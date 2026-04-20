@@ -3,8 +3,9 @@ import { Link, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
 import { crmApi } from '../../api/crm.api';
 import { formsApi } from '../../api/forms.api';
-import { ROUTES } from '../../constants/routes';
+import { ROUTES, safeRoute } from '../../constants/routes';
 import { DataTable, FilterBar, InlineNotice, PageSection, RefreshNotice, StatGrid, toArray } from './PlatformShared';
+import { resolveCrmErrorMessage } from '../crm/crmUiUtils';
 
 const EMPTY_FORM_FIELDS = [
   { key: 'name', label: 'Name', type: 'text', required: true },
@@ -73,9 +74,9 @@ export const PlatformCmsPage = () => {
     try {
       const res = await crmApi.listLeads({ limit: 100 });
       setLeads(toArray(res?.data?.data || res?.data?.items || res?.data));
-    } catch {
+    } catch (loadError) {
       setLeads([]);
-      setError('Unable to load CMS intake leads.');
+      setError(resolveCrmErrorMessage(loadError, 'Unable to load CMS intake leads.'));
     } finally {
       setRefreshing(false);
       setLoading(false);
@@ -90,9 +91,9 @@ export const PlatformCmsPage = () => {
       const records = toArray(response?.data);
       setForms(records);
       setSelectedFormId((prev) => (prev || String(records[0]?._id || records[0]?.id || '')));
-    } catch {
+    } catch (loadError) {
       setForms([]);
-      setFormsError('Unable to load forms.');
+      setFormsError(resolveCrmErrorMessage(loadError, 'Unable to load forms.'));
     } finally {
       setFormsLoading(false);
     }
@@ -206,7 +207,7 @@ export const PlatformCmsPage = () => {
     if (selectedForm) {
       hydrateEditorFromForm(selectedForm);
     }
-  }, [selectedFormId, selectedForm?._id]);
+  }, [selectedForm]);
 
   const setEditorField = (index, key, value) => {
     setFormEditor((prev) => ({
@@ -240,6 +241,7 @@ export const PlatformCmsPage = () => {
 
   const handleSaveForm = async (event) => {
     event.preventDefault();
+    if (formSaving) return;
     setFormEditorError('');
     setFormEditorSuccess('');
 
@@ -260,6 +262,26 @@ export const PlatformCmsPage = () => {
       setFormEditorError('A name field is required for public/embed submissions.');
       return;
     }
+    const fieldKeys = new Set();
+    for (const field of normalizedFields) {
+      const normalizedKey = String(field.key || '').toLowerCase();
+      if (fieldKeys.has(normalizedKey)) {
+        setFormEditorError(`Field key "${field.key}" is duplicated. Use unique field keys.`);
+        return;
+      }
+      fieldKeys.add(normalizedKey);
+    }
+
+    const redirectUrl = normalizeText(formEditor.redirectUrl);
+    if (redirectUrl) {
+      try {
+        // eslint-disable-next-line no-new
+        new URL(redirectUrl);
+      } catch {
+        setFormEditorError('Redirect URL must be a valid absolute URL (for example: https://example.com/thank-you).');
+        return;
+      }
+    }
 
     const payload = {
       name: normalizedName,
@@ -268,7 +290,7 @@ export const PlatformCmsPage = () => {
       allowEmbed: Boolean(formEditor.allowEmbed),
       embedTitle: normalizeText(formEditor.embedTitle),
       successMessage: normalizeText(formEditor.successMessage) || 'Thank you. Your submission has been received.',
-      redirectUrl: normalizeText(formEditor.redirectUrl),
+      redirectUrl,
       allowedEmbedDomains: normalizeDomains(formEditor.allowedEmbedDomainsInput),
     };
 
@@ -287,7 +309,7 @@ export const PlatformCmsPage = () => {
       }
       await loadForms();
     } catch (saveError) {
-      setFormEditorError(saveError.message || 'Unable to save form.');
+      setFormEditorError(resolveCrmErrorMessage(saveError, 'Unable to save form.'));
     } finally {
       setFormSaving(false);
     }
@@ -310,9 +332,9 @@ export const PlatformCmsPage = () => {
         <div className="action-row">
           <button type="button" onClick={() => void handleCopy(publicLink || embedLink, 'Intake link')} disabled={!selectedForm}>Copy intake link</button>
           <button type="button" onClick={resetEditorForCreate}>Create new form</button>
-          <Link to={`${ROUTES.CMS(firmSlug)}#intake-queue`}>Go to Intake Queue</Link>
-          <Link to={`${ROUTES.CMS(firmSlug)}#embed-forms`}>Go to Forms</Link>
-          <Link to={ROUTES.WORK_SETTINGS(firmSlug)}#cms-intake-settings}>Open Intake Settings</Link>
+          <Link to={safeRoute(`${ROUTES.CMS(firmSlug)}#intake-queue`)}>Go to Intake Queue</Link>
+          <Link to={safeRoute(`${ROUTES.CMS(firmSlug)}#embed-forms`)}>Go to Forms</Link>
+          <Link to={safeRoute(`${ROUTES.WORK_SETTINGS(firmSlug)}#cms-intake-settings`)}>Open Intake Settings</Link>
         </div>
       </PageSection>
 
