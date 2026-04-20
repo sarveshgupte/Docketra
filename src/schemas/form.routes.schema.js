@@ -4,6 +4,7 @@ const formFieldSchema = z.object({
   key: nonEmptyString.max(64),
   label: z.string().trim().max(128).optional(),
   type: z.enum(['text', 'email', 'phone']).optional(),
+  required: z.boolean().optional(),
 }).strict();
 
 module.exports = {

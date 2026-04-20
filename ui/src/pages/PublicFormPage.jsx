@@ -3,9 +3,9 @@ import { useSearchParams, useParams } from 'react-router-dom';
 import { publicFormsApi } from '../api/forms.api';
 
 const DEFAULT_FIELDS = [
-  { key: 'name', label: 'Name', type: 'text' },
-  { key: 'email', label: 'Email', type: 'email' },
-  { key: 'phone', label: 'Phone', type: 'phone' },
+  { key: 'name', label: 'Name', type: 'text', required: true },
+  { key: 'email', label: 'Email', type: 'email', required: false },
+  { key: 'phone', label: 'Phone', type: 'phone', required: false },
 ];
 const HONEYPOT_KEY = 'website';
 
@@ -164,7 +164,7 @@ export const PublicFormPage = () => {
       <section style={cardStyle}>
         <h1 style={{ fontSize: 24, marginBottom: 12 }}>{formConfig.embedTitle || formConfig.name}</h1>
         {!embedMode && <p style={{ marginTop: 0, marginBottom: 20, color: '#64748B' }}>Submit your intake details below.</p>}
-        {error && <p style={{ color: '#B91C1C', marginBottom: 12 }}>{error}</p>}
+        {error && <p role="alert" style={{ color: '#B91C1C', marginBottom: 12 }}>{error}</p>}
         {success && <p style={{ color: '#047857', marginBottom: 12 }}>{success}</p>}
         {!hasNameField && (
           <p style={{ color: '#B45309', marginBottom: 12 }}>

@@ -17,6 +17,7 @@ Docketra CMS supports three acquisition modes so firms can capture intake in the
   - Iframe snippet
 - Submission still uses shared intake orchestration:
   - `Lead -> optional Client -> optional Docket`
+  - auto-create behavior is resolved from firm intake config (not hard-disabled in public/embed handlers)
 
 ### Embed metadata captured
 

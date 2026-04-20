@@ -143,6 +143,20 @@ const leadSchema = new mongoose.Schema({
     externalSubmissionId: { type: String, default: null },
     idempotencyKey: { type: String, default: null },
     extraFields: { type: mongoose.Schema.Types.Mixed, default: null },
+    intakeOutcome: {
+      createdClient: { type: Boolean, default: false },
+      createdDocket: { type: Boolean, default: false },
+      clientId: { type: String, default: null },
+      docketId: { type: String, default: null },
+      source: { type: String, default: null },
+      submissionMode: { type: String, default: null },
+      formId: { type: String, default: null },
+      formSlug: { type: String, default: null },
+      autoCreateClientEnabled: { type: Boolean, default: false },
+      autoCreateDocketEnabled: { type: Boolean, default: false },
+      warnings: { type: [String], default: [] },
+      updatedAt: { type: String, default: null },
+    },
   },
 }, { timestamps: { createdAt: true, updatedAt: false } });
 

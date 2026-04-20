@@ -1,6 +1,7 @@
 import { request } from './apiClient';
 
 export const formsApi = {
+  createForm: (data) => request((http) => http.post('/forms', data), 'Failed to create form'),
   listForms: () => request((http) => http.get('/forms'), 'Failed to load forms'),
   updateForm: (id, data) => request((http) => http.patch(`/forms/${id}`, data), 'Failed to update form'),
 };
