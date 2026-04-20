@@ -17,6 +17,21 @@ export const WorkSettingsPage = () => {
   const [loadingWorkbaskets, setLoadingWorkbaskets] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
+  const [intakeLoading, setIntakeLoading] = useState(true);
+  const [intakeSaving, setIntakeSaving] = useState(false);
+  const [intakeRegenerating, setIntakeRegenerating] = useState(false);
+  const [intakeState, setIntakeState] = useState({
+    autoCreateClient: true,
+    autoCreateDocket: true,
+    defaultCategoryId: '',
+    defaultSubcategoryId: '',
+    defaultWorkbasketId: '',
+    defaultPriority: '',
+    defaultAssignee: '',
+    intakeApiEnabled: false,
+  });
+  const [intakeMeta, setIntakeMeta] = useState({ options: { categories: [], workbaskets: [], priorities: [], assignees: [] }, intakeApiKeyMasked: null });
+  const [intakeKey, setIntakeKey] = useState('');
 
   const loadWorkbaskets = async () => {
     setLoadingWorkbaskets(true);
@@ -34,7 +49,72 @@ export const WorkSettingsPage = () => {
 
   useEffect(() => {
     loadWorkbaskets();
+    const loadIntakeSettings = async () => {
+      setIntakeLoading(true);
+      try {
+        const response = await adminApi.getCmsIntakeSettings();
+        const intake = response?.data?.intake || {};
+        const options = response?.data?.options || {};
+        setIntakeMeta({ options, intakeApiKeyMasked: intake.intakeApiKeyMasked || null });
+        setIntakeState({
+          autoCreateClient: Boolean(intake.autoCreateClient),
+          autoCreateDocket: Boolean(intake.autoCreateDocket),
+          defaultCategoryId: intake.defaultCategoryId || '',
+          defaultSubcategoryId: intake.defaultSubcategoryId || '',
+          defaultWorkbasketId: intake.defaultWorkbasketId || '',
+          defaultPriority: intake.defaultPriority || '',
+          defaultAssignee: intake.defaultAssignee || '',
+          intakeApiEnabled: Boolean(intake.intakeApiEnabled),
+        });
+      } catch {
+        setStatusMessage({ type: 'error', text: 'Unable to load CMS intake settings.' });
+      } finally {
+        setIntakeLoading(false);
+      }
+    };
+    void loadIntakeSettings();
   }, []);
+
+  const selectedCategory = (intakeMeta.options?.categories || []).find((item) => item.id === intakeState.defaultCategoryId);
+  const subcategoryOptions = selectedCategory?.subcategories || [];
+
+  const handleSaveIntakeSettings = async () => {
+    setIntakeSaving(true);
+    setStatusMessage({ type: 'info', text: 'Saving CMS intake settings…' });
+    try {
+      await adminApi.updateCmsIntakeSettings({
+        autoCreateClient: intakeState.autoCreateClient,
+        autoCreateDocket: intakeState.autoCreateDocket,
+        defaultCategoryId: intakeState.defaultCategoryId || null,
+        defaultSubcategoryId: intakeState.defaultSubcategoryId || null,
+        defaultWorkbasketId: intakeState.defaultWorkbasketId || null,
+        defaultPriority: intakeState.defaultPriority || null,
+        defaultAssignee: intakeState.defaultAssignee || null,
+        intakeApiEnabled: intakeState.intakeApiEnabled,
+      });
+      setStatusMessage({ type: 'success', text: 'CMS intake settings updated.' });
+    } catch (error) {
+      setStatusMessage({ type: 'error', text: error?.message || 'Could not update CMS intake settings.' });
+    } finally {
+      setIntakeSaving(false);
+    }
+  };
+
+  const handleRegenerateApiKey = async () => {
+    setIntakeRegenerating(true);
+    setStatusMessage({ type: 'info', text: 'Regenerating intake API key…' });
+    try {
+      const response = await adminApi.regenerateCmsIntakeApiKey();
+      const regenerated = response?.data?.intake?.intakeApiKey || '';
+      setIntakeKey(regenerated);
+      setIntakeMeta((prev) => ({ ...prev, intakeApiKeyMasked: regenerated ? '••••••••••••••••' : null }));
+      setStatusMessage({ type: 'success', text: 'New intake API key generated. Copy it now; it will not be shown again.' });
+    } catch {
+      setStatusMessage({ type: 'error', text: 'Failed to regenerate intake API key.' });
+    } finally {
+      setIntakeRegenerating(false);
+    }
+  };
 
   const handleCreateWorkbasket = async () => {
     if (!workbasketName.trim()) return;
@@ -138,20 +218,61 @@ export const WorkSettingsPage = () => {
         </div>
       </Card>
 
-      <Card className="neo-card">
+      <Card className="neo-card" id="cms-intake-settings">
         <div className="p-6">
-          <h2 className="text-lg font-semibold text-gray-900">Automation & Workflow Controls</h2>
-          <p className="mt-1 text-sm text-gray-600">
-            Assignment strategy and workflow automation settings are currently not wired to active execution paths.
-            To avoid misleading controls, these options have been temporarily hidden from this page.
-          </p>
-          <p className="mt-3 text-sm text-gray-600">
-            Today, your enforceable work configuration in this section is:
-          </p>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
-            <li>Workbasket lifecycle management (add, rename, activate/deactivate).</li>
-            <li>Category and subcategory management.</li>
-          </ul>
+          <h2 className="text-lg font-semibold text-gray-900">CMS Intake Settings</h2>
+          <p className="mt-1 text-sm text-gray-600">Configure launch-critical intake defaults and API access without touching code.</p>
+          {intakeLoading ? <p className="mt-3 text-sm text-gray-500">Loading CMS intake settings…</p> : (
+            <>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <label><input type="checkbox" checked={intakeState.autoCreateClient} onChange={(event) => setIntakeState((prev) => ({ ...prev, autoCreateClient: event.target.checked }))} /> Auto create client</label>
+                <label><input type="checkbox" checked={intakeState.autoCreateDocket} onChange={(event) => setIntakeState((prev) => ({ ...prev, autoCreateDocket: event.target.checked }))} /> Auto create docket</label>
+                <label><input type="checkbox" checked={intakeState.intakeApiEnabled} onChange={(event) => setIntakeState((prev) => ({ ...prev, intakeApiEnabled: event.target.checked }))} /> Intake API enabled</label>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <label>Default category
+                  <select value={intakeState.defaultCategoryId} onChange={(event) => setIntakeState((prev) => ({ ...prev, defaultCategoryId: event.target.value, defaultSubcategoryId: '' }))}>
+                    <option value="">None</option>
+                    {(intakeMeta.options?.categories || []).map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+                  </select>
+                </label>
+                <label>Default subcategory
+                  <select value={intakeState.defaultSubcategoryId} onChange={(event) => setIntakeState((prev) => ({ ...prev, defaultSubcategoryId: event.target.value }))} disabled={!intakeState.defaultCategoryId}>
+                    <option value="">None</option>
+                    {subcategoryOptions.map((subcategory) => <option key={subcategory.id} value={subcategory.id}>{subcategory.name}</option>)}
+                  </select>
+                </label>
+                <label>Default workbasket
+                  <select value={intakeState.defaultWorkbasketId} onChange={(event) => setIntakeState((prev) => ({ ...prev, defaultWorkbasketId: event.target.value }))}>
+                    <option value="">None</option>
+                    {(intakeMeta.options?.workbaskets || []).map((workbasket) => <option key={workbasket.id} value={workbasket.id}>{workbasket.name}</option>)}
+                  </select>
+                </label>
+                <label>Default priority
+                  <select value={intakeState.defaultPriority} onChange={(event) => setIntakeState((prev) => ({ ...prev, defaultPriority: event.target.value }))}>
+                    <option value="">None</option>
+                    {(intakeMeta.options?.priorities || []).map((priority) => <option key={priority} value={priority}>{priority}</option>)}
+                  </select>
+                </label>
+                <label>Default assignee
+                  <select value={intakeState.defaultAssignee} onChange={(event) => setIntakeState((prev) => ({ ...prev, defaultAssignee: event.target.value }))}>
+                    <option value="">None</option>
+                    {(intakeMeta.options?.assignees || []).map((assignee) => <option key={assignee.xid} value={assignee.xid}>{assignee.name} ({assignee.xid})</option>)}
+                  </select>
+                </label>
+              </div>
+              <div className="mt-4 rounded border border-gray-200 p-3">
+                <p className="text-sm text-gray-700"><strong>Intake API key</strong>: {intakeKey || intakeMeta.intakeApiKeyMasked || 'Not generated yet'}</p>
+                <div className="mt-2 flex gap-2">
+                  <Button type="button" variant="outline" onClick={() => navigator.clipboard.writeText(intakeKey)} disabled={!intakeKey}>Copy new key</Button>
+                  <Button type="button" variant="outline" onClick={handleRegenerateApiKey} disabled={intakeRegenerating}>{intakeRegenerating ? 'Regenerating…' : 'Regenerate key'}</Button>
+                </div>
+              </div>
+              <div className="mt-4">
+                <Button type="button" variant="primary" onClick={handleSaveIntakeSettings} disabled={intakeSaving}>{intakeSaving ? 'Saving…' : 'Save intake settings'}</Button>
+              </div>
+            </>
+          )}
         </div>
       </Card>
 

@@ -22,21 +22,25 @@ export const PlatformCrmPage = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [invoices, setInvoices] = useState([]);
 
   const loadData = async ({ background = false } = {}) => {
     if (background && (clients.length > 0 || leads.length > 0)) setRefreshing(true);
     else setLoading(true);
     setError('');
     try {
-      const [clientRes, leadRes] = await Promise.all([
+      const [clientRes, leadRes, invoiceRes] = await Promise.all([
         crmApi.listClients({ limit: 50 }),
         crmApi.listLeads({ limit: 50 }),
+        crmApi.listInvoices({ limit: 100 }),
       ]);
       setClients(toArray(clientRes?.data?.data || clientRes?.data?.items || clientRes?.data));
       setLeads(toArray(leadRes?.data?.data || leadRes?.data?.items || leadRes?.data));
+      setInvoices(toArray(invoiceRes?.data?.data || invoiceRes?.data?.items || invoiceRes?.data));
     } catch {
       setClients([]);
       setLeads([]);
+      setInvoices([]);
       setError('Unable to load CRM overview right now.');
     } finally {
       setRefreshing(false);
@@ -60,11 +64,30 @@ export const PlatformCrmPage = () => {
   );
   const leadsNeedingFollowUp = useMemo(() => leads.filter(leadNeedsFollowUp).slice(0, 5), [leads]);
 
+  const stageCounts = useMemo(() => leads.reduce((acc, lead) => {
+    const key = String(lead.stage || lead.status || 'new').toLowerCase();
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {}), [leads]);
+  const overdueFollowUps = useMemo(() => leads.filter(leadNeedsFollowUp).length, [leads]);
+  const clientsAddedLast7Days = useMemo(
+    () => clients.filter((client) => {
+      if (!client.createdAt) return false;
+      return new Date(client.createdAt).getTime() >= Date.now() - (7 * 24 * 60 * 60 * 1000);
+    }).length,
+    [clients]
+  );
+  const unpaidInvoices = useMemo(
+    () => invoices.filter((invoice) => !['paid', 'PAID'].includes(String(invoice.status || '').trim())).length,
+    [invoices]
+  );
+
   const cards = [
-    { label: 'Total clients', value: loading ? '…' : clients.length },
-    { label: 'Active clients', value: loading ? '…' : clients.filter((client) => String(client.status || '').toLowerCase() === 'active').length },
-    { label: 'Leads count', value: loading ? '…' : leads.length },
-    { label: 'Recently added clients', value: loading ? '…' : recentlyAdded.length },
+    { label: 'Leads · new', value: loading ? '…' : (stageCounts.new || 0) },
+    { label: 'Leads · contacted', value: loading ? '…' : (stageCounts.contacted || 0) },
+    { label: 'Overdue follow-ups', value: loading ? '…' : overdueFollowUps },
+    { label: 'Clients added (7d)', value: loading ? '…' : clientsAddedLast7Days },
+    { label: 'Unpaid invoices', value: loading ? '…' : unpaidInvoices },
   ];
 
   return (
@@ -81,8 +104,8 @@ export const PlatformCrmPage = () => {
       <PageSection title="Quick actions" description="Use CRM as your summary + routing hub; creation flows remain in Client Management and Leads.">
         <div className="action-row">
           <Link to={ROUTES.CRM_CLIENTS(firmSlug)}>New Client</Link>
-          <Link to={ROUTES.CRM_CLIENTS(firmSlug)}>Import Clients (CSV)</Link>
           <Link to={ROUTES.CRM_LEADS(firmSlug)}>Go to Leads Queue</Link>
+          <Link to={ROUTES.CRM_CLIENTS(firmSlug)}>Open Client Management</Link>
         </div>
       </PageSection>
 
