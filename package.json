@@ -5,9 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "start:api": "node src/server.js",
     "start:worker": "node src/worker.js",
-    "start:job": "node src/jobs/cloudRunJob.runner.js",
     "dev": "nodemon src/server.js",
     "build": "npm install --include=dev && npm --prefix ui install --include=dev && npm --prefix ui run build",
     "lint": "find src tests -name '*.js' -print0 | xargs -0 -n1 node --check",
@@ -26,8 +24,6 @@
     "migration:add_starter_plan_fields": "node scripts/migrations/add_starter_plan_fields.js up",
     "migration:rollback_starter_plan_fields": "node scripts/migrations/add_starter_plan_fields.js down",
     "worker": "node src/workers/bulkUpload.worker.js",
-    "deploy": "wrangler deploy",
-    "preview": "wrangler dev",
     "migrate:rbac-team": "node src/scripts/migrateRbacTeamHierarchy.js",
     "seed:rbac-team": "node src/scripts/seedRbacHierarchy.js"
   },
