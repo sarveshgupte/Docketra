@@ -159,10 +159,24 @@ export const PlatformCmsPage = () => {
   }, [leads]);
 
   const cmsStats = [
-    { label: 'Total submissions', value: leads.length },
+    { label: 'Active forms', value: forms.filter((form) => form.isActive).length },
+    {
+      label: 'Submissions today',
+      value: leads.filter((lead) => {
+        if (!lead.createdAt) return false;
+        const created = new Date(lead.createdAt);
+        const now = new Date();
+        return created.getFullYear() === now.getFullYear() && created.getMonth() === now.getMonth() && created.getDate() === now.getDate();
+      }).length,
+    },
+    {
+      label: 'Submissions (7d)',
+      value: leads.filter((lead) => lead.createdAt && new Date(lead.createdAt).getTime() >= Date.now() - (7 * 24 * 60 * 60 * 1000)).length,
+    },
     { label: 'Lead only', value: leads.filter((lead) => !parseOutcome(lead).createdClient && !parseOutcome(lead).createdDocket).length },
-    { label: 'Lead + client', value: leads.filter((lead) => parseOutcome(lead).createdClient && !parseOutcome(lead).createdDocket).length },
-    { label: 'Lead + client + docket', value: leads.filter((lead) => parseOutcome(lead).createdClient && parseOutcome(lead).createdDocket).length },
+    { label: 'Converted to client', value: leads.filter((lead) => parseOutcome(lead).createdClient).length },
+    { label: 'Converted to docket', value: leads.filter((lead) => parseOutcome(lead).createdDocket).length },
+    { label: 'Routing/config warnings', value: leads.filter((lead) => parseOutcome(lead).warnings.length > 0).length },
   ];
 
   const hydrateEditorFromForm = (form) => {
@@ -283,7 +297,7 @@ export const PlatformCmsPage = () => {
     <PlatformShell
       moduleLabel="CMS / Intake and Submission"
       title="CMS"
-      subtitle="Intake and submission surface hub for request links, forms/templates, and public intake routing."
+      subtitle="Intake and submission surface hub for request links, forms, and public intake routing."
       actions={<Link to={ROUTES.CRM_LEADS(firmSlug)}>Go to Intake Queue</Link>}
     >
       <InlineNotice tone="error" message={error} />
@@ -297,7 +311,8 @@ export const PlatformCmsPage = () => {
           <button type="button" onClick={() => void handleCopy(publicLink || embedLink, 'Intake link')} disabled={!selectedForm}>Copy intake link</button>
           <button type="button" onClick={resetEditorForCreate}>Create new form</button>
           <Link to={`${ROUTES.CMS(firmSlug)}#intake-queue`}>Go to Intake Queue</Link>
-          <Link to={`${ROUTES.CMS(firmSlug)}#embed-forms`}>Go to Forms/Templates</Link>
+          <Link to={`${ROUTES.CMS(firmSlug)}#embed-forms`}>Go to Forms</Link>
+          <Link to={ROUTES.WORK_SETTINGS(firmSlug)}#cms-intake-settings}>Open Intake Settings</Link>
         </div>
       </PageSection>
 

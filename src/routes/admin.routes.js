@@ -21,6 +21,9 @@ const {
   getFirmSettingsActivity,
   getSettingsAudit,
   updateFirmSettings,
+  getCmsIntakeSettings,
+  updateCmsIntakeSettings,
+  regenerateCmsIntakeApiKey,
   getStorageConfig,
   updateStorageConfig,
   disconnectStorage,
@@ -116,6 +119,9 @@ router.get('/firm-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_
 router.get('/firm-settings/activity', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getFirmSettingsActivity);
 router.get('/settings/audit', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getSettingsAudit);
 router.put('/firm-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userWriteLimiter, updateFirmSettings);
+router.get('/cms-intake-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getCmsIntakeSettings);
+router.put('/cms-intake-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userWriteLimiter, updateCmsIntakeSettings);
+router.post('/cms-intake-settings/intake-api-key/regenerate', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), sensitiveLimiter, regenerateCmsIntakeApiKey);
 router.get('/workbaskets', ...adminBaseAccess, authorizeFirmPermission('CASE_VIEW'), userReadLimiter, listWorkbaskets);
 router.post('/workbaskets', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, createWorkbasket);
 router.put('/workbaskets/:workbasketId', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, renameWorkbasket);

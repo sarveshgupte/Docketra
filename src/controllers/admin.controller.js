@@ -1,8 +1,11 @@
+const crypto = require('crypto');
 const mongoose = require('mongoose');
 const User = require('../models/User.model');
 const Case = require('../models/Case.model');
 const Task = require('../models/Task');
 const Firm = require('../models/Firm.model');
+const Team = require('../models/Team.model');
+const Category = require('../models/Category.model');
 const AuthAudit = require('../models/AuthAudit.model');
 const CaseAudit = require('../models/CaseAudit.model');
 const emailService = require('../services/email.service');
@@ -27,6 +30,7 @@ const { assertPrimaryAdmin, getTagValidationError, normalizeId } = require('../u
 const { logAuditEvent, getAuditLogs } = require('../services/adminActionAudit.service');
 const { writeSettingsAudit, listSettingsAudit } = require('../services/productAudit.service');
 const settingsAuditService = require('../services/settingsAudit.service');
+const { safeDecrypt } = require('../utils/encryption');
 const log = require('../utils/log');
 
 /**
@@ -38,6 +42,37 @@ const log = require('../utils/log');
 
 const INVITE_TOKEN_EXPIRY_HOURS = 48; // 48 hours for invite tokens
 const DEFAULT_STORAGE_MODE = 'docketra_managed';
+const INTAKE_API_KEY_MASK = '••••••••••••••••';
+
+const toNullableString = (value) => {
+  if (value === null || value === undefined) return null;
+  const normalized = String(value).trim();
+  return normalized || null;
+};
+
+const normalizeIntakePriority = (value) => {
+  const normalized = toNullableString(value);
+  if (!normalized) return null;
+  const upper = normalized.toUpperCase();
+  return ['LOW', 'MEDIUM', 'HIGH'].includes(upper) ? upper : null;
+};
+
+const normalizeCmsIntakeConfig = (config = {}, { includeApiKey = false } = {}) => {
+  const decryptedKey = safeDecrypt(config?.intakeApiKey || null);
+  return {
+    autoCreateClient: Boolean(config?.autoCreateClient),
+    autoCreateDocket: Boolean(config?.autoCreateDocket),
+    defaultCategoryId: config?.defaultCategoryId ? String(config.defaultCategoryId) : null,
+    defaultSubcategoryId: toNullableString(config?.defaultSubcategoryId),
+    defaultWorkbasketId: config?.defaultWorkbasketId ? String(config.defaultWorkbasketId) : null,
+    defaultPriority: normalizeIntakePriority(config?.defaultPriority),
+    defaultAssignee: toNullableString(config?.defaultAssignee)?.toUpperCase() || null,
+    intakeApiEnabled: Boolean(config?.intakeApiEnabled),
+    intakeApiKeyConfigured: Boolean(decryptedKey),
+    intakeApiKeyMasked: decryptedKey ? INTAKE_API_KEY_MASK : null,
+    intakeApiKey: includeApiKey ? decryptedKey : null,
+  };
+};
 
 /**
  * Get admin dashboard statistics
@@ -754,6 +789,243 @@ const updateFirmSettings = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error updating firm settings',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get CMS intake settings (Admin only)
+ * GET /api/admin/cms-intake-settings
+ */
+const getCmsIntakeSettings = async (req, res) => {
+  try {
+    const firmId = req.user?.firmId;
+    if (!firmId) {
+      return res.status(403).json({ success: false, message: 'Firm context is required' });
+    }
+
+    const [firm, workbaskets, categories, assignees] = await Promise.all([
+      Firm.findById(firmId).select('intakeConfig.cms firmId'),
+      Team.find({ firmId, isActive: true }).select('_id name').sort({ name: 1 }).lean(),
+      Category.find({ firmId, isActive: true }).select('_id name subcategories').sort({ name: 1 }).lean(),
+      User.find({ firmId, status: { $ne: 'deleted' }, isActive: true, role: { $in: ['PRIMARY_ADMIN', 'ADMIN', 'MANAGER', 'USER'] } })
+        .select('xID name email role')
+        .sort({ name: 1 })
+        .lean(),
+    ]);
+
+    if (!firm) {
+      return res.status(404).json({ success: false, message: 'Firm not found' });
+    }
+
+    const categoryOptions = categories.map((category) => ({
+      id: String(category._id),
+      name: category.name,
+      subcategories: Array.isArray(category.subcategories)
+        ? category.subcategories
+          .filter((entry) => entry?.isActive !== false)
+          .map((entry) => ({ id: String(entry.id || ''), name: entry.name || '' }))
+        : [],
+    }));
+
+    const intakeSettings = normalizeCmsIntakeConfig(firm.intakeConfig?.cms || {}, {
+      includeApiKey: String(req.query?.includeApiKey || '').toLowerCase() === 'true',
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        intake: intakeSettings,
+        options: {
+          workbaskets: workbaskets.map((entry) => ({ id: String(entry._id), name: entry.name })),
+          categories: categoryOptions,
+          priorities: ['LOW', 'MEDIUM', 'HIGH'],
+          assignees: assignees.map((user) => ({
+            xid: String(user.xID || '').toUpperCase(),
+            name: user.name || user.email || String(user.xID || '').toUpperCase(),
+            role: user.role || 'USER',
+          })),
+        },
+      },
+    });
+  } catch (error) {
+    log.error('[ADMIN] Error fetching CMS intake settings:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching CMS intake settings',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Update CMS intake settings (Admin only)
+ * PUT /api/admin/cms-intake-settings
+ */
+const updateCmsIntakeSettings = async (req, res) => {
+  try {
+    const firmId = req.user?.firmId;
+    if (!firmId) {
+      return res.status(403).json({ success: false, message: 'Firm context is required' });
+    }
+
+    const firm = await Firm.findById(firmId);
+    if (!firm) {
+      return res.status(404).json({ success: false, message: 'Firm not found' });
+    }
+
+    const previousIntakeSettings = normalizeCmsIntakeConfig(firm.intakeConfig?.cms || {});
+    const body = req.body || {};
+    const nextCmsConfig = {
+      ...(firm.intakeConfig?.cms || {}),
+      autoCreateClient: Boolean(body.autoCreateClient),
+      autoCreateDocket: Boolean(body.autoCreateDocket),
+      intakeApiEnabled: Boolean(body.intakeApiEnabled),
+      defaultCategoryId: mongoose.isValidObjectId(body.defaultCategoryId) ? body.defaultCategoryId : null,
+      defaultSubcategoryId: toNullableString(body.defaultSubcategoryId),
+      defaultWorkbasketId: mongoose.isValidObjectId(body.defaultWorkbasketId) ? body.defaultWorkbasketId : null,
+      defaultPriority: normalizeIntakePriority(body.defaultPriority),
+      defaultAssignee: toNullableString(body.defaultAssignee)?.toUpperCase() || null,
+    };
+
+    if (nextCmsConfig.defaultCategoryId && nextCmsConfig.defaultSubcategoryId) {
+      const category = await Category.findOne({
+        _id: nextCmsConfig.defaultCategoryId,
+        firmId,
+        isActive: true,
+        'subcategories.id': nextCmsConfig.defaultSubcategoryId,
+      })
+        .select('_id subcategories')
+        .lean();
+
+      if (!category) {
+        return res.status(400).json({
+          success: false,
+          message: 'Default subcategory must belong to the selected active category',
+        });
+      }
+    } else if (nextCmsConfig.defaultSubcategoryId && !nextCmsConfig.defaultCategoryId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Default category is required when default subcategory is provided',
+      });
+    }
+
+    if (nextCmsConfig.defaultWorkbasketId) {
+      const workbasket = await Team.findOne({ _id: nextCmsConfig.defaultWorkbasketId, firmId, isActive: true }).select('_id').lean();
+      if (!workbasket) {
+        return res.status(400).json({
+          success: false,
+          message: 'Default workbasket must be an active workbasket from this firm',
+        });
+      }
+    }
+
+    if (nextCmsConfig.defaultAssignee) {
+      const assignee = await User.findOne({
+        firmId,
+        xID: nextCmsConfig.defaultAssignee,
+        status: { $ne: 'deleted' },
+        isActive: true,
+      }).select('_id');
+      if (!assignee) {
+        return res.status(400).json({
+          success: false,
+          message: 'Default assignee must be an active firm user',
+        });
+      }
+    }
+
+    const previousKey = firm.intakeConfig?.cms?.intakeApiKey || null;
+    firm.intakeConfig = {
+      ...(firm.intakeConfig || {}),
+      cms: {
+        ...(firm.intakeConfig?.cms || {}),
+        ...nextCmsConfig,
+        intakeApiKey: previousKey,
+      },
+    };
+    await firm.save();
+
+    const nextIntakeSettings = normalizeCmsIntakeConfig(firm.intakeConfig?.cms || {});
+    await writeSettingsAudit({
+      req,
+      settingsKey: 'cms-intake-settings',
+      action: 'CONFIG_CHANGED',
+      oldDoc: previousIntakeSettings,
+      newDoc: nextIntakeSettings,
+      metadata: { source: 'admin.updateCmsIntakeSettings' },
+      dedupeKey: 'cms-intake-settings-update',
+    });
+
+    return res.json({
+      success: true,
+      message: 'CMS intake settings updated successfully',
+      data: nextIntakeSettings,
+    });
+  } catch (error) {
+    log.error('[ADMIN] Error updating CMS intake settings:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error updating CMS intake settings',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Regenerate CMS intake API key (Admin only)
+ * POST /api/admin/cms-intake-settings/intake-api-key/regenerate
+ */
+const regenerateCmsIntakeApiKey = async (req, res) => {
+  try {
+    const firmId = req.user?.firmId;
+    if (!firmId) {
+      return res.status(403).json({ success: false, message: 'Firm context is required' });
+    }
+
+    const firm = await Firm.findById(firmId).select('intakeConfig');
+    if (!firm) {
+      return res.status(404).json({ success: false, message: 'Firm not found' });
+    }
+
+    const newApiKey = crypto.randomBytes(24).toString('hex');
+    firm.intakeConfig = {
+      ...(firm.intakeConfig || {}),
+      cms: {
+        ...(firm.intakeConfig?.cms || {}),
+        intakeApiKey: newApiKey,
+      },
+    };
+    await firm.save();
+
+    const nextIntakeSettings = normalizeCmsIntakeConfig(firm.intakeConfig?.cms || {});
+    await writeSettingsAudit({
+      req,
+      settingsKey: 'cms-intake-settings',
+      action: 'API_KEY_REGENERATED',
+      oldDoc: { intakeApiKeyConfigured: true },
+      newDoc: { intakeApiKeyConfigured: true },
+      metadata: { source: 'admin.regenerateCmsIntakeApiKey' },
+      dedupeKey: 'cms-intake-api-key-regenerate',
+    });
+
+    return res.json({
+      success: true,
+      message: 'CMS intake API key regenerated',
+      data: {
+        intake: {
+          ...nextIntakeSettings,
+          intakeApiKey: newApiKey,
+        },
+      },
+    });
+  } catch (error) {
+    log.error('[ADMIN] Error regenerating CMS intake API key:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error regenerating CMS intake API key',
       error: error.message,
     });
   }
@@ -1505,6 +1777,9 @@ module.exports = {
   getFirmSettingsActivity,
   getSettingsAudit,
   updateFirmSettings: wrapWriteHandler(updateFirmSettings),
+  getCmsIntakeSettings,
+  updateCmsIntakeSettings: wrapWriteHandler(updateCmsIntakeSettings),
+  regenerateCmsIntakeApiKey: wrapWriteHandler(regenerateCmsIntakeApiKey),
   getStorageConfig,
   updateStorageConfig: wrapWriteHandler(updateStorageConfig),
   disconnectStorage: wrapWriteHandler(disconnectStorage),
