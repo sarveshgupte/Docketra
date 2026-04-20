@@ -73,6 +73,27 @@ const createCrmClient = async (req, res) => {
   }
 };
 
+const normalizeClientPayload = (body = {}) => {
+  const name = typeof body.name === 'string' ? body.name.trim() : '';
+  const email = typeof body.email === 'string' ? body.email.trim() : '';
+  const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+  const leadSource = typeof body.leadSource === 'string' ? body.leadSource.trim() : '';
+  const notes = typeof body.notes === 'string' ? body.notes.trim() : '';
+  const status = typeof body.status === 'string' ? body.status.trim().toLowerCase() : '';
+  const type = typeof body.type === 'string' ? body.type.trim() : '';
+  const tags = Array.isArray(body.tags) ? body.tags.map((tag) => String(tag || '').trim()).filter(Boolean) : undefined;
+  return {
+    name,
+    email,
+    phone,
+    leadSource,
+    notes,
+    status,
+    type,
+    tags,
+  };
+};
+
 const listCrmClients = async (req, res) => {
   try {
     const { limit, skip } = parsePagination(req.query);
@@ -187,8 +208,149 @@ const getCrmClientById = async (req, res) => {
   }
 };
 
+const updateCrmClient = async (req, res) => {
+  try {
+    const clientId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(clientId)) {
+      return res.status(404).json({ success: false, message: 'Client not found' });
+    }
+
+    const { client, crmClient } = await resolveClientAndLegacyCrm({
+      firmId: req.user.firmId,
+      inputId: clientId,
+      createdByXid: req.user?.xid || req.user?.xID || 'SYSTEM',
+    });
+    if (!client && !crmClient) return res.status(404).json({ success: false, message: 'Client not found' });
+
+    const normalized = normalizeClientPayload(req.body || {});
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'name') && !normalized.name) {
+      return res.status(400).json({ success: false, message: 'name cannot be blank' });
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'type') && !['individual', 'company'].includes(normalized.type)) {
+      return res.status(400).json({ success: false, message: 'Invalid type' });
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'status') && !['lead', 'active', 'inactive'].includes(normalized.status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+
+    let hasChanges = false;
+    if (client) {
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, 'name') && client.businessName !== normalized.name) {
+        client.businessName = normalized.name;
+        hasChanges = true;
+      }
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, 'email')) {
+        const nextEmail = normalized.email || null;
+        if ((client.businessEmail || null) !== nextEmail) {
+          client.businessEmail = nextEmail;
+          hasChanges = true;
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, 'phone')) {
+        const nextPhone = normalized.phone || null;
+        if ((client.primaryContactNumber || null) !== nextPhone) {
+          client.primaryContactNumber = nextPhone;
+          hasChanges = true;
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, 'leadSource')) {
+        const nextLeadSource = normalized.leadSource || null;
+        if ((client.leadSource || null) !== nextLeadSource) {
+          client.leadSource = nextLeadSource;
+          hasChanges = true;
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, 'notes')) {
+        const nextNotes = normalized.notes || null;
+        if ((client.notes || null) !== nextNotes) {
+          client.notes = nextNotes;
+          hasChanges = true;
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, 'status')) {
+        const nextStatus = normalized.status;
+        if (client.status !== nextStatus) {
+          client.status = nextStatus;
+          client.isActive = nextStatus !== 'inactive';
+          hasChanges = true;
+        }
+      }
+      if (normalized.tags) {
+        const existing = JSON.stringify(Array.isArray(client.tags) ? client.tags : []);
+        const incoming = JSON.stringify(normalized.tags);
+        if (existing !== incoming) {
+          client.tags = normalized.tags;
+          hasChanges = true;
+        }
+      }
+    }
+
+    if (crmClient) {
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, 'name') && crmClient.name !== normalized.name) {
+        crmClient.name = normalized.name;
+        hasChanges = true;
+      }
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, 'email')) {
+        const nextEmail = normalized.email || null;
+        if ((crmClient.email || null) !== nextEmail) {
+          crmClient.email = nextEmail;
+          hasChanges = true;
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, 'phone')) {
+        const nextPhone = normalized.phone || null;
+        if ((crmClient.phone || null) !== nextPhone) {
+          crmClient.phone = nextPhone;
+          hasChanges = true;
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, 'type') && crmClient.type !== normalized.type) {
+        crmClient.type = normalized.type;
+        hasChanges = true;
+      }
+      if (normalized.tags) {
+        const existing = JSON.stringify(Array.isArray(crmClient.tags) ? crmClient.tags : []);
+        const incoming = JSON.stringify(normalized.tags);
+        if (existing !== incoming) {
+          crmClient.tags = normalized.tags;
+          hasChanges = true;
+        }
+      }
+    }
+
+    if (hasChanges) {
+      await Promise.all([
+        client ? client.save() : Promise.resolve(),
+        crmClient ? crmClient.save() : Promise.resolve(),
+      ]);
+    }
+
+    const refreshedClient = client?.toObject ? client.toObject() : client || mapCrmClientToClient(crmClient);
+    return res.json({
+      success: true,
+      data: {
+        ...refreshedClient,
+        crmType: crmClient?.type || refreshedClient?.crmType || 'individual',
+        legacyCrmClientId: crmClient?._id || refreshedClient?.legacyCrmClientId || null,
+      },
+    });
+  } catch (error) {
+    if (error instanceof mongoose.Error.CastError) {
+      return res.status(404).json({ success: false, message: 'Client not found' });
+    }
+    return res.status(400).json({ success: false, message: error.message || 'Failed to update client' });
+  }
+};
+
+const deactivateCrmClient = async (req, res) => {
+  req.body = { ...(req.body || {}), status: 'inactive' };
+  return updateCrmClient(req, res);
+};
+
 module.exports = {
   createCrmClient,
   listCrmClients,
   getCrmClientById,
+  updateCrmClient,
+  deactivateCrmClient,
 };

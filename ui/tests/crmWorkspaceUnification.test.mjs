@@ -7,8 +7,9 @@ const read = (relativePath) => fs.readFileSync(path.resolve(process.cwd(), relat
 const crmClientsSource = read('src/pages/crm/CrmClientsPage.jsx');
 assert.ok(crmClientsSource.includes('title="Client Management"'), 'CRM clients page should use Client Management title contract');
 assert.ok(crmClientsSource.includes('moduleLabel="CRM"'), 'CRM clients page should use CRM module label');
-assert.ok(crmClientsSource.includes('Import Clients (CSV)'), 'CRM clients page should expose Import Clients (CSV) quick action');
 assert.ok(crmClientsSource.includes('Go to Leads Queue'), 'CRM clients page should expose Go to Leads Queue quick action');
+assert.ok(crmClientsSource.includes('Tag filter'), 'CRM clients page should expose tag filter controls');
+assert.ok(crmClientsSource.includes('Source filter'), 'CRM clients page should expose source filter controls');
 assert.equal(crmClientsSource.includes('neo-label'), false, 'CRM clients page should not include neo-label styles');
 assert.equal(crmClientsSource.includes('neo-input'), false, 'CRM clients page should not include neo-input styles');
 assert.equal(crmClientsSource.includes('components/common/Card'), false, 'CRM clients page should not use legacy Card composition');
