@@ -115,6 +115,9 @@ module.exports = {
     }).passthrough(),
   },
   'PUT /firm-settings': { body: passthroughBody },
+  'GET /cms-intake-settings': { query: passthroughQuery },
+  'PUT /cms-intake-settings': { body: passthroughBody },
+  'POST /cms-intake-settings/intake-api-key/regenerate': { body: passthroughBody },
   'GET /workbaskets': { query: passthroughQuery },
   'POST /workbaskets': { body: z.object({ name: nonEmptyString }).passthrough() },
   'PUT /workbaskets/:workbasketId': {
