@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
 import { crmApi } from '../../api/crm.api';
-import { ROUTES } from '../../constants/routes';
+import { ROUTES, safeRoute } from '../../constants/routes';
+import { resolveCrmErrorMessage } from '../crm/crmUiUtils';
 import { DataTable, InlineNotice, PageSection, RefreshNotice, StatGrid, toArray } from './PlatformShared';
 
 const leadNeedsFollowUp = (lead) => {
@@ -37,11 +38,11 @@ export const PlatformCrmPage = () => {
       setClients(toArray(clientRes?.data?.data || clientRes?.data?.items || clientRes?.data));
       setLeads(toArray(leadRes?.data?.data || leadRes?.data?.items || leadRes?.data));
       setInvoices(toArray(invoiceRes?.data?.data || invoiceRes?.data?.items || invoiceRes?.data));
-    } catch {
+    } catch (loadError) {
       setClients([]);
       setLeads([]);
       setInvoices([]);
-      setError('Unable to load CRM overview right now.');
+      setError(resolveCrmErrorMessage(loadError, 'Unable to load CRM overview right now.'));
     } finally {
       setRefreshing(false);
       setLoading(false);
@@ -103,19 +104,19 @@ export const PlatformCrmPage = () => {
 
       <PageSection title="Quick actions" description="Use CRM as your summary + routing hub; creation flows remain in Client Management and Leads.">
         <div className="action-row">
-          <Link to={ROUTES.CRM_CLIENTS(firmSlug)}>New Client</Link>
-          <Link to={ROUTES.CRM_LEADS(firmSlug)}>Go to Leads Queue</Link>
-          <Link to={ROUTES.CRM_CLIENTS(firmSlug)}>Open Client Management</Link>
+          <Link to={safeRoute(ROUTES.CRM_CLIENTS(firmSlug))}>New Client</Link>
+          <Link to={safeRoute(ROUTES.CRM_LEADS(firmSlug))}>Go to Leads Queue</Link>
+          <Link to={safeRoute(ROUTES.CRM_CLIENTS(firmSlug))}>Open Client Management</Link>
         </div>
       </PageSection>
 
       <PageSection title="CRM areas" description="Open the right CRM surface quickly.">
         <div className="tile-grid">
-          <Link className="module-tile" to={ROUTES.CRM_CLIENTS(firmSlug)}>
+          <Link className="module-tile" to={safeRoute(ROUTES.CRM_CLIENTS(firmSlug))}>
             <strong>Client Management</strong>
             <span>Client records, profile details, and linked docket context.</span>
           </Link>
-          <Link className="module-tile" to={ROUTES.CRM_LEADS(firmSlug)}>
+          <Link className="module-tile" to={safeRoute(ROUTES.CRM_LEADS(firmSlug))}>
             <strong>Leads</strong>
             <span>Pipeline stages, follow-up tracking, and conversion.</span>
           </Link>

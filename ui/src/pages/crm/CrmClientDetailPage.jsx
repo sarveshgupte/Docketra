@@ -47,6 +47,16 @@ export const CrmClientDetailPage = () => {
   const [invoiceForm, setInvoiceForm] = useState({ amount: '', dealId: '' });
   const [markingPaidId, setMarkingPaidId] = useState(null);
 
+  const closeDealModal = () => {
+    setShowDealModal(false);
+    setDealForm({ title: '', value: '', stage: 'new' });
+  };
+
+  const closeInvoiceModal = () => {
+    setShowInvoiceModal(false);
+    setInvoiceForm({ amount: '', dealId: '' });
+  };
+
   const loadData = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -105,8 +115,7 @@ export const CrmClientDetailPage = () => {
         stage: dealForm.stage,
       });
       showSuccess('Deal created successfully.');
-      setShowDealModal(false);
-      setDealForm({ title: '', value: '', stage: 'new' });
+      closeDealModal();
       await loadData();
     } catch (createError) {
       showError(resolveCrmErrorMessage(createError, 'Failed to create deal.'));
@@ -130,8 +139,7 @@ export const CrmClientDetailPage = () => {
         dealId: invoiceForm.dealId || undefined,
       });
       showSuccess('Invoice created successfully.');
-      setShowInvoiceModal(false);
-      setInvoiceForm({ amount: '', dealId: '' });
+      closeInvoiceModal();
       await loadData();
     } catch (createError) {
       showError(resolveCrmErrorMessage(createError, 'Failed to create invoice.'));
@@ -180,7 +188,15 @@ export const CrmClientDetailPage = () => {
     <tr
       key={docket._id || docket.caseId}
       className="cursor-pointer"
+      role="link"
+      tabIndex={0}
       onClick={() => navigate(safeRoute(ROUTES.CASE_DETAIL(firmSlug, docket._id || docket.caseId)))}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          navigate(safeRoute(ROUTES.CASE_DETAIL(firmSlug, docket._id || docket.caseId)));
+        }
+      }}
     >
       <td>{docket.caseNumber || docket.caseId || '—'}</td>
       <td>{docket.title || docket.category || '—'}</td>
@@ -258,7 +274,7 @@ export const CrmClientDetailPage = () => {
         ) : null}
       </PageSection>
 
-      <Modal isOpen={showDealModal} onClose={() => setShowDealModal(false)} title="Add Deal" maxWidth="lg">
+      <Modal isOpen={showDealModal} onClose={closeDealModal} title="Add Deal" maxWidth="lg">
         <form onSubmit={handleCreateDeal} className="grid gap-4">
           <Input label="Title" value={dealForm.title} onChange={(event) => setDealForm((prev) => ({ ...prev, title: event.target.value }))} required />
           <Input label="Value (₹)" type="number" value={dealForm.value} onChange={(event) => setDealForm((prev) => ({ ...prev, value: event.target.value }))} />
@@ -271,13 +287,13 @@ export const CrmClientDetailPage = () => {
             </select>
           </div>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setShowDealModal(false)}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={closeDealModal}>Cancel</Button>
             <Button type="submit" loading={savingDeal} disabled={savingDeal}>Create Deal</Button>
           </div>
         </form>
       </Modal>
 
-      <Modal isOpen={showInvoiceModal} onClose={() => setShowInvoiceModal(false)} title="Add Invoice" maxWidth="lg">
+      <Modal isOpen={showInvoiceModal} onClose={closeInvoiceModal} title="Add Invoice" maxWidth="lg">
         <form onSubmit={handleCreateInvoice} className="grid gap-4">
           <Input label="Amount (₹)" type="number" value={invoiceForm.amount} onChange={(event) => setInvoiceForm((prev) => ({ ...prev, amount: event.target.value }))} required />
           <div>
@@ -288,7 +304,7 @@ export const CrmClientDetailPage = () => {
             </select>
           </div>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setShowInvoiceModal(false)}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={closeInvoiceModal}>Cancel</Button>
             <Button type="submit" loading={savingInvoice} disabled={savingInvoice}>Create Invoice</Button>
           </div>
         </form>
