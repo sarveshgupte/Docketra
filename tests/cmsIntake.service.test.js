@@ -11,9 +11,11 @@ const docketAuditService = require('../src/services/docketAudit.service');
 
 async function testLeadOnlyFlow() {
   const originalLeadCreate = Lead.create;
+  const originalLeadFindByIdAndUpdate = Lead.findByIdAndUpdate;
   const originalFirmFindById = Firm.findById;
 
-  Lead.create = async (payload) => ({ _id: 'lead-1', ...payload });
+  Lead.create = async (payload) => ({ _id: '507f1f77bcf86cd799439101', ...payload });
+  Lead.findByIdAndUpdate = async () => ({ _id: '507f1f77bcf86cd799439101' });
   Firm.findById = () => ({ select: () => ({ lean: async () => null }) });
 
   try {
@@ -36,7 +38,7 @@ async function testLeadOnlyFlow() {
       submissionMode: 'embedded_form',
     });
 
-    assert.strictEqual(result.lead._id, 'lead-1');
+    assert.strictEqual(result.lead._id, '507f1f77bcf86cd799439101');
     assert.strictEqual(result.client, null);
     assert.strictEqual(result.docket, null);
     assert.strictEqual(result.submissionMode, 'embedded_form');
@@ -50,17 +52,20 @@ async function testLeadOnlyFlow() {
     assert.strictEqual(result.lead.metadata.submissionMode, 'embedded_form');
   } finally {
     Lead.create = originalLeadCreate;
+    Lead.findByIdAndUpdate = originalLeadFindByIdAndUpdate;
     Firm.findById = originalFirmFindById;
   }
 }
 
 async function testLeadAndClientFlow() {
   const originalLeadCreate = Lead.create;
+  const originalLeadFindByIdAndUpdate = Lead.findByIdAndUpdate;
   const originalFirmFindById = Firm.findById;
   const originalFindClient = clientService.findClientByEmailOrPhone;
   const originalCreateClient = clientService.createClient;
 
-  Lead.create = async (payload) => ({ _id: 'lead-2', ...payload });
+  Lead.create = async (payload) => ({ _id: '507f1f77bcf86cd799439102', ...payload });
+  Lead.findByIdAndUpdate = async () => ({ _id: '507f1f77bcf86cd799439102' });
   Firm.findById = () => ({ select: () => ({ lean: async () => null }) });
   clientService.findClientByEmailOrPhone = async () => null;
   clientService.createClient = async () => ({ _id: 'client-doc-1', clientId: 'C000123' });
@@ -72,11 +77,12 @@ async function testLeadAndClientFlow() {
       intakeConfig: { autoCreateClient: true, autoCreateDocket: false },
     });
 
-    assert.strictEqual(result.lead._id, 'lead-2');
+    assert.strictEqual(result.lead._id, '507f1f77bcf86cd799439102');
     assert.strictEqual(result.client.clientId, 'C000123');
     assert.strictEqual(result.docket, null);
   } finally {
     Lead.create = originalLeadCreate;
+    Lead.findByIdAndUpdate = originalLeadFindByIdAndUpdate;
     Firm.findById = originalFirmFindById;
     clientService.findClientByEmailOrPhone = originalFindClient;
     clientService.createClient = originalCreateClient;
@@ -85,14 +91,20 @@ async function testLeadAndClientFlow() {
 
 async function testLeadClientAndDocketFlow() {
   const originalLeadCreate = Lead.create;
+  const originalLeadFindByIdAndUpdate = Lead.findByIdAndUpdate;
   const originalFirmFindById = Firm.findById;
   const originalFindClient = clientService.findClientByEmailOrPhone;
   const originalCreateClient = clientService.createClient;
   const originalMapRouting = routingService.mapServiceToRouting;
   const originalCaseCreate = Case.create;
   const originalLogDocketEvent = docketAuditService.logDocketEvent;
+  const updateCalls = [];
 
-  Lead.create = async (payload) => ({ _id: 'lead-3', ...payload });
+  Lead.create = async (payload) => ({ _id: '507f1f77bcf86cd799439103', ...payload });
+  Lead.findByIdAndUpdate = async (id, update) => {
+    updateCalls.push({ id, update });
+    return { _id: id };
+  };
   Firm.findById = () => ({ select: () => ({ lean: async () => null }) });
   clientService.findClientByEmailOrPhone = async () => null;
   clientService.createClient = async () => ({ _id: 'client-doc-2', clientId: 'C000124' });
@@ -119,11 +131,17 @@ async function testLeadClientAndDocketFlow() {
       intakeConfig: { autoCreateClient: true, autoCreateDocket: true },
     });
 
-    assert.strictEqual(result.lead._id, 'lead-3');
+    assert.strictEqual(result.lead._id, '507f1f77bcf86cd799439103');
     assert.strictEqual(result.client.clientId, 'C000124');
     assert.strictEqual(result.docket.caseId, 'CASE-20260418-00001');
+    assert.strictEqual(result.metadata.intakeOutcome.createdClient, true);
+    assert.strictEqual(result.metadata.intakeOutcome.createdDocket, true);
+    assert.strictEqual(result.metadata.intakeOutcome.clientId, 'C000124');
+    assert.strictEqual(result.metadata.intakeOutcome.docketId, 'CASE-20260418-00001');
+    assert.ok(updateCalls.length > 0);
   } finally {
     Lead.create = originalLeadCreate;
+    Lead.findByIdAndUpdate = originalLeadFindByIdAndUpdate;
     Firm.findById = originalFirmFindById;
     clientService.findClientByEmailOrPhone = originalFindClient;
     clientService.createClient = originalCreateClient;
@@ -135,11 +153,17 @@ async function testLeadClientAndDocketFlow() {
 
 async function testInvalidRoutingConfigGracefulFailure() {
   const originalLeadCreate = Lead.create;
+  const originalLeadFindByIdAndUpdate = Lead.findByIdAndUpdate;
   const originalFirmFindById = Firm.findById;
   const originalFindClient = clientService.findClientByEmailOrPhone;
   const originalCreateClient = clientService.createClient;
 
-  Lead.create = async (payload) => ({ _id: 'lead-4', ...payload });
+  const updateCalls = [];
+  Lead.create = async (payload) => ({ _id: '507f1f77bcf86cd799439104', ...payload });
+  Lead.findByIdAndUpdate = async (id, update) => {
+    updateCalls.push({ id, update });
+    return { _id: id };
+  };
   Firm.findById = () => ({ select: () => ({ lean: async () => null }) });
   clientService.findClientByEmailOrPhone = async () => ({ _id: 'client-doc-3', clientId: 'C000125' });
   clientService.createClient = async () => {
@@ -153,12 +177,17 @@ async function testInvalidRoutingConfigGracefulFailure() {
       intakeConfig: { autoCreateClient: true, autoCreateDocket: true },
     });
 
-    assert.strictEqual(result.lead._id, 'lead-4');
+    assert.strictEqual(result.lead._id, '507f1f77bcf86cd799439104');
     assert.strictEqual(result.client.clientId, 'C000125');
     assert.strictEqual(result.docket, null);
     assert.ok(result.metadata.warnings.some((warning) => warning.includes('Docket routing is incomplete')));
+    assert.strictEqual(result.metadata.intakeOutcome.createdClient, true);
+    assert.strictEqual(result.metadata.intakeOutcome.createdDocket, false);
+    assert.ok(result.metadata.intakeOutcome.warnings.length > 0);
+    assert.ok(updateCalls.length > 0);
   } finally {
     Lead.create = originalLeadCreate;
+    Lead.findByIdAndUpdate = originalLeadFindByIdAndUpdate;
     Firm.findById = originalFirmFindById;
     clientService.findClientByEmailOrPhone = originalFindClient;
     clientService.createClient = originalCreateClient;
@@ -167,11 +196,13 @@ async function testInvalidRoutingConfigGracefulFailure() {
 
 async function testBackwardCompatibleHandleFormSubmission() {
   const originalLeadCreate = Lead.create;
+  const originalLeadFindByIdAndUpdate = Lead.findByIdAndUpdate;
   const originalFirmFindById = Firm.findById;
   const originalFindClient = clientService.findClientByEmailOrPhone;
   const originalCreateClient = clientService.createClient;
 
-  Lead.create = async (payload) => ({ _id: 'lead-legacy', ...payload });
+  Lead.create = async (payload) => ({ _id: '507f1f77bcf86cd799439105', ...payload });
+  Lead.findByIdAndUpdate = async () => ({ _id: '507f1f77bcf86cd799439105' });
   Firm.findById = () => ({ select: () => ({ lean: async () => null }) });
   clientService.findClientByEmailOrPhone = async () => ({ _id: 'client-legacy', clientId: 'C009999' });
   clientService.createClient = async () => ({ _id: 'client-legacy', clientId: 'C009999' });
@@ -182,11 +213,12 @@ async function testBackwardCompatibleHandleFormSubmission() {
       source: 'CMS_FORM',
     });
 
-    assert.strictEqual(result.lead._id, 'lead-legacy');
+    assert.strictEqual(result.lead._id, '507f1f77bcf86cd799439105');
     assert.ok(Object.prototype.hasOwnProperty.call(result, 'client'));
     assert.ok(Object.prototype.hasOwnProperty.call(result, 'docket'));
   } finally {
     Lead.create = originalLeadCreate;
+    Lead.findByIdAndUpdate = originalLeadFindByIdAndUpdate;
     Firm.findById = originalFirmFindById;
     clientService.findClientByEmailOrPhone = originalFindClient;
     clientService.createClient = originalCreateClient;
@@ -195,10 +227,12 @@ async function testBackwardCompatibleHandleFormSubmission() {
 
 async function testApiIntakeIdempotencyAndMetadata() {
   const originalLeadCreate = Lead.create;
+  const originalLeadFindByIdAndUpdate = Lead.findByIdAndUpdate;
   const originalLeadFindOne = Lead.findOne;
   const originalFirmFindById = Firm.findById;
 
-  Lead.create = async (payload) => ({ _id: 'lead-api-1', ...payload });
+  Lead.create = async (payload) => ({ _id: '507f1f77bcf86cd799439106', ...payload });
+  Lead.findByIdAndUpdate = async () => ({ _id: '507f1f77bcf86cd799439106' });
   Lead.findOne = () => ({ sort: () => ({ lean: async () => null }) });
   Firm.findById = () => ({ select: () => ({ lean: async () => null }) });
 
@@ -220,17 +254,18 @@ async function testApiIntakeIdempotencyAndMetadata() {
     assert.strictEqual(created.lead.metadata.idempotencyKey, 'idem-123');
     assert.strictEqual(created.lead.metadata.extraFields.customStatus, 'urgent');
 
-    Lead.findOne = () => ({ sort: () => ({ lean: async () => ({ _id: 'lead-existing', source: 'api_integration', metadata: { pageSlug: null, formSlug: null } }) }) });
+    Lead.findOne = () => ({ sort: () => ({ lean: async () => ({ _id: '507f1f77bcf86cd799439107', source: 'api_integration', metadata: { pageSlug: null, formSlug: null } }) }) });
     const replay = await cmsIntakeService.processCmsSubmission({
       firmId: '507f1f77bcf86cd799439011',
       payload: { name: 'API User', idempotencyKey: 'idem-123' },
       intakeConfig: { autoCreateClient: false, autoCreateDocket: false },
       submissionMode: 'api_intake',
     });
-    assert.strictEqual(replay.lead._id, 'lead-existing');
+    assert.strictEqual(replay.lead._id, '507f1f77bcf86cd799439107');
     assert.strictEqual(replay.metadata.idempotentReplay, true);
   } finally {
     Lead.create = originalLeadCreate;
+    Lead.findByIdAndUpdate = originalLeadFindByIdAndUpdate;
     Lead.findOne = originalLeadFindOne;
     Firm.findById = originalFirmFindById;
   }

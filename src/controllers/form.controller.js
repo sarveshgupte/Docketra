@@ -27,6 +27,25 @@ function ensurePublicFormFieldRequirements(fields = []) {
   }
 }
 
+function normalizeFieldType(value) {
+  const type = String(value || '').trim().toLowerCase();
+  if (type === 'email' || type === 'phone' || type === 'text') return type;
+  return 'text';
+}
+
+function normalizeFormFields(rawFields) {
+  const source = Array.isArray(rawFields) && rawFields.length > 0 ? rawFields : DEFAULT_FIELDS;
+  return source.map((field, index) => {
+    const key = String(field?.key || '').trim() || `field_${index + 1}`;
+    return {
+      key,
+      label: String(field?.label || key).trim() || key,
+      type: normalizeFieldType(field?.type),
+      required: Boolean(field?.required) || normalizeFieldKey(key) === REQUIRED_PUBLIC_FIELD_KEY,
+    };
+  });
+}
+
 function normalizeAllowedDomains(domains = []) {
   return domains
     .map((value) => String(value || '').trim().toLowerCase())
@@ -84,8 +103,7 @@ const createForm = async (req, res) => {
     const name = String(req.body?.name || '').trim();
     if (!name) return res.status(400).json({ success: false, message: 'name is required' });
 
-    const rawFields = req.body?.fields;
-    const fields = Array.isArray(rawFields) && rawFields.length > 0 ? rawFields : DEFAULT_FIELDS;
+    const fields = normalizeFormFields(req.body?.fields);
     ensurePublicFormFieldRequirements(fields);
 
     const form = await Form.create({
@@ -135,7 +153,7 @@ const updateForm = async (req, res) => {
       updates.name = nextName;
     }
     if (Array.isArray(req.body.fields)) {
-      updates.fields = req.body.fields.length > 0 ? req.body.fields : DEFAULT_FIELDS;
+      updates.fields = normalizeFormFields(req.body.fields);
       ensurePublicFormFieldRequirements(updates.fields);
     }
 
@@ -242,10 +260,6 @@ const submitForm = async (req, res) => {
         ipAddress: req.socket?.remoteAddress || req.ip || null,
       },
       submissionMode: embedMode ? EMBEDDED_SUBMISSION_MODE : 'public_form',
-      intakeConfig: {
-        autoCreateClient: false,
-        autoCreateDocket: false,
-      },
     });
 
     return res.status(201).json({
@@ -255,6 +269,7 @@ const submitForm = async (req, res) => {
         successMessage: form.successMessage || 'Thank you. Your submission has been received.',
         redirectUrl: form.redirectUrl || null,
         submissionMode: embedMode ? EMBEDDED_SUBMISSION_MODE : 'public_form',
+        outcome: result?.metadata?.intakeOutcome || null,
       },
     });
   } catch (error) {
