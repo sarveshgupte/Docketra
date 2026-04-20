@@ -6,12 +6,9 @@ const featureGate = require('../src/services/featureGate.service');
 function testExports() {
   const expectedExports = [
     'isFirmCreationDisabled',
-    'isGoogleAuthDisabled',
     'areFileUploadsDisabled',
-    'isInboundEmailEnabled',
     'isExternalStorageEnabled',
     'ensureFirmCreationEnabled',
-    'ensureGoogleAuthEnabled',
     'ensureFileUploadsEnabled',
   ];
 

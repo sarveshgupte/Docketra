@@ -15,7 +15,6 @@ import { buildCreateDocketPayload, validateCreateDocketPayload, resolveEarliestE
 const STEPS = ['Basic Info', 'Classification', 'Routing', 'Assignment', 'Review & Create'];
 
 const defaultForm = {
-  workType: 'client',
   title: '',
   description: '',
   categoryId: '',
@@ -38,12 +37,12 @@ const FIELD_TO_STEP = {
   assignedTo: 3,
 };
 
-export const GuidedDocketForm = ({ onCreated, onCancel, initialWorkType = 'client', initialClientId = '' }) => {
+export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) => {
   const { showError } = useToast();
   const [step, setStep] = useState(0);
   const [submitError, setSubmitError] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
-  const [formData, setFormData] = useState({ ...defaultForm, workType: initialWorkType === 'internal' ? 'internal' : 'client' });
+  const [formData, setFormData] = useState(defaultForm);
   const [errors, setErrors] = useState({});
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
@@ -59,7 +58,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialWorkType = 'clien
       || formData.categoryId
       || formData.subcategoryId
       || formData.assignedTo
-      || (formData.workType === 'client' && formData.clientId)
+      || formData.clientId
     );
   }, [formData]);
 
@@ -91,12 +90,13 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialWorkType = 'clien
         setClients(nextClients);
 
         setFormData((prev) => {
+          const firmDefaultClientId = nextClients.find((item) => item.isDefaultClient || item.isSystemClient || item.isInternal || item.clientId === 'C000001')?.clientId || '';
           const preferredClientId = initialClientId && nextClients.some((item) => item.clientId === initialClientId)
             ? initialClientId
             : '';
           return {
             ...prev,
-            clientId: prev.clientId || preferredClientId || nextClients[0]?.clientId || '',
+            clientId: prev.clientId || preferredClientId || firmDefaultClientId || nextClients[0]?.clientId || '',
             workbasketId: prev.workbasketId || nextWorkbaskets[0]?._id || '',
           };
         });
@@ -162,7 +162,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialWorkType = 'clien
     if (step === 1) return Boolean(formData.categoryId) && Boolean(formData.subcategoryId);
     if (step === 2) return Boolean(formData.workbasketId);
     return true;
-  }, [formData.clientId, formData.title, formData.workType, formData.workbasketId, step]);
+  }, [formData.clientId, formData.title, formData.workbasketId, step]);
 
   const updateField = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -244,40 +244,16 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialWorkType = 'clien
       {step === 0 && (
         <>
           <Input label="Title" required value={formData.title} onChange={(e) => updateField('title', e.target.value)} error={errors.title} helpText="Use a clear title your team can recognize quickly." />
-          <div>
-            <p className="mb-2 block text-sm font-medium text-gray-800">Work Type <span className="ml-1 text-red-500">*</span></p>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant={formData.workType === 'client' ? 'primary' : 'outline'}
-                onClick={() => {
-                  setFormData((prev) => ({ ...prev, workType: 'client', clientId: prev.clientId || clients[0]?.clientId || '' }));
-                  setErrors((prev) => ({ ...prev, clientId: '' }));
-                }}
-              >
-                Client Work
-              </Button>
-              <Button
-                type="button"
-                variant={formData.workType === 'internal' ? 'primary' : 'outline'}
-                onClick={() => {
-                  setFormData((prev) => ({ ...prev, workType: 'internal', clientId: '' }));
-                  setErrors((prev) => ({ ...prev, clientId: '' }));
-                }}
-              >
-                Internal Task
-              </Button>
-            </div>
-          </div>
           <Select
-            label={formData.workType === 'internal' ? 'Client (optional for internal work)' : 'Client'}
-            required={formData.workType !== 'internal'}
+            label="Client (defaults to your firm for internal work)"
+            required
             value={formData.clientId}
             onChange={(e) => updateField('clientId', e.target.value)}
             error={errors.clientId}
-            disabled={loading.clients || formData.workType === 'internal'}
+            disabled={loading.clients}
+            helpText="Select a client. Use your firm (default) for internal tasks."
             options={[
-              { value: '', label: formData.workType === 'internal' ? 'Internal work (no client required)' : (loading.clients ? 'Loading clients...' : 'Select client') },
+              { value: '', label: loading.clients ? 'Loading clients...' : 'Use default firm client (auto-filled on submit)' },
               ...clients.map((item) => ({ value: item.clientId, label: `${item.clientId} - ${item.businessName || 'Unnamed client'}` })),
             ]}
           />
@@ -343,8 +319,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialWorkType = 'clien
           <h3>Review</h3>
           <p><strong>Title:</strong> {formData.title || '—'}</p>
           <p><strong>Description:</strong> {formData.description || '—'}</p>
-          <p><strong>Work Type:</strong> {formData.workType === 'internal' ? 'Internal Work' : 'Client Work'}</p>
-          <p><strong>Client:</strong> {formData.workType === 'internal' ? 'Not linked (internal)' : ((clients.find((item) => item.clientId === formData.clientId)?.businessName && `${formData.clientId} - ${clients.find((item) => item.clientId === formData.clientId)?.businessName}`) || formData.clientId || '—')}</p>
+          <p><strong>Client:</strong> {((clients.find((item) => item.clientId === formData.clientId)?.businessName && `${formData.clientId} - ${clients.find((item) => item.clientId === formData.clientId)?.businessName}`) || formData.clientId || 'Default firm client (auto-selected)')}</p>
           <p><strong>Category:</strong> {(categories.find((item) => item._id === formData.categoryId)?.name) || '—'}</p>
           <p><strong>Subcategory:</strong> {(subcategories.find((item) => item.id === formData.subcategoryId)?.name) || '—'}</p>
           <p><strong>Workbasket:</strong> {(workbaskets.find((item) => item._id === formData.workbasketId)?.name) || '—'}</p>

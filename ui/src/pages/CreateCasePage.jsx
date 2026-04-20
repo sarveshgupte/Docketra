@@ -12,7 +12,6 @@ export const CreateCasePage = () => {
   const { firmSlug } = useParams();
   const { showSuccess } = useToast();
   const queryParams = new URLSearchParams(location.search || '');
-  const initialWorkType = location.state?.initialWorkType === 'internal' ? 'internal' : 'client';
   const initialClientId = queryParams.get('clientId') || location.state?.clientId || '';
 
   return (
@@ -24,7 +23,6 @@ export const CreateCasePage = () => {
     >
       <div className="create-case">
         <GuidedDocketForm
-          initialWorkType={initialWorkType}
           initialClientId={initialClientId}
           onCancel={() => navigate(ROUTES.CASES(firmSlug))}
           onCreated={(response) => {
