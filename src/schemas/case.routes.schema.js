@@ -21,6 +21,7 @@ const createCaseBody = z.object({
   caseSubCategory: z.string().trim().optional(),
   clientId: clientIdString.optional(),
   isInternal: queryBoolean.optional(),
+  // Deprecated in create payloads; retained for backward compatibility.
   workType: z.enum(['client', 'internal']).optional(),
   priority: z.enum(['Low', 'Medium', 'High', 'Urgent']).optional(),
   assignedTo: xidString.optional(),

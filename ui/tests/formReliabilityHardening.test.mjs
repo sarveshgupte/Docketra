@@ -10,6 +10,8 @@ assert.ok(createDocketFormSource.includes('setStatusMessage(\'Creating docket…
 assert.ok(createDocketFormSource.includes('if (loading.submit) return;'), 'Create docket submit should block duplicate submissions');
 assert.ok(createDocketFormSource.includes('setSubmitError('), 'Create docket flow should expose stable form-level error feedback');
 assert.ok(createDocketFormSource.includes('onCancel?.();'), 'Create docket flow should support explicit cancel behavior');
+assert.ok(!createDocketFormSource.includes('Client Work'), 'Create docket flow should not show work-type toggle options');
+assert.ok(createDocketFormSource.includes('Client (defaults to your firm for internal work)'), 'Create docket flow should communicate default firm client behavior');
 
 const clientsPageSource = read('src/pages/ClientsPage.jsx');
 assert.ok(clientsPageSource.includes('validateClientForm'), 'Client modal should include explicit validation');

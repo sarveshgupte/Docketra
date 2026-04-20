@@ -33,6 +33,15 @@ async function run() {
   assert.strictEqual(clientCreate.clientId, 'C000123');
   assert.strictEqual(clientCreate.workType, 'client');
 
+  const createWithoutClient = createSchema.parse({
+    title: 'Internal review via default client',
+    description: 'No explicit client selected',
+    categoryId: '507f1f77bcf86cd799439011',
+    subcategoryId: 'internal-qc',
+  });
+  assert.strictEqual(createWithoutClient.clientId, undefined);
+  assert.strictEqual(createWithoutClient.workType, undefined);
+
   const listQuery = listSchema.parse({
     isInternal: 'true',
     workType: 'internal',
@@ -49,4 +58,3 @@ run().catch((error) => {
   console.error('Case route schema internal-work tests failed:', error);
   process.exit(1);
 });
-
