@@ -355,10 +355,12 @@ const categoryWorklist = async (req, res) => {
  */
 const employeeWorklist = async (req, res) => {
   try {
+    const requestedPage = Number.parseInt(req.query?.page, 10);
     const requestedLimit = Number.parseInt(req.query?.limit, 10);
+    const normalizedPage = Number.isFinite(requestedPage) ? Math.max(requestedPage, 1) : 1;
     const normalizedLimit = Number.isFinite(requestedLimit)
       ? Math.min(Math.max(requestedLimit, 1), 100)
-      : null;
+      : 25;
     const requestedStatuses = Array.isArray(req.query?.status)
       ? req.query.status.flatMap((value) => String(value).split(','))
       : (typeof req.query?.status === 'string' ? req.query.status.split(',') : []);
@@ -433,13 +435,14 @@ const employeeWorklist = async (req, res) => {
     
     const casesQuery = Case.find(enforceTenantScope(query, req, { source: 'search.employeeWorklist' }))
       .select('caseId caseNumber caseName category subcategory caseSubCategory dueDate slaDueAt createdAt createdBy updatedAt status clientId clientName assignedToXID assignedToName')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip((normalizedPage - 1) * normalizedLimit)
+      .limit(normalizedLimit);
 
-    if (normalizedLimit) {
-      casesQuery.limit(normalizedLimit);
-    }
-
-    const cases = await casesQuery.lean();
+    const [cases, total] = await Promise.all([
+      casesQuery.lean(),
+      Case.countDocuments(enforceTenantScope(query, req, { source: 'search.employeeWorklist.count' })),
+    ]);
 
     const missingClientNameIds = [...new Set(
       (cases || [])
@@ -492,6 +495,12 @@ const employeeWorklist = async (req, res) => {
         clientId: c.clientId || null,
         clientName: c.clientName || clientNameByClientId.get(String(c.clientId || '').trim()) || null,
       })),
+      pagination: {
+        page: normalizedPage,
+        limit: normalizedLimit,
+        total,
+        pages: Math.ceil(total / normalizedLimit) || 1,
+      },
     });
   } catch (error) {
     res.status(500).json({

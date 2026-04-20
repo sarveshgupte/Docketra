@@ -7,7 +7,18 @@ const log = require('../utils/log');
  * Handles MongoDB connection with proper error handling and retry logic
  */
 
+let connectPromise = null;
+
 const connectDB = async () => {
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
+
+  if (connectPromise) {
+    return connectPromise;
+  }
+
+  connectPromise = (async () => {
   try {
     // VALIDATION: Strict schema enforcement
     mongoose.set('strict', true);
@@ -33,10 +44,16 @@ const connectDB = async () => {
     mongoose.connection.on('disconnected', () => {
       log.warn('MONGOOSE_DISCONNECTED');
     });
+    return conn.connection;
   } catch (error) {
     log.error('MONGODB_CONNECT_FAILED', { error: error.message });
     process.exit(1);
+  } finally {
+    connectPromise = null;
   }
+  })();
+
+  return connectPromise;
 };
 
 module.exports = connectDB;

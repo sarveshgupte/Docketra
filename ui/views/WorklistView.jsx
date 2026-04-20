@@ -58,6 +58,8 @@ export function WorklistView({
   const [categoryFilter, setCategoryFilter] = useState('');
   const [subcategoryFilter, setSubcategoryFilter] = useState('');
   const [showActiveOnly, setShowActiveOnly] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0, limit: 25 });
 
   const isPendingView = variant === 'pending';
 
@@ -77,11 +79,12 @@ export function WorklistView({
         const pendingData = response?.data?.data;
         setRecords(normalizeRecords(pendingData));
       } else {
-        const response = await worklistApi.getEmployeeWorklist({ assigneeXID });
+        const response = await worklistApi.getEmployeeWorklist({ assigneeXID, page, limit: 25 });
         const worklistPayload = Array.isArray(response?.data)
           ? response.data
           : response?.data?.data;
         setRecords(normalizeRecords(worklistPayload));
+        setPagination(response?.pagination || { page, pages: 1, total: worklistPayload?.length || 0, limit: 25 });
       }
     } catch (err) {
       console.error('Failed to load worklist:', err);
@@ -90,6 +93,10 @@ export function WorklistView({
     } finally {
       setLoading(false);
     }
+  }, [assigneeXID, isPendingView, page]);
+
+  useEffect(() => {
+    setPage(1);
   }, [assigneeXID, isPendingView]);
 
   useEffect(() => {
@@ -370,6 +377,23 @@ export function WorklistView({
           />
         )}
       />
+      {!isPendingView ? (
+        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+          <span>Page {pagination.page} of {Math.max(pagination.pages || 1, 1)} · {pagination.total || 0} dockets</span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" disabled={page <= 1} onClick={() => setPage((prev) => Math.max(1, prev - 1))}>
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              disabled={page >= Math.max(pagination.pages || 1, 1)}
+              onClick={() => setPage((prev) => prev + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </Card>
   );
 }
