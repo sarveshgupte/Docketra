@@ -1,18 +1,23 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { PlatformShell } from '../../components/platform/PlatformShell';
-import { Card } from '../../components/common/Card';
-import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
-import { Modal } from '../../components/common/Modal';
+import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
-import { PageHeader } from '../../components/layout/PageHeader';
-import { DataTable } from '../../components/common/DataTable';
-import { EmptyState } from '../../components/ui/EmptyState';
+import { Modal } from '../../components/common/Modal';
+import { PlatformShell } from '../../components/platform/PlatformShell';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { crmApi } from '../../api/crm.api';
 import { adminApi } from '../../api/admin.api';
 import { formatDate } from '../../utils/formatters';
+import {
+  DataTable,
+  FilterBar,
+  InlineNotice,
+  PageSection,
+  RefreshNotice,
+  StatGrid,
+} from '../platform/PlatformShared';
+import { resolveCrmErrorMessage } from './crmUiUtils';
 
 const LEAD_STAGE_MAP = { new: 'Draft', contacted: 'Pending', qualified: 'Pending', converted: 'Approved', lost: 'Rejected' };
 const LEAD_STAGE_LABEL = { new: 'New', contacted: 'Contacted', qualified: 'Qualified', converted: 'Converted', lost: 'Lost' };
@@ -41,6 +46,7 @@ export const LeadsPage = () => {
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
   const [leads, setLeads] = useState([]);
   const [users, setUsers] = useState([]);
   const [viewMode, setViewMode] = useState('list');
@@ -50,30 +56,14 @@ export const LeadsPage = () => {
   const [updatingId, setUpdatingId] = useState(null);
   const [selectedLead, setSelectedLead] = useState(null);
   const [filters, setFilters] = useState({ stage: '', ownerXid: '', dueOnly: false });
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    source: 'manual',
-    ownerXid: '',
-    nextFollowUpAt: '',
-  });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', source: 'manual', ownerXid: '', nextFollowUpAt: '' });
   const [formErrors, setFormErrors] = useState({});
-  const [detailForm, setDetailForm] = useState({
-    stage: 'new',
-    ownerXid: '',
-    nextFollowUpAt: '',
-    lastContactAt: '',
-    lostReason: '',
-    note: '',
-  });
+  const [detailForm, setDetailForm] = useState({ stage: 'new', ownerXid: '', nextFollowUpAt: '', lastContactAt: '', lostReason: '', note: '' });
 
   const loadLeads = useCallback(async ({ background = false } = {}) => {
-    if (background) {
-      setRefreshing(true);
-    } else {
-      setInitialLoading(true);
-    }
+    if (background) setRefreshing(true);
+    else setInitialLoading(true);
+    setError('');
     try {
       const response = await crmApi.listLeads({
         ...(filters.stage ? { stage: filters.stage } : {}),
@@ -81,8 +71,10 @@ export const LeadsPage = () => {
         ...(filters.dueOnly ? { dueOnly: true } : {}),
       });
       setLeads(Array.isArray(response?.data) ? response.data : []);
-    } catch (error) {
-      showError(error?.message || 'Failed to load leads');
+    } catch (loadError) {
+      const message = resolveCrmErrorMessage(loadError, 'Unable to load leads right now.');
+      setError(message);
+      showError(message);
       setLeads([]);
     } finally {
       setRefreshing(false);
@@ -95,29 +87,18 @@ export const LeadsPage = () => {
     try {
       const response = await adminApi.getUsers();
       setUsers(Array.isArray(response?.data) ? response.data : []);
-    } catch (_error) {
+    } catch {
       setUsers([]);
     }
   }, [isAdmin]);
 
-  useEffect(() => {
-    loadLeads();
-  }, [loadLeads]);
-
-  useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
+  useEffect(() => { void loadLeads(); }, [loadLeads]);
+  useEffect(() => { void loadUsers(); }, [loadUsers]);
 
   const openModal = () => {
     setForm({ name: '', email: '', phone: '', source: 'manual', ownerXid: '', nextFollowUpAt: '' });
     setFormErrors({});
     setShowModal(true);
-  };
-
-  const closeModal = () => {
-    setShowModal(false);
-    setForm({ name: '', email: '', phone: '', source: 'manual', ownerXid: '', nextFollowUpAt: '' });
-    setFormErrors({});
   };
 
   const openDetail = (lead) => {
@@ -133,11 +114,6 @@ export const LeadsPage = () => {
     setShowDetail(true);
   };
 
-  const closeDetail = () => {
-    setSelectedLead(null);
-    setShowDetail(false);
-  };
-
   const patchLeadInState = useCallback((leadId, update) => {
     setLeads((current) => current.map((lead) => {
       const id = lead._id || lead.id;
@@ -151,9 +127,7 @@ export const LeadsPage = () => {
     if (!lead) return false;
     const stage = lead.stage || lead.status;
     if (filters.stage && stage !== filters.stage) return false;
-    if (filters.ownerXid && String(lead.ownerXid || '').toUpperCase() !== String(filters.ownerXid || '').toUpperCase()) {
-      return false;
-    }
+    if (filters.ownerXid && String(lead.ownerXid || '').toUpperCase() !== String(filters.ownerXid || '').toUpperCase()) return false;
     if (filters.dueOnly && !isOverdue(lead)) return false;
     return true;
   }, [filters.dueOnly, filters.ownerXid, filters.stage]);
@@ -164,7 +138,8 @@ export const LeadsPage = () => {
     if (!form.name.trim()) nextErrors.name = 'Lead name is required.';
     if (!form.email.trim() && !form.phone.trim()) nextErrors.contact = 'Add at least one contact method (email or phone).';
     setFormErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
+    if (Object.keys(nextErrors).length) return;
+
     setSaving(true);
     try {
       const response = await crmApi.createLead({
@@ -175,14 +150,12 @@ export const LeadsPage = () => {
         ownerXid: form.ownerXid || undefined,
         nextFollowUpAt: form.nextFollowUpAt ? new Date(`${form.nextFollowUpAt}T00:00:00.000Z`).toISOString() : undefined,
       });
-      showSuccess('Lead created successfully');
+      showSuccess('Lead created successfully.');
       const createdLead = response?.data;
-      if (leadMatchesFilters(createdLead)) {
-        setLeads((current) => [createdLead, ...current]);
-      }
-      closeModal();
-    } catch (error) {
-      showError(error?.message || 'Failed to create lead. Please check required fields.');
+      if (leadMatchesFilters(createdLead)) setLeads((current) => [createdLead, ...current]);
+      setShowModal(false);
+    } catch (createError) {
+      showError(resolveCrmErrorMessage(createError, 'Failed to create lead. Please review the form and try again.'));
     } finally {
       setSaving(false);
     }
@@ -192,31 +165,21 @@ export const LeadsPage = () => {
     setUpdatingId(leadId);
     const previousLead = leads.find((lead) => (lead._id || lead.id) === leadId) || null;
     const previousStage = previousLead?.stage || previousLead?.status || 'new';
-    if (previousLead) {
-      patchLeadInState(leadId, {
-        stage,
-        status: stage,
-      });
-    }
+    if (previousLead) patchLeadInState(leadId, { stage, status: stage });
+
     try {
       if (stage === 'converted') {
         const converted = await crmApi.convertLead(leadId);
         const convertedLead = converted?.data?.lead;
-        if (convertedLead) {
-          patchLeadInState(leadId, convertedLead);
-        }
+        if (convertedLead) patchLeadInState(leadId, convertedLead);
       } else {
         const updated = await crmApi.updateLead(leadId, { stage });
-        if (updated?.data) {
-          patchLeadInState(leadId, updated.data);
-        }
+        if (updated?.data) patchLeadInState(leadId, updated.data);
       }
-      showSuccess(`Lead updated to ${LEAD_STAGE_LABEL[stage] || stage}`);
-    } catch (error) {
-      if (previousLead) {
-        patchLeadInState(leadId, { ...previousLead, stage: previousStage, status: previousStage });
-      }
-      showError(error?.message || 'Failed to update lead');
+      showSuccess(`Lead updated to ${LEAD_STAGE_LABEL[stage] || stage}.`);
+    } catch (updateError) {
+      if (previousLead) patchLeadInState(leadId, { ...previousLead, stage: previousStage, status: previousStage });
+      showError(resolveCrmErrorMessage(updateError, 'Failed to update lead.'));
     } finally {
       setUpdatingId(null);
     }
@@ -240,14 +203,13 @@ export const LeadsPage = () => {
         note: detailForm.note.trim() || undefined,
       };
       const response = await crmApi.updateLead(selectedLead._id, payload);
-      showSuccess('Lead details updated successfully');
       const nextLead = response?.data || convertedLeadPayload;
-      if (nextLead) {
-        patchLeadInState(selectedLead._id, nextLead);
-      }
-      closeDetail();
-    } catch (error) {
-      showError(error?.message || 'Failed to update lead. Please review the form and try again.');
+      if (nextLead) patchLeadInState(selectedLead._id, nextLead);
+      showSuccess('Lead details updated successfully.');
+      setShowDetail(false);
+      setSelectedLead(null);
+    } catch (saveError) {
+      showError(resolveCrmErrorMessage(saveError, 'Failed to update lead details.'));
     } finally {
       setSaving(false);
     }
@@ -263,198 +225,65 @@ export const LeadsPage = () => {
     return acc;
   }, {}), [leads]);
 
-  const columns = [
-    {
-      key: 'name',
-      header: 'Lead',
-      render: (lead) => (
-        <div>
+  const tableRows = leads.map((lead) => {
+    const id = lead._id || lead.id;
+    const stage = lead.stage || lead.status;
+    const isUpdating = updatingId === id;
+    return (
+      <tr key={id}>
+        <td>
           <div className="font-medium">{lead.name || '—'}</div>
           <div className="text-xs text-gray-500">{lead.email || lead.phone || 'No contact info'}</div>
-        </div>
-      ),
-    },
-    {
-      key: 'stage',
-      header: 'Stage',
-      render: (lead) => {
-        const stage = lead.stage || lead.status;
-        return (
+        </td>
+        <td>
           <div className="flex items-center gap-2">
-            <Badge status={LEAD_STAGE_MAP[stage] || 'Draft'}>
-              {LEAD_STAGE_LABEL[stage] || stage || '—'}
-            </Badge>
+            <Badge status={LEAD_STAGE_MAP[stage] || 'Draft'}>{LEAD_STAGE_LABEL[stage] || stage || '—'}</Badge>
             {isOverdue(lead) ? <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Overdue follow-up</span> : null}
           </div>
-        );
-      },
-    },
-    {
-      key: 'owner',
-      header: 'Owner',
-      render: (lead) => lead.owner?.name || lead.ownerXid || 'Unassigned',
-    },
-    {
-      key: 'followUp',
-      header: 'Next Follow-up',
-      render: (lead) => formatDate(lead.nextFollowUpAt) || '—',
-    },
-    {
-      key: 'conversion',
-      header: 'Conversion',
-      render: (lead) => {
-        if ((lead.stage || lead.status) !== 'converted') return 'Not converted';
-        return (
-          <div className="text-xs">
-            <div className="font-medium">Converted to {lead.convertedClientId || 'client'}</div>
-            <div className="text-gray-500">{lead.hasDownstreamWork ? 'Tasks/Dockets started' : 'No downstream work yet'}</div>
-          </div>
-        );
-      },
-    },
-    {
-      key: 'actions',
-      header: 'Actions',
-      render: (lead) => {
-        const id = lead._id || lead.id;
-        const stage = lead.stage || lead.status;
-        const isUpdating = updatingId === id;
-        return (
-          <div className="flex items-center gap-2">
+        </td>
+        <td>{lead.owner?.name || lead.ownerXid || 'Unassigned'}</td>
+        <td>{formatDate(lead.nextFollowUpAt) || '—'}</td>
+        <td>
+          <div className="action-row">
             {isAdmin && stage !== 'converted' ? (
-              <select
-                value={stage}
-                onChange={(e) => handleQuickStageUpdate(id, e.target.value)}
-                disabled={isUpdating}
-                className="border border-gray-200 rounded px-2 py-1 text-xs"
-              >
+              <select value={stage} onChange={(event) => handleQuickStageUpdate(id, event.target.value)} disabled={isUpdating} className="rounded border border-gray-300 px-2 py-1 text-xs">
                 {STAGES.map((option) => <option key={option} value={option}>{LEAD_STAGE_LABEL[option]}</option>)}
               </select>
             ) : null}
             <Button variant="outline" onClick={() => openDetail(lead)}>Manage</Button>
           </div>
-        );
-      },
-    },
-  ];
-
-  const renderPipelineView = () => (
-    <Card className="p-4 overflow-x-auto">
-      <div className="flex gap-4 min-w-max">
-        {STAGES.map((stage) => (
-          <div key={stage} className="w-72 rounded-lg border border-gray-200 bg-gray-50 p-3">
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-semibold text-gray-800">{LEAD_STAGE_LABEL[stage]}</p>
-              <span className="rounded bg-white px-2 py-0.5 text-xs font-medium text-gray-700 border border-gray-200">{leadsByStage[stage]?.length || 0}</span>
-            </div>
-            <div className="space-y-2">
-              {leadsByStage[stage]?.length ? leadsByStage[stage].map((lead) => {
-                const id = lead._id || lead.id;
-                const currentStage = lead.stage || lead.status;
-                const isUpdating = updatingId === id;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => openDetail(lead)}
-                    className="w-full text-left rounded-md border border-gray-200 bg-white p-3 shadow-sm hover:border-gray-300"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-semibold text-gray-900">{lead.name || '—'}</p>
-                      {isOverdue(lead) ? <span className="inline-flex h-2.5 w-2.5 rounded-full bg-red-500 mt-1" title="Follow-up overdue" /> : null}
-                    </div>
-                    <p className="mt-1 text-xs text-gray-600">Owner: {lead.owner?.name || lead.ownerXid || 'Unassigned'}</p>
-                    {lead.nextFollowUpAt ? (
-                      <p className="mt-1 text-xs text-gray-600">Follow-up: {formatDate(lead.nextFollowUpAt)}</p>
-                    ) : (
-                      <p className="mt-1 text-xs text-gray-400">No follow-up set</p>
-                    )}
-                    {isAdmin ? (
-                      <div className="mt-2 flex items-center justify-between gap-2">
-                        <label className="text-xs text-gray-500" htmlFor={`move-${id}`}>Move</label>
-                        <select
-                          id={`move-${id}`}
-                          value={currentStage}
-                          onClick={(event) => event.stopPropagation()}
-                          onChange={(event) => {
-                            event.stopPropagation();
-                            handleQuickStageUpdate(id, event.target.value);
-                          }}
-                          disabled={isUpdating}
-                          className="w-32 border border-gray-200 rounded px-2 py-1 text-xs bg-white"
-                        >
-                          {STAGES.map((option) => <option key={option} value={option}>{LEAD_STAGE_LABEL[option]}</option>)}
-                        </select>
-                      </div>
-                    ) : null}
-                  </button>
-                );
-              }) : (
-                <div className="rounded-md border border-dashed border-gray-300 bg-white p-3 text-xs text-gray-500">No leads in this stage</div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </Card>
-  );
+        </td>
+      </tr>
+    );
+  });
 
   return (
-    <PlatformShell moduleLabel="Operations" title="CRM leads" subtitle="Track lead pipeline progression and owner follow-up commitments.">
-      <PageHeader
-        title="Leads"
-        description="Run your CRM pipeline from intake to conversion and downstream handoff."
-        actions={isAdmin ? (
-          <Button onClick={openModal}>+ New Lead</Button>
-        ) : null}
-      />
+    <PlatformShell moduleLabel="CRM" title="Leads" subtitle="Track pipeline stages, follow-up commitments, and conversion readiness.">
+      <InlineNotice tone="error" message={error} />
+      <RefreshNotice refreshing={refreshing} message="Refreshing leads in the background…" />
 
-      <div className="mb-4 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setViewMode('list')}
-          className={`rounded-md border px-3 py-1.5 text-sm ${viewMode === 'list' ? 'border-primary bg-primary text-white' : 'border-gray-200 bg-white text-gray-700'}`}
-        >
-          List View
-        </button>
-        <button
-          type="button"
-          onClick={() => setViewMode('pipeline')}
-          className={`rounded-md border px-3 py-1.5 text-sm ${viewMode === 'pipeline' ? 'border-primary bg-primary text-white' : 'border-gray-200 bg-white text-gray-700'}`}
-        >
-          Pipeline View
-        </button>
-      </div>
+      <PageSection title="Quick actions" description="Keep terminology and controls aligned with CRM overview and client management.">
+        <div className="action-row">
+          {isAdmin ? <Button onClick={openModal}>New Lead</Button> : null}
+          <Button variant="outline" onClick={() => setViewMode('list')}>List View</Button>
+          <Button variant="outline" onClick={() => setViewMode('pipeline')}>Pipeline View</Button>
+        </div>
+      </PageSection>
 
-      <div className="grid gap-3 md:grid-cols-5 mb-4">
-        {STAGES.map((stage) => (
-          <Card key={stage} className="p-3">
-            <p className="text-xs text-gray-500">{LEAD_STAGE_LABEL[stage]}</p>
-            <p className="text-xl font-semibold">{stageStats[stage] || 0}</p>
-          </Card>
-        ))}
-      </div>
+      <StatGrid items={STAGES.map((stage) => ({ label: LEAD_STAGE_LABEL[stage], value: stageStats[stage] || 0 }))} />
 
-      <Card className="mb-4">
-        <div className="grid gap-3 md:grid-cols-4 p-4">
+      <PageSection title="Filters" description="Filter by stage, owner, and overdue follow-up status.">
+        <FilterBar>
           <div>
-            <label className="text-xs text-gray-600">Filter by stage</label>
-            <select
-              value={filters.stage}
-              onChange={(e) => setFilters((prev) => ({ ...prev, stage: e.target.value }))}
-              className="w-full border border-gray-200 rounded px-2 py-2 text-sm"
-            >
+            <label className="block text-xs text-gray-600" htmlFor="lead-filter-stage">Stage</label>
+            <select id="lead-filter-stage" value={filters.stage} onChange={(event) => setFilters((prev) => ({ ...prev, stage: event.target.value }))} className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm">
               <option value="">All stages</option>
               {STAGES.map((stage) => <option key={stage} value={stage}>{LEAD_STAGE_LABEL[stage]}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-xs text-gray-600">Filter by owner</label>
-            <select
-              value={filters.ownerXid}
-              onChange={(e) => setFilters((prev) => ({ ...prev, ownerXid: e.target.value }))}
-              className="w-full border border-gray-200 rounded px-2 py-2 text-sm"
-            >
+            <label className="block text-xs text-gray-600" htmlFor="lead-filter-owner">Owner</label>
+            <select id="lead-filter-owner" value={filters.ownerXid} onChange={(event) => setFilters((prev) => ({ ...prev, ownerXid: event.target.value }))} className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm">
               <option value="">All owners</option>
               {users.map((item) => {
                 const xid = item.xid || item.xID;
@@ -462,52 +291,61 @@ export const LeadsPage = () => {
               })}
             </select>
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700 mt-6">
-            <input
-              type="checkbox"
-              checked={filters.dueOnly}
-              onChange={(e) => setFilters((prev) => ({ ...prev, dueOnly: e.target.checked }))}
-            />
+          <label className="mt-6 flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" checked={filters.dueOnly} onChange={(event) => setFilters((prev) => ({ ...prev, dueOnly: event.target.checked }))} />
             Follow-up overdue only
           </label>
-          <div className="flex items-end">
-            <Button variant="outline" onClick={() => loadLeads({ background: leads.length > 0 })} loading={refreshing} disabled={refreshing}>
-              {refreshing ? 'Refreshing…' : 'Apply Filters'}
-            </Button>
-          </div>
-        </div>
-      </Card>
+          <Button variant="outline" onClick={() => void loadLeads({ background: leads.length > 0 })} loading={refreshing} disabled={refreshing}>
+            {refreshing ? 'Refreshing…' : 'Apply Filters'}
+          </Button>
+        </FilterBar>
+      </PageSection>
 
-      {initialLoading ? (
-        <Card className="p-4 text-sm text-gray-500">Loading leads…</Card>
-      ) : viewMode === 'pipeline' ? renderPipelineView() : (
-        <Card>
-          <DataTable
-            columns={columns}
-            rows={leads}
-            rowKey="_id"
-            emptyMessage={(
-              <div className="p-8">
-                <EmptyState
-                  title="No leads yet"
-                  description="📭 No leads yet. Submissions will appear here."
-                />
+      <PageSection title={viewMode === 'pipeline' ? 'Pipeline board' : 'Lead queue'} description="Operational lead tracking surface.">
+        {viewMode === 'pipeline' ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            {STAGES.map((stage) => (
+              <div key={stage} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-sm font-semibold">{LEAD_STAGE_LABEL[stage]}</p>
+                  <span className="rounded border border-gray-200 bg-white px-2 py-0.5 text-xs">{leadsByStage[stage]?.length || 0}</span>
+                </div>
+                <div className="space-y-2">
+                  {(leadsByStage[stage] || []).length ? leadsByStage[stage].map((lead) => (
+                    <button key={lead._id || lead.id} type="button" onClick={() => openDetail(lead)} className="w-full rounded border border-gray-200 bg-white p-2 text-left text-xs hover:border-gray-300">
+                      <p className="font-semibold text-sm">{lead.name || '—'}</p>
+                      <p className="text-gray-600">Owner: {lead.owner?.name || lead.ownerXid || 'Unassigned'}</p>
+                      <p className="text-gray-600">Follow-up: {lead.nextFollowUpAt ? formatDate(lead.nextFollowUpAt) : 'Not set'}</p>
+                    </button>
+                  )) : <p className="rounded border border-dashed border-gray-300 bg-white p-2 text-xs text-gray-500">No leads in this stage</p>}
+                </div>
               </div>
-            )}
+            ))}
+          </div>
+        ) : (
+          <DataTable
+            columns={['Lead', 'Stage', 'Owner', 'Next Follow-up', 'Actions']}
+            rows={tableRows}
+            loading={initialLoading}
+            error={error}
+            onRetry={() => void loadLeads()}
+            emptyLabel="No leads yet. Use New Lead to start your pipeline."
+            hasActiveFilters={Boolean(filters.stage || filters.ownerXid || filters.dueOnly)}
+            emptyLabelFiltered="No leads match current filters."
           />
-        </Card>
-      )}
+        )}
+      </PageSection>
 
-      <Modal isOpen={showModal} onClose={closeModal} title="Add New Lead" maxWidth="lg">
-        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1rem' }}>
-          <Input label="Name" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} required error={formErrors.name} placeholder="Enter lead name" />
-          <Input label="Email" type="email" value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} error={formErrors.contact && form.phone.trim() ? '' : formErrors.contact} placeholder="name@company.com" />
-          <Input label="Phone" value={form.phone} onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))} error={formErrors.contact && form.email.trim() ? '' : formErrors.contact} placeholder="+1 555 000 1234" />
-          <Input label="Source" value={form.source} onChange={(e) => setForm((prev) => ({ ...prev, source: e.target.value }))} placeholder="e.g. manual, referral, website" />
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="New Lead" maxWidth="lg">
+        <form onSubmit={handleSubmit} className="grid gap-4">
+          <Input label="Name" value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} required error={formErrors.name} />
+          <Input label="Email" type="email" value={form.email} onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))} error={formErrors.contact && form.phone.trim() ? '' : formErrors.contact} />
+          <Input label="Phone" value={form.phone} onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))} error={formErrors.contact && form.email.trim() ? '' : formErrors.contact} />
+          <Input label="Source" value={form.source} onChange={(event) => setForm((prev) => ({ ...prev, source: event.target.value }))} />
           {isAdmin ? (
             <div>
-              <label className="block text-sm font-medium text-gray-700">Owner</label>
-              <select value={form.ownerXid} onChange={(e) => setForm((prev) => ({ ...prev, ownerXid: e.target.value }))} className="w-full border border-gray-200 rounded px-2 py-2 text-sm">
+              <label className="block text-sm font-medium text-gray-700" htmlFor="lead-owner">Owner</label>
+              <select id="lead-owner" value={form.ownerXid} onChange={(event) => setForm((prev) => ({ ...prev, ownerXid: event.target.value }))} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm">
                 <option value="">Unassigned</option>
                 {users.map((item) => {
                   const xid = item.xid || item.xID;
@@ -516,26 +354,26 @@ export const LeadsPage = () => {
               </select>
             </div>
           ) : null}
-          <Input label="Next Follow-up" type="date" value={form.nextFollowUpAt} onChange={(e) => setForm((prev) => ({ ...prev, nextFollowUpAt: e.target.value }))} />
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-            <Button type="button" variant="outline" onClick={closeModal}>Cancel</Button>
-            <Button type="submit" loading={saving} disabled={saving}>{saving ? 'Saving…' : 'Create Lead'}</Button>
+          <Input label="Next Follow-up" type="date" value={form.nextFollowUpAt} onChange={(event) => setForm((prev) => ({ ...prev, nextFollowUpAt: event.target.value }))} />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setShowModal(false)}>Cancel</Button>
+            <Button type="submit" loading={saving} disabled={saving}>Create Lead</Button>
           </div>
         </form>
       </Modal>
 
-      <Modal isOpen={showDetail} onClose={closeDetail} title={`Manage Lead${selectedLead?.name ? `: ${selectedLead.name}` : ''}`} maxWidth="lg">
-        <div className="grid gap-3">
+      <Modal isOpen={showDetail} onClose={() => setShowDetail(false)} title={`Manage Lead${selectedLead?.name ? `: ${selectedLead.name}` : ''}`} maxWidth="lg">
+        <div className="grid gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Stage</label>
-            <select value={detailForm.stage} onChange={(e) => setDetailForm((prev) => ({ ...prev, stage: e.target.value }))} className="w-full border border-gray-200 rounded px-2 py-2 text-sm">
+            <label className="block text-sm font-medium text-gray-700" htmlFor="detail-stage">Stage</label>
+            <select id="detail-stage" value={detailForm.stage} onChange={(event) => setDetailForm((prev) => ({ ...prev, stage: event.target.value }))} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm">
               {STAGES.map((option) => <option key={option} value={option}>{LEAD_STAGE_LABEL[option]}</option>)}
             </select>
           </div>
           {isAdmin ? (
             <div>
-              <label className="block text-sm font-medium text-gray-700">Owner</label>
-              <select value={detailForm.ownerXid} onChange={(e) => setDetailForm((prev) => ({ ...prev, ownerXid: e.target.value }))} className="w-full border border-gray-200 rounded px-2 py-2 text-sm">
+              <label className="block text-sm font-medium text-gray-700" htmlFor="detail-owner">Owner</label>
+              <select id="detail-owner" value={detailForm.ownerXid} onChange={(event) => setDetailForm((prev) => ({ ...prev, ownerXid: event.target.value }))} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm">
                 <option value="">Unassigned</option>
                 {users.map((item) => {
                   const xid = item.xid || item.xID;
@@ -544,28 +382,26 @@ export const LeadsPage = () => {
               </select>
             </div>
           ) : null}
-          <Input label="Next Follow-up" type="date" value={detailForm.nextFollowUpAt} onChange={(e) => setDetailForm((prev) => ({ ...prev, nextFollowUpAt: e.target.value }))} />
-          <Input label="Last Contact" type="date" value={detailForm.lastContactAt} onChange={(e) => setDetailForm((prev) => ({ ...prev, lastContactAt: e.target.value }))} />
-          {detailForm.stage === 'lost' ? <Input label="Lost Reason" value={detailForm.lostReason} onChange={(e) => setDetailForm((prev) => ({ ...prev, lostReason: e.target.value }))} /> : null}
+          <Input label="Next Follow-up" type="date" value={detailForm.nextFollowUpAt} onChange={(event) => setDetailForm((prev) => ({ ...prev, nextFollowUpAt: event.target.value }))} />
+          <Input label="Last Contact" type="date" value={detailForm.lastContactAt} onChange={(event) => setDetailForm((prev) => ({ ...prev, lastContactAt: event.target.value }))} />
+          {detailForm.stage === 'lost' ? <Input label="Lost Reason" value={detailForm.lostReason} onChange={(event) => setDetailForm((prev) => ({ ...prev, lostReason: event.target.value }))} /> : null}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Add Note</label>
-            <textarea value={detailForm.note} onChange={(e) => setDetailForm((prev) => ({ ...prev, note: e.target.value }))} rows={3} className="w-full border border-gray-200 rounded px-2 py-2 text-sm" placeholder="Capture qualification or relationship context" />
+            <label className="block text-sm font-medium text-gray-700" htmlFor="detail-note">Add Note</label>
+            <textarea id="detail-note" value={detailForm.note} onChange={(event) => setDetailForm((prev) => ({ ...prev, note: event.target.value }))} rows={3} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm" placeholder="Capture qualification context" />
           </div>
-
           <div className="rounded bg-gray-50 p-3">
-            <p className="text-xs font-semibold text-gray-700 mb-2">Recent Activity</p>
+            <p className="mb-2 text-xs font-semibold text-gray-700">Recent Activity</p>
             {Array.isArray(selectedLead?.activitySummary) && selectedLead.activitySummary.length > 0 ? (
-              <ul className="text-xs text-gray-600 space-y-1">
+              <ul className="space-y-1 text-xs text-gray-600">
                 {selectedLead.activitySummary.slice(-5).reverse().map((item, idx) => (
                   <li key={`${item.createdAt || idx}-${item.message}`}>{formatDate(item.createdAt)} · {item.message}</li>
                 ))}
               </ul>
             ) : <p className="text-xs text-gray-500">No activity yet.</p>}
           </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-            <Button type="button" variant="outline" onClick={closeDetail}>Cancel</Button>
-            <Button type="button" onClick={handleSaveDetail} loading={saving} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setShowDetail(false)}>Cancel</Button>
+            <Button type="button" onClick={handleSaveDetail} loading={saving} disabled={saving}>Save Changes</Button>
           </div>
         </div>
       </Modal>

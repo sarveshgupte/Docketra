@@ -285,3 +285,11 @@
 - Ensured command center state resets cleanly on close and route change (query, active selection, search status, and record result groups).
 - Added explicit record-search fallback guidance while keeping module/quick commands operational even if record lookup fails.
 - Added command-center test script wiring in `ui/package.json` (`test:command-center`).
+
+## April 2026: CRM workspace unification and tenant-error messaging fix
+
+- Unified CRM Overview, Client Management, Client Detail, and Leads under one platform page contract (`PlatformShell` + shared `PlatformShared` sections/tables/notices/stats).
+- Refactored CRM Clients away from mixed legacy composition (`Card`, old table wrappers, `neo-*` styles, and inline style-heavy framing) into the shared workspace language.
+- Aligned CRM terminology and quick-action labels across routes (`CRM`, `Client Management`, `Leads`, `New Client`, `Import Clients (CSV)`, `Go to Leads Queue`).
+- Fixed misleading CRM error path by adding CRM-scoped message normalization so valid firm-scoped CRM routes no longer surface false "Firm not found" copy during CRM fetch failures.
+- Added focused regression coverage (`ui/tests/crmWorkspaceUnification.test.mjs`) for CRM route consistency, naming, and error-message correctness safeguards.
