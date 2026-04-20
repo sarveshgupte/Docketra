@@ -75,7 +75,6 @@ export const MarketingContactPage = lazyPage(() => import('../pages/marketing/Co
 export const MarketingSignupPage = lazy(() => import('../pages/marketing/Signup'));
 export const NotFoundPage = lazyPage(() => import('../pages/NotFoundPage'), 'NotFoundPage');
 export const OtpVerificationPage = lazyPage(() => import('../pages/OtpVerificationPage'), 'OtpVerificationPage');
-export const OAuthPostAuthPage = lazyPage(() => import('../pages/OAuthPostAuthPage'), 'OAuthPostAuthPage');
 export const UploadPage = lazyPage(() => import('../pages/UploadPage'), 'UploadPage');
 export const PublicFormPage = lazyPage(() => import('../pages/PublicFormPage'), 'PublicFormPage');
 export const CrmClientsPage = lazyPage(() => import('../pages/crm/CrmClientsPage'), 'CrmClientsPage');

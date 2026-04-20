@@ -12,11 +12,6 @@ const {
   isAdminCurrentlyLocked,
   resolveSessionQuery,
 } = require('../src/services/superadminLifecycle.service');
-const {
-  signGoogleState,
-  parseGoogleState,
-  getGoogleOAuthClient,
-} = require('../src/services/authGoogle.service');
 
 async function runTests() {
   console.log('Running controller decomposition service tests...');
@@ -86,26 +81,6 @@ async function runTests() {
     const result = await resolveSessionQuery(query, sessionMarker);
     assert.deepStrictEqual(result, { ok: true, session: sessionMarker });
     console.log('✅ resolveSessionQuery preserves session-aware query behavior');
-  }
-
-  {
-    process.env.JWT_SECRET = 'controller-decomposition-secret';
-    const raw = signGoogleState({ nonce: 'abc', ts: 123 });
-    const parsed = parseGoogleState(raw);
-    assert.deepStrictEqual(parsed, { nonce: 'abc', ts: 123 });
-    assert.strictEqual(parseGoogleState(`${raw}tampered`), null);
-    console.log('✅ google auth state signing/parsing remains deterministic');
-  }
-
-  {
-    let threw = false;
-    try {
-      getGoogleOAuthClient({});
-    } catch (error) {
-      threw = error.message === 'GOOGLE_OAUTH_CONFIG_MISSING';
-    }
-    assert.strictEqual(threw, true);
-    console.log('✅ getGoogleOAuthClient still enforces required config');
   }
 
   console.log('All controller decomposition service tests passed.');

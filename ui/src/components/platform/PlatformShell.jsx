@@ -6,6 +6,7 @@ import { CommandPalette } from '../common/CommandPalette';
 import api from '../../services/api';
 import { crmApi } from '../../api/crm.api';
 import { isShortcutAllowedTarget } from '../../utils/keyboardShortcuts';
+import { isNavItemActive } from '../../utils/navActive';
 import './platform.css';
 
 const roleRank = { USER: 1, MANAGER: 2, ADMIN: 3, PRIMARY_ADMIN: 4 };
@@ -31,14 +32,20 @@ const navForRole = (firmSlug, role) => {
     {
       section: 'Oversight',
       items: [
-        { to: ROUTES.ADMIN_REPORTS(firmSlug), label: 'Reports', minRole: 'ADMIN' },
+        { to: ROUTES.ADMIN_REPORTS(firmSlug), label: 'Reports', minRole: 'ADMIN', activeMatch: 'exactOrDescendant' },
       ],
     },
     {
       section: 'Administration',
       items: [
-        { to: ROUTES.ADMIN(firmSlug), label: 'Team & Access', minRole: 'ADMIN' },
-        { to: ROUTES.SETTINGS(firmSlug), label: 'Settings', minRole: 'ADMIN' },
+        {
+          to: ROUTES.ADMIN(firmSlug),
+          label: 'Team & Access',
+          minRole: 'ADMIN',
+          activeMatch: 'exactOrDescendant',
+          excludeActiveFor: [ROUTES.ADMIN_REPORTS(firmSlug)],
+        },
+        { to: ROUTES.SETTINGS(firmSlug), label: 'Settings', minRole: 'ADMIN', activeMatch: 'exactOrDescendant' },
       ],
     },
   ];
@@ -88,7 +95,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   const userName = user?.name || user?.xID || 'User';
   const hasAdminAccess = hasAtLeastRole(role, 'ADMIN');
   const currentNavItem = useMemo(
-    () => navSections.flatMap((section) => section.items).find((item) => pathname === item.to || pathname.startsWith(`${item.to}/`)),
+    () => navSections.flatMap((section) => section.items).find((item) => isNavItemActive(pathname, item)),
     [navSections, pathname]
   );
 
@@ -328,7 +335,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`platform__nav-link ${pathname === item.to || pathname.startsWith(`${item.to}/`) ? 'is-active' : ''}`}
+                  className={`platform__nav-link ${isNavItemActive(pathname, item) ? 'is-active' : ''}`}
                   title={item.label}
                 >
                   <span>{item.label}</span>
