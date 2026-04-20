@@ -1,20 +1,9 @@
 const log = require('../utils/log');
 
-const isEnabled = (value, fallback) => {
-  if (value === undefined || value === null || value === '') return fallback;
-  return ['1', 'true', 'yes', 'on'].includes(String(value).trim().toLowerCase());
-};
-
-const isProduction = process.env.NODE_ENV === 'production';
-const workerIntervalSchedulersEnabled = isEnabled(
-  process.env.ENABLE_WORKER_INTERVAL_SCHEDULERS,
-  !isProduction
-);
-
 const workerModules = [
   { name: 'STORAGE_WORKER', path: '../workers/storage.worker' },
   { name: 'STORAGE_INTEGRITY_WORKER', path: '../workers/storageIntegrity.worker' },
-  { name: 'TENANT_CASE_METRICS_WORKER', path: '../workers/tenantCaseMetrics.worker', intervalScheduler: true },
+  { name: 'TENANT_CASE_METRICS_WORKER', path: '../workers/tenantCaseMetrics.worker' },
   { name: 'EMAIL_WORKER', path: '../workers/email.worker' },
   { name: 'AUDIT_WORKER', path: '../workers/audit.worker' },
   { name: 'NOTIFICATION_WORKER', path: '../workers/notification.worker' },
@@ -38,10 +27,6 @@ const startWorkerModule = ({ name, path }) => {
 
 const startBackgroundWorkers = () => {
   workerModules.forEach((moduleConfig) => {
-    if (moduleConfig.intervalScheduler && !workerIntervalSchedulersEnabled) {
-      log.info(`${moduleConfig.name}_SKIPPED`, { reason: 'ENABLE_WORKER_INTERVAL_SCHEDULERS=false' });
-      return;
-    }
     startWorkerModule(moduleConfig);
   });
 };
@@ -51,11 +36,6 @@ const startBackgroundSchedules = () => {
   enqueueDailyStorageIntegrityJob().catch((err) =>
     log.error('[storageIntegritySchedule] registration failed', { message: err.message })
   );
-
-  if (!workerIntervalSchedulersEnabled) {
-    log.info('WORKER_INTERVAL_SCHEDULERS_DISABLED');
-    return;
-  }
 
   const { runStorageHealthCheck } = require('../jobs/storageHealthCheck.job');
   const { cleanupStaleTmpUploads } = require('../utils/cleanupTmpUploads');
@@ -78,5 +58,4 @@ const startBackgroundSchedules = () => {
 module.exports = {
   startBackgroundWorkers,
   startBackgroundSchedules,
-  workerIntervalSchedulersEnabled,
 };
