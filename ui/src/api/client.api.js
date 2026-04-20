@@ -1,8 +1,13 @@
 import { request } from './apiClient';
 
 export const clientApi = {
-  getClients: (activeOnly = false, forCreateCase = false) => {
-    const params = forCreateCase ? { forCreateCase: 'true' } : { activeOnly: activeOnly ? 'true' : 'false' };
+  getClients: (activeOnly = false, forCreateCase = false, options = {}) => {
+    const params = forCreateCase
+      ? { forCreateCase: 'true' }
+      : { activeOnly: activeOnly ? 'true' : 'false' };
+    if (options.page) params.page = options.page;
+    if (options.limit) params.limit = options.limit;
+    if (options.search) params.search = options.search;
     return request((http) => http.get('/clients', { params }), 'Failed to load clients');
   },
 

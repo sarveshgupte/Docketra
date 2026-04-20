@@ -75,6 +75,12 @@ const buildClientListResponse = (clients = []) => {
   };
 };
 
+const parsePositiveInteger = (value, fallback, max = 100) => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return Math.min(parsed, max);
+};
+
 const buildClientLogContext = (req, extra = {}) => ({
   firmId: req.user?.firmId || req.firmId || null,
   requestId: req.requestId || req.headers?.['x-request-id'] || null,
@@ -162,27 +168,52 @@ const getClients = async (req, res) => {
     await ensureDefaultClientForFirm(firm || accessContext.firmId);
 
     setNoCacheHeaders(res);
-    const { activeOnly, forCreateCase } = req.query;
+    const { activeOnly, forCreateCase, search } = req.query;
+    const page = parsePositiveInteger(req.query.page, 1, 100000);
+    const limit = parsePositiveInteger(req.query.limit, 25, 200);
+    const skip = (page - 1) * limit;
     const shouldFilterActiveOnly = parseBooleanQuery(activeOnly);
     const shouldLoadForCreateCase = parseBooleanQuery(forCreateCase);
+    const normalizedSearch = normalizeString(search);
 
     const filter = shouldLoadForCreateCase || shouldFilterActiveOnly
       ? { isActive: true }
       : {};
-    
-    const clients = await ClientRepository.find(
-      accessContext.firmId,
-      filter,
-      accessContext.role,
-      {
-        select: 'clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal isDefaultClient createdAt PAN TAN CIN contactPersonName contactPersonDesignation contactPersonPhoneNumber contactPersonEmailAddress',
-        sort: { clientId: 1 },
-        logContext: buildClientLogContext(req, { model: 'Client' }),
-      }
-    );
+    if (normalizedSearch) {
+      const escapedSearch = normalizedSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.$or = [
+        { businessName: { $regex: escapedSearch, $options: 'i' } },
+        { clientId: { $regex: escapedSearch, $options: 'i' } },
+        { businessEmail: { $regex: escapedSearch, $options: 'i' } },
+      ];
+    }
+
+    const [clients, total] = await Promise.all([
+      ClientRepository.find(
+        accessContext.firmId,
+        filter,
+        accessContext.role,
+        {
+          select: 'clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal isDefaultClient createdAt PAN TAN CIN contactPersonName contactPersonDesignation contactPersonPhoneNumber contactPersonEmailAddress',
+          sort: { clientId: 1 },
+          limit,
+          skip,
+          logContext: buildClientLogContext(req, { model: 'Client' }),
+        }
+      ),
+      ClientRepository.count(accessContext.firmId, filter),
+    ]);
 
     const normalizedClients = normalizeClientList(clients).map(mapClientResponse);
-    return res.json(buildClientListResponse(normalizedClients));
+    return res.json({
+      ...buildClientListResponse(normalizedClients),
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit) || 1,
+      },
+    });
   } catch (error) {
     logClientError('CLIENT_LIST_ERROR', req, error, {
       query: req.query || {},

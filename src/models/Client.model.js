@@ -749,6 +749,7 @@ clientSchema.index({ createdByXid: 1 }); // CANONICAL - xID-based creator querie
 clientSchema.index({ firmId: 1, status: 1 }); // Organization-scoped status queries
 clientSchema.index({ firmId: 1 });
 clientSchema.index({ firmId: 1, createdAt: -1 });
+clientSchema.index({ firmId: 1, isActive: 1, businessName: 1, clientId: 1 }); // Client list table sorting/filtering
 // Enforce one default client per organization - critical for onboarding integrity
 clientSchema.index({ firmId: 1, isDefaultClient: 1 }, {
   unique: true,
