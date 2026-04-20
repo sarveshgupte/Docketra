@@ -47,8 +47,12 @@ const validateRequest = (schema = {}) => (req, res, next) => {
   }
 
   if (errors.length > 0) {
+    const firstError = errors[0] || null;
     return res.status(400).json({
       success: false,
+      message: firstError
+        ? `Validation failed for ${firstError.location}${firstError.path ? `.${firstError.path}` : ''}: ${firstError.message}`
+        : 'Validation failed for request payload.',
       error: {
         code: 'VALIDATION_ERROR',
         details: errors,

@@ -21,6 +21,14 @@ async function testEnsureDefaultClientReturnsExistingClient() {
   Module._load = function(request, parent, isMain) {
     if (request === '../models/Client.model') {
       return {
+        findOne: () => ({
+          session() {
+            return this;
+          },
+          then(resolve) {
+            return Promise.resolve(resolve({ _id: 'client-1', clientId: 'C000001', firmId: 'firm-1', isDefaultClient: true }));
+          },
+        }),
         findOneAndUpdate: async () => {
           findOneAndUpdateCalls += 1;
           return { _id: 'client-1', clientId: 'C000001', firmId: 'firm-1', isDefaultClient: true };
@@ -42,8 +50,8 @@ async function testEnsureDefaultClientReturnsExistingClient() {
   const { ensureDefaultClient } = require('../src/services/defaultClient.guard');
   const existing = await ensureDefaultClient('firm-1', 'Acme Legal');
 
-  assert.strictEqual(generatorCalls, 1);
-  assert.strictEqual(findOneAndUpdateCalls, 1);
+  assert.strictEqual(generatorCalls, 0);
+  assert.strictEqual(findOneAndUpdateCalls, 0);
   assert.strictEqual(existing.clientId, 'C000001');
   console.log('  ✓ default client guard returns existing default client');
 }
@@ -55,6 +63,14 @@ async function testEnsureDefaultClientCreatesAndLogsMissingClient() {
   Module._load = function(request, parent, isMain) {
     if (request === '../models/Client.model') {
       return {
+        findOne: () => ({
+          session() {
+            return this;
+          },
+          then(resolve) {
+            return Promise.resolve(resolve(null));
+          },
+        }),
         findOneAndUpdate: async (...args) => {
           updateArgs = args;
           return { _id: 'client-2', ...args[1].$setOnInsert };

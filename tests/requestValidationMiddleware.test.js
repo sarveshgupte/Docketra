@@ -39,6 +39,7 @@ function createMockResponse() {
   assert.strictEqual(controllerExecuted, false, 'Controller should not execute on validation failure');
   assert.strictEqual(res.statusCode, 400, 'Should return 400 on validation failure');
   assert.deepStrictEqual(res.body.success, false);
+  assert.match(res.body.message, /Validation failed for body\.email:/);
   assert.strictEqual(res.body.error.code, 'VALIDATION_ERROR');
   assert.ok(Array.isArray(res.body.error.details));
   assert.ok(res.body.error.details.some((d) => d.location === 'body'));

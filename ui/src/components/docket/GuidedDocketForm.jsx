@@ -10,6 +10,7 @@ import { caseApi } from '../../api/case.api';
 import { clientApi } from '../../api/client.api';
 import { useToast } from '../../hooks/useToast';
 import { useUnsavedChangesPrompt } from '../../hooks/useUnsavedChangesPrompt';
+import { buildCreateDocketPayload, validateCreateDocketPayload, resolveEarliestErrorStep } from './createDocketPayload';
 
 const STEPS = ['Basic Info', 'Classification', 'Routing', 'Assignment', 'Review & Create'];
 
@@ -25,6 +26,16 @@ const defaultForm = {
 };
 
 const isEmailLikeError = (message) => typeof message === 'string' && message.toLowerCase().includes('validation');
+const FIELD_TO_STEP = {
+  title: 0,
+  workType: 0,
+  clientId: 0,
+  categoryId: 1,
+  subcategoryId: 1,
+  workbasketId: 2,
+  priority: 2,
+  assignedTo: 3,
+};
 
 export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) => {
   const { showError } = useToast();
@@ -122,19 +133,23 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
 
   const validateStep = (stepIndex = step) => {
     const nextErrors = {};
-    const title = formData.title.trim();
+    const payload = buildCreateDocketPayload(formData);
 
     if (stepIndex === 0) {
-      if (!title) nextErrors.title = 'Enter a title to continue.';
-      else if (title.length < 5) nextErrors.title = 'Title should be at least 5 characters.';
-
-      if (!formData.clientId) nextErrors.clientId = 'Select a client to continue.';
+      if (!payload.title) nextErrors.title = 'Enter a title to continue.';
+      else if (payload.title.length < 5) nextErrors.title = 'Title should be at least 5 characters.';
+      if (!payload.isInternal && !payload.clientId) nextErrors.clientId = 'Select a client for client work.';
     }
 
-    if (stepIndex === 2 && !formData.workbasketId) nextErrors.workbasketId = 'Workbasket mapping is required before submit.';
+    if (stepIndex === 1) {
+      if (!payload.categoryId) nextErrors.categoryId = 'Select a category to continue.';
+      if (!payload.subcategoryId) nextErrors.subcategoryId = 'Select a subcategory to continue.';
+    }
 
-    if (formData.categoryId && formData.subcategoryId) {
-      const isValidSub = subcategories.some((item) => item.id === formData.subcategoryId);
+    if (stepIndex === 2 && !payload.workbasketId) nextErrors.workbasketId = 'Workbasket mapping is required before submit.';
+
+    if (payload.categoryId && payload.subcategoryId) {
+      const isValidSub = subcategories.some((item) => item.id === payload.subcategoryId);
       if (!isValidSub) nextErrors.subcategoryId = 'Selected subcategory is not valid for this category.';
     }
 
@@ -143,7 +158,8 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   };
 
   const canProceed = useMemo(() => {
-    if (step === 0) return Boolean(formData.title.trim()) && Boolean(formData.clientId);
+    if (step === 0) return Boolean(formData.title.trim()) && (formData.workType === 'internal' || Boolean(formData.clientId));
+    if (step === 1) return Boolean(formData.categoryId) && Boolean(formData.subcategoryId);
     if (step === 2) return Boolean(formData.workbasketId);
     return true;
   }, [formData.clientId, formData.title, formData.workbasketId, step]);
@@ -162,21 +178,17 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   const handleCreate = async () => {
     if (loading.submit) return;
     setSubmitError('');
-    if (!validateStep(0) || !validateStep(2)) return;
+    const payload = buildCreateDocketPayload(formData);
+    const payloadErrors = validateCreateDocketPayload(payload, { categories, subcategories });
+    if (!validateStep(0) || !validateStep(1) || !validateStep(2) || Object.keys(payloadErrors).length > 0) {
+      setErrors((prev) => ({ ...prev, ...payloadErrors }));
+      return;
+    }
 
     setLoading((prev) => ({ ...prev, submit: true }));
     setStatusMessage('Creating docket…');
     try {
-      const response = await caseApi.createDocket({
-        title: formData.title.trim(),
-        description: formData.description.trim(),
-        categoryId: formData.categoryId || undefined,
-        subcategoryId: formData.subcategoryId || undefined,
-        clientId: formData.clientId || undefined,
-        workbasketId: formData.workbasketId,
-        priority: formData.priority || 'medium',
-        assignedTo: formData.assignedTo || undefined,
-      });
+      const response = await caseApi.createDocket(payload);
 
       if (response?.success) {
         onCreated?.(response);
@@ -187,7 +199,24 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
       setSubmitError(apiMessage);
       if (isEmailLikeError(apiMessage)) showError(apiMessage);
     } catch (error) {
-      const apiMessage = error?.response?.data?.message || error?.message || 'Failed to create docket. Please review the fields and try again.';
+      const apiMessage = error?.data?.message || error?.response?.data?.message || error?.message || 'Failed to create docket. Please review the fields and try again.';
+      const fieldErrors = error?.data?.fieldErrors || {};
+      const detailErrors = Array.isArray(error?.data?.error?.details) ? error.data.error.details : [];
+      const detailFieldErrors = detailErrors.reduce((acc, item) => {
+        if (item?.path && item?.message) {
+          const field = String(item.path).split('.').pop();
+          acc[field] = item.message;
+        }
+        return acc;
+      }, {});
+      const mergedErrors = { ...detailFieldErrors, ...fieldErrors };
+      if (Object.keys(mergedErrors).length > 0) {
+        setErrors((prev) => ({ ...prev, ...mergedErrors }));
+        const earliestStep = resolveEarliestErrorStep(mergedErrors, FIELD_TO_STEP);
+        if (earliestStep !== null) {
+          setStep(Math.min(step, earliestStep));
+        }
+      }
       setSubmitError(apiMessage);
       showError(apiMessage);
     } finally {
@@ -236,14 +265,17 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
         <>
           <Select
             label="Category"
+            required
             value={formData.categoryId}
             onChange={(e) => updateField('categoryId', e.target.value)}
             disabled={loading.categories}
+            error={errors.categoryId}
             helpText="Category and subcategory decide routing defaults."
             options={[{ value: '', label: 'Select category' }, ...categories.map((item) => ({ value: item._id, label: item.name }))]}
           />
           <Select
             label="Subcategory"
+            required
             value={formData.subcategoryId}
             onChange={(e) => updateField('subcategoryId', e.target.value)}
             disabled={!formData.categoryId || loading.categories}

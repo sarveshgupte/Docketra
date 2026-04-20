@@ -10,10 +10,14 @@ const paginationQuery = z.object({
   activityLimit: z.coerce.number().int().min(1).max(100).optional(),
 }).strict();
 
+const prioritySchema = z
+  .enum(['low', 'medium', 'high', 'urgent', 'Low', 'Medium', 'High', 'Urgent'])
+  .transform((value) => String(value).toLowerCase());
+
 const createCaseBody = z.object({
   // Title is intentionally optional in createCase controller for backward compatibility.
   title: z.string().trim().min(1).optional(),
-  description: nonEmptyString,
+  description: z.string().trim().optional(),
   categoryId: objectIdString,
   subcategoryId: nonEmptyString,
   category: z.string().trim().optional(),
@@ -23,7 +27,7 @@ const createCaseBody = z.object({
   isInternal: queryBoolean.optional(),
   // Deprecated in create payloads; retained for backward compatibility.
   workType: z.enum(['client', 'internal']).optional(),
-  priority: z.enum(['Low', 'Medium', 'High', 'Urgent']).optional(),
+  priority: prioritySchema.optional(),
   assignedTo: xidString.optional(),
   slaDueDate: z.coerce.date().optional(),
   forceCreate: z.boolean().optional(),
@@ -31,6 +35,7 @@ const createCaseBody = z.object({
   payload: z.record(z.any()).optional(),
   workTypeId: objectIdString.optional(),
   subWorkTypeId: objectIdString.optional(),
+  workbasketId: objectIdString.optional(),
   idempotencyKey: z.string().trim().min(1).optional(),
 }).strict();
 
