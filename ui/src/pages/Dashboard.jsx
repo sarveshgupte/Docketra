@@ -5,7 +5,7 @@ import { Button } from '../components/common/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ROUTES } from '../constants/routes';
 import { SlaBadge } from '../components/common/SlaBadge';
-import { useDashboardWidgetQuery, useSetupStatusQuery } from '../hooks/useDashboardQuery';
+import { useDashboardSummaryQuery, useSetupStatusQuery } from '../hooks/useDashboardQuery';
 
 const FILTERS = ['MY', 'TEAM', 'ALL'];
 const SORT_OPTIONS = ['NEWEST', 'PRIORITY', 'SLA'];
@@ -78,19 +78,16 @@ export const DashboardPage = () => {
   const [workbasketId, setWorkbasketId] = useState('');
 
   const widgetParams = { filter, page, sort, workbasketId };
-  const myDocketsQuery = useDashboardWidgetQuery('myDockets', widgetParams);
-  const overdueDocketsQuery = useDashboardWidgetQuery('overdueDockets', widgetParams);
-  const recentDocketsQuery = useDashboardWidgetQuery('recentDockets', widgetParams);
-  const workbasketLoadQuery = useDashboardWidgetQuery('workbasketLoad', widgetParams);
+  const dashboardSummaryQuery = useDashboardSummaryQuery(widgetParams);
   const { data: isSetupComplete, isLoading: setupLoading } = useSetupStatusQuery();
 
-  const loading = myDocketsQuery.isFetching || overdueDocketsQuery.isFetching
-    || recentDocketsQuery.isFetching || workbasketLoadQuery.isFetching;
+  const loading = dashboardSummaryQuery.isFetching;
+  const dashboardData = dashboardSummaryQuery.data || {};
 
-  const myDockets = myDocketsQuery.data ?? { items: [], total: 0, hasNextPage: false };
-  const overdueDockets = overdueDocketsQuery.data ?? { items: [], total: 0, hasNextPage: false };
-  const recentDockets = recentDocketsQuery.data ?? { items: [], total: 0, hasNextPage: false };
-  const workbasketLoad = workbasketLoadQuery.data ?? [];
+  const myDockets = dashboardData.myDockets ?? { items: [], total: 0, hasNextPage: false };
+  const overdueDockets = dashboardData.overdueDockets ?? { items: [], total: 0, hasNextPage: false };
+  const recentDockets = dashboardData.recentDockets ?? { items: [], total: 0, hasNextPage: false };
+  const workbasketLoad = dashboardData.workbasketLoad ?? [];
 
   const goToDocket = (docket) => {
     if (!docket?.caseInternalId) return;
@@ -171,7 +168,7 @@ export const DashboardPage = () => {
           <DashboardCard title="My Dockets" actions={<Button variant="outline" onClick={() => navigate(ROUTES.CASES(firmSlug))}>View All</Button>}>
             <DocketList
               items={myDockets?.items || []}
-              loading={myDocketsQuery.isFetching}
+              loading={dashboardSummaryQuery.isFetching}
               emptyLabel="No dockets assigned"
               onSelect={goToDocket}
             />
@@ -180,7 +177,7 @@ export const DashboardPage = () => {
           <DashboardCard title="Overdue Dockets" actions={<Button variant="outline" onClick={() => navigate(ROUTES.CASES(firmSlug))}>View All</Button>}>
             <DocketList
               items={overdueDockets?.items || []}
-              loading={overdueDocketsQuery.isFetching}
+              loading={dashboardSummaryQuery.isFetching}
               emptyLabel="No overdue dockets"
               onSelect={goToDocket}
             />
@@ -189,14 +186,14 @@ export const DashboardPage = () => {
           <DashboardCard title="Recent Activity" emoji="📌" actions={<Button variant="outline" onClick={() => navigate(ROUTES.CASES(firmSlug))}>View All</Button>}>
             <DocketList
               items={recentDockets?.items || []}
-              loading={recentDocketsQuery.isFetching}
+              loading={dashboardSummaryQuery.isFetching}
               emptyLabel="No recent dockets"
               onSelect={goToDocket}
             />
           </DashboardCard>
 
           <DashboardCard title="Workbasket Load" actions={<Button variant="outline" onClick={() => navigate(ROUTES.CASES(firmSlug))}>View All</Button>}>
-            <WorkbasketChart items={workbasketLoad} loading={workbasketLoadQuery.isFetching} />
+            <WorkbasketChart items={workbasketLoad} loading={dashboardSummaryQuery.isFetching} />
           </DashboardCard>
         </div>
 

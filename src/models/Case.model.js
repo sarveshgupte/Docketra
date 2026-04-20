@@ -1234,6 +1234,8 @@ caseSchema.index({ firmId: 1, createdAt: 1 }); // Firm-scoped daily creation met
 caseSchema.index({ firmId: 1, status: 1, createdAt: -1 }); // Firm-scoped status dashboards sorted by recency
 caseSchema.index({ firmId: 1, createdAt: -1 });
 caseSchema.index({ firmId: 1, clientId: 1 });
+caseSchema.index({ firmId: 1, workType: 1, status: 1, createdAt: -1 }); // Firm-scoped list view filters with recency sort
+caseSchema.index({ firmId: 1, assignedToXID: 1, workType: 1, status: 1, createdAt: -1 }); // Assignee workload list with work-type filters
 caseSchema.index({ state: 1 }); // Canonical docket state reporting queries
 caseSchema.index({ qcOutcome: 1 }); // QC outcome reporting queries
 caseSchema.index({ firmId: 1, state: 1 }); // Firm-scoped canonical state analytics

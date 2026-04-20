@@ -46,6 +46,10 @@ export const ClientsPage = () => {
   const [selectedClient, setSelectedClient] = useState(null);
   const [savingClient, setSavingClient] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0, limit: 25 });
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [clientForm, setClientForm] = useState({
     businessName: '',
     businessAddress: '',
@@ -64,6 +68,7 @@ export const ClientsPage = () => {
   const [clientFormErrors, setClientFormErrors] = useState({});
   const [clientFormMessage, setClientFormMessage] = useState({ type: '', text: '' });
   const fileInputRef = useRef(null);
+  const searchDebounceRef = useRef(null);
   const normalizedRole = String(user?.role || '').trim().toUpperCase();
   const isAdmin = normalizedRole === 'ADMIN' || normalizedRole === 'PRIMARY_ADMIN' || Boolean(user?.isPrimaryAdmin);
 
@@ -98,7 +103,7 @@ export const ClientsPage = () => {
     setLoading(true);
     setLoadError('');
     try {
-      const response = await clientApi.getClients(false);
+      const response = await clientApi.getClients(false, false, { page, limit: 25, search: searchQuery || undefined });
       const payload = Array.isArray(response?.data)
         ? response.data
         : Array.isArray(response?.clients)
@@ -119,6 +124,7 @@ export const ClientsPage = () => {
         }));
 
       setClients(normalizedClients);
+      setPagination(response?.pagination || { page, pages: 1, total: normalizedClients.length, limit: 25 });
     } catch (error) {
       setClients([]);
       setLoadError(error?.response?.data?.message || error?.message || 'Failed to load clients');
@@ -126,11 +132,22 @@ export const ClientsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [showError]);
+  }, [showError, page, searchQuery]);
 
   useEffect(() => {
     loadClients();
   }, [loadClients]);
+
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      setPage(1);
+      setSearchQuery(searchInput.trim());
+    }, 300);
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, [searchInput]);
 
   const selectedFactSheet = useMemo(
     () => editCfsClient?.clientFactSheet || {},
@@ -462,6 +479,14 @@ export const ClientsPage = () => {
         ) : null}
     >
       <Card>
+        <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
+          <Input
+            label="Search clients"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder="Search by client name, ID, or email"
+          />
+        </div>
         {loading ? <Loading message="Loading clients..." /> : loadError ? (
           <div className="p-8">
             <EmptyState
@@ -486,6 +511,23 @@ export const ClientsPage = () => {
             )}
           />
         )}
+        {!loading && !loadError ? (
+          <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 text-sm text-gray-600">
+            <span>Page {pagination.page} of {Math.max(pagination.pages || 1, 1)} · {pagination.total || 0} clients</span>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" disabled={page <= 1} onClick={() => setPage((prev) => Math.max(1, prev - 1))}>
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                disabled={page >= Math.max(pagination.pages || 1, 1)}
+                onClick={() => setPage((prev) => prev + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </Card>
       <BulkUploadModal
         isOpen={showBulkUpload}

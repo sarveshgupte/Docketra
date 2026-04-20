@@ -20,6 +20,7 @@ log.info('API_RUNTIME_WORKERS_DISABLED');
 // Middleware
 const requestLogger = require('./middleware/requestLogger');
 const requestId = require('./middleware/requestId.middleware');
+const requestTiming = require('./middleware/requestTiming.middleware');
 const { attachRequestContext } = require('./middleware/attachRequestContext');
 const errorHandler = require('./middleware/errorHandler');
 const notFound = require('./middleware/notFound');
@@ -272,6 +273,7 @@ app.use(attachRequestContext);
 app.use(enforceTemporaryIpBlock);
 app.use(requestLifecycle);
 app.use(requestLogger);
+app.use(requestTiming);
 app.use(responseContract);
 app.use(degradedGuard);
 app.use('/api', globalApiLimiter);
