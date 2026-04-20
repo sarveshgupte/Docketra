@@ -123,3 +123,24 @@ To support desktop-heavy daily operations, module navigation now follows a share
    - Record lookup runs only while the command center is open.
    - Stale async responses must be ignored via request sequencing checks.
    - Quick actions and module commands remain usable even when record lookup is degraded.
+
+## CRM workspace contract (April 2026 unification)
+
+CRM now follows one explicit route-level workspace contract across:
+
+- `/crm` (module hub)
+- `/crm/clients` (Client Management)
+- `/crm/clients/:crmClientId` (Client Detail)
+- `/crm/leads` (Leads queue)
+
+### UI contract requirements
+
+- Shared shell + section primitives only (`PlatformShell`, `PageSection`, `StatGrid`, `FilterBar`, platform `DataTable`, inline notices).
+- Consistent quick-action language and ordering across CRM routes.
+- Consistent empty/loading/error treatment and modal rhythm for CRM create/manage flows.
+- No legacy `Layout` semantics, `neo-*` style classes, or route-local visual pattern forks on migrated CRM routes.
+
+### Error handling contract
+
+- CRM route failures must show CRM-specific recovery guidance.
+- Tenant/firm-resolution copy (for example `Firm not found`) is only valid when firm context is truly invalid at the auth/tenant layer, not for routine CRM data-load failures.
