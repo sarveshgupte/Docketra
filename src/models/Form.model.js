@@ -16,6 +16,10 @@ const formFieldSchema = new mongoose.Schema({
     enum: ['text', 'email', 'phone'],
     default: 'text',
   },
+  required: {
+    type: Boolean,
+    default: false,
+  },
 }, { _id: false });
 
 const formSchema = new mongoose.Schema({

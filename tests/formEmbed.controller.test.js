@@ -81,6 +81,7 @@ async function testEmbedSubmissionUsesUnifiedIntakeFlow() {
   assert.strictEqual(captured.payload.utm_source, 'google');
   assert.strictEqual(captured.payload.utm_campaign, 'spring-launch');
   assert.strictEqual(captured.payload.utm_medium, 'cpc');
+  assert.strictEqual(captured.intakeConfig, undefined);
 }
 
 async function testInactiveOrEmbedDisabledFormsAreRejected() {
@@ -106,6 +107,33 @@ async function testInactiveOrEmbedDisabledFormsAreRejected() {
     await formController.submitForm(req, res);
     assert.strictEqual(res.statusCode, 403);
     assert.match(res.payload.message, /Embed is not enabled/i);
+  }
+
+  {
+    const formController = loadController({
+      formMock: {
+        findById: createFindByIdMock({
+          _id: '507f1f77bcf86cd799439011',
+          firmId: '507f1f77bcf86cd799439012',
+          isActive: true,
+          allowEmbed: true,
+          fields: [{ key: 'name', type: 'text' }],
+          allowedEmbedDomains: ['firm.com'],
+        }),
+      },
+      cmsMock: { processCmsSubmission: async () => ({ lead: { _id: 'x' } }) },
+    });
+    const req = {
+      params: { id: '507f1f77bcf86cd799439011' },
+      query: { embed: 'true' },
+      headers: { referer: 'https://evil.com/form' },
+      body: { name: 'N', pageUrl: 'https://evil.com/form' },
+      socket: {},
+    };
+    const res = mockResponse();
+    await formController.submitForm(req, res);
+    assert.strictEqual(res.statusCode, 403);
+    assert.match(res.payload.message, /origin is not allowed/i);
   }
 }
 
