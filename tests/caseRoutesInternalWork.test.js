@@ -29,9 +29,27 @@ async function run() {
     clientId: 'C000123',
     isInternal: false,
     workType: 'client',
+    priority: 'medium',
   });
   assert.strictEqual(clientCreate.clientId, 'C000123');
   assert.strictEqual(clientCreate.workType, 'client');
+  assert.strictEqual(clientCreate.priority, 'medium');
+
+  const guidedPayload = createSchema.parse({
+    title: 'this is a test docket',
+    description: '',
+    categoryId: '507f1f77bcf86cd799439011',
+    subcategoryId: 'legal-subcat',
+    clientId: 'C000001',
+    workType: 'client',
+    isInternal: false,
+    workbasketId: '507f1f77bcf86cd799439012',
+    priority: 'medium',
+    assignedTo: 'X000001',
+  });
+  assert.strictEqual(guidedPayload.description, '');
+  assert.strictEqual(guidedPayload.workbasketId, '507f1f77bcf86cd799439012');
+  assert.strictEqual(guidedPayload.priority, 'medium');
 
   const createWithoutClient = createSchema.parse({
     title: 'Internal review via default client',
