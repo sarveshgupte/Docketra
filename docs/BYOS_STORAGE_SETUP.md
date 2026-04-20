@@ -1,5 +1,7 @@
 # BYOS Storage Setup
 
+> Note: Google OAuth in Docketra is used for Drive BYOS connection only; Google login/signup on public auth pages is retired.
+
 ## BYOS + Metadata-Minimal Design (April 2026)
 
 Docketra uses MongoDB as a control plane only. Firm business files are kept in firm-owned storage.

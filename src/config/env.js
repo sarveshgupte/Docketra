@@ -33,11 +33,8 @@ const envSchema = z
     SUPERADMIN_EMAIL: z.string().trim().email(),
     SUPERADMIN_OBJECT_ID: z.string().trim().regex(MONGODB_OBJECTID_REGEX),
 
-    DISABLE_GOOGLE_AUTH: boolFromEnv,
     GOOGLE_CLIENT_ID: z.string().trim().optional(),
     GOOGLE_CLIENT_SECRET: z.string().trim().optional(),
-    GOOGLE_AUTH_REDIRECT_URI: z.string().trim().optional(),
-    GOOGLE_CALLBACK_URL: z.string().trim().optional(),
     GOOGLE_OAUTH_REDIRECT_URI: z.string().trim().optional(),
 
     ENCRYPTION_PROVIDER: z.enum(['local', 'kms', 'disabled']).default('local'),
@@ -62,18 +59,6 @@ const envSchema = z
   .superRefine((env, ctx) => {
     if (!env.MONGO_URI && !env.MONGODB_URI) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['MONGO_URI'], message: 'MONGO_URI or MONGODB_URI is required' });
-    }
-
-    if (!env.DISABLE_GOOGLE_AUTH) {
-      if (!env.GOOGLE_CLIENT_ID) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['GOOGLE_CLIENT_ID'], message: 'required when Google auth is enabled' });
-      }
-      if (!env.GOOGLE_CLIENT_SECRET) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['GOOGLE_CLIENT_SECRET'], message: 'required when Google auth is enabled' });
-      }
-      if (!env.GOOGLE_AUTH_REDIRECT_URI && !env.GOOGLE_CALLBACK_URL && !env.GOOGLE_OAUTH_REDIRECT_URI) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['GOOGLE_AUTH_REDIRECT_URI'], message: 'required when Google auth is enabled (or set GOOGLE_CALLBACK_URL/GOOGLE_OAUTH_REDIRECT_URI)' });
-      }
     }
 
     if (env.ENCRYPTION_PROVIDER !== 'disabled' && !env.MASTER_ENCRYPTION_KEY) {

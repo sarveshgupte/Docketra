@@ -16,9 +16,6 @@ export const authApi = {
   loginResendOtp: ({ firmSlug, loginToken }) =>
     request((http) => http.post('/auth/login/resend', { firmSlug, loginToken }), 'Unable to resend OTP.'),
 
-  exchangeGoogleAuth: ({ exchangeToken, firmSlug }) =>
-    request((http) => http.post('/auth/google/exchange', { exchangeToken, firmSlug }), 'Google sign-in failed.'),
-
   signupInit: ({ name, email, password, firmName, phone }) =>
     request((http) => http.post('/auth/signup/init', { name, email, password, firmName, phone }), 'Signup failed.'),
 

@@ -15,7 +15,6 @@ import { spacingClasses } from '../theme/tokens';
 import { Stack } from '../components/layout/Stack';
 import { Row } from '../components/layout/Row';
 import { ErrorState } from '../components/feedback/ErrorState';
-import { getApiBaseUrl } from '../utils/apiBaseUrl';
 import { resolvePostLoginDestination } from '../utils/authRedirect';
 import './LoginPage.css';
 
@@ -277,20 +276,6 @@ export const FirmLoginPage = () => {
     }
   };
 
-  const handleGoogleLogin = () => {
-    const apiBase = getApiBaseUrl();
-    if (!apiBase) return;
-
-    const params = new URLSearchParams({
-      intent: 'login',
-      firmSlug: firmSlug || '',
-    });
-
-    // Important: use absolute backend URL so React Router (including firm scoped
-    // routes/basenames) never rewrites this to /app/firm/api/...
-    window.location.assign(`${apiBase}/api/auth/google/start?${params.toString()}`);
-  };
-
   if (firmLoading) return <div className="auth-wrapper"><Card className="auth-card max-w-form"><Loading message="Loading firm information..." /></Card></div>;
 
   if (!firmData) {
@@ -340,20 +325,6 @@ export const FirmLoginPage = () => {
         )}
 
         {error && <ErrorState title="Sign in failed" description={error} />}
-
-        {step === 'credentials' && (
-          <div className="google-container mt-3">
-            <Button
-              type="button"
-              variant="secondary"
-              fullWidth
-              disabled={loading}
-              onClick={handleGoogleLogin}
-            >
-              Continue with Google
-            </Button>
-          </div>
-        )}
 
         {step === 'credentials' ? (
           <form onSubmit={handleCredentialSubmit} noValidate className={`mt-4 ${spacingClasses.formFieldSpacing}`}>
