@@ -22,6 +22,16 @@ export const useDashboardWidgetQuery = (widgetKey, { filter, page, sort, workbas
     gcTime: 15 * 60 * 1000,
   });
 
+export const useDashboardSummaryQuery = ({ filter, page, sort, workbasketId }) =>
+  useQuery({
+    queryKey: ['dashboard', 'summary', { filter, page, sort, workbasketId }],
+    queryFn: () => dashboardApi.getSummary({ filter, page, limit: PAGE_SIZE, sort, workbasketId }),
+    select: (result) => result?.data ?? EMPTY_SUMMARY,
+    placeholderData: keepPreviousData,
+    staleTime: 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
+
 export const useSetupStatusQuery = () =>
   useQuery({
     queryKey: ['firm', 'setup-status'],
