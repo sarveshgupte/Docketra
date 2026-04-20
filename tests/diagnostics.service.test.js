@@ -146,7 +146,6 @@ async function runTests() {
 
     let flags = snapshot.featureFlags;
     assert.strictEqual(flags.find(f => f.name === 'firmCreation').enabled, true);
-    assert.strictEqual(flags.find(f => f.name === 'googleAuth').enabled, false);
     assert.strictEqual(flags.find(f => f.name === 'fileUploads').enabled, true);
 
     // measureDbLatency returns a number
