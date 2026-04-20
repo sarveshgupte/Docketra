@@ -44,6 +44,10 @@ const getOrCreateDefaultClient = async (firmId, options = {}) => {
     session = null,
   } = options;
   try {
+    const existingDefaultClient = await findDefaultClient(firmId, session);
+    if (existingDefaultClient) {
+      return existingDefaultClient;
+    }
     const clientId = await generateNextClientId(firmId, session);
     const defaultClient = await Client.findOneAndUpdate(
       { firmId, isDefaultClient: true },

@@ -80,6 +80,42 @@ module.exports = (deps) => {
     docketAuditService,
   } = deps;
 
+  const sanitizeCreatePayloadForLog = (body = {}) => ({
+    titleProvided: typeof body.title === 'string' ? body.title.trim().length > 0 : Boolean(body.title),
+    descriptionLength: typeof body.description === 'string' ? body.description.trim().length : 0,
+    categoryId: body.categoryId || null,
+    subcategoryId: body.subcategoryId || null,
+    workbasketId: body.workbasketId || null,
+    clientId: body.clientId || null,
+    workType: body.workType || null,
+    isInternal: typeof body.isInternal === 'boolean' ? body.isInternal : null,
+    priority: body.priority || null,
+    assignedTo: body.assignedTo || null,
+    hasPayload: Boolean(body.payload && typeof body.payload === 'object'),
+    payloadKeys: body.payload && typeof body.payload === 'object' ? Object.keys(body.payload).slice(0, 12) : [],
+    hasClientData: Boolean(body.clientData && typeof body.clientData === 'object'),
+    clientDataKeys: body.clientData && typeof body.clientData === 'object' ? Object.keys(body.clientData).slice(0, 12) : [],
+  });
+
+  const buildValidationFailureResponse = (error, responseMeta = {}) => {
+    const validationDetails = Array.isArray(error?.errors) ? error.errors : [];
+    const fieldErrors = validationDetails.reduce((acc, item = {}) => {
+      if (item?.field && item?.message) {
+        acc[item.field] = item.message;
+      }
+      return acc;
+    }, {});
+
+    return {
+      success: false,
+      message: error?.message || 'Docket creation validation failed.',
+      code: error?.code || 'DOCKET_VALIDATION_FAILED',
+      ...(validationDetails.length ? { details: validationDetails } : {}),
+      ...(Object.keys(fieldErrors).length ? { fieldErrors } : {}),
+      ...responseMeta,
+    };
+  };
+
   const createCase = async (req, res) => {
     const requestId = req.requestId || randomUUID();
     req.requestId = requestId;
@@ -675,17 +711,31 @@ module.exports = (deps) => {
           });
         }
 
+        const validationDetails = Array.isArray(error?.errors) ? error.errors : null;
+        const statusCode = validationDetails ? 400 : (error?.statusCode || 400);
+        const responsePayload = validationDetails
+          ? buildValidationFailureResponse(error, responseMeta)
+          : {
+            success: false,
+            message: error?.message || 'Failed to create docket.',
+            code: error?.code || 'CASE_CREATE_FAILED',
+            ...responseMeta,
+          };
+
         log.error('CASE_CREATE_FAILED', {
           req,
           requestId,
           tenantId: firmId?.toString(),
-          error,
+          error: {
+            name: error?.name || null,
+            message: error?.message || null,
+            code: error?.code || null,
+            statusCode,
+            validationDetails,
+          },
+          requestShape: sanitizeCreatePayloadForLog(req.body),
         });
-        return res.status(400).json({
-          success: false,
-          message: 'Failed to create docket.',
-          ...responseMeta,
-        });
+        return res.status(statusCode).json(responsePayload);
       }
     } catch (error) {
       const statusCode = error?.statusCode || 400;
