@@ -168,6 +168,8 @@ async function testConvertLeadUpdatesState() {
   assert.strictEqual(res.statusCode, 200);
   assert.strictEqual(res.payload.data.lead.stage, 'converted');
   assert.strictEqual(res.payload.data.lead.status, 'converted');
+  assert.ok(res.payload.data.lead.linkedClientId);
+  assert.strictEqual(res.payload.data.legacyCrmClientId, 'legacy-crm-1');
   assert.ok(res.payload.data.conversion.convertedAt);
   assert.strictEqual(res.payload.data.conversion.convertedClientId, 'C000123');
 

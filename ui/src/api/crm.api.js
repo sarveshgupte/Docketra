@@ -4,6 +4,8 @@ export const crmApi = {
   listClients: (params) => request((http) => http.get('/crm-clients', { params }), 'Failed to load CRM clients'),
   getClientById: (id) => request((http) => http.get(`/crm-clients/${id}`), 'Failed to load CRM client details'),
   createClient: (data) => request((http) => http.post('/crm-clients', data), 'Failed to create CRM client'),
+  updateClient: (id, data) => request((http) => http.patch(`/crm-clients/${id}`, data), 'Failed to update CRM client'),
+  deactivateClient: (id) => request((http) => http.patch(`/crm-clients/${id}/deactivate`), 'Failed to deactivate CRM client'),
 
   listLeads: (params) => request((http) => http.get('/leads', { params }), 'Failed to load leads'),
   createLead: (data) => request((http) => http.post('/leads', data), 'Failed to create lead'),
