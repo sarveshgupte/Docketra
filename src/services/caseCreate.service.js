@@ -123,9 +123,10 @@ module.exports = (deps) => {
       } = req.body;
       const guidedInput = normalizeCreateInput(req.body);
       const requestedInternal = guidedInput?.isInternal ?? isInternal;
+      // `workType` request field is deprecated for create payloads.
+      // Keep backward compatibility by normalizing from explicit `isInternal` only.
       const { isInternal: normalizedIsInternal, workType: normalizedWorkType } = normalizeWorkMode({
         isInternal: requestedInternal,
-        workType: req.body?.workType,
       });
       
       // Get creator xID from authenticated user (req.user is set by auth middleware)
@@ -252,45 +253,42 @@ module.exports = (deps) => {
         }
       }
 
-      // Client work continues to default to tenant default client when caller omits clientId.
-      if (!normalizedIsInternal && !finalClientId) {
+      // Every new docket must resolve to a firm-scoped client.
+      // If omitted (including cleared client in UI), use tenant default client.
+      if (!finalClientId) {
         const defaultClient = await getOrCreateDefaultClient(firmId, {
           requestId,
           userId: req.user?._id || req.user?.id || null,
         });
         finalClientId = defaultClient?.clientId || 'C000001';
       }
-      if (!normalizedIsInternal) {
-        // Verify client exists and validate status - with firm scoping
-        // PR: Client Lifecycle Enforcement - only ACTIVE clients can be used for new cases
-        const client = await ClientRepository.findByClientId(firmId, finalClientId, req.user.role);
-        
-        if (!client) {
-          return res.status(404).json({
-            success: false,
-            message: `Client ${finalClientId} not found`,
-            ...responseMeta,
-          });
-        }
+      // Verify client exists and validate status - with firm scoping
+      // PR: Client Lifecycle Enforcement - only ACTIVE clients can be used for new cases
+      const client = await ClientRepository.findByClientId(firmId, finalClientId, req.user.role);
+      
+      if (!client) {
+        return res.status(404).json({
+          success: false,
+          message: `Client ${finalClientId} not found`,
+          ...responseMeta,
+        });
+      }
 
-        if (String(client.firmId) !== String(firmId)) {
-          return res.status(403).json({
-            success: false,
-            message: 'Client firm mismatch detected',
-            ...responseMeta,
-          });
-        }
-        
-        // Check client status
-        if (!isClientActive(client.status)) {
-          return res.status(400).json({
-            success: false,
-            message: 'This client is no longer active. Please contact your administrator to proceed.',
-            ...responseMeta,
-          });
-        }
-      } else {
-        finalClientId = finalClientId || null;
+      if (String(client.firmId) !== String(firmId)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Client firm mismatch detected',
+          ...responseMeta,
+        });
+      }
+      
+      // Check client status
+      if (!isClientActive(client.status)) {
+        return res.status(400).json({
+          success: false,
+          message: 'This client is no longer active. Please contact your administrator to proceed.',
+          ...responseMeta,
+        });
       }
       
       // Determine the actual category name to use (for backward compatibility)
