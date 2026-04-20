@@ -1,4 +1,5 @@
 const Lead = require('../models/Lead.model');
+const mongoose = require('mongoose');
 const Firm = require('../models/Firm.model');
 const Case = require('../models/Case.model');
 const { DocketLifecycle } = require('../domain/docketLifecycle');
@@ -96,6 +97,30 @@ function extractExtraFields(payload = {}) {
     extras[safeKey] = normalizeExtraFieldValue(value);
   });
   return Object.keys(extras).length > 0 ? extras : null;
+}
+
+function buildIntakeOutcome({
+  submissionMode,
+  metadata,
+  config,
+  client,
+  docket,
+  warnings = [],
+}) {
+  return {
+    createdClient: Boolean(client?.clientId),
+    createdDocket: Boolean(docket?.caseId),
+    clientId: client?.clientId || null,
+    docketId: docket?.caseId || null,
+    source: metadata.source || null,
+    submissionMode,
+    formId: metadata.formId || null,
+    formSlug: metadata.formSlug || null,
+    autoCreateClientEnabled: Boolean(config?.autoCreateClient),
+    autoCreateDocketEnabled: Boolean(config?.autoCreateDocket),
+    warnings: Array.isArray(warnings) ? warnings : [],
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 function validateSubmission(payload = {}) {
@@ -266,6 +291,14 @@ async function processCmsSubmission({
       externalSubmissionId: metadata.externalSubmissionId,
       idempotencyKey: metadata.idempotencyKey,
       extraFields,
+      intakeOutcome: buildIntakeOutcome({
+        submissionMode,
+        metadata,
+        config,
+        client: null,
+        docket: null,
+        warnings: [],
+      }),
     },
   });
 
@@ -349,6 +382,30 @@ async function processCmsSubmission({
     }
   }
 
+  const finalOutcome = buildIntakeOutcome({
+    submissionMode,
+    metadata,
+    config,
+    client,
+    docket,
+    warnings,
+  });
+  const initialOutcome = lead?.metadata?.intakeOutcome || {};
+  if (
+    initialOutcome.createdClient !== finalOutcome.createdClient
+    || initialOutcome.createdDocket !== finalOutcome.createdDocket
+    || initialOutcome.clientId !== finalOutcome.clientId
+    || initialOutcome.docketId !== finalOutcome.docketId
+    || JSON.stringify(initialOutcome.warnings || []) !== JSON.stringify(finalOutcome.warnings || [])
+  ) {
+    if (mongoose.isValidObjectId(lead._id)) {
+      await Lead.findByIdAndUpdate(lead._id, { $set: { 'metadata.intakeOutcome': finalOutcome } });
+    }
+    if (lead.metadata) {
+      lead.metadata.intakeOutcome = finalOutcome;
+    }
+  }
+
   return {
     lead,
     client: client || null,
@@ -360,6 +417,7 @@ async function processCmsSubmission({
       formSlug: metadata.formSlug,
       timestamp: metadata.timestamp,
       warnings,
+      intakeOutcome: finalOutcome,
     },
   };
 }

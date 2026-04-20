@@ -29,6 +29,8 @@ const LEAD_LIST_SELECT = [
   'lostReason',
   'convertedAt',
   'convertedClientId',
+  'linkedClientId',
+  'metadata',
   'createdAt',
   'activitySummary',
 ].join(' ');
