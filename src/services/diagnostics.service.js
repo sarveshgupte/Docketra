@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const { getState } = require('./systemState.service');
-const { isFirmCreationDisabled, isGoogleAuthDisabled, areFileUploadsDisabled } = require('./featureFlags.service');
+const { isFirmCreationDisabled, areFileUploadsDisabled } = require('./featureFlags.service');
 const { getRedisClient } = require('../config/redis');
 const { getIdempotencyCacheSize } = require('../middleware/idempotency.middleware');
 const metricsService = require('./metrics.service');
@@ -54,7 +54,6 @@ const getDiagnosticsSnapshot = async () => {
     degradedReasons: (state.reasons || []).slice(-MAX_DEGRADED_REASONS),
     featureFlags: [
       { name: 'firmCreation', enabled: !isFirmCreationDisabled() },
-      { name: 'googleAuth', enabled: !isGoogleAuthDisabled() },
       { name: 'fileUploads', enabled: !areFileUploadsDisabled() },
     ],
     redis: getRedisStatus(),

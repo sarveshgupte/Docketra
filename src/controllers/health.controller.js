@@ -5,7 +5,7 @@ const { validateEnv } = require('../config/validateEnv');
 const { getRedisClient } = require('../config/redis');
 const { getBuildMetadata } = require('../services/buildInfo.service');
 const { STATES, markDegraded, getState, setState } = require('../services/systemState.service');
-const { isFirmCreationDisabled, isGoogleAuthDisabled, areFileUploadsDisabled } = require('../services/featureGate.service');
+const { isFirmCreationDisabled, areFileUploadsDisabled } = require('../services/featureGate.service');
 const { getWorkerStatuses } = require('../services/workerRegistry.service');
 
 const DB_LATENCY_THRESHOLD_MS = Number(process.env.DB_LATENCY_THRESHOLD_MS || 750);
@@ -74,7 +74,6 @@ const runReadinessChecks = async () => {
   const featureFlags = {
     firmCreation: isFirmCreationDisabled() ? 'disabled' : 'enabled',
     fileUploads: areFileUploadsDisabled() ? 'disabled' : 'enabled',
-    googleAuth: isGoogleAuthDisabled() ? 'disabled' : 'enabled',
   };
   checks.featureFlags = featureFlags;
 

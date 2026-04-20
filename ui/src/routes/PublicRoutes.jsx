@@ -18,7 +18,6 @@ import {
   MarketingSignupPage,
   MarketingTermsPage,
   OtpVerificationPage,
-  OAuthPostAuthPage,
   ResetPasswordPage,
   SetPasswordPage,
   UploadPage,
@@ -68,7 +67,6 @@ export const PublicRoutes = () => (
     <Route element={<RouteSuspenseOutlet />}>
       <Route path="/signup" element={<MarketingSignupPage />} />
       <Route path="/auth/otp" element={<OtpVerificationPage />} />
-      <Route path="/oauth/post-auth" element={<OAuthPostAuthPage />} />
       <Route path="/:firmSlug/login" element={<FirmLoginPage />} />
       <Route path="/app/:firmSlug" element={<AppFirmRootRedirect />} />
       <Route path="/app/:firmSlug/login" element={<AppFirmLoginRedirect />} />
