@@ -43,6 +43,7 @@ export const CrmClientsPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [deactivatingId, setDeactivatingId] = useState(null);
   const [form, setForm] = useState({
     name: '',
     type: 'individual',
@@ -149,6 +150,10 @@ export const CrmClientsPage = () => {
       showError('Client name is required.');
       return;
     }
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      showError('Please enter a valid email address.');
+      return;
+    }
     setSaving(true);
 
     try {
@@ -186,7 +191,15 @@ export const CrmClientsPage = () => {
       <tr
         key={clientId}
         className="cursor-pointer"
+        role="link"
+        tabIndex={0}
         onClick={() => navigate(safeRoute(ROUTES.CRM_CLIENT_DETAIL(firmSlug, clientId)))}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            navigate(safeRoute(ROUTES.CRM_CLIENT_DETAIL(firmSlug, clientId)));
+          }
+        }}
       >
         <td>{item.businessName || item.name || '—'}</td>
         <td>
@@ -216,16 +229,22 @@ export const CrmClientsPage = () => {
                     size="sm"
                     onClick={async (event) => {
                       event.stopPropagation();
+                      if (deactivatingId) return;
+                      setDeactivatingId(clientId);
                       try {
                         await crmApi.deactivateClient(clientId);
                         showSuccess('Client deactivated.');
                         await loadClients({ background: true });
                       } catch (deactivateError) {
                         showError(resolveCrmErrorMessage(deactivateError, 'Failed to deactivate client.'));
+                      } finally {
+                        setDeactivatingId(null);
                       }
                     }}
+                    disabled={deactivatingId === clientId}
+                    loading={deactivatingId === clientId}
                   >
-                    Deactivate
+                    {deactivatingId === clientId ? 'Deactivating…' : 'Deactivate'}
                   </Button>
                 ) : null}
               </>

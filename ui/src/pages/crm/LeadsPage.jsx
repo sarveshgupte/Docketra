@@ -38,6 +38,12 @@ const isOverdue = (lead) => {
   if (stage === 'converted' || stage === 'lost') return false;
   return new Date(lead.nextFollowUpAt).getTime() < Date.now();
 };
+const toRows = (payload) => {
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload)) return payload;
+  return [];
+};
 
 export const LeadsPage = () => {
   const navigate = useNavigate();
@@ -74,7 +80,7 @@ export const LeadsPage = () => {
         ...(filters.ownerXid ? { ownerXid: filters.ownerXid } : {}),
         ...(filters.dueOnly ? { dueOnly: true } : {}),
       });
-      setLeads(Array.isArray(response?.data) ? response.data : []);
+      setLeads(toRows(response?.data));
     } catch (loadError) {
       const message = resolveCrmErrorMessage(loadError, 'Unable to load leads right now.');
       setError(message);
@@ -105,6 +111,12 @@ export const LeadsPage = () => {
     setShowModal(true);
   };
 
+  const closeModal = () => {
+    setShowModal(false);
+    setForm({ name: '', email: '', phone: '', source: 'manual', ownerXid: '', nextFollowUpAt: '' });
+    setFormErrors({});
+  };
+
   const openDetail = (lead) => {
     setSelectedLead(lead);
     setDetailForm({
@@ -116,6 +128,12 @@ export const LeadsPage = () => {
       note: '',
     });
     setShowDetail(true);
+  };
+
+  const closeDetail = () => {
+    setShowDetail(false);
+    setSelectedLead(null);
+    setDetailForm({ stage: 'new', ownerXid: '', nextFollowUpAt: '', lastContactAt: '', lostReason: '', note: '' });
   };
 
   const patchLeadInState = useCallback((leadId, update) => {
@@ -164,7 +182,7 @@ export const LeadsPage = () => {
       showSuccess('Lead created successfully.');
       const createdLead = response?.data;
       if (leadMatchesFilters(createdLead)) setLeads((current) => [createdLead, ...current]);
-      setShowModal(false);
+      closeModal();
     } catch (createError) {
       showError(resolveCrmErrorMessage(createError, 'Failed to create lead. Please review the form and try again.'));
     } finally {
@@ -350,7 +368,7 @@ export const LeadsPage = () => {
         )}
       </PageSection>
 
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="New Lead" maxWidth="lg">
+      <Modal isOpen={showModal} onClose={closeModal} title="New Lead" maxWidth="lg">
         <form onSubmit={handleSubmit} className="grid gap-4">
           <Input label="Name" value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} required error={formErrors.name} />
           <Input label="Email" type="email" value={form.email} onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))} error={formErrors.contact && form.phone.trim() ? '' : formErrors.contact} />
@@ -370,13 +388,13 @@ export const LeadsPage = () => {
           ) : null}
           <Input label="Next Follow-up" type="date" value={form.nextFollowUpAt} onChange={(event) => setForm((prev) => ({ ...prev, nextFollowUpAt: event.target.value }))} />
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setShowModal(false)}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={closeModal}>Cancel</Button>
             <Button type="submit" loading={saving} disabled={saving}>Create Lead</Button>
           </div>
         </form>
       </Modal>
 
-      <Modal isOpen={showDetail} onClose={() => setShowDetail(false)} title={`Manage Lead${selectedLead?.name ? `: ${selectedLead.name}` : ''}`} maxWidth="lg">
+      <Modal isOpen={showDetail} onClose={closeDetail} title={`Manage Lead${selectedLead?.name ? `: ${selectedLead.name}` : ''}`} maxWidth="lg">
         <div className="grid gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700" htmlFor="detail-stage">Stage</label>
@@ -423,7 +441,7 @@ export const LeadsPage = () => {
                 Open Client Workspace
               </Button>
             ) : null}
-            <Button type="button" variant="outline" onClick={() => setShowDetail(false)}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={closeDetail}>Cancel</Button>
             <Button type="button" onClick={handleSaveDetail} loading={saving} disabled={saving}>Save Changes</Button>
           </div>
         </div>
