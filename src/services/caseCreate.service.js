@@ -520,7 +520,7 @@ module.exports = (deps) => {
           createdBy: req.user.email || req.user.xID, // Legacy field - use email or xID as fallback
           priority: normalizedPriority,
           status: 'OPEN',
-          lifecycle: resolvedAssignee ? DocketLifecycle.IN_WORKLIST : DocketLifecycle.CREATED,
+          lifecycle: resolvedAssignee ? DocketLifecycle.ACTIVE : DocketLifecycle.CREATED,
           assignedToXID: resolvedAssignee || null, // PR: xID Canonicalization - Store in assignedToXID
           assignedTo: null,
           assignedBy: null,
@@ -642,29 +642,39 @@ module.exports = (deps) => {
           userXID: req.user?.xID || null,
         });
 
-        await docketAuditService.logCreation({
-          firmId: newCase.firmId,
-          docketId: newCase.caseId,
-          performedBy: req.user?.xID || createdByXID,
-          performedByRole: req.user?.role,
-          initialData: {
-            status: newCase.status,
-            priority: newCase.priority,
-            category: newCase.caseCategory || newCase.category || null,
-            subcategory: newCase.caseSubCategory || newCase.subcategory || null,
-            queueType: newCase.queueType || null,
-            lifecycle: newCase.lifecycle || null,
-            assignedToXID: newCase.assignedToXID || null,
-            ownerTeamId: newCase.ownerTeamId ? String(newCase.ownerTeamId) : null,
-            isInternal: Boolean(newCase.isInternal),
-            workType: newCase.workType || (newCase.isInternal ? 'internal' : 'client'),
-          },
-          metadata: {
-            source: 'caseCreate.service.createCase',
-            createdByXID,
-          },
-          session,
-        });
+        try {
+          await docketAuditService.logCreation({
+            firmId: newCase.firmId,
+            docketId: newCase.caseId,
+            performedBy: req.user?.xID || createdByXID,
+            performedByRole: req.user?.role,
+            initialData: {
+              status: newCase.status,
+              priority: newCase.priority,
+              category: newCase.caseCategory || newCase.category || null,
+              subcategory: newCase.caseSubCategory || newCase.subcategory || null,
+              queueType: newCase.queueType || null,
+              lifecycle: newCase.lifecycle || null,
+              assignedToXID: newCase.assignedToXID || null,
+              ownerTeamId: newCase.ownerTeamId ? String(newCase.ownerTeamId) : null,
+              isInternal: Boolean(newCase.isInternal),
+              workType: newCase.workType || (newCase.isInternal ? 'internal' : 'client'),
+            },
+            metadata: {
+              source: 'caseCreate.service.createCase',
+              createdByXID,
+            },
+            session,
+          });
+        } catch (auditError) {
+          log.warn('CASE_CREATE_AUDIT_LOG_FAILED', {
+            req,
+            requestId,
+            tenantId: newCase.firmId,
+            caseId: newCase.caseId,
+            error: auditError,
+          });
+        }
 
         return res.status(201).json({
           success: true,
