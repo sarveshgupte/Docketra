@@ -43,7 +43,7 @@ export const PlatformWorkbasketsPage = () => {
       setRows(toArray(res?.data?.data || res?.data?.items));
     } catch {
       setRows([]);
-      setError('Unable to load workbaskets.');
+      setError('Unable to load the workbench queue.');
     } finally {
       setRefreshing(false);
       setLoading(false);
@@ -98,7 +98,7 @@ export const PlatformWorkbasketsPage = () => {
       setSuccess('Docket pulled to worklist.');
       await loadRows({ background: true });
     } catch {
-      setError('Unable to pull docket to worklist.');
+      setError('Unable to move docket to My Worklist.');
     } finally {
       setPendingPullId('');
     }
@@ -106,21 +106,21 @@ export const PlatformWorkbasketsPage = () => {
 
   return (
     <PlatformShell
-      title="Workbasket"
-      subtitle="Team workflow queue for dockets available to be pulled into individual execution."
+      title="Workbench"
+      subtitle="Shared docket queue for work that can be pulled into individual execution."
       actions={<Link to={ROUTES.CASES(firmSlug)}>All Dockets</Link>}
     >
       <InlineNotice tone="error" message={error} />
       <InlineNotice tone="success" message={success} />
-      <RefreshNotice refreshing={refreshing} message="Refreshing workbaskets in the background…" />
-      <PageSection title="Team queue" description={`${filteredRows.length} dockets available in this shared workflow queue.`}>
+      <RefreshNotice refreshing={refreshing} message="Refreshing the workbench queue in the background…" />
+      <PageSection title="Shared queue" description={`${filteredRows.length} dockets available in this shared workflow queue.`}>
         <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL'}>
           <input
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search docket, client, category"
-            aria-label="Search workbaskets"
+            aria-label="Search workbench queue"
           />
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter by status">
             <option value="ALL">All statuses</option>
@@ -167,8 +167,8 @@ export const PlatformWorkbasketsPage = () => {
           error={error}
           onRetry={() => void loadRows()}
           hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL'}
-          emptyLabel="No dockets are currently available to pull from this Workbasket."
-          emptyLabelFiltered="No Workbasket dockets match your current search or filters."
+          emptyLabel="No dockets are currently available to pull from the Workbench."
+          emptyLabelFiltered="No Workbench dockets match your current search or filters."
         />
       </PageSection>
     </PlatformShell>

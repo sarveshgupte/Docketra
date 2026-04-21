@@ -85,13 +85,25 @@ export const getRoleBadgePresentation = (user) => {
   const normalizedRole = String(user?.role || '').trim().toUpperCase();
   const isPrimaryOrSystemAdmin = user?.isPrimaryAdmin || user?.isSystem;
 
+  if (normalizedRole === 'SUPERADMIN') {
+    return { tone: 'InProgress', label: 'SuperAdmin' };
+  }
+
   if (isPrimaryOrSystemAdmin || normalizedRole === 'PRIMARY_ADMIN' || normalizedRole === 'ADMIN') {
     return { tone: 'InProgress', label: (isPrimaryOrSystemAdmin || normalizedRole === 'PRIMARY_ADMIN') ? 'Primary Admin' : 'Admin' };
   }
 
-  if (['STAFF', 'EMPLOYEE', 'USER'].includes(normalizedRole)) {
-    return { tone: 'Pending', label: 'User' };
+  if (normalizedRole === 'MANAGER') {
+    return { tone: 'Pending', label: 'Manager' };
   }
 
-  return { tone: 'Pending', label: normalizedRole ? normalizedRole.charAt(0) + normalizedRole.slice(1).toLowerCase() : 'User' };
+  if (normalizedRole === 'PARTNER') {
+    return { tone: 'Pending', label: 'Partner' };
+  }
+
+  if (['STAFF', 'EMPLOYEE', 'USER'].includes(normalizedRole)) {
+    return { tone: 'Pending', label: 'Employee' };
+  }
+
+  return { tone: 'Pending', label: normalizedRole ? normalizedRole.charAt(0) + normalizedRole.slice(1).toLowerCase() : 'Employee' };
 };
