@@ -30,14 +30,35 @@ export const PlatformCrmPage = () => {
     else setLoading(true);
     setError('');
     try {
-      const [clientRes, leadRes, invoiceRes] = await Promise.all([
+      const [clientResult, leadResult, invoiceResult] = await Promise.allSettled([
         crmApi.listClients({ limit: 50 }),
         crmApi.listLeads({ limit: 50 }),
         crmApi.listInvoices({ limit: 100 }),
       ]);
-      setClients(toArray(clientRes?.data?.data || clientRes?.data?.items || clientRes?.data));
-      setLeads(toArray(leadRes?.data?.data || leadRes?.data?.items || leadRes?.data));
-      setInvoices(toArray(invoiceRes?.data?.data || invoiceRes?.data?.items || invoiceRes?.data));
+
+      const nextClients = clientResult.status === 'fulfilled'
+        ? toArray(clientResult.value?.data?.data || clientResult.value?.data?.items || clientResult.value?.data)
+        : [];
+      const nextLeads = leadResult.status === 'fulfilled'
+        ? toArray(leadResult.value?.data?.data || leadResult.value?.data?.items || leadResult.value?.data)
+        : [];
+      const nextInvoices = invoiceResult.status === 'fulfilled'
+        ? toArray(invoiceResult.value?.data?.data || invoiceResult.value?.data?.items || invoiceResult.value?.data)
+        : [];
+
+      setClients(nextClients);
+      setLeads(nextLeads);
+      setInvoices(nextInvoices);
+
+      const failedCalls = [clientResult, leadResult, invoiceResult].filter((result) => result.status === 'rejected');
+      if (failedCalls.length > 0) {
+        if (failedCalls.length === 3) {
+          const rootError = failedCalls[0].reason;
+          setError(resolveCrmErrorMessage(rootError, 'Unable to load CRM overview right now.'));
+        } else {
+          setError('Some CRM overview data could not be loaded right now. Showing available data.');
+        }
+      }
     } catch (loadError) {
       setClients([]);
       setLeads([]);
@@ -104,7 +125,7 @@ export const PlatformCrmPage = () => {
 
       <PageSection title="Quick actions" description="Use CRM as your summary + routing hub; creation flows remain in Client Management and Leads.">
         <div className="action-row">
-          <Link to={safeRoute(ROUTES.CRM_CLIENTS(firmSlug))}>New Client</Link>
+          <Link to={safeRoute(`${ROUTES.CRM_CLIENTS(firmSlug)}?action=new`)}>New Client</Link>
           <Link to={safeRoute(ROUTES.CRM_LEADS(firmSlug))}>Go to Leads Queue</Link>
           <Link to={safeRoute(ROUTES.CRM_CLIENTS(firmSlug))}>Open Client Management</Link>
         </div>
