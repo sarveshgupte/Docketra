@@ -169,7 +169,7 @@ const otpResendKeyGenerator = (req) => {
   return `ip:${ipKeyGenerator(req)}`;
 };
 const refreshUserKeyGenerator = (req) => {
-  const accessToken = req.body?.accessToken || getCookieValue(req.headers?.cookie, 'accessToken');
+  const accessToken = getCookieValue(req.headers?.cookie, 'accessToken');
   if (accessToken) {
     try {
       const decoded = jwtService.verifyAccessToken(accessToken);
@@ -181,7 +181,7 @@ const refreshUserKeyGenerator = (req) => {
     }
   }
 
-  const refreshToken = req.body?.refreshToken || getCookieValue(req.headers?.cookie, 'refreshToken');
+  const refreshToken = getCookieValue(req.headers?.cookie, 'refreshToken');
   if (refreshToken) {
     return `token:${createHash('sha256').update(refreshToken).digest('hex')}`;
   }

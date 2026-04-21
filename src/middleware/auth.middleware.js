@@ -68,7 +68,7 @@ const ensureTenantDefaultClient = async (req, user) => {
 
 /**
  * Authenticate user - validate JWT and attach full user data to request
- * Verifies JWT token from Authorization header
+ * Verifies JWT token from HTTP-only accessToken cookie
  * Verifies user exists and is active
  * Attaches user document to req.user with userId, firmId, role
  * Special case: allows password changes for users with mustChangePassword flag
@@ -84,15 +84,8 @@ const authenticate = async (req, res, next) => {
       return next();
     }
     const noteAuthFailure = () => metricsService.recordAuthFailure(req.originalUrl || req.url);
-    // Extract token from Authorization header
-    const authHeader = req.headers.authorization;
-    let token = jwtService.extractTokenFromHeader(authHeader);
-    
-    // Fallback to accessToken cookie (Google OAuth sets HTTP-only cookies)
-    if (!token) {
-      const cookieHeader = req.headers.cookie;
-      token = getCookieValue(cookieHeader, 'accessToken');
-    }
+    const cookieHeader = req.headers.cookie;
+    const token = req.cookies?.accessToken || getCookieValue(cookieHeader, 'accessToken');
     
     if (!token) {
       noteAuthFailure();

@@ -2,6 +2,7 @@ const { Server } = require('socket.io');
 const User = require('../models/User.model');
 const jwtService = require('./jwt.service');
 const { isActiveStatus } = require('../utils/status.utils');
+const { getCookieValue } = require('../utils/requestCookies');
 
 let ioInstance = null;
 
@@ -10,14 +11,9 @@ function toRoomKey(firmId, userId) {
 }
 
 function getHandshakeToken(socket) {
-  const authHeader = socket?.handshake?.headers?.authorization;
-  const bearerToken = jwtService.extractTokenFromHeader(authHeader);
-  if (bearerToken) return bearerToken;
-  const authToken = socket?.handshake?.auth?.token;
-  if (typeof authToken === 'string' && authToken.trim()) {
-    return authToken.trim();
-  }
-  return null;
+  const cookieHeader = socket?.handshake?.headers?.cookie;
+  if (!cookieHeader) return null;
+  return getCookieValue(cookieHeader, 'accessToken');
 }
 
 async function resolveSocketIdentity(socket) {
@@ -102,4 +98,7 @@ function emitUserNotification({ firmId, userId, notification }) {
 module.exports = {
   initNotificationSocket,
   emitUserNotification,
+  __private: {
+    getHandshakeToken,
+  },
 };

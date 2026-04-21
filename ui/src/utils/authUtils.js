@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, USER_ROLES } from './constants';
+import { USER_ROLES } from './constants';
 
 /**
  * @deprecated User data is no longer stored in localStorage
@@ -27,13 +27,6 @@ export const isAccessTokenOnlyUser = (user) => {
     return true;
   }
   return false;
-};
-
-/**
- * Check if the current session is access-token-only by checking for refresh token
- */
-export const isAccessTokenOnlySession = () => {
-  return !localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
 };
 
 /**

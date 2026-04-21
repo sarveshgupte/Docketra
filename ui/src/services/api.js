@@ -5,12 +5,12 @@
 
 import axios from 'axios';
 import { API_BASE_URL, ERROR_CODES, SESSION_KEYS, STORAGE_KEYS } from '../utils/constants';
-import { isAccessTokenOnlySession } from '../utils/authUtils';
 import { resolveFirmLoginPath } from '../utils/tenantRouting';
 import { emitOnboardingProgressRefresh, shouldRefreshOnboardingProgress } from '../utils/onboardingProgressRefresh';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -56,7 +56,7 @@ function generateIdempotencyKey() {
   return 'idemp-' + Math.random().toString(36).substring(2) + Date.now();
 }
 
-// Request interceptor - Add JWT Bearer token
+// Request interceptor - add idempotency/impersonation headers
 api.interceptors.request.use(
   (config) => {
     const method = (config.method || '').toLowerCase();
@@ -74,11 +74,6 @@ api.interceptors.request.use(
       }
     }
 
-    const accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-    if (accessToken) {
-      config.headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-    
     // Add impersonation header if SuperAdmin is impersonating a firm
     const impersonatedFirm = localStorage.getItem(STORAGE_KEYS.IMPERSONATED_FIRM);
     if (impersonatedFirm) {
@@ -140,8 +135,6 @@ api.interceptors.response.use(
       setTimeout(() => { redirecting = false; }, REDIRECT_TIMEOUT_MS);
     };
     const clearAuthStorage = () => {
-      localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
-      localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
       localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
     };
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -165,40 +158,11 @@ api.interceptors.response.use(
     }
     
     // Handle token expiry
-    if (status === 401 && error.response?.data?.code === 'TOKEN_EXPIRED' && !originalRequest._retry) {
+    if (status === 401 && !originalRequest._retry && !isPublicAuthFlowRequest(originalRequest)) {
       originalRequest._retry = true;
-
-      if (isAccessTokenOnlySession()) {
-        clearAuthStorage();
-        sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
-          message: 'Your admin session has expired. Please log in again.',
-          type: 'info'
-        }));
-        redirectToLogin();
-        return Promise.reject(error);
-      }
       
       try {
-        // Attempt to refresh token
-        const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
-        
-        if (!refreshToken) {
-          throw new Error('No refresh token available');
-        }
-        
-        // Use the configured api instance for consistency
-        const response = await api.post('/auth/refresh', {
-          refreshToken,
-        });
-        
-        const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data;
-        
-        // Store new tokens
-        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
-        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
-        
-        // Retry original request with new token
-        originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
+        await api.post('/auth/refresh');
         return api(originalRequest);
       } catch (refreshError) {
         // Refresh failed - clear storage and redirect to login
