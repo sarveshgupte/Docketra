@@ -239,6 +239,29 @@ export const PlatformCmsPage = () => {
     setFormEditorSuccess('');
   };
 
+  const scrollToSection = (sectionId) => {
+    if (!sectionId || typeof document === 'undefined') return;
+    const target = document.getElementById(sectionId);
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (typeof window !== 'undefined') {
+      const nextHash = `#${sectionId}`;
+      if (window.location.hash !== nextHash) {
+        window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${nextHash}`);
+      }
+    }
+  };
+
+  const handleCreateForm = () => {
+    resetEditorForCreate();
+    setSelectedFormId('');
+    scrollToSection('embed-forms');
+  };
+
+  const handleGoToForms = () => {
+    scrollToSection('embed-forms');
+  };
+
   const handleSaveForm = async (event) => {
     event.preventDefault();
     if (formSaving) return;
@@ -331,9 +354,9 @@ export const PlatformCmsPage = () => {
       <PageSection title="Quick actions" description="Move from intake setup to queue processing quickly.">
         <div className="action-row">
           <button type="button" onClick={() => void handleCopy(publicLink || embedLink, 'Intake link')} disabled={!selectedForm}>Copy intake link</button>
-          <button type="button" onClick={resetEditorForCreate}>Create new form</button>
-          <Link to={safeRoute(`${ROUTES.CMS(firmSlug)}#intake-queue`)}>Go to Intake Queue</Link>
-          <Link to={safeRoute(`${ROUTES.CMS(firmSlug)}#embed-forms`)}>Go to Forms</Link>
+          <button type="button" onClick={handleCreateForm}>Create new form</button>
+          <Link to={safeRoute(ROUTES.CRM_LEADS(firmSlug))}>Go to Intake Queue</Link>
+          <button type="button" onClick={handleGoToForms}>Go to Forms</button>
           <Link to={safeRoute(`${ROUTES.WORK_SETTINGS(firmSlug)}#cms-intake-settings`)}>Open Intake Settings</Link>
         </div>
       </PageSection>
