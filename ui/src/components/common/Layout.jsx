@@ -367,23 +367,20 @@ export const Layout = ({ children, title, subtitle }) => {
       void fetchNotifications();
     }, 30000);
 
-    const accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-    if (accessToken) {
-      socket = io(resolveSocketUrl(), {
-        path: '/socket.io',
-        auth: { token: accessToken },
-        transports: ['websocket', 'polling'],
-      });
+    socket = io(resolveSocketUrl(), {
+      path: '/socket.io',
+      withCredentials: true,
+      transports: ['websocket', 'polling'],
+    });
 
-      socket.on('notification:new', (payload) => {
-        if (cancelled || !payload) return;
-        setNotificationItems((current) => {
-          const normalized = normalizeNotification(payload);
-          const deduped = current.filter((item) => item.id !== normalized.id);
-          return sortNotificationsLatestFirst([normalized, ...deduped]);
-        });
+    socket.on('notification:new', (payload) => {
+      if (cancelled || !payload) return;
+      setNotificationItems((current) => {
+        const normalized = normalizeNotification(payload);
+        const deduped = current.filter((item) => item.id !== normalized.id);
+        return sortNotificationsLatestFirst([normalized, ...deduped]);
       });
-    }
+    });
 
     return () => {
       cancelled = true;

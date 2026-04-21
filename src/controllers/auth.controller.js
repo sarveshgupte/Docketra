@@ -855,12 +855,11 @@ const handleSuperadminLogin = async (req, res, normalizedXID, password, loginSco
       defaultClientId: null,
       isSuperAdmin: user.isSuperAdmin,
     });
+    authSessionService.setAuthCookies(res, { accessToken });
 
     return res.json({
       success: true,
       message: 'Login successful',
-      accessToken,
-      refreshToken: null,
       isSuperAdmin: true,
       refreshEnabled: false,
       data: user,
@@ -3452,6 +3451,7 @@ const authLoginService = createAuthLoginService({
     clearCachedLoginOtpState,
     buildSuccessfulLoginPayload,
     normalizeFirmSlug,
+    setAuthCookies: (...args) => authSessionService.setAuthCookies(...args),
   },
   services: {
     authOtpService,
@@ -3521,6 +3521,7 @@ const authOtpServiceFacade = authOtpService.createAuthOtpService({
   sendCentralOtp,
   verifyCentralOtp,
   issueAuthTokens,
+  setAuthCookies: (...args) => authSessionService.setAuthCookies(...args),
 });
 
 const authSignupService = createAuthSignupService({

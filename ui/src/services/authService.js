@@ -3,35 +3,12 @@
  */
 
 import api from './api';
-import { ERROR_CODES, STORAGE_KEYS } from '../utils/constants';
-import { isAccessTokenOnlyUser } from '../utils/authUtils';
+import { STORAGE_KEYS } from '../utils/constants';
 import { authApi } from '../api/auth.api';
 
 export const authService = {
   setSessionTokens: (payload = {}) => {
-    const {
-      accessToken,
-      refreshToken,
-      data: userData = {},
-      refreshEnabled,
-      isSuperAdmin,
-    } = payload;
-
-    if (!accessToken) return;
-
-    const userWithFlags = {
-      ...userData,
-      refreshEnabled: refreshEnabled !== undefined ? refreshEnabled : userData.refreshEnabled,
-      isSuperAdmin: isSuperAdmin !== undefined ? isSuperAdmin : userData.isSuperAdmin,
-    };
-
-    const accessTokenOnly = isAccessTokenOnlyUser(userWithFlags);
-    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-    if (!accessTokenOnly && refreshToken) {
-      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-    }
+    const { data: userData = {} } = payload;
 
     if (userData?.firmSlug) {
       localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, userData.firmSlug);
@@ -108,9 +85,6 @@ export const authService = {
     try {
       await api.post('/auth/logout');
     } finally {
-      localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
-      localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-      
       if (!firmSlugToPreserve) {
         localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
       } else {
@@ -230,36 +204,10 @@ export const authService = {
   },
 
   /**
-   * Check if user is authenticated
-   */
-  isAuthenticated: () => {
-    return !!localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-  },
-  
-  /**
    * Refresh access token
    */
   refreshToken: async () => {
-    const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
-    
-    // If no refresh token, this is an access-token-only session
-    if (!refreshToken) {
-      const error = new Error('Refresh not supported for this session');
-      error.code = ERROR_CODES.REFRESH_NOT_SUPPORTED;
-      error.response = { data: { code: ERROR_CODES.REFRESH_NOT_SUPPORTED } };
-      throw error;
-    }
-    
-    const response = await api.post('/auth/refresh', {
-      refreshToken,
-    });
-    
-    if (response.data.success) {
-      const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data;
-      localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
-      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
-    }
-    
+    const response = await api.post('/auth/refresh');
     return response.data;
   },
 };

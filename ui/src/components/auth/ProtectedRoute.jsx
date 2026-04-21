@@ -52,13 +52,6 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
 
   // 1. Authentication check: User must be authenticated
   if (!isAuthenticated) {
-    const hadSession = !!localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-    if (hadSession) {
-      sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
-        message: 'Your session expired. Please sign in again.',
-        type: 'info'
-      }));
-    }
     const loginPathWithReturnTo = appendReturnTo(loginPath, buildReturnTo(location));
     return <Navigate to={loginPathWithReturnTo} replace />;
   }

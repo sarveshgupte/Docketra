@@ -122,10 +122,7 @@ module.exports = {
     }).strip(),
   },
   'POST /refresh': {
-    body: z.object({
-      refreshToken: nonEmptyString.optional(),
-      accessToken: nonEmptyString.optional(),
-    }).strip(),
+    body: z.object({}).strip(),
   },
   'POST /verify-totp': {
     body: z.object({
