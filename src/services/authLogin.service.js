@@ -32,6 +32,7 @@ const createAuthLoginService = (deps) => {
     clearCachedLoginOtpState = deps.clearCachedLoginOtpState,
     buildSuccessfulLoginPayload = deps.buildSuccessfulLoginPayload,
     normalizeFirmSlug = deps.normalizeFirmSlug,
+    setAuthCookies = deps.setAuthCookies,
   } = utils;
   const {
     authOtpService = deps.authOtpService,
@@ -415,6 +416,18 @@ const createAuthLoginService = (deps) => {
         resource: 'auth/verify-otp',
         mfaRequired: true,
       });
+      if (response?.accessToken && response?.refreshToken) {
+        setAuthCookies(res, {
+          accessToken: response.accessToken,
+          refreshToken: response.refreshToken,
+        });
+      }
+      if (Object.prototype.hasOwnProperty.call(response, 'accessToken')) {
+        delete response.accessToken;
+      }
+      if (Object.prototype.hasOwnProperty.call(response, 'refreshToken')) {
+        delete response.refreshToken;
+      }
 
       return res.json(response);
     } catch (error) {
