@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
 import { caseApi } from '../../api/case.api';
@@ -15,42 +15,27 @@ import {
   formatDocketLabel,
   formatStatusLabel,
   getDocketRouteId,
-  toArray,
 } from './PlatformShared';
+import { usePlatformQcQueueQuery } from '../../hooks/usePlatformDataQueries';
 
 export const PlatformQcQueuePage = () => {
   const { firmSlug } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { openDocket } = useActiveDocket();
-  const [rows, setRows] = useState([]);
   const [search, setSearch] = useState('');
   const [assigneeFilter, setAssigneeFilter] = useState('ALL');
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [pendingQcId, setPendingQcId] = useState('');
 
-  const loadRows = async ({ background = false } = {}) => {
-    if (background && rows.length > 0) setRefreshing(true);
-    else setLoading(true);
-    setError('');
-    try {
-      const res = await caseApi.getCases({ state: 'IN_QC', limit: 50 });
-      setRows(toArray(res?.data?.data || res?.data?.items));
-    } catch {
-      setRows([]);
-      setError('Unable to load the QC workbench queue.');
-    } finally {
-      setRefreshing(false);
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadRows();
-  }, []);
+  const {
+    data: rows = [],
+    isLoading,
+    isFetching,
+    isError,
+    refetch,
+  } = usePlatformQcQueueQuery();
 
   const filteredRows = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -86,11 +71,12 @@ export const PlatformQcQueuePage = () => {
 
   const executeQcAction = async (caseInternalId, action, note) => {
     setSuccess('');
+    setError('');
     setPendingQcId(caseInternalId);
     try {
       await caseApi.qcAction(caseInternalId, action, note);
       setSuccess(`QC action ${action.toLowerCase()} completed.`);
-      await loadRows({ background: true });
+      await refetch();
     } catch {
       setError('QC action failed. Please retry.');
     } finally {
@@ -104,9 +90,9 @@ export const PlatformQcQueuePage = () => {
       subtitle="Quality-control queue for pass, return-for-correction, and fail review decisions."
       actions={<Link to={ROUTES.ADMIN_REPORTS(firmSlug)}>QC Reports</Link>}
     >
-      <InlineNotice tone="error" message={error} />
+      <InlineNotice tone="error" message={error || (isError ? 'Unable to load the QC workbench queue.' : '')} />
       <InlineNotice tone="success" message={success} />
-      <RefreshNotice refreshing={refreshing} message="Refreshing QC queue in the background…" />
+      <RefreshNotice refreshing={isFetching && !isLoading} message="Refreshing QC queue in the background…" />
       <PageSection title="QC review queue" description={`${filteredRows.length} dockets waiting for QC decisions.`}>
         <FilterBar onClear={clearFilters} clearDisabled={!search && assigneeFilter === 'ALL'}>
           <input
@@ -122,8 +108,8 @@ export const PlatformQcQueuePage = () => {
               <option key={assignee} value={assignee}>{assignee}</option>
             ))}
           </select>
-          <button type="button" onClick={() => void loadRows({ background: rows.length > 0 })} disabled={loading || refreshing}>
-            {refreshing ? 'Refreshing…' : 'Refresh'}
+          <button type="button" onClick={() => void refetch()} disabled={isFetching}>
+            {isFetching ? 'Refreshing…' : 'Refresh'}
           </button>
         </FilterBar>
         <DataTable
@@ -151,9 +137,9 @@ export const PlatformQcQueuePage = () => {
               </td>
             </tr>
           ))}
-          loading={loading}
-          error={error}
-          onRetry={() => void loadRows()}
+          loading={isLoading}
+          error={isError ? 'Unable to load the QC workbench queue.' : ''}
+          onRetry={() => void refetch()}
           hasActiveFilters={Boolean(search.trim()) || assigneeFilter !== 'ALL'}
           emptyLabel="No dockets are currently waiting in the QC Workbench."
           emptyLabelFiltered="No QC Workbench dockets match your current search or filters."

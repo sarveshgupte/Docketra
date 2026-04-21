@@ -22,6 +22,7 @@ import { API_BASE_URL, APP_NAME, APP_VERSION, STORAGE_KEYS, USER_ROLES } from '.
 import { useActiveDocket } from '../../hooks/useActiveDocket';
 import { formatDateTime } from '../../utils/formatDateTime';
 import { getFirmConfig } from '../../utils/firmConfig';
+import { trackAsync } from '../../utils/performanceMonitor';
 import './Layout.css';
 import { ROUTES, safeRoute } from '../../constants/routes';
 
@@ -157,6 +158,8 @@ export const Layout = ({ children, title, subtitle }) => {
   const notificationDropdownRef = useRef(null);
   const hasMountedRef = useRef(false);
   const seenNotificationIdsRef = useRef(new Set());
+  const latestNotificationFetchRef = useRef(0);
+  const notificationFetchInFlightRef = useRef(false);
 
   const currentFirmSlug = firmSlug || user?.firmSlug;
   const normalizedRole = String(user?.role || '').trim().toUpperCase();
@@ -348,24 +351,34 @@ export const Layout = ({ children, title, subtitle }) => {
       groupCount: Number(item.groupCount || 1),
     });
 
-    const fetchNotifications = async () => {
+    const fetchNotifications = async (source = 'poll') => {
+      if (notificationFetchInFlightRef.current) return;
+      notificationFetchInFlightRef.current = true;
+      const startedAt = Date.now();
       try {
-        const response = await notificationsApi.getNotifications({ limit: 20 });
+        const response = await trackAsync('layout.notifications.fetch', `layout:notifications:${source}`, () =>
+          notificationsApi.getNotifications({ limit: 20 })
+        );
         const rows = Array.isArray(response?.data) ? response.data.map(normalizeNotification) : [];
         if (!cancelled) {
           setNotificationItems(sortNotificationsLatestFirst(rows));
+          latestNotificationFetchRef.current = startedAt;
         }
       } catch (error) {
         if (!cancelled) {
           console.warn('[Layout] Failed to load notifications', error?.message || error);
         }
+      } finally {
+        notificationFetchInFlightRef.current = false;
       }
     };
 
-    void fetchNotifications();
+    void fetchNotifications('mount');
     const pollId = setInterval(() => {
-      void fetchNotifications();
-    }, 30000);
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      if (Date.now() - latestNotificationFetchRef.current < 12000) return;
+      void fetchNotifications('poll');
+    }, 45000);
 
     socket = io(resolveSocketUrl(), {
       path: '/socket.io',
@@ -375,6 +388,7 @@ export const Layout = ({ children, title, subtitle }) => {
 
     socket.on('notification:new', (payload) => {
       if (cancelled || !payload) return;
+      latestNotificationFetchRef.current = Date.now();
       setNotificationItems((current) => {
         const normalized = normalizeNotification(payload);
         const deduped = current.filter((item) => item.id !== normalized.id);
