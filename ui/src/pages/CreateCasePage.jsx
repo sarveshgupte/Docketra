@@ -27,12 +27,7 @@ export const CreateCasePage = () => {
           onCancel={() => navigate(ROUTES.CASES(firmSlug))}
           onCreated={(response) => {
             const docketId = response?.data?.docketId || response?.data?.caseId;
-            const routedWorkbasketId = response?.data?.ownerTeamId || response?.data?.routedToTeamId || response?.data?.workbasketId;
-            showSuccess(`✅ Docket ${docketId || 'created'} created successfully and routed.`);
-            const destination = routedWorkbasketId
-              ? `${ROUTES.GLOBAL_WORKLIST(firmSlug)}?workbasketId=${encodeURIComponent(String(routedWorkbasketId))}`
-              : ROUTES.GLOBAL_WORKLIST(firmSlug);
-            navigate(destination);
+            showSuccess(`✅ Docket ${docketId || 'created'} created successfully.`);
           }}
         />
       </div>
