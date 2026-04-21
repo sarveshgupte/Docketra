@@ -50,7 +50,7 @@ export const PlatformTaskManagerPage = () => {
       } catch {
         if (!cancelled) {
           setStats({ allActiveDockets: 0, myWorklistCount: 0, workbasketCount: 0, qcPendingCount: 0 });
-          setError('Task Manager metrics are temporarily unavailable. You can still navigate to all execution surfaces.');
+          setError('Docket Workbench metrics are temporarily unavailable. You can still navigate to all execution surfaces.');
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -66,14 +66,14 @@ export const PlatformTaskManagerPage = () => {
   const cards = [
     { label: 'All active dockets', value: loading ? '…' : stats.allActiveDockets, helpText: 'In progress, pending, and in QC right now.' },
     { label: 'My Worklist', value: loading ? '…' : stats.myWorklistCount, helpText: 'Your active and pended docket workload.' },
-    { label: 'Workbasket', value: loading ? '…' : stats.workbasketCount, helpText: 'Team queue dockets available to pull and start.' },
-    { label: 'QC Workbasket', value: loading ? '…' : stats.qcPendingCount, helpText: 'Dockets waiting for pass/correct/fail review.' },
+    { label: 'Workbench', value: loading ? '…' : stats.workbasketCount, helpText: 'Shared queue dockets available to pull and start.' },
+    { label: 'QC Workbench', value: loading ? '…' : stats.qcPendingCount, helpText: 'Dockets waiting for pass/correct/fail review.' },
   ];
 
   return (
     <PlatformShell
-      moduleLabel="Task Manager / Execution"
-      title="Task Manager"
+      moduleLabel="Dockets / Workbench"
+      title="Docket Workbench"
       subtitle="Daily docket execution hub for team intake, personal work, QC review, and oversight."
       actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>New Docket</Link>}
     >
@@ -83,15 +83,15 @@ export const PlatformTaskManagerPage = () => {
       <PageSection title="Quick actions" description="Go straight to the queue that matches your next workflow step.">
         <div className="action-row">
           <Link to={ROUTES.CREATE_CASE(firmSlug)}>New Docket</Link>
-          <Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>Go to Workbasket</Link>
+          <Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>Go to Workbench</Link>
           <Link to={ROUTES.WORKLIST(firmSlug)}>Go to My Worklist</Link>
         </div>
       </PageSection>
 
-      <PageSection title="Execution surfaces" description="Task Manager owns docket execution; document collection remains inside each docket detail under Attachments.">
+      <PageSection title="Execution surfaces" description="Docket Workbench owns docket execution; document collection remains inside each docket detail under Attachments.">
         <div className="tile-grid">
           <Link className="module-tile" to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>
-            <strong>Workbasket</strong>
+            <strong>Workbench</strong>
             <span>Team queue dockets available for pull and assignment.</span>
           </Link>
           <Link className="module-tile" to={ROUTES.WORKLIST(firmSlug)}>
@@ -99,7 +99,7 @@ export const PlatformTaskManagerPage = () => {
             <span>Your own active and pended docket execution workload.</span>
           </Link>
           <Link className="module-tile" to={ROUTES.QC_QUEUE(firmSlug)}>
-            <strong>QC Workbasket</strong>
+            <strong>QC Workbench</strong>
             <span>Dockets awaiting quality-control pass, correction, or fail decisions.</span>
           </Link>
           <Link className="module-tile" to={ROUTES.CASES(firmSlug)}>

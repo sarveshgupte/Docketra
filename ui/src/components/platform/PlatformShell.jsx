@@ -17,7 +17,7 @@ const navForRole = (firmSlug, role) => {
     {
       section: 'Daily Operations',
       items: [
-        { to: ROUTES.TASK_MANAGER(firmSlug), label: 'Task Manager' },
+        { to: ROUTES.TASK_MANAGER(firmSlug), label: 'Docket Workbench' },
         { to: ROUTES.DASHBOARD(firmSlug), label: 'Dashboard' },
       ],
     },
@@ -207,10 +207,10 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   const commandSections = useMemo(() => {
     const navigationItems = [
       { id: 'go-dashboard', label: 'Go to Dashboard', shortcut: 'Alt+Shift+D', action: () => openRoute(ROUTES.DASHBOARD(firmSlug)), description: 'Open firm dashboard overview.' },
-      { id: 'go-task-manager', label: 'Go to Task Manager', shortcut: 'Alt+Shift+T', action: () => openRoute(ROUTES.TASK_MANAGER(firmSlug)), description: 'Jump to execution surfaces.' },
-      { id: 'go-workbasket', label: 'Go to Workbasket', shortcut: 'Alt+Shift+B', action: () => openRoute(ROUTES.GLOBAL_WORKLIST(firmSlug)), description: 'Open team queue dockets available to pull.' },
+      { id: 'go-task-manager', label: 'Go to Docket Workbench', shortcut: 'Alt+Shift+T', action: () => openRoute(ROUTES.TASK_MANAGER(firmSlug)), description: 'Jump to the main docket execution workspace.' },
+      { id: 'go-workbasket', label: 'Go to Workbench', shortcut: 'Alt+Shift+B', action: () => openRoute(ROUTES.GLOBAL_WORKLIST(firmSlug)), description: 'Open shared queue dockets available to pull.' },
       { id: 'go-worklist', label: 'Go to My Worklist', shortcut: 'Alt+Shift+W', action: () => openRoute(ROUTES.WORKLIST(firmSlug)), description: 'Open your active and pended docket workload.' },
-      { id: 'go-qc', label: 'Go to QC Workbasket', shortcut: 'Alt+Shift+Q', action: () => openRoute(ROUTES.QC_QUEUE(firmSlug)), description: 'Open dockets waiting for quality review decisions.' },
+      { id: 'go-qc', label: 'Go to QC Workbench', shortcut: 'Alt+Shift+Q', action: () => openRoute(ROUTES.QC_QUEUE(firmSlug)), description: 'Open dockets waiting for quality review decisions.' },
       { id: 'go-clients', label: 'Go to Clients', action: () => openRoute(ROUTES.CLIENTS(firmSlug)), description: 'Open client management workspace.', adminOnly: true },
       { id: 'go-crm', label: 'Go to CRM', action: () => openRoute(ROUTES.CRM(firmSlug)), description: 'Open relationship management module.', adminOnly: true },
       { id: 'go-cms', label: 'Go to CMS', action: () => openRoute(ROUTES.CMS(firmSlug)), description: 'Open intake and submissions module.', adminOnly: true },

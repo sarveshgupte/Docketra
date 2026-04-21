@@ -25,12 +25,12 @@ assert.ok(shellSource.includes('normalizeClientRows'), 'Client IDs should be nor
 for (const requiredCommand of [
   "'New Docket'",
   "'Go to Dashboard'",
-  "'Go to Task Manager'",
+  "'Go to Docket Workbench'",
   "'Go to CRM'",
   "'Go to CMS'",
-  "'Go to Workbasket'",
+  "'Go to Workbench'",
   "'Go to My Worklist'",
-  "'Go to QC Workbasket'",
+  "'Go to QC Workbench'",
   "'Go to Clients'",
   "'Go to Reports'",
   "'Go to Settings'",
@@ -56,17 +56,17 @@ const dashboardSource = read('src/pages/platform/DashboardPage.jsx');
 assert.ok(dashboardSource.includes('>New Docket<'), 'Dashboard quick action naming should use New Docket');
 
 const crmSource = read('src/pages/platform/CrmPage.jsx');
-for (const label of ['New Client', 'Import Clients (CSV)', 'Go to Leads Queue']) {
+for (const label of ['New Client', 'Go to Leads Queue', 'Open Client Management']) {
   assert.ok(crmSource.includes(`>${label}<`), `CRM quick actions should use consistent wording: ${label}`);
 }
 
 const cmsSource = read('src/pages/platform/CmsPage.jsx');
-for (const label of ['Go to Intake Queue', 'Go to Forms/Templates']) {
+for (const label of ['Go to Intake Queue', 'Go to Forms']) {
   assert.ok(cmsSource.includes(`>${label}<`), `CMS quick actions should use consistent wording: ${label}`);
 }
 
 const tasksSource = read('src/pages/platform/TaskManagerPage.jsx');
-for (const label of ['Go to Workbasket', 'Go to My Worklist']) {
+for (const label of ['Go to Workbench', 'Go to My Worklist']) {
   assert.ok(tasksSource.includes(`>${label}<`), `Task Manager quick actions should use consistent wording: ${label}`);
 }
 
