@@ -501,6 +501,8 @@ module.exports = (deps) => {
           assignedTo: guidedInput.assignedTo || assignedTo,
         });
 
+        const initialStatus = resolvedAssignee ? CaseStatus.ASSIGNED : CaseStatus.UNASSIGNED;
+
         const newCase = new Case({
           title: normalizedTitle,
           description: normalizedDescription,
@@ -519,7 +521,7 @@ module.exports = (deps) => {
           createdByXID, // Set from authenticated user context
           createdBy: req.user.email || req.user.xID, // Legacy field - use email or xID as fallback
           priority: normalizedPriority,
-          status: 'OPEN',
+          status: initialStatus,
           lifecycle: resolvedAssignee ? DocketLifecycle.ACTIVE : DocketLifecycle.CREATED,
           assignedToXID: resolvedAssignee || null, // PR: xID Canonicalization - Store in assignedToXID
           assignedTo: null,
@@ -528,7 +530,7 @@ module.exports = (deps) => {
           state: resolvedAssignee ? 'IN_PROGRESS' : 'IN_WB',
           qcOutcome: null,
           ownerTeamId: routedWorkbasketId || null,
-          routedToTeamId: routedWorkbasketId || null,
+          routedToTeamId: null,
           routedByUserId: null,
           routedAt: null,
           routingNote: null,
@@ -613,7 +615,7 @@ module.exports = (deps) => {
           session,
           docketId: newCase.caseId,
           action: 'CREATED',
-          toState: 'OPEN',
+          toState: initialStatus,
           metadata: {
             category: actualCategory,
             clientId: finalClientId,
@@ -624,7 +626,7 @@ module.exports = (deps) => {
           },
           oldDoc: {},
           newDoc: {
-            status: 'OPEN',
+            status: initialStatus,
             category: actualCategory,
             clientId: finalClientId,
             isInternal: normalizedIsInternal,
