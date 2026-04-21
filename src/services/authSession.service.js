@@ -1,4 +1,37 @@
 const log = require('../utils/log');
+const { getCookieValue } = require('../utils/requestCookies');
+
+const getAuthCookieOptions = ({ maxAge = undefined } = {}) => {
+  const secureCookies = process.env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure: secureCookies,
+    sameSite: 'lax',
+    path: '/',
+    ...(typeof maxAge === 'number' ? { maxAge } : {}),
+  };
+};
+
+const setAuthCookies = (res, { accessToken, refreshToken, refreshMaxAge } = {}) => {
+  if (!res || typeof res.cookie !== 'function') return;
+  const fifteenMinutesMs = 15 * 60 * 1000;
+  const refreshMs = typeof refreshMaxAge === 'number'
+    ? refreshMaxAge
+    : Number(process.env.JWT_REFRESH_EXPIRES_MS || 7 * 24 * 60 * 60 * 1000);
+
+  if (accessToken) {
+    res.cookie('accessToken', accessToken, getAuthCookieOptions({ maxAge: fifteenMinutesMs }));
+  }
+  if (refreshToken) {
+    res.cookie('refreshToken', refreshToken, getAuthCookieOptions({ maxAge: refreshMs }));
+  }
+};
+
+const clearAuthCookies = (res) => {
+  if (!res || typeof res.clearCookie !== 'function') return;
+  res.clearCookie('accessToken', getAuthCookieOptions());
+  res.clearCookie('refreshToken', getAuthCookieOptions());
+};
 const createAuthSessionService = (deps) => {
   const models = deps.models || {};
   const utils = deps.utils || {};
@@ -65,10 +98,9 @@ const createAuthSessionService = (deps) => {
         );
       }
 
-      const secureCookies = process.env.NODE_ENV === 'production';
       const clearCookies = [
-        { name: 'accessToken', options: { httpOnly: true, secure: secureCookies, sameSite: 'lax', path: '/' } },
-        { name: 'refreshToken', options: { httpOnly: true, secure: secureCookies, sameSite: 'lax', path: '/' } },
+        { name: 'accessToken', options: getAuthCookieOptions() },
+        { name: 'refreshToken', options: getAuthCookieOptions() },
       ];
 
       try {
@@ -123,14 +155,12 @@ const createAuthSessionService = (deps) => {
 
   const refreshAccessToken = async (req, res) => {
     try {
-      const refreshToken =
-        req.body.refreshToken ||
-        req.cookies?.refreshToken;
+      const refreshToken = req.cookies?.refreshToken || getCookieValue(req.headers?.cookie, 'refreshToken');
 
       if (!refreshToken) {
-        return res.status(400).json({
+        return res.status(401).json({
           success: false,
-          message: 'Refresh token is required',
+          message: 'Authentication required',
         });
       }
 
@@ -224,24 +254,10 @@ const createAuthSessionService = (deps) => {
         firmId: user.firmId,
       });
 
-      const secureCookies = process.env.NODE_ENV === 'production';
-      const fifteenMinutesMs = 15 * 60 * 1000;
-      const refreshMs = jwtService.getRefreshTokenExpiryMs();
-
-      res.cookie('accessToken', newAccessToken, {
-        httpOnly: true,
-        secure: secureCookies,
-        sameSite: 'lax',
-        maxAge: fifteenMinutesMs,
-        path: '/',
-      });
-
-      res.cookie('refreshToken', newRefreshToken, {
-        httpOnly: true,
-        secure: secureCookies,
-        sameSite: 'lax',
-        maxAge: refreshMs,
-        path: '/',
+      setAuthCookies(res, {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+        refreshMaxAge: jwtService.getRefreshTokenExpiryMs(),
       });
 
       await logAuthAudit({
@@ -258,8 +274,6 @@ const createAuthSessionService = (deps) => {
       return res.json({
         success: true,
         message: 'Token refreshed successfully',
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
       });
     } catch (error) {
       log.error('[AUTH] Refresh token error:', error);
@@ -271,6 +285,9 @@ const createAuthSessionService = (deps) => {
   };
 
   return {
+    getAuthCookieOptions,
+    setAuthCookies,
+    clearAuthCookies,
     generateAndStoreRefreshToken,
     logout,
     refreshAccessToken,

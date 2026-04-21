@@ -4,8 +4,6 @@
  * New Auth Contract (as of this PR):
  * ===================================
  * localStorage contains ONLY:
- *   - STORAGE_KEYS.ACCESS_TOKEN
- *   - STORAGE_KEYS.REFRESH_TOKEN  
  *   - STORAGE_KEYS.FIRM_SLUG (optional, routing hint only)
  * 
  * User data is NEVER stored in localStorage.
@@ -31,30 +29,13 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isHydrating, setIsHydrating] = useState(true); // Start true, boot effect will resolve it
   const bootHydratedRef = useRef(false);
-  const profileFetchAttemptedRef = useRef(null); // Token-based guard for profile hydration
+  const profileFetchAttemptedRef = useRef(false);
   const profileFetchInFlightRef = useRef(false);
   const profileFetchPromiseRef = useRef(null);
-  const authTokenRef = useRef(null); // Ensure auth is set once per access token
 
   useEffect(() => {
     if (bootHydratedRef.current) return;
     bootHydratedRef.current = true;
-
-    let token = null;
-    try {
-      token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-    } catch (error) {
-      console.warn('[AUTH] Unable to access storage during hydration.', error);
-      setLoading(false);
-      setIsHydrating(false);
-      return;
-    }
-
-    if (!token) {
-      setLoading(false);
-      setIsHydrating(false);
-      return;
-    }
 
     fetchProfile()
       .catch((error) => {
@@ -68,8 +49,6 @@ export const AuthProvider = ({ children }) => {
 
   const clearAuthStorage = useCallback((firmSlugToPreserve = null) => {
     try {
-      localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
-      localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
       localStorage.removeItem(STORAGE_KEYS.IMPERSONATED_FIRM);
       if (firmSlugToPreserve) {
         localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlugToPreserve);
@@ -85,10 +64,9 @@ export const AuthProvider = ({ children }) => {
     clearAuthStorage();
     setUser(null);
     setIsAuthenticated(false);
-    profileFetchAttemptedRef.current = null;
+    profileFetchAttemptedRef.current = false;
     profileFetchInFlightRef.current = false;
     profileFetchPromiseRef.current = null;
-    authTokenRef.current = null;
   }, [clearAuthStorage]);
 
   /**
@@ -115,19 +93,8 @@ export const AuthProvider = ({ children }) => {
     // Set user state from API data only (never from localStorage)
     setUser(userData);
     
-    // Authentication = valid user identity + role
-    // SuperAdmin users don't have firmSlug, so role is the source of truth
     const isAuth = !!userData && !!userData.role;
-    let accessToken = null;
-    try {
-      accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-    } catch (error) {
-      console.warn('[AUTH] Unable to access storage while setting auth state.', error);
-    }
-    if (accessToken && authTokenRef.current !== accessToken) {
-      authTokenRef.current = accessToken;
-      setIsAuthenticated(isAuth);
-    }
+    setIsAuthenticated(isAuth);
   }, []);
 
   const fetchProfile = useCallback(async () => {
@@ -135,22 +102,10 @@ export const AuthProvider = ({ children }) => {
       return profileFetchPromiseRef.current || { success: false, data: null };
     }
 
-    let accessToken = null;
-    try {
-      accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-    } catch (error) {
-      console.warn('[AUTH] Unable to access storage while fetching profile.', error);
+    if (profileFetchAttemptedRef.current) {
       return { success: false, data: null };
     }
-    if (!accessToken) {
-      resetAuthState();
-      return { success: false, data: null };
-    }
-
-    if (profileFetchAttemptedRef.current === accessToken) {
-      return { success: false, data: null };
-    }
-    profileFetchAttemptedRef.current = accessToken;
+    profileFetchAttemptedRef.current = true;
     profileFetchInFlightRef.current = true;
 
     const profileFetchPromise = (async () => {
@@ -194,7 +149,7 @@ export const AuthProvider = ({ children }) => {
       const response = await authService.login(xID, password, endpoint);
       
       if (response.success) {
-        // Login successful - tokens are stored by authService
+        // Login successful - session cookies are set by backend
         // Caller should call fetchProfile() to hydrate user data
         return response;
       }

@@ -38,6 +38,7 @@ const createAuthOtpService = (deps) => {
     sendCentralOtp,
     verifyCentralOtp,
     issueAuthTokens,
+    setAuthCookies,
   } = deps;
 
   const verifyTotp = async (req, res) => {
@@ -224,8 +225,6 @@ const createAuthOtpService = (deps) => {
       const response = {
         success: true,
         message: user.forcePasswordReset ? 'Password reset required' : 'Login successful',
-        accessToken,
-        refreshToken,
         data: {
           id: user._id.toString(),
           xID: user.xID,
@@ -244,6 +243,9 @@ const createAuthOtpService = (deps) => {
       if (user.forcePasswordReset) {
         response.mustChangePassword = true;
         response.forcePasswordReset = true;
+      }
+      if (accessToken) {
+        setAuthCookies(res, { accessToken, refreshToken });
       }
 
       return res.json(response);
@@ -294,12 +296,10 @@ const createAuthOtpService = (deps) => {
       }
 
       const tokens = await issueAuthTokens(req, user);
+      setAuthCookies(res, tokens);
       return res.json({
         success: true,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
         data: {
-          ...tokens,
           user,
         },
       });

@@ -7,6 +7,7 @@ const { authenticate } = require('../middleware/auth.middleware');
 const { attachFirmFromSlug } = require('../middleware/attachFirmFromSlug.middleware');
 const { attachFirmContext } = require('../middleware/firmContext.middleware');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
+const { enforceSameOriginForCookieAuth } = require('../middleware/csrfOrigin.middleware');
 const {
   authLimiter,
   authBlockEnforcer,
@@ -60,6 +61,14 @@ const detectProfileLoop = (req, res, next) => {
   }
   next();
 };
+
+router.use((req, res, next) => {
+  const method = String(req.method || 'GET').toUpperCase();
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    return enforceSameOriginForCookieAuth(req, res, next);
+  }
+  return next();
+});
 
 /**
  * Authentication and User Management Routes

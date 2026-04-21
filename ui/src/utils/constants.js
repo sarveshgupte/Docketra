@@ -110,8 +110,6 @@ export const USER_ROLES = {
 };
 
 export const STORAGE_KEYS = {
-  ACCESS_TOKEN: 'accessToken',
-  REFRESH_TOKEN: 'refreshToken',
   FIRM_SLUG: 'firmSlug',
   IMPERSONATED_FIRM: 'impersonatedFirm', // SuperAdmin firm impersonation state
   // @deprecated Will be removed in v2.0. Use AuthContext to get user data from API instead.
