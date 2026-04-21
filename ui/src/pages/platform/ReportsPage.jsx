@@ -21,7 +21,7 @@ export const PlatformReportsPage = () => {
       setMetrics(toArray(res?.data?.data));
     } catch {
       setMetrics([]);
-      setError('Unable to load reports metrics.');
+      setError('Unable to load docket report metrics.');
     } finally {
       setRefreshing(false);
       setLoading(false);
@@ -73,7 +73,7 @@ export const PlatformReportsPage = () => {
 
       <PageSection title="Metric table" description="Structured view for faster scanning and export checks.">
         <DataTable
-          columns={['Metric', 'Value']}
+          columns={['Docket metric', 'Value']}
           rows={metrics.map((m, index) => (
             <tr key={`${m.label || m.category || 'metric'}-${index}`}>
               <td>{m.label || m.category || `Bucket ${index + 1}`}</td>

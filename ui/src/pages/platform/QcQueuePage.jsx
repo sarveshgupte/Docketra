@@ -41,7 +41,7 @@ export const PlatformQcQueuePage = () => {
       setRows(toArray(res?.data?.data || res?.data?.items));
     } catch {
       setRows([]);
-      setError('Unable to load QC queue.');
+      setError('Unable to load the QC workbench queue.');
     } finally {
       setRefreshing(false);
       setLoading(false);
@@ -100,7 +100,7 @@ export const PlatformQcQueuePage = () => {
 
   return (
     <PlatformShell
-      title="QC Workbasket"
+      title="QC Workbench"
       subtitle="Quality-control queue for pass, return-for-correction, and fail review decisions."
       actions={<Link to={ROUTES.ADMIN_REPORTS(firmSlug)}>QC Reports</Link>}
     >
@@ -155,8 +155,8 @@ export const PlatformQcQueuePage = () => {
           error={error}
           onRetry={() => void loadRows()}
           hasActiveFilters={Boolean(search.trim()) || assigneeFilter !== 'ALL'}
-          emptyLabel="No dockets are currently waiting in the QC Workbasket."
-          emptyLabelFiltered="No QC Workbasket dockets match your current search or filters."
+          emptyLabel="No dockets are currently waiting in the QC Workbench."
+          emptyLabelFiltered="No QC Workbench dockets match your current search or filters."
         />
       </PageSection>
     </PlatformShell>
