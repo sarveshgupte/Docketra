@@ -582,7 +582,6 @@ const globalWorklist = async (req, res) => {
       if (selectedTeamId) {
         query.ownerTeamId = selectedTeamId;
       }
-      query.routedToTeamId = null;
       query.status = { $in: [CaseStatus.OPEN, CaseStatus.RETURNED, CaseStatus.UNASSIGNED] };
     }
     
@@ -603,10 +602,19 @@ const globalWorklist = async (req, res) => {
     if (createdAtFrom || createdAtTo) {
       query.createdAt = {};
       if (createdAtFrom) {
-        query.createdAt.$gte = new Date(createdAtFrom);
+        const fromDate = new Date(createdAtFrom);
+        if (!Number.isNaN(fromDate.getTime())) {
+          query.createdAt.$gte = fromDate;
+        }
       }
       if (createdAtTo) {
-        query.createdAt.$lte = new Date(createdAtTo);
+        const toDate = new Date(createdAtTo);
+        if (!Number.isNaN(toDate.getTime())) {
+          query.createdAt.$lte = toDate;
+        }
+      }
+      if (Object.keys(query.createdAt).length === 0) {
+        delete query.createdAt;
       }
     }
     
@@ -767,6 +775,13 @@ const globalWorklist = async (req, res) => {
       },
     });
   } catch (error) {
+    log.error('GLOBAL_WORKLIST_FETCH_FAILED', {
+      req,
+      error,
+      query: req.query || null,
+      userXID: req.user?.xID || null,
+      firmId: req.user?.firmId || null,
+    });
     res.status(500).json({
       success: false,
       message: 'Error fetching global worklist',
