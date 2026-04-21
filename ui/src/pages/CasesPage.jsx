@@ -673,19 +673,19 @@ export const CasesPage = () => {
 
   if (loading) {
     return (
-      <PlatformShell moduleLabel="Task Manager" title="Dockets" subtitle="Master oversight queue for search, tracking, routing, and lifecycle execution.">
+      <PlatformShell moduleLabel="Dockets / Oversight" title="Dockets" subtitle="Master oversight queue for search, tracking, routing, and lifecycle execution.">
         <TableSkeleton rows={8} />
       </PlatformShell>
     );
   }
 
   return (
-    <PlatformShell moduleLabel="Task Manager" title="Dockets" subtitle="Master oversight queue for search, tracking, routing, and lifecycle execution.">
+    <PlatformShell moduleLabel="Dockets / Oversight" title="Dockets" subtitle="Master oversight queue for search, tracking, routing, and lifecycle execution.">
       <div className="cases-page">
         <PageHeader
           title="All Dockets"
           subtitle="Master oversight view across all visible dockets, workflow states, and queue ownership."
-          meta="Task Manager / All Dockets"
+          meta="Dockets / All Dockets"
           actions={(
             <CasesHeaderActions
               isHighWorkload={isHighWorkload}

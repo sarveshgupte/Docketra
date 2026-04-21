@@ -1551,11 +1551,14 @@ export const AdminPage = () => {
             onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
             options={[
               { value: '', label: 'Select Role', disabled: true },
-              { value: 'Employee', label: 'User' },
+              { value: 'Employee', label: 'Employee' },
               { value: 'Admin', label: 'Admin' },
             ]}
             required
           />
+          <div className="neo-info-text">
+            Role hierarchy: Primary Admin &gt; Admin &gt; Manager &gt; Employee. SuperAdmin is platform-only.
+          </div>
 
           <Input
             label="Department"

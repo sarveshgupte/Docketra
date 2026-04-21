@@ -44,7 +44,7 @@ export const PlatformDashboardPage = () => {
     <PlatformShell
       moduleLabel="Dashboard / Firm Ops"
       title="Dashboard"
-      subtitle="Unified snapshot across CMS acquisition, CRM relationships, and Tasks execution."
+      subtitle="Unified snapshot across CMS acquisition, CRM relationships, and docket execution."
       actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>New Docket</Link>}
     >
       <InlineNotice tone="error" message={error} />
@@ -55,7 +55,7 @@ export const PlatformDashboardPage = () => {
         <div className="action-row">
           {isAdmin ? <Link to={ROUTES.CMS(firmSlug)}>CMS · Forms & Intake</Link> : null}
           {isAdmin ? <Link to={ROUTES.CRM_CLIENTS(firmSlug)}>CRM · Leads & Clients</Link> : null}
-          <Link to={ROUTES.CASES(firmSlug)}>Tasks · Dockets & Worklists</Link>
+          <Link to={ROUTES.CASES(firmSlug)}>Dockets · Oversight & Worklists</Link>
         </div>
         {!isAdmin ? <p className="muted">CMS and CRM modules are available to admin roles.</p> : null}
       </PageSection>
@@ -75,8 +75,8 @@ export const PlatformDashboardPage = () => {
       >
         <div className="action-row">
           <Link to={ROUTES.WORKLIST(firmSlug)}>My Worklist</Link>
-          <Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>Workbasket</Link>
-          <Link to={ROUTES.QC_QUEUE(firmSlug)}>QC Workbasket</Link>
+          <Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>Workbench</Link>
+          <Link to={ROUTES.QC_QUEUE(firmSlug)}>QC Workbench</Link>
           {isAdmin ? <Link to={ROUTES.ADMIN_REPORTS(firmSlug)}>Reports</Link> : null}
         </div>
       </PageSection>
