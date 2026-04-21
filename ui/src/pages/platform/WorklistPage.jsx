@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
-import { worklistApi } from '../../api/worklist.api';
 import { caseApi } from '../../api/case.api';
 import { ROUTES } from '../../constants/routes';
 import { useActiveDocket } from '../../hooks/useActiveDocket';
@@ -16,43 +15,28 @@ import {
   formatDocketLabel,
   formatStatusLabel,
   getDocketRouteId,
-  toArray,
 } from './PlatformShared';
+import { usePlatformMyWorklistQuery } from '../../hooks/usePlatformDataQueries';
 
 export const PlatformWorklistPage = () => {
   const { firmSlug } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { openDocket } = useActiveDocket();
-  const [rows, setRows] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [pendingActionId, setPendingActionId] = useState('');
 
-  const loadRows = async ({ background = false } = {}) => {
-    if (background && rows.length > 0) setRefreshing(true);
-    else setLoading(true);
-    setError('');
-    try {
-      const res = await worklistApi.getEmployeeWorklist({ limit: 50 });
-      setRows(toArray(res?.data?.data || res?.data?.items));
-    } catch {
-      setRows([]);
-      setError('Unable to load your worklist right now.');
-    } finally {
-      setRefreshing(false);
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadRows();
-  }, []);
+  const {
+    data: rows = [],
+    isLoading,
+    isFetching,
+    isError,
+    refetch,
+  } = usePlatformMyWorklistQuery();
 
   const filteredRows = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -93,13 +77,14 @@ export const PlatformWorklistPage = () => {
 
   const transition = async (caseInternalId, action) => {
     setSuccess('');
+    setError('');
     setPendingActionId(caseInternalId);
     try {
       if (action === 'SEND_TO_QC') await caseApi.transitionDocket(caseInternalId, { action: 'SEND_TO_QC' });
       if (action === 'PEND') await caseApi.pendCase(caseInternalId, 'Pending via worklist action');
       if (action === 'RESOLVE') await caseApi.resolveCase(caseInternalId, 'Resolved via worklist action');
       setSuccess('Docket updated successfully.');
-      await loadRows({ background: true });
+      await refetch();
     } catch {
       setError('Action failed. Refresh and retry.');
     } finally {
@@ -113,9 +98,9 @@ export const PlatformWorklistPage = () => {
       subtitle="Your personal docket workload for active execution and pended follow-up."
       actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>Create Docket</Link>}
     >
-      <InlineNotice tone="error" message={error} />
+      <InlineNotice tone="error" message={error || (isError ? 'Unable to load your worklist right now.' : '')} />
       <InlineNotice tone="success" message={success} />
-      <RefreshNotice refreshing={refreshing} message="Refreshing worklist without interrupting your current view…" />
+      <RefreshNotice refreshing={isFetching && !isLoading} message="Refreshing worklist without interrupting your current view…" />
       <PageSection title="My active workload" description={`${filteredRows.length} dockets in your current worklist view.`}>
         <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL'}>
           <input
@@ -137,8 +122,8 @@ export const PlatformWorklistPage = () => {
               <option key={category} value={category}>{category}</option>
             ))}
           </select>
-          <button type="button" onClick={() => void loadRows({ background: rows.length > 0 })} disabled={loading || refreshing}>
-            {refreshing ? 'Refreshing…' : 'Refresh'}
+          <button type="button" onClick={() => void refetch()} disabled={isFetching}>
+            {isFetching ? 'Refreshing…' : 'Refresh'}
           </button>
         </FilterBar>
 
@@ -167,9 +152,9 @@ export const PlatformWorklistPage = () => {
               </td>
             </tr>
           ))}
-          loading={loading}
-          error={error}
-          onRetry={() => void loadRows()}
+          loading={isLoading}
+          error={isError ? 'Unable to load your worklist right now.' : ''}
+          onRetry={() => void refetch()}
           hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL'}
           emptyLabel="No dockets are assigned to your worklist right now."
           emptyLabelFiltered="No worklist dockets match your current search or filters."

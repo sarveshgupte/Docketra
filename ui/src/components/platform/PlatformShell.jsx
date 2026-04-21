@@ -7,6 +7,7 @@ import api from '../../services/api';
 import { crmApi } from '../../api/crm.api';
 import { isShortcutAllowedTarget } from '../../utils/keyboardShortcuts';
 import { isNavItemActive } from '../../utils/navActive';
+import { trackAsync } from '../../utils/performanceMonitor';
 import './platform.css';
 
 const roleRank = { USER: 1, MANAGER: 2, ADMIN: 3, PRIMARY_ADMIN: 4 };
@@ -84,12 +85,14 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [searchResults, setSearchResults] = useState({ dockets: [], clients: [] });
+  const [clientDirectory, setClientDirectory] = useState([]);
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { firmSlug } = useParams();
   const { user, logout } = useAuth();
   const menuRef = useRef(null);
   const searchRequestIdRef = useRef(0);
+  const searchCacheRef = useRef(new Map());
   const role = String(user?.role || 'USER').toUpperCase();
   const navSections = useMemo(() => navForRole(firmSlug, role), [firmSlug, role]);
   const userName = user?.name || user?.xID || 'User';
@@ -167,21 +170,35 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
 
     const requestId = searchRequestIdRef.current + 1;
     searchRequestIdRef.current = requestId;
+    const cacheKey = term.toLowerCase();
+    const cachedResults = searchCacheRef.current.get(cacheKey);
+    if (cachedResults) {
+      setSearching(false);
+      setSearchError('');
+      setSearchResults(cachedResults);
+      return;
+    }
 
     const timer = window.setTimeout(async () => {
       setSearching(true);
       setSearchError('');
       try {
         const [docketRes, clientsRes] = await Promise.allSettled([
-          api.get('/search', { params: { q: term } }),
-          hasAdminAccess ? crmApi.listClients({ limit: 50 }) : Promise.resolve({ data: [] }),
+          trackAsync('command-center.search.dockets', `command-center:dockets:${cacheKey}`, () => api.get('/search', { params: { q: term } })),
+          hasAdminAccess && clientDirectory.length === 0
+            ? trackAsync('command-center.search.clients.initial-load', 'command-center:clients', () => crmApi.listClients({ limit: 50 }))
+            : Promise.resolve({ data: [] }),
         ]);
 
         const isStale = !commandPaletteOpen || requestId !== searchRequestIdRef.current || commandQuery.trim() !== term;
         if (isStale) return;
 
         const dockets = docketRes.status === 'fulfilled' ? docketRes.value?.data?.data || [] : [];
-        const clientRows = clientsRes.status === 'fulfilled' ? normalizeClientRows(clientsRes.value) : [];
+        const freshClientDirectory = clientsRes.status === 'fulfilled' ? normalizeClientRows(clientsRes.value) : clientDirectory;
+        if (clientsRes.status === 'fulfilled' && freshClientDirectory.length > 0) {
+          setClientDirectory(freshClientDirectory);
+        }
+        const clientRows = freshClientDirectory;
         const needle = term.toLowerCase();
         const clients = clientRows.filter((client) => (`${client.label} ${client.description}`).toLowerCase().includes(needle)).slice(0, 6);
 
@@ -189,7 +206,9 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
           setSearchError('Record search is temporarily unavailable. Commands and module jumps are still available.');
         }
 
-        setSearchResults({ dockets: dockets.slice(0, 6), clients });
+        const nextResults = { dockets: dockets.slice(0, 6), clients };
+        setSearchResults(nextResults);
+        searchCacheRef.current.set(cacheKey, nextResults);
       } catch {
         if (requestId !== searchRequestIdRef.current) return;
         setSearchError('Record search is temporarily unavailable. Commands and module jumps are still available.');
@@ -202,7 +221,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     }, 220);
 
     return () => window.clearTimeout(timer);
-  }, [commandPaletteOpen, commandQuery, hasAdminAccess]);
+  }, [commandPaletteOpen, commandQuery, hasAdminAccess, clientDirectory]);
 
   const commandSections = useMemo(() => {
     const navigationItems = [

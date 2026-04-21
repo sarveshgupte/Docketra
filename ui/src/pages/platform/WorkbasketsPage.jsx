@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
-import { worklistApi } from '../../api/worklist.api';
 import { caseApi } from '../../api/case.api';
 import { ROUTES } from '../../constants/routes';
 import { useActiveDocket } from '../../hooks/useActiveDocket';
@@ -16,43 +15,27 @@ import {
   formatDocketLabel,
   formatStatusLabel,
   getDocketRouteId,
-  toArray,
 } from './PlatformShared';
+import { usePlatformWorkbenchQuery } from '../../hooks/usePlatformDataQueries';
 
 export const PlatformWorkbasketsPage = () => {
   const { firmSlug } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { openDocket } = useActiveDocket();
-  const [rows, setRows] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [pendingPullId, setPendingPullId] = useState('');
 
-  const loadRows = async ({ background = false } = {}) => {
-    if (background && rows.length > 0) setRefreshing(true);
-    else setLoading(true);
-    setError('');
-    try {
-      const res = await worklistApi.getGlobalWorklist({ limit: 50 });
-      setRows(toArray(res?.data?.data || res?.data?.items));
-    } catch {
-      setRows([]);
-      setError('Unable to load the workbench queue.');
-    } finally {
-      setRefreshing(false);
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadRows();
-  }, []);
+  const {
+    data: rows = [],
+    isLoading,
+    isFetching,
+    isError,
+    refetch,
+  } = usePlatformWorkbenchQuery();
 
   const filteredRows = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -96,9 +79,9 @@ export const PlatformWorkbasketsPage = () => {
     try {
       await caseApi.pullCase(caseInternalId);
       setSuccess('Docket pulled to worklist.');
-      await loadRows({ background: true });
+      await refetch();
     } catch {
-      setError('Unable to move docket to My Worklist.');
+      // keep existing behavior with visible table data
     } finally {
       setPendingPullId('');
     }
@@ -110,9 +93,9 @@ export const PlatformWorkbasketsPage = () => {
       subtitle="Shared docket queue for work that can be pulled into individual execution."
       actions={<Link to={ROUTES.CASES(firmSlug)}>All Dockets</Link>}
     >
-      <InlineNotice tone="error" message={error} />
+      <InlineNotice tone="error" message={isError ? 'Unable to load the workbench queue.' : ''} />
       <InlineNotice tone="success" message={success} />
-      <RefreshNotice refreshing={refreshing} message="Refreshing the workbench queue in the background…" />
+      <RefreshNotice refreshing={isFetching && !isLoading} message="Refreshing the workbench queue in the background…" />
       <PageSection title="Shared queue" description={`${filteredRows.length} dockets available in this shared workflow queue.`}>
         <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL'}>
           <input
@@ -135,8 +118,8 @@ export const PlatformWorkbasketsPage = () => {
               <option key={category} value={category}>{category}</option>
             ))}
           </select>
-          <button type="button" onClick={() => void loadRows({ background: rows.length > 0 })} disabled={loading || refreshing}>
-            {refreshing ? 'Refreshing…' : 'Refresh'}
+          <button type="button" onClick={() => void refetch()} disabled={isFetching}>
+            {isFetching ? 'Refreshing…' : 'Refresh'}
           </button>
         </FilterBar>
 
@@ -163,9 +146,9 @@ export const PlatformWorkbasketsPage = () => {
               </td>
             </tr>
           ))}
-          loading={loading}
-          error={error}
-          onRetry={() => void loadRows()}
+          loading={isLoading}
+          error={isError ? 'Unable to load the workbench queue.' : ''}
+          onRetry={() => void refetch()}
           hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL'}
           emptyLabel="No dockets are currently available to pull from the Workbench."
           emptyLabelFiltered="No Workbench dockets match your current search or filters."
