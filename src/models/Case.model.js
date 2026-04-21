@@ -984,18 +984,18 @@ caseSchema.pre('findOneAndUpdate', normalizeWorkModeUpdatePayload);
 caseSchema.pre('updateOne', normalizeWorkModeUpdatePayload);
 
 caseSchema.pre('validate', function enforceAssignedUserForWorklistLifecycle() {
-  const lifecycle = normalizeLifecycle(this.lifecycle);
-  if (lifecycle !== DocketLifecycle.WL) return;
+  const queueType = String(this.queueType || '').trim().toUpperCase();
+  if (queueType !== 'PERSONAL') return;
 
   if (!this.assignedToXID) {
-    this.invalidate('assignedToXID', 'WL docket must have assignedToXID');
+    this.invalidate('assignedToXID', 'PERSONAL docket must have assignedToXID');
   }
 });
 
 caseSchema.pre('save', function enforceAssignedUserForWlOnSave() {
-  const lifecycle = normalizeLifecycle(this.lifecycle);
-  if (lifecycle === DocketLifecycle.WL && !this.assignedToXID) {
-    throw new Error('WL docket must have assignedToXID');
+  const queueType = String(this.queueType || '').trim().toUpperCase();
+  if (queueType === 'PERSONAL' && !this.assignedToXID) {
+    throw new Error('PERSONAL docket must have assignedToXID');
   }
 });
 
