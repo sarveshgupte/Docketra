@@ -161,11 +161,10 @@ const caseSchema = new mongoose.Schema({
   
   /**
    * Detailed information about the case
-   * MANDATORY field - provides comprehensive case context
+   * Optional field for additional case context
    */
   description: {
     type: String,
-    required: [true, 'Case description is required'],
     trim: true,
     // Encrypted payloads have significant overhead (v1:iv:authTag:ciphertext).
     // Allow ample room so encrypted descriptions are not truncated at rest.
