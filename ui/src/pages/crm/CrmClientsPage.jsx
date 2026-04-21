@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
@@ -25,6 +25,7 @@ const TYPE_LABELS = { individual: 'Individual', company: 'Company' };
 export const CrmClientsPage = () => {
   const { firmSlug } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { showError, showSuccess } = useToast();
 
@@ -79,6 +80,16 @@ export const CrmClientsPage = () => {
   useEffect(() => {
     void loadClients();
   }, [loadClients]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    const action = String(searchParams.get('action') || '').toLowerCase();
+    if (action !== 'new') return;
+    setShowModal(true);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('action');
+    setSearchParams(nextParams, { replace: true });
+  }, [isAdmin, searchParams, setSearchParams]);
 
   const resetForm = () => {
     setForm({ name: '', type: 'individual', email: '', phone: '', tags: '', leadSource: '', notes: '' });
