@@ -9,7 +9,9 @@ assert.ok(adminPageSource.includes('AdminUsersSection'), 'AdminPage should deleg
 assert.ok(adminPageSource.includes('CreateUserModal'), 'AdminPage should delegate create-user form to CreateUserModal');
 assert.ok(adminPageSource.includes('UserAccessModal'), 'AdminPage should delegate access assignment to UserAccessModal');
 assert.ok(adminPageSource.includes('actionLoadingByUser'), 'AdminPage should track per-user action loading state');
-assert.ok(adminPageSource.includes('window.confirm('), 'AdminPage should guard high-risk actions with confirmations');
+assert.ok(adminPageSource.includes('ActionConfirmModal'), 'AdminPage should use ActionConfirmModal for high-risk actions');
+assert.ok(!adminPageSource.includes('window.confirm('), 'AdminPage should not use native window.confirm for user admin actions');
+assert.ok(adminPageSource.includes('pendingConfirmation'), 'AdminPage should keep centralized confirmation state');
 assert.ok(adminPageSource.includes('if (creatingUser) return;'), 'Create user should protect against duplicate submits');
 
 const usersSectionSource = read('src/pages/admin/components/AdminUsersSection.jsx');
@@ -25,6 +27,6 @@ assert.ok(createUserModalSource.includes("{ value: 'Employee', label: 'Employee'
 assert.ok(createUserModalSource.includes("{ value: 'Admin', label: 'Admin' }"), 'Create user modal should include Admin role label');
 
 const roleCopySource = read('src/pages/admin/adminRoleCopy.js');
-assert.ok(roleCopySource.includes('Primary Admin > Admin > Manager > User'), 'Role copy should define canonical role hierarchy');
+assert.ok(roleCopySource.includes('Primary Admin > Admin > Manager > Employee'), 'Role copy should define canonical role hierarchy');
 
 console.log('adminSurfaceHardening.test.mjs passed');

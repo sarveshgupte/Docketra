@@ -144,12 +144,12 @@ export const HierarchyPage = () => {
   };
 
   return (
-    <PlatformShell moduleLabel="Operations" title="Hierarchy management" subtitle="Manage Admin → Manager → User reporting lines across the firm.">
+    <PlatformShell moduleLabel="Operations" title="Hierarchy management" subtitle="Manage Admin → Manager → Employee reporting lines across the firm.">
       <div className="space-y-4">
         <Card>
           <div className="space-y-2 p-2">
             <h1 className="text-xl font-semibold text-slate-900">Hierarchy Management</h1>
-            <p className="text-sm text-slate-600">Primary Admin can view and manage Admin → Manager → User reporting lines.</p>
+            <p className="text-sm text-slate-600">Primary Admin can view and manage Admin → Manager → Employee reporting lines.</p>
             {!isPrimaryAdmin && (
               <p className="rounded bg-amber-50 px-3 py-2 text-sm text-amber-800">Only Primary Admin can manage hierarchy</p>
             )}

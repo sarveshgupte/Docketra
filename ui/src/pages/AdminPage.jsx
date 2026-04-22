@@ -25,6 +25,7 @@ import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
 import { formatDate } from '../utils/formatters';
 import { BulkUploadModal } from '../components/bulk/BulkUploadModal';
+import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
 import { buildTemplateCsv } from '../constants/bulkUploadSchema';
 import {
   EMPTY_ADMIN_STATS,
@@ -105,6 +106,7 @@ export const AdminPage = () => {
   const [creatingUser, setCreatingUser] = useState(false);
   const [savingUserAccess, setSavingUserAccess] = useState(false);
   const [actionLoadingByUser, setActionLoadingByUser] = useState({});
+  const [pendingConfirmation, setPendingConfirmation] = useState(null);
   const [userSectionMessage, setUserSectionMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [statsEmpty, setStatsEmpty] = useState(false);
@@ -195,6 +197,32 @@ export const AdminPage = () => {
       [xID]: isLoading,
     }));
   };
+
+  const closePendingConfirmation = () => {
+    setPendingConfirmation(null);
+  };
+
+  const openActionConfirmation = ({
+    title,
+    description,
+    confirmText = 'Confirm',
+    danger = false,
+    loadingKey = null,
+    onConfirm,
+  }) => {
+    setPendingConfirmation({
+      title,
+      description,
+      confirmText,
+      danger,
+      loadingKey,
+      onConfirm,
+    });
+  };
+
+  const isConfirmActionLoading = Boolean(
+    pendingConfirmation?.loadingKey && actionLoadingByUser[pendingConfirmation.loadingKey],
+  );
 
   useEffect(() => {
     loadAdminStats();
@@ -430,26 +458,32 @@ export const AdminPage = () => {
       ? `Cancel invite for ${user?.name || user?.email || 'this user'}?`
       : `Are you sure you want to ${shouldActivate ? 'activate' : 'deactivate'} ${user?.name || user?.email || 'this user'}?`;
 
-    if (!window.confirm(confirmationMessage)) {
-      return;
-    }
-
-    try {
-      setUserActionLoading(user.xID, true);
-      const response = await adminApi.updateUserStatus(user.xID, shouldActivate);
-      
-      if (response.success) {
-        showToast(isInvited ? 'Invite cancelled successfully' : `User ${action}d successfully`, 'success');
-        setUserSectionMessage(`User ${user?.name || user?.email || user?.xID} ${shouldActivate ? 'activated' : (isInvited ? 'invite cancelled' : 'deactivated')} successfully.`);
-        await Promise.all([loadAdminStats(), loadAdminData()]);
-      } else {
-        showToast(response.message || (isInvited ? 'Failed to cancel invite' : `Failed to ${action} user`), 'error');
-      }
-    } catch (error) {
-      showToast(error.response?.data?.message || (isInvited ? 'Failed to cancel invite' : `Failed to ${action} user`), 'error');
-    } finally {
-      setUserActionLoading(user.xID, false);
-    }
+    openActionConfirmation({
+      title: isInvited ? 'Cancel Invite' : `${shouldActivate ? 'Activate' : 'Deactivate'} Employee`,
+      description: confirmationMessage,
+      confirmText: isInvited ? 'Cancel Invite' : (shouldActivate ? 'Activate' : 'Deactivate'),
+      danger: !shouldActivate || isInvited,
+      loadingKey: user.xID,
+      onConfirm: async () => {
+        try {
+          setUserActionLoading(user.xID, true);
+          const response = await adminApi.updateUserStatus(user.xID, shouldActivate);
+          
+          if (response.success) {
+            showToast(isInvited ? 'Invite cancelled successfully' : `User ${action}d successfully`, 'success');
+            setUserSectionMessage(`User ${user?.name || user?.email || user?.xID} ${shouldActivate ? 'activated' : (isInvited ? 'invite cancelled' : 'deactivated')} successfully.`);
+            await Promise.all([loadAdminStats(), loadAdminData()]);
+            closePendingConfirmation();
+          } else {
+            showToast(response.message || (isInvited ? 'Failed to cancel invite' : `Failed to ${action} user`), 'error');
+          }
+        } catch (error) {
+          showToast(error.response?.data?.message || (isInvited ? 'Failed to cancel invite' : `Failed to ${action} user`), 'error');
+        } finally {
+          setUserActionLoading(user.xID, false);
+        }
+      },
+    });
   };
 
   const handleResendSetupEmail = async (xID) => {
@@ -472,42 +506,58 @@ export const AdminPage = () => {
   };
 
   const handleUnlockAccount = async (xID) => {
-    if (!window.confirm('Unlock this account now?')) return;
-    try {
-      setUserActionLoading(xID, true);
-      const response = await adminApi.unlockAccount(xID);
-      
-      if (response.success) {
-        showToast('Account unlocked successfully', 'success');
-        setUserSectionMessage('Account unlocked successfully.');
-        await loadAdminData();
-      } else {
-        showToast(response.message || 'Failed to unlock account', 'error');
-      }
-    } catch (error) {
-      showToast(error.response?.data?.message || 'Failed to unlock account', 'error');
-    } finally {
-      setUserActionLoading(xID, false);
-    }
+    openActionConfirmation({
+      title: 'Unlock Account',
+      description: 'Unlock this account now?',
+      confirmText: 'Unlock',
+      loadingKey: xID,
+      onConfirm: async () => {
+        try {
+          setUserActionLoading(xID, true);
+          const response = await adminApi.unlockAccount(xID);
+          
+          if (response.success) {
+            showToast('Account unlocked successfully', 'success');
+            setUserSectionMessage('Account unlocked successfully.');
+            await loadAdminData();
+            closePendingConfirmation();
+          } else {
+            showToast(response.message || 'Failed to unlock account', 'error');
+          }
+        } catch (error) {
+          showToast(error.response?.data?.message || 'Failed to unlock account', 'error');
+        } finally {
+          setUserActionLoading(xID, false);
+        }
+      },
+    });
   };
 
   const handleSendPasswordReset = async (user) => {
-    if (!window.confirm(`Send a password reset link to ${user?.email || 'this user'}?`)) return;
-    try {
-      setUserActionLoading(user?.xID, true);
-      const response = await adminApi.resetPassword(user.xID);
-      if (response.success) {
-        showToast(`Password reset link sent to ${user.email}`, 'success');
-        setUserSectionMessage(`Password reset link sent to ${user.email}.`);
-        await loadAdminData();
-      } else {
-        showToast(response.message || 'Failed to send password reset link', 'error');
-      }
-    } catch (error) {
-      showToast(error.response?.data?.message || 'Failed to send password reset link', 'error');
-    } finally {
-      setUserActionLoading(user?.xID, false);
-    }
+    openActionConfirmation({
+      title: 'Send Password Reset',
+      description: `Send a password reset link to ${user?.email || 'this user'}?`,
+      confirmText: 'Send Reset Link',
+      loadingKey: user?.xID,
+      onConfirm: async () => {
+        try {
+          setUserActionLoading(user?.xID, true);
+          const response = await adminApi.resetPassword(user.xID);
+          if (response.success) {
+            showToast(`Password reset link sent to ${user.email}`, 'success');
+            setUserSectionMessage(`Password reset link sent to ${user.email}.`);
+            await loadAdminData();
+            closePendingConfirmation();
+          } else {
+            showToast(response.message || 'Failed to send password reset link', 'error');
+          }
+        } catch (error) {
+          showToast(error.response?.data?.message || 'Failed to send password reset link', 'error');
+        } finally {
+          setUserActionLoading(user?.xID, false);
+        }
+      },
+    });
   };
 
   const handleOpenAccessModal = async (user) => {
@@ -1523,6 +1573,17 @@ export const AdminPage = () => {
         onToggleClientAccess={handleToggleClientAccess}
         onSave={handleSaveUserAccess}
         saving={savingUserAccess}
+      />
+
+      <ActionConfirmModal
+        isOpen={Boolean(pendingConfirmation)}
+        title={pendingConfirmation?.title}
+        description={pendingConfirmation?.description}
+        confirmText={pendingConfirmation?.confirmText}
+        danger={pendingConfirmation?.danger}
+        loading={isConfirmActionLoading}
+        onCancel={closePendingConfirmation}
+        onConfirm={() => pendingConfirmation?.onConfirm?.()}
       />
       
       {/* Create Category Modal */}
