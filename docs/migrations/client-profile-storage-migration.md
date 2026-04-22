@@ -22,6 +22,7 @@ node scripts/migrations/migrate_client_profiles_to_storage.js
 - Clears sensitive Mongo fields via service save path
 - Logs only client/firm identifiers and error reason (no sensitive payload)
 - After migration, sensitive profile fields are hydration-only in API responses and must not be used as Mongo query/write fields.
+- Post-migration write invariants apply uniformly to both direct and approval-based client creation flows (explicit `clientId`, storage-backed profile write, rollback on storage failure).
 
 ## Partial failure handling
 - Script continues after per-record failure

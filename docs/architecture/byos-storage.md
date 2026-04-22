@@ -54,6 +54,9 @@ Stored as versioned JSON:
 - `deleteClientProfile`
 - `migrateClientProfileToStorage`
 
+`src/services/clientProfileWriteGuard.service.js`
+- `persistClientProfileOrRollback` (shared helper for direct create and approval create flows)
+
 All storage access requires firm context and tenant-scoped keys/folders.
 
 ## Fallback mode requirements
@@ -67,3 +70,7 @@ Without these, profile writes fail closed with `STORAGE_NOT_CONNECTED`.
 ## Read-path guarantee
 - Profile reads resolve by `Client.profileRef` metadata, not by tenant “currently active provider” alone.
 - Managed-fallback (`provider: docketra_managed`) profile objects remain readable even after a firm later connects an external provider.
+
+## Approval-flow guarantee
+- Approval-based client creation explicitly generates `clientId` via `generateNextClientId(...)` before repository create, matching direct create invariants.
+- Approval profile writes use `persistClientProfileOrRollback(...)`, so storage-write failure cannot leave orphan `Client` documents.

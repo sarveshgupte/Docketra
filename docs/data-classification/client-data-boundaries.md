@@ -6,6 +6,7 @@
 
 ## Enforcement notes
 - Client create/update flows persist sensitive payload through `clientProfileStorageService`.
+- Approval-based client creation follows the same rule set: explicit `clientId` generation + storage-backed profile write with rollback helper (`persistClientProfileOrRollback`).
 - `Client.profileRef` is the only persistent linkage in Mongo.
 - Client detail endpoints hydrate profile on demand from storage.
 - Search/list endpoints rely on safe metadata fields only.
