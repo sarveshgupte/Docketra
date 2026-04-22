@@ -373,6 +373,29 @@ export const CasesPage = () => {
     });
   }, []);
 
+
+  const handleViewTabKeyDown = useCallback((event, index) => {
+    let newIndex;
+    if (event.key === 'ArrowRight') {
+      newIndex = (index + 1) % availableViews.length;
+    } else if (event.key === 'ArrowLeft') {
+      newIndex = (index - 1 + availableViews.length) % availableViews.length;
+    }
+
+    if (newIndex !== undefined) {
+      event.preventDefault();
+      const viewId = availableViews[newIndex].id;
+      setActiveView(viewId);
+
+      setTimeout(() => {
+        const tabElement = document.getElementById(`view-tab-${viewId}`);
+        if (tabElement) {
+          tabElement.focus();
+        }
+      }, 0);
+    }
+  }, [availableViews, setActiveView]);
+
   const handleBulkAssignToMe = useCallback(async () => {
     const selectedList = cases.filter((c) => selectedCaseIds.has(c.caseId));
     if (!selectedList.length) return;
@@ -702,13 +725,17 @@ export const CasesPage = () => {
 
         {/* Preset operational view tabs */}
         <div className="cases-page__views cases-page__control-section" role="tablist" aria-label="Docket views">
-          {availableViews.map((view) => (
+          {availableViews.map((view, index) => (
             <button
               key={view.id}
+              id={`view-tab-${view.id}`}
               role="tab"
               aria-selected={activeView === view.id}
               className={`cases-page__view-tab${activeView === view.id ? ' cases-page__view-tab--active' : ''}`}
               onClick={() => setActiveView(view.id)}
+              onKeyDown={(e) => handleViewTabKeyDown(e, index)}
+              tabIndex={activeView === view.id ? 0 : -1}
+              aria-controls="cases-data-table"
               type="button"
             >
               {view.label}
@@ -782,7 +809,7 @@ export const CasesPage = () => {
           </SectionCard>
         )}
 
-        <SectionCard title="Docket Registry" subtitle={`${searchedCases.length} records`}>
+        <SectionCard id="cases-data-table" title="Docket Registry" subtitle={`${searchedCases.length} records`}>
           <DataTable
             columns={columns}
             rows={sortedCases}

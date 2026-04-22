@@ -99,19 +99,46 @@ export const CasesSavedViews = ({ savedViews, savedViewsOpen, setSavedViewsOpen,
   </div>
 );
 
-export const CasesFiltersCard = ({ statusFilter, setStatusFilter, workTypeFilter, setWorkTypeFilter, qcWorkbaskets, activeWorkbasketId, setActiveWorkbasketId, }) => (
+export const CasesFiltersCard = ({  statusFilter, setStatusFilter, workTypeFilter, setWorkTypeFilter, qcWorkbaskets, activeWorkbasketId, setActiveWorkbasketId,  }) => {
+  const handleWorkbasketTabKeyDown = (event, index) => {
+    let newIndex;
+    if (event.key === 'ArrowRight') {
+      newIndex = (index + 1) % qcWorkbaskets.length;
+    } else if (event.key === 'ArrowLeft') {
+      newIndex = (index - 1 + qcWorkbaskets.length) % qcWorkbaskets.length;
+    }
+
+    if (newIndex !== undefined) {
+      event.preventDefault();
+      const workbasketId = qcWorkbaskets[newIndex].id;
+      setActiveWorkbasketId(workbasketId);
+
+      setTimeout(() => {
+        const tabElement = document.getElementById(`workbasket-tab-${workbasketId}`);
+        if (tabElement) {
+          tabElement.focus();
+        }
+      }, 0);
+    }
+  };
+
+  return (
   <SectionCard className="cases-page__filters cases-page__control-section" title="Filters" subtitle="Narrow down the docket list by workflow status.">
     {statusFilter === CASE_STATUS.QC_PENDING && qcWorkbaskets.length > 1 && (
       <>
         <label className="cases-page__filter-label">QC Workbasket</label>
         <div className="cases-page__views" role="tablist" aria-label="QC workbasket selector">
-          {qcWorkbaskets.map((workbasket) => (
+          {qcWorkbaskets.map((workbasket, index) => (
             <button
               key={workbasket.id}
+              id={`workbasket-tab-${workbasket.id}`}
               role="tab"
               aria-selected={activeWorkbasketId === workbasket.id}
               className={`cases-page__view-tab${activeWorkbasketId === workbasket.id ? ' cases-page__view-tab--active' : ''}`}
               onClick={() => setActiveWorkbasketId(workbasket.id)}
+              onKeyDown={(e) => handleWorkbasketTabKeyDown(e, index)}
+              tabIndex={activeWorkbasketId === workbasket.id ? 0 : -1}
+              aria-controls="status-filter"
               type="button"
             >
               {workbasket.name}
@@ -136,7 +163,8 @@ export const CasesFiltersCard = ({ statusFilter, setStatusFilter, workTypeFilter
       <option value="internal">Internal Work</option>
     </select>
   </SectionCard>
-);
+  );
+};
 
 export const CasesPerformancePanel = ({ isPartner, enablePerformanceView, showPerformance, performanceMetrics }) => {
   if (isPartner || !enablePerformanceView || !showPerformance) return null;
