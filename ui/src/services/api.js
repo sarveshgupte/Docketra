@@ -17,6 +17,7 @@ const api = axios.create({
 });
 
 let redirecting = false;
+let refreshFailureDetected = false;
 const markErrorToasted = (error, message) => {
   if (!error) return;
   error.uiFeedback = {
@@ -34,6 +35,8 @@ const isPublicAuthFlowRequest = (requestConfig) => {
     || /\/verify-otp$/.test(requestUrl)
     || /\/login$/.test(requestUrl);
 };
+const isRefreshRequest = (requestConfig) => /\/auth\/refresh$/.test(String(requestConfig?.url || ''));
+const isLoginLikePath = (pathname) => /\/login$/.test(pathname) || pathname.includes('/auth/login');
 
 function generateIdempotencyKey() {
   if (window.crypto?.randomUUID) {
@@ -105,6 +108,9 @@ api.interceptors.request.use(
 // Response interceptor - Handle token expiry and refresh
 api.interceptors.response.use(
   (response) => {
+    if (/\/auth\/(profile|refresh)$/.test(String(response?.config?.url || ''))) {
+      refreshFailureDetected = false;
+    }
     if (shouldRefreshOnboardingProgress({ method: response?.config?.method, url: response?.config?.url })) {
       emitOnboardingProgressRefresh({
         method: response?.config?.method,
@@ -130,6 +136,13 @@ api.interceptors.response.use(
       const destination = resolveFirmLoginPath({
         fallbackFirmSlug: firmSlug,
       });
+      const currentPath = window.location.pathname || '';
+      const alreadyOnLoginRoute = currentPath === destination || isLoginLikePath(currentPath);
+      if (alreadyOnLoginRoute) {
+        console.info('[AUTH] Skipping hard redirect: already on login route.', { currentPath, destination });
+        redirecting = false;
+        return;
+      }
       window.location.assign(destination);
       // Fallback reset in case navigation is blocked
       setTimeout(() => { redirecting = false; }, REDIRECT_TIMEOUT_MS);
@@ -158,14 +171,31 @@ api.interceptors.response.use(
     }
     
     // Handle token expiry
-    if (status === 401 && !originalRequest._retry && !isPublicAuthFlowRequest(originalRequest)) {
+    if (status === 401 && refreshFailureDetected && !isPublicAuthFlowRequest(originalRequest)) {
+      clearAuthStorage();
+      redirectToLogin();
+      return Promise.reject(error);
+    }
+
+    if (
+      status === 401
+      && !originalRequest._retry
+      && !isPublicAuthFlowRequest(originalRequest)
+      && !isRefreshRequest(originalRequest)
+    ) {
       originalRequest._retry = true;
       
       try {
         await api.post('/auth/refresh');
+        refreshFailureDetected = false;
         return api(originalRequest);
       } catch (refreshError) {
         // Refresh failed - clear storage and redirect to login
+        refreshFailureDetected = true;
+        console.warn('[AUTH] Refresh failed. Resolving session as unauthenticated.', {
+          refreshStatus: refreshError?.response?.status || null,
+          refreshCode: refreshError?.code || refreshError?.response?.data?.code || null,
+        });
         clearAuthStorage();
         const refreshCode = refreshError?.code || refreshError?.response?.data?.code;
         sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
