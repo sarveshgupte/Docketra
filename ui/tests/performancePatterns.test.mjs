@@ -6,14 +6,18 @@ const read = (relativePath) => fs.readFileSync(path.resolve(process.cwd(), relat
 
 const hooksSource = read('src/hooks/usePlatformDataQueries.js');
 assert.ok(hooksSource.includes('useQuery({'), 'Platform data hooks should use React Query.');
-for (const queryKey of [
-  "['platform', 'dashboard-summary']",
-  "['platform', 'my-worklist']",
-  "['platform', 'workbench']",
-  "['platform', 'qc-workbench']",
-  "['platform', 'reports-metrics']",
+assert.ok(hooksSource.includes('usePlatformQueryScope'), 'Platform hooks should derive tenant/session query scope.');
+for (const querySuffix of [
+  "'dashboard-summary'",
+  "'my-worklist'",
+  "'workbench'",
+  "'qc-workbench'",
+  "'reports-metrics'",
 ]) {
-  assert.ok(hooksSource.includes(queryKey), `Missing expected platform query key ${queryKey}`);
+  assert.ok(
+    hooksSource.includes(`queryKey: ['platform', scopedFirmSlug, scopedUserId, ${querySuffix}]`),
+    `Missing expected scoped platform query key suffix ${querySuffix}`
+  );
 }
 assert.ok(hooksSource.includes('placeholderData: keepPreviousData'), 'Platform hooks should preserve previous data during background refresh.');
 assert.ok(hooksSource.includes('staleTime:'), 'Platform hooks should define stale-time behavior intentionally.');
