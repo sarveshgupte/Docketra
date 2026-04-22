@@ -1,5 +1,11 @@
 # Admin Surface Architecture
 
+## 0) Admin polish fixes delivered
+- Standardized admin-facing role wording to `Primary Admin`, `Admin`, `Manager`, `Employee`, `Partner`.
+- Removed mixed `Employee (User)` copy in shared admin role help copy.
+- Replaced native confirm dialogs for high-risk user actions with shared modal UX.
+- Kept `AdminPage` as orchestrator while preserving existing split into focused renderer components.
+
 ## 1) Page / component breakdown
 - **`ui/src/pages/AdminPage.jsx`**
   - Owns tab-level orchestration (`users`, `categories`, `clients`).
@@ -23,6 +29,8 @@
   - Derived lists/maps (`primaryWorkbaskets`, `qcOnlyWorkbaskets`, `workbasketNameById`, actor role flags).
 - `useRef`
   - Toast deduplication lock/timer state.
+- Confirmation orchestration
+  - `pendingConfirmation` state in `AdminPage` drives a shared `ActionConfirmModal` for sensitive actions.
 
 ## 3) Mutation flow + feedback rules
 1. UI action calls a handler in `AdminPage`.
@@ -47,7 +55,25 @@
   - activate/deactivate/cancel invite,
   - unlock account,
   - send password reset.
+- Use app-consistent modal UX (`ActionConfirmModal`) instead of `window.confirm`.
+- Confirmation modal disables close/secondary actions while the confirm mutation is in-flight.
 - Never allow deactivation of primary admin user.
 - Keep role copy explicit:
-  - firm hierarchy: `Primary Admin > Admin > Manager > User`,
+  - firm hierarchy: `Primary Admin > Admin > Manager > Employee`,
   - `SuperAdmin` is platform-only.
+  - internal stored role may remain `USER`; admin-facing label is `Employee`.
+
+## 6) Safety and authorization alignment
+- `AdminPage` is orchestrator-only: heavy rendering and table actions remain in `AdminUsersSection` / modal components.
+- Backend is the source of truth for authorization; frontend role checks are UX guards only.
+- Admin action feedback follows a predictable pattern:
+  1. set per-user loading,
+  2. execute API mutation,
+  3. show toast + section message,
+  4. refresh users/stats and close confirmation modal on success.
+
+## 7) Most important regressions tied to this surface
+- `ui/tests/adminSurfaceHardening.test.mjs`
+  - validates `ActionConfirmModal` usage for high-risk user actions,
+  - asserts native `window.confirm` is not used for these actions,
+  - asserts canonical role hierarchy copy (`... > Employee`) is present.
