@@ -23,6 +23,8 @@ const { ensureDefaultClientForFirm } = require('../services/defaultClient.servic
 const { parseBooleanQuery } = require('../utils/query.utils');
 const { sanitizePayload, enforceAllowedFields, PayloadValidationError } = require('../utils/payloadValidation');
 const cfsDriveService = require('../services/cfsDrive.service');
+const { clientProfileStorageService } = require('../services/clientProfileStorage.service');
+const { persistClientProfileOrRollback } = require('../services/clientProfileWriteGuard.service');
 
 const getClientAccessContext = (req, res, message) => {
   const firmId = req.user?.firmId;
@@ -47,6 +49,22 @@ const normalizeString = (value) => {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
   return trimmed.length ? trimmed : undefined;
+};
+
+const hydrateClientFromProfileIfAvailable = async (firmId, client) => {
+  if (!client) return client;
+  try {
+    const profile = await clientProfileStorageService.getClientProfile({ firmId, client });
+    if (!profile) return client;
+    return clientProfileStorageService.hydrateClientWithProfile(client, profile);
+  } catch (error) {
+    log.warn('CLIENT_PROFILE_HYDRATE_FAILED', {
+      firmId: String(firmId || ''),
+      clientId: client?.clientId || null,
+      message: error.message,
+    });
+    return client;
+  }
 };
 
 const setNoCacheHeaders = (res) => {
@@ -184,7 +202,6 @@ const getClients = async (req, res) => {
       filter.$or = [
         { businessName: { $regex: escapedSearch, $options: 'i' } },
         { clientId: { $regex: escapedSearch, $options: 'i' } },
-        { businessEmail: { $regex: escapedSearch, $options: 'i' } },
       ];
     }
 
@@ -194,7 +211,7 @@ const getClients = async (req, res) => {
         filter,
         accessContext.role,
         {
-          select: 'clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal isDefaultClient createdAt PAN TAN CIN contactPersonName contactPersonDesignation contactPersonPhoneNumber contactPersonEmailAddress',
+          select: 'clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal isDefaultClient createdAt profileRef',
           sort: { clientId: 1 },
           limit,
           skip,
@@ -246,8 +263,9 @@ const getClientById = async (req, res) => {
       });
     }
     
+    const hydratedClient = await hydrateClientFromProfileIfAvailable(accessContext.firmId, client);
     const attachments = await AttachmentRepository.findByClientSource(accessContext.firmId, clientId, 'client_cfs');
-    const payload = mapClientResponse(client);
+    const payload = mapClientResponse(hydratedClient);
     payload.clientFactSheet = payload.clientFactSheet || {};
     payload.clientFactSheet.attachments = attachments.map((attachment) => ({
       fileId: attachment._id,
@@ -393,18 +411,8 @@ const createClient = async (req, res) => {
         clientId,
         // Business fields from sanitized request
         businessName: businessName.trim(),
-        businessAddress: businessAddress ? businessAddress.trim() : undefined,
         primaryContactNumber: primaryContactNumber.trim(),
-        secondaryContactNumber: secondaryContactNumber ? secondaryContactNumber.trim() : undefined,
         businessEmail: businessEmail.trim().toLowerCase(),
-        PAN: PAN ? PAN.trim().toUpperCase() : undefined,
-        GST: GST ? GST.trim().toUpperCase() : undefined,
-        TAN: TAN ? TAN.trim().toUpperCase() : undefined,
-        CIN: CIN ? CIN.trim().toUpperCase() : undefined,
-        contactPersonName: contactPersonName ? contactPersonName.trim() : undefined,
-        contactPersonDesignation: contactPersonDesignation ? contactPersonDesignation.trim() : undefined,
-        contactPersonPhoneNumber: contactPersonPhoneNumber ? contactPersonPhoneNumber.trim() : undefined,
-        contactPersonEmailAddress: contactPersonEmailAddress ? contactPersonEmailAddress.trim().toLowerCase() : undefined,
         // System-owned fields (injected server-side only, NEVER from client)
         firmId: userFirmId,
         createdByXid,
@@ -417,6 +425,27 @@ const createClient = async (req, res) => {
     });
 
     await incrementTenantMetric(userFirmId, 'clients').catch(() => null);
+
+    await persistClientProfileOrRollback({
+      firmId: userFirmId,
+      client,
+      actorXID: createdByXid,
+      profileInput: {
+        legalName: businessName.trim(),
+        businessAddress: businessAddress ? businessAddress.trim() : null,
+        businessEmail: businessEmail.trim().toLowerCase(),
+        primaryContactNumber: primaryContactNumber.trim(),
+        secondaryContactNumber: secondaryContactNumber ? secondaryContactNumber.trim() : null,
+        PAN: PAN ? PAN.trim().toUpperCase() : null,
+        GST: GST ? GST.trim().toUpperCase() : null,
+        TAN: TAN ? TAN.trim().toUpperCase() : null,
+        CIN: CIN ? CIN.trim().toUpperCase() : null,
+        contactPersonName: contactPersonName ? contactPersonName.trim() : null,
+        contactPersonDesignation: contactPersonDesignation ? contactPersonDesignation.trim() : null,
+        contactPersonPhoneNumber: contactPersonPhoneNumber ? contactPersonPhoneNumber.trim() : null,
+        contactPersonEmailAddress: contactPersonEmailAddress ? contactPersonEmailAddress.trim().toLowerCase() : null,
+      },
+    });
 
     log.info('CLIENT_CREATED', buildClientLogContext(req, {
       clientId: client.clientId,
@@ -503,15 +532,32 @@ const updateClient = async (req, res) => {
       });
     }
     
+    await clientProfileStorageService.updateClientProfile({
+      firmId: accessContext.firmId,
+      client,
+      actorXID: req.user?.xID || 'SYSTEM',
+      partialProfileInput: {
+        legalName: businessName !== undefined ? String(businessName).trim() : undefined,
+        businessAddress: businessAddress !== undefined ? String(businessAddress).trim() : undefined,
+        businessEmail: businessEmail !== undefined ? String(businessEmail).trim().toLowerCase() : undefined,
+        primaryContactNumber: primaryContactNumber !== undefined ? String(primaryContactNumber).trim() : undefined,
+        secondaryContactNumber: secondaryContactNumber !== undefined ? (secondaryContactNumber ? String(secondaryContactNumber).trim() : null) : undefined,
+        PAN: PAN !== undefined ? (PAN ? String(PAN).trim().toUpperCase() : null) : undefined,
+        TAN: TAN !== undefined ? (TAN ? String(TAN).trim().toUpperCase() : null) : undefined,
+        CIN: CIN !== undefined ? (CIN ? String(CIN).trim().toUpperCase() : null) : undefined,
+        GST: GST !== undefined ? (GST ? String(GST).trim().toUpperCase() : null) : undefined,
+        contactPersonName: contactPersonName !== undefined ? (contactPersonName ? String(contactPersonName).trim() : null) : undefined,
+        contactPersonDesignation: contactPersonDesignation !== undefined ? (contactPersonDesignation ? String(contactPersonDesignation).trim() : null) : undefined,
+        contactPersonPhoneNumber: contactPersonPhoneNumber !== undefined ? (contactPersonPhoneNumber ? String(contactPersonPhoneNumber).trim() : null) : undefined,
+        contactPersonEmailAddress: contactPersonEmailAddress !== undefined ? (contactPersonEmailAddress ? String(contactPersonEmailAddress).trim().toLowerCase() : null) : undefined,
+      },
+    });
+
     if (businessName !== undefined) {
       client.businessName = String(businessName).trim();
     }
 
-    if (businessAddress !== undefined) {
-      client.businessAddress = String(businessAddress).trim();
-    }
-
-    // Update allowed fields
+    // Update allowed metadata fields
     if (businessEmail !== undefined) {
       client.businessEmail = String(businessEmail).trim().toLowerCase();
     }
@@ -519,48 +565,14 @@ const updateClient = async (req, res) => {
     if (primaryContactNumber !== undefined) {
       client.primaryContactNumber = String(primaryContactNumber).trim();
     }
-    
-    if (secondaryContactNumber !== undefined) {
-      client.secondaryContactNumber = secondaryContactNumber || null;
-    }
-
-    if (PAN !== undefined) {
-      client.PAN = PAN ? String(PAN).trim().toUpperCase() : null;
-    }
-
-    if (TAN !== undefined) {
-      client.TAN = TAN ? String(TAN).trim().toUpperCase() : null;
-    }
-
-    if (CIN !== undefined) {
-      client.CIN = CIN ? String(CIN).trim().toUpperCase() : null;
-    }
-
-    if (GST !== undefined) {
-      client.GST = GST ? String(GST).trim().toUpperCase() : null;
-    }
-
-    if (contactPersonName !== undefined) {
-      client.contactPersonName = contactPersonName ? String(contactPersonName).trim() : null;
-    }
-
-    if (contactPersonDesignation !== undefined) {
-      client.contactPersonDesignation = contactPersonDesignation ? String(contactPersonDesignation).trim() : null;
-    }
-
-    if (contactPersonPhoneNumber !== undefined) {
-      client.contactPersonPhoneNumber = contactPersonPhoneNumber ? String(contactPersonPhoneNumber).trim() : null;
-    }
-
-    if (contactPersonEmailAddress !== undefined) {
-      client.contactPersonEmailAddress = contactPersonEmailAddress ? String(contactPersonEmailAddress).trim().toLowerCase() : null;
-    }
 
     await client.save();
+
+    const hydrated = await hydrateClientFromProfileIfAvailable(accessContext.firmId, client);
     
     res.json({
       success: true,
-      data: mapClientResponse(client),
+      data: mapClientResponse(hydrated),
       message: 'Client updated successfully',
     });
   } catch (error) {
@@ -792,45 +804,40 @@ const updateClientFactSheet = async (req, res) => {
       });
     }
     
-    // Initialize clientFactSheet if it doesn't exist
-    if (!client.clientFactSheet) {
-      client.clientFactSheet = { files: [] };
-    }
-    
-    // Track if this is creation or update for audit logging
-    // Use _initialized flag for accurate detection
-    const isCreation = !client.clientFactSheet._initialized;
-    
-    // Update description and notes
-    if (description !== undefined) {
-      client.clientFactSheet.description = description;
-      client.clientFactSheet.updatedAt = new Date();
-    }
-    if (notes !== undefined) {
-      client.clientFactSheet.notes = notes;
-      client.clientFactSheet.updatedAt = new Date();
-    }
+    const existingProfile = await clientProfileStorageService.getClientProfile({ firmId: userFirmId, client });
+    const existingFactSheet = existingProfile?.profile?.factSheet || {};
+    const isCreation = !existingFactSheet?._initialized;
 
-    // Optional: capture structured client fact sheet metadata.
-    // This complements existing top-level client fields and keeps CFS case-friendly.
+    const nextFactSheet = {
+      ...existingFactSheet,
+      ...(description !== undefined ? { description } : {}),
+      ...(notes !== undefined ? { notes } : {}),
+      updatedAt: new Date(),
+      _initialized: true,
+    };
+
     if (basicInfo && typeof basicInfo === 'object') {
-      client.clientFactSheet.basicInfo = {
-        clientName: basicInfo.clientName ?? client.clientFactSheet.basicInfo?.clientName ?? client.businessName,
-        entityType: basicInfo.entityType ?? client.clientFactSheet.basicInfo?.entityType ?? '',
-        PAN: basicInfo.PAN ?? client.clientFactSheet.basicInfo?.PAN ?? client.PAN ?? '',
-        CIN: basicInfo.CIN ?? client.clientFactSheet.basicInfo?.CIN ?? client.CIN ?? '',
-        GSTIN: basicInfo.GSTIN ?? client.clientFactSheet.basicInfo?.GSTIN ?? client.GST ?? '',
-        address: basicInfo.address ?? client.clientFactSheet.basicInfo?.address ?? client.businessAddress,
-        contactPerson: basicInfo.contactPerson ?? client.clientFactSheet.basicInfo?.contactPerson ?? '',
-        email: basicInfo.email ?? client.clientFactSheet.basicInfo?.email ?? client.businessEmail,
-        phone: basicInfo.phone ?? client.clientFactSheet.basicInfo?.phone ?? client.primaryContactNumber,
+      nextFactSheet.basicInfo = {
+        clientName: basicInfo.clientName ?? nextFactSheet.basicInfo?.clientName ?? client.businessName,
+        entityType: basicInfo.entityType ?? nextFactSheet.basicInfo?.entityType ?? '',
+        PAN: basicInfo.PAN ?? nextFactSheet.basicInfo?.PAN ?? '',
+        CIN: basicInfo.CIN ?? nextFactSheet.basicInfo?.CIN ?? '',
+        GSTIN: basicInfo.GSTIN ?? nextFactSheet.basicInfo?.GSTIN ?? '',
+        address: basicInfo.address ?? nextFactSheet.basicInfo?.address ?? '',
+        contactPerson: basicInfo.contactPerson ?? nextFactSheet.basicInfo?.contactPerson ?? '',
+        email: basicInfo.email ?? nextFactSheet.basicInfo?.email ?? client.businessEmail ?? '',
+        phone: basicInfo.phone ?? nextFactSheet.basicInfo?.phone ?? client.primaryContactNumber ?? '',
       };
     }
-    
-    // Mark as initialized
-    client.clientFactSheet._initialized = true;
-    
-    await client.save();
+
+    await clientProfileStorageService.updateClientProfile({
+      firmId: userFirmId,
+      client,
+      actorXID: performedByXID,
+      partialProfileInput: {
+        clientFactSheet: nextFactSheet,
+      },
+    });
     
     // Log audit event
     if (isCreation) {
@@ -867,7 +874,7 @@ const updateClientFactSheet = async (req, res) => {
     
     res.json({
       success: true,
-      data: client.clientFactSheet,
+      data: nextFactSheet,
       message: 'Client Fact Sheet updated successfully',
     });
   } catch (error) {
@@ -926,9 +933,14 @@ const uploadFactSheetFile = async (req, res) => {
 
     const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
     if (client) {
-      client.clientFactSheet = client.clientFactSheet || {};
-      client.clientFactSheet.updatedAt = new Date();
-      await client.save();
+      const existingProfile = await clientProfileStorageService.getClientProfile({ firmId: userFirmId, client });
+      const factSheet = existingProfile?.profile?.factSheet || {};
+      await clientProfileStorageService.updateClientProfile({
+        firmId: userFirmId,
+        client,
+        actorXID: performedByXID,
+        partialProfileInput: { clientFactSheet: { ...factSheet, updatedAt: new Date() } },
+      });
     }
     
     // Log audit event
@@ -1000,9 +1012,14 @@ const deleteFactSheetFile = async (req, res) => {
 
     const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
     if (client) {
-      client.clientFactSheet = client.clientFactSheet || {};
-      client.clientFactSheet.updatedAt = new Date();
-      await client.save();
+      const existingProfile = await clientProfileStorageService.getClientProfile({ firmId: userFirmId, client });
+      const factSheet = existingProfile?.profile?.factSheet || {};
+      await clientProfileStorageService.updateClientProfile({
+        firmId: userFirmId,
+        client,
+        actorXID: req.user?.xID || 'SYSTEM',
+        partialProfileInput: { clientFactSheet: { ...factSheet, updatedAt: new Date() } },
+      });
     }
     
     // Log audit event
@@ -1088,9 +1105,14 @@ const uploadClientCFSFile = async (req, res) => {
 
     const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
     if (client) {
-      client.clientFactSheet = client.clientFactSheet || {};
-      client.clientFactSheet.updatedAt = new Date();
-      await client.save();
+      const existingProfile = await clientProfileStorageService.getClientProfile({ firmId: userFirmId, client });
+      const factSheet = existingProfile?.profile?.factSheet || {};
+      await clientProfileStorageService.updateClientProfile({
+        firmId: userFirmId,
+        client,
+        actorXID: userXID,
+        partialProfileInput: { clientFactSheet: { ...factSheet, updatedAt: new Date() } },
+      });
     }
 
     return res.status(202).json({
@@ -1197,9 +1219,14 @@ const deleteClientCFSFile = async (req, res) => {
       reason: req.body?.reason || 'Client CFS delete',
     });
 
-    client.clientFactSheet = client.clientFactSheet || {};
-    client.clientFactSheet.updatedAt = new Date();
-    await client.save();
+    const existingProfile = await clientProfileStorageService.getClientProfile({ firmId: userFirmId, client });
+    const factSheet = existingProfile?.profile?.factSheet || {};
+    await clientProfileStorageService.updateClientProfile({
+      firmId: userFirmId,
+      client,
+      actorXID: req.user?.xID || 'SYSTEM',
+      partialProfileInput: { clientFactSheet: { ...factSheet, updatedAt: new Date() } },
+    });
 
     res.json({
       success: true,
@@ -1296,7 +1323,8 @@ const listClientCfsComments = async (req, res) => {
     const userFirmId = req.user?.firmId;
     const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
     if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
-    const comments = client.clientFactSheet?.comments || [];
+    const profile = await clientProfileStorageService.getClientProfile({ firmId: userFirmId, client });
+    const comments = profile?.profile?.factSheet?.comments || [];
     return res.json({ success: true, data: comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Error fetching CFS comments', error: error.message });
@@ -1311,8 +1339,9 @@ const addClientCfsComment = async (req, res) => {
     const userXID = req.user?.xID;
     const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
     if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
-    if (!client.clientFactSheet) client.clientFactSheet = { files: [], comments: [] };
-    if (!Array.isArray(client.clientFactSheet.comments)) client.clientFactSheet.comments = [];
+    const profile = await clientProfileStorageService.getClientProfile({ firmId: userFirmId, client });
+    const factSheet = profile?.profile?.factSheet || {};
+    const comments = Array.isArray(factSheet.comments) ? [...factSheet.comments] : [];
     const entry = {
       client_id: clientId,
       user_id: userXID,
@@ -1326,8 +1355,19 @@ const addClientCfsComment = async (req, res) => {
         uploaded_at: new Date(),
       })),
     };
-    client.clientFactSheet.comments.unshift(entry);
-    await client.save();
+    comments.unshift(entry);
+    await clientProfileStorageService.updateClientProfile({
+      firmId: userFirmId,
+      client,
+      actorXID: userXID || 'SYSTEM',
+      partialProfileInput: {
+        clientFactSheet: {
+          ...factSheet,
+          comments,
+          updatedAt: new Date(),
+        },
+      },
+    });
 
     await logClientFactSheetAction({
       clientId,
@@ -1394,4 +1434,7 @@ module.exports = {
   addClientCfsComment: wrapWriteHandler(addClientCfsComment),
   listClientActivity,
   listClientDockets,
+  __testables: {
+    persistClientProfileOrRollback,
+  },
 };

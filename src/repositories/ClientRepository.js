@@ -154,6 +154,35 @@ const applyQueryOptions = (query, options = {}) => {
 // ── Repository ──────────────────────────────────────────────────────────────
 
 const ClientRepository = {
+  _assertNoSensitivePersistence(payload = {}) {
+    const blockedFields = [
+      'PAN',
+      'TAN',
+      'GST',
+      'CIN',
+      'businessAddress',
+      'secondaryContactNumber',
+      'contactPersonName',
+      'contactPersonDesignation',
+      'contactPersonPhoneNumber',
+      'contactPersonEmailAddress',
+      'clientFactSheet',
+    ];
+    for (const field of blockedFields) {
+      if (!Object.prototype.hasOwnProperty.call(payload, field)) continue;
+      const value = payload[field];
+      const hasValue = value !== null
+        && value !== undefined
+        && !(typeof value === 'string' && value.trim().length === 0)
+        && !(Array.isArray(value) && value.length === 0)
+        && !(typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0);
+      if (hasValue) {
+        const err = new Error(`BYOS_SENSITIVE_FIELD_PERSISTENCE_BLOCKED:${field}`);
+        err.code = 'BYOS_SENSITIVE_FIELD_PERSISTENCE_BLOCKED';
+        throw err;
+      }
+    }
+  },
   /**
    * Find client by clientId with firm scoping
    * @param {string|ObjectId} firmId - Firm ID from req.user.firmId
@@ -232,6 +261,7 @@ const ClientRepository = {
     if (!clientId) {
       return null;
     }
+    this._assertNoSensitivePersistence(update?.$set || update || {});
     return Client.updateOne({ firmId, clientId }, update);
   },
 
@@ -247,6 +277,7 @@ const ClientRepository = {
     if (!_id) {
       return null;
     }
+    this._assertNoSensitivePersistence(update?.$set || update || {});
     return Client.updateOne({ firmId, _id }, update);
   },
 
@@ -295,6 +326,7 @@ const ClientRepository = {
       throw new Error('firmId is required to create a client');
     }
     _guardSuperadmin(role);
+    this._assertNoSensitivePersistence(clientData || {});
     // Ensure the per-tenant DEK exists before the model pre-save hook needs it.
     await ensureTenantKey(String(clientData.firmId));
     const doc = await Client.create(clientData);

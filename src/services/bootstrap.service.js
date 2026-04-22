@@ -373,7 +373,7 @@ const recoverFirmBootstrap = async (firmId) => {
           defaultClient = new Client({
             clientId,
             businessName: firm.name,
-            businessAddress: 'Default Address',
+            businessAddress: null,
             primaryContactNumber: '0000000000',
             businessEmail: `${firm.firmId.toLowerCase()}@system.local`,
             firmId: firm._id,

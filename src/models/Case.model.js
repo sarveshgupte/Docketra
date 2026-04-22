@@ -1133,10 +1133,6 @@ caseSchema.pre('validate', async function() {
         businessName: client.businessName,
         primaryContactNumber: client.primaryContactNumber,
         businessEmail: client.businessEmail,
-        businessAddress: client.businessAddress,
-        PAN: client.PAN,
-        GST: client.GST,
-        CIN: client.CIN,
       };
     }
   }
