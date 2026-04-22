@@ -12,9 +12,7 @@ import { Loading } from '../components/common/Loading';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { Textarea } from '../components/common/Textarea';
-import { Input } from '../components/common/Input';
 import { Select } from '../components/common/Select';
-import { Modal } from '../components/common/Modal';
 import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
@@ -29,17 +27,19 @@ import { CASE_DETAIL_TABS, USER_ROLES, VALID_CASE_DETAIL_TAB_NAMES } from '../ut
 import { LifecycleBadge } from '../../components/LifecycleBadge';
 import { DocketSidebar } from '../components/docket/DocketSidebar';
 import { DocketComments } from '../components/docket/DocketComments';
-import { ActionModal } from '../components/docket/ActionModal';
 import { StickyTabs } from '../components/common/StickyTabs';
 import './CaseDetailPage.css';
 import { ROUTES } from '../constants/routes';
 import { RouteErrorFallback } from '../components/routing/RouteErrorFallback';
 import { useActiveDocket } from '../hooks/useActiveDocket';
 import { useCaseQuery } from '../hooks/useCaseQuery';
+import { useDocketQueueNavigation } from '../hooks/useDocketQueueNavigation';
 import { invalidateCaseCache } from '../utils/caseCache';
+import { getDocketSlaBadgeStatus } from '../utils/docketSla';
 import { getLifecycleMeta } from '../../utils/lifecycleMap';
 import api from '../services/api';
 import { DocketDetails } from '../../components/DocketDetails';
+import { CaseWorkflowModals } from './caseDetail/CaseWorkflowModals';
 import {
   ACTION_RETRY_BASE_DELAY_MS,
   ACTION_RETRY_KEY,
@@ -60,30 +60,28 @@ export const CaseDetailPage = () => {
   const { showSuccess, showError, showWarning } = useToast();
   const { activeDocketId, activeDocketData, isDocketLoading, beginDocketOpen, setActiveDocketData } = useActiveDocket();
 
-  // Next/Previous navigation: read list context passed from CasesPage
-  const sourceList = location.state?.sourceList || null; // array of caseIds
-  const sourceIndex = location.state?.index ?? -1;
-  const returnToFromQuery = useMemo(() => {
-    const params = new URLSearchParams(location.search || '');
-    const raw = params.get('returnTo');
-    return raw && raw.startsWith('/app/firm/') ? raw : '';
-  }, [location.search]);
+  const {
+    sourceList,
+    sourceIndex,
+    returnTo,
+    hasPrev,
+    hasNext,
+    getNavigationState,
+  } = useDocketQueueNavigation({ location, firmSlug });
+
   const activeTab = useMemo(() => {
     const params = new URLSearchParams(location.search || '');
     const tab = params.get('tab');
     if (tab === CASE_DETAIL_TABS.COMMENTS_LEGACY) return CASE_DETAIL_TABS.ACTIVITY;
     return VALID_CASE_DETAIL_TAB_NAMES.includes(tab) ? tab : CASE_DETAIL_TABS.OVERVIEW;
   }, [location.search]);
-  const returnTo = location.state?.returnTo || returnToFromQuery || ROUTES.CASES(firmSlug);
-  const hasPrev = sourceList && sourceIndex > 0;
-  const hasNext = sourceList && sourceIndex < sourceList.length - 1;
 
   const handlePrevCase = () => {
     if (!hasPrev) return;
     const prevId = sourceList[sourceIndex - 1];
     beginDocketOpen(prevId);
     navigate(ROUTES.CASE_DETAIL(firmSlug, prevId), {
-      state: { sourceList, index: sourceIndex - 1 },
+      state: getNavigationState(sourceIndex - 1),
     });
   };
 
@@ -92,7 +90,7 @@ export const CaseDetailPage = () => {
     const nextId = sourceList[sourceIndex + 1];
     beginDocketOpen(nextId);
     navigate(ROUTES.CASE_DETAIL(firmSlug, nextId), {
-      state: { sourceList, index: sourceIndex + 1 },
+      state: getNavigationState(sourceIndex + 1),
     });
   };
 
@@ -171,6 +169,7 @@ export const CaseDetailPage = () => {
   const [routeTeamId, setRouteTeamId] = useState('');
   const [routingNote, setRoutingNote] = useState('');
   const [showRouteModal, setShowRouteModal] = useState(false);
+  const [routeSubmitting, setRouteSubmitting] = useState(false);
   const [uploadLinkGenerating, setUploadLinkGenerating] = useState(false);
   const [uploadLinkResult, setUploadLinkResult] = useState(null);
   const [timelineFilter, setTimelineFilter] = useState('ALL');
@@ -1333,16 +1332,10 @@ export const CaseDetailPage = () => {
     return warnings;
   }, [caseInfo, comments, lifecycleStatus]);
 
-  const docketSlaStatus = useMemo(() => {
-    if (!caseInfo) return 'GREEN';
-    if (caseInfo.slaStatus) return String(caseInfo.slaStatus).toUpperCase();
-    const dueAt = caseInfo.slaDueAt || caseInfo.slaDueDate;
-    const dueTs = new Date(dueAt || '').getTime();
-    if (!Number.isFinite(dueTs)) return 'GREEN';
-    if (dueTs < Date.now()) return 'RED';
-    if ((dueTs - Date.now()) < (24 * 60 * 60 * 1000)) return 'YELLOW';
-    return 'GREEN';
-  }, [caseInfo]);
+  const docketSlaStatus = useMemo(
+    () => getDocketSlaBadgeStatus({ ...caseInfo, slaDueDate: caseInfo?.slaDueAt || caseInfo?.slaDueDate }),
+    [caseInfo]
+  );
 
   const actionInFlight = assigningCase || pendingCase || resolvingCase || unpendingCase;
   const openActionModal = (type) => {
@@ -1439,6 +1432,8 @@ export const CaseDetailPage = () => {
       showWarning('Comment is compulsory while routing a docket.');
       return;
     }
+    if (routeSubmitting) return;
+    setRouteSubmitting(true);
     try {
       await caseApi.routeToTeam(caseId, routeTeamId, routingNote.trim());
       showSuccess('Docket routed successfully.');
@@ -1448,6 +1443,30 @@ export const CaseDetailPage = () => {
       loadCaseData({ silent: false });
     } catch(err) {
       showError(err?.response?.data?.message || 'Failed to route docket');
+    } finally {
+      setRouteSubmitting(false);
+    }
+  };
+
+  const handleSubmitQcAction = async () => {
+    if (!qcComment.trim()) {
+      showWarning('Comment is mandatory for QC action');
+      return;
+    }
+    if (qcSubmitting) return;
+    setQcSubmitting(true);
+    try {
+      const response = await caseApi.qcAction(caseId, qcDecisionType, qcComment.trim());
+      if (response.success) {
+        showSuccess(`QC action ${qcDecisionType} recorded.`);
+        setShowQcModal(false);
+        setQcComment('');
+        loadCase({ background: true });
+      }
+    } catch (error) {
+      showError(extractErrorMessage(error, 'Failed to apply QC action.'));
+    } finally {
+      setQcSubmitting(false);
     }
   };
 
@@ -2237,249 +2256,61 @@ export const CaseDetailPage = () => {
           </div>
         </Modal>
 
-        {/* Pend Docket Modal */}
-        <Modal
-          isOpen={showPendModal}
-          onClose={() => { setShowPendModal(false); setPendComment(''); setPendingUntil(''); }}
-          title="Pend Docket"
-          actions={
-            <>
-              <Button variant="outline" onClick={() => { setShowPendModal(false); setPendComment(''); setPendingUntil(''); }} disabled={pendingCase}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={handlePendCase} disabled={!pendComment.trim() || !pendingUntil || pendingCase}>
-                {pendingCase ? 'Pending…' : 'Pend Docket'}
-              </Button>
-            </>
-          }
-        >
-          <div style={{ padding: 'var(--spacing-md)' }}>
-            <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)' }}>
-              Pending a case temporarily pauses it until a specified date.
-              The docket will remain in your worklist but move below active dockets until the selected date.
-            </p>
-            <Textarea
-              label="Comment (Required)"
-              value={pendComment}
-              onChange={(e) => setPendComment(e.target.value)}
-              placeholder="Explain why this case is being pended…"
-              rows={4}
-              required
-              disabled={pendingCase}
-            />
-            <div style={{ marginTop: 'var(--spacing-md)' }}>
-              <Input
-                type="date"
-                label="Reopen Date (Required)"
-                value={pendingUntil}
-                onChange={(e) => setPendingUntil(e.target.value)}
-                min={getISODateInTimezone(new Date())}
-                required
-                disabled={pendingCase}
-              />
-            </div>
-          </div>
-        </Modal>
-
-        {/* Resolve Docket Modal */}
-        <Modal
-          isOpen={showResolveModal}
-          onClose={() => { setShowResolveModal(false); setResolveComment(''); }}
-          title="Resolve Docket"
-          actions={
-            <>
-              <Button variant="outline" onClick={() => { setShowResolveModal(false); setResolveComment(''); }} disabled={resolvingCase}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={handleResolveCase} disabled={!resolveComment.trim() || resolvingCase}>
-                {resolvingCase ? 'Resolving…' : 'Resolve Docket'}
-              </Button>
-            </>
-          }
-        >
-          <div style={{ padding: 'var(--spacing-md)' }}>
-            {/* Task 3: Smart lifecycle warnings */}
-            {lifecycleWarnings.length > 0 && (
-              <div className="case-detail__lifecycle-warnings" role="note">
-                <strong>⚠ Heads up before resolving:</strong>
-                <ul className="case-detail__lifecycle-warnings-list">
-                  {lifecycleWarnings.map((w) => <li key={w}>{w}</li>)}
-                </ul>
-              </div>
-            )}
-            <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)' }}>
-              Resolving a case marks it as executed with no further action required.
-              The case will become read-only after resolution.
-            </p>
-            <Textarea
-              label="Comment (Required)"
-              value={resolveComment}
-              onChange={(e) => setResolveComment(e.target.value)}
-              placeholder="Describe how this case was resolved…"
-              rows={4}
-              required
-              disabled={resolvingCase}
-            />
-          </div>
-        </Modal>
-        <ActionModal
-          isOpen={showQcModal}
-          onClose={() => setShowQcModal(false)}
-          title={`QC Action: ${qcDecisionType || 'REVIEW'}`}
-          comment={qcComment}
-          setComment={setQcComment}
-          commentRequired
-          submitLabel="Submit QC Action"
-          submitting={qcSubmitting}
-          onSubmit={async () => {
-            if (!qcComment.trim()) {
-              showWarning('Comment is mandatory for QC action');
-              return;
-            }
-            setQcSubmitting(true);
-            try {
-              const response = await caseApi.qcAction(caseId, qcDecisionType, qcComment.trim());
-              if (response.success) {
-                showSuccess(`QC action ${qcDecisionType} recorded.`);
-                setShowQcModal(false);
-                setQcComment('');
-                loadCase({ background: true });
-              }
-            } catch (error) {
-              showError(extractErrorMessage(error, 'Failed to apply QC action.'));
-            } finally {
-              setQcSubmitting(false);
-            }
-          }}
+        <CaseWorkflowModals
+          showPendModal={showPendModal}
+          setShowPendModal={setShowPendModal}
+          pendComment={pendComment}
+          setPendComment={setPendComment}
+          pendingUntil={pendingUntil}
+          setPendingUntil={setPendingUntil}
+          pendingMinDate={getISODateInTimezone(new Date())}
+          pendingCase={pendingCase}
+          handlePendCase={handlePendCase}
+          lifecycleWarnings={lifecycleWarnings}
+          showResolveModal={showResolveModal}
+          setShowResolveModal={setShowResolveModal}
+          resolveComment={resolveComment}
+          setResolveComment={setResolveComment}
+          resolvingCase={resolvingCase}
+          handleResolveCase={handleResolveCase}
+          showQcModal={showQcModal}
+          setShowQcModal={setShowQcModal}
+          qcDecisionType={qcDecisionType}
+          qcComment={qcComment}
+          setQcComment={setQcComment}
+          qcSubmitting={qcSubmitting}
+          handleSubmitQcAction={handleSubmitQcAction}
+          showAssignModal={showAssignModal}
+          setShowAssignModal={setShowAssignModal}
+          assignComment={assignComment}
+          setAssignComment={setAssignComment}
+          assigningCase={assigningCase}
+          handleAssignDocket={handleAssignDocket}
+          assignUser={assignUser}
+          setAssignUser={setAssignUser}
+          availableAssignees={availableAssignees}
+          showRouteModal={showRouteModal}
+          setShowRouteModal={setShowRouteModal}
+          routeTeamId={routeTeamId}
+          setRouteTeamId={setRouteTeamId}
+          routingNote={routingNote}
+          setRoutingNote={setRoutingNote}
+          routingTeams={routingTeams.filter((team) => String(team._id) !== String(caseInfo?.ownerTeamId || ''))}
+          handleRouteToTeam={handleRouteToTeam}
+          routeSubmitting={routeSubmitting}
+          showFileModal={showFileModal}
+          setShowFileModal={setShowFileModal}
+          fileComment={fileComment}
+          setFileComment={setFileComment}
+          filingCase={filingCase}
+          handleFileCase={handleFileCase}
+          showUnpendModal={showUnpendModal}
+          setShowUnpendModal={setShowUnpendModal}
+          unpendComment={unpendComment}
+          setUnpendComment={setUnpendComment}
+          unpendingCase={unpendingCase}
+          handleUnpendCase={handleUnpendCase}
         />
-
-        <ActionModal
-          isOpen={showAssignModal}
-          onClose={() => setShowAssignModal(false)}
-          title="Move Docket to Another Worklist"
-          comment={assignComment}
-          setComment={setAssignComment}
-          commentRequired={false}
-          submitLabel="Move Docket"
-          submitting={assigningCase}
-          onSubmit={handleAssignDocket}
-          disabled={!assignUser}
-        >
-          <div className="space-y-2">
-            <label htmlFor="assign-user" className="block text-sm font-medium text-gray-700">Select user</label>
-            <select
-              id="assign-user"
-              className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
-              value={assignUser}
-              onChange={(e) => setAssignUser(e.target.value)}
-            >
-              {availableAssignees.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </div>
-        </ActionModal>
-
-        <Modal
-          isOpen={showRouteModal}
-          onClose={() => setShowRouteModal(false)}
-          title="Route Docket to Workbasket"
-          actions={(
-            <>
-              <Button variant="outline" onClick={() => setShowRouteModal(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={handleRouteToTeam} disabled={!routeTeamId || !String(routingNote || '').trim()}>
-                Route Docket
-              </Button>
-            </>
-          )}
-        >
-          <div style={{ padding: 'var(--spacing-md)' }}>
-            <Select
-              label="Route to workbasket"
-              value={routeTeamId}
-              onChange={(event) => setRouteTeamId(event.target.value)}
-            >
-              <option value="">Select workbasket</option>
-              {routingTeams.filter((team) => String(team._id) !== String(caseInfo?.ownerTeamId || '')).map((team) => (
-                <option key={team._id} value={team._id}>{team.name}</option>
-              ))}
-            </Select>
-            <div style={{ marginTop: 'var(--spacing-md)' }}>
-              <Textarea
-                label="Routing Comment (Required)"
-                value={routingNote}
-                onChange={(event) => setRoutingNote(event.target.value)}
-                placeholder="Add the reason/context for routing this docket..."
-                rows={4}
-              />
-            </div>
-          </div>
-        </Modal>
-
-
-
-        <Modal
-          isOpen={showFileModal}
-          onClose={() => { setShowFileModal(false); setFileComment(''); }}
-          title="File Docket"
-          actions={
-            <>
-              <Button variant="outline" onClick={() => { setShowFileModal(false); setFileComment(''); }} disabled={filingCase}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={handleFileCase} disabled={!String(fileComment || '').trim() || filingCase}>
-                {filingCase ? 'Filing…' : 'File Docket'}
-              </Button>
-            </>
-          }
-        >
-          <div style={{ padding: 'var(--spacing-md)' }}>
-            <Textarea
-              label="Comment (Required)"
-              value={fileComment}
-              onChange={(e) => setFileComment(e.target.value)}
-              placeholder="Add the filing note/comment..."
-              rows={4}
-              required
-              disabled={filingCase}
-            />
-          </div>
-        </Modal>
-
-        {/* Unpend Docket Modal */}
-        <Modal
-          isOpen={showUnpendModal}
-          onClose={() => { setShowUnpendModal(false); setUnpendComment(''); }}
-          title="Unpend Docket"
-          actions={
-            <>
-              <Button variant="outline" onClick={() => { setShowUnpendModal(false); setUnpendComment(''); }} disabled={unpendingCase}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={handleUnpendCase} disabled={!unpendComment.trim() || unpendingCase}>
-                {unpendingCase ? 'Unpending…' : 'Unpend Docket'}
-              </Button>
-            </>
-          }
-        >
-          <div style={{ padding: 'var(--spacing-md)' }}>
-            <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)' }}>
-              Unpending a docket will move it back to OPEN lifecycle and return it to your worklist.
-              Use this when you no longer need to wait for external input.
-            </p>
-            <Textarea
-              label="Comment (Required)"
-              value={unpendComment}
-              onChange={(e) => setUnpendComment(e.target.value)}
-              placeholder="Explain why this docket is being unpended…"
-              rows={4}
-              required
-              disabled={unpendingCase}
-            />
-          </div>
-        </Modal>
 
         {confirmModal && (
           <ActionConfirmModal
