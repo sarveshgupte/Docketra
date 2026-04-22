@@ -18,10 +18,12 @@
 - **Primary Admin**: Highest firm-level administrator for governance and setup ownership.
 - **Admin**: Firm-level administrator who manages day-to-day user access and setup tasks.
 - **Manager**: Team lead role with operational oversight and limited admin scope.
-- **Employee (User)**: Standard firm user role for assigned docket execution.
+- **Employee**: Standard firm user role for assigned docket execution.
 - **Partner**: Optional firm collaboration role used when enabled by firm policy.
-- **Role hierarchy (firm context)**: Primary Admin > Admin > Manager > User.
+- **Role hierarchy (firm context)**: Primary Admin > Admin > Manager > Employee.
 - **Platform boundary**: SuperAdmin is platform-only and should not appear as a firm team-management role.
+- **Canonical firm role labels (admin-facing copy)**: Primary Admin, Admin, Manager, Employee, Partner.
+- **Role storage compatibility note**: Backend may continue storing employee-tier users as `USER`; UI/admin copy must render that as `Employee`.
 
 ## Deprecated terms to avoid in UI
 - **Case / Cases / All Cases** → use **Docket / Dockets / All Dockets**
