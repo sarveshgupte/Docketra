@@ -149,7 +149,6 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
       _id: defaultClientObjectId,
       clientId,
       businessName: normalizedName,
-      businessAddress: null,
       primaryContactNumber: DEFAULT_CONTACT_NUMBER,
       businessEmail: `${firmSlug}@${SYSTEM_EMAIL_DOMAIN}`,
       firmId: defaultClientObjectId, // self-referencing

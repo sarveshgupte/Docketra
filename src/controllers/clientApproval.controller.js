@@ -6,10 +6,11 @@ const { CaseRepository, ClientRepository } = require('../repositories');
 const { CASE_CATEGORIES, CLIENT_STATUS } = require('../config/constants');
 const CaseStatus = require('../domain/case/caseStatus');
 const CaseService = require('../services/case.service');
+const { generateNextClientId } = require('../services/clientIdGenerator');
+const { persistClientProfileOrRollback } = require('../services/clientProfileWriteGuard.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const log = require('../utils/log');
 const { buildClientStatusQuery, CANONICAL_CLIENT_STATUSES } = require('../utils/clientStatus');
-const { clientProfileStorageService } = require('../services/clientProfileStorage.service');
 
 const normalizeClientList = (clients) => (Array.isArray(clients) ? clients : []);
 
@@ -134,8 +135,11 @@ const approveNewClient = async (req, res) => {
       });
     }
     
+    const clientId = await generateNextClientId(req.user.firmId);
+
     // Create the new client
     const newClient = await ClientRepository.create({
+      clientId,
       businessName: clientData.businessName,
       primaryContactNumber: clientData.primaryContactNumber,
       businessEmail: clientData.businessEmail,
@@ -147,31 +151,26 @@ const approveNewClient = async (req, res) => {
       createdBy: approverEmail.toLowerCase(),
     }, req.user?.role);
 
-    try {
-      await clientProfileStorageService.createClientProfile({
-        firmId: req.user.firmId,
-        client: newClient,
-        actorXID: approverXid,
-        profileInput: {
-          legalName: clientData.businessName,
-          businessAddress: clientData.businessAddress || null,
-          primaryContactNumber: clientData.primaryContactNumber,
-          secondaryContactNumber: clientData.secondaryContactNumber || null,
-          businessEmail: clientData.businessEmail,
-          PAN: clientData.PAN || null,
-          GST: clientData.GST || null,
-          TAN: clientData.TAN || null,
-          CIN: clientData.CIN || null,
-          contactPersonName: clientData.contactPersonName || null,
-          contactPersonDesignation: clientData.contactPersonDesignation || null,
-          contactPersonPhoneNumber: clientData.contactPersonPhoneNumber || null,
-          contactPersonEmailAddress: clientData.contactPersonEmailAddress || null,
-        },
-      });
-    } catch (profileError) {
-      await newClient.deleteOne().catch(() => null);
-      throw profileError;
-    }
+    await persistClientProfileOrRollback({
+      firmId: req.user.firmId,
+      client: newClient,
+      actorXID: approverXid,
+      profileInput: {
+        legalName: clientData.businessName,
+        businessAddress: clientData.businessAddress || null,
+        primaryContactNumber: clientData.primaryContactNumber,
+        secondaryContactNumber: clientData.secondaryContactNumber || null,
+        businessEmail: clientData.businessEmail,
+        PAN: clientData.PAN || null,
+        GST: clientData.GST || null,
+        TAN: clientData.TAN || null,
+        CIN: clientData.CIN || null,
+        contactPersonName: clientData.contactPersonName || null,
+        contactPersonDesignation: clientData.contactPersonDesignation || null,
+        contactPersonPhoneNumber: clientData.contactPersonPhoneNumber || null,
+        contactPersonEmailAddress: clientData.contactPersonEmailAddress || null,
+      },
+    });
     
     // Update case with approval metadata through centralized service
     await CaseService.updateStatus(caseId, CaseStatus.APPROVED, {

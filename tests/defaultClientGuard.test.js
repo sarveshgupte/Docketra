@@ -101,7 +101,6 @@ async function testEnsureDefaultClientCreatesAndLogsMissingClient() {
         isInternal: true,
         createdBySystem: true,
         businessName: 'Beta Legal',
-        businessAddress: 'Default Address',
         primaryContactNumber: '0000000000',
         businessEmail: expectedBusinessEmail,
         status: 'ACTIVE',
