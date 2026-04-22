@@ -22,6 +22,12 @@ import { getFirmConfig } from '../utils/firmConfig';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { formatDateTime, getISODateInTimezone } from '../utils/formatDateTime';
 import { formatCaseName } from '../utils/formatters';
+import {
+  getDocketRecencyLabel,
+  getDocketSlaBadgeStatus,
+  isDocketDueToday,
+  isDocketSlaBreached,
+} from '../utils/docketSla';
 import { buildCsv } from '../utils/csv';
 import { UX_COPY } from '../constants/uxCopy';
 import { useQueryState } from '../hooks/useQueryState';
@@ -44,47 +50,6 @@ import './CasesPage.css';
 
 // Keep date-sort keys explicit so additional date columns can be added safely.
 const DATE_SORT_KEYS = new Set(['updatedAt', 'slaDueDate']);
-
-/** Returns true when a case's SLA due date has passed and it is not yet resolved/filed. */
-const isSlaBreached = (row) => {
-  if (!row.slaDueDate) return false;
-  if (row.status === CASE_STATUS.RESOLVED || row.status === CASE_STATUS.FILED) return false;
-  return new Date(row.slaDueDate) < new Date();
-};
-
-/** Returns true when the SLA due date is today (any time). */
-const isDueToday = (row) => {
-  if (!row.slaDueDate) return false;
-  const due = new Date(row.slaDueDate);
-  const now = new Date();
-  return (
-    due.getFullYear() === now.getFullYear() &&
-    due.getMonth() === now.getMonth() &&
-    due.getDate() === now.getDate()
-  );
-};
-
-/** Returns a recency label if the case was updated within 2 hours. */
-const getSlaBadgeStatus = (row) => {
-  if (row?.slaStatus) return String(row.slaStatus).toUpperCase();
-  if (isSlaBreached(row)) return 'RED';
-  if (row?.slaDueDate) {
-    const due = new Date(row.slaDueDate).getTime();
-    if (Number.isFinite(due) && (due - Date.now()) < (24 * 60 * 60 * 1000)) {
-      return 'YELLOW';
-    }
-  }
-  return 'GREEN';
-};
-
-const getRecencyLabel = (updatedAt) => {
-  if (!updatedAt) return null;
-  const diffMs = Date.now() - new Date(updatedAt).getTime();
-  const diffMins = diffMs / 60000;
-  if (diffMins < 30) return 'Just updated';
-  if (diffMins < 120) return 'Recently updated';
-  return null;
-};
 
 export const CasesPage = () => {
   const { user } = useAuth();
@@ -533,8 +498,8 @@ export const CasesPage = () => {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     return {
       totalOpen: cases.filter((c) => c.status === CASE_STATUS.OPEN || c.status === CASE_STATUS.PENDING).length,
-      dueToday: cases.filter(isDueToday).length,
-      overdue: cases.filter(isSlaBreached).length,
+      dueToday: cases.filter(isDocketDueToday).length,
+      overdue: cases.filter(isDocketSlaBreached).length,
       escalated: cases.filter((row) => isEscalatedCase(row, firmConfig.escalationInactivityThresholdHours)).length,
       filedLast7: cases.filter(
         (c) => c.status === CASE_STATUS.FILED && c.updatedAt && new Date(c.updatedAt) >= sevenDaysAgo
@@ -575,7 +540,7 @@ export const CasesPage = () => {
     const avgDays = countWithDuration ? (totalMs / countWithDuration / (1000 * 60 * 60 * 24)).toFixed(1) : null;
 
     const withSla = cases.filter((c) => c.slaDueDate);
-    const breachedCount = withSla.filter(isSlaBreached).length;
+    const breachedCount = withSla.filter(isDocketSlaBreached).length;
     const resolvedWithinSla = resolved.filter(
       (c) => c.slaDueDate && new Date(c.updatedAt) <= new Date(c.slaDueDate)
     ).length;
@@ -655,8 +620,8 @@ export const CasesPage = () => {
     sortedCases,
     selectedCaseIds,
     handleToggleSelectCase,
-    getSlaBadgeStatus,
-    getRecencyLabel,
+    getSlaBadgeStatus: getDocketSlaBadgeStatus,
+    getRecencyLabel: getDocketRecencyLabel,
     inactivityThresholdHours: firmConfig.escalationInactivityThresholdHours,
     isAdmin,
     assigningCaseId,
