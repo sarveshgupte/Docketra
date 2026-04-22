@@ -1,35 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
-import { dashboardApi } from '../../api/dashboard.api';
 import { ROUTES } from '../../constants/routes';
-import { InlineNotice, PageSection, StatGrid } from './PlatformShared';
+import { InlineNotice, PageSection, RefreshNotice, StatGrid } from './PlatformShared';
 import { usePermissions } from '../../hooks/usePermissions';
+import { usePlatformDashboardSummaryQuery } from '../../hooks/usePlatformDataQueries';
 
 export const PlatformDashboardPage = () => {
   const { firmSlug } = useParams();
   const { isAdmin } = usePermissions();
-  const [summary, setSummary] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const res = await dashboardApi.getSummary({ filter: 'ALL' });
-        setSummary(res?.data?.data || {});
-      } catch {
-        setSummary({});
-        setError('Dashboard metrics are temporarily unavailable.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void load();
-  }, []);
+  const {
+    data: summary = {},
+    isLoading,
+    isFetching,
+    isError,
+    refetch,
+  } = usePlatformDashboardSummaryQuery();
 
   const cards = [
     { label: 'Total dockets', value: summary.totalDockets || 0, helpText: 'All dockets tracked across the firm.' },
@@ -47,21 +33,22 @@ export const PlatformDashboardPage = () => {
       subtitle="Unified snapshot across CMS acquisition, CRM relationships, and docket execution."
       actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>New Docket</Link>}
     >
-      <InlineNotice tone="error" message={error} />
+      <InlineNotice tone="error" message={isError ? 'Dashboard metrics are temporarily unavailable.' : ''} />
+      <RefreshNotice refreshing={isFetching && !isLoading} message="Refreshing dashboard metrics in the background…" />
       <StatGrid items={cards} />
-
 
       <PageSection title="Modules" description="Open the right workspace quickly based on your current objective.">
         <div className="action-row">
           {isAdmin ? <Link to={ROUTES.CMS(firmSlug)}>CMS · Forms & Intake</Link> : null}
           {isAdmin ? <Link to={ROUTES.CRM_CLIENTS(firmSlug)}>CRM · Leads & Clients</Link> : null}
           <Link to={ROUTES.CASES(firmSlug)}>Dockets · Oversight & Worklists</Link>
+          <button type="button" onClick={() => void refetch()} disabled={isFetching}>{isFetching ? 'Refreshing…' : 'Refresh metrics'}</button>
         </div>
         {!isAdmin ? <p className="muted">CMS and CRM modules are available to admin roles.</p> : null}
       </PageSection>
 
       <PageSection title="Productivity trend" description="Quick signal of current workload throughput.">
-        {loading ? <p className="muted">Loading productivity signal…</p> : (
+        {isLoading ? <p className="muted">Loading productivity signal…</p> : (
           <div className="bar" aria-label="Productivity score">
             <span style={{ width: `${Math.min(100, Number(summary.productivityScore || 62))}%` }} />
           </div>

@@ -1,42 +1,25 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
-import { reportsService } from '../../services/reports.service';
 import { ROUTES } from '../../constants/routes';
-import { DataTable, InlineNotice, PageSection, RefreshNotice, StatGrid, toArray } from './PlatformShared';
+import { DataTable, InlineNotice, PageSection, RefreshNotice, StatGrid } from './PlatformShared';
+import { usePlatformReportsMetricsQuery } from '../../hooks/usePlatformDataQueries';
 
 export const PlatformReportsPage = () => {
   const { firmSlug } = useParams();
-  const [metrics, setMetrics] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState('');
-
-  const load = async ({ background = false } = {}) => {
-    if (background && metrics.length > 0) setRefreshing(true);
-    else setLoading(true);
-    setError('');
-    try {
-      const res = await reportsService.getCaseMetrics();
-      setMetrics(toArray(res?.data?.data));
-    } catch {
-      setMetrics([]);
-      setError('Unable to load docket report metrics.');
-    } finally {
-      setRefreshing(false);
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void load();
-  }, []);
+  const {
+    data: metrics = [],
+    isLoading,
+    isFetching,
+    isError,
+    refetch,
+  } = usePlatformReportsMetricsQuery();
 
   const top = useMemo(() => metrics.slice(0, 5), [metrics]);
   const summaryCards = [
     { label: 'Metric buckets', value: metrics.length },
     { label: 'Top bucket value', value: Number(top[0]?.value || top[0]?.count || 0) },
-    { label: 'Report health', value: error ? 'Needs retry' : 'Available' },
+    { label: 'Report health', value: isError ? 'Needs retry' : 'Available' },
   ];
 
   return (
@@ -45,8 +28,8 @@ export const PlatformReportsPage = () => {
       subtitle="Productivity, quality, and workload insights for operational leadership"
       actions={<Link to={ROUTES.CASES(firmSlug)}>All Dockets</Link>}
     >
-      <InlineNotice tone="error" message={error} />
-      <RefreshNotice refreshing={refreshing} message="Refreshing report metrics in the background…" />
+      <InlineNotice tone="error" message={isError ? 'Unable to load docket report metrics.' : ''} />
+      <RefreshNotice refreshing={isFetching && !isLoading} message="Refreshing report metrics in the background…" />
       <StatGrid items={summaryCards} />
 
       <PageSection
@@ -54,8 +37,8 @@ export const PlatformReportsPage = () => {
         description="Top report buckets by current value."
         actions={(
           <>
-            <button type="button" onClick={() => void load({ background: true })} disabled={loading || refreshing}>
-              {refreshing ? 'Refreshing…' : 'Refresh metrics'}
+            <button type="button" onClick={() => void refetch()} disabled={isFetching}>
+              {isFetching ? 'Refreshing…' : 'Refresh metrics'}
             </button>
             <Link to={`/app/firm/${firmSlug}/admin/reports/detailed`}>Open detailed reports</Link>
           </>
@@ -80,9 +63,9 @@ export const PlatformReportsPage = () => {
               <td>{m.value || m.count || 0}</td>
             </tr>
           ))}
-          loading={loading}
-          error={error}
-          onRetry={() => void load()}
+          loading={isLoading}
+          error={isError ? 'Unable to load docket report metrics.' : ''}
+          onRetry={() => void refetch()}
           emptyLabel="No metrics are available for the selected period."
         />
       </PageSection>
