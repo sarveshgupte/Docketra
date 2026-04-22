@@ -13,6 +13,7 @@ const { mapAuditResponse } = require('../mappers/audit.mapper');
 const { getWeeklySlaSummary } = require('../services/sla.service');
 const reportsService = require('../services/reports.service');
 const log = require('../utils/log');
+const { isSuperAdminRole } = require('../utils/role.utils');
 
 const DEFAULT_AUDIT_LOG_LIMIT = 100;
 const MAX_AUDIT_LOG_LIMIT = 250;
@@ -84,7 +85,11 @@ const hydrateCasesForReport = async (firmId, cases) => {
 
 const resolveFirmIdFromAuthContext = (req, res) => {
   const firmId = req.user?.firmId || req.firmId;
-  if (!firmId && req.user?.role !== 'SUPER_ADMIN') {
+  if (isSuperAdminRole(req.user?.role)) {
+    res.status(403).json({ success: false, message: 'Forbidden: SuperAdmin cannot access firm-scoped reports' });
+    return null;
+  }
+  if (!firmId) {
     res.status(403).json({ success: false, message: 'Forbidden: firm context required' });
     return null;
   }

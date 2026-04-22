@@ -228,6 +228,28 @@ async function runTests() {
     console.log('✅ getCaseMetrics: success scenario handled');
   }
 
+  // Test 2b: getCaseMetrics - missing firm context fails closed
+  {
+    const { req, res } = createMockHttp();
+    req.user = { role: 'ADMIN' };
+    await reportsController.getCaseMetrics(req, res);
+    assert.strictEqual(res.statusCode, 403);
+    assert.strictEqual(res.jsonData.success, false);
+    assert.ok(res.jsonData.message.includes('firm context required'));
+    console.log('✅ getCaseMetrics: missing tenant context blocked');
+  }
+
+  // Test 2c: getCaseMetrics - superadmin blocked from firm-scoped reporting endpoint
+  {
+    const { req, res } = createMockHttp();
+    req.user = { role: 'SuperAdmin', firmId: 'firm123' };
+    await reportsController.getCaseMetrics(req, res);
+    assert.strictEqual(res.statusCode, 403);
+    assert.strictEqual(res.jsonData.success, false);
+    assert.ok(res.jsonData.message.includes('SuperAdmin cannot access firm-scoped reports'));
+    console.log('✅ getCaseMetrics: superadmin blocked from firm-scoped route');
+  }
+
   // Test 3: getPendingCasesReport - Success
   {
     const { req, res } = createMockHttp();
