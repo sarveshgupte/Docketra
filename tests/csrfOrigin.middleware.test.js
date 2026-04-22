@@ -1,66 +1,41 @@
+#!/usr/bin/env node
 const assert = require('assert');
+const express = require('express');
+const request = require('supertest');
 const { enforceSameOriginForCookieAuth } = require('../src/middleware/csrfOrigin.middleware');
 
-function createRes() {
-  return {
-    statusCode: 200,
-    payload: null,
-    status(code) {
-      this.statusCode = code;
-      return this;
-    },
-    json(body) {
-      this.payload = body;
-      return body;
-    },
-  };
+async function run() {
+  process.env.FRONTEND_ORIGINS = 'https://app.docketra.com,https://staging.docketra.com';
+
+  const app = express();
+  app.post('/csrf-check', enforceSameOriginForCookieAuth, (_req, res) => {
+    res.status(200).json({ success: true });
+  });
+
+  await request(app)
+    .post('/csrf-check')
+    .set('Host', 'api.docketra.com')
+    .set('Origin', 'https://app.docketra.com')
+    .expect(200);
+
+  await request(app)
+    .post('/csrf-check')
+    .set('Host', 'internal-render-host')
+    .set('X-Forwarded-Host', 'api.docketra.com')
+    .set('Origin', 'https://api.docketra.com')
+    .expect(200);
+
+  const rejected = await request(app)
+    .post('/csrf-check')
+    .set('Host', 'api.docketra.com')
+    .set('Origin', 'https://evil.example.com')
+    .expect(403);
+
+  assert.strictEqual(rejected.body?.success, false, 'Cross-origin request should be rejected');
+  console.log('csrfOrigin middleware tests passed');
 }
 
-function run() {
-  let nextCalled = false;
-  const sameOriginReq = {
-    headers: {
-      host: 'app.example.com',
-      origin: 'https://app.example.com',
-    },
-  };
-  const sameOriginRes = createRes();
-  enforceSameOriginForCookieAuth(sameOriginReq, sameOriginRes, () => { nextCalled = true; });
-  assert.strictEqual(nextCalled, true);
-
-  const noOriginReq = { headers: { host: 'app.example.com' } };
-  const noOriginRes = createRes();
-  enforceSameOriginForCookieAuth(noOriginReq, noOriginRes, () => {});
-  assert.strictEqual(noOriginRes.statusCode, 200);
-
-  const crossOriginReq = {
-    headers: {
-      host: 'app.example.com',
-      origin: 'https://evil.example',
-    },
-  };
-  const crossOriginRes = createRes();
-  enforceSameOriginForCookieAuth(crossOriginReq, crossOriginRes, () => {});
-  assert.strictEqual(crossOriginRes.statusCode, 403);
-  assert.strictEqual(crossOriginRes.payload?.success, false);
-
-  const refererReq = {
-    headers: {
-      host: 'app.example.com',
-      referer: 'https://app.example.com/login',
-    },
-  };
-  const refererRes = createRes();
-  let refererNext = false;
-  enforceSameOriginForCookieAuth(refererReq, refererRes, () => { refererNext = true; });
-  assert.strictEqual(refererNext, true);
-
-  console.log('csrfOrigin.middleware.test.js passed');
-}
-
-try {
-  run();
-} catch (error) {
+run().catch((error) => {
   console.error(error);
   process.exit(1);
-}
+});

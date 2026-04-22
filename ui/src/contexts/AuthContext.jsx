@@ -32,6 +32,7 @@ export const AuthProvider = ({ children }) => {
   const profileFetchAttemptedRef = useRef(false);
   const profileFetchInFlightRef = useRef(false);
   const profileFetchPromiseRef = useRef(null);
+  const authFailureResolvedRef = useRef(false);
 
   useEffect(() => {
     if (bootHydratedRef.current) return;
@@ -60,13 +61,14 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const resetAuthState = useCallback(() => {
+  const resetAuthState = useCallback(({ allowProfileRetry = false } = {}) => {
     clearAuthStorage();
     setUser(null);
     setIsAuthenticated(false);
-    profileFetchAttemptedRef.current = false;
+    profileFetchAttemptedRef.current = allowProfileRetry ? false : true;
     profileFetchInFlightRef.current = false;
     profileFetchPromiseRef.current = null;
+    authFailureResolvedRef.current = !allowProfileRetry;
   }, [clearAuthStorage]);
 
   /**
@@ -98,6 +100,11 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const fetchProfile = useCallback(async () => {
+    if (authFailureResolvedRef.current) {
+      console.info('[AUTH] Skipping profile fetch after resolved unauthenticated state.');
+      return { success: false, data: null };
+    }
+
     if (profileFetchInFlightRef.current) {
       return profileFetchPromiseRef.current || { success: false, data: null };
     }
@@ -149,6 +156,10 @@ export const AuthProvider = ({ children }) => {
       const response = await authService.login(xID, password, endpoint);
       
       if (response.success) {
+        authFailureResolvedRef.current = false;
+        profileFetchAttemptedRef.current = false;
+        profileFetchInFlightRef.current = false;
+        profileFetchPromiseRef.current = null;
         // Login successful - session cookies are set by backend
         // Caller should call fetchProfile() to hydrate user data
         return response;
@@ -157,7 +168,7 @@ export const AuthProvider = ({ children }) => {
       const errorMessage = response.message || 'Login failed';
       throw new Error(errorMessage);
     } catch (error) {
-      resetAuthState();
+      resetAuthState({ allowProfileRetry: true });
       throw error;
     }
   }, [resetAuthState]);
@@ -204,6 +215,7 @@ export const AuthProvider = ({ children }) => {
       // Always clear client-side state
       setUser(null);
       setIsAuthenticated(false);
+      authFailureResolvedRef.current = true;
       profileFetchInFlightRef.current = false;
       profileFetchPromiseRef.current = null;
 

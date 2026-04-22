@@ -65,3 +65,37 @@ For future high-risk mutations, reuse the same origin validation middleware or a
 - Socket authentication reads `accessToken` from handshake cookies only.
 - Auth router enforces origin/referrer CSRF checks on all state-changing methods (`POST`, `PUT`, `PATCH`, `DELETE`).
 - Deprecated client auth token helpers have been removed from runtime usage (no `isAuthenticated()` token shim in `authService`).
+
+## April 2026 hotfix — auth refresh loop prevention
+
+### Root cause
+
+- A CSRF same-origin guard compared `Origin`/`Referer` host to `Host` too literally.
+- In production, frontend and API can be on different legitimate hosts (`app.*` vs `api.*`), so valid refresh requests were rejected with `403`.
+- Frontend hydration then hit `GET /api/auth/profile` (`401`) → `POST /api/auth/refresh` (`403`) repeatedly, and hard redirects to login could re-trigger the cycle.
+
+### What was fixed
+
+- CSRF middleware now accepts:
+  - direct same-host requests, including `X-Forwarded-Host` aware checks behind reverse proxies,
+  - configured frontend origins from `FRONTEND_ORIGINS` / `FRONTEND_URL`.
+- Refresh/session service now emits lightweight logs for refresh rejection reasons (missing cookie, invalid/expired, revoked, unsupported scope, inactive user).
+- Frontend API interceptor now has explicit loop guards:
+  - never refresh recursively when `/auth/refresh` itself returns `401`,
+  - short-circuit additional refresh attempts after a refresh failure in the same app lifecycle,
+  - skip hard redirect if already on a login route.
+- Auth bootstrap (`AuthContext`) now marks resolved unauthenticated state after refresh/profile auth failure and short-circuits repeated hydration retries until a successful login.
+
+### How refresh failure is now handled
+
+1. Profile fetch gets `401`.
+2. Client attempts **one** refresh for that failed request.
+3. If refresh fails, auth is resolved as unauthenticated, local auth hints are cleared, and login redirect is performed once (without self-redirect thrash).
+4. Further profile hydration retries are blocked until next explicit login success.
+
+### Why repeated loops are prevented now
+
+- Backend no longer incorrectly rejects legitimate deployed frontend refresh calls because of host mismatch alone.
+- Frontend cannot recursively refresh refresh calls.
+- Frontend cannot repeatedly hard-redirect to the same login page.
+- AuthContext blocks re-hydration loops once unauthenticated state has already been resolved.
