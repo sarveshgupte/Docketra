@@ -1,5 +1,20 @@
 const mongoose = require('mongoose');
 
+
+const ALLOW_EMAIL_BODY_PERSISTENCE = String(process.env.ALLOW_EMAIL_BODY_PERSISTENCE || '').toLowerCase() === 'true';
+
+function stripEmailContent(doc) {
+  if (ALLOW_EMAIL_BODY_PERSISTENCE) return;
+  if (doc.bodyText) doc.bodyText = undefined;
+  if (doc.bodyHtml) doc.bodyHtml = undefined;
+  if (doc.headers && typeof doc.headers === 'object') {
+    doc.headers = {
+      messageId: doc.messageId || null,
+    };
+  }
+}
+
+
 /**
  * Email Metadata Model for Docketra Case Management System
  * 
@@ -110,6 +125,11 @@ const emailMetadataSchema = new mongoose.Schema({
 /**
  * Pre-update Hooks: Prevent Updates
  */
+emailMetadataSchema.pre('validate', function(next) {
+  stripEmailContent(this);
+  next();
+});
+
 emailMetadataSchema.pre('updateOne', function(next) {
   next(new Error('Email metadata cannot be updated. Records are immutable.'));
 });

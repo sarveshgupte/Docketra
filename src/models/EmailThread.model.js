@@ -1,5 +1,20 @@
 const mongoose = require('mongoose');
 
+
+const ALLOW_EMAIL_BODY_PERSISTENCE = String(process.env.ALLOW_EMAIL_BODY_PERSISTENCE || '').toLowerCase() === 'true';
+
+function stripThreadContent(doc) {
+  if (ALLOW_EMAIL_BODY_PERSISTENCE) return;
+  if (doc.bodyText) doc.bodyText = undefined;
+  if (doc.bodyHtml) doc.bodyHtml = undefined;
+  if (doc.headers && typeof doc.headers === 'object') {
+    doc.headers = {
+      messageId: doc.messageId || null,
+    };
+  }
+}
+
+
 const emailThreadSchema = new mongoose.Schema(
   {
     tenantId: {
@@ -58,6 +73,11 @@ const emailThreadSchema = new mongoose.Schema(
     timestamps: false,
   }
 );
+
+emailThreadSchema.pre('validate', function(next) {
+  stripThreadContent(this);
+  next();
+});
 
 emailThreadSchema.index({ tenantId: 1, caseId: 1, createdAt: -1 });
 

@@ -288,6 +288,7 @@ const storageWorker = new Worker(
           await CaseFile.findByIdAndUpdate(fileId, {
             storageFileId: driveFileId,
             uploadStatus: 'uploaded',
+            $unset: { localPath: 1 },
           });
 
           // Create the immutable Attachment record now that we have a Drive file ID
@@ -388,7 +389,6 @@ const storageWorker = new Worker(
             log.warn('[StorageWorker]', {
               event: 'local_file_delete_failed',
               jobType: job.name,
-              path: caseFile.localPath,
               message: unlinkErr.message,
             });
           }
