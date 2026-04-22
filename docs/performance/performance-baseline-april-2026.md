@@ -10,13 +10,32 @@
 7. Platform shell command-center search
 8. Legacy shell notification loading
 
-## What was changed
-- Replaced repeated local `useEffect` fetch patterns in core platform pages with shared React Query hooks.
-- Added query-level cache/reuse with stale windows and previous-data retention for queue/list surfaces.
-- Switched refresh behavior from blocking table reloads to scoped background refresh states where safe.
-- Reduced command-center request churn by caching term results and reusing loaded client directory.
-- Reduced notification overhead by preventing polling overlap with fresh socket events and de-duping in-flight fetches.
-- Added lightweight instrumentation for slow calls + duplicate in-flight detection.
+## What performance improvements were made
+- Replaced repeated page-level fetch effects with shared React Query hooks for key platform surfaces.
+- Introduced cache reuse and stale windows to prevent avoidable remount refetches.
+- Preserved prior data during refresh (`keepPreviousData`) to reduce "wait then repaint everything" behavior.
+- Shifted refresh UX to scoped background loading (`isFetching`) instead of broad blocking loaders.
+- Added lightweight instrumentation (`trackAsync`) for slow requests and duplicate in-flight request visibility.
+- Reduced command-center request churn with search-result caching and one-time client-directory loading.
+- Reduced notification chatter by de-duping in-flight fetches and limiting poll/socket overlap.
+
+## Which screens benefited most
+- **Workbench / My Worklist / QC Workbench**: strongest perceived speed gains due to list-data reuse and background refresh.
+- **Dashboard + Docket Workbench**: better revisit speed and fewer redundant summary loads.
+- **Reports**: less blocking refresh behavior while preserving existing metric data.
+- **Command-center**: faster repeated searches and lower backend chatter.
+- **Legacy notifications**: fewer redundant notification fetch cycles.
+
+## Which duplicate fetches were removed
+- Duplicate dashboard summary fetches across Dashboard and Docket Workbench page mounts.
+- Re-mount refetch loops for Workbench, My Worklist, QC Workbench, and Reports where data was already recently fetched.
+- Repeated command-center client-list fetches during typing/search sessions.
+- Notification polling requests overlapping with recent socket events and in-flight fetches.
+
+## Which loading states were improved
+- Replaced multiple full-surface blocking states with background refresh notices where stale data exists.
+- Kept table/card content visible during manual refreshes and revisit fetches.
+- Reduced flash-of-empty-content behavior on route revisit for core platform list/summary pages.
 
 ## Before/after observations (qualitative)
 - **Before**: each mount of high-traffic pages triggered new API calls and full loading states.
@@ -26,8 +45,9 @@
 - **Before**: notifications used fixed polling regardless of recent socket events.
 - **After**: polling avoids tight overlap after socket updates and skips redundant in-flight fetches.
 
-## Remaining hotspots to tackle next
-- CasesPage still has heavy render and derived-data work under large datasets; profile and split expensive transforms.
-- Legacy Layout route shells should eventually converge to PlatformShell patterns to eliminate duplicate navigation behavior.
-- Introduce route-level prefetch for top destinations from dashboard/workbench for near-instant transitions.
-- Add automated request-count assertions in integration tests for key workflows.
+## Remaining hotspots (next PR)
+- **All Dockets (`CasesPage`)**: heavy derived transforms and large render surfaces still need profiling and selective memoization/extraction.
+- **Legacy Layout global search**: still effect-driven and can generate avoidable fetch work compared with PlatformShell patterns.
+- **Route transition prefetching**: top navigation targets are not yet prefetched.
+- **Automated regressions**: request-count and render-timing assertions should be added for top flows.
+- **Long-list virtualization**: evaluate for large-firm dockets/worklist views once profiling data is captured.
