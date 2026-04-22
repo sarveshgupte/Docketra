@@ -16,6 +16,12 @@
 - **CMS**: Intake/submission workspace for forms, request links, and inbound processing.
 - **SuperAdmin**: Platform-level role with cross-firm administration.
 - **Primary Admin**: Highest firm-level administrator for governance and setup ownership.
+- **Admin**: Firm-level administrator who manages day-to-day user access and setup tasks.
+- **Manager**: Team lead role with operational oversight and limited admin scope.
+- **Employee (User)**: Standard firm user role for assigned docket execution.
+- **Partner**: Optional firm collaboration role used when enabled by firm policy.
+- **Role hierarchy (firm context)**: Primary Admin > Admin > Manager > User.
+- **Platform boundary**: SuperAdmin is platform-only and should not appear as a firm team-management role.
 
 ## Deprecated terms to avoid in UI
 - **Case / Cases / All Cases** → use **Docket / Dockets / All Dockets**
