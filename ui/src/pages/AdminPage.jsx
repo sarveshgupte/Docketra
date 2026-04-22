@@ -35,11 +35,12 @@ import {
   normalizeCategory,
   parseDelimitedLine,
   getApiErrorType,
-  getUserStatusBadge,
   getNormalizedUserStatus,
   isPrimaryAdminUser,
-  getRoleBadgePresentation,
 } from './admin/adminPageUtils';
+import { AdminUsersSection } from './admin/components/AdminUsersSection';
+import { CreateUserModal } from './admin/components/CreateUserModal';
+import { UserAccessModal } from './admin/components/UserAccessModal';
 import './AdminPage.css';
 
 const downloadBulkTemplate = (type) => {
@@ -103,6 +104,8 @@ export const AdminPage = () => {
   const [selectedUserForAccess, setSelectedUserForAccess] = useState(null);
   const [creatingUser, setCreatingUser] = useState(false);
   const [savingUserAccess, setSavingUserAccess] = useState(false);
+  const [actionLoadingByUser, setActionLoadingByUser] = useState({});
+  const [userSectionMessage, setUserSectionMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [statsEmpty, setStatsEmpty] = useState(false);
   const [statsFailed, setStatsFailed] = useState(false);
@@ -185,6 +188,13 @@ export const AdminPage = () => {
     () => (workbaskets || []).filter((wb) => String(wb?.type || '').toUpperCase() === 'QC'),
     [workbaskets],
   );
+  const setUserActionLoading = (xID, isLoading) => {
+    if (!xID) return;
+    setActionLoadingByUser((prev) => ({
+      ...prev,
+      [xID]: isLoading,
+    }));
+  };
 
   useEffect(() => {
     loadAdminStats();
@@ -368,6 +378,7 @@ export const AdminPage = () => {
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
+    if (creatingUser) return;
     if (!isPrimaryAdminActor) {
       showToast('Only PRIMARY_ADMIN can modify hierarchy', 'error');
       return;
@@ -386,6 +397,7 @@ export const AdminPage = () => {
       
       if (response.success) {
         showToast(`User invited successfully! xID: ${response.data?.xID}.`, 'success');
+        setUserSectionMessage(`User invite sent to ${newUser.email}.`);
         setShowCreateModal(false);
         setNewUser({
           name: '', email: '', role: '', department: '', teamIds: [], assignQcWorkbaskets: false,
@@ -414,62 +426,87 @@ export const AdminPage = () => {
     const isInvited = normalizedStatus === 'invited';
     const shouldActivate = isInvited ? false : normalizedStatus !== 'active';
     const action = isInvited ? 'cancel invite for' : (shouldActivate ? 'activate' : 'deactivate');
+    const confirmationMessage = isInvited
+      ? `Cancel invite for ${user?.name || user?.email || 'this user'}?`
+      : `Are you sure you want to ${shouldActivate ? 'activate' : 'deactivate'} ${user?.name || user?.email || 'this user'}?`;
+
+    if (!window.confirm(confirmationMessage)) {
+      return;
+    }
 
     try {
+      setUserActionLoading(user.xID, true);
       const response = await adminApi.updateUserStatus(user.xID, shouldActivate);
       
       if (response.success) {
         showToast(isInvited ? 'Invite cancelled successfully' : `User ${action}d successfully`, 'success');
+        setUserSectionMessage(`User ${user?.name || user?.email || user?.xID} ${shouldActivate ? 'activated' : (isInvited ? 'invite cancelled' : 'deactivated')} successfully.`);
         await Promise.all([loadAdminStats(), loadAdminData()]);
       } else {
         showToast(response.message || (isInvited ? 'Failed to cancel invite' : `Failed to ${action} user`), 'error');
       }
     } catch (error) {
       showToast(error.response?.data?.message || (isInvited ? 'Failed to cancel invite' : `Failed to ${action} user`), 'error');
+    } finally {
+      setUserActionLoading(user.xID, false);
     }
   };
 
   const handleResendSetupEmail = async (xID) => {
     try {
+      setUserActionLoading(xID, true);
       const response = await adminApi.resendSetupEmail(xID);
       
       if (response.success) {
         showToast('Invite email sent successfully', 'success');
+        setUserSectionMessage('Invite email sent successfully.');
         await loadAdminData();
       } else {
         showToast(response.message || 'Failed to send email', 'error');
       }
     } catch (error) {
       showToast(error.response?.data?.message || 'Failed to send email', 'error');
+    } finally {
+      setUserActionLoading(xID, false);
     }
   };
 
   const handleUnlockAccount = async (xID) => {
+    if (!window.confirm('Unlock this account now?')) return;
     try {
+      setUserActionLoading(xID, true);
       const response = await adminApi.unlockAccount(xID);
       
       if (response.success) {
         showToast('Account unlocked successfully', 'success');
+        setUserSectionMessage('Account unlocked successfully.');
         await loadAdminData();
       } else {
         showToast(response.message || 'Failed to unlock account', 'error');
       }
     } catch (error) {
       showToast(error.response?.data?.message || 'Failed to unlock account', 'error');
+    } finally {
+      setUserActionLoading(xID, false);
     }
   };
 
   const handleSendPasswordReset = async (user) => {
+    if (!window.confirm(`Send a password reset link to ${user?.email || 'this user'}?`)) return;
     try {
+      setUserActionLoading(user?.xID, true);
       const response = await adminApi.resetPassword(user.xID);
       if (response.success) {
         showToast(`Password reset link sent to ${user.email}`, 'success');
+        setUserSectionMessage(`Password reset link sent to ${user.email}.`);
         await loadAdminData();
       } else {
         showToast(response.message || 'Failed to send password reset link', 'error');
       }
     } catch (error) {
       showToast(error.response?.data?.message || 'Failed to send password reset link', 'error');
+    } finally {
+      setUserActionLoading(user?.xID, false);
     }
   };
 
@@ -1177,17 +1214,8 @@ export const AdminPage = () => {
     });
   };
 
-  const formatRole = (role) => getRoleBadgePresentation({ role }).label;
-
   const handleEditUser = (user) => {
     handleOpenAccessModal(user);
-  };
-
-  const handleDeleteClick = (xID) => {
-    const matchedUser = users.find((entry) => entry.xID === xID);
-    if (matchedUser) {
-      handleToggleUserStatus(matchedUser);
-    }
   };
 
   if (loading) {
@@ -1244,69 +1272,20 @@ export const AdminPage = () => {
         )}
 
         {activeTab === 'users' && (
-          <Card>
-            <div className="admin__section-header">
-              <h2 className="neo-section__header">User Management</h2>
-              <div className="admin__section-actions">
-                <Button variant="default" onClick={() => handleOpenBulkUpload('team')}>
-                  Bulk Upload
-                </Button>
-                <Button
-                  variant="default"
-                  onClick={() => downloadBulkTemplate('team')}
-                >
-                  Download Template
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => setShowCreateModal(true)}
-                  disabled={!isPrimaryAdminActor}
-                >
-                  + Create User
-                </Button>
-              </div>
-            </div>
-            
-            {users.length === 0 ? (
-              <EmptyState
-                title="No users added yet"
-                description="Invite your team to start collaborating."
-              />
-            ) : (
-              <DataTable
-                  columns={[
-                    { key: 'name', header: 'User Name', render: (u) => <span className="font-medium text-gray-900">{u.name}</span> },
-                    { key: 'email', header: 'Email' },
-                    { key: 'role', header: 'Role', render: (u) => <span className="inline-flex items-center rounded-md bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-800">{formatRole(u.role)}</span> },
-                    { key: 'status', header: 'Status', render: (u) => <StatusBadge status={u.status || 'ACTIVE'} /> },
-                    { key: 'actions', header: 'Actions', render: (u) => (
-                      <div className="flex gap-2">
-                        {isPrimaryAdminActor ? (
-                          <Button size="sm" variant="outline" onClick={() => handleEditUser(u)}>Edit</Button>
-                        ) : null}
-                        {getNormalizedUserStatus(u) === 'invited' && (
-                          <Button size="sm" variant="default" onClick={() => handleResendSetupEmail(u.xID)}>
-                            Resend Invite
-                          </Button>
-                        )}
-                        {isPrimaryAdminActor ? (
-                          <Button
-                            size="sm"
-                            variant={getNormalizedUserStatus(u) === 'active' ? 'danger' : 'default'}
-                            disabled={isPrimaryAdminUser(u)}
-                            onClick={() => handleDeleteClick(u.xID)}
-                          >
-                            {getNormalizedUserStatus(u) === 'invited' ? 'Cancel Invite' : (getNormalizedUserStatus(u) === 'active' ? 'Deactivate' : 'Activate')}
-                          </Button>
-                        ) : null}
-                      </div>
-                    ) }
-                  ]}
-                  rows={filteredUsers}
-                  rowKey="xID"
-                />
-            )}
-          </Card>
+          <AdminUsersSection
+            users={filteredUsers}
+            canCreateUsers={isPrimaryAdminActor}
+            onBulkUpload={() => handleOpenBulkUpload('team')}
+            onDownloadTemplate={() => downloadBulkTemplate('team')}
+            onCreateUser={() => setShowCreateModal(true)}
+            onEditUser={handleEditUser}
+            onResendInvite={handleResendSetupEmail}
+            onToggleUserStatus={handleToggleUserStatus}
+            onUnlock={handleUnlockAccount}
+            onResetPassword={handleSendPasswordReset}
+            actionLoadingByUser={actionLoadingByUser}
+            sectionMessage={userSectionMessage}
+          />
         )}
 
         {activeTab === 'clients' && (
@@ -1514,133 +1493,18 @@ export const AdminPage = () => {
         showToast={(message, level) => showToast(message, level === 'error' ? 'error' : 'success')}
       />
 
-      <Modal
+      <CreateUserModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        title="Create New User"
-      >
-        <form onSubmit={handleCreateUser} className="admin__create-form">
-          <div className="neo-form-group">
-            <label className="neo-label">xID (Auto-Generated)</label>
-            <div className="neo-info-text">
-              Employee ID will be automatically generated (e.g., X000001)
-            </div>
-          </div>
+        onSubmit={handleCreateUser}
+        newUser={newUser}
+        setNewUser={setNewUser}
+        creatingUser={creatingUser}
+        primaryWorkbaskets={primaryWorkbaskets}
+        qcOnlyWorkbaskets={qcOnlyWorkbaskets}
+      />
 
-          <Input
-            label="Name"
-            type="text"
-            value={newUser.name}
-            onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-            placeholder="John Doe"
-            required
-          />
-
-          <Input
-            label="Email"
-            type="email"
-            value={newUser.email}
-            onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-            placeholder="john.doe@company.com"
-            required
-          />
-
-          <Select
-            label="Role"
-            value={newUser.role}
-            onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-            options={[
-              { value: '', label: 'Select Role', disabled: true },
-              { value: 'Employee', label: 'Employee' },
-              { value: 'Admin', label: 'Admin' },
-            ]}
-            required
-          />
-          <div className="neo-info-text">
-            Role hierarchy: Primary Admin &gt; Admin &gt; Manager &gt; Employee. SuperAdmin is platform-only.
-          </div>
-
-          <Input
-            label="Department"
-            type="text"
-            value={newUser.department}
-            onChange={(e) => setNewUser({ ...newUser, department: e.target.value })}
-            placeholder="e.g., Operations"
-          />
-          <div className="neo-form-group">
-            <FormLabel>Workbaskets (at least one)</FormLabel>
-            <div className="admin__client-access-list">
-              {primaryWorkbaskets.map((workbasket) => (
-                <label key={workbasket._id} className="admin__client-access-item">
-                  <input
-                    type="checkbox"
-                    checked={(newUser.teamIds || []).includes(String(workbasket._id))}
-                    onChange={() => {
-                      setNewUser((prev) => {
-                        const current = Array.isArray(prev.teamIds) ? prev.teamIds : [];
-                        return {
-                          ...prev,
-                          teamIds: current.includes(String(workbasket._id))
-                            ? current.filter((id) => id !== String(workbasket._id))
-                            : [...current, String(workbasket._id)],
-                        };
-                      });
-                    }}
-                  />
-                  <span>{workbasket.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          {qcOnlyWorkbaskets.length > 0 ? (
-            <div className="neo-form-group">
-              <FormLabel>QC Access (optional)</FormLabel>
-              <div className="admin__client-access-list">
-                {qcOnlyWorkbaskets.map((workbasket) => (
-                  <label key={workbasket._id} className="admin__client-access-item">
-                    <input
-                      type="checkbox"
-                      checked={(newUser.teamIds || []).includes(String(workbasket._id))}
-                      onChange={() => {
-                        setNewUser((prev) => {
-                          const current = Array.isArray(prev.teamIds) ? prev.teamIds : [];
-                          return {
-                            ...prev,
-                            teamIds: current.includes(String(workbasket._id))
-                              ? current.filter((id) => id !== String(workbasket._id))
-                              : [...current, String(workbasket._id)],
-                          };
-                        });
-                      }}
-                    />
-                    <span>{workbasket.name}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          <div className="admin__form-actions">
-            <Button
-              type="button"
-              variant="default"
-              onClick={() => setShowCreateModal(false)}
-              disabled={creatingUser}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={creatingUser || (newUser.teamIds || []).length === 0}
-            >
-              {creatingUser ? 'Creating...' : 'Create User'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal
+      <UserAccessModal
         isOpen={showAccessModal}
         onClose={() => {
           setShowAccessModal(false);
@@ -1648,112 +1512,18 @@ export const AdminPage = () => {
           setRestrictedClientDraft([]);
           setSelectedWorkbasketDraft([]);
         }}
-        title={`User Access & Workbasket Mapping${selectedUserForAccess ? ` — ${selectedUserForAccess.name}` : ''}`}
-      >
-        <div className="admin__create-form">
-          <div className="neo-info-text">
-            Select workbaskets and clients for this user. At least one workbasket is required.
-          </div>
-          <div className="neo-form-group">
-            <FormLabel>Workbaskets (at least one)</FormLabel>
-            <div className="admin__client-access-list">
-              {primaryWorkbaskets.map((workbasket) => (
-                <label key={workbasket._id} className="admin__client-access-item">
-                  <input
-                    type="checkbox"
-                    checked={selectedWorkbasketDraft.includes(String(workbasket._id))}
-                    onChange={() => {
-                      setSelectedWorkbasketDraft((prev) => prev.includes(String(workbasket._id))
-                        ? prev.filter((id) => id !== String(workbasket._id))
-                        : [...prev, String(workbasket._id)]);
-                    }}
-                  />
-                  <span>{workbasket.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {qcOnlyWorkbaskets.length > 0 ? (
-            <div className="neo-form-group">
-              <FormLabel>QC Access (optional)</FormLabel>
-              <div className="admin__client-access-list">
-                {qcOnlyWorkbaskets.map((workbasket) => (
-                  <label key={workbasket._id} className="admin__client-access-item">
-                    <input
-                      type="checkbox"
-                      checked={selectedWorkbasketDraft.includes(String(workbasket._id))}
-                      onChange={() => {
-                        setSelectedWorkbasketDraft((prev) => prev.includes(String(workbasket._id))
-                          ? prev.filter((id) => id !== String(workbasket._id))
-                          : [...prev, String(workbasket._id)]);
-                      }}
-                    />
-                    <span>{workbasket.name}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          <div className="admin__access-summary">
-            {clients.length === 0 ? (
-              <Badge status="Pending">No Clients Found</Badge>
-            ) : (restrictedClientDraft || []).length === 0 ? (
-              <Badge status="Approved">All Clients Allowed</Badge>
-            ) : (
-              <Badge status="Pending">
-                {clients.length - (restrictedClientDraft || []).length} of {clients.length} clients allowed
-              </Badge>
-            )}
-          </div>
-
-          <div className="admin__client-access-list">
-            {clients.length === 0 ? (
-              <div className="neo-info-text">No clients available yet.</div>
-            ) : (
-              clients.map((client) => (
-                <label key={client.clientId} className="admin__client-access-item">
-                  <input
-                    type="checkbox"
-                    checked={isClientAllowedForDraft(client.clientId)}
-                    onChange={() => handleToggleClientAccess(client.clientId)}
-                  />
-                  <span>
-                    <strong>{client.businessName}</strong> ({client.clientId})
-                  </span>
-                  <Badge status={isClientAllowedForDraft(client.clientId) ? 'Approved' : 'Rejected'}>
-                    {isClientAllowedForDraft(client.clientId) ? 'Allowed' : 'Blocked'}
-                  </Badge>
-                </label>
-              ))
-            )}
-          </div>
-
-          <div className="admin__form-actions">
-            <Button
-              type="button"
-              variant="default"
-              onClick={() => {
-                setShowAccessModal(false);
-                setSelectedUserForAccess(null);
-                setRestrictedClientDraft([]);
-                setSelectedWorkbasketDraft([]);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-              disabled={savingUserAccess || selectedWorkbasketDraft.length === 0}
-              onClick={handleSaveUserAccess}
-            >
-              {savingUserAccess ? 'Saving...' : 'Save Access'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        selectedUser={selectedUserForAccess}
+        primaryWorkbaskets={primaryWorkbaskets}
+        qcOnlyWorkbaskets={qcOnlyWorkbaskets}
+        selectedWorkbasketDraft={selectedWorkbasketDraft}
+        setSelectedWorkbasketDraft={setSelectedWorkbasketDraft}
+        clients={clients}
+        restrictedClientDraft={restrictedClientDraft}
+        isClientAllowedForDraft={isClientAllowedForDraft}
+        onToggleClientAccess={handleToggleClientAccess}
+        onSave={handleSaveUserAccess}
+        saving={savingUserAccess}
+      />
       
       {/* Create Category Modal */}
       <Modal
