@@ -5,6 +5,8 @@ import { caseApi } from '../api/case.api';
 import { reportsService } from '../services/reports.service';
 import { toArray } from '../pages/platform/PlatformShared';
 import { trackAsync } from '../utils/performanceMonitor';
+import { useAuth } from './useAuth';
+import { useFirm } from './useFirm';
 
 const queueDefaults = {
   placeholderData: keepPreviousData,
@@ -12,42 +14,76 @@ const queueDefaults = {
   gcTime: 15 * 60 * 1000,
 };
 
-export const usePlatformDashboardSummaryQuery = () => useQuery({
-  queryKey: ['platform', 'dashboard-summary'],
+
+const usePlatformQueryScope = () => {
+  const { user } = useAuth();
+  const { firmSlug } = useFirm();
+
+  const scopedFirmSlug = firmSlug || user?.firmSlug || 'unknown-firm';
+  const scopedUserId = user?.xID || user?.id || user?._id || user?.userId || user?.email || 'anonymous-user';
+
+  return {
+    scopedFirmSlug,
+    scopedUserId,
+  };
+};
+
+export const usePlatformDashboardSummaryQuery = () => {
+  const { scopedFirmSlug, scopedUserId } = usePlatformQueryScope();
+
+  return useQuery({
+    queryKey: ['platform', scopedFirmSlug, scopedUserId, 'dashboard-summary'],
   queryFn: () => trackAsync('platform.dashboard.summary', 'platform:dashboard:summary', () => dashboardApi.getSummary({ filter: 'ALL' })),
   select: (res) => res?.data?.data || {},
   ...queueDefaults,
-});
+  });
+};
 
-export const usePlatformMyWorklistQuery = () => useQuery({
-  queryKey: ['platform', 'my-worklist'],
+export const usePlatformMyWorklistQuery = () => {
+  const { scopedFirmSlug, scopedUserId } = usePlatformQueryScope();
+
+  return useQuery({
+    queryKey: ['platform', scopedFirmSlug, scopedUserId, 'my-worklist'],
   queryFn: () => trackAsync('platform.worklist.my', 'platform:worklist:my', () => worklistApi.getEmployeeWorklist({ limit: 50 })),
   select: (res) => toArray(res?.data?.data || res?.data?.items),
   ...queueDefaults,
-});
+  });
+};
 
-export const usePlatformWorkbenchQuery = () => useQuery({
-  queryKey: ['platform', 'workbench'],
+export const usePlatformWorkbenchQuery = () => {
+  const { scopedFirmSlug, scopedUserId } = usePlatformQueryScope();
+
+  return useQuery({
+    queryKey: ['platform', scopedFirmSlug, scopedUserId, 'workbench'],
   queryFn: () => trackAsync('platform.worklist.global', 'platform:worklist:global', () => worklistApi.getGlobalWorklist({ limit: 50 })),
   select: (res) => toArray(res?.data?.data || res?.data?.items),
   ...queueDefaults,
-});
+  });
+};
 
-export const usePlatformQcQueueQuery = () => useQuery({
-  queryKey: ['platform', 'qc-workbench'],
+export const usePlatformQcQueueQuery = () => {
+  const { scopedFirmSlug, scopedUserId } = usePlatformQueryScope();
+
+  return useQuery({
+    queryKey: ['platform', scopedFirmSlug, scopedUserId, 'qc-workbench'],
   queryFn: () => trackAsync('platform.qc.queue', 'platform:qc:queue', () => caseApi.getCases({ state: 'IN_QC', limit: 50 })),
   select: (res) => toArray(res?.data?.data || res?.data?.items),
   ...queueDefaults,
-});
+  });
+};
 
-export const usePlatformReportsMetricsQuery = () => useQuery({
-  queryKey: ['platform', 'reports-metrics'],
+export const usePlatformReportsMetricsQuery = () => {
+  const { scopedFirmSlug, scopedUserId } = usePlatformQueryScope();
+
+  return useQuery({
+    queryKey: ['platform', scopedFirmSlug, scopedUserId, 'reports-metrics'],
   queryFn: () => trackAsync('platform.reports.metrics', 'platform:reports:metrics', () => reportsService.getCaseMetrics()),
   select: (res) => toArray(res?.data?.data),
   staleTime: 2 * 60 * 1000,
   gcTime: 20 * 60 * 1000,
   placeholderData: keepPreviousData,
-});
+  });
+};
 
 export const usePlatformTaskManagerStatsQuery = () => {
   const dashboard = usePlatformDashboardSummaryQuery();
