@@ -375,9 +375,7 @@ const clientSchema = new mongoose.Schema({
    */
   primaryContactNumber: {
     type: String,
-    required: function requiredPrimaryContactNumber() {
-      return this.isDefaultClient !== true;
-    },
+    required: false,
     default: null,
     trim: true,
   },
@@ -397,8 +395,26 @@ const clientSchema = new mongoose.Schema({
    */
   businessEmail: {
     type: String,
-    required: [true, 'Business email is required'],
+    required: function requiredBusinessEmail() {
+      return this.isDefaultClient === true;
+    },
     trim: true,
+  },
+
+  /**
+   * Storage-backed client profile reference.
+   * Keeps only operational pointer metadata in MongoDB.
+   */
+  profileRef: {
+    provider: { type: String, trim: true, default: null },
+    mode: { type: String, enum: ['firm_connected', 'managed_fallback'], default: null },
+    fileId: { type: String, trim: true, default: null },
+    objectKey: { type: String, trim: true, default: null },
+    checksum: { type: String, trim: true, default: null },
+    version: { type: Number, default: 0, min: 0 },
+    schemaVersion: { type: Number, default: 1, min: 1 },
+    migratedAt: { type: Date, default: null },
+    updatedAt: { type: Date, default: null },
   },
 
   /**
@@ -783,6 +799,36 @@ clientSchema.plugin(softDeletePlugin);
 const { looksEncrypted: _clientIsEncryptedValue } = require('../security/encryption.utils');
 const { tenantScopeGuardPlugin } = require('./plugins/tenantScopeGuard.plugin');
 
+const NON_PERSISTENT_SENSITIVE_FIELDS = [
+  'PAN',
+  'TAN',
+  'GST',
+  'CIN',
+  'businessAddress',
+  'secondaryContactNumber',
+  'contactPersonName',
+  'contactPersonDesignation',
+  'contactPersonPhoneNumber',
+  'contactPersonEmailAddress',
+  'clientFactSheet',
+];
+
+function _hasMeaningfulSensitiveValue(value) {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'object') {
+    return Object.values(value).some((entry) => _hasMeaningfulSensitiveValue(entry));
+  }
+  return true;
+}
+
+function _sensitivePersistenceError(field) {
+  const error = new Error(`BYOS_SENSITIVE_FIELD_PERSISTENCE_BLOCKED:${field}`);
+  error.code = 'BYOS_SENSITIVE_FIELD_PERSISTENCE_BLOCKED';
+  return error;
+}
+
 /** Client fields that must be encrypted before persisting. */
 const _CLIENT_SENSITIVE_FIELDS = ['primaryContactNumber', 'businessEmail'];
 
@@ -816,6 +862,13 @@ async function _encryptClientUpdatePayload(query) {
     ...(updateDoc.$set || {}),
     ...directSet,
   };
+
+  for (const field of NON_PERSISTENT_SENSITIVE_FIELDS) {
+    const candidate = setUpdate[field];
+    if (_hasMeaningfulSensitiveValue(candidate)) {
+      throw _sensitivePersistenceError(field);
+    }
+  }
 
   const fieldsToEncrypt = _CLIENT_SENSITIVE_FIELDS.filter((field) => setUpdate[field] != null && !_clientIsEncryptedValue(setUpdate[field]));
   if (!fieldsToEncrypt.length) return;
@@ -882,6 +935,14 @@ clientSchema.pre('save', async function () {
   for (const field of _CLIENT_SENSITIVE_FIELDS) {
     if (this[field] != null && !_clientIsEncryptedValue(this[field])) {
       this[field] = await _enc(String(this[field]), tenantId, { session });
+    }
+  }
+});
+
+clientSchema.pre('validate', function () {
+  for (const field of NON_PERSISTENT_SENSITIVE_FIELDS) {
+    if (this.isModified(field) && _hasMeaningfulSensitiveValue(this[field])) {
+      throw _sensitivePersistenceError(field);
     }
   }
 });

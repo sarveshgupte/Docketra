@@ -54,6 +54,7 @@ const buildCaseActivityService = require('../services/caseActivity.service');
 const buildCaseBulkService = require('../services/caseBulk.service');
 const log = require('../utils/log');
 const docketAuditService = require('../services/docketAudit.service');
+const { clientProfileStorageService } = require('../services/clientProfileStorage.service');
 
 const inFlightCaseRecordLoads = new Map();
 
@@ -930,28 +931,30 @@ const getClientFactSheetForCase = async (req, res) => {
       });
     }
     
+    const profile = await clientProfileStorageService.getClientProfile({ firmId: req.user.firmId, client }).catch(() => null);
+    const clientFactSheet = profile?.profile?.factSheet || {};
     const attachments = await AttachmentRepository.findByClientSource(req.user.firmId, client.clientId, 'client_cfs');
-    const rawBasicInfo = client.clientFactSheet?.basicInfo || {};
+    const rawBasicInfo = clientFactSheet?.basicInfo || {};
     const normalizedBasicInfo = {
       clientName: rawBasicInfo.clientName || client.businessName || '',
       entityType: rawBasicInfo.entityType || '',
-      PAN: rawBasicInfo.PAN || client.PAN || '',
-      CIN: rawBasicInfo.CIN || client.CIN || '',
-      GSTIN: rawBasicInfo.GSTIN || client.GST || '',
-      address: rawBasicInfo.address || client.businessAddress || '',
+      PAN: rawBasicInfo.PAN || profile?.profile?.identifiers?.pan || '',
+      CIN: rawBasicInfo.CIN || profile?.profile?.identifiers?.cin || '',
+      GSTIN: rawBasicInfo.GSTIN || profile?.profile?.identifiers?.gstin || '',
+      address: rawBasicInfo.address || profile?.profile?.addresses?.businessAddress || '',
       contactPerson: rawBasicInfo.contactPerson || '',
-      email: rawBasicInfo.email || client.businessEmail || '',
-      phone: rawBasicInfo.phone || client.primaryContactNumber || '',
+      email: rawBasicInfo.email || profile?.profile?.contacts?.primaryEmail || client.businessEmail || '',
+      phone: rawBasicInfo.phone || profile?.profile?.contacts?.primaryPhone || client.primaryContactNumber || '',
     };
-    const documents = (client.clientFactSheet?.documents || []).map((doc) => ({
+    const documents = (clientFactSheet?.documents || []).map((doc) => ({
       fileName: doc.fileName,
       fileUrl: doc.fileUrl,
       uploadedBy: doc.uploadedBy,
       uploadedAt: doc.uploadedAt,
     }));
     const hasFactSheetContent = Boolean(
-      (client.clientFactSheet?.description || '').trim()
-      || (client.clientFactSheet?.notes || '').trim()
+      (clientFactSheet?.description || '').trim()
+      || (clientFactSheet?.notes || '').trim()
       || documents.length > 0
       || Object.values(normalizedBasicInfo).some((value) => String(value || '').trim())
     );
@@ -979,9 +982,9 @@ const getClientFactSheetForCase = async (req, res) => {
       clientId: client.clientId,
       businessName: client.businessName,
       basicInfo: normalizedBasicInfo,
-      description: client.clientFactSheet?.description || '',
-      notes: client.clientFactSheet?.notes || '',
-      updatedAt: client.clientFactSheet?.updatedAt || null,
+      description: clientFactSheet?.description || '',
+      notes: clientFactSheet?.notes || '',
+      updatedAt: clientFactSheet?.updatedAt || null,
       files: [],
       attachments: [],
       documents,

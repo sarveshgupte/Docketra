@@ -60,7 +60,7 @@ const getOrCreateDefaultClient = async (firmId, options = {}) => {
           isInternal: true,
           createdBySystem: true,
           businessName: firmName || 'Default Client',
-          businessAddress: 'Default Address',
+          businessAddress: null,
           primaryContactNumber: '0000000000',
           businessEmail: buildSystemEmail(firmId),
           status: 'ACTIVE',

@@ -43,7 +43,7 @@ const seedOrganizationClient = async () => {
       const organizationClient = new Client({
         clientId: 'C000001',
         businessName: 'Organization',
-        businessAddress: 'Organization Headquarters',
+        businessAddress: null,
         primaryContactNumber: '0000000000',
         businessEmail: 'organization@system.local',
         isSystemClient: true,

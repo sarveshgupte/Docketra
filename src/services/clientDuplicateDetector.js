@@ -97,42 +97,20 @@ function calculateSimilarity(str1, str2) {
  * @param {string} clientData.businessAddress - Business address
  * @param {string} clientData.primaryContactNumber - Primary contact number
  * @param {string} clientData.businessEmail - Business email
- * @param {string} clientData.PAN - PAN number
- * @param {string} clientData.GST - GST number
- * @param {string} clientData.CIN - CIN number
  * @returns {Promise<Object>} Detection results
  */
 async function detectDuplicates(clientData) {
   try {
     const {
       businessName,
-      businessAddress,
       primaryContactNumber,
       businessEmail,
-      PAN,
-      GST,
-      CIN,
     } = clientData;
 
     const matches = [];
     
     // Build query for exact matches
     const exactMatchQuery = { $or: [], isActive: true };
-    
-    // Exact match on PAN (if provided)
-    if (PAN && PAN.trim()) {
-      exactMatchQuery.$or.push({ PAN: PAN.toUpperCase().trim() });
-    }
-    
-    // Exact match on GST (if provided)
-    if (GST && GST.trim()) {
-      exactMatchQuery.$or.push({ GST: GST.toUpperCase().trim() });
-    }
-    
-    // Exact match on CIN (if provided)
-    if (CIN && CIN.trim()) {
-      exactMatchQuery.$or.push({ CIN: CIN.toUpperCase().trim() });
-    }
     
     // Exact match on primary contact number (if provided)
     if (primaryContactNumber && primaryContactNumber.trim()) {
@@ -154,15 +132,6 @@ async function detectDuplicates(clientData) {
     for (const client of exactMatches) {
       const matchedFields = [];
       
-      if (PAN && client.PAN === PAN.toUpperCase().trim()) {
-        matchedFields.push('PAN');
-      }
-      if (GST && client.GST === GST.toUpperCase().trim()) {
-        matchedFields.push('GST');
-      }
-      if (CIN && client.CIN === CIN.toUpperCase().trim()) {
-        matchedFields.push('CIN');
-      }
       if (primaryContactNumber && client.primaryContactNumber === primaryContactNumber.trim()) {
         matchedFields.push('Primary Contact Number');
       }
@@ -181,7 +150,7 @@ async function detectDuplicates(clientData) {
     
     // Fuzzy matching on business name and address
     // Only check if we have business name or address to compare
-    if (businessName || businessAddress) {
+    if (businessName) {
       // Get all active clients for fuzzy matching
       const allClients = await Client.find({ isActive: true }).lean();
       
@@ -200,15 +169,6 @@ async function detectDuplicates(clientData) {
           if (nameSimilarity >= 80) {
             matchedFields.push('Business Name');
             maxSimilarity = Math.max(maxSimilarity, nameSimilarity);
-          }
-        }
-        
-        // Check business address similarity (threshold: 80%)
-        if (businessAddress && client.businessAddress) {
-          const addressSimilarity = calculateSimilarity(businessAddress, client.businessAddress);
-          if (addressSimilarity >= 80) {
-            matchedFields.push('Business Address');
-            maxSimilarity = Math.max(maxSimilarity, addressSimilarity);
           }
         }
         
