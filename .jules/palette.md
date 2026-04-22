@@ -17,3 +17,7 @@
 ## 2025-04-17 - Added `aria-pressed` to Password Visibility Toggle
 **Learning:** Found an accessibility issue where the password visibility toggle button was using an `aria-label` to communicate state (e.g., "Show password" vs. "Hide password"), but lacked the crucial `aria-pressed` attribute which is standard for toggle buttons. Without `aria-pressed`, screen readers don't explicitly treat it as a stateful toggle, leaving the user guessing if the action was correctly registered.
 **Action:** When implementing icon-only toggle buttons (like password visibility, or "favorite" toggles), ensure that they not only have descriptive, dynamic `aria-label`s, but also include an explicit `aria-pressed={state}` attribute to robustly communicate their toggle nature to assistive technologies.
+
+## 2025-04-22 - Complete ARIA Tablists for View Toggles
+**Learning:** Standard ARIA tablists require more than just \`role="tab"\` and \`aria-selected\`. They must include roving \`tabIndex={isActive ? 0 : -1}\`, Arrow key navigation (Left/Right to switch focus and select), and \`aria-controls\` to properly link tabs to panels. Without these, keyboard accessibility is broken and screen reader experience is suboptimal.
+**Action:** When implementing custom tablists, ensure comprehensive ARIA and keyboard patterns are implemented, including handling \`ArrowLeft\`/\`ArrowRight\` for navigation, maintaining a single focusable \`tabIndex=0\` tab, and using \`aria-controls\`.
