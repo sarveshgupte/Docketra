@@ -16,7 +16,7 @@ assert.ok(casesPageSource.includes('returnTo='), 'Dockets list should preserve r
 
 const caseDetailSource = read('src/pages/CaseDetailPage.jsx');
 assert.ok(caseDetailSource.includes('handleBackToQueue'), 'Docket detail should expose an explicit back-to-queue action.');
-assert.ok(caseDetailSource.includes('const returnTo = location.state?.returnTo || returnToFromQuery || ROUTES.CASES(firmSlug);'), 'Docket detail should resolve continuity return path from state/query with dockets fallback.');
+assert.ok(caseDetailSource.includes('useDocketQueueNavigation'), 'Docket detail should resolve continuity return path via queue navigation hook.');
 
 for (const page of ['src/pages/platform/WorklistPage.jsx', 'src/pages/platform/WorkbasketsPage.jsx', 'src/pages/platform/QcQueuePage.jsx']) {
   const source = read(page);
