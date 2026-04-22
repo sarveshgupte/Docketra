@@ -32,7 +32,8 @@
     "test:shells": "node tests/firmWorkspaceShellUnification.test.mjs",
     "test:command-center": "node tests/workspaceCommandCenter.test.mjs",
     "test:sidebar-active": "node tests/sidebarActiveStateReliability.test.mjs",
-    "test:crm-unification": "node tests/crmWorkspaceUnification.test.mjs"
+    "test:crm-unification": "node tests/crmWorkspaceUnification.test.mjs",
+    "test:performance-patterns": "node tests/performancePatterns.test.mjs"
   },
   "browserslist": {
     "production": [

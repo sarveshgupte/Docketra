@@ -1,73 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
-import { dashboardApi } from '../../api/dashboard.api';
-import { worklistApi } from '../../api/worklist.api';
-import { caseApi } from '../../api/case.api';
 import { ROUTES } from '../../constants/routes';
 import { usePermissions } from '../../hooks/usePermissions';
-import { InlineNotice, PageSection, StatGrid, toArray } from './PlatformShared';
+import { InlineNotice, PageSection, RefreshNotice, StatGrid } from './PlatformShared';
+import { usePlatformTaskManagerStatsQuery } from '../../hooks/usePlatformDataQueries';
 
 export const PlatformTaskManagerPage = () => {
   const { firmSlug } = useParams();
   const { isAdmin } = usePermissions();
-  const [stats, setStats] = useState({
-    allActiveDockets: 0,
-    myWorklistCount: 0,
-    workbasketCount: 0,
-    qcPendingCount: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const [summaryRes, worklistRes, globalRes, qcRes] = await Promise.allSettled([
-          dashboardApi.getSummary({ filter: 'ALL' }),
-          worklistApi.getEmployeeWorklist({ limit: 1 }),
-          worklistApi.getGlobalWorklist({ limit: 1 }),
-          caseApi.getCases({ state: 'IN_QC', limit: 1 }),
-        ]);
-
-        if (cancelled) return;
-
-        const summary = summaryRes.status === 'fulfilled' ? (summaryRes.value?.data?.data || {}) : {};
-        const myWorklist = worklistRes.status === 'fulfilled' ? worklistRes.value : null;
-        const globalWorklist = globalRes.status === 'fulfilled' ? globalRes.value : null;
-        const qcRows = qcRes.status === 'fulfilled' ? qcRes.value : null;
-
-        setStats({
-          allActiveDockets: Number(summary.inProgress || 0) + Number(summary.pending || 0) + Number(summary.inQc || 0),
-          myWorklistCount: Number(myWorklist?.meta?.total ?? toArray(myWorklist?.data).length ?? 0),
-          workbasketCount: Number(globalWorklist?.meta?.total ?? toArray(globalWorklist?.data).length ?? 0),
-          qcPendingCount: Number(qcRows?.meta?.total ?? toArray(qcRows?.data?.data || qcRows?.data?.items).length ?? 0),
-        });
-      } catch {
-        if (!cancelled) {
-          setStats({ allActiveDockets: 0, myWorklistCount: 0, workbasketCount: 0, qcPendingCount: 0 });
-          setError('Docket Workbench metrics are temporarily unavailable. You can still navigate to all execution surfaces.');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { stats, isLoading, isFetching, isError } = usePlatformTaskManagerStatsQuery();
 
   const cards = [
-    { label: 'All active dockets', value: loading ? '…' : stats.allActiveDockets, helpText: 'In progress, pending, and in QC right now.' },
-    { label: 'My Worklist', value: loading ? '…' : stats.myWorklistCount, helpText: 'Your active and pended docket workload.' },
-    { label: 'Workbench', value: loading ? '…' : stats.workbasketCount, helpText: 'Shared queue dockets available to pull and start.' },
-    { label: 'QC Workbench', value: loading ? '…' : stats.qcPendingCount, helpText: 'Dockets waiting for pass/correct/fail review.' },
+    { label: 'All active dockets', value: isLoading ? '…' : stats.allActiveDockets, helpText: 'In progress, pending, and in QC right now.' },
+    { label: 'My Worklist', value: isLoading ? '…' : stats.myWorklistCount, helpText: 'Your active and pended docket workload.' },
+    { label: 'Workbench', value: isLoading ? '…' : stats.workbasketCount, helpText: 'Shared queue dockets available to pull and start.' },
+    { label: 'QC Workbench', value: isLoading ? '…' : stats.qcPendingCount, helpText: 'Dockets waiting for pass/correct/fail review.' },
   ];
 
   return (
@@ -77,7 +25,8 @@ export const PlatformTaskManagerPage = () => {
       subtitle="Daily docket execution hub for team intake, personal work, QC review, and oversight."
       actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>New Docket</Link>}
     >
-      <InlineNotice tone="error" message={error} />
+      <InlineNotice tone="error" message={isError ? 'Docket Workbench metrics are temporarily unavailable. You can still navigate to all execution surfaces.' : ''} />
+      <RefreshNotice refreshing={isFetching && !isLoading} message="Refreshing Docket Workbench metrics in the background…" />
       <StatGrid items={cards} />
 
       <PageSection title="Quick actions" description="Go straight to the queue that matches your next workflow step.">
