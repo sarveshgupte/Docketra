@@ -60,7 +60,7 @@ async function setupFirmWithClient() {
   const client = await Client.create({
     clientId: 'C000001',
     businessName: 'Test Firm One',
-    businessAddress: 'Address',
+
     primaryContactNumber: '0000000000',
     businessEmail: 'firm001@test.com',
     firmId: firm._id,
