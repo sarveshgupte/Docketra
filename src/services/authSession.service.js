@@ -158,6 +158,10 @@ const createAuthSessionService = (deps) => {
       const refreshToken = req.cookies?.refreshToken || getCookieValue(req.headers?.cookie, 'refreshToken');
 
       if (!refreshToken) {
+        log.info('[AUTH] Refresh rejected: refresh token cookie missing.', {
+          path: req.originalUrl || req.url,
+          hasCookieHeader: Boolean(req.headers?.cookie),
+        });
         return res.status(401).json({
           success: false,
           message: 'Authentication required',
@@ -169,6 +173,9 @@ const createAuthSessionService = (deps) => {
       const now = new Date();
 
       if (!storedToken || storedToken.expiresAt <= now) {
+        log.info('[AUTH] Refresh rejected: token invalid or expired.', {
+          hasStoredToken: Boolean(storedToken),
+        });
         await noteRefreshTokenFailure({
           req,
           userId: storedToken?.userId || null,
@@ -182,6 +189,7 @@ const createAuthSessionService = (deps) => {
       }
 
       if (storedToken.isRevoked) {
+        log.info('[AUTH] Refresh rejected: token already revoked.');
         await noteRefreshTokenFailure({
           req,
           userId: storedToken.userId,
@@ -197,6 +205,10 @@ const createAuthSessionService = (deps) => {
       const isSuperAdminToken = !storedToken.userId;
       const isTokenMissingFirmContext = !storedToken.firmId;
       if (isSuperAdminToken || isTokenMissingFirmContext) {
+        log.info('[AUTH] Refresh rejected: unsupported token scope.', {
+          isSuperAdminToken,
+          isTokenMissingFirmContext,
+        });
         await noteRefreshTokenFailure({
           req,
           reason: 'refresh_not_supported',
@@ -214,6 +226,10 @@ const createAuthSessionService = (deps) => {
       });
 
       if (!user || !isActiveStatus(user.status)) {
+        log.info('[AUTH] Refresh rejected: user missing or inactive.', {
+          hasUser: Boolean(user),
+          userStatus: user?.status || null,
+        });
         await noteRefreshTokenFailure({
           req,
           userId: storedToken.userId,
