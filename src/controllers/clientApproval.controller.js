@@ -6,6 +6,8 @@ const { CaseRepository, ClientRepository } = require('../repositories');
 const { CASE_CATEGORIES, CLIENT_STATUS } = require('../config/constants');
 const CaseStatus = require('../domain/case/caseStatus');
 const CaseService = require('../services/case.service');
+const { generateNextClientId } = require('../services/clientIdGenerator');
+const { persistClientProfileOrRollback } = require('../services/clientProfileWriteGuard.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const log = require('../utils/log');
 const { buildClientStatusQuery, CANONICAL_CLIENT_STATUSES } = require('../utils/clientStatus');
@@ -111,7 +113,7 @@ const approveNewClient = async (req, res) => {
     }
     
     // Validate required client fields
-    const requiredFields = ['businessName', 'businessAddress', 'primaryContactNumber', 'businessEmail'];
+    const requiredFields = ['businessName', 'primaryContactNumber', 'businessEmail'];
     const missingFields = requiredFields.filter(field => !clientData[field]);
     
     if (missingFields.length > 0) {
@@ -133,25 +135,42 @@ const approveNewClient = async (req, res) => {
       });
     }
     
+    const clientId = await generateNextClientId(req.user.firmId);
+
     // Create the new client
-    const newClient = new Client({
+    const newClient = await ClientRepository.create({
+      clientId,
       businessName: clientData.businessName,
-      businessAddress: clientData.businessAddress,
       primaryContactNumber: clientData.primaryContactNumber,
-      secondaryContactNumber: clientData.secondaryContactNumber || null,
       businessEmail: clientData.businessEmail,
-      PAN: clientData.PAN || null,
-      GST: clientData.GST || null,
-      TAN: clientData.TAN || null,
-      CIN: clientData.CIN || null,
+      firmId: req.user.firmId,
       isSystemClient: false,
       isActive: true,
       status: CANONICAL_CLIENT_STATUSES.ACTIVE,
-      createdByXid: approverXid, // CANONICAL - set from approver's xID
-      createdBy: approverEmail.toLowerCase(), // DEPRECATED - backward compatibility only
+      createdByXid: approverXid,
+      createdBy: approverEmail.toLowerCase(),
+    }, req.user?.role);
+
+    await persistClientProfileOrRollback({
+      firmId: req.user.firmId,
+      client: newClient,
+      actorXID: approverXid,
+      profileInput: {
+        legalName: clientData.businessName,
+        businessAddress: clientData.businessAddress || null,
+        primaryContactNumber: clientData.primaryContactNumber,
+        secondaryContactNumber: clientData.secondaryContactNumber || null,
+        businessEmail: clientData.businessEmail,
+        PAN: clientData.PAN || null,
+        GST: clientData.GST || null,
+        TAN: clientData.TAN || null,
+        CIN: clientData.CIN || null,
+        contactPersonName: clientData.contactPersonName || null,
+        contactPersonDesignation: clientData.contactPersonDesignation || null,
+        contactPersonPhoneNumber: clientData.contactPersonPhoneNumber || null,
+        contactPersonEmailAddress: clientData.contactPersonEmailAddress || null,
+      },
     });
-    
-    await newClient.save();
     
     // Update case with approval metadata through centralized service
     await CaseService.updateStatus(caseId, CaseStatus.APPROVED, {

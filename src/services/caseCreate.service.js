@@ -384,12 +384,8 @@ module.exports = (deps) => {
         // Detect duplicates using client data
         const dataToCheck = clientData || (payload && payload.clientData) || {
           businessName: client.businessName,
-          businessAddress: client.businessAddress,
           primaryContactNumber: client.primaryContactNumber,
           businessEmail: client.businessEmail,
-          PAN: client.PAN,
-          GST: client.GST,
-          CIN: client.CIN,
         };
         
         const duplicateResult = await detectDuplicates(dataToCheck);

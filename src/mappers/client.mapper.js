@@ -31,6 +31,8 @@ const mapClientResponse = (client) => {
     TAN: client.TAN ?? null,
     GST: client.GST ?? null,
     CIN: client.CIN ?? null,
+    profileVersion: client.profileRef?.version ?? 0,
+    profileProvider: client.profileRef?.provider ?? null,
     status: client.status,
     isActive: client.isActive,
     isSystemClient: Boolean(client.isSystemClient),
