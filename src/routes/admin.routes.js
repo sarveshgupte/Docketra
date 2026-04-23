@@ -4,7 +4,6 @@ const routeSchemas = require('../schemas/admin.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const { requirePrimaryAdmin, requireManagerOrPrimaryAdmin } = require('../middleware/rbac.middleware');
-const { createSecureUpload, enforceUploadSecurity } = require('../middleware/uploadProtection.middleware');
 const { superadminLimiter, userReadLimiter, userWriteLimiter, sensitiveLimiter } = require('../middleware/rateLimiters');
 const { adminBaseAccess } = require('./routeGroups');
 const {
@@ -70,7 +69,6 @@ const {
   updateUserWorkbaskets,
 } = require('../controllers/workbasket.controller');
 
-const upload = createSecureUpload({ memory: true });
 
 /**
  * Admin Routes
@@ -91,7 +89,7 @@ router.put('/clients/:clientId', ...adminBaseAccess, authorizeFirmPermission('CL
 router.patch('/clients/:clientId/status', ...adminBaseAccess, authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, toggleClientStatus);
 router.post('/clients/:clientId/change-name', ...adminBaseAccess, authorizeFirmPermission('CLIENT_MANAGE'), sensitiveLimiter, changeLegalName);
 router.put('/clients/:clientId/fact-sheet', ...adminBaseAccess, authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, updateClientFactSheet);
-router.post('/clients/:clientId/fact-sheet/files', ...adminBaseAccess, authorizeFirmPermission('CLIENT_MANAGE'), sensitiveLimiter, upload.single('file'), enforceUploadSecurity, uploadFactSheetFile);
+router.post('/clients/:clientId/fact-sheet/files', ...adminBaseAccess, authorizeFirmPermission('CLIENT_MANAGE'), sensitiveLimiter, uploadFactSheetFile);
 router.delete('/clients/:clientId/fact-sheet/files/:fileId', ...adminBaseAccess, authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, deleteFactSheetFile);
 
 router.get('/categories', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_MANAGE'), userReadLimiter, getCategories);

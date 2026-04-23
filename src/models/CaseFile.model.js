@@ -3,11 +3,10 @@
 /**
  * CaseFile Model
  *
- * Staging record for async Google Drive file uploads.
- * Created by the upload controller immediately after receiving a file.
- * The storage worker processes the upload and updates this record.
+ * Upload session + staging record.
  *
- * localPath — absolute path to the file on disk; never transmitted via Redis.
+ * Legacy path: async worker upload from localPath.
+ * BYOS path: direct-to-provider upload intents finalized by API.
  */
 
 const mongoose = require('mongoose');
@@ -23,7 +22,7 @@ const caseFileSchema = new mongoose.Schema(
     },
     localPath: {
       type: String,
-      required: true,
+      default: null,
     },
     originalName: {
       type: String,
@@ -40,8 +39,37 @@ const caseFileSchema = new mongoose.Schema(
     },
     uploadStatus: {
       type: String,
-      enum: ['pending', 'uploaded', 'error'],
+      enum: ['pending', 'initiated', 'uploaded', 'verified', 'error', 'failed', 'abandoned'],
       default: 'pending',
+    },
+    provider: {
+      type: String,
+      default: null,
+    },
+    providerMode: {
+      type: String,
+      enum: ['firm_connected', 'managed_fallback'],
+      default: null,
+    },
+    providerFileId: {
+      type: String,
+      default: null,
+    },
+    providerObjectKey: {
+      type: String,
+      default: null,
+    },
+    targetFolderId: {
+      type: String,
+      default: null,
+    },
+    expiresAt: {
+      type: Date,
+      default: null,
+    },
+    finalizedAt: {
+      type: Date,
+      default: null,
     },
     errorMessage: {
       type: String,

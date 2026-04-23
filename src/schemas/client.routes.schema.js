@@ -37,6 +37,27 @@ module.exports = {
   'POST /:clientId/fact-sheet/files': { params: z.object({ clientId: clientIdString }), body: z.object({}).passthrough() },
   'DELETE /:clientId/fact-sheet/files/:fileId': { params: z.object({ clientId: clientIdString, fileId: nonEmptyString }) },
   'POST /:clientId/cfs/files': { params: z.object({ clientId: clientIdString }), body: z.object({}).passthrough() },
+  'POST /:clientId/cfs/files/upload-intent': {
+    params: z.object({ clientId: clientIdString }),
+    body: z.object({
+      fileName: nonEmptyString,
+      mimeType: nonEmptyString,
+      size: z.coerce.number().int().positive(),
+      description: z.string().trim().min(1).max(500).optional(),
+      fileType: z.string().trim().optional(),
+    }).strict(),
+  },
+  'POST /:clientId/cfs/files/finalize': {
+    params: z.object({ clientId: clientIdString }),
+    body: z.object({
+      uploadId: nonEmptyString,
+      completion: z.object({
+        providerFileId: z.string().trim().optional(),
+        objectKey: z.string().trim().optional(),
+      }).optional(),
+      checksum: z.string().trim().optional(),
+    }).strict(),
+  },
   'DELETE /:clientId/cfs/files/:attachmentId': { params: z.object({ clientId: clientIdString, attachmentId: nonEmptyString }) },
 
   'GET /:clientId/activity': { params: z.object({ clientId: clientIdString }), query: z.object({}).passthrough() },

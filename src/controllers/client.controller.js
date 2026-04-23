@@ -25,6 +25,7 @@ const { sanitizePayload, enforceAllowedFields, PayloadValidationError } = requir
 const cfsDriveService = require('../services/cfsDrive.service');
 const { clientProfileStorageService } = require('../services/clientProfileStorage.service');
 const { persistClientProfileOrRollback } = require('../services/clientProfileWriteGuard.service');
+const directUploadService = require('../services/directUpload.service');
 
 const getClientAccessContext = (req, res, message) => {
   const firmId = req.user?.firmId;
@@ -894,6 +895,20 @@ const updateClientFactSheet = async (req, res) => {
  * Requires multer middleware for file upload
  */
 const uploadFactSheetFile = async (req, res) => {
+  if (!directUploadService.isDirectUploadsEnabled()) {
+    return res.status(503).json({
+      success: false,
+      code: 'DIRECT_UPLOADS_DISABLED',
+      message: 'File uploads are temporarily unavailable',
+    });
+  }
+  return res.status(410).json({
+    success: false,
+    message: 'Legacy multipart upload is deprecated. Use upload intent/finalize endpoints.',
+  });
+};
+
+const createClientCFSUploadIntent = async (req, res) => {
   try {
     if (areFileUploadsDisabled()) {
       return res.status(503).json({
@@ -902,87 +917,27 @@ const uploadFactSheetFile = async (req, res) => {
       });
     }
     const { clientId } = req.params;
-    
-    // Get firmId and xID from authenticated user
-    const userFirmId = req.user?.firmId;
-    const performedByXID = req.user?.xID;
-    
-    if (!userFirmId || !performedByXID) {
-      return res.status(403).json({
-        success: false,
-        message: 'Authentication required',
-      });
+    const { fileName, mimeType, size, description = 'Client Fact Sheet attachment', fileType = 'documents' } = req.body || {};
+    const userFirmId = String(req.user?.firmId || '');
+    if (!userFirmId || !req.user?.xID) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
     }
-    
-    // Check if file was uploaded
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'No file uploaded',
-      });
-    }
-    
-    const queuedFile = await cfsDriveService.uploadClientCFSFile(clientId, userFirmId, req.file, {
-      userRole: req.user?.role,
-      userEmail: req.user?.email || 'unknown',
-      userXID: performedByXID,
-      userName: req.user?.name || req.user?.email || performedByXID,
-      description: req.body?.description || 'Client Fact Sheet attachment',
-      fileType: req.body?.fileType || 'documents',
-    });
 
-    const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
-    if (client) {
-      const existingProfile = await clientProfileStorageService.getClientProfile({ firmId: userFirmId, client });
-      const factSheet = existingProfile?.profile?.factSheet || {};
-      await clientProfileStorageService.updateClientProfile({
-        firmId: userFirmId,
-        client,
-        actorXID: performedByXID,
-        partialProfileInput: { clientFactSheet: { ...factSheet, updatedAt: new Date() } },
-      });
-    }
-    
-    // Log audit event
-    await logFactSheetFileAdded({
-      clientId,
+    const intent = await directUploadService.createIntent({
       firmId: userFirmId,
-      performedByXID,
-      fileName: req.file.originalname,
-      metadata: {
-        fileId: String(queuedFile._id),
-        mimeType: getMimeType(req.file.originalname) || req.file.mimetype || 'application/octet-stream',
-        fileSize: req.file.size,
-      },
-    });
-    await logClientFactSheetAction({
       clientId,
-      firmId: userFirmId,
-      actionType: 'CLIENT_CFS_ATTACHMENT_ADDED',
-      description: `Attachment added to CFS for ${client.businessName}: ${req.file.originalname}`,
-      performedByXID,
-      metadata: { fileName: req.file.originalname, navigateTo: `/clients/${clientId}/cfs` },
-      req,
+      source: 'client_cfs',
+      fileName,
+      mimeType,
+      size,
+      description,
+      role: req.user?.role,
+      user: req.user,
+      fileType,
     });
-    
-    res.status(202).json({
-      success: true,
-      data: {
-        fileId: String(queuedFile._id),
-        fileName: req.file.originalname,
-        size: req.file.size || 0,
-        mimeType: getMimeType(req.file.originalname) || req.file.mimetype || 'application/octet-stream',
-        uploadedAt: queuedFile.createdAt || new Date(),
-      },
-      message: 'File upload queued for processing',
-    });
+    return res.status(201).json({ success: true, data: intent });
   } catch (error) {
-    log.error('Error uploading fact sheet file:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error uploading file',
-      error: error.message,
-    });
+    return res.status(error.status || 500).json({ success: false, message: error.message });
   }
 };
 
@@ -1056,51 +1011,33 @@ const deleteFactSheetFile = async (req, res) => {
  * Files are stored in Google Drive and referenced via Attachment model
  */
 const uploadClientCFSFile = async (req, res) => {
+  if (!directUploadService.isDirectUploadsEnabled()) {
+    return res.status(503).json({
+      success: false,
+      code: 'DIRECT_UPLOADS_DISABLED',
+      message: 'File uploads are temporarily unavailable',
+    });
+  }
+  return res.status(410).json({
+    success: false,
+    message: 'Legacy multipart upload is deprecated. Use upload intent/finalize endpoints.',
+  });
+};
+
+const finalizeClientCFSUpload = async (req, res) => {
   try {
-    if (areFileUploadsDisabled()) {
-      return res.status(503).json({
-        success: false,
-        message: 'File uploads are temporarily disabled',
-      });
-    }
     const { clientId } = req.params;
-    const { description, fileType = 'documents' } = req.body;
-
-    // Validate file upload
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'No file provided',
-      });
-    }
-
-    // Validate description
-    if (!description || !description.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'File description is required',
-      });
-    }
-
-    // Get user context
-    const userFirmId = req.user?.firmId;
+    const { uploadId, completion = {}, checksum } = req.body || {};
+    const userFirmId = String(req.user?.firmId || '');
     const userXID = req.user?.xID;
-    const userName = req.user?.name || req.user?.email;
+    if (!userFirmId || !userXID) return res.status(401).json({ success: false, message: 'Authentication required' });
 
-    if (!userFirmId || !userXID) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required',
-      });
-    }
-
-    const caseFile = await cfsDriveService.uploadClientCFSFile(clientId, userFirmId, req.file, {
-      userRole: req.user?.role,
-      userEmail: req.user?.email || 'unknown',
-      userXID,
-      userName,
-      description: description.trim(),
-      fileType,
+    const attachment = await directUploadService.finalizeIntent({
+      uploadId,
+      completion,
+      checksum,
+      firmId: userFirmId,
+      user: req.user,
     });
 
     const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
@@ -1115,17 +1052,24 @@ const uploadClientCFSFile = async (req, res) => {
       });
     }
 
-    return res.status(202).json({
+    await logFactSheetFileAdded({
+      clientId,
+      firmId: userFirmId,
+      performedByXID: userXID,
+      fileName: attachment.fileName,
+      metadata: { fileId: String(attachment._id), mimeType: attachment.mimeType, fileSize: attachment.size },
+    });
+
+    return res.status(201).json({
       success: true,
-      data: caseFile,
-      message: 'File upload queued for processing',
+      data: attachment,
+      message: 'File uploaded successfully',
     });
   } catch (error) {
-    log.error('Error uploading client CFS file:', error);
-
-    res.status(500).json({
+    log.error('Error finalizing client CFS upload:', error);
+    res.status(error.status || 500).json({
       success: false,
-      message: 'Error uploading file to client CFS',
+      message: 'Error finalizing client CFS upload',
       error: error.message,
     });
   }
@@ -1424,6 +1368,8 @@ module.exports = {
   changeLegalName: wrapWriteHandler(changeLegalName),
   updateClientFactSheet: wrapWriteHandler(updateClientFactSheet),
   uploadFactSheetFile: wrapWriteHandler(uploadFactSheetFile),
+  createClientCFSUploadIntent: wrapWriteHandler(createClientCFSUploadIntent),
+  finalizeClientCFSUpload: wrapWriteHandler(finalizeClientCFSUpload),
   deleteFactSheetFile: wrapWriteHandler(deleteFactSheetFile),
   // Client CFS management
   uploadClientCFSFile: wrapWriteHandler(uploadClientCFSFile),
