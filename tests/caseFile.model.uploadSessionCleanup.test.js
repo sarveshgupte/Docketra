@@ -16,6 +16,11 @@ const CaseFile = require('../src/models/CaseFile.model');
   ));
   assert.ok(attachmentLinkIndex, 'firmId+attachmentId index should exist');
   assert.strictEqual(attachmentLinkIndex[1].unique, true, 'upload session to attachment link should be unique');
+  assert.deepStrictEqual(
+    attachmentLinkIndex[1].partialFilterExpression,
+    { attachmentId: { $type: 'objectId' } },
+    'attachment link uniqueness should only apply to non-null attachment ids'
+  );
 
   console.log('caseFile.model.uploadSessionCleanup test passed');
 })();
