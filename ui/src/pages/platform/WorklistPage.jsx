@@ -101,6 +101,12 @@ export const PlatformWorklistPage = () => {
       <InlineNotice tone="error" message={error || (isError ? 'Unable to load your worklist right now.' : '')} />
       <InlineNotice tone="success" message={success} />
       <RefreshNotice refreshing={isFetching && !isLoading} message="Refreshing worklist without interrupting your current view…" />
+      <PageSection
+        title="What this queue is for"
+        description="My Worklist is your personal execution queue. Dockets appear after assignment from Workbench or direct assignment at creation."
+      >
+        <p className="muted">If this is empty, check Workbench for unassigned intake or ask an admin/manager to assign dockets to you.</p>
+      </PageSection>
       <PageSection title="My active workload" description={`${filteredRows.length} dockets in your current worklist view.`}>
         <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL'}>
           <input
@@ -156,7 +162,7 @@ export const PlatformWorklistPage = () => {
           error={isError ? 'Unable to load your worklist right now.' : ''}
           onRetry={() => void refetch()}
           hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL'}
-          emptyLabel="No dockets are assigned to your worklist right now."
+          emptyLabel="No dockets are assigned to you yet. Pull from Workbench or request assignment from your manager/admin."
           emptyLabelFiltered="No worklist dockets match your current search or filters."
         />
       </PageSection>

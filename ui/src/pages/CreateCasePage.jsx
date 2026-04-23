@@ -18,7 +18,7 @@ export const CreateCasePage = () => {
     <PlatformShell
       moduleLabel="Tasks / Dockets"
       title="Create Docket"
-      subtitle="Use the guided flow to classify, route, and assign new dockets consistently."
+      subtitle="Use the guided flow to classify, route, and assign your first docket with clear setup checks."
       actions={null}
     >
       <div className="create-case">

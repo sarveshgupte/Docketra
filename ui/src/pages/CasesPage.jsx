@@ -798,6 +798,15 @@ export const CasesPage = () => {
           </SectionCard>
         )}
 
+        <SectionCard
+          title="How to use All Dockets"
+          subtitle="All Dockets is your full oversight registry across statuses, owners, and queues."
+        >
+          <p className="text-sm text-slate-600">
+            Use this view to monitor throughput and locate any docket by client, category, or status. New dockets appear here immediately after creation, even before assignment.
+          </p>
+        </SectionCard>
+
         <SectionCard title="Docket Registry" subtitle={`${searchedCases.length} records`}>
           <DataTable
             columns={columns}
@@ -823,7 +832,7 @@ export const CasesPage = () => {
                         ? UX_COPY.emptyStates.NO_MY_OPEN
                         : isAdmin ? 'No dockets yet' : 'No assigned dockets'
                 }
-                description={isAdmin ? 'Use Create Docket to start managing firm workflows.' : 'You do not have assigned dockets right now.'}
+                description={isAdmin ? 'No dockets exist yet. Create your first docket after client, category/subcategory, and workbench setup are ready.' : 'No docket records are visible yet. Ask an admin to create and assign dockets, then monitor them here.'}
                 actionLabel={isAdmin ? 'Create Docket' : undefined}
                 onAction={isAdmin ? () => navigate(ROUTES.CREATE_CASE(firmSlug)) : undefined}
               />

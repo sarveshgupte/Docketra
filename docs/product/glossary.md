@@ -10,6 +10,7 @@
 - **Workbench**: Shared team queue of unclaimed dockets available to pull.
 - **My Worklist**: Personal queue of dockets assigned to the signed-in user.
 - **QC Workbench**: Quality-control queue for pass, correction, or fail decisions.
+- **Queue explanation hint**: Short in-product helper copy that states what a queue is for, why it may be empty, and what action populates it.
 - **Filed**: Finalized docket outcome recorded as filed.
 - **Resolved**: Finalized docket outcome completed without filing.
 - **CRM**: Relationship workspace for leads, clients, deals, and invoices.
