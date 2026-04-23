@@ -6,6 +6,7 @@ const User = require('../models/User.model');
 const Case = require('../models/Case.model');
 const { DocketActivity } = require('../models/DocketActivity.model');
 const { normalizeRole } = require('../utils/role.utils');
+const { REASON_CODES } = require('./pilotDiagnostics.service');
 
 const SOURCE = Object.freeze({
   DETECTED: 'detected',
@@ -106,6 +107,21 @@ const getSharedSignals = async ({ firmId, user }) => {
     userAssignedDocketCount,
     userInteractionCount,
   };
+};
+
+
+const buildBlockers = ({ signals }) => {
+  const blockers = [];
+  if (!signals?.firm?.isSetupComplete) {
+    blockers.push({ code: REASON_CODES.SETUP_INCOMPLETE, message: 'Firm profile setup is incomplete.', nextCheck: 'Complete firm defaults and onboarding checklist.' });
+  }
+  if ((signals?.categoryWithSubcategoryCount || 0) === 0) {
+    blockers.push({ code: REASON_CODES.MISSING_ROUTING, message: 'No active category/subcategory routing found.', nextCheck: 'Create at least one active category + subcategory pair.' });
+  }
+  if ((signals?.workbasketCount || 0) === 0) {
+    blockers.push({ code: REASON_CODES.INACTIVE_WORKBENCH, message: 'No active workbench is available for docket routing.', nextCheck: 'Create or reactivate a primary workbench in Work Settings.' });
+  }
+  return blockers;
 };
 
 const buildRoleSteps = ({ role, signals }) => {
@@ -267,11 +283,14 @@ const getOnboardingProgress = async ({ firmId, user }) => {
   const steps = buildRoleSteps({ role, signals });
   const completed = steps.filter((step) => step.completed).length;
 
+  const blockers = buildBlockers({ signals });
+
   return {
     role,
     completed,
     total: steps.length,
     steps,
+    blockers,
     signals: {
       activeClientCount: signals.activeClientCount,
       categoryCount: signals.categoryCount,

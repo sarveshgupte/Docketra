@@ -112,6 +112,8 @@ async function run() {
   assert.strictEqual(progress.steps.find((s) => s.id === 'create-docket').completed, false);
   assert.strictEqual(progress.steps.find((s) => s.id === 'firm-profile').completed, false);
   assert.strictEqual(progress.steps.find((s) => s.id === 'firm-profile').completionMode, 'detected');
+  assert.ok(progress.blockers.some((b) => b.code === 'setup_incomplete'));
+  assert.ok(progress.blockers.some((b) => b.code === 'missing_routing'));
   console.log('✅ primary admin conservative defaults passed');
 
   clearMocks();
@@ -131,6 +133,7 @@ async function run() {
   });
   assert.strictEqual(progress.steps.find((s) => s.id === 'create-docket').completed, true);
   assert.strictEqual(progress.steps.find((s) => s.id === 'unassigned-reviewed').completed, true);
+  assert.strictEqual(progress.blockers.some((b) => b.code === 'setup_incomplete'), false);
   console.log('✅ admin detected signals passed');
 
   clearMocks();

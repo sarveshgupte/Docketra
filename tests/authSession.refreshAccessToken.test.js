@@ -63,6 +63,7 @@ async function testMissingCookie() {
   await service.refreshAccessToken({ headers: {}, cookies: {}, get: () => 'ua', ip: '127.0.0.1' }, res);
   assert.strictEqual(res.statusCode, 401);
   assert.strictEqual(res.payload?.message, 'Authentication required');
+  assert.strictEqual(res.payload?.reasonCode, 'missing_refresh_token');
 }
 
 async function testInvalidToken() {
@@ -100,9 +101,26 @@ async function testValidToken() {
   assert.ok(res.cookies.some((cookie) => cookie.name === 'refreshToken'));
 }
 
+
+async function testRefreshNotSupportedScope() {
+  const storedToken = {
+    expiresAt: new Date(Date.now() + 60_000),
+    isRevoked: false,
+    userId: null,
+    firmId: null,
+    save: async () => {},
+  };
+  const service = buildService({ storedToken });
+  const res = createRes();
+  await service.refreshAccessToken({ headers: { cookie: 'refreshToken=token-2' }, cookies: {}, get: () => 'ua', ip: '127.0.0.1', originalUrl: '/api/auth/refresh' }, res);
+  assert.strictEqual(res.statusCode, 401);
+  assert.strictEqual(res.payload?.reasonCode, 'refresh_not_supported');
+}
+
 async function run() {
   await testMissingCookie();
   await testInvalidToken();
+  await testRefreshNotSupportedScope();
   await testValidToken();
   console.log('authSession refreshAccessToken tests passed');
 }

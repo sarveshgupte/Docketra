@@ -99,3 +99,8 @@ For future high-risk mutations, reuse the same origin validation middleware or a
 - Frontend cannot recursively refresh refresh calls.
 - Frontend cannot repeatedly hard-redirect to the same login page.
 - AuthContext blocks re-hydration loops once unauthenticated state has already been resolved.
+
+
+## Pilot support diagnostics update (2026-04-23)
+- Refresh responses include machine-readable reason codes for support triage (`missing_refresh_token`, `refresh_not_supported`).
+- Refresh outcomes now emit structured pilot-ops events without logging sensitive tokens.
