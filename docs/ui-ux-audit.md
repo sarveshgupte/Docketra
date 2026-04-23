@@ -505,3 +505,11 @@ Migrated to `PlatformShell` in this pass:
 
 - Continue migrating remaining legacy route families to `PlatformShared` contracts to reduce future mixed-language regressions.
 - Add browser/integration-level assertion for tenant middleware failure simulation once e2e harness is available in CI.
+
+## 2026-04-23 Queue UX consistency pass
+
+- Unified queue interaction patterns across All Dockets, Worklist, Workbasket, and QC queue via shared table/filter affordances.
+- Standardized background refresh messaging, empty-filtered messaging, and keyboard row focus/open behavior.
+- Replaced queue QC action confirmations with in-app `ActionConfirmModal` flows and explicit destructive copy for fail actions.
+- Added a focused UI consistency regression test: `ui/tests/queueUxConsistency.test.mjs`.
+- Follow-up: consider migrating platform queue table implementation to consume `ui/src/components/common/DataTable.jsx` directly for full parity.

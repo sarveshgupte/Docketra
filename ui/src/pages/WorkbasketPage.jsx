@@ -21,6 +21,7 @@ import { worklistApi } from '../api/worklist.api';
 import { categoryService } from '../services/categoryService';
 import { formatDate } from '../utils/formatters';
 import { useToast } from '../hooks/useToast';
+import { QueueFilterBar } from '../components/common/QueueFilterBar';
 import { formClasses } from '../theme/tokens';
 import { useQueryState } from '../hooks/useQueryState';
 import { useActiveDocket } from '../hooks/useActiveDocket';
@@ -625,7 +626,7 @@ export const WorkbasketPage = () => {
           </Button>
         </div>
         <Card>
-          <form className="global-worklist__filters" role="search" aria-label="Workbasket filters">
+          <QueueFilterBar className="mb-6" onClear={handleResetFilters} clearDisabled={activeFilters.length === 0}>
             <div className="filter-group">
               <label htmlFor={filterIds.category}>Category</label>
               <select
@@ -676,16 +677,7 @@ export const WorkbasketPage = () => {
                 <option value="30d">Last 30 days</option>
               </select>
             </div>
-            <div className="filter-group">
-              <Button
-                variant="outline"
-                type="button"
-                onClick={handleResetFilters}
-              >
-                Clear Filters
-              </Button>
-            </div>
-          </form>
+          </QueueFilterBar>
 
           <div className="sr-only" role="status" aria-live="polite">
             {resultSummary}
@@ -730,6 +722,8 @@ export const WorkbasketPage = () => {
             onResetFilters={handleResetFilters}
             loading={loading}
             loadingMessage="Loading workbasket..."
+            refreshing={isRefreshing && !loading}
+            refreshingMessage="Refreshing workbasket in the background…"
             emptyMessage={(
               <EmptyState
                 title="No dockets in backlog"
@@ -738,36 +732,22 @@ export const WorkbasketPage = () => {
                 onAction={isAdmin ? () => navigate(ROUTES.CREATE_CASE(firmSlug)) : undefined}
               />
             )}
+            emptyFilteredMessage={
+              <EmptyState
+                title="No dockets match these filters"
+                description="Adjust filters or clear all to view available dockets in this workbasket."
+              />
+            }
+            pagination={pagination && pagination.pages > 1 ? {
+              page: pagination.page,
+              pages: pagination.pages,
+              total: pagination.total,
+              onPageChange: (nextPage) => {
+                setFilters((prev) => ({ ...prev, page: nextPage }));
+                setQuery({ page: String(nextPage) });
+              },
+            } : null}
           />
-          {isRefreshing && !loading ? <p className="mt-2 text-xs text-gray-500">Refreshing workbasket…</p> : null}
-
-          {pagination && pagination.pages > 1 && (
-            <div className="global-worklist__pagination">
-              <Button
-                variant="outline"
-                disabled={pagination.page === 1}
-                onClick={() => {
-                  setFilters((prev) => ({ ...prev, page: pagination.page - 1 }));
-                  setQuery({ page: String(pagination.page - 1) });
-                }}
-              >
-                Previous
-              </Button>
-              <span>
-                Page {pagination.page} of {pagination.pages} ({pagination.total} total)
-              </span>
-              <Button
-                variant="outline"
-                disabled={pagination.page === pagination.pages}
-                onClick={() => {
-                  setFilters((prev) => ({ ...prev, page: pagination.page + 1 }));
-                  setQuery({ page: String(pagination.page + 1) });
-                }}
-              >
-                Next
-              </Button>
-            </div>
-          )}
         </Card>
       </div>
       <ActionConfirmModal

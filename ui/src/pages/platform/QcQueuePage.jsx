@@ -19,6 +19,7 @@ import {
 } from './PlatformShared';
 import { usePlatformQcQueueQuery } from '../../hooks/usePlatformDataQueries';
 import { CASE_QUERY_PARAMS } from '../../hooks/useCaseQuery';
+import { ActionConfirmModal } from '../../components/common/ActionConfirmModal';
 
 export const PlatformQcQueuePage = () => {
   const { firmSlug } = useParams();
@@ -30,6 +31,7 @@ export const PlatformQcQueuePage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [pendingQcId, setPendingQcId] = useState('');
+  const [confirmAction, setConfirmAction] = useState(null);
   const queryClient = useQueryClient();
 
   const {
@@ -60,6 +62,19 @@ export const PlatformQcQueuePage = () => {
     setSearch('');
     setAssigneeFilter('ALL');
   };
+
+  const activeFilters = useMemo(() => {
+    const items = [];
+    if (search.trim()) items.push({ key: 'search', label: 'Search', value: search.trim() });
+    if (assigneeFilter !== 'ALL') items.push({ key: 'assignee', label: 'Assignee', value: assigneeFilter });
+    return items;
+  }, [search, assigneeFilter]);
+
+  const removeFilter = (key) => {
+    if (key === 'search') setSearch('');
+    if (key === 'assignee') setAssigneeFilter('ALL');
+  };
+
 
   const prefetchCaseDetail = (row) => {
     const caseId = getDocketRouteId(row);
@@ -131,6 +146,21 @@ export const PlatformQcQueuePage = () => {
             {isFetching ? 'Refreshing…' : 'Refresh'}
           </button>
         </FilterBar>
+        {activeFilters.length > 0 ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2" role="list" aria-label="Active QC filters">
+            {activeFilters.map((filter) => (
+              <button
+                key={filter.key}
+                type="button"
+                onClick={() => removeFilter(filter.key)}
+                className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700 hover:bg-slate-200"
+              >
+                <span className="font-medium">{filter.label}:</span> {filter.value}
+                <span aria-hidden>&times;</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
         <DataTable
           columns={['Docket ID', 'Client', 'Category', 'QC Status', 'Assignee', 'Updated', 'Actions']}
           rows={filteredRows.map((r) => (
@@ -147,11 +177,11 @@ export const PlatformQcQueuePage = () => {
               <td>{formatDateLabel(r.updatedAt || r.createdAt)}</td>
               <td>
                 <div className="action-group-secondary" role="group" aria-label="QC actions">
-                  <button type="button" onClick={() => void executeQcAction(r.caseInternalId, 'PASS', 'Passed from queue')} disabled={pendingQcId === r.caseInternalId}>
+                  <button type="button" onClick={() => setConfirmAction({ caseInternalId: r.caseInternalId, action: 'PASS', note: 'Passed from queue', title: `Pass ${formatDocketLabel(r)}?`, description: 'This marks the docket as QC passed and advances it to completion.', confirmText: 'Confirm pass', danger: false })} disabled={pendingQcId === r.caseInternalId}>
                     {pendingQcId === r.caseInternalId ? 'Updating…' : 'Pass'}
                   </button>
-                  <button type="button" onClick={() => void executeQcAction(r.caseInternalId, 'CORRECT', 'Needs correction')} disabled={pendingQcId === r.caseInternalId}>Return for correction</button>
-                  <button type="button" className="action-danger" onClick={() => void executeQcAction(r.caseInternalId, 'FAIL', 'Failed from queue')} disabled={pendingQcId === r.caseInternalId}>Fail</button>
+                  <button type="button" onClick={() => setConfirmAction({ caseInternalId: r.caseInternalId, action: 'CORRECT', note: 'Needs correction', title: `Return ${formatDocketLabel(r)} for correction?`, description: 'This sends the docket back to execution with a correction request.', confirmText: 'Return for correction', danger: false })} disabled={pendingQcId === r.caseInternalId}>Return for correction</button>
+                  <button type="button" className="action-danger" onClick={() => setConfirmAction({ caseInternalId: r.caseInternalId, action: 'FAIL', note: 'Failed from queue', title: `Fail ${formatDocketLabel(r)}?`, description: 'This records the docket as failed in QC. Continue only if this decision is final.', confirmText: 'Fail docket', danger: true })} disabled={pendingQcId === r.caseInternalId}>Fail</button>
                 </div>
               </td>
             </tr>
@@ -164,6 +194,22 @@ export const PlatformQcQueuePage = () => {
           emptyLabelFiltered="No QC Workbench dockets match your current search or filters."
         />
       </PageSection>
+      <ActionConfirmModal
+        isOpen={Boolean(confirmAction)}
+        title={confirmAction?.title || 'Confirm QC action'}
+        description={confirmAction?.description}
+        confirmText={confirmAction?.confirmText || 'Confirm'}
+        cancelText="Cancel"
+        danger={Boolean(confirmAction?.danger)}
+        loading={Boolean(confirmAction?.caseInternalId && pendingQcId === confirmAction.caseInternalId)}
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={async () => {
+          if (!confirmAction) return;
+          const current = confirmAction;
+          setConfirmAction(null);
+          await executeQcAction(current.caseInternalId, current.action, current.note);
+        }}
+      />
     </PlatformShell>
   );
 };

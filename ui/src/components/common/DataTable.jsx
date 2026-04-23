@@ -1,5 +1,5 @@
 import React from 'react';
-import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell, TableEmptyState } from './Table';
+import { Table, TableHead, TableBody, TableRow, TableEmptyState } from './Table';
 import { Button } from './Button';
 
 const joinClasses = (...classes) => classes.filter(Boolean).join(' ');
@@ -20,8 +20,14 @@ export const DataTable = ({
   loading = false,
   loadingMessage = 'Loading data...',
   emptyMessage = 'No records found.',
+  emptyFilteredMessage = 'No dockets match your current filters.',
+  errorMessage = '',
+  onRetry,
+  refreshing = false,
+  refreshingMessage = 'Refreshing in the background…',
   onRowClick,
   onRowHover,
+  pagination,
 }) => {
   const handleSortClick = (key, sortable) => {
     if (!sortable || !onSortChange) return;
@@ -47,21 +53,20 @@ export const DataTable = ({
     ? rows
     : (Array.isArray(data) ? data : []);
 
+  const hasActiveFilters = activeFilters.length > 0;
+
   return (
     <div className="flex flex-col space-y-3">
-      {/* Compact Toolbar */}
       {(toolbarLeft || toolbarRight || activeFilters.length > 0) && (
         <div className="flex min-h-10 items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            {toolbarLeft}
-          </div>
+          <div className="flex items-center gap-3">{toolbarLeft}</div>
 
           <div className="flex items-center gap-3 flex-wrap justify-end">
-            {/* Filter Chips */}
             {activeFilters.length > 0 && (
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap" role="list" aria-label="Active filters">
                 {activeFilters.map((f) => (
                   <button
+                    type="button"
                     key={f.key}
                     onClick={() => onRemoveFilter?.(f.key)}
                     className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700 hover:bg-slate-200 transition-colors"
@@ -71,13 +76,8 @@ export const DataTable = ({
                     <span aria-hidden className="ml-0.5 text-slate-500 hover:text-slate-900">&times;</span>
                   </button>
                 ))}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onResetFilters}
-                  className="text-slate-500 hover:text-slate-900 px-2 h-7"
-                >
-                  Reset
+                <Button variant="ghost" size="sm" onClick={onResetFilters} className="text-slate-500 hover:text-slate-900 px-2 h-7">
+                  Clear all
                 </Button>
               </div>
             )}
@@ -86,9 +86,12 @@ export const DataTable = ({
         </div>
       )}
 
-      {/* Table Area */}
-      <Table loading={loading} loadingMessage={loadingMessage}>
-        <TableHead>
+      {refreshing ? (
+        <p className="text-xs text-slate-500" role="status" aria-live="polite">{refreshingMessage}</p>
+      ) : null}
+
+      <Table loading={loading} loadingMessage={loadingMessage} className="max-h-[70vh] overflow-auto">
+        <TableHead className="sticky top-0 z-10">
           <TableRow>
             {columns.map((col) => {
               const isSortedByThis = sortState?.key === col.key;
@@ -98,64 +101,90 @@ export const DataTable = ({
               return (
                 <th
                   key={String(col.key)}
-                  onClick={() => handleSortClick(col.key, col.sortable)}
                   className={joinClasses(
                     headerPaddingClass,
                     'text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap bg-slate-50',
-                    col.sortable ? 'cursor-pointer select-none group hover:text-slate-700 hover:bg-slate-100 transition-colors' : '',
                     col.headerClassName
                   )}
                   style={{ width: col.width }}
                   aria-sort={ariaSort}
+                  scope="col"
                 >
-                  <div className={joinClasses("flex items-center", col.align === 'right' ? 'justify-end' : 'justify-start')}>
-                    {col.label || col.header || col.key}
-                    {getSortIcon(col.key, col.sortable)}
-                    {col.sortable && (
-                      <span className="sr-only">
-                        {`Sort ${nextDirection}`}
-                      </span>
-                    )}
-                  </div>
+                  {col.sortable ? (
+                    <button
+                      type="button"
+                      onClick={() => handleSortClick(col.key, col.sortable)}
+                      className={joinClasses('flex items-center w-full group hover:text-slate-700 transition-colors', col.align === 'right' ? 'justify-end' : 'justify-start')}
+                    >
+                      {col.label || col.header || col.key}
+                      {getSortIcon(col.key, col.sortable)}
+                      <span className="sr-only">{`Sort ${nextDirection}`}</span>
+                    </button>
+                  ) : (
+                    <div className={joinClasses('flex items-center', col.align === 'right' ? 'justify-end' : 'justify-start')}>
+                      {col.label || col.header || col.key}
+                    </div>
+                  )}
                 </th>
               );
             })}
           </TableRow>
         </TableHead>
         <TableBody>
-          {normalizedRows.length === 0 && !loading ? (
-            <TableEmptyState colSpan={columns.length} message={emptyMessage} />
-          ) : (
-            normalizedRows.map((row, rowIndex) => (
-              <TableRow
-                key={
-                  (rowKey && typeof rowKey === 'string' ? row?.[rowKey] : null)
-                  || row?.id
-                  || row?._id
-                  || rowIndex
+          {!loading && errorMessage ? (
+            <tr>
+              <td colSpan={columns.length} className="px-6 py-8 text-center text-sm text-red-700">
+                <p>{errorMessage}</p>
+                {onRetry ? <Button variant="outline" size="sm" onClick={onRetry} className="mt-3">Retry</Button> : null}
+              </td>
+            </tr>
+          ) : null}
+
+          {!loading && !errorMessage && normalizedRows.length === 0 ? (
+            <TableEmptyState colSpan={columns.length} message={hasActiveFilters ? emptyFilteredMessage : emptyMessage} />
+          ) : null}
+
+          {!loading && !errorMessage ? normalizedRows.map((row, rowIndex) => (
+            <TableRow
+              key={(rowKey && typeof rowKey === 'string' ? row?.[rowKey] : null) || row?.id || row?._id || rowIndex}
+              onClick={() => onRowClick?.(row)}
+              onMouseEnter={() => onRowHover?.(row)}
+              tabIndex={onRowClick ? 0 : undefined}
+              onKeyDown={onRowClick ? (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onRowClick(row);
                 }
-                onClick={() => onRowClick?.(row)}
-                onMouseEnter={() => onRowHover?.(row)}
-                className={onRowClick ? 'cursor-pointer hover:bg-slate-50 transition-colors' : ''}
-              >
-                {columns.map((col) => (
-                  <td
-                    key={String(col.key)}
-                    className={joinClasses(
-                      cellPaddingClass,
-                      'whitespace-nowrap text-sm text-slate-800',
-                      col.align === 'right' ? 'text-right' : 'text-left',
-                      col.className
-                    )}
-                  >
-                    {col.render ? col.render(row) : row[col.key]}
-                  </td>
-                ))}
-              </TableRow>
-            ))
-          )}
+              } : undefined}
+              className={onRowClick ? 'cursor-pointer hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset transition-colors' : ''}
+            >
+              {columns.map((col) => (
+                <td
+                  key={String(col.key)}
+                  className={joinClasses(
+                    cellPaddingClass,
+                    'whitespace-nowrap text-sm text-slate-800',
+                    col.align === 'right' ? 'text-right' : 'text-left',
+                    col.className || col.cellClassName,
+                  )}
+                >
+                  {col.render ? col.render(row) : row[col.key]}
+                </td>
+              ))}
+            </TableRow>
+          )) : null}
         </TableBody>
       </Table>
+
+      {pagination?.pages > 1 ? (
+        <div className="flex items-center justify-between text-sm text-slate-600" role="navigation" aria-label="Queue pagination">
+          <span>Page {pagination.page} of {pagination.pages} · {pagination.total || 0} dockets</span>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="outline" size="small" disabled={pagination.page <= 1} onClick={() => pagination.onPageChange?.(pagination.page - 1)}>Previous</Button>
+            <Button type="button" variant="outline" size="small" disabled={pagination.page >= pagination.pages} onClick={() => pagination.onPageChange?.(pagination.page + 1)}>Next</Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };
