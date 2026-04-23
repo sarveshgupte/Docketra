@@ -31,6 +31,12 @@ export const PlatformReportsPage = () => {
       <InlineNotice tone="error" message={isError ? 'Unable to load docket report metrics.' : ''} />
       <RefreshNotice refreshing={isFetching && !isLoading} message="Refreshing report metrics in the background…" />
       <StatGrid items={summaryCards} />
+      <PageSection
+        title="What this module is for"
+        description="Reports summarize execution health over time. Data appears after dockets move through workbench, worklist, and QC."
+      >
+        <p className="muted">If this is empty, create and process a few dockets first to generate measurable trends.</p>
+      </PageSection>
 
       <PageSection
         title="Performance trend"
@@ -66,7 +72,7 @@ export const PlatformReportsPage = () => {
           loading={isLoading}
           error={isError ? 'Unable to load docket report metrics.' : ''}
           onRetry={() => void refetch()}
-          emptyLabel="No metrics are available for the selected period."
+          emptyLabel="No report metrics yet. Complete at least one end-to-end docket cycle to generate report data."
         />
       </PageSection>
     </PlatformShell>

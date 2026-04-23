@@ -122,6 +122,12 @@ export const PlatformCrmPage = () => {
       <InlineNotice tone="error" message={error} />
       <RefreshNotice refreshing={refreshing} message="Refreshing CRM overview in the background…" />
       <StatGrid items={cards} />
+      <PageSection
+        title="What this module is for"
+        description="CRM tracks lead-to-client progression. If this page is empty, start by creating your first client or lead."
+      >
+        <p className="muted">Client records also power clearer docket context and reporting readiness.</p>
+      </PageSection>
 
       <PageSection title="Quick actions" description="Use CRM as your summary + routing hub; creation flows remain in Client Management and Leads.">
         <div className="action-row">
@@ -176,7 +182,7 @@ export const PlatformCrmPage = () => {
           loading={loading}
           error={error}
           onRetry={() => void loadData()}
-          emptyLabel="No recent client updates yet."
+          emptyLabel="No recent client updates yet. Add or edit a client record to start tracking updates."
           pageSize={5}
         />
       </PageSection>
@@ -195,7 +201,7 @@ export const PlatformCrmPage = () => {
           loading={loading}
           error={error}
           onRetry={() => void loadData()}
-          emptyLabel="No follow-up items are currently due."
+          emptyLabel="No follow-up items are currently due. New leads or scheduled follow-ups will appear here."
           pageSize={5}
         />
       </PageSection>

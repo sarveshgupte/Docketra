@@ -171,6 +171,9 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
     if (step === 2) return Boolean(formData.workbasketId);
     return true;
   }, [formData.clientId, formData.title, formData.workbasketId, step]);
+  const selectedClient = clients.find((item) => item.clientId === formData.clientId);
+  const defaultClient = clients.find((item) => item.isDefaultClient || item.isSystemClient || item.isInternal || item.clientId === 'C000001');
+  const hasRoutingPrerequisites = categories.length > 0 && workbaskets.length > 0;
 
   const updateField = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -250,6 +253,20 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
 
       {submitError ? <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{submitError}</p> : null}
       {statusMessage ? <p className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">{statusMessage}</p> : null}
+      <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
+        <p className="font-semibold text-slate-900">First docket guidance</p>
+        <ul className="mt-2 list-disc pl-5 space-y-1">
+          <li>Client: {selectedClient ? `${selectedClient.clientId} - ${selectedClient.businessName || 'Unnamed client'}` : (defaultClient ? `${defaultClient.clientId} - ${defaultClient.businessName || 'Default firm client'}` : 'Will use your default firm client if available')}.</li>
+          <li>Category + subcategory are required because they determine routing and downstream queue visibility.</li>
+          <li>Workbench is required and auto-selected from category/subcategory mapping.</li>
+          <li>After creation, the docket appears in All Dockets and enters Workbench or the selected assignee’s My Worklist.</li>
+        </ul>
+      </div>
+      {!hasRoutingPrerequisites ? (
+        <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          Docket creation may be blocked until categories/subcategories and at least one active workbench are configured in Work Settings.
+        </p>
+      ) : null}
 
       {step === 0 && (
         <>
