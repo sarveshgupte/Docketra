@@ -13,6 +13,12 @@ import { useUnsavedChangesPrompt } from '../../hooks/useUnsavedChangesPrompt';
 import { buildCreateDocketPayload, validateCreateDocketPayload, resolveEarliestErrorStep } from './createDocketPayload';
 
 const STEPS = ['Basic Info', 'Classification', 'Routing', 'Assignment', 'Review & Create'];
+const createSubmissionKey = () => {
+  if (typeof window !== 'undefined' && window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return `docket-create-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
 
 const defaultForm = {
   title: '',
@@ -23,6 +29,7 @@ const defaultForm = {
   workbasketId: '',
   priority: 'medium',
   assignedTo: '',
+  idempotencyKey: '',
 };
 
 const isEmailLikeError = (message) => typeof message === 'string' && message.toLowerCase().includes('validation');
@@ -94,12 +101,13 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
           const preferredClientId = initialClientId && nextClients.some((item) => item.clientId === initialClientId)
             ? initialClientId
             : '';
-          return {
-            ...prev,
-            clientId: prev.clientId || preferredClientId || firmDefaultClientId || nextClients[0]?.clientId || '',
-            workbasketId: prev.workbasketId || nextWorkbaskets[0]?._id || '',
-          };
-        });
+        return {
+          ...prev,
+          clientId: prev.clientId || preferredClientId || firmDefaultClientId || nextClients[0]?.clientId || '',
+          workbasketId: prev.workbasketId || nextWorkbaskets[0]?._id || '',
+          idempotencyKey: prev.idempotencyKey || createSubmissionKey(),
+        };
+      });
       } catch (error) {
         setSubmitError('Failed to load form options. Please refresh and retry.');
       } finally {
@@ -178,7 +186,8 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   const handleCreate = async () => {
     if (loading.submit) return;
     setSubmitError('');
-    const payload = buildCreateDocketPayload(formData);
+    const submitPayload = { ...formData, idempotencyKey: formData.idempotencyKey || createSubmissionKey() };
+    const payload = buildCreateDocketPayload(submitPayload);
     const payloadErrors = validateCreateDocketPayload(payload, { categories, subcategories });
     if (!validateStep(0) || !validateStep(1) || !validateStep(2) || Object.keys(payloadErrors).length > 0) {
       setErrors((prev) => ({ ...prev, ...payloadErrors }));
@@ -191,6 +200,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
       const response = await caseApi.createDocket(payload);
 
       if (response?.success) {
+        setFormData((prev) => ({ ...prev, idempotencyKey: createSubmissionKey() }));
         onCreated?.(response);
         return;
       }
