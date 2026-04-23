@@ -9,7 +9,6 @@ const {
   attachmentLimiter,
   sensitiveLimiter,
 } = require('../middleware/rateLimiters');
-const { createSecureUpload, enforceUploadSecurity } = require('../middleware/uploadProtection.middleware');
 const {
   getClients,
   getClientById,
@@ -19,6 +18,8 @@ const {
   changeLegalName,
   updateClientFactSheet,
   uploadFactSheetFile,
+  createClientCFSUploadIntent,
+  finalizeClientCFSUpload,
   deleteFactSheetFile,
   uploadClientCFSFile,
   listClientCFSFiles,
@@ -30,8 +31,6 @@ const {
   listClientActivity,
 } = require('../controllers/client.controller');
 
-const upload = createSecureUpload({ memory: true });
-const uploadCFS = createSecureUpload();
 
 /**
  * Client Management Routes
@@ -66,12 +65,14 @@ router.post('/:clientId/change-name', authorizeFirmPermission('CLIENT_MANAGE'), 
 
 // Client Fact Sheet endpoints (Admin-only)
 router.put('/:clientId/fact-sheet', authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, updateClientFactSheet);
-router.post('/:clientId/fact-sheet/files', authorizeFirmPermission('CLIENT_MANAGE'), sensitiveLimiter, upload.single('file'), enforceUploadSecurity, uploadFactSheetFile);
+router.post('/:clientId/fact-sheet/files', authorizeFirmPermission('CLIENT_MANAGE'), sensitiveLimiter, uploadFactSheetFile);
 router.delete('/:clientId/fact-sheet/files/:fileId', authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, deleteFactSheetFile);
 
 // Client CFS endpoints
 // Admin-only: Upload and delete
-router.post('/:clientId/cfs/files', authorizeFirmPermission('CLIENT_MANAGE'), sensitiveLimiter, attachmentLimiter, uploadCFS.single('file'), enforceUploadSecurity, uploadClientCFSFile);
+router.post('/:clientId/cfs/files/upload-intent', authorizeFirmPermission('CLIENT_MANAGE'), sensitiveLimiter, attachmentLimiter, createClientCFSUploadIntent);
+router.post('/:clientId/cfs/files/finalize', authorizeFirmPermission('CLIENT_MANAGE'), sensitiveLimiter, attachmentLimiter, finalizeClientCFSUpload);
+router.post('/:clientId/cfs/files', authorizeFirmPermission('CLIENT_MANAGE'), sensitiveLimiter, attachmentLimiter, uploadClientCFSFile);
 router.delete('/:clientId/cfs/files/:attachmentId', authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, deleteClientCFSFile);
 // All authenticated users: List and download (read-only)
 router.get('/:clientId/cfs/files', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, listClientCFSFiles);

@@ -18,6 +18,14 @@ class StorageProvider {
   async getFileMetadata(fileId) { // eslint-disable-line no-unused-vars
     throw new Error('StorageProvider.getFileMetadata() not implemented');
   }
+
+  async createDirectUploadSession(options) { // eslint-disable-line no-unused-vars
+    throw new Error('StorageProvider.createDirectUploadSession() not implemented');
+  }
+
+  async verifyUploadedObject(options) { // eslint-disable-line no-unused-vars
+    throw new Error('StorageProvider.verifyUploadedObject() not implemented');
+  }
 }
 
 module.exports = StorageProvider;

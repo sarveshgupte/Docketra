@@ -4,6 +4,7 @@ const {
   GetObjectCommand,
   DeleteObjectCommand,
   HeadBucketCommand,
+  HeadObjectCommand,
 } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { randomUUID } = require('crypto');
@@ -90,6 +91,45 @@ class S3Provider extends StorageProvider {
       return { ok: true };
     } catch (error) {
       throw new StorageAccessError('Failed storage connection test', this.tenantId, error);
+    }
+  }
+
+  buildTenantScopedKey(objectKey = '') {
+    const keyPrefix = this.prefix ? `${this.prefix.replace(/^\/+|\/+$/g, '')}/` : '';
+    return `${keyPrefix}${String(objectKey).replace(/^\/+/, '')}`;
+  }
+
+  async createDirectUploadSession({ objectKey, mimeType = 'application/octet-stream' }) {
+    const scopedKey = this.buildTenantScopedKey(objectKey || randomUUID());
+    const uploadUrl = await this.generateUploadUrl(scopedKey);
+    return {
+      provider: 's3',
+      method: 'PUT',
+      uploadUrl,
+      headers: { 'Content-Type': mimeType },
+      providerFileId: null,
+      objectKey: scopedKey,
+    };
+  }
+
+  async verifyUploadedObject({ objectKey, expectedSize, expectedMimeType }) {
+    if (!objectKey) {
+      return { ok: false, reason: 'missing_object_key' };
+    }
+    try {
+      const meta = await this.client.send(new HeadObjectCommand({
+        Bucket: this.bucket,
+        Key: objectKey,
+      }));
+
+      const sizeMatch = Number(meta.ContentLength || 0) === Number(expectedSize || 0);
+      const mimeMatch = !expectedMimeType || String(meta.ContentType || '').toLowerCase() === String(expectedMimeType).toLowerCase();
+      if (!sizeMatch || !mimeMatch) {
+        return { ok: false, reason: 'metadata_mismatch' };
+      }
+      return { ok: true, provider: 's3', fileId: objectKey };
+    } catch (error) {
+      return { ok: false, reason: error.message };
     }
   }
 }

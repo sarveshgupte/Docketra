@@ -1,4 +1,14 @@
 import { request } from './apiClient';
+const uploadViaSignedUrl = ({ uploadUrl, uploadMethod = 'PUT', uploadHeaders = {}, file }) => new Promise((resolve, reject) => {
+  const xhr = new XMLHttpRequest();
+  xhr.open(uploadMethod, uploadUrl);
+  Object.entries(uploadHeaders || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) xhr.setRequestHeader(key, value);
+  });
+  xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed with status ${xhr.status}`)));
+  xhr.onerror = () => reject(new Error('Upload failed due to network error'));
+  xhr.send(file);
+});
 
 export const clientApi = {
   getClients: (activeOnly = false, forCreateCase = false, options = {}) => {
@@ -28,14 +38,33 @@ export const clientApi = {
   addClientCfsComment: (clientId, payload) => request((http) => http.post(`/clients/${clientId}/cfs/comments`, payload), 'Failed to add comment'),
 
   uploadClientCFSFile: async (clientId, file) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('description', 'Client Fact Sheet attachment');
-    formData.append('fileType', 'documents');
+    const intentResponse = await request(
+      (http) => http.post(`/clients/${clientId}/cfs/files/upload-intent`, {
+        fileName: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        size: file.size,
+        description: 'Client Fact Sheet attachment',
+        fileType: 'documents',
+      }),
+      'Failed to create upload intent',
+    );
+    const intent = intentResponse?.data;
+    await uploadViaSignedUrl({
+      uploadUrl: intent?.uploadUrl,
+      uploadMethod: intent?.uploadMethod,
+      uploadHeaders: intent?.uploadHeaders,
+      file,
+    });
 
     return request(
-      (http) => http.post(`/clients/${clientId}/cfs/files`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
-      'Failed to upload file',
+      (http) => http.post(`/clients/${clientId}/cfs/files/finalize`, {
+        uploadId: intent.uploadId,
+        completion: {
+          ...(intent.providerFileId ? { providerFileId: intent.providerFileId } : {}),
+          ...(intent.objectKey ? { objectKey: intent.objectKey } : {}),
+        },
+      }),
+      'Failed to finalize upload',
     );
   },
 

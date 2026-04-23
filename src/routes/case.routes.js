@@ -12,11 +12,12 @@ const {
   commentLimiter,
   fileUploadLimiter,
 } = require('../middleware/rateLimiters');
-const { createSecureUpload, enforceUploadSecurity } = require('../middleware/uploadProtection.middleware');
 const {
   createCase,
   addComment,
   addAttachment,
+  createAttachmentUploadIntent,
+  finalizeAttachmentUpload,
   cloneCase,
   unpendCase,
   updateCaseStatus,
@@ -60,7 +61,6 @@ const { validateCaseCommentPayload } = require('../middleware/commentValidation.
 const { requireDocketAccess } = require('../middleware/docketAccess.middleware');
 const { requireStorageConnected } = require('../middleware/requireStorageConnected');
 
-const upload = createSecureUpload();
 
 const {
   assignDocket,
@@ -171,7 +171,9 @@ router.get('/:caseId/upload-link', authorizeFirmPermission('CASE_VIEW'), userRea
 router.post('/:caseId/upload-link/revoke', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, revokeUploadLink);
 
 // POST /api/cases/:caseId/attachments - Upload attachment to case
-router.post('/:caseId/attachments', requireStorageConnected, upload.single('file'), enforceUploadSecurity, authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, fileUploadLimiter, checkCaseClientAccess, addAttachment);
+router.post('/:caseId/attachments/upload-intent', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, fileUploadLimiter, checkCaseClientAccess, createAttachmentUploadIntent);
+router.post('/:caseId/attachments/finalize', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, fileUploadLimiter, checkCaseClientAccess, finalizeAttachmentUpload);
+router.post('/:caseId/attachments', requireStorageConnected, authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, fileUploadLimiter, checkCaseClientAccess, addAttachment);
 
 // GET /api/cases/:caseId/attachments/:attachmentId/view - View attachment inline
 router.get('/:caseId/attachments/:attachmentId/view', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, viewAttachment);
