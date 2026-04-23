@@ -185,9 +185,11 @@ async function testInvalidRoutingConfigGracefulFailure() {
     assert.strictEqual(result.client.clientId, 'C000125');
     assert.strictEqual(result.docket, null);
     assert.ok(result.metadata.warnings.some((warning) => warning.includes('Docket routing is incomplete')));
+    assert.strictEqual(result.metadata.warningDetails[0].code, 'missing_routing');
     assert.strictEqual(result.metadata.intakeOutcome.createdClient, true);
     assert.strictEqual(result.metadata.intakeOutcome.createdDocket, false);
     assert.ok(result.metadata.intakeOutcome.warnings.length > 0);
+    assert.strictEqual(result.metadata.intakeOutcome.warningDetails[0].code, 'missing_routing');
     assert.ok(updateCalls.length > 0);
   } finally {
     Lead.create = originalLeadCreate;
@@ -267,6 +269,7 @@ async function testApiIntakeIdempotencyAndMetadata() {
     });
     assert.strictEqual(replay.lead._id, '507f1f77bcf86cd799439107');
     assert.strictEqual(replay.metadata.idempotentReplay, true);
+    assert.strictEqual(replay.metadata.warningDetails[0].code, 'idempotent_replay');
   } finally {
     Lead.create = originalLeadCreate;
     Lead.findByIdAndUpdate = originalLeadFindByIdAndUpdate;

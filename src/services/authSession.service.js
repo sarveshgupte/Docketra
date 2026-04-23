@@ -1,5 +1,6 @@
 const log = require('../utils/log');
 const { getCookieValue } = require('../utils/requestCookies');
+const { REASON_CODES, logPilotEvent } = require('./pilotDiagnostics.service');
 
 const getAuthCookieOptions = ({ maxAge = undefined } = {}) => {
   const secureCookies = process.env.NODE_ENV === 'production';
@@ -164,6 +165,7 @@ const createAuthSessionService = (deps) => {
         });
         return res.status(401).json({
           success: false,
+          reasonCode: 'missing_refresh_token',
           message: 'Authentication required',
         });
       }
@@ -213,9 +215,11 @@ const createAuthSessionService = (deps) => {
           req,
           reason: 'refresh_not_supported',
         });
+        logPilotEvent({ event: 'auth_refresh_rejected', severity: 'warn', metadata: { reasonCode: REASON_CODES.REFRESH_NOT_SUPPORTED, route: req.originalUrl || req.url } });
         return res.status(401).json({
           success: false,
           code: 'REFRESH_NOT_SUPPORTED',
+          reasonCode: REASON_CODES.REFRESH_NOT_SUPPORTED,
           message: 'Session refresh is not supported for SuperAdmin accounts',
         });
       }
@@ -287,6 +291,7 @@ const createAuthSessionService = (deps) => {
         userAgent: req.get('user-agent'),
       });
 
+      logPilotEvent({ event: 'auth_refresh_succeeded', metadata: { firmId: user.firmId, userId: user._id, route: req.originalUrl || req.url } });
       return res.json({
         success: true,
         message: 'Token refreshed successfully',
