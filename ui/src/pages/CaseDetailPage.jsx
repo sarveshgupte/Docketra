@@ -4,7 +4,7 @@
  * PR: Comprehensive CaseHistory & Audit Trail - Added view tracking and history display
  */
 
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { lazy, Suspense, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
@@ -14,6 +14,7 @@ import { Button } from '../components/common/Button';
 import { Textarea } from '../components/common/Textarea';
 import { Select } from '../components/common/Select';
 import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
+import { Modal } from '../components/common/Modal';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { useToast } from '../hooks/useToast';
@@ -26,7 +27,6 @@ import { formatDocketId } from '../utils/formatters';
 import { CASE_DETAIL_TABS, USER_ROLES, VALID_CASE_DETAIL_TAB_NAMES } from '../utils/constants';
 import { LifecycleBadge } from '../../components/LifecycleBadge';
 import { DocketSidebar } from '../components/docket/DocketSidebar';
-import { DocketComments } from '../components/docket/DocketComments';
 import { StickyTabs } from '../components/common/StickyTabs';
 import './CaseDetailPage.css';
 import { ROUTES } from '../constants/routes';
@@ -40,6 +40,10 @@ import { getLifecycleMeta } from '../../utils/lifecycleMap';
 import api from '../services/api';
 import { DocketDetails } from '../../components/DocketDetails';
 import { CaseWorkflowModals } from './caseDetail/CaseWorkflowModals';
+import { CaseDetailPanelSkeleton } from './caseDetail/CaseDetailPanelSkeleton';
+const CaseDetailAttachmentsPanel = lazy(() => import('./caseDetail/CaseDetailAttachmentsPanel').then((module) => ({ default: module.CaseDetailAttachmentsPanel })));
+const CaseDetailActivityPanel = lazy(() => import('./caseDetail/CaseDetailActivityPanel').then((module) => ({ default: module.CaseDetailActivityPanel })));
+const CaseDetailHistoryPanel = lazy(() => import('./caseDetail/CaseDetailHistoryPanel').then((module) => ({ default: module.CaseDetailHistoryPanel })));
 import {
   ACTION_RETRY_BASE_DELAY_MS,
   ACTION_RETRY_KEY,
@@ -210,8 +214,7 @@ export const CaseDetailPage = () => {
         const response = await api.get('/teams');
         const teams = Array.isArray(response?.data?.data) ? response.data.data : [];
         setRoutingTeams(teams);
-      } catch (error) {
-        console.warn('Failed to load teams', error);
+      } catch (_error) {
       }
     };
     loadTeams();
@@ -320,6 +323,7 @@ export const CaseDetailPage = () => {
   ]), [attachments.length, mergedTimelineEvents.length]);
 
   useEffect(() => {
+    if (activeTab !== CASE_DETAIL_TABS.ACTIVITY) return undefined;
     let cancelled = false;
     const loadTimeline = async () => {
       if (!caseId) return;
@@ -347,7 +351,7 @@ export const CaseDetailPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [caseId, timelineFilter, timelinePage]);
+  }, [activeTab, caseId, timelineFilter, timelinePage]);
   const visibleComments = useMemo(() => comments.slice(-commentWindowSize), [comments, commentWindowSize]);
   const commentDraftKey = `docketra_case_comment_draft_${firmSlug || 'firm'}_${caseId}`;
   const availableAssignees = useMemo(() => {
@@ -510,9 +514,6 @@ export const CaseDetailPage = () => {
     const reconciledPrevComments = prevComments.filter((comment) => {
       if (!comment?.optimistic) return true;
       const matched = incomingComments.some((incomingComment) => commentsMatch(comment, incomingComment));
-      if (matched && import.meta.env.DEV) {
-        console.debug(`[CaseDetail:${source}] optimistic comment reconciled with server payload.`);
-      }
       return !matched;
     });
 
@@ -538,16 +539,6 @@ export const CaseDetailPage = () => {
       return rightTs - leftTs;
     });
 
-    if (import.meta.env.DEV) {
-      if (incomingComments.length < prevComments.length) {
-        console.debug(`[CaseDetail:${source}] incoming comments smaller than local state; merge preserved local items.`);
-      }
-      const prevOptimistic = prevComments.filter((item) => item?.optimistic).length;
-      const mergedOptimistic = mergedComments.filter((item) => item?.optimistic).length;
-      if (prevOptimistic > 0 && mergedOptimistic < prevOptimistic) {
-        console.debug(`[CaseDetail:${source}] optimistic comments may have been replaced during merge.`);
-      }
-    }
 
     return {
       ...prev,
@@ -588,15 +579,6 @@ export const CaseDetailPage = () => {
       
       if (response.success && requestId === loadSequenceRef.current) {
         const normalized = response.data?.case || response.data;
-        console.log('API response:', normalized);
-        console.log('DOCKET_DEBUG', {
-          caseId,
-          activeDocketId,
-          lifecycle: normalizeLifecycleForUi(normalized?.lifecycle),
-          assignedTo: normalized?.assignedToXID || normalized?.assignedTo?.xID || null,
-          responseSource: 'loadCase',
-          timestamp: new Date().toISOString(),
-        });
         setCaseData((prev) => mergeCaseData(prev, normalized, { source: 'loadCase' }));
         setActiveDocketData(normalized);
       }
@@ -869,6 +851,7 @@ export const CaseDetailPage = () => {
 
   useEffect(() => {
     if (!caseData?.clientId) return;
+    if (![CASE_DETAIL_TABS.OVERVIEW, CASE_DETAIL_TABS.HISTORY].includes(activeTab)) return;
     const loadClientDockets = async () => {
       setLoadingClientDockets(true);
       try {
@@ -882,7 +865,7 @@ export const CaseDetailPage = () => {
       }
     };
     loadClientDockets();
-  }, [caseData?.clientId, caseId]);
+  }, [activeTab, caseData?.clientId, caseId]);
 
   // Track exit on beforeunload (best-effort for tab close)
   // Note: sendBeacon doesn't support custom headers, so we rely on cookie-based auth
@@ -1265,8 +1248,7 @@ export const CaseDetailPage = () => {
         }
         return type;
       });
-    } catch (error) {
-      console.error('[CaseDetail] Failed to open sidebar', { type, error });
+    } catch (_error) {
       showError('Unable to open panel right now. Please retry.');
     }
   };
@@ -1274,8 +1256,7 @@ export const CaseDetailPage = () => {
   const runGuardedAction = useCallback((action, fallbackMessage = 'Unable to complete this action right now.') => {
     try {
       action?.();
-    } catch (error) {
-      console.error('[CaseDetail] Action failed', error);
+    } catch (_error) {
       showError(fallbackMessage);
     }
   }, [showError]);
@@ -1489,7 +1470,7 @@ export const CaseDetailPage = () => {
       setRouteTeamId('');
       setRoutingNote('');
       setShowRouteModal(false);
-      loadCaseData({ silent: false });
+      loadCase({ background: true });
     } catch(err) {
       showError(err?.response?.data?.message || 'Failed to route docket');
     } finally {
@@ -1602,13 +1583,6 @@ export const CaseDetailPage = () => {
   const handleAddCommentSuccess = () => {
     commentsListRef.current?.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
-
-  useEffect(() => {
-    console.log('ACTION_VISIBILITY_DEBUG', {
-      lifecycle: lifecycleStatus,
-      shouldShowActions,
-    });
-  }, [lifecycleStatus, shouldShowActions]);
 
   useEffect(() => {
     const handleKeyboardShortcuts = (event) => {
@@ -1976,230 +1950,65 @@ export const CaseDetailPage = () => {
             ) : null}
 
             {activeTab === CASE_DETAIL_TABS.ATTACHMENTS ? (
-            <section className="case-card case-detail-section case-detail-section--attachments" id="panel-attachments" role="tabpanel" aria-labelledby="tab-attachments">
-              <div className="case-card__heading case-detail-section__heading">
-                <h2 id="attachments-heading">Attachments</h2>
-                <p className="case-detail-section__subheading">Canonical document collection for this docket.</p>
-              </div>
-              <p className="mb-3 text-xs text-gray-500">All docket document collection lives here. Upload files and retain metadata with the docket execution record.</p>
-              <form className="rounded-xl border border-gray-200 bg-gray-50 p-3" onSubmit={handleUploadFile}>
-                <div className="flex flex-wrap items-center gap-2">
-                  <input type="file" className="hidden" id="docket-attachment-input" onChange={handleFileSelect} />
-                  <Button variant="outline" type="button" onClick={() => document.getElementById('docket-attachment-input')?.click()} disabled={uploadingFile}>
-                    Select file
-                  </Button>
-                  <span className="text-xs text-gray-500">{selectedFile?.name || 'No file selected'}</span>
-                </div>
-                <Textarea
-                  label="Attachment comment (required)"
-                  value={fileDescription}
-                  onChange={(event) => setFileDescription(event.target.value)}
-                  rows={3}
-                  className="mt-3"
+              <Suspense fallback={<CaseDetailPanelSkeleton title="Loading attachments…" />}>
+                <CaseDetailAttachmentsPanel
+                  attachments={attachments}
+                  sectionLoading={sectionLoading.attachments}
+                  selectedFile={selectedFile}
+                  uploadingFile={uploadingFile}
+                  uploadProgress={uploadProgress}
+                  fileDescription={fileDescription}
+                  onUploadFile={handleUploadFile}
+                  onFileSelect={handleFileSelect}
+                  onFileDescriptionChange={setFileDescription}
                 />
-                <div className="mt-3">
-                  <Button variant="primary" type="submit" disabled={uploadingFile || !selectedFile}>
-                    {uploadingFile ? `Uploading${uploadProgress ? ` ${uploadProgress}%` : '…'}` : 'Upload attachment'}
-                  </Button>
-                </div>
-              </form>
-              {sectionLoading.attachments ? <p className="case-detail__empty-note mt-3">Loading attachments…</p> : null}
-              {!sectionLoading.attachments && attachments.length === 0 ? (
-                <p className="case-detail__empty-note mt-3">No attachments yet. Document collection belongs in this docket’s Attachments tab.</p>
-              ) : null}
-              {attachments.length > 0 ? (
-                <ul className="mt-4 space-y-3">
-                  {attachments.map((attachment, index) => (
-                    <li key={attachment.id || attachment._id || index} className="rounded-xl border border-gray-200 bg-white p-3">
-                      <p className="text-sm font-medium text-gray-900">{attachment.fileName || attachment.filename || 'Attachment'}</p>
-                      <p className="mt-1 text-xs text-gray-500">Uploaded {formatDateTime(attachment.createdAt || attachment.uploadedAt)}</p>
-                      <p className="mt-1 text-xs text-gray-500">By {attachment.createdByName || attachment.createdByXID || attachment.uploadedBy || attachment.createdBy || 'System'}</p>
-                      {attachment.description ? <p className="mt-1 text-xs text-gray-500">Comment: {attachment.description}</p> : null}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </section>
+              </Suspense>
             ) : null}
 
             {activeTab === CASE_DETAIL_TABS.ACTIVITY ? (
-            <section className="case-card case-detail-section case-detail-section--comments" id="panel-activity" role="tabpanel" aria-labelledby="tab-activity">
-              <div className="case-card__heading case-detail-section__heading">
-                <h2 id="comments-heading">Activity</h2>
-                <p className="case-detail-section__subheading">Operational timeline, updates, and comments.</p>
-              </div>
-              <div className="mb-4">
-                <div className="flex items-center gap-2">
-                  <select
-                    value={timelineFilter}
-                    onChange={(event) => {
-                      setTimelineFilter(event.target.value);
-                      setTimelinePage(1);
-                    }}
-                  >
-                    <option value="ALL">All</option>
-                    <option value="STATUS_CHANGED">Status Changes</option>
-                    <option value="ASSIGNED">Assignments</option>
-                    <option value="COMMENT_ADDED">Comments</option>
-                  </select>
-                </div>
-                {timelineLoading ? <p className="case-detail__empty-note mt-3">Loading activity…</p> : null}
-                {!timelineLoading && !mergedTimelineEvents.length ? <p className="case-detail__empty-note mt-3">No activity events yet.</p> : null}
-                {!timelineLoading && mergedTimelineEvents.length ? (
-                  <ul className="mt-3 space-y-3">
-                    {mergedTimelineEvents.map((event, index) => (
-                      <li key={`${event._id || event.id || index}`} className="flex items-start gap-3 border-l-2 border-gray-200 pl-3">
-                        <span>{event.icon}</span>
-                        <div>
-                          <div className="text-sm font-medium">{event.description || event.action || event.actionType || 'Updated'}</div>
-                          <div className="text-xs text-gray-500">{event.actorLabel} • {formatDateTime(event.createdAt || event.timestamp)}</div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-                <div className="mt-3 flex items-center justify-end gap-2">
-                  <Button variant="outline" disabled={timelinePage <= 1} onClick={() => setTimelinePage((value) => Math.max(1, value - 1))}>
-                    Previous
-                  </Button>
-                  <Button variant="outline" disabled={!timelineHasNextPage} onClick={() => setTimelinePage((value) => value + 1)}>
-                    Next
-                  </Button>
-                </div>
-              </div>
-              <div className="case-detail__comments" ref={commentsListRef}>
-                {sectionLoading.comments ? (
-                  <div className="case-detail__section-skeleton" aria-hidden="true">
-                    {Array.from({ length: 4 }).map((_, idx) => <div key={`comment-skeleton-${idx}`} className="case-detail__skeleton-row" />)}
-                  </div>
-                ) : <DocketComments comments={visibleComments} />}
-              </div>
-              {comments.length > visibleComments.length ? (
-                <div className="case-detail__virtual-actions">
-                  <Button variant="outline" onClick={() => setCommentWindowSize((size) => size + INITIAL_VIRTUAL_WINDOW)}>
-                    Load older comments ({comments.length - visibleComments.length} remaining)
-                  </Button>
-                </div>
-              ) : null}
-              {(accessMode.canComment || permissions.canAddComment(caseData)) && (
-                <div className="case-detail__add-comment">
-                  <Textarea
-                    label="Add Comment"
-                    id={commentComposerId}
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Enter your comment…"
-                    rows={3}
-                    className="case-detail__comment-input"
-                  />
-                  <div className="case-detail__composer-actions">
-                    <Button variant="primary" onClick={handleAddComment} disabled={!newComment.trim() || submitting}>
-                      {submitting ? 'Adding…' : 'Add Comment'}
-                    </Button>
-                  </div>
-                </div>
-              )}
-              {showQcActions ? (
-                <section className="mt-4 border-t pt-4" aria-label="QC actions">
-                  <h3 className="text-sm font-semibold text-gray-900">QC Actions</h3>
-                  <div className="case-detail__composer-actions case-detail__lifecycle-actions mt-3">
-                    <Button variant="primary" onClick={() => { setQcDecisionType('APPROVED'); setQcComment(''); setShowQcModal(true); }}>
-                      Approve
-                    </Button>
-                    <Button variant="secondary" onClick={() => { setQcDecisionType('CORRECTED'); setQcComment(''); setShowQcModal(true); }}>
-                      Corrected
-                    </Button>
-                    <Button variant="danger" onClick={() => { setQcDecisionType('FAILED'); setQcComment(''); setShowQcModal(true); }}>
-                      Reject
-                    </Button>
-                  </div>
-                </section>
-              ) : null}
-            </section>
+              <Suspense fallback={<CaseDetailPanelSkeleton title="Loading activity…" />}>
+                <CaseDetailActivityPanel
+                  timelineFilter={timelineFilter}
+                  onTimelineFilterChange={(value) => {
+                    setTimelineFilter(value);
+                    setTimelinePage(1);
+                  }}
+                  timelineLoading={timelineLoading}
+                  mergedTimelineEvents={mergedTimelineEvents}
+                  timelinePage={timelinePage}
+                  timelineHasNextPage={timelineHasNextPage}
+                  onPrevTimelinePage={() => setTimelinePage((value) => Math.max(1, value - 1))}
+                  onNextTimelinePage={() => setTimelinePage((value) => value + 1)}
+                  sectionLoading={sectionLoading.comments}
+                  commentsListRef={commentsListRef}
+                  visibleComments={visibleComments}
+                  comments={comments}
+                  onLoadOlderComments={() => setCommentWindowSize((size) => size + INITIAL_VIRTUAL_WINDOW)}
+                  initialVirtualWindow={INITIAL_VIRTUAL_WINDOW}
+                  accessMode={accessMode}
+                  permissions={permissions}
+                  caseData={caseData}
+                  commentComposerId={commentComposerId}
+                  newComment={newComment}
+                  onNewCommentChange={setNewComment}
+                  onAddComment={handleAddComment}
+                  submitting={submitting}
+                />
+              </Suspense>
             ) : null}
             {activeTab === CASE_DETAIL_TABS.HISTORY ? (
-            <>
-            <section className="case-card" id="panel-history" role="tabpanel" aria-labelledby="tab-history">
-              <div className="case-card__heading">
-                <h2>Change History</h2>
-              </div>
-              <p className="mb-3 text-xs text-gray-500">Audit-style change record using available timeline/audit data.</p>
-              {!sortedTimelineEvents.length ? <p className="case-detail__empty-note">No audit history available yet.</p> : null}
-              {sortedTimelineEvents.length ? (
-                <ul className="space-y-3">
-                  {sortedTimelineEvents.map((event, index) => {
-                    const changeSet = event?.changes || event?.diff || event?.fieldsChanged || null;
-                    const actor = event?.performedByName || event?.performedByXID || event?.performedBy || event?.actorXID || 'System';
-                    return (
-                    <li key={`${event._id || event.id || index}`} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                      <div className="text-sm font-medium text-gray-900">{event?.actionLabel || event?.description || event?.actionType || event?.action || 'Updated'}</div>
-                      <div className="mt-1 text-xs text-gray-500">{actor} • {formatDateTime(event?.timestamp || event?.createdAt || event?.updatedAt)}</div>
-                      {Array.isArray(changeSet) && changeSet.length ? (
-                        <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-gray-600">
-                          {changeSet.map((change, changeIndex) => (
-                            <li key={`${index}-change-${changeIndex}`}>
-                              {change?.field || change?.key || 'Field'}: {String(change?.from ?? change?.before ?? '—')} → {String(change?.to ?? change?.after ?? '—')}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : null}
-                    </li>
-                  );})}
-                </ul>
-              ) : null}
-            </section>
-            <section className="case-card" aria-labelledby="past-dockets-heading">
-              <div className="case-card__heading">
-                <h2 id="past-dockets-heading">Client Docket History</h2>
-              </div>
-              {loadingClientDockets ? (
-                <p className="case-detail__empty-note">Loading history…</p>
-              ) : clientDockets.length === 0 ? (
-                <p className="case-detail__empty-note">No history found for this client.</p>
-              ) : (
-                <div className="case-detail-table-wrap">
-                  <table className="case-detail-table">
-                    <thead>
-                      <tr>
-                        <th>Docket #</th>
-                        <th>Created</th>
-                        <th>Resolved/Filed</th>
-                        <th>Lifecycle</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {clientDockets.map((row) => {
-                        const rowId = row.caseId || row.docketId || row._id;
-                        const closedDate = row.resolvedAt || row.filedAt || row.closedAt || row.completedAt;
-                        return (
-                          <tr key={rowId}>
-                            <td>
-                              <button
-                                type="button"
-                                className="case-detail-table__link"
-                                onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, rowId), { state: { returnTo: linkedClientRoute || returnTo, fromClientRoute: linkedClientRoute || fromClientRoute } })}
-                              >
-                                {formatDocketId(rowId)}
-                              </button>
-                            </td>
-                            <td>{row.createdAt ? formatDateTime(row.createdAt) : '—'}</td>
-                            <td>{closedDate ? formatDateTime(closedDate) : '—'}</td>
-                            <td>
-                              {getLifecycleMeta(row.lifecycle) ? (
-                                <LifecycleBadge lifecycle={row.lifecycle} />
-                              ) : (
-                                '—'
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-            </>
+              <Suspense fallback={<CaseDetailPanelSkeleton title="Loading history…" rows={6} />}>
+                <CaseDetailHistoryPanel
+                  sortedTimelineEvents={sortedTimelineEvents}
+                  loadingClientDockets={loadingClientDockets}
+                  clientDockets={clientDockets}
+                  firmSlug={firmSlug}
+                  linkedClientRoute={linkedClientRoute}
+                  returnTo={returnTo}
+                  fromClientRoute={fromClientRoute}
+                  navigate={navigate}
+                />
+              </Suspense>
             ) : null}
           </main>
 

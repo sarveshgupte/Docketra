@@ -50,3 +50,31 @@ Core docket reliability surfaces:
 2. Some workflow action handlers remain inline and tightly coupled to page state.
 3. Queue-origin behavior is still distributed across list pages and can drift without shared tests.
 4. Current tests are mostly structure/string assertions; behavioral integration coverage is still thin.
+
+## 2026-04-23 detail-page performance refactor
+
+### Extracted detail modules
+- `ui/src/pages/caseDetail/CaseDetailAttachmentsPanel.jsx`
+- `ui/src/pages/caseDetail/CaseDetailActivityPanel.jsx`
+- `ui/src/pages/caseDetail/CaseDetailHistoryPanel.jsx`
+- `ui/src/pages/caseDetail/CaseDetailPanelSkeleton.jsx`
+
+### Lazy-load policy for detail tabs
+- Core shell, header summary, badges, and primary lifecycle controls remain eager.
+- Secondary heavy surfaces are lazy-loaded with `React.lazy` + `Suspense` fallback:
+  - Attachments tab
+  - Activity tab (timeline/comments rendering surface)
+  - History tab (audit + client history table)
+
+### Fetch discipline updates
+- Timeline API fetch now runs only when Activity tab is active.
+- Client history fetch now runs only when Overview or History tab is active.
+- This reduces first-open chatter and avoids expensive secondary data work before needed.
+
+### Navigation continuity checks (manual)
+- Open detail from: All Dockets, Worklist, Workbasket, QC queue.
+- Use browser back and confirm list/queue context is restored.
+- Use prev/next docket controls and confirm return context remains stable.
+
+### Known follow-up
+- Further split `CaseDetailPage` orchestration into dedicated hooks (`useCaseDetailActions`, `useCaseDetailRealtime`) to reduce top-level state breadth.
