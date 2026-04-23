@@ -37,7 +37,8 @@
     "test:case-detail-performance": "node tests/caseDetailPerformanceRefactor.test.mjs",
     "test:admin-surface": "node tests/adminSurfaceHardening.test.mjs",
     "test:auth-refresh-loop": "node tests/authRefreshLoopRegression.test.mjs",
-    "test:docket-surface": "node tests/docketSurfaceHardening.test.mjs"
+    "test:docket-surface": "node tests/docketSurfaceHardening.test.mjs",
+    "test:queue-ux-consistency": "node tests/queueUxConsistency.test.mjs"
   },
   "browserslist": {
     "production": [

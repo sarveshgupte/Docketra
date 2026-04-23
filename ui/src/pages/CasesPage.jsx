@@ -156,6 +156,7 @@ export const CasesPage = () => {
   const {
     data: casesQueryData,
     isLoading: loading,
+    isFetching,
     error,
     refetch: refetchCases,
   } = useCasesListQuery({
@@ -778,12 +779,6 @@ export const CasesPage = () => {
           performanceMetrics={performanceMetrics}
         />
 
-        {error ? (
-          <div className="cases-page__error" role="alert">
-            Failed to load dockets. Refresh the page or try again in a moment.
-          </div>
-        ) : null}
-
         {isAdmin && !onboardingDismissed && cases.length === 0 && categoryCount === 0 && (
           <SectionCard title="Welcome to Docketra" subtitle="Start with these three steps to set up your firm operations.">
             <ol className="cases-page__onboarding-list">
@@ -821,6 +816,10 @@ export const CasesPage = () => {
             onResetFilters={handleResetFilters}
             toolbarLeft={toolbarLeft}
             dense
+            refreshing={isFetching && !loading && sortedCases.length > 0}
+            refreshingMessage="Refreshing docket registry in the background…"
+            errorMessage={error ? 'Unable to load docket registry. Retry to fetch the latest queue data.' : ''}
+            onRetry={() => void refetchCases()}
             emptyMessage={
               <EmptyState
                 title={
@@ -835,6 +834,12 @@ export const CasesPage = () => {
                 description={isAdmin ? 'No dockets exist yet. Create your first docket after client, category/subcategory, and workbench setup are ready.' : 'No docket records are visible yet. Ask an admin to create and assign dockets, then monitor them here.'}
                 actionLabel={isAdmin ? 'Create Docket' : undefined}
                 onAction={isAdmin ? () => navigate(ROUTES.CREATE_CASE(firmSlug)) : undefined}
+              />
+            }
+            emptyFilteredMessage={
+              <EmptyState
+                title="No dockets match these filters"
+                description="Adjust your filters or clear all filters to view the full docket registry."
               />
             }
           />
