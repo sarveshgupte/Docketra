@@ -17,6 +17,7 @@ const { EVENT_NAMES, emitDocketEvent } = require('./docketEvents.service');
 const { NotificationTypes, createNotification } = require('../domain/notifications');
 const { CASE_LOCK_CONFIG } = require('../config/constants');
 const { logActivitySafe } = require('./docketActivity.service');
+const { REASON_CODES } = require('./pilotDiagnostics.service');
 const { getCanonicalDocketState } = require('../utils/docketStateMapper');
 const { canTransition } = require('../utils/docketStateTransitions');
 
@@ -644,7 +645,7 @@ async function reopenDuePending() {
           to: DocketStatus.AVAILABLE,
         }],
         metadata: {
-          reasonCode: 'AUTO_REOPEN_DUE',
+          reasonCode: REASON_CODES.AUTO_REOPEN_DUE,
           fromState: 'PEND',
           toState: 'WB',
         },

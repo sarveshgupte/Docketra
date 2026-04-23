@@ -68,6 +68,7 @@ const stableStringify = (input) => {
 };
 
 const valuesEqual = (left, right) => stableStringify(left) === stableStringify(right);
+const CANONICAL_AUDIT_SOURCE = 'docket.audit';
 
 const buildDedupeKey = (payload) => createHash('sha256').update(stableStringify(payload)).digest('hex');
 
@@ -103,6 +104,15 @@ async function logDocketEvent({
   const normalizedEvent = String(event).trim().toUpperCase();
   if (!normalizedEvent) return null;
   const sanitizedMetadata = sanitizeValue(metadata);
+  const normalizedMetadata = {
+    ...(sanitizedMetadata && typeof sanitizedMetadata === 'object' ? sanitizedMetadata : {}),
+    source: sanitizedMetadata?.source || CANONICAL_AUDIT_SOURCE,
+  };
+  delete normalizedMetadata.reasonCode;
+  delete normalizedMetadata.fromState;
+  delete normalizedMetadata.toState;
+  delete normalizedMetadata.actorId;
+  delete normalizedMetadata.actorRole;
   const payload = {
     entityType: 'docket',
     entityId: String(docketId),
@@ -118,7 +128,7 @@ async function logDocketEvent({
     toState: toState || undefined,
     qcOutcome: qcOutcome || undefined,
     reasonCode: sanitizedMetadata?.reasonCode || null,
-    metadata: sanitizedMetadata,
+    metadata: normalizedMetadata,
   };
   payload.dedupeKey = buildDedupeKey(payload);
   const created = await DocketAudit.create([payload], session ? { session } : undefined);
@@ -183,7 +193,7 @@ const createLog = async ({
           comment: comment || null,
           changes: normalizedChanges,
           legacyAction: String(action || '').toUpperCase(),
-          source: 'docketAudit.service.createLog',
+          source: 'docket.audit.legacy_bridge',
         },
         session,
       });

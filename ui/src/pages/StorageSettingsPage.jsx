@@ -12,6 +12,8 @@ import {
   sendStorageChangeOtp,
   testStorageConnection,
   verifyStorageChangeOtp,
+  exportFirmStorage,
+  listStorageExports,
 } from '../services/storageService';
 import { useAuth } from '../hooks/useAuth';
 import { spacingClasses } from '../theme/tokens';
@@ -36,6 +38,9 @@ export function StorageSettingsPage() {
   const [s3SessionToken, setS3SessionToken] = useState('');
   const [loadError, setLoadError] = useState('');
   const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
+  const [exportRuns, setExportRuns] = useState([]);
+  const [exportsLoading, setExportsLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const { user } = useAuth();
 
   const loadConfiguration = async () => {
@@ -44,6 +49,8 @@ export function StorageSettingsPage() {
     try {
       const data = await getStorageConfiguration();
       setConfig(data);
+      const exportData = await listStorageExports(10);
+      setExportRuns(Array.isArray(exportData?.data) ? exportData.data : []);
     } catch (error) {
       const message = error?.response?.data?.message || 'Failed to load storage configuration.';
       setLoadError(message);
@@ -142,6 +149,27 @@ export function StorageSettingsPage() {
     }
   };
 
+  const onRunExport = async () => {
+    setExporting(true);
+    setStatusMessage({ type: 'info', text: 'Generating export archive…' });
+    try {
+      const result = await exportFirmStorage();
+      setStatusMessage({
+        type: 'success',
+        text: result?.downloadUrl
+          ? 'Export generated. Use the download link or export history below.'
+          : 'Export generated. Download link may be provider-limited; use export history and support recovery guidance.',
+      });
+      await loadConfiguration();
+    } catch (error) {
+      const message = error?.response?.data?.message || 'Export failed. No partial export was released.';
+      setStatusMessage({ type: 'error', text: message });
+      toast?.showError?.(message);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <PlatformShell moduleLabel="Settings" title="Storage settings" subtitle="Configure and validate your external document storage integration.">
@@ -161,6 +189,7 @@ export function StorageSettingsPage() {
   }
 
   const connected = config?.isConfigured;
+  const storageMode = provider === 'docketra_managed' ? 'Docketra-managed storage' : 'Firm-connected storage';
   const isGoogleProvider = provider === 'google-drive';
   const isOneDriveProvider = provider === 'onedrive';
   const isS3Provider = provider === 's3';
@@ -199,7 +228,14 @@ export function StorageSettingsPage() {
               ) : null}
               <div>
                 <h2 className="text-lg font-medium text-gray-900 mb-4">Storage Provider</h2>
-                <p className="text-sm text-gray-500">Default is Docketra managed storage. BYOS changes require OTP verification.</p>
+                <p className="text-sm text-gray-500">BYOS trust mode is firm-connected storage. Docketra-managed storage is available as fallback/default. Provider changes require OTP verification.</p>
+              </div>
+              <div className="rounded border border-blue-200 bg-blue-50 px-3 py-3 text-sm text-blue-900">
+                <p className="font-medium">Current storage mode: {storageMode}</p>
+                <p className="mt-1">
+                  Firm-connected storage keeps document bytes in your firm-owned cloud environment.
+                  Docketra-managed mode is operational fallback when BYOS is not connected.
+                </p>
               </div>
 
               <div className={spacingClasses.formFieldSpacing}>
@@ -215,6 +251,7 @@ export function StorageSettingsPage() {
                   ]}
                 />
                 <Input label="Status" value={connected ? 'Active' : 'Not Connected'} readOnly />
+                <Input label="Storage mode" value={storageMode} readOnly />
                 <Input label="Connected email" value={config?.connectedEmail || 'N/A'} readOnly />
                 <Input label="Folder path" value={config?.folderPath || config?.rootFolderId || 'N/A'} readOnly />
                 <Input label="Connected since" value={formatDateTime(config?.createdAt)} readOnly />
@@ -271,6 +308,54 @@ export function StorageSettingsPage() {
                   </p>
                 ) : null}
               </div>
+            </div>
+          </Card>
+
+          <Card>
+            <div className={spacingClasses.sectionMargin}>
+              <div>
+                <h2 className="text-lg font-medium text-gray-900 mb-2">Data ownership, backup, and export readiness</h2>
+                <p className="text-sm text-gray-600">
+                  Primary Admins can generate a firm backup export and review recent runs. If a download link is unavailable for your provider,
+                  use the export history plus support diagnostics as the recovery path.
+                </p>
+              </div>
+              <div className={`${spacingClasses.formActions} ${spacingClasses.formActionsGap}`}>
+                <Button type="button" variant="primary" onClick={onRunExport} disabled={exporting} loading={exporting}>
+                  {exporting ? 'Generating Export…' : 'Generate Firm Export'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={async () => {
+                    setExportsLoading(true);
+                    try {
+                      const exportData = await listStorageExports(10);
+                      setExportRuns(Array.isArray(exportData?.data) ? exportData.data : []);
+                    } finally {
+                      setExportsLoading(false);
+                    }
+                  }}
+                  disabled={exportsLoading}
+                >
+                  {exportsLoading ? 'Refreshing…' : 'Refresh Export History'}
+                </Button>
+              </div>
+              <ul className="space-y-2 text-sm">
+                {exportRuns.length === 0 ? (
+                  <li className="text-gray-500">No recent export runs found.</li>
+                ) : exportRuns.map((item) => (
+                  <li key={item?.exportId || item?._id} className="rounded border border-gray-200 px-3 py-2">
+                    <p className="font-medium text-gray-900">{item?.exportId || 'Export run'}</p>
+                    <p className="text-gray-600">
+                      Created: {formatDateTime(item?.createdAt || item?.timestamp)} · Files: {Number(item?.fileCount || 0)} · Size: {Number(item?.size || 0)} bytes
+                    </p>
+                    {!item?.downloadUrl ? (
+                      <p className="text-amber-700">Download link unavailable for this provider. Use support recovery path with export ID.</p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
             </div>
           </Card>
         </div>
