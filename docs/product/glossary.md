@@ -15,6 +15,8 @@
 - **CRM**: Relationship workspace for leads, clients, deals, and invoices.
 - **CMS**: Intake/submission workspace for forms, request links, and inbound processing.
 - **Intake Queue**: Operational list of inbound CMS submissions and handoff outcomes (lead/client/docket).
+- **Idempotent replay**: A safe duplicate-submit response where Docketra returns an already-processed result instead of creating another record.
+- **Routing warning**: A non-silent workflow signal that routing could not complete as configured (for example, missing/inactive workbench mapping).
 - **SuperAdmin**: Platform-level role with cross-firm administration.
 - **Primary Admin**: Highest firm-level administrator for governance and setup ownership.
 - **Admin**: Firm-level administrator who manages day-to-day user access and setup tasks.

@@ -54,3 +54,11 @@
 - Lead conversion concurrency and visibility can still benefit from stronger operational telemetry.
 - CRM/CMS pages still rely mostly on page-local state (limited shared caching/query patterns).
 - Public intake UX is intentionally simple; additional accessibility and field-help improvements remain.
+
+## 7) Follow-up hardening updates (docket creation/routing correctness)
+- Public/embed submission validation now returns and renders **field-level errors** (not just the first error).
+- Public form labels now clearly show required (`*`) vs optional (`(optional)`).
+- Intake idempotency replay for `public_form` / `embedded_form` now scopes by submission mode **and** form/page identity fields when present (`formId`, `formSlug`, `pageSlug`).
+- Intake routing now validates mapped workbench presence and active status before creating a docket.
+- Intake responses include `workflowSteps` metadata so operators can see which steps succeeded, skipped, replayed, or failed.
+- CMS-created dockets now receive deterministic intake-derived idempotency keys to reduce duplicate docket creation on retry paths.

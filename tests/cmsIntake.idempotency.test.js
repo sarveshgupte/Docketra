@@ -22,6 +22,7 @@ function loadService({ leadMock, firmMock, clientMock, routingMock, caseMock, au
 
 async function testIdempotentReplayForPublicForm() {
   const calls = { leadCreate: 0, caseCreate: 0, clientCreate: 0 };
+  let capturedQuery = null;
   const existingLead = {
     _id: 'lead-existing',
     source: 'form',
@@ -41,7 +42,10 @@ async function testIdempotentReplayForPublicForm() {
 
   const cmsIntake = loadService({
     leadMock: {
-      findOne: () => ({ sort: () => ({ lean: async () => existingLead }) }),
+      findOne: (query) => {
+        capturedQuery = query;
+        return { sort: () => ({ lean: async () => existingLead }) };
+      },
       create: async () => {
         calls.leadCreate += 1;
         return { _id: 'lead-new' };
@@ -73,6 +77,9 @@ async function testIdempotentReplayForPublicForm() {
       name: 'Replay User',
       email: 'replay@example.com',
       idempotencyKey: 'idem-public-1',
+      formId: 'form-1',
+      formSlug: 'tax-intake',
+      pageSlug: 'tax',
     },
     submissionMode: 'public_form',
   });
@@ -82,6 +89,9 @@ async function testIdempotentReplayForPublicForm() {
   assert.strictEqual(calls.leadCreate, 0);
   assert.strictEqual(calls.clientCreate, 0);
   assert.strictEqual(calls.caseCreate, 0);
+  assert.ok(Array.isArray(capturedQuery.$and), 'Public form replays should scope idempotency by form/page fields');
+  assert.ok(capturedQuery.$and.some((clause) => clause['metadata.formId'] === 'form-1'));
+  assert.ok(!capturedQuery.$and.some((clause) => clause['metadata.formSlug']), 'formId should be preferred over formSlug in scope resolution');
 }
 
 async function run() {

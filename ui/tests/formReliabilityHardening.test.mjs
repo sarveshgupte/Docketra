@@ -24,4 +24,10 @@ assert.ok(modalSource.includes('onRequestClose'), 'Modal should support request-
 assert.ok(modalSource.includes("requestClose('escape')"), 'Modal should route Escape close through requestClose guard');
 assert.ok(modalSource.includes("requestClose('overlay')"), 'Modal should route overlay close through requestClose guard');
 
+const publicFormSource = read('src/pages/PublicFormPage.jsx');
+assert.ok(publicFormSource.includes('setFieldErrors'), 'Public intake form should maintain field-level validation state');
+assert.ok(publicFormSource.includes('Please review the highlighted fields and try again.'), 'Public intake form should show a friendly validation summary');
+assert.ok(publicFormSource.includes("field.required ? ' *' : ' (optional)'"), 'Public intake form should clearly label required vs optional fields');
+assert.ok(publicFormSource.includes('disabled={submitting || !hasNameField}'), 'Public intake submit should stay disabled while submitting');
+
 console.log('formReliabilityHardening.test.mjs passed');
