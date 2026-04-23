@@ -2,6 +2,7 @@ const { sendSuccessResponse, sendErrorResponse, sendServiceResponse } = require(
 const { validateRequiredFields } = require('../utils/validation.util');
 const { mapErrorToServiceResponse } = require('../utils/error.util');
 const log = require('../utils/log');
+const { buildWorkflowMeta, logWorkflowEvent } = require('../utils/workflowDiagnostics');
 
 module.exports = (deps) => {
   const {
@@ -149,6 +150,7 @@ module.exports = (deps) => {
   };
 
   const updateCaseStatus = async (req, res) => {
+    const startedAt = Date.now();
     try {
       log.info('CASE_UPDATE_SERVICE_START', {
         req,
@@ -263,6 +265,13 @@ module.exports = (deps) => {
         status: normalizedStatus,
         userXID: req.user?.xID || null,
       });
+      logWorkflowEvent('DOCKET_STATUS_MUTATION', buildWorkflowMeta({
+        req,
+        workflow: 'docket_status_update',
+        entity: { caseId: caseData.caseId },
+        durationMs: Date.now() - startedAt,
+        outcome: 'success',
+      }));
       
       return sendSuccessResponse(res, {
         body: {
@@ -273,6 +282,14 @@ module.exports = (deps) => {
     } catch (error) {
       const statusCode = Number.isInteger(error.statusCode) ? error.statusCode : 400;
       log.error('CASE_UPDATE_FAILED', { req, caseId: req.params?.caseId || null, error });
+      logWorkflowEvent('DOCKET_STATUS_MUTATION', buildWorkflowMeta({
+        req,
+        workflow: 'docket_status_update',
+        entity: { caseId: req.params?.caseId || null },
+        durationMs: Date.now() - startedAt,
+        outcome: 'failed',
+        error,
+      }));
       return sendErrorResponse(res, {
         statusCode,
         message: 'Error updating case status',

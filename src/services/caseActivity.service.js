@@ -1,3 +1,5 @@
+const { buildWorkflowMeta, logWorkflowEvent } = require('../utils/workflowDiagnostics');
+
 module.exports = (deps) => {
   const {
     mongoose,
@@ -75,6 +77,7 @@ module.exports = (deps) => {
   } = deps;
 
   const addComment = async (req, res) => {
+    const startedAt = Date.now();
     const { caseId } = req.params;
     const tenantFirmId = req.firmId || req.user?.firmId;
     let caseData = null;
@@ -203,7 +206,22 @@ module.exports = (deps) => {
         },
         message: 'Comment added successfully',
       });
+      logWorkflowEvent('DOCKET_COMMENT_MUTATION', buildWorkflowMeta({
+        req,
+        workflow: 'docket_comment_add',
+        entity: { caseId: caseData.caseId },
+        durationMs: Date.now() - startedAt,
+        outcome: 'success',
+      }));
     } catch (error) {
+      logWorkflowEvent('DOCKET_COMMENT_MUTATION', buildWorkflowMeta({
+        req,
+        workflow: 'docket_comment_add',
+        entity: { caseId: caseData?.caseId || req.params?.caseId || null },
+        durationMs: Date.now() - startedAt,
+        outcome: 'failed',
+        error,
+      }));
       const { status, body } = buildAddCommentErrorResponse(error, {
         caseId,
         resolvedCaseId: caseData?.caseId || null,

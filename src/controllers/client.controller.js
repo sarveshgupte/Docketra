@@ -26,6 +26,7 @@ const cfsDriveService = require('../services/cfsDrive.service');
 const { clientProfileStorageService } = require('../services/clientProfileStorage.service');
 const { persistClientProfileOrRollback } = require('../services/clientProfileWriteGuard.service');
 const directUploadService = require('../services/directUpload.service');
+const { buildWorkflowMeta, logWorkflowEvent } = require('../utils/workflowDiagnostics');
 
 const getClientAccessContext = (req, res, message) => {
   const firmId = req.user?.firmId;
@@ -249,6 +250,7 @@ const getClients = async (req, res) => {
  * GET /api/clients/:clientId
  */
 const getClientById = async (req, res) => {
+  const startedAt = Date.now();
   try {
     const { clientId } = req.params;
     const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to access clients');
@@ -282,10 +284,25 @@ const getClientById = async (req, res) => {
       success: true,
       data: payload,
     });
+    logWorkflowEvent('CLIENT_DETAIL_LOAD', buildWorkflowMeta({
+      req,
+      workflow: 'client_detail_load',
+      entity: { clientId },
+      durationMs: Date.now() - startedAt,
+      outcome: 'success',
+    }));
   } catch (error) {
     logClientError('CLIENT_GET_ERROR', req, error, {
       clientId: req.params?.clientId || null,
     });
+    logWorkflowEvent('CLIENT_DETAIL_LOAD', buildWorkflowMeta({
+      req,
+      workflow: 'client_detail_load',
+      entity: { clientId: req.params?.clientId || null },
+      durationMs: Date.now() - startedAt,
+      outcome: 'failed',
+      error,
+    }));
     res.status(500).json({
       success: false,
       message: 'Error fetching client',
@@ -773,6 +790,7 @@ const changeLegalName = async (req, res) => {
  * Files are managed via separate endpoints
  */
 const updateClientFactSheet = async (req, res) => {
+  const startedAt = Date.now();
   try {
     const { clientId } = req.params;
     const { description, notes, basicInfo } = req.body;
@@ -878,7 +896,22 @@ const updateClientFactSheet = async (req, res) => {
       data: nextFactSheet,
       message: 'Client Fact Sheet updated successfully',
     });
+    logWorkflowEvent('CLIENT_FACT_SHEET_MUTATION', buildWorkflowMeta({
+      req,
+      workflow: 'client_fact_sheet_update',
+      entity: { clientId },
+      durationMs: Date.now() - startedAt,
+      outcome: 'success',
+    }));
   } catch (error) {
+    logWorkflowEvent('CLIENT_FACT_SHEET_MUTATION', buildWorkflowMeta({
+      req,
+      workflow: 'client_fact_sheet_update',
+      entity: { clientId: req.params?.clientId || null },
+      durationMs: Date.now() - startedAt,
+      outcome: 'failed',
+      error,
+    }));
     log.error('Error updating client fact sheet:', error);
     res.status(500).json({
       success: false,
@@ -909,6 +942,7 @@ const uploadFactSheetFile = async (req, res) => {
 };
 
 const createClientCFSUploadIntent = async (req, res) => {
+  const startedAt = Date.now();
   try {
     if (areFileUploadsDisabled()) {
       return res.status(503).json({
@@ -943,9 +977,26 @@ const createClientCFSUploadIntent = async (req, res) => {
       fileType,
       checksum,
     });
+    logWorkflowEvent('CLIENT_CFS_UPLOAD_INTENT', buildWorkflowMeta({
+      req,
+      workflow: 'client_cfs_upload_intent',
+      entity: { clientId, uploadId: intent.uploadId },
+      provider: intent.provider,
+      providerMode: intent.providerMode,
+      durationMs: Date.now() - startedAt,
+      outcome: 'success',
+    }));
     return res.status(201).json({ success: true, data: intent });
   } catch (error) {
-    return res.status(error.status || 500).json({ success: false, message: error.message });
+    logWorkflowEvent('CLIENT_CFS_UPLOAD_INTENT', buildWorkflowMeta({
+      req,
+      workflow: 'client_cfs_upload_intent',
+      entity: { clientId: req.params?.clientId || null },
+      durationMs: Date.now() - startedAt,
+      outcome: 'failed',
+      error,
+    }));
+    return res.status(error.status || 500).json({ success: false, code: error.code || 'CLIENT_UPLOAD_INTENT_FAILED', message: error.message });
   }
 };
 
@@ -1033,6 +1084,7 @@ const uploadClientCFSFile = async (req, res) => {
 };
 
 const finalizeClientCFSUpload = async (req, res) => {
+  const startedAt = Date.now();
   try {
     const { clientId } = req.params;
     const { uploadId, completion = {}, checksum } = req.body || {};
@@ -1067,6 +1119,14 @@ const finalizeClientCFSUpload = async (req, res) => {
       fileName: attachment.fileName,
       metadata: { fileId: String(attachment._id), mimeType: attachment.mimeType, fileSize: attachment.size },
     });
+    logWorkflowEvent('CLIENT_CFS_UPLOAD_FINALIZE', buildWorkflowMeta({
+      req,
+      workflow: 'client_cfs_upload_finalize',
+      entity: { clientId, uploadId },
+      provider: attachment.storageProvider || null,
+      durationMs: Date.now() - startedAt,
+      outcome: 'success',
+    }));
 
     return res.status(201).json({
       success: true,
@@ -1074,9 +1134,18 @@ const finalizeClientCFSUpload = async (req, res) => {
       message: 'File uploaded successfully',
     });
   } catch (error) {
+    logWorkflowEvent('CLIENT_CFS_UPLOAD_FINALIZE', buildWorkflowMeta({
+      req,
+      workflow: 'client_cfs_upload_finalize',
+      entity: { clientId: req.params?.clientId || null, uploadId: req.body?.uploadId || null },
+      durationMs: Date.now() - startedAt,
+      outcome: 'failed',
+      error,
+    }));
     log.error('Error finalizing client CFS upload:', error);
     res.status(error.status || 500).json({
       success: false,
+      code: error.code || 'CLIENT_CFS_UPLOAD_FINALIZE_FAILED',
       message: 'Error finalizing client CFS upload',
       error: error.message,
     });

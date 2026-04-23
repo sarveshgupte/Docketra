@@ -1,4 +1,5 @@
 import api from '../services/api';
+import { emitDiagnosticEvent } from '../utils/workflowDiagnostics';
 
 export const handleApiSuccess = (response) => ({
   success: Boolean(response?.data?.success ?? true),
@@ -24,6 +25,12 @@ export const handleApiError = (error, fallbackMessage = 'Request failed') => {
   normalizedError.code = error?.response?.data?.code;
   normalizedError.data = error?.response?.data;
   normalizedError.originalError = error;
+
+  emitDiagnosticEvent('error', 'api_client_normalized_error', {
+    code: normalizedError.code || null,
+    status: normalizedError.status || null,
+    message: normalizedError.message,
+  });
 
   throw normalizedError;
 };

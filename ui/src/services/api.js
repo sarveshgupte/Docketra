@@ -7,6 +7,7 @@ import axios from 'axios';
 import { API_BASE_URL, ERROR_CODES, SESSION_KEYS, STORAGE_KEYS } from '../utils/constants';
 import { resolveFirmLoginPath } from '../utils/tenantRouting';
 import { emitOnboardingProgressRefresh, shouldRefreshOnboardingProgress } from '../utils/onboardingProgressRefresh';
+import { createCorrelationId, emitDiagnosticEvent, shouldEmitWarning } from '../utils/workflowDiagnostics';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -26,6 +27,11 @@ const buildRequestSignature = (config) => {
   const url = String(config?.url || '');
   const params = config?.params ? JSON.stringify(config.params) : '';
   return `${method} ${url} ${params}`;
+};
+const buildWorkflowName = (config) => {
+  const method = String(config?.method || 'get').toLowerCase();
+  const url = String(config?.url || '').replace(/[0-9a-f]{24}/gi, ':id');
+  return `${method}:${url || 'unknown'}`.slice(0, 120);
 };
 const markErrorToasted = (error, message) => {
   if (!error) return;
@@ -73,16 +79,25 @@ api.interceptors.request.use(
   (config) => {
     const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     const signature = buildRequestSignature(config);
+    const workflow = buildWorkflowName(config);
+    const correlationId = config?.metadata?.correlationId || createCorrelationId(workflow);
     config.metadata = {
       ...(config.metadata || {}),
       requestId,
       signature,
+      workflow,
+      correlationId,
     };
+    config.headers = config.headers || {};
+    config.headers['X-Correlation-ID'] = correlationId;
     requestStartedAtById.set(requestId, performance.now());
     const activeCount = (inFlightRequestCounts.get(signature) || 0) + 1;
     inFlightRequestCounts.set(signature, activeCount);
     if (activeCount > 1) {
-      console.warn('[perf] Duplicate API request in-flight', { signature, activeCount });
+      const warningKey = `dup:${signature}`;
+      if (shouldEmitWarning(warningKey)) {
+        emitDiagnosticEvent('warn', 'duplicate_api_request', { signature, activeCount, workflow, correlationId });
+      }
     }
 
     const method = (config.method || '').toLowerCase();
@@ -143,12 +158,9 @@ api.interceptors.response.use(
     if (startedAt) {
       const durationMs = Math.round(performance.now() - startedAt);
       if (durationMs >= SLOW_API_THRESHOLD_MS) {
-        console.warn('[perf] Slow API response', {
-          signature,
-          durationMs,
-          status: response?.status,
-        });
+        emitDiagnosticEvent('warn', 'slow_api_response', { signature, workflow: response?.config?.metadata?.workflow, correlationId: response?.config?.metadata?.correlationId, durationMs, status: response?.status });
       }
+      emitDiagnosticEvent('info', 'api_response', { signature, workflow: response?.config?.metadata?.workflow, correlationId: response?.config?.metadata?.correlationId, durationMs, status: response?.status });
     }
     if (/\/auth\/(profile|refresh)$/.test(String(response?.config?.url || ''))) {
       refreshFailureDetected = false;
@@ -176,11 +188,20 @@ api.interceptors.response.use(
       else inFlightRequestCounts.set(signature, remaining);
     }
     const originalRequest = error.config;
+    const status = error.response?.status;
+    emitDiagnosticEvent('error', 'api_error', {
+      signature,
+      workflow: error?.config?.metadata?.workflow,
+      correlationId: error?.config?.metadata?.correlationId,
+      status,
+      code: error?.response?.data?.code || error?.code || null,
+      retried: Boolean(originalRequest?._retry),
+      networkRetryCount: originalRequest?._networkRetryCount || 0,
+    });
     if (redirecting) {
       return Promise.reject(error);
     }
     const hasResponse = !!error.response;
-    const status = error.response?.status;
     const firmSlug = localStorage.getItem(STORAGE_KEYS.FIRM_SLUG);
     const redirectToLogin = () => {
       if (redirecting) return;

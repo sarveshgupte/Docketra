@@ -1,4 +1,5 @@
 const log = require('../utils/log');
+const { buildWorkflowMeta, logWorkflowEvent } = require('../utils/workflowDiagnostics');
 const { applyWorkModeFilter, normalizeWorkMode } = require('../utils/workType');
 module.exports = (deps) => {
   const {
@@ -79,6 +80,7 @@ module.exports = (deps) => {
   const getCaseByCaseId = async (req, res) => {
     const requestId = req.id || req.requestId || randomUUID().slice(0, 8);
     const getCaseTimerLabel = `[GET_CASE:${requestId}]`;
+    const startedAt = Date.now();
     try {
       console.time(getCaseTimerLabel);
       log.info('STEP 1 start');
@@ -445,10 +447,25 @@ module.exports = (deps) => {
       };
 
       const response = res.status(200).json(payload);
+      logWorkflowEvent('DOCKET_DETAIL_LOAD', buildWorkflowMeta({
+        req,
+        workflow: 'docket_detail_load',
+        entity: { caseId: caseData.caseId },
+        durationMs: Date.now() - startedAt,
+        outcome: 'success',
+      }));
       log.info('RESPONSE SENT');
       return response;
     } catch (error) {
       log.error('[GET_CASE] Unexpected error:', error);
+      logWorkflowEvent('DOCKET_DETAIL_LOAD', buildWorkflowMeta({
+        req,
+        workflow: 'docket_detail_load',
+        entity: { caseId: req.params?.caseId || null },
+        durationMs: Date.now() - startedAt,
+        outcome: 'failed',
+        error,
+      }));
 
       return res.status(500).json({
         success: false,
