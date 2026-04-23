@@ -31,9 +31,14 @@ const adminAuditLogSchema = new mongoose.Schema({
     enum: [
       'HIERARCHY_UPDATED',
       'USER_INVITED',
+      'USER_CREATED',
       'USER_ACTIVATED',
       'USER_DEACTIVATED',
       'ROLE_UPDATED',
+      'USER_UNLOCKED',
+      'USER_PASSWORD_RESET',
+      'WORKBENCH_CONFIG_UPDATED',
+      'CATEGORY_CONFIG_UPDATED',
     ],
   },
   metadata: {
