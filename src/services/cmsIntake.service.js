@@ -2,6 +2,7 @@ const Lead = require('../models/Lead.model');
 const mongoose = require('mongoose');
 const Firm = require('../models/Firm.model');
 const Case = require('../models/Case.model');
+const Team = require('../models/Team.model');
 const { DocketLifecycle } = require('../domain/docketLifecycle');
 const clientService = require('./client.service');
 const routingService = require('./routing.service');
@@ -72,6 +73,53 @@ function normalizeMetadata(payload = {}, requestMeta = {}, options = {}) {
     externalSubmissionId,
     idempotencyKey: idempotencyKey || externalSubmissionId,
   };
+}
+
+function normalizeScopeValue(value) {
+  return normalizeTrimmedString(value);
+}
+
+function shouldUseFormScopedIdempotency(submissionMode) {
+  return submissionMode === 'public_form' || submissionMode === 'embedded_form';
+}
+
+function resolveIdempotencyScopeToken(metadata = {}) {
+  const formId = normalizeScopeValue(metadata.formId);
+  if (formId) return { scopeField: 'metadata.formId', scopeValue: formId };
+  const formSlug = normalizeScopeValue(metadata.formSlug);
+  if (formSlug) return { scopeField: 'metadata.formSlug', scopeValue: formSlug };
+  const pageSlug = normalizeScopeValue(metadata.pageSlug);
+  if (pageSlug) return { scopeField: 'metadata.pageSlug', scopeValue: pageSlug };
+  return null;
+}
+
+function buildIdempotencyScopeQuery({ submissionMode, metadata }) {
+  if (shouldUseFormScopedIdempotency(submissionMode)) {
+    const scopeToken = resolveIdempotencyScopeToken(metadata);
+    if (scopeToken) {
+      return {
+        $and: [
+          { 'metadata.submissionMode': submissionMode },
+          { [scopeToken.scopeField]: scopeToken.scopeValue },
+        ],
+      };
+    }
+  }
+  return { 'metadata.submissionMode': submissionMode };
+}
+
+function buildDocketIdempotencyKey({ firmId, submissionMode, metadata }) {
+  const intakeKey = normalizeTrimmedString(metadata.idempotencyKey);
+  if (!intakeKey) return null;
+  const scopeToken = resolveIdempotencyScopeToken(metadata);
+  const scopeParts = [
+    String(firmId),
+    String(submissionMode || 'cms'),
+    scopeToken?.scopeField || '-',
+    (scopeToken?.scopeValue || '-').toLowerCase(),
+    intakeKey.toLowerCase(),
+  ];
+  return `cms-intake:${scopeParts.join(':')}`;
 }
 
 function normalizeExtraFieldValue(value) {
@@ -166,7 +214,21 @@ async function resolveRouting({ firmId, config, metadata }) {
   }
 
   try {
-    return await routingService.mapServiceToRouting({ firmId, service: metadata.service.toLowerCase() });
+    const routing = await routingService.mapServiceToRouting({ firmId, service: metadata.service.toLowerCase() });
+    if (!routing?.workbasketId) {
+      return {
+        ...routing,
+        validationMessage: 'Routing matched a category/subcategory, but no workbench is mapped.',
+      };
+    }
+    const workbench = await Team.findOne({ firmId, _id: routing.workbasketId, isActive: true }).select('_id').lean();
+    if (!workbench) {
+      return {
+        ...routing,
+        validationMessage: 'Routing points to an inactive or missing workbench. Update category/subcategory mapping.',
+      };
+    }
+    return routing;
   } catch (error) {
     return {
       validationMessage: error.message,
@@ -184,6 +246,11 @@ async function createDocket({
 }) {
   const titleService = metadata.service || metadata.formSlug || 'CMS intake';
   const title = `${titleService} request - ${lead.name}`;
+  const docketIdempotencyKey = buildDocketIdempotencyKey({
+    firmId,
+    submissionMode: metadata.submissionMode,
+    metadata,
+  });
 
   const docket = await Case.create({
     firmId: String(firmId),
@@ -207,6 +274,7 @@ async function createDocket({
     assignedToXID: config.defaultAssignee || null,
     createdByXID: 'SYSTEM',
     createdBy: 'system@docketra.local',
+    idempotencyKey: docketIdempotencyKey || undefined,
   });
 
   return docket;
@@ -228,13 +296,15 @@ async function processCmsSubmission({
   const metadata = normalizeMetadata(payload, requestMeta, {
     defaultSource: submissionMode === 'api_intake' ? 'api_integration' : 'CMS_FORM',
   });
+  metadata.submissionMode = submissionMode;
   const extraFields = extractExtraFields(payload);
   const config = await resolveIntakeConfig({ firmId, overrides: intakeConfigOverrides });
+  const workflowSteps = [];
 
   if (metadata.idempotencyKey) {
     const existingLead = await Lead.findOne({
       firmId,
-      'metadata.submissionMode': submissionMode,
+      ...buildIdempotencyScopeQuery({ submissionMode, metadata }),
       $or: [
         { 'metadata.idempotencyKey': metadata.idempotencyKey },
         { 'metadata.externalSubmissionId': metadata.idempotencyKey },
@@ -242,6 +312,7 @@ async function processCmsSubmission({
     }).sort({ createdAt: -1 }).lean();
 
     if (existingLead) {
+      workflowSteps.push({ step: 'idempotency_replay', status: 'replayed' });
       const existingWarnings = Array.isArray(existingLead?.metadata?.intakeOutcome?.warnings)
         ? existingLead.metadata.intakeOutcome.warnings
         : [];
@@ -258,6 +329,7 @@ async function processCmsSubmission({
           warnings: [...existingWarnings, 'Duplicate idempotency key detected. Existing lead returned.'],
           intakeOutcome: existingLead?.metadata?.intakeOutcome || null,
           idempotentReplay: true,
+          workflowSteps,
         },
       };
     }
@@ -311,6 +383,7 @@ async function processCmsSubmission({
     leadId: lead._id,
     source: metadata.source,
   });
+  workflowSteps.push({ step: 'lead_created', status: 'succeeded', leadId: String(lead._id) });
 
   const warnings = [];
   let client = null;
@@ -318,8 +391,12 @@ async function processCmsSubmission({
   if (config.autoCreateClient) {
     if (!email && !phone) {
       warnings.push('Client was not created because email or phone is required.');
+      workflowSteps.push({ step: 'client_resolution', status: 'skipped', reason: 'missing_contact' });
     } else {
       client = await clientService.findClientByEmailOrPhone({ firmId, email, phone });
+      if (client) {
+        workflowSteps.push({ step: 'client_resolution', status: 'matched_existing', clientId: client.clientId });
+      }
       if (!client) {
         client = await clientService.createClient({
           firmId,
@@ -328,6 +405,7 @@ async function processCmsSubmission({
           phone,
           createdByXid: actor?.xid || actor?.xID || 'SYSTEM',
         });
+        workflowSteps.push({ step: 'client_resolution', status: 'created_new', clientId: client?.clientId || null });
       }
 
       if (client) {
@@ -345,6 +423,7 @@ async function processCmsSubmission({
     const routing = await resolveRouting({ firmId, config, metadata });
     if (routing.validationMessage) {
       warnings.push(routing.validationMessage);
+      workflowSteps.push({ step: 'routing_resolution', status: 'failed', reason: routing.validationMessage });
       log.warn('cms_docket_routing_failed', {
         firmId,
         leadId: lead._id,
@@ -353,7 +432,15 @@ async function processCmsSubmission({
     } else {
       if (!client) {
         warnings.push('Docket auto-create skipped because no canonical client is available.');
+        workflowSteps.push({ step: 'docket_create', status: 'skipped', reason: 'missing_client' });
       } else {
+        workflowSteps.push({
+          step: 'routing_resolution',
+          status: 'succeeded',
+          categoryId: routing.categoryId || null,
+          subcategoryId: routing.subcategoryId || null,
+          workbasketId: routing.workbasketId || null,
+        });
         docket = await createDocket({
           firmId,
           clientId: client.clientId,
@@ -362,6 +449,7 @@ async function processCmsSubmission({
           config,
           routing,
         });
+        workflowSteps.push({ step: 'docket_create', status: 'succeeded', docketId: docket.caseId });
 
         await docketAuditService.logDocketEvent({
           docketId: docket.caseId,
@@ -374,6 +462,7 @@ async function processCmsSubmission({
             submissionMode,
             leadId: String(lead._id),
             clientId: client.clientId,
+            docketIdempotencyKey: docket.idempotencyKey || null,
           },
         });
 
@@ -422,6 +511,7 @@ async function processCmsSubmission({
       timestamp: metadata.timestamp,
       warnings,
       intakeOutcome: finalOutcome,
+      workflowSteps,
     },
   };
 }

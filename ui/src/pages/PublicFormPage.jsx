@@ -43,6 +43,7 @@ export const PublicFormPage = () => {
   const [formConfig, setFormConfig] = useState(null);
   const [formState, setFormState] = useState({ [HONEYPOT_KEY]: '' });
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [success, setSuccess] = useState('');
   const [submissionKey, setSubmissionKey] = useState(() => createSubmissionKey());
 
@@ -110,6 +111,7 @@ export const PublicFormPage = () => {
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormState((prev) => ({ ...prev, [name]: value }));
+    setFieldErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
   const handleSubmit = async (event) => {
@@ -119,32 +121,34 @@ export const PublicFormPage = () => {
       return;
     }
 
-    const nextErrors = [];
+    const nextErrors = {};
     const fieldPayload = fields.reduce((acc, field) => {
       const value = String(formState[field.key] || '').trim();
       if (field.required && !value) {
-        nextErrors.push(`${field.label} is required.`);
+        nextErrors[field.key] = `${field.label} is required.`;
       }
       if (value) {
         if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-          nextErrors.push('Please enter a valid email address.');
+          nextErrors[field.key] = 'Please enter a valid email address.';
         }
         if (field.type === 'phone' && !/^[+()\-\s0-9]{7,20}$/.test(value)) {
-          nextErrors.push('Please enter a valid phone number.');
+          nextErrors[field.key] = 'Please enter a valid phone number.';
         }
         acc[field.key] = value;
       }
       return acc;
     }, {});
 
-    if (nextErrors.length > 0) {
-      setError(nextErrors[0]);
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      setError('Please review the highlighted fields and try again.');
       return;
     }
 
     setSubmitting(true);
     setError('');
     setSuccess('');
+    setFieldErrors({});
     try {
       const payload = {
         ...fieldPayload,
@@ -171,6 +175,10 @@ export const PublicFormPage = () => {
       setSubmissionKey(createSubmissionKey());
       setFormState(fields.reduce((acc, field) => ({ ...acc, [field.key]: '' }), { [HONEYPOT_KEY]: '' }));
     } catch (submitError) {
+      const apiFieldErrors = submitError?.data?.fieldErrors || submitError?.response?.data?.fieldErrors || {};
+      if (apiFieldErrors && typeof apiFieldErrors === 'object') {
+        setFieldErrors(apiFieldErrors);
+      }
       setError(submitError.message || 'Unable to submit form.');
     } finally {
       setSubmitting(false);
@@ -205,7 +213,7 @@ export const PublicFormPage = () => {
               <div key={field.key} style={{ marginBottom: 12 }}>
                 <label htmlFor={inputId} style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>
                   {field.label}
-                  {field.required ? ' *' : ''}
+                  {field.required ? ' *' : ' (optional)'}
                 </label>
                 <input
                   id={inputId}
@@ -214,8 +222,12 @@ export const PublicFormPage = () => {
                   value={formState[field.key] || ''}
                   onChange={handleChange}
                   required={field.required}
-                  style={{ width: '100%' }}
+                  aria-invalid={Boolean(fieldErrors[field.key])}
+                  style={{ width: '100%', borderColor: fieldErrors[field.key] ? '#B91C1C' : undefined }}
                 />
+                {fieldErrors[field.key] ? (
+                  <p role="alert" style={{ color: '#B91C1C', marginTop: 6, marginBottom: 0, fontSize: 13 }}>{fieldErrors[field.key]}</p>
+                ) : null}
               </div>
             );
           })}

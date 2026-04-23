@@ -290,6 +290,39 @@ async function testSubmitFormPassesIdempotencyKey() {
   assert.strictEqual(captured.payload.idempotencyKey, 'idem-header-1');
 }
 
+async function testSubmitFormReturnsFieldLevelErrors() {
+  const formController = loadController({
+    formMock: {
+      findById: createFindByIdMock({
+        _id: '507f1f77bcf86cd799439011',
+        firmId: '507f1f77bcf86cd799439012',
+        isActive: true,
+        allowEmbed: true,
+        fields: [{ key: 'name', label: 'Full name', type: 'text', required: true }, { key: 'email', type: 'email', required: true }],
+      }),
+    },
+    cmsMock: {
+      processCmsSubmission: async () => ({ lead: { _id: 'lead-1' } }),
+    },
+  });
+
+  const req = {
+    params: { id: '507f1f77bcf86cd799439011' },
+    query: {},
+    headers: {},
+    body: { name: '', email: 'not-an-email' },
+    socket: { remoteAddress: '127.0.0.1' },
+    ip: '127.0.0.1',
+  };
+  const res = mockResponse();
+  await formController.submitForm(req, res);
+
+  assert.strictEqual(res.statusCode, 400);
+  assert.match(res.payload.message, /highlighted fields/i);
+  assert.ok(res.payload.fieldErrors.name);
+  assert.ok(res.payload.fieldErrors.email);
+}
+
 async function run() {
   try {
     await testEmbedSubmissionUsesUnifiedIntakeFlow();
@@ -299,6 +332,7 @@ async function run() {
     await testMisconfiguredFormWithoutNameFieldIsRejected();
     await testCreateFormRejectsDuplicateFieldKeys();
     await testSubmitFormPassesIdempotencyKey();
+    await testSubmitFormReturnsFieldLevelErrors();
     console.log('Form embed controller tests passed.');
   } catch (error) {
     console.error('Form embed controller tests failed:', error);
