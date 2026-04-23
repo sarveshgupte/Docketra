@@ -231,10 +231,10 @@ async function processCmsSubmission({
   const extraFields = extractExtraFields(payload);
   const config = await resolveIntakeConfig({ firmId, overrides: intakeConfigOverrides });
 
-  if (submissionMode === 'api_intake' && metadata.idempotencyKey) {
+  if (metadata.idempotencyKey) {
     const existingLead = await Lead.findOne({
       firmId,
-      'metadata.submissionMode': 'api_intake',
+      'metadata.submissionMode': submissionMode,
       $or: [
         { 'metadata.idempotencyKey': metadata.idempotencyKey },
         { 'metadata.externalSubmissionId': metadata.idempotencyKey },
@@ -242,6 +242,9 @@ async function processCmsSubmission({
     }).sort({ createdAt: -1 }).lean();
 
     if (existingLead) {
+      const existingWarnings = Array.isArray(existingLead?.metadata?.intakeOutcome?.warnings)
+        ? existingLead.metadata.intakeOutcome.warnings
+        : [];
       return {
         lead: existingLead,
         client: null,
@@ -252,7 +255,8 @@ async function processCmsSubmission({
           pageSlug: existingLead?.metadata?.pageSlug || metadata.pageSlug,
           formSlug: existingLead?.metadata?.formSlug || metadata.formSlug,
           timestamp: metadata.timestamp,
-          warnings: ['Duplicate idempotency key detected. Existing lead returned.'],
+          warnings: [...existingWarnings, 'Duplicate idempotency key detected. Existing lead returned.'],
+          intakeOutcome: existingLead?.metadata?.intakeOutcome || null,
           idempotentReplay: true,
         },
       };

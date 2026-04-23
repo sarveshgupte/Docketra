@@ -24,6 +24,7 @@ import { resolveCrmErrorMessage } from './crmUiUtils';
 const LEAD_STAGE_MAP = { new: 'Draft', contacted: 'Pending', qualified: 'Pending', converted: 'Approved', lost: 'Rejected' };
 const LEAD_STAGE_LABEL = { new: 'New', contacted: 'Contacted', qualified: 'Qualified', converted: 'Converted', lost: 'Lost' };
 const STAGES = ['new', 'contacted', 'qualified', 'converted', 'lost'];
+const PHONE_REGEX = /^[+()\-\s0-9]{7,20}$/;
 
 const toDateInputValue = (value) => {
   if (!value) return '';
@@ -166,6 +167,12 @@ export const LeadsPage = () => {
     const nextErrors = {};
     if (!form.name.trim()) nextErrors.name = 'Lead name is required.';
     if (!form.email.trim() && !form.phone.trim()) nextErrors.contact = 'Add at least one contact method (email or phone).';
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      nextErrors.email = 'Please enter a valid email address.';
+    }
+    if (form.phone.trim() && !PHONE_REGEX.test(form.phone.trim())) {
+      nextErrors.phone = 'Please enter a valid phone number.';
+    }
     setFormErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
@@ -371,9 +378,9 @@ export const LeadsPage = () => {
       <Modal isOpen={showModal} onClose={closeModal} title="New Lead" maxWidth="lg">
         <form onSubmit={handleSubmit} className="grid gap-4">
           <Input label="Name" value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} required error={formErrors.name} />
-          <Input label="Email" type="email" value={form.email} onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))} error={formErrors.contact && form.phone.trim() ? '' : formErrors.contact} />
-          <Input label="Phone" value={form.phone} onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))} error={formErrors.contact && form.email.trim() ? '' : formErrors.contact} />
-          <Input label="Source" value={form.source} onChange={(event) => setForm((prev) => ({ ...prev, source: event.target.value }))} />
+          <Input label="Email (optional)" type="email" value={form.email} onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))} error={formErrors.email || (formErrors.contact && form.phone.trim() ? '' : formErrors.contact)} />
+          <Input label="Phone (optional)" value={form.phone} onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))} error={formErrors.phone || (formErrors.contact && form.email.trim() ? '' : formErrors.contact)} />
+          <Input label="Source (optional)" value={form.source} onChange={(event) => setForm((prev) => ({ ...prev, source: event.target.value }))} />
           {isAdmin ? (
             <div>
               <label className="block text-sm font-medium text-gray-700" htmlFor="lead-owner">Owner</label>
@@ -389,7 +396,7 @@ export const LeadsPage = () => {
           <Input label="Next Follow-up" type="date" value={form.nextFollowUpAt} onChange={(event) => setForm((prev) => ({ ...prev, nextFollowUpAt: event.target.value }))} />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={closeModal}>Cancel</Button>
-            <Button type="submit" loading={saving} disabled={saving}>Create Lead</Button>
+            <Button type="submit" loading={saving} disabled={saving}>{saving ? 'Saving…' : 'Create Lead'}</Button>
           </div>
         </form>
       </Modal>
