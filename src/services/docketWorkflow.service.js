@@ -222,9 +222,11 @@ async function writeAudit({
   const canonicalEvent = String(metadata?.event || '').toUpperCase() === 'QC_ACTION'
     ? 'QC_ACTION'
     : 'STATE_CHANGED';
+  const canonicalReasonCode = metadata?.reasonCode || null;
   const canonicalMetadata = canonicalEvent === 'QC_ACTION'
-    ? { comment: comment || null, source: 'qcDecision' }
+    ? { ...metadata, comment: comment || null, source: 'qcDecision' }
     : {
+      ...metadata,
       action: action || null,
       requestId: requestId || metadata?.requestId || null,
     };
@@ -254,6 +256,7 @@ async function writeAudit({
     performedBy: userId,
     changes,
     metadata: { ...metadata, comment, source: 'docketWorkflow.service.writeAudit' },
+    reasonCode: canonicalReasonCode,
     firmId,
     session,
   });
@@ -630,7 +633,7 @@ async function reopenDuePending() {
       writeAudit({
         docketId: docket.caseId,
         fromState: DocketStatus.PENDING,
-        toState: DocketStatus.IN_PROGRESS,
+        toState: DocketStatus.AVAILABLE,
         userId: 'SYSTEM',
         comment: 'Auto reopened',
         action: 'PENDING_REOPEN',
@@ -638,8 +641,13 @@ async function reopenDuePending() {
         changes: [{
           field: 'status',
           from: DocketStatus.PENDING,
-          to: DocketStatus.IN_PROGRESS,
+          to: DocketStatus.AVAILABLE,
         }],
+        metadata: {
+          reasonCode: 'AUTO_REOPEN_DUE',
+          fromState: 'PEND',
+          toState: 'WB',
+        },
       })
     );
   }
@@ -650,8 +658,12 @@ async function reopenDuePending() {
       { _id: { $in: caseIdsForUpdate } },
       {
         $set: {
-          status: toPersistenceState(DocketStatus.IN_PROGRESS),
-          state: 'IN_PROGRESS',
+          lifecycle: DocketLifecycle.IN_WORKLIST,
+          status: toPersistenceState(DocketStatus.AVAILABLE),
+          state: 'IN_WB',
+          assignedToXID: null,
+          assignedTo: null,
+          queueType: 'GLOBAL',
           qcOutcome: null,
           reopenAt: null,
           pendingUntil: null,

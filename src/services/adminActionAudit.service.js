@@ -14,7 +14,8 @@ const logAuditEvent = async ({ firmId, actorId, targetId = null, action, metadat
   const resolvedActorId = normalizeObjectId(actorId);
   const resolvedTargetId = normalizeObjectId(targetId);
 
-  if (!resolvedFirmId || !resolvedActorId || !action) {
+  const normalizedAction = String(action || '').trim().toUpperCase();
+  if (!resolvedFirmId || !resolvedActorId || !normalizedAction) {
     return null;
   }
 
@@ -23,7 +24,7 @@ const logAuditEvent = async ({ firmId, actorId, targetId = null, action, metadat
       firmId: resolvedFirmId,
       actorId: resolvedActorId,
       targetId: resolvedTargetId,
-      action,
+      action: normalizedAction,
       metadata,
     });
   } catch (error) {
