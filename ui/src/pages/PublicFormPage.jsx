@@ -9,6 +9,13 @@ const DEFAULT_FIELDS = [
 ];
 const HONEYPOT_KEY = 'website';
 
+const createSubmissionKey = () => {
+  if (typeof window !== 'undefined' && window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return `submission-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
 const normalizeFieldKey = (value) => String(value || '').trim();
 
 const resolveFieldType = (value) => {
@@ -37,6 +44,7 @@ export const PublicFormPage = () => {
   const [formState, setFormState] = useState({ [HONEYPOT_KEY]: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [submissionKey, setSubmissionKey] = useState(() => createSubmissionKey());
 
   const fields = useMemo(() => {
     const configuredFields = Array.isArray(formConfig?.fields) ? formConfig.fields : [];
@@ -79,6 +87,7 @@ export const PublicFormPage = () => {
       return acc;
     }, { [HONEYPOT_KEY]: '' });
     setFormState(nextState);
+    setSubmissionKey(createSubmissionKey());
   }, [fields]);
 
   const pageContainerStyle = useMemo(() => ({
@@ -110,18 +119,33 @@ export const PublicFormPage = () => {
       return;
     }
 
+    const nextErrors = [];
+    const fieldPayload = fields.reduce((acc, field) => {
+      const value = String(formState[field.key] || '').trim();
+      if (field.required && !value) {
+        nextErrors.push(`${field.label} is required.`);
+      }
+      if (value) {
+        if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          nextErrors.push('Please enter a valid email address.');
+        }
+        if (field.type === 'phone' && !/^[+()\-\s0-9]{7,20}$/.test(value)) {
+          nextErrors.push('Please enter a valid phone number.');
+        }
+        acc[field.key] = value;
+      }
+      return acc;
+    }, {});
+
+    if (nextErrors.length > 0) {
+      setError(nextErrors[0]);
+      return;
+    }
+
     setSubmitting(true);
     setError('');
     setSuccess('');
     try {
-      const fieldPayload = fields.reduce((acc, field) => {
-        const value = String(formState[field.key] || '').trim();
-        if (value) {
-          acc[field.key] = value;
-        }
-        return acc;
-      }, {});
-
       const payload = {
         ...fieldPayload,
         website: formState.website || '',
@@ -131,6 +155,7 @@ export const PublicFormPage = () => {
         utm_campaign: searchParams.get('utm_campaign') || undefined,
         utm_medium: searchParams.get('utm_medium') || undefined,
         submissionMode: embedMode ? 'embedded_form' : 'public_form',
+        idempotencyKey: submissionKey,
       };
 
       const response = await publicFormsApi.submitForm(formId, payload, { embed: embedMode ? 'true' : undefined });
@@ -143,6 +168,7 @@ export const PublicFormPage = () => {
       }
 
       setSuccess(message);
+      setSubmissionKey(createSubmissionKey());
       setFormState(fields.reduce((acc, field) => ({ ...acc, [field.key]: '' }), { [HONEYPOT_KEY]: '' }));
     } catch (submitError) {
       setError(submitError.message || 'Unable to submit form.');
@@ -195,7 +221,7 @@ export const PublicFormPage = () => {
           })}
 
           <button type="submit" disabled={submitting || !hasNameField} style={{ width: '100%', padding: '10px 14px' }}>
-            {submitting ? 'Submitting…' : 'Submit'}
+            {submitting ? 'Submitting…' : 'Submit Intake'}
           </button>
         </form>
       </section>
