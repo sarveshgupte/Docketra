@@ -6,6 +6,9 @@
  *
  * Logging: only non-sensitive metadata (firmId, job type) is ever logged.
  */
+// BYOS direct-upload note:
+// This worker handles legacy localPath upload jobs only.
+// Direct-upload intent/finalize sessions must not depend on this worker.
 
 'use strict';
 

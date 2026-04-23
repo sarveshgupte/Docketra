@@ -145,6 +145,66 @@ class GoogleDriveProvider extends StorageProvider {
     const created = await this.createFolder(parentFolderId, folderName);
     return created.folderId;
   }
+
+  async createDirectUploadSession({
+    fileName,
+    mimeType = 'application/octet-stream',
+    folderId,
+  }) {
+    const drive = this.getClient();
+    const response = await drive.files.create(
+      {
+        requestBody: { name: fileName, parents: [folderId], mimeType },
+        media: { mimeType },
+        fields: 'id',
+        supportsAllDrives: true,
+      },
+      {
+        headers: { 'X-Upload-Content-Type': mimeType },
+        params: { uploadType: 'resumable' },
+      }
+    );
+
+    return {
+      provider: this.providerName,
+      method: 'PUT',
+      uploadUrl: response?.headers?.location,
+      headers: {
+        'Content-Type': mimeType,
+      },
+      providerFileId: response?.data?.id || null,
+      objectKey: null,
+    };
+  }
+
+  async verifyUploadedObject({ fileId, objectKey, folderId, expectedSize, expectedMimeType }) {
+    const drive = this.getClient();
+    const resolvedFileId = fileId || objectKey;
+    if (!resolvedFileId) {
+      return { ok: false, reason: 'missing_file_id' };
+    }
+
+    const res = await drive.files.get({
+      fileId: resolvedFileId,
+      fields: 'id,size,mimeType,parents,webViewLink',
+      supportsAllDrives: true,
+    });
+    const data = res?.data || {};
+
+    const parentMatch = !folderId || (Array.isArray(data.parents) && data.parents.includes(folderId));
+    const sizeMatch = Number(data.size || 0) === Number(expectedSize || 0);
+    const mimeMatch = !expectedMimeType || data.mimeType === expectedMimeType;
+    if (!parentMatch || !sizeMatch || !mimeMatch) {
+      return { ok: false, reason: 'metadata_mismatch' };
+    }
+
+    return {
+      ok: true,
+      provider: this.providerName,
+      fileId: data.id,
+      webViewLink: data.webViewLink || null,
+    };
+  }
 }
 
 module.exports = GoogleDriveProvider;

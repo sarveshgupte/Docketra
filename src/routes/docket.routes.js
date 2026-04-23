@@ -12,11 +12,12 @@ const {
   commentLimiter,
   fileUploadLimiter,
 } = require('../middleware/rateLimiters');
-const { createSecureUpload, enforceUploadSecurity } = require('../middleware/uploadProtection.middleware');
 const {
   createCase,
   addComment,
   addAttachment,
+  createAttachmentUploadIntent,
+  finalizeAttachmentUpload,
   cloneCase,
   unpendCase,
   updateCaseStatus,
@@ -69,7 +70,6 @@ const {
 const { getTimeline } = require('../controllers/docketActivity.controller');
 const { previewDocketBulkUpload, uploadDocketBulk } = require('../controllers/docketBulkUpload.controller');
 
-const upload = createSecureUpload();
 
 const {
   assignDocket,
@@ -177,7 +177,9 @@ router.get('/:caseId/upload-link', authorizeFirmPermission('CASE_VIEW'), userRea
 router.post('/:caseId/upload-link/revoke', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, revokeUploadLink);
 
 // ── Single docket — attachments ───────────────────────────────────────────────
-router.post('/:caseId/attachments', requireStorageConnected, upload.single('file'), enforceUploadSecurity, authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, fileUploadLimiter, checkCaseClientAccess, addAttachment);
+router.post('/:caseId/attachments/upload-intent', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, fileUploadLimiter, checkCaseClientAccess, createAttachmentUploadIntent);
+router.post('/:caseId/attachments/finalize', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, fileUploadLimiter, checkCaseClientAccess, finalizeAttachmentUpload);
+router.post('/:caseId/attachments', requireStorageConnected, authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, fileUploadLimiter, checkCaseClientAccess, addAttachment);
 router.get('/:caseId/attachments/:attachmentId/view', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, viewAttachment);
 router.get('/:caseId/attachments/:attachmentId/download', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, downloadAttachment);
 
