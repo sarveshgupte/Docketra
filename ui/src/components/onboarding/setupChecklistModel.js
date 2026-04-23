@@ -9,7 +9,7 @@ export const CHECKLIST_COPY = {
   },
   'storage-setup': {
     title: 'Connect document storage',
-    description: 'Configure BYOS so docket files stay in your preferred environment.',
+    description: 'Configure BYOS, confirm storage mode, and verify export/recovery visibility.',
     actionLabel: 'Open storage settings',
     completionMode: 'detected',
   },

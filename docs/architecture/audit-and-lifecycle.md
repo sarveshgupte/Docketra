@@ -29,6 +29,8 @@ Notes:
 - `actorId/actorRole` mirror legacy `userId/userRole` for backward compatibility.
 - `event` and `action` are kept aligned.
 - `reasonCode` is first-class for diagnostics and post-mortems.
+- Metadata source labels now use canonical service-owned values (for example `docket.audit`, `docket.audit.legacy_bridge`) to reduce drift.
+- Canonical fields (`reasonCode`, `fromState`, `toState`, actor ids) are stored as top-level fields; metadata should avoid duplicating them.
 
 ## Docket lifecycle stages and expected audit events
 
@@ -43,7 +45,7 @@ Notes:
 5. **Resolved / Filed (`RESOLVED`, `FILED`)**
    - Expected events: `STATE_CHANGED` and terminal metadata.
 6. **Reopen / rollback**
-   - Expected events: `PENDING_REOPEN` or equivalent with explicit reason code.
+   - Expected events: `PENDING_REOPEN` with explicit reason code (`AUTO_REOPEN_DUE`) and state reset to Workbench (`IN_WB` / available queue).
 
 ## CRM/CMS → Client → Docket traceability
 

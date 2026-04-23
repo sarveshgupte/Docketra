@@ -12,6 +12,7 @@ const { StorageValidationError } = require('../services/storage/errors/StorageEr
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const { S3Adapter } = require('../services/storageAdapter.service');
 const { writeSettingsAudit } = require('../services/productAudit.service');
+const { REASON_CODES, logPilotEvent } = require('../services/pilotDiagnostics.service');
 const log = require('../utils/log');
 
 const GOOGLE_SCOPES = [
@@ -22,6 +23,13 @@ const STATE_TTL_SECONDS = 10 * 60;
 const MANAGED_STORAGE_MODE = 'docketra_managed';
 const SUPPORTED_STORAGE_PROVIDERS = new Set(['docketra_managed', 'google-drive', 'onedrive', 's3']);
 const usedStorageOtpJti = new Map();
+const STORAGE_AUDIT_SOURCES = Object.freeze({
+  CHANGE_PROVIDER: 'storage.change_provider',
+  EXPORT_GENERATE: 'storage.export_generate',
+  EXPORT_DOWNLOAD: 'storage.export_download',
+  BACKUP_LIST: 'storage.backup_list',
+  DISCONNECT: 'storage.disconnect',
+});
 
 function decodeFirmStorageConfig(firm, firmId) {
   const encrypted = firm?.storageConfig?.credentials;
@@ -455,7 +463,7 @@ const changeFirmStorage = async (req, res) => {
         provider: canonicalProvider,
       },
       metadata: {
-        source: 'storage.changeFirmStorage',
+        source: STORAGE_AUDIT_SOURCES.CHANGE_PROVIDER,
         provider: canonicalProvider,
       },
       dedupeKey: `firm-storage-change:${canonicalProvider}`,
@@ -496,6 +504,22 @@ const exportFirmStorage = async (req, res) => {
     }
 
     log.info('[STORAGE]', { event: 'backup_generated', firmId: req.firmId, exportId: backup.exportId });
+    await writeSettingsAudit({
+      req,
+      tenantId: req.firmId,
+      settingsKey: 'storage-export',
+      action: 'EXPORT_GENERATED',
+      metadata: {
+        source: STORAGE_AUDIT_SOURCES.EXPORT_GENERATE,
+        exportId: backup.exportId,
+        fileCount: backup.fileCount,
+      },
+      dedupeKey: `storage-export-generated:${backup.exportId}`,
+    });
+    logPilotEvent({
+      event: 'storage_export_generated',
+      metadata: { firmId: req.firmId, exportId: backup.exportId, fileCount: backup.fileCount || 0 },
+    });
     return res.json({
       success: true,
       exportId: backup.exportId,
@@ -508,7 +532,23 @@ const exportFirmStorage = async (req, res) => {
       deliveryPolicy: 'link_only',
     });
   } catch (error) {
-    return res.status(500).json({ error: 'export_failed', message: error.message });
+    logPilotEvent({
+      event: 'storage_export_failed',
+      severity: 'warn',
+      metadata: { firmId: req.firmId, reasonCode: REASON_CODES.STORAGE_EXPORT_FAILED },
+    });
+    await writeSettingsAudit({
+      req,
+      tenantId: req.firmId,
+      settingsKey: 'storage-export',
+      action: 'EXPORT_FAILED',
+      metadata: {
+        source: STORAGE_AUDIT_SOURCES.EXPORT_GENERATE,
+        reasonCode: REASON_CODES.STORAGE_EXPORT_FAILED,
+        message: error.message || null,
+      },
+    });
+    return res.status(500).json({ error: 'export_failed', reasonCode: REASON_CODES.STORAGE_EXPORT_FAILED, message: error.message });
   }
 };
 
@@ -518,8 +558,28 @@ const downloadFirmStorageExport = async (req, res) => {
   if (!entry) return res.status(404).json({ error: 'invalid_or_expired_export_link' });
 
   if (!entry.downloadUrl) {
-    return res.status(409).json({ error: 'download_link_unavailable_for_provider' });
+    logPilotEvent({
+      event: 'storage_export_download_unavailable',
+      severity: 'warn',
+      metadata: { firmId: req.firmId, exportId: token, reasonCode: REASON_CODES.EXPORT_DOWNLOAD_UNAVAILABLE },
+    });
+    return res.status(409).json({
+      error: 'download_link_unavailable_for_provider',
+      reasonCode: REASON_CODES.EXPORT_DOWNLOAD_UNAVAILABLE,
+      message: 'Download link is unavailable for the active storage provider. Use backup run metadata and support recovery path.',
+    });
   }
+  await writeSettingsAudit({
+    req,
+    tenantId: req.firmId,
+    settingsKey: 'storage-export',
+    action: 'EXPORT_DOWNLOAD_LINK_ISSUED',
+    metadata: {
+      source: STORAGE_AUDIT_SOURCES.EXPORT_DOWNLOAD,
+      exportId: token,
+    },
+    dedupeKey: `storage-export-download:${token}`,
+  });
   return res.redirect(entry.downloadUrl);
 };
 
@@ -532,7 +592,16 @@ const listBackupRuns = async (req, res) => {
       data: items,
     });
   } catch (error) {
-    return res.status(500).json({ error: 'backup_runs_fetch_failed', message: error.message });
+    logPilotEvent({
+      event: 'storage_backup_runs_fetch_failed',
+      severity: 'warn',
+      metadata: { firmId: req.firmId, reasonCode: REASON_CODES.BACKUP_RUNS_FETCH_FAILED },
+    });
+    return res.status(500).json({
+      error: 'backup_runs_fetch_failed',
+      reasonCode: REASON_CODES.BACKUP_RUNS_FETCH_FAILED,
+      message: error.message,
+    });
   }
 };
 
@@ -555,7 +624,7 @@ const disconnectStorage = async (req, res) => {
         mode: next?.storage?.mode || null,
         provider: next?.storage?.provider || null,
       },
-      metadata: { source: 'storage.disconnectStorage' },
+      metadata: { source: STORAGE_AUDIT_SOURCES.DISCONNECT },
       dedupeKey: 'storage-disconnect',
     });
     const context = await googleDriveService.getClient(req.firmId);

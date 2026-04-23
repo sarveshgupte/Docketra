@@ -35,3 +35,13 @@ export async function changeStorageProvider(payload) {
   const response = await api.post('/firm/storage/change', payload);
   return response.data;
 }
+
+export async function exportFirmStorage() {
+  const response = await api.post('/storage/export');
+  return response.data;
+}
+
+export async function listStorageExports(limit = 10) {
+  const response = await api.get('/storage/exports', { params: { limit } });
+  return response.data;
+}

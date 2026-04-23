@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { caseApi } from '../../api/case.api';
 import { formatDateTime, getISODateInTimezone } from '../../utils/formatDateTime';
 import { buildCsv } from '../../utils/csv';
+import { getAuditActionLabel, normalizeAuditAction } from '../../constants/auditEventLabels';
 import './AuditTimelineDrawer.css';
 
 // Keep drawer compact while surfacing recent immutable audit activity.
@@ -28,12 +29,12 @@ const ACTION_ICONS = {
 };
 
 const getActionIcon = (action = '') => {
-  const key = action.toUpperCase();
+  const key = normalizeAuditAction({ action });
   return ACTION_ICONS[key] || null;
 };
 
-const isLifecycleEvent = (action = '') => LIFECYCLE_ACTIONS.has(action.toUpperCase());
-const isIrreversible = (action = '') => IRREVERSIBLE_ACTIONS.has(action.toUpperCase());
+const isLifecycleEvent = (action = '') => LIFECYCLE_ACTIONS.has(normalizeAuditAction({ action }));
+const isIrreversible = (action = '') => IRREVERSIBLE_ACTIONS.has(normalizeAuditAction({ action }));
 
 const normalizeEvents = (data = {}) => {
   const source = data.auditLog?.length ? data.auditLog : data.history || [];
@@ -41,6 +42,7 @@ const normalizeEvents = (data = {}) => {
     .map((event) => ({
       id: event._id || event.id || `${event.timestamp}-${event.actionType}`,
       action: event.actionType || event.action || 'Updated',
+      actionLabel: getAuditActionLabel(event),
       actor:
         event.performedByName ||
         event.actorXID ||
@@ -158,7 +160,7 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
                 <div className={`audit-drawer__item${lifecycle ? ' audit-drawer__item--lifecycle' : ''}${irreversible ? ' audit-drawer__item--irreversible' : ''}`}>
                   <div className="audit-drawer__item-row">
                     {icon && <span className="audit-drawer__icon" aria-hidden="true">{icon}</span>}
-                    <p className="audit-drawer__action">{entry.action}</p>
+                    <p className="audit-drawer__action">{entry.actionLabel || entry.action}</p>
                     {irreversible && <span className="audit-drawer__irreversible-tag" title="This action is irreversible">Final</span>}
                   </div>
                   <p className="audit-drawer__detail">
