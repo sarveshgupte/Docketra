@@ -8,6 +8,7 @@ const buildRequestContext = (req) => ({
   dbSession: getSession(req),
   route: req.originalUrl || req.url || null,
   requestId: req.requestId || null,
+  correlationId: req.correlationId || null,
 });
 
 const attachRequestContext = (req, res, next) => {

@@ -13,6 +13,7 @@ import { RoutePerformanceTracker } from './components/routing/RoutePerformanceTr
 import { FirstLoginExperience } from './components/onboarding/FirstLoginExperience';
 import { useAuth } from './hooks/useAuth';
 import { bootstrapAuth } from './auth/authBootstrap';
+import { DiagnosticsPanel } from './components/common/DiagnosticsPanel';
 
 const AppBootstrap = () => {
   const { fetchProfile } = useAuth();
@@ -29,6 +30,7 @@ const AppBootstrap = () => {
         <RoutePerformanceTracker />
         <Router />
         <FirstLoginExperience />
+        <DiagnosticsPanel />
       </ToastProvider>
   );
 };
