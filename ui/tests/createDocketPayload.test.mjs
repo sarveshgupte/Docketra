@@ -11,6 +11,7 @@ const payload = buildCreateDocketPayload({
   workbasketId: 'wb-1',
   priority: 'Medium',
   assignedTo: 'x000001',
+  idempotencyKey: ' abc-123 ',
 });
 
 assert.deepStrictEqual(payload, {
@@ -24,6 +25,7 @@ assert.deepStrictEqual(payload, {
   workbasketId: 'wb-1',
   priority: 'medium',
   assignedTo: 'X000001',
+  idempotencyKey: 'abc-123',
 });
 
 const missingIdErrors = validateCreateDocketPayload(

@@ -12,6 +12,8 @@ const SPAM_NAME_PATTERN = /https?:\/\//i;
 const EMBEDDED_SUBMISSION_MODE = 'embedded_form';
 const EMBEDDED_SOURCE = 'website_embed';
 const REQUIRED_PUBLIC_FIELD_KEY = 'name';
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_REGEX = /^[+()\-\s0-9]{7,20}$/;
 
 function normalizeFieldKey(value) {
   return String(value || '').trim().toLowerCase();
@@ -73,7 +75,7 @@ function normalizeFormSettings(payload = {}) {
   return {
     allowEmbed: payload.allowEmbed === undefined ? true : Boolean(payload.allowEmbed),
     embedTitle: String(payload.embedTitle || '').trim(),
-    successMessage: String(payload.successMessage || '').trim() || 'Thank you. Your submission has been received.',
+    successMessage: String(payload.successMessage || '').trim() || 'Thanks — your intake was submitted successfully.',
     redirectUrl: String(payload.redirectUrl || '').trim(),
     themeMode: payload.themeMode === 'dark' ? 'dark' : 'light',
     allowedEmbedDomains: normalizeAllowedDomains(rawDomains),
@@ -112,6 +114,36 @@ function isAllowedOrigin(form, req) {
     if (!hostname) return false;
     return allowlist.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
   });
+}
+
+function buildPublicFieldValidation(form, body = {}) {
+  const fieldErrors = {};
+  const normalizedBody = body && typeof body === 'object' ? body : {};
+  const fields = Array.isArray(form?.fields) ? form.fields : [];
+
+  fields.forEach((field) => {
+    const key = String(field?.key || '').trim();
+    if (!key) return;
+    const label = String(field?.label || key).trim() || key;
+    const value = String(normalizedBody[key] || '').trim();
+    const required = Boolean(field?.required) || normalizeFieldKey(key) === REQUIRED_PUBLIC_FIELD_KEY;
+
+    if (required && !value) {
+      fieldErrors[key] = `${label} is required.`;
+      return;
+    }
+    if (!value) return;
+
+    const fieldType = normalizeFieldType(field?.type);
+    if (fieldType === 'email' && !EMAIL_REGEX.test(value)) {
+      fieldErrors[key] = 'Please enter a valid email address.';
+    }
+    if (fieldType === 'phone' && !PHONE_REGEX.test(value)) {
+      fieldErrors[key] = 'Please enter a valid phone number.';
+    }
+  });
+
+  return fieldErrors;
 }
 
 const createForm = async (req, res) => {
@@ -222,7 +254,7 @@ const getPublicForm = async (req, res) => {
         fields: form.fields,
         embedMode,
         embedTitle: form.embedTitle || form.name,
-        successMessage: form.successMessage || 'Thank you. Your submission has been received.',
+        successMessage: form.successMessage || 'Thanks — your intake was submitted successfully.',
         redirectUrl: form.redirectUrl || null,
         themeMode: form.themeMode || 'light',
         allowEmbed: Boolean(form.allowEmbed),
@@ -257,8 +289,15 @@ const submitForm = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid submission' });
     }
 
+    const fieldErrors = buildPublicFieldValidation(form, req.body);
     const name = String(req.body?.name || '').trim();
-    if (!name) return res.status(400).json({ success: false, message: 'name is required' });
+    if (Object.keys(fieldErrors).length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please review the highlighted fields and try again.',
+        fieldErrors,
+      });
+    }
 
     if (SPAM_NAME_PATTERN.test(name)) {
       return res.status(400).json({ success: false, message: 'Invalid submission' });
@@ -285,7 +324,7 @@ const submitForm = async (req, res) => {
       success: true,
       data: {
         id: result.lead._id,
-        successMessage: form.successMessage || 'Thank you. Your submission has been received.',
+        successMessage: form.successMessage || 'Thanks — your intake was submitted successfully.',
         redirectUrl: form.redirectUrl || null,
         submissionMode: embedMode ? EMBEDDED_SUBMISSION_MODE : 'public_form',
         outcome: result?.metadata?.intakeOutcome || null,

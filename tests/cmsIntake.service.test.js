@@ -8,6 +8,7 @@ const Case = require('../src/models/Case.model');
 const clientService = require('../src/services/client.service');
 const routingService = require('../src/services/routing.service');
 const docketAuditService = require('../src/services/docketAudit.service');
+const Team = require('../src/models/Team.model');
 
 async function testLeadOnlyFlow() {
   const originalLeadCreate = Lead.create;
@@ -98,6 +99,7 @@ async function testLeadClientAndDocketFlow() {
   const originalMapRouting = routingService.mapServiceToRouting;
   const originalCaseCreate = Case.create;
   const originalLogDocketEvent = docketAuditService.logDocketEvent;
+  const originalTeamFindOne = Team.findOne;
   const updateCalls = [];
 
   Lead.create = async (payload) => ({ _id: '507f1f77bcf86cd799439103', ...payload });
@@ -117,6 +119,7 @@ async function testLeadClientAndDocketFlow() {
   });
   Case.create = async (payload) => ({ _id: 'case-doc-1', caseId: 'CASE-20260418-00001', ...payload });
   docketAuditService.logDocketEvent = async () => ({ _id: 'audit-1' });
+  Team.findOne = () => ({ select: () => ({ lean: async () => ({ _id: 'wb-1' }) }) });
 
   try {
     const result = await cmsIntakeService.processCmsSubmission({
@@ -148,6 +151,7 @@ async function testLeadClientAndDocketFlow() {
     routingService.mapServiceToRouting = originalMapRouting;
     Case.create = originalCaseCreate;
     docketAuditService.logDocketEvent = originalLogDocketEvent;
+    Team.findOne = originalTeamFindOne;
   }
 }
 
