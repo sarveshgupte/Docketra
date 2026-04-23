@@ -1,0 +1,36 @@
+# Performance QA Checklist (Manual)
+
+## Test setup
+- Use a firm with realistic data volume (at least 50+ dockets and 30+ clients).
+- Open browser devtools network + console.
+
+## Navigation and state continuity
+1. Open **All Dockets** with filters/search/sort set.
+2. Scroll to mid-list, open a docket, then use browser back.
+   - Expected: previous filter/search/sort context remains.
+   - Expected: scroll position is restored near prior viewport.
+3. Move between multiple dockets from list.
+   - Expected: first-open is faster after hover/select prefetch.
+
+## Mutation responsiveness
+1. In docket detail, add comment / update status / assign action.
+   - Expected: no full-page white flash.
+   - Expected: only affected panel updates; shell stays stable.
+2. In clients page, edit client and toggle status.
+   - Expected: row updates without mandatory full list reload.
+3. In client fact sheet modal, upload/delete attachment.
+   - Expected: attachment section updates cleanly; no hard refresh.
+
+## API chatter checks
+- Verify console warnings for duplicate in-flight requests are absent during normal flows.
+- Verify slow API logs appear only for genuinely slow requests (`[perf] Slow API response`).
+
+## Route transition checks
+- Navigate dashboard ↔ dockets ↔ clients ↔ reports.
+- Verify `[perf] Route transition` logs emit with path pairs and timings.
+- Confirm side nav active state matches destination route during transitions.
+
+## Regression checks
+- Role-based permissions continue to gate admin-only actions.
+- Firm-scoped routing remains intact.
+- Optional services disabled (e.g., AI) do not break primary workflows.
