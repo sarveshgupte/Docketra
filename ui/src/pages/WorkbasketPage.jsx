@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
@@ -25,6 +26,8 @@ import { useQueryState } from '../hooks/useQueryState';
 import { useActiveDocket } from '../hooks/useActiveDocket';
 import { ROUTES } from '../constants/routes';
 import { getISODateInTimezone } from '../utils/formatDateTime';
+import { caseApi } from '../api/case.api';
+import { CASE_QUERY_PARAMS } from '../hooks/useCaseQuery';
 import './WorkbasketPage.css';
 
 const WORKBASKET_FILTER_DEFAULTS = {
@@ -77,6 +80,7 @@ export const WorkbasketPage = () => {
   const { showSuccess, showError, showInfo } = useToast();
   
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [cases, setCases] = useState([]);
   const [filters, setFilters] = useState(() => ({ ...WORKBASKET_FILTER_DEFAULTS }));
@@ -91,6 +95,7 @@ export const WorkbasketPage = () => {
   const [activeTab, setActiveTab] = useState('own');
   const [activeWorkbasketId, setActiveWorkbasketId] = useState('');
   const isAdmin = ['ADMIN', 'Admin'].includes(user?.role);
+  const queryClient = useQueryClient();
   const allSelected = cases.length > 0 && selectedCases.length === cases.length;
   const partiallySelected = selectedCases.length > 0 && !allSelected;
   const queryDefaults = useMemo(() => ({
@@ -199,7 +204,11 @@ export const WorkbasketPage = () => {
   }, []);
 
   const loadGlobalWorklist = async () => {
-    setLoading(true);
+    if (initialLoadComplete) {
+      setIsRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const response = await worklistApi.getGlobalWorklist({
         ...filters,
@@ -216,6 +225,7 @@ export const WorkbasketPage = () => {
       console.error('Failed to load workbasket:', error);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
       setInitialLoadComplete(true);
     }
   };
@@ -529,6 +539,16 @@ export const WorkbasketPage = () => {
     handleSort(nextSort.key, nextSort.direction);
   }, []);
 
+  const handleRowHover = useCallback((caseItem) => {
+    const caseId = caseItem?.caseId;
+    if (!caseId || !window.matchMedia?.('(pointer:fine)').matches) return;
+    queryClient.prefetchQuery({
+      queryKey: ['case', caseId, CASE_QUERY_PARAMS],
+      queryFn: () => caseApi.getCaseById(caseId, CASE_QUERY_PARAMS),
+      staleTime: 30 * 1000,
+    });
+  }, [queryClient]);
+
   const handleResetFilters = useCallback(() => {
     setFilters({ ...WORKBASKET_FILTER_DEFAULTS });
     setQuery({
@@ -702,6 +722,7 @@ export const WorkbasketPage = () => {
             columns={columns}
             rows={cases}
             rowKey="caseId"
+            onRowHover={handleRowHover}
             sortState={{ key: filters.sortBy, direction: filters.sortOrder }}
             onSortChange={handleSortChange}
             activeFilters={activeFilters}
@@ -718,6 +739,7 @@ export const WorkbasketPage = () => {
               />
             )}
           />
+          {isRefreshing && !loading ? <p className="mt-2 text-xs text-gray-500">Refreshing workbasket…</p> : null}
 
           {pagination && pagination.pages > 1 && (
             <div className="global-worklist__pagination">
