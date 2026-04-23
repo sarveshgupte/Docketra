@@ -186,7 +186,7 @@ class GoogleDriveProvider extends StorageProvider {
 
     const res = await drive.files.get({
       fileId: resolvedFileId,
-      fields: 'id,size,mimeType,parents,webViewLink',
+      fields: 'id,size,mimeType,parents,webViewLink,md5Checksum',
       supportsAllDrives: true,
     });
     const data = res?.data || {};
@@ -203,6 +203,13 @@ class GoogleDriveProvider extends StorageProvider {
       provider: this.providerName,
       fileId: data.id,
       webViewLink: data.webViewLink || null,
+      checksum: data.md5Checksum
+        ? {
+            algorithm: 'md5',
+            value: String(data.md5Checksum).toLowerCase(),
+            raw: `md5:${String(data.md5Checksum).toLowerCase()}`,
+          }
+        : null,
     };
   }
 }

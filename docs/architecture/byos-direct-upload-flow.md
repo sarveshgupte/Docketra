@@ -23,8 +23,10 @@ Normal user upload paths:
 3. **Finalize**
    - Client sends `uploadId` and optional `completion` metadata.
    - Backend uses upload-session stored provider identity as source-of-truth.
+   - Backend resolves the provider backend from session metadata (`providerMode`), not current tenant provider state.
    - Optional completion fields must match server-tracked identifiers if provided.
-   - Backend verifies object ownership/path + MIME + size and then registers immutable `Attachment` metadata.
+   - Backend verifies object ownership/path + MIME + size (+ checksum when comparable signals exist) and then registers immutable `Attachment` metadata.
+   - Finalize is idempotent: already-verified sessions return the same attachment instead of creating duplicates.
 
 ## B) Provider-specific identity model
 - **Google Drive**
@@ -40,11 +42,30 @@ Backend resolver sequence:
 2. If unavailable, use managed fallback S3 backend.
 3. If neither backend is available, return `STORAGE_NOT_AVAILABLE`.
 
+Finalize does **not** rerun this generic sequence. It uses the backend mode recorded when the session was created:
+- `firm_connected` session → must finalize against firm-connected backend.
+- `managed_fallback` session → must finalize against managed fallback backend.
+
 ## D) Security and tenant isolation
 - No cross-tenant finalize registration allowed.
 - Finalize rejects session identifier mismatches.
 - Expired sessions are marked `abandoned` and reject finalize (`UPLOAD_SESSION_EXPIRED`).
 - Verification failures return `UPLOAD_VERIFICATION_FAILED`.
+- Checksum mismatches return `UPLOAD_CHECKSUM_MISMATCH`.
+
+## E) Checksum trust model
+- Client can provide checksum at intent creation and/or finalize.
+- Intent-time and finalize-time checksums must match when both are present.
+- Provider-side checksum is enforced only when provider metadata exposes a comparable checksum.
+  - Google Drive: `md5Checksum` available.
+  - S3: `ETag` surfaced as `md5` signal (best-effort, not equivalent to SHA-256).
+- If provider checksum is unavailable or non-comparable, backend still enforces intent-vs-finalize checksum consistency.
+
+## F) Session lifecycle + cleanup
+- States: `initiated` → `uploaded` (lock) → `verified`; terminal states `failed` / `abandoned`.
+- Expired finalize attempts move session to `abandoned`.
+- Verification/checksum failures move session to `failed`.
+- Terminal sessions receive `cleanupAt`; Mongo TTL index removes stale terminal session rows after retention window.
 
 ## E) Legacy endpoints
 Legacy multipart endpoints are deprecated.

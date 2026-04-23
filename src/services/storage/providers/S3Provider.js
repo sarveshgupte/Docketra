@@ -127,7 +127,18 @@ class S3Provider extends StorageProvider {
       if (!sizeMatch || !mimeMatch) {
         return { ok: false, reason: 'metadata_mismatch' };
       }
-      return { ok: true, provider: 's3', fileId: objectKey };
+      return {
+        ok: true,
+        provider: 's3',
+        fileId: objectKey,
+        checksum: meta?.ETag
+          ? {
+              algorithm: 'md5',
+              value: String(meta.ETag).replace(/"/g, '').toLowerCase(),
+              raw: `md5:${String(meta.ETag).replace(/"/g, '').toLowerCase()}`,
+            }
+          : null,
+      };
     } catch (error) {
       return { ok: false, reason: error.message };
     }
