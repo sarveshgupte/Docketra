@@ -46,6 +46,22 @@ function normalizeFormFields(rawFields) {
   });
 }
 
+
+
+function validateUniqueFieldKeys(fields = []) {
+  const seen = new Set();
+  for (const field of fields) {
+    const key = normalizeFieldKey(field?.key);
+    if (!key) {
+      throw new Error('Field key is required');
+    }
+    if (seen.has(key)) {
+      throw new Error(`Form field key "${key}" is duplicated`);
+    }
+    seen.add(key);
+  }
+}
+
 function normalizeAllowedDomains(domains = []) {
   return domains
     .map((value) => String(value || '').trim().toLowerCase())
@@ -104,6 +120,7 @@ const createForm = async (req, res) => {
     if (!name) return res.status(400).json({ success: false, message: 'name is required' });
 
     const fields = normalizeFormFields(req.body?.fields);
+    validateUniqueFieldKeys(fields);
     ensurePublicFormFieldRequirements(fields);
 
     const form = await Form.create({
@@ -154,6 +171,7 @@ const updateForm = async (req, res) => {
     }
     if (Array.isArray(req.body.fields)) {
       updates.fields = normalizeFormFields(req.body.fields);
+      validateUniqueFieldKeys(updates.fields);
       ensurePublicFormFieldRequirements(updates.fields);
     }
 
@@ -253,6 +271,7 @@ const submitForm = async (req, res) => {
         source: embedMode ? EMBEDDED_SOURCE : 'form',
         formSlug: form.slug || String(form._id),
         formId: String(form._id),
+        idempotencyKey: String(req.body?.idempotencyKey || req.headers?.['idempotency-key'] || '').trim() || undefined,
       },
       requestMeta: {
         query: req.query,

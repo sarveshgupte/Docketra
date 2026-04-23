@@ -14,6 +14,7 @@
 - **Resolved**: Finalized docket outcome completed without filing.
 - **CRM**: Relationship workspace for leads, clients, deals, and invoices.
 - **CMS**: Intake/submission workspace for forms, request links, and inbound processing.
+- **Intake Queue**: Operational list of inbound CMS submissions and handoff outcomes (lead/client/docket).
 - **SuperAdmin**: Platform-level role with cross-firm administration.
 - **Primary Admin**: Highest firm-level administrator for governance and setup ownership.
 - **Admin**: Firm-level administrator who manages day-to-day user access and setup tasks.

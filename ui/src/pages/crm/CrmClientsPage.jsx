@@ -21,6 +21,7 @@ import {
 import { normalizeRows, resolveCrmErrorMessage } from './crmUiUtils';
 
 const TYPE_LABELS = { individual: 'Individual', company: 'Company' };
+const PHONE_REGEX = /^[+()\-\s0-9]{7,20}$/;
 
 export const CrmClientsPage = () => {
   const { firmSlug } = useParams();
@@ -45,6 +46,7 @@ export const CrmClientsPage = () => {
   const [editingClient, setEditingClient] = useState(null);
   const [saving, setSaving] = useState(false);
   const [deactivatingId, setDeactivatingId] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
   const [form, setForm] = useState({
     name: '',
     type: 'individual',
@@ -85,6 +87,7 @@ export const CrmClientsPage = () => {
     if (!isAdmin) return;
     const action = String(searchParams.get('action') || '').toLowerCase();
     if (action !== 'new') return;
+    setFormErrors({});
     setShowModal(true);
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete('action');
@@ -98,6 +101,7 @@ export const CrmClientsPage = () => {
   const closeModal = () => {
     setShowModal(false);
     setEditingClient(null);
+    setFormErrors({});
     resetForm();
   };
 
@@ -112,6 +116,7 @@ export const CrmClientsPage = () => {
       leadSource: client.leadSource || '',
       notes: client.notes || '',
     });
+    setFormErrors({});
     setShowModal(true);
   };
 
@@ -157,14 +162,17 @@ export const CrmClientsPage = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (saving) return;
-    if (!form.name.trim()) {
-      showError('Client name is required.');
-      return;
-    }
+    const nextErrors = {};
+    if (!form.name.trim()) nextErrors.name = 'Client name is required.';
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      showError('Please enter a valid email address.');
-      return;
+      nextErrors.email = 'Please enter a valid email address.';
     }
+    if (form.phone.trim() && !PHONE_REGEX.test(form.phone.trim())) {
+      nextErrors.phone = 'Please enter a valid phone number.';
+    }
+    setFormErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
     setSaving(true);
 
     try {
@@ -271,7 +279,7 @@ export const CrmClientsPage = () => {
       moduleLabel="CRM"
       title="Client Management"
       subtitle="Manage client records, ownership, and conversion readiness in one consistent workspace."
-      actions={isAdmin ? <Button onClick={() => setShowModal(true)}>New Client</Button> : null}
+      actions={isAdmin ? <Button onClick={() => { setFormErrors({}); setEditingClient(null); resetForm(); setShowModal(true); }}>New Client</Button> : null}
     >
       <InlineNotice tone="error" message={error} />
       <RefreshNotice refreshing={refreshing} message="Refreshing client records in the background…" />
@@ -279,7 +287,7 @@ export const CrmClientsPage = () => {
 
       <PageSection title="Quick actions" description="Use the same CRM language across overview, leads, and client detail.">
         <div className="action-row">
-          {isAdmin ? <Button onClick={() => setShowModal(true)}>New Client</Button> : null}
+          {isAdmin ? <Button onClick={() => { setFormErrors({}); setEditingClient(null); resetForm(); setShowModal(true); }}>New Client</Button> : null}
           <Button variant="outline" onClick={() => navigate(safeRoute(ROUTES.CRM_LEADS(firmSlug)))}>Go to Leads Queue</Button>
         </div>
       </PageSection>
@@ -336,10 +344,11 @@ export const CrmClientsPage = () => {
       >
         <form onSubmit={handleSubmit} className="grid gap-4">
           <Input
-            label="Name"
+            label="Client name"
             value={form.name}
             onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
             required
+            error={formErrors.name}
           />
           <div>
             <label className="block text-sm font-medium text-gray-700" htmlFor="crm-client-type">Type</label>
@@ -354,15 +363,17 @@ export const CrmClientsPage = () => {
             </select>
           </div>
           <Input
-            label="Email"
+            label="Email (optional)"
             type="email"
             value={form.email}
             onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+            error={formErrors.email}
           />
           <Input
-            label="Phone"
+            label="Phone (optional)"
             value={form.phone}
             onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
+            error={formErrors.phone}
           />
           <Input
             label="Tags (comma-separated)"
