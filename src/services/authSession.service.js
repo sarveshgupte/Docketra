@@ -165,7 +165,7 @@ const createAuthSessionService = (deps) => {
         });
         return res.status(401).json({
           success: false,
-          reasonCode: 'missing_refresh_token',
+          reasonCode: REASON_CODES.MISSING_REFRESH_TOKEN,
           message: 'Authentication required',
         });
       }
