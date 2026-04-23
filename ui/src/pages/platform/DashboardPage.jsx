@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
 import { ROUTES } from '../../constants/routes';
 import { InlineNotice, PageSection, RefreshNotice, StatGrid } from './PlatformShared';
 import { usePermissions } from '../../hooks/usePermissions';
 import { usePlatformDashboardSummaryQuery } from '../../hooks/usePlatformDataQueries';
+import { dashboardApi } from '../../api/dashboard.api';
+import { mapOnboardingBlocker, mapOnboardingStepsWithCopy } from '../../components/onboarding/firstRunGuidance';
 
 export const PlatformDashboardPage = () => {
   const { firmSlug } = useParams();
   const { isAdmin } = usePermissions();
+  const [onboardingProgress, setOnboardingProgress] = useState(null);
+  const [onboardingError, setOnboardingError] = useState('');
   const {
     data: summary = {},
     isLoading,
@@ -16,6 +20,42 @@ export const PlatformDashboardPage = () => {
     isError,
     refetch,
   } = usePlatformDashboardSummaryQuery();
+  
+  useEffect(() => {
+    let isCancelled = false;
+    const loadOnboarding = async () => {
+      try {
+        const response = await dashboardApi.getOnboardingProgress();
+        if (!isCancelled && response?.success) {
+          setOnboardingProgress(response.data || null);
+          setOnboardingError('');
+        }
+      } catch (_error) {
+        if (!isCancelled) {
+          setOnboardingError('Onboarding guidance is temporarily unavailable.');
+        }
+      }
+    };
+
+    void loadOnboarding();
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  const onboardingMode = onboardingProgress?.role === 'PRIMARY_ADMIN' ? 'primary-admin' : 'admin';
+  const mappedSteps = useMemo(() => mapOnboardingStepsWithCopy({
+    steps: onboardingProgress?.steps || [],
+    firmSlug,
+    mode: onboardingMode,
+  }), [firmSlug, onboardingMode, onboardingProgress?.steps]);
+  const pendingSteps = mappedSteps.filter((step) => !step.completed);
+  const nextStep = pendingSteps[0] || null;
+  const blockers = useMemo(() => (onboardingProgress?.blockers || []).map((blocker) => mapOnboardingBlocker({
+    blocker,
+    firmSlug,
+    mode: onboardingMode,
+  })), [firmSlug, onboardingMode, onboardingProgress?.blockers]);
 
   const cards = [
     { label: 'Total dockets', value: summary.totalDockets || 0, helpText: 'All dockets tracked across the firm.' },
@@ -34,8 +74,45 @@ export const PlatformDashboardPage = () => {
       actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>New Docket</Link>}
     >
       <InlineNotice tone="error" message={isError ? 'Dashboard metrics are temporarily unavailable.' : ''} />
+      <InlineNotice tone="error" message={onboardingError} />
       <RefreshNotice refreshing={isFetching && !isLoading} message="Refreshing dashboard metrics in the background…" />
       <StatGrid items={cards} />
+
+      <PageSection
+        title="First-run setup guidance"
+        description="Use this sequence to reach first pilot success quickly: firm setup → client readiness → category/subcategory + workbench → first docket → first teammate."
+        actions={nextStep?.route ? <Link to={nextStep.route}>{nextStep.actionLabel}</Link> : null}
+      >
+        {nextStep ? (
+          <div className="panel">
+            <p className="section-title" style={{ marginBottom: 6 }}>Next recommended action: {nextStep.title}</p>
+            <p className="muted">{nextStep.description || nextStep.explanation}</p>
+            {nextStep.route ? <Link to={nextStep.route}>{nextStep.actionLabel}</Link> : null}
+          </div>
+        ) : (
+          <p className="muted">Setup checklist is complete. Keep momentum by creating and assigning live dockets.</p>
+        )}
+        {pendingSteps.length > 1 ? (
+          <ul className="muted" style={{ marginTop: 10, paddingLeft: 18 }}>
+            {pendingSteps.slice(1, 4).map((step) => <li key={step.id}>{step.title}</li>)}
+          </ul>
+        ) : null}
+      </PageSection>
+
+      {blockers.length ? (
+        <PageSection title="Setup blockers to clear" description="These are blocking first-use success. Clear them in order.">
+          <div className="grid-cards">
+            {blockers.map((blocker) => (
+              <article className="panel metric-card" key={blocker.code}>
+                <p className="metric-label">{blocker.title}</p>
+                <p className="metric-note">{blocker.description}</p>
+                {blocker.supportHint ? <p className="muted">{blocker.supportHint}</p> : null}
+                {blocker.route ? <Link to={blocker.route}>{blocker.actionLabel}</Link> : null}
+              </article>
+            ))}
+          </div>
+        </PageSection>
+      ) : null}
 
       <PageSection title="Modules" description="Open the right workspace quickly based on your current objective.">
         <div className="action-row">

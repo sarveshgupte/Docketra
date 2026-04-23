@@ -93,6 +93,12 @@ export const PlatformQcQueuePage = () => {
       <InlineNotice tone="error" message={error || (isError ? 'Unable to load the QC workbench queue.' : '')} />
       <InlineNotice tone="success" message={success} />
       <RefreshNotice refreshing={isFetching && !isLoading} message="Refreshing QC queue in the background…" />
+      <PageSection
+        title="What this queue is for"
+        description="QC Workbench is where completed execution dockets are reviewed for pass, return-for-correction, or fail decisions."
+      >
+        <p className="muted">If this is empty, your team may still be executing in My Worklist or has not sent dockets to QC yet.</p>
+      </PageSection>
       <PageSection title="QC review queue" description={`${filteredRows.length} dockets waiting for QC decisions.`}>
         <FilterBar onClear={clearFilters} clearDisabled={!search && assigneeFilter === 'ALL'}>
           <input
@@ -141,7 +147,7 @@ export const PlatformQcQueuePage = () => {
           error={isError ? 'Unable to load the QC workbench queue.' : ''}
           onRetry={() => void refetch()}
           hasActiveFilters={Boolean(search.trim()) || assigneeFilter !== 'ALL'}
-          emptyLabel="No dockets are currently waiting in the QC Workbench."
+          emptyLabel="No dockets are waiting for QC right now. Items will appear after users send completed execution work to QC."
           emptyLabelFiltered="No QC Workbench dockets match your current search or filters."
         />
       </PageSection>
