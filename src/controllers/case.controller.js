@@ -391,7 +391,7 @@ const createAttachmentUploadIntent = async (req, res) => {
   try {
     if (areFileUploadsDisabled()) return res.status(503).json({ success: false, message: 'File uploads are temporarily disabled' });
     const { caseId } = req.params;
-    const { fileName, mimeType, size, description, note } = req.body || {};
+    const { fileName, mimeType, size, description, note, checksum } = req.body || {};
     const intent = await directUploadService.createIntent({
       firmId: String(req.user?.firmId || ''),
       caseId,
@@ -401,6 +401,7 @@ const createAttachmentUploadIntent = async (req, res) => {
       size,
       description,
       note,
+      checksum,
       role: req.user?.role,
       user: req.user,
     });

@@ -71,6 +71,15 @@ const caseFileSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    attachmentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Attachment',
+      default: null,
+    },
+    cleanupAt: {
+      type: Date,
+      default: null,
+    },
     errorMessage: {
       type: String,
       default: null,
@@ -111,6 +120,11 @@ const caseFileSchema = new mongoose.Schema(
 
 caseFileSchema.index({ firmId: 1, caseId: 1 });
 caseFileSchema.index({ firmId: 1, checksum: 1 });
+caseFileSchema.index({ firmId: 1, attachmentId: 1 }, { sparse: true, unique: true });
+caseFileSchema.index(
+  { cleanupAt: 1 },
+  { expireAfterSeconds: 0, partialFilterExpression: { cleanupAt: { $type: 'date' } } }
+);
 
 caseFileSchema.pre('save', function(next) {
   for (const value of Object.values(this.toObject({ depopulate: true }))) {

@@ -45,6 +45,7 @@ module.exports = {
       size: z.coerce.number().int().positive(),
       description: z.string().trim().min(1).max(500).optional(),
       fileType: z.string().trim().optional(),
+      checksum: z.string().trim().optional(),
     }).strict(),
   },
   'POST /:clientId/cfs/files/finalize': {

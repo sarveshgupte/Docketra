@@ -917,7 +917,14 @@ const createClientCFSUploadIntent = async (req, res) => {
       });
     }
     const { clientId } = req.params;
-    const { fileName, mimeType, size, description = 'Client Fact Sheet attachment', fileType = 'documents' } = req.body || {};
+    const {
+      fileName,
+      mimeType,
+      size,
+      description = 'Client Fact Sheet attachment',
+      fileType = 'documents',
+      checksum,
+    } = req.body || {};
     const userFirmId = String(req.user?.firmId || '');
     if (!userFirmId || !req.user?.xID) {
       return res.status(401).json({ success: false, message: 'Authentication required' });
@@ -934,6 +941,7 @@ const createClientCFSUploadIntent = async (req, res) => {
       role: req.user?.role,
       user: req.user,
       fileType,
+      checksum,
     });
     return res.status(201).json({ success: true, data: intent });
   } catch (error) {
