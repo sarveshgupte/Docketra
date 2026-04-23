@@ -300,7 +300,7 @@ const finalizeIntent = async ({ uploadId, firmId, user, completion = {}, checksu
 
   assertClientCompletionMatchesSession({ uploadRecord, completion });
 
-  const backend = await resolveUploadBackend(firmId);
+  const backend = await resolveUploadBackendForSession(firmId, uploadRecord);
   const provider = backend.provider;
   const verifyFileId = uploadRecord.providerFileId || completion.providerFileId || null;
   const verifyObjectKey = uploadRecord.providerObjectKey || completion.objectKey || null;
