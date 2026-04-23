@@ -18,6 +18,15 @@ const api = axios.create({
 
 let redirecting = false;
 let refreshFailureDetected = false;
+const inFlightRequestCounts = new Map();
+const requestStartedAtById = new Map();
+const SLOW_API_THRESHOLD_MS = 900;
+const buildRequestSignature = (config) => {
+  const method = String(config?.method || 'get').toUpperCase();
+  const url = String(config?.url || '');
+  const params = config?.params ? JSON.stringify(config.params) : '';
+  return `${method} ${url} ${params}`;
+};
 const markErrorToasted = (error, message) => {
   if (!error) return;
   error.uiFeedback = {
@@ -62,6 +71,20 @@ function generateIdempotencyKey() {
 // Request interceptor - add idempotency/impersonation headers
 api.interceptors.request.use(
   (config) => {
+    const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const signature = buildRequestSignature(config);
+    config.metadata = {
+      ...(config.metadata || {}),
+      requestId,
+      signature,
+    };
+    requestStartedAtById.set(requestId, performance.now());
+    const activeCount = (inFlightRequestCounts.get(signature) || 0) + 1;
+    inFlightRequestCounts.set(signature, activeCount);
+    if (activeCount > 1) {
+      console.warn('[perf] Duplicate API request in-flight', { signature, activeCount });
+    }
+
     const method = (config.method || '').toLowerCase();
     if (['post', 'put', 'patch', 'delete'].includes(method)) {
       const hasIdempotencyKey = typeof config.headers?.has === 'function'
@@ -108,6 +131,25 @@ api.interceptors.request.use(
 // Response interceptor - Handle token expiry and refresh
 api.interceptors.response.use(
   (response) => {
+    const requestId = response?.config?.metadata?.requestId;
+    const signature = response?.config?.metadata?.signature;
+    const startedAt = requestId ? requestStartedAtById.get(requestId) : null;
+    if (requestId) requestStartedAtById.delete(requestId);
+    if (signature) {
+      const remaining = Math.max(0, (inFlightRequestCounts.get(signature) || 1) - 1);
+      if (remaining === 0) inFlightRequestCounts.delete(signature);
+      else inFlightRequestCounts.set(signature, remaining);
+    }
+    if (startedAt) {
+      const durationMs = Math.round(performance.now() - startedAt);
+      if (durationMs >= SLOW_API_THRESHOLD_MS) {
+        console.warn('[perf] Slow API response', {
+          signature,
+          durationMs,
+          status: response?.status,
+        });
+      }
+    }
     if (/\/auth\/(profile|refresh)$/.test(String(response?.config?.url || ''))) {
       refreshFailureDetected = false;
     }
@@ -123,6 +165,16 @@ api.interceptors.response.use(
     return response;
   },
   async (error) => {
+    const requestId = error?.config?.metadata?.requestId;
+    const signature = error?.config?.metadata?.signature;
+    if (requestId) {
+      requestStartedAtById.delete(requestId);
+    }
+    if (signature) {
+      const remaining = Math.max(0, (inFlightRequestCounts.get(signature) || 1) - 1);
+      if (remaining === 0) inFlightRequestCounts.delete(signature);
+      else inFlightRequestCounts.set(signature, remaining);
+    }
     const originalRequest = error.config;
     if (redirecting) {
       return Promise.reject(error);

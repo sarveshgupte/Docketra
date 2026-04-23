@@ -17,6 +17,7 @@ import { formatDateTime } from '../utils/formatDateTime';
 import { BulkUploadModal } from '../components/bulk/BulkUploadModal';
 import { buildTemplateCsv } from '../constants/bulkUploadSchema';
 import { useUnsavedChangesPrompt } from '../hooks/useUnsavedChangesPrompt';
+import { useQueryState } from '../hooks/useQueryState';
 
 const toDisplayString = (value, fallback = '—') => {
   if (typeof value === 'string') {
@@ -33,7 +34,9 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const ClientsPage = () => {
   const { user } = useAuth();
   const { showError, showSuccess } = useToast();
+  const { query, setQuery } = useQueryState({ page: '1', q: '' });
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [clients, setClients] = useState([]);
   const [editCfsClient, setEditCfsClient] = useState(null);
@@ -46,10 +49,10 @@ export const ClientsPage = () => {
   const [selectedClient, setSelectedClient] = useState(null);
   const [savingClient, setSavingClient] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(Math.max(Number.parseInt(query.page, 10) || 1, 1));
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0, limit: 25 });
-  const [searchInput, setSearchInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState(query.q || '');
+  const [searchQuery, setSearchQuery] = useState(query.q || '');
   const [clientForm, setClientForm] = useState({
     businessName: '',
     businessAddress: '',
@@ -100,7 +103,9 @@ export const ClientsPage = () => {
   });
 
   const loadClients = useCallback(async () => {
-    setLoading(true);
+    const hasRows = clients.length > 0;
+    setLoading(!hasRows);
+    setIsRefreshing(hasRows);
     setLoadError('');
     try {
       const response = await clientApi.getClients(false, false, { page, limit: 25, search: searchQuery || undefined });
@@ -126,13 +131,13 @@ export const ClientsPage = () => {
       setClients(normalizedClients);
       setPagination(response?.pagination || { page, pages: 1, total: normalizedClients.length, limit: 25 });
     } catch (error) {
-      setClients([]);
       setLoadError(error?.response?.data?.message || error?.message || 'Failed to load clients');
       showError(error?.response?.data?.message || error?.message || 'Failed to load clients');
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
-  }, [showError, page, searchQuery]);
+  }, [clients.length, showError, page, searchQuery]);
 
   useEffect(() => {
     loadClients();
@@ -148,6 +153,19 @@ export const ClientsPage = () => {
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     };
   }, [searchInput]);
+
+  useEffect(() => {
+    const requestedPage = Math.max(Number.parseInt(query.page, 10) || 1, 1);
+    if (requestedPage !== page) setPage(requestedPage);
+    if ((query.q || '') !== searchInput) {
+      setSearchInput(query.q || '');
+      setSearchQuery(query.q || '');
+    }
+  }, [page, query.page, query.q, searchInput]);
+
+  useEffect(() => {
+    setQuery({ page: page > 1 ? page : null, q: searchQuery || null });
+  }, [page, searchQuery, setQuery]);
 
   const selectedFactSheet = useMemo(
     () => editCfsClient?.clientFactSheet || {},
@@ -257,6 +275,9 @@ export const ClientsPage = () => {
           contactPersonEmailAddress: clientForm.contactPersonEmailAddress,
         });
         if (!response?.success) throw new Error(response?.message || 'Failed to update client');
+        setClients((prev) => prev.map((client) => (client.clientId === selectedClient.clientId
+          ? { ...client, ...response?.data, ...clientForm }
+          : client)));
         showSuccess('Client updated successfully');
       } else {
         const response = await clientApi.createClient({
@@ -275,10 +296,12 @@ export const ClientsPage = () => {
           ...(clientForm.contactPersonEmailAddress ? { contactPersonEmailAddress: clientForm.contactPersonEmailAddress } : {}),
         });
         if (!response?.success) throw new Error(response?.message || 'Failed to create client');
+        if (response?.data?.clientId) {
+          setClients((prev) => ([{ ...response.data, clientId: response.data.clientId }, ...prev]));
+        }
         showSuccess(`Client created successfully${response?.data?.clientId ? ` (${response.data.clientId})` : ''}`);
       }
       setClientFormMessage({ type: 'success', text: 'Client details saved successfully.' });
-      await loadClients();
       closeClientModal();
     } catch (error) {
       const message = error?.response?.data?.message || error?.message || 'Failed to save client';
@@ -303,8 +326,10 @@ export const ClientsPage = () => {
     try {
       const response = await clientApi.toggleClientStatus(client.clientId, !isCurrentlyActive);
       if (!response?.success) throw new Error(response?.message || `Failed to ${action} client`);
+      setClients((prev) => prev.map((row) => (row.clientId === client.clientId
+        ? { ...row, status: isCurrentlyActive ? 'INACTIVE' : 'ACTIVE' }
+        : row)));
       showSuccess(`Client ${isCurrentlyActive ? 'deactivated' : 'activated'} successfully`);
-      await loadClients();
     } catch (error) {
       showError(error?.response?.data?.message || error?.message || `Failed to ${action} client`);
     }
@@ -400,6 +425,7 @@ export const ClientsPage = () => {
     const response = await clientApi.getClientById(editCfsClient.clientId);
     const refreshedClient = response?.data || editCfsClient;
     setEditCfsClient(refreshedClient);
+    setClients((prev) => prev.map((client) => (client.clientId === refreshedClient.clientId ? { ...client, ...refreshedClient } : client)));
     setDescriptionDraft(refreshedClient?.clientFactSheet?.description || '');
     setNotesDraft(refreshedClient?.clientFactSheet?.notes || '');
   };
@@ -410,7 +436,7 @@ export const ClientsPage = () => {
     try {
       await clientApi.updateClientFactSheet(editCfsClient.clientId, descriptionDraft, notesDraft);
       showSuccess('Client Fact Sheet updated');
-      await Promise.all([refreshSelectedClient(), loadClients()]);
+      await refreshSelectedClient();
     } catch (error) {
       showError(error?.response?.data?.message || 'Failed to update Client Fact Sheet');
     } finally {
@@ -425,7 +451,7 @@ export const ClientsPage = () => {
     try {
       await clientApi.uploadClientCFSFile(editCfsClient.clientId, file);
       showSuccess('Document attached successfully');
-      await Promise.all([refreshSelectedClient(), loadClients()]);
+      await refreshSelectedClient();
     } catch (error) {
       showError(error?.response?.data?.message || 'Failed to upload file');
     } finally {
@@ -440,7 +466,7 @@ export const ClientsPage = () => {
     try {
       await clientApi.deleteFactSheetFile(editCfsClient.clientId, fileId);
       showSuccess('Document removed');
-      await Promise.all([refreshSelectedClient(), loadClients()]);
+      await refreshSelectedClient();
     } catch (error) {
       showError(error?.response?.data?.message || 'Failed to delete file');
     } finally {
@@ -513,7 +539,10 @@ export const ClientsPage = () => {
         )}
         {!loading && !loadError ? (
           <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 text-sm text-gray-600">
-            <span>Page {pagination.page} of {Math.max(pagination.pages || 1, 1)} · {pagination.total || 0} clients</span>
+            <span>
+              Page {pagination.page} of {Math.max(pagination.pages || 1, 1)} · {pagination.total || 0} clients
+              {isRefreshing ? ' · Refreshing…' : ''}
+            </span>
             <div className="flex items-center gap-2">
               <Button variant="outline" disabled={page <= 1} onClick={() => setPage((prev) => Math.max(1, prev - 1))}>
                 Previous

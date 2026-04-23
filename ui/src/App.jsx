@@ -9,6 +9,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import { ActiveDocketProvider } from './contexts/ActiveDocketContext';
 import { Router } from './Router';
 import { ScrollToTop } from './components/routing/ScrollToTop';
+import { RoutePerformanceTracker } from './components/routing/RoutePerformanceTracker';
 import { FirstLoginExperience } from './components/onboarding/FirstLoginExperience';
 import { useAuth } from './hooks/useAuth';
 import { bootstrapAuth } from './auth/authBootstrap';
@@ -25,6 +26,7 @@ const AppBootstrap = () => {
   return (
       <ToastProvider>
         <ScrollToTop />
+        <RoutePerformanceTracker />
         <Router />
         <FirstLoginExperience />
       </ToastProvider>

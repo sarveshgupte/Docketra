@@ -21,6 +21,7 @@ export const DataTable = ({
   loadingMessage = 'Loading data...',
   emptyMessage = 'No records found.',
   onRowClick,
+  onRowHover,
 }) => {
   const handleSortClick = (key, sortable) => {
     if (!sortable || !onSortChange) return;
@@ -134,6 +135,7 @@ export const DataTable = ({
                   || rowIndex
                 }
                 onClick={() => onRowClick?.(row)}
+                onMouseEnter={() => onRowHover?.(row)}
                 className={onRowClick ? 'cursor-pointer hover:bg-slate-50 transition-colors' : ''}
               >
                 {columns.map((col) => (
