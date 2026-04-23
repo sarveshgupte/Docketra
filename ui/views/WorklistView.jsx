@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../src/services/api';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { worklistApi } from '../src/api/worklist.api';
 import { Card } from '../src/components/common/Card';
 import { Button } from '../src/components/common/Button';
@@ -9,6 +10,8 @@ import { TableSkeleton } from '../src/components/common/Skeleton';
 import { DataTable } from '../src/components/common/DataTable';
 import { formClasses } from '../src/theme/tokens';
 import { useKeyboardShortcuts } from '../src/hooks/useKeyboardShortcuts';
+import { CASE_QUERY_PARAMS } from '../src/hooks/useCaseQuery';
+import { caseApi } from '../src/api/case.api';
 import { formatDate } from '../src/utils/formatters';
 import { resolveLifecycleKey } from '../utils/lifecycleMap';
 
@@ -52,7 +55,6 @@ export function WorklistView({
 }) {
   const [loading, setLoading] = useState(true);
   const [records, setRecords] = useState([]);
-  const [error, setError] = useState('');
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -60,6 +62,7 @@ export function WorklistView({
   const [showActiveOnly, setShowActiveOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0, limit: 25 });
+  const queryClient = useQueryClient();
 
   const isPendingView = variant === 'pending';
 
@@ -70,47 +73,54 @@ export function WorklistView({
     return lifecycleKey === 'pending';
   }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      if (isPendingView) {
-        const response = await api.get('/cases/my-pending');
-        const pendingData = response?.data?.data;
-        setRecords(normalizeRecords(pendingData));
-      } else {
-        const response = await worklistApi.getEmployeeWorklist({ assigneeXID, page, limit: 25 });
-        const worklistPayload = Array.isArray(response?.data)
-          ? response.data
-          : response?.data?.data;
-        setRecords(normalizeRecords(worklistPayload));
-        setPagination(response?.pagination || { page, pages: 1, total: worklistPayload?.length || 0, limit: 25 });
-      }
-    } catch (err) {
-      console.error('Failed to load worklist:', err);
-      setError('We couldn’t load your worklist. Retry to fetch the latest assigned dockets.');
-      setRecords([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [assigneeXID, isPendingView, page]);
-
   useEffect(() => {
     setPage(1);
   }, [assigneeXID, isPendingView]);
 
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
+    queryKey: ['worklist-view', variant, assigneeXID || 'self', page, sortState?.key || 'updatedAt', sortState?.direction || 'desc', searchQuery.trim(), categoryFilter, subcategoryFilter],
+    queryFn: async () => {
+      if (isPendingView) {
+        const response = await api.get('/cases/my-pending');
+        const pendingData = response?.data?.data;
+        return { records: normalizeRecords(pendingData), pagination: { page: 1, pages: 1, total: pendingData?.length || 0, limit: 25 } };
+      }
+      const response = await worklistApi.getEmployeeWorklist({
+        assigneeXID,
+        page,
+        limit: 25,
+        sortBy: sortState?.key || 'updatedAt',
+        sortOrder: sortState?.direction || 'desc',
+        search: searchQuery.trim() || undefined,
+        category: categoryFilter || undefined,
+        subcategory: subcategoryFilter || undefined,
+      });
+      const payload = Array.isArray(response?.data) ? response.data : response?.data?.data;
+      return {
+        records: normalizeRecords(payload),
+        pagination: response?.pagination || { page, pages: 1, total: payload?.length || 0, limit: 25 },
+      };
+    },
+    placeholderData: keepPreviousData,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
   useEffect(() => {
-    void load();
-  }, [load]);
+    setRecords(data?.records || []);
+    setPagination(data?.pagination || { page: 1, pages: 1, total: 0, limit: 25 });
+    setLoading(isLoading);
+  }, [data, isLoading]);
 
   const filtered = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
     return records
       .filter((row) => isAllowedWorklistLifecycle(row))
       .filter((row) => (showActiveOnly && !isPendingView ? !isPendingDocket(row) : true))
-      .filter((row) => (categoryFilter ? row.category === categoryFilter : true))
-      .filter((row) => (subcategoryFilter ? row.subcategory === subcategoryFilter : true))
+      .filter((row) => (isPendingView && categoryFilter ? row.category === categoryFilter : true))
+      .filter((row) => (isPendingView && subcategoryFilter ? row.subcategory === subcategoryFilter : true))
       .filter((row) => {
+        if (!isPendingView) return true;
         if (!normalizedQuery) return true;
         return (
           matchText(row.caseId, normalizedQuery)
@@ -124,6 +134,7 @@ export function WorklistView({
   }, [records, searchQuery, categoryFilter, subcategoryFilter, showActiveOnly, isPendingView, isPendingDocket]);
 
   const sorted = useMemo(() => {
+    if (!isPendingView) return [...filtered];
     if (!sortState?.key || !sortState?.direction) return [...filtered];
     const direction = sortState.direction === 'asc' ? 1 : -1;
     return [...filtered].sort((left, right) => {
@@ -141,7 +152,7 @@ export function WorklistView({
         sensitivity: 'base',
       }) * direction;
     });
-  }, [filtered, sortState]);
+  }, [filtered, sortState, isPendingView]);
 
   const categories = useMemo(
     () => [...new Set(records.map((row) => row.category).filter((value) => value && value !== '—'))].sort(),
@@ -185,6 +196,16 @@ export function WorklistView({
     const index = sorted.findIndex((item) => (item.routeCaseId || item.caseId) === (row.routeCaseId || row.caseId));
     handleOpen(row.routeCaseId || row.caseId, index >= 0 ? index : 0);
   }, [handleOpen, sorted]);
+
+  const handleRowHover = useCallback((row) => {
+    const caseId = row?.routeCaseId || row?.caseId;
+    if (!caseId || !window.matchMedia?.('(pointer:fine)').matches) return;
+    queryClient.prefetchQuery({
+      queryKey: ['case', caseId, CASE_QUERY_PARAMS],
+      queryFn: () => caseApi.getCaseById(caseId, CASE_QUERY_PARAMS),
+      staleTime: 30 * 1000,
+    });
+  }, [queryClient]);
 
   useKeyboardShortcuts({
     onNext: () => setFocusedIndex((idx) => Math.min(idx + 1, Math.max(sorted.length - 1, 0))),
@@ -278,7 +299,7 @@ export function WorklistView({
         <ErrorState
           title="We couldn’t load your worklist"
           description="Retry to fetch the latest assigned dockets. If the problem continues, refresh the page or contact your administrator."
-          onRetry={load}
+          onRetry={() => refetch()}
         />
       </Card>
     );
@@ -365,8 +386,10 @@ export function WorklistView({
         rows={sorted}
         rowKey="caseId"
         onRowClick={handleRowClick}
+        onRowHover={handleRowHover}
         sortState={sortState}
         onSortChange={onSortChange}
+        loading={isLoading && !records.length}
         activeFilters={activeFilters}
         onRemoveFilter={removeFilter}
         onResetFilters={resetFilters}
@@ -377,6 +400,7 @@ export function WorklistView({
           />
         )}
       />
+      {isFetching && records.length > 0 ? <p className="mt-2 text-xs text-gray-500">Refreshing worklist…</p> : null}
       {!isPendingView ? (
         <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
           <span>Page {pagination.page} of {Math.max(pagination.pages || 1, 1)} · {pagination.total || 0} dockets</span>

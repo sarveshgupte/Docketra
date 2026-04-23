@@ -35,10 +35,11 @@ export const TableBody = ({ children, className = '' }) => {
   return <tbody className={joinClasses('divide-y divide-gray-200 bg-white', className)}>{children}</tbody>;
 };
 
-export const TableRow = ({ children, onClick, className = '' }) => {
+export const TableRow = ({ children, onClick, className = '', ...rest }) => {
   return (
     <tr
       onClick={onClick}
+      {...rest}
       className={joinClasses(
         'transition-colors duration-150 hover:bg-gray-50',
         onClick && 'cursor-pointer',

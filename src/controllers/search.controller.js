@@ -387,6 +387,11 @@ const employeeWorklist = async (req, res) => {
     }
     
     const requestedAssignee = String(req.query?.assigneeXID || '').trim().toUpperCase();
+    const search = String(req.query?.search || '').trim();
+    const categoryFilter = String(req.query?.category || '').trim();
+    const subcategoryFilter = String(req.query?.subcategory || '').trim();
+    const sortBy = String(req.query?.sortBy || 'createdAt').trim();
+    const sortOrder = String(req.query?.sortOrder || 'desc').toLowerCase() === 'asc' ? 1 : -1;
     const isAdmin = ['ADMIN', 'Admin'].includes(String(user?.role || ''));
     const targetAssigneeXID = requestedAssignee || String(user.xID || '').trim().toUpperCase();
 
@@ -432,10 +437,49 @@ const employeeWorklist = async (req, res) => {
       // PENDING must be excluded because pending dockets are shown via /cases/my-pending.
       status: { $in: filteredStatuses },
     };
+    if (categoryFilter) {
+      query.category = categoryFilter;
+    }
+    if (subcategoryFilter) {
+      query.$or = [
+        { subcategory: subcategoryFilter },
+        { caseSubCategory: subcategoryFilter },
+      ];
+    }
+    if (search) {
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escapedSearch, 'i');
+      query.$and = [
+        ...(Array.isArray(query.$and) ? query.$and : []),
+        {
+          $or: [
+            { caseId: regex },
+            { caseNumber: regex },
+            { clientId: regex },
+            { clientName: regex },
+            { category: regex },
+            { subcategory: regex },
+            { caseSubCategory: regex },
+          ],
+        },
+      ];
+    }
+    const sortFieldMap = {
+      caseId: 'caseId',
+      clientId: 'clientId',
+      clientName: 'clientName',
+      category: 'category',
+      subcategory: 'subcategory',
+      dueDate: 'dueDate',
+      pendingUntil: 'pendingUntil',
+      updatedAt: 'updatedAt',
+      createdAt: 'createdAt',
+    };
+    const sortField = sortFieldMap[sortBy] || 'createdAt';
     
     const casesQuery = Case.find(enforceTenantScope(query, req, { source: 'search.employeeWorklist' }))
       .select('caseId caseNumber caseName category subcategory caseSubCategory dueDate slaDueAt createdAt createdBy updatedAt status clientId clientName assignedToXID assignedToName')
-      .sort({ createdAt: -1 })
+      .sort({ [sortField]: sortOrder, _id: 1 })
       .skip((normalizedPage - 1) * normalizedLimit)
       .limit(normalizedLimit);
 
