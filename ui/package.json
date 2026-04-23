@@ -34,6 +34,7 @@
     "test:sidebar-active": "node tests/sidebarActiveStateReliability.test.mjs",
     "test:crm-unification": "node tests/crmWorkspaceUnification.test.mjs",
     "test:performance-patterns": "node tests/performancePatterns.test.mjs",
+    "test:case-detail-performance": "node tests/caseDetailPerformanceRefactor.test.mjs",
     "test:admin-surface": "node tests/adminSurfaceHardening.test.mjs",
     "test:auth-refresh-loop": "node tests/authRefreshLoopRegression.test.mjs",
     "test:docket-surface": "node tests/docketSurfaceHardening.test.mjs"
