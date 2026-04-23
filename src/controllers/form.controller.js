@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Form = require('../models/Form.model');
 const { processCmsSubmission } = require('../services/cmsIntake.service');
+const { REASON_CODES, logPilotEvent } = require('../services/pilotDiagnostics.service');
 
 const DEFAULT_FIELDS = [
   { key: 'name', label: 'Name', type: 'text' },
@@ -280,7 +281,8 @@ const submitForm = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Embed is not enabled for this form' });
     }
     if (embedMode && !isAllowedOrigin(form, req)) {
-      return res.status(403).json({ success: false, message: 'Submission origin is not allowed' });
+      logPilotEvent({ event: 'public_intake_rejected', severity: 'warn', metadata: { reasonCode: REASON_CODES.INVALID_ORIGIN, formId, hasOrigin: Boolean(req.headers?.origin) } });
+      return res.status(403).json({ success: false, code: 'INVALID_ORIGIN', reasonCode: REASON_CODES.INVALID_ORIGIN, message: 'Submission origin is not allowed' });
     }
     if (!hasRequiredPublicField(form.fields || [])) {
       return res.status(409).json({ success: false, message: 'Form is misconfigured: name field is required for public/embed use' });
@@ -328,6 +330,8 @@ const submitForm = async (req, res) => {
         redirectUrl: form.redirectUrl || null,
         submissionMode: embedMode ? EMBEDDED_SUBMISSION_MODE : 'public_form',
         outcome: result?.metadata?.intakeOutcome || null,
+        warningDetails: result?.metadata?.warningDetails || [],
+        workflowSteps: result?.metadata?.workflowSteps || [],
       },
     });
   } catch (error) {

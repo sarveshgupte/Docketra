@@ -54,3 +54,8 @@
   - high-risk user actions use shared confirmation modal UX,
   - native `window.confirm` is not used for these actions,
   - canonical role hierarchy copy uses `Employee` labels in admin UI support copy.
+
+
+## Pilot support diagnostics update (2026-04-23)
+- API intake now emits `firm_context_missing` when tenant context is absent.
+- Onboarding progress payload now includes setup blockers with controlled reason codes to accelerate tenant-scoped recovery.

@@ -62,3 +62,8 @@
 - Intake routing now validates mapped workbench presence and active status before creating a docket.
 - Intake responses include `workflowSteps` metadata so operators can see which steps succeeded, skipped, replayed, or failed.
 - CMS-created dockets now receive deterministic intake-derived idempotency keys to reduce duplicate docket creation on retry paths.
+
+
+## Pilot support diagnostics update (2026-04-23)
+- Public/embed submission rejects due to origin policy now return `reasonCode: invalid_origin`.
+- Platform CMS intake view surfaces warning reason-code hints for faster support triage.

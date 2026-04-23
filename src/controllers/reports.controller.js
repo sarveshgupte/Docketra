@@ -14,6 +14,8 @@ const { getWeeklySlaSummary } = require('../services/sla.service');
 const reportsService = require('../services/reports.service');
 const log = require('../utils/log');
 const { isSuperAdminRole } = require('../utils/role.utils');
+const { REASON_CODES, logPilotEvent } = require('../services/pilotDiagnostics.service');
+const { logAuditEvent } = require('../services/adminActionAudit.service');
 
 const DEFAULT_AUDIT_LOG_LIMIT = 100;
 const MAX_AUDIT_LOG_LIMIT = 250;
@@ -576,8 +578,16 @@ const exportCasesCSV = async (req, res) => {
     res.send(csv);
   } catch (error) {
     log.error('Error in exportCasesCSV:', error);
+    await logAuditEvent({
+      firmId: req.user?.firmId || req.firmId,
+      actorId: req.user?._id,
+      action: 'REPORT_EXPORT_FAILED',
+      metadata: { exportType: 'csv', reasonCode: REASON_CODES.REPORT_EXPORT_FAILED, message: error?.message || null },
+    });
+    logPilotEvent({ event: 'report_export_failed', severity: 'warn', metadata: { firmId: req.user?.firmId || req.firmId, exportType: 'csv', reasonCode: REASON_CODES.REPORT_EXPORT_FAILED } });
     res.status(500).json({
       success: false,
+      reasonCode: REASON_CODES.REPORT_EXPORT_FAILED,
       message: 'Failed to export cases as CSV',
       error: error.message,
     });
@@ -667,8 +677,16 @@ const exportCasesExcel = async (req, res) => {
     res.end();
   } catch (error) {
     log.error('Error in exportCasesExcel:', error);
+    await logAuditEvent({
+      firmId: req.user?.firmId || req.firmId,
+      actorId: req.user?._id,
+      action: 'REPORT_EXPORT_FAILED',
+      metadata: { exportType: 'excel', reasonCode: REASON_CODES.REPORT_EXPORT_FAILED, message: error?.message || null },
+    });
+    logPilotEvent({ event: 'report_export_failed', severity: 'warn', metadata: { firmId: req.user?.firmId || req.firmId, exportType: 'excel', reasonCode: REASON_CODES.REPORT_EXPORT_FAILED } });
     res.status(500).json({
       success: false,
+      reasonCode: REASON_CODES.REPORT_EXPORT_FAILED,
       message: 'Failed to export cases as Excel',
       error: error.message,
     });

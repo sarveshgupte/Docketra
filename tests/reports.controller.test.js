@@ -300,6 +300,27 @@ async function runTests() {
     console.log('✅ exportCasesCSV: success scenario handled');
   }
 
+
+  // Test 5b: exportCasesCSV - Failure reason code
+  {
+    const { req, res } = createMockHttp();
+    req.query.fromDate = '2023-01-01';
+    req.query.toDate = '2023-12-31';
+    const oldFind = mockCaseModel.find;
+    mockCaseModel.find = () => ({
+      sort: () => ({
+        limit: () => ({
+          lean: async () => { throw new Error('csv-export-boom'); }
+        })
+      })
+    });
+    await reportsController.exportCasesCSV(req, res);
+    assert.strictEqual(res.statusCode, 500);
+    assert.strictEqual(res.jsonData.success, false);
+    assert.strictEqual(res.jsonData.reasonCode, 'report_export_failed');
+    mockCaseModel.find = oldFind;
+    console.log('✅ exportCasesCSV: failure reason code emitted');
+  }
   // Test 6: exportCasesExcel - Total exceeds limit
   {
     const { req, res } = createMockHttp();

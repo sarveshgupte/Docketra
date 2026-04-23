@@ -28,6 +28,7 @@ const parseOutcome = (lead) => ({
   clientId: lead?.metadata?.intakeOutcome?.clientId || null,
   docketId: lead?.metadata?.intakeOutcome?.docketId || null,
   warnings: toArray(lead?.metadata?.intakeOutcome?.warnings),
+  warningDetails: toArray(lead?.metadata?.intakeOutcome?.warningDetails || lead?.metadata?.intakeDiagnostics?.warningDetails),
   submissionMode: lead?.metadata?.submissionMode || lead?.metadata?.intakeOutcome?.submissionMode || 'cms',
   source: lead?.source || lead?.metadata?.intakeOutcome?.source || 'CMS_FORM',
 });
@@ -544,7 +545,12 @@ export const PlatformCmsPage = () => {
                 <td>
                   <strong>{lead.name || '-'}</strong>
                   <div className="muted">{lead.email || 'No email'}</div>
-                  {outcome.warnings.length > 0 ? <div style={{ color: '#92400E' }}>⚠️ {outcome.warnings[0]}</div> : null}
+                  {outcome.warnings.length > 0 ? (
+                    <div style={{ color: '#92400E' }}>
+                      ⚠️ {outcome.warnings[0]}
+                      {outcome.warningDetails[0]?.code ? <span className="muted"> ({outcome.warningDetails[0].code})</span> : null}
+                    </div>
+                  ) : null}
                 </td>
                 <td>{outcome.source || '-'}</td>
                 <td>{outcome.submissionMode || '-'}</td>

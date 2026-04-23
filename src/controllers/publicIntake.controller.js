@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const Firm = require('../models/Firm.model');
 const { safeDecrypt } = require('../utils/encryption');
 const { processCmsSubmission } = require('../services/cmsIntake.service');
+const { REASON_CODES, logPilotEvent } = require('../services/pilotDiagnostics.service');
 
 const INTAKE_KEY_HEADER = 'x-docketra-intake-key';
 
@@ -20,7 +21,8 @@ const submitApiIntake = async (req, res) => {
   try {
     const firmSlug = String(req.params?.firmSlug || '').trim().toLowerCase();
     if (!firmSlug) {
-      return res.status(400).json({ success: false, error: 'firmSlug is required' });
+      logPilotEvent({ event: 'api_intake_rejected', severity: 'warn', metadata: { reasonCode: REASON_CODES.FIRM_CONTEXT_MISSING } });
+      return res.status(400).json({ success: false, reasonCode: REASON_CODES.FIRM_CONTEXT_MISSING, error: 'firmSlug is required' });
     }
 
     const firm = await Firm.findOne({ firmSlug })
@@ -71,6 +73,8 @@ const submitApiIntake = async (req, res) => {
       clientId: result?.client?.clientId || null,
       docketId: result?.docket?.caseId || null,
       warnings: result?.metadata?.warnings || [],
+      warningDetails: result?.metadata?.warningDetails || [],
+      workflowSteps: result?.metadata?.workflowSteps || [],
       submissionMode: 'api_intake',
       idempotentReplay: isReplay,
     });
