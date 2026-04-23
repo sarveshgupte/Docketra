@@ -102,16 +102,23 @@ async function logDocketEvent({
   if (!docketId || !firmId) return null;
   const normalizedEvent = String(event).trim().toUpperCase();
   if (!normalizedEvent) return null;
+  const sanitizedMetadata = sanitizeValue(metadata);
   const payload = {
+    entityType: 'docket',
+    entityId: String(docketId),
     docketId: String(docketId),
     firmId: String(firmId),
     event: AUDIT_EVENTS[normalizedEvent] || normalizedEvent,
+    action: AUDIT_EVENTS[normalizedEvent] || normalizedEvent,
     userId: userId ? String(userId).toUpperCase() : undefined,
     userRole: userRole ? normalizeRole(userRole) : undefined,
+    actorId: userId ? String(userId).toUpperCase() : undefined,
+    actorRole: userRole ? normalizeRole(userRole) : undefined,
     fromState: fromState || undefined,
     toState: toState || undefined,
     qcOutcome: qcOutcome || undefined,
-    metadata: sanitizeValue(metadata),
+    reasonCode: sanitizedMetadata?.reasonCode || null,
+    metadata: sanitizedMetadata,
   };
   payload.dedupeKey = buildDedupeKey(payload);
   const created = await DocketAudit.create([payload], session ? { session } : undefined);
@@ -139,6 +146,7 @@ const createLog = async ({
   comment = null,
   changes = [],
   metadata = {},
+  reasonCode = null,
   timestamp = new Date(),
   dedupeKey = null,
   session = null,
@@ -171,6 +179,7 @@ const createLog = async ({
         qcOutcome: metadata?.qcOutcome || null,
         metadata: {
           ...metadata,
+          reasonCode: reasonCode || metadata?.reasonCode || null,
           comment: comment || null,
           changes: normalizedChanges,
           legacyAction: String(action || '').toUpperCase(),
@@ -193,6 +202,7 @@ const createLog = async ({
       comment: comment ? String(comment).slice(0, 500) : null,
       changes: normalizedChanges,
       metadata: sanitizeValue(metadata),
+      reasonCode: reasonCode || sanitizeValue(metadata)?.reasonCode || null,
       timestamp,
       dedupeKey: finalDedupeKey,
     }], session ? { session } : {});

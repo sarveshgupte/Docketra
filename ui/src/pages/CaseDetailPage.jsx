@@ -249,18 +249,67 @@ export const CaseDetailPage = () => {
   const mergedTimelineEvents = useMemo(() => {
     const fromApi = Array.isArray(timelineApiData) ? timelineApiData : [];
     const fallback = sortedTimelineEvents || [];
-    return (fromApi.length ? fromApi : fallback).map((entry) => ({
+    const sourceRows = fromApi.length ? fromApi : fallback;
+    const seen = new Set();
+    const normalizedRows = sourceRows
+      .map((entry) => {
+        const type = String(entry.type || entry.actionType || entry.action || '').toUpperCase();
+        const label = ({
+          DOCKET_CREATED: 'Docket created',
+          CREATED: 'Docket created',
+          STATUS_CHANGED: 'Status changed',
+          STATE_TRANSITION: 'Status changed',
+          ASSIGNED: 'Assigned',
+          ASSIGNMENT: 'Assignment changed',
+          REASSIGNED: 'Assignment changed',
+          QC_ACTION: 'QC decision recorded',
+          QC_APPROVED: 'QC approved',
+          QC_PASSED: 'QC approved',
+          QC_CORRECTED: 'QC corrected',
+          QC_FAILED: 'QC failed',
+          WORKBASKET_CHANGED: 'Routed to workbasket',
+          ROUTED: 'Routed to workbasket',
+          COMMENT_ADDED: 'Comment added',
+          UPDATED: 'Docket updated',
+        }[type] || null);
+        const stableKey = entry._id
+          || entry.id
+          || `${type}:${entry.createdAt || entry.timestamp || ''}:${entry.performedByXID || entry.actorXID || entry.performedBy || ''}:${entry.description || label || ''}`;
+        if (seen.has(stableKey)) return null;
+        seen.add(stableKey);
+        return {
+          ...entry,
+          timelineLabel: label || entry.description || entry.action || entry.actionType || 'Updated',
+          actorLabel: entry.performedByName || entry.performedByXID || entry.performedBy || 'System',
+          icon: ({
+            DOCKET_CREATED: '🆕',
+            CREATED: '🆕',
+            STATUS_CHANGED: '🔄',
+            STATE_TRANSITION: '🔄',
+            QC_ACTION: '🧪',
+            QC_APPROVED: '✅',
+            QC_PASSED: '✅',
+            QC_CORRECTED: '🛠️',
+            QC_FAILED: '❌',
+            ASSIGNED: '👤',
+            ASSIGNMENT: '👤',
+            REASSIGNED: '👤',
+            WORKBASKET_CHANGED: '🗂️',
+            ROUTED: '🗂️',
+            PRIORITY_CHANGED: '⚡',
+            COMMENT_ADDED: '💬',
+            UPDATED: '✏️',
+          }[type] || '•'),
+        };
+      })
+      .filter(Boolean);
+    return normalizedRows.sort((left, right) => {
+      const leftTs = new Date(left?.timestamp || left?.createdAt || left?.updatedAt || 0).getTime();
+      const rightTs = new Date(right?.timestamp || right?.createdAt || right?.updatedAt || 0).getTime();
+      return rightTs - leftTs;
+    }).map((entry) => ({
       ...entry,
-      actorLabel: entry.performedByName || entry.performedByXID || entry.performedBy || 'System',
-      icon: ({
-        DOCKET_CREATED: '🆕',
-        STATUS_CHANGED: '🔄',
-        ASSIGNED: '👤',
-        WORKBASKET_CHANGED: '🗂️',
-        PRIORITY_CHANGED: '⚡',
-        COMMENT_ADDED: '💬',
-        UPDATED: '✏️',
-      }[String(entry.type || entry.actionType || '').toUpperCase()] || '•'),
+      description: entry.timelineLabel,
     }));
   }, [timelineApiData, sortedTimelineEvents]);
   const docketTabs = useMemo(() => ([
