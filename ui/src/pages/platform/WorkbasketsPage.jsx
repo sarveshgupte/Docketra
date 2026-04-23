@@ -96,6 +96,12 @@ export const PlatformWorkbasketsPage = () => {
       <InlineNotice tone="error" message={isError ? 'Unable to load the workbench queue.' : ''} />
       <InlineNotice tone="success" message={success} />
       <RefreshNotice refreshing={isFetching && !isLoading} message="Refreshing the workbench queue in the background…" />
+      <PageSection
+        title="What this queue is for"
+        description="Workbench is the shared pull queue. Dockets appear here when they are unassigned or routed to team intake. Pulling a docket moves it into an owner’s My Worklist."
+      >
+        <p className="muted">If this is empty, create a docket or check category/subcategory-to-workbench mapping in Work Settings.</p>
+      </PageSection>
       <PageSection title="Shared queue" description={`${filteredRows.length} dockets available in this shared workflow queue.`}>
         <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL'}>
           <input
@@ -150,7 +156,7 @@ export const PlatformWorkbasketsPage = () => {
           error={isError ? 'Unable to load the workbench queue.' : ''}
           onRetry={() => void refetch()}
           hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL'}
-          emptyLabel="No dockets are currently available to pull from the Workbench."
+          emptyLabel="No dockets are in Workbench yet. Create your first docket or validate routing setup to populate this queue."
           emptyLabelFiltered="No Workbench dockets match your current search or filters."
         />
       </PageSection>

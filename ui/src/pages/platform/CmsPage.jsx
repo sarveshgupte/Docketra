@@ -351,6 +351,12 @@ export const PlatformCmsPage = () => {
       <InlineNotice tone="info" message={copyState} />
       <RefreshNotice refreshing={refreshing} message="Refreshing intake queue in the background…" />
       <StatGrid items={cmsStats} />
+      <PageSection
+        title="What this module is for"
+        description="CMS captures intake submissions. Leads are created first, then client/docket creation follows your configured intake settings."
+      >
+        <p className="muted">If no data appears yet, publish one form and submit a test intake.</p>
+      </PageSection>
 
       <PageSection title="Quick actions" description="Move from intake setup to queue processing quickly.">
         <div className="action-row">
