@@ -37,6 +37,7 @@ import { ROUTES } from '../constants/routes';
 import { WORK_TYPE, getWorkTypeLabel, normalizeWorkTypeFilter } from '../utils/workType';
 import { RouteErrorFallback } from '../components/routing/RouteErrorFallback';
 import { useActiveDocket } from '../hooks/useActiveDocket';
+import { useQueryClient } from '@tanstack/react-query';
 import { DocketBulkUploadModal } from '../components/bulk/DocketBulkUploadModal';
 import {
   CasesFiltersCard,
@@ -79,6 +80,7 @@ export const CasesPage = () => {
 
   const { showSuccess, showToast } = useToast();
   const { openDocket } = useActiveDocket();
+  const queryClient = useQueryClient();
   // Use a stable, unique identifier per user for saved-views storage.
   // _id is the MongoDB ObjectId; id is an alias used in some API responses.
   const savedViewsUserId = user?._id || user?.id || user?.email || null;
@@ -302,6 +304,20 @@ export const CasesPage = () => {
   const handleCreateCase = useCallback(() => {
     navigate(ROUTES.CREATE_CASE(firmSlug));
   }, [navigate, firmSlug]);
+
+  const handleCaseHover = useCallback((caseRecord) => {
+    if (!caseRecord?.caseId) return;
+    queryClient.prefetchQuery({
+      queryKey: ['case', caseRecord.caseId, { commentsPage: 1, commentsLimit: 25, activityPage: 1, activityLimit: 25 }],
+      queryFn: () => caseApi.getCaseById(caseRecord.caseId, {
+        commentsPage: 1,
+        commentsLimit: 25,
+        activityPage: 1,
+        activityLimit: 25,
+      }),
+      staleTime: 30 * 1000,
+    });
+  }, [queryClient]);
 
   const handleAssignToMe = useCallback(async (caseRecord, event) => {
     event.stopPropagation();
@@ -788,6 +804,7 @@ export const CasesPage = () => {
             rows={sortedCases}
             rowKey="caseId"
             onRowClick={handleCaseClick}
+            onRowHover={handleCaseHover}
             sortState={sortState}
             onSortChange={setSortState}
             activeFilters={activeFilters}

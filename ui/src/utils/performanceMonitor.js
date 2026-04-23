@@ -38,3 +38,14 @@ export const trackAsync = async (metricName, requestKey, runner) => {
 export const perfThresholds = {
   slowRequestMs: SLOW_REQUEST_THRESHOLD_MS,
 };
+
+export const markRouteTransition = (fromPath, toPath, durationMs) => {
+  if (!fromPath || !toPath || fromPath === toPath) return;
+  const roundedDuration = Math.round(durationMs);
+  const level = roundedDuration >= 700 ? 'warn' : 'info';
+  log(level, 'Route transition', {
+    fromPath,
+    toPath,
+    durationMs: roundedDuration,
+  });
+};
