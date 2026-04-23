@@ -37,6 +37,35 @@
 - Kept table/card content visible during manual refreshes and revisit fetches.
 - Reduced flash-of-empty-content behavior on route revisit for core platform list/summary pages.
 
+## Queue hardening addendum (April 23, 2026)
+
+### Issues identified
+- **My Worklist** was doing client-side search/filter/sort on every keystroke and every sort click, with full table recomputation.
+- **My Worklist + Workbasket** showed heavier loading transitions than needed during parameter changes.
+- **Row hover prefetch intent** existed in queue surfaces, but table row hover handlers were being dropped by the shared `TableRow` wrapper.
+- **QC Workbench** had no detail prefetch for likely row-to-detail navigation.
+
+### Frontend changes in this PR
+- Moved non-pending **My Worklist** search/category/subcategory/sort to server query params and React Query cache keys.
+- Added `keepPreviousData` behavior for **My Worklist** fetches so previous rows stay visible while refreshed data loads.
+- Disabled overly aggressive focus-refetch for the queue query where cached data is still fresh.
+- Added background “Refreshing …” messaging for **My Worklist** and **Workbasket** while preserving table body continuity.
+- Fixed shared table row event passthrough so `onMouseEnter` reaches rows and queue prefetch hooks execute reliably.
+- Added docket detail prefetch on likely navigation intent (pointer hover) for **My Worklist**, **Workbasket**, and **QC Workbench**.
+
+### Backend changes in this PR
+- Extended `GET /api/worklists/employee/me` to support:
+  - `search`
+  - `category`
+  - `subcategory`
+  - `sortBy`
+  - `sortOrder`
+- Kept existing pagination contract and tenant scoping intact while pushing high-churn list transforms to Mongo query execution.
+
+### Known limitations / follow-up
+- Full row virtualization was intentionally not introduced in this PR because current table semantics (sticky behaviors + action controls) need a focused pass to avoid UX regressions.
+- `CasesPage` still has broad derived-data work that should be profiled and split in a follow-up optimization pass.
+
 ## Before/after observations (qualitative)
 - **Before**: each mount of high-traffic pages triggered new API calls and full loading states.
 - **After**: revisiting these pages reuses cached data and refreshes in background, reducing blank-state flashes.
