@@ -1,15 +1,6 @@
 import React from 'react';
 import { formatDateTime } from '../../utils/formatDateTime';
-
-const ACTION_LABELS = {
-  DOCK_EXITED: 'Exited from system',
-  CASE_PULLED: 'Docket pulled for review',
-  DOCK_VIEWED: 'Viewed docket',
-  CASE_CREATED: 'New docket created',
-  CASE_UPDATED: 'Docket updated',
-  STATUS_CHANGED: 'Status changed',
-  CASE_CLOSED: 'Docket closed',
-};
+import { getAuditActionLabel } from '../../constants/auditEventLabels';
 
 export const AuditTimeline = ({ events = [], onViewFullTimeline }) => {
   const orderedEvents = [...events].sort((a, b) => {
@@ -26,7 +17,7 @@ export const AuditTimeline = ({ events = [], onViewFullTimeline }) => {
       ) : (
         <div className="audit-timeline-list">
           {orderedEvents.map((event, index) => {
-            const action = event.actionType || event.action || 'CASE_UPDATED';
+            const actionLabel = getAuditActionLabel(event);
             const actorId = event.actorXID || event.performedByXID || event.actor || event.createdByXID;
             const actorName = event.performedByName || event.createdByName || event.actorName;
             const details = event.details || event.comment;
@@ -34,7 +25,7 @@ export const AuditTimeline = ({ events = [], onViewFullTimeline }) => {
             return (
               <div key={event._id || event.id || index} className="audit-entry">
                 <div className="audit-entry-event">
-                  {ACTION_LABELS[action] || action}
+                  {actionLabel}
                   {event._important ? <span className="audit-entry-important">Important</span> : null}
                 </div>
                 <div className="audit-entry-actor">

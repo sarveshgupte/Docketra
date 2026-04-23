@@ -7,13 +7,14 @@ Help new pilot firms reach first success quickly with clear next actions and few
 
 ### Primary Admin
 1. Complete firm profile and defaults.
-2. Confirm BYOS/storage setup.
+2. Confirm BYOS/storage setup and verify visible storage mode (firm-connected preferred for pilot trust).
 3. Ensure at least one active client (default/internal client is acceptable where configured).
 4. Create category + subcategory mapping.
 5. Create/activate at least one workbench.
 6. Create first docket.
 7. Invite first teammate and confirm role hierarchy.
 8. Verify flow: All Dockets → Workbench/My Worklist → QC Workbench.
+9. Run one test export from Storage Settings and confirm recovery path visibility.
 
 ### Admin
 1. Confirm assigned workbench visibility.

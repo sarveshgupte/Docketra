@@ -4,6 +4,7 @@ const DocketAudit = require('../src/models/DocketAudit.model');
 const docketAuditService = require('../src/services/docketAudit.service');
 const Case = require('../src/models/Case.model');
 const { reopenDuePending } = require('../src/services/docketWorkflow.service');
+const { REASON_CODES } = require('../src/services/pilotDiagnostics.service');
 
 async function testCanonicalAuditShape() {
   const originalCreate = DocketAudit.create;
@@ -81,7 +82,7 @@ async function testReopenMovesToWorkbenchWithAudit() {
     const canonical = observed.find((entry) => entry.kind === 'canonical');
     assert.ok(canonical);
     assert.strictEqual(canonical.payload.toState, 'AVAILABLE');
-    assert.strictEqual(canonical.payload.metadata.reasonCode, 'AUTO_REOPEN_DUE');
+    assert.strictEqual(canonical.payload.metadata.reasonCode, REASON_CODES.AUTO_REOPEN_DUE);
   } finally {
     Case.find = originalFind;
     Case.updateMany = originalUpdateMany;

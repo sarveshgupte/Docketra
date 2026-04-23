@@ -11,6 +11,11 @@ const REASON_CODES = Object.freeze({
   SETUP_INCOMPLETE: 'setup_incomplete',
   MISSING_CONTACT: 'missing_contact',
   REPORT_EXPORT_FAILED: 'report_export_failed',
+  MISSING_REFRESH_TOKEN: 'missing_refresh_token',
+  AUTO_REOPEN_DUE: 'AUTO_REOPEN_DUE',
+  STORAGE_EXPORT_FAILED: 'storage_export_failed',
+  EXPORT_DOWNLOAD_UNAVAILABLE: 'export_download_unavailable',
+  BACKUP_RUNS_FETCH_FAILED: 'backup_runs_fetch_failed',
 });
 
 const buildWarning = ({ code, message, recovery = null, context = null }) => ({
