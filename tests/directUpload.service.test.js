@@ -8,10 +8,11 @@ const state = {
   caseFiles: [],
   attachments: [],
   providerMode: 'connected',
-  verifyResult: { ok: true, provider: 'google-drive', fileId: 'drv-1', webViewLink: 'https://view' },
+  connectedVerifyResult: { ok: true, provider: 'google-drive', fileId: 'drv-1', webViewLink: 'https://view', checksum: { raw: 'md5:abc123', algorithm: 'md5', value: 'abc123' } },
+  fallbackVerifyResult: { ok: true, provider: 's3', fileId: 'managed-key', checksum: { raw: 'md5:def456', algorithm: 'md5', value: 'def456' } },
 };
 
-const mockProvider = {
+const connectedProvider = {
   providerName: 'google-drive',
   async createDirectUploadSession() {
     return {
@@ -24,7 +25,7 @@ const mockProvider = {
     };
   },
   async verifyUploadedObject() {
-    return state.verifyResult;
+    return state.connectedVerifyResult;
   },
 };
 
@@ -42,9 +43,27 @@ const mocks = {
     async findOne(query) {
       return state.caseFiles.find((row) => String(row._id) === String(query._id) && String(row.firmId) === String(query.firmId)) || null;
     },
+    async findOneAndUpdate(query, update) {
+      const row = state.caseFiles.find((item) => (
+        String(item._id) === String(query._id)
+        && String(item.firmId) === String(query.firmId)
+        && item.uploadStatus === query.uploadStatus
+      ));
+      if (!row) return null;
+      Object.assign(row, update?.$set || {});
+      return row;
+    },
   },
   '../models/Attachment.model': {
-    findOne() {
+    async findById(id) {
+      return state.attachments.find((row) => String(row._id) === String(id)) || null;
+    },
+    findOne(query = {}) {
+      if (query._id) {
+        return state.attachments.find(
+          (row) => String(row._id) === String(query._id) && String(row.firmId) === String(query.firmId)
+        ) || null;
+      }
       return { sort: () => ({ select: () => ({ lean: async () => null }) }) };
     },
     async create(payload) {
@@ -79,7 +98,7 @@ const mocks = {
         if (state.providerMode === 'fallback') {
           throw new Error('no firm-connected provider');
         }
-        return mockProvider;
+        return connectedProvider;
       },
     },
   },
@@ -92,7 +111,7 @@ const mocks = {
         return { provider: 's3', uploadUrl: 'https://s3-upload', method: 'PUT', headers: {}, objectKey, providerFileId: null };
       }
       async verifyUploadedObject() {
-        return { ok: true, provider: 's3', fileId: 'managed-key' };
+        return state.fallbackVerifyResult;
       }
     },
   },
@@ -122,6 +141,7 @@ const directUploadService = require('../src/services/directUpload.service');
       mimeType: 'application/pdf',
       size: 1200,
       description: 'evidence',
+      checksum: 'md5:abc123',
       role: 'admin',
       user: { xID: 'X123', email: 'a@b.com', name: 'Ada' },
     });
@@ -134,15 +154,27 @@ const directUploadService = require('../src/services/directUpload.service');
       uploadId: intent.uploadId,
       firmId: 'FIRM-1',
       completion: { providerFileId: 'drv-1' },
+      checksum: 'md5:abc123',
       user: { xID: 'X123', email: 'a@b.com', name: 'Ada' },
     });
     assert.strictEqual(attachment.storageFileId, 'drv-1');
     assert.strictEqual(state.caseFiles[0].uploadStatus, 'verified');
 
     let mismatchRejected = false;
+    const mismatchIntent = await directUploadService.createIntent({
+      firmId: 'FIRM-1',
+      caseId: 'DCK-1',
+      source: 'upload',
+      fileName: 'mismatch.pdf',
+      mimeType: 'application/pdf',
+      size: 1000,
+      description: 'mismatch',
+      role: 'admin',
+      user: { xID: 'X123', email: 'a@b.com', name: 'Ada' },
+    });
     try {
       await directUploadService.finalizeIntent({
-        uploadId: intent.uploadId,
+        uploadId: mismatchIntent.uploadId,
         firmId: 'FIRM-1',
         completion: { providerFileId: 'wrong' },
         user: { xID: 'X123', email: 'a@b.com', name: 'Ada' },
@@ -151,6 +183,32 @@ const directUploadService = require('../src/services/directUpload.service');
       mismatchRejected = error.code === 'UPLOAD_IDENTIFIER_MISMATCH' || error.status === 409;
     }
     assert.ok(mismatchRejected, 'mismatched completion metadata should be rejected');
+
+    let checksumMismatchRejected = false;
+    const checksumIntent = await directUploadService.createIntent({
+      firmId: 'FIRM-1',
+      caseId: 'DCK-1',
+      source: 'upload',
+      fileName: 'checksum.pdf',
+      mimeType: 'application/pdf',
+      size: 1200,
+      description: 'checksum',
+      checksum: 'md5:abc123',
+      role: 'admin',
+      user: { xID: 'X123', email: 'a@b.com', name: 'Ada' },
+    });
+    try {
+      await directUploadService.finalizeIntent({
+        uploadId: checksumIntent.uploadId,
+        firmId: 'FIRM-1',
+        completion: { providerFileId: 'drv-1' },
+        checksum: 'md5:xxxxxx',
+        user: { xID: 'X123', email: 'a@b.com', name: 'Ada' },
+      });
+    } catch (error) {
+      checksumMismatchRejected = error.code === 'UPLOAD_CHECKSUM_MISMATCH';
+    }
+    assert.ok(checksumMismatchRejected, 'checksum mismatches should be rejected');
 
     const expiringIntent = await directUploadService.createIntent({
       firmId: 'FIRM-1',
@@ -194,6 +252,41 @@ const directUploadService = require('../src/services/directUpload.service');
     });
     assert.strictEqual(fallbackIntent.provider, 's3');
     assert.strictEqual(fallbackIntent.providerMode, 'managed_fallback');
+
+    state.providerMode = 'connected';
+    const fallbackAttachment = await directUploadService.finalizeIntent({
+      uploadId: fallbackIntent.uploadId,
+      firmId: 'FIRM-1',
+      completion: { objectKey: fallbackIntent.objectKey },
+      checksum: 'md5:def456',
+      user: { xID: 'X123', email: 'a@b.com', name: 'Ada' },
+    });
+    assert.strictEqual(fallbackAttachment.storageProvider, 's3', 'finalize should honor session backend');
+
+    const firstFinalize = await directUploadService.finalizeIntent({
+      uploadId: intent.uploadId,
+      firmId: 'FIRM-1',
+      completion: { providerFileId: 'drv-1' },
+      checksum: 'md5:abc123',
+      user: { xID: 'X123', email: 'a@b.com', name: 'Ada' },
+    });
+    const secondFinalize = await directUploadService.finalizeIntent({
+      uploadId: intent.uploadId,
+      firmId: 'FIRM-1',
+      completion: { providerFileId: 'drv-1' },
+      checksum: 'md5:abc123',
+      user: { xID: 'X123', email: 'a@b.com', name: 'Ada' },
+    });
+    assert.strictEqual(String(firstFinalize._id), String(secondFinalize._id), 'finalize should be idempotent');
+    assert.strictEqual(
+      state.attachments.filter((item) => item.fileName === 'evidence.pdf').length,
+      1,
+      'idempotent finalize should not create duplicate attachments'
+    );
+
+    const { computeCleanupAtForStatus } = directUploadService;
+    assert.strictEqual(computeCleanupAtForStatus('initiated'), null, 'initiated sessions should not get cleanup ttl');
+    assert.ok(computeCleanupAtForStatus('failed') instanceof Date, 'terminal sessions should get cleanup ttl');
 
     console.log('directUpload.service test passed');
   } catch (error) {

@@ -46,6 +46,7 @@ For details, see `docs/architecture/byos-direct-upload-flow.md`.
 - Client uploads bytes directly to storage provider URL.
 - Finalize verifies expected provider identity/object scope from server-stored session metadata.
 - Client completion metadata is optional and cannot override server-tracked identity.
+- Finalize backend resolution is pinned to session `providerMode`; current tenant storage state cannot override session backend.
 
 ### 3.3 Upload session lifecycle
 Upload session record states:
@@ -54,6 +55,15 @@ Upload session record states:
 - `verified`
 - `failed`
 - `abandoned`
+
+Finalize behavior guarantees:
+- Idempotent finalize for already `verified` sessions (returns linked attachment).
+- Expired sessions transition to `abandoned`.
+- Verification/checksum failures transition to `failed`.
+
+Retention/cleanup:
+- Terminal sessions (`verified`, `failed`, `abandoned`) are assigned `cleanupAt`.
+- Mongo TTL index on `cleanupAt` deletes stale terminal sessions automatically after configured retention.
 
 ### 3.4 Legacy upload pipeline status
 - Legacy server-staged multipart upload endpoints are deprecated.

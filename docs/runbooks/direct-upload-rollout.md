@@ -16,6 +16,8 @@
    - connected provider tenants
    - fallback-only tenants (no connected provider)
 3. Confirm finalize enforces identifier matching and tenant-scoped verification.
+   - Confirm finalize resolves backend from upload-session `providerMode`, not current tenant provider state.
+   - Confirm finalized session retries return the same attachment (idempotent finalize).
 4. Monitor upload session statuses (`initiated`, `verified`, `failed`, `abandoned`).
 5. Verify no new direct-upload sessions use `localPath`.
 
@@ -28,4 +30,5 @@ Alert on:
 - `STORAGE_NOT_AVAILABLE`
 - `UPLOAD_SESSION_EXPIRED`
 - `UPLOAD_VERIFICATION_FAILED`
+- `UPLOAD_CHECKSUM_MISMATCH`
 - identifier mismatch rejections
