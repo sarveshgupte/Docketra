@@ -56,6 +56,7 @@ const log = require('../utils/log');
 const docketAuditService = require('../services/docketAudit.service');
 const { clientProfileStorageService } = require('../services/clientProfileStorage.service');
 const directUploadService = require('../services/directUpload.service');
+const { buildWorkflowMeta, logWorkflowEvent } = require('../utils/workflowDiagnostics');
 
 const inFlightCaseRecordLoads = new Map();
 
@@ -388,6 +389,7 @@ const addAttachment = async (req, res) => {
 };
 
 const createAttachmentUploadIntent = async (req, res) => {
+  const startedAt = Date.now();
   try {
     if (areFileUploadsDisabled()) return res.status(503).json({ success: false, message: 'File uploads are temporarily disabled' });
     const { caseId } = req.params;
@@ -405,13 +407,31 @@ const createAttachmentUploadIntent = async (req, res) => {
       role: req.user?.role,
       user: req.user,
     });
+    logWorkflowEvent('DIRECT_UPLOAD_INTENT', buildWorkflowMeta({
+      req,
+      workflow: 'docket_attachment_upload_intent',
+      entity: { caseId, uploadId: intent.uploadId },
+      provider: intent.provider,
+      providerMode: intent.providerMode,
+      durationMs: Date.now() - startedAt,
+      outcome: 'success',
+    }));
     return res.status(201).json({ success: true, data: intent });
   } catch (error) {
-    return res.status(error.status || 400).json({ success: false, message: error.message });
+    logWorkflowEvent('DIRECT_UPLOAD_INTENT', buildWorkflowMeta({
+      req,
+      workflow: 'docket_attachment_upload_intent',
+      entity: { caseId: req.params?.caseId || null },
+      durationMs: Date.now() - startedAt,
+      outcome: 'failed',
+      error,
+    }));
+    return res.status(error.status || 400).json({ success: false, code: error.code || 'UPLOAD_INTENT_FAILED', message: error.message });
   }
 };
 
 const finalizeAttachmentUpload = async (req, res) => {
+  const startedAt = Date.now();
   try {
     const { uploadId, completion = {}, checksum } = req.body || {};
     const attachment = await directUploadService.finalizeIntent({
@@ -421,9 +441,25 @@ const finalizeAttachmentUpload = async (req, res) => {
       firmId: String(req.user?.firmId || ''),
       user: req.user,
     });
+    logWorkflowEvent('DIRECT_UPLOAD_FINALIZE', buildWorkflowMeta({
+      req,
+      workflow: 'docket_attachment_upload_finalize',
+      entity: { caseId: req.params?.caseId || null, uploadId },
+      provider: attachment.storageProvider || null,
+      durationMs: Date.now() - startedAt,
+      outcome: 'success',
+    }));
     return res.status(201).json({ success: true, data: attachment });
   } catch (error) {
-    return res.status(error.status || 400).json({ success: false, message: error.message });
+    logWorkflowEvent('DIRECT_UPLOAD_FINALIZE', buildWorkflowMeta({
+      req,
+      workflow: 'docket_attachment_upload_finalize',
+      entity: { caseId: req.params?.caseId || null, uploadId: req.body?.uploadId || null },
+      durationMs: Date.now() - startedAt,
+      outcome: 'failed',
+      error,
+    }));
+    return res.status(error.status || 400).json({ success: false, code: error.code || 'UPLOAD_FINALIZE_FAILED', message: error.message });
   }
 };
 
