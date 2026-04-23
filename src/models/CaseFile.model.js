@@ -120,7 +120,15 @@ const caseFileSchema = new mongoose.Schema(
 
 caseFileSchema.index({ firmId: 1, caseId: 1 });
 caseFileSchema.index({ firmId: 1, checksum: 1 });
-caseFileSchema.index({ firmId: 1, attachmentId: 1 }, { sparse: true, unique: true });
+caseFileSchema.index(
+  { firmId: 1, attachmentId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      attachmentId: { $type: 'objectId' },
+    },
+  }
+);
 caseFileSchema.index(
   { cleanupAt: 1 },
   { expireAfterSeconds: 0, partialFilterExpression: { cleanupAt: { $type: 'date' } } }

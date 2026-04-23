@@ -400,11 +400,17 @@ const finalizeIntent = async ({ uploadId, firmId, user, completion = {}, checksu
 
   if (lockRecord) {
     uploadRecord.uploadStatus = lockRecord.uploadStatus;
-  } else if (uploadRecord.uploadStatus !== 'uploaded') {
+  } else {
     const latestRecord = await CaseFile.findOne({ _id: uploadRecord._id, firmId: String(firmId) });
     if (latestRecord?.uploadStatus === 'verified' && latestRecord.attachmentId) {
       const existingAttachment = await Attachment.findOne({ _id: latestRecord.attachmentId, firmId: String(firmId) });
       if (existingAttachment) return existingAttachment;
+    }
+    if (latestRecord?.uploadStatus === 'uploaded') {
+      const error = new Error('Upload session is already being finalized');
+      error.status = 409;
+      error.code = 'UPLOAD_SESSION_IN_PROGRESS';
+      throw error;
     }
     const error = new Error('Upload session is already being finalized');
     error.status = 409;

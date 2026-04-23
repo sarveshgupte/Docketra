@@ -284,6 +284,37 @@ const directUploadService = require('../src/services/directUpload.service');
       'idempotent finalize should not create duplicate attachments'
     );
 
+    const inProgressIntent = await directUploadService.createIntent({
+      firmId: 'FIRM-1',
+      caseId: 'DCK-1',
+      source: 'upload',
+      fileName: 'in-progress.pdf',
+      mimeType: 'application/pdf',
+      size: 1200,
+      description: 'in progress',
+      role: 'admin',
+      user: { xID: 'X123', email: 'a@b.com', name: 'Ada' },
+    });
+    const inProgressSession = state.caseFiles.find((row) => String(row._id) === inProgressIntent.uploadId);
+    inProgressSession.uploadStatus = 'uploaded';
+    let inProgressRejected = false;
+    try {
+      await directUploadService.finalizeIntent({
+        uploadId: inProgressIntent.uploadId,
+        firmId: 'FIRM-1',
+        completion: { providerFileId: 'drv-1' },
+        user: { xID: 'X123', email: 'a@b.com', name: 'Ada' },
+      });
+    } catch (error) {
+      inProgressRejected = error.code === 'UPLOAD_SESSION_IN_PROGRESS';
+    }
+    assert.ok(inProgressRejected, 'finalize retries should fail while another finalize is in progress');
+    assert.strictEqual(
+      state.attachments.filter((item) => item.fileName === 'in-progress.pdf').length,
+      0,
+      'in-progress finalize retries should not create attachments'
+    );
+
     const { computeCleanupAtForStatus } = directUploadService;
     assert.strictEqual(computeCleanupAtForStatus('initiated'), null, 'initiated sessions should not get cleanup ttl');
     assert.ok(computeCleanupAtForStatus('failed') instanceof Date, 'terminal sessions should get cleanup ttl');
