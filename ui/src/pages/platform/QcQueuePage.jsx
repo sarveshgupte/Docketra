@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
 import { caseApi } from '../../api/case.api';
@@ -17,6 +18,7 @@ import {
   getDocketRouteId,
 } from './PlatformShared';
 import { usePlatformQcQueueQuery } from '../../hooks/usePlatformDataQueries';
+import { CASE_QUERY_PARAMS } from '../../hooks/useCaseQuery';
 
 export const PlatformQcQueuePage = () => {
   const { firmSlug } = useParams();
@@ -28,6 +30,7 @@ export const PlatformQcQueuePage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [pendingQcId, setPendingQcId] = useState('');
+  const queryClient = useQueryClient();
 
   const {
     data: rows = [],
@@ -56,6 +59,16 @@ export const PlatformQcQueuePage = () => {
   const clearFilters = () => {
     setSearch('');
     setAssigneeFilter('ALL');
+  };
+
+  const prefetchCaseDetail = (row) => {
+    const caseId = getDocketRouteId(row);
+    if (!caseId || !window.matchMedia?.('(pointer:fine)').matches) return;
+    queryClient.prefetchQuery({
+      queryKey: ['case', caseId, CASE_QUERY_PARAMS],
+      queryFn: () => caseApi.getCaseById(caseId, CASE_QUERY_PARAMS),
+      staleTime: 30 * 1000,
+    });
   };
 
   const openFromQueue = (row) => {
@@ -123,7 +136,7 @@ export const PlatformQcQueuePage = () => {
           rows={filteredRows.map((r) => (
             <tr key={r.caseInternalId || r._id}>
               <td>
-                <button className="action-primary" type="button" onClick={() => openFromQueue(r)}>
+                <button className="action-primary" type="button" onMouseEnter={() => prefetchCaseDetail(r)} onFocus={() => prefetchCaseDetail(r)} onClick={() => openFromQueue(r)}>
                   {formatDocketLabel(r)}
                 </button>
               </td>
