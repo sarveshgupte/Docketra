@@ -175,3 +175,19 @@ Key findings from the current implementation:
 - **Frontend:** component consolidation, workflow parity, accessibility fixes.
 - **Platform/Backend:** stable list/filter contracts and action-response payloads.
 - **QA:** workflow matrix with keyboard + error-path coverage.
+
+### Queue consistency workstream update (2026-04-23)
+
+Completed:
+- Shared queue table behavior standardized for row focus/open keyboard behavior, sort control semantics, refresh notices, and filter-chip reset affordances.
+- Worklist and Workbasket now use a shared queue filter-bar shell (`QueueFilterBar`) to align sizing/spacing and clear-all behavior.
+- QC queue actions now route through `ActionConfirmModal` with consistent operational wording and destructive affordance for fail actions.
+
+Manual QA checklist:
+1. Verify row open via mouse click and keyboard (Tab to row + Enter/Space) in All Dockets, Worklist, and Workbasket.
+2. Verify active filter chips can be removed individually and cleared in bulk on all queue screens.
+3. Trigger QC pass/correct/fail and confirm modal copy + cancel/confirm keyboard behavior.
+4. Trigger background refresh and verify existing rows stay visible while refresh notice is shown.
+
+Remaining follow-ups:
+- Platform shared queue table still uses a page-local implementation; evaluate full consolidation into common DataTable in a future incremental PR.

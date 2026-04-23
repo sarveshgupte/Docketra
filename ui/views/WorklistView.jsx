@@ -9,6 +9,7 @@ import { EmptyState } from '../src/components/ui/EmptyState';
 import { TableSkeleton } from '../src/components/common/Skeleton';
 import { DataTable } from '../src/components/common/DataTable';
 import { formClasses } from '../src/theme/tokens';
+import { QueueFilterBar } from '../src/components/common/QueueFilterBar';
 import { useKeyboardShortcuts } from '../src/hooks/useKeyboardShortcuts';
 import { CASE_QUERY_PARAMS } from '../src/hooks/useCaseQuery';
 import { caseApi } from '../src/api/case.api';
@@ -322,7 +323,7 @@ export function WorklistView({
 
   return (
     <Card>
-      <div className="worklist-toolbar">
+      <QueueFilterBar onClear={resetFilters} clearDisabled={!searchQuery.trim() && !categoryFilter && !subcategoryFilter && (!showActiveOnly || isPendingView)}>
         <div className="worklist-toolbar__field worklist-toolbar__field--search">
           <label htmlFor="worklist-search">Search</label>
           <input
@@ -365,21 +366,18 @@ export function WorklistView({
             ))}
           </select>
         </div>
-        <div className="worklist-toolbar__actions">
-          {!isPendingView && (
-            <label className="worklist-toolbar__checkbox" htmlFor="worklist-active-only">
-              <input
-                id="worklist-active-only"
-                type="checkbox"
-                checked={showActiveOnly}
-                onChange={(event) => setShowActiveOnly(event.target.checked)}
-              />
-              <span>Show active dockets</span>
-            </label>
-          )}
-          <Button variant="outline" onClick={resetFilters}>Clear Filters</Button>
-        </div>
-      </div>
+        {!isPendingView && (
+          <label className="worklist-toolbar__checkbox" htmlFor="worklist-active-only">
+            <input
+              id="worklist-active-only"
+              type="checkbox"
+              checked={showActiveOnly}
+              onChange={(event) => setShowActiveOnly(event.target.checked)}
+            />
+            <span>Show active dockets only</span>
+          </label>
+        )}
+      </QueueFilterBar>
 
       <DataTable
         columns={columns}
@@ -390,6 +388,8 @@ export function WorklistView({
         sortState={sortState}
         onSortChange={onSortChange}
         loading={isLoading && !records.length}
+        refreshing={isFetching && records.length > 0}
+        refreshingMessage="Refreshing worklist in the background…"
         activeFilters={activeFilters}
         onRemoveFilter={removeFilter}
         onResetFilters={resetFilters}
@@ -399,25 +399,13 @@ export function WorklistView({
             description="Try changing your filters or clear them to see all assigned dockets."
           />
         )}
+        pagination={!isPendingView ? {
+          page,
+          pages: Math.max(pagination.pages || 1, 1),
+          total: pagination.total || 0,
+          onPageChange: (nextPage) => setPage(nextPage),
+        } : null}
       />
-      {isFetching && records.length > 0 ? <p className="mt-2 text-xs text-gray-500">Refreshing worklist…</p> : null}
-      {!isPendingView ? (
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-          <span>Page {pagination.page} of {Math.max(pagination.pages || 1, 1)} · {pagination.total || 0} dockets</span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" disabled={page <= 1} onClick={() => setPage((prev) => Math.max(1, prev - 1))}>
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              disabled={page >= Math.max(pagination.pages || 1, 1)}
-              onClick={() => setPage((prev) => prev + 1)}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      ) : null}
     </Card>
   );
 }
