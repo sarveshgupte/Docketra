@@ -9,6 +9,8 @@ const state = {
   attachments: [],
   providerMode: 'connected',
   verifyResult: { ok: true, provider: 'google-drive', fileId: 'drv-1', webViewLink: 'https://view' },
+  connectedVerifyCalls: 0,
+  fallbackVerifyCalls: 0,
 };
 
 const mockProvider = {
@@ -24,6 +26,7 @@ const mockProvider = {
     };
   },
   async verifyUploadedObject() {
+    state.connectedVerifyCalls += 1;
     return state.verifyResult;
   },
 };
@@ -92,6 +95,7 @@ const mocks = {
         return { provider: 's3', uploadUrl: 'https://s3-upload', method: 'PUT', headers: {}, objectKey, providerFileId: null };
       }
       async verifyUploadedObject() {
+        state.fallbackVerifyCalls += 1;
         return { ok: true, provider: 's3', fileId: 'managed-key' };
       }
     },
@@ -194,6 +198,17 @@ const directUploadService = require('../src/services/directUpload.service');
     });
     assert.strictEqual(fallbackIntent.provider, 's3');
     assert.strictEqual(fallbackIntent.providerMode, 'managed_fallback');
+
+    state.providerMode = 'connected';
+    const fallbackAttachment = await directUploadService.finalizeIntent({
+      uploadId: fallbackIntent.uploadId,
+      firmId: 'FIRM-1',
+      completion: { objectKey: state.caseFiles.find((row) => String(row._id) === fallbackIntent.uploadId)?.providerObjectKey },
+      user: { xID: 'X123', email: 'a@b.com', name: 'Ada' },
+    });
+    assert.strictEqual(fallbackAttachment.storageProvider, 's3');
+    assert.strictEqual(state.fallbackVerifyCalls, 1, 'finalize should verify with managed fallback provider recorded on session');
+    assert.strictEqual(state.connectedVerifyCalls, 1, 'connected provider should only verify the initial non-fallback finalize');
 
     console.log('directUpload.service test passed');
   } catch (error) {

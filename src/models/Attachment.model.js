@@ -113,7 +113,7 @@ const attachmentSchema = new mongoose.Schema({
 
   storageProvider: {
     type: String,
-    enum: ['google-drive'],
+    enum: ['google-drive', 's3'],
     required: function requiredStorageProvider() {
       return !!this.storageFileId;
     },
