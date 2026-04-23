@@ -53,3 +53,8 @@
 - Some non-form ingestion paths still rely on path-specific idempotency behavior.
 - Poor intake contact quality can still require manual client cleanup.
 - Recovery remains operator-driven (auditable), not full transactional rollback across all steps.
+
+
+## Pilot support diagnostics update (2026-04-23)
+- Intake routing and docket auto-create now attach structured `warningDetails` with reason codes (`missing_routing`, `inactive_workbench`, `missing_client`, `idempotent_replay`).
+- Lead records persist `metadata.intakeDiagnostics` to support operator recovery and replay debugging.

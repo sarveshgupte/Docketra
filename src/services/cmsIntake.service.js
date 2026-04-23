@@ -8,6 +8,7 @@ const clientService = require('./client.service');
 const routingService = require('./routing.service');
 const docketAuditService = require('./docketAudit.service');
 const log = require('../utils/log');
+const { REASON_CODES, buildWarning, summarizeWarnings, logPilotEvent } = require('./pilotDiagnostics.service');
 
 const SPAM_NAME_PATTERN = /https?:\/\//i;
 
@@ -209,6 +210,7 @@ async function resolveRouting({ firmId, config, metadata }) {
 
   if (!metadata.service) {
     return {
+      reasonCode: REASON_CODES.MISSING_ROUTING,
       validationMessage: 'Docket routing is incomplete: service or default category/subcategory config is required.',
     };
   }
@@ -218,19 +220,22 @@ async function resolveRouting({ firmId, config, metadata }) {
     if (!routing?.workbasketId) {
       return {
         ...routing,
-        validationMessage: 'Routing matched a category/subcategory, but no workbench is mapped.',
+        reasonCode: REASON_CODES.MISSING_ROUTING,
+        validationMessage: 'Docket skipped because no active workbench mapping exists for the selected routing rule.',
       };
     }
     const workbench = await Team.findOne({ firmId, _id: routing.workbasketId, isActive: true }).select('_id').lean();
     if (!workbench) {
       return {
         ...routing,
-        validationMessage: 'Routing points to an inactive or missing workbench. Update category/subcategory mapping.',
+        reasonCode: REASON_CODES.INACTIVE_WORKBENCH,
+        validationMessage: 'Docket skipped because routing points to an inactive or missing workbench.',
       };
     }
     return routing;
   } catch (error) {
     return {
+      reasonCode: REASON_CODES.MISSING_ROUTING,
       validationMessage: error.message,
     };
   }
@@ -316,6 +321,11 @@ async function processCmsSubmission({
       const existingWarnings = Array.isArray(existingLead?.metadata?.intakeOutcome?.warnings)
         ? existingLead.metadata.intakeOutcome.warnings
         : [];
+      const replayWarning = buildWarning({
+        code: REASON_CODES.IDEMPOTENT_REPLAY,
+        message: 'Existing lead returned due to idempotent replay.',
+        recovery: 'Reuse the existing leadId/clientId/docketId and avoid retrying with the same idempotency key.',
+      });
       return {
         lead: existingLead,
         client: null,
@@ -326,7 +336,8 @@ async function processCmsSubmission({
           pageSlug: existingLead?.metadata?.pageSlug || metadata.pageSlug,
           formSlug: existingLead?.metadata?.formSlug || metadata.formSlug,
           timestamp: metadata.timestamp,
-          warnings: [...existingWarnings, 'Duplicate idempotency key detected. Existing lead returned.'],
+          warnings: [...existingWarnings, replayWarning.message],
+          warningDetails: [replayWarning],
           intakeOutcome: existingLead?.metadata?.intakeOutcome || null,
           idempotentReplay: true,
           workflowSteps,
@@ -385,13 +396,21 @@ async function processCmsSubmission({
   });
   workflowSteps.push({ step: 'lead_created', status: 'succeeded', leadId: String(lead._id) });
 
-  const warnings = [];
+  const warningDetails = [];
+  const addWarning = (warning) => {
+    if (!warning?.message) return;
+    warningDetails.push(warning);
+  };
   let client = null;
 
   if (config.autoCreateClient) {
     if (!email && !phone) {
-      warnings.push('Client was not created because email or phone is required.');
-      workflowSteps.push({ step: 'client_resolution', status: 'skipped', reason: 'missing_contact' });
+      addWarning(buildWarning({
+        code: REASON_CODES.MISSING_CONTACT,
+        message: 'Client not created because contact details (email or phone) are missing.',
+        recovery: 'Capture at least one contact detail and retry intake.',
+      }));
+      workflowSteps.push({ step: 'client_resolution', status: 'skipped', reasonCode: REASON_CODES.MISSING_CONTACT });
     } else {
       client = await clientService.findClientByEmailOrPhone({ firmId, email, phone });
       if (client) {
@@ -422,8 +441,12 @@ async function processCmsSubmission({
   if (config.autoCreateDocket) {
     const routing = await resolveRouting({ firmId, config, metadata });
     if (routing.validationMessage) {
-      warnings.push(routing.validationMessage);
-      workflowSteps.push({ step: 'routing_resolution', status: 'failed', reason: routing.validationMessage });
+      addWarning(buildWarning({
+        code: routing.reasonCode || REASON_CODES.MISSING_ROUTING,
+        message: routing.validationMessage,
+        recovery: 'Review category/subcategory mapping and active workbench assignment in work settings.',
+      }));
+      workflowSteps.push({ step: 'routing_resolution', status: 'failed', reasonCode: routing.reasonCode || REASON_CODES.MISSING_ROUTING });
       log.warn('cms_docket_routing_failed', {
         firmId,
         leadId: lead._id,
@@ -431,8 +454,12 @@ async function processCmsSubmission({
       });
     } else {
       if (!client) {
-        warnings.push('Docket auto-create skipped because no canonical client is available.');
-        workflowSteps.push({ step: 'docket_create', status: 'skipped', reason: 'missing_client' });
+        addWarning(buildWarning({
+          code: REASON_CODES.MISSING_CLIENT,
+          message: 'Docket skipped because no canonical client is available.',
+          recovery: 'Resolve or create a client first, then retry docket creation.',
+        }));
+        workflowSteps.push({ step: 'docket_create', status: 'skipped', reasonCode: REASON_CODES.MISSING_CLIENT });
       } else {
         workflowSteps.push({
           step: 'routing_resolution',
@@ -481,8 +508,9 @@ async function processCmsSubmission({
     config,
     client,
     docket,
-    warnings,
+    warnings: summarizeWarnings(warningDetails),
   });
+  finalOutcome.warningDetails = warningDetails;
   const initialOutcome = lead?.metadata?.intakeOutcome || {};
   if (
     initialOutcome.createdClient !== finalOutcome.createdClient
@@ -492,12 +520,36 @@ async function processCmsSubmission({
     || JSON.stringify(initialOutcome.warnings || []) !== JSON.stringify(finalOutcome.warnings || [])
   ) {
     if (mongoose.isValidObjectId(lead._id)) {
-      await Lead.findByIdAndUpdate(lead._id, { $set: { 'metadata.intakeOutcome': finalOutcome } });
+      await Lead.findByIdAndUpdate(lead._id, {
+        $set: {
+          'metadata.intakeOutcome': finalOutcome,
+          'metadata.intakeDiagnostics': {
+            warningDetails,
+            workflowSteps,
+            lastFailureReason: warningDetails[0]?.code || null,
+            updatedAt: new Date().toISOString(),
+          },
+        },
+      });
     }
     if (lead.metadata) {
       lead.metadata.intakeOutcome = finalOutcome;
     }
   }
+
+
+  logPilotEvent({
+    event: 'cms_intake_outcome',
+    severity: warningDetails.length ? 'warn' : 'info',
+    metadata: {
+      firmId,
+      leadId: String(lead._id),
+      submissionMode,
+      createdClient: finalOutcome.createdClient,
+      createdDocket: finalOutcome.createdDocket,
+      warningCodes: warningDetails.map((warning) => warning.code),
+    },
+  });
 
   return {
     lead,
@@ -509,7 +561,8 @@ async function processCmsSubmission({
       pageSlug: metadata.pageSlug,
       formSlug: metadata.formSlug,
       timestamp: metadata.timestamp,
-      warnings,
+      warnings: summarizeWarnings(warningDetails),
+      warningDetails,
       intakeOutcome: finalOutcome,
       workflowSteps,
     },

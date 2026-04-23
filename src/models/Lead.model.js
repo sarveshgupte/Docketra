@@ -155,6 +155,13 @@ const leadSchema = new mongoose.Schema({
       autoCreateClientEnabled: { type: Boolean, default: false },
       autoCreateDocketEnabled: { type: Boolean, default: false },
       warnings: { type: [String], default: [] },
+      warningDetails: { type: [mongoose.Schema.Types.Mixed], default: [] },
+      updatedAt: { type: String, default: null },
+    },
+    intakeDiagnostics: {
+      warningDetails: { type: [mongoose.Schema.Types.Mixed], default: [] },
+      workflowSteps: { type: [mongoose.Schema.Types.Mixed], default: [] },
+      lastFailureReason: { type: String, default: null },
       updatedAt: { type: String, default: null },
     },
   },
