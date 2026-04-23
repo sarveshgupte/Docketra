@@ -1,76 +1,60 @@
-# BYOS Storage Architecture (Client Profile Offloading)
+# BYOS Storage Architecture (Umbrella)
 
-## Objective
-Docketra MongoDB stores only minimal workflow metadata for clients. Full client profile payloads are stored in the active storage backend:
-- firm-connected provider (Google Drive, etc.)
-- Docketra-managed fallback storage (S3-backed) when firm storage is unavailable
+This document is the source of truth for Docketra BYOS storage behavior across **client profiles** and **file uploads**.
 
-## Client Data Boundary
-### Allowed in Mongo (`Client`)
-- `_id`, `firmId`, `clientId`
-- `businessName` (display/index)
-- `status`, `isActive`, system flags
-- `profileRef` pointer metadata (`provider`, `mode`, `fileId/objectKey`, `checksum`, `version`, timestamps)
+## 1) Core BYOS principles
+- Firm data bytes should live in tenant storage whenever possible.
+- Docketra app servers should avoid durable file-byte persistence for normal product workflows.
+- Multi-tenant boundaries are enforced by server-side firm context, never client-supplied tenant identifiers.
 
-### Not allowed in Mongo (migrated to profile object)
-- PAN/CIN/GST/TAN
-- addresses
-- detailed contact person attributes
-- client fact sheet notes/description/basic info/comments
-- other rich profile payload fields
+## 2) Client profile storage architecture (existing)
 
-## Enforcement guarantees
-- `PAN`, `TAN`, `GST`, `CIN`, `businessAddress`, `secondaryContactNumber`, `contactPerson*`, and `clientFactSheet` are **hydration-only API fields**.
-- Any write attempt for these fields to Mongo is blocked by schema/repository enforcement with `BYOS_SENSITIVE_FIELD_PERSISTENCE_BLOCKED`.
-- API responses may still include these properties after profile hydration, but Mongo is not the source of truth.
+### 2.1 Sensitive profile fields are storage-backed
+- Sensitive profile fields are not treated as canonical Mongo fields after migration.
+- `Client.profileRef` is the canonical pointer for profile payload location/version/checksum.
+- Hydration-only behavior: API reads hydrate profile fields from storage references at read time.
 
-## Storage-backed profile object
-Stored as versioned JSON:
+### 2.2 `profileRef` contract
+`Client.profileRef` tracks:
+- `provider`
+- `mode` (`firm_connected` | `managed_fallback`)
+- `fileId` (provider-native ID where applicable)
+- `objectKey` (object path/key where applicable)
+- `checksum`, `version`, `schemaVersion`, timestamps
 
-```json
-{
-  "schemaVersion": 1,
-  "clientId": "C000123",
-  "firmId": "...",
-  "profileVersion": 3,
-  "updatedAt": "2026-04-22T00:00:00.000Z",
-  "updatedBy": "X123456",
-  "profile": {
-    "legalName": "...",
-    "identifiers": { "pan": null, "gstin": null, "tan": null, "cin": null },
-    "contacts": { "primaryEmail": null, "primaryPhone": null, "secondaryPhone": null, "contactPerson": {} },
-    "addresses": { "businessAddress": null },
-    "factSheet": {},
-    "customFields": {}
-  }
-}
-```
+### 2.3 Backend resolution and fallback
+Profile storage backend resolution uses:
+1. firm-connected provider (when available)
+2. Docketra-managed fallback storage
+3. fail closed if neither backend is available
 
-## Service entry points
-`src/services/clientProfileStorage.service.js`
-- `createClientProfile`
-- `getClientProfile`
-- `updateClientProfile`
-- `deleteClientProfile`
-- `migrateClientProfileToStorage`
+### 2.4 Write guarantees / rollback guarantees
+- Approval and create/update flows must preserve storage-write-first guarantees for profile payloads.
+- Failure to persist required profile storage state must not silently commit an inconsistent profile boundary.
+- Rollback helpers (`persistClientProfileOrRollback`) remain required guardrails for approval/create flows.
 
-`src/services/clientProfileWriteGuard.service.js`
-- `persistClientProfileOrRollback` (shared helper for direct create and approval create flows)
+## 3) Direct upload architecture (new primary upload path)
 
-All storage access requires firm context and tenant-scoped keys/folders.
+For details, see `docs/architecture/byos-direct-upload-flow.md`.
 
-## Fallback mode requirements
-Managed fallback uses S3 via env:
-- `MANAGED_STORAGE_S3_BUCKET`
-- `MANAGED_STORAGE_S3_REGION`
-- optional credentials/prefix
+### 3.1 Supported upload modes
+- `firm_connected`: upload directly to tenant-connected provider.
+- `managed_fallback`: upload directly to Docketra-managed S3 fallback when firm-connected backend is unavailable.
 
-Without these, profile writes fail closed with `STORAGE_NOT_CONNECTED`.
+### 3.2 Upload trust model
+- Backend issues tenant-scoped upload intent + upload session metadata.
+- Client uploads bytes directly to storage provider URL.
+- Finalize verifies expected provider identity/object scope from server-stored session metadata.
+- Client completion metadata is optional and cannot override server-tracked identity.
 
-## Read-path guarantee
-- Profile reads resolve by `Client.profileRef` metadata, not by tenant “currently active provider” alone.
-- Managed-fallback (`provider: docketra_managed`) profile objects remain readable even after a firm later connects an external provider.
+### 3.3 Upload session lifecycle
+Upload session record states:
+- `initiated`
+- `uploaded` (optional intermediate)
+- `verified`
+- `failed`
+- `abandoned`
 
-## Approval-flow guarantee
-- Approval-based client creation explicitly generates `clientId` via `generateNextClientId(...)` before repository create, matching direct create invariants.
-- Approval profile writes use `persistClientProfileOrRollback(...)`, so storage-write failure cannot leave orphan `Client` documents.
+### 3.4 Legacy upload pipeline status
+- Legacy server-staged multipart upload endpoints are deprecated.
+- Legacy worker/local-path upload flow remains **legacy-only** for historical jobs and explicit emergency fallback, not the default path for normal product uploads.

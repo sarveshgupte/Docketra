@@ -150,6 +150,27 @@ module.exports = {
       note: z.string().trim().min(1).max(500).optional(),
     }).strict(),
   },
+  'POST /:caseId/attachments/upload-intent': {
+    params: caseIdParams,
+    body: z.object({
+      fileName: nonEmptyString,
+      mimeType: nonEmptyString,
+      size: z.coerce.number().int().positive(),
+      description: z.string().trim().min(1).max(500),
+      note: z.string().trim().min(1).max(500).optional(),
+    }).strict(),
+  },
+  'POST /:caseId/attachments/finalize': {
+    params: caseIdParams,
+    body: z.object({
+      uploadId: nonEmptyString,
+      completion: z.object({
+        providerFileId: z.string().trim().optional(),
+        objectKey: z.string().trim().optional(),
+      }).optional(),
+      checksum: z.string().trim().optional(),
+    }).strict(),
+  },
   'GET /:caseId/attachments/:attachmentId/view': { params: caseAndAttachmentParams, query: strictEmpty },
   'GET /:caseId/attachments/:attachmentId/download': { params: caseAndAttachmentParams, query: strictEmpty },
   'POST /:caseId/clone': { params: caseIdParams, body: cloneCaseBody },

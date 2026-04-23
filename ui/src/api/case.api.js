@@ -15,7 +15,29 @@ const caseRoute = {
   detail: (caseId) => `/dockets/${caseId}`,
   comments: (caseId) => `/dockets/${caseId}/comments`,
   attachments: (caseId) => `/dockets/${caseId}/attachments`,
+  attachmentIntent: (caseId) => `/dockets/${caseId}/attachments/upload-intent`,
+  attachmentFinalize: (caseId) => `/dockets/${caseId}/attachments/finalize`,
 };
+
+const uploadViaSignedUrl = ({ uploadUrl, uploadMethod = 'PUT', uploadHeaders = {}, file, onProgress }) => new Promise((resolve, reject) => {
+  const xhr = new XMLHttpRequest();
+  xhr.open(uploadMethod, uploadUrl);
+  Object.entries(uploadHeaders || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) xhr.setRequestHeader(key, value);
+  });
+  xhr.upload.onprogress = (event) => {
+    if (!onProgress || !event.lengthComputable) return;
+    const total = event.total || file.size || 0;
+    const loaded = event.loaded || 0;
+    const percent = total > 0 ? Math.round((loaded / total) * 100) : 0;
+    onProgress({ loaded, total, percent });
+  };
+  xhr.onload = () => (xhr.status >= 200 && xhr.status < 300
+    ? resolve()
+    : reject(new Error(`Direct upload failed with status ${xhr.status}`)));
+  xhr.onerror = () => reject(new Error('Direct upload failed due to network error'));
+  xhr.send(file);
+});
 
 const withCaseInvalidation = async (caseId, requestFn) => {
   const response = await requestFn();
@@ -89,25 +111,35 @@ export const caseApi = {
   ),
 
   addAttachment: async (caseId, file, description, onProgress) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('description', description);
+    const intentResponse = await request(
+      (http) => http.post(caseRoute.attachmentIntent(caseId), {
+        fileName: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        size: file.size,
+        description,
+      }),
+      'Failed to create attachment upload intent',
+    );
+    const intent = intentResponse?.data;
+    await uploadViaSignedUrl({
+      uploadUrl: intent?.uploadUrl,
+      uploadMethod: intent?.uploadMethod,
+      uploadHeaders: intent?.uploadHeaders,
+      file,
+      onProgress,
+    });
 
     const response = await withCaseInvalidation(
       caseId,
       () => request(
-        () => api.post(caseRoute.attachments(caseId), formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          onUploadProgress: typeof onProgress === 'function'
-            ? (progressEvent) => {
-              const total = progressEvent.total || file.size || 0;
-              const loaded = progressEvent.loaded || 0;
-              const percent = total > 0 ? Math.round((loaded / total) * 100) : 0;
-              onProgress({ loaded, total, percent });
-            }
-            : undefined,
+        (http) => http.post(caseRoute.attachmentFinalize(caseId), {
+          uploadId: intent.uploadId,
+          completion: {
+            ...(intent.providerFileId ? { providerFileId: intent.providerFileId } : {}),
+            ...(intent.objectKey ? { objectKey: intent.objectKey } : {}),
+          },
         }),
-        'Failed to upload attachment',
+        'Failed to finalize attachment upload',
       ),
     );
 

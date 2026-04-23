@@ -55,6 +55,7 @@ const buildCaseBulkService = require('../services/caseBulk.service');
 const log = require('../utils/log');
 const docketAuditService = require('../services/docketAudit.service');
 const { clientProfileStorageService } = require('../services/clientProfileStorage.service');
+const directUploadService = require('../services/directUpload.service');
 
 const inFlightCaseRecordLoads = new Map();
 
@@ -373,144 +374,55 @@ const getCaseComments = async (req, res) => caseActivityService.getCaseComments(
  * PR: Case Identifier Semantics - Uses internal ID resolution
  */
 const addAttachment = async (req, res) => {
-  try {
-    if (!req.storageContext?.rootFolderId) {
-      log.warn('[STORAGE] blocked_operation: upload_attempt_without_storage');
-      return res.status(400).json({ code: 'STORAGE_NOT_CONNECTED', message: 'Cloud storage must be connected' });
-    }
-    if (areFileUploadsDisabled()) {
-      return res.status(503).json({
-        success: false,
-        message: 'File uploads are temporarily disabled',
-      });
-    }
-    const { caseId } = req.params;
-    const { description, note } = req.body;
-    
-    // PR #45: Require authenticated user with xID for security and audit
-    if (!req.user?.email || !req.user?.xID) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required',
-      });
-    }
-    
-    // Validate file upload
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'File is required',
-      });
-    }
-    
-    // Validate required fields
-    if (!description) {
-      return res.status(400).json({
-        success: false,
-        message: 'Description is required',
-      });
-    }
-    
-    // PR: Case Identifier Semantics - Resolve identifier to internal ID
-    try {
-      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
-      var caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
-    } catch (error) {
-      return res.status(404).json({
-        success: false,
-        message: 'Case not found',
-      });
-    }
-    
-    if (!caseData) {
-      return res.status(404).json({
-        success: false,
-        message: 'Case not found',
-      });
-    }
-    
-    // PR #45: Allow attachments in view mode - no assignment/ownership check
-    // Only check if case is locked by someone else - use authenticated user for security
-    if (caseData.lockStatus?.isLocked && 
-        caseData.lockStatus.activeUserEmail !== req.user.email.toLowerCase()) {
-      return res.status(423).json({
-        success: false,
-        message: `Case is currently locked by ${caseData.lockStatus.activeUserEmail}`,
-      });
-    }
-    
-    // Queue file upload to Google Drive asynchronously
-    const firmId = req.user.firmId.toString();
-    const fileMimeType = req.file.mimetype || getMimeType(req.file.originalname);
-    const fileSize = req.file.size;
-
-    // Move uploaded file to a firm-scoped temp directory so the worker can read it
-    const tmpDir = path.join(__dirname, '../../uploads/tmp', firmId);
-    await fs.mkdir(tmpDir, { recursive: true });
-    const destPath = path.join(tmpDir, path.basename(req.file.path));
-    await fs.rename(req.file.path, destPath);
-
-    // Compute checksum via streaming to avoid loading the full file into memory
-    const checksum = await new Promise((resolve, reject) => {
-      const hash = createHash('sha256');
-      const stream = fsSync.createReadStream(destPath);
-      stream.on('data', chunk => hash.update(chunk));
-      stream.on('end', () => resolve(hash.digest('hex')));
-      stream.on('error', reject);
-    });
-
-    // Resolve the Drive folder for this case's attachments
-    const cfsDriveService = require('../services/cfsDrive.service');
-    const targetFolderId = cfsDriveService.getFolderIdForFileType(
-      caseData.drive,
-      'attachment'
-    );
-
-    if (!targetFolderId) {
-      await cleanupTempFile(destPath);
-      return res.status(500).json({
-        success: false,
-        message: 'Case Drive folder structure not initialized',
-      });
-    }
-
-    // Create staging record — upload is processed asynchronously by the worker
-    const caseFile = await CaseFile.create({
-      firmId: req.user.firmId,
-      caseId: caseData.caseId,
-      localPath: destPath,
-      originalName: req.file.originalname,
-      mimeType: fileMimeType,
-      size: fileSize,
-      uploadStatus: 'pending',
-      description,
-      checksum,
-      createdBy: req.user.email.toLowerCase(),
-      createdByXID: req.user.xID,
-      createdByName: req.user.name,
-      note,
-      source: 'upload',
-    });
-
-    await enqueueStorageJob(JOB_TYPES.UPLOAD_FILE, {
-      firmId,
-      provider: 'google',
-      caseId: caseData.caseId,
-      folderId: targetFolderId,
-      fileId: caseFile._id,
-    });
-
-    return res.status(202).json({
-      success: true,
-      data: caseFile,
-      message: 'File upload queued for processing',
-    });
-  } catch (error) {
-    res.status(400).json({
+  if (!directUploadService.isDirectUploadsEnabled()) {
+    return res.status(503).json({
       success: false,
-      message: 'Error uploading attachment',
-      error: error.message,
+      code: 'DIRECT_UPLOADS_DISABLED',
+      message: 'Attachment uploads are temporarily unavailable',
     });
+  }
+  return res.status(410).json({
+    success: false,
+    message: 'Legacy multipart upload is deprecated. Use upload intent/finalize endpoints.',
+  });
+};
+
+const createAttachmentUploadIntent = async (req, res) => {
+  try {
+    if (areFileUploadsDisabled()) return res.status(503).json({ success: false, message: 'File uploads are temporarily disabled' });
+    const { caseId } = req.params;
+    const { fileName, mimeType, size, description, note } = req.body || {};
+    const intent = await directUploadService.createIntent({
+      firmId: String(req.user?.firmId || ''),
+      caseId,
+      source: 'upload',
+      fileName,
+      mimeType,
+      size,
+      description,
+      note,
+      role: req.user?.role,
+      user: req.user,
+    });
+    return res.status(201).json({ success: true, data: intent });
+  } catch (error) {
+    return res.status(error.status || 400).json({ success: false, message: error.message });
+  }
+};
+
+const finalizeAttachmentUpload = async (req, res) => {
+  try {
+    const { uploadId, completion = {}, checksum } = req.body || {};
+    const attachment = await directUploadService.finalizeIntent({
+      uploadId,
+      completion,
+      checksum,
+      firmId: String(req.user?.firmId || ''),
+      user: req.user,
+    });
+    return res.status(201).json({ success: true, data: attachment });
+  } catch (error) {
+    return res.status(error.status || 400).json({ success: false, message: error.message });
   }
 };
 
@@ -1317,6 +1229,8 @@ module.exports = {
   createCase: wrapWriteHandler(createCase),
   addComment: wrapWriteHandler(addComment),
   addAttachment: wrapWriteHandler(addAttachment),
+  createAttachmentUploadIntent: wrapWriteHandler(createAttachmentUploadIntent),
+  finalizeAttachmentUpload: wrapWriteHandler(finalizeAttachmentUpload),
   cloneCase: wrapWriteHandler(cloneCase),
   unpendCase: wrapWriteHandler(unpendCase),
   updateCaseStatus: wrapWriteHandler(updateCaseStatus),
