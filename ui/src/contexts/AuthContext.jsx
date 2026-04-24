@@ -15,6 +15,7 @@ import React, { createContext, useState, useCallback, useEffect, useRef, useMemo
 import { authService } from '../services/authService';
 import { STORAGE_KEYS } from '../utils/constants';
 import { isSuperAdmin } from '../utils/authUtils';
+import { queryClient } from '../queryClient';
 
 export const AuthContext = createContext(null);
 export const AUTH_STATES = {
@@ -61,15 +62,27 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const clearPrivateClientState = useCallback(() => {
+    try {
+      queryClient.clear();
+    } catch (_error) {
+      // Keep logout resilient even if query cache internals throw.
+    }
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new CustomEvent('auth:logout'));
+    }
+  }, []);
+
   const resetAuthState = useCallback(({ allowProfileRetry = false } = {}) => {
     clearAuthStorage();
+    clearPrivateClientState();
     setUser(null);
     setIsAuthenticated(false);
     profileFetchAttemptedRef.current = allowProfileRetry ? false : true;
     profileFetchInFlightRef.current = false;
     profileFetchPromiseRef.current = null;
     authFailureResolvedRef.current = !allowProfileRetry;
-  }, [clearAuthStorage]);
+  }, [clearAuthStorage, clearPrivateClientState]);
 
   /**
    * WARNING:
@@ -209,19 +222,41 @@ export const AuthProvider = ({ children }) => {
       // Call backend logout endpoint
       await authService.logout(preserveFirmSlug);
     } catch (error) {
-      // Even if backend call fails, clear client state
-      console.error('Logout error:', error);
+      // Even if backend call fails, clear client state locally.
+      console.warn('[AUTH] Logout request failed. Finalizing local logout state.');
     } finally {
       // Always clear client-side state
       setUser(null);
       setIsAuthenticated(false);
+      clearPrivateClientState();
       authFailureResolvedRef.current = true;
       profileFetchInFlightRef.current = false;
       profileFetchPromiseRef.current = null;
 
       clearAuthStorage(firmSlugToPreserve);
+      try {
+        if (typeof window !== 'undefined' && window?.localStorage) {
+          window.localStorage.setItem(STORAGE_KEYS.AUTH_LOGOUT_BROADCAST, String(Date.now()));
+        }
+      } catch (_error) {
+        // Multi-tab broadcast is best-effort; local logout already completed.
+      }
     }
-  }, [user, clearAuthStorage]);
+  }, [user, clearAuthStorage, clearPrivateClientState]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return undefined;
+    const onStorageEvent = (event) => {
+      if (event.key !== STORAGE_KEYS.AUTH_LOGOUT_BROADCAST || !event.newValue) return;
+      setUser(null);
+      setIsAuthenticated(false);
+      clearAuthStorage();
+      clearPrivateClientState();
+      authFailureResolvedRef.current = true;
+    };
+    window.addEventListener('storage', onStorageEvent);
+    return () => window.removeEventListener('storage', onStorageEvent);
+  }, [clearAuthStorage, clearPrivateClientState]);
 
   const updateUser = useCallback((userData) => {
     setUser((prev) => {

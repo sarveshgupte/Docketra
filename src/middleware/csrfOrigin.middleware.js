@@ -24,6 +24,35 @@ const getRequestHosts = (req) => {
   return new Set([...forwardedHostHeader, ...directHost]);
 };
 
+const getRequestPath = (req) => String(req.originalUrl || req.url || req.path || '').split('?')[0];
+
+const CSRF_SKIP_PATHS = [
+  /^\/health(?:\/|$)/,
+  /^\/api\/health(?:\/|$)/,
+  /^\/api\/system\/health(?:\/|$)/,
+  /^\/metrics(?:\/|$)/,
+  /^\/api\/metrics\/security(?:\/|$)/,
+  /^\/api\/csp-violation(?:\/|$)/,
+];
+
+const hasAuthCookie = (req) => {
+  if (req?.cookies?.accessToken || req?.cookies?.refreshToken) return true;
+  const cookieHeader = String(req?.headers?.cookie || '');
+  if (!cookieHeader) return false;
+  return /(?:^|;\s*)(?:accessToken|refreshToken)=/.test(cookieHeader);
+};
+
+const hasHeaderTokenAuth = (req) => Boolean(
+  req?.headers?.authorization
+  || req?.headers?.['x-internal-token']
+  || req?.headers?.['x-metrics-token']
+);
+
+const shouldSkipCsrfForPath = (req) => {
+  const path = getRequestPath(req);
+  return CSRF_SKIP_PATHS.some((matcher) => matcher.test(path));
+};
+
 const enforceSameOriginForCookieAuth = (req, res, next) => {
   const originUrl = getSourceUrl(req.headers.origin);
   const refererUrl = getSourceUrl(req.headers.referer);
@@ -66,6 +95,36 @@ const enforceSameOriginForCookieAuth = (req, res, next) => {
   });
 };
 
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+const enforceSameOriginForMutatingRequests = (req, res, next) => {
+  const method = String(req.method || 'GET').toUpperCase();
+  if (method === 'OPTIONS') return next();
+  if (!MUTATING_METHODS.has(method)) {
+    return next();
+  }
+
+  if (shouldSkipCsrfForPath(req)) {
+    return next();
+  }
+
+  // Only enforce same-origin when the request is carrying cookie auth material.
+  // This avoids blocking non-browser or token-authenticated integrations that do
+  // not rely on ambient browser cookies for authentication.
+  if (!hasAuthCookie(req) && hasHeaderTokenAuth(req)) {
+    return next();
+  }
+  if (!hasAuthCookie(req)) return next();
+
+  return enforceSameOriginForCookieAuth(req, res, next);
+};
+
 module.exports = {
   enforceSameOriginForCookieAuth,
+  enforceSameOriginForMutatingRequests,
+  __private: {
+    shouldSkipCsrfForPath,
+    hasAuthCookie,
+    hasHeaderTokenAuth,
+  },
 };

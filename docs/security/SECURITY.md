@@ -231,3 +231,19 @@ Before deploying to production, implement:
 **Last Updated**: January 2026  
 **Security Review**: Enterprise access control implemented  
 **Status**: Production-ready for internal deployment with email service integration
+
+## April 2026 Session/CSRF hardening update
+
+- Enforced same-origin CSRF checks for mutating HTTP methods (`POST`, `PUT`, `PATCH`, `DELETE`) when cookie-auth context is present, with explicit operational/internal exceptions.
+- Standardized auth cookie options with production-safe defaults and optional deployment overrides:
+  - `AUTH_COOKIE_SAMESITE`
+  - `AUTH_COOKIE_DOMAIN`
+- Hardened logout/session invalidation:
+  - logout revokes refresh tokens,
+  - refresh failure for invalid/revoked token clears auth cookies,
+  - logout now actively disconnects authenticated notification sockets for that user.
+- Frontend auth hardening:
+  - clears React Query private cache on auth reset/logout,
+  - broadcasts logout across tabs to prevent stale privileged views,
+  - emits logout lifecycle event so websocket clients disconnect immediately.
+- See detailed engineering note: `docs/security/session-csrf-hardening-2026-04.md`.

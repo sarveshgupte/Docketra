@@ -65,6 +65,10 @@ const detectProfileLoop = (req, res, next) => {
 router.use((req, res, next) => {
   const method = String(req.method || 'GET').toUpperCase();
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    const cookieHeader = String(req.headers?.cookie || '');
+    const hasAuthCookie = Boolean(req.cookies?.accessToken || req.cookies?.refreshToken
+      || /(?:^|;\s*)(?:accessToken|refreshToken)=/.test(cookieHeader));
+    if (!hasAuthCookie) return next();
     return enforceSameOriginForCookieAuth(req, res, next);
   }
   return next();

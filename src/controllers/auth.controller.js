@@ -34,6 +34,7 @@ const { handleUserDeactivation } = require('../services/docketWorkflow.service')
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
 const { getLatestPublishedUpdate } = require('../services/productUpdate.service');
+const { disconnectUserSockets } = require('../services/notificationSocket.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const config = require('../config/config');
 const { loadEnv } = require('../config/env');
@@ -3470,6 +3471,7 @@ const authSessionService = createAuthSessionService({
     noteRefreshTokenUse,
     logAuthAudit,
     getFirmSlug,
+    disconnectSocketsForUser: disconnectUserSockets,
     isSuperAdminRole,
     DEFAULT_FIRM_ID,
   },
