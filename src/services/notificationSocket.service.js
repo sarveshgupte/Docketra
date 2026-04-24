@@ -5,6 +5,12 @@ const { isActiveStatus } = require('../utils/status.utils');
 const { getCookieValue } = require('../utils/requestCookies');
 
 let ioInstance = null;
+let revalidationTimer = null;
+const socketMetaById = new Map();
+const REVALIDATION_WINDOW_MS = 60 * 1000;
+const REVALIDATION_TICK_MS = 7_500;
+
+const randomJitterMs = () => Math.floor(Math.random() * 30_000);
 
 function toRoomKey(firmId, userId) {
   return `notifications:${String(firmId || '')}:${String(userId || '').toUpperCase()}`;
@@ -37,6 +43,7 @@ async function resolveSocketIdentity(socket) {
   return {
     userId: String(user.xID || '').toUpperCase(),
     firmId: String(user.firmId || ''),
+    userMongoId: String(user._id || ''),
   };
 }
 
@@ -71,9 +78,83 @@ function initNotificationSocket(httpServer, { allowedOrigins = [] } = {}) {
     }
   });
 
-  ioInstance.on('connection', () => {});
+  ioInstance.on('connection', (socket) => {
+    socketMetaById.set(socket.id, {
+      nextRevalidateAt: Date.now() + REVALIDATION_WINDOW_MS + randomJitterMs(),
+      revalidating: false,
+    });
+    startSocketRevalidationScheduler();
+    socket.on('disconnect', () => {
+      socketMetaById.delete(socket.id);
+      stopSocketRevalidationSchedulerIfIdle();
+    });
+  });
 
   return ioInstance;
+}
+
+function disconnectUserSockets({ firmId, userMongoId = null, userXid = null } = {}) {
+  if (!ioInstance || !firmId) return;
+  for (const socket of ioInstance.sockets.sockets.values()) {
+    const identity = socket?.data?.notificationIdentity || {};
+    const sameFirm = String(identity.firmId || '') === String(firmId || '');
+    const sameMongoId = userMongoId && String(identity.userMongoId || '') === String(userMongoId);
+    const sameXid = userXid && String(identity.userId || '').toUpperCase() === String(userXid || '').toUpperCase();
+    if (sameFirm && (sameMongoId || sameXid)) {
+      socket.disconnect(true);
+    }
+  }
+}
+
+async function revalidateConnectedSockets() {
+  if (!ioInstance) return;
+  const now = Date.now();
+  for (const socket of ioInstance.sockets.sockets.values()) {
+    const meta = socketMetaById.get(socket.id);
+    if (!meta || meta.revalidating || now < meta.nextRevalidateAt) continue;
+    meta.revalidating = true;
+    meta.nextRevalidateAt = now + REVALIDATION_WINDOW_MS + randomJitterMs();
+    try {
+      const identity = await resolveSocketIdentity(socket);
+      if (!identity?.firmId || !identity?.userId) {
+        socket.disconnect(true);
+      }
+    } catch (_error) {
+      socket.disconnect(true);
+    } finally {
+      const latestMeta = socketMetaById.get(socket.id);
+      if (latestMeta) latestMeta.revalidating = false;
+    }
+  }
+}
+
+function startSocketRevalidationScheduler() {
+  if (revalidationTimer || !ioInstance) return;
+  revalidationTimer = setInterval(() => {
+    revalidateConnectedSockets().catch(() => {});
+  }, REVALIDATION_TICK_MS);
+  if (typeof revalidationTimer.unref === 'function') {
+    revalidationTimer.unref();
+  }
+}
+
+function stopSocketRevalidationSchedulerIfIdle() {
+  const hasTrackedSockets = socketMetaById.size > 0;
+  if (hasTrackedSockets || !revalidationTimer) return;
+  clearInterval(revalidationTimer);
+  revalidationTimer = null;
+}
+
+function resetSocketSchedulerForTests() {
+  if (revalidationTimer) {
+    clearInterval(revalidationTimer);
+    revalidationTimer = null;
+  }
+  socketMetaById.clear();
+}
+
+function setIoInstanceForTests(instance) {
+  ioInstance = instance;
 }
 
 function emitUserNotification({ firmId, userId, notification }) {
@@ -98,7 +179,14 @@ function emitUserNotification({ firmId, userId, notification }) {
 module.exports = {
   initNotificationSocket,
   emitUserNotification,
+  disconnectUserSockets,
   __private: {
     getHandshakeToken,
+    revalidateConnectedSockets,
+    startSocketRevalidationScheduler,
+    stopSocketRevalidationSchedulerIfIdle,
+    socketMetaById,
+    resetSocketSchedulerForTests,
+    setIoInstanceForTests,
   },
 };

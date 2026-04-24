@@ -396,9 +396,17 @@ export const Layout = ({ children, title, subtitle }) => {
       });
     });
 
+    const handleAuthLogout = () => {
+      if (socket?.connected) {
+        socket.disconnect();
+      }
+    };
+    window.addEventListener('auth:logout', handleAuthLogout);
+
     return () => {
       cancelled = true;
       clearInterval(pollId);
+      window.removeEventListener('auth:logout', handleAuthLogout);
       if (socket) {
         socket.disconnect();
       }

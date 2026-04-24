@@ -29,5 +29,25 @@ assert(
   authContextSource.includes('Skipping profile fetch after resolved unauthenticated state'),
   'AuthContext should explicitly short-circuit profile hydration after refresh failure.'
 );
+assert(
+  authContextSource.includes('queryClient.clear();'),
+  'AuthContext should clear private React Query cache when auth state is reset/logout.'
+);
+assert(
+  authContextSource.includes("window.dispatchEvent(new CustomEvent('auth:logout'))"),
+  'AuthContext should broadcast logout lifecycle events for socket/session cleanup.'
+);
+assert(
+  authContextSource.includes('AUTH_LOGOUT_BROADCAST'),
+  'AuthContext should emit and subscribe to a multi-tab logout broadcast key.'
+);
+assert(
+  authContextSource.includes('window?.localStorage'),
+  'AuthContext logout broadcast should guard browser storage access.'
+);
+assert(
+  authContextSource.includes('Multi-tab broadcast is best-effort'),
+  'AuthContext should keep logout finalization resilient when storage write fails.'
+);
 
 console.log('auth refresh loop regression tests passed');
