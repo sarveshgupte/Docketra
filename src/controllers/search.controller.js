@@ -9,6 +9,7 @@ const CaseStatus = require('../domain/case/caseStatus');
 const { logCaseListViewed } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
 const log = require('../utils/log');
+const SLOW_WORKLIST_QUERY_MS = 400;
 
 const toObjectIdStringOrNull = (value) => {
   if (!value) {
@@ -21,6 +22,19 @@ const toObjectIdStringOrNull = (value) => {
   }
 
   return normalizedValue;
+};
+
+const logSlowWorklistQuery = ({ queryName, durationMs, firmId, userXID, page, limit }) => {
+  if (durationMs < SLOW_WORKLIST_QUERY_MS) return;
+  log.warn('[WORKLIST_QUERY_SLOW]', {
+    queryName,
+    durationMs,
+    thresholdMs: SLOW_WORKLIST_QUERY_MS,
+    firmId: firmId || null,
+    userXID: userXID || null,
+    page,
+    limit,
+  });
 };
 
 /**
@@ -355,6 +369,7 @@ const categoryWorklist = async (req, res) => {
  */
 const employeeWorklist = async (req, res) => {
   try {
+    const startedAt = Date.now();
     const requestedPage = Number.parseInt(req.query?.page, 10);
     const requestedLimit = Number.parseInt(req.query?.limit, 10);
     const normalizedPage = Number.isFinite(requestedPage) ? Math.max(requestedPage, 1) : 1;
@@ -487,6 +502,14 @@ const employeeWorklist = async (req, res) => {
       casesQuery.lean(),
       Case.countDocuments(enforceTenantScope(query, req, { source: 'search.employeeWorklist.count' })),
     ]);
+    logSlowWorklistQuery({
+      queryName: 'employeeWorklist',
+      durationMs: Date.now() - startedAt,
+      firmId,
+      userXID: targetAssigneeXID,
+      page: normalizedPage,
+      limit: normalizedLimit,
+    });
 
     const missingClientNameIds = [...new Set(
       (cases || [])
@@ -578,6 +601,7 @@ const employeeWorklist = async (req, res) => {
  */
 const globalWorklist = async (req, res) => {
   try {
+    const startedAt = Date.now();
     const {
       clientId,
       category,
@@ -696,58 +720,55 @@ const globalWorklist = async (req, res) => {
     const sortDirection = sortOrder === 'desc' ? -1 : 1;
     const sort = { [sortField]: sortDirection };
     
-    // Build the base query without slaDueAt modifications for separation
-    const baseQuery = { ...query };
-    
-    // PERFORMANCE: Execute count query concurrently with data fetch
-    const totalQuery = { ...baseQuery };
-    // We attach a no-op catch immediately to prevent UnhandledPromiseRejection in case of an early throw.
-    // The error will still be caught when we await it later or if we want to handle it.
-    const totalPromise = Case.countDocuments(enforceTenantScope(totalQuery, req, { source: 'search.globalWorklist.total' }));
-    totalPromise.catch(() => {}); // prevent UnhandledPromiseRejection
+    const baseQuery = enforceTenantScope({ ...query }, req, { source: 'search.globalWorklist.base' });
+    const projection = {
+      caseId: 1,
+      caseName: 1,
+      clientId: 1,
+      category: 1,
+      status: 1,
+      slaDueAt: 1,
+      createdAt: 1,
+      createdBy: 1,
+      ownerTeamId: 1,
+      routedToTeamId: 1,
+      routingNote: 1,
+    };
+    const skip = (parsedPage - 1) * parsedLimit;
 
-    // Handle null slaDueAt - put them at the end
-    let casesWithSLA = [];
-    let casesWithoutSLA = [];
-    
-    if (normalizedSortBy === 'slaDueAt') {
-      // Query for cases WITH slaDueAt (not null)
-      const queryWithSLA = { ...baseQuery };
-      // Don't modify if slaStatus filter is already applied
-      if (!slaStatus) {
-        queryWithSLA.slaDueAt = { $ne: null };
-      }
-      
-      casesWithSLA = await Case.find(enforceTenantScope(queryWithSLA, req, { source: 'search.globalWorklist.withSLA' }))
-        .select('caseId caseName clientId category status slaDueAt createdAt createdBy ownerTeamId routedToTeamId routingNote')
-        .sort(sort)
-        .limit(parsedLimit)
-        .skip((parsedPage - 1) * parsedLimit)
-        .lean();
-      
-      // Query for cases WITHOUT slaDueAt (null) - only if no slaStatus filter
-      if (!slaStatus && casesWithSLA.length < parsedLimit) {
-        const queryWithoutSLA = { ...baseQuery, slaDueAt: null };
-        
-        casesWithoutSLA = await Case.find(enforceTenantScope(queryWithoutSLA, req, { source: 'search.globalWorklist.withoutSLA' }))
-          .select('caseId caseName clientId category status slaDueAt createdAt createdBy ownerTeamId routedToTeamId routingNote')
-          .sort({ createdAt: sortDirection })
-          .limit(parsedLimit - casesWithSLA.length)
-          .skip(Math.max(0, (parsedPage - 1) * parsedLimit - casesWithSLA.length))
-          .lean();
-      }
-    } else {
-      // For other sort fields, just execute the query normally
-      casesWithSLA = await Case.find(enforceTenantScope(baseQuery, req, { source: 'search.globalWorklist.base' }))
-        .select('caseId caseName clientId category status slaDueAt createdAt createdBy ownerTeamId routedToTeamId routingNote')
-        .sort(sort)
-        .limit(parsedLimit)
-        .skip((parsedPage - 1) * parsedLimit)
-        .lean();
-    }
-    
-    // Merge results
-    const allCases = [...casesWithSLA, ...casesWithoutSLA];
+    const [allCases, total] = await (normalizedSortBy === 'slaDueAt' && !slaStatus
+      ? (async () => {
+          const [nonNullCases, nullCount, totalCount] = await Promise.all([
+            Case.find({ ...baseQuery, slaDueAt: { $ne: null } })
+              .select(projection)
+              .sort(sort)
+              .skip(skip)
+              .limit(parsedLimit)
+              .lean(),
+            Case.countDocuments({ ...baseQuery, slaDueAt: null }),
+            Case.countDocuments(baseQuery),
+          ]);
+          if (nonNullCases.length >= parsedLimit) {
+            return [nonNullCases, totalCount];
+          }
+          const nullSkip = Math.max(0, skip - Math.max(totalCount - nullCount, 0));
+          const nullCases = await Case.find({ ...baseQuery, slaDueAt: null })
+            .select(projection)
+            .sort({ createdAt: sortDirection, _id: 1 })
+            .skip(nullSkip)
+            .limit(parsedLimit - nonNullCases.length)
+            .lean();
+          return [[...nonNullCases, ...nullCases], totalCount];
+        })()
+      : Promise.all([
+          Case.find(baseQuery)
+            .select(projection)
+            .sort({ ...sort, _id: 1 })
+            .skip(skip)
+            .limit(parsedLimit)
+            .lean(),
+          Case.countDocuments(baseQuery),
+        ]));
     const teamIds = [...new Set(
       allCases
         .flatMap((c) => [c.ownerTeamId, c.routedToTeamId])
@@ -787,8 +808,14 @@ const globalWorklist = async (req, res) => {
       };
     });
     
-    // Await the total count
-    const total = await totalPromise;
+    logSlowWorklistQuery({
+      queryName: 'globalWorklist',
+      durationMs: Date.now() - startedAt,
+      firmId,
+      userXID: req.user?.xID,
+      page: parsedPage,
+      limit: parsedLimit,
+    });
     
     // Log case list view for audit (if user is authenticated)
     if (req.user?.xID) {

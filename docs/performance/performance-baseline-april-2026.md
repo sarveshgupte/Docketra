@@ -80,3 +80,21 @@
 - **Route transition prefetching**: top navigation targets are not yet prefetched.
 - **Automated regressions**: request-count and render-timing assertions should be added for top flows.
 - **Long-list virtualization**: evaluate for large-firm dockets/worklist views once profiling data is captured.
+
+## Backend query optimization addendum (April 23, 2026)
+
+### Backend hotspots profiled
+- `GET /api/cases` (All Dockets)
+- `GET /api/worklists/employee/me` (My Worklist)
+- `GET /api/worklists/global` (Workbasket queue)
+- Dashboard summary service queries
+- Reports list/export endpoints
+
+### Improvements shipped
+- Reduced overfetching with stricter projections on case lists and report queries.
+- Added stable tie-break sorting (`_id`) on high-volume list endpoints to keep pagination deterministic.
+- Reduced duplicated work in global worklist SLA ordering path while preserving current response semantics.
+- Added slow-path backend instrumentation for case/worklist/dashboard/report query timings.
+
+### Index alignment
+- Added compound indexes for assignee+status+recency, subcategory filters, and owner/routed workbasket SLA sorting patterns.

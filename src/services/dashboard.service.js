@@ -8,6 +8,8 @@ const log = require('../utils/log');
 const ACTIVE_DOCKET_STATUSES = ['OPEN', 'IN_PROGRESS'];
 const ACTIVE_DOCKET_STATUS_SET = new Set(ACTIVE_DOCKET_STATUSES);
 const SORT_OPTIONS = new Set(['NEWEST', 'PRIORITY', 'SLA']);
+const DASHBOARD_LIST_PROJECTION = 'caseInternalId caseNumber caseId title caseName status priority dueDate slaDueAt workbasketId ownerTeamId routedToTeamId createdAt updatedAt';
+const SLOW_DASHBOARD_QUERY_MS = 350;
 
 const normalizeStatus = (status) => String(status || '').trim().toUpperCase();
 const normalizeSort = (sort) => {
@@ -18,12 +20,12 @@ const normalizeSort = (sort) => {
 const resolveSort = (sort = 'NEWEST') => {
   const normalized = normalizeSort(sort);
   if (normalized === 'PRIORITY') {
-    return { priorityRank: -1, createdAt: -1 };
+    return { priorityRank: -1, createdAt: -1, _id: 1 };
   }
   if (normalized === 'SLA') {
-    return { slaDueAt: 1, dueDate: 1, createdAt: -1 };
+    return { slaDueAt: 1, dueDate: 1, createdAt: -1, _id: 1 };
   }
-  return { createdAt: -1 };
+  return { createdAt: -1, _id: 1 };
 };
 
 const resolveSlaBadge = (docket = {}) => getSlaStatus(docket);
@@ -53,13 +55,26 @@ const mapDocket = (docket = {}) => ({
   updatedAt: docket.updatedAt,
 });
 
-const buildListQuery = (firmId, query = {}, sort = 'NEWEST') =>
-  Case.find({ firmId: new mongoose.Types.ObjectId(firmId), ...query })
-    .select('caseInternalId caseNumber caseId title caseName status priority dueDate slaDueAt workbasketId ownerTeamId routedToTeamId createdAt updatedAt')
+const buildListQuery = (firmObjectId, query = {}, sort = 'NEWEST') =>
+  Case.find({ firmId: firmObjectId, ...query })
+    .select(DASHBOARD_LIST_PROJECTION)
     .sort(resolveSort(sort))
     .lean();
 
+const logSlowDashboardQuery = ({ queryName, firmId, durationMs, page, limit }) => {
+  if (durationMs < SLOW_DASHBOARD_QUERY_MS) return;
+  log.warn('[DASHBOARD_QUERY_SLOW]', {
+    queryName,
+    firmId,
+    durationMs,
+    page,
+    limit,
+    thresholdMs: SLOW_DASHBOARD_QUERY_MS,
+  });
+};
+
 const getMyDockets = async (userId, firmId, { filter = 'MY', page = 1, limit = 10, sort = 'NEWEST', workbasketId = null } = {}) => {
+  const startedAt = Date.now();
   const normalizedFilter = String(filter || 'MY').trim().toUpperCase();
   const pageNumber = Math.max(Number(page) || 1, 1);
   const pageLimit = Math.min(Math.max(Number(limit) || 10, 1), 25);
@@ -71,11 +86,19 @@ const getMyDockets = async (userId, firmId, { filter = 'MY', page = 1, limit = 1
     : {};
 
   const query = { ...assignmentFilter, ...workbasketFilter, status: { $in: ACTIVE_DOCKET_STATUSES } };
+  const firmObjectId = new mongoose.Types.ObjectId(firmId);
 
   const [items, total] = await Promise.all([
-    buildListQuery(firmId, query, sort).skip(skip).limit(pageLimit),
-    Case.countDocuments({ firmId: new mongoose.Types.ObjectId(firmId), ...query }),
+    buildListQuery(firmObjectId, query, sort).skip(skip).limit(pageLimit),
+    Case.countDocuments({ firmId: firmObjectId, ...query }),
   ]);
+  logSlowDashboardQuery({
+    queryName: 'getMyDockets',
+    firmId,
+    durationMs: Date.now() - startedAt,
+    page: pageNumber,
+    limit: pageLimit,
+  });
 
   return {
     items: items
@@ -91,6 +114,7 @@ const getMyDockets = async (userId, firmId, { filter = 'MY', page = 1, limit = 1
 };
 
 const getOverdueDockets = async (firmId, { page = 1, limit = 10, sort = 'NEWEST', workbasketId = null } = {}) => {
+  const startedAt = Date.now();
   const pageNumber = Math.max(Number(page) || 1, 1);
   const pageLimit = Math.min(Math.max(Number(limit) || 10, 1), 25);
   const skip = (pageNumber - 1) * pageLimit;
@@ -101,11 +125,19 @@ const getOverdueDockets = async (firmId, { page = 1, limit = 10, sort = 'NEWEST'
     ...(workbasketId ? { $or: [{ workbasketId }, { ownerTeamId: workbasketId }, { routedToTeamId: workbasketId }] } : {}),
     $or: [{ slaDueAt: { $lt: now } }, { dueDate: { $lt: now } }],
   };
+  const firmObjectId = new mongoose.Types.ObjectId(firmId);
 
   const [items, total] = await Promise.all([
-    buildListQuery(firmId, query, sort).skip(skip).limit(pageLimit),
-    Case.countDocuments({ firmId: new mongoose.Types.ObjectId(firmId), ...query }),
+    buildListQuery(firmObjectId, query, sort).skip(skip).limit(pageLimit),
+    Case.countDocuments({ firmId: firmObjectId, ...query }),
   ]);
+  logSlowDashboardQuery({
+    queryName: 'getOverdueDockets',
+    firmId,
+    durationMs: Date.now() - startedAt,
+    page: pageNumber,
+    limit: pageLimit,
+  });
 
   const mappedItems = items.map((docket) => ({ ...mapDocket(docket), isOverdue: true }));
   enqueueSlaCheckJob({ firmId }).catch((err) => {
@@ -116,15 +148,24 @@ const getOverdueDockets = async (firmId, { page = 1, limit = 10, sort = 'NEWEST'
 };
 
 const getRecentDockets = async (firmId, { page = 1, limit = 10, sort = 'NEWEST', workbasketId = null } = {}) => {
+  const startedAt = Date.now();
   const pageNumber = Math.max(Number(page) || 1, 1);
   const pageLimit = Math.min(Math.max(Number(limit) || 10, 1), 25);
   const skip = (pageNumber - 1) * pageLimit;
   const query = workbasketId ? { $or: [{ workbasketId }, { ownerTeamId: workbasketId }, { routedToTeamId: workbasketId }] } : {};
+  const firmObjectId = new mongoose.Types.ObjectId(firmId);
 
   const [items, total] = await Promise.all([
-    buildListQuery(firmId, query, sort).skip(skip).limit(pageLimit),
-    Case.countDocuments({ firmId: new mongoose.Types.ObjectId(firmId), ...query }),
+    buildListQuery(firmObjectId, query, sort).skip(skip).limit(pageLimit),
+    Case.countDocuments({ firmId: firmObjectId, ...query }),
   ]);
+  logSlowDashboardQuery({
+    queryName: 'getRecentDockets',
+    firmId,
+    durationMs: Date.now() - startedAt,
+    page: pageNumber,
+    limit: pageLimit,
+  });
 
   return { items: items.map(mapDocket), page: pageNumber, limit: pageLimit, total, hasNextPage: skip + items.length < total, sort: normalizeSort(sort) };
 };
