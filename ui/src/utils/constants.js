@@ -112,6 +112,7 @@ export const USER_ROLES = {
 export const STORAGE_KEYS = {
   FIRM_SLUG: 'firmSlug',
   IMPERSONATED_FIRM: 'impersonatedFirm', // SuperAdmin firm impersonation state
+  AUTH_LOGOUT_BROADCAST: 'authLogoutBroadcastAt',
   // @deprecated Will be removed in v2.0. Use AuthContext to get user data from API instead.
   X_ID: 'xID',
   // @deprecated Will be removed in v2.0. Use AuthContext to get user data from API instead.
