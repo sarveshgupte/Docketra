@@ -104,3 +104,26 @@ For future high-risk mutations, reuse the same origin validation middleware or a
 ## Pilot support diagnostics update (2026-04-23)
 - Refresh responses include machine-readable reason codes for support triage (`missing_refresh_token`, `refresh_not_supported`).
 - Refresh outcomes now emit structured pilot-ops events without logging sensitive tokens.
+
+## April 24, 2026 hardening addendum
+
+### Mutating-route origin/CSRF consistency
+- Same-origin validation is now enforced centrally for mutating routes (`POST`/`PUT`/`PATCH`/`DELETE`) that carry cookie-auth context.
+- Auth router keeps route-local protection as defense in depth.
+- Internal/token-auth and operational endpoints (health/metrics/CSP reporting) are explicitly excluded from cookie CSRF enforcement to avoid blocking non-browser integrations.
+
+### Cookie hardening details
+- Auth cookies remain `httpOnly` and `secure` in production.
+- `sameSite` defaults to `lax` and can be overridden with `AUTH_COOKIE_SAMESITE`.
+- `AUTH_COOKIE_DOMAIN` can be used for controlled multi-subdomain deployments.
+
+### Logout/session invalidation behavior
+- Logout revokes refresh tokens and disconnects active authenticated websocket sessions for the same user and firm.
+- Invalid/revoked refresh attempts now clear auth cookies to avoid stale-cookie retry loops.
+- Missing refresh token / unsupported scope / inactive user refresh rejections now also clear auth cookies for consistent stale-session cleanup.
+
+### Frontend auth state + cache lifecycle
+- Auth reset/logout clears React Query cache so private data does not persist after session end.
+- Logout is broadcast across tabs via localStorage key updates.
+- Browser clients emit a logout lifecycle event used by socket consumers to disconnect immediately.
+- Logout broadcast writes are best-effort with guarded storage access, so local logout finalization still succeeds in restricted storage environments.

@@ -2,13 +2,25 @@ const log = require('../utils/log');
 const { getCookieValue } = require('../utils/requestCookies');
 const { REASON_CODES, logPilotEvent } = require('./pilotDiagnostics.service');
 
+const normalizedCookieSameSite = () => {
+  const configured = String(process.env.AUTH_COOKIE_SAMESITE || 'lax').trim().toLowerCase();
+  if (configured === 'strict' || configured === 'lax') return configured;
+  if (configured === 'none') {
+    return process.env.NODE_ENV === 'production' ? 'none' : 'lax';
+  }
+  return 'lax';
+};
+
 const getAuthCookieOptions = ({ maxAge = undefined } = {}) => {
   const secureCookies = process.env.NODE_ENV === 'production';
+  const cookieDomain = String(process.env.AUTH_COOKIE_DOMAIN || '').trim();
+  const sameSite = normalizedCookieSameSite();
   return {
     httpOnly: true,
     secure: secureCookies,
-    sameSite: 'lax',
+    sameSite,
     path: '/',
+    ...(cookieDomain ? { domain: cookieDomain } : {}),
     ...(typeof maxAge === 'number' ? { maxAge } : {}),
   };
 };
@@ -46,6 +58,7 @@ const createAuthSessionService = (deps) => {
     noteRefreshTokenFailure = deps.noteRefreshTokenFailure,
     noteRefreshTokenUse = deps.noteRefreshTokenUse,
     logAuthAudit = deps.logAuthAudit,
+    disconnectSocketsForUser = deps.disconnectSocketsForUser,
     getFirmSlug = deps.getFirmSlug,
     isSuperAdminRole = deps.isSuperAdminRole,
     DEFAULT_FIRM_ID = deps.DEFAULT_FIRM_ID,
@@ -97,6 +110,13 @@ const createAuthSessionService = (deps) => {
           { userId: user._id, isRevoked: false },
           { isRevoked: true }
         );
+        if (typeof disconnectSocketsForUser === 'function') {
+          disconnectSocketsForUser({
+            firmId: user.firmId,
+            userMongoId: user._id,
+            userXid: user.xID,
+          });
+        }
       }
 
       const clearCookies = [
@@ -163,6 +183,7 @@ const createAuthSessionService = (deps) => {
           path: req.originalUrl || req.url,
           hasCookieHeader: Boolean(req.headers?.cookie),
         });
+        clearAuthCookies(res);
         return res.status(401).json({
           success: false,
           reasonCode: REASON_CODES.MISSING_REFRESH_TOKEN,
@@ -184,6 +205,7 @@ const createAuthSessionService = (deps) => {
           firmId: storedToken?.firmId || null,
           reason: 'invalid_refresh_token',
         });
+        clearAuthCookies(res);
         return res.status(401).json({
           success: false,
           message: 'Invalid or expired refresh token',
@@ -198,6 +220,7 @@ const createAuthSessionService = (deps) => {
           firmId: storedToken.firmId,
           reason: 'revoked_refresh_token',
         });
+        clearAuthCookies(res);
         return res.status(401).json({
           success: false,
           message: 'Invalid or expired refresh token',
@@ -216,6 +239,7 @@ const createAuthSessionService = (deps) => {
           reason: 'refresh_not_supported',
         });
         logPilotEvent({ event: 'auth_refresh_rejected', severity: 'warn', metadata: { reasonCode: REASON_CODES.REFRESH_NOT_SUPPORTED, route: req.originalUrl || req.url } });
+        clearAuthCookies(res);
         return res.status(401).json({
           success: false,
           code: 'REFRESH_NOT_SUPPORTED',
@@ -240,6 +264,7 @@ const createAuthSessionService = (deps) => {
           firmId: storedToken.firmId,
           reason: 'refresh_user_not_found',
         });
+        clearAuthCookies(res);
         return res.status(401).json({
           success: false,
           message: 'User not found or inactive',
