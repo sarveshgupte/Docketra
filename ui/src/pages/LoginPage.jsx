@@ -76,7 +76,7 @@ export const LoginPage = () => {
       if (response.success) {
         showSuccess('✅ Login successful. Redirecting to your workspace.');
 
-        const profileResult = await fetchProfile();
+        const profileResult = await fetchProfile({ force: true });
 
         if (profileResult?.success) {
           const returnTo = new URLSearchParams(location.search).get('returnTo');

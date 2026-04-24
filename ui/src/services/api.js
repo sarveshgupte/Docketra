@@ -46,7 +46,7 @@ const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 4000;
 const isPublicAuthFlowRequest = (requestConfig) => {
   const requestUrl = String(requestConfig?.url || '');
-  return /\/auth\/(resend-otp|verify-totp|complete-mfa-login|forgot-password|reset-password-with-token|resend-credentials)$/.test(requestUrl)
+  return /\/auth\/(resend-otp|verify-totp|complete-mfa-login|forgot-password|forgot-password\/init|forgot-password\/verify|forgot-password\/reset|reset-password-with-token|resend-credentials|login\/init|login\/verify|login\/resend)$/.test(requestUrl)
     || /\/verify-otp$/.test(requestUrl)
     || /\/login$/.test(requestUrl);
 };

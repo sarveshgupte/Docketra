@@ -94,7 +94,7 @@ export const OtpVerificationPage = () => {
       const response = await api.post('/auth/verify-otp', { email, otp, purpose });
       const payload = response?.data || {};
       authService.setSessionTokens(payload);
-      const profileResult = await fetchProfile();
+      const profileResult = await fetchProfile({ force: true });
       if (profileResult?.success) {
         navigate(resolvePostAuthRoute(profileResult.data), { replace: true });
       } else {
