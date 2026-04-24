@@ -60,15 +60,29 @@ const getDocketTimeline = async (docketId, firmId, { type, page = 1, limit = 20 
     query.type = String(type).trim().toUpperCase();
   }
 
-  const [items, total] = await Promise.all([
-    DocketActivity.find(query)
-      .select('type description metadata performedByXID createdAt')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(pageLimit)
-      .lean(),
-    DocketActivity.countDocuments(query),
+  // ⚡ Bolt: Optimize docket timeline queries with $facet aggregation
+  // 💡 What: Replaced concurrent find() and countDocuments() with a single $facet aggregation.
+  // 🎯 Why: Reduces database network round-trips from 2 to 1 for fetching paginated items and total counts.
+  // 📊 Impact: Decreases database query latency and overhead.
+  const aggResult = await DocketActivity.aggregate([
+    { $match: query },
+    { $sort: { createdAt: -1 } },
+    {
+      $facet: {
+        items: [
+          { $skip: skip },
+          { $limit: pageLimit },
+          { $project: { type: 1, description: 1, metadata: 1, performedByXID: 1, createdAt: 1 } }
+        ],
+        totalCount: [
+          { $count: "count" }
+        ]
+      }
+    }
   ]);
+
+  const items = aggResult[0]?.items || [];
+  const total = aggResult[0]?.totalCount?.[0]?.count || 0;
 
   const xids = [...new Set(items.map((item) => item.performedByXID).filter(Boolean))];
   const users = xids.length
