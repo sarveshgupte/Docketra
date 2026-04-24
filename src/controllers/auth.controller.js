@@ -752,6 +752,9 @@ const buildSuccessfulLoginPayload = async (req, user, { authMethod = 'Email OTP'
     description: `User login completed successfully via ${authMethod}`,
   }).catch(() => null);
 
+  const redirectTo = isSuperAdminRole(user.role)
+    ? '/app/superadmin'
+    : (firmSlug ? `/app/firm/${firmSlug}/dashboard` : '/complete-profile');
   const response = {
     success: true,
     message: user.forcePasswordReset ? 'Password reset required' : 'Login successful',
@@ -770,6 +773,7 @@ const buildSuccessfulLoginPayload = async (req, user, { authMethod = 'Email OTP'
       mustSetPassword: !!user.mustSetPassword,
       passwordSetAt: user.passwordSetAt,
     },
+    redirectTo,
   };
 
   if (user.forcePasswordReset) {
@@ -864,6 +868,7 @@ const handleSuperadminLogin = async (req, res, normalizedXID, password, loginSco
       isSuperAdmin: true,
       refreshEnabled: false,
       data: user,
+      redirectTo: '/app/superadmin',
     });
   } catch (postAuthError) {
     log.error('[AUTH][superadmin] Post-auth token/response failure', {
@@ -1527,6 +1532,7 @@ const getProfile = async (req, res) => {
           refreshEnabled: false,
           permissions: ['*'],
         },
+        redirectTo: '/app/superadmin',
       });
     }
     
@@ -1662,6 +1668,8 @@ const getProfile = async (req, res) => {
       }))
       .filter((workbasket) => workbasket.name);
 
+    const resolvedFirmSlug = req.jwt?.firmSlug || dbUser.firmId?.firmSlug || null;
+
     res.json({
       success: true,
       data: {
@@ -1689,7 +1697,7 @@ const getProfile = async (req, res) => {
           name: dbUser.firmId.name,
         } : null,
         firmId: userFirmId,
-        firmSlug: req.jwt?.firmSlug || dbUser.firmId?.firmSlug || null, // JWT-first: use token claim, fallback to DB
+        firmSlug: resolvedFirmSlug, // JWT-first: use token claim, fallback to DB
         defaultClientId: req.jwt?.defaultClientId || (dbUser.defaultClientId ? dbUser.defaultClientId.toString() : null), // JWT-first
         // Mutable fields from UserProfile model (editable)
         dateOfBirth: profile.dob || profile.dateOfBirth,
@@ -1709,6 +1717,7 @@ const getProfile = async (req, res) => {
           update: latestUpdate || null,
         },
       },
+      redirectTo: resolvedFirmSlug ? `/app/firm/${resolvedFirmSlug}/dashboard` : '/complete-profile',
     });
   } catch (error) {
     res.status(500).json({

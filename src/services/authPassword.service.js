@@ -22,6 +22,45 @@ const createAuthPasswordService = (deps) => {
     PASSWORD_POLICY_MESSAGE,
     bcrypt,
   } = deps;
+  const resolveForgotPasswordContext = async ({ req, email }) => {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const providedFirmSlug = normalizeFirmSlug(req?.firmSlug || req?.body?.firmSlug || req?.query?.firmSlug || req?.params?.firmSlug);
+    let firm = req?.firm || null;
+
+    if (!firm && providedFirmSlug) {
+      firm = await Firm.findOne({ firmSlug: providedFirmSlug, status: 'active' }).select('_id name firmSlug').lean();
+      if (!firm?._id) {
+        return { user: null, firm: null, ambiguous: false, invalidFirm: true };
+      }
+    }
+
+    if (firm?._id) {
+      const user = await User.findOne({
+        firmId: firm._id,
+        email: normalizedEmail,
+        status: 'active',
+        isActive: true,
+      });
+      return { user, firm, ambiguous: false, invalidFirm: false };
+    }
+
+    const candidateUsers = await User.find({
+      email: normalizedEmail,
+      status: 'active',
+      isActive: true,
+    }).limit(2);
+
+    if (candidateUsers.length !== 1) {
+      return { user: null, firm: null, ambiguous: candidateUsers.length > 1, invalidFirm: false };
+    }
+
+    const user = candidateUsers[0];
+    const resolvedFirm = await Firm.findById(user.firmId).select('_id name firmSlug').lean();
+    if (!resolvedFirm?._id) {
+      return { user: null, firm: null, ambiguous: false, invalidFirm: false };
+    }
+    return { user, firm: resolvedFirm, ambiguous: false, invalidFirm: false };
+  };
 
   const forgotPassword = async (req, res) => {
     try {
@@ -140,11 +179,16 @@ const createAuthPasswordService = (deps) => {
     if (!email) {
       return res.status(400).json({ success: false, message: 'email is required' });
     }
-    const firm = req.firm;
+    const context = await resolveForgotPasswordContext({ req, email });
+    if (context.invalidFirm) {
+      return res.status(404).json({ success: false, message: 'Invalid workspace URL' });
+    }
+    const firm = context.firm;
     const now = Date.now();
 
-    const user = await User.findOne({ firmId: firm._id, email, status: 'active', isActive: true });
     const genericResponse = { success: true, message: 'If the account exists, an OTP has been sent to email.' };
+    const user = context.user;
+    if (context.ambiguous || !firm?._id) return res.json(genericResponse);
     if (!user) return res.json(genericResponse);
 
     const lastSentAtMs = user.forgotPasswordOtpLastSentAt ? new Date(user.forgotPasswordOtpLastSentAt).getTime() : 0;
@@ -194,6 +238,7 @@ const createAuthPasswordService = (deps) => {
     return res.json({
       ...genericResponse,
       resendCooldownSeconds: FORGOT_PASSWORD_OTP_RESEND_COOLDOWN_SECONDS,
+      firmSlug: firm.firmSlug || null,
     });
   };
 
@@ -204,9 +249,12 @@ const createAuthPasswordService = (deps) => {
     if (!email || !/^\d{6}$/.test(otp)) {
       return res.status(400).json({ success: false, message: 'email and valid OTP are required' });
     }
-    const firm = req.firm;
-
-    const user = await User.findOne({ firmId: firm._id, email, status: 'active', isActive: true });
+    const context = await resolveForgotPasswordContext({ req, email });
+    if (context.invalidFirm) {
+      return res.status(404).json({ success: false, message: 'Invalid workspace URL' });
+    }
+    const firm = context.firm;
+    const user = context.user;
     if (!user || !user.forgotPasswordOtpHash || !user.forgotPasswordOtpExpiresAt || user.forgotPasswordOtpExpiresAt.getTime() < Date.now()) {
       return res.status(401).json({ success: false, message: 'Invalid or expired OTP' });
     }
@@ -271,7 +319,7 @@ const createAuthPasswordService = (deps) => {
         eventType: 'FORGOT_PASSWORD_OTP_VERIFIED',
       },
     }, req);
-    return res.json({ success: true, message: 'OTP verified', resetToken });
+    return res.json({ success: true, message: 'OTP verified', resetToken, firmSlug: firm?.firmSlug || null });
   };
 
   const forgotPasswordResetWithOtp = async (req, res) => {
@@ -283,9 +331,12 @@ const createAuthPasswordService = (deps) => {
       return res.status(400).json({ success: false, message: PASSWORD_POLICY_MESSAGE });
     }
 
-    const firm = req.firm;
-
-    const user = await User.findOne({ firmId: firm._id, email, status: 'active', isActive: true });
+    const context = await resolveForgotPasswordContext({ req, email });
+    if (context.invalidFirm) {
+      return res.status(404).json({ success: false, message: 'Invalid workspace URL' });
+    }
+    const firm = context.firm;
+    const user = context.user;
     if (!user || !user.forgotPasswordResetTokenHash || !user.forgotPasswordResetTokenExpiresAt || user.forgotPasswordResetTokenExpiresAt.getTime() < Date.now()) {
       return res.status(401).json({ success: false, message: 'Invalid or expired reset session' });
     }
@@ -311,7 +362,7 @@ const createAuthPasswordService = (deps) => {
       userAgent: req.get('user-agent'),
     }, req);
 
-    return res.json({ success: true, message: 'Password reset successful' });
+    return res.json({ success: true, message: 'Password reset successful', firmSlug: firm?.firmSlug || null });
   };
 
   return {
