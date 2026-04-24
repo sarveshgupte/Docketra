@@ -1,6 +1,7 @@
 const log = require('../utils/log');
 const { buildWorkflowMeta, logWorkflowEvent } = require('../utils/workflowDiagnostics');
 const { applyWorkModeFilter, normalizeWorkMode } = require('../utils/workType');
+const CASE_LIST_PROJECTION = 'caseId caseNumber caseName title status category subcategory caseSubCategory priority clientId clientName assignedTo assignedToXID assignedToName createdBy createdByXID createdAt updatedAt dueDate slaDueAt isInternal workType lifecycle state pendingUntil ownerTeamId routedToTeamId';
 module.exports = (deps) => {
   const {
     mongoose,
@@ -479,6 +480,7 @@ module.exports = (deps) => {
 
   const getCases = async (req, res) => {
     try {
+      const listStartedAt = Date.now();
       if (typeof res.set === 'function') {
         res.set({
           'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -574,9 +576,10 @@ module.exports = (deps) => {
       // PERFORMANCE: Execute independent queries concurrently
       const [cases, total] = await Promise.all([
         Case.find(scopedCaseQuery)
+          .select(CASE_LIST_PROJECTION)
           .limit(parseInt(limit))
           .skip((parseInt(page) - 1) * parseInt(limit))
-          .sort({ createdAt: -1 })
+          .sort({ createdAt: -1, _id: 1 })
           .lean(),
         Case.countDocuments(scopedCaseQuery)
       ]);
@@ -591,7 +594,9 @@ module.exports = (deps) => {
 
       let clientsMap = new Map();
       if (uniqueClientIds.length > 0) {
-        const clientDocs = await Client.find(enforceTenantScope({ clientId: { $in: uniqueClientIds } }, req, { source: 'case.getCases.clients' })).lean();
+        const clientDocs = await Client.find(enforceTenantScope({ clientId: { $in: uniqueClientIds } }, req, { source: 'case.getCases.clients' }))
+          .select('clientId businessName primaryContactNumber businessEmail status isActive')
+          .lean();
 
         if (clientDocs.length > 0) {
           const decryptedClients = await ClientRepository.decryptDocs(clientDocs, req.user.firmId, { role: req.user.role });
@@ -670,6 +675,20 @@ module.exports = (deps) => {
           pages: Math.ceil(total / parseInt(limit)),
         },
       });
+      const durationMs = Date.now() - listStartedAt;
+      if (durationMs > 450) {
+        log.warn('[CASE_LIST_SLOW]', {
+          durationMs,
+          thresholdMs: 450,
+          firmId: req.user?.firmId || null,
+          userXID: req.user?.xID || null,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          hasStatusFilter: Boolean(status),
+          hasCategoryFilter: Boolean(category),
+          hasClientFilter: Boolean(clientId),
+        });
+      }
     } catch (error) {
       res.status(500).json({
         success: false,

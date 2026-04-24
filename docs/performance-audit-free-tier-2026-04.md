@@ -51,3 +51,24 @@
 - No paid infrastructure introduced.
 - No Redis dependency introduced.
 - Existing API fields preserved; added pagination/search is backward compatible.
+
+## Backend query/index optimization pass (April 23, 2026)
+
+### Additional bottlenecks identified
+1. Case/list/report endpoints still fetched larger documents than needed for list surfaces.
+2. Some queue and registry list sorts could be unstable under identical timestamps.
+3. Global worklist SLA path incurred extra query fanout for null-vs-non-null SLA handling.
+4. Slow backend query paths lacked targeted timing diagnostics.
+
+### Additional backend optimizations
+- Added list-safe projections for `GET /api/cases` and key report endpoints.
+- Added deterministic secondary sort tie-breakers (`_id`) on core list paths.
+- Refined global worklist SLA ordering branch to reduce duplicate list-query work.
+- Added slow-query threshold logs for case, worklist, dashboard, and report endpoints.
+
+### Additional indexes added
+- `{ firmId: 1, assignedToXID: 1, status: 1, createdAt: -1 }`
+- `{ firmId: 1, assignedToXID: 1, subcategory: 1, status: 1, createdAt: -1 }`
+- `{ firmId: 1, assignedToXID: 1, caseSubCategory: 1, status: 1, createdAt: -1 }`
+- `{ firmId: 1, ownerTeamId: 1, status: 1, slaDueAt: 1, createdAt: -1 }`
+- `{ firmId: 1, routedToTeamId: 1, status: 1, slaDueAt: 1, createdAt: -1 }`
