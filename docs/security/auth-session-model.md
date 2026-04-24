@@ -127,3 +127,25 @@ For future high-risk mutations, reuse the same origin validation middleware or a
 - Logout is broadcast across tabs via localStorage key updates.
 - Browser clients emit a logout lifecycle event used by socket consumers to disconnect immediately.
 - Logout broadcast writes are best-effort with guarded storage access, so local logout finalization still succeeds in restricted storage environments.
+
+## April 24, 2026 auth-flow regression fix
+
+### SuperAdmin login contract
+- SuperAdmin login remains cookie-based and does **not** require firm context.
+- SuperAdmin login/profile responses now include `redirectTo: /app/superadmin` for deterministic frontend routing.
+- SuperAdmin sessions continue to advertise `refreshEnabled: false`, and frontend route resolution must not assume `firmSlug`.
+
+### Firm login + OTP verify contract
+- Tenant login OTP verify responses now include `redirectTo` derived from `firmSlug` (`/app/firm/:firmSlug/dashboard`).
+- Frontend OTP success handlers force profile hydration once (`fetchProfile({ force: true })`) to clear stale unauthenticated guards and avoid post-OTP blank states.
+- Public auth endpoints (`/auth/login/*`, `/auth/forgot-password/*`) are explicitly marked as non-refreshable in API interceptor logic to prevent accidental refresh recursion on expected auth errors.
+
+### Forgot-password firmSlug handling
+- Forgot-password OTP routes now use optional firm resolution middleware:
+  - If `firmSlug` is present, firm scope is enforced.
+  - If absent, backend resolves a unique active account safely without account enumeration.
+- `forgot-password/init`, `verify`, and `reset` include `firmSlug` in success payloads when resolved, so frontend can preserve workspace login context end-to-end.
+
+### Logout/session expectations
+- Logout continues to clear auth cookies server-side and clear client cache/state + broadcast logout across tabs.
+- `preserveFirmSlug` behavior remains best-effort and only preserves routing hints, not identity material.
