@@ -112,7 +112,14 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(isAuth);
   }, []);
 
-  const fetchProfile = useCallback(async () => {
+  const fetchProfile = useCallback(async ({ force = false } = {}) => {
+    if (force) {
+      authFailureResolvedRef.current = false;
+      profileFetchAttemptedRef.current = false;
+      profileFetchInFlightRef.current = false;
+      profileFetchPromiseRef.current = null;
+    }
+
     if (authFailureResolvedRef.current) {
       console.info('[AUTH] Skipping profile fetch after resolved unauthenticated state.');
       return { success: false, data: null };

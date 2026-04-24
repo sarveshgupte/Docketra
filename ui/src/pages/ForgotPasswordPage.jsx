@@ -22,6 +22,7 @@ const getForgotPasswordErrorMessage = (errorData, defaultMessage) => (
 
 export const ForgotPasswordPage = () => {
   const { firmSlug } = useParams();
+  const [resolvedFirmSlug, setResolvedFirmSlug] = useState(firmSlug || '');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
@@ -34,7 +35,8 @@ export const ForgotPasswordPage = () => {
   const [fieldError, setFieldError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const loginPath = firmSlug ? `/${firmSlug}/login` : '/superadmin';
+  const activeFirmSlug = resolvedFirmSlug || firmSlug || '';
+  const loginPath = activeFirmSlug ? `/${activeFirmSlug}/login` : '/superadmin';
 
   React.useEffect(() => {
     if (step !== 2 || cooldown <= 0) return undefined;
@@ -62,8 +64,11 @@ export const ForgotPasswordPage = () => {
     setLoading(true);
 
     try {
-      const response = await authService.forgotPasswordInit(normalizedEmail, firmSlug);
+      const response = await authService.forgotPasswordInit(normalizedEmail, activeFirmSlug || undefined);
       if (response.success) {
+        if (response?.firmSlug) {
+          setResolvedFirmSlug(response.firmSlug);
+        }
         setSuccess('OTP sent to your email.');
         setStep(2);
         setCooldown(30);
@@ -86,8 +91,11 @@ export const ForgotPasswordPage = () => {
     }
     setLoading(true);
     try {
-      const response = await authService.forgotPasswordVerify(email.trim().toLowerCase(), firmSlug, otp.trim());
+      const response = await authService.forgotPasswordVerify(email.trim().toLowerCase(), activeFirmSlug || undefined, otp.trim());
       if (response.success) {
+        if (response?.firmSlug) {
+          setResolvedFirmSlug(response.firmSlug);
+        }
         setResetToken(response.resetToken || '');
         setStep(3);
         setSuccess('OTP verified. Set your new password.');
@@ -112,9 +120,14 @@ export const ForgotPasswordPage = () => {
     }
     setLoading(true);
     try {
-      const response = await authService.forgotPasswordResetWithOtp(email.trim().toLowerCase(), firmSlug, resetToken, password);
+      const response = await authService.forgotPasswordResetWithOtp(email.trim().toLowerCase(), activeFirmSlug || undefined, resetToken, password);
       if (response.success) {
-        navigate(loginPath, { state: { message: 'Password reset successfully. Please login.', messageType: 'success' } });
+        const nextFirmSlug = response?.firmSlug || activeFirmSlug || '';
+        if (response?.firmSlug) {
+          setResolvedFirmSlug(response.firmSlug);
+        }
+        const nextLoginPath = nextFirmSlug ? `/${nextFirmSlug}/login` : '/superadmin';
+        navigate(nextLoginPath, { state: { message: 'Password reset successfully. Please login.', messageType: 'success' } });
       }
     } catch (err) {
       setError(getForgotPasswordErrorMessage(err.response?.data, 'Unable to reset password'));
@@ -128,7 +141,7 @@ export const ForgotPasswordPage = () => {
     setLoading(true);
     setError('');
     try {
-      await authService.forgotPasswordInit(email.trim().toLowerCase(), firmSlug);
+      await authService.forgotPasswordInit(email.trim().toLowerCase(), activeFirmSlug || undefined);
       setSuccess('OTP resent to your email.');
       setCooldown(30);
     } catch (err) {

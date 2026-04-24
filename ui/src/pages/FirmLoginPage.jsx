@@ -183,7 +183,7 @@ export const FirmLoginPage = () => {
   const completeLogin = async (responseData) => {
     authService.setSessionTokens(responseData);
 
-    const profileResult = await fetchProfile();
+    const profileResult = await fetchProfile({ force: true });
     if (profileResult?.success) {
       showSuccess('✅ Signed in successfully. Redirecting to your dashboard.');
       const returnTo = new URLSearchParams(location.search).get('returnTo');
