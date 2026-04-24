@@ -24,6 +24,8 @@ const MAX_REPORT_PAGE_LIMIT = 250;
 const MAX_REPORT_RANGE_DAYS = 366;
 const DEFAULT_EXPORT_HISTORY_LIMIT = 25;
 const MAX_EXPORT_HISTORY_LIMIT = 200;
+const REPORT_CASE_PROJECTION = 'caseId caseName title status category clientId assignedToXID createdAt createdBy pendingUntil';
+const SLOW_REPORT_QUERY_MS = 500;
 
 const isValidDate = (value) => {
   const date = new Date(value);
@@ -48,6 +50,17 @@ const validateDateRangeWindow = (fromDate, toDate) => {
   }
 
   return { valid: true, start, end };
+};
+
+const logSlowReportPath = ({ endpoint, durationMs, firmId, extra = {} }) => {
+  if (durationMs < SLOW_REPORT_QUERY_MS) return;
+  log.warn('[REPORT_QUERY_SLOW]', {
+    endpoint,
+    durationMs,
+    thresholdMs: SLOW_REPORT_QUERY_MS,
+    firmId: firmId || null,
+    ...extra,
+  });
 };
 
 const hydrateCasesForReport = async (firmId, cases) => {
@@ -344,6 +357,7 @@ const aggregateByAgeing = (cases) => {
  */
 const getPendingCasesReport = async (req, res) => {
   try {
+    const startedAt = Date.now();
     const firmId = resolveFirmIdFromAuthContext(req, res);
     if (!firmId) return;
     const { category, assignedTo, ageingBucket } = req.query;
@@ -358,7 +372,7 @@ const getPendingCasesReport = async (req, res) => {
     
     // Fetch all pending cases
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
-    const cases = await Case.find(matchStage).limit(MAX_EXPORT_ROWS + 1).lean();
+    const cases = await Case.find(matchStage).select(REPORT_CASE_PROJECTION).limit(MAX_EXPORT_ROWS + 1).lean();
     if (cases.length > MAX_EXPORT_ROWS) {
       // PERFORMANCE: Hard cap enforced to prevent memory exhaustion
       return res.status(400).json({
@@ -400,6 +414,12 @@ const getPendingCasesReport = async (req, res) => {
         cases: casesWithClientNames,
       },
     });
+    logSlowReportPath({
+      endpoint: 'getPendingCasesReport',
+      durationMs: Date.now() - startedAt,
+      firmId,
+      extra: { totalPending: filteredCases.length },
+    });
   } catch (error) {
     log.error('Error in getPendingCasesReport:', error);
     res.status(500).json({
@@ -417,6 +437,7 @@ const getPendingCasesReport = async (req, res) => {
  */
 const getCasesByDateRange = async (req, res) => {
   try {
+    const startedAt = Date.now();
     const firmId = resolveFirmIdFromAuthContext(req, res);
     if (!firmId) return;
     const { fromDate, toDate, status, category, page = 1, limit = 50 } = req.query;
@@ -463,6 +484,7 @@ const getCasesByDateRange = async (req, res) => {
     const [total, cases] = await Promise.all([
       Case.countDocuments(matchStage),
       Case.find(matchStage)
+        .select(REPORT_CASE_PROJECTION)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limitNum)
@@ -483,6 +505,12 @@ const getCasesByDateRange = async (req, res) => {
         },
       },
     });
+    logSlowReportPath({
+      endpoint: 'getCasesByDateRange',
+      durationMs: Date.now() - startedAt,
+      firmId,
+      extra: { page: pageNum, limit: limitNum, total },
+    });
   } catch (error) {
     log.error('Error in getCasesByDateRange:', error);
     res.status(500).json({
@@ -500,6 +528,7 @@ const getCasesByDateRange = async (req, res) => {
  */
 const exportCasesCSV = async (req, res) => {
   try {
+    const startedAt = Date.now();
     const firmId = resolveFirmIdFromAuthContext(req, res);
     if (!firmId) return;
     const { fromDate, toDate, status, category } = req.query;
@@ -538,6 +567,7 @@ const exportCasesCSV = async (req, res) => {
     // Get all matching cases (bounded for export)
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const cases = await Case.find(matchStage)
+      .select(REPORT_CASE_PROJECTION)
       .sort({ createdAt: -1 })
       .limit(MAX_EXPORT_ROWS + 1)
       .lean();
@@ -576,6 +606,12 @@ const exportCasesCSV = async (req, res) => {
     });
 
     res.send(csv);
+    logSlowReportPath({
+      endpoint: 'exportCasesCSV',
+      durationMs: Date.now() - startedAt,
+      firmId,
+      extra: { rows: casesWithClientNames.length },
+    });
   } catch (error) {
     log.error('Error in exportCasesCSV:', error);
     await logAuditEvent({
@@ -601,6 +637,7 @@ const exportCasesCSV = async (req, res) => {
  */
 const exportCasesExcel = async (req, res) => {
   try {
+    const startedAt = Date.now();
     const firmId = resolveFirmIdFromAuthContext(req, res);
     if (!firmId) return;
     const { fromDate, toDate, status, category } = req.query;
@@ -638,6 +675,7 @@ const exportCasesExcel = async (req, res) => {
 
     // Get all matching cases (bounded for export)
     const cases = await Case.find(matchStage)
+      .select(REPORT_CASE_PROJECTION)
       .sort({ createdAt: -1 })
       .limit(MAX_EXPORT_ROWS + 1)
       .lean();
@@ -675,6 +713,12 @@ const exportCasesExcel = async (req, res) => {
 
     await workbook.xlsx.write(res);
     res.end();
+    logSlowReportPath({
+      endpoint: 'exportCasesExcel',
+      durationMs: Date.now() - startedAt,
+      firmId,
+      extra: { rows: casesWithClientNames.length },
+    });
   } catch (error) {
     log.error('Error in exportCasesExcel:', error);
     await logAuditEvent({

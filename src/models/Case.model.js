@@ -1218,7 +1218,12 @@ caseSchema.index({ firmId: 1, slaDueAt: 1 }); // Firm-scoped SLA due lookups
 caseSchema.index({ firmId: 1, status: 1 }); // Firm-scoped status queries
 caseSchema.index({ firmId: 1, assignedToXID: 1 }); // Firm-scoped assignment queries
 caseSchema.index({ firmId: 1, assignedToXID: 1, status: 1 }); // Firm-scoped assignment + status workbasket queries
+caseSchema.index({ firmId: 1, assignedToXID: 1, status: 1, createdAt: -1 }); // My Worklist / employee queue filter + recency sort
+caseSchema.index({ firmId: 1, assignedToXID: 1, subcategory: 1, status: 1, createdAt: -1 }); // Worklist subcategory filter (canonical field) + recency sort
+caseSchema.index({ firmId: 1, assignedToXID: 1, caseSubCategory: 1, status: 1, createdAt: -1 }); // Worklist subcategory filter (legacy field) + recency sort
 caseSchema.index({ firmId: 1, ownerTeamId: 1, routedToTeamId: 1, status: 1 });
+caseSchema.index({ firmId: 1, ownerTeamId: 1, status: 1, slaDueAt: 1, createdAt: -1 }); // Workbasket queue (owner) status + SLA/default sort
+caseSchema.index({ firmId: 1, routedToTeamId: 1, status: 1, slaDueAt: 1, createdAt: -1 }); // Workbasket queue (routed) status + SLA/default sort
 caseSchema.index({ firmId: 1, status: 1, createdAt: -1 });
 caseSchema.index({ firmId: 1, status: 1, dueDate: 1, slaDueAt: 1 });
 caseSchema.index({ firmId: 1, routedToTeamId: 1, status: 1 });

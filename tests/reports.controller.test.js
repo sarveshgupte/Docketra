@@ -308,9 +308,11 @@ async function runTests() {
     req.query.toDate = '2023-12-31';
     const oldFind = mockCaseModel.find;
     mockCaseModel.find = () => ({
-      sort: () => ({
-        limit: () => ({
-          lean: async () => { throw new Error('csv-export-boom'); }
+      select: () => ({
+        sort: () => ({
+          limit: () => ({
+            lean: async () => { throw new Error('csv-export-boom'); }
+          })
         })
       })
     });
@@ -328,9 +330,11 @@ async function runTests() {
     req.query.toDate = '2023-12-31';
     const oldFind = mockCaseModel.find;
     mockCaseModel.find = () => ({
-      sort: () => ({
-        limit: () => ({
-          lean: async () => Array.from({ length: 5001 }) // > MAX_EXPORT_ROWS
+      select: () => ({
+        sort: () => ({
+          limit: () => ({
+            lean: async () => Array.from({ length: 5001 }) // > MAX_EXPORT_ROWS
+          })
         })
       })
     });
