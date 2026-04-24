@@ -510,6 +510,11 @@ export const CasesPage = () => {
     return list;
   }, [searchedCases, sortState]);
 
+  const hasCachedRows = sortedCases.length > 0;
+  const tableErrorMessage = !hasCachedRows && error
+    ? 'Unable to load docket registry. Retry to fetch the latest queue data.'
+    : '';
+
   // Task 1: SLA Summary Bar metrics (computed from all cases, not filtered)
   const slaSummary = useMemo(() => {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -816,9 +821,9 @@ export const CasesPage = () => {
             onResetFilters={handleResetFilters}
             toolbarLeft={toolbarLeft}
             dense
-            refreshing={isFetching && !loading && sortedCases.length > 0}
+            refreshing={isFetching && !loading && hasCachedRows}
             refreshingMessage="Refreshing docket registry in the background…"
-            errorMessage={error ? 'Unable to load docket registry. Retry to fetch the latest queue data.' : ''}
+            errorMessage={tableErrorMessage}
             onRetry={() => void refetchCases()}
             emptyMessage={
               <EmptyState
