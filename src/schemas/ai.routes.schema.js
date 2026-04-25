@@ -10,7 +10,7 @@ const roleAccessSchema = z.object({
 module.exports = {
   'POST /config': {
     body: z.object({
-      provider: z.enum(['openai', 'gemini', 'claude']),
+      provider: z.enum(['openai']),
       apiKey: z.string().trim().min(1).optional(),
       model: z.string().trim().min(1).max(120).optional(),
       settings: z.object({

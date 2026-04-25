@@ -186,6 +186,7 @@ const createApp = () => {
     throw new Error('SECURITY: Wildcard CORS is forbidden in production');
   }
   const allowedOrigins = configuredOrigins.length > 0 ? configuredOrigins : (!isProduction ? ['http://localhost:5173'] : []);
+  const cspReportingEnabled = env.CSP_REPORTING_ENABLED === true;
   log.info('CORS_ALLOWED_ORIGINS', { allowedOrigins });
 
   // SECURITY: Defense-in-depth middleware
@@ -205,6 +206,20 @@ const createApp = () => {
     ...(!isProduction ? ['http://localhost:5173', 'ws://localhost:5173'] : []),
   ];
 
+  const cspDirectives = {
+    defaultSrc: ["'self'"],
+    baseUri: ["'self'"],
+    objectSrc: ["'none'"],
+    frameAncestors: ["'none'"],
+    scriptSrc: isProduction ? ["'self'"] : ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+    styleSrc: ["'self'", "'unsafe-inline'"],
+    imgSrc: ["'self'", 'data:', 'blob:'],
+    connectSrc: cspConnectSrc,
+  };
+  if (cspReportingEnabled) {
+    cspDirectives.reportUri = ['/api/csp-violation'];
+  }
+
   app.use(helmet({
     crossOriginEmbedderPolicy: false,
     frameguard: { action: 'deny' },
@@ -214,26 +229,18 @@ const createApp = () => {
     hsts: isProduction ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
     contentSecurityPolicy: {
       useDefaults: true,
-      directives: {
-        defaultSrc: ["'self'"],
-        baseUri: ["'self'"],
-        objectSrc: ["'none'"],
-        frameAncestors: ["'none'"],
-        scriptSrc: isProduction ? ["'self'"] : ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:', 'blob:'],
-        connectSrc: cspConnectSrc,
-        reportUri: ['/api/csp-violation'],
-      },
+      directives: cspDirectives,
     },
   }));
 
   // SECURITY: Capture CSP reports without exposing internals to clients.
-  app.post('/api/csp-violation', express.json({ type: ['application/csp-report', 'application/reports+json', 'application/json'] }), (req, res) => {
-    const report = maskSensitiveObject(req.body || {});
-    log.warn('CSP_VIOLATION_REPORTED', { report });
-    return res.status(204).end();
-  });
+  if (cspReportingEnabled) {
+    app.post('/api/csp-violation', express.json({ type: ['application/csp-report', 'application/reports+json', 'application/json'] }), (req, res) => {
+      const report = maskSensitiveObject(req.body || {});
+      log.warn('CSP_VIOLATION_REPORTED', { report });
+      return res.status(204).end();
+    });
+  }
 
   const CORS_ALLOWED_HEADERS = ['Content-Type', 'Authorization', 'X-Requested-With', 'Idempotency-Key', 'X-Correlation-ID'];
   const CORS_ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'];

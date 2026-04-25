@@ -45,7 +45,7 @@ const DASHBOARD_RECENT_CASES_ROW_COUNT = 5;
 const DASHBOARD_RECENT_CASES_MAX_ROWS = 10;
 const DASHBOARD_RECENT_CASES_LIMIT = Math.min(DASHBOARD_RECENT_CASES_ROW_COUNT, DASHBOARD_RECENT_CASES_MAX_ROWS);
 const resolveSupportEmail = () => {
-  const rawMailFrom = String(import.meta.env.VITE_MAIL_FROM || import.meta.env.MAIL_FROM || '').trim();
+  const rawMailFrom = String(import.meta.env.VITE_SUPPORT_EMAIL || '').trim();
   if (!rawMailFrom) return 'support@docketra.com';
 
   const bracketMatch = rawMailFrom.match(/<([^>]+)>/);

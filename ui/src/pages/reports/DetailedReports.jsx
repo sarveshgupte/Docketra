@@ -191,8 +191,7 @@ export const DetailedReports = () => {
       setExportModal({ isOpen: false, type: null, loading: false });
       loadExportHistory();
       
-      // Show success message (you could add a toast here)
-      console.log('Report exported successfully');
+      // Success is surfaced in UI state; avoid production console logging.
     } catch (err) {
       console.error('Error exporting:', err);
       setError('Failed to export report. Please try again.');
