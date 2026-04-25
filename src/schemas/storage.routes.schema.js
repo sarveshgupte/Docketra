@@ -25,6 +25,9 @@ module.exports = {
   'GET /configuration': {
     query: z.object({}).passthrough(),
   },
+  'GET /ownership-summary': {
+    query: z.object({}).passthrough(),
+  },
   'POST /test-connection': {
     body: z.object({}).passthrough(),
   },

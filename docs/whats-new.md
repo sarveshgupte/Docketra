@@ -1,5 +1,22 @@
 # What's New
 
+## April 2026: Storage & Data Ownership dashboard (BYOS trust visibility)
+
+- Added a firm-facing **Storage & Data Ownership** summary section in Storage settings to clearly show:
+  - active storage provider,
+  - connection status,
+  - last health check,
+  - fallback/default storage state,
+  - backup/export status,
+  - warnings when BYOS is not configured.
+- Added `GET /api/storage/ownership-summary` to provide a single tenant-scoped backend summary for trust and recovery visibility.
+- Enforced admin-only access and retained tenant isolation by scoping reads to `req.firmId`.
+- Kept provider secrets out of summary responses.
+- Added focused controller tests covering permission enforcement and tenant-scoped reads.
+- Added documentation:
+  - `docs/product/storage-and-data-ownership.md`
+  - `docs/architecture/byos-storage-model.md`
+
 ## April 2026: Audit Log explorer for firm admins
 
 - Added a dedicated firm-scoped **Audit Log** explorer at `/app/:firmSlug/admin/audit-logs` with readable summaries, actor, module, action type, target entity, severity, and timestamp.
