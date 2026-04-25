@@ -73,7 +73,7 @@ export const caseApi = {
 
     const pendingPromise = request(
       (http) => http.get(caseRoute.detail(caseId), { params }),
-      'Failed to load case details',
+      'Failed to load docket details',
     )
       .then((response) => {
         if (response?.notModified) {

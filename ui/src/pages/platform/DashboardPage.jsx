@@ -118,7 +118,7 @@ export const PlatformDashboardPage = () => {
         <div className="action-row">
           {isAdmin ? <Link to={ROUTES.CMS(firmSlug)}>CMS · Forms & Intake</Link> : null}
           {isAdmin ? <Link to={ROUTES.CRM_CLIENTS(firmSlug)}>CRM · Leads & Clients</Link> : null}
-          <Link to={ROUTES.CASES(firmSlug)}>Dockets · Oversight & Worklists</Link>
+          <Link to={ROUTES.DOCKETS(firmSlug)}>Dockets · Oversight & Worklists</Link>
           <button type="button" onClick={() => void refetch()} disabled={isFetching}>{isFetching ? 'Refreshing…' : 'Refresh metrics'}</button>
         </div>
         {!isAdmin ? <p className="muted">CMS and CRM modules are available to admin roles.</p> : null}
@@ -135,7 +135,7 @@ export const PlatformDashboardPage = () => {
       <PageSection
         title="Execution shortcuts"
         description="Jump directly into core operations without searching through navigation."
-        actions={<Link to={ROUTES.CASES(firmSlug)}>Open all dockets</Link>}
+        actions={<Link to={ROUTES.DOCKETS(firmSlug)}>Open all dockets</Link>}
       >
         <div className="action-row">
           <Link to={ROUTES.WORKLIST(firmSlug)}>My Worklist</Link>

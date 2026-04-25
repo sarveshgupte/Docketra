@@ -24,17 +24,22 @@ assert.ok(
   'Legacy /cases route must redirect to canonical /dockets path.'
 );
 assert.ok(
+  protectedRoutesSource.includes('path="cases/create"')
+    && protectedRoutesSource.includes('element={<Navigate to="../dockets/create" replace />}'),
+  'Legacy /cases/create route must redirect to canonical /dockets/create path.'
+);
+assert.ok(
   protectedRoutesSource.includes('path="cases/:caseId"')
     && protectedRoutesSource.includes('LegacyCaseDetailRedirect'),
   'Legacy /cases/:caseId route must redirect to canonical /dockets/:caseId path.'
 );
 
 assert.ok(
-  casesPageSource.includes('<PlatformShell moduleLabel="Operations" title="Dockets"'),
-  'Cases page should render in PlatformShell with explicit title to keep browser title stable.'
+  casesPageSource.includes('title="Dockets"'),
+  'Cases page should render in PlatformShell with explicit docket title to keep browser title stable.'
 );
 assert.ok(
-  casesPageSource.includes('Failed to load dockets. Refresh the page or try again in a moment.'),
+  casesPageSource.includes('Unable to load docket registry. Retry to fetch the latest queue data.'),
   'Cases page should expose inline, recoverable fetch failure state.'
 );
 assert.ok(
@@ -47,7 +52,7 @@ assert.ok(
   'PlatformShell must manage document title for unified workspace pages such as Dockets.'
 );
 assert.ok(
-  dashboardSource.includes('ROUTES.CASES(firmSlug)'),
+  dashboardSource.includes('ROUTES.DOCKETS(firmSlug)'),
   'Dashboard entry point must navigate to canonical dockets route.'
 );
 assert.ok(

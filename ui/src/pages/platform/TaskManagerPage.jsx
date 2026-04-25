@@ -20,7 +20,7 @@ export const PlatformTaskManagerPage = () => {
 
   return (
     <PlatformShell
-      moduleLabel="Dockets / Workbench"
+      moduleLabel="Docket Operations"
       title="Docket Workbench"
       subtitle="Daily docket execution hub for team intake, personal work, QC review, and oversight."
       actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>New Docket</Link>}
@@ -51,7 +51,7 @@ export const PlatformTaskManagerPage = () => {
             <strong>QC Workbench</strong>
             <span>Dockets awaiting quality-control pass, correction, or fail decisions.</span>
           </Link>
-          <Link className="module-tile" to={ROUTES.CASES(firmSlug)}>
+          <Link className="module-tile" to={ROUTES.DOCKETS(firmSlug)}>
             <strong>All Dockets</strong>
             <span>Master oversight view across workflow states and ownership.</span>
           </Link>
