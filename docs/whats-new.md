@@ -1,5 +1,13 @@
 # What's New
 
+## April 2026: Internal auth stability — unified login identifier model
+
+- Standardized auth-facing identifiers to a single user-facing format: **xID (`X123456`)**.
+- Removed login/OTP/route-schema acceptance of legacy `DK-XXXXX` style identifiers.
+- Kept legacy `xid` as an internal compatibility alias only, now synchronized to `xID` to avoid drift.
+- Updated forgot-password OTP flow to accept the same login identifier model (`xID` or email, depending on user input), eliminating cross-flow validation mismatches.
+- Added regression tests to enforce frontend/backend validation parity and identifier consistency across login + forgot-password paths.
+
 ## April 2026: Route validation contract enforcement + public intake legacy cleanup
 
 - Added a phased backend route-validation contract test (`tests/routeValidationContract.test.js`) that strictly enforces schema correctness for routes already using `applyRouteValidation`, while requiring explicit allowlisting + migration reasons for legacy non-validated route files.

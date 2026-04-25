@@ -261,9 +261,10 @@ const createAuthOtpService = (deps) => {
   const sendOtpEndpoint = async (req, res) => {
     try {
       const email = req.body?.email ? String(req.body.email).trim().toLowerCase() : null;
-      const xid = req.body?.xid ? String(req.body.xid).trim().toUpperCase() : null;
+      const xIDRaw = req.body?.xID || req.body?.XID || req.body?.xid || null;
+      const xid = xIDRaw ? String(xIDRaw).trim().toUpperCase() : null;
       const purpose = String(req.body?.purpose || 'login').trim();
-      const result = await sendCentralOtp({ email, xid, purpose });
+      const result = await sendCentralOtp({ email, xid, xID: xid, purpose });
       return res.status(202).json({ success: true, data: result });
     } catch (error) {
       const statusCode = error.message === 'OTP_RATE_LIMITED' ? 429 : 400;

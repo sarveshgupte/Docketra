@@ -22,8 +22,11 @@ const createAuthPasswordService = (deps) => {
     PASSWORD_POLICY_MESSAGE,
     bcrypt,
   } = deps;
-  const resolveForgotPasswordContext = async ({ req, email }) => {
-    const normalizedEmail = String(email || '').trim().toLowerCase();
+  const resolveForgotPasswordContext = async ({ req, identifier }) => {
+    const rawIdentifier = String(identifier || '').trim();
+    const isEmailIdentifier = rawIdentifier.includes('@');
+    const normalizedEmail = isEmailIdentifier ? rawIdentifier.toLowerCase() : null;
+    const normalizedXID = isEmailIdentifier ? null : rawIdentifier.toUpperCase();
     const providedFirmSlug = normalizeFirmSlug(req?.firmSlug || req?.body?.firmSlug || req?.query?.firmSlug || req?.params?.firmSlug);
     let firm = req?.firm || null;
 
@@ -37,7 +40,7 @@ const createAuthPasswordService = (deps) => {
     if (firm?._id) {
       const user = await User.findOne({
         firmId: firm._id,
-        email: normalizedEmail,
+        ...(isEmailIdentifier ? { email: normalizedEmail } : { xID: normalizedXID }),
         status: 'active',
         isActive: true,
       });
@@ -45,7 +48,7 @@ const createAuthPasswordService = (deps) => {
     }
 
     const candidateUsers = await User.find({
-      email: normalizedEmail,
+      ...(isEmailIdentifier ? { email: normalizedEmail } : { xID: normalizedXID }),
       status: 'active',
       isActive: true,
     }).limit(2);
@@ -65,15 +68,18 @@ const createAuthPasswordService = (deps) => {
   const forgotPassword = async (req, res) => {
     try {
       const { email, firmSlug } = req.body;
+      const identifier = String(req.body?.identifier || req.body?.xID || req.body?.xid || email || '').trim();
+      const isEmailIdentifier = identifier.includes('@');
+      const normalizedEmail = isEmailIdentifier ? identifier.toLowerCase() : null;
+      const normalizedXID = isEmailIdentifier ? null : identifier.toUpperCase();
 
-      if (!email) {
+      if (!identifier) {
         return res.status(400).json({
           success: false,
-          message: 'Email is required',
+          message: 'Email or xID is required',
         });
       }
 
-      const normalizedEmail = email.trim().toLowerCase();
       const normalizedFirmSlug = normalizeFirmSlug(firmSlug);
       let resolvedFirmId = req.firmId || null;
 
@@ -95,33 +101,37 @@ const createAuthPasswordService = (deps) => {
       if (resolvedFirmId) {
         user = await User.findOne({
           firmId: resolvedFirmId,
-          email: normalizedEmail,
+          ...(isEmailIdentifier ? { email: normalizedEmail } : { xID: normalizedXID }),
           status: { $ne: 'deleted' },
         });
       } else {
         const candidateUsers = await User.find({
-          email: normalizedEmail,
+          ...(isEmailIdentifier ? { email: normalizedEmail } : { xID: normalizedXID }),
           status: { $ne: 'deleted' },
         })
           .limit(2);
         if (candidateUsers.length > 1) {
-          log.warn(`[AUTH] Forgot password email is ambiguous across firms: ${emailService.maskEmail(normalizedEmail)}`);
+          log.warn(`[AUTH] Forgot password identifier is ambiguous across firms: ${isEmailIdentifier ? emailService.maskEmail(normalizedEmail) : normalizedXID}`);
           return res.json({
             success: true,
-            message: 'If an account exists with this email, you will receive a password reset link.',
+            message: 'If an account exists with this identifier, you will receive a password reset link.',
           });
         }
         user = candidateUsers.length === 1 ? candidateUsers[0] : null;
       }
 
       if (!user) {
-        const emailParts = email.split('@');
-        const maskedEmail = emailParts[0].substring(0, 2) + '***@' + (emailParts[1] || '');
-        log.info(`[AUTH] Forgot password requested for non-existent email: ${maskedEmail}`);
+        if (isEmailIdentifier) {
+          const emailParts = normalizedEmail.split('@');
+          const maskedEmail = emailParts[0].substring(0, 2) + '***@' + (emailParts[1] || '');
+          log.info(`[AUTH] Forgot password requested for non-existent email: ${maskedEmail}`);
+        } else {
+          log.info(`[AUTH] Forgot password requested for non-existent xID: ${normalizedXID}`);
+        }
 
         return res.json({
           success: true,
-          message: 'If an account exists with this email, you will receive a password reset link.',
+          message: 'If an account exists with this identifier, you will receive a password reset link.',
         });
       }
 
@@ -130,7 +140,7 @@ const createAuthPasswordService = (deps) => {
 
         return res.json({
           success: true,
-          message: 'If an account exists with this email, you will receive a password reset link.',
+          message: 'If an account exists with this identifier, you will receive a password reset link.',
         });
       }
 
@@ -163,7 +173,7 @@ const createAuthPasswordService = (deps) => {
 
       return res.json({
         success: true,
-        message: 'If an account exists with this email, you will receive a password reset link.',
+        message: 'If an account exists with this identifier, you will receive a password reset link.',
       });
     } catch (error) {
       log.error('[AUTH] Error in forgot password:', error);
@@ -175,11 +185,11 @@ const createAuthPasswordService = (deps) => {
   };
 
   const forgotPasswordInit = async (req, res) => {
-    const email = String(req.body?.email || '').trim().toLowerCase();
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'email is required' });
+    const identifier = String(req.body?.identifier || req.body?.xID || req.body?.xid || req.body?.email || '').trim();
+    if (!identifier) {
+      return res.status(400).json({ success: false, message: 'email or xID is required' });
     }
-    const context = await resolveForgotPasswordContext({ req, email });
+    const context = await resolveForgotPasswordContext({ req, identifier });
     if (context.invalidFirm) {
       return res.status(404).json({ success: false, message: 'Invalid workspace URL' });
     }
@@ -243,13 +253,13 @@ const createAuthPasswordService = (deps) => {
   };
 
   const forgotPasswordVerify = async (req, res) => {
-    const email = String(req.body?.email || '').trim().toLowerCase();
+    const identifier = String(req.body?.identifier || req.body?.xID || req.body?.xid || req.body?.email || '').trim();
     const otp = String(req.body?.otp || '').trim();
 
-    if (!email || !/^\d{6}$/.test(otp)) {
-      return res.status(400).json({ success: false, message: 'email and valid OTP are required' });
+    if (!identifier || !/^\d{6}$/.test(otp)) {
+      return res.status(400).json({ success: false, message: 'email/xID and valid OTP are required' });
     }
-    const context = await resolveForgotPasswordContext({ req, email });
+    const context = await resolveForgotPasswordContext({ req, identifier });
     if (context.invalidFirm) {
       return res.status(404).json({ success: false, message: 'Invalid workspace URL' });
     }
@@ -323,15 +333,18 @@ const createAuthPasswordService = (deps) => {
   };
 
   const forgotPasswordResetWithOtp = async (req, res) => {
-    const email = String(req.body?.email || '').trim().toLowerCase();
+    const identifier = String(req.body?.identifier || req.body?.xID || req.body?.xid || req.body?.email || '').trim();
     const resetToken = String(req.body?.resetToken || '').trim();
     const password = String(req.body?.password || '');
+    if (!identifier || !resetToken || !password) {
+      return res.status(400).json({ success: false, message: 'email/xID, resetToken, and password are required' });
+    }
 
     if (!validatePasswordStrength(password)) {
       return res.status(400).json({ success: false, message: PASSWORD_POLICY_MESSAGE });
     }
 
-    const context = await resolveForgotPasswordContext({ req, email });
+    const context = await resolveForgotPasswordContext({ req, identifier });
     if (context.invalidFirm) {
       return res.status(404).json({ success: false, message: 'Invalid workspace URL' });
     }

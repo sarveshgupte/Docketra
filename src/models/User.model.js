@@ -21,7 +21,7 @@ const { getTagValidationError, normalizeId } = require('../utils/hierarchy.utils
  */
 
 const userSchema = new mongoose.Schema({
-  // Enterprise employee number - PRIMARY identifier
+  // Enterprise employee number - PRIMARY login identifier
   // Format: X followed by 6 digits (e.g., X000001, X000002)
   // IMMUTABLE - Cannot be changed after creation
   // FIRM-SCOPED - Each firm starts with X000001
@@ -29,16 +29,17 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'xID is required'],
     uppercase: true,
-    match: [/^(X\d{6}|DK-[A-Z0-9]{5})$/, 'xID must be in format X123456 or DK-XXXXX'],
+    match: [/^X\d{6}$/, 'xID must be in format X123456'],
     immutable: true,
   },
 
-  // New canonical identity in DK-XXXXX format
+  // Internal alias retained for backward compatibility with legacy payloads/claims.
+  // Always mirrors xID and must never diverge from it.
   xid: {
     type: String,
     uppercase: true,
     trim: true,
-    match: [/^DK-[A-Z0-9]{5}$/, 'xid must be in format DK-XXXXX'],
+    match: [/^X\d{6}$/, 'xid must be in format X123456'],
   },
 
   // UUID identity key for external references
@@ -621,24 +622,6 @@ const userSchema = new mongoose.Schema({
   toObject: { virtuals: true, getters: true },
 });
 
-const generateMigratedXid = async (legacyXid) => {
-  const normalizedLegacy = String(legacyXid || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
-  const base = normalizedLegacy.slice(-5).padStart(5, '0');
-  const directCandidate = `DK-${base}`;
-
-  const directExists = await mongoose.models.User.exists({ xid: directCandidate });
-  if (!directExists) return directCandidate;
-
-  for (let i = 0; i < 20; i += 1) {
-    const candidate = `DK-${crypto.randomBytes(3).toString('hex').slice(0, 5).toUpperCase()}`;
-    // eslint-disable-next-line no-await-in-loop
-    const exists = await mongoose.models.User.exists({ xid: candidate });
-    if (!exists) return candidate;
-  }
-
-  throw new Error('XID_MIGRATION_FAILED');
-};
-
 /**
  * Validation: Every non-superadmin user must have tenant context fields set.
  */
@@ -650,15 +633,9 @@ userSchema.pre('save', async function() {
     this.twoFactorSecret = encryptProtectedValue(this.twoFactorSecret);
   }
 
-  // Migration safety: backfill canonical xid from legacy xID when missing
-  if (!this.xid) {
-    if (this.xID && /^DK-[A-Z0-9]{5}$/.test(this.xID)) {
-      this.xid = this.xID;
-    } else if (this.xID) {
-      this.xid = await generateMigratedXid(this.xID);
-    } else {
-      this.xid = await generateMigratedXid('');
-    }
+  // Keep legacy alias synchronized with the canonical user-facing xID.
+  if (this.xID && this.xid !== this.xID) {
+    this.xid = this.xID;
   }
 
   // GUARDRAIL: Prevent saving non-superadmin users without firm/default client context
