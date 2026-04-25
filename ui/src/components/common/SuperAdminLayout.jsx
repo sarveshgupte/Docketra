@@ -58,6 +58,9 @@ export const SuperAdminLayout = ({ children }) => {
           <Link to="/app/superadmin/onboarding-insights" className={navItemClass(isActive('/app/superadmin/onboarding-insights'))}>
             Onboarding Insights
           </Link>
+          <Link to="/app/superadmin/diagnostics" className={navItemClass(isActive('/app/superadmin/diagnostics'))}>
+            Support Diagnostics
+          </Link>
         </nav>
 
         <div className="mt-6 hidden rounded-xl border border-gray-200 bg-gray-50 p-3 md:block">

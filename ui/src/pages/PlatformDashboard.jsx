@@ -256,9 +256,14 @@ export const PlatformDashboard = () => {
               <Badge>Superadmin</Badge>
             </div>
             <div className="flex justify-end">
-              <Button variant="secondary" onClick={() => navigate('/app/superadmin/onboarding-insights')}>
-                Open actionable insights
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="secondary" onClick={() => navigate('/app/superadmin/onboarding-insights')}>
+                  Open actionable insights
+                </Button>
+                <Button variant="ghost" onClick={() => navigate('/app/superadmin/diagnostics')}>
+                  Open support diagnostics
+                </Button>
+              </div>
             </div>
             {onboardingInsights ? (
               <div className="space-y-4">
