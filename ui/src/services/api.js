@@ -52,7 +52,15 @@ const isPublicAuthFlowRequest = (requestConfig) => {
     || /\/login$/.test(requestUrl);
 };
 const isRefreshRequest = (requestConfig) => /\/auth\/refresh$/.test(String(requestConfig?.url || ''));
-const isLoginLikePath = (pathname) => /\/login$/.test(pathname) || pathname.includes('/auth/login');
+const isPublicAuthPagePath = (pathname) => {
+  const value = String(pathname || '').trim();
+  if (!value) return false;
+  if (value === '/' || value === '/login' || value === '/superadmin' || value === '/superadmin/login') return true;
+  if (value === '/forgot-password' || value === '/reset-password' || value === '/auth/otp') return true;
+  if (/^\/[a-z0-9]+(?:-[a-z0-9]+)*\/login$/i.test(value)) return true;
+  return false;
+};
+const isLoginLikePath = (pathname) => isPublicAuthPagePath(pathname) || pathname.includes('/auth/login');
 
 function generateIdempotencyKey() {
   if (window.crypto?.randomUUID) {
@@ -210,7 +218,7 @@ api.interceptors.response.use(
       redirecting = true;
       const inSuperadminNamespace = String(window.location.pathname || '').startsWith('/app/superadmin') || String(window.location.pathname || '').startsWith('/superadmin');
       const destination = inSuperadminNamespace
-        ? '/superadmin'
+        ? '/superadmin/login'
         : resolveFirmLoginPath({ fallbackFirmSlug: firmSlug });
       const currentPath = window.location.pathname || '';
       const alreadyOnLoginRoute = currentPath === destination || isLoginLikePath(currentPath);
@@ -225,6 +233,9 @@ api.interceptors.response.use(
     };
     const clearAuthStorage = () => {
       localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
+      sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_TOKEN);
+      sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_FIRM);
+      sessionStorage.removeItem(SESSION_KEYS.POST_LOGIN_RETURN_TO);
       window.dispatchEvent(new CustomEvent('auth:logout'));
     };
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
