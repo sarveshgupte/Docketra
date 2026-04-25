@@ -22,6 +22,29 @@ const sanitizeLayoutClasses = (className = '') =>
     .filter((token) => LAYOUT_CLASS_PATTERNS.some((pattern) => pattern.test(token)))
     .join(' ');
 
+const normalizeButtonSize = (size) => {
+  const aliases = {
+    xs: 'xs',
+    sm: 'sm',
+    small: 'sm',
+    md: 'md',
+    medium: 'md',
+    lg: 'lg',
+    large: 'lg',
+  };
+
+  return aliases[size] || 'md';
+};
+
+const normalizeVariant = (variant) => {
+  const aliases = {
+    default: 'secondary',
+    warning: 'danger',
+  };
+
+  return aliases[variant] || variant;
+};
+
 export const Button = ({
   children,
   onClick,
@@ -29,14 +52,21 @@ export const Button = ({
   variant = 'secondary',
   disabled = false,
   loading = false,
-  size,
+  size = 'md',
   fullWidth = false,
   className = '',
+  allowUnsafeClassName = false,
   ...props
 }) => {
-  const baseClasses =
-    size === 'sm' ? 'inline-flex min-h-8 items-center justify-center rounded-md border font-medium leading-4 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-xs px-3 py-1.5' :
-    'inline-flex min-h-11 items-center justify-center rounded-md border font-medium leading-5 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-sm px-4 py-2.5';
+  const normalizedSize = normalizeButtonSize(size);
+  const normalizedVariant = normalizeVariant(variant);
+
+  const baseClassesBySize = {
+    xs: 'inline-flex min-h-7 items-center justify-center rounded-md border font-medium leading-4 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-xs px-2 py-1',
+    sm: 'inline-flex min-h-8 items-center justify-center rounded-md border font-medium leading-4 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-xs px-3 py-1.5',
+    md: 'inline-flex min-h-11 items-center justify-center rounded-md border font-medium leading-5 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-sm px-4 py-2.5',
+    lg: 'inline-flex min-h-12 items-center justify-center rounded-md border font-medium leading-5 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-base px-5 py-3',
+  };
 
   const variantClasses = {
     primary: 'border-primary bg-primary text-white hover:brightness-105 active:brightness-95 focus-visible:ring-primary',
@@ -49,7 +79,7 @@ export const Button = ({
   };
 
   const isDisabled = disabled || loading;
-  const layoutClassName = sanitizeLayoutClasses(className);
+  const layoutClassName = allowUnsafeClassName ? className : sanitizeLayoutClasses(className);
 
   return (
     <button
@@ -57,7 +87,7 @@ export const Button = ({
       onClick={onClick}
       disabled={isDisabled}
       aria-busy={loading || undefined}
-      className={`${baseClasses} ${fullWidth ? 'w-full' : ''} ${variantClasses[variant] || variantClasses.secondary} ${layoutClassName}`}
+      className={`${baseClassesBySize[normalizedSize]} ${fullWidth ? 'w-full' : ''} ${variantClasses[normalizedVariant] || variantClasses.secondary} ${layoutClassName}`}
       {...props}
     >
       {loading && (

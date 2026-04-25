@@ -18,6 +18,7 @@ const sizeClasses = {
   xs: 'max-w-sm',
   small: 'max-w-md',
   sm: 'max-w-md',
+  medium: 'max-w-lg',
   md: 'max-w-lg',
   lg: 'max-w-3xl',
   large: 'max-w-3xl',

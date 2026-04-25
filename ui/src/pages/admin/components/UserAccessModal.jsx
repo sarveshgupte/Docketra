@@ -24,8 +24,8 @@ export const UserAccessModal = ({
 }) => (
   <Modal isOpen={isOpen} onClose={onClose} title={`User Access & Workbasket Mapping${selectedUser ? ` — ${selectedUser.name}` : ''}`}>
     <div className="admin__create-form">
-      <div className="neo-info-text">Select workbaskets and clients for this user. At least one workbasket is required.</div>
-      <div className="neo-form-group">
+      <div className="text-sm text-gray-600">Select workbaskets and clients for this user. At least one workbasket is required.</div>
+      <div className="space-y-2">
         <FormLabel>Workbaskets (at least one)</FormLabel>
         <div className="admin__client-access-list">
           {primaryWorkbaskets.map((workbasket) => (
@@ -38,7 +38,7 @@ export const UserAccessModal = ({
       </div>
 
       {qcOnlyWorkbaskets.length > 0 ? (
-        <div className="neo-form-group">
+        <div className="space-y-2">
           <FormLabel>QC Access (optional)</FormLabel>
           <div className="admin__client-access-list">
             {qcOnlyWorkbaskets.map((workbasket) => (
@@ -63,7 +63,7 @@ export const UserAccessModal = ({
 
       <div className="admin__client-access-list">
         {clients.length === 0 ? (
-          <div className="neo-info-text">No clients available yet.</div>
+          <div className="text-sm text-gray-600">No clients available yet.</div>
         ) : (
           clients.map((client) => (
             <label key={client.clientId} className="admin__client-access-item">

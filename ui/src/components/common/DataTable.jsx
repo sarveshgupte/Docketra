@@ -76,7 +76,7 @@ export const DataTable = ({
                     <span aria-hidden className="ml-0.5 text-slate-500 hover:text-slate-900">&times;</span>
                   </button>
                 ))}
-                <Button variant="ghost" size="sm" onClick={onResetFilters} className="text-slate-500 hover:text-slate-900 px-2 h-7">
+                <Button variant="ghost" size="xs" onClick={onResetFilters}>
                   Clear all
                 </Button>
               </div>
@@ -180,8 +180,8 @@ export const DataTable = ({
         <div className="flex items-center justify-between text-sm text-slate-600" role="navigation" aria-label="Queue pagination">
           <span>Page {pagination.page} of {pagination.pages} · {pagination.total || 0} dockets</span>
           <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" size="small" disabled={pagination.page <= 1} onClick={() => pagination.onPageChange?.(pagination.page - 1)}>Previous</Button>
-            <Button type="button" variant="outline" size="small" disabled={pagination.page >= pagination.pages} onClick={() => pagination.onPageChange?.(pagination.page + 1)}>Next</Button>
+            <Button type="button" variant="outline" size="sm" disabled={pagination.page <= 1} onClick={() => pagination.onPageChange?.(pagination.page - 1)}>Previous</Button>
+            <Button type="button" variant="outline" size="sm" disabled={pagination.page >= pagination.pages} onClick={() => pagination.onPageChange?.(pagination.page + 1)}>Next</Button>
           </div>
         </div>
       ) : null}
