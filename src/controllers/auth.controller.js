@@ -35,6 +35,7 @@ const { ensureDefaultClientForFirm } = require('../services/defaultClient.servic
 const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
 const { getLatestPublishedUpdate } = require('../services/productUpdate.service');
 const { disconnectUserSockets } = require('../services/notificationSocket.service');
+const { resolveCanonicalTenantForUser } = require('../services/tenantIdentity.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const config = require('../config/config');
 const { loadEnv } = require('../config/env');
@@ -548,22 +549,6 @@ const clearCachedLoginOtpState = async (user) => {
 };
 
 /**
- * Helper: Fetch firm slug for a given firmId
- * Reduces code duplication across auth functions
- */
-const getFirmSlug = async (firmId) => {
-  if (!firmId) return null;
-  
-  try {
-    const firm = await Firm.findOne({ _id: firmId });
-    return firm?.firmSlug || null;
-  } catch (error) {
-    log.error('[AUTH] Error fetching firm slug:', error);
-    return null; // Gracefully handle errors, don't crash
-  }
-};
-
-/**
  * Generate a refresh token, hash it for storage, persist with expiry, and return the raw token.
  * @param {Object} params
  * @param {Object} params.req
@@ -583,23 +568,24 @@ const buildTokenResponse = async (user, req, authMethod = 'Password') => {
     await ensureUserDefaultClientLink(user, req);
   }
 
-  // Fetch firm details if user has firmId
-  const firmSlug = await getFirmSlug(user.firmId);
+  const tenantContext = await resolveCanonicalTenantForUser(user);
+  const runtimeTenantId = tenantContext?.tenantId || (user.firmId ? String(user.firmId) : null);
+  const firmSlug = tenantContext?.firmSlug || null;
 
   // OBJECTIVE 2: Include ALL firm context in JWT token
   await ensureCanonicalXid(user);
 
   const accessToken = jwtService.generateAccessToken({
     userId: user._id.toString(),
-    firmId: user.firmId ? user.firmId.toString() : undefined,
+    firmId: runtimeTenantId || undefined,
     firmSlug: firmSlug || undefined, // NEW: Include firmSlug in token
-    defaultClientId: user.defaultClientId ? user.defaultClientId.toString() : undefined, // NEW: Include defaultClientId in token
+    defaultClientId: tenantContext?.defaultClientId || (user.defaultClientId ? user.defaultClientId.toString() : undefined),
     role: user.role,
   });
 
   const { refreshToken } = await generateAndStoreRefreshToken({
     userId: user._id,
-    firmId: user.firmId || null,
+    firmId: runtimeTenantId || null,
     req,
   });
 

@@ -7,6 +7,7 @@ const { loadEnv } = require('../config/env');
 const metricsService = require('../services/metrics.service');
 const { getCookieValue } = require('../utils/requestCookies');
 const { isActiveStatus, getFirmInactiveCode } = require('../utils/status.utils');
+const { resolveCanonicalTenantForUser } = require('../services/tenantIdentity.service');
 const { buildRequestContext } = require('./attachRequestContext');
 const log = require('../utils/log');
 
@@ -23,12 +24,13 @@ const MUST_SET_ALLOWED_PATHS = [
   '/api/auth/reset-password-with-token',
 ];
 
-const ensureTenantDefaultClient = async (req, user) => {
+const ensureTenantDefaultClient = async (req, user, runtimeTenantId = null) => {
   if (!user || user.role === 'SUPER_ADMIN') {
     return null;
   }
 
-  if (!user.firmId) {
+  const tenantId = runtimeTenantId || user.firmId;
+  if (!tenantId) {
     throw new Error('MISSING_FIRM_CONTEXT');
   }
 
@@ -42,11 +44,11 @@ const ensureTenantDefaultClient = async (req, user) => {
   const needsRepair = (
     !defaultClient
     || !defaultClient.isDefaultClient
-    || String(defaultClient.firmId) !== String(user.firmId)
+    || (String(defaultClient.firmId) !== String(defaultClient._id) && String(defaultClient.firmId) !== String(tenantId))
   );
 
   if (needsRepair) {
-    defaultClient = await getOrCreateDefaultClient(user.firmId, {
+    defaultClient = await getOrCreateDefaultClient(tenantId, {
       userId: user._id,
       requestId: req?.id || req?.requestId || null,
     });
@@ -169,11 +171,7 @@ const authenticate = async (req, res, next) => {
     // ============================================================
     
     // Find user by ID from token
-    const userQuery = { _id: decoded.userId };
-    if (decoded.firmId) {
-      userQuery.firmId = decoded.firmId;
-    }
-    const user = await User.findOne(userQuery);
+    const user = await User.findOne({ _id: decoded.userId });
     
     if (!user) {
       noteAuthFailure();
@@ -212,10 +210,22 @@ const authenticate = async (req, res, next) => {
       });
     }
     
-    // Verify firmId matches (multi-tenancy check)
-    // Skip this check for SUPER_ADMIN (they have no firmId)
+    let tenantContext = null;
+    try {
+      tenantContext = await resolveCanonicalTenantForUser(user);
+    } catch (tenantResolutionError) {
+      log.warn('[AUTH] Tenant identity resolution failed, falling back to stored user context', {
+        error: tenantResolutionError.message,
+        userId: user?._id || null,
+      });
+    }
+    const runtimeTenantId = tenantContext?.tenantId || (user.firmId ? user.firmId.toString() : null);
+    const runtimeDefaultClientId = tenantContext?.defaultClientId || (user.defaultClientId ? user.defaultClientId.toString() : null);
+    const runtimeFirmSlug = tenantContext?.firmSlug || decoded.firmSlug || null;
+
+    // Verify firmId matches canonical runtime tenant context
     if (user.role !== 'SUPER_ADMIN') {
-      if (user.firmId && decoded.firmId && user.firmId.toString() !== decoded.firmId.toString()) {
+      if (runtimeTenantId && decoded.firmId && runtimeTenantId !== decoded.firmId.toString()) {
         noteAuthFailure();
         return res.status(403).json({
           success: false,
@@ -227,10 +237,10 @@ const authenticate = async (req, res, next) => {
     // Check if user's organization is suspended (Superadmin exempt)
     // NOTE: This DB lookup is for runtime state check (SUSPENDED status), not authorization
     // Authorization decisions use JWT claims (req.jwt.firmId, req.jwt.firmSlug)
-    if (user.role !== 'SUPER_ADMIN' && user.firmId) {
+    if (user.role !== 'SUPER_ADMIN' && runtimeTenantId) {
       // Try default-client lookup first (new architecture), fall back to Firm (legacy)
       const Client = require('../models/Client.model');
-      const defaultClient = await Client.findOne({ _id: user.firmId, isDefaultClient: true })
+      const defaultClient = await Client.findOne({ _id: runtimeTenantId, isDefaultClient: true })
         .select('status').lean();
       if (defaultClient) {
         if (defaultClient.status && !isActiveStatus(defaultClient.status)) {
@@ -246,7 +256,9 @@ const authenticate = async (req, res, next) => {
         let Firm;
         try { Firm = require('../models/Firm.model'); } catch (_) { /* no Firm model */ }
         if (Firm) {
-          const firm = await Firm.findById(user.firmId).select('status').lean();
+          const firm = tenantContext?.legacyFirmId
+            ? await Firm.findById(tenantContext.legacyFirmId).select('status').lean()
+            : null;
           if (firm && !isActiveStatus(firm.status)) {
             noteAuthFailure();
             return res.status(403).json({
@@ -304,7 +316,7 @@ const authenticate = async (req, res, next) => {
     }
 
     try {
-      await ensureTenantDefaultClient(req, user);
+      await ensureTenantDefaultClient(req, user, runtimeTenantId);
     } catch (defaultClientError) {
       noteAuthFailure();
       log.error('[AUTH] Failed to enforce tenant default client invariant:', defaultClientError.message);
@@ -323,8 +335,8 @@ const authenticate = async (req, res, next) => {
       xID: user.xID,
       email: user.email,
       role: effectiveRole,
-      firmId: user.firmId || decoded.firmId || null,
-      defaultClientId: user.defaultClientId || decoded.defaultClientId || null,
+      firmId: runtimeTenantId || decoded.firmId || null,
+      defaultClientId: runtimeDefaultClientId || decoded.defaultClientId || null,
     };
 
     if (!req._authLogged) {
@@ -339,16 +351,16 @@ const authenticate = async (req, res, next) => {
     // This makes firmSlug and defaultClientId available for route handlers
     req.jwt = {
       userId: decoded.userId,
-      firmId: decoded.firmId || null, // May be null for SUPER_ADMIN
-      firmSlug: decoded.firmSlug || null, // NEW: Make firmSlug available from token
-      defaultClientId: decoded.defaultClientId || null, // NEW: Make defaultClientId available from token
+      firmId: runtimeTenantId || decoded.firmId || null,
+      firmSlug: runtimeFirmSlug || null,
+      defaultClientId: runtimeDefaultClientId || decoded.defaultClientId || null,
       role: effectiveRole,
     };
     // Canonical identity attachment: use Mongo _id as the single source of truth
     req.userId = user?._id ? user._id.toString() : decoded.userId;
     req.identity = {
       userId: req.userId,
-      firmId: req.jwt.firmId || (user?.firmId ? user.firmId.toString() : null),
+      firmId: req.jwt.firmId || runtimeTenantId,
       role: effectiveRole,
     };
     req.context = {

@@ -24,6 +24,7 @@
 
 const Client = require('../models/Client.model');
 const { getActiveSession } = require('../utils/transactionContext');
+const { resolveClientOwnershipFirmId } = require('./tenantIdentity.service');
 const log = require('../utils/log');
 
 /**
@@ -44,6 +45,7 @@ const generateNextClientId = async (firmId, session = null) => {
   if (!firmId) {
     throw new Error('firmId is required for clientId generation');
   }
+  const ownershipFirmId = await resolveClientOwnershipFirmId(firmId, { session: resolvedSession });
   
   try {
     // Query the latest client WITHIN THIS FIRM within the transaction session
@@ -51,12 +53,12 @@ const generateNextClientId = async (firmId, session = null) => {
     // FIRM-SCOPED: Only look at clients within this firm
     const queryOptions = resolvedSession && !resolvedSession.skipTransaction ? { session: resolvedSession } : {};
     const lastClient = await Client
-      .findOne({ firmId, clientId: /^C\d+$/ }, {}, queryOptions)
+      .findOne({ firmId: ownershipFirmId, clientId: /^C\d+$/ }, {}, queryOptions)
       .sort({ clientId: -1 });
     
     // Bootstrap case: no clients exist yet for this firm
     if (!lastClient || !lastClient.clientId) {
-      log.info(`[Client ID Generator] Bootstrap: Generated first clientId: C000001 for firm: ${firmId}`);
+      log.info(`[Client ID Generator] Bootstrap: Generated first clientId: C000001 for firm: ${ownershipFirmId}`);
       return 'C000001';
     }
     
@@ -67,7 +69,7 @@ const generateNextClientId = async (firmId, session = null) => {
     const nextNumber = lastNumber + 1;
     const clientId = `C${String(nextNumber).padStart(6, '0')}`;
     
-    log.info(`[Client ID Generator] Generated clientId: ${clientId} for firm: ${firmId}`);
+    log.info(`[Client ID Generator] Generated clientId: ${clientId} for firm: ${ownershipFirmId}`);
     
     return clientId;
   } catch (error) {
@@ -98,7 +100,8 @@ const validateClientIdFormat = (clientId) => {
  */
 const clientIdExists = async (clientId, firmId) => {
   try {
-    const query = firmId ? { clientId, firmId } : { clientId };
+    const ownershipFirmId = firmId ? await resolveClientOwnershipFirmId(firmId) : null;
+    const query = ownershipFirmId ? { clientId, firmId: ownershipFirmId } : { clientId };
     if (!firmId) {
       log.warn('[Client ID Generator] clientIdExists called without firmId; falling back to legacy global lookup');
     }

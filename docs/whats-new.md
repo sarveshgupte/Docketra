@@ -1,5 +1,13 @@
 # What's New
 
+## April 2026: Internal / platform stability — canonical tenant identity scope
+
+- Standardized runtime tenant identity across signup, login, JWT, and tenant middleware to use the workspace default client `_id` as canonical scope.
+- Preserved relational ownership boundaries by keeping `Client.firmId` linked to `Firm._id` for firm-backed tenants while runtime auth scope stays default-client based.
+- Added a central tenant identity resolver with explicit legacy fallback (`Firm._id` -> `Firm.defaultClientId`) to preserve backward compatibility for older tenants.
+- Updated self-serve signup bootstrap so new admin users are created with canonical runtime tenant scope, matching onboarding-created workspaces.
+- Added invariant tests for canonical signup scope, auth token/middleware normalization behavior, and cross-tenant rejection.
+
 ## April 2026: Proactive superadmin onboarding alerts for stuck firms/users
 
 - Added derived in-app onboarding alerts (`GET /api/superadmin/onboarding-alerts`) so superadmin can proactively spot blocked firms/users without manually scanning each dashboard tile.

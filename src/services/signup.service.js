@@ -1,5 +1,6 @@
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
+const mongoose = require('mongoose');
 const Firm = require('../models/Firm.model');
 const Client = require('../models/Client.model');
 const User = require('../models/User.model');
@@ -22,6 +23,7 @@ const {
 } = require('./signupRateLimit.service');
 const { coercePrimaryAdminCreationFields } = require('../utils/hierarchy.utils');
 const { setupDefaultFirm } = require('./firmSetup.service');
+const { resolveCanonicalTenantFromFirmId } = require('./tenantIdentity.service');
 
 const SALT_ROUNDS = 10;
 const OTP_EXPIRY_MINUTES = 5;
@@ -575,10 +577,12 @@ const createFirmAndAdmin = async ({
     throw lastFirmCreateError || new Error('Unable to create firm with unique slug');
   }
 
-  await ensureTenantKey(String(firm._id), { session });
+  const defaultClientObjectId = new mongoose.Types.ObjectId();
+  await ensureTenantKey(String(defaultClientObjectId), { session });
 
   const defaultClientId = await generateNextClientId(firm._id, session);
   const [defaultClient] = await Client.create([{
+    _id: defaultClientObjectId,
     clientId: defaultClientId,
     firmId: firm._id,
     businessName: normalizedFirmName,
@@ -603,14 +607,14 @@ const createFirmAndAdmin = async ({
   }
   log.info('DEFAULT_CLIENT_CREATED', {
     req,
-    firmId: String(firm._id),
+    firmId: String(defaultClient._id),
     clientId: defaultClient.clientId,
   });
 
   firm.defaultClientId = defaultClient._id;
   await firm.save({ session });
 
-  const adminXID = await generateNextXID(firm._id, session);
+  const adminXID = await generateNextXID(defaultClient._id, session);
   const isGoogleAuth = authProvider === 'google';
   const now = new Date();
   const [adminUser] = await User.create([{
@@ -619,7 +623,7 @@ const createFirmAndAdmin = async ({
     email: normalizedEmail,
     primary_email: normalizedEmail,
     phoneNumber: normalizePhone(phone) || null,
-    firmId: firm._id,
+    firmId: defaultClient._id,
     defaultClientId: defaultClient._id,
     isOnboarded: authProvider === 'password',
     ...coercePrimaryAdminCreationFields({ role: 'PRIMARY_ADMIN' }),
@@ -651,7 +655,7 @@ const createFirmAndAdmin = async ({
     },
   }], { session });
 
-  await setupDefaultFirm(firm._id, adminUser, { session });
+  await setupDefaultFirm(defaultClient._id, adminUser, { session });
 
   firm.bootstrapStatus = 'COMPLETED';
   await firm.save({ session });
@@ -662,7 +666,8 @@ const createFirmAndAdmin = async ({
     adminXID,
     firmSlug,
     firmUrl,
-    firmId: firm._id,
+    firmId: defaultClient._id,
+    legacyFirmId: firm._id,
     userId: adminUser._id,
     defaultClientId: defaultClient._id,
   };
@@ -794,8 +799,8 @@ const resendCredentialsEmail = async ({ email, req = null }) => {
     return { success: true, message: responseMessage };
   }
 
-  const firm = await Firm.findById(adminUser.firmId).select('name firmSlug').lean();
-  if (!firm || !firm.firmSlug) {
+  const canonicalTenant = await resolveCanonicalTenantFromFirmId(adminUser.firmId);
+  if (!canonicalTenant?.firmSlug) {
     log.error('[PUBLIC_SIGNUP] Unable to resend credentials email. Firm context missing.', {
       firmId: adminUser.firmId ? String(adminUser.firmId) : null,
     });
@@ -806,8 +811,8 @@ const resendCredentialsEmail = async ({ email, req = null }) => {
     name: adminUser.name,
     email: normalizedEmail,
     xid: adminUser.xID,
-    firmName: firm.name,
-    firmSlug: firm.firmSlug,
+    firmName: canonicalTenant.firmName || 'Docketra Workspace',
+    firmSlug: canonicalTenant.firmSlug,
     req,
   });
   if (!emailResult.success) {

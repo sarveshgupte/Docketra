@@ -1,6 +1,7 @@
 const Client = require('../models/Client.model');
 const { decrypt, ensureTenantKey, ForbiddenError } = require('../security/encryption.service');
 const { looksEncrypted } = require('../security/encryption.utils');
+const { resolveClientOwnershipFirmId } = require('../services/tenantIdentity.service');
 
 /**
  * ⚠️ SECURITY: Client Repository - Firm-Scoped Data Access Layer ⚠️
@@ -141,6 +142,11 @@ const assertTenantId = (firmId) => {
   }
 };
 
+const resolveOwnershipFirmId = async (firmId) => {
+  assertTenantId(firmId);
+  return resolveClientOwnershipFirmId(firmId);
+};
+
 const applyQueryOptions = (query, options = {}) => {
   if (options.select) query.select(options.select);
   if (options.sort) query.sort(options.sort);
@@ -191,12 +197,12 @@ const ClientRepository = {
    * @returns {Promise<Object|null>} Client document or null
    */
   async findByClientId(firmId, clientId, role, options = {}) {
-    assertTenantId(firmId);
+    const ownershipFirmId = await resolveOwnershipFirmId(firmId);
     if (!clientId) {
       return null;
     }
     _guardSuperadmin(role);
-    const doc = await applyQueryOptions(Client.findOne({ firmId, clientId }), options);
+    const doc = await applyQueryOptions(Client.findOne({ firmId: ownershipFirmId, clientId }), options);
     await _decryptClientDoc(doc, firmId, options);
     return normalizeClientDisplay(doc);
   },
@@ -209,12 +215,12 @@ const ClientRepository = {
    * @returns {Promise<Object|null>} Client document or null
    */
   async findById(firmId, _id, role, options = {}) {
-    assertTenantId(firmId);
+    const ownershipFirmId = await resolveOwnershipFirmId(firmId);
     if (!_id) {
       return null;
     }
     _guardSuperadmin(role);
-    const doc = await applyQueryOptions(Client.findOne({ firmId, _id }), options);
+    const doc = await applyQueryOptions(Client.findOne({ firmId: ownershipFirmId, _id }), options);
     await _decryptClientDoc(doc, firmId, options);
     return normalizeClientDisplay(doc);
   },
@@ -227,9 +233,9 @@ const ClientRepository = {
    * @returns {Promise<Array>} Array of client documents
    */
   async find(firmId, query = {}, role, options = {}) {
-    assertTenantId(firmId);
+    const ownershipFirmId = await resolveOwnershipFirmId(firmId);
     _guardSuperadmin(role);
-    const docs = await applyQueryOptions(Client.find({ firmId, ...query }), options);
+    const docs = await applyQueryOptions(Client.find({ firmId: ownershipFirmId, ...query }), options);
     await _decryptClientDocs(docs, firmId, options);
     return Array.isArray(docs) ? docs.map(normalizeClientDisplay) : docs;
   },
@@ -242,9 +248,9 @@ const ClientRepository = {
    * @returns {Promise<Object|null>} Client document or null
    */
   async findOne(firmId, query = {}, role, options = {}) {
-    assertTenantId(firmId);
+    const ownershipFirmId = await resolveOwnershipFirmId(firmId);
     _guardSuperadmin(role);
-    const doc = await applyQueryOptions(Client.findOne({ firmId, ...query }), options);
+    const doc = await applyQueryOptions(Client.findOne({ firmId: ownershipFirmId, ...query }), options);
     await _decryptClientDoc(doc, firmId, options);
     return normalizeClientDisplay(doc);
   },
@@ -256,13 +262,13 @@ const ClientRepository = {
    * @param {Object} update - Update object
    * @returns {Promise<Object|null>} Updated client document or null
    */
-  updateByClientId(firmId, clientId, update) {
-    assertTenantId(firmId);
+  async updateByClientId(firmId, clientId, update) {
+    const ownershipFirmId = await resolveOwnershipFirmId(firmId);
     if (!clientId) {
       return null;
     }
     this._assertNoSensitivePersistence(update?.$set || update || {});
-    return Client.updateOne({ firmId, clientId }, update);
+    return Client.updateOne({ firmId: ownershipFirmId, clientId }, update);
   },
 
   /**
@@ -272,13 +278,13 @@ const ClientRepository = {
    * @param {Object} update - Update object
    * @returns {Promise<Object|null>} Updated client document or null
    */
-  updateById(firmId, _id, update) {
-    assertTenantId(firmId);
+  async updateById(firmId, _id, update) {
+    const ownershipFirmId = await resolveOwnershipFirmId(firmId);
     if (!_id) {
       return null;
     }
     this._assertNoSensitivePersistence(update?.$set || update || {});
-    return Client.updateOne({ firmId, _id }, update);
+    return Client.updateOne({ firmId: ownershipFirmId, _id }, update);
   },
 
   /**
@@ -287,9 +293,9 @@ const ClientRepository = {
    * @param {Object} query - Additional query filters
    * @returns {Promise<number>} Count of clients
    */
-  count(firmId, query = {}) {
-    assertTenantId(firmId);
-    return Client.countDocuments({ firmId, ...query });
+  async count(firmId, query = {}) {
+    const ownershipFirmId = await resolveOwnershipFirmId(firmId);
+    return Client.countDocuments({ firmId: ownershipFirmId, ...query });
   },
 
   countClients(firmId, query = {}) {
@@ -327,6 +333,8 @@ const ClientRepository = {
     }
     _guardSuperadmin(role);
     this._assertNoSensitivePersistence(clientData || {});
+    const ownershipFirmId = await resolveOwnershipFirmId(clientData.firmId);
+    clientData.firmId = ownershipFirmId;
     // Ensure the per-tenant DEK exists before the model pre-save hook needs it.
     await ensureTenantKey(String(clientData.firmId));
     const doc = await Client.create(clientData);
