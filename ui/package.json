@@ -42,9 +42,10 @@
     "test:post-login-flow": "node tests/postLoginFlowRegression.test.mjs",
     "test:docket-surface": "node tests/docketSurfaceHardening.test.mjs",
     "test:queue-ux-consistency": "node tests/queueUxConsistency.test.mjs",
+    "test:reports-dashboard-states": "node tests/reportsDashboardLoadingStates.test.mjs",
     "test:design-system-contract": "node tests/designSystemContract.test.mjs",
     "test:storage-service-contract": "node tests/storageServiceContract.test.mjs",
-    "test:ci": "npm run test:dockets-route && npm run test:navigation && npm run test:forms && npm run test:auth-refresh-loop && npm run test:routing-public-boundary && npm run test:admin-surface && npm run test:docket-surface && npm run test:queue-ux-consistency && npm run test:design-system-contract && npm run test:storage-service-contract && npm run test:case-detail-performance && npm run test:case-detail-architecture"
+    "test:ci": "npm run test:dockets-route && npm run test:navigation && npm run test:forms && npm run test:auth-refresh-loop && npm run test:routing-public-boundary && npm run test:admin-surface && npm run test:docket-surface && npm run test:queue-ux-consistency && npm run test:reports-dashboard-states && npm run test:design-system-contract && npm run test:storage-service-contract && npm run test:case-detail-performance && npm run test:case-detail-architecture"
   },
   "browserslist": {
     "production": [

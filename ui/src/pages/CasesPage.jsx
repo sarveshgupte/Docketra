@@ -17,6 +17,7 @@ import { useCaseView, CASE_VIEWS, isEscalatedCase } from '../hooks/useCaseView';
 import { useSavedViews } from '../hooks/useSavedViews';
 import { caseApi } from '../api/case.api';
 import { useCasesListQuery, useCategoryCountQuery } from '../hooks/useCasesListQuery';
+import { CASE_QUERY_PARAMS, getCaseQueryKey } from '../hooks/useCaseQuery';
 import { CASE_STATUS, USER_ROLES } from '../utils/constants';
 import { getFirmConfig } from '../utils/firmConfig';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
@@ -309,16 +310,42 @@ export const CasesPage = () => {
   const handleCaseHover = useCallback((caseRecord) => {
     if (!caseRecord?.caseId) return;
     queryClient.prefetchQuery({
-      queryKey: ['case', caseRecord.caseId, { commentsPage: 1, commentsLimit: 25, activityPage: 1, activityLimit: 25 }],
-      queryFn: () => caseApi.getCaseById(caseRecord.caseId, {
-        commentsPage: 1,
-        commentsLimit: 25,
-        activityPage: 1,
-        activityLimit: 25,
-      }),
-      staleTime: 30 * 1000,
+      queryKey: getCaseQueryKey(caseRecord.caseId, CASE_QUERY_PARAMS),
+      queryFn: () => caseApi.getCaseById(caseRecord.caseId, CASE_QUERY_PARAMS),
+      staleTime: 90 * 1000,
     });
   }, [queryClient]);
+
+  const optimisticallyAssignDocket = useCallback((caseRecord) => {
+    if (!caseRecord?.caseId || !user?.xID) return () => {};
+    const targetCaseId = caseRecord.caseId;
+    const queryCacheEntries = queryClient.getQueriesData({ queryKey: ['cases-list'] });
+    const previousEntries = queryCacheEntries.map(([queryKey, data]) => [queryKey, data]);
+
+    queryCacheEntries.forEach(([queryKey, data]) => {
+      const list = data?.cases;
+      if (!Array.isArray(list)) return;
+      if (!list.some((item) => item?.caseId === targetCaseId)) return;
+      queryClient.setQueryData(queryKey, {
+        ...data,
+        cases: list.map((item) => (item?.caseId === targetCaseId
+          ? {
+            ...item,
+            assignedToXID: user.xID,
+            assignedToName: user.name || item.assignedToName || user.xID,
+            assignedTo: user.xID,
+            status: item.status === CASE_STATUS.UNASSIGNED ? CASE_STATUS.OPEN : item.status,
+          }
+          : item)),
+      });
+    });
+
+    return () => {
+      previousEntries.forEach(([queryKey, previous]) => {
+        queryClient.setQueryData(queryKey, previous);
+      });
+    };
+  }, [queryClient, user?.name, user?.xID]);
 
   const handleAssignToMe = useCallback(async (caseRecord, event) => {
     event.stopPropagation();
@@ -340,6 +367,7 @@ export const CasesPage = () => {
         onConfirm: async () => {
           setConfirmModal(null);
           setAssigningCaseId(caseRecord.caseId);
+          const rollback = optimisticallyAssignDocket(caseRecord);
           try {
             const response = await caseApi.pullCase(caseRecord.caseId);
             if (response.success) {
@@ -348,6 +376,7 @@ export const CasesPage = () => {
             }
           } catch (err) {
             console.error('Failed to assign case:', err);
+            rollback();
           } finally {
             setAssigningCaseId(null);
           }
@@ -356,6 +385,7 @@ export const CasesPage = () => {
       return;
     }
     setAssigningCaseId(caseRecord.caseId);
+    const rollback = optimisticallyAssignDocket(caseRecord);
     try {
       const response = await caseApi.pullCase(caseRecord.caseId);
       if (response.success) {
@@ -364,10 +394,11 @@ export const CasesPage = () => {
       }
     } catch (err) {
       console.error('Failed to assign case:', err);
+      rollback();
     } finally {
       setAssigningCaseId(null);
     }
-  }, [showSuccess, refreshCases]);
+  }, [optimisticallyAssignDocket, showSuccess, refreshCases]);
 
   // Task 6: Bulk action handlers
   const handleToggleSelectCase = useCallback((caseId, isLocked) => {

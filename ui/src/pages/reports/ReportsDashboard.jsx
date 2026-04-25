@@ -3,79 +3,41 @@
  * MIS Dashboard with metric cards
  */
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { DashboardSkeleton } from '../../components/common/Skeleton';
 import { PlatformShell } from '../../components/platform/PlatformShell';
 import { MetricCard } from '../../components/reports/MetricCard';
 import { AuditLogView } from '../../components/reports/AuditLogView';
-import { reportsService } from '../../services/reports.service';
+import { useReportsDashboardQuery, getErrorMessage } from '../../hooks/useReportsDashboardQuery';
 import './ReportsDashboard.css';
 
 export const ReportsDashboard = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
-  const [loading, setLoading] = useState(true);
-  const [metrics, setMetrics] = useState(null);
-  const [pendingReport, setPendingReport] = useState(null);
-  const [slaWeeklySummary, setSlaWeeklySummary] = useState(null);
-  const [error, setError] = useState(null);
+  const {
+    data,
+    error,
+    isLoading,
+    isFetching,
+    isSuccess,
+    refetch,
+  } = useReportsDashboardQuery();
+  const metrics = data?.metrics ?? null;
+  const pendingReport = data?.pendingReport ?? null;
+  const slaWeeklySummary = data?.slaWeeklySummary ?? null;
   const hasAnyReportData = (
     (metrics && Object.keys(metrics).length > 0) ||
     (pendingReport && Object.keys(pendingReport).length > 0) ||
     (slaWeeklySummary && Object.keys(slaWeeklySummary).length > 0)
   );
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Load docket metrics
-      const metricsResponse = await reportsService.getCaseMetrics();
-      if (metricsResponse.data.success) {
-        setMetrics(metricsResponse.data.data);
-      }
-
-      // Load pending dockets report
-      const pendingResponse = await reportsService.getPendingCases();
-      if (pendingResponse.data.success) {
-        setPendingReport(pendingResponse.data.data);
-      }
-
-      const slaResponse = await reportsService.getSlaWeeklySummary();
-      if (slaResponse.data.success) {
-        setSlaWeeklySummary(slaResponse.data.data);
-      }
-    } catch (err) {
-      console.error('Error loading dashboard data:', err);
-      if (!err.response) {
-        setError('Unable to connect to server');
-      } else if (err.response?.status === 404) {
-        setMetrics(null);
-        setPendingReport(null);
-      } else if (err.response?.status === 401 || err.response?.status === 403) {
-        setError('You do not have permission');
-      } else if (err.response?.status >= 500) {
-        setError('Something went wrong. Please try again.');
-      } else {
-        setError('Something went wrong. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleViewDetailedReports = () => {
     navigate(`/app/firm/${firmSlug}/admin/reports/detailed`);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <PlatformShell
         moduleLabel="Operations"
@@ -87,7 +49,7 @@ export const ReportsDashboard = () => {
     );
   }
 
-  if (error) {
+  if (error && !isSuccess) {
     return (
       <PlatformShell
         moduleLabel="Operations"
@@ -97,16 +59,16 @@ export const ReportsDashboard = () => {
         <div className="reports-dashboard">
           <EmptyState
             title="We couldn’t load your reports"
-            description={error}
+            description={getErrorMessage(error)}
             actionLabel="Try again"
-            onAction={loadDashboardData}
+            onAction={refetch}
           />
         </div>
       </PlatformShell>
     );
   }
 
-  if (!hasAnyReportData) {
+  if (isSuccess && !hasAnyReportData) {
     return (
       <PlatformShell
         moduleLabel="Operations"
@@ -132,6 +94,7 @@ export const ReportsDashboard = () => {
       subtitle="Management information system - read-only view."
     >
       <div className="reports-dashboard">
+        {isFetching && hasAnyReportData ? <p className="text-sm text-gray-500">Refreshing report metrics…</p> : null}
         <div className="reports-dashboard__grid">
           {/* Total dockets card */}
           <MetricCard
