@@ -31,6 +31,14 @@ const STORAGE_AUDIT_SOURCES = Object.freeze({
   DISCONNECT: 'storage.disconnect',
 });
 
+function toConnectionStatus({ provider, mode, credentials, hasStorageConfig }) {
+  if (mode === MANAGED_STORAGE_MODE || provider === 'docketra_managed') {
+    return 'ACTIVE_MANAGED';
+  }
+  if (!hasStorageConfig) return 'DISCONNECTED';
+  return credentials?.status || 'ACTIVE';
+}
+
 function decodeFirmStorageConfig(firm, firmId) {
   const encrypted = firm?.storageConfig?.credentials;
   if (!encrypted) return {};
@@ -347,6 +355,91 @@ const getStorageConfiguration = async (req, res) => {
     });
   } catch {
     return res.status(500).json({ error: 'configuration_fetch_failed' });
+  }
+};
+
+const getStorageOwnershipSummary = async (req, res) => {
+  if (!ensureFirmAdmin(req, res)) return;
+  try {
+    const firm = await Firm.findById(req.firmId).select('storage storageConfig settings.storageBackup').lean();
+    const storageProvider = toUiProvider(firm?.storage?.provider);
+    const storageMode = firm?.storage?.mode || MANAGED_STORAGE_MODE;
+    const hasStorageConfig = Boolean(firm?.storageConfig?.provider);
+    const credentials = decodeFirmStorageConfig(firm, req.firmId);
+    const connectionStatus = toConnectionStatus({
+      provider: storageProvider,
+      mode: storageMode,
+      credentials,
+      hasStorageConfig,
+    });
+    const lastHealthCheckAt = credentials?.lastCheckedAt || null;
+    const lastHealthError = credentials?.lastError || null;
+
+    let lastExport = null;
+    try {
+      const recent = await storageBackupService.listBackups(req.firmId, 1);
+      if (Array.isArray(recent) && recent.length > 0) {
+        const item = recent[0];
+        lastExport = {
+          exportId: item?.exportId || null,
+          createdAt: item?.createdAt || item?.timestamp || null,
+          fileCount: Number(item?.fileCount || 0),
+          size: Number(item?.size || 0),
+          hasDownloadUrl: Boolean(item?.downloadUrl),
+        };
+      }
+    } catch {
+      lastExport = null;
+    }
+
+    const warnings = [];
+    if (storageMode === MANAGED_STORAGE_MODE || storageProvider === 'docketra_managed') {
+      warnings.push({
+        code: 'BYOS_NOT_CONFIGURED',
+        message: 'BYOS is not configured. Docketra-managed fallback storage is active for firm operations.',
+      });
+    }
+    if (connectionStatus === 'DISCONNECTED') {
+      warnings.push({
+        code: 'STORAGE_DISCONNECTED',
+        message: 'Firm storage connection is currently disconnected.',
+      });
+    }
+    if (lastHealthError) {
+      warnings.push({
+        code: 'HEALTH_CHECK_ERROR',
+        message: 'Last provider health check reported an issue.',
+      });
+    }
+
+    return res.json({
+      activeStorage: {
+        provider: storageProvider,
+        mode: storageMode,
+        connectionStatus,
+        connectedEmail: credentials?.connectedEmail || null,
+      },
+      lastHealthCheck: {
+        checkedAt: lastHealthCheckAt,
+        status: lastHealthError ? 'ERROR' : connectionStatus,
+        lastError: lastHealthError,
+      },
+      fallbackStorage: {
+        provider: 'docketra_managed',
+        enabled: true,
+        status: storageMode === MANAGED_STORAGE_MODE ? 'ACTIVE' : 'STANDBY',
+      },
+      backupExport: {
+        backupEnabled: Boolean(firm?.settings?.storageBackup?.enabled),
+        retentionDays: Number(firm?.settings?.storageBackup?.retentionDays || 30),
+        lastExport,
+      },
+      ownershipModel:
+        'Docketra uses a control-plane model. Firm and client data should remain in the configured storage provider according to your data ownership setup.',
+      warnings,
+    });
+  } catch {
+    return res.status(500).json({ error: 'storage_summary_fetch_failed' });
   }
 };
 
@@ -700,4 +793,5 @@ module.exports = {
   listBackupRuns,
   buildStateCookie,
   mapProviderErrorToStatus,
+  getStorageOwnershipSummary,
 };

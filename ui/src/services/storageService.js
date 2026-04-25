@@ -14,6 +14,11 @@ export async function testStorageConnection() {
   return response.data;
 }
 
+export async function getStorageOwnershipSummary() {
+  const response = await api.get('/storage/ownership-summary');
+  return response.data;
+}
+
 export async function sendStorageChangeOtp(email) {
   const response = await api.post('/auth/send-otp', {
     email,
@@ -37,7 +42,7 @@ export async function changeStorageProvider(payload) {
 }
 
 export async function exportFirmStorage() {
-  const response = await api.post('/storage/export');
+  const response = await api.get('/storage/export');
   return response.data;
 }
 
