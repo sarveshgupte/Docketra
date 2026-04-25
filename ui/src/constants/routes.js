@@ -1,5 +1,5 @@
 export const ROUTES = {
-  SUPERADMIN_LOGIN: '/superadmin',
+  SUPERADMIN_LOGIN: '/superadmin/login',
   SUPERADMIN_DASHBOARD: '/app/superadmin',
   SUPERADMIN_FIRMS: '/app/superadmin/firms',
   FIRM_LOGIN: (firmSlug) => `/${firmSlug}/login`,

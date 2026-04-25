@@ -31,10 +31,12 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
   const storedFirmSlug = localStorage.getItem(STORAGE_KEYS.FIRM_SLUG);
   const effectiveFirmSlug = firmSlug || storedFirmSlug;
   const isSuperAdminUser = isSuperAdmin(user);
-  const loginPath = resolveFirmLoginPath({
-    firmSlug,
-    fallbackFirmSlug: storedFirmSlug,
-  });
+  const loginPath = requireSuperadmin
+    ? ROUTES.SUPERADMIN_LOGIN
+    : resolveFirmLoginPath({
+      firmSlug,
+      fallbackFirmSlug: storedFirmSlug,
+    });
 
   // Multi-tenancy guard: Detect firm slug mismatches
   if (firmSlug && storedFirmSlug && firmSlug !== storedFirmSlug) {
@@ -74,13 +76,13 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
       return <Navigate to={ROUTES.DASHBOARD(effectiveFirmSlug)} replace />;
     }
     setAccessToast('SuperAdmin access is required to view that page.');
-    return <Navigate to="/superadmin" replace />;
+    return <Navigate to={ROUTES.SUPERADMIN_LOGIN} replace />;
   }
 
   // 4. Firm route authorization: SuperAdmin users cannot access firm routes
   // They use a separate routing namespace (/superadmin)
   if (!requireSuperadmin && isSuperAdminUser) {
-    return <Navigate to="/superadmin" replace />;
+    return <Navigate to={ROUTES.SUPERADMIN_DASHBOARD} replace />;
   }
 
   // 5. Admin-only route authorization

@@ -22,8 +22,8 @@ assert(
   'AuthContext force fetch should clear resolved unauthenticated guard.'
 );
 assert(
-  firmLoginSource.includes('fetchProfile({ force: true })'),
-  'Firm OTP login should force profile hydration after OTP verification.'
+  firmLoginSource.includes('fetchProfile({ force: true })') && firmLoginSource.includes('resolvePostLoginDestination(returnTo, profileResult.data'),
+  'Firm OTP login should force profile hydration and validate redirects after OTP verification.'
 );
 assert(
   otpPageSource.includes('fetchProfile({ force: true })'),
