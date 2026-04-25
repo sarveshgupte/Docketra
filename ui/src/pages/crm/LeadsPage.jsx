@@ -356,7 +356,7 @@ export const LeadsPage = () => {
                       <p className="text-gray-600">Owner: {lead.owner?.name || lead.ownerXid || 'Unassigned'}</p>
                       <p className="text-gray-600">Follow-up: {lead.nextFollowUpAt ? formatDate(lead.nextFollowUpAt) : 'Not set'}</p>
                     </button>
-                  )) : <p className="rounded border border-dashed border-gray-300 bg-white p-2 text-xs text-gray-500">No leads in this stage</p>}
+                  )) : <p className="rounded border border-dashed border-gray-300 bg-white p-2 text-xs text-gray-500">No leads in this stage yet. New intake submissions will appear here.</p>}
                 </div>
               </div>
             ))}
@@ -368,9 +368,9 @@ export const LeadsPage = () => {
             loading={initialLoading}
             error={error}
             onRetry={() => void loadLeads()}
-            emptyLabel="No leads yet. Use New Lead to start your pipeline."
+            emptyLabel="No leads yet. Create a lead manually or publish an intake form to start the pipeline."
             hasActiveFilters={Boolean(filters.stage || filters.ownerXid || filters.dueOnly)}
-            emptyLabelFiltered="No leads match current filters."
+            emptyLabelFiltered="No leads match current filters. Adjust stage/owner filters or disable overdue-only mode."
           />
         )}
       </PageSection>

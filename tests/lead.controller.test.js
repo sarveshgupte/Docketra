@@ -176,6 +176,40 @@ async function testConvertLeadUpdatesState() {
   mongoose.startSession = originalStartSession;
 }
 
+async function testConvertLeadFailureRecoveryActions() {
+  const originalCrmCreate = mockCrmClientModel.create;
+  const originalStartSession = mongoose.startSession;
+  mockLeadModel.findOne = () => ({
+    session: async () => ({
+      _id: 'lead-err',
+      name: 'Broken Lead',
+      email: 'broken@example.com',
+      phone: '000',
+      stage: 'qualified',
+      status: 'qualified',
+      linkedClientId: null,
+      activitySummary: [],
+      save: async () => {},
+    }),
+  });
+  mockCrmClientModel.create = async () => {
+    throw new Error('db conversion failure');
+  };
+  mongoose.startSession = async () => ({
+    withTransaction: async (cb) => cb(),
+    endSession: async () => {},
+  });
+
+  const { req, res } = createReqRes({ params: { id: '507f191e810c19729de860ed' } });
+  await leadController.convertLead(req, res);
+  assert.strictEqual(res.statusCode, 400);
+  assert.ok(Array.isArray(res.payload.recoveryActions));
+  assert.ok(res.payload.recoveryActions.length >= 2);
+
+  mockCrmClientModel.create = originalCrmCreate;
+  mongoose.startSession = originalStartSession;
+}
+
 async function run() {
   try {
     await testCreateLeadDefaults();
@@ -183,6 +217,7 @@ async function run() {
     await testOwnerAssignmentValidation();
     await testNoopUpdateSkipsWrite();
     await testConvertLeadUpdatesState();
+    await testConvertLeadFailureRecoveryActions();
     console.log('Lead controller tests passed.');
   } catch (error) {
     console.error('Lead controller tests failed:', error);

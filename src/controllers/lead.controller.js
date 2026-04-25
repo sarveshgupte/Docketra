@@ -398,7 +398,15 @@ const convertLead = async (req, res) => {
     if (error instanceof mongoose.Error.CastError) {
       return res.status(404).json({ success: false, message: 'Lead not found' });
     }
-    return res.status(400).json({ success: false, message: error.message || 'Failed to convert lead' });
+    return res.status(400).json({
+      success: false,
+      message: error.message || 'Failed to convert lead',
+      recoveryActions: [
+        'Confirm the lead still has valid contact details (email or phone).',
+        'Check if the lead was already converted and refresh the page.',
+        'If the issue persists, open CRM clients and complete conversion manually.',
+      ],
+    });
   } finally {
     await session.endSession();
   }
