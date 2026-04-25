@@ -9,17 +9,19 @@ const OTP_MAX_ATTEMPTS = 5;
 const OTP_RATE_LIMIT_SECONDS = 60;
 const OTP_VERIFICATION_TOKEN_EXPIRY = '10m';
 
-const normalizeIdentifier = async ({ email, xid, identifier }) => {
+const normalizeIdentifier = async ({ email, xid, xID, XID, identifier }) => {
   const raw = identifier ? String(identifier).trim() : null;
 
   if (email || (raw && raw.includes('@'))) {
     return String(email || raw).trim().toLowerCase();
   }
 
-  const normalizedXid = String(xid || raw || '').trim().toUpperCase();
+  const normalizedXid = String(xID || XID || xid || raw || '').trim().toUpperCase();
   if (!normalizedXid) throw new Error('IDENTIFIER_REQUIRED');
 
-  const user = await User.findOne({ xid: normalizedXid }).select('primary_email email');
+  const user = await User.findOne({
+    $or: [{ xID: normalizedXid }, { xid: normalizedXid }],
+  }).select('primary_email email');
   if (!user) throw new Error('IDENTIFIER_NOT_FOUND');
 
   const canonicalEmail = String(user.primary_email || user.email || '').trim().toLowerCase();
@@ -30,8 +32,8 @@ const normalizeIdentifier = async ({ email, xid, identifier }) => {
 
 const generateOtpCode = () => String(crypto.randomInt(0, 1000000)).padStart(6, '0');
 
-const sendOtp = async ({ email, xid, identifier, purpose }) => {
-  const resolvedIdentifier = await normalizeIdentifier({ email, xid, identifier });
+const sendOtp = async ({ email, xid, xID, XID, identifier, purpose }) => {
+  const resolvedIdentifier = await normalizeIdentifier({ email, xid, xID, XID, identifier });
 
   const latestOtp = await Otp.findOne({ identifier: resolvedIdentifier, purpose }).sort({ created_at: -1 });
   if (latestOtp && (Date.now() - new Date(latestOtp.created_at).getTime()) < (OTP_RATE_LIMIT_SECONDS * 1000)) {
@@ -71,7 +73,9 @@ const verifyOtp = async ({ identifier, code, purpose }) => {
   let normalizedIdentifier = isEmail ? rawIdentifier.toLowerCase() : rawIdentifier.toUpperCase();
 
   if (!isEmail) {
-    const user = await User.findOne({ xid: normalizedIdentifier }).select('primary_email email');
+    const user = await User.findOne({
+      $or: [{ xID: normalizedIdentifier }, { xid: normalizedIdentifier }],
+    }).select('primary_email email');
     if (!user) throw new Error('IDENTIFIER_NOT_FOUND');
     normalizedIdentifier = (user.primary_email || user.email || '').toLowerCase();
   }

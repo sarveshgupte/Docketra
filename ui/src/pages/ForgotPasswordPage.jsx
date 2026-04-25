@@ -8,7 +8,7 @@ import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
 import { authService } from '../services/authService';
-import { STRONG_PASSWORD_MESSAGE, validateEmail, validateStrongPassword } from '../utils/validators';
+import { STRONG_PASSWORD_MESSAGE, validateEmail, validateStrongPassword, validateXID } from '../utils/validators';
 import { spacingClasses } from '../theme/tokens';
 import './ForgotPasswordPage.css';
 
@@ -37,6 +37,13 @@ export const ForgotPasswordPage = () => {
   const navigate = useNavigate();
   const activeFirmSlug = resolvedFirmSlug || firmSlug || '';
   const loginPath = activeFirmSlug ? `/${activeFirmSlug}/login` : '/superadmin';
+  const normalizeLoginIdentifier = (value) => {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return { value: '', type: 'empty' };
+    if (validateEmail(trimmed.toLowerCase())) return { value: trimmed.toLowerCase(), type: 'email' };
+    if (validateXID(trimmed)) return { value: trimmed.toUpperCase(), type: 'xid' };
+    return { value: trimmed, type: 'invalid' };
+  };
 
   React.useEffect(() => {
     if (step !== 2 || cooldown <= 0) return undefined;
@@ -49,22 +56,22 @@ export const ForgotPasswordPage = () => {
     setError('');
     setSuccess('');
     setFieldError('');
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedIdentifier = normalizeLoginIdentifier(email);
 
-    if (!normalizedEmail) {
-      setFieldError('Please enter your email address.');
+    if (!normalizedIdentifier.value) {
+      setFieldError('Please enter your xID or email address.');
       return;
     }
 
-    if (!validateEmail(normalizedEmail)) {
-      setFieldError('Please enter a valid email address.');
+    if (normalizedIdentifier.type === 'invalid') {
+      setFieldError('Enter a valid xID (X123456) or email address.');
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await authService.forgotPasswordInit(normalizedEmail, activeFirmSlug || undefined);
+      const response = await authService.forgotPasswordInit(normalizedIdentifier.value, activeFirmSlug || undefined);
       if (response.success) {
         if (response?.firmSlug) {
           setResolvedFirmSlug(response.firmSlug);
@@ -91,7 +98,8 @@ export const ForgotPasswordPage = () => {
     }
     setLoading(true);
     try {
-      const response = await authService.forgotPasswordVerify(email.trim().toLowerCase(), activeFirmSlug || undefined, otp.trim());
+      const normalizedIdentifier = normalizeLoginIdentifier(email);
+      const response = await authService.forgotPasswordVerify(normalizedIdentifier.value, activeFirmSlug || undefined, otp.trim());
       if (response.success) {
         if (response?.firmSlug) {
           setResolvedFirmSlug(response.firmSlug);
@@ -120,7 +128,8 @@ export const ForgotPasswordPage = () => {
     }
     setLoading(true);
     try {
-      const response = await authService.forgotPasswordResetWithOtp(email.trim().toLowerCase(), activeFirmSlug || undefined, resetToken, password);
+      const normalizedIdentifier = normalizeLoginIdentifier(email);
+      const response = await authService.forgotPasswordResetWithOtp(normalizedIdentifier.value, activeFirmSlug || undefined, resetToken, password);
       if (response.success) {
         const nextFirmSlug = response?.firmSlug || activeFirmSlug || '';
         if (response?.firmSlug) {
@@ -141,7 +150,8 @@ export const ForgotPasswordPage = () => {
     setLoading(true);
     setError('');
     try {
-      await authService.forgotPasswordInit(email.trim().toLowerCase(), activeFirmSlug || undefined);
+      const normalizedIdentifier = normalizeLoginIdentifier(email);
+      await authService.forgotPasswordInit(normalizedIdentifier.value, activeFirmSlug || undefined);
       setSuccess('OTP resent to your email.');
       setCooldown(30);
     } catch (err) {
@@ -157,15 +167,15 @@ export const ForgotPasswordPage = () => {
         <div className="forgot-password-header">
           <h1>Forgot Password</h1>
           <p className="text-secondary">
-            Enter your email address and we'll send an OTP to reset your password.
+            Enter your xID or email and we'll send an OTP to reset your password.
             {firmSlug ? ' Password recovery is scoped to this workspace.' : ''}
           </p>
         </div>
 
         <form onSubmit={step === 1 ? handleInit : step === 2 ? handleVerifyOtp : handleReset} noValidate className={spacingClasses.formFieldSpacing}>
           {step === 1 && <Input
-            label="Email Address"
-            type="email"
+            label="xID or Email"
+            type="text"
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
@@ -174,11 +184,11 @@ export const ForgotPasswordPage = () => {
             }}
             error={fieldError}
             required
-            placeholder="Enter your email"
-            autoComplete="email"
+            placeholder="X123456 or name@company.com"
+            autoComplete="username"
             disabled={loading}
             autoFocus
-            helpText={firmSlug ? 'Use the email address registered in this workspace.' : undefined}
+            helpText={firmSlug ? 'Use the xID or email registered in this workspace.' : undefined}
           />}
           {step === 2 && <Input
             label="OTP"
