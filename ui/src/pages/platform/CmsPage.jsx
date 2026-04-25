@@ -31,6 +31,7 @@ const parseOutcome = (lead) => ({
   warningDetails: toArray(lead?.metadata?.intakeOutcome?.warningDetails || lead?.metadata?.intakeDiagnostics?.warningDetails),
   submissionMode: lead?.metadata?.submissionMode || lead?.metadata?.intakeOutcome?.submissionMode || 'cms',
   source: lead?.source || lead?.metadata?.intakeOutcome?.source || 'CMS_FORM',
+  sourceAttribution: lead?.metadata?.sourceAttribution || null,
 });
 
 const emptyEditorState = {
@@ -500,7 +501,7 @@ export const PlatformCmsPage = () => {
         ) : null}
       </PageSection>
 
-      <PageSection id="intake-queue" title="Intake queue summary" description="Track real submission outcomes and downstream handoff status.">
+      <PageSection id="intake-queue" title="Intake queue summary" description="Track real submission outcomes, source attribution, and downstream handoff status.">
         <FilterBar
           onClear={() => {
             setQuery('');
@@ -546,15 +547,18 @@ export const PlatformCmsPage = () => {
             const outcome = parseOutcome(lead);
             const leadId = lead._id || lead.id;
             const statusLabel = lead.stage || lead.status || 'new';
+            const sourceDetail = outcome.sourceAttribution?.referrer || outcome.sourceAttribution?.pageUrl || null;
             return (
               <tr key={leadId}>
                 <td>
                   <strong>{lead.name || '-'}</strong>
                   <div className="muted">{lead.email || 'No email'}</div>
+                  {sourceDetail ? <div className="muted">From: {sourceDetail}</div> : null}
                   {outcome.warnings.length > 0 ? (
                     <div style={{ color: '#92400E' }}>
                       ⚠️ {outcome.warnings[0]}
                       {outcome.warningDetails[0]?.code ? <span className="muted"> ({outcome.warningDetails[0].code})</span> : null}
+                      {outcome.warningDetails[0]?.recovery ? <div className="muted">Recovery: {outcome.warningDetails[0].recovery}</div> : null}
                     </div>
                   ) : null}
                 </td>
@@ -571,8 +575,8 @@ export const PlatformCmsPage = () => {
           error={error}
           onRetry={() => void loadLeads()}
           hasActiveFilters={Boolean(query.trim()) || sourceFilter !== 'all' || modeFilter !== 'all' || outcomeFilter !== 'all'}
-          emptyLabel="No intake submissions yet. Create a form to start intake testing."
-          emptyLabelFiltered="No intake submissions match your current filters."
+          emptyLabel="No intake submissions yet. Publish a form, submit a test intake, then review conversion outcomes here."
+          emptyLabelFiltered="No intake submissions match your current filters. Clear filters or broaden source/mode selection."
         />
       </PageSection>
     </PlatformShell>

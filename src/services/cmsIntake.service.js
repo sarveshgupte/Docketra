@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const Firm = require('../models/Firm.model');
 const Case = require('../models/Case.model');
 const Team = require('../models/Team.model');
+const Client = require('../models/Client.model');
 const { DocketLifecycle } = require('../domain/docketLifecycle');
 const clientService = require('./client.service');
 const routingService = require('./routing.service');
@@ -146,6 +147,141 @@ function extractExtraFields(payload = {}) {
     extras[safeKey] = normalizeExtraFieldValue(value);
   });
   return Object.keys(extras).length > 0 ? extras : null;
+}
+
+const DUPLICATE_IDENTIFIER_FIELDS = Object.freeze([
+  { key: 'pan', leadPath: 'metadata.extraFields.pan', clientPath: 'PAN', label: 'PAN' },
+  { key: 'gst', leadPath: 'metadata.extraFields.gst', clientPath: 'GST', label: 'GST' },
+  { key: 'gstin', leadPath: 'metadata.extraFields.gstin', clientPath: 'clientFactSheet.basicInfo.GSTIN', label: 'GSTIN' },
+  { key: 'clientcode', leadPath: 'metadata.extraFields.clientcode', clientPath: null, label: 'Client code' },
+  { key: 'firmidentifier', leadPath: 'metadata.extraFields.firmidentifier', clientPath: null, label: 'Firm identifier' },
+  { key: 'firmid', leadPath: 'metadata.extraFields.firmid', clientPath: null, label: 'Firm identifier' },
+]);
+
+function normalizeIdentifier(value) {
+  const normalized = normalizeTrimmedString(value);
+  return normalized ? normalized.toUpperCase() : null;
+}
+
+function buildSourceAttribution(metadata = {}) {
+  return {
+    source: metadata.source || 'CMS_FORM',
+    submissionMode: metadata.submissionMode || 'cms',
+    channel: metadata.submissionMode === 'api_intake' ? 'API Intake' : (metadata.submissionMode === 'embedded_form' ? 'Embedded form' : (metadata.submissionMode === 'public_form' ? 'Public form' : 'CMS')),
+    pageUrl: metadata.pageUrl || null,
+    referrer: metadata.referrer || null,
+    formId: metadata.formId || null,
+    formSlug: metadata.formSlug || null,
+    campaign: {
+      utm_source: metadata.utm_source || null,
+      utm_medium: metadata.utm_medium || null,
+      utm_campaign: metadata.utm_campaign || null,
+    },
+    externalSubmissionId: metadata.externalSubmissionId || null,
+    idempotencyKey: metadata.idempotencyKey || null,
+    capturedAt: metadata.timestamp || new Date().toISOString(),
+  };
+}
+
+async function detectIntakeDuplicates({
+  firmId,
+  email,
+  phone,
+  extraFields = {},
+  sourceAttribution = {},
+  excludeLeadId = null,
+}) {
+  const warningContext = {
+    leads: [],
+    clients: [],
+    matchedFields: [],
+  };
+  const leadOr = [];
+  const clientOr = [];
+
+  const normalizedEmail = normalizeTrimmedString(email)?.toLowerCase() || null;
+  const normalizedPhone = normalizeTrimmedString(phone) || null;
+  if (normalizedEmail) {
+    leadOr.push({ email: normalizedEmail });
+    clientOr.push({ businessEmail: normalizedEmail });
+  }
+  if (normalizedPhone) {
+    leadOr.push({ phone: normalizedPhone });
+    clientOr.push({ primaryContactNumber: normalizedPhone });
+  }
+
+  DUPLICATE_IDENTIFIER_FIELDS.forEach((field) => {
+    const rawValue = extraFields?.[field.key];
+    const normalizedValue = normalizeIdentifier(rawValue);
+    if (!normalizedValue) return;
+    leadOr.push({ [field.leadPath]: normalizedValue });
+    if (field.clientPath) clientOr.push({ [field.clientPath]: normalizedValue });
+    warningContext.matchedFields.push(field.label);
+  });
+
+  const uniqueMatchedFields = new Set(warningContext.matchedFields);
+  if (normalizedEmail) uniqueMatchedFields.add('Email');
+  if (normalizedPhone) uniqueMatchedFields.add('Phone');
+  warningContext.matchedFields = [...uniqueMatchedFields];
+
+  if (leadOr.length > 0) {
+    const leadQuery = {
+      firmId,
+      $or: leadOr,
+    };
+    if (excludeLeadId) {
+      leadQuery._id = { $ne: excludeLeadId };
+    }
+    const leadMatches = await Lead.find(leadQuery)
+      .select('_id name email phone source createdAt metadata.sourceAttribution')
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean();
+    warningContext.leads = leadMatches.map((lead) => ({
+      leadId: String(lead._id),
+      name: lead.name || null,
+      email: lead.email || null,
+      phone: lead.phone || null,
+      source: lead?.metadata?.sourceAttribution?.source || lead.source || null,
+      createdAt: lead.createdAt || null,
+    }));
+  }
+
+  if (clientOr.length > 0) {
+    const clientMatches = await Client.find({
+      firmId,
+      $or: clientOr,
+      isActive: true,
+    })
+      .select('clientId businessName businessEmail primaryContactNumber PAN GST clientFactSheet.basicInfo.GSTIN')
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean();
+    warningContext.clients = clientMatches.map((client) => ({
+      clientId: client.clientId,
+      businessName: client.businessName || null,
+      businessEmail: client.businessEmail || null,
+      primaryContactNumber: client.primaryContactNumber || null,
+      PAN: client.PAN || null,
+      GST: client.GST || client?.clientFactSheet?.basicInfo?.GSTIN || null,
+    }));
+  }
+
+  if (warningContext.leads.length === 0 && warningContext.clients.length === 0) {
+    return null;
+  }
+
+  return buildWarning({
+    code: REASON_CODES.DUPLICATE_MATCH,
+    message: 'Potential duplicate detected from prior intake/client records.',
+    recovery: 'Review existing lead/client records before converting this intake. Merge or continue only if this is a legitimate new matter.',
+    context: {
+      source: sourceAttribution.source,
+      submissionMode: sourceAttribution.submissionMode,
+      matchedFields: warningContext.matchedFields,
+      matches: warningContext,
+    },
+  });
 }
 
 function buildIntakeOutcome({
@@ -303,6 +439,15 @@ async function processCmsSubmission({
   });
   metadata.submissionMode = submissionMode;
   const extraFields = extractExtraFields(payload);
+  if (extraFields) {
+    Object.entries(extraFields).forEach(([key, value]) => {
+      if (!DUPLICATE_IDENTIFIER_FIELDS.some((field) => field.key === key.toLowerCase())) return;
+      const normalizedValue = normalizeIdentifier(value);
+      if (!normalizedValue) return;
+      extraFields[key] = normalizedValue;
+    });
+  }
+  const sourceAttribution = buildSourceAttribution(metadata);
   const config = await resolveIntakeConfig({ firmId, overrides: intakeConfigOverrides });
   const workflowSteps = [];
 
@@ -378,6 +523,7 @@ async function processCmsSubmission({
       externalSubmissionId: metadata.externalSubmissionId,
       idempotencyKey: metadata.idempotencyKey,
       extraFields,
+      sourceAttribution,
       intakeOutcome: buildIntakeOutcome({
         submissionMode,
         metadata,
@@ -401,7 +547,27 @@ async function processCmsSubmission({
     if (!warning?.message) return;
     warningDetails.push(warning);
   };
+  const duplicateWarning = await detectIntakeDuplicates({
+    firmId,
+    email,
+    phone,
+    extraFields: extraFields || {},
+    sourceAttribution,
+    excludeLeadId: lead._id,
+  });
+  if (duplicateWarning) {
+    addWarning(duplicateWarning);
+    workflowSteps.push({
+      step: 'duplicate_check',
+      status: 'warning',
+      reasonCode: duplicateWarning.code,
+      matchedFields: duplicateWarning?.context?.matchedFields || [],
+    });
+  } else {
+    workflowSteps.push({ step: 'duplicate_check', status: 'clear' });
+  }
   let client = null;
+  const conversionTrail = [];
 
   if (config.autoCreateClient) {
     if (!email && !phone) {
@@ -411,29 +577,66 @@ async function processCmsSubmission({
         recovery: 'Capture at least one contact detail and retry intake.',
       }));
       workflowSteps.push({ step: 'client_resolution', status: 'skipped', reasonCode: REASON_CODES.MISSING_CONTACT });
+      conversionTrail.push({
+        target: 'client',
+        status: 'skipped',
+        reasonCode: REASON_CODES.MISSING_CONTACT,
+        recovery: 'Capture email or phone before retrying client conversion.',
+        at: new Date().toISOString(),
+      });
     } else {
-      client = await clientService.findClientByEmailOrPhone({ firmId, email, phone });
-      if (client) {
-        workflowSteps.push({ step: 'client_resolution', status: 'matched_existing', clientId: client.clientId });
-      }
-      if (!client) {
-        client = await clientService.createClient({
-          firmId,
-          name,
-          email,
-          phone,
-          createdByXid: actor?.xid || actor?.xID || 'SYSTEM',
+      try {
+        client = await clientService.findClientByEmailOrPhone({ firmId, email, phone });
+        if (client) {
+          workflowSteps.push({ step: 'client_resolution', status: 'matched_existing', clientId: client.clientId });
+          conversionTrail.push({
+            target: 'client',
+            status: 'matched_existing',
+            clientId: client.clientId,
+            at: new Date().toISOString(),
+          });
+        }
+        if (!client) {
+          client = await clientService.createClient({
+            firmId,
+            name,
+            email,
+            phone,
+            createdByXid: actor?.xid || actor?.xID || 'SYSTEM',
+          });
+          workflowSteps.push({ step: 'client_resolution', status: 'created_new', clientId: client?.clientId || null });
+          conversionTrail.push({
+            target: 'client',
+            status: 'created_new',
+            clientId: client?.clientId || null,
+            at: new Date().toISOString(),
+          });
+        }
+      } catch (error) {
+        const warning = buildWarning({
+          code: REASON_CODES.CONVERSION_FAILED,
+          message: `Client conversion failed: ${error.message || 'unknown error'}`,
+          recovery: 'Open the intake lead and retry client conversion after fixing contact or identifier data.',
+          context: { target: 'client' },
         });
-        workflowSteps.push({ step: 'client_resolution', status: 'created_new', clientId: client?.clientId || null });
-      }
-
-      if (client) {
-        log.info('cms_client_upserted', {
-          firmId,
-          leadId: lead._id,
-          clientId: client.clientId,
+        addWarning(warning);
+        workflowSteps.push({ step: 'client_resolution', status: 'failed', reasonCode: REASON_CODES.CONVERSION_FAILED });
+        conversionTrail.push({
+          target: 'client',
+          status: 'failed',
+          reasonCode: REASON_CODES.CONVERSION_FAILED,
+          error: error.message || 'Unknown error',
+          recovery: warning.recovery,
+          at: new Date().toISOString(),
         });
       }
+    }
+    if (client) {
+      log.info('cms_client_upserted', {
+        firmId,
+        leadId: lead._id,
+        clientId: client.clientId,
+      });
     }
   }
 
@@ -460,6 +663,13 @@ async function processCmsSubmission({
           recovery: 'Resolve or create a client first, then retry docket creation.',
         }));
         workflowSteps.push({ step: 'docket_create', status: 'skipped', reasonCode: REASON_CODES.MISSING_CLIENT });
+        conversionTrail.push({
+          target: 'docket',
+          status: 'skipped',
+          reasonCode: REASON_CODES.MISSING_CLIENT,
+          recovery: 'Resolve client conversion first, then retry docket conversion.',
+          at: new Date().toISOString(),
+        });
       } else {
         workflowSteps.push({
           step: 'routing_resolution',
@@ -468,36 +678,61 @@ async function processCmsSubmission({
           subcategoryId: routing.subcategoryId || null,
           workbasketId: routing.workbasketId || null,
         });
-        docket = await createDocket({
-          firmId,
-          clientId: client.clientId,
-          lead,
-          metadata,
-          config,
-          routing,
-        });
-        workflowSteps.push({ step: 'docket_create', status: 'succeeded', docketId: docket.caseId });
-
-        await docketAuditService.logDocketEvent({
-          docketId: docket.caseId,
-          firmId,
-          event: 'DOCKET_CREATED',
-          userId: actor?.xid || actor?.xID || 'SYSTEM',
-          userRole: actor?.role || 'SYSTEM',
-          metadata: {
-            source: metadata.source,
-            submissionMode,
-            leadId: String(lead._id),
+        try {
+          docket = await createDocket({
+            firmId,
             clientId: client.clientId,
-            docketIdempotencyKey: docket.idempotencyKey || null,
-          },
-        });
+            lead,
+            metadata,
+            config,
+            routing,
+          });
+          workflowSteps.push({ step: 'docket_create', status: 'succeeded', docketId: docket.caseId });
+          conversionTrail.push({
+            target: 'docket',
+            status: 'succeeded',
+            docketId: docket.caseId,
+            at: new Date().toISOString(),
+          });
 
-        log.info('cms_docket_created', {
-          firmId,
-          leadId: lead._id,
-          docketId: docket.caseId,
-        });
+          await docketAuditService.logDocketEvent({
+            docketId: docket.caseId,
+            firmId,
+            event: 'DOCKET_CREATED',
+            userId: actor?.xid || actor?.xID || 'SYSTEM',
+            userRole: actor?.role || 'SYSTEM',
+            metadata: {
+              source: metadata.source,
+              submissionMode,
+              leadId: String(lead._id),
+              clientId: client.clientId,
+              docketIdempotencyKey: docket.idempotencyKey || null,
+            },
+          });
+
+          log.info('cms_docket_created', {
+            firmId,
+            leadId: lead._id,
+            docketId: docket.caseId,
+          });
+        } catch (error) {
+          const warning = buildWarning({
+            code: REASON_CODES.CONVERSION_FAILED,
+            message: `Docket conversion failed: ${error.message || 'unknown error'}`,
+            recovery: 'Open the intake lead, verify routing and client linkage, then retry docket conversion.',
+            context: { target: 'docket' },
+          });
+          addWarning(warning);
+          workflowSteps.push({ step: 'docket_create', status: 'failed', reasonCode: REASON_CODES.CONVERSION_FAILED });
+          conversionTrail.push({
+            target: 'docket',
+            status: 'failed',
+            reasonCode: REASON_CODES.CONVERSION_FAILED,
+            error: error.message || 'Unknown error',
+            recovery: warning.recovery,
+            at: new Date().toISOString(),
+          });
+        }
       }
     }
   }
@@ -526,6 +761,7 @@ async function processCmsSubmission({
           'metadata.intakeDiagnostics': {
             warningDetails,
             workflowSteps,
+            conversionTrail,
             lastFailureReason: warningDetails[0]?.code || null,
             updatedAt: new Date().toISOString(),
           },
@@ -565,6 +801,8 @@ async function processCmsSubmission({
       warningDetails,
       intakeOutcome: finalOutcome,
       workflowSteps,
+      sourceAttribution,
+      conversionTrail,
     },
   };
 }

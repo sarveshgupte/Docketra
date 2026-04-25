@@ -3,6 +3,7 @@ const assert = require('assert');
 
 const cmsIntakeService = require('../src/services/cmsIntake.service');
 const Lead = require('../src/models/Lead.model');
+const Client = require('../src/models/Client.model');
 const Firm = require('../src/models/Firm.model');
 const Case = require('../src/models/Case.model');
 const clientService = require('../src/services/client.service');
@@ -13,10 +14,14 @@ const Team = require('../src/models/Team.model');
 async function testLeadOnlyFlow() {
   const originalLeadCreate = Lead.create;
   const originalLeadFindByIdAndUpdate = Lead.findByIdAndUpdate;
+  const originalLeadFind = Lead.find;
+  const originalClientFind = Client.find;
   const originalFirmFindById = Firm.findById;
 
   Lead.create = async (payload) => ({ _id: '507f1f77bcf86cd799439101', ...payload });
   Lead.findByIdAndUpdate = async () => ({ _id: '507f1f77bcf86cd799439101' });
+  Lead.find = () => ({ select: () => ({ sort: () => ({ limit: () => ({ lean: async () => [] }) }) }) });
+  Client.find = () => ({ select: () => ({ sort: () => ({ limit: () => ({ lean: async () => [] }) }) }) });
   Firm.findById = () => ({ select: () => ({ lean: async () => null }) });
 
   try {
@@ -51,9 +56,12 @@ async function testLeadOnlyFlow() {
     assert.strictEqual(result.lead.metadata.formId, '507f1f77bcf86cd799439099');
     assert.strictEqual(result.lead.metadata.formSlug, 'tax-intake');
     assert.strictEqual(result.lead.metadata.submissionMode, 'embedded_form');
+    assert.strictEqual(result.metadata.warningDetails.some((warning) => warning.code === 'duplicate_match'), false);
   } finally {
     Lead.create = originalLeadCreate;
     Lead.findByIdAndUpdate = originalLeadFindByIdAndUpdate;
+    Lead.find = originalLeadFind;
+    Client.find = originalClientFind;
     Firm.findById = originalFirmFindById;
   }
 }
@@ -61,12 +69,16 @@ async function testLeadOnlyFlow() {
 async function testLeadAndClientFlow() {
   const originalLeadCreate = Lead.create;
   const originalLeadFindByIdAndUpdate = Lead.findByIdAndUpdate;
+  const originalLeadFind = Lead.find;
+  const originalClientFind = Client.find;
   const originalFirmFindById = Firm.findById;
   const originalFindClient = clientService.findClientByEmailOrPhone;
   const originalCreateClient = clientService.createClient;
 
   Lead.create = async (payload) => ({ _id: '507f1f77bcf86cd799439102', ...payload });
   Lead.findByIdAndUpdate = async () => ({ _id: '507f1f77bcf86cd799439102' });
+  Lead.find = () => ({ select: () => ({ sort: () => ({ limit: () => ({ lean: async () => [] }) }) }) });
+  Client.find = () => ({ select: () => ({ sort: () => ({ limit: () => ({ lean: async () => [] }) }) }) });
   Firm.findById = () => ({ select: () => ({ lean: async () => null }) });
   clientService.findClientByEmailOrPhone = async () => null;
   clientService.createClient = async () => ({ _id: 'client-doc-1', clientId: 'C000123' });
@@ -84,6 +96,8 @@ async function testLeadAndClientFlow() {
   } finally {
     Lead.create = originalLeadCreate;
     Lead.findByIdAndUpdate = originalLeadFindByIdAndUpdate;
+    Lead.find = originalLeadFind;
+    Client.find = originalClientFind;
     Firm.findById = originalFirmFindById;
     clientService.findClientByEmailOrPhone = originalFindClient;
     clientService.createClient = originalCreateClient;
@@ -93,6 +107,8 @@ async function testLeadAndClientFlow() {
 async function testLeadClientAndDocketFlow() {
   const originalLeadCreate = Lead.create;
   const originalLeadFindByIdAndUpdate = Lead.findByIdAndUpdate;
+  const originalLeadFind = Lead.find;
+  const originalClientFind = Client.find;
   const originalFirmFindById = Firm.findById;
   const originalFindClient = clientService.findClientByEmailOrPhone;
   const originalCreateClient = clientService.createClient;
@@ -107,6 +123,8 @@ async function testLeadClientAndDocketFlow() {
     updateCalls.push({ id, update });
     return { _id: id };
   };
+  Lead.find = () => ({ select: () => ({ sort: () => ({ limit: () => ({ lean: async () => [] }) }) }) });
+  Client.find = () => ({ select: () => ({ sort: () => ({ limit: () => ({ lean: async () => [] }) }) }) });
   Firm.findById = () => ({ select: () => ({ lean: async () => null }) });
   clientService.findClientByEmailOrPhone = async () => null;
   clientService.createClient = async () => ({ _id: 'client-doc-2', clientId: 'C000124' });
@@ -141,10 +159,15 @@ async function testLeadClientAndDocketFlow() {
     assert.strictEqual(result.metadata.intakeOutcome.createdDocket, true);
     assert.strictEqual(result.metadata.intakeOutcome.clientId, 'C000124');
     assert.strictEqual(result.metadata.intakeOutcome.docketId, 'CASE-20260418-00001');
+    assert.ok(Array.isArray(result.metadata.conversionTrail));
+    assert.ok(result.metadata.conversionTrail.some((entry) => entry.target === 'client' && entry.status === 'created_new'));
+    assert.ok(result.metadata.conversionTrail.some((entry) => entry.target === 'docket' && entry.status === 'succeeded'));
     assert.ok(updateCalls.length > 0);
   } finally {
     Lead.create = originalLeadCreate;
     Lead.findByIdAndUpdate = originalLeadFindByIdAndUpdate;
+    Lead.find = originalLeadFind;
+    Client.find = originalClientFind;
     Firm.findById = originalFirmFindById;
     clientService.findClientByEmailOrPhone = originalFindClient;
     clientService.createClient = originalCreateClient;
@@ -158,6 +181,8 @@ async function testLeadClientAndDocketFlow() {
 async function testInvalidRoutingConfigGracefulFailure() {
   const originalLeadCreate = Lead.create;
   const originalLeadFindByIdAndUpdate = Lead.findByIdAndUpdate;
+  const originalLeadFind = Lead.find;
+  const originalClientFind = Client.find;
   const originalFirmFindById = Firm.findById;
   const originalFindClient = clientService.findClientByEmailOrPhone;
   const originalCreateClient = clientService.createClient;
@@ -168,6 +193,8 @@ async function testInvalidRoutingConfigGracefulFailure() {
     updateCalls.push({ id, update });
     return { _id: id };
   };
+  Lead.find = () => ({ select: () => ({ sort: () => ({ limit: () => ({ lean: async () => [] }) }) }) });
+  Client.find = () => ({ select: () => ({ sort: () => ({ limit: () => ({ lean: async () => [] }) }) }) });
   Firm.findById = () => ({ select: () => ({ lean: async () => null }) });
   clientService.findClientByEmailOrPhone = async () => ({ _id: 'client-doc-3', clientId: 'C000125' });
   clientService.createClient = async () => {
@@ -194,6 +221,8 @@ async function testInvalidRoutingConfigGracefulFailure() {
   } finally {
     Lead.create = originalLeadCreate;
     Lead.findByIdAndUpdate = originalLeadFindByIdAndUpdate;
+    Lead.find = originalLeadFind;
+    Client.find = originalClientFind;
     Firm.findById = originalFirmFindById;
     clientService.findClientByEmailOrPhone = originalFindClient;
     clientService.createClient = originalCreateClient;
@@ -203,12 +232,16 @@ async function testInvalidRoutingConfigGracefulFailure() {
 async function testBackwardCompatibleHandleFormSubmission() {
   const originalLeadCreate = Lead.create;
   const originalLeadFindByIdAndUpdate = Lead.findByIdAndUpdate;
+  const originalLeadFind = Lead.find;
+  const originalClientFind = Client.find;
   const originalFirmFindById = Firm.findById;
   const originalFindClient = clientService.findClientByEmailOrPhone;
   const originalCreateClient = clientService.createClient;
 
   Lead.create = async (payload) => ({ _id: '507f1f77bcf86cd799439105', ...payload });
   Lead.findByIdAndUpdate = async () => ({ _id: '507f1f77bcf86cd799439105' });
+  Lead.find = () => ({ select: () => ({ sort: () => ({ limit: () => ({ lean: async () => [] }) }) }) });
+  Client.find = () => ({ select: () => ({ sort: () => ({ limit: () => ({ lean: async () => [] }) }) }) });
   Firm.findById = () => ({ select: () => ({ lean: async () => null }) });
   clientService.findClientByEmailOrPhone = async () => ({ _id: 'client-legacy', clientId: 'C009999' });
   clientService.createClient = async () => ({ _id: 'client-legacy', clientId: 'C009999' });
@@ -225,6 +258,8 @@ async function testBackwardCompatibleHandleFormSubmission() {
   } finally {
     Lead.create = originalLeadCreate;
     Lead.findByIdAndUpdate = originalLeadFindByIdAndUpdate;
+    Lead.find = originalLeadFind;
+    Client.find = originalClientFind;
     Firm.findById = originalFirmFindById;
     clientService.findClientByEmailOrPhone = originalFindClient;
     clientService.createClient = originalCreateClient;
@@ -235,11 +270,15 @@ async function testApiIntakeIdempotencyAndMetadata() {
   const originalLeadCreate = Lead.create;
   const originalLeadFindByIdAndUpdate = Lead.findByIdAndUpdate;
   const originalLeadFindOne = Lead.findOne;
+  const originalLeadFind = Lead.find;
+  const originalClientFind = Client.find;
   const originalFirmFindById = Firm.findById;
 
   Lead.create = async (payload) => ({ _id: '507f1f77bcf86cd799439106', ...payload });
   Lead.findByIdAndUpdate = async () => ({ _id: '507f1f77bcf86cd799439106' });
   Lead.findOne = () => ({ sort: () => ({ lean: async () => null }) });
+  Lead.find = () => ({ select: () => ({ sort: () => ({ limit: () => ({ lean: async () => [] }) }) }) });
+  Client.find = () => ({ select: () => ({ sort: () => ({ limit: () => ({ lean: async () => [] }) }) }) });
   Firm.findById = () => ({ select: () => ({ lean: async () => null }) });
 
   try {
@@ -274,6 +313,205 @@ async function testApiIntakeIdempotencyAndMetadata() {
     Lead.create = originalLeadCreate;
     Lead.findByIdAndUpdate = originalLeadFindByIdAndUpdate;
     Lead.findOne = originalLeadFindOne;
+    Lead.find = originalLeadFind;
+    Client.find = originalClientFind;
+    Firm.findById = originalFirmFindById;
+  }
+}
+
+async function testDuplicateWarningFromIntakeIdentifiers() {
+  const originalLeadCreate = Lead.create;
+  const originalLeadFindByIdAndUpdate = Lead.findByIdAndUpdate;
+  const originalLeadFind = Lead.find;
+  const originalClientFind = Client.find;
+  const originalFirmFindById = Firm.findById;
+
+  Lead.create = async (payload) => ({ _id: '507f1f77bcf86cd799439108', ...payload });
+  Lead.findByIdAndUpdate = async () => ({ _id: '507f1f77bcf86cd799439108' });
+  Lead.find = () => ({
+    select: () => ({
+      sort: () => ({
+        limit: () => ({
+          lean: async () => ([{ _id: 'lead-existing-1', name: 'Existing Lead', email: 'dup@example.com', source: 'website_embed', createdAt: new Date().toISOString(), metadata: {} }]),
+        }),
+      }),
+    }),
+  });
+  Client.find = () => ({
+    select: () => ({
+      sort: () => ({
+        limit: () => ({
+          lean: async () => ([{ clientId: 'C000900', businessName: 'Existing Client', businessEmail: 'dup@example.com' }]),
+        }),
+      }),
+    }),
+  });
+  Firm.findById = () => ({ select: () => ({ lean: async () => null }) });
+
+  try {
+    const result = await cmsIntakeService.processCmsSubmission({
+      firmId: '507f1f77bcf86cd799439011',
+      payload: {
+        name: 'Duplicate Signal',
+        email: 'dup@example.com',
+        pan: 'ABCDE1234F',
+      },
+      intakeConfig: { autoCreateClient: false, autoCreateDocket: false },
+      submissionMode: 'public_form',
+    });
+    assert.strictEqual(result.metadata.warningDetails[0].code, 'duplicate_match');
+    assert.ok(result.metadata.warningDetails[0].recovery.includes('Review existing lead/client records'));
+    assert.ok(result.metadata.warningDetails[0].context.matches.leads.length > 0);
+    assert.ok(result.metadata.warningDetails[0].context.matches.clients.length > 0);
+  } finally {
+    Lead.create = originalLeadCreate;
+    Lead.findByIdAndUpdate = originalLeadFindByIdAndUpdate;
+    Lead.find = originalLeadFind;
+    Client.find = originalClientFind;
+    Firm.findById = originalFirmFindById;
+  }
+}
+
+async function testDuplicateWarningFromOlderLeadOnly() {
+  const originalLeadCreate = Lead.create;
+  const originalLeadFindByIdAndUpdate = Lead.findByIdAndUpdate;
+  const originalLeadFind = Lead.find;
+  const originalClientFind = Client.find;
+  const originalFirmFindById = Firm.findById;
+
+  Lead.create = async (payload) => ({ _id: '507f1f77bcf86cd799439109', ...payload });
+  Lead.findByIdAndUpdate = async () => ({ _id: '507f1f77bcf86cd799439109' });
+  Lead.find = (query) => ({
+    select: () => ({
+      sort: () => ({
+        limit: () => ({
+          lean: async () => {
+            assert.ok(query._id && query._id.$ne, 'duplicate check should exclude current lead _id');
+            return [{ _id: '507f1f77bcf86cd799439010', name: 'Old Lead', email: 'same@example.com', source: 'cms', metadata: {} }];
+          },
+        }),
+      }),
+    }),
+  });
+  Client.find = () => ({ select: () => ({ sort: () => ({ limit: () => ({ lean: async () => [] }) }) }) });
+  Firm.findById = () => ({ select: () => ({ lean: async () => null }) });
+
+  try {
+    const result = await cmsIntakeService.processCmsSubmission({
+      firmId: '507f1f77bcf86cd799439011',
+      payload: {
+        name: 'Lead Match',
+        email: 'same@example.com',
+      },
+      intakeConfig: { autoCreateClient: false, autoCreateDocket: false },
+      submissionMode: 'public_form',
+    });
+    const duplicateWarning = result.metadata.warningDetails.find((warning) => warning.code === 'duplicate_match');
+    assert.ok(duplicateWarning, 'expected duplicate warning when matching older lead');
+    assert.strictEqual(result.client, null, 'duplicate warning should remain non-blocking');
+    assert.strictEqual(result.docket, null, 'duplicate warning should remain non-blocking');
+  } finally {
+    Lead.create = originalLeadCreate;
+    Lead.findByIdAndUpdate = originalLeadFindByIdAndUpdate;
+    Lead.find = originalLeadFind;
+    Client.find = originalClientFind;
+    Firm.findById = originalFirmFindById;
+  }
+}
+
+async function testDuplicateWarningFromExistingClientOnly() {
+  const originalLeadCreate = Lead.create;
+  const originalLeadFindByIdAndUpdate = Lead.findByIdAndUpdate;
+  const originalLeadFind = Lead.find;
+  const originalClientFind = Client.find;
+  const originalFirmFindById = Firm.findById;
+
+  Lead.create = async (payload) => ({ _id: '507f1f77bcf86cd799439110', ...payload });
+  Lead.findByIdAndUpdate = async () => ({ _id: '507f1f77bcf86cd799439110' });
+  Lead.find = () => ({ select: () => ({ sort: () => ({ limit: () => ({ lean: async () => [] }) }) }) });
+  Client.find = () => ({
+    select: () => ({
+      sort: () => ({
+        limit: () => ({
+          lean: async () => ([{ clientId: 'C123999', businessName: 'Client Match', businessEmail: 'clientmatch@example.com' }]),
+        }),
+      }),
+    }),
+  });
+  Firm.findById = () => ({ select: () => ({ lean: async () => null }) });
+
+  try {
+    const result = await cmsIntakeService.processCmsSubmission({
+      firmId: '507f1f77bcf86cd799439011',
+      payload: {
+        name: 'Client Match Lead',
+        email: 'clientmatch@example.com',
+      },
+      intakeConfig: { autoCreateClient: false, autoCreateDocket: false },
+      submissionMode: 'public_form',
+    });
+    const duplicateWarning = result.metadata.warningDetails.find((warning) => warning.code === 'duplicate_match');
+    assert.ok(duplicateWarning, 'expected duplicate warning when matching existing client');
+    assert.ok(result.metadata.intakeOutcome, 'duplicate warning should not block intake outcome');
+  } finally {
+    Lead.create = originalLeadCreate;
+    Lead.findByIdAndUpdate = originalLeadFindByIdAndUpdate;
+    Lead.find = originalLeadFind;
+    Client.find = originalClientFind;
+    Firm.findById = originalFirmFindById;
+  }
+}
+
+async function testCurrentLeadExcludedFromDuplicateMatching() {
+  const originalLeadCreate = Lead.create;
+  const originalLeadFindByIdAndUpdate = Lead.findByIdAndUpdate;
+  const originalLeadFind = Lead.find;
+  const originalClientFind = Client.find;
+  const originalFirmFindById = Firm.findById;
+  const currentLeadId = '507f1f77bcf86cd799439111';
+
+  Lead.create = async (payload) => ({ _id: currentLeadId, ...payload });
+  Lead.findByIdAndUpdate = async () => ({ _id: currentLeadId });
+  Lead.find = (query) => ({
+    select: () => ({
+      sort: () => ({
+        limit: () => ({
+          lean: async () => {
+            assert.strictEqual(String(query?._id?.$ne || ''), currentLeadId, 'lead duplicate query must exclude current lead id');
+            return [];
+          },
+        }),
+      }),
+    }),
+  });
+  Client.find = () => ({ select: () => ({ sort: () => ({ limit: () => ({ lean: async () => [] }) }) }) });
+  Firm.findById = () => ({ select: () => ({ lean: async () => null }) });
+
+  try {
+    const result = await cmsIntakeService.processCmsSubmission({
+      firmId: '507f1f77bcf86cd799439011',
+      payload: {
+        name: 'Self Lead',
+        email: 'self@example.com',
+      },
+      intakeConfig: { autoCreateClient: false, autoCreateDocket: false },
+      submissionMode: 'public_form',
+    });
+    assert.strictEqual(
+      result.metadata.warningDetails.some((warning) => warning.code === 'duplicate_match'),
+      false,
+      'self-match should not generate duplicate warning'
+    );
+    assert.strictEqual(
+      result.metadata.intakeDiagnostics?.warningDetails?.some((warning) => warning.code === 'duplicate_match') || false,
+      false,
+      'intake diagnostics should include duplicate warning only for genuine previous matches'
+    );
+  } finally {
+    Lead.create = originalLeadCreate;
+    Lead.findByIdAndUpdate = originalLeadFindByIdAndUpdate;
+    Lead.find = originalLeadFind;
+    Client.find = originalClientFind;
     Firm.findById = originalFirmFindById;
   }
 }
@@ -286,6 +524,10 @@ async function run() {
     await testInvalidRoutingConfigGracefulFailure();
     await testBackwardCompatibleHandleFormSubmission();
     await testApiIntakeIdempotencyAndMetadata();
+    await testDuplicateWarningFromIntakeIdentifiers();
+    await testDuplicateWarningFromOlderLeadOnly();
+    await testDuplicateWarningFromExistingClientOnly();
+    await testCurrentLeadExcludedFromDuplicateMatching();
     console.log('CMS intake service tests passed.');
   } catch (error) {
     console.error('CMS intake service tests failed:', error);
