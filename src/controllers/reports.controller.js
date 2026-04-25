@@ -364,7 +364,15 @@ const getPendingCasesReport = async (req, res) => {
     const startedAt = Date.now();
     const firmId = resolveFirmIdFromAuthContext(req, res);
     if (!firmId) return;
-    const { category, assignedTo, ageingBucket } = req.query;
+    const { category, assignedTo, ageingBucket, page = 1, limit = 50 } = req.query;
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    if (!Number.isInteger(pageNum) || pageNum < 1 || !Number.isInteger(limitNum) || limitNum < 1 || limitNum > MAX_REPORT_PAGE_LIMIT) {
+      return res.status(400).json({
+        success: false,
+        message: `page must be >= 1 and limit must be between 1 and ${MAX_REPORT_PAGE_LIMIT}`,
+      });
+    }
     
     // Build match stage for pending cases
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
@@ -376,7 +384,11 @@ const getPendingCasesReport = async (req, res) => {
     
     // Fetch all pending cases
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
-    const cases = await Case.find(matchStage).select(REPORT_CASE_PROJECTION).limit(MAX_EXPORT_ROWS + 1).lean();
+    const cases = await Case.find(matchStage)
+      .select(REPORT_CASE_PROJECTION)
+      .sort({ pendingUntil: 1, createdAt: -1 })
+      .limit(MAX_EXPORT_ROWS + 1)
+      .lean();
     if (cases.length > MAX_EXPORT_ROWS) {
       // PERFORMANCE: Hard cap enforced to prevent memory exhaustion
       return res.status(400).json({
@@ -394,10 +406,8 @@ const getPendingCasesReport = async (req, res) => {
       filteredCases = casesWithAgeing.filter(c => c.ageingBucket === ageingBucket);
     }
     
-    const casesWithClientNames = await hydrateCasesForReport(firmId, filteredCases);
-    
-    // Sort by ageing descending (oldest first)
-    casesWithClientNames.sort((a, b) => b.ageingDays - a.ageingDays);
+    const pagedCases = filteredCases.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+    const casesWithClientNames = await hydrateCasesForReport(firmId, pagedCases);
     
     // Aggregate by category
     const byCategoryMap = aggregateByCategory(filteredCases);
@@ -416,6 +426,12 @@ const getPendingCasesReport = async (req, res) => {
         byEmployee,
         byAgeing,
         cases: casesWithClientNames,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: filteredCases.length,
+          pages: Math.ceil(filteredCases.length / limitNum) || 1,
+        },
       },
     });
     logSlowReportPath({
@@ -423,7 +439,7 @@ const getPendingCasesReport = async (req, res) => {
       endpoint: 'getPendingCasesReport',
       durationMs: Date.now() - startedAt,
       firmId,
-      extra: { totalPending: filteredCases.length },
+      extra: { totalPending: filteredCases.length, page: pageNum, limit: limitNum },
     });
   } catch (error) {
     log.error('Error in getPendingCasesReport:', error);

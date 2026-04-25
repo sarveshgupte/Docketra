@@ -1229,6 +1229,7 @@ caseSchema.index({ firmId: 1, status: 1, dueDate: 1, slaDueAt: 1 });
 caseSchema.index({ firmId: 1, routedToTeamId: 1, status: 1 });
 caseSchema.index({ firmId: 1, dueDate: 1, status: 1 }); // Firm-scoped overdue metrics queries
 caseSchema.index({ firmId: 1, status: 1, dueDate: 1 }); // Firm-scoped status-filtered due-date ordering queries
+caseSchema.index({ firmId: 1, status: 1, pendingUntil: 1 }); // Pending report filter + chronological pending queue sort
 caseSchema.index({ firmId: 1, resolvedAt: 1 }); // Firm-scoped resolution metrics queries
 caseSchema.index({ firmId: 1, createdAt: 1 }); // Firm-scoped daily creation metrics queries
 caseSchema.index({ firmId: 1, status: 1, createdAt: -1 }); // Firm-scoped status dashboards sorted by recency
