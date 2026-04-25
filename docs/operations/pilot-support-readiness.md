@@ -1,3 +1,5 @@
+> **Historical document (point-in-time):** This file captures an earlier audit/readiness snapshot and may not reflect the current product surface. For current state, see `README.md`, `docs/product/current-product-overview.md`, and `docs/operations/pilot-readiness-checklist.md`.
+
 # Pilot Support Readiness
 
 ## Key operational signals now available
