@@ -9,7 +9,7 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
 import { SESSION_KEYS, STORAGE_KEYS } from '../../utils/constants.js';
 import { isSuperAdmin } from '../../utils/authUtils.js';
-import { resolveFirmLoginPath } from '../../utils/tenantRouting.js';
+import { resolveFirmLoginPath, sanitizeFirmSlug } from '../../utils/tenantRouting.js';
 import { RouteLoadingShell } from '../routing/RouteLoadingShell';
 import { ROUTES } from '../../constants/routes.js';
 import { AUTH_STATES } from '../../contexts/AuthContext.jsx';
@@ -28,21 +28,24 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
   const { isAdmin } = usePermissions();
   const location = useLocation();
   const { firmSlug } = useParams();
-  const storedFirmSlug = localStorage.getItem(STORAGE_KEYS.FIRM_SLUG);
-  const effectiveFirmSlug = firmSlug || storedFirmSlug;
+  const routeFirmSlug = sanitizeFirmSlug(firmSlug);
+  const storedFirmSlug = sanitizeFirmSlug(localStorage.getItem(STORAGE_KEYS.FIRM_SLUG));
+  const effectiveFirmSlug = routeFirmSlug || storedFirmSlug;
+  const hasInvalidRouteFirmSlug = Boolean(firmSlug && !routeFirmSlug);
   const isSuperAdminUser = isSuperAdmin(user);
-  const loginPath = resolveFirmLoginPath({
-    firmSlug,
+  const firmLoginPath = resolveFirmLoginPath({
+    firmSlug: routeFirmSlug,
     fallbackFirmSlug: storedFirmSlug,
   });
+  const loginPath = requireSuperadmin ? ROUTES.SUPERADMIN_LOGIN : firmLoginPath;
 
   // Multi-tenancy guard: Detect firm slug mismatches
-  if (firmSlug && storedFirmSlug && firmSlug !== storedFirmSlug) {
-    console.warn(`[TENANCY] Firm slug mismatch detected. URL firm="${firmSlug}", session firm="${storedFirmSlug}"`);
+  if (routeFirmSlug && storedFirmSlug && routeFirmSlug !== storedFirmSlug) {
+    console.warn(`[TENANCY] Firm slug mismatch detected. URL firm="${routeFirmSlug}", session firm="${storedFirmSlug}"`);
   }
 
-  if (user?.firmSlug && firmSlug && user.firmSlug !== firmSlug) {
-    console.warn(`[TENANCY] Attempted cross-firm access blocked in UI. User firm="${user.firmSlug}", requested firm="${firmSlug}"`);
+  if (user?.firmSlug && routeFirmSlug && user.firmSlug !== routeFirmSlug) {
+    console.warn(`[TENANCY] Attempted cross-firm access blocked in UI. User firm="${user.firmSlug}", requested firm="${routeFirmSlug}"`);
   }
 
   // Wait for auth hydration to complete
@@ -54,6 +57,10 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
   if (!isAuthenticated) {
     const loginPathWithReturnTo = appendReturnTo(loginPath, buildReturnTo(location));
     return <Navigate to={loginPathWithReturnTo} replace />;
+  }
+
+  if (hasInvalidRouteFirmSlug && !requireSuperadmin) {
+    return <Navigate to={ROUTES.PUBLIC_LOGIN} replace />;
   }
 
   if (authState === AUTH_STATES.ONBOARDING_REQUIRED) {

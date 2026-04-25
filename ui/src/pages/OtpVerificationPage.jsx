@@ -11,6 +11,7 @@ import { Stack } from '../components/layout/Stack';
 import { Row } from '../components/layout/Row';
 import { ErrorState } from '../components/feedback/ErrorState';
 import { authApi } from '../api/auth.api';
+import { resolvePostAuthNavigation } from '../utils/postAuthNavigation';
 
 export const OtpVerificationPage = () => {
   const navigate = useNavigate();
@@ -96,9 +97,14 @@ export const OtpVerificationPage = () => {
       authService.setSessionTokens(payload);
       const profileResult = await fetchProfile({ force: true });
       if (profileResult?.success) {
-        navigate(resolvePostAuthRoute(profileResult.data), { replace: true });
+        const nextRoute = resolvePostAuthNavigation({
+          locationSearch: location.search,
+          user: profileResult.data,
+          resolvePostAuthRoute,
+        });
+        navigate(nextRoute, { replace: true });
       } else {
-        navigate('/superadmin', { replace: true });
+        setError('OTP verified, but your workspace context could not be loaded. Please sign in again.');
       }
     } catch (submitError) {
       setError(submitError?.response?.data?.message || 'Invalid OTP. Enter the latest 6-digit code and try again.');

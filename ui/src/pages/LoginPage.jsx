@@ -12,7 +12,7 @@ import { validateXID, validatePassword } from '../utils/validators';
 import { useToast } from '../hooks/useToast';
 import { spacingClasses } from '../theme/tokens';
 import { ErrorState } from '../components/feedback/ErrorState';
-import { resolvePostLoginDestination } from '../utils/authRedirect';
+import { resolvePostAuthNavigation } from '../utils/postAuthNavigation';
 import './LoginPage.css';
 
 export const LoginPage = () => {
@@ -74,15 +74,21 @@ export const LoginPage = () => {
       const response = await login(normalizedIdentifier, password, '/superadmin/login');
 
       if (response.success) {
-        showSuccess('✅ Login successful. Redirecting to your workspace.');
-
         const profileResult = await fetchProfile({ force: true });
 
-        if (profileResult?.success) {
-          const returnTo = new URLSearchParams(location.search).get('returnTo');
-          const nextRoute = resolvePostLoginDestination(returnTo, resolvePostAuthRoute(profileResult.data));
-          navigate(nextRoute, { replace: true });
+        if (!profileResult?.success || !profileResult?.data) {
+          setError('Login succeeded, but your workspace context could not be loaded. Please retry.');
+          return;
         }
+
+        const nextRoute = resolvePostAuthNavigation({
+          locationSearch: location.search,
+          user: profileResult.data,
+          resolvePostAuthRoute,
+        });
+
+        showSuccess('✅ Login successful. Redirecting to your workspace.');
+        navigate(nextRoute, { replace: true });
       }
     } catch (err) {
       const errorData = err.response?.data;

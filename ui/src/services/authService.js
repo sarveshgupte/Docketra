@@ -3,7 +3,7 @@
  */
 
 import api from './api';
-import { STORAGE_KEYS } from '../utils/constants';
+import { SESSION_KEYS, STORAGE_KEYS } from '../utils/constants';
 import { authApi } from '../api/auth.api';
 
 export const authService = {
@@ -85,6 +85,9 @@ export const authService = {
     try {
       await api.post('/auth/logout');
     } finally {
+      sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_TOKEN);
+      sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_FIRM);
+      sessionStorage.removeItem(SESSION_KEYS.POST_LOGIN_RETURN_TO);
       if (!firmSlugToPreserve) {
         localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
       } else {
