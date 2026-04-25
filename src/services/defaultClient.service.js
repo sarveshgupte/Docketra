@@ -4,9 +4,9 @@ const { getOrCreateDefaultClient } = require('./defaultClient.guard');
  * Ensure an organization has a default client.
  *
  * In the new client-centric architecture the "organization" is represented by
- * a Client document with isDefaultClient=true.  The default client's firmId
- * equals its own _id (self-referencing) so that it is included in all
- * organization-scoped queries (Client.find({ firmId: orgId })).
+ * a Client document with isDefaultClient=true. Runtime tenant identity is
+ * represented by the default client _id, while relational ownership remains
+ * anchored to the owning Firm._id in deployments that still use Firm records.
  *
  * Legacy usage: When a `firm` document is supplied the function still works —
  * it creates the default client with firmId=firm._id and updates

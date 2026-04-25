@@ -2,6 +2,7 @@ const { randomUUID } = require('crypto');
 const mongoose = require('mongoose');
 const { isSuperAdminRole } = require('../utils/role.utils');
 const { isActiveStatus } = require('../utils/status.utils');
+const { resolveCanonicalTenantFromFirmId } = require('../services/tenantIdentity.service');
 const log = require('../utils/log');
 
 /**
@@ -61,48 +62,15 @@ const firmContext = async (req, res, next) => {
       throw error;
     }
 
-    // ── Client-first lookup (new architecture) ──────────────────────────────
-    const Client = require('../models/Client.model');
     let tenantId = null;
     let tenantStatus = 'active';
     let tenantSlug = null;
+    const tenantContext = await resolveCanonicalTenantFromFirmId(candidateId);
 
-    let defaultClient = null;
-    try {
-      defaultClient = await Client.findOne({ _id: candidateId, isDefaultClient: true })
-        .select('_id status businessName firmSlug').lean();
-    } catch (_clientErr) {
-      // DB not available or query failed — fall through to legacy Firm lookup
-    }
-
-    if (defaultClient) {
-      tenantId = defaultClient._id.toString();
-      tenantStatus = defaultClient.status ? defaultClient.status.toLowerCase() : 'active';
-      tenantSlug = defaultClient.firmSlug || null;
-    } else {
-      // ── Legacy Firm fallback (backward compat) ──────────────────────────
-      let Firm;
-      try {
-        Firm = require('../models/Firm.model');
-      } catch (_) {
-        Firm = null;
-      }
-
-      if (Firm) {
-        let firm = null;
-        try {
-          const firmQuery = Firm.findOne({ _id: candidateId });
-          // Use .lean() if available (real Mongoose query), otherwise use the result directly
-          firm = await (typeof firmQuery.lean === 'function' ? firmQuery.lean() : firmQuery);
-        } catch (_firmErr) {
-          // DB not available or query failed
-        }
-        if (firm) {
-          tenantId = firm._id.toString();
-          tenantStatus = firm.status || 'active';
-          tenantSlug = firm.firmSlug || null;
-        }
-      }
+    if (tenantContext) {
+      tenantId = tenantContext.tenantId;
+      tenantStatus = tenantContext.status || 'active';
+      tenantSlug = tenantContext.firmSlug || null;
     }
 
     if (!tenantId) {

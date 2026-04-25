@@ -1,5 +1,6 @@
 const Client = require('../models/Client.model');
 const { generateNextClientId } = require('./clientIdGenerator');
+const { resolveClientOwnershipFirmId } = require('./tenantIdentity.service');
 const log = require('../utils/log');
 
 /**
@@ -22,10 +23,11 @@ const buildSystemEmail = (firmId) => {
 };
 
 const findDefaultClient = (firmId, session = null) => {
+  const queryFirmId = firmId;
   const query = Client.findOne({
-  firmId,
-  isDefaultClient: true,
-});
+    firmId: queryFirmId,
+    isDefaultClient: true,
+  });
   if (session) {
     query.session(session);
   }
@@ -43,25 +45,26 @@ const getOrCreateDefaultClient = async (firmId, options = {}) => {
     userId = null,
     session = null,
   } = options;
+  const ownershipFirmId = await resolveClientOwnershipFirmId(firmId, { session });
   try {
-    const existingDefaultClient = await findDefaultClient(firmId, session);
+    const existingDefaultClient = await findDefaultClient(ownershipFirmId, session);
     if (existingDefaultClient) {
       return existingDefaultClient;
     }
-    const clientId = await generateNextClientId(firmId, session);
+    const clientId = await generateNextClientId(ownershipFirmId, session);
     const defaultClient = await Client.findOneAndUpdate(
-      { firmId, isDefaultClient: true },
+      { firmId: ownershipFirmId, isDefaultClient: true },
       {
         $setOnInsert: {
           clientId,
-          firmId,
+          firmId: ownershipFirmId,
           isDefaultClient: true,
           isSystemClient: true,
           isInternal: true,
           createdBySystem: true,
           businessName: firmName || 'Default Client',
           primaryContactNumber: '0000000000',
-          businessEmail: buildSystemEmail(firmId),
+          businessEmail: buildSystemEmail(ownershipFirmId),
           status: 'ACTIVE',
           isActive: true,
           createdByXid: 'SYSTEM',
@@ -78,7 +81,7 @@ const getOrCreateDefaultClient = async (firmId, options = {}) => {
     return defaultClient;
   } catch (error) {
     if (error?.code === 11000) {
-      const repairedClient = await findDefaultClient(firmId, session);
+      const repairedClient = await findDefaultClient(ownershipFirmId, session);
       if (repairedClient) {
         return repairedClient;
       }
