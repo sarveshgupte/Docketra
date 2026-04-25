@@ -36,13 +36,13 @@ export const adminApi = {
   unlockAccount: (xID) => request((http) => http.post('/auth/unlock-account', { xID }), 'Failed to unlock account'),
 
   getPendingApprovals: () => request((http) => http.get('/cases?status=UNDER_REVIEW,Reviewed,Pending'), 'Failed to load pending approvals'),
-  approveNewClient: (caseId, comment = '') => request((http) => http.post(`/client-approval/${caseId}/approve-new`, { comment }), 'Failed to approve new client case'),
-  approveClientEdit: (caseId, comment = '') => request((http) => http.post(`/client-approval/${caseId}/approve-edit`, { comment }), 'Failed to approve client edit case'),
-  rejectCase: (caseId, comment) => request((http) => http.post(`/client-approval/${caseId}/reject`, { comment }), 'Failed to reject case'),
+  approveNewClient: (caseId, comment = '') => request((http) => http.post(`/client-approval/${caseId}/approve-new`, { comment }), 'Failed to approve new client docket'),
+  approveClientEdit: (caseId, comment = '') => request((http) => http.post(`/client-approval/${caseId}/approve-edit`, { comment }), 'Failed to approve client edit docket'),
+  rejectCase: (caseId, comment) => request((http) => http.post(`/client-approval/${caseId}/reject`, { comment }), 'Failed to reject docket'),
 
   listClients: (params = { activeOnly: false }) => request((http) => http.get('/admin/clients', { params }), 'Failed to list clients'),
   getClientById: (clientId) => request((http) => http.get(`/client-approval/clients/${clientId}`), 'Failed to load client'),
-  getAllResolvedCases: (params = {}) => request((http) => http.get(`/admin/cases/resolved${buildQueryString(params)}`), 'Failed to load resolved cases'),
+  getAllResolvedCases: (params = {}) => request((http) => http.get(`/admin/cases/resolved${buildQueryString(params)}`), 'Failed to load resolved dockets'),
 
   getStorageConfig: () => request((http) => http.get('/admin/storage'), 'Failed to load storage config'),
   updateStorageConfig: (payload) => request((http) => http.put('/admin/storage', payload), 'Failed to update storage config'),

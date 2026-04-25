@@ -8,6 +8,7 @@ const shellSource = read('src/components/platform/PlatformShell.jsx');
 const paletteSource = read('src/components/common/CommandPalette.jsx');
 const shortcutsSource = read('src/utils/keyboardShortcuts.js');
 const packageSource = read('package.json');
+const navigationModelSource = read('src/constants/platformNavigation.js');
 
 assert.ok(shellSource.includes("Search dockets, clients, modules…"), 'Topbar should expose command-center search scope hint');
 assert.ok(shellSource.includes('Ctrl/⌘ K'), 'Trigger should use cross-platform shortcut copy');
@@ -37,9 +38,12 @@ for (const requiredCommand of [
   "'Open Profile'",
   "'Sign out'",
 ]) {
-  assert.ok(shellSource.includes(requiredCommand), `Command center should contain required command: ${requiredCommand}`);
+  assert.ok(navigationModelSource.includes(requiredCommand) || shellSource.includes(requiredCommand), `Command center should contain required command: ${requiredCommand}`);
 }
 
+
+assert.ok(navigationModelSource.includes('getPlatformNavigation'), 'Navigation model should expose a single section source for sidebar rendering.');
+assert.ok(navigationModelSource.includes('getPlatformDestinationCommands'), 'Navigation model should expose shared command-center destinations.');
 assert.equal(paletteSource.includes('window.addEventListener'), false, 'CommandPalette should not register global keyboard listeners');
 assert.ok(paletteSource.includes('role="combobox"'), 'CommandPalette should expose combobox semantics');
 assert.ok(paletteSource.includes('role="listbox"'), 'CommandPalette should expose listbox semantics');
