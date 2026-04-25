@@ -28,6 +28,7 @@ const {
   getOnboardingInsights,
   getOnboardingInsightDetails,
   getOnboardingAlerts,
+  getSupportDiagnostics,
 } = require('../controllers/superadmin.controller');
 
 /**
@@ -54,6 +55,7 @@ router.get('/onboarding-insights', authorize(SuperAdminPolicy.canViewPlatformSta
 router.get('/onboarding-insights/details', authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingInsightDetails);
 router.get('/onboarding-alerts', authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingAlerts);
 router.get('/health', requireSuperadmin, getOperationalHealth);
+router.get('/diagnostics', requireSuperadmin, getSupportDiagnostics);
 
 // Firm management
 router.post('/firms', authorize(FirmPolicy.canCreate), createFirm);

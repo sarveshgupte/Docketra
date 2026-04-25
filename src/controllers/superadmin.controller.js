@@ -24,6 +24,7 @@ const { safeAuditLog } = require('../services/safeSideEffects.service');
 const { getSession } = require('../utils/getSession');
 const log = require('../utils/log');
 const onboardingAnalyticsService = require('../services/onboardingAnalytics.service');
+const { getSupportDiagnosticsSnapshot } = require('../services/superadminDiagnostics.service');
 const {
   findFirmAdmin,
   findFirmAdminById,
@@ -166,6 +167,24 @@ const getOnboardingInsightDetails = async (req, res) => {
       success: false,
       message: 'Failed to load onboarding insight details',
       data: null,
+    });
+  }
+};
+
+
+const getSupportDiagnostics = async (req, res) => {
+  try {
+    const limit = Number.parseInt(req.query?.limit, 10) || 15;
+    const snapshot = await getSupportDiagnosticsSnapshot({
+      limit: Math.min(Math.max(limit, 5), 30),
+    });
+
+    return res.json({ success: true, data: snapshot });
+  } catch (error) {
+    log.error('[SUPERADMIN] Error loading support diagnostics:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to load support diagnostics',
     });
   }
 };
@@ -1537,6 +1556,7 @@ module.exports = {
   getOnboardingInsights,
   getOnboardingInsightDetails,
   getOnboardingAlerts,
+  getSupportDiagnostics,
   getFirmBySlug,
   getOperationalHealth,
   switchFirm,
