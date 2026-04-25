@@ -1730,17 +1730,22 @@ const updateUserHierarchy = async (req, res) => {
 
 const getAdminAuditLogs = async (req, res) => {
   try {
-    assertPrimaryAdmin(req.user);
-    const logs = await getAuditLogs({
+    const result = await getAuditLogs({
       firmId: req.user?.firmId,
       userId: req.query?.userId,
+      actor: req.query?.actor,
       action: req.query?.action,
+      actionType: req.query?.actionType,
+      module: req.query?.module,
       startDate: req.query?.startDate,
       endDate: req.query?.endDate,
+      targetEntity: req.query?.targetEntity,
+      severity: req.query?.severity,
+      page: req.query?.page,
       limit: req.query?.limit,
     });
 
-    return res.json({ success: true, data: logs });
+    return res.json({ success: true, ...result });
   } catch (error) {
     return res.status(error.statusCode || 400).json({
       success: false,
