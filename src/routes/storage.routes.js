@@ -12,6 +12,7 @@ const {
   googleCallback,
   googleConfirmDrive,
   getStorageConfiguration,
+  getStorageOwnershipSummary,
   testStorageConnection,
   exportFirmStorage,
   downloadFirmStorageExport,
@@ -31,6 +32,7 @@ router.get('/google/callback', oauthLimiter, requirePrimaryAdmin, googleCallback
 router.post('/google/confirm-drive', oauthLimiter, requirePrimaryAdmin, googleConfirmDrive);
 
 router.get('/configuration', userReadLimiter, getStorageConfiguration);
+router.get('/ownership-summary', userReadLimiter, getStorageOwnershipSummary);
 router.post('/test-connection', userReadLimiter, testStorageConnection);
 router.get('/health-check', userReadLimiter, storageHealthCheck);
 router.get('/usage', userReadLimiter, storageUsage);

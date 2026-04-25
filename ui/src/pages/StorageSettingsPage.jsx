@@ -9,6 +9,7 @@ import {
   changeStorageProvider,
   connectGoogleDrive,
   getStorageConfiguration,
+  getStorageOwnershipSummary,
   sendStorageChangeOtp,
   testStorageConnection,
   verifyStorageChangeOtp,
@@ -44,6 +45,7 @@ export function StorageSettingsPage() {
   const [exportRuns, setExportRuns] = useState([]);
   const [exportsLoading, setExportsLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [ownershipSummary, setOwnershipSummary] = useState(null);
   const { user } = useAuth();
 
   const loadConfiguration = async () => {
@@ -52,6 +54,8 @@ export function StorageSettingsPage() {
     try {
       const data = await getStorageConfiguration();
       setConfig(data);
+      const summary = await getStorageOwnershipSummary();
+      setOwnershipSummary(summary);
       const exportData = await listStorageExports(10);
       setExportRuns(Array.isArray(exportData?.data) ? exportData.data : []);
     } catch (error) {
@@ -201,6 +205,7 @@ export function StorageSettingsPage() {
   const isOneDriveProvider = provider === 'onedrive';
   const isS3Provider = provider === 's3';
   const canSwitchProvider = provider !== (config?.provider || 'docketra_managed');
+  const summaryWarnings = Array.isArray(ownershipSummary?.warnings) ? ownershipSummary.warnings : [];
 
   return (
     <PlatformShell moduleLabel="Settings" title="Storage settings" subtitle="Configure and validate your external document storage integration.">
@@ -210,6 +215,53 @@ export function StorageSettingsPage() {
             <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Storage Settings</h1>
             <p className="text-sm text-gray-500">Configure and validate your external document storage integration.</p>
           </div>
+
+          <Card>
+            <div className={spacingClasses.sectionMargin}>
+              <div>
+                <h2 className="text-lg font-medium text-gray-900 mb-2">Storage & Data Ownership</h2>
+                <p className="text-sm text-gray-600">
+                  Docketra acts as a control plane. Firm/client data should stay in your configured storage provider based on your data ownership model.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div className="rounded border border-gray-200 bg-white px-3 py-2">
+                  <p className="font-medium text-gray-900">Active provider</p>
+                  <p className="text-gray-600">{ownershipSummary?.activeStorage?.provider || provider}</p>
+                </div>
+                <div className="rounded border border-gray-200 bg-white px-3 py-2">
+                  <p className="font-medium text-gray-900">Connection status</p>
+                  <p className="text-gray-600">{ownershipSummary?.activeStorage?.connectionStatus || 'UNKNOWN'}</p>
+                </div>
+                <div className="rounded border border-gray-200 bg-white px-3 py-2">
+                  <p className="font-medium text-gray-900">Last health check</p>
+                  <p className="text-gray-600">{formatDateTime(ownershipSummary?.lastHealthCheck?.checkedAt)}</p>
+                </div>
+                <div className="rounded border border-gray-200 bg-white px-3 py-2">
+                  <p className="font-medium text-gray-900">Fallback storage</p>
+                  <p className="text-gray-600">
+                    {ownershipSummary?.fallbackStorage?.provider || 'docketra_managed'} · {ownershipSummary?.fallbackStorage?.status || 'ACTIVE'}
+                  </p>
+                </div>
+                <div className="rounded border border-gray-200 bg-white px-3 py-2 md:col-span-2">
+                  <p className="font-medium text-gray-900">Backup / export status</p>
+                  <p className="text-gray-600">
+                    Backup enabled: {ownershipSummary?.backupExport?.backupEnabled ? 'Yes' : 'No'} · Last export: {formatDateTime(ownershipSummary?.backupExport?.lastExport?.createdAt)}
+                  </p>
+                </div>
+              </div>
+              {summaryWarnings.length ? (
+                <div className="rounded border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+                  <p className="font-medium">Warnings</p>
+                  <ul className="list-disc pl-5 mt-1 space-y-1">
+                    {summaryWarnings.map((warning) => (
+                      <li key={warning.code}>{warning.message}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          </Card>
 
           <Card>
             <div className={spacingClasses.sectionMargin}>
