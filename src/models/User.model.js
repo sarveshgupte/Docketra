@@ -622,6 +622,16 @@ const userSchema = new mongoose.Schema({
   toObject: { virtuals: true, getters: true },
 });
 
+const CANONICAL_XID_REGEX = /^X\d{6}$/;
+
+userSchema.pre('validate', function() {
+  // Backward-compatible normalization for legacy records where xID is canonical
+  // but xid still stores historical identifiers (e.g., DK-XXXXX).
+  if (this.xID && CANONICAL_XID_REGEX.test(this.xID) && this.xid !== this.xID) {
+    this.xid = this.xID;
+  }
+});
+
 /**
  * Validation: Every non-superadmin user must have tenant context fields set.
  */
