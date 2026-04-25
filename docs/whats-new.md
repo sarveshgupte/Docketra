@@ -1,5 +1,14 @@
 # What's New
 
+## April 2026: Internal security hardening — production defaults and provider fail-closed behavior
+
+- Disabled Vite production source maps by default; source maps now require explicit `VITE_ENABLE_PROD_SOURCEMAPS=true`.
+- Hardened startup validation to fail closed on unsupported encryption providers (`ENCRYPTION_PROVIDER` now supports only implemented values).
+- Hardened AI provider selection so only implemented providers can be configured/used end-to-end (schema, controller, runtime map, and UI selector aligned).
+- Made CSP reporting ingestion opt-in via `CSP_REPORTING_ENABLED=true` instead of always-on route exposure.
+- Tightened internal metrics access: production `/api/metrics/security` now requires bearer token and no longer falls back to superadmin session auth.
+- Added regression coverage for production config validation and internal metrics token enforcement.
+
 ## April 2026: Platform stability — backend runtime entrypoint split
 
 - Split backend runtime composition so Express app assembly now lives in `createApp()` (`src/app/createApp.js`) without opening listeners.

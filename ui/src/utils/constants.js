@@ -1,3 +1,5 @@
+import { safeConsole } from './safeConsole';
+
 /**
  * Application Constants
  */
@@ -46,12 +48,12 @@ Falling back to same-origin API path: ${defaultApiBaseUrl}
 
 If your API is hosted on another domain, set:
 VITE_API_BASE_URL=https://api.example.com/api`;
-  console.warn(warningMessage);
+  safeConsole.warn(warningMessage);
 }
 
 export const API_BASE_URL = normalizeApiBaseUrl(rawApiBaseUrl || defaultApiBaseUrl);
 
-console.info(`✓ Using API base URL: ${API_BASE_URL}`);
+safeConsole.info(`✓ Using API base URL: ${API_BASE_URL}`);
 
 export const CASE_STATUS = {
   // Canonical lifecycle states (NEW - use these)

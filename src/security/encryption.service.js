@@ -10,8 +10,8 @@
  *     - Decryption failures are logged with context and re-thrown.
  *
  * Provider selection:
- *   ENCRYPTION_PROVIDER=local  →  LocalEncryptionProvider  (default)
- *   ENCRYPTION_PROVIDER=kms    →  KmsEncryptionProvider    (stub)
+ *   ENCRYPTION_PROVIDER=local    →  LocalEncryptionProvider  (default)
+ *   ENCRYPTION_PROVIDER=disabled →  LocalEncryptionProvider (legacy no-op mode at call sites)
  *
  * Usage in repositories (example):
  *   const { encrypt, decrypt, ensureTenantKey } = require('../security/encryption.service');
@@ -24,7 +24,6 @@
  */
 
 const LocalEncryptionProvider = require('./encryption.local.provider');
-const KmsEncryptionProvider = require('./encryption.kms.provider');
 const { looksEncrypted } = require('./encryption.utils');
 const log = require('../utils/log');
 
@@ -40,10 +39,10 @@ function getProvider() {
   if (_provider) return _provider;
 
   const name = (process.env.ENCRYPTION_PROVIDER || 'local').toLowerCase();
-  if (name === 'kms') {
-    _provider = new KmsEncryptionProvider();
-  } else {
+  if (name === 'local' || name === 'disabled') {
     _provider = new LocalEncryptionProvider();
+  } else {
+    throw new Error(`Unsupported ENCRYPTION_PROVIDER "${name}". Supported providers: local, disabled`);
   }
   return _provider;
 }

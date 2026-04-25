@@ -3,7 +3,7 @@
 const Firm = require('../models/Firm.model');
 const { encrypt } = require('../utils/encryption');
 
-const ALLOWED_PROVIDERS = new Set(['openai', 'gemini', 'claude']);
+const ALLOWED_PROVIDERS = new Set(['openai']);
 
 function isValidApiKeyForProvider(provider, apiKey) {
   const value = String(apiKey || '').trim();
@@ -13,15 +13,7 @@ function isValidApiKeyForProvider(provider, apiKey) {
     return /^sk-[A-Za-z0-9._-]{10,}$/.test(value);
   }
 
-  if (provider === 'gemini') {
-    return /^AIza[0-9A-Za-z_-]{20,}$/.test(value) || value.length >= 20;
-  }
-
-  if (provider === 'claude') {
-    return /^sk-ant-[A-Za-z0-9_-]{10,}$/.test(value) || value.length >= 20;
-  }
-
-  return value.length >= 20;
+  return false;
 }
 
 function sanitizeBoolean(value, fallback) {
