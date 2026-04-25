@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
 import { ROUTES } from '../../constants/routes';
 import { DataTable, InlineNotice, PageSection, RefreshNotice, StatGrid } from './PlatformShared';
+import { AccessDeniedState } from '../../components/feedback/AccessDeniedState';
+import { getRecoveryPayload } from '../../utils/errorRecovery';
 import { usePlatformReportsMetricsQuery } from '../../hooks/usePlatformDataQueries';
 
 export const PlatformReportsPage = () => {
@@ -12,8 +14,12 @@ export const PlatformReportsPage = () => {
     isLoading,
     isFetching,
     isError,
+    error: queryError,
     refetch,
   } = usePlatformReportsMetricsQuery();
+
+  const recovery = getRecoveryPayload(queryError, 'platform_queue');
+  const isAccessDenied = isError && recovery.reasonCode === 'CASE_ACCESS_DENIED';
 
   const top = useMemo(() => metrics.slice(0, 5), [metrics]);
   const summaryCards = [
@@ -21,6 +27,14 @@ export const PlatformReportsPage = () => {
     { label: 'Top bucket value', value: Number(top[0]?.value || top[0]?.count || 0) },
     { label: 'Report health', value: isError ? 'Needs retry' : 'Available' },
   ];
+
+  if (isAccessDenied) {
+    return (
+      <PlatformShell title="Access restricted" subtitle="Your session is active, but this module is currently not available for your role.">
+        <AccessDeniedState supportContext={recovery.supportContext} />
+      </PlatformShell>
+    );
+  }
 
   return (
     <PlatformShell

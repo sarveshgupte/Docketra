@@ -16,6 +16,8 @@ import {
   formatStatusLabel,
   getDocketRouteId,
 } from './PlatformShared';
+import { AccessDeniedState } from '../../components/feedback/AccessDeniedState';
+import { getRecoveryPayload } from '../../utils/errorRecovery';
 import { usePlatformMyWorklistQuery } from '../../hooks/usePlatformDataQueries';
 
 export const PlatformWorklistPage = () => {
@@ -35,8 +37,13 @@ export const PlatformWorklistPage = () => {
     isLoading,
     isFetching,
     isError,
+    error: queryError,
     refetch,
   } = usePlatformMyWorklistQuery();
+
+
+  const recovery = getRecoveryPayload(queryError, 'platform_queue');
+  const isAccessDenied = isError && recovery.reasonCode === 'CASE_ACCESS_DENIED';
 
   const filteredRows = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -91,6 +98,14 @@ export const PlatformWorklistPage = () => {
       setPendingActionId('');
     }
   };
+
+  if (isAccessDenied) {
+    return (
+      <PlatformShell title="Access restricted" subtitle="Your session is active, but this module is currently not available for your role.">
+        <AccessDeniedState supportContext={recovery.supportContext} />
+      </PlatformShell>
+    );
+  }
 
   return (
     <PlatformShell

@@ -7,6 +7,7 @@ export const ErrorState = ({
   description = 'Unable to load data right now.',
   onRetry,
   retryLabel = 'Retry',
+  footer,
 }) => (
   <Stack space={12} className="rounded-lg border border-red-200 bg-red-50 p-4" role="alert">
     <h3 className="text-base font-semibold text-red-800">{title}</h3>
@@ -16,5 +17,6 @@ export const ErrorState = ({
         <Button type="button" variant="primary" onClick={onRetry}>{retryLabel}</Button>
       </div>
     ) : null}
+    {footer || null}
   </Stack>
 );

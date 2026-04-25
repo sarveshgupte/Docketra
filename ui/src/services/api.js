@@ -208,9 +208,10 @@ api.interceptors.response.use(
     const redirectToLogin = () => {
       if (redirecting) return;
       redirecting = true;
-      const destination = resolveFirmLoginPath({
-        fallbackFirmSlug: firmSlug,
-      });
+      const inSuperadminNamespace = String(window.location.pathname || '').startsWith('/app/superadmin') || String(window.location.pathname || '').startsWith('/superadmin');
+      const destination = inSuperadminNamespace
+        ? '/superadmin'
+        : resolveFirmLoginPath({ fallbackFirmSlug: firmSlug });
       const currentPath = window.location.pathname || '';
       const alreadyOnLoginRoute = currentPath === destination || isLoginLikePath(currentPath);
       if (alreadyOnLoginRoute) {
@@ -224,6 +225,7 @@ api.interceptors.response.use(
     };
     const clearAuthStorage = () => {
       localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
+      window.dispatchEvent(new CustomEvent('auth:logout'));
     };
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -277,7 +279,8 @@ api.interceptors.response.use(
           message: refreshCode === ERROR_CODES.REFRESH_NOT_SUPPORTED
             ? 'Your admin session has expired. Please log in again.'
             : 'Your session expired. Please log in again.',
-          type: 'info'
+          type: 'info',
+          code: ERROR_CODES.AUTH_SESSION_EXPIRED,
         }));
         redirectToLogin();
         return Promise.reject(refreshError);
@@ -292,7 +295,8 @@ api.interceptors.response.use(
       clearAuthStorage();
       sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
         message: 'Your session expired. Please log in again.',
-        type: 'info'
+        type: 'info',
+        code: ERROR_CODES.AUTH_SESSION_EXPIRED,
       }));
       redirectToLogin();
       return Promise.reject(error);

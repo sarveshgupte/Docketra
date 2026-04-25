@@ -22,6 +22,8 @@ import { caseApi } from '../api/case.api';
 import { clientApi } from '../api/client.api';
 import { categoryService } from '../services/categoryService';
 import { extractErrorMessage } from '../services/apiResponse';
+import { getRecoveryPayload } from '../utils/errorRecovery';
+import { SupportContext } from '../components/feedback/SupportContext';
 import { formatDateTime, getISODateInTimezone } from '../utils/formatDateTime';
 import { formatDocketId } from '../utils/formatters';
 import { CASE_DETAIL_TABS, USER_ROLES, VALID_CASE_DETAIL_TAB_NAMES } from '../utils/constants';
@@ -1014,11 +1016,10 @@ export const CaseDetailPage = () => {
       setActionConfirmation(message);
       setActionError(null);
     } catch (error) {
-      const safeMessage = error?.response?.data?.message?.toLowerCase?.().includes('malware scanner not configured')
-        ? 'File upload temporarily unavailable. Please contact administrator.'
-        : 'Failed to upload file. Please try again.';
+      const uploadRecovery = getRecoveryPayload(error, 'docket_attachments_upload');
+      const safeMessage = uploadRecovery.copy.message;
       showError(safeMessage);
-      setActionError({ message: safeMessage, retry: handleUploadFile });
+      setActionError({ message: safeMessage, retry: uploadRecovery.copy.retryAllowed ? handleUploadFile : null, supportContext: uploadRecovery.supportContext });
     } finally {
       setUploadingFile(false);
       setUploadProgress(0);
@@ -1704,6 +1705,7 @@ export const CaseDetailPage = () => {
                 Retry
               </button>
             ) : null}
+            <SupportContext context={actionError.supportContext} className="mt-2" />
           </div>
         ) : null}
 

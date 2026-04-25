@@ -16,6 +16,8 @@ import {
   formatStatusLabel,
   getDocketRouteId,
 } from './PlatformShared';
+import { AccessDeniedState } from '../../components/feedback/AccessDeniedState';
+import { getRecoveryPayload } from '../../utils/errorRecovery';
 import { usePlatformWorkbenchQuery } from '../../hooks/usePlatformDataQueries';
 
 export const PlatformWorkbasketsPage = () => {
@@ -34,8 +36,13 @@ export const PlatformWorkbasketsPage = () => {
     isLoading,
     isFetching,
     isError,
+    error: queryError,
     refetch,
   } = usePlatformWorkbenchQuery();
+
+
+  const recovery = getRecoveryPayload(queryError, 'platform_queue');
+  const isAccessDenied = isError && recovery.reasonCode === 'CASE_ACCESS_DENIED';
 
   const filteredRows = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -86,6 +93,14 @@ export const PlatformWorkbasketsPage = () => {
       setPendingPullId('');
     }
   };
+
+  if (isAccessDenied) {
+    return (
+      <PlatformShell title="Access restricted" subtitle="Your session is active, but this module is currently not available for your role.">
+        <AccessDeniedState supportContext={recovery.supportContext} />
+      </PlatformShell>
+    );
+  }
 
   return (
     <PlatformShell
