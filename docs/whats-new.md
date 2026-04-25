@@ -1,5 +1,12 @@
 # What's New
 
+## April 2026: Route validation contract enforcement + public intake legacy cleanup
+
+- Added a phased backend route-validation contract test (`tests/routeValidationContract.test.js`) that strictly enforces schema correctness for routes already using `applyRouteValidation`, while requiring explicit allowlisting + migration reasons for legacy non-validated route files.
+- Removed legacy `/api/cms/submit` intake flow and replaced it with an explicit deprecation response (`410 ROUTE_DEPRECATED`) that points integrations to `POST /api/public/cms/:firmSlug/intake`.
+- Removed stale Joi-based CMS route schema/controller artifacts so route validation standards are consistently Zod-based.
+- Added focused public intake validation tests for valid and invalid payloads, and verified tenant resolution remains slug-derived rather than caller-controlled fields.
+
 ## April 2026: Internal / platform stability — canonical tenant identity scope
 
 - Standardized runtime tenant identity across signup, login, JWT, and tenant middleware to use the workspace default client `_id` as canonical scope.
