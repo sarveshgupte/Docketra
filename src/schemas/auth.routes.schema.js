@@ -2,6 +2,10 @@ const { z, nonEmptyString, xidString } = require('./common');
 const { validatePasswordStrength, PASSWORD_POLICY_MESSAGE } = require('../utils/passwordPolicy');
 
 const strongPassword = z.string().refine(validatePasswordStrength, PASSWORD_POLICY_MESSAGE);
+const loginIdentifierString = z.string().trim().refine(
+  (value) => /^\S+@\S+\.\S+$/.test(value) || /^X\d{6}$/i.test(value),
+  'identifier must be a valid email or xID (X123456)',
+);
 
 module.exports = {
   'POST /setup-account': {
@@ -33,10 +37,12 @@ module.exports = {
   'POST /send-otp': {
     body: z.object({
       email: z.string().trim().email().optional(),
-      xid: z.string().trim().toUpperCase().regex(/^DK-[A-Z0-9]{5}$/).optional(),
+      xid: xidString.optional(),
+      xID: xidString.optional(),
+      XID: xidString.optional(),
       purpose: z.enum(['signup', 'login', 'storage_change']).default('login'),
-    }).strip().refine((value) => Boolean(value.email || value.xid), {
-      message: 'email or xid is required',
+    }).strip().refine((value) => Boolean(value.email || value.xid || value.xID || value.XID), {
+      message: 'email or xID is required',
       path: ['email'],
     }),
   },
@@ -68,30 +74,54 @@ module.exports = {
   },
   'POST /forgot-password': {
     body: z.object({
-      email: z.string().trim().email(),
+      email: z.string().trim().email().optional(),
+      identifier: loginIdentifierString.optional(),
+      xid: xidString.optional(),
+      xID: xidString.optional(),
       firmSlug: z.string().trim().min(1).optional(),
-    }).strip(),
+    }).strip().refine((value) => Boolean(value.email || value.identifier || value.xid || value.xID), {
+      message: 'email or xID is required',
+      path: ['email'],
+    }),
   },
   'POST /forgot-password/init': {
     body: z.object({
-      email: z.string().trim().email(),
+      email: z.string().trim().email().optional(),
+      identifier: loginIdentifierString.optional(),
+      xid: xidString.optional(),
+      xID: xidString.optional(),
       firmSlug: nonEmptyString,
-    }).strip(),
+    }).strip().refine((value) => Boolean(value.email || value.identifier || value.xid || value.xID), {
+      message: 'email or xID is required',
+      path: ['email'],
+    }),
   },
   'POST /forgot-password/verify': {
     body: z.object({
-      email: z.string().trim().email(),
+      email: z.string().trim().email().optional(),
+      identifier: loginIdentifierString.optional(),
+      xid: xidString.optional(),
+      xID: xidString.optional(),
       firmSlug: nonEmptyString,
       otp: z.string().trim().regex(/^\d{6}$/),
-    }).strip(),
+    }).strip().refine((value) => Boolean(value.email || value.identifier || value.xid || value.xID), {
+      message: 'email or xID is required',
+      path: ['email'],
+    }),
   },
   'POST /forgot-password/reset': {
     body: z.object({
-      email: z.string().trim().email(),
+      email: z.string().trim().email().optional(),
+      identifier: loginIdentifierString.optional(),
+      xid: xidString.optional(),
+      xID: xidString.optional(),
       firmSlug: nonEmptyString,
       resetToken: nonEmptyString,
       password: strongPassword,
-    }).strip(),
+    }).strip().refine((value) => Boolean(value.email || value.identifier || value.xid || value.xID), {
+      message: 'email or xID is required',
+      path: ['email'],
+    }),
   },
   'POST /login/init': {
     body: z.object({

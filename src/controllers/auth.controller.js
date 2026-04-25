@@ -3371,25 +3371,11 @@ const verifyTotp = async (req, res) => authOtpServiceFacade.verifyTotp(req, res)
 
 const completeMfaLogin = async (req, res) => authOtpServiceFacade.completeMfaLogin(req, res);
 
-const generatePrimaryXid = async () => {
-  for (let i = 0; i < 20; i += 1) {
-    const candidate = `DK-${crypto.randomBytes(3).toString('hex').slice(0, 5).toUpperCase()}`;
-    // eslint-disable-next-line no-await-in-loop
-    const exists = await User.exists({ xid: candidate });
-    if (!exists) return candidate;
-  }
-  throw new Error('XID_GENERATION_FAILED');
-};
-
 const ensureCanonicalXid = async (user) => {
   if (!user) return user;
-  if (user.xid) return user;
-
-  if (user.xID && /^DK-[A-Z0-9]{5}$/.test(user.xID)) {
-    user.xid = user.xID;
-  } else {
-    user.xid = await generatePrimaryXid();
-  }
+  if (!user.xID) return user;
+  if (user.xid === user.xID) return user;
+  user.xid = user.xID;
 
   if (typeof user.save === 'function') {
     await user.save();

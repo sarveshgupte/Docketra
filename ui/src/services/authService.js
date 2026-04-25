@@ -133,8 +133,8 @@ export const authService = {
   /**
    * Forgot password - Request password reset email
    */
-  forgotPassword: async (email, firmSlug) => {
-    const payload = { email };
+  forgotPassword: async (identifier, firmSlug) => {
+    const payload = { identifier };
     if (firmSlug) {
       payload.firmSlug = firmSlug;
     }
@@ -142,19 +142,19 @@ export const authService = {
     return response.data;
   },
 
-  forgotPasswordInit: async (email, firmSlug) => {
-    const response = await api.post('/auth/forgot-password/init', { email, firmSlug });
+  forgotPasswordInit: async (identifier, firmSlug) => {
+    const response = await api.post('/auth/forgot-password/init', { identifier, firmSlug });
     return response.data;
   },
 
-  forgotPasswordVerify: async (email, firmSlug, otp) => {
-    const response = await api.post('/auth/forgot-password/verify', { email, firmSlug, otp });
+  forgotPasswordVerify: async (identifier, firmSlug, otp) => {
+    const response = await api.post('/auth/forgot-password/verify', { identifier, firmSlug, otp });
     return response.data;
   },
 
-  forgotPasswordResetWithOtp: async (email, firmSlug, resetToken, password) => {
+  forgotPasswordResetWithOtp: async (identifier, firmSlug, resetToken, password) => {
     const response = await api.post('/auth/forgot-password/reset', {
-      email,
+      identifier,
       firmSlug,
       resetToken,
       password,
