@@ -18,6 +18,7 @@ const MASK_SEGMENT_LENGTH = 4;
 const MIN_JWT_LENGTH = 20;
 const MIN_TOKEN_MASK_LENGTH = 6;
 const REDACTED = '***REDACTED***';
+const { sanitizeForLogs } = require('./redaction');
 
 const SENSITIVE_KEY_PATTERN = /(secret|token|password|key|credential|auth)/i;
 const STRICT_REDACTION_KEYS = new Set([
@@ -148,20 +149,9 @@ const maskValue = (key, value, seen = new WeakSet()) => {
 };
 
 const maskSensitiveObject = (input, seen = new WeakSet()) => {
-  if (input === null || input === undefined) return input;
-  if (Array.isArray(input)) {
-    if (seen.has(input)) return '[Circular]';
-    seen.add(input);
-    return input.map((item) => maskSensitiveObject(item, seen));
-  }
-  if (typeof input !== 'object') return input;
-  if (seen.has(input)) return '[Circular]';
-  seen.add(input);
-
-  return Object.entries(input).reduce((acc, [key, value]) => {
-    acc[key] = maskValue(key, value, seen);
-    return acc;
-  }, {});
+  const sanitized = sanitizeForLogs(input, '', seen);
+  if (sanitized === '[REDACTED]') return REDACTED;
+  return sanitized;
 };
 
 const sanitizeErrorForLog = (error) => {

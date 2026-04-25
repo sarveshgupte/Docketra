@@ -54,6 +54,7 @@ const requestLifecycle = (req, res, next) => {
       lifecycleEnd: reason,
       transactionCommitted: !!req.transactionCommitted,
       transactionState: req.transactionState || (req.transactionCommitted ? 'committed' : 'not_started'),
+      correlationId: req.correlationId || null,
     });
     Promise.resolve(noteApiActivity({ req, statusCode: responseStatusCode })).catch(() => null);
     if (!skipSideEffects) {

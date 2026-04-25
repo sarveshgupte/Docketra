@@ -6,6 +6,7 @@ const { getIpRange } = require('../utils/ipRange');
 const { logAuthEvent } = require('./audit.service');
 const { getRequestIp, getRequestUserAgent } = require('./forensicAudit.service');
 const log = require('../utils/log');
+const { sanitizeForAudit } = require('../utils/redaction');
 
 const SECURITY_AUDIT_ACTIONS = Object.freeze({
   LOGIN_SUCCESS: 'LOGIN_SUCCESS',
@@ -19,23 +20,10 @@ const SECURITY_AUDIT_ACTIONS = Object.freeze({
   SECURITY_ALERT: 'SECURITY_ALERT',
 });
 
-const REDACTED_VALUE = '[REDACTED]';
-const SENSITIVE_KEY_PATTERN = /(secret|password|token|authorization|cookie|otp|totp|passcode|csrf|xsrf|session(?:id|token)?|api[_-]?key|bearer)/i;
-
-function sanitizeMetadata(value, seen = new WeakSet()) {
-  if (value === null || value === undefined) return value;
-  if (Array.isArray(value)) {
-    return value.map((entry) => sanitizeMetadata(entry, seen));
-  }
-  if (typeof value !== 'object') return value;
-  if (seen.has(value)) return '[Circular]';
-
-  seen.add(value);
-  return Object.entries(value).reduce((acc, [key, nested]) => {
-    acc[key] = SENSITIVE_KEY_PATTERN.test(key) ? REDACTED_VALUE : sanitizeMetadata(nested, seen);
-    return acc;
-  }, {});
+function sanitizeMetadata(value) {
+  return sanitizeForAudit(value);
 }
+
 
 function coerceUserId(userId) {
   if (!userId) return null;

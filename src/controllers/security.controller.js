@@ -4,6 +4,7 @@ const AuthAudit = require('../models/AuthAudit.model');
 const RefreshToken = require('../models/RefreshToken.model');
 const { getSecurityMetricsSnapshot, SECURITY_METRIC_WINDOWS } = require('../services/securityTelemetry.service');
 const log = require('../utils/log');
+const { sanitizeForPublicDiagnostics } = require('../utils/redaction');
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
@@ -53,7 +54,7 @@ const listSecurityAlerts = async (req, res) => {
 
     return res.json({
       success: true,
-      data: alerts.map((entry) => ({
+      data: alerts.map((entry) => sanitizeForPublicDiagnostics({
         timestamp: entry.timestamp,
         event: entry.metadata?.event || entry.metadata?.reason || entry.actionType,
         userId: entry.userId || null,

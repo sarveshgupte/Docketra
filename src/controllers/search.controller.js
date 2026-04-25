@@ -9,6 +9,7 @@ const CaseStatus = require('../domain/case/caseStatus');
 const { logCaseListViewed } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
 const log = require('../utils/log');
+const { logSlowEndpoint } = require('../utils/slowLog');
 const SLOW_WORKLIST_QUERY_MS = 400;
 
 const toObjectIdStringOrNull = (value) => {
@@ -24,16 +25,16 @@ const toObjectIdStringOrNull = (value) => {
   return normalizedValue;
 };
 
-const logSlowWorklistQuery = ({ queryName, durationMs, firmId, userXID, page, limit }) => {
-  if (durationMs < SLOW_WORKLIST_QUERY_MS) return;
-  log.warn('[WORKLIST_QUERY_SLOW]', {
-    queryName,
-    durationMs,
+const logSlowWorklistQuery = ({ req = null, queryName, durationMs, firmId, userXID, page, limit }) => {
+  logSlowEndpoint({
+    marker: '[WORKLIST_QUERY_SLOW]',
     thresholdMs: SLOW_WORKLIST_QUERY_MS,
-    firmId: firmId || null,
-    userXID: userXID || null,
-    page,
-    limit,
+    durationMs,
+    req,
+    firmId,
+    userXID,
+    queryCategoryFlags: { queryName },
+    pagination: { page, limit },
   });
 };
 
@@ -503,6 +504,7 @@ const employeeWorklist = async (req, res) => {
       Case.countDocuments(enforceTenantScope(query, req, { source: 'search.employeeWorklist.count' })),
     ]);
     logSlowWorklistQuery({
+      req,
       queryName: 'employeeWorklist',
       durationMs: Date.now() - startedAt,
       firmId,
@@ -809,6 +811,7 @@ const globalWorklist = async (req, res) => {
     });
     
     logSlowWorklistQuery({
+      req,
       queryName: 'globalWorklist',
       durationMs: Date.now() - startedAt,
       firmId,

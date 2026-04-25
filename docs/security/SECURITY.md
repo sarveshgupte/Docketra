@@ -247,3 +247,27 @@ Before deploying to production, implement:
   - broadcasts logout across tabs to prevent stale privileged views,
   - emits logout lifecycle event so websocket clients disconnect immediately.
 - See detailed engineering note: `docs/security/session-csrf-hardening-2026-04.md`.
+
+## April 2026 logging/redaction and diagnostics addendum
+
+- Added centralized log redaction helpers for secrets/tokens/cookies/reset links/signed URLs in `src/utils/redaction.js`.
+- Introduced mode-based sanitization:
+  - `sanitizeForLogs`
+  - `sanitizeForAudit`
+  - `sanitizeForPublicDiagnostics`
+- Standardized slow endpoint diagnostics fields (request/correlation IDs, path-only route, duration, safe flags, pagination) via `src/utils/slowLog.js`.
+- Correlation improvements:
+  - backend lifecycle logs include `correlationId`
+  - frontend API diagnostics capture backend `x-request-id`
+- Production logging safety:
+  - no global console monkey-patching
+  - `ui/src/utils/safeConsole.js` remains an explicit opt-in wrapper for development diagnostics
+- Stack traces in structured logs are now disabled by default in production and can be enabled explicitly with `LOG_INCLUDE_STACK=true`.
+
+### Addendum manual checks
+
+1. Auth flows still function (login/logout/forgot-password).
+2. Docket CRUD and reporting flows still function.
+3. Slow endpoint diagnostics do not expose raw query strings.
+4. Audit metadata preserves useful business labels while redacting secrets.
+5. Production error responses remain user-safe and do not expose internal raw errors.
