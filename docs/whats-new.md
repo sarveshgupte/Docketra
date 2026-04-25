@@ -1,5 +1,13 @@
 # What's New
 
+## April 2026: Navigation and terminology cleanup — canonical docket model
+
+- Unified firm navigation and command-center destination definitions under one shared model (`ui/src/constants/platformNavigation.js`) so sidebar and command center stay aligned.
+- Standardized user-facing work-item terminology around **Docket** across updated route labels and operational surface copy.
+- Kept legacy `/cases` route family as compatibility redirects only (`/cases`, `/cases/:caseId`, `/cases/create`) while preserving canonical `/dockets` routes for navigation and direct links.
+- Hardened route and navigation reliability tests to assert canonical dockets routing and legacy alias redirect behavior.
+- Added product reference documentation for canonical module names, queue terms, and legacy aliases in `docs/product/navigation-and-terminology-model.md`.
+
 ## April 2026: Internal platform stability — PR CI release gates
 
 - Added a serious PR release-gate workflow in GitHub Actions to enforce backend syntax checks, route validation contract coverage, core backend tests, frontend build, and focused frontend reliability checks.

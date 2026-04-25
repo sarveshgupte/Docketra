@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../constants/routes';
+import { getPlatformDestinationCommands, getPlatformNavigation, PLATFORM_SHORTCUT_ROUTES } from '../../constants/platformNavigation';
 import { CommandPalette } from '../common/CommandPalette';
 import api from '../../services/api';
 import { crmApi } from '../../api/crm.api';
@@ -12,49 +13,6 @@ import './platform.css';
 
 const roleRank = { USER: 1, MANAGER: 2, ADMIN: 3, PRIMARY_ADMIN: 4 };
 const hasAtLeastRole = (current, minimum) => (roleRank[current] || 0) >= (roleRank[minimum] || 0);
-
-const navForRole = (firmSlug, role) => {
-  const all = [
-    {
-      section: 'Daily Operations',
-      items: [
-        { to: ROUTES.TASK_MANAGER(firmSlug), label: 'Docket Workbench' },
-        { to: ROUTES.DASHBOARD(firmSlug), label: 'Dashboard' },
-      ],
-    },
-    {
-      section: 'Business Modules',
-      items: [
-        { to: ROUTES.CMS(firmSlug), label: 'Intake (CMS)', minRole: 'ADMIN' },
-        { to: ROUTES.CRM(firmSlug), label: 'Pipeline (CRM)', minRole: 'ADMIN' },
-        { to: ROUTES.CLIENTS(firmSlug), label: 'Clients', minRole: 'ADMIN' },
-      ],
-    },
-    {
-      section: 'Oversight',
-      items: [
-        { to: ROUTES.ADMIN_REPORTS(firmSlug), label: 'Reports', minRole: 'ADMIN', activeMatch: 'exactOrDescendant' },
-      ],
-    },
-    {
-      section: 'Administration',
-      items: [
-        {
-          to: ROUTES.ADMIN(firmSlug),
-          label: 'Team & Access',
-          minRole: 'ADMIN',
-          activeMatch: 'exactOrDescendant',
-          excludeActiveFor: [ROUTES.ADMIN_REPORTS(firmSlug)],
-        },
-        { to: ROUTES.SETTINGS(firmSlug), label: 'Settings', minRole: 'ADMIN', activeMatch: 'exactOrDescendant' },
-      ],
-    },
-  ];
-
-  return all
-    .map((section) => ({ ...section, items: section.items.filter((item) => !item.minRole || hasAtLeastRole(role, item.minRole)) }))
-    .filter((section) => section.items.length > 0);
-};
 
 const normalizeClientRows = (payload) => {
   const rows = Array.isArray(payload?.data?.data)
@@ -94,9 +52,9 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   const searchRequestIdRef = useRef(0);
   const searchCacheRef = useRef(new Map());
   const role = String(user?.role || 'USER').toUpperCase();
-  const navSections = useMemo(() => navForRole(firmSlug, role), [firmSlug, role]);
-  const userName = user?.name || user?.xID || 'User';
   const hasAdminAccess = hasAtLeastRole(role, 'ADMIN');
+  const navSections = useMemo(() => getPlatformNavigation(firmSlug, role), [firmSlug, role]);
+  const userName = user?.name || user?.xID || 'User';
   const currentNavItem = useMemo(
     () => navSections.flatMap((section) => section.items).find((item) => isNavItemActive(pathname, item)),
     [navSections, pathname]
@@ -225,18 +183,17 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
 
   const commandSections = useMemo(() => {
     const navigationItems = [
-      { id: 'go-dashboard', label: 'Go to Dashboard', shortcut: 'Alt+Shift+D', action: () => openRoute(ROUTES.DASHBOARD(firmSlug)), description: 'Open firm dashboard overview.' },
-      { id: 'go-task-manager', label: 'Go to Docket Workbench', shortcut: 'Alt+Shift+T', action: () => openRoute(ROUTES.TASK_MANAGER(firmSlug)), description: 'Jump to the main docket execution workspace.' },
+      ...getPlatformDestinationCommands(firmSlug, role).map((item) => ({
+        id: item.id,
+        label: item.label,
+        description: item.description,
+        shortcut: item.shortcut,
+        action: () => openRoute(item.to),
+      })),
       { id: 'go-workbasket', label: 'Go to Workbench', shortcut: 'Alt+Shift+B', action: () => openRoute(ROUTES.GLOBAL_WORKLIST(firmSlug)), description: 'Open shared queue dockets available to pull.' },
       { id: 'go-worklist', label: 'Go to My Worklist', shortcut: 'Alt+Shift+W', action: () => openRoute(ROUTES.WORKLIST(firmSlug)), description: 'Open your active and pended docket workload.' },
       { id: 'go-qc', label: 'Go to QC Workbench', shortcut: 'Alt+Shift+Q', action: () => openRoute(ROUTES.QC_QUEUE(firmSlug)), description: 'Open dockets waiting for quality review decisions.' },
-      { id: 'go-clients', label: 'Go to Clients', action: () => openRoute(ROUTES.CLIENTS(firmSlug)), description: 'Open client management workspace.', adminOnly: true },
-      { id: 'go-crm', label: 'Go to CRM', action: () => openRoute(ROUTES.CRM(firmSlug)), description: 'Open relationship management module.', adminOnly: true },
-      { id: 'go-cms', label: 'Go to CMS', action: () => openRoute(ROUTES.CMS(firmSlug)), description: 'Open intake and submissions module.', adminOnly: true },
-      { id: 'go-reports', label: 'Go to Reports', action: () => openRoute(ROUTES.ADMIN_REPORTS(firmSlug)), description: 'Open operational reports.', adminOnly: true },
-      { id: 'go-team', label: 'Go to Team', action: () => openRoute(ROUTES.ADMIN(firmSlug)), description: 'Open team management.', adminOnly: true },
-      { id: 'go-settings', label: 'Go to Settings', action: () => openRoute(ROUTES.SETTINGS(firmSlug)), description: 'Open workspace settings.', adminOnly: true },
-    ].filter((item) => !item.adminOnly || hasAdminAccess);
+    ];
 
     const actionsItems = [
       { id: 'new-docket', label: 'New Docket', shortcut: 'Alt+Shift+N', action: () => openRoute(ROUTES.CREATE_CASE(firmSlug)), description: 'Create a docket quickly.' },
@@ -267,7 +224,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     if (clientItems.length) sections.push({ id: 'clients', label: 'Client results', items: clientItems });
 
     return sections;
-  }, [firmSlug, hasAdminAccess, openRoute, searchResults]);
+  }, [firmSlug, role, openRoute, searchResults]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -303,16 +260,8 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
 
       if (!(event.altKey && event.shiftKey)) return;
 
-      const shortcuts = {
-        n: () => openRoute(ROUTES.CREATE_CASE(firmSlug)),
-        d: () => openRoute(ROUTES.DASHBOARD(firmSlug)),
-        t: () => openRoute(ROUTES.TASK_MANAGER(firmSlug)),
-        w: () => openRoute(ROUTES.WORKLIST(firmSlug)),
-        b: () => openRoute(ROUTES.GLOBAL_WORKLIST(firmSlug)),
-        q: () => openRoute(ROUTES.QC_QUEUE(firmSlug)),
-      };
-
-      const action = shortcuts[key];
+      const shortcutFactory = PLATFORM_SHORTCUT_ROUTES[key];
+      const action = shortcutFactory ? () => openRoute(shortcutFactory(firmSlug)) : null;
       if (!action) return;
 
       event.preventDefault();

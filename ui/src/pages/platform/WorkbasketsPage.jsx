@@ -106,7 +106,7 @@ export const PlatformWorkbasketsPage = () => {
     <PlatformShell
       title="Workbench"
       subtitle="Shared docket queue for work that can be pulled into individual execution."
-      actions={<Link to={ROUTES.CASES(firmSlug)}>All Dockets</Link>}
+      actions={<Link to={ROUTES.DOCKETS(firmSlug)}>All Dockets</Link>}
     >
       <InlineNotice tone="error" message={isError ? 'Unable to load the workbench queue.' : ''} />
       <InlineNotice tone="success" message={success} />
