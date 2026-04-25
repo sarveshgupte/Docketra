@@ -2,13 +2,14 @@ const { randomUUID } = require('crypto');
 const AuthAudit = require('../models/AuthAudit.model');
 const { enqueueAuditJob } = require('../queues/audit.queue');
 const { getIpRange } = require('../utils/ipRange');
+const { sanitizeForAudit } = require('../utils/redaction');
 
 const getRequestRoute = (req) => {
   const route = req?.context?.route || req?.originalUrl || req?.url || null;
   return typeof route === 'string' ? route.split('?')[0] : null;
 };
 
-const enrichMetadataFromRequest = (metadata, req, ipAddress, userAgent, requestId) => ({
+const enrichMetadataFromRequest = (metadata, req, ipAddress, userAgent, requestId) => sanitizeForAudit({
   ...(metadata || {}),
   requestId,
   route: metadata?.route || getRequestRoute(req),

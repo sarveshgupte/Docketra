@@ -6,6 +6,7 @@ import App from './App';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { queryClient } from './queryClient';
 
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>

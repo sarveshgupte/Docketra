@@ -1,22 +1,52 @@
 # Operational error taxonomy
 
-Primary operational codes for triage:
+Updated: April 24, 2026.
 
-- `STORAGE_NOT_AVAILABLE`
-- `STORAGE_NOT_CONNECTED`
-- `UPLOAD_SESSION_EXPIRED`
-- `UPLOAD_VERIFICATION_FAILED`
-- `UPLOAD_CHECKSUM_MISMATCH`
-- `UPLOAD_SESSION_BACKEND_UNAVAILABLE`
-- `UPLOAD_SESSION_NOT_FOUND`
-- `TENANT_SCOPE_TAMPERING_DETECTED`
-- `CASE_ACCESS_DENIED`
-- `CLIENT_ACCESS_RESTRICTED`
-- `CACHE_HYDRATION_FAILED`
+## Core reason-code families
 
-Defined in backend at `src/constants/operationalErrorCodes.js` and mirrored in frontend handling (`ui/src/utils/constants.js`).
+- `AUTH_*`: authentication/login/session state failures.
+- `TENANT_*`: tenant scope, firm routing, or impersonation boundary failures.
+- `UPLOAD_*`: document upload intent/finalize/provider issues.
+- `REPORT_*`: reporting/export/query failures.
+- `STORAGE_*`: BYOS storage connectivity/degraded-mode failures.
+- `AUDIT_*`: audit write/sanitization/degraded persistence failures.
 
-## Handling guidance
-- `UPLOAD_*` failures: check intent + finalize events with shared correlation id.
-- `STORAGE_*` failures: verify firm storage connectivity and provider mode.
-- `TENANT_SCOPE_*`/access failures: validate firm context and role scope.
+## Correlation and traceability requirements
+
+Every operational error should be diagnosable with:
+
+- `requestId` (backend-generated or propagated)
+- `correlationId` (frontend workflow-level id)
+- `route` + `method`
+- `statusCode`
+- optional `reasonCode`
+
+No sensitive request payloads, token values, cookies, OTPs, passwords, reset links, or signed URLs may be included in error metadata.
+
+## Safe vs unsafe diagnostic fields
+
+### Safe
+- request identifiers (`requestId`, `correlationId`)
+- HTTP metadata (`route`, `method`, `statusCode`)
+- firm/tenant id where authorized
+- actor id (`userXID`) where authorized
+- duration, pagination counts, boolean filter flags
+- normalized error code (`reasonCode` / `errorCode`)
+
+### Unsafe
+- auth/session secrets (password, OTP, JWT, refresh/access tokens, cookies)
+- raw search text, docket/client names, comments/descriptions
+- email verification / password reset links
+- attachment signed URLs and provider tokens
+- raw stack traces in API responses or tenant-facing diagnostics
+
+## Slow-endpoint reason-code conventions
+
+Use endpoint-local reason codes where possible:
+
+- `REPORT_QUERY_SLOW`
+- `WORKLIST_QUERY_SLOW`
+- `CASE_LIST_SLOW`
+- `DASHBOARD_QUERY_SLOW`
+
+All slow diagnostics must include only safe category flags (not raw query text/values).

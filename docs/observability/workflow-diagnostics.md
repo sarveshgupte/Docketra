@@ -1,37 +1,69 @@
 # Workflow diagnostics
 
-## Correlation id pattern
-- Frontend creates an `X-Correlation-ID` per API workflow in `ui/src/services/api.js`.
-- Backend accepts and re-emits it in `src/middleware/requestId.middleware.js` and includes it in structured workflow logs.
-- If absent, backend falls back to `requestId`.
+Updated: April 24, 2026.
 
-## Structured backend events
-- `DOCKET_DETAIL_LOAD`
-- `CLIENT_DETAIL_LOAD`
-- `DIRECT_UPLOAD_INTENT`
-- `DIRECT_UPLOAD_FINALIZE`
-- `CLIENT_CFS_UPLOAD_INTENT`
-- `CLIENT_CFS_UPLOAD_FINALIZE`
-- `DOCKET_COMMENT_MUTATION`
-- `DOCKET_STATUS_MUTATION`
-- `CLIENT_FACT_SHEET_MUTATION`
+## Request/correlation ID behavior
 
-## Safe log fields
-- `event`, `workflow`, `route`
-- `firmId`, `actorXID`
-- `caseId`, `clientId`, `uploadId`
-- `provider`, `providerMode`
-- `outcome`, `durationMs`, `errorCode`
-- `correlationId`
+- Frontend creates `X-Correlation-ID` per API workflow (`ui/src/services/api.js`).
+- Backend guarantees `requestId` and emits both `X-Request-ID` and `X-Correlation-ID` (`src/middleware/requestId.middleware.js`).
+- Backend lifecycle and error diagnostics now include both identifiers (`src/middleware/requestLifecycle.middleware.js`, `src/utils/log.js`).
+- Frontend API diagnostics capture backend `x-request-id` from responses/errors to bridge browser + backend traces.
 
-## Must never be logged
-- Raw document contents
-- CFS payloads / client profile full object
-- Auth tokens or cookies
-- File body bytes
+## Standard slow-endpoint log shape
 
-## Frontend diagnostics
-- Route transitions and durations (`ui/src/utils/performanceMonitor.js`)
-- API duration and slow API warnings (`ui/src/services/api.js`)
-- Duplicate in-flight request storm warnings (deduped)
-- Dev/internal diagnostics panel behind `localStorage['docketra:diagnostics:panel']='enabled'`
+Slow events:
+
+- `[CASE_LIST_SLOW]`
+- `[WORKLIST_QUERY_SLOW]`
+- `[DASHBOARD_QUERY_SLOW]`
+- `[REPORT_QUERY_SLOW]`
+
+Canonical fields:
+
+- `marker`, `diagnosticType`
+- `requestId`, `correlationId`
+- `route`, `method`
+- `durationMs`, `thresholdMs`
+- `firmId`, `userXID` (when tenant-safe)
+- `queryCategoryFlags` (booleans/category tags only)
+- `pagination` (`page`, `limit`)
+
+Raw search terms, names, comments, tokens, reset links, and attachment metadata are prohibited.
+
+## Frontend diagnostics hygiene
+
+- Diagnostics are emitted through workflow diagnostics helpers.
+- Console output is dev-only via safe console guard (`ui/src/utils/safeConsole.js`).
+- Production suppresses direct console dumping to avoid accidental payload leakage.
+- Duplicate request and route-transition diagnostics remain available as safe metadata-only events.
+
+## Audit event hygiene
+
+Audit metadata must be normalized and sanitized to safe fields only:
+
+- action type
+- actor (`performedBy`, `userXID`)
+- target id / list marker
+- tenant/firm id
+- result/status/reason code
+- safe booleans/counts
+
+Do not store request bodies, secrets, full blobs, signed URLs, or raw stack traces.
+
+## Manual QA checklist
+
+1. Confirm login/logout/forgot-password still work.
+2. Confirm create/open/update docket workflows still work.
+3. Confirm upload + BYOS Google Drive flows still work.
+4. Trigger backend validation error and verify user-safe response.
+5. Trigger slow list/report endpoint and verify standardized slow log payload.
+6. Trigger failed auth and verify no password/OTP/token/reset-link in logs.
+7. Check prod build browser console for absence of raw API payload logs.
+8. Verify audit metadata contains only safe normalized fields.
+9. Verify request IDs are visible in response headers and diagnostics.
+
+## Follow-up items
+
+- Add dashboard/service-level propagation of `correlationId` where service calls are detached from `req`.
+- Add tenant-safe diagnostics API contract tests for superadmin/operator views.
+- Add CI guard to fail on new unsafe console/debug patterns in `ui/src` and `src`.

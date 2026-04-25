@@ -3,6 +3,7 @@ const CaseHistory = require('../models/CaseHistory.model');
 const { logDocketEvent } = require('./docketAudit.service');
 const { CASE_ACTION_TYPES } = require('../config/constants');
 const log = require('../utils/log');
+const { sanitizeForAudit, buildSafeFilterFlags } = require('../utils/redaction');
 
 /**
  * Audit Logging Service
@@ -109,10 +110,10 @@ const logCaseHistory = async ({
       performedBy: performedBy ? performedBy.toLowerCase() : 'SYSTEM',
       performedByXID: performedByXID ? performedByXID.toUpperCase() : 'SYSTEM',
       actorRole: mapActorRole(actorRole),
-      metadata: {
+      metadata: sanitizeForAudit({
         ...metadata,
         impersonationMode: req?.context?.impersonationMode || null,
-      },
+      }),
     };
     
     // Add IP and user agent if request object provided
@@ -131,13 +132,12 @@ const logCaseHistory = async ({
         event: 'CASE_HISTORY',
         userId: performedByXID || performedBy || 'SYSTEM',
         userRole: mapActorRole(actorRole),
-        metadata: {
+        metadata: sanitizeForAudit({
           actionType: actionType || null,
           actionLabel: actionLabel || description,
-          description,
           source: 'auditLog.service.logCaseHistory',
           ...(metadata || {}),
-        },
+        }),
         session: session || null,
       });
     } catch (_) {
@@ -148,7 +148,6 @@ const logCaseHistory = async ({
   } catch (error) {
     log.error('[AUDIT] Failed to create case history entry', {
       error: error.message,
-      stack: error.stack,
       historyEntry: {
         caseId,
         firmId,
@@ -158,7 +157,7 @@ const logCaseHistory = async ({
         performedBy,
         performedByXID,
         actorRole,
-        metadata,
+        metadata: sanitizeForAudit(metadata),
       },
     });
     if (session) {
@@ -201,10 +200,10 @@ const logCaseAction = async ({ caseId, firmId, actionType, description, performe
       actionType,
       description,
       performedByXID: performedByXID.toUpperCase(),
-      metadata: {
+      metadata: sanitizeForAudit({
         ...metadata,
         impersonationMode,
-      },
+      }),
       impersonationActive,
       impersonationSessionId,
     });
@@ -234,11 +233,8 @@ const logCaseListViewed = async ({ viewerXID, firmId, filters = {}, listType, re
       return;
     }
 
-    // Build description
-    const filterDesc = Object.keys(filters).length > 0 
-      ? ` with filters: ${JSON.stringify(filters)}`
-      : '';
-    const description = `Case list viewed (${listType})${filterDesc} - ${resultCount} result(s)`;
+    const safeFilterFlags = buildSafeFilterFlags(filters);
+    const description = `Case list viewed (${listType}) - ${resultCount} result(s)`;
 
     // Extract impersonation context if available
     const impersonationActive = req?.context?.isSuperAdmin && req?.context?.impersonationSessionId ? true : false;
@@ -255,7 +251,7 @@ const logCaseListViewed = async ({ viewerXID, firmId, filters = {}, listType, re
       performedByXID: viewerXID.toUpperCase(),
       metadata: {
         listType,
-        filters,
+        filterFlags: safeFilterFlags,
         resultCount,
         timestamp: new Date(),
         impersonationMode,
@@ -318,11 +314,11 @@ const logAdminAction = async ({ adminXID, actionType, targetXID, targetFirmId, m
       actionType,
       description,
       performedByXID: adminXID.toUpperCase(),
-      metadata: {
+      metadata: sanitizeForAudit({
         ...metadata,
         targetXID,
         timestamp: new Date(),
-      },
+      }),
       impersonationActive,
       impersonationSessionId,
     });

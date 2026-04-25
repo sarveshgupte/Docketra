@@ -4,6 +4,9 @@ const { maskSensitiveObject } = require('./pii');
 
 const OMITTED_KEYS = new Set(['req', 'res', 'socket']);
 
+const shouldIncludeStack = () => process.env.LOG_INCLUDE_STACK === 'true' || process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+
+
 const safeStringify = (value) => {
   const seen = new WeakSet();
 
@@ -87,7 +90,7 @@ const buildContext = (level, event, meta = {}) => {
     ? {
       name: safeMeta.error.name,
       message: safeMeta.error.message,
-      stack: safeMeta.error.stack,
+      ...(shouldIncludeStack() ? { stack: safeMeta.error.stack } : {}),
     }
     : safeMeta.error;
   const { error: _ignoredError, ...safeMetaWithoutError } = safeMeta;
@@ -96,6 +99,7 @@ const buildContext = (level, event, meta = {}) => {
     severity: String(severity).toUpperCase(),
     event: normalizeEventName(event, level),
     requestId: resolvedRequestId,
+    correlationId: safeMeta.correlationId || req?.correlationId || null,
     method,
     url,
     statusCode,
@@ -173,7 +177,7 @@ const parseLogArgs = (level, args = []) => {
       event,
       meta: {
         ...secondMeta,
-        extra: [second, ...rest].map((arg) => (arg instanceof Error ? { name: arg.name, message: arg.message, stack: arg.stack } : arg)),
+        extra: [second, ...rest].map((arg) => (arg instanceof Error ? { name: arg.name, message: arg.message, ...(shouldIncludeStack() ? { stack: arg.stack } : {}) } : arg)),
       },
     };
   }

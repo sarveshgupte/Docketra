@@ -1,19 +1,8 @@
-const SENSITIVE_KEY_PATTERN = /(password|token|secret|credential|authorization|cookie|otp|refresh|access|api[-_]?key)/i;
+const { sanitizeForAudit } = require('./redaction');
 
 const isPlainObject = (value) => value && typeof value === 'object' && !Array.isArray(value);
 
-const sanitizeValue = (value, key = '') => {
-  if (SENSITIVE_KEY_PATTERN.test(String(key || ''))) return '[REDACTED]';
-  if (Array.isArray(value)) return value.map((item) => sanitizeValue(item));
-  if (isPlainObject(value)) {
-    const sanitized = {};
-    for (const [childKey, childValue] of Object.entries(value)) {
-      sanitized[childKey] = sanitizeValue(childValue, childKey);
-    }
-    return sanitized;
-  }
-  return value;
-};
+const sanitizeValue = (value, key = '') => sanitizeForAudit(value, key);
 
 const getFieldChanges = (oldDoc = {}, newDoc = {}) => {
   const previous = isPlainObject(oldDoc) ? oldDoc : {};
