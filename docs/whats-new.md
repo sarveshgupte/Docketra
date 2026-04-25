@@ -1,5 +1,12 @@
 # What's New
 
+## April 2026: Documentation refresh — current product + pilot readiness
+
+- Rewrote `README.md` to reflect Docketra as a B2B firm operations SaaS (CMS, CRM, Task Manager, reports, onboarding, BYOS-first, and security posture).
+- Added `docs/product/current-product-overview.md` as the canonical product summary for reviewers and developers.
+- Added `docs/operations/pilot-readiness-checklist.md` with practical go/no-go checks across product, security, reliability, BYOS, and support operations.
+- Marked older audit/readiness docs as **historical** where they no longer represent the current platform shape.
+
 ## April 2026: Internal maintainability — admin surface modularization
 
 - Refactored `ui/src/pages/AdminPage.jsx` so the route stays orchestration-focused while section rendering is delegated to dedicated modules.

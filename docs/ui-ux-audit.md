@@ -1,3 +1,5 @@
+> **Historical document (point-in-time):** This file captures an earlier audit/readiness snapshot and may not reflect the current product surface. For current state, see `README.md`, `docs/product/current-product-overview.md`, and `docs/operations/pilot-readiness-checklist.md`.
+
 # Docketra UI/UX audit and improvement pass (April 2026)
 
 ## Visual polish, density, and enterprise fit-and-finish pass (April 2026)
