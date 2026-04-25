@@ -6,7 +6,7 @@ import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
 import { validatePassword, validateXID } from '../utils/validators';
-import { STORAGE_KEYS } from '../utils/constants';
+import { SESSION_KEYS, STORAGE_KEYS } from '../utils/constants';
 import { authService } from '../services/authService';
 import { useToast } from '../hooks/useToast';
 import { authApi } from '../api/auth.api';
@@ -15,7 +15,8 @@ import { spacingClasses } from '../theme/tokens';
 import { Stack } from '../components/layout/Stack';
 import { Row } from '../components/layout/Row';
 import { ErrorState } from '../components/feedback/ErrorState';
-import { resolvePostLoginDestination } from '../utils/authRedirect';
+import { resolvePostAuthNavigation } from '../utils/postAuthNavigation';
+import { sanitizeFirmSlug } from '../utils/tenantRouting';
 import './LoginPage.css';
 
 const mapSafeLoginError = (error) => {
@@ -40,7 +41,8 @@ const getWorkspaceStatusMessage = (status) => {
 };
 
 export const FirmLoginPage = () => {
-  const { firmSlug } = useParams();
+  const { firmSlug: rawFirmSlug } = useParams();
+  const firmSlug = sanitizeFirmSlug(rawFirmSlug);
   const navigate = useNavigate();
   const location = useLocation();
   const { fetchProfile, resolvePostAuthRoute } = useAuth();
@@ -62,8 +64,21 @@ export const FirmLoginPage = () => {
   const [firmData, setFirmData] = useState(null);
   const [cooldown, setCooldown] = useState(30);
   const otpInputRef = useRef(null);
+  const clearPendingLoginState = () => {
+    sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_TOKEN);
+    sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_FIRM);
+    sessionStorage.removeItem(SESSION_KEYS.POST_LOGIN_RETURN_TO);
+  };
 
   useEffect(() => {
+    if (!firmSlug) {
+      setFirmLoading(false);
+      setFirmData(null);
+      setError('Invalid workspace URL');
+      clearPendingLoginState();
+      return undefined;
+    }
+
     const fetchFirmLoginDetailsFromApiPath = async (slug) => {
       const response = await fetch(`/api/${slug}/login`, {
         method: 'GET',
@@ -154,7 +169,7 @@ export const FirmLoginPage = () => {
       }
     };
 
-    if (firmSlug) loadFirmData();
+    loadFirmData();
   }, [firmSlug]);
 
   useEffect(() => {
@@ -184,12 +199,23 @@ export const FirmLoginPage = () => {
     authService.setSessionTokens(responseData);
 
     const profileResult = await fetchProfile({ force: true });
-    if (profileResult?.success) {
-      showSuccess('✅ Signed in successfully. Redirecting to your dashboard.');
-      const returnTo = new URLSearchParams(location.search).get('returnTo');
-      const nextRoute = resolvePostLoginDestination(returnTo, resolvePostAuthRoute(profileResult.data));
-      navigate(nextRoute, { replace: true });
+    if (!profileResult?.success || !profileResult?.data) {
+      throw new Error('Login succeeded, but workspace context could not be loaded. Please retry.');
     }
+
+    const nextRoute = resolvePostAuthNavigation({
+      locationSearch: location.search,
+      user: profileResult.data,
+      resolvePostAuthRoute,
+    });
+
+    if (!nextRoute || nextRoute === '/') {
+      throw new Error('Your session loaded, but no workspace route is available. Please contact your admin.');
+    }
+
+    clearPendingLoginState();
+    showSuccess('✅ Signed in successfully. Redirecting to your workspace.');
+    navigate(nextRoute, { replace: true });
   };
 
   const credentialFormValid = validateXID(xid.trim().toUpperCase()) && validatePassword(password);
@@ -211,12 +237,16 @@ export const FirmLoginPage = () => {
       return;
     }
 
+    clearPendingLoginState();
     setLoading(true);
     try {
       const response = await authApi.loginInit({ firmSlug, xid: normalizedXid, password });
       if (response?.otpRequired && response?.loginToken) {
         setLoginToken(response.loginToken);
         setOtpHint(response?.otpDeliveryHint || 'A verification code was sent to your email.');
+        sessionStorage.setItem(SESSION_KEYS.PENDING_LOGIN_TOKEN, response.loginToken);
+        sessionStorage.setItem(SESSION_KEYS.PENDING_LOGIN_FIRM, firmSlug || '');
+        sessionStorage.setItem(SESSION_KEYS.POST_LOGIN_RETURN_TO, location.search || '');
         setOtp('');
         setStep('otp');
       } else if (response?.accessToken) {
@@ -245,12 +275,31 @@ export const FirmLoginPage = () => {
 
     setLoading(true);
     try {
-      const response = await authApi.loginVerify({ firmSlug, loginToken, otp: otp.trim() });
+      const pendingFirm = sanitizeFirmSlug(sessionStorage.getItem(SESSION_KEYS.PENDING_LOGIN_FIRM));
+      const pendingToken = sessionStorage.getItem(SESSION_KEYS.PENDING_LOGIN_TOKEN);
+      const tokenForVerification = pendingFirm && pendingFirm === firmSlug ? pendingToken : loginToken;
+      if (!tokenForVerification) {
+        clearPendingLoginState();
+        setStep('credentials');
+        setError('Your login verification session expired. Please sign in again.');
+        return;
+      }
+      if (pendingFirm && pendingFirm !== firmSlug) {
+        clearPendingLoginState();
+        setStep('credentials');
+        setError('Workspace changed during verification. Please sign in again.');
+        return;
+      }
+      const response = await authApi.loginVerify({ firmSlug, loginToken: tokenForVerification, otp: otp.trim() });
       await completeLogin(response);
     } catch (err) {
       const status = err?.status;
       const message = status === 400 || status === 401 ? 'Invalid or expired OTP. Request a new code and try again.' : toUserFacingError(err, mapSafeLoginError(err));
       setError(message);
+      if (status === 401) {
+        clearPendingLoginState();
+        setStep('credentials');
+      }
       showError(message);
     } finally {
       setLoading(false);

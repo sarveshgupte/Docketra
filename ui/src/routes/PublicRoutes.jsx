@@ -59,6 +59,7 @@ export const PublicRoutes = () => (
         <Route path="/acceptable-use" element={<MarketingAcceptableUsePage />} />
         <Route path="/about" element={<MarketingAboutPage />} />
         <Route path="/contact" element={<MarketingContactPage />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/superadmin" element={<LoginPage />} />
         <Route path="/superadmin/login" element={<LoginPage />} />
       </Route>

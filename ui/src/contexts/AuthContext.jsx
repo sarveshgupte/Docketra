@@ -13,7 +13,7 @@
 
 import React, { createContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { authService } from '../services/authService';
-import { STORAGE_KEYS } from '../utils/constants';
+import { SESSION_KEYS, STORAGE_KEYS } from '../utils/constants';
 import { isSuperAdmin } from '../utils/authUtils';
 import { queryClient } from '../queryClient';
 
@@ -57,6 +57,9 @@ export const AuthProvider = ({ children }) => {
       } else {
         localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
       }
+      sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_TOKEN);
+      sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_FIRM);
+      sessionStorage.removeItem(SESSION_KEYS.POST_LOGIN_RETURN_TO);
     } catch (error) {
       console.warn('[AUTH] Unable to update storage while clearing auth state.', error);
     }
