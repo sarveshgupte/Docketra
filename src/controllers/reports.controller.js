@@ -16,6 +16,7 @@ const log = require('../utils/log');
 const { isSuperAdminRole } = require('../utils/role.utils');
 const { REASON_CODES, logPilotEvent } = require('../services/pilotDiagnostics.service');
 const { logAuditEvent } = require('../services/adminActionAudit.service');
+const { logSlowEndpoint } = require('../utils/slowLog');
 
 const DEFAULT_AUDIT_LOG_LIMIT = 100;
 const MAX_AUDIT_LOG_LIMIT = 250;
@@ -26,6 +27,7 @@ const DEFAULT_EXPORT_HISTORY_LIMIT = 25;
 const MAX_EXPORT_HISTORY_LIMIT = 200;
 const REPORT_CASE_PROJECTION = 'caseId caseName title status category clientId assignedToXID createdAt createdBy pendingUntil';
 const SLOW_REPORT_QUERY_MS = 500;
+const includeInternalErrorDetails = process.env.NODE_ENV !== 'production';
 
 const isValidDate = (value) => {
   const date = new Date(value);
@@ -52,14 +54,16 @@ const validateDateRangeWindow = (fromDate, toDate) => {
   return { valid: true, start, end };
 };
 
-const logSlowReportPath = ({ endpoint, durationMs, firmId, extra = {} }) => {
-  if (durationMs < SLOW_REPORT_QUERY_MS) return;
-  log.warn('[REPORT_QUERY_SLOW]', {
-    endpoint,
-    durationMs,
+const logSlowReportPath = ({ req = null, endpoint, durationMs, firmId, extra = {} }) => {
+  logSlowEndpoint({
+    marker: '[REPORT_QUERY_SLOW]',
     thresholdMs: SLOW_REPORT_QUERY_MS,
-    firmId: firmId || null,
-    ...extra,
+    durationMs,
+    req,
+    firmId,
+    queryCategoryFlags: { endpoint },
+    pagination: { page: extra.page || null, limit: extra.limit || null },
+    extra,
   });
 };
 
@@ -247,7 +251,7 @@ const getCaseMetrics = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch case metrics',
-      error: error.message,
+      ...(includeInternalErrorDetails ? { error: error.message } : {}),
     });
   }
 };
@@ -265,7 +269,7 @@ const getSlaWeeklySummary = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch weekly SLA summary',
-      error: error.message,
+      ...(includeInternalErrorDetails ? { error: error.message } : {}),
     });
   }
 };
@@ -415,6 +419,7 @@ const getPendingCasesReport = async (req, res) => {
       },
     });
     logSlowReportPath({
+      req,
       endpoint: 'getPendingCasesReport',
       durationMs: Date.now() - startedAt,
       firmId,
@@ -425,7 +430,7 @@ const getPendingCasesReport = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch pending cases report',
-      error: error.message,
+      ...(includeInternalErrorDetails ? { error: error.message } : {}),
     });
   }
 };
@@ -506,6 +511,7 @@ const getCasesByDateRange = async (req, res) => {
       },
     });
     logSlowReportPath({
+      req,
       endpoint: 'getCasesByDateRange',
       durationMs: Date.now() - startedAt,
       firmId,
@@ -516,7 +522,7 @@ const getCasesByDateRange = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch cases by date range',
-      error: error.message,
+      ...(includeInternalErrorDetails ? { error: error.message } : {}),
     });
   }
 };
@@ -607,6 +613,7 @@ const exportCasesCSV = async (req, res) => {
 
     res.send(csv);
     logSlowReportPath({
+      req,
       endpoint: 'exportCasesCSV',
       durationMs: Date.now() - startedAt,
       firmId,
@@ -625,7 +632,7 @@ const exportCasesCSV = async (req, res) => {
       success: false,
       reasonCode: REASON_CODES.REPORT_EXPORT_FAILED,
       message: 'Failed to export cases as CSV',
-      error: error.message,
+      ...(includeInternalErrorDetails ? { error: error.message } : {}),
     });
   }
 };
@@ -714,6 +721,7 @@ const exportCasesExcel = async (req, res) => {
     await workbook.xlsx.write(res);
     res.end();
     logSlowReportPath({
+      req,
       endpoint: 'exportCasesExcel',
       durationMs: Date.now() - startedAt,
       firmId,
@@ -732,7 +740,7 @@ const exportCasesExcel = async (req, res) => {
       success: false,
       reasonCode: REASON_CODES.REPORT_EXPORT_FAILED,
       message: 'Failed to export cases as Excel',
-      error: error.message,
+      ...(includeInternalErrorDetails ? { error: error.message } : {}),
     });
   }
 };
@@ -831,7 +839,7 @@ const getAuditLogs = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch audit logs',
-      error: error.message,
+      ...(includeInternalErrorDetails ? { error: error.message } : {}),
     });
   }
 };
@@ -890,7 +898,7 @@ const getExportHistory = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch export history',
-      error: error.message,
+      ...(includeInternalErrorDetails ? { error: error.message } : {}),
     });
   }
 };
@@ -969,7 +977,7 @@ const generateClientFactSheetPdf = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to generate client fact sheet',
-      error: error.message,
+      ...(includeInternalErrorDetails ? { error: error.message } : {}),
     });
   }
 };
@@ -1004,7 +1012,7 @@ const userProductivity = async (req, res) => {
     const data = await reportsService.getUserProductivity(filter);
     return res.json({ success: true, data });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Failed to fetch user productivity', error: error.message });
+    return res.status(500).json({ success: false, message: 'Failed to fetch user productivity', ...(includeInternalErrorDetails ? { error: error.message } : {}) });
   }
 };
 
@@ -1015,7 +1023,7 @@ const docketStats = async (req, res) => {
     const data = await reportsService.getDocketStats(filter);
     return res.json({ success: true, data });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Failed to fetch docket stats', error: error.message });
+    return res.status(500).json({ success: false, message: 'Failed to fetch docket stats', ...(includeInternalErrorDetails ? { error: error.message } : {}) });
   }
 };
 
@@ -1026,7 +1034,7 @@ const qcPerformance = async (req, res) => {
     const data = await reportsService.getQCPerformance(filter);
     return res.json({ success: true, data });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Failed to fetch QC performance', error: error.message });
+    return res.status(500).json({ success: false, message: 'Failed to fetch QC performance', ...(includeInternalErrorDetails ? { error: error.message } : {}) });
   }
 };
 
@@ -1037,7 +1045,7 @@ const timePerUser = async (req, res) => {
     const data = await reportsService.getTimePerUser(filter);
     return res.json({ success: true, data });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Failed to fetch user time analytics', error: error.message });
+    return res.status(500).json({ success: false, message: 'Failed to fetch user time analytics', ...(includeInternalErrorDetails ? { error: error.message } : {}) });
   }
 };
 
@@ -1048,7 +1056,7 @@ const clientWorkload = async (req, res) => {
     const data = await reportsService.getClientWorkload(filter);
     return res.json({ success: true, data });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Failed to fetch client workload', error: error.message });
+    return res.status(500).json({ success: false, message: 'Failed to fetch client workload', ...(includeInternalErrorDetails ? { error: error.message } : {}) });
   }
 };
 
@@ -1059,7 +1067,7 @@ const docketTimeStats = async (req, res) => {
     const data = await reportsService.getDocketTimeStats(filter);
     return res.json({ success: true, data });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Failed to fetch docket time analytics', error: error.message });
+    return res.status(500).json({ success: false, message: 'Failed to fetch docket time analytics', ...(includeInternalErrorDetails ? { error: error.message } : {}) });
   }
 };
 

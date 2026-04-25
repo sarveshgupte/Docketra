@@ -8,6 +8,7 @@ import { API_BASE_URL, ERROR_CODES, SESSION_KEYS, STORAGE_KEYS } from '../utils/
 import { resolveFirmLoginPath } from '../utils/tenantRouting';
 import { emitOnboardingProgressRefresh, shouldRefreshOnboardingProgress } from '../utils/onboardingProgressRefresh';
 import { createCorrelationId, emitDiagnosticEvent, shouldEmitWarning } from '../utils/workflowDiagnostics';
+import { safeConsole } from '../utils/safeConsole';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -130,7 +131,7 @@ api.interceptors.request.use(
           config.headers['X-Impersonation-Mode'] = firmData.impersonationMode;
         }
       } catch (error) {
-        console.error('[API] Failed to parse impersonated firm data from localStorage. Data may be corrupted. Please clear impersonation state and try again.', error);
+        safeConsole.error('[API] Failed to parse impersonated firm data from localStorage. Data may be corrupted. Please clear impersonation state and try again.', { message: error?.message });
         // Clear corrupted data
         localStorage.removeItem(STORAGE_KEYS.IMPERSONATED_FIRM);
       }
@@ -158,9 +159,9 @@ api.interceptors.response.use(
     if (startedAt) {
       const durationMs = Math.round(performance.now() - startedAt);
       if (durationMs >= SLOW_API_THRESHOLD_MS) {
-        emitDiagnosticEvent('warn', 'slow_api_response', { signature, workflow: response?.config?.metadata?.workflow, correlationId: response?.config?.metadata?.correlationId, durationMs, status: response?.status });
+        emitDiagnosticEvent('warn', 'slow_api_response', { signature, workflow: response?.config?.metadata?.workflow, correlationId: response?.config?.metadata?.correlationId, requestId: response?.headers?.['x-request-id'] || null, durationMs, status: response?.status });
       }
-      emitDiagnosticEvent('info', 'api_response', { signature, workflow: response?.config?.metadata?.workflow, correlationId: response?.config?.metadata?.correlationId, durationMs, status: response?.status });
+      emitDiagnosticEvent('info', 'api_response', { signature, workflow: response?.config?.metadata?.workflow, correlationId: response?.config?.metadata?.correlationId, requestId: response?.headers?.['x-request-id'] || null, durationMs, status: response?.status });
     }
     if (/\/auth\/(profile|refresh)$/.test(String(response?.config?.url || ''))) {
       refreshFailureDetected = false;
@@ -197,6 +198,7 @@ api.interceptors.response.use(
       code: error?.response?.data?.code || error?.code || null,
       retried: Boolean(originalRequest?._retry),
       networkRetryCount: originalRequest?._networkRetryCount || 0,
+      requestId: error?.response?.headers?.['x-request-id'] || null,
     });
     if (redirecting) {
       return Promise.reject(error);
@@ -212,7 +214,7 @@ api.interceptors.response.use(
       const currentPath = window.location.pathname || '';
       const alreadyOnLoginRoute = currentPath === destination || isLoginLikePath(currentPath);
       if (alreadyOnLoginRoute) {
-        console.info('[AUTH] Skipping hard redirect: already on login route.', { currentPath, destination });
+        safeConsole.info('[AUTH] Skipping hard redirect: already on login route.', { currentPath, destination });
         redirecting = false;
         return;
       }
