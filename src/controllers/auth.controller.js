@@ -428,6 +428,9 @@ const clearForgotPasswordOtpState = (user) => {
 
 const persistLoginOtpState = async (user) => {
   if (!user) return;
+  if (user.xID && /^X\d{6}$/.test(user.xID) && user.xid !== user.xID) {
+    user.xid = user.xID;
+  }
 
   if (typeof user.save === 'function') {
     await user.save();
