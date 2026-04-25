@@ -1,5 +1,15 @@
 # What's New
 
+## April 2026: Audit Log explorer for firm admins
+
+- Added a dedicated firm-scoped **Audit Log** explorer at `/app/:firmSlug/admin/audit-logs` with readable summaries, actor, module, action type, target entity, severity, and timestamp.
+- Expanded backend `GET /api/admin/audit-logs` to support firm-safe filtering by actor, action type, module, date range, target entity, and severity/risk.
+- Added response pagination (`page`, `limit`, `total`, `totalPages`, `hasNextPage`) to support long-running firms with large admin activity volumes.
+- Strengthened audit response safety by redacting sensitive metadata keys and avoiding full sensitive payload exposure in the explorer response.
+- Broadened access from primary admin-only to authorized admin users with `USER_VIEW` permission while preserving strict tenant scoping.
+- Added focused regression coverage for tenant isolation and filter behavior in the admin audit explorer service.
+- Added product documentation: `docs/product/audit-log.md`.
+
 ## April 2026: Documentation refresh — current product + pilot readiness
 
 - Rewrote `README.md` to reflect Docketra as a B2B firm operations SaaS (CMS, CRM, Task Manager, reports, onboarding, BYOS-first, and security posture).
