@@ -4,6 +4,7 @@ const Team = require('../models/Team.model');
 const { getSlaStatus } = require('./sla.service');
 const { enqueueSlaCheckJob } = require('../queues/slaCheck.queue');
 const log = require('../utils/log');
+const { logSlowEndpoint } = require('../utils/slowLog');
 
 const ACTIVE_DOCKET_STATUSES = ['OPEN', 'IN_PROGRESS'];
 const ACTIVE_DOCKET_STATUS_SET = new Set(ACTIVE_DOCKET_STATUSES);
@@ -61,15 +62,16 @@ const buildListQuery = (firmObjectId, query = {}, sort = 'NEWEST') =>
     .sort(resolveSort(sort))
     .lean();
 
-const logSlowDashboardQuery = ({ queryName, firmId, durationMs, page, limit }) => {
-  if (durationMs < SLOW_DASHBOARD_QUERY_MS) return;
-  log.warn('[DASHBOARD_QUERY_SLOW]', {
-    queryName,
-    firmId,
-    durationMs,
-    page,
-    limit,
+const logSlowDashboardQuery = ({ queryName, firmId, durationMs, page, limit, requestId = null, userXID = null }) => {
+  logSlowEndpoint({
+    marker: '[DASHBOARD_QUERY_SLOW]',
     thresholdMs: SLOW_DASHBOARD_QUERY_MS,
+    durationMs,
+    req: requestId ? { requestId } : null,
+    firmId,
+    userXID,
+    queryCategoryFlags: { queryName },
+    pagination: { page, limit },
   });
 };
 

@@ -1,3 +1,5 @@
+import { safeConsole } from './safeConsole';
+
 const MAX_EVENTS = 80;
 const WARN_TTL_MS = 20000;
 
@@ -36,8 +38,7 @@ export const emitDiagnosticEvent = (level, event, context = {}) => {
     window.dispatchEvent(new CustomEvent('docketra:diagnostic', { detail: payload }));
   }
 
-  const method = console[level] || console.info;
-  method(`[diag] ${event}`, payload);
+  safeConsole[level]?.(`[diag] ${event}`, payload);
 };
 
 export const getRecentDiagnostics = () => [...events];

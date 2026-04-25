@@ -1,4 +1,6 @@
 const log = require('../utils/log');
+const { logSlowEndpoint } = require('../utils/slowLog');
+const includeInternalErrorDetails = process.env.NODE_ENV !== 'production';
 const { buildWorkflowMeta, logWorkflowEvent } = require('../utils/workflowDiagnostics');
 const { applyWorkModeFilter, normalizeWorkMode } = require('../utils/workType');
 const CASE_LIST_PROJECTION = 'caseId caseNumber caseName title status category subcategory caseSubCategory priority clientId clientName assignedTo assignedToXID assignedToName createdBy createdByXID createdAt updatedAt dueDate slaDueAt isInternal workType lifecycle state pendingUntil ownerTeamId routedToTeamId';
@@ -471,7 +473,7 @@ module.exports = (deps) => {
       return res.status(500).json({
         success: false,
         message: 'Error fetching case',
-        error: error.message,
+        ...(includeInternalErrorDetails ? { error: error.message } : {}),
       });
     } finally {
       console.timeEnd(getCaseTimerLabel);
@@ -676,24 +678,28 @@ module.exports = (deps) => {
         },
       });
       const durationMs = Date.now() - listStartedAt;
-      if (durationMs > 450) {
-        log.warn('[CASE_LIST_SLOW]', {
-          durationMs,
-          thresholdMs: 450,
-          firmId: req.user?.firmId || null,
-          userXID: req.user?.xID || null,
-          page: parseInt(page),
-          limit: parseInt(limit),
+      logSlowEndpoint({
+        marker: '[CASE_LIST_SLOW]',
+        thresholdMs: 450,
+        durationMs,
+        req,
+        firmId: req.user?.firmId || null,
+        userXID: req.user?.xID || null,
+        queryCategoryFlags: {
           hasStatusFilter: Boolean(status),
           hasCategoryFilter: Boolean(category),
           hasClientFilter: Boolean(clientId),
-        });
-      }
+        },
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+        },
+      });
     } catch (error) {
       res.status(500).json({
         success: false,
         message: 'Error fetching cases',
-        error: error.message,
+        ...(includeInternalErrorDetails ? { error: error.message } : {}),
       });
     }
   };
