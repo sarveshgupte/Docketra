@@ -1,0 +1,5 @@
+# Reduce manual merge-conflict resolution for frequently-updated append-only docs.
+docs/whats-new.md merge=union
+
+# Keep line endings normalized to avoid noisy cross-platform diffs during conflict resolution.
+* text=auto
