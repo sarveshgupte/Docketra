@@ -7,6 +7,8 @@ const REASON_CODES = Object.freeze({
   INVALID_ORIGIN: 'invalid_origin',
   REFRESH_NOT_SUPPORTED: 'refresh_not_supported',
   IDEMPOTENT_REPLAY: 'idempotent_replay',
+  DUPLICATE_MATCH: 'duplicate_match',
+  CONVERSION_FAILED: 'conversion_failed',
   FIRM_CONTEXT_MISSING: 'firm_context_missing',
   SETUP_INCOMPLETE: 'setup_incomplete',
   MISSING_CONTACT: 'missing_contact',

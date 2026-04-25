@@ -1,5 +1,16 @@
 # What's New
 
+## April 2026: CRM + Intake workflow maturity pass
+
+- Improved intake workflow correctness across CMS/public/API ingestion to support real lead → client → docket lifecycle handling.
+- Added explicit intake source attribution metadata (`metadata.sourceAttribution`) so teams can trace where each submission originated (source, mode, page/referrer, UTM, form context).
+- Added intake duplicate warnings (non-blocking) for same email/phone and common firm identifiers (PAN/GST/GSTIN/client code/firm identifier where present).
+- Added stronger conversion auditability in lead diagnostics with structured workflow steps and conversion trail entries for client/docket outcomes.
+- Improved conversion failure clarity with explicit warning reason codes and recovery actions for operators.
+- Improved CRM/CMS empty-state guidance and intake warning visibility in UI so first-run teams understand the next best action.
+- Added/expanded tests for intake-to-client and intake-to-docket conversion paths, duplicate warning diagnostics, and conversion failure recovery messaging.
+- Added product workflow documentation: `docs/product/crm-intake-workflow.md`.
+
 ## April 2026: Superadmin support diagnostics console
 
 - Added a new superadmin support diagnostics surface at `/app/superadmin/diagnostics` backed by `GET /api/superadmin/diagnostics`.
