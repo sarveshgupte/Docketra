@@ -6,6 +6,8 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const BCRYPT_HASH_REGEX = /^\$2[abxy]?\$\d{2}\$.+/;
 
 const SENSITIVE_ENV_KEY_PATTERN = /(SECRET|PASSWORD|TOKEN|KEY|PRIVATE|CREDENTIAL|AUTH)/i;
+const SUPPORTED_ENCRYPTION_PROVIDERS = ['local', 'disabled'];
+const SUPPORTED_AI_PROVIDERS = ['openai'];
 
 const boolFromEnv = z
   .union([z.boolean(), z.string()])
@@ -37,12 +39,13 @@ const envSchema = z
     GOOGLE_CLIENT_SECRET: z.string().trim().optional(),
     GOOGLE_OAUTH_REDIRECT_URI: z.string().trim().optional(),
 
-    ENCRYPTION_PROVIDER: z.enum(['local', 'kms', 'disabled']).default('local'),
+    ENCRYPTION_PROVIDER: z.string().trim().optional().default('local'),
     MASTER_ENCRYPTION_KEY: z.string().trim().optional(),
 
     METRICS_TOKEN: z.string().trim().optional(),
     STORAGE_TOKEN_SECRET: z.string().trim().optional(),
     STRICT_BYOS: boolFromEnv,
+    CSP_REPORTING_ENABLED: boolFromEnv,
 
     BREVO_API_KEY: z.string().trim().optional(),
     MAIL_FROM: z.string().trim().optional(),
@@ -61,8 +64,26 @@ const envSchema = z
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['MONGO_URI'], message: 'MONGO_URI or MONGODB_URI is required' });
     }
 
-    if (env.ENCRYPTION_PROVIDER !== 'disabled' && !env.MASTER_ENCRYPTION_KEY) {
+    const encryptionProvider = String(env.ENCRYPTION_PROVIDER || 'local').toLowerCase();
+    if (!SUPPORTED_ENCRYPTION_PROVIDERS.includes(encryptionProvider)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ENCRYPTION_PROVIDER'],
+        message: `Unsupported ENCRYPTION_PROVIDER "${env.ENCRYPTION_PROVIDER}". Supported providers: ${SUPPORTED_ENCRYPTION_PROVIDERS.join(', ')}`,
+      });
+    }
+
+    if (encryptionProvider !== 'disabled' && !env.MASTER_ENCRYPTION_KEY) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['MASTER_ENCRYPTION_KEY'], message: 'required when ENCRYPTION_PROVIDER is not disabled' });
+    }
+
+    const aiProvider = String(env.AI_PROVIDER || '').trim().toLowerCase();
+    if (aiProvider && !SUPPORTED_AI_PROVIDERS.includes(aiProvider)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['AI_PROVIDER'],
+        message: `Unsupported AI_PROVIDER "${env.AI_PROVIDER}". Supported providers: ${SUPPORTED_AI_PROVIDERS.join(', ')}`,
+      });
     }
 
     if (env.NODE_ENV === 'production') {
