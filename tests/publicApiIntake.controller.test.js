@@ -147,11 +147,48 @@ async function testReplayResponseUses200() {
   assert.strictEqual(res.payload.idempotentReplay, true);
 }
 
+
+async function testFirmIdIsAlwaysResolvedFromSlug() {
+  let captured = null;
+  const firmRecord = {
+    _id: '507f1f77bcf86cd799439011',
+    intakeConfig: { cms: { intakeApiEnabled: true, intakeApiKey: 'my-secret' } },
+  };
+  const controller = loadController({
+    firmMock: {
+      findOne: () => ({ select: () => ({ lean: async () => firmRecord }) }),
+    },
+    serviceMock: {
+      processCmsSubmission: async (input) => {
+        captured = input;
+        return { lead: { _id: 'lead-safe' }, metadata: { warnings: [] } };
+      },
+    },
+  });
+
+  const req = {
+    params: { firmSlug: 'firm-one' },
+    headers: { 'x-docketra-intake-key': 'my-secret' },
+    body: { name: 'A', firmId: 'malicious-firm', clientId: 'malicious-client' },
+    query: {},
+    socket: {},
+    get: () => null,
+  };
+  const res = createRes();
+  await controller.submitApiIntake(req, res);
+
+  assert.strictEqual(res.statusCode, 201);
+  assert.strictEqual(String(captured.firmId), firmRecord._id);
+  assert.strictEqual(captured.payload.firmId, 'malicious-firm');
+  assert.strictEqual(captured.payload.clientId, 'malicious-client');
+}
+
 async function run() {
   try {
     await testRejectsMissingOrInvalidAuth();
     await testAcceptsValidRequestAndMapsResponse();
     await testReplayResponseUses200();
+    await testFirmIdIsAlwaysResolvedFromSlug();
     console.log('Public API intake controller tests passed.');
   } catch (error) {
     console.error('Public API intake controller tests failed:', error);
