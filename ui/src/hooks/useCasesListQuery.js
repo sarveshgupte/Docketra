@@ -83,7 +83,10 @@ export const useCasesListQuery = ({
     },
     enabled: Boolean(enabled),
     placeholderData: keepPreviousData,
-    staleTime: 45 * 1000,
+    staleTime: 90 * 1000,
+    gcTime: 20 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
 export const useCategoryCountQuery = ({ isAdmin, enabled = true }) =>

@@ -1,5 +1,16 @@
 # What's New
 
+## April 2026: Perceived speed + free-tier performance pass
+
+- Improved dashboard and docket list perceived speed with longer safe React Query freshness windows and reduced remount/focus refetch churn.
+- Added shared docket-detail query keying (`getCaseQueryKey`) so hover prefetch and detail page load reuse the same request cache path more consistently.
+- Added dashboard card skeleton rows to avoid loading text flashes while keeping card structure stable during fetches.
+- Added low-risk optimistic UI for **Assign to me** in dockets so rows update instantly with rollback on failure.
+- Refactored reports dashboard loading to React Query with parallel metric requests and cache-aware refresh behavior.
+- Improved reports backend pending-list handling with validated pagination parameters and response pagination metadata.
+- Added a targeted pending-report query index for firm/status/pending deadline access pattern.
+- Added the perceived-speed playbook: `docs/performance/perceived-speed-playbook.md`.
+
 ## April 2026: CRM + Intake workflow maturity pass
 
 - Improved intake workflow correctness across CMS/public/API ingestion to support real lead → client → docket lifecycle handling.
