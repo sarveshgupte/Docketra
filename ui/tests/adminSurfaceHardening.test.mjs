@@ -6,8 +6,11 @@ const read = (relPath) => fs.readFileSync(path.resolve(process.cwd(), relPath), 
 
 const adminPageSource = read('src/pages/AdminPage.jsx');
 assert.ok(adminPageSource.includes('AdminUsersSection'), 'AdminPage should delegate user rendering to AdminUsersSection');
+assert.ok(adminPageSource.includes('AdminClientsSection'), 'AdminPage should delegate client rendering to AdminClientsSection');
+assert.ok(adminPageSource.includes('AdminCategoriesSection'), 'AdminPage should delegate category rendering to AdminCategoriesSection');
 assert.ok(adminPageSource.includes('CreateUserModal'), 'AdminPage should delegate create-user form to CreateUserModal');
 assert.ok(adminPageSource.includes('UserAccessModal'), 'AdminPage should delegate access assignment to UserAccessModal');
+assert.ok(adminPageSource.includes('useAdminDataLoader'), 'AdminPage should use shared admin data loader hook');
 assert.ok(adminPageSource.includes('actionLoadingByUser'), 'AdminPage should track per-user action loading state');
 assert.ok(adminPageSource.includes('ActionConfirmModal'), 'AdminPage should use ActionConfirmModal for high-risk actions');
 assert.ok(!adminPageSource.includes('window.confirm('), 'AdminPage should not use native window.confirm for user admin actions');
