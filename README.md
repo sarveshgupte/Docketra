@@ -1,358 +1,153 @@
-# Docketra - Task & Case Management System
+# Docketra
 
-A backend-first task and case management web application designed for small consultancies. Built with Node.js, Express, and MongoDB.
+Docketra is a **B2B firm operations SaaS** that connects intake, relationship management, and execution into one firm-scoped workspace.
 
-> **📚 Documentation**: For a complete guide to all documentation in this repository, see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)
+It is built for teams that need to run predictable operations across:
+- lead capture and intake (CMS),
+- client and pipeline management (CRM),
+- docket execution, allocation, QC, and reporting (Task Manager).
 
-## 🎯 Overview
+> Canonical work item term: **Docket** (legacy `/cases` routes remain compatibility aliases).
 
-Docketra is an internal task and case management system that prioritizes:
-- **Backend-first development**: Complete, robust API before frontend
-- **Strong data integrity**: Mongoose schemas with validation
-- **Comprehensive audit trail**: Automatic tracking of all changes
-- **Simple, clear architecture**: Easy to understand and maintain
-- **Productivity-focused**: RESTful API design for rapid integration
+## Who Docketra is for
 
-## 📁 Project Structure
+- Professional service firms (tax, compliance, legal-adjacent ops, finance ops, back-office teams).
+- Operations leads who need queue discipline, role-based work allocation, and auditability.
+- Firms that require data control with a **BYOS-first** (Bring Your Own Storage) posture.
 
+## Core product modules
+
+1. **CMS (Intake / Acquisition)**
+   - Request links, hosted forms, embed forms, API intake.
+   - Unified intake pipeline: submission → lead → optional client → optional docket.
+
+2. **CRM (Relationship Management)**
+   - Lead pipeline (`new`, `contacted`, `qualified`, `converted`, `lost`).
+   - Ownership, follow-up tracking, client records, and relationship history.
+
+3. **Task Manager (Execution)**
+   - Dockets, Workbasket, My Worklist, QC queue, all-dockets oversight.
+   - Work allocation, lifecycle transitions, attachment handling, and audit trail.
+
+4. **Operations & Platform Controls**
+   - Reports, onboarding guidance, team/access controls, security settings, storage settings.
+
+## High-level architecture
+
+- **Frontend**: React + Vite app in `ui/`.
+- **Backend API**: Node.js + Express in `src/`.
+- **Database**: MongoDB (firm-scoped multi-tenant model).
+- **Queue/Workers**: Redis + worker processes for async jobs.
+- **Security layers**: JWT auth, firm-context enforcement, rate limiting, audit logging, request IDs, environment validation.
+
+```text
+Web UI (ui/)  -->  API (src/server.js / routes/controllers/services)
+                     |
+                     +--> MongoDB (tenant-scoped records)
+                     +--> Redis + workers (background jobs)
+                     +--> Optional integrations (Google auth/storage, email, AI)
 ```
-docketra/
-├── src/
-│   ├── config/          # Configuration files
-│   │   ├── database.js  # MongoDB connection setup
-│   │   └── config.js    # Application configuration
-│   ├── models/          # Mongoose data models
-│   │   ├── User.js      # User model with audit fields
-│   │   ├── Task.js      # Task model with status tracking
-│   │   └── Case.js      # Case model with relationships
-│   ├── controllers/     # Business logic
-│   │   ├── userController.js
-│   │   ├── taskController.js
-│   │   └── caseController.js
-│   ├── routes/          # API routes
-│   │   ├── users.js
-│   │   ├── tasks.js
-│   │   └── cases.js
-│   ├── middleware/      # Express middleware
-│   │   ├── errorHandler.js   # Centralized error handling
-│   │   ├── requestLogger.js  # Request logging for audit
-│   │   └── notFound.js       # 404 handler
-│   └── server.js        # Main application entry point
-├── .env.example         # Environment variables template
-├── .gitignore          
-├── package.json
-└── README.md
-```
 
-## 🚀 Getting Started
+## Local setup
 
 ### Prerequisites
+- Node.js 18.x
+- npm 9+
+- MongoDB (local or container)
+- Redis (recommended for full worker/rate-limit behavior)
 
-- Node.js (v18 or higher)
-- MongoDB (v4.4 or higher)
-- npm or yarn
-- Redis (required in production for distributed rate limiting and workers)
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd docketra
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit `.env` and configure the production-safe minimum:
-   ```
-    PORT=3000
-    NODE_ENV=development
-    MONGO_URI=mongodb://127.0.0.1:27017/docketra
-    JWT_SECRET=<32+ character secret>
-    SUPERADMIN_XID=X000001
-    SUPERADMIN_EMAIL=superadmin@example.com
-    SUPERADMIN_PASSWORD_HASH=<bcrypt hash>
-    SUPERADMIN_OBJECT_ID=000000000000000000000001
-    REDIS_URL=redis://127.0.0.1:6379
-    ```
-
-4. **Start MongoDB**
-   ```bash
-   # Using MongoDB service
-   sudo service mongod start
-   
-   # Or using Docker
-   docker run -d -p 27017:27017 --name mongodb mongo:latest
-   ```
-
- 5. **Run the application**
-    ```bash
-    # API process
-    npm start
-
-    # Worker process (run separately in another shell/container)
-    npm run start:worker
-    ```
-
- 6. **Verify the server is running**
-    ```bash
-    curl http://localhost:3000/health
-    ```
-
-## 📚 API Documentation
-
-### Base URL
-```
-http://localhost:3000/api
-```
-
-### Authentication
-
-The API uses xID-based authentication. To access protected endpoints:
-
-1. Login to get authenticated:
-   ```bash
-    curl -X POST http://localhost:3000/<firm-slug>/login \
-      -H "Content-Type: application/json" \
-      -d '{
-        "xID": "X000001",
-        "password": "ChangeMe@123"
-      }'
-   ```
-
-2. Use the returned `accessToken` for subsequent requests. Protected endpoints require the `Authorization: Bearer <token>` header:
-   ```bash
-   curl http://localhost:3000/api/users \
-     -H "Authorization: Bearer <accessToken>"
-   ```
-
-### Endpoints Overview
-
-#### Authentication
-- `POST /api/auth/login` - Login with xID and password
-- `POST /api/auth/logout` - Logout (requires authentication)
-- `POST /api/auth/change-password` - Change password (requires authentication)
-- `GET /api/auth/profile` - Get user profile (requires authentication)
-- `PUT /api/auth/profile` - Update user profile (requires authentication)
-
-#### Users
-- `GET /api/users` - List all users (with pagination and filters)
-- `GET /api/users/:id` - Get user by ID
-- `POST /api/users` - Create new user
-- `PUT /api/users/:id` - Update user
-- `DELETE /api/users/:id` - Deactivate user (soft delete)
-
-#### Tasks
-- `GET /api/tasks` - List all tasks (with filters)
-- `GET /api/tasks/:id` - Get task by ID (with audit history)
-- `GET /api/tasks/stats` - Get task statistics
-- `POST /api/tasks` - Create new task
-- `PUT /api/tasks/:id` - Update task
-- `DELETE /api/tasks/:id` - Delete task
-
-#### Cases
-- `GET /api/cases` - List all cases (with filters)
-- `GET /api/cases/:id` - Get case by ID (with related tasks)
-- `GET /api/cases/stats` - Get case statistics
-- `POST /api/cases` - Create new case
-- `PUT /api/cases/:id` - Update case
-- `DELETE /api/cases/:id` - Delete case (only if no tasks)
-- `POST /api/cases/:id/notes` - Add note to case
-
-### Example Requests
-
-#### Create a User
-```bash
-curl -X POST http://localhost:3000/api/users \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "John Doe",
-    "email": "john@example.com",
-    "role": "consultant"
-  }'
-```
-
-#### Create a Case
-```bash
-curl -X POST http://localhost:3000/api/cases \
-  -H "Content-Type: application/json" \
-  -d '{
-    "caseNumber": "CASE-001",
-    "title": "Client Website Redesign",
-    "description": "Complete redesign of client website",
-    "priority": "high",
-    "client": {
-      "name": "Acme Corp",
-      "email": "contact@acme.com"
-    },
-    "createdBy": "USER_ID_HERE"
-  }'
-```
-
-#### Create a Task
-```bash
-curl -X POST http://localhost:3000/api/tasks \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Design homepage mockup",
-    "description": "Create initial homepage design mockup",
-    "priority": "high",
-    "status": "pending",
-    "assignedTo": "USER_ID_HERE",
-    "case": "CASE_ID_HERE",
-    "dueDate": "2024-02-01",
-    "createdBy": "USER_ID_HERE"
-  }'
-```
-
-#### Query Tasks
-```bash
-# Get all pending tasks
-curl "http://localhost:3000/api/tasks?status=pending"
-
-# Get high priority tasks assigned to a user
-curl "http://localhost:3000/api/tasks?priority=high&assignedTo=USER_ID"
-
-# Get tasks for a specific case
-curl "http://localhost:3000/api/tasks?case=CASE_ID"
-```
-
-## 🗄️ Data Models
-
-### User Model
-- **Fields**: xID (immutable), name (immutable), email, role (Admin/Employee), allowedCategories, isActive
-- **Authentication**: xID-based with bcrypt password hashing
-- **Security**: Password expiry (60 days), password history (last 5), forced password change on first login
-- **Format**: xID follows pattern X123456 (X followed by 6 digits)
-- **Audit**: createdAt, passwordLastChangedAt, passwordExpiresAt
-- **Validation**: xID format, email format, required fields
-
-### Task Model
-- **Fields**: title, description, status, priority, assignedTo, case, dueDate, estimatedHours, actualHours
-- **Status**: pending, in_progress, review, completed, blocked, cancelled
-- **Priority**: low, medium, high, urgent
-- **Audit**: createdBy, updatedBy, statusHistory, timestamps
-- **Features**: Automatic status history tracking, completion timestamp
-
-### Case Model
-- **Fields**: caseNumber (unique), title, description, status, priority, client info, assignedTeam, leadConsultant
-- **Status**: open, active, on_hold, closed, archived
-- **Features**: Notes system, status history, task relationships, budget tracking
-- **Audit**: createdBy, updatedBy, statusHistory, timestamps
-- **Validation**: Cannot delete cases with active tasks
-
-## 🔐 Data Integrity & Audit Trail
-
-### Automatic Tracking
-- All models include `createdAt` and `updatedAt` timestamps
-
-## 🔭 Observability
-
-- Every request carries an `X-Request-ID` header; upstream request IDs are preserved when provided.
-- `GET /metrics` exports Prometheus-compatible metrics when authorized with `Authorization: Bearer <METRICS_TOKEN>`.
-- Add `Accept: application/json` to the same endpoint if you need the legacy JSON snapshot.
-
-Example:
+### 1) Install dependencies
 
 ```bash
-curl http://localhost:3000/metrics \
-  -H "Authorization: Bearer $METRICS_TOKEN"
+npm install
+npm --prefix ui install
 ```
 
-## 🧪 Validation & Load Testing
+### 2) Configure environment
 
+```bash
+cp .env.example .env
+```
+
+Minimum local variables:
+
+```dotenv
+NODE_ENV=development
+PORT=5000
+MONGO_URI=mongodb://127.0.0.1:27017/docketra
+JWT_SECRET=<at least 32 random chars>
+SUPERADMIN_XID=X000001
+SUPERADMIN_EMAIL=superadmin@example.com
+SUPERADMIN_PASSWORD_HASH=<bcrypt hash>
+SUPERADMIN_OBJECT_ID=000000000000000000000001
+ENCRYPTION_PROVIDER=disabled
+REDIS_URL=redis://localhost:6379
+```
+
+### 3) Start backend and frontend
+
+```bash
+# backend API
+npm run dev
+
+# background worker (separate terminal)
+npm run start:worker
+
+# frontend app (separate terminal)
+npm --prefix ui run dev
+```
+
+## Environment variables (required/important)
+
+Use `.env.example` as the source of truth. Key categories:
+- **Core runtime**: `NODE_ENV`, `PORT`, `APP_NAME`
+- **Database**: `MONGO_URI` (and legacy `MONGODB_URI`)
+- **Auth & security**: `JWT_SECRET`, superadmin bootstrap vars, rate limit vars
+- **Encryption**: `ENCRYPTION_PROVIDER`, `MASTER_ENCRYPTION_KEY` (when enabled)
+- **Storage/Integrations**: Google OAuth vars, storage token secret, upload controls
+- **Ops/diagnostics**: `METRICS_TOKEN`, CSP reporting toggle, build metadata
+- **Frontend build vars**: `VITE_*` keys (can live in root `.env` or `ui/.env`)
+
+## Build, test, and verification commands
+
+### Backend
 ```bash
 npm run lint
-npm test
-npm run build:ui
+npm run validate:env
+npm run test
 ```
 
-Basic load testing is available via k6:
-
+### Frontend
 ```bash
-k6 run load-tests/core-endpoints.js \
-  -e BASE_URL=http://localhost:3000 \
-  -e TENANT_SLUG=acme \
-  -e LOGIN_XID=X000001 \
-  -e LOGIN_PASSWORD=ChangeMe@123
+npm --prefix ui run build
+npm --prefix ui run test:ci
 ```
-- User actions tracked via `createdBy` and `updatedBy` fields
-- Status changes logged with timestamp and user in `statusHistory`
 
-### Request Logging
-- All API requests logged with timestamp, method, URL, and IP
-- Request bodies logged (excluding sensitive data)
-
-### Data Validation
-- Mongoose schema validation on all fields
-- Email format validation
-- Required field validation
-- Numeric constraints (no negative hours/budgets)
-- String length limits
-
-## 🎨 Design Decisions
-
-### Backend-First Approach
-- Complete API built before frontend
-- Focus on data integrity and business logic
-- RESTful design for easy frontend integration
-
-### MongoDB with Mongoose
-- Schema validation for data integrity
-- Flexible document structure for evolving requirements
-- Built-in audit trail support with timestamps
-- Efficient querying with indexes
-
-### Simple Architecture
-- Clear separation of concerns (MVC pattern)
-- No over-engineering - standard Express patterns
-- Easy to understand and maintain
-- Scalable structure for future growth
-
-### Audit Trail Implementation
-- Automatic timestamp generation
-- Status history tracking on state changes
-- User tracking on all modifications
-- Request logging for security
-
-## 🔧 Development
-
-### Running in Development Mode
+### Release gate (CI-equivalent local check)
 ```bash
-npm run dev
+npm run ci:release-gate
 ```
-Uses nodemon for automatic server restart on file changes.
 
-### Project Dependencies
-- **express**: Web framework
-- **mongoose**: MongoDB ODM
-- **dotenv**: Environment variable management
-- **cors**: Cross-origin resource sharing
-- **nodemon**: Development auto-restart (dev dependency)
+## Deployment notes
 
-## 📝 Future Enhancements
+- Production deploy targets are documented in `docs/deployment/render-deployment.md`.
+- Build relies on backend install + `ui` build (`npm run build` / `heroku-postbuild`).
+- Ensure production secrets are set explicitly (JWT, encryption/storage, metrics token, OAuth creds).
+- Run env validation and release gate checks before deployment.
+- Keep worker process enabled in production for async and queue-driven workflows.
 
-- [x] Authentication & authorization (xID-based)
-- [x] React frontend
-- [ ] File attachments for cases/tasks
-- [ ] Email notifications
-- [ ] Time tracking integration
-- [ ] Reporting and analytics dashboard
-- [ ] API rate limiting
-- [ ] Comprehensive test suite
+## Security and data ownership principles
 
-## 🤝 Contributing
+- **Firm-scoped isolation**: tenant boundaries are enforced across auth, routing, and data access.
+- **Role hierarchy**: permissions align to primary admin > admin > manager > user.
+- **BYOS-first posture**: firm data ownership is prioritized; external storage/integrations remain explicit and configurable.
+- **Auditability by default**: security-sensitive and operational actions are logged with traceability.
+- **Fail-safe optional services**: platform behavior remains functional even when optional providers (for example, AI/integrations) are disabled.
 
-This is an internal project for a small consultancy. For questions or suggestions, please contact the development team.
+## Documentation map
 
-## 📄 License
-
-ISC
+- Current product overview: `docs/product/current-product-overview.md`
+- Pilot readiness checklist: `docs/operations/pilot-readiness-checklist.md`
+- Release updates: `docs/whats-new.md`
+- Deployment: `docs/deployment/render-deployment.md`
+- Security: `docs/security/SECURITY_MODEL.md` and `docs/security/`
