@@ -35,6 +35,7 @@
     "test:crm-unification": "node tests/crmWorkspaceUnification.test.mjs",
     "test:performance-patterns": "node tests/performancePatterns.test.mjs",
     "test:case-detail-performance": "node tests/caseDetailPerformanceRefactor.test.mjs",
+    "test:case-detail-architecture": "node tests/caseDetailArchitectureSmoke.test.mjs",
     "test:admin-surface": "node tests/adminSurfaceHardening.test.mjs",
     "test:auth-refresh-loop": "node tests/authRefreshLoopRegression.test.mjs",
     "test:routing-public-boundary": "node tests/routingPublicBoundaryRegression.test.mjs",
@@ -42,7 +43,7 @@
     "test:docket-surface": "node tests/docketSurfaceHardening.test.mjs",
     "test:queue-ux-consistency": "node tests/queueUxConsistency.test.mjs",
     "test:design-system-contract": "node tests/designSystemContract.test.mjs",
-    "test:ci": "npm run test:dockets-route && npm run test:navigation && npm run test:forms && npm run test:auth-refresh-loop && npm run test:routing-public-boundary && npm run test:admin-surface && npm run test:docket-surface && npm run test:queue-ux-consistency && npm run test:design-system-contract"
+    "test:ci": "npm run test:dockets-route && npm run test:navigation && npm run test:forms && npm run test:auth-refresh-loop && npm run test:routing-public-boundary && npm run test:admin-surface && npm run test:docket-surface && npm run test:queue-ux-consistency && npm run test:design-system-contract && npm run test:case-detail-performance && npm run test:case-detail-architecture"
   },
   "browserslist": {
     "production": [

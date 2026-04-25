@@ -1,5 +1,16 @@
 # What's New
 
+## April 2026: Internal maintainability — Docket Detail modular architecture hardening
+
+- Refactored `ui/src/pages/CaseDetailPage.jsx` to keep route orchestration focused while delegating render-heavy sections into dedicated modules.
+- Added explicit detail modules for summary/status (`CaseDetailSummaryHeader`), operational alerts (`CaseDetailAlerts`), and overview/details/action composition (`CaseDetailOverviewPanel`).
+- Extracted tab-scoped fetch paths into dedicated hooks:
+  - `useCaseDetailTimeline` (Activity-only timeline fetching/normalization)
+  - `useClientDocketHistory` (Overview/History related client dockets)
+- Centralized role/permission policy checks into explicit helper functions in `ui/src/pages/caseDetail/caseDetailAccess.js` for easier testing and safer future changes.
+- Added docket-detail architecture smoke coverage (`ui/tests/caseDetailArchitectureSmoke.test.mjs`) and wired it into frontend CI checks.
+- Added dedicated architecture documentation at `docs/frontend/docket-detail-architecture.md` with clear component/hook boundaries and extension guidance.
+
 ## April 2026: Design system consolidation — shared B2B UI contract
 
 - Consolidated shared component contract for Button, Input, Select, Card, DataTable, Empty/Error states, PageHeader, Modal, Tabs, and Toast usage in `docs/ui/design-system-contract.md`.
