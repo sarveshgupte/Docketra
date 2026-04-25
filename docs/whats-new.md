@@ -1,5 +1,14 @@
 # What's New
 
+## April 2026: Internal maintainability — admin surface modularization
+
+- Refactored `ui/src/pages/AdminPage.jsx` so the route stays orchestration-focused while section rendering is delegated to dedicated modules.
+- Added focused admin section components for clients (`AdminClientsSection`) and categories/subcategories/workbasket mapping (`AdminCategoriesSection`) while preserving existing behavior and routes.
+- Extracted shared admin data loading into `ui/src/pages/admin/hooks/useAdminDataLoader.js` for tab-aware loading (`users/categories/clients`) and stats loading reuse.
+- Extracted admin modal groups into focused modules (`AdminBulkPasteModal`, `AdminCategoryModals`, `AdminClientModals`) to reduce risk when touching user/client/category concerns.
+- Added targeted regression coverage for modular admin architecture (`ui/tests/adminArchitectureSmoke.test.mjs`) and expanded existing admin hardening checks.
+- Updated admin architecture documentation at `docs/frontend/admin-surface-architecture.md` with extension placement guidance for team, roles/permissions, clients, categories, workbench mapping, storage/settings, firm profile, and hierarchy work.
+
 ## April 2026: Internal maintainability — Docket Detail modular architecture hardening
 
 - Refactored `ui/src/pages/CaseDetailPage.jsx` to keep route orchestration focused while delegating render-heavy sections into dedicated modules.

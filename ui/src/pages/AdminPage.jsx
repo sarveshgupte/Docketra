@@ -8,13 +8,6 @@ import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
-import { DataTable } from '../components/common/DataTable';
-import { Input } from '../components/common/Input';
-import { Textarea } from '../components/common/Textarea';
-import { Select } from '../components/common/Select';
-import { FormLabel } from '../components/common/FormLabel';
-import { Modal } from '../components/common/Modal';
-import { Loading } from '../components/common/Loading';
 import { TableSkeleton } from '../components/common/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { PageHeader } from '../components/layout/PageHeader';
@@ -23,7 +16,6 @@ import { categoryService } from '../services/categoryService';
 import { clientApi } from '../api/client.api';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
-import { formatDate } from '../utils/formatters';
 import { BulkUploadModal } from '../components/bulk/BulkUploadModal';
 import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
 import { buildTemplateCsv } from '../constants/bulkUploadSchema';
@@ -32,7 +24,6 @@ import {
   TOAST_DEDUPLICATION_WINDOW_MS,
   EMPTY_FIELD_PLACEHOLDER,
   looksEncryptedToken,
-  toSafeText,
   normalizeCategory,
   parseDelimitedLine,
   getApiErrorType,
@@ -42,6 +33,12 @@ import {
 import { AdminUsersSection } from './admin/components/AdminUsersSection';
 import { CreateUserModal } from './admin/components/CreateUserModal';
 import { UserAccessModal } from './admin/components/UserAccessModal';
+import { AdminClientsSection } from './admin/components/AdminClientsSection';
+import { AdminCategoriesSection } from './admin/components/AdminCategoriesSection';
+import { AdminBulkPasteModal } from './admin/components/AdminBulkPasteModal';
+import { AdminCategoryModals } from './admin/components/AdminCategoryModals';
+import { AdminClientModals } from './admin/components/AdminClientModals';
+import { useAdminDataLoader } from './admin/hooks/useAdminDataLoader';
 import './AdminPage.css';
 
 const downloadBulkTemplate = (type) => {
@@ -307,102 +304,25 @@ export const AdminPage = () => {
     return [fallbackAdminUser, ...loadedUsers];
   };
 
-  const loadAdminStats = async () => {
-    try {
-      const response = await adminApi.getAdminStats();
-      const data = response?.success ? response.data : null;
-      if (data) {
-        setAdminStats(data);
-        setStatsEmpty(false);
-        setStatsFailed(false);
-      } else {
-        setAdminStats(EMPTY_ADMIN_STATS);
-        setStatsEmpty(true);
-        setStatsFailed(false);
-      }
-    } catch (error) {
-      console.error('Failed to load admin stats:', error);
-      setStatsFailed(true);
-      const errorType = notifyLoadError(error, 'admin-load');
-      if (errorType === 'empty') {
-        setAdminStats(EMPTY_ADMIN_STATS);
-        setStatsEmpty(true);
-      }
-    }
-  };
-
-  const fetchClients = async () => {
-    const response = await adminApi.listClients({ activeOnly: false });
-    const rawClients = response?.success ? (response.data || []) : [];
-    const normalizedClients = Array.isArray(rawClients)
-      ? rawClients.map((client) => ({
-        ...client,
-        businessEmail: toSafeText(client?.businessEmail, ''),
-        contactPersonEmailAddress: toSafeText(client?.contactPersonEmailAddress, ''),
-      }))
-      : [];
-    setClients(normalizedClients);
-    return response;
-  };
-
-  const fetchWorkbaskets = async () => {
-    const response = await adminApi.listWorkbaskets({ includeInactive: false });
-    setWorkbaskets(response?.success ? (response.data || []) : []);
-    return response;
-  };
-
-  const loadAdminData = async () => {
-    setLoading(true);
-    setTabError(null);
-    try {
-      if (activeTab === 'users') {
-        const [response] = await Promise.all([adminApi.getUsers(), fetchWorkbaskets()]);
-        const apiUsers = response?.success ? (response.data || []) : [];
-        const normalizedUsers = Array.isArray(apiUsers)
-          ? apiUsers.map((entry) => ({
-            ...entry,
-            email: toSafeText(entry?.email, ''),
-            name: toSafeText(entry?.name, ''),
-          }))
-          : [];
-        setUsers(ensureLoggedInAdminVisible(normalizedUsers));
-      } else if (activeTab === 'categories') {
-        const [response] = await Promise.all([
-          categoryService.getAdminCategories(false), // Get all categories including inactive
-          fetchWorkbaskets(),
-        ]);
-        const normalizedCategories = (response?.success ? (response.data || []) : [])
-          .map(normalizeCategory)
-          .filter(Boolean);
-        setCategories(normalizedCategories);
-      } else if (activeTab === 'clients') {
-        await fetchClients();
-      }
-    } catch (error) {
-      console.error('Failed to load admin data:', error);
-      const errorType = notifyLoadError(error, 'admin-load');
-      if (activeTab === 'clients' && errorType !== 'empty') {
-        setTabError({
-          tab: 'clients',
-          message: errorType === 'network'
-            ? 'Failed to load clients. Check your connection and retry.'
-            : 'Failed to load clients.',
-        });
-      }
-      if (errorType === 'empty') {
-        if (activeTab === 'users') {
-          setUsers([]);
-        } else if (activeTab === 'categories') {
-          setCategories([]);
-        } else if (activeTab === 'clients') {
-          setClients([]);
-          setTabError(null);
-        }
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    fetchClients,
+    fetchWorkbaskets,
+    loadAdminStats,
+    loadAdminData,
+  } = useAdminDataLoader({
+    activeTab,
+    ensureLoggedInAdminVisible,
+    notifyLoadError,
+    setLoading,
+    setTabError,
+    setUsers,
+    setCategories,
+    setClients,
+    setWorkbaskets,
+    setAdminStats,
+    setStatsEmpty,
+    setStatsFailed,
+  });
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
@@ -1339,196 +1259,52 @@ export const AdminPage = () => {
         )}
 
         {activeTab === 'clients' && (
-          <Card>
-            <div className="admin__section-header">
-              <h2 className="neo-section__header">Client Management</h2>
-              <div className="admin__section-actions">
-                <Button variant="default" onClick={() => handleOpenBulkUpload('clients')}>
-                  Bulk Upload
-                </Button>
-                <Button variant="default" onClick={() => downloadBulkTemplate('clients')}>
-                  Download Template
-                </Button>
-                <Button variant="default" onClick={() => handleOpenBulkPaste('clients')}>
-                  Bulk Paste
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    setSelectedClient(null);
-                    setClientForm({
-                      businessName: '',
-                      businessAddress: '',
-                      primaryContactNumber: '',
-                      secondaryContactNumber: '',
-                      businessEmail: '',
-                      PAN: '',
-                      GST: '',
-                      TAN: '',
-                      CIN: '',
-                    });
-                    setShowClientModal(true);
-                  }}
-                >
-                  + Create Client
-                </Button>
-              </div>
-            </div>
-            
-            {tabError?.tab === 'clients' ? (
-              <EmptyState
-                title={tabError.message}
-                description="The admin panel is still available. Retry loading clients without leaving this page."
-                actionLabel="Retry"
-                onAction={loadAdminData}
-              />
-            ) : clients.length === 0 ? (
-              <EmptyState
-                title="No clients created yet"
-                description="Create your first client to begin managing cases."
-              />
-            ) : (
-              <>
-                {!hasAdditionalClients && defaultClients.length > 0 && (
-                  <p className="text-secondary" style={{ marginBottom: '16px' }}>
-                    Your firm is set up as the default internal client. Add more clients when you are ready.
-                  </p>
-                )}
-                <div className="admin__clients-table-wrap">
-                  <DataTable
-                    columns={[
-                      { key: 'clientId', header: 'Client ID', render: (c) => <span className="font-medium text-gray-900">{c.clientId}</span> },
-                      { key: 'clientName', header: 'Client Name', render: (c) => c.clientName || '—' },
-                      { key: 'entityType', header: 'Entity Type', render: (c) => c.entityType || '—' },
-                      { key: 'status', header: 'Status', render: (c) => <StatusBadge status={c.status} /> },
-                      { key: 'createdAt', header: 'Added On', render: (c) => formatDate(c.createdAt) },
-                      { key: 'actions', header: 'Actions', render: (c) => (
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => handleEditClient(c)}>Edit</Button>
-                        </div>
-                      ) }
-                    ]}
-                    rows={filteredClientsList}
-                    rowKey="_id"
-                  />
-                </div>
-              </>
-            )}
-          </Card>
+          <AdminClientsSection
+            clients={filteredClientsList}
+            hasAdditionalClients={hasAdditionalClients}
+            defaultClients={defaultClients}
+            tabError={tabError}
+            onRetry={loadAdminData}
+            onBulkUpload={() => handleOpenBulkUpload('clients')}
+            onDownloadTemplate={() => downloadBulkTemplate('clients')}
+            onBulkPaste={() => handleOpenBulkPaste('clients')}
+            onCreateClient={() => {
+              setSelectedClient(null);
+              setClientForm({
+                businessName: '',
+                businessAddress: '',
+                primaryContactNumber: '',
+                secondaryContactNumber: '',
+                businessEmail: '',
+                PAN: '',
+                GST: '',
+                TAN: '',
+                CIN: '',
+              });
+              setShowClientModal(true);
+            }}
+            onEditClient={handleEditClient}
+            StatusBadge={StatusBadge}
+          />
         )}
 
         {activeTab === 'categories' && (
-          <Card>
-            <div className="admin__section-header">
-              <h2 className="neo-section__header">Category Management</h2>
-              <div className="admin__section-actions">
-                <Button variant="default" onClick={() => handleOpenBulkUpload('categories')}>
-                  Bulk Upload
-                </Button>
-                <Button variant="default" onClick={() => downloadBulkTemplate('categories')}>
-                  Download Template
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => setShowCategoryModal(true)}
-                >
-                  + Create Category
-                </Button>
-              </div>
-            </div>
-            
-            {categories.length === 0 ? (
-              <EmptyState
-                title="No categories created yet"
-                description="Use categories to organize your cases."
-              />
-            ) : (
-              <div className="categories-list">
-                {categories.map((category) => (
-                  <Card key={category._id} className="category-card">
-                    <div className="category-header">
-                      <div>
-                        <h3>{category.name}</h3>
-                        <Badge status={category.isActive ? 'Approved' : 'Rejected'}>
-                          {category.isActive ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </div>
-                      <div className="category-actions">
-                        <Button
-                          size="small"
-                          variant="default"
-                          onClick={() => {
-                            setSelectedCategory(category);
-                            setShowSubcategoryModal(true);
-                          }}
-                        >
-                          + Add Subcategory
-                        </Button>
-                        <Button
-                          size="small"
-                          variant={category.isActive ? 'danger' : 'success'}
-                          onClick={() => handleToggleCategoryStatus(category)}
-                        >
-                          {category.isActive ? 'Disable' : 'Enable'}
-                        </Button>
-                        <Button
-                          size="small"
-                          variant="danger"
-                          onClick={() => handleDeleteCategory(category)}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    {category.subcategories && category.subcategories.length > 0 && (
-                      <div className="subcategories-list">
-                        <h4>Subcategories:</h4>
-                        <DataTable
-                          columns={[
-                            { key: 'name', label: 'Subcategory', render: (sub) => <div className="font-medium text-gray-900">{sub.name}</div> },
-                            {
-                              key: 'workbasketId',
-                              label: 'Workbasket',
-                              render: (sub) => {
-                                const linkedWorkbasketName = workbasketNameById.get(String(sub?.workbasketId || ''));
-                                return linkedWorkbasketName || '—';
-                              },
-                            },
-                            { key: 'status', label: 'Status', render: (sub) => <StatusBadge status={sub.isActive ? 'ACTIVE' : 'INACTIVE'} /> },
-                            {
-                              key: 'actions',
-                              label: 'Action',
-                              align: 'right',
-                              render: (sub) => (
-                                <div className="flex gap-2 justify-end">
-                                  <Button
-                                    size="sm"
-                                    variant={sub.isActive ? 'outline' : 'primary'}
-                                    onClick={() => handleToggleSubcategoryStatus(category, sub)}
-                                  >
-                                    {sub.isActive ? 'Disable' : 'Enable'}
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="danger"
-                                    onClick={() => handleDeleteSubcategory(category, sub)}
-                                  >
-                                    Delete
-                                  </Button>
-                                </div>
-                              ),
-                            },
-                          ]}
-                          rows={category.subcategories}
-                        />
-                      </div>
-                    )}
-                  </Card>
-                ))}
-              </div>
-            )}
-          </Card>
+          <AdminCategoriesSection
+            categories={categories}
+            workbasketNameById={workbasketNameById}
+            onBulkUpload={() => handleOpenBulkUpload('categories')}
+            onDownloadTemplate={() => downloadBulkTemplate('categories')}
+            onCreateCategory={() => setShowCategoryModal(true)}
+            onAddSubcategory={(category) => {
+              setSelectedCategory(category);
+              setShowSubcategoryModal(true);
+            }}
+            onToggleCategoryStatus={handleToggleCategoryStatus}
+            onDeleteCategory={handleDeleteCategory}
+            onToggleSubcategoryStatus={handleToggleSubcategoryStatus}
+            onDeleteSubcategory={handleDeleteSubcategory}
+            StatusBadge={StatusBadge}
+          />
         )}
 
       </div>
@@ -1586,401 +1362,52 @@ export const AdminPage = () => {
         onConfirm={() => pendingConfirmation?.onConfirm?.()}
       />
       
-      {/* Create Category Modal */}
-      <Modal
+      <AdminBulkPasteModal
         isOpen={showBulkPasteModal}
-        onClose={() => {
-          if (bulkPasteInProgress) return;
-          setShowBulkPasteModal(false);
-        }}
-        title={bulkPasteMode === 'clients' ? 'Bulk Paste Clients' : bulkPasteMode === 'subcategories' ? 'Bulk Paste Subcategories' : 'Bulk Paste Categories'}
-      >
-        <form onSubmit={handleBulkPasteSubmit} className="admin__create-form">
-          <div className="neo-info-text">
-            {bulkPasteMode === 'clients'
-              ? 'Paste rows from Excel/Sheets. Columns: BusinessName, BusinessEmail, PrimaryContactNumber, BusinessAddress (optional), PAN (optional), CIN (optional), TAN (optional), GST (optional).'
-              : bulkPasteMode === 'subcategories'
-                ? 'Paste 3 columns: CategoryName, SubcategoryName, Workbasket (name or id).'
-                : 'Paste one category name per line (or first column). Duplicate names are skipped.'}
-          </div>
-          <Textarea
-            label="Paste Data"
-            rows={10}
-            value={bulkPasteInput}
-            onChange={(event) => setBulkPasteInput(event.target.value)}
-            placeholder={bulkPasteMode === 'clients'
-              ? 'Acme Pvt Ltd\tops@acme.com\t9876543210\tMumbai'
-              : bulkPasteMode === 'subcategories'
-                ? 'Tax\tGST Filing'
-                : 'Tax'}
-            required
-          />
-          <div className="neo-form-actions">
-            <Button type="button" variant="default" onClick={() => setShowBulkPasteModal(false)} disabled={bulkPasteInProgress}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" disabled={bulkPasteInProgress}>
-              {bulkPasteInProgress ? 'Saving...' : 'Save Bulk Data'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        onClose={() => setShowBulkPasteModal(false)}
+        mode={bulkPasteMode}
+        input={bulkPasteInput}
+        onInputChange={setBulkPasteInput}
+        onSubmit={handleBulkPasteSubmit}
+        inProgress={bulkPasteInProgress}
+      />
 
-      {/* Create Category Modal */}
-      <Modal
-        isOpen={showCategoryModal}
-        onClose={() => {
-          setShowCategoryModal(false);
-          setCategoryForm({ name: '' });
-        }}
-        title="Create New Category"
-      >
-        <form onSubmit={handleCreateCategory} className="admin__create-form">
-          <Input
-            label="Category Name"
-            name="name"
-            value={categoryForm.name}
-            onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-            placeholder="Enter category name"
-            required
-          />
+      <AdminCategoryModals
+        showCategoryModal={showCategoryModal}
+        setShowCategoryModal={setShowCategoryModal}
+        categoryForm={categoryForm}
+        setCategoryForm={setCategoryForm}
+        onCreateCategory={handleCreateCategory}
+        submitting={submitting}
+        showSubcategoryModal={showSubcategoryModal}
+        setShowSubcategoryModal={setShowSubcategoryModal}
+        selectedCategory={selectedCategory}
+        setSelectedCategory={setSelectedCategory}
+        subcategoryForm={subcategoryForm}
+        setSubcategoryForm={setSubcategoryForm}
+        onAddSubcategory={handleAddSubcategory}
+        workbaskets={workbaskets}
+      />
 
-          <div className="neo-form-actions">
-            <Button
-              type="button"
-              variant="default"
-              onClick={() => {
-                setShowCategoryModal(false);
-                setCategoryForm({ name: '' });
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={submitting}
-            >
-              {submitting ? 'Creating...' : 'Create Category'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
-      
-      {/* Add Subcategory Modal */}
-      <Modal
-        isOpen={showSubcategoryModal}
-        onClose={() => {
-          setShowSubcategoryModal(false);
-          setSubcategoryForm({ name: '', workbasketId: '' });
-          setSelectedCategory(null);
-        }}
-        title={`Add Subcategory to ${selectedCategory?.name || ''}`}
-      >
-        <form onSubmit={handleAddSubcategory} className="admin__create-form">
-          <Input
-            label="Subcategory Name"
-            name="name"
-            value={subcategoryForm.name}
-            onChange={(e) => setSubcategoryForm({ ...subcategoryForm, name: e.target.value })}
-            placeholder="Enter subcategory name"
-            required
-          />
-          <Select
-            label="Workbasket"
-            value={subcategoryForm.workbasketId}
-            onChange={(e) => setSubcategoryForm({ ...subcategoryForm, workbasketId: e.target.value })}
-            options={[
-              { value: '', label: 'Select workbasket', disabled: true },
-              ...workbaskets.map((workbasket) => ({ value: String(workbasket._id), label: workbasket.name })),
-            ]}
-            required
-          />
-
-          <div className="neo-form-actions">
-            <Button
-              type="button"
-              variant="default"
-              onClick={() => {
-                setShowSubcategoryModal(false);
-                setSubcategoryForm({ name: '', workbasketId: '' });
-                setSelectedCategory(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={submitting}
-            >
-              {submitting ? 'Adding...' : 'Add Subcategory'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
-      
-      {/* Client Modal (Create/Edit) */}
-      <Modal
-        isOpen={showClientModal}
-        onClose={handleCloseClientModal}
-        title={selectedClient ? 'Edit Client' : 'Create New Client'}
-      >
-        <form onSubmit={selectedClient ? handleUpdateClient : handleCreateClient} className="admin__create-form">
-          {selectedClient && (
-            <div className="neo-form-group">
-              <label className="neo-label">Client ID</label>
-              <div className="neo-info-text">{selectedClient.clientId} (Immutable)</div>
-            </div>
-          )}
-
-          <Input
-            label="Client Name"
-            name="businessName"
-            value={clientForm.businessName}
-            onChange={(e) => setClientForm({ ...clientForm, businessName: e.target.value })}
-            placeholder="Enter client name"
-            required
-            disabled={!!selectedClient}
-            title={selectedClient ? 'Business name cannot be edited inline. Use "Change Legal Name" action.' : ''}
-          />
-          
-          {selectedClient && (
-            <div className="client-field-hint">
-              To change business name, use the "Change Legal Name" button for audit compliance
-            </div>
-          )}
-
-          <Input
-            label="Business Address (Optional)"
-            name="businessAddress"
-            value={clientForm.businessAddress}
-            onChange={(e) => setClientForm({ ...clientForm, businessAddress: e.target.value })}
-            placeholder="Enter business address"
-            disabled={!!selectedClient}
-            title={selectedClient ? 'Address cannot be changed after creation' : ''}
-          />
-
-          <Input
-            label="Client Phone Number"
-            name="primaryContactNumber"
-            type="tel"
-            value={clientForm.primaryContactNumber}
-            onChange={(e) => setClientForm({ ...clientForm, primaryContactNumber: e.target.value })}
-            placeholder="Enter client phone number"
-            required
-          />
-
-          <Input
-            label="Secondary Contact Number"
-            name="secondaryContactNumber"
-            type="tel"
-            value={clientForm.secondaryContactNumber}
-            onChange={(e) => setClientForm({ ...clientForm, secondaryContactNumber: e.target.value })}
-            placeholder="Enter secondary contact number (optional)"
-          />
-
-          <Input
-            label="Client Email"
-            name="businessEmail"
-            type="email"
-            value={clientForm.businessEmail}
-            onChange={(e) => setClientForm({ ...clientForm, businessEmail: e.target.value })}
-            placeholder="Enter client email"
-            required
-          />
-
-          <Input
-            label="PAN"
-            name="PAN"
-            value={clientForm.PAN}
-            onChange={(e) => setClientForm({ ...clientForm, PAN: e.target.value })}
-            placeholder="Enter PAN (optional)"
-            disabled={!!selectedClient}
-            title={selectedClient ? 'PAN is immutable and cannot be changed' : ''}
-          />
-
-          <Input
-            label="TAN"
-            name="TAN"
-            value={clientForm.TAN}
-            onChange={(e) => setClientForm({ ...clientForm, TAN: e.target.value })}
-            placeholder="Enter TAN (optional)"
-            disabled={!!selectedClient}
-            title={selectedClient ? 'TAN is immutable and cannot be changed' : ''}
-          />
-
-          <Input
-            label="CIN"
-            name="CIN"
-            value={clientForm.CIN}
-            onChange={(e) => setClientForm({ ...clientForm, CIN: e.target.value })}
-            placeholder="Enter CIN (optional)"
-            disabled={!!selectedClient}
-            title={selectedClient ? 'CIN is immutable and cannot be changed' : ''}
-          />
-
-          <Input
-            label="GST"
-            name="GST"
-            value={clientForm.GST}
-            onChange={(e) => setClientForm({ ...clientForm, GST: e.target.value })}
-            placeholder="Enter GST (optional)"
-            disabled={!!selectedClient}
-            title={selectedClient ? 'GST cannot be changed after creation' : ''}
-          />
-
-          {/* Client Fact Sheet Section - PR: Client Fact Sheet Foundation */}
-          {selectedClient && (
-            <>
-              <div style={{ marginTop: '2rem', marginBottom: '1rem', borderTop: '2px solid #e0e0e0', paddingTop: '1rem' }}>
-                <h3 style={{ marginBottom: '1rem' }}>Client Fact Sheet</h3>
-              </div>
-
-              <Textarea
-                label="Description"
-                value={clientForm.description}
-                onChange={(e) => setClientForm({ ...clientForm, description: e.target.value })}
-                placeholder="Add a description for this client (visible to all case-accessible users)"
-                rows={4}
-              />
-
-              <Textarea
-                label="Internal Notes"
-                value={clientForm.notes}
-                onChange={(e) => setClientForm({ ...clientForm, notes: e.target.value })}
-                placeholder="Add internal notes (visible to all case-accessible users)"
-                rows={4}
-              />
-
-              <div style={{ marginTop: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                  Files
-                </label>
-                <input
-                  type="file"
-                  onChange={handleUploadFactSheetFile}
-                  disabled={uploadingFactSheetFile}
-                  style={{ marginBottom: '1rem' }}
-                />
-                {uploadingFactSheetFile && <p style={{ fontSize: '0.9rem', color: '#666' }}>Uploading...</p>}
-                
-                {factSheetFiles && factSheetFiles.length > 0 && (
-                  <div style={{ marginTop: '1rem' }}>
-                    {factSheetFiles.map((file) => (
-                      <div
-                        key={file.fileId}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: '0.5rem',
-                          background: '#f5f5f5',
-                          borderRadius: '4px',
-                          marginBottom: '0.5rem',
-                        }}
-                      >
-                        <span style={{ fontSize: '0.9rem' }}>📄 {file.fileName}</span>
-                        <Button
-                          variant="default"
-                          onClick={() => handleDeleteFactSheetFile(file.fileId)}
-                          style={{ padding: '0.25rem 0.75rem', fontSize: '0.85rem' }}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          <div className="neo-form-actions">
-            <Button
-              type="button"
-              variant="default"
-              onClick={handleCloseClientModal}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={submitting}
-            >
-              {submitting ? (selectedClient ? 'Updating...' : 'Creating...') : (selectedClient ? 'Update Client' : 'Create Client')}
-            </Button>
-          </div>
-        </form>
-      </Modal>
-      
-      {/* Change Legal Name Modal */}
-      <Modal
-        isOpen={showChangeNameModal}
-        onClose={handleCloseChangeNameModal}
-        title="Change Client Legal Name"
-      >
-        <form onSubmit={handleChangeLegalName} className="admin__create-form">
-          {selectedClient && (
-            <>
-              <div className="neo-form-group">
-                <label className="neo-label">Client ID</label>
-                <div className="neo-info-text">{selectedClient.clientId}</div>
-              </div>
-              
-              <div className="neo-form-group">
-                <label className="neo-label">Current Business Name</label>
-                <div className="neo-info-text client-current-name">{selectedClient.businessName}</div>
-              </div>
-            </>
-          )}
-          
-          <div className="client-warning-box">
-            <strong>⚠️ Important:</strong> Changing a client's legal name is a significant action. 
-            This change will be permanently recorded in the audit trail with your user ID and the reason provided.
-          </div>
-
-          <Input
-            label="New Business Name"
-            name="newBusinessName"
-            value={changeNameForm.newBusinessName}
-            onChange={(e) => setChangeNameForm({ ...changeNameForm, newBusinessName: e.target.value })}
-            placeholder="Enter new business name"
-            required
-          />
-
-          <div className="neo-form-group">
-            <FormLabel label="Reason for Name Change" required />
-            <textarea
-              name="reason"
-              value={changeNameForm.reason}
-              onChange={(e) => setChangeNameForm({ ...changeNameForm, reason: e.target.value })}
-              placeholder="Enter reason for legal name change (e.g., merger, rebranding, legal restructuring)"
-              required
-              rows="4"
-              className="client-reason-textarea"
-            />
-          </div>
-
-          <div className="neo-form-actions">
-            <Button
-              type="button"
-              variant="default"
-              onClick={handleCloseChangeNameModal}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="warning"
-              disabled={submitting}
-            >
-              {submitting ? 'Changing Name...' : 'Confirm Name Change'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      <AdminClientModals
+        showClientModal={showClientModal}
+        handleCloseClientModal={handleCloseClientModal}
+        selectedClient={selectedClient}
+        handleUpdateClient={handleUpdateClient}
+        handleCreateClient={handleCreateClient}
+        clientForm={clientForm}
+        setClientForm={setClientForm}
+        uploadingFactSheetFile={uploadingFactSheetFile}
+        handleUploadFactSheetFile={handleUploadFactSheetFile}
+        factSheetFiles={factSheetFiles}
+        handleDeleteFactSheetFile={handleDeleteFactSheetFile}
+        submitting={submitting}
+        showChangeNameModal={showChangeNameModal}
+        handleCloseChangeNameModal={handleCloseChangeNameModal}
+        handleChangeLegalName={handleChangeLegalName}
+        changeNameForm={changeNameForm}
+        setChangeNameForm={setChangeNameForm}
+      />
     </PlatformShell>
   );
 };
