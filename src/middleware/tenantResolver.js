@@ -15,9 +15,9 @@
  *   router.use('/f/:firmSlug', tenantResolver, ...handlers);
  */
 
-const Firm = require('../models/Firm.model');
 const { normalizeFirmSlug } = require('../utils/slugify');
 const { getFirmInactiveCode, isActiveStatus } = require('../utils/status.utils');
+const { resolveTenantBySlug } = require('../services/tenantIdentity.service');
 const log = require('../utils/log');
 
 const TENANT_CACHE_TTL_MS = 60 * 1000;
@@ -48,11 +48,7 @@ const setCachedTenant = (slug, firm) => {
 };
 
 const fetchFirmForTenantResolution = async (slug) => {
-  const query = Firm.findOne({ firmSlug: slug }).select('_id firmId firmSlug name status');
-  if (typeof query.lean === 'function') {
-    return query.lean();
-  }
-  return query;
+  return resolveTenantBySlug(slug);
 };
 
 module.exports = async function tenantResolver(req, res, next) {
@@ -96,20 +92,21 @@ module.exports = async function tenantResolver(req, res, next) {
     }
 
     // Attach canonical tenant context for downstream controllers
-    const tenantId = String(firm._id);
+    const tenantId = String(firm.tenantId || firm._id);
     req.firm = {
       id: tenantId,
-      slug: firm.firmSlug,
-      status: firm.status,
+      slug: firm.firmSlug || normalizedSlug,
+      status: firm.status || null,
+      legacyFirmId: firm.legacyFirmId || null,
     };
     req.tenant = {
       id: tenantId,
       slug: firm.firmSlug,
     };
     req.firmId = tenantId;
-    req.firmSlug = firm.firmSlug;
-    req.firmIdString = firm.firmId; // String format e.g. FIRM001
-    req.firmName = firm.name;
+    req.firmSlug = firm.firmSlug || normalizedSlug;
+    req.firmIdString = firm.firmIdString || null;
+    req.firmName = firm.firmName || null;
     req.context = {
       ...req.context,
       firmId: tenantId,
