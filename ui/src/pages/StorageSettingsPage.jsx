@@ -18,6 +18,8 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { spacingClasses } from '../theme/tokens';
 import { formatDateTime } from '../utils/formatDateTime';
+import { getRecoveryPayload } from '../utils/errorRecovery';
+import { SupportContext } from '../components/feedback/SupportContext';
 
 export function StorageSettingsPage() {
   const toast = useContext(ToastContext);
@@ -38,6 +40,7 @@ export function StorageSettingsPage() {
   const [s3SessionToken, setS3SessionToken] = useState('');
   const [loadError, setLoadError] = useState('');
   const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
+  const [supportContext, setSupportContext] = useState(null);
   const [exportRuns, setExportRuns] = useState([]);
   const [exportsLoading, setExportsLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -52,9 +55,10 @@ export function StorageSettingsPage() {
       const exportData = await listStorageExports(10);
       setExportRuns(Array.isArray(exportData?.data) ? exportData.data : []);
     } catch (error) {
-      const message = error?.response?.data?.message || 'Failed to load storage configuration.';
-      setLoadError(message);
-      toast?.showError?.(message);
+      const recovery = getRecoveryPayload(error, 'storage_settings');
+      setLoadError(`${recovery.copy.message} ${recovery.copy.action}`);
+      setSupportContext(recovery.supportContext);
+      toast?.showError?.(recovery.copy.message);
     } finally {
       setLoading(false);
     }
@@ -84,9 +88,10 @@ export function StorageSettingsPage() {
       setStatusMessage({ type: 'success', text: result?.message || 'Storage connection is healthy.' });
       await loadConfiguration();
     } catch (error) {
-      const message = error?.response?.data?.message || 'Storage connection test failed.';
-      setStatusMessage({ type: 'error', text: message });
-      toast?.showError?.(message);
+      const recovery = getRecoveryPayload(error, 'storage_settings');
+      setStatusMessage({ type: 'error', text: `${recovery.copy.message} ${recovery.copy.action}` });
+      setSupportContext(recovery.supportContext);
+      toast?.showError?.(recovery.copy.message);
     } finally {
       setTesting(false);
     }
@@ -141,9 +146,10 @@ export function StorageSettingsPage() {
       setStatusMessage({ type: 'success', text: 'Storage settings updated.' });
       await loadConfiguration();
     } catch (error) {
-      const message = error?.response?.data?.message || 'Failed to update storage';
-      setStatusMessage({ type: 'error', text: message });
-      toast?.showError?.(message);
+      const recovery = getRecoveryPayload(error, 'storage_settings');
+      setStatusMessage({ type: 'error', text: `${recovery.copy.message} ${recovery.copy.action}` });
+      setSupportContext(recovery.supportContext);
+      toast?.showError?.(recovery.copy.message);
     } finally {
       setSavingProvider(false);
     }
@@ -162,9 +168,10 @@ export function StorageSettingsPage() {
       });
       await loadConfiguration();
     } catch (error) {
-      const message = error?.response?.data?.message || 'Export failed. No partial export was released.';
-      setStatusMessage({ type: 'error', text: message });
-      toast?.showError?.(message);
+      const recovery = getRecoveryPayload(error, 'storage_export');
+      setStatusMessage({ type: 'error', text: `${recovery.copy.message} ${recovery.copy.action}` });
+      setSupportContext(recovery.supportContext);
+      toast?.showError?.(recovery.copy.message);
     } finally {
       setExporting(false);
     }
@@ -214,6 +221,7 @@ export function StorageSettingsPage() {
                   </Button>
                 </div>
               ) : null}
+              <SupportContext context={supportContext} />
               {statusMessage.text ? (
                 <p className={`rounded border px-3 py-2 text-sm ${
                   statusMessage.type === 'error'

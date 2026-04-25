@@ -44,3 +44,33 @@
 - No centralized timeline view that correlates auth + intake + routing + export signals in one place.
 - No alerting/escalation layer (signals are available but not auto-alerted).
 - Some non-CMS ingestion paths still have lighter diagnostics than CMS/public/API intake.
+
+## Pilot readiness guardrails update (April 25, 2026)
+
+### Recovery states added
+- Shared recovery-copy map for auth, access-denied, storage, upload, tenant-scope, and inactive client/user states.
+- Shared access-denied UX state with safe explanation + back/dashboard actions.
+- Upload recovery in docket attachments now resolves to controlled safe copy and includes support context.
+- Storage settings errors now resolve to role-aware recovery copy and support context.
+
+### Request ID and support context behavior
+- User-facing recovery states now use a tenant-safe support context containing only request ID, reason code, module, timestamp, and user-safe status.
+- Support context intentionally excludes stack traces, request/response payloads, tokens, cookies, signed URLs, and tenant-private data.
+
+### Role-specific storage guidance
+- Storage recovery copy explicitly distinguishes Primary Admin/Admin remediation vs normal-user “contact your admin” guidance.
+
+### Admin-safe diagnostic boundaries
+- Diagnostics panel labels and fields are now tenant-safe and restricted to workflow category + request ID + reason code + recommended next action.
+
+### Manual QA checklist
+1. Expire a session and confirm one redirect + one user-facing session-expired message.
+2. Trigger 403 on queue/report pages and verify shared access-denied state appears.
+3. Trigger storage configuration failure as admin and non-admin; verify guidance differs safely.
+4. Trigger upload failure codes and verify copy is safe and actionable.
+5. Verify support context includes request ID when backend provides `X-Request-ID`.
+6. Verify no tokens/cookies/stack traces/payloads appear in recovery UI.
+
+### Known follow-ups
+- Expand access-denied shared state to remaining legacy pages that still use page-specific inline errors.
+- Add end-to-end browser tests for session-expiry multi-tab behavior.

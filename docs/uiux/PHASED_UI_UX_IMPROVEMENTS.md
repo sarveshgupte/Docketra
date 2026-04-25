@@ -191,3 +191,20 @@ Manual QA checklist:
 
 Remaining follow-ups:
 - Platform shared queue table still uses a page-local implementation; evaluate full consolidation into common DataTable in a future incremental PR.
+
+## Incremental pilot support UX hardening (April 25, 2026)
+
+### Implemented in this increment
+- Added shared access-denied recovery component for platform queue/report surfaces.
+- Added shared support-context component (request ID, reason code, module, timestamp, safe status).
+- Added centralized recovery copy map for auth/storage/upload/access/inactive scenarios.
+- Improved upload failure recovery copy in docket attachments with retry-safe guidance.
+- Improved storage settings recovery messaging with role-specific admin guidance.
+
+### Why this was prioritized
+This reduces dead-end states during pilot onboarding and enables support teams to triage issues without exposing tenant-private diagnostics.
+
+### Follow-up UX backlog
+- Roll shared access-denied + support-context pattern into remaining legacy pages.
+- Add explicit inactive-client/inactive-assignee inline states in all create/assign forms.
+- Add visual regression + journey tests for session-expiry redirect message behavior.
