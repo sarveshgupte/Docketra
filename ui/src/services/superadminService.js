@@ -29,6 +29,11 @@ export const superadminService = {
     return response.data;
   },
 
+  getSupportDiagnostics: async (params = {}) => {
+    const response = await api.get('/superadmin/diagnostics', { params });
+    return response.data;
+  },
+
   /**
    * Create a new firm
    */
