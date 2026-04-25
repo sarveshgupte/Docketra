@@ -1,5 +1,13 @@
 # What's New
 
+## April 2026: Platform stability — backend runtime entrypoint split
+
+- Split backend runtime composition so Express app assembly now lives in `createApp()` (`src/app/createApp.js`) without opening listeners.
+- Added a dedicated server startup runtime (`src/runtime/startServer.js`) that connects Mongo, runs bootstrap, initializes sockets, and starts HTTP listening.
+- Kept middleware order, security headers, rate limits, health endpoints, and route mounts unchanged while improving testability.
+- Added smoke coverage for import-safe app creation, health endpoint registration, unknown-route 404 behavior, and no accidental listener starts during module import.
+- Preserved existing operational startup behavior through the process entrypoint (`src/server.js`).
+
 ## April 2026: Internal auth stability — unified login identifier model
 
 - Standardized auth-facing identifiers to a single user-facing format: **xID (`X123456`)**.
