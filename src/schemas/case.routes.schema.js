@@ -187,7 +187,6 @@ module.exports = {
   'POST /:caseId/resolve': { params: caseIdParams, body: z.object({ comment: nonEmptyString }).strict() },
   'POST /:caseId/pend': { params: caseIdParams, body: z.object({ comment: nonEmptyString, reopenDate: nonEmptyString }).strict() },
   'POST /:caseId/file': { params: caseIdParams, body: z.object({ comment: nonEmptyString }).strict() },
-  'POST /:caseId/unassign': { params: caseIdParams, body: strictEmpty },
 
   'POST /:caseId/route': {
     params: caseIdParams,
