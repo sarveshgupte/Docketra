@@ -35,7 +35,10 @@ const { ensureDefaultClientForFirm } = require('../services/defaultClient.servic
 const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
 const { getLatestPublishedUpdate } = require('../services/productUpdate.service');
 const { disconnectUserSockets } = require('../services/notificationSocket.service');
-const { resolveCanonicalTenantForUser } = require('../services/tenantIdentity.service');
+const {
+  resolveCanonicalTenantFromFirmId,
+  resolveCanonicalTenantForUser,
+} = require('../services/tenantIdentity.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const config = require('../config/config');
 const { loadEnv } = require('../config/env');
@@ -86,6 +89,12 @@ const isSuperAdminRequest = (req) => (
   || isSuperAdminRole(req?.jwt?.role || req?.user?.role)
 );
 const getRequestFirmId = (req) => req?.jwt?.firmId || req?.user?.firmId || req?.firmId || null;
+
+const getFirmSlug = async (firmId) => {
+  if (!firmId) return null;
+  const tenantContext = await resolveCanonicalTenantFromFirmId(firmId);
+  return tenantContext?.firmSlug || null;
+};
 
 const ensureUserDefaultClientLink = async (user, req = null) => {
   if (!user?.firmId) {
