@@ -26,11 +26,13 @@ export const DiagnosticsPanel = () => {
 
   return (
     <aside style={{ position: 'fixed', right: 8, bottom: 8, width: 380, maxHeight: 260, overflow: 'auto', zIndex: 9999, background: '#111827', color: '#d1d5db', borderRadius: 8, padding: 10, fontSize: 11 }}>
-      <div style={{ fontWeight: 700, marginBottom: 6 }}>Diagnostics (internal)</div>
+      <div style={{ fontWeight: 700, marginBottom: 6 }}>Diagnostics (tenant-safe)</div>
       {events.slice(-12).reverse().map((event, idx) => (
         <div key={`${event.ts}-${idx}`} style={{ borderTop: '1px solid #374151', paddingTop: 4, marginTop: 4 }}>
           <div>{event.level?.toUpperCase()} · {event.event}</div>
           <div style={{ opacity: 0.8 }}>{event.workflow || event.metricName || ''} {event.durationMs ? `(${event.durationMs}ms)` : ''}</div>
+          <div style={{ opacity: 0.8 }}>request={event.requestId || '—'} · reason={event.code || '—'}</div>
+          <div style={{ opacity: 0.8 }}>next action: retry or contact admin with request ID</div>
         </div>
       ))}
     </aside>
