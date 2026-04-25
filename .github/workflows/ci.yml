@@ -1,4 +1,4 @@
-name: CI
+name: CI Release Gates
 
 on:
   pull_request:
@@ -9,8 +9,13 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test-and-audit:
+  backend-release-gate:
+    name: Backend release gate
     runs-on: ubuntu-latest
     env:
       NODE_ENV: test
@@ -31,30 +36,40 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            ui/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install backend dependencies
-        run: npm install
+      - name: Install backend dependencies (dev included)
+        run: npm install --include=dev
 
-      - name: Install UI dependencies
-        run: cd ui && npm install
+      - name: Backend syntax/lint gate
+        run: npm run ci:backend:syntax
 
-      - name: Validate environment contract
-        run: npm run validate:env
+      - name: Route schema coverage gate
+        run: npm run ci:backend:routes
 
-      - name: Lint
-        run: npm run lint
+      - name: Core backend tests gate
+        run: npm run ci:backend:core
 
-      - name: Test
-        run: npm test
+      - name: Security/config gate
+        run: npm run ci:backend:security
 
-      - name: Build UI
-        run: npm run build:ui
+  frontend-release-gate:
+    name: Frontend release gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Audit backend dependencies
-        run: npm audit --audit-level=high
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
 
-      - name: Audit UI dependencies
-        run: cd ui && npm audit --audit-level=high
+      - name: Install frontend dependencies (dev included)
+        run: npm run ci:frontend:install
+
+      - name: Frontend build gate
+        run: npm run ci:frontend:build
+
+      - name: Frontend UI checks gate
+        run: npm run ci:frontend:checks
