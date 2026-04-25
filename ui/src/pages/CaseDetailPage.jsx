@@ -5,7 +5,7 @@
  */
 
 import { lazy, Suspense, useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
@@ -23,11 +23,9 @@ import { clientApi } from '../api/client.api';
 import { categoryService } from '../services/categoryService';
 import { extractErrorMessage } from '../services/apiResponse';
 import { getRecoveryPayload } from '../utils/errorRecovery';
-import { SupportContext } from '../components/feedback/SupportContext';
 import { formatDateTime, getISODateInTimezone } from '../utils/formatDateTime';
 import { formatDocketId } from '../utils/formatters';
-import { CASE_DETAIL_TABS, USER_ROLES, VALID_CASE_DETAIL_TAB_NAMES } from '../utils/constants';
-import { LifecycleBadge } from '../../components/LifecycleBadge';
+import { CASE_DETAIL_TABS, VALID_CASE_DETAIL_TAB_NAMES } from '../utils/constants';
 import { DocketSidebar } from '../components/docket/DocketSidebar';
 import { StickyTabs } from '../components/common/StickyTabs';
 import './CaseDetailPage.css';
@@ -38,11 +36,21 @@ import { useCaseQuery } from '../hooks/useCaseQuery';
 import { useDocketQueueNavigation } from '../hooks/useDocketQueueNavigation';
 import { invalidateCaseCache } from '../utils/caseCache';
 import { getDocketSlaBadgeStatus } from '../utils/docketSla';
-import { getLifecycleMeta } from '../../utils/lifecycleMap';
 import api from '../services/api';
 import { DocketDetails } from '../../components/DocketDetails';
 import { CaseWorkflowModals } from './caseDetail/CaseWorkflowModals';
 import { CaseDetailPanelSkeleton } from './caseDetail/CaseDetailPanelSkeleton';
+import { CaseDetailAlerts } from './caseDetail/CaseDetailAlerts';
+import { CaseDetailSummaryHeader } from './caseDetail/CaseDetailSummaryHeader';
+import { CaseDetailOverviewPanel } from './caseDetail/CaseDetailOverviewPanel';
+import { useCaseDetailTimeline } from './caseDetail/useCaseDetailTimeline';
+import { useClientDocketHistory } from './caseDetail/useClientDocketHistory';
+import {
+  canAdminMoveAssignedDocketForUser,
+  canCloneDocketByPolicy,
+  canRouteDocketByPolicy,
+  isRoutedTeamCannotResolve,
+} from './caseDetail/caseDetailAccess';
 const CaseDetailAttachmentsPanel = lazy(() => import('./caseDetail/CaseDetailAttachmentsPanel').then((module) => ({ default: module.CaseDetailAttachmentsPanel })));
 const CaseDetailActivityPanel = lazy(() => import('./caseDetail/CaseDetailActivityPanel').then((module) => ({ default: module.CaseDetailActivityPanel })));
 const CaseDetailHistoryPanel = lazy(() => import('./caseDetail/CaseDetailHistoryPanel').then((module) => ({ default: module.CaseDetailHistoryPanel })));
@@ -114,8 +122,6 @@ export const CaseDetailPage = () => {
   const [fileDescription, setFileDescription] = useState('');
   const [uploadingFile, setUploadingFile] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [loadingClientDockets, setLoadingClientDockets] = useState(false);
-  const [clientDockets, setClientDockets] = useState([]);
   const [actionConfirmation, setActionConfirmation] = useState('');
   const [actionError, setActionError] = useState(null);
   const pageContainerRef = useRef(null);
@@ -180,9 +186,6 @@ export const CaseDetailPage = () => {
   const [uploadLinkResult, setUploadLinkResult] = useState(null);
   const [timelineFilter, setTimelineFilter] = useState('ALL');
   const [timelinePage, setTimelinePage] = useState(1);
-  const [timelineLoading, setTimelineLoading] = useState(false);
-  const [timelineApiData, setTimelineApiData] = useState([]);
-  const [timelineHasNextPage, setTimelineHasNextPage] = useState(false);
 
   // Track case view session
   // PR: Comprehensive CaseHistory & Audit Trail
@@ -222,9 +225,7 @@ export const CaseDetailPage = () => {
     loadTeams();
   }, []);
 
-  const isRoutedToMyTeam = Boolean(caseInfo?.routedToTeamId) && String(caseInfo?.routedToTeamId) === String(user?.teamId || '');
-  const isOwnerTeam = Boolean(caseInfo?.ownerTeamId) && String(caseInfo?.ownerTeamId) === String(user?.teamId || '');
-  const routedTeamCannotResolve = isRoutedToMyTeam && !isOwnerTeam;
+  const routedTeamCannotResolve = isRoutedTeamCannotResolve({ caseInfo, user });
   const comments = Array.isArray(caseData?.comments) ? caseData.comments.filter(Boolean) : [];
   const attachments = Array.isArray(caseData?.attachments) ? caseData.attachments.filter(Boolean) : [];
   const auditLog = Array.isArray(caseData?.auditLog) ? caseData.auditLog.filter(Boolean) : [];
@@ -251,109 +252,32 @@ export const CaseDetailPage = () => {
     }),
     [timelineEvents]
   );
-  const mergedTimelineEvents = useMemo(() => {
-    const fromApi = Array.isArray(timelineApiData) ? timelineApiData : [];
-    const fallback = sortedTimelineEvents || [];
-    const sourceRows = fromApi.length ? fromApi : fallback;
-    const seen = new Set();
-    const normalizedRows = sourceRows
-      .map((entry) => {
-        const type = String(entry.type || entry.actionType || entry.action || '').toUpperCase();
-        const label = ({
-          DOCKET_CREATED: 'Docket created',
-          CREATED: 'Docket created',
-          STATUS_CHANGED: 'Status changed',
-          STATE_TRANSITION: 'Status changed',
-          ASSIGNED: 'Assigned',
-          ASSIGNMENT: 'Assignment changed',
-          REASSIGNED: 'Assignment changed',
-          QC_ACTION: 'QC decision recorded',
-          QC_APPROVED: 'QC approved',
-          QC_PASSED: 'QC approved',
-          QC_CORRECTED: 'QC corrected',
-          QC_FAILED: 'QC failed',
-          WORKBASKET_CHANGED: 'Routed to workbasket',
-          ROUTED: 'Routed to workbasket',
-          COMMENT_ADDED: 'Comment added',
-          UPDATED: 'Docket updated',
-        }[type] || null);
-        const stableKey = entry._id
-          || entry.id
-          || `${type}:${entry.createdAt || entry.timestamp || ''}:${entry.performedByXID || entry.actorXID || entry.performedBy || ''}:${entry.description || label || ''}`;
-        if (seen.has(stableKey)) return null;
-        seen.add(stableKey);
-        return {
-          ...entry,
-          timelineLabel: label || entry.description || entry.action || entry.actionType || 'Updated',
-          actorLabel: entry.performedByName || entry.performedByXID || entry.performedBy || 'System',
-          icon: ({
-            DOCKET_CREATED: '🆕',
-            CREATED: '🆕',
-            STATUS_CHANGED: '🔄',
-            STATE_TRANSITION: '🔄',
-            QC_ACTION: '🧪',
-            QC_APPROVED: '✅',
-            QC_PASSED: '✅',
-            QC_CORRECTED: '🛠️',
-            QC_FAILED: '❌',
-            ASSIGNED: '👤',
-            ASSIGNMENT: '👤',
-            REASSIGNED: '👤',
-            WORKBASKET_CHANGED: '🗂️',
-            ROUTED: '🗂️',
-            PRIORITY_CHANGED: '⚡',
-            COMMENT_ADDED: '💬',
-            UPDATED: '✏️',
-          }[type] || '•'),
-        };
-      })
-      .filter(Boolean);
-    return normalizedRows.sort((left, right) => {
-      const leftTs = new Date(left?.timestamp || left?.createdAt || left?.updatedAt || 0).getTime();
-      const rightTs = new Date(right?.timestamp || right?.createdAt || right?.updatedAt || 0).getTime();
-      return rightTs - leftTs;
-    }).map((entry) => ({
-      ...entry,
-      description: entry.timelineLabel,
-    }));
-  }, [timelineApiData, sortedTimelineEvents]);
+  const {
+    timelineLoading,
+    timelineHasNextPage,
+    mergedTimelineEvents,
+  } = useCaseDetailTimeline({
+    activeTab,
+    caseId,
+    timelineFilter,
+    timelinePage,
+    sortedTimelineEvents,
+  });
   const docketTabs = useMemo(() => ([
     { name: CASE_DETAIL_TABS.OVERVIEW, label: 'Overview' },
     { name: CASE_DETAIL_TABS.ATTACHMENTS, label: 'Attachments', badge: attachments.length || null },
     { name: CASE_DETAIL_TABS.ACTIVITY, label: 'Activity', badge: mergedTimelineEvents.length || null },
     { name: CASE_DETAIL_TABS.HISTORY, label: 'History' },
   ]), [attachments.length, mergedTimelineEvents.length]);
+  const {
+    loadingClientDockets,
+    clientDockets,
+  } = useClientDocketHistory({
+    activeTab,
+    clientId: caseData?.clientId,
+    caseId,
+  });
 
-  useEffect(() => {
-    if (activeTab !== CASE_DETAIL_TABS.ACTIVITY) return undefined;
-    let cancelled = false;
-    const loadTimeline = async () => {
-      if (!caseId) return;
-      setTimelineLoading(true);
-      try {
-        const params = {
-          page: timelinePage,
-          limit: 10,
-          ...(timelineFilter !== 'ALL' ? { type: timelineFilter } : {}),
-        };
-        const result = await caseApi.getDocketTimeline(caseId, params);
-        if (cancelled) return;
-        setTimelineApiData(Array.isArray(result?.data) ? result.data : []);
-        setTimelineHasNextPage(Boolean(result?.pagination?.hasNextPage));
-      } catch (_error) {
-        if (!cancelled) {
-          setTimelineApiData([]);
-          setTimelineHasNextPage(false);
-        }
-      } finally {
-        if (!cancelled) setTimelineLoading(false);
-      }
-    };
-    loadTimeline();
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTab, caseId, timelineFilter, timelinePage]);
   const visibleComments = useMemo(() => comments.slice(-commentWindowSize), [comments, commentWindowSize]);
   const commentDraftKey = `docketra_case_comment_draft_${firmSlug || 'firm'}_${caseId}`;
   const availableAssignees = useMemo(() => {
@@ -470,13 +394,12 @@ export const CaseDetailPage = () => {
     return '-';
   })();
   const lifecycleStatus = normalizeLifecycleForUi(caseInfo?.lifecycle);
-  const isAdmin = ['ADMIN', 'Admin'].includes(String(user?.role || ''));
   const isMoveLockedByAnotherUser = Boolean(caseInfo?.lockStatus?.isLocked)
     && String(caseInfo?.lockStatus?.activeUserXID || '').trim().toUpperCase() !== String(user?.xID || '').trim().toUpperCase();
   const lockOwnerLabel = [caseInfo?.lockStatus?.activeUserDisplayName, caseInfo?.lockStatus?.activeUserXID]
     .filter((value) => value != null && String(value).trim() !== '')
     .join(' · ') || caseInfo?.lockStatus?.activeUserXID || caseInfo?.lockStatus?.activeUserEmail || 'another user';
-  const canAdminMoveAssignedDocket = isAdmin && Boolean(caseInfo?.assignedToXID);
+  const canAdminMoveAssignedDocket = canAdminMoveAssignedDocketForUser({ caseInfo, user });
 
   const mergeUniqueComments = useCallback((inputComments = []) => {
     const map = new Map();
@@ -850,24 +773,6 @@ export const CaseDetailPage = () => {
     }, 5000);
     return () => clearTimeout(timer);
   }, [actionError, actionConfirmation]);
-
-  useEffect(() => {
-    if (!caseData?.clientId) return;
-    if (![CASE_DETAIL_TABS.OVERVIEW, CASE_DETAIL_TABS.HISTORY].includes(activeTab)) return;
-    const loadClientDockets = async () => {
-      setLoadingClientDockets(true);
-      try {
-        const response = await caseApi.getClientDockets(caseData.clientId);
-        const rows = response.data || response.dockets || [];
-        setClientDockets(rows.filter((row) => row.caseId !== caseId));
-      } catch (error) {
-        setClientDockets([]);
-      } finally {
-        setLoadingClientDockets(false);
-      }
-    };
-    loadClientDockets();
-  }, [activeTab, caseData?.clientId, caseId]);
 
   // Track exit on beforeunload (best-effort for tab close)
   // Note: sendBeacon doesn't support custom headers, so we rely on cookie-based auth
@@ -1330,7 +1235,7 @@ export const CaseDetailPage = () => {
   // PR #45: Extract access mode information from API response
   const accessMode = caseData?.accessMode || {};
   const isViewOnlyMode = accessMode.isViewOnlyMode;
-  const canCloneDocket = permissions.canCloneCase?.(caseData) !== false;
+  const canCloneDocket = canCloneDocketByPolicy({ permissions, caseData });
 
   // Task 2: Inactivity warning — OPEN case not updated in 3+ days (not pended)
   const isInactiveWarning = useMemo(() => {
@@ -1430,10 +1335,7 @@ export const CaseDetailPage = () => {
   }, [isViewOnlyMode, lifecycleActionMap, lifecycleStatus, routedTeamCannotResolve]);
 
   const canPerformLifecycleActions = lifecycleQuickActions.length > 0;
-  const canRouteDocket = Boolean(caseInfo)
-    && !isViewOnlyMode
-    && !caseInfo?.routedToTeamId
-    && routingTeams.length > 0;
+  const canRouteDocket = canRouteDocketByPolicy({ caseInfo, isViewOnlyMode, routingTeams });
   const showQcActions = false;
   const isAnyModalOpen = Boolean(
     showPendModal
@@ -1697,258 +1599,71 @@ export const CaseDetailPage = () => {
           {realtimeStatus === 'live' ? '● Real-time updates active' : '● Reconnecting to real-time updates...'}
           {retryQueue.length > 0 ? ` • ${retryQueue.length} queued offline action(s)` : ''}
         </div>
-        {actionError ? (
-          <div className="neo-alert neo-alert--danger case-detail__alert">
-            {actionError.message}{' '}
-            {actionError.retry ? (
-              <button type="button" className="case-detail__retry" onClick={actionError.retry}>
-                Retry
-              </button>
-            ) : null}
-            <SupportContext context={actionError.supportContext} className="mt-2" />
-          </div>
-        ) : null}
-
-        {/* Alerts */}
-        {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && (
-          <div className="neo-alert neo-alert--info case-detail__alert">
-            <strong>Role Restricted Action</strong> — Action restricted: Only Partners can approve this lifecycle stage.
-          </div>
-        )}
-        {canAdminMoveAssignedDocket && (
-          <div className="neo-alert neo-alert--info case-detail__alert">
-            <strong>Admin Worklist Movement</strong> — Move this docket between user worklists or back to workbasket.
-            {isMoveLockedByAnotherUser ? ` Movement is locked while ${lockOwnerLabel} is active in this docket.` : ''}
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => setShowAssignModal(true)} disabled={isMoveLockedByAnotherUser || assigningCase}>
-                Move to another WL
-              </Button>
-              <Button variant="outline" onClick={handleMoveToWorkbasket} disabled={isMoveLockedByAnotherUser || assigningCase}>
-                Move WL → WB
-              </Button>
-              <Button variant="ghost" onClick={() => handleViewUserWorklist(caseInfo?.assignedToXID)}>
-                View {caseInfo?.assignedToXID || 'owner'} WL
-              </Button>
-            </div>
-          </div>
-        )}
-        {caseInfo.lockStatus?.isLocked &&
-          caseInfo.lockStatus.activeUserEmail !== user?.email?.toLowerCase() && (
-          <div className="neo-alert neo-alert--warning case-detail__alert">
-            <strong>Docket {caseInfo?.caseId || caseId} is locked</strong>{' '}
-            {(() => {
-              const name = caseInfo.lockStatus.activeUserDisplayName;
-              const xid  = caseInfo.lockStatus.activeUserXID;
-              const who  = name && xid ? `${name} (${xid})` : name || xid || caseInfo.lockStatus.activeUserEmail;
-              return `by ${who}`;
-            })()}
-            {' '}since{' '}
-            {formatDateTime(caseInfo.lockStatus.lastActivityAt || caseInfo.lockStatus.lockedAt)}.
-          </div>
-        )}
-        {/* Task 2: Inactivity warning */}
-        {isInactiveWarning && (
-          <div className="case-detail__inactivity-warning case-detail__alert" role="status">
-            ⚠ No activity in 3 days
-          </div>
-        )}
-        {docketSlaStatus === 'RED' ? (
-          <div className="neo-alert neo-alert--danger case-detail__alert" role="status">
-            <strong>SLA breached</strong> — This docket is overdue and needs attention.
-          </div>
-        ) : null}
-        {docketSlaStatus === 'YELLOW' ? (
-          <div className="neo-alert neo-alert--warning case-detail__alert" role="status">
-            <strong>SLA at risk</strong> — Less than 24 hours remain on this docket.
-          </div>
-        ) : null}
-        <section className="case-card" aria-label="Docket summary header">
-          <div className="case-card__heading">
-            <h2>{formatDocketId(caseInfo?.caseId || caseId)}</h2>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="info">{docketStatusLabel}</Badge>
-              {caseInfo?.qc?.status || caseInfo?.qcStatus ? (
-                <Badge variant={String(caseInfo?.qc?.status || caseInfo?.qcStatus).toUpperCase() === 'FAILED' ? 'danger' : 'warning'}>
-                  QC {caseInfo?.qc?.status || caseInfo?.qcStatus}
-                </Badge>
-              ) : null}
-            </div>
-          </div>
-          <p className="mt-2 text-sm text-gray-700">{caseInfo?.title || caseInfo?.caseName || 'Untitled docket'}</p>
-          <div className="field-grid mt-4">
-            <div className="field-group min-w-0"><span className="field-label">Category</span><span className="field-value text-sm">{categoryLabel}</span></div>
-            <div className="field-group min-w-0"><span className="field-label">Subcategory</span><span className="field-value text-sm">{subcategoryLabel}</span></div>
-            <div className="field-group min-w-0">
-              <span className="field-label">Linked Client</span>
-              <span className="field-value text-sm break-words">
-                {isInternalWork ? 'Internal work (default client context)' : (
-                  linkedClientRoute ? <Link to={linkedClientRoute} className="case-detail-table__link">{clientName}</Link> : clientName
-                )}
-              </span>
-            </div>
-            <div className="field-group min-w-0"><span className="field-label">Assignee / Owner</span><span className="field-value text-sm break-words">{assigneeLabel}</span></div>
-            <div className="field-group min-w-0"><span className="field-label">Queue / Workbasket</span><span className="field-value text-sm break-words">{queueLabel}</span></div>
-            <div className="field-group min-w-0"><span className="field-label">Created / Updated</span><span className="field-value text-sm">{formatDateTime(caseInfo?.createdAt)} • {formatDateTime(caseInfo?.updatedAt)}</span></div>
-          </div>
-        </section>
+        <CaseDetailAlerts
+          actionError={actionError}
+          caseInfo={caseInfo}
+          caseId={caseId}
+          user={user}
+          isViewOnlyMode={isViewOnlyMode}
+          canAdminMoveAssignedDocket={canAdminMoveAssignedDocket}
+          isMoveLockedByAnotherUser={isMoveLockedByAnotherUser}
+          lockOwnerLabel={lockOwnerLabel}
+          assigningCase={assigningCase}
+          onOpenAssignModal={() => setShowAssignModal(true)}
+          onMoveToWorkbasket={handleMoveToWorkbasket}
+          onViewUserWorklist={handleViewUserWorklist}
+          isInactiveWarning={isInactiveWarning}
+          docketSlaStatus={docketSlaStatus}
+        />
+        <CaseDetailSummaryHeader
+          caseInfo={caseInfo}
+          caseId={caseId}
+          docketStatusLabel={docketStatusLabel}
+          categoryLabel={categoryLabel}
+          subcategoryLabel={subcategoryLabel}
+          linkedClientRoute={linkedClientRoute}
+          clientName={clientName}
+          isInternalWork={isInternalWork}
+          assigneeLabel={assigneeLabel}
+          queueLabel={queueLabel}
+        />
         <StickyTabs tabs={docketTabs} defaultTab={CASE_DETAIL_TABS.OVERVIEW} />
 
         <div className="case-detail-layout-grid flex w-full flex-col gap-6">
           <main className="case-detail-main min-w-0">
             {activeTab === CASE_DETAIL_TABS.OVERVIEW ? (
-              <>
-            <section className="case-card" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
-              <div className="case-card__heading">
-                <h2 id="snapshot-heading">Overview</h2>
-              </div>
-              <div className="field-grid">
-                <div className="field-group min-w-0">
-                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Client Name</span>
-                  <span className="field-value text-sm font-medium text-gray-900 break-words">
-                    {isInternalWork ? 'Internal work (default client)' : (
-                      linkedClientRoute ? <Link to={linkedClientRoute} className="case-detail-table__link">{clientName}</Link> : clientName
-                    )}
-                  </span>
-                </div>
-                <div className="field-group min-w-0">
-                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Client ID</span>
-                  <span className="field-value text-sm font-medium text-gray-900 break-words">{clientIdLabel}</span>
-                </div>
-                <div className="field-group min-w-0">
-                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Category</span>
-                  <span className="field-value text-sm font-medium text-gray-900">{categoryLabel}</span>
-                </div>
-                <div className="field-group min-w-0">
-                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Subcategory</span>
-                  <span className="field-value text-sm font-medium text-gray-900">{subcategoryLabel}</span>
-                </div>
-                <div className="field-group min-w-0">
-                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">SLA (days)</span>
-                  <span className="field-value text-sm font-medium text-gray-900">{slaDaysLabel}</span>
-                </div>
-                <div className="field-group min-w-0">
-                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Lifecycle</span>
-                  {getLifecycleMeta(caseInfo?.lifecycle) ? <LifecycleBadge lifecycle={caseInfo?.lifecycle} /> : <span className="field-value text-sm font-medium text-gray-900">—</span>}
-                </div>
-                <div className="field-group min-w-0">
-                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Due / SLA</span>
-                  <span className="field-value text-sm font-medium text-gray-900">{dueDateLabel ? formatDateTime(dueDateLabel) : `SLA ${slaDaysLabel} day(s)`}</span>
-                </div>
-                <div className="field-group min-w-0">
-                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Work Type</span>
-                  <Badge variant={caseInfo?.isInternal ? 'info' : 'success'}>{caseInfo?.isInternal ? 'Internal Work' : 'Client Work'}</Badge>
-                </div>
-              </div>
-            </section>
-            <section className="case-card" aria-labelledby="client-context-heading">
-              <div className="case-card__heading">
-                <h2 id="client-context-heading">Client Context</h2>
-              </div>
-              <div className="field-grid">
-                <div className="field-group min-w-0"><span className="field-label">Client ID</span><span className="field-value">{clientIdLabel}</span></div>
-                <div className="field-group min-w-0"><span className="field-label">Business Email</span><span className="field-value break-words">{linkedClientEmail}</span></div>
-                <div className="field-group min-w-0"><span className="field-label">Primary Contact</span><span className="field-value">{linkedClientContact}</span></div>
-                <div className="field-group min-w-0"><span className="field-label">Context</span><span className="field-value">{isInternalWork ? 'Internal work' : 'Client work'}</span></div>
-              </div>
-              <div className="case-detail__composer-actions mt-4">
-                {linkedClientRoute && !isInternalWork ? (
-                  <Button variant="outline" onClick={() => navigate(linkedClientRoute)}>Open Client Workspace</Button>
-                ) : null}
-                {linkedClientId && !isInternalWork ? (
-                  <Button variant="secondary" onClick={() => navigate(`${ROUTES.CREATE_CASE(firmSlug)}?clientId=${encodeURIComponent(linkedClientId)}`)}>Create Docket for Client</Button>
-                ) : null}
-                {fromClientRoute ? (
-                  <Button variant="ghost" onClick={() => navigate(fromClientRoute)}>Back to Client</Button>
-                ) : null}
-              </div>
-              {!isInternalWork ? (
-                loadingClientDockets ? <p className="case-detail__empty-note mt-4">Loading related client dockets…</p> : (
-                  clientDockets.length ? (
-                    <div className="case-detail-table-wrap mt-4">
-                      <table className="case-detail-table">
-                        <thead>
-                          <tr>
-                            <th>Docket</th>
-                            <th>Title</th>
-                            <th>Status</th>
-                            <th>Updated</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {clientDockets.slice(0, 5).map((row) => {
-                            const rowId = row.caseId || row.docketId || row._id;
-                            return (
-                              <tr key={rowId}>
-                                <td>
-                                  <button type="button" className="case-detail-table__link" onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, rowId), { state: { returnTo: linkedClientRoute || returnTo, fromClientRoute: linkedClientRoute || fromClientRoute } })}>
-                                    {formatDocketId(rowId)}
-                                  </button>
-                                </td>
-                                <td>{row.title || row.caseName || 'Untitled docket'}</td>
-                                <td>{row.lifecycle || row.status || '—'}</td>
-                                <td>{formatDateTime(row.updatedAt || row.createdAt)}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : <p className="case-detail__empty-note mt-4">No related dockets found for this client.</p>
-                )
-              ) : <p className="case-detail__empty-note mt-4">This docket is marked internal and uses your firm default client context.</p>}
-            </section>
-
-            <section className={`case-card ${lifecycleStatus === 'IN_PROGRESS' ? 'opacity-90' : ''}`} aria-labelledby="overview-heading">
-              <div className="case-card__heading">
-                <h2 id="overview-heading">Details</h2>
-              </div>
-              {lifecycleStatus === 'IN_PROGRESS' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
-                <Badge variant="warning" className="mt-3 inline-flex">
-                  In progress until {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
-                </Badge>
-              ) : null}
-              <div className="field-group mt-4">
-                <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Description</span>
-                <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent}</span>
-              </div>
-              {shouldShowActions ? (
-                <section className="case-detail__actions-panel mt-4 border-t pt-4" aria-label="Docket actions">
-                  <div className="case-detail__composer-actions case-detail__lifecycle-actions mt-3">
-                    {canPerformLifecycleActions ? lifecycleQuickActions.map((action) => (
-                      <Button
-                        key={action.key}
-                        variant={action.variant}
-                        onClick={action.onClick}
-                        disabled={actionInFlight}
-                      >
-                        {action.label}
-                      </Button>
-                    )) : null}
-                    {!isViewOnlyMode ? (
-                      <Button variant="secondary" onClick={() => { setFileComment(''); setShowFileModal(true); }} disabled={actionInFlight}>
-                        File
-                      </Button>
-                    ) : null}
-                    {canRouteDocket ? (
-                      <Button variant="outline" onClick={() => setShowRouteModal(true)} disabled={actionInFlight}>
-                        Route
-                      </Button>
-                    ) : null}
-                  </div>
-                  {canPerformLifecycleActions ? (
-                    <label className="mt-3 flex items-center gap-2 text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={forceQcReview}
-                        onChange={(e) => setForceQcReview(e.target.checked)}
-                      />
-                      Force QC Review
-                    </label>
-                  ) : null}
-                </section>
-              ) : null}
-            </section>
-              </>
+              <CaseDetailOverviewPanel
+                caseInfo={caseInfo}
+                firmSlug={firmSlug}
+                linkedClientRoute={linkedClientRoute}
+                isInternalWork={isInternalWork}
+                clientName={clientName}
+                clientIdLabel={clientIdLabel}
+                categoryLabel={categoryLabel}
+                subcategoryLabel={subcategoryLabel}
+                slaDaysLabel={slaDaysLabel}
+                dueDateLabel={dueDateLabel}
+                linkedClientEmail={linkedClientEmail}
+                linkedClientContact={linkedClientContact}
+                linkedClientId={linkedClientId}
+                fromClientRoute={fromClientRoute}
+                loadingClientDockets={loadingClientDockets}
+                clientDockets={clientDockets}
+                returnTo={returnTo}
+                navigate={navigate}
+                descriptionContent={descriptionContent}
+                lifecycleStatus={lifecycleStatus}
+                shouldShowActions={shouldShowActions}
+                canPerformLifecycleActions={canPerformLifecycleActions}
+                lifecycleQuickActions={lifecycleQuickActions}
+                actionInFlight={actionInFlight}
+                isViewOnlyMode={isViewOnlyMode}
+                onOpenFileModal={() => { setFileComment(''); setShowFileModal(true); }}
+                canRouteDocket={canRouteDocket}
+                onOpenRouteModal={() => setShowRouteModal(true)}
+                forceQcReview={forceQcReview}
+                onForceQcReviewChange={setForceQcReview}
+              />
             ) : null}
 
             {activeTab === CASE_DETAIL_TABS.ATTACHMENTS ? (
