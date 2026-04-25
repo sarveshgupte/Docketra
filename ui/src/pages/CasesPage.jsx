@@ -655,14 +655,14 @@ export const CasesPage = () => {
 
   if (loading) {
     return (
-      <PlatformShell moduleLabel="Dockets / Oversight" title="Dockets" subtitle="Master oversight queue for search, tracking, routing, and lifecycle execution.">
+      <PlatformShell moduleLabel="Dockets" title="Dockets" subtitle="Master oversight queue for search, tracking, routing, and lifecycle execution.">
         <TableSkeleton rows={8} />
       </PlatformShell>
     );
   }
 
   return (
-    <PlatformShell moduleLabel="Dockets / Oversight" title="Dockets" subtitle="Master oversight queue for search, tracking, routing, and lifecycle execution.">
+    <PlatformShell moduleLabel="Dockets" title="Dockets" subtitle="Master oversight queue for search, tracking, routing, and lifecycle execution.">
       <div className="cases-page">
         <PageHeader
           title="All Dockets"

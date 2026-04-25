@@ -300,11 +300,7 @@ export const ProtectedRoutes = () => (
         />
         <Route
           path="cases/create"
-          element={(
-            <ProtectedRoute>
-              <CreateCasePage />
-            </ProtectedRoute>
-          )}
+          element={<Navigate to="../dockets/create" replace />}
         />
         <Route
           path="profile"

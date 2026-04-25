@@ -40,7 +40,7 @@ export const PlatformReportsPage = () => {
     <PlatformShell
       title="Reports"
       subtitle="Productivity, quality, and workload insights for operational leadership"
-      actions={<Link to={ROUTES.CASES(firmSlug)}>All Dockets</Link>}
+      actions={<Link to={ROUTES.DOCKETS(firmSlug)}>All Dockets</Link>}
     >
       <InlineNotice tone="error" message={isError ? 'Unable to load docket report metrics.' : ''} />
       <RefreshNotice refreshing={isFetching && !isLoading} message="Refreshing report metrics in the background…" />
