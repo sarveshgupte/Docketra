@@ -13,6 +13,7 @@ const resolveBearerToken = (headerValue) => {
 const allowInternalTokenOrSuperadmin = (req, res, next) => {
   const configuredToken = process.env.METRICS_TOKEN?.trim();
   const bearerToken = resolveBearerToken(req.headers.authorization);
+  const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
 
   if (configuredToken && typeof bearerToken === 'string') {
     if (configuredToken.length === bearerToken.length) {
@@ -25,6 +26,10 @@ const allowInternalTokenOrSuperadmin = (req, res, next) => {
         return next();
       }
     }
+  }
+
+  if (isProduction) {
+    return res.status(401).json({ success: false, code: 'UNAUTHORIZED', message: 'Internal metrics token required' });
   }
 
   return authenticate(req, res, () => requireSuperadmin(req, res, next));

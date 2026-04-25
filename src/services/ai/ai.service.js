@@ -6,13 +6,9 @@ const { decrypt } = require('../../utils/encryption');
 const { normalizeRole } = require('../../utils/role.utils');
 const log = require('../../utils/log');
 const openAiProvider = require('./providers/openai.provider');
-const geminiProvider = require('./providers/gemini.provider');
-const claudeProvider = require('./providers/claude.provider');
 
 const providers = {
   openai: openAiProvider,
-  gemini: geminiProvider,
-  claude: claudeProvider,
 };
 
 const DEFAULT_FEATURE_FLAGS = Object.freeze({
@@ -35,9 +31,7 @@ function buildServiceError(code, message) {
 }
 
 function resolveSystemModel(providerName) {
-  if (providerName === 'gemini') return process.env.GEMINI_MODEL || null;
-  if (providerName === 'claude') return process.env.CLAUDE_MODEL || null;
-  return process.env.OPENAI_MODEL || null;
+  return providerName === 'openai' ? (process.env.OPENAI_MODEL || null) : null;
 }
 
 function resolveVerboseLoggingEnabled(aiConfig = {}) {

@@ -11,8 +11,6 @@ import { spacingClasses } from '../theme/tokens';
 
 const PROVIDER_OPTIONS = [
   { value: 'openai', label: 'OpenAI' },
-  { value: 'gemini', label: 'Google Gemini' },
-  { value: 'claude', label: 'Anthropic Claude' },
 ];
 
 const normalizeRole = (role) => String(role || '').trim().toUpperCase();
