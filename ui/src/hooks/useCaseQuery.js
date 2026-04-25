@@ -9,16 +9,24 @@ const CASE_QUERY_PARAMS = {
   activityLimit: 25,
 };
 
+export const getCaseQueryKey = (caseId, params = CASE_QUERY_PARAMS) => ['case', caseId, params];
+
 export const useCaseQuery = (caseId, options = {}) => {
   const {
     enabled = true,
     refetchInterval = false,
+    staleTime = 90 * 1000,
+    gcTime = 20 * 60 * 1000,
   } = options;
   const resolvedEnabled = Boolean(enabled && caseId);
   const query = useQuery({
-    queryKey: ['case', caseId, CASE_QUERY_PARAMS],
+    queryKey: getCaseQueryKey(caseId, CASE_QUERY_PARAMS),
     queryFn: () => caseApi.getCaseById(caseId, CASE_QUERY_PARAMS),
     enabled: resolvedEnabled,
+    staleTime,
+    gcTime,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     refetchInterval: (queryContext) => (
       typeof refetchInterval === 'function'
         ? refetchInterval(queryContext)
@@ -34,6 +42,8 @@ export const useCaseQuery = (caseId, options = {}) => {
   return {
     data: query.data,
     error: query.error,
+    isFetching: query.isFetching,
+    isLoading: query.isLoading,
     refetch,
   };
 };

@@ -20,9 +20,22 @@ const DashboardCard = ({ title, children, actions = null, emoji }) => (
   </section>
 );
 
+const DashboardListSkeleton = ({ rows = 3 }) => (
+  <ul className="space-y-2" aria-hidden="true">
+    {Array.from({ length: rows }).map((_, index) => (
+      <li key={`dashboard-skeleton-row-${index}`} className="rounded-lg border border-gray-200 px-3 py-2">
+        <div className="animate-pulse space-y-2">
+          <div className="h-3 w-2/3 rounded bg-gray-200" />
+          <div className="h-2.5 w-1/3 rounded bg-gray-100" />
+        </div>
+      </li>
+    ))}
+  </ul>
+);
+
 const DocketList = ({ items = [], loading = false, emptyLabel, onSelect }) => {
   if (loading) {
-    return <p className="text-sm text-gray-500">Loading…</p>;
+    return <DashboardListSkeleton rows={3} />;
   }
 
   if (!items.length) {
@@ -54,7 +67,7 @@ const DocketList = ({ items = [], loading = false, emptyLabel, onSelect }) => {
 };
 
 const WorkbasketChart = ({ items = [], loading = false }) => {
-  if (loading) return <p className="text-sm text-gray-500">Loading…</p>;
+  if (loading) return <DashboardListSkeleton rows={4} />;
   if (!items.length) return <p className="text-sm text-gray-500">No workbasket load data</p>;
 
   return (

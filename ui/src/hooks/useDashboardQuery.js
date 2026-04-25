@@ -18,8 +18,10 @@ export const useDashboardWidgetQuery = (widgetKey, { filter, page, sort, workbas
       dashboardApi.getSummary({ filter, page, limit: PAGE_SIZE, sort, workbasketId, only: widgetKey }),
     select: (result) => result?.data?.[widgetKey] ?? EMPTY_SUMMARY[widgetKey],
     placeholderData: keepPreviousData,
-    staleTime: 60 * 1000,
-    gcTime: 15 * 60 * 1000,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
 export const useDashboardSummaryQuery = ({ filter, page, sort, workbasketId }) =>
@@ -28,8 +30,10 @@ export const useDashboardSummaryQuery = ({ filter, page, sort, workbasketId }) =
     queryFn: () => dashboardApi.getSummary({ filter, page, limit: PAGE_SIZE, sort, workbasketId }),
     select: (result) => result?.data ?? EMPTY_SUMMARY,
     placeholderData: keepPreviousData,
-    staleTime: 60 * 1000,
-    gcTime: 15 * 60 * 1000,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
 export const useSetupStatusQuery = () =>
@@ -39,4 +43,6 @@ export const useSetupStatusQuery = () =>
     select: (result) => Boolean(result?.data?.isSetupComplete),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
