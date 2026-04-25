@@ -5,16 +5,19 @@ const assert = require('assert');
 const Module = require('module');
 
 const originalLoad = Module._load;
+let capturedRouteSchemas = null;
 
 const requireSuperadmin = () => {};
 const getSupportDiagnostics = () => {};
 
 Module._load = function(request, parent, isMain) {
   if (request === '../middleware/requestValidation.middleware') {
-    return { applyRouteValidation: (router) => router };
-  }
-  if (request === '../schemas/superadmin.routes.schema.js') {
-    return {};
+    return {
+      applyRouteValidation: (router, routeSchemas) => {
+        capturedRouteSchemas = routeSchemas;
+        return router;
+      },
+    };
   }
   if (request === '../middleware/permission.middleware') {
     return { requireSuperadmin };
@@ -80,6 +83,19 @@ try {
   const handlers = diagnosticsLayer.route.stack.map((item) => item.handle);
   assert.strictEqual(handlers[0], requireSuperadmin, 'GET /diagnostics must enforce requireSuperadmin middleware');
   assert.strictEqual(handlers[1], getSupportDiagnostics, 'GET /diagnostics should map to support diagnostics controller');
+
+  const diagnosticsSchema = capturedRouteSchemas && capturedRouteSchemas['GET /diagnostics'];
+  assert.ok(diagnosticsSchema, 'GET /diagnostics must be declared in superadmin route schemas');
+  assert.ok(diagnosticsSchema.query, 'GET /diagnostics must define a query schema');
+
+  assert.strictEqual(diagnosticsSchema.query.safeParse({}).success, true, 'GET /diagnostics query should allow no params');
+  const parsedLimit = diagnosticsSchema.query.safeParse({ limit: '5' });
+  assert.strictEqual(parsedLimit.success, true, 'GET /diagnostics should coerce numeric limit values');
+  assert.strictEqual(parsedLimit.data.limit, 5, 'GET /diagnostics should coerce limit to an integer');
+  assert.strictEqual(diagnosticsSchema.query.safeParse({ limit: '4' }).success, false, 'GET /diagnostics limit must be >= 5');
+  assert.strictEqual(diagnosticsSchema.query.safeParse({ limit: '31' }).success, false, 'GET /diagnostics limit must be <= 30');
+  assert.strictEqual(diagnosticsSchema.query.safeParse({ limit: 'abc' }).success, false, 'GET /diagnostics limit must be numeric');
+  assert.strictEqual(diagnosticsSchema.query.safeParse({ limit: '10', extra: 'ok' }).success, true, 'GET /diagnostics should preserve passthrough behavior');
 
   console.log('superadminDiagnostics.routes.test.js passed');
 } finally {
