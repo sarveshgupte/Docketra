@@ -9,6 +9,7 @@ import { resolveFirmLoginPath } from '../utils/tenantRouting';
 import { emitOnboardingProgressRefresh, shouldRefreshOnboardingProgress } from '../utils/onboardingProgressRefresh';
 import { createCorrelationId, emitDiagnosticEvent, shouldEmitWarning } from '../utils/workflowDiagnostics';
 import { safeConsole } from '../utils/safeConsole';
+import { clearRoutingAuthStorage } from '../utils/authRedirect';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -223,8 +224,10 @@ api.interceptors.response.use(
       // Fallback reset in case navigation is blocked
       setTimeout(() => { redirecting = false; }, REDIRECT_TIMEOUT_MS);
     };
-    const clearAuthStorage = () => {
-      localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
+    const clearAuthStorage = ({ keepToast = false } = {}) => {
+      const currentToast = keepToast ? sessionStorage.getItem(SESSION_KEYS.GLOBAL_TOAST) : null;
+      clearRoutingAuthStorage();
+      if (currentToast) sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, currentToast);
       window.dispatchEvent(new CustomEvent('auth:logout'));
     };
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -273,15 +276,16 @@ api.interceptors.response.use(
           refreshStatus: refreshError?.response?.status || null,
           refreshCode: refreshError?.code || refreshError?.response?.data?.code || null,
         });
-        clearAuthStorage();
         const refreshCode = refreshError?.code || refreshError?.response?.data?.code;
-        sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
+        const toast = JSON.stringify({
           message: refreshCode === ERROR_CODES.REFRESH_NOT_SUPPORTED
             ? 'Your admin session has expired. Please log in again.'
             : 'Your session expired. Please log in again.',
           type: 'info',
           code: ERROR_CODES.AUTH_SESSION_EXPIRED,
-        }));
+        });
+        sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, toast);
+        clearAuthStorage({ keepToast: true });
         redirectToLogin();
         return Promise.reject(refreshError);
       }
@@ -292,12 +296,13 @@ api.interceptors.response.use(
       if (isPublicAuthFlowRequest(originalRequest)) {
         return Promise.reject(error);
       }
-      clearAuthStorage();
-      sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
+      const toast = JSON.stringify({
         message: 'Your session expired. Please log in again.',
         type: 'info',
         code: ERROR_CODES.AUTH_SESSION_EXPIRED,
-      }));
+      });
+      sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, toast);
+      clearAuthStorage({ keepToast: true });
       redirectToLogin();
       return Promise.reject(error);
     }

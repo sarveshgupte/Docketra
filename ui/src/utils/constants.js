@@ -121,6 +121,9 @@ export const STORAGE_KEYS = {
 
 export const SESSION_KEYS = {
   GLOBAL_TOAST: 'GLOBAL_TOAST',
+  PENDING_LOGIN: 'pendingLogin',
+  PENDING_OTP: 'pendingOtp',
+  REDIRECT_TARGET: 'redirectTarget',
 };
 
 /**

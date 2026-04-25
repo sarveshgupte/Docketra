@@ -187,8 +187,10 @@ export const FirmLoginPage = () => {
     if (profileResult?.success) {
       showSuccess('✅ Signed in successfully. Redirecting to your dashboard.');
       const returnTo = new URLSearchParams(location.search).get('returnTo');
-      const nextRoute = resolvePostLoginDestination(returnTo, resolvePostAuthRoute(profileResult.data));
+      const nextRoute = resolvePostLoginDestination(returnTo, profileResult.data, resolvePostAuthRoute(profileResult.data));
       navigate(nextRoute, { replace: true });
+    } else {
+      setError('Signed in, but your workspace profile could not be loaded. Please retry sign-in or contact your workspace admin.');
     }
   };
 

@@ -16,6 +16,7 @@ import { authService } from '../services/authService';
 import { STORAGE_KEYS } from '../utils/constants';
 import { isSuperAdmin } from '../utils/authUtils';
 import { queryClient } from '../queryClient';
+import { clearRoutingAuthStorage, getDefaultPostAuthRoute } from '../utils/authRedirect';
 
 export const AuthContext = createContext(null);
 export const AUTH_STATES = {
@@ -50,16 +51,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const clearAuthStorage = useCallback((firmSlugToPreserve = null) => {
-    try {
-      localStorage.removeItem(STORAGE_KEYS.IMPERSONATED_FIRM);
-      if (firmSlugToPreserve) {
-        localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlugToPreserve);
-      } else {
-        localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
-      }
-    } catch (error) {
-      console.warn('[AUTH] Unable to update storage while clearing auth state.', error);
-    }
+    clearRoutingAuthStorage({ preserveFirmSlug: firmSlugToPreserve });
   }, []);
 
   const clearPrivateClientState = useCallback(() => {
@@ -300,12 +292,7 @@ export const AuthProvider = ({ children }) => {
 
   const authState = resolveAuthState(user, isAuthenticated);
 
-  const resolvePostAuthRoute = useCallback((candidateUser = user) => {
-    if (!candidateUser) return '/superadmin';
-    if (isSuperAdmin(candidateUser)) return '/app/superadmin';
-    if (!candidateUser?.firmSlug) return '/complete-profile';
-    return `/app/firm/${candidateUser.firmSlug}/dashboard`;
-  }, [user]);
+  const resolvePostAuthRoute = useCallback((candidateUser = user) => getDefaultPostAuthRoute(candidateUser), [user]);
 
   const isAuthResolved = !loading && !isHydrating;
 

@@ -80,8 +80,10 @@ export const LoginPage = () => {
 
         if (profileResult?.success) {
           const returnTo = new URLSearchParams(location.search).get('returnTo');
-          const nextRoute = resolvePostLoginDestination(returnTo, resolvePostAuthRoute(profileResult.data));
+          const nextRoute = resolvePostLoginDestination(returnTo, profileResult.data, resolvePostAuthRoute(profileResult.data));
           navigate(nextRoute, { replace: true });
+        } else {
+          setError('Signed in, but your admin profile could not be loaded. Please retry sign-in.');
         }
       }
     } catch (err) {

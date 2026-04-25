@@ -5,6 +5,7 @@
 import api from './api';
 import { STORAGE_KEYS } from '../utils/constants';
 import { authApi } from '../api/auth.api';
+import { clearRoutingAuthStorage } from '../utils/authRedirect';
 
 export const authService = {
   setSessionTokens: (payload = {}) => {
@@ -85,11 +86,7 @@ export const authService = {
     try {
       await api.post('/auth/logout');
     } finally {
-      if (!firmSlugToPreserve) {
-        localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
-      } else {
-        localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlugToPreserve);
-      }
+      clearRoutingAuthStorage({ preserveFirmSlug: firmSlugToPreserve });
     }
   },
 

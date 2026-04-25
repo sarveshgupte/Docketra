@@ -13,7 +13,7 @@ export const RootRedirect = () => {
   }
 
   if (authState === AUTH_STATES.UNAUTHENTICATED) {
-    return <Navigate to={ROUTES.SUPERADMIN_LOGIN} replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (authState === AUTH_STATES.ONBOARDING_REQUIRED) {
