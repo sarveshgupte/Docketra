@@ -4,9 +4,9 @@
  * Attaches firmId to request context for authentication
  */
 
-const Firm = require('../models/Firm.model');
 const { normalizeFirmSlug } = require('../utils/slugify');
 const { getFirmInactiveCode, isActiveStatus } = require('../utils/status.utils');
+const { resolveTenantBySlug } = require('../services/tenantIdentity.service');
 const log = require('../utils/log');
 
 /**
@@ -45,8 +45,8 @@ const resolveFirmSlug = async (req, res, next) => {
       });
     }
     
-    // Resolve firmSlug to firm
-    const firm = await Firm.findOne({ firmSlug: normalizedSlug });
+    // Resolve firmSlug to canonical tenant
+    const firm = await resolveTenantBySlug(normalizedSlug);
 
     log.info({
       event: 'firm_login_attempt',
@@ -75,19 +75,20 @@ const resolveFirmSlug = async (req, res, next) => {
     
     // Attach firm context to request
     req.firmSlug = normalizedSlug;
-    req.firmId = firm._id.toString();
-    req.firmIdString = firm.firmId; // String format (e.g., FIRM001)
-    req.firmName = firm.name;
+    req.firmId = String(firm.tenantId || firm._id);
+    req.firmIdString = firm.firmIdString || null;
+    req.firmName = firm.firmName || null;
     req.firm = {
-      id: firm._id.toString(),
-      slug: firm.firmSlug,
+      id: req.firmId,
+      slug: firm.firmSlug || normalizedSlug,
       status: firm.status,
+      legacyFirmId: firm.legacyFirmId || null,
     };
     // Canonical firm context for downstream auth controllers.
     req.context = {
       ...req.context,
-      firmId: firm._id.toString(),
-      firmSlug: firm.firmSlug,
+      firmId: req.firmId,
+      firmSlug: firm.firmSlug || normalizedSlug,
     };
     
     next();
@@ -119,17 +120,17 @@ const optionalFirmResolution = async (req, res, next) => {
     if (!normalizedSlug) {
       return next();
     }
-    const firm = await Firm.findOne({ firmSlug: normalizedSlug });
+    const firm = await resolveTenantBySlug(normalizedSlug);
     
     if (firm && isActiveStatus(firm.status)) {
       req.firmSlug = normalizedSlug;
-      req.firmId = firm._id.toString();
-      req.firmIdString = firm.firmId;
-      req.firmName = firm.name;
+      req.firmId = String(firm.tenantId || firm._id);
+      req.firmIdString = firm.firmIdString || null;
+      req.firmName = firm.firmName || null;
       req.context = {
         ...req.context,
-        firmId: firm._id.toString(),
-        firmSlug: firm.firmSlug,
+        firmId: req.firmId,
+        firmSlug: firm.firmSlug || normalizedSlug,
       };
     }
     
