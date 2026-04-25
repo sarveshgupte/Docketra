@@ -1,5 +1,12 @@
 # What's New
 
+## April 2026: Internal platform stability — PR CI release gates
+
+- Added a serious PR release-gate workflow in GitHub Actions to enforce backend syntax checks, route validation contract coverage, core backend tests, frontend build, and focused frontend reliability checks.
+- Added explicit CI-oriented npm scripts (`ci:backend:*`, `ci:frontend:*`, `ci:release-gate`) so local developer verification matches CI command-for-command.
+- Added dedicated security/config gate coverage in CI by running environment contract validation plus backend security and hardening suites.
+- Added an operations playbook at `docs/operations/ci-release-gates.md` with exact local pre-PR commands.
+
 ## April 2026: Internal security hardening — production defaults and provider fail-closed behavior
 
 - Disabled Vite production source maps by default; source maps now require explicit `VITE_ENABLE_PROD_SOURCEMAPS=true`.
