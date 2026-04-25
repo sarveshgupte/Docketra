@@ -1,5 +1,14 @@
 # What's New
 
+## April 2026: Design system consolidation — shared B2B UI contract
+
+- Consolidated shared component contract for Button, Input, Select, Card, DataTable, Empty/Error states, PageHeader, Modal, Tabs, and Toast usage in `docs/ui/design-system-contract.md`.
+- Standardized Button API normalization with backward-compatible aliases (`small/sm`, `medium/md`, `default/secondary`, `warning/danger`) to reduce component-call drift across legacy surfaces.
+- Clarified Button className policy: safe-by-default layout sanitization remains, with explicit `allowUnsafeClassName` escape hatch for intentional one-off utility styling.
+- Tightened shared queue/table action sizing to canonical `sm/xs` button density on DataTable and QueueFilterBar.
+- Reduced active admin surface dependency on legacy `neo-*` utility classes in create-user and access-mapping modals and team section copy blocks.
+- Added a lightweight design-system contract regression test (`ui/tests/designSystemContract.test.mjs`) and wired it into UI CI checks.
+
 ## April 2026: Navigation and terminology cleanup — canonical docket model
 
 - Unified firm navigation and command-center destination definitions under one shared model (`ui/src/constants/platformNavigation.js`) so sidebar and command center stay aligned.

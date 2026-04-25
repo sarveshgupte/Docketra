@@ -21,9 +21,9 @@ export const CreateUserModal = ({
 }) => (
   <Modal isOpen={isOpen} onClose={onClose} title="Create New User">
     <form onSubmit={onSubmit} className="admin__create-form">
-      <div className="neo-form-group">
-        <label className="neo-label">xID (Auto-Generated)</label>
-        <div className="neo-info-text">Employee ID will be automatically generated (e.g., X000001)</div>
+      <div className="space-y-1">
+        <label className="block text-sm font-medium text-gray-800">xID (Auto-Generated)</label>
+        <div className="text-xs text-gray-600">Employee ID will be automatically generated (e.g., X000001)</div>
       </div>
 
       <Input label="Name" type="text" value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} placeholder="John Doe" required />
@@ -39,13 +39,13 @@ export const CreateUserModal = ({
         ]}
         required
       />
-      <div className="neo-info-text">Role hierarchy: {ADMIN_ROLE_HELP.hierarchy}. {ADMIN_ROLE_HELP.superAdminNote}</div>
-      <ul className="neo-info-text" style={{ marginTop: 8 }}>
+      <div className="text-xs text-gray-600">Role hierarchy: {ADMIN_ROLE_HELP.hierarchy}. {ADMIN_ROLE_HELP.superAdminNote}</div>
+      <ul className="mt-2 space-y-1 text-xs text-gray-600">
         {ADMIN_ROLE_DESCRIPTIONS.map((entry) => <li key={entry.role}><strong>{entry.role}:</strong> {entry.description}</li>)}
       </ul>
 
       <Input label="Department" type="text" value={newUser.department} onChange={(e) => setNewUser({ ...newUser, department: e.target.value })} placeholder="e.g., Operations" />
-      <div className="neo-form-group">
+      <div className="space-y-2">
         <FormLabel>Workbaskets (at least one)</FormLabel>
         <div className="admin__client-access-list">
           {primaryWorkbaskets.map((workbasket) => (
@@ -62,7 +62,7 @@ export const CreateUserModal = ({
       </div>
 
       {qcOnlyWorkbaskets.length > 0 ? (
-        <div className="neo-form-group">
+        <div className="space-y-2">
           <FormLabel>QC Access (optional)</FormLabel>
           <div className="admin__client-access-list">
             {qcOnlyWorkbaskets.map((workbasket) => (

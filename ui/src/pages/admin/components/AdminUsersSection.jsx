@@ -37,8 +37,8 @@ export const AdminUsersSection = ({
     <Card>
       <div className="admin__section-header">
         <div>
-          <h2 className="neo-section__header">Team Members</h2>
-          <p className="neo-info-text">Use this section to manage people, access, and account safety actions.</p>
+          <h2 className="text-lg font-semibold text-gray-900">Team Members</h2>
+          <p className="mt-1 text-sm text-gray-600">Use this section to manage people, access, and account safety actions.</p>
         </div>
         <div className="admin__section-actions">
           <Button variant="default" onClick={onBulkUpload}>Bulk Upload</Button>
@@ -47,7 +47,7 @@ export const AdminUsersSection = ({
         </div>
       </div>
 
-      {sectionMessage ? <div className="neo-info-text" style={{ marginBottom: 12 }}>{sectionMessage}</div> : null}
+      {sectionMessage ? <div className="mb-3 text-sm text-gray-600">{sectionMessage}</div> : null}
 
       {!hasUsers ? (
         <EmptyState title="No users added yet" description="Invite your team to start collaborating." />

@@ -6,7 +6,7 @@ export const QueueFilterBar = ({ children, onClear, clearDisabled = false, class
     <div className="flex flex-wrap items-end gap-3">
       {children}
       {onClear ? (
-        <Button type="button" variant="outline" size="small" onClick={onClear} disabled={clearDisabled}>
+        <Button type="button" variant="outline" size="sm" onClick={onClear} disabled={clearDisabled}>
           Clear all
         </Button>
       ) : null}
