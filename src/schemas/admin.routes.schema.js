@@ -70,10 +70,16 @@ module.exports = {
   'GET /audit-logs': {
     query: z.object({
       userId: objectIdOrString.optional(),
+      actor: objectIdOrString.optional(),
       action: nonEmptyString.optional(),
+      actionType: nonEmptyString.optional(),
+      module: nonEmptyString.optional(),
       startDate: z.string().optional(),
       endDate: z.string().optional(),
-      limit: z.coerce.number().int().positive().max(500).optional(),
+      targetEntity: nonEmptyString.optional(),
+      severity: nonEmptyString.optional(),
+      page: z.coerce.number().int().positive().optional(),
+      limit: z.coerce.number().int().positive().max(200).optional(),
     }).passthrough(),
   },
   'GET /users': { query: passthroughQuery },
