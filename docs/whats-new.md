@@ -293,3 +293,12 @@
 - Aligned CRM terminology and quick-action labels across routes (`CRM`, `Client Management`, `Leads`, `New Client`, `Import Clients (CSV)`, `Go to Leads Queue`).
 - Fixed misleading CRM error path by adding CRM-scoped message normalization so valid firm-scoped CRM routes no longer surface false "Firm not found" copy during CRM fetch failures.
 - Added focused regression coverage (`ui/tests/crmWorkspaceUnification.test.mjs`) for CRM route consistency, naming, and error-message correctness safeguards.
+
+## April 2026: Pilot-readiness recovery UX + tenant-safe troubleshooting guardrails
+
+- Added a centralized frontend recovery copy map for auth expiry, access-denied, storage setup, upload failures, tenant-scope guardrails, and inactive client/user scenarios.
+- Added a shared tenant-safe support context UI (request ID, reason code, module, timestamp, status) for safer support handoff.
+- Added shared access-denied recovery state (safe explanation + go back/dashboard actions) on key queue/report surfaces.
+- Hardened session-expiry redirect handling with explicit session-expired reason code and superadmin-safe redirect behavior.
+- Updated Storage Settings and Docket attachment upload error flows with role-aware, retry-safe recovery guidance.
+- Updated diagnostics panel display to focus on tenant-safe troubleshooting fields only.

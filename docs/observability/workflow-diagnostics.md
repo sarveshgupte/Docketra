@@ -67,3 +67,21 @@ Do not store request bodies, secrets, full blobs, signed URLs, or raw stack trac
 - Add dashboard/service-level propagation of `correlationId` where service calls are detached from `req`.
 - Add tenant-safe diagnostics API contract tests for superadmin/operator views.
 - Add CI guard to fail on new unsafe console/debug patterns in `ui/src` and `src`.
+
+## Tenant-safe workflow diagnostics update (April 25, 2026)
+
+- Frontend normalized errors now carry safe fields: `requestId`, `code` (reason code), `status`, `module`, and `timestamp`.
+- New recovery support context component standardizes what is shown to users and support.
+- Diagnostics panel now presents tenant-safe troubleshooting snippets (request ID, reason code, workflow category, next action) and avoids raw payload details.
+
+### Boundaries (must not display)
+- Access/refresh tokens, cookies, authorization headers.
+- Raw stack traces.
+- Raw request/response payloads.
+- Signed URLs and attachment storage paths.
+- Tenant-private descriptive content (docket comments/descriptions/client-private fields).
+
+### Manual QA additions
+1. Trigger API 403 and verify reason code + request ID are visible in support context.
+2. Trigger upload failure and verify request ID propagation in docket attachment recovery UI.
+3. Inspect diagnostics panel output and confirm it never prints tokens, cookies, payload blobs, or stack traces.

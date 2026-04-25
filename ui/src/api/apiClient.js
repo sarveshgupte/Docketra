@@ -24,6 +24,9 @@ export const handleApiError = (error, fallbackMessage = 'Request failed') => {
   normalizedError.status = error?.response?.status;
   normalizedError.code = error?.response?.data?.code;
   normalizedError.data = error?.response?.data;
+  normalizedError.requestId = error?.response?.headers?.['x-request-id'] || null;
+  normalizedError.module = error?.config?.metadata?.workflow || 'workspace';
+  normalizedError.timestamp = new Date().toISOString();
   normalizedError.originalError = error;
 
   emitDiagnosticEvent('error', 'api_client_normalized_error', {

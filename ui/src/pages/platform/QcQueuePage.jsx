@@ -17,6 +17,8 @@ import {
   formatStatusLabel,
   getDocketRouteId,
 } from './PlatformShared';
+import { AccessDeniedState } from '../../components/feedback/AccessDeniedState';
+import { getRecoveryPayload } from '../../utils/errorRecovery';
 import { usePlatformQcQueueQuery } from '../../hooks/usePlatformDataQueries';
 import { CASE_QUERY_PARAMS } from '../../hooks/useCaseQuery';
 import { ActionConfirmModal } from '../../components/common/ActionConfirmModal';
@@ -39,8 +41,13 @@ export const PlatformQcQueuePage = () => {
     isLoading,
     isFetching,
     isError,
+    error: queryError,
     refetch,
   } = usePlatformQcQueueQuery();
+
+
+  const recovery = getRecoveryPayload(queryError, 'platform_queue');
+  const isAccessDenied = isError && recovery.reasonCode === 'CASE_ACCESS_DENIED';
 
   const filteredRows = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -111,6 +118,14 @@ export const PlatformQcQueuePage = () => {
       setPendingQcId('');
     }
   };
+
+  if (isAccessDenied) {
+    return (
+      <PlatformShell title="Access restricted" subtitle="Your session is active, but this module is currently not available for your role.">
+        <AccessDeniedState supportContext={recovery.supportContext} />
+      </PlatformShell>
+    );
+  }
 
   return (
     <PlatformShell
