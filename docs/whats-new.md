@@ -1,5 +1,13 @@
 # What's New
 
+## April 2026: Superadmin support diagnostics console
+
+- Added a new superadmin support diagnostics surface at `/app/superadmin/diagnostics` backed by `GET /api/superadmin/diagnostics`.
+- Added redacted operational triage coverage for firm status, onboarding summary, storage connection/health status, recent failed login/OTP issues, API error categories, slow endpoint percentile summary, and request IDs for tracing.
+- Enforced superadmin-only backend access control for the diagnostics endpoint.
+- Kept privacy boundaries strict by returning summarized/redacted diagnostics only (no client documents, no raw payloads, no secrets).
+- Added focused tests for route-level access control and diagnostics redaction behavior.
+
 ## April 2026: Storage & Data Ownership dashboard (BYOS trust visibility)
 
 - Added a firm-facing **Storage & Data Ownership** summary section in Storage settings to clearly show:
