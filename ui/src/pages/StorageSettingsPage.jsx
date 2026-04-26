@@ -18,9 +18,11 @@ import {
 } from '../services/storageService';
 import { useAuth } from '../hooks/useAuth';
 import { spacingClasses } from '../theme/tokens';
+import { PageHeader } from '../components/layout/PageHeader';
 import { formatDateTime } from '../utils/formatDateTime';
 import { getRecoveryPayload } from '../utils/errorRecovery';
 import { SupportContext } from '../components/feedback/SupportContext';
+import { StatusMessageStack } from './platform/PlatformShared';
 
 export function StorageSettingsPage() {
   const toast = useContext(ToastContext);
@@ -184,13 +186,10 @@ export function StorageSettingsPage() {
   if (loading) {
     return (
       <PlatformShell moduleLabel="Settings" title="Storage settings" subtitle="Configure and validate your external document storage integration.">
-        <div className="min-h-screen bg-gray-50">
-          <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-            <div className="space-y-2">
-              <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Storage Settings</h1>
-              <p className="text-sm text-gray-500">Configure and validate your external document storage integration.</p>
-            </div>
-          <Card>
+        <div className="min-h-screen w-full flex-1 bg-gray-50">
+          <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 space-y-6">
+            <PageHeader title="Storage Settings" subtitle="Configure and validate your external document storage integration." />
+            <Card>
               <p className="text-sm text-gray-500">Loading storage settings...</p>
             </Card>
           </div>
@@ -206,15 +205,23 @@ export function StorageSettingsPage() {
   const isS3Provider = provider === 's3';
   const canSwitchProvider = provider !== (config?.provider || 'docketra_managed');
   const summaryWarnings = Array.isArray(ownershipSummary?.warnings) ? ownershipSummary.warnings : [];
+  const statusMessages = [
+    loadError ? { tone: 'error', message: loadError } : null,
+    statusMessage.text
+      ? {
+        tone: statusMessage.type === 'error' ? 'error' : statusMessage.type === 'success' ? 'success' : 'info',
+        message: statusMessage.text,
+      }
+      : null,
+  ].filter(Boolean);
 
   return (
     <PlatformShell moduleLabel="Settings" title="Storage settings" subtitle="Configure and validate your external document storage integration.">
       <div className="min-h-screen bg-gray-50">
-        <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-          <div className="space-y-2">
-            <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Storage Settings</h1>
-            <p className="text-sm text-gray-500">Configure and validate your external document storage integration.</p>
-          </div>
+        <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 space-y-6">
+          <PageHeader title="Storage Settings" subtitle="Configure and validate your external document storage integration." />
+
+          <StatusMessageStack messages={statusMessages} />
 
           <Card>
             <div className={spacingClasses.sectionMargin}>
@@ -265,30 +272,10 @@ export function StorageSettingsPage() {
 
           <Card>
             <div className={spacingClasses.sectionMargin}>
-              {loadError ? (
-                <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  <p>{loadError}</p>
-                  <Button type="button" variant="outline" onClick={loadConfiguration} disabled={loading}>
-                    Retry loading
-                  </Button>
-                </div>
-              ) : null}
               <SupportContext context={supportContext} />
-              {statusMessage.text ? (
-                <p className={`rounded border px-3 py-2 text-sm ${
-                  statusMessage.type === 'error'
-                    ? 'border-red-200 bg-red-50 text-red-700'
-                    : statusMessage.type === 'success'
-                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                      : 'border-blue-200 bg-blue-50 text-blue-700'
-                }`}
-                >
-                  {statusMessage.text}
-                </p>
-              ) : null}
               <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Storage Provider</h2>
-                <p className="text-sm text-gray-500">BYOS trust mode is firm-connected storage. Docketra-managed storage is available as fallback/default. Provider changes require OTP verification.</p>
+                <h2 className="text-lg font-medium text-gray-900 mb-2">Storage Provider</h2>
+                <p className="text-sm text-gray-500">BYOS trust mode is firm-connected storage so firm/client document bytes remain in firm-provided storage when configured. Docketra-managed storage remains the default fallback. Provider changes require OTP verification.</p>
               </div>
               <div className="rounded border border-blue-200 bg-blue-50 px-3 py-3 text-sm text-blue-900">
                 <p className="font-medium">Current storage mode: {storageMode}</p>
@@ -331,14 +318,14 @@ export function StorageSettingsPage() {
                     <Input label="S3 Session Token (optional)" value={s3SessionToken} onChange={(event) => setS3SessionToken(event.target.value)} />
                   </>
                 ) : null}
-                <div className={`grid grid-cols-1 md:grid-cols-3 ${spacingClasses.formActionsGap} items-end`}>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3 items-end">
                   <Input label="OTP Code" value={otpCode} onChange={(event) => setOtpCode(event.target.value)} />
                   <Button type="button" variant="outline" onClick={requestOtp}>Send OTP</Button>
                   <Button type="button" variant="outline" onClick={verifyOtp}>Verify OTP</Button>
                 </div>
               </div>
 
-              <div className={`${spacingClasses.formActions} ${spacingClasses.formActionsGap}`}>
+              <div className={`${spacingClasses.formActions} ${spacingClasses.formActionsGap} flex-wrap`}>
                 {isGoogleProvider ? (
                   <Button type="button" variant="primary" onClick={onConnectGoogleDrive} disabled={testing}>
                     Connect / Refresh Google Drive
@@ -380,7 +367,7 @@ export function StorageSettingsPage() {
                   use the export history plus support diagnostics as the recovery path.
                 </p>
               </div>
-              <div className={`${spacingClasses.formActions} ${spacingClasses.formActionsGap}`}>
+              <div className={`${spacingClasses.formActions} ${spacingClasses.formActionsGap} flex-wrap`}>
                 <Button type="button" variant="primary" onClick={onRunExport} disabled={exporting} loading={exporting}>
                   {exporting ? 'Generating Export…' : 'Generate Firm Export'}
                 </Button>

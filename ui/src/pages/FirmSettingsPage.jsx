@@ -12,6 +12,7 @@ import { slaApi } from '../api/sla.api';
 import { categoryService } from '../services/categoryService';
 import { getFirmConfig, setFirmConfig } from '../utils/firmConfig';
 import { formatDateTime } from '../utils/formatDateTime';
+import { StatusMessageStack } from './platform/PlatformShared';
 
 const enabledDisabledOptions = [
   { value: 'true', label: 'Enabled' },
@@ -266,6 +267,17 @@ export const FirmSettingsPage = () => {
     }
   };
 
+  const primaryStatusMessages = [
+    saveMessage.text
+      ? { tone: saveMessage.type === 'success' ? 'success' : 'error', message: saveMessage.text }
+      : null,
+  ].filter(Boolean);
+  const slaStatusMessages = [
+    slaMessage.text
+      ? { tone: slaMessage.type === 'success' ? 'success' : 'error', message: slaMessage.text }
+      : null,
+  ].filter(Boolean);
+
   return (
     <PlatformShell moduleLabel="Settings" title="Firm settings" subtitle="Configure operational defaults, SLA policy, and feature visibility for this firm.">
       <div className="min-h-screen w-full flex-1 bg-gray-50">
@@ -349,19 +361,11 @@ export const FirmSettingsPage = () => {
                 />
               </div>
 
-              {saveMessage.text ? (
-                <div
-                  className={`rounded-lg px-4 py-3 text-sm ${
-                    saveMessage.type === 'success'
-                      ? 'border border-green-200 bg-green-50 text-green-700'
-                      : 'border border-red-200 bg-red-50 text-red-700'
-                  }`}
-                >
-                  {saveMessage.text}
-                </div>
-              ) : null}
+              <div className="mt-6">
+                <StatusMessageStack messages={primaryStatusMessages} />
+              </div>
 
-              <div className="mt-6 pt-5 border-t border-gray-200 flex justify-end gap-3">
+              <div className="mt-6 pt-5 border-t border-gray-200 flex flex-wrap justify-end gap-3">
                 <Button type="button" variant="outline" onClick={() => navigate(`/app/firm/${firmSlug}/admin`)}>
                   Back to Admin
                 </Button>
@@ -417,17 +421,7 @@ export const FirmSettingsPage = () => {
                 />
               </div>
 
-              {slaMessage.text ? (
-                <div
-                  className={`mt-4 rounded-lg px-4 py-3 text-sm ${
-                    slaMessage.type === 'success'
-                      ? 'border border-green-200 bg-green-50 text-green-700'
-                      : 'border border-red-200 bg-red-50 text-red-700'
-                  }`}
-                >
-                  {slaMessage.text}
-                </div>
-              ) : null}
+              <StatusMessageStack messages={slaStatusMessages} />
 
               <div className="mt-4 flex flex-wrap gap-3">
                 <Button type="button" variant="primary" onClick={handleSaveRule} disabled={savingSlaRule || loadingSlaData}>
@@ -464,7 +458,7 @@ export const FirmSettingsPage = () => {
                               </Button>
                               <Button
                                 type="button"
-                                variant="outline"
+                                variant="danger"
                                 size="small"
                                 onClick={() => handleDeleteRule(rule._id || rule.id)}
                                 disabled={deletingRuleId === (rule._id || rule.id)}
