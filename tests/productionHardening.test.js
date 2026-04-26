@@ -174,7 +174,7 @@ async function testAdminStatusNormalization() {
 }
 
 async function testDebugRoutesDisabledInProduction() {
-  const serverSource = fs.readFileSync(path.join(__dirname, '../src/server.js'), 'utf8');
+  const serverSource = fs.readFileSync(path.join(__dirname, '../src/app/createApp.js'), 'utf8');
   const notFound = require('../src/middleware/notFound');
   const originalNodeEnv = process.env.NODE_ENV;
 

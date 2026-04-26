@@ -1206,10 +1206,11 @@ const downloadClientCFSFileForCase = async (req, res) => {
 
     const provider = await StorageProviderFactory.getProvider(userFirmId);
     const fileStream = await provider.downloadFile(attachment.driveFileId);
+    const safeFilename = sanitizeFilename(attachment.fileName);
 
     // Set response headers
     res.setHeader('Content-Type', attachment.mimeType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${attachment.fileName}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
 
     // Stream file to response
     fileStream.pipe(res);
