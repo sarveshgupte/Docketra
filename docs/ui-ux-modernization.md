@@ -224,6 +224,38 @@ This PR was expanded (still presentation-only and low-risk) to cover more of the
 - Continue migrating remaining low-risk legacy list/detail surfaces onto `PageSection` + `SectionToolbar` + `StatusMessageStack`.
 - Prepare a contract doc for future convergence between `PlatformShared` `DataTable` and app-level `DataTable` (no functional merge yet).
 
+---
+
+## Fourth PR scope (non-queue platform polish + table/list convergence prep)
+
+### Scope completed in this PR
+- Polished `TaskManagerPage` status and CTA hierarchy by consolidating async notices into a single `StatusMessageStack` and removing duplicate primary action exposure.
+- Polished `SettingsPage` hierarchy and action placement with explicit settings module labeling and tighter admin/audit action grouping.
+- Applied the same status stack contract on `ReportsPage` to remove remaining ad hoc notice placement in a non-queue platform route.
+- Added a dedicated table/list convergence audit + migration plan document (`docs/ui-table-list-convergence.md`) without changing any table implementation behavior.
+
+### Exact pages/components touched
+- `ui/src/pages/platform/TaskManagerPage.jsx`
+- `ui/src/pages/platform/SettingsPage.jsx`
+- `ui/src/pages/platform/ReportsPage.jsx`
+- `docs/ui-table-list-convergence.md`
+- `docs/ui-ux-modernization.md`
+
+### Before / after UX impact
+- **Before:** Task Manager and Reports used mixed notice placement (`InlineNotice` + separate refresh notice); Task Manager exposed a duplicated primary CTA; settings hub had slightly weaker hierarchy alignment vs other platform modules.
+- **After:** Non-queue platform pages now follow the same status-message stack contract, Task Manager CTA hierarchy is clearer (single primary in page header, secondary routing actions in section), and Settings action grouping is more predictable/scannable.
+
+### Remaining UI/UX gaps
+1. Legacy settings detail screens (`FirmSettingsPage`, `WorkSettingsPage`, `StorageSettingsPage`, `AiSettingsPage`) still mix older card/header patterns and could be normalized incrementally.
+2. Platform and app/common table primitives remain split; migration should proceed via adapters to avoid queue and All Dockets regressions.
+3. CMS form editor still includes several inline layout styles that should be tokenized in a low-risk follow-up pass.
+
+### Recommended next PR
+**PR 5: Settings detail surface consistency pass**
+- Normalize section headers, action rows, and status stack placement across firm/work/storage/AI settings pages.
+- Keep save/cancel/danger hierarchy consistent and role-safe.
+- Do not alter settings API payloads or behavior.
+
 ### Post-review corrections (PR 3 follow-up)
 
 #### Corrections made
