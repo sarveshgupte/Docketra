@@ -29,7 +29,8 @@
 .admin__section-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: var(--spacing-md);
   margin-bottom: var(--spacing-md);
 }
 
@@ -38,6 +39,106 @@
   gap: var(--spacing-sm);
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+
+.admin__section-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1rem;
+  line-height: 1.4;
+  font-weight: 650;
+}
+
+.admin__section-description {
+  margin: 0.25rem 0 0;
+  color: #475569;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+
+.admin__toolbar {
+  display: grid;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+}
+
+.admin__header-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.admin__section-heading {
+  min-width: 0;
+}
+
+.admin__status-stack {
+  display: grid;
+  gap: 6px;
+}
+
+.admin__status {
+  margin: 0;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 8px 10px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.admin__status--info {
+  color: #1e3a8a;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.admin__status--warning {
+  color: #92400e;
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.admin__status--error {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.admin__readonly-group {
+  display: grid;
+  gap: var(--spacing-xs);
+}
+
+.admin__readonly-label {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.admin__readonly-value {
+  font-size: 0.875rem;
+  color: #475569;
+  padding: var(--spacing-sm);
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-sm);
+}
+
+.admin__modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+  flex-wrap: wrap;
+}
+
+.admin button:focus-visible,
+.admin a:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
 
 .admin__actions {
@@ -285,4 +386,21 @@
 
 .admin__client-access-item:last-child {
   border-bottom: none;
+}
+
+@media (max-width: 768px) {
+  .admin__section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin__section-actions,
+  .admin__header-actions {
+    justify-content: flex-start;
+  }
+
+  .admin__section-actions > button,
+  .admin__header-actions > button {
+    width: 100%;
+  }
 }

@@ -2,20 +2,10 @@ import { Card } from '../../../components/common/Card';
 import { Button } from '../../../components/common/Button';
 import { DataTable } from '../../../components/common/DataTable';
 import { EmptyState } from '../../../components/ui/EmptyState';
-import { Badge } from '../../../components/common/Badge';
 import { getNormalizedUserStatus, isPrimaryAdminUser, getRoleBadgePresentation } from '../adminPageUtils';
+import { AdminSectionHeader } from './AdminSectionHeader';
+import { AdminStatusBadge } from './AdminStatusBadge';
 
-const StatusBadge = ({ status, fallback = 'ACTIVE' }) => {
-  const normalizedStatus = String(status || fallback).toUpperCase();
-  const map = {
-    ACTIVE: 'Approved',
-    INVITED: 'Pending',
-    INACTIVE: 'Rejected',
-    DISABLED: 'Rejected',
-  };
-
-  return <Badge status={map[normalizedStatus] || 'Pending'}>{normalizedStatus}</Badge>;
-};
 
 export const AdminUsersSection = ({
   users,
@@ -35,17 +25,15 @@ export const AdminUsersSection = ({
 
   return (
     <Card>
-      <div className="admin__section-header">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">Team Members</h2>
-          <p className="mt-1 text-sm text-gray-600">Use this section to manage people, access, and account safety actions.</p>
-        </div>
-        <div className="admin__section-actions">
-          <Button variant="default" onClick={onBulkUpload}>Bulk Upload</Button>
-          <Button variant="default" onClick={onDownloadTemplate}>Download Template</Button>
-          <Button variant="primary" onClick={onCreateUser} disabled={!canCreateUsers}>+ Create User</Button>
-        </div>
-      </div>
+      <AdminSectionHeader
+        title="Team Members"
+        description="Manage users, role-based access, and account safety actions."
+        actions={[
+          { key: 'bulk-upload-users', label: 'Bulk Upload', onClick: onBulkUpload },
+          { key: 'download-users-template', label: 'Download Template', onClick: onDownloadTemplate },
+          { key: 'create-user', label: '+ Create User', variant: 'primary', onClick: onCreateUser, disabled: !canCreateUsers },
+        ]}
+      />
 
       {sectionMessage ? <div className="mb-3 text-sm text-gray-600">{sectionMessage}</div> : null}
 
@@ -61,15 +49,16 @@ export const AdminUsersSection = ({
               header: 'Role',
               render: (u) => <span className="inline-flex items-center rounded-md bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-800">{getRoleBadgePresentation({ role: u.role, isPrimaryAdmin: u.isPrimaryAdmin, isSystem: u.isSystem }).label}</span>,
             },
-            { key: 'status', header: 'Status', render: (u) => <StatusBadge status={u.status} /> },
+            { key: 'status', header: 'Status', render: (u) => <AdminStatusBadge status={u.status} /> },
             {
               key: 'actions',
               header: 'Actions',
+              align: 'right',
               render: (u) => {
                 const status = getNormalizedUserStatus(u);
                 const isActionLoading = Boolean(actionLoadingByUser[u.xID]);
                 return (
-                  <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
+                  <div className="flex justify-end gap-2" style={{ flexWrap: 'wrap' }}>
                     {canCreateUsers ? (
                       <Button size="sm" variant="outline" onClick={() => onEditUser(u)} disabled={isActionLoading}>Edit Access</Button>
                     ) : null}
