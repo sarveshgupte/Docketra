@@ -17,3 +17,7 @@
 ## 2025-04-17 - Added `aria-pressed` to Password Visibility Toggle
 **Learning:** Found an accessibility issue where the password visibility toggle button was using an `aria-label` to communicate state (e.g., "Show password" vs. "Hide password"), but lacked the crucial `aria-pressed` attribute which is standard for toggle buttons. Without `aria-pressed`, screen readers don't explicitly treat it as a stateful toggle, leaving the user guessing if the action was correctly registered.
 **Action:** When implementing icon-only toggle buttons (like password visibility, or "favorite" toggles), ensure that they not only have descriptive, dynamic `aria-label`s, but also include an explicit `aria-pressed={state}` attribute to robustly communicate their toggle nature to assistive technologies.
+
+## 2026-04-26 - Action Menus in Data Tables
+**Learning:** Repetitive generic actions in data tables (like "View Docket", "Assign to Me", "View Timeline") create a terrible experience for screen reader users who use the rotor/element list, as they just hear "View Docket" 50 times without context. Adding the specific row's primary identifier (like Docket Name) to the `aria-label` makes these menus fully accessible.
+**Action:** When adding actions in list or table rows, always provide an `aria-label` that includes the primary identifier of the item the action applies to.
