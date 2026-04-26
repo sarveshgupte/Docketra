@@ -149,6 +149,17 @@ function extractExtraFields(payload = {}) {
   return Object.keys(extras).length > 0 ? extras : null;
 }
 
+function canonicalizeExtraFields(extraFields = {}) {
+  if (!extraFields || typeof extraFields !== 'object') return {};
+  const canonical = {};
+  Object.entries(extraFields).forEach(([key, value]) => {
+    const normalizedKey = normalizeTrimmedString(key)?.toLowerCase();
+    if (!normalizedKey) return;
+    canonical[normalizedKey] = value;
+  });
+  return canonical;
+}
+
 const DUPLICATE_IDENTIFIER_FIELDS = Object.freeze([
   { key: 'pan', leadPath: 'metadata.extraFields.pan', clientPath: 'PAN', label: 'PAN' },
   { key: 'gst', leadPath: 'metadata.extraFields.gst', clientPath: 'GST', label: 'GST' },
@@ -191,6 +202,7 @@ async function detectIntakeDuplicates({
   sourceAttribution = {},
   excludeLeadId = null,
 }) {
+  const canonicalExtraFields = canonicalizeExtraFields(extraFields);
   const warningContext = {
     leads: [],
     clients: [],
@@ -211,7 +223,7 @@ async function detectIntakeDuplicates({
   }
 
   DUPLICATE_IDENTIFIER_FIELDS.forEach((field) => {
-    const rawValue = extraFields?.[field.key];
+    const rawValue = canonicalExtraFields[field.key];
     const normalizedValue = normalizeIdentifier(rawValue);
     if (!normalizedValue) return;
     leadOr.push({ [field.leadPath]: normalizedValue });

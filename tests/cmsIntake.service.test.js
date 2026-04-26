@@ -516,6 +516,54 @@ async function testCurrentLeadExcludedFromDuplicateMatching() {
   }
 }
 
+async function testDuplicateLookupCanonicalizesExtraFieldKeys() {
+  const originalLeadCreate = Lead.create;
+  const originalLeadFindByIdAndUpdate = Lead.findByIdAndUpdate;
+  const originalLeadFind = Lead.find;
+  const originalClientFind = Client.find;
+  const originalFirmFindById = Firm.findById;
+
+  Lead.create = async (payload) => ({ _id: '507f1f77bcf86cd799439112', ...payload });
+  Lead.findByIdAndUpdate = async () => ({ _id: '507f1f77bcf86cd799439112' });
+  Lead.find = (query) => ({
+    select: () => ({
+      sort: () => ({
+        limit: () => ({
+          lean: async () => {
+            const duplicatePanQuery = Array.isArray(query.$or)
+              ? query.$or.find((condition) => condition['metadata.extraFields.pan'])
+              : null;
+            assert.ok(duplicatePanQuery, 'duplicate query should include canonicalized pan key');
+            assert.strictEqual(duplicatePanQuery['metadata.extraFields.pan'], 'ABCDE1234F');
+            return [];
+          },
+        }),
+      }),
+    }),
+  });
+  Client.find = () => ({ select: () => ({ sort: () => ({ limit: () => ({ lean: async () => [] }) }) }) });
+  Firm.findById = () => ({ select: () => ({ lean: async () => null }) });
+
+  try {
+    await cmsIntakeService.processCmsSubmission({
+      firmId: '507f1f77bcf86cd799439011',
+      payload: {
+        name: 'Canonical Key',
+        email: 'canonical@example.com',
+        PAN: 'abcde1234f',
+      },
+      intakeConfig: { autoCreateClient: false, autoCreateDocket: false },
+      submissionMode: 'public_form',
+    });
+  } finally {
+    Lead.create = originalLeadCreate;
+    Lead.findByIdAndUpdate = originalLeadFindByIdAndUpdate;
+    Lead.find = originalLeadFind;
+    Client.find = originalClientFind;
+    Firm.findById = originalFirmFindById;
+  }
+}
+
 async function run() {
   try {
     await testLeadOnlyFlow();
@@ -528,6 +576,7 @@ async function run() {
     await testDuplicateWarningFromOlderLeadOnly();
     await testDuplicateWarningFromExistingClientOnly();
     await testCurrentLeadExcludedFromDuplicateMatching();
+    await testDuplicateLookupCanonicalizesExtraFieldKeys();
     console.log('CMS intake service tests passed.');
   } catch (error) {
     console.error('CMS intake service tests failed:', error);
