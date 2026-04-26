@@ -103,7 +103,7 @@ router.patch('/categories/:id/subcategories/:subcategoryId/status', ...adminBase
 router.delete('/categories/:id/subcategories/:subcategoryId', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_MANAGE'), userWriteLimiter, deleteSubcategory);
 
 router.get('/hierarchy', ...adminBaseAccess, authorizeFirmPermission('USER_VIEW'), userReadLimiter, getHierarchyTree);
-router.get('/audit-logs', ...adminBaseAccess, authorizeFirmPermission('USER_VIEW'), userReadLimiter, getAdminAuditLogs);
+router.get('/audit-logs', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('USER_VIEW'), userReadLimiter, getAdminAuditLogs);
 router.get('/users', ...adminBaseAccess, authorizeFirmPermission('USER_VIEW'), userReadLimiter, getAllUsers);
 router.post('/users', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), sensitiveLimiter, createUser);
 router.put('/users/:xID/activate', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('USER_MANAGE'), sensitiveLimiter, activateUser);
