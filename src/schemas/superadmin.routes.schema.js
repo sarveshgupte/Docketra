@@ -12,6 +12,7 @@ module.exports = {
   'GET /onboarding-insights/details': { query: passthroughQuery },
   'GET /onboarding-alerts': { query: passthroughQuery },
   'GET /health': { query: passthroughQuery },
+  'GET /diagnostics': { query: passthroughQuery },
 
   'POST /firms': {
     body: z.object({

@@ -5,17 +5,12 @@ const assert = require('assert');
 const Module = require('module');
 
 const originalLoad = Module._load;
+const routeSchemas = require('../src/schemas/superadmin.routes.schema.js');
 
 const requireSuperadmin = () => {};
 const getSupportDiagnostics = () => {};
 
 Module._load = function(request, parent, isMain) {
-  if (request === '../middleware/requestValidation.middleware') {
-    return { applyRouteValidation: (router) => router };
-  }
-  if (request === '../schemas/superadmin.routes.schema.js') {
-    return {};
-  }
   if (request === '../middleware/permission.middleware') {
     return { requireSuperadmin };
   }
@@ -72,14 +67,20 @@ Module._load = function(request, parent, isMain) {
 };
 
 try {
+  assert.ok(routeSchemas['GET /diagnostics'], 'Validation schema must include GET /diagnostics');
+
   delete require.cache[require.resolve('../src/routes/superadmin.routes')];
   const router = require('../src/routes/superadmin.routes');
   const diagnosticsLayer = router.stack.find((layer) => layer.route?.path === '/diagnostics' && layer.route.methods.get);
 
   assert.ok(diagnosticsLayer, 'GET /diagnostics route should exist on superadmin router');
   const handlers = diagnosticsLayer.route.stack.map((item) => item.handle);
-  assert.strictEqual(handlers[0], requireSuperadmin, 'GET /diagnostics must enforce requireSuperadmin middleware');
-  assert.strictEqual(handlers[1], getSupportDiagnostics, 'GET /diagnostics should map to support diagnostics controller');
+  const superadminIndex = handlers.indexOf(requireSuperadmin);
+  const controllerIndex = handlers.indexOf(getSupportDiagnostics);
+
+  assert.ok(superadminIndex >= 0, 'GET /diagnostics must enforce requireSuperadmin middleware');
+  assert.ok(controllerIndex >= 0, 'GET /diagnostics should map to support diagnostics controller');
+  assert.ok(superadminIndex < controllerIndex, 'requireSuperadmin must execute before support diagnostics controller');
 
   console.log('superadminDiagnostics.routes.test.js passed');
 } finally {
