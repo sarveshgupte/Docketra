@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
 import { ROUTES } from '../../constants/routes';
-import { InlineNotice, PageSection, RefreshNotice, StatGrid } from './PlatformShared';
+import { PageSection, StatGrid, StatusMessageStack } from './PlatformShared';
 import { usePermissions } from '../../hooks/usePermissions';
 import { usePlatformDashboardSummaryQuery } from '../../hooks/usePlatformDataQueries';
 import { dashboardApi } from '../../api/dashboard.api';
@@ -73,9 +73,13 @@ export const PlatformDashboardPage = () => {
       subtitle="Unified snapshot across CMS acquisition, CRM relationships, and docket execution."
       actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>New Docket</Link>}
     >
-      <InlineNotice tone="error" message={isError ? 'Dashboard metrics are temporarily unavailable.' : ''} />
-      <InlineNotice tone="error" message={onboardingError} />
-      <RefreshNotice refreshing={isFetching && !isLoading} message="Refreshing dashboard metrics in the background…" />
+      <StatusMessageStack
+        messages={[
+          { tone: 'error', message: isError ? 'Dashboard metrics are temporarily unavailable.' : '' },
+          { tone: 'error', message: onboardingError },
+          { tone: 'info', message: isFetching && !isLoading ? 'Refreshing dashboard metrics in the background…' : '' },
+        ]}
+      />
       <StatGrid items={cards} />
 
       <PageSection

@@ -8,9 +8,9 @@ import {
   buildQueueContext,
   DataTable,
   FilterBar,
-  InlineNotice,
   PageSection,
-  RefreshNotice,
+  SectionToolbar,
+  StatusMessageStack,
   formatDateLabel,
   formatDocketLabel,
   formatStatusLabel,
@@ -108,17 +108,26 @@ export const PlatformWorkbasketsPage = () => {
       subtitle="Shared docket queue for work that can be pulled into individual execution."
       actions={<Link to={ROUTES.DOCKETS(firmSlug)}>All Dockets</Link>}
     >
-      <InlineNotice tone="error" message={isError ? 'Unable to load the workbench queue.' : ''} />
-      <InlineNotice tone="success" message={success} />
-      <RefreshNotice refreshing={isFetching && !isLoading} message="Refreshing the workbench queue in the background…" />
+      <StatusMessageStack
+        messages={[
+          { tone: 'error', message: isError ? 'Unable to load the workbench queue.' : '' },
+          { tone: 'success', message: success },
+          { tone: 'info', message: isFetching && !isLoading ? 'Refreshing the workbench queue in the background…' : '' },
+        ]}
+      />
       <PageSection
         title="What this queue is for"
         description="Workbench is the shared pull queue. Dockets appear here when they are unassigned or routed to team intake. Pulling a docket moves it into an owner’s My Worklist."
       >
         <p className="muted">If this is empty, create a docket or check category/subcategory-to-workbench mapping in Work Settings.</p>
       </PageSection>
-      <PageSection title="Shared queue" description={`${filteredRows.length} dockets available in this shared workflow queue.`}>
-        <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL'}>
+      <PageSection
+        title="Shared queue"
+        description={`${filteredRows.length} dockets available in this shared workflow queue.`}
+        actions={<button type="button" onClick={() => void refetch()} disabled={isFetching}>{isFetching ? 'Refreshing…' : 'Refresh'}</button>}
+      >
+        <SectionToolbar>
+          <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL'}>
           <input
             type="search"
             value={search}
@@ -139,10 +148,8 @@ export const PlatformWorkbasketsPage = () => {
               <option key={category} value={category}>{category}</option>
             ))}
           </select>
-          <button type="button" onClick={() => void refetch()} disabled={isFetching}>
-            {isFetching ? 'Refreshing…' : 'Refresh'}
-          </button>
-        </FilterBar>
+          </FilterBar>
+        </SectionToolbar>
 
         <DataTable
           columns={['Docket ID', 'Client', 'Category / Subcategory', 'Status', 'Queue', 'Updated', 'Actions']}

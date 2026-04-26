@@ -4,7 +4,7 @@ import { PlatformShell } from '../../components/platform/PlatformShell';
 import { crmApi } from '../../api/crm.api';
 import { formsApi } from '../../api/forms.api';
 import { ROUTES, safeRoute } from '../../constants/routes';
-import { DataTable, FilterBar, InlineNotice, PageSection, RefreshNotice, StatGrid, toArray } from './PlatformShared';
+import { DataTable, FilterBar, PageSection, SectionToolbar, StatGrid, StatusMessageStack, toArray } from './PlatformShared';
 import { resolveCrmErrorMessage } from '../crm/crmUiUtils';
 
 const EMPTY_FORM_FIELDS = [
@@ -347,10 +347,14 @@ export const PlatformCmsPage = () => {
       subtitle="Intake and submission surface hub for request links, forms, and public intake routing."
       actions={<Link to={ROUTES.CRM_LEADS(firmSlug)}>Go to Intake Queue</Link>}
     >
-      <InlineNotice tone="error" message={error} />
-      <InlineNotice tone="error" message={formsError} />
-      <InlineNotice tone="info" message={copyState} />
-      <RefreshNotice refreshing={refreshing} message="Refreshing intake queue in the background…" />
+      <StatusMessageStack
+        messages={[
+          { tone: 'error', message: error },
+          { tone: 'error', message: formsError },
+          { tone: 'info', message: copyState },
+          { tone: 'info', message: refreshing ? 'Refreshing intake queue in the background…' : '' },
+        ]}
+      />
       <StatGrid items={cmsStats} />
       <PageSection
         title="What this module is for"
@@ -392,8 +396,12 @@ export const PlatformCmsPage = () => {
         )}
 
         <form onSubmit={handleSaveForm}>
-          <InlineNotice tone="error" message={formEditorError} />
-          <InlineNotice tone="info" message={formEditorSuccess} />
+          <StatusMessageStack
+            messages={[
+              { tone: 'error', message: formEditorError },
+              { tone: 'success', message: formEditorSuccess },
+            ]}
+          />
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
             <label>
               Form name
@@ -502,44 +510,46 @@ export const PlatformCmsPage = () => {
       </PageSection>
 
       <PageSection id="intake-queue" title="Intake queue summary" description="Track real submission outcomes, source attribution, and downstream handoff status.">
-        <FilterBar
-          onClear={() => {
-            setQuery('');
-            setSourceFilter('all');
-            setModeFilter('all');
-            setOutcomeFilter('all');
-          }}
-          clearDisabled={!query && sourceFilter === 'all' && modeFilter === 'all' && outcomeFilter === 'all'}
-        >
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search lead, source, mode, client, docket"
-            aria-label="Search intake leads"
-          />
-          <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)} aria-label="Filter by source">
-            <option value="all">All sources</option>
-            {availableSources.map((source) => <option key={source} value={source}>{source}</option>)}
-          </select>
-          <select value={modeFilter} onChange={(event) => setModeFilter(event.target.value)} aria-label="Filter by submission mode">
-            <option value="all">All modes</option>
-            <option value="public_form">Public form</option>
-            <option value="embedded_form">Embedded form</option>
-            <option value="cms">CMS</option>
-            <option value="api_intake">API intake</option>
-          </select>
-          <select value={outcomeFilter} onChange={(event) => setOutcomeFilter(event.target.value)} aria-label="Filter by outcome">
-            <option value="all">All outcomes</option>
-            <option value="lead_only">Lead only</option>
-            <option value="lead_client">Lead + client</option>
-            <option value="lead_client_docket">Lead + client + docket</option>
-            <option value="warnings_only">Routing/config warnings</option>
-          </select>
-          <button type="button" onClick={() => void loadLeads({ background: leads.length > 0 })} disabled={loading || refreshing}>
-            {refreshing ? 'Refreshing…' : 'Refresh'}
-          </button>
-        </FilterBar>
+        <SectionToolbar>
+          <FilterBar
+            onClear={() => {
+              setQuery('');
+              setSourceFilter('all');
+              setModeFilter('all');
+              setOutcomeFilter('all');
+            }}
+            clearDisabled={!query && sourceFilter === 'all' && modeFilter === 'all' && outcomeFilter === 'all'}
+          >
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search lead, source, mode, client, docket"
+              aria-label="Search intake leads"
+            />
+            <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)} aria-label="Filter by source">
+              <option value="all">All sources</option>
+              {availableSources.map((source) => <option key={source} value={source}>{source}</option>)}
+            </select>
+            <select value={modeFilter} onChange={(event) => setModeFilter(event.target.value)} aria-label="Filter by submission mode">
+              <option value="all">All modes</option>
+              <option value="public_form">Public form</option>
+              <option value="embedded_form">Embedded form</option>
+              <option value="cms">CMS</option>
+              <option value="api_intake">API intake</option>
+            </select>
+            <select value={outcomeFilter} onChange={(event) => setOutcomeFilter(event.target.value)} aria-label="Filter by outcome">
+              <option value="all">All outcomes</option>
+              <option value="lead_only">Lead only</option>
+              <option value="lead_client">Lead + client</option>
+              <option value="lead_client_docket">Lead + client + docket</option>
+              <option value="warnings_only">Routing/config warnings</option>
+            </select>
+            <button type="button" onClick={() => void loadLeads({ background: leads.length > 0 })} disabled={loading || refreshing}>
+              {refreshing ? 'Refreshing…' : 'Refresh'}
+            </button>
+          </FilterBar>
+        </SectionToolbar>
 
         <DataTable
           columns={['Lead', 'Source', 'Submission mode', 'Created client?', 'Created docket?', 'Status / stage', 'Created at']}
