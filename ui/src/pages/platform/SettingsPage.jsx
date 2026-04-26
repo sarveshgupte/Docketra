@@ -9,11 +9,12 @@ export const PlatformSettingsPage = () => {
 
   return (
     <PlatformShell
+      moduleLabel="Settings"
       title="Settings"
       subtitle="Firm configuration and operational controls"
       actions={<Link to={ROUTES.ADMIN_REPORTS(firmSlug)}>Audit reports</Link>}
     >
-      <PageSection title="Configuration areas" description="Use these sections to maintain secure and predictable workflows.">
+      <PageSection title="Configuration areas" description="Use these sections to maintain secure, predictable operations and role-based controls.">
         <section className="grid-cards">
           <article className="panel">
             <h3>Firm profile</h3>
@@ -30,7 +31,10 @@ export const PlatformSettingsPage = () => {
           <article className="panel">
             <h3>Admin controls</h3>
             <p className="muted">User, role, and hierarchy administration.</p>
-            <div className="action-row"><Link to={ROUTES.ADMIN(firmSlug)}>Open admin panel</Link></div>
+            <div className="action-row">
+              <Link to={ROUTES.ADMIN(firmSlug)}>Open admin panel</Link>
+              <Link to={ROUTES.ADMIN_REPORTS(firmSlug)}>View audit reports</Link>
+            </div>
           </article>
 
           <article className="panel">
