@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
 import { ROUTES } from '../../constants/routes';
 import { usePermissions } from '../../hooks/usePermissions';
-import { InlineNotice, PageSection, RefreshNotice, StatGrid } from './PlatformShared';
+import { PageSection, StatGrid, StatusMessageStack } from './PlatformShared';
 import { usePlatformTaskManagerStatsQuery } from '../../hooks/usePlatformDataQueries';
 
 export const PlatformTaskManagerPage = () => {
@@ -25,15 +25,19 @@ export const PlatformTaskManagerPage = () => {
       subtitle="Daily docket execution hub for team intake, personal work, QC review, and oversight."
       actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>New Docket</Link>}
     >
-      <InlineNotice tone="error" message={isError ? 'Docket Workbench metrics are temporarily unavailable. You can still navigate to all execution surfaces.' : ''} />
-      <RefreshNotice refreshing={isFetching && !isLoading} message="Refreshing Docket Workbench metrics in the background…" />
+      <StatusMessageStack
+        messages={[
+          { tone: 'error', message: isError ? 'Docket Workbench metrics are temporarily unavailable. You can still navigate to all execution surfaces.' : '' },
+          { tone: 'info', message: isFetching && !isLoading ? 'Refreshing Docket Workbench metrics in the background…' : '' },
+        ]}
+      />
       <StatGrid items={cards} />
 
       <PageSection title="Quick actions" description="Go straight to the queue that matches your next workflow step.">
         <div className="action-row">
-          <Link to={ROUTES.CREATE_CASE(firmSlug)}>New Docket</Link>
           <Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>Go to Workbench</Link>
           <Link to={ROUTES.WORKLIST(firmSlug)}>Go to My Worklist</Link>
+          <Link to={ROUTES.DOCKETS(firmSlug)}>Open All Dockets</Link>
         </div>
       </PageSection>
 

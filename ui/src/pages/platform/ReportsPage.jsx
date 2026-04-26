@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
 import { ROUTES } from '../../constants/routes';
-import { DataTable, InlineNotice, PageSection, RefreshNotice, StatGrid } from './PlatformShared';
+import { DataTable, PageSection, StatGrid, StatusMessageStack } from './PlatformShared';
 import { AccessDeniedState } from '../../components/feedback/AccessDeniedState';
 import { getRecoveryPayload } from '../../utils/errorRecovery';
 import { usePlatformReportsMetricsQuery } from '../../hooks/usePlatformDataQueries';
@@ -38,12 +38,17 @@ export const PlatformReportsPage = () => {
 
   return (
     <PlatformShell
+      moduleLabel="Reports / Operations Insights"
       title="Reports"
       subtitle="Productivity, quality, and workload insights for operational leadership"
       actions={<Link to={ROUTES.DOCKETS(firmSlug)}>All Dockets</Link>}
     >
-      <InlineNotice tone="error" message={isError ? 'Unable to load docket report metrics.' : ''} />
-      <RefreshNotice refreshing={isFetching && !isLoading} message="Refreshing report metrics in the background…" />
+      <StatusMessageStack
+        messages={[
+          { tone: 'error', message: isError ? 'Unable to load docket report metrics.' : '' },
+          { tone: 'info', message: isFetching && !isLoading ? 'Refreshing report metrics in the background…' : '' },
+        ]}
+      />
       <StatGrid items={summaryCards} />
       <PageSection
         title="What this module is for"
