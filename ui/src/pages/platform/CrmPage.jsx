@@ -4,7 +4,7 @@ import { PlatformShell } from '../../components/platform/PlatformShell';
 import { crmApi } from '../../api/crm.api';
 import { ROUTES, safeRoute } from '../../constants/routes';
 import { resolveCrmErrorMessage } from '../crm/crmUiUtils';
-import { DataTable, InlineNotice, PageSection, RefreshNotice, StatGrid, toArray } from './PlatformShared';
+import { DataTable, PageSection, StatGrid, StatusMessageStack, toArray } from './PlatformShared';
 
 const leadNeedsFollowUp = (lead) => {
   if (!lead?.nextFollowUpAt) return false;
@@ -119,8 +119,12 @@ export const PlatformCrmPage = () => {
       subtitle="Relationship and client management hub for pipeline visibility, follow-up, and conversion readiness."
       actions={<button type="button" onClick={() => void loadData({ background: true })} disabled={loading || refreshing}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>}
     >
-      <InlineNotice tone="error" message={error} />
-      <RefreshNotice refreshing={refreshing} message="Refreshing CRM overview in the background…" />
+      <StatusMessageStack
+        messages={[
+          { tone: 'error', message: error },
+          { tone: 'info', message: refreshing ? 'Refreshing CRM overview in the background…' : '' },
+        ]}
+      />
       <StatGrid items={cards} />
       <PageSection
         title="What this module is for"
