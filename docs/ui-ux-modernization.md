@@ -278,3 +278,36 @@ This PR was expanded (still presentation-only and low-risk) to cover more of the
 #### Risk notes
 - **CasesPage risk:** Low. Changes are presentation-only and preserve existing data queries, actions, routes, and retry behavior; layout stays on existing app primitives.
 - **FilteredCasesPage risk:** Very low after scope reduction; route remains on prior structure with no contract migration in this correction pass.
+
+## Fifth PR scope (settings detail consistency + trust signaling)
+
+### Scope completed in this PR
+- Normalized settings detail page structure across Firm, Work, Storage (BYOS), and AI (BYOAI) settings pages using a consistent page header + section card hierarchy.
+- Standardized settings feedback into a predictable status-message stack pattern so success/error/info updates appear in one stable location per page.
+- Reduced legacy visual drift in settings detail pages by removing remaining `neo-card` usage in Work Settings and aligning action rows/spacing with tokenized form actions.
+- Improved action hierarchy and scan clarity for configuration actions (save, refresh, connect, disconnect, destructive actions) without altering business logic or payload contracts.
+- Improved responsive wrapping for settings action rows and list item controls so controls remain readable at narrower widths.
+- Preserved and clarified BYOS/BYOAI trust posture copy, keeping storage/data-ownership and optional-AI messaging explicit.
+
+### Exact pages/components touched
+- `ui/src/pages/FirmSettingsPage.jsx`
+- `ui/src/pages/WorkSettingsPage.jsx`
+- `ui/src/pages/StorageSettingsPage.jsx`
+- `ui/src/pages/AiSettingsPage.jsx`
+- `docs/byos-byoai-settings-ux.md`
+- `docs/ui-ux-modernization.md`
+
+### Before / after UX impact
+- **Before:** Settings detail pages mixed multiple header/card patterns, mixed message placements, and inconsistent action-row hierarchy (including duplicate or low-contrast destructive actions).
+- **After:** Settings pages share a more predictable information hierarchy, a consistent status-message stack pattern, clearer primary/secondary/destructive action treatment, and stronger responsive behavior for dense settings controls.
+
+### Remaining UI/UX gaps
+1. `FirmSettingsPage` still contains a large multi-section surface that could be split into smaller reusable settings section primitives in a future pass.
+2. Settings detail pages still use route-local status state patterns; long-term consistency could improve with a shared settings feedback hook.
+3. Additional accessibility QA (keyboard-only traversal and screen-reader spot checks) should be run against all settings detail pages after final visual migration.
+
+### Recommended next PR
+**PR 6: Settings detail component extraction + focused accessibility hardening**
+- Extract shared `SettingsSection`, `SettingsStatusStack`, and `SettingsActionRow` primitives from now-aligned pages.
+- Add keyboard/screen-reader acceptance checks for settings workflows.
+- Keep behavior, payloads, and integration flows unchanged.
