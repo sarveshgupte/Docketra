@@ -3,6 +3,7 @@ import { Button } from '../../../components/common/Button';
 import { DataTable } from '../../../components/common/DataTable';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { formatDate } from '../../../utils/formatters';
+import { AdminSectionHeader } from './AdminSectionHeader';
 
 export const AdminClientsSection = ({
   clients,
@@ -18,15 +19,16 @@ export const AdminClientsSection = ({
   StatusBadge,
 }) => (
   <Card>
-    <div className="admin__section-header">
-      <h2 className="neo-section__header">Client Management</h2>
-      <div className="admin__section-actions">
-        <Button variant="default" onClick={onBulkUpload}>Bulk Upload</Button>
-        <Button variant="default" onClick={onDownloadTemplate}>Download Template</Button>
-        <Button variant="default" onClick={onBulkPaste}>Bulk Paste</Button>
-        <Button variant="primary" onClick={onCreateClient}>+ Create Client</Button>
-      </div>
-    </div>
+    <AdminSectionHeader
+      title="Client Management"
+      description="Manage firm clients, profile completeness, and status from one place."
+      actions={[
+        { key: 'bulk-upload-clients', label: 'Bulk Upload', onClick: onBulkUpload },
+        { key: 'download-clients-template', label: 'Download Template', onClick: onDownloadTemplate },
+        { key: 'bulk-paste-clients', label: 'Bulk Paste', onClick: onBulkPaste },
+        { key: 'create-client', label: '+ Create Client', variant: 'primary', onClick: onCreateClient },
+      ]}
+    />
 
     {tabError?.tab === 'clients' ? (
       <EmptyState
@@ -38,7 +40,7 @@ export const AdminClientsSection = ({
     ) : clients.length === 0 ? (
       <EmptyState
         title="No clients created yet"
-        description="Create your first client to begin managing cases."
+        description="Create your first client to begin managing dockets and downstream workflows."
       />
     ) : (
       <>
@@ -58,8 +60,9 @@ export const AdminClientsSection = ({
               {
                 key: 'actions',
                 header: 'Actions',
+                align: 'right',
                 render: (c) => (
-                  <div className="flex gap-2">
+                  <div className="flex justify-end gap-2">
                     <Button size="sm" variant="outline" onClick={() => onEditClient(c)}>Edit</Button>
                   </div>
                 ),
