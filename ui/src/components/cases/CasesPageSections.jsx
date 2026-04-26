@@ -1,5 +1,4 @@
 import { Button } from '../common/Button';
-import { SectionCard } from '../layout/SectionCard';
 import { CASE_STATUS } from '../../utils/constants';
 
 export const CasesHeaderActions = ({
@@ -35,7 +34,7 @@ export const CasesHeaderActions = ({
 export const CasesSlaSummaryBar = ({ isPartner, slaSummary, setStatusFilter, setActiveView, enableEscalationView }) => {
   if (isPartner) return null;
   return (
-    <div className="cases-page__sla-bar cases-page__control-section" role="region" aria-label="SLA Summary">
+    <div className="cases-page__sla-bar" role="region" aria-label="SLA Summary">
       <button type="button" className="cases-page__sla-tile" onClick={() => { setStatusFilter('ALL'); setActiveView('MY_OPEN'); }} aria-label={`Total open dockets: ${slaSummary.totalOpen}`}>
         <span className="cases-page__sla-tile-value">{slaSummary.totalOpen}</span>
         <span className="cases-page__sla-tile-label">Open Dockets</span>
@@ -63,7 +62,7 @@ export const CasesSlaSummaryBar = ({ isPartner, slaSummary, setStatusFilter, set
 };
 
 export const CasesSavedViews = ({ savedViews, savedViewsOpen, setSavedViewsOpen, handleLoadSavedView, removeView, saveViewName, setSaveViewName, handleSaveCurrentView }) => (
-  <div className="cases-page__saved-views cases-page__control-section">
+  <div className="cases-page__saved-views">
     <div className="cases-page__saved-views-row">
       <button type="button" className="cases-page__saved-views-toggle" onClick={() => setSavedViewsOpen((v) => !v)} aria-expanded={savedViewsOpen}>
         ⭐ Saved Views {savedViews.length > 0 && `(${savedViews.length})`}
@@ -99,17 +98,21 @@ export const CasesSavedViews = ({ savedViews, savedViewsOpen, setSavedViewsOpen,
   </div>
 );
 
-export const CasesFiltersCard = ({ statusFilter, setStatusFilter, workTypeFilter, setWorkTypeFilter, qcWorkbaskets, activeWorkbasketId, setActiveWorkbasketId, }) => (
-  <SectionCard className="cases-page__filters cases-page__control-section" title="Filters" subtitle="Narrow down the docket list by workflow status.">
+export const CasesFiltersCard = ({ statusFilter, setStatusFilter, workTypeFilter, setWorkTypeFilter, qcWorkbaskets, activeWorkbasketId, setActiveWorkbasketId, onClearFilters, }) => {
+  const defaultQcWorkbasketId = qcWorkbaskets[0]?.id || '';
+  const hasQcOverride = statusFilter === CASE_STATUS.QC_PENDING && Boolean(activeWorkbasketId) && activeWorkbasketId !== defaultQcWorkbasketId;
+  const hasActiveFilters = statusFilter !== 'ALL' || workTypeFilter !== 'ALL' || hasQcOverride;
+
+  return (
+    <div className="cases-page__filters" role="group" aria-label="Docket filters">
     {statusFilter === CASE_STATUS.QC_PENDING && qcWorkbaskets.length > 1 && (
       <>
         <label className="cases-page__filter-label">QC Workbasket</label>
-        <div className="cases-page__views" role="tablist" aria-label="QC workbasket selector">
+        <div className="cases-page__views" role="group" aria-label="QC workbasket selector">
           {qcWorkbaskets.map((workbasket) => (
             <button
               key={workbasket.id}
-              role="tab"
-              aria-selected={activeWorkbasketId === workbasket.id}
+              aria-pressed={activeWorkbasketId === workbasket.id}
               className={`cases-page__view-tab${activeWorkbasketId === workbasket.id ? ' cases-page__view-tab--active' : ''}`}
               onClick={() => setActiveWorkbasketId(workbasket.id)}
               type="button"
@@ -120,23 +123,31 @@ export const CasesFiltersCard = ({ statusFilter, setStatusFilter, workTypeFilter
         </div>
       </>
     )}
-    <label className="cases-page__filter-label" htmlFor="status-filter">Status</label>
-    <select id="status-filter" className="cases-page__filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-      <option value="ALL">All statuses</option>
-      <option value={CASE_STATUS.OPEN}>Open</option>
-      <option value={CASE_STATUS.PENDING}>Pending</option>
-      <option value={CASE_STATUS.QC_PENDING}>QC Pending</option>
-      <option value={CASE_STATUS.RESOLVED}>Resolved</option>
-      <option value={CASE_STATUS.FILED}>Filed</option>
-    </select>
-    <label className="cases-page__filter-label" htmlFor="work-type-filter">Work Type</label>
-    <select id="work-type-filter" className="cases-page__filter-select" value={workTypeFilter} onChange={(event) => setWorkTypeFilter(event.target.value)}>
-      <option value="ALL">All Work</option>
-      <option value="client">Client Work</option>
-      <option value="internal">Internal Work</option>
-    </select>
-  </SectionCard>
-);
+    <div className="cases-page__filter-row">
+      <div className="cases-page__filter-control">
+        <label className="cases-page__filter-label" htmlFor="status-filter">Status</label>
+        <select id="status-filter" className="cases-page__filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="ALL">All statuses</option>
+          <option value={CASE_STATUS.OPEN}>Open</option>
+          <option value={CASE_STATUS.PENDING}>Pending</option>
+          <option value={CASE_STATUS.QC_PENDING}>QC Pending</option>
+          <option value={CASE_STATUS.RESOLVED}>Resolved</option>
+          <option value={CASE_STATUS.FILED}>Filed</option>
+        </select>
+      </div>
+      <div className="cases-page__filter-control">
+        <label className="cases-page__filter-label" htmlFor="work-type-filter">Work Type</label>
+        <select id="work-type-filter" className="cases-page__filter-select" value={workTypeFilter} onChange={(event) => setWorkTypeFilter(event.target.value)}>
+          <option value="ALL">All Work</option>
+          <option value="client">Client Work</option>
+          <option value="internal">Internal Work</option>
+        </select>
+      </div>
+      <Button variant="ghost" size="sm" onClick={onClearFilters} disabled={!hasActiveFilters}>Clear filters</Button>
+    </div>
+  </div>
+  );
+};
 
 export const CasesPerformancePanel = ({ isPartner, enablePerformanceView, showPerformance, performanceMetrics }) => {
   if (isPartner || !enablePerformanceView || !showPerformance) return null;
