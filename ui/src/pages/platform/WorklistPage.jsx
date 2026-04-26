@@ -8,9 +8,9 @@ import {
   buildQueueContext,
   DataTable,
   FilterBar,
-  InlineNotice,
   PageSection,
-  RefreshNotice,
+  SectionToolbar,
+  StatusMessageStack,
   formatDateLabel,
   formatDocketLabel,
   formatStatusLabel,
@@ -113,40 +113,47 @@ export const PlatformWorklistPage = () => {
       subtitle="Your personal docket workload for active execution and pended follow-up."
       actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>Create Docket</Link>}
     >
-      <InlineNotice tone="error" message={error || (isError ? 'Unable to load your worklist right now.' : '')} />
-      <InlineNotice tone="success" message={success} />
-      <RefreshNotice refreshing={isFetching && !isLoading} message="Refreshing worklist without interrupting your current view…" />
+      <StatusMessageStack
+        messages={[
+          { tone: 'error', message: error || (isError ? 'Unable to load your worklist right now.' : '') },
+          { tone: 'success', message: success },
+          { tone: 'info', message: isFetching && !isLoading ? 'Refreshing worklist without interrupting your current view…' : '' },
+        ]}
+      />
       <PageSection
         title="What this queue is for"
         description="My Worklist is your personal execution queue. Dockets appear after assignment from Workbench or direct assignment at creation."
       >
         <p className="muted">If this is empty, check Workbench for unassigned intake or ask an admin/manager to assign dockets to you.</p>
       </PageSection>
-      <PageSection title="My active workload" description={`${filteredRows.length} dockets in your current worklist view.`}>
-        <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL'}>
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search docket, client, assignee"
-            aria-label="Search worklist"
-          />
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter worklist by status">
-            <option value="ALL">All statuses</option>
-            <option value="IN_PROGRESS">In progress</option>
-            <option value="PENDING">Pending</option>
-            <option value="IN_QC">In QC</option>
-          </select>
-          <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Filter by category">
-            <option value="ALL">All categories</option>
-            {categories.map((category) => (
-              <option key={category} value={category}>{category}</option>
-            ))}
-          </select>
-          <button type="button" onClick={() => void refetch()} disabled={isFetching}>
-            {isFetching ? 'Refreshing…' : 'Refresh'}
-          </button>
-        </FilterBar>
+      <PageSection
+        title="My active workload"
+        description={`${filteredRows.length} dockets in your current worklist view.`}
+        actions={<button type="button" onClick={() => void refetch()} disabled={isFetching}>{isFetching ? 'Refreshing…' : 'Refresh'}</button>}
+      >
+        <SectionToolbar>
+          <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL'}>
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search docket, client, assignee"
+              aria-label="Search worklist"
+            />
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter worklist by status">
+              <option value="ALL">All statuses</option>
+              <option value="IN_PROGRESS">In progress</option>
+              <option value="PENDING">Pending</option>
+              <option value="IN_QC">In QC</option>
+            </select>
+            <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Filter by category">
+              <option value="ALL">All categories</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>{category}</option>
+              ))}
+            </select>
+          </FilterBar>
+        </SectionToolbar>
 
         <DataTable
           columns={['Docket ID', 'Client', 'Category / Subcategory', 'Status', 'Assignee', 'Updated', 'Actions']}

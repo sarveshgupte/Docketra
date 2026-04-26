@@ -243,9 +243,9 @@
 }
 
 .platform__content {
-  padding: 16px;
+  padding: 18px;
   display: grid;
-  gap: 12px;
+  gap: 14px;
   align-content: start;
 }
 
@@ -278,7 +278,7 @@
 
 .section-panel {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .section-header {
@@ -303,8 +303,14 @@
 .section-actions,
 .action-row {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
+}
+
+.section-toolbar,
+.status-stack {
+  display: grid;
+  gap: 8px;
 }
 
 .action-row a,
@@ -327,6 +333,19 @@
 .section-actions a:hover,
 .section-actions button:hover {
   background: #f8fafc;
+}
+
+.action-row a:focus-visible,
+.action-row button:focus-visible,
+.section-actions a:focus-visible,
+.section-actions button:focus-visible,
+.filter-bar button:focus-visible,
+.filter-bar a:focus-visible,
+.table td button:focus-visible,
+.table td a:focus-visible,
+.module-tile:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
 
 .tile-grid {
@@ -387,6 +406,7 @@
 
 .filter-bar input {
   min-width: 220px;
+  flex: 1 1 240px;
 }
 
 .filter-bar button,
@@ -567,7 +587,7 @@
 .bar span {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #2563eb, #7c3aed);
+  background: #2563eb;
 }
 
 button:disabled,
@@ -683,6 +703,15 @@ select:focus-visible {
 
   .platform__content {
     padding: 12px;
+  }
+
+  .filter-bar__controls {
+    width: 100%;
+  }
+
+  .filter-bar input,
+  .filter-bar select {
+    min-width: min(100%, 220px);
   }
 }
 
