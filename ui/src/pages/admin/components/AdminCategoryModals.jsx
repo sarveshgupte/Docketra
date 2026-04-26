@@ -38,7 +38,7 @@ export const AdminCategoryModals = ({
           required
         />
 
-        <div className="neo-form-actions">
+        <div className="admin__modal-actions">
           <Button
             type="button"
             variant="default"
@@ -83,7 +83,7 @@ export const AdminCategoryModals = ({
           required
         />
 
-        <div className="neo-form-actions">
+        <div className="admin__modal-actions">
           <Button
             type="button"
             variant="default"
