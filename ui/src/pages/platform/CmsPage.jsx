@@ -375,13 +375,13 @@ export const PlatformCmsPage = () => {
 
       <PageSection id="embed-forms" title="Form management" description="Create/edit intake forms and publish request links.">
         {forms.length > 0 ? (
-          <div className="action-row" style={{ marginBottom: 16 }}>
+          <div className="cms-form-editor__status-row">
             <label htmlFor="cms-form-select">Select form</label>
             <select
               id="cms-form-select"
               value={selectedFormId}
               onChange={(event) => setSelectedFormId(event.target.value)}
-              style={{ minWidth: 260 }}
+              className="cms-form-editor__form-select"
               disabled={formsLoading}
             >
               {forms.map((form) => (
@@ -395,34 +395,34 @@ export const PlatformCmsPage = () => {
           <p>No forms found yet. Create one below to start launch testing.</p>
         )}
 
-        <form onSubmit={handleSaveForm}>
+        <form onSubmit={handleSaveForm} className="cms-form-editor">
           <StatusMessageStack
             messages={[
               { tone: 'error', message: formEditorError },
               { tone: 'success', message: formEditorSuccess },
             ]}
           />
-          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
-            <label>
+          <div className="cms-form-editor__grid">
+            <label className="cms-form-editor__field">
               Form name
               <input value={formEditor.name} onChange={(event) => setFormEditor((prev) => ({ ...prev, name: event.target.value }))} required />
             </label>
-            <label>
+            <label className="cms-form-editor__field">
               Embed title
               <input value={formEditor.embedTitle} onChange={(event) => setFormEditor((prev) => ({ ...prev, embedTitle: event.target.value }))} />
             </label>
-            <label>
+            <label className="cms-form-editor__field">
               Success message
               <input value={formEditor.successMessage} onChange={(event) => setFormEditor((prev) => ({ ...prev, successMessage: event.target.value }))} />
             </label>
-            <label>
+            <label className="cms-form-editor__field">
               Redirect URL (optional)
               <input value={formEditor.redirectUrl} onChange={(event) => setFormEditor((prev) => ({ ...prev, redirectUrl: event.target.value }))} placeholder="https://example.com/thank-you" />
             </label>
           </div>
 
-          <div style={{ marginTop: 12, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            <label>
+          <div className="cms-form-editor__toggles">
+            <label className="cms-form-editor__toggle">
               <input
                 type="checkbox"
                 checked={formEditor.isActive}
@@ -431,7 +431,7 @@ export const PlatformCmsPage = () => {
               {' '}
               Active
             </label>
-            <label>
+            <label className="cms-form-editor__toggle">
               <input
                 type="checkbox"
                 checked={formEditor.allowEmbed}
@@ -442,7 +442,7 @@ export const PlatformCmsPage = () => {
             </label>
           </div>
 
-          <label style={{ display: 'block', marginTop: 12 }}>
+          <label className="cms-form-editor__field cms-form-editor__field--full">
             Allowed embed domains (comma-separated)
             <input
               value={formEditor.allowedEmbedDomainsInput}
@@ -451,60 +451,67 @@ export const PlatformCmsPage = () => {
             />
           </label>
 
-          <div style={{ marginTop: 12 }}>
+          <div className="cms-form-editor__fields">
             <strong>Fields</strong>
             {formEditor.fields.map((field, index) => (
-              <div key={`${field.key || 'field'}-${index}`} style={{ display: 'grid', gap: 8, gridTemplateColumns: '1.2fr 1.2fr 0.8fr auto auto', alignItems: 'center', marginTop: 8 }}>
+              <div key={`${field.key || 'field'}-${index}`} className="cms-form-editor__field-row">
                 <input
                   value={field.key}
                   onChange={(event) => setEditorField(index, 'key', event.target.value)}
                   placeholder="field key"
+                  aria-label={`Field ${index + 1} key`}
                   required
                 />
                 <input
                   value={field.label}
                   onChange={(event) => setEditorField(index, 'label', event.target.value)}
                   placeholder="label"
+                  aria-label={`Field ${index + 1} label`}
                 />
                 <select value={field.type} onChange={(event) => setEditorField(index, 'type', event.target.value)}>
                   <option value="text">Text</option>
                   <option value="email">Email</option>
                   <option value="phone">Phone</option>
                 </select>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(field.required) || normalizeText(field.key).toLowerCase() === 'name'}
-                    onChange={(event) => setEditorField(index, 'required', event.target.checked)}
-                    disabled={normalizeText(field.key).toLowerCase() === 'name'}
-                  />
-                  {' '}
-                  Required
-                </label>
-                <button
-                  type="button"
-                  onClick={() => removeField(index)}
-                  disabled={formEditor.fields.length <= 1 || normalizeText(field.key).toLowerCase() === 'name'}
-                >
-                  Remove
-                </button>
+                <div className="cms-form-editor__field-actions">
+                  <label className="cms-form-editor__toggle">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(field.required) || normalizeText(field.key).toLowerCase() === 'name'}
+                      onChange={(event) => setEditorField(index, 'required', event.target.checked)}
+                      disabled={normalizeText(field.key).toLowerCase() === 'name'}
+                    />
+                    {' '}
+                    Required
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => removeField(index)}
+                    aria-label={`Remove field ${field.label || field.key || index + 1}`}
+                    disabled={formEditor.fields.length <= 1 || normalizeText(field.key).toLowerCase() === 'name'}
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             ))}
-            <div className="action-row" style={{ marginTop: 8 }}>
+            <div className="cms-form-editor__actions">
               <button type="button" onClick={addField}>Add field</button>
-              <button type="submit" disabled={formSaving}>{formSaving ? 'Saving…' : (formEditor.id ? 'Save form' : 'Create form')}</button>
+              <button type="submit" className="cms-form-editor__save-btn" disabled={formSaving}>
+                {formSaving ? 'Saving…' : (formEditor.id ? 'Save form' : 'Create form')}
+              </button>
             </div>
           </div>
         </form>
 
         {selectedForm ? (
           <>
-            <div className="action-row" style={{ marginTop: 16 }}>
+            <div className="cms-form-editor__copy-actions">
               <button type="button" onClick={() => void handleCopy(publicLink, 'Public link')}>Copy public link</button>
               <button type="button" onClick={() => void handleCopy(embedLink, 'Embed link')}>Copy embed link</button>
               <button type="button" onClick={() => void handleCopy(iframeSnippet, 'Iframe snippet')}>Copy iframe snippet</button>
             </div>
-            <p className="muted" style={{ marginTop: 8 }}>Document collection remains inside Docket → Attachments, not as a standalone CMS repository.</p>
+            <p className="muted cms-form-editor__note">Document collection remains inside Docket → Attachments, not as a standalone CMS repository.</p>
           </>
         ) : null}
       </PageSection>
