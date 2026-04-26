@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
+import { Select } from '../components/common/Select';
 import { PageHeader } from '../components/layout/PageHeader';
 import { adminApi } from '../api/admin.api';
 import { ROUTES } from '../constants/routes';
+import { spacingClasses } from '../theme/tokens';
+import { StatusMessageStack } from './platform/PlatformShared';
 
 export const WorkSettingsPage = () => {
   const navigate = useNavigate();
@@ -32,6 +35,16 @@ export const WorkSettingsPage = () => {
   });
   const [intakeMeta, setIntakeMeta] = useState({ options: { categories: [], workbaskets: [], priorities: [], assignees: [] }, intakeApiKeyMasked: null });
   const [intakeKey, setIntakeKey] = useState('');
+
+  const statusMessages = useMemo(() => ([
+    loadError ? { tone: 'error', message: loadError } : null,
+    statusMessage.text
+      ? {
+        tone: statusMessage.type === 'error' ? 'error' : statusMessage.type === 'success' ? 'success' : 'info',
+        message: statusMessage.text,
+      }
+      : null,
+  ].filter(Boolean)), [loadError, statusMessage]);
 
   const loadWorkbaskets = async () => {
     setLoadingWorkbaskets(true);
@@ -158,140 +171,130 @@ export const WorkSettingsPage = () => {
 
   return (
     <PlatformShell moduleLabel="Settings" title="Work settings" subtitle="Configure work taxonomy and docket structuring rules for your firm.">
-      <PageHeader
-        title="Work Settings"
-        subtitle="Configure work taxonomy and docket structuring rules for your firm."
-      />
+      <div className="min-h-screen w-full flex-1 bg-gray-50">
+        <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 space-y-6">
+          <PageHeader
+            title="Work Settings"
+            subtitle="Configure work taxonomy and docket structuring rules for your firm."
+          />
 
-      <Card className="neo-card">
-        <div className="p-6">
-          {loadError ? (
-            <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              <p>{loadError}</p>
-              <Button type="button" variant="outline" onClick={loadWorkbaskets} disabled={loadingWorkbaskets}>
-                Retry loading
+          <StatusMessageStack messages={statusMessages} />
+
+          <Card>
+            <div className={spacingClasses.sectionMargin}>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Workbasket Management</h2>
+                <p className="mt-1 text-sm text-gray-600">Add, rename, and activate or deactivate workbaskets for docket routing.</p>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+                <Input
+                  label="New workbasket"
+                  value={workbasketName}
+                  onChange={(event) => setWorkbasketName(event.target.value)}
+                  placeholder="e.g. Compliance WB"
+                />
+                <Button type="button" variant="primary" onClick={handleCreateWorkbasket} disabled={workbasketSaving || !workbasketName.trim()}>
+                  Add Workbasket
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                {loadingWorkbaskets ? <p className="text-sm text-gray-500">Loading workbaskets…</p> : null}
+                {!loadingWorkbaskets && workbaskets.length === 0 ? (
+                  <p className="text-sm text-gray-500">No workbaskets are configured yet. Create one to start docket routing.</p>
+                ) : null}
+                {workbaskets.map((workbasket) => (
+                  <div key={workbasket._id} className="flex flex-wrap items-center justify-between gap-3 rounded border border-gray-200 px-3 py-2">
+                    <div className="text-sm font-medium text-gray-900">{workbasket.name} <span className="text-xs text-gray-500">({workbasket.isActive ? 'Active' : 'Inactive'})</span></div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" variant="outline" onClick={() => handleRenameWorkbasket(workbasket)}>Rename</Button>
+                      <Button type="button" variant={workbasket.isActive ? 'danger' : 'primary'} onClick={() => handleToggleWorkbasket(workbasket)}>
+                        {workbasket.isActive ? 'Deactivate' : 'Activate'}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          <Card id="cms-intake-settings">
+            <div className={spacingClasses.sectionMargin}>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">CMS Intake Settings</h2>
+                <p className="mt-1 text-sm text-gray-600">Set predictable intake defaults and API access without changing backend behavior.</p>
+              </div>
+              {intakeLoading ? <p className="text-sm text-gray-500">Loading CMS intake settings…</p> : (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {[{ key: 'autoCreateClient', label: 'Auto create client' }, { key: 'autoCreateDocket', label: 'Auto create docket' }, { key: 'intakeApiEnabled', label: 'Intake API enabled' }].map((item) => (
+                      <label key={item.key} className="inline-flex items-center gap-2 rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                          checked={Boolean(intakeState[item.key])}
+                          onChange={(event) => setIntakeState((prev) => ({ ...prev, [item.key]: event.target.checked }))}
+                        />
+                        {item.label}
+                      </label>
+                    ))}
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Select label="Default category" value={intakeState.defaultCategoryId} onChange={(event) => setIntakeState((prev) => ({ ...prev, defaultCategoryId: event.target.value, defaultSubcategoryId: '' }))}>
+                      <option value="">None</option>
+                      {(intakeMeta.options?.categories || []).map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+                    </Select>
+                    <Select label="Default subcategory" value={intakeState.defaultSubcategoryId} onChange={(event) => setIntakeState((prev) => ({ ...prev, defaultSubcategoryId: event.target.value }))} disabled={!intakeState.defaultCategoryId}>
+                      <option value="">None</option>
+                      {subcategoryOptions.map((subcategory) => <option key={subcategory.id} value={subcategory.id}>{subcategory.name}</option>)}
+                    </Select>
+                    <Select label="Default workbasket" value={intakeState.defaultWorkbasketId} onChange={(event) => setIntakeState((prev) => ({ ...prev, defaultWorkbasketId: event.target.value }))}>
+                      <option value="">None</option>
+                      {(intakeMeta.options?.workbaskets || []).map((workbasket) => <option key={workbasket.id} value={workbasket.id}>{workbasket.name}</option>)}
+                    </Select>
+                    <Select label="Default priority" value={intakeState.defaultPriority} onChange={(event) => setIntakeState((prev) => ({ ...prev, defaultPriority: event.target.value }))}>
+                      <option value="">None</option>
+                      {(intakeMeta.options?.priorities || []).map((priority) => <option key={priority} value={priority}>{priority}</option>)}
+                    </Select>
+                    <Select label="Default assignee" value={intakeState.defaultAssignee} onChange={(event) => setIntakeState((prev) => ({ ...prev, defaultAssignee: event.target.value }))} className="md:col-span-2">
+                      <option value="">None</option>
+                      {(intakeMeta.options?.assignees || []).map((assignee) => <option key={assignee.xid} value={assignee.xid}>{assignee.name} ({assignee.xid})</option>)}
+                    </Select>
+                  </div>
+
+                  <div className="rounded border border-gray-200 bg-gray-50 p-3">
+                    <p className="text-sm text-gray-700"><strong>Intake API key:</strong> {intakeKey || intakeMeta.intakeApiKeyMasked || 'Not generated yet'}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Button type="button" variant="outline" onClick={() => navigator.clipboard.writeText(intakeKey)} disabled={!intakeKey}>Copy new key</Button>
+                      <Button type="button" variant="outline" onClick={handleRegenerateApiKey} disabled={intakeRegenerating}>{intakeRegenerating ? 'Regenerating…' : 'Regenerate key'}</Button>
+                    </div>
+                  </div>
+
+                  <div className={`${spacingClasses.formActions} ${spacingClasses.formActionsGap} flex-wrap`}>
+                    <Button type="button" variant="primary" onClick={handleSaveIntakeSettings} disabled={intakeSaving}>{intakeSaving ? 'Saving…' : 'Save Intake Settings'}</Button>
+                  </div>
+                </>
+              )}
+            </div>
+          </Card>
+
+          <Card>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Category Management</h2>
+                <p className="mt-1 text-sm text-gray-600">Create categories and subcategories that define where dockets are created.</p>
+              </div>
+              <Button
+                variant="primary"
+                onClick={() => navigate(ROUTES.WORK_CATEGORY_MANAGEMENT(firmSlug))}
+              >
+                Open Category Management
               </Button>
             </div>
-          ) : null}
-          {statusMessage.text ? (
-            <p className={`mb-4 rounded border px-3 py-2 text-sm ${
-              statusMessage.type === 'error'
-                ? 'border-red-200 bg-red-50 text-red-700'
-                : statusMessage.type === 'success'
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                  : 'border-blue-200 bg-blue-50 text-blue-700'
-            }`}
-            >
-              {statusMessage.text}
-            </p>
-          ) : null}
-          <h2 className="text-lg font-semibold text-gray-900">Workbasket Management</h2>
-          <p className="mt-1 text-sm text-gray-600">Add, rename, and activate/deactivate workbaskets for docket routing.</p>
-          <div className="mt-4 flex gap-3">
-            <Input
-              label="New workbasket"
-              value={workbasketName}
-              onChange={(event) => setWorkbasketName(event.target.value)}
-              placeholder="e.g. Compliance WB"
-            />
-            <Button type="button" variant="primary" onClick={handleCreateWorkbasket} disabled={workbasketSaving || !workbasketName.trim()}>
-              Add Workbasket
-            </Button>
-          </div>
-          <div className="mt-4 space-y-2">
-            {loadingWorkbaskets ? <p className="text-sm text-gray-500">Loading workbaskets…</p> : null}
-            {!loadingWorkbaskets && workbaskets.length === 0 ? (
-              <p className="text-sm text-gray-500">No workbaskets are configured yet. Create one to start docket routing.</p>
-            ) : null}
-            {workbaskets.map((workbasket) => (
-              <div key={workbasket._id} className="flex items-center justify-between rounded border px-3 py-2">
-                <div className="text-sm font-medium text-gray-900">{workbasket.name} <span className="text-xs text-gray-500">({workbasket.isActive ? 'Active' : 'Inactive'})</span></div>
-                <div className="flex gap-2">
-                  <Button type="button" variant="outline" onClick={() => handleRenameWorkbasket(workbasket)}>Rename</Button>
-                  <Button type="button" variant={workbasket.isActive ? 'danger' : 'success'} onClick={() => handleToggleWorkbasket(workbasket)}>
-                    {workbasket.isActive ? 'Deactivate' : 'Activate'}
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+          </Card>
         </div>
-      </Card>
-
-      <Card className="neo-card" id="cms-intake-settings">
-        <div className="p-6">
-          <h2 className="text-lg font-semibold text-gray-900">CMS Intake Settings</h2>
-          <p className="mt-1 text-sm text-gray-600">Configure launch-critical intake defaults and API access without touching code.</p>
-          {intakeLoading ? <p className="mt-3 text-sm text-gray-500">Loading CMS intake settings…</p> : (
-            <>
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <label><input type="checkbox" checked={intakeState.autoCreateClient} onChange={(event) => setIntakeState((prev) => ({ ...prev, autoCreateClient: event.target.checked }))} /> Auto create client</label>
-                <label><input type="checkbox" checked={intakeState.autoCreateDocket} onChange={(event) => setIntakeState((prev) => ({ ...prev, autoCreateDocket: event.target.checked }))} /> Auto create docket</label>
-                <label><input type="checkbox" checked={intakeState.intakeApiEnabled} onChange={(event) => setIntakeState((prev) => ({ ...prev, intakeApiEnabled: event.target.checked }))} /> Intake API enabled</label>
-              </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <label>Default category
-                  <select value={intakeState.defaultCategoryId} onChange={(event) => setIntakeState((prev) => ({ ...prev, defaultCategoryId: event.target.value, defaultSubcategoryId: '' }))}>
-                    <option value="">None</option>
-                    {(intakeMeta.options?.categories || []).map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-                  </select>
-                </label>
-                <label>Default subcategory
-                  <select value={intakeState.defaultSubcategoryId} onChange={(event) => setIntakeState((prev) => ({ ...prev, defaultSubcategoryId: event.target.value }))} disabled={!intakeState.defaultCategoryId}>
-                    <option value="">None</option>
-                    {subcategoryOptions.map((subcategory) => <option key={subcategory.id} value={subcategory.id}>{subcategory.name}</option>)}
-                  </select>
-                </label>
-                <label>Default workbasket
-                  <select value={intakeState.defaultWorkbasketId} onChange={(event) => setIntakeState((prev) => ({ ...prev, defaultWorkbasketId: event.target.value }))}>
-                    <option value="">None</option>
-                    {(intakeMeta.options?.workbaskets || []).map((workbasket) => <option key={workbasket.id} value={workbasket.id}>{workbasket.name}</option>)}
-                  </select>
-                </label>
-                <label>Default priority
-                  <select value={intakeState.defaultPriority} onChange={(event) => setIntakeState((prev) => ({ ...prev, defaultPriority: event.target.value }))}>
-                    <option value="">None</option>
-                    {(intakeMeta.options?.priorities || []).map((priority) => <option key={priority} value={priority}>{priority}</option>)}
-                  </select>
-                </label>
-                <label>Default assignee
-                  <select value={intakeState.defaultAssignee} onChange={(event) => setIntakeState((prev) => ({ ...prev, defaultAssignee: event.target.value }))}>
-                    <option value="">None</option>
-                    {(intakeMeta.options?.assignees || []).map((assignee) => <option key={assignee.xid} value={assignee.xid}>{assignee.name} ({assignee.xid})</option>)}
-                  </select>
-                </label>
-              </div>
-              <div className="mt-4 rounded border border-gray-200 p-3">
-                <p className="text-sm text-gray-700"><strong>Intake API key</strong>: {intakeKey || intakeMeta.intakeApiKeyMasked || 'Not generated yet'}</p>
-                <div className="mt-2 flex gap-2">
-                  <Button type="button" variant="outline" onClick={() => navigator.clipboard.writeText(intakeKey)} disabled={!intakeKey}>Copy new key</Button>
-                  <Button type="button" variant="outline" onClick={handleRegenerateApiKey} disabled={intakeRegenerating}>{intakeRegenerating ? 'Regenerating…' : 'Regenerate key'}</Button>
-                </div>
-              </div>
-              <div className="mt-4">
-                <Button type="button" variant="primary" onClick={handleSaveIntakeSettings} disabled={intakeSaving}>{intakeSaving ? 'Saving…' : 'Save intake settings'}</Button>
-              </div>
-            </>
-          )}
-        </div>
-      </Card>
-
-      <Card className="neo-card">
-        <div className="flex items-start justify-between gap-4 p-6">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Category Management</h2>
-            <p className="mt-1 text-sm text-gray-600">
-              Create categories and subcategories that define where dockets are created.
-            </p>
-          </div>
-          <Button
-            variant="primary"
-            onClick={() => navigate(ROUTES.WORK_CATEGORY_MANAGEMENT(firmSlug))}
-          >
-            Open Category Management
-          </Button>
-        </div>
-      </Card>
+      </div>
     </PlatformShell>
   );
 };

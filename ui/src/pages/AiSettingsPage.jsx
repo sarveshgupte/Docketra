@@ -4,10 +4,12 @@ import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Select } from '../components/common/Select';
+import { PageHeader } from '../components/layout/PageHeader';
 import { ToastContext } from '../contexts/ToastContext';
 import { useAuth } from '../hooks/useAuth';
 import { getAiConfigurationStatus, saveAiConfiguration, disconnectAiConfiguration } from '../services/aiSettingsService';
 import { spacingClasses } from '../theme/tokens';
+import { StatusMessageStack } from './platform/PlatformShared';
 
 const PROVIDER_OPTIONS = [
   { value: 'openai', label: 'OpenAI' },
@@ -29,6 +31,15 @@ export function AiSettingsPage() {
   const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
 
   const isPrimaryAdmin = useMemo(() => normalizeRole(user?.role) === 'PRIMARY_ADMIN', [user?.role]);
+  const statusMessages = useMemo(() => ([
+    loadError ? { tone: 'error', message: loadError } : null,
+    statusMessage.text
+      ? {
+        tone: statusMessage.type === 'error' ? 'error' : statusMessage.type === 'success' ? 'success' : 'info',
+        message: statusMessage.text,
+      }
+      : null,
+  ].filter(Boolean)), [loadError, statusMessage]);
 
   const loadStatus = async () => {
     setLoading(true);
@@ -100,114 +111,89 @@ export function AiSettingsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <PlatformShell moduleLabel="Settings" title="AI settings" subtitle="Manage firm-level BYOAI provider configuration.">
-        <div className="min-h-screen bg-gray-50">
-          <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-            <div className="space-y-2">
-              <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">AI Settings</h1>
-              <p className="text-sm text-gray-500">Connect your preferred provider for BYOAI features.</p>
-            </div>
-          <Card>
-              <p className="text-sm text-gray-500">Loading AI settings...</p>
-            </Card>
-          </div>
-        </div>
-      </PlatformShell>
-    );
-  }
-
   return (
     <PlatformShell moduleLabel="Settings" title="AI settings" subtitle="Manage firm-level BYOAI provider configuration.">
-      <div className="min-h-screen bg-gray-50">
-        <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-          <div className="space-y-2">
-            <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">AI Settings</h1>
-            <p className="text-sm text-gray-500">Manage your firm-level BYOAI provider configuration.</p>
-          </div>
+      <div className="min-h-screen w-full flex-1 bg-gray-50">
+        <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 space-y-6">
+          <PageHeader
+            title="AI Settings"
+            subtitle="Manage your firm-level BYOAI provider configuration."
+          />
+
+          <StatusMessageStack messages={statusMessages} />
 
           <Card>
             <div className={spacingClasses.sectionMargin}>
-              {loadError ? (
-                <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  <p>{loadError}</p>
-                  <Button type="button" variant="outline" onClick={loadStatus} disabled={loading}>
-                    Retry loading
-                  </Button>
-                </div>
-              ) : null}
-              {statusMessage.text ? (
-                <p className={`mb-4 rounded border px-3 py-2 text-sm ${
-                  statusMessage.type === 'error'
-                    ? 'border-red-200 bg-red-50 text-red-700'
-                    : statusMessage.type === 'success'
-                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                      : 'border-blue-200 bg-blue-50 text-blue-700'
-                }`}
-                >
-                  {statusMessage.text}
-                </p>
-              ) : null}
               <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Provider Configuration</h2>
-                <p className="text-sm text-gray-500">Primary Admin can connect or rotate API credentials.</p>
+                <h2 className="text-lg font-medium text-gray-900">BYOAI Configuration</h2>
+                <p className="text-sm text-gray-600 mt-1">Primary Admin can connect or rotate provider credentials. Existing keys are never displayed.</p>
               </div>
 
-              <div className={spacingClasses.formFieldSpacing}>
-                <Select
-                  label="Provider"
-                  value={provider}
-                  onChange={(event) => setProvider(event.target.value)}
-                  options={PROVIDER_OPTIONS}
-                  disabled={!isPrimaryAdmin || saving || disconnecting}
-                />
-                <Input
-                  label="Connection Status"
-                  value={connected ? 'Connected' : 'Not connected'}
-                  readOnly
-                />
-                <Input
-                  label="Model (optional)"
-                  value={model}
-                  onChange={(event) => setModel(event.target.value)}
-                  placeholder="e.g. gpt-4.1-mini"
-                  disabled={!isPrimaryAdmin || saving || disconnecting}
-                />
-                <Input
-                  label="API Key"
-                  type="password"
-                  value={apiKey}
-                  onChange={(event) => setApiKey(event.target.value)}
-                  placeholder="Enter a new key to connect or rotate"
-                  helpText={isPrimaryAdmin ? 'For security, existing keys are never shown.' : 'Only Primary Admin can update AI keys.'}
-                  disabled={!isPrimaryAdmin || saving || disconnecting}
-                />
+              <div className="rounded border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+                <p className="font-medium">Trust and privacy note</p>
+                <p className="mt-1">AI access is optional. Docketra does not require BYOAI to operate, and this setting only controls the configured model provider connection for eligible firm features.</p>
               </div>
 
-              <div className={`${spacingClasses.formActions} ${spacingClasses.formActionsGap}`}>
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={onSave}
-                  loading={saving}
-                  disabled={!isPrimaryAdmin || disconnecting}
-                >
-                  Save AI Settings
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onDisconnect}
-                  loading={disconnecting}
-                  disabled={!isPrimaryAdmin || !connected || saving}
-                >
-                  Disconnect Provider
-                </Button>
-                {!isPrimaryAdmin ? (
-                  <p className="text-xs text-gray-500">Your role can view AI status, but only Primary Admin can edit this setting.</p>
-                ) : null}
-              </div>
+              {loading ? <p className="text-sm text-gray-500">Loading AI settings...</p> : (
+                <>
+                  <div className={spacingClasses.formFieldSpacing}>
+                    <Select
+                      label="Provider"
+                      value={provider}
+                      onChange={(event) => setProvider(event.target.value)}
+                      options={PROVIDER_OPTIONS}
+                      disabled={!isPrimaryAdmin || saving || disconnecting}
+                    />
+                    <Input
+                      label="Connection status"
+                      value={connected ? 'Connected' : 'Not connected'}
+                      readOnly
+                    />
+                    <Input
+                      label="Model (optional)"
+                      value={model}
+                      onChange={(event) => setModel(event.target.value)}
+                      placeholder="e.g. gpt-4.1-mini"
+                      disabled={!isPrimaryAdmin || saving || disconnecting}
+                    />
+                    <Input
+                      label="API key"
+                      type="password"
+                      value={apiKey}
+                      onChange={(event) => setApiKey(event.target.value)}
+                      placeholder="Enter a new key to connect or rotate"
+                      helpText={isPrimaryAdmin ? 'For security, existing keys are never shown.' : 'Only Primary Admin can update AI keys.'}
+                      disabled={!isPrimaryAdmin || saving || disconnecting}
+                    />
+                  </div>
+
+                  <div className={`${spacingClasses.formActions} ${spacingClasses.formActionsGap} flex-wrap justify-between`}>
+                    {!isPrimaryAdmin ? (
+                      <p className="text-xs text-gray-500">Your role can view AI status, but only Primary Admin can edit this setting.</p>
+                    ) : <span />}
+                    <div className="flex flex-wrap gap-3">
+                      <Button
+                        type="button"
+                        variant="danger"
+                        onClick={onDisconnect}
+                        loading={disconnecting}
+                        disabled={!isPrimaryAdmin || !connected || saving}
+                      >
+                        Disconnect Provider
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="primary"
+                        onClick={onSave}
+                        loading={saving}
+                        disabled={!isPrimaryAdmin || disconnecting}
+                      >
+                        Save AI Settings
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </Card>
         </div>
