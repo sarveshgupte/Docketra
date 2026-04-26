@@ -3,6 +3,7 @@ import { Badge } from '../../../components/common/Badge';
 import { Button } from '../../../components/common/Button';
 import { DataTable } from '../../../components/common/DataTable';
 import { EmptyState } from '../../../components/ui/EmptyState';
+import { AdminSectionHeader } from './AdminSectionHeader';
 
 export const AdminCategoriesSection = ({
   categories,
@@ -18,14 +19,15 @@ export const AdminCategoriesSection = ({
   StatusBadge,
 }) => (
   <Card>
-    <div className="admin__section-header">
-      <h2 className="neo-section__header">Category Management</h2>
-      <div className="admin__section-actions">
-        <Button variant="default" onClick={onBulkUpload}>Bulk Upload</Button>
-        <Button variant="default" onClick={onDownloadTemplate}>Download Template</Button>
-        <Button variant="primary" onClick={onCreateCategory}>+ Create Category</Button>
-      </div>
-    </div>
+    <AdminSectionHeader
+      title="Category Management"
+      description="Maintain category and subcategory taxonomy used by dockets and workbaskets."
+      actions={[
+        { key: 'bulk-upload-categories', label: 'Bulk Upload', onClick: onBulkUpload },
+        { key: 'download-categories-template', label: 'Download Template', onClick: onDownloadTemplate },
+        { key: 'create-category', label: '+ Create Category', variant: 'primary', onClick: onCreateCategory },
+      ]}
+    />
 
     {categories.length === 0 ? (
       <EmptyState
@@ -47,7 +49,7 @@ export const AdminCategoriesSection = ({
                 <Button size="small" variant="default" onClick={() => onAddSubcategory(category)}>+ Add Subcategory</Button>
                 <Button
                   size="small"
-                  variant={category.isActive ? 'danger' : 'success'}
+                  variant={category.isActive ? 'danger' : 'primary'}
                   onClick={() => onToggleCategoryStatus(category)}
                 >
                   {category.isActive ? 'Disable' : 'Enable'}

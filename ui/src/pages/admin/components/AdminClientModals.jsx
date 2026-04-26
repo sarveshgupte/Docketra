@@ -31,9 +31,9 @@ export const AdminClientModals = ({
     >
       <form onSubmit={selectedClient ? handleUpdateClient : handleCreateClient} className="admin__create-form">
         {selectedClient && (
-          <div className="neo-form-group">
-            <label className="neo-label">Client ID</label>
-            <div className="neo-info-text">{selectedClient.clientId} (Immutable)</div>
+          <div className="admin__readonly-group">
+            <label className="admin__readonly-label">Client ID</label>
+            <div className="admin__readonly-value">{selectedClient.clientId} (Immutable)</div>
           </div>
         )}
 
@@ -198,7 +198,7 @@ export const AdminClientModals = ({
           </>
         )}
 
-        <div className="neo-form-actions">
+        <div className="admin__modal-actions">
           <Button type="button" variant="default" onClick={handleCloseClientModal}>Cancel</Button>
           <Button type="submit" variant="primary" disabled={submitting}>
             {submitting ? (selectedClient ? 'Updating...' : 'Creating...') : (selectedClient ? 'Update Client' : 'Create Client')}
@@ -215,14 +215,14 @@ export const AdminClientModals = ({
       <form onSubmit={handleChangeLegalName} className="admin__create-form">
         {selectedClient && (
           <>
-            <div className="neo-form-group">
-              <label className="neo-label">Client ID</label>
-              <div className="neo-info-text">{selectedClient.clientId}</div>
+            <div className="admin__readonly-group">
+              <label className="admin__readonly-label">Client ID</label>
+              <div className="admin__readonly-value">{selectedClient.clientId}</div>
             </div>
 
-            <div className="neo-form-group">
-              <label className="neo-label">Current Business Name</label>
-              <div className="neo-info-text client-current-name">{selectedClient.businessName}</div>
+            <div className="admin__readonly-group">
+              <label className="admin__readonly-label">Current Business Name</label>
+              <div className="admin__readonly-value client-current-name">{selectedClient.businessName}</div>
             </div>
           </>
         )}
@@ -241,7 +241,7 @@ export const AdminClientModals = ({
           required
         />
 
-        <div className="neo-form-group">
+        <div className="admin__readonly-group">
           <FormLabel label="Reason for Name Change" required />
           <textarea
             name="reason"
@@ -254,7 +254,7 @@ export const AdminClientModals = ({
           />
         </div>
 
-        <div className="neo-form-actions">
+        <div className="admin__modal-actions">
           <Button type="button" variant="default" onClick={handleCloseChangeNameModal}>Cancel</Button>
           <Button type="submit" variant="warning" disabled={submitting}>{submitting ? 'Changing Name...' : 'Confirm Name Change'}</Button>
         </div>

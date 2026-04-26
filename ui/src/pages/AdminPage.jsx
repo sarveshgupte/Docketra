@@ -11,6 +11,7 @@ import { Button } from '../components/common/Button';
 import { TableSkeleton } from '../components/common/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { PageHeader } from '../components/layout/PageHeader';
+import { AdminStatusBadge } from './admin/components/AdminStatusBadge';
 import { adminApi } from '../api/admin.api';
 import { categoryService } from '../services/categoryService';
 import { clientApi } from '../api/client.api';
@@ -53,16 +54,6 @@ const downloadBulkTemplate = (type) => {
   window.URL.revokeObjectURL(url);
 };
 
-const StatusBadge = ({ status }) => {
-  const normalizedStatus = String(status || '').toUpperCase();
-  const map = {
-    ACTIVE: 'Approved',
-    INVITED: 'Pending',
-    INACTIVE: 'Rejected',
-    DISABLED: 'Rejected',
-  };
-  return <Badge status={map[normalizedStatus] || 'Pending'}>{normalizedStatus || EMPTY_FIELD_PLACEHOLDER}</Badge>;
-};
 
 export const AdminPage = () => {
   const navigate = useNavigate();
@@ -1188,6 +1179,14 @@ export const AdminPage = () => {
     handleOpenAccessModal(user);
   };
 
+  const headerTitle = isWorkSettingsContext ? 'Category Management' : 'Team Management';
+  const headerDescription = isWorkSettingsContext
+    ? 'Create and manage docket categories and subcategories.'
+    : 'Manage users, access control, and security actions.';
+  const handleRefreshAdminSurface = async () => {
+    await Promise.allSettled([loadAdminStats(), loadAdminData()]);
+  };
+
   if (loading) {
     return (
       <PlatformShell moduleLabel="Operations" title="Team" subtitle="Manage users, permissions, and security actions for your firm.">
@@ -1204,42 +1203,46 @@ export const AdminPage = () => {
     >
       <div className="admin">
         <PageHeader
-          title={isWorkSettingsContext ? 'Category Management' : 'Team Management'}
-          description={isWorkSettingsContext
-            ? 'Create and manage docket categories and subcategories.'
-            : 'Manage users, access control, and security actions'}
+          title={headerTitle}
+          description={headerDescription}
+          actions={(
+            <div className="admin__header-actions">
+              <Button variant="outline" onClick={() => void handleRefreshAdminSurface()}>Refresh</Button>
+            </div>
+          )}
         />
 
-        <div className="admin__tabs">
-          {!isWorkSettingsContext && (
-            <Button
-              variant={activeTab === 'users' ? 'primary' : 'default'}
-              onClick={() => { setActiveTab('users'); setSearchParams({ tab: 'users' }); }}
-            >
-              User Management ({statsFailed ? '--' : adminStats.totalUsers})
-            </Button>
-          )}
-          {isWorkSettingsContext && (
-            <Button
-              variant={activeTab === 'categories' ? 'primary' : 'default'}
-              onClick={() => {
-                setActiveTab('categories');
-                setSearchParams({ tab: 'categories', context: 'work-settings' });
-              }}
-            >
-              Categories ({statsFailed ? '--' : adminStats.totalCategories})
-            </Button>
-          )}
-        </div>
+        <div className="admin__toolbar">
+          <div className="admin__tabs" aria-label="Admin sections">
+            {!isWorkSettingsContext && (
+              <Button
+                variant={activeTab === 'users' ? 'primary' : 'default'}
+                onClick={() => { setActiveTab('users'); setSearchParams({ tab: 'users' }); }}
+              >
+                User Management ({statsFailed ? '--' : adminStats.totalUsers})
+              </Button>
+            )}
+            {isWorkSettingsContext && (
+              <Button
+                variant={activeTab === 'categories' ? 'primary' : 'default'}
+                onClick={() => {
+                  setActiveTab('categories');
+                  setSearchParams({ tab: 'categories', context: 'work-settings' });
+                }}
+              >
+                Categories ({statsFailed ? '--' : adminStats.totalCategories})
+              </Button>
+            )}
+          </div>
 
-        {statsEmpty && (
-          <Card>
-            <EmptyState
-              title="No statistics available yet"
-              description="Data will appear once activity begins."
-            />
-          </Card>
-        )}
+          {(statsFailed || tabError?.message || statsEmpty) ? (
+            <div className="admin__status-stack" role="status" aria-live="polite">
+              {statsFailed ? <p className="admin__status admin__status--warning">Some statistics are temporarily unavailable.</p> : null}
+              {tabError?.message ? <p className="admin__status admin__status--error">{tabError.message}</p> : null}
+              {statsEmpty ? <p className="admin__status admin__status--info">No statistics are available yet for this workspace.</p> : null}
+            </div>
+          ) : null}
+        </div>
 
         {activeTab === 'users' && (
           <AdminUsersSection
@@ -1284,7 +1287,7 @@ export const AdminPage = () => {
               setShowClientModal(true);
             }}
             onEditClient={handleEditClient}
-            StatusBadge={StatusBadge}
+            StatusBadge={AdminStatusBadge}
           />
         )}
 
@@ -1303,7 +1306,7 @@ export const AdminPage = () => {
             onDeleteCategory={handleDeleteCategory}
             onToggleSubcategoryStatus={handleToggleSubcategoryStatus}
             onDeleteSubcategory={handleDeleteSubcategory}
-            StatusBadge={StatusBadge}
+            StatusBadge={AdminStatusBadge}
           />
         )}
 

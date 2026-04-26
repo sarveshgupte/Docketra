@@ -53,9 +53,7 @@
   color: #6b7280;
 }
 
-.platform__collapse,
-button,
-a {
+.platform :is(button, a) {
   transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
 }
 
@@ -98,6 +96,12 @@ a {
   background: #1d4ed8;
   color: #fff;
   font-weight: 600;
+}
+
+
+.platform__nav-link:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
 
 .platform__topbar {
@@ -164,6 +168,10 @@ a {
   font-weight: 550;
   text-decoration: none;
   color: #111827;
+}
+
+.platform__actions > * {
+  white-space: nowrap;
 }
 
 .platform__actions button:hover,

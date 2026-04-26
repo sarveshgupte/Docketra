@@ -20,7 +20,7 @@ export const AdminBulkPasteModal = ({
     title={mode === 'clients' ? 'Bulk Paste Clients' : mode === 'subcategories' ? 'Bulk Paste Subcategories' : 'Bulk Paste Categories'}
   >
     <form onSubmit={onSubmit} className="admin__create-form">
-      <div className="neo-info-text">
+      <div className="admin__readonly-value">
         {mode === 'clients'
           ? 'Paste rows from Excel/Sheets. Columns: BusinessName, BusinessEmail, PrimaryContactNumber, BusinessAddress (optional), PAN (optional), CIN (optional), TAN (optional), GST (optional).'
           : mode === 'subcategories'
@@ -39,7 +39,7 @@ export const AdminBulkPasteModal = ({
             : 'Tax'}
         required
       />
-      <div className="neo-form-actions">
+      <div className="admin__modal-actions">
         <Button type="button" variant="default" onClick={onClose} disabled={inProgress}>Cancel</Button>
         <Button type="submit" variant="primary" disabled={inProgress}>{inProgress ? 'Saving...' : 'Save Bulk Data'}</Button>
       </div>
