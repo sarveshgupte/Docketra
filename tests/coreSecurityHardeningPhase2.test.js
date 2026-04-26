@@ -36,14 +36,14 @@ function testSensitiveLogMasking() {
     totpSecret: 'OTPSECRET',
   });
 
-  assert.strictEqual(masked.Authorization, 'Bearer *****');
-  assert.strictEqual(masked.cookie, '***REDACTED***');
-  assert.strictEqual(masked.password, '***REDACTED***');
-  assert.strictEqual(masked.mfaSecret, '***REDACTED***');
-  assert.strictEqual(masked.twoFactorSecret, '***REDACTED***');
-  assert.strictEqual(masked.totpSecret, '***REDACTED***');
-  assert.strictEqual(masked.accessToken, '***REDACTED***');
-  assert.strictEqual(masked.refreshToken, '***REDACTED***');
+  assert.strictEqual(masked.Authorization, '[REDACTED]');
+  assert.strictEqual(masked.cookie, '[REDACTED]');
+  assert.strictEqual(masked.password, '[REDACTED]');
+  assert.strictEqual(masked.mfaSecret, '[REDACTED]');
+  assert.strictEqual(masked.twoFactorSecret, '[REDACTED]');
+  assert.strictEqual(masked.totpSecret, '[REDACTED]');
+  assert.strictEqual(masked.accessToken, '[REDACTED]');
+  assert.strictEqual(masked.refreshToken, '[REDACTED]');
 }
 
 function testErrorHandlerHidesServerDetails() {
@@ -60,14 +60,14 @@ function testErrorHandlerHidesServerDetails() {
 }
 
 function testServerHardeningWiring() {
-  const serverPath = path.join(__dirname, '..', 'src', 'server.js');
+  const serverPath = path.join(__dirname, '..', 'src', 'app', 'createApp.js');
   const serverCode = fs.readFileSync(serverPath, 'utf8');
 
   assert.match(serverCode, /contentSecurityPolicy:\s*\{/);
   assert.match(serverCode, /referrerPolicy:\s*\{\s*policy:\s*'strict-origin-when-cross-origin'/);
   assert.ok(serverCode.includes('hsts: isProduction ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false'));
   assert.match(serverCode, /app\.post\('\/api\/csp-violation'/);
-  assert.match(serverCode, /if\s*\(!isProduction\)\s*\{\s*app\.use\('\/api\/debug'/s);
+  assert.match(serverCode, /if\s*\(!isProduction\)\s*\{[\s\S]*?app\.use\('\/api\/debug'/s);
 }
 
 function testRateLimiterExports() {

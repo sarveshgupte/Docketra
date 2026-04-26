@@ -41,6 +41,11 @@ const runMiddleware = async (mw, req) => {
 };
 
 async function shouldRejectJwtFirmMismatch() {
+  const Client = require('../src/models/Client.model');
+  const originalClientFindOne = Client.findOne;
+  Client.findOne = () => ({ lean: async () => null, session: function() { return this; }, select: function() { return this; } });
+  const originalFindById = Firm.findById;
+  Firm.findById = () => ({ lean: async () => ({ _id: OBJECT_ID_A, firmSlug: 'firm-a', status: 'ACTIVE' }), session: function() { return this; }, select: function() { return this; } });
   const originalFindOne = Firm.findOne;
   Firm.findOne = async () => ({ _id: OBJECT_ID_A, firmSlug: 'firm-a', status: 'ACTIVE' });
 
@@ -56,9 +61,16 @@ async function shouldRejectJwtFirmMismatch() {
   console.log('✓ JWT firm mismatch is rejected');
 
   Firm.findOne = originalFindOne;
+  Firm.findById = originalFindById;
+  Client.findOne = originalClientFindOne;
 }
 
 async function shouldBlockDisabledFirm() {
+  const Client = require('../src/models/Client.model');
+  const originalClientFindOne = Client.findOne;
+  Client.findOne = () => ({ lean: async () => null, session: function() { return this; }, select: function() { return this; } });
+  const originalFindById = Firm.findById;
+  Firm.findById = () => ({ lean: async () => ({ _id: OBJECT_ID_A, firmSlug: 'firm-a', status: 'SUSPENDED' }), session: function() { return this; }, select: function() { return this; } });
   const originalFindOne = Firm.findOne;
   Firm.findOne = async () => ({ _id: OBJECT_ID_A, firmSlug: 'firm-a', status: 'SUSPENDED' });
 
@@ -73,9 +85,16 @@ async function shouldBlockDisabledFirm() {
   console.log('✓ Disabled firm blocks access');
 
   Firm.findOne = originalFindOne;
+  Firm.findById = originalFindById;
+  Client.findOne = originalClientFindOne;
 }
 
 async function shouldAllowActiveFirmRegardlessOfStatusCase() {
+  const Client = require('../src/models/Client.model');
+  const originalClientFindOne = Client.findOne;
+  Client.findOne = () => ({ lean: async () => null, session: function() { return this; }, select: function() { return this; } });
+  const originalFindById = Firm.findById;
+  Firm.findById = () => ({ lean: async () => ({ _id: OBJECT_ID_A, firmSlug: 'firm-a', status: 'ACTIVE' }), session: function() { return this; }, select: function() { return this; } });
   const originalFindOne = Firm.findOne;
   Firm.findOne = async () => ({ _id: OBJECT_ID_A, firmSlug: 'firm-a', status: 'ACTIVE' });
 
@@ -92,6 +111,8 @@ async function shouldAllowActiveFirmRegardlessOfStatusCase() {
   console.log('✓ Uppercase ACTIVE firm status is accepted');
 
   Firm.findOne = originalFindOne;
+  Firm.findById = originalFindById;
+  Client.findOne = originalClientFindOne;
 }
 
 async function shouldBlockSuperadminFromFirmRoutes() {
