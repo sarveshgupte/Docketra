@@ -7,12 +7,28 @@
 }
 
 .cases-page__filters {
-  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.cases-page__control-section {
-  padding-top: 8px;
-  padding-bottom: 8px;
+.cases-page__toolbar-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cases-page__filter-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cases-page__filter-control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .cases-page__filter-label {
@@ -115,6 +131,16 @@
 .cases-page__view-tab:hover {
   border-color: var(--color-border-strong);
   color: var(--text-body);
+}
+
+.cases-page__view-tab:focus-visible,
+.cases-page__saved-views-toggle:focus-visible,
+.cases-page__saved-view-load:focus-visible,
+.cases-page__saved-view-remove:focus-visible,
+.cases-page__search-input:focus-visible,
+.cases-page__filter-select:focus-visible {
+  outline: 2px solid var(--color-accent, #4f46e5);
+  outline-offset: 2px;
 }
 
 .cases-page__view-tab--active {
@@ -253,7 +279,6 @@
 
 .cases-page__search-input {
   width: 100%;
-  max-width: 420px;
   padding: 8px 12px;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 6px;

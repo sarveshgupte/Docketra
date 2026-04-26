@@ -22,7 +22,6 @@ import { CASE_STATUS, USER_ROLES } from '../utils/constants';
 import { getFirmConfig } from '../utils/firmConfig';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { formatDateTime, getISODateInTimezone } from '../utils/formatDateTime';
-import { formatCaseName } from '../utils/formatters';
 import {
   getDocketRecencyLabel,
   getDocketSlaBadgeStatus,
@@ -40,6 +39,9 @@ import { RouteErrorFallback } from '../components/routing/RouteErrorFallback';
 import { useActiveDocket } from '../hooks/useActiveDocket';
 import { useQueryClient } from '@tanstack/react-query';
 import { DocketBulkUploadModal } from '../components/bulk/DocketBulkUploadModal';
+import {
+  StatusMessageStack,
+} from './platform/PlatformShared';
 import {
   CasesFiltersCard,
   CasesHeaderActions,
@@ -638,6 +640,9 @@ export const CasesPage = () => {
     () => <span className="cases-page__toolbar-copy">{sortedCases.length} records</span>,
     [sortedCases.length],
   );
+  const statusMessages = useMemo(() => ([
+    { tone: 'info', message: isFetching && !loading ? 'Refreshing docket registry in the background…' : '' },
+  ]), [isFetching, loading]);
 
   // Memoize select-all state to avoid repeated inline filtering (Task 6)
   const allVisibleSelected = useMemo(() => {
@@ -723,84 +728,77 @@ export const CasesPage = () => {
           setActiveView={setActiveView}
           enableEscalationView={enableEscalationView}
         />
+        <StatusMessageStack messages={statusMessages} />
 
-        {/* Task 6: Search & Quick Jump */}
-        <div className="cases-page__search-bar cases-page__control-section">
-          <input
-            type="search"
-            className="cases-page__search-input"
-            placeholder="Search by docket ID, title, or client…"
-            value={searchInput}
-            onChange={handleSearchChange}
-            aria-label="Search dockets"
-          />
-        </div>
-
-        {/* Saved Views (user presets) */}
-        <CasesSavedViews
-          savedViews={savedViews}
-          savedViewsOpen={savedViewsOpen}
-          setSavedViewsOpen={setSavedViewsOpen}
-          handleLoadSavedView={handleLoadSavedView}
-          removeView={removeView}
-          saveViewName={saveViewName}
-          setSaveViewName={setSaveViewName}
-          handleSaveCurrentView={handleSaveCurrentView}
-        />
-
-        {/* Preset operational view tabs */}
-        <div className="cases-page__views cases-page__control-section" role="tablist" aria-label="Docket views">
-          {availableViews.map((view) => (
-            <button
-              key={view.id}
-              role="tab"
-              aria-selected={activeView === view.id}
-              className={`cases-page__view-tab${activeView === view.id ? ' cases-page__view-tab--active' : ''}`}
-              onClick={() => setActiveView(view.id)}
-              type="button"
-            >
-              {view.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Smart default view indicator */}
-        <SmartViewIndicator
-          hasStoredView={hasStoredView}
-          activeView={activeView}
-          caseCount={viewFilteredCases.length}
-        />
-
-        {/* Task 6: Bulk action bar */}
-        {enableBulkActions && selectedCaseIds.size > 0 && (
-          <div className="cases-page__bulk-bar cases-page__control-section" role="toolbar" aria-label="Bulk actions">
-            <span className="cases-page__bulk-count">{selectedCaseIds.size} selected</span>
-            <Button
-              variant="outline"
-              onClick={handleBulkAssignToMe}
-              disabled={bulkActionInProgress}
-            >
-              {UX_COPY.actions.ASSIGN_TO_ME}
-            </Button>
-            <button
-              type="button"
-              className="cases-page__bulk-clear"
-              onClick={() => setSelectedCaseIds(new Set())}
-            >
-              Clear
-            </button>
+        <div className="cases-page__toolbar-grid">
+          <div className="cases-page__search-bar">
+            <input
+              type="search"
+              className="cases-page__search-input"
+              placeholder="Search by docket ID, title, or client…"
+              value={searchInput}
+              onChange={handleSearchChange}
+              aria-label="Search dockets"
+            />
           </div>
-        )}
-
-        <CasesFiltersCard
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          workTypeFilter={workTypeFilter}
-          setWorkTypeFilter={setWorkTypeFilter}
-          qcWorkbaskets={qcWorkbaskets}
-          activeWorkbasketId={activeWorkbasketId}
-          setActiveWorkbasketId={setActiveWorkbasketId}
-        />
+          <CasesSavedViews
+            savedViews={savedViews}
+            savedViewsOpen={savedViewsOpen}
+            setSavedViewsOpen={setSavedViewsOpen}
+            handleLoadSavedView={handleLoadSavedView}
+            removeView={removeView}
+            saveViewName={saveViewName}
+            setSaveViewName={setSaveViewName}
+            handleSaveCurrentView={handleSaveCurrentView}
+          />
+          <div className="cases-page__views" role="group" aria-label="Docket views">
+            {availableViews.map((view) => (
+              <button
+                key={view.id}
+                aria-pressed={activeView === view.id}
+                className={`cases-page__view-tab${activeView === view.id ? ' cases-page__view-tab--active' : ''}`}
+                onClick={() => setActiveView(view.id)}
+                type="button"
+              >
+                {view.label}
+              </button>
+            ))}
+          </div>
+          <CasesFiltersCard
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            workTypeFilter={workTypeFilter}
+            setWorkTypeFilter={setWorkTypeFilter}
+            qcWorkbaskets={qcWorkbaskets}
+            activeWorkbasketId={activeWorkbasketId}
+            setActiveWorkbasketId={setActiveWorkbasketId}
+            onClearFilters={handleResetFilters}
+          />
+          <SmartViewIndicator
+            hasStoredView={hasStoredView}
+            activeView={activeView}
+            caseCount={viewFilteredCases.length}
+          />
+          {enableBulkActions && selectedCaseIds.size > 0 && (
+            <div className="cases-page__bulk-bar" role="toolbar" aria-label="Bulk actions">
+              <span className="cases-page__bulk-count">{selectedCaseIds.size} selected</span>
+              <Button
+                variant="outline"
+                onClick={handleBulkAssignToMe}
+                disabled={bulkActionInProgress}
+              >
+                {UX_COPY.actions.ASSIGN_TO_ME}
+              </Button>
+              <button
+                type="button"
+                className="cases-page__bulk-clear"
+                onClick={() => setSelectedCaseIds(new Set())}
+              >
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Task 7: Performance Insight — hidden for Partner (Task 8) */}
         <CasesPerformancePanel

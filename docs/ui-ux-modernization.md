@@ -190,3 +190,59 @@ This PR was expanded (still presentation-only and low-risk) to cover more of the
 - Bring `CasesPage` and remaining non-admin legacy pages onto the same section toolbar + status stack contract.
 - Normalize page-level header action hierarchy (single primary CTA, secondary in section context only).
 - Continue responsive hardening around dense table/action layouts without altering business logic or data contracts.
+
+---
+
+## Third PR scope (All Dockets + remaining legacy docket list parity)
+
+### Scope completed in this PR
+- Aligned **All Dockets (`CasesPage`)** to the platform section contract by using a unified `PageSection` + `SectionToolbar` structure for list controls and section actions.
+- Added a **`StatusMessageStack`** on `CasesPage` so error/refresh messages now render in one consistent stack, matching Worklist/Workbench/QC/CRM/CMS/Dashboard behavior.
+- Consolidated All Dockets controls (search, saved views, view chips, filters, bulk actions) inside the section toolbar for clearer scan order and cleaner responsive wrapping.
+- Removed mixed tab semantics from All Dockets control chips and switched to safer button-group semantics (`aria-pressed`) to avoid incorrect ARIA tab patterns.
+- Modernized the legacy **Filtered Dockets** list surface to the same page/section/status contract with platform shell/section/table patterns and consistent retry/error copy.
+
+### Exact pages/components touched
+- `ui/src/pages/CasesPage.jsx`
+- `ui/src/components/cases/CasesPageSections.jsx`
+- `ui/src/pages/CasesPage.css`
+- `ui/src/pages/FilteredCasesPage.jsx`
+- `docs/ui-ux-modernization.md`
+
+### Before / after UX impact
+- **Before:** All Dockets mixed page-header, standalone control blocks, and section cards with status/refresh feedback split between table-level messaging and ad hoc placements; legacy filtered docket list used older layout/card patterns.
+- **After:** All Dockets now follows a single section-toolbar pattern with consistent status stack placement and clearer CTA hierarchy inside the registry section; filtered docket list now uses the same platform page/section/feedback contract for parity and faster scan.
+
+### Remaining UI/UX gaps
+1. `TaskManagerPage` and `SettingsPage` still have minor action hierarchy and toolbar placement differences vs queue-centric modules.
+2. Some legacy route-level pages outside core docket workflows still use older card/header patterns and could be incrementally migrated.
+3. Shared table primitives are still split between platform and app-level implementations (tracked for a later consolidation PR).
+
+### Recommended next PR
+**PR 4: Non-queue platform polish + shared table convergence prep**
+- Normalize toolbar/action hierarchy in Task Manager and Settings.
+- Continue migrating remaining low-risk legacy list/detail surfaces onto `PageSection` + `SectionToolbar` + `StatusMessageStack`.
+- Prepare a contract doc for future convergence between `PlatformShared` `DataTable` and app-level `DataTable` (no functional merge yet).
+
+### Post-review corrections (PR 3 follow-up)
+
+#### Corrections made
+1. **CasesPage layout consistency tightened (low-risk):**
+   - Removed mixed usage of platform section wrappers in `CasesPage` and kept the page on its established app-level layout (`PageHeader` + `SectionCard` + app `DataTable`) to avoid half-platform/half-legacy visual drift.
+   - Retained `StatusMessageStack` only for non-duplicative page-level refresh messaging.
+2. **Duplicate error messaging removed:**
+   - `CasesPage` no longer surfaces the same error in both status stack and table-level messaging; table-level error/retry remains the single error location.
+3. **Refresh affordance restored:**
+   - Re-enabled `DataTable` background refresh notice (`refreshing` + `refreshingMessage`) so users keep existing table-context feedback.
+4. **Filter clear CTA behavior corrected:**
+   - `Clear filters` is now disabled when filters are already at default (`status=ALL`, `workType=ALL`, no QC workbasket override).
+5. **FilteredCasesPage risk reduction:**
+   - Reverted the broader shell/table migration to keep this route close to prior behavior and avoid regression risk in access/loading/retry/pagination expectations for this pass.
+
+#### Deferred product decision (intentional)
+- **All Dockets work-type filter (`Client Work` / `Internal Work`)** remains in place for now to avoid changing established admin registry behavior in a UI-only pass.
+- This should be confirmed with Product in a follow-up decision: retain as an explicit operational filter, relabel for clarity, or replace with a different client-selection paradigm.
+
+#### Risk notes
+- **CasesPage risk:** Low. Changes are presentation-only and preserve existing data queries, actions, routes, and retry behavior; layout stays on existing app primitives.
+- **FilteredCasesPage risk:** Very low after scope reduction; route remains on prior structure with no contract migration in this correction pass.
