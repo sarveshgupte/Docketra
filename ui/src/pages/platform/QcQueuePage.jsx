@@ -9,9 +9,9 @@ import {
   buildQueueContext,
   DataTable,
   FilterBar,
-  InlineNotice,
   PageSection,
-  RefreshNotice,
+  SectionToolbar,
+  StatusMessageStack,
   formatDateLabel,
   formatDocketLabel,
   formatStatusLabel,
@@ -133,17 +133,26 @@ export const PlatformQcQueuePage = () => {
       subtitle="Quality-control queue for pass, return-for-correction, and fail review decisions."
       actions={<Link to={ROUTES.ADMIN_REPORTS(firmSlug)}>QC Reports</Link>}
     >
-      <InlineNotice tone="error" message={error || (isError ? 'Unable to load the QC workbench queue.' : '')} />
-      <InlineNotice tone="success" message={success} />
-      <RefreshNotice refreshing={isFetching && !isLoading} message="Refreshing QC queue in the background…" />
+      <StatusMessageStack
+        messages={[
+          { tone: 'error', message: error || (isError ? 'Unable to load the QC workbench queue.' : '') },
+          { tone: 'success', message: success },
+          { tone: 'info', message: isFetching && !isLoading ? 'Refreshing QC queue in the background…' : '' },
+        ]}
+      />
       <PageSection
         title="What this queue is for"
         description="QC Workbench is where completed execution dockets are reviewed for pass, return-for-correction, or fail decisions."
       >
         <p className="muted">If this is empty, your team may still be executing in My Worklist or has not sent dockets to QC yet.</p>
       </PageSection>
-      <PageSection title="QC review queue" description={`${filteredRows.length} dockets waiting for QC decisions.`}>
-        <FilterBar onClear={clearFilters} clearDisabled={!search && assigneeFilter === 'ALL'}>
+      <PageSection
+        title="QC review queue"
+        description={`${filteredRows.length} dockets waiting for QC decisions.`}
+        actions={<button type="button" onClick={() => void refetch()} disabled={isFetching}>{isFetching ? 'Refreshing…' : 'Refresh'}</button>}
+      >
+        <SectionToolbar>
+          <FilterBar onClear={clearFilters} clearDisabled={!search && assigneeFilter === 'ALL'}>
           <input
             type="search"
             value={search}
@@ -157,10 +166,8 @@ export const PlatformQcQueuePage = () => {
               <option key={assignee} value={assignee}>{assignee}</option>
             ))}
           </select>
-          <button type="button" onClick={() => void refetch()} disabled={isFetching}>
-            {isFetching ? 'Refreshing…' : 'Refresh'}
-          </button>
-        </FilterBar>
+          </FilterBar>
+        </SectionToolbar>
         {activeFilters.length > 0 ? (
           <div className="mt-3 flex flex-wrap items-center gap-2" role="list" aria-label="Active QC filters">
             {activeFilters.map((filter) => (

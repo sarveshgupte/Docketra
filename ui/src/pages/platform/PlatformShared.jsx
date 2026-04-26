@@ -85,6 +85,24 @@ export const InlineNotice = ({ tone = 'info', message }) => {
   return <p className={`inline-notice inline-notice--${tone}`}>{message}</p>;
 };
 
+export const StatusMessageStack = ({ messages = [] }) => {
+  const visible = messages.filter((item) => item?.message);
+  if (visible.length === 0) return null;
+  return (
+    <div className="status-stack" role="status" aria-live="polite">
+      {visible.map((item) => (
+        <InlineNotice key={`${item.tone || 'info'}-${item.message}`} tone={item.tone || 'info'} message={item.message} />
+      ))}
+    </div>
+  );
+};
+
+export const SectionToolbar = ({ children }) => (
+  <div className="section-toolbar" role="region" aria-label="Section actions and filters">
+    {children}
+  </div>
+);
+
 export const RefreshNotice = ({ refreshing = false, message = 'Refreshing in background…' }) => (
   <InlineNotice tone="info" message={refreshing ? message : ''} />
 );

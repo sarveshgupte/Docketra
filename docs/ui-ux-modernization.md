@@ -154,3 +154,39 @@ This PR was expanded (still presentation-only and low-risk) to cover more of the
 ### Post-review corrections (final polish)
 - Removed duplicate primary CTAs from the admin page header (section headers remain the single source for create/bulk actions).
 - Corrected admin tab control semantics for this low-risk pass by treating controls as standard navigation buttons (removed mixed tablist/aria-pressed pattern).
+
+---
+
+## Second PR scope (non-admin platform module contract pass)
+
+### Scope completed in this PR
+- Applied a consistent **status-message stack** pattern across non-admin platform pages so info/error/success messages appear in one predictable location.
+- Standardized **section toolbar placement** on queue-driven pages (Worklist, Workbench, QC Workbench, CMS intake queue): filters/search stay in toolbar, refresh actions are consistently placed in section header actions.
+- Tightened **spacing and responsive wrapping** in platform content/sections/toolbars for denser but clearer operational scans.
+- Improved **focus-visible affordances** for page/section actions, module tiles, filter controls, and table actions.
+- Removed decorative progress gradient in the platform productivity bar to align with the production-focused visual direction.
+
+### Exact pages/components touched
+- `ui/src/pages/platform/PlatformShared.jsx`
+- `ui/src/pages/platform/WorklistPage.jsx`
+- `ui/src/pages/platform/WorkbasketsPage.jsx`
+- `ui/src/pages/platform/QcQueuePage.jsx`
+- `ui/src/pages/platform/DashboardPage.jsx`
+- `ui/src/pages/platform/CrmPage.jsx`
+- `ui/src/pages/platform/CmsPage.jsx`
+- `ui/src/components/platform/platform.css`
+
+### Before / after UX impact
+- **Before:** Status messages and refresh feedback were rendered ad hoc (multiple inline notices, mixed placement); filter + refresh controls were inconsistently grouped; focus cues were available but uneven on high-traffic controls.
+- **After:** Status messages now follow a single stacked contract; queue toolbars consistently separate filtering from section-level refresh actions; keyboard focus indicators are clearer and more consistent; spacing and wrapping are more reliable at tablet/laptop widths.
+
+### Remaining UI/UX gaps
+1. All Dockets (`CasesPage`) still uses its legacy section contract and should be aligned with this toolbar/status pattern in a dedicated low-risk pass.
+2. Task Manager and Settings pages could adopt a stricter primary/secondary CTA hierarchy for parity with queue pages.
+3. CMS form editor still relies on several inline layout styles that should be moved into shared scoped classes.
+
+### Recommended next PR
+**PR 3: All Dockets + legacy platform parity pass**
+- Bring `CasesPage` and remaining non-admin legacy pages onto the same section toolbar + status stack contract.
+- Normalize page-level header action hierarchy (single primary CTA, secondary in section context only).
+- Continue responsive hardening around dense table/action layouts without altering business logic or data contracts.
