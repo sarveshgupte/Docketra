@@ -11,7 +11,7 @@ const {
   logFactSheetFileRemoved,
   logClientFactSheetAction
 } = require('../services/clientFactSheetAudit.service');
-const { getMimeType } = require('../utils/fileUtils');
+const { getMimeType, sanitizeFilename } = require('../utils/fileUtils');
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const { areFileUploadsDisabled } = require('../services/featureFlags.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
@@ -1319,10 +1319,11 @@ const downloadClientCFSFile = async (req, res) => {
     }
 
     const fileStream = await provider.downloadFile(attachment.driveFileId);
+    const safeFilename = sanitizeFilename(attachment.fileName);
 
     // Set response headers
     res.setHeader('Content-Type', attachment.mimeType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${attachment.fileName}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
 
     // Stream file to response
     fileStream.pipe(res);

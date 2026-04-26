@@ -16,3 +16,7 @@
 **Vulnerability:** Debug routes were globally imported and advertised in the public-facing root `/api` discovery endpoint, even if they were gated for mounting.
 **Learning:** Top-level `require` statements load modules into memory regardless of runtime conditions, and static endpoint maps in API discovery routes can leak internal infrastructure details.
 **Prevention:** Use conditional lazy loading (`require` inside an environment check) to reduce production footprint and ensure discovery endpoints dynamically reflect available routes based on the environment.
+## 2025-02-15 - Prevent HTTP Header Injection in Downloads
+**Vulnerability:** HTTP Response Splitting / Header Injection. The `attachment.fileName` was interpolated directly into the `Content-Disposition` header in `src/controllers/client.controller.js` and `src/controllers/case.controller.js`.
+**Learning:** If an attacker can control the filename of an uploaded file, they could potentially inject CRLF characters or quotes to manipulate the HTTP response headers or perform directory traversal during download.
+**Prevention:** Always use `sanitizeFilename` from `src/utils/fileUtils.js` to strip potentially dangerous characters from filenames before setting them in the `Content-Disposition` header.
