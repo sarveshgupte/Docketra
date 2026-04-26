@@ -311,3 +311,33 @@ This PR was expanded (still presentation-only and low-risk) to cover more of the
 - Extract shared `SettingsSection`, `SettingsStatusStack`, and `SettingsActionRow` primitives from now-aligned pages.
 - Add keyboard/screen-reader acceptance checks for settings workflows.
 - Keep behavior, payloads, and integration flows unchanged.
+
+## Sixth PR scope (CMS form editor and intake form management polish)
+
+### Scope completed in this PR
+- Modernized the CMS form editor layout by removing inline layout styles and moving the editor structure to scoped CMS-specific classes.
+- Tightened form management controls (form picker, active/embed status, fields editor rows, add/remove actions, copy actions) into a cleaner, scan-friendly hierarchy aligned with platform module conventions.
+- Clarified CTA hierarchy inside the CMS editor so the save/create action is the clear primary control and supporting actions remain secondary.
+- Improved responsive behavior for field rows and copy actions to avoid cramped controls at tablet/mobile widths.
+- Preserved current CMS/intake contracts and behavior (same APIs, payload fields, and copy-link/embed/snippet flows).
+
+### Exact pages/components touched
+- `ui/src/pages/platform/CmsPage.jsx`
+- `ui/src/components/platform/platform.css`
+- `docs/ui-ux-modernization.md`
+- `docs/cms-form-editor-ux.md`
+
+### Before / after UX impact
+- **Before:** CMS editor used multiple inline style blocks, mixed field-row alignment, and clustered controls that became harder to scan as forms grew.
+- **After:** CMS editor uses scoped layout classes with consistent grouping, cleaner spacing, stronger primary CTA emphasis, improved toggle/field-action alignment, and responsive wrapping for smaller screens.
+
+### Remaining UI/UX gaps
+1. CMS public form preview (outside platform editor) could use a dedicated visual QA pass for parity with the updated editor contract.
+2. Intake queue warnings in the CMS summary table still use a small inline warning treatment; could be standardized to a reusable warning badge pattern later.
+3. Platform form controls still rely on generic button styles; a future tokenized button hierarchy could improve consistency across all modules.
+
+### Recommended next PR
+**PR 7: CMS public form preview + intake warning presentation hardening**
+- Apply the same spacing, typography, and feedback hierarchy to public/embedded form render surfaces.
+- Introduce a reusable warning badge/tone contract for queue tables.
+- Keep submission behavior, routing, and API payload contracts unchanged.
