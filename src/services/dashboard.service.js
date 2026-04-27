@@ -91,8 +91,8 @@ const getMyDockets = async (userId, firmId, { filter = 'MY', page = 1, limit = 1
   const firmObjectId = new mongoose.Types.ObjectId(firmId);
 
   const [items, total] = await Promise.all([
-    buildListQuery(firmObjectId, query, sort).skip(skip).limit(pageLimit),
-    Case.countDocuments({ firmId: firmObjectId, ...query }),
+    buildListQuery(firmObjectId, query, sort).skip(skip).limit(pageLimit).exec(),
+    Case.countDocuments({ firmId: firmObjectId, ...query }).exec(),
   ]);
   logSlowDashboardQuery({
     queryName: 'getMyDockets',
@@ -130,8 +130,8 @@ const getOverdueDockets = async (firmId, { page = 1, limit = 10, sort = 'NEWEST'
   const firmObjectId = new mongoose.Types.ObjectId(firmId);
 
   const [items, total] = await Promise.all([
-    buildListQuery(firmObjectId, query, sort).skip(skip).limit(pageLimit),
-    Case.countDocuments({ firmId: firmObjectId, ...query }),
+    buildListQuery(firmObjectId, query, sort).skip(skip).limit(pageLimit).exec(),
+    Case.countDocuments({ firmId: firmObjectId, ...query }).exec(),
   ]);
   logSlowDashboardQuery({
     queryName: 'getOverdueDockets',
@@ -158,8 +158,8 @@ const getRecentDockets = async (firmId, { page = 1, limit = 10, sort = 'NEWEST',
   const firmObjectId = new mongoose.Types.ObjectId(firmId);
 
   const [items, total] = await Promise.all([
-    buildListQuery(firmObjectId, query, sort).skip(skip).limit(pageLimit),
-    Case.countDocuments({ firmId: firmObjectId, ...query }),
+    buildListQuery(firmObjectId, query, sort).skip(skip).limit(pageLimit).exec(),
+    Case.countDocuments({ firmId: firmObjectId, ...query }).exec(),
   ]);
   logSlowDashboardQuery({
     queryName: 'getRecentDockets',
@@ -174,7 +174,7 @@ const getRecentDockets = async (firmId, { page = 1, limit = 10, sort = 'NEWEST',
 
 const getWorkbasketLoad = async (firmId) => {
   const [workbaskets, counts] = await Promise.all([
-    Team.find({ firmId: new mongoose.Types.ObjectId(firmId), parentWorkbasketId: null, isActive: true }).select('_id name').lean(),
+    Team.find({ firmId: new mongoose.Types.ObjectId(firmId), parentWorkbasketId: null, isActive: true }).select('_id name').lean().exec(),
     Case.aggregate([
       {
         $match: {
@@ -189,7 +189,7 @@ const getWorkbasketLoad = async (firmId) => {
       },
       { $match: { workbasketId: { $ne: null } } },
       { $group: { _id: '$workbasketId', count: { $sum: 1 } } },
-    ]),
+    ]).exec(),
   ]);
 
   const countMap = new Map(counts.map((entry) => [String(entry._id), entry.count]));

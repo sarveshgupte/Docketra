@@ -379,8 +379,9 @@ const getAuditTrail = async ({
       .sort({ timestamp: -1 })
       .skip((parsedPage - 1) * parsedLimit)
       .limit(parsedLimit)
-      .lean(),
-    DocketAuditLog.countDocuments(query),
+      .lean()
+      .exec(),
+    DocketAuditLog.countDocuments(query).exec(),
   ]);
   return {
     rows,

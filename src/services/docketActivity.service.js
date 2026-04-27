@@ -66,8 +66,9 @@ const getDocketTimeline = async (docketId, firmId, { type, page = 1, limit = 20 
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(pageLimit)
-      .lean(),
-    DocketActivity.countDocuments(query),
+      .lean()
+      .exec(),
+    DocketActivity.countDocuments(query).exec(),
   ]);
 
   const xids = [...new Set(items.map((item) => item.performedByXID).filter(Boolean))];

@@ -17,3 +17,6 @@
 ## 2026-04-18 - Parallelize Independent Validations in Create Endpoints
 **Learning:** Validating multiple optional but independent identifiers (e.g., `dealId`, `docketId`) sequentially in a creation endpoint wastes network roundtrips.
 **Action:** Prepare the Mongoose queries as promises and execute them concurrently with `Promise.all` instead of sequentially awaiting them.
+## 2026-04-27 - Mongoose Exec inside Promise.all
+**Learning:** When passing Mongoose queries (`find`, `countDocuments`, `aggregate`) to `Promise.all` alongside `.skip().limit().lean()`, failing to append `.exec()` results in Mongoose attempting to execute "thenables" implicitly. While it functionally works, it introduces unneeded microtask evaluation overhead and can potentially cause "Query already executed" exceptions when `.catch()` or subsequent chainings mutate the query object during parallel resolution.
+**Action:** Always append `.exec()` to ensure Mongoose returns a native Promise before passing it to `Promise.all`.

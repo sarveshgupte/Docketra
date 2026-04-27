@@ -178,8 +178,8 @@ const listDocketAudit = async ({ tenantId, docketId, page = 1, limit = 50 }) => 
   const query = { tenantId: safeTenantId, docketId: safeDocketId };
 
   const [items, total] = await Promise.all([
-    DocketAuditLog.find(query).sort({ timestamp: -1 }).skip(skip).limit(safeLimit).lean(),
-    DocketAuditLog.countDocuments(query),
+    DocketAuditLog.find(query).sort({ timestamp: -1 }).skip(skip).limit(safeLimit).lean().exec(),
+    DocketAuditLog.countDocuments(query).exec(),
   ]);
   return { items, total, page: safePage, limit: safeLimit };
 };
@@ -197,8 +197,8 @@ const listSettingsAudit = async ({ tenantId, settingsKey = null, page = 1, limit
   if (safeSettingsKey) query.settingsKey = safeSettingsKey;
 
   const [items, total] = await Promise.all([
-    SettingsAuditLog.find(query).sort({ timestamp: -1 }).skip(skip).limit(safeLimit).lean(),
-    SettingsAuditLog.countDocuments(query),
+    SettingsAuditLog.find(query).sort({ timestamp: -1 }).skip(skip).limit(safeLimit).lean().exec(),
+    SettingsAuditLog.countDocuments(query).exec(),
   ]);
   return { items, total, page: safePage, limit: safeLimit };
 };
