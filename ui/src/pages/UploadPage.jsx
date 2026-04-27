@@ -7,15 +7,15 @@ const pageStyle = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  background: '#f8fafc',
+  background: 'var(--dt-bg-warm)',
   padding: '24px',
 };
 
 const cardStyle = {
   width: '100%',
   maxWidth: '480px',
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
+  background: 'var(--dt-surface)',
+  border: '1px solid var(--dt-border-whisper)',
   borderRadius: '12px',
   padding: '24px',
   boxShadow: '0 8px 24px rgba(15, 23, 42, 0.06)',
@@ -152,11 +152,11 @@ export const UploadPage = () => {
         {pageStatus === 'loading' ? <p>Loading upload link...</p> : null}
 
         {pageStatus === 'error' ? (
-          <p style={{ color: '#b91c1c', margin: 0 }}>{errorMessage || 'This upload link has expired.'}</p>
+          <p style={{ color: 'var(--dt-error)', margin: 0 }}>{errorMessage || 'This upload link has expired.'}</p>
         ) : null}
 
         {status === 'success' ? (
-          <div style={{ color: '#15803d', margin: 0 }}>
+          <div style={{ color: 'var(--dt-success)', margin: 0 }}>
             <p style={{ margin: 0, fontWeight: 600 }}>✅ Documents received</p>
             <p style={{ marginTop: '8px' }}>Our team will review your documents and get back to you.</p>
           </div>
@@ -177,7 +177,7 @@ export const UploadPage = () => {
                   value={pin}
                   onChange={(event) => setPin(event.target.value.replace(/\D/g, '').slice(0, 4))}
                   placeholder="____"
-                  style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px' }}
+                  style={{ width: '100%', padding: '10px', border: '1px solid var(--dt-border)', borderRadius: '8px' }}
                 />
                 <button
                   type="button"
@@ -186,7 +186,7 @@ export const UploadPage = () => {
                   style={{
                     marginTop: '8px',
                     fontSize: '13px',
-                    color: '#2563eb',
+                    color: 'var(--dt-accent)',
                     background: 'transparent',
                     border: 'none',
                     padding: 0,
@@ -195,13 +195,13 @@ export const UploadPage = () => {
                 >
                   {requestingPin ? 'Sending PIN…' : 'Request PIN on email'}
                 </button>
-                {pinHelpMessage ? <p style={{ color: '#15803d', marginTop: '8px', marginBottom: 0 }}>{pinHelpMessage}</p> : null}
+                {pinHelpMessage ? <p style={{ color: 'var(--dt-success)', marginTop: '8px', marginBottom: 0 }}>{pinHelpMessage}</p> : null}
               </div>
             ) : null}
 
             <div style={{ marginBottom: '16px' }}>
               <h1 style={{ fontSize: '20px', marginBottom: '10px' }}>Upload documents</h1>
-              <p style={{ marginBottom: '10px', color: '#334155', fontSize: '14px', fontWeight: 600 }}>
+              <p style={{ marginBottom: '10px', color: 'var(--dt-text-secondary)', fontSize: '14px', fontWeight: 600 }}>
                 Secure upload • No login required
               </p>
               <div
@@ -213,7 +213,7 @@ export const UploadPage = () => {
                   setErrorMessage('');
                 }}
                 style={{
-                  border: '1px dashed #94a3b8',
+                  border: '1px dashed var(--dt-border-strong)',
                   borderRadius: '8px',
                   padding: '14px',
                   marginBottom: '10px',
@@ -230,7 +230,7 @@ export const UploadPage = () => {
                   setErrorMessage('');
                 }}
               />
-              <div style={{ marginTop: '8px', color: '#64748b', fontSize: '14px' }}>
+              <div style={{ marginTop: '8px', color: 'var(--dt-text-muted)', fontSize: '14px' }}>
                 {files.length
                   ? files.map((file, index) => <div key={`${file.name}-${index}`}>{file.name}</div>)
                   : 'No files selected'}
@@ -241,8 +241,8 @@ export const UploadPage = () => {
               type="submit"
               disabled={uploading}
               style={{
-                background: '#2563eb',
-                color: '#fff',
+                background: 'var(--dt-accent)',
+                color: 'var(--dt-text-inverse)',
                 border: 'none',
                 borderRadius: '8px',
                 padding: '10px 16px',
@@ -255,13 +255,13 @@ export const UploadPage = () => {
             </button>
 
             {uploading ? (
-              <p style={{ color: '#1e293b', marginTop: '12px' }}>
+              <p style={{ color: 'var(--dt-text)', marginTop: '12px' }}>
                 Uploading... please wait ({progress}%)
               </p>
             ) : null}
 
             {status === 'error' ? (
-              <p style={{ color: '#b91c1c', marginTop: '12px' }}>
+              <p style={{ color: 'var(--dt-error)', marginTop: '12px' }}>
                 {errorMessage || 'Upload failed. Please try again.'}
               </p>
             ) : null}
