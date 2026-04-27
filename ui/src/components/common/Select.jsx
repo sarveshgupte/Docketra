@@ -33,7 +33,7 @@ export const Select = ({
       <FormLabel htmlFor={selectId} label={label} required={required} />
       <select 
         id={selectId}
-        className={`${formClasses.inputBase} pr-9 ${error ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500/20' : ''} ${!error && success ? formClasses.inputSuccess : ''}`}
+        className={`${formClasses.inputBase} pr-9 ${error ? 'border-[var(--dt-error)] text-[var(--dt-error)] focus:border-[var(--dt-error)] focus:ring-[var(--dt-error)]/20' : ''} ${!error && success ? formClasses.inputSuccess : ''}`}
         disabled={disabled} 
         required={required} 
         aria-invalid={error ? 'true' : undefined}

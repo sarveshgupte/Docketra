@@ -22,7 +22,7 @@ export const EmptyState = ({
   return (
     <div className="ui-empty-state" role="status">
       {resolvedIcon ? (
-        <div className="ui-empty-state__icon mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-500" aria-hidden="true">
+        <div className="ui-empty-state__icon mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--dt-surface-muted)] text-[var(--dt-text-muted)]" aria-hidden="true">
           {resolvedIcon}
         </div>
       ) : null}

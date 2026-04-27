@@ -21,18 +21,18 @@ export const Table = ({
   return (
     <div className={joinClasses(surfaceClasses.tableWrapper, className)}>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">{children}</table>
+        <table className="min-w-full divide-y divide-[var(--dt-border-whisper)]">{children}</table>
       </div>
     </div>
   );
 };
 
 export const TableHead = ({ children, className = '' }) => {
-  return <thead className={joinClasses('bg-gray-50 border-b border-gray-200', className)}>{children}</thead>;
+  return <thead className={joinClasses('bg-[var(--dt-surface-subtle)] border-b border-[var(--dt-border-whisper)]', className)}>{children}</thead>;
 };
 
 export const TableBody = ({ children, className = '' }) => {
-  return <tbody className={joinClasses('divide-y divide-gray-200 bg-white', className)}>{children}</tbody>;
+  return <tbody className={joinClasses('divide-y divide-[var(--dt-border-whisper)] bg-[var(--dt-surface)]', className)}>{children}</tbody>;
 };
 
 export const TableRow = ({ children, onClick, className = '', ...rest }) => {
@@ -41,7 +41,7 @@ export const TableRow = ({ children, onClick, className = '', ...rest }) => {
       onClick={onClick}
       {...rest}
       className={joinClasses(
-        'transition-colors duration-150 hover:bg-gray-50',
+        'transition-colors duration-150 hover:bg-[var(--dt-surface-subtle)]',
         onClick && 'cursor-pointer',
         className,
       )}
@@ -55,7 +55,7 @@ export const TableHeader = ({ children, className = '' }) => {
   return (
     <th
       className={joinClasses(
-        `${spacingClasses.tableHeaderPadding} text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap`,
+        `${spacingClasses.tableHeaderPadding} text-left text-xs font-semibold text-[var(--dt-text-muted)] uppercase tracking-wider whitespace-nowrap`,
         className,
       )}
     >
@@ -65,14 +65,14 @@ export const TableHeader = ({ children, className = '' }) => {
 };
 
 export const TableCell = ({ children, className = '' }) => {
-  return <td className={joinClasses(`${spacingClasses.tableCellPadding} whitespace-nowrap text-sm text-gray-900`, className)}>{children}</td>;
+  return <td className={joinClasses(`${spacingClasses.tableCellPadding} whitespace-nowrap text-sm text-[var(--dt-text)]`, className)}>{children}</td>;
 };
 
 export const TableFooter = ({ children, colSpan, className = '' }) => {
   return (
-    <tfoot className="bg-white">
+    <tfoot className="bg-[var(--dt-surface)]">
       <tr>
-        <td colSpan={colSpan} className={joinClasses(`${spacingClasses.tableCellPadding} text-sm text-gray-500 border-t border-gray-200`, className)}>
+        <td colSpan={colSpan} className={joinClasses(`${spacingClasses.tableCellPadding} text-sm text-[var(--dt-text-muted)] border-t border-[var(--dt-border-whisper)]`, className)}>
           {children}
         </td>
       </tr>
@@ -82,7 +82,7 @@ export const TableFooter = ({ children, colSpan, className = '' }) => {
 
 export const TableEmptyState = ({ colSpan, message = 'No records found.' }) => (
   <tr>
-    <td colSpan={colSpan} className={`${spacingClasses.tableCellPadding} py-8 text-center text-sm text-gray-500`}>
+    <td colSpan={colSpan} className={`${spacingClasses.tableCellPadding} py-8 text-center text-sm text-[var(--dt-text-muted)]`}>
       {message}
     </td>
   </tr>

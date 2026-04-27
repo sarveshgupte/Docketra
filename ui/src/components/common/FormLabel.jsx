@@ -11,7 +11,7 @@ export const FormLabel = ({ htmlFor, label, required = false, className = '' }) 
     >
       {label}
       {required && (
-        <span className="ml-1 text-red-500" aria-hidden="true">
+        <span className="ml-1 text-[var(--dt-error)]" aria-hidden="true">
           *
         </span>
       )}

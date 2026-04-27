@@ -62,20 +62,20 @@ export const Button = ({
   const normalizedVariant = normalizeVariant(variant);
 
   const baseClassesBySize = {
-    xs: 'inline-flex min-h-7 items-center justify-center rounded-md border font-medium leading-4 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-xs px-2 py-1',
-    sm: 'inline-flex min-h-8 items-center justify-center rounded-md border font-medium leading-4 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-xs px-3 py-1.5',
-    md: 'inline-flex min-h-11 items-center justify-center rounded-md border font-medium leading-5 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-sm px-4 py-2.5',
-    lg: 'inline-flex min-h-12 items-center justify-center rounded-md border font-medium leading-5 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-base px-5 py-3',
+    xs: 'inline-flex min-h-7 items-center justify-center rounded-[var(--dt-radius-control)] border font-medium leading-4 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--dt-surface)] disabled:cursor-not-allowed disabled:opacity-60 text-xs px-2 py-1',
+    sm: 'inline-flex min-h-8 items-center justify-center rounded-[var(--dt-radius-control)] border font-medium leading-4 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--dt-surface)] disabled:cursor-not-allowed disabled:opacity-60 text-xs px-3 py-1.5',
+    md: 'inline-flex min-h-11 items-center justify-center rounded-[var(--dt-radius-control)] border font-medium leading-5 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--dt-surface)] disabled:cursor-not-allowed disabled:opacity-60 text-sm px-4 py-2.5',
+    lg: 'inline-flex min-h-12 items-center justify-center rounded-[var(--dt-radius-control)] border font-medium leading-5 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--dt-surface)] disabled:cursor-not-allowed disabled:opacity-60 text-base px-5 py-3',
   };
 
   const variantClasses = {
-    primary: 'border-primary bg-primary text-white hover:brightness-105 active:brightness-95 focus-visible:ring-primary',
+    primary: 'border-[var(--dt-accent)] bg-[var(--dt-accent)] text-[var(--dt-text-inverse)] hover:border-[var(--dt-accent-hover)] hover:bg-[var(--dt-accent-hover)] active:border-[var(--dt-accent-active)] active:bg-[var(--dt-accent-active)] focus-visible:ring-[var(--dt-focus)]',
     secondary:
-      'border-border bg-white text-textMain hover:bg-slate-50 active:bg-slate-100 focus-visible:ring-textMuted',
+      'border-[var(--dt-border)] bg-[var(--dt-surface)] text-[var(--dt-text)] hover:bg-[var(--dt-surface-subtle)] active:bg-[var(--dt-surface-muted)] focus-visible:ring-[var(--dt-focus)]',
     outline:
-      'border-border bg-transparent text-textMain hover:bg-slate-50 active:bg-slate-100 focus-visible:ring-textMuted',
-    danger: 'border-error bg-error text-white hover:brightness-105 active:brightness-95 focus-visible:ring-error',
-    ghost: 'border-transparent bg-transparent text-textMain hover:bg-slate-100 active:bg-slate-200 focus-visible:ring-textMuted',
+      'border-[var(--dt-border)] bg-transparent text-[var(--dt-text)] hover:bg-[var(--dt-surface-subtle)] active:bg-[var(--dt-surface-muted)] focus-visible:ring-[var(--dt-focus)]',
+    danger: 'border-[var(--dt-error)] bg-[var(--dt-error)] text-[var(--dt-text-inverse)] hover:brightness-105 active:brightness-95 focus-visible:ring-[var(--dt-error)]',
+    ghost: 'border-transparent bg-transparent text-[var(--dt-text)] hover:bg-[var(--dt-surface-muted)] active:bg-[var(--dt-surface-muted)] focus-visible:ring-[var(--dt-focus)]',
   };
 
   const isDisabled = disabled || loading;
