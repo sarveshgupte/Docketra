@@ -186,11 +186,11 @@ export function StorageSettingsPage() {
   if (loading) {
     return (
       <PlatformShell moduleLabel="Settings" title="Storage settings" subtitle="Configure and validate your external document storage integration.">
-        <div className="min-h-screen w-full flex-1 bg-gray-50">
+        <div className="min-h-screen w-full flex-1 bg-[var(--dt-bg-warm)]">
           <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 space-y-6">
             <PageHeader title="Storage Settings" subtitle="Configure and validate your external document storage integration." />
             <Card>
-              <p className="text-sm text-gray-500">Loading storage settings...</p>
+              <p className="text-sm text-[var(--dt-text-muted)]">Loading storage settings...</p>
             </Card>
           </div>
         </div>
@@ -217,7 +217,7 @@ export function StorageSettingsPage() {
 
   return (
     <PlatformShell moduleLabel="Settings" title="Storage settings" subtitle="Configure and validate your external document storage integration.">
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[var(--dt-bg-warm)]">
         <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 space-y-6">
           <PageHeader title="Storage Settings" subtitle="Configure and validate your external document storage integration." />
 
@@ -226,39 +226,39 @@ export function StorageSettingsPage() {
           <Card>
             <div className={spacingClasses.sectionMargin}>
               <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-2">Storage & Data Ownership</h2>
-                <p className="text-sm text-gray-600">
+                <h2 className="text-lg font-medium text-[var(--dt-text)] mb-2">Storage & Data Ownership</h2>
+                <p className="text-sm text-[var(--dt-text-secondary)]">
                   Docketra acts as a control plane. Firm/client data should stay in your configured storage provider based on your data ownership model.
                 </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div className="rounded border border-gray-200 bg-white px-3 py-2">
-                  <p className="font-medium text-gray-900">Active provider</p>
-                  <p className="text-gray-600">{ownershipSummary?.activeStorage?.provider || provider}</p>
+                <div className="rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-surface)] px-3 py-2">
+                  <p className="font-medium text-[var(--dt-text)]">Active provider</p>
+                  <p className="text-[var(--dt-text-secondary)]">{ownershipSummary?.activeStorage?.provider || provider}</p>
                 </div>
-                <div className="rounded border border-gray-200 bg-white px-3 py-2">
-                  <p className="font-medium text-gray-900">Connection status</p>
-                  <p className="text-gray-600">{ownershipSummary?.activeStorage?.connectionStatus || 'UNKNOWN'}</p>
+                <div className="rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-surface)] px-3 py-2">
+                  <p className="font-medium text-[var(--dt-text)]">Connection status</p>
+                  <p className="text-[var(--dt-text-secondary)]">{ownershipSummary?.activeStorage?.connectionStatus || 'UNKNOWN'}</p>
                 </div>
-                <div className="rounded border border-gray-200 bg-white px-3 py-2">
-                  <p className="font-medium text-gray-900">Last health check</p>
-                  <p className="text-gray-600">{formatDateTime(ownershipSummary?.lastHealthCheck?.checkedAt)}</p>
+                <div className="rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-surface)] px-3 py-2">
+                  <p className="font-medium text-[var(--dt-text)]">Last health check</p>
+                  <p className="text-[var(--dt-text-secondary)]">{formatDateTime(ownershipSummary?.lastHealthCheck?.checkedAt)}</p>
                 </div>
-                <div className="rounded border border-gray-200 bg-white px-3 py-2">
-                  <p className="font-medium text-gray-900">Fallback storage</p>
-                  <p className="text-gray-600">
+                <div className="rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-surface)] px-3 py-2">
+                  <p className="font-medium text-[var(--dt-text)]">Fallback storage</p>
+                  <p className="text-[var(--dt-text-secondary)]">
                     {ownershipSummary?.fallbackStorage?.provider || 'docketra_managed'} · {ownershipSummary?.fallbackStorage?.status || 'ACTIVE'}
                   </p>
                 </div>
-                <div className="rounded border border-gray-200 bg-white px-3 py-2 md:col-span-2">
-                  <p className="font-medium text-gray-900">Backup / export status</p>
-                  <p className="text-gray-600">
+                <div className="rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-surface)] px-3 py-2 md:col-span-2">
+                  <p className="font-medium text-[var(--dt-text)]">Backup / export status</p>
+                  <p className="text-[var(--dt-text-secondary)]">
                     Backup enabled: {ownershipSummary?.backupExport?.backupEnabled ? 'Yes' : 'No'} · Last export: {formatDateTime(ownershipSummary?.backupExport?.lastExport?.createdAt)}
                   </p>
                 </div>
               </div>
               {summaryWarnings.length ? (
-                <div className="rounded border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+                <div className="rounded border border-[var(--dt-warning)] bg-[var(--dt-warning-subtle)] px-3 py-3 text-sm text-[var(--dt-warning)]">
                   <p className="font-medium">Warnings</p>
                   <ul className="list-disc pl-5 mt-1 space-y-1">
                     {summaryWarnings.map((warning) => (
@@ -274,10 +274,10 @@ export function StorageSettingsPage() {
             <div className={spacingClasses.sectionMargin}>
               <SupportContext context={supportContext} />
               <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-2">Storage Provider</h2>
-                <p className="text-sm text-gray-500">BYOS trust mode is firm-connected storage so firm/client document bytes remain in firm-provided storage when configured. Docketra-managed storage remains the default fallback. Provider changes require OTP verification.</p>
+                <h2 className="text-lg font-medium text-[var(--dt-text)] mb-2">Storage Provider</h2>
+                <p className="text-sm text-[var(--dt-text-muted)]">BYOS trust mode is firm-connected storage so firm/client document bytes remain in firm-provided storage when configured. Docketra-managed storage remains the default fallback. Provider changes require OTP verification.</p>
               </div>
-              <div className="rounded border border-blue-200 bg-blue-50 px-3 py-3 text-sm text-blue-900">
+              <div className="rounded border border-[var(--dt-info)] bg-[var(--dt-info-subtle)] px-3 py-3 text-sm text-[var(--dt-info)]">
                 <p className="font-medium">Current storage mode: {storageMode}</p>
                 <p className="mt-1">
                   Firm-connected storage keeps document bytes in your firm-owned cloud environment.
@@ -345,12 +345,12 @@ export function StorageSettingsPage() {
                   {savingProvider ? 'Saving…' : canSwitchProvider ? 'Save Provider' : 'Provider Unchanged'}
                 </Button>
                 {!canSwitchProvider ? (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-[var(--dt-text-muted)]">
                     Select a different provider before saving.
                   </p>
                 ) : null}
                 {!verificationToken ? (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-[var(--dt-text-muted)]">
                     OTP verification is required before provider changes.
                   </p>
                 ) : null}
@@ -361,8 +361,8 @@ export function StorageSettingsPage() {
           <Card>
             <div className={spacingClasses.sectionMargin}>
               <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-2">Data ownership, backup, and export readiness</h2>
-                <p className="text-sm text-gray-600">
+                <h2 className="text-lg font-medium text-[var(--dt-text)] mb-2">Data ownership, backup, and export readiness</h2>
+                <p className="text-sm text-[var(--dt-text-secondary)]">
                   Primary Admins can generate a firm backup export and review recent runs. If a download link is unavailable for your provider,
                   use the export history plus support diagnostics as the recovery path.
                 </p>
@@ -390,15 +390,15 @@ export function StorageSettingsPage() {
               </div>
               <ul className="space-y-2 text-sm">
                 {exportRuns.length === 0 ? (
-                  <li className="text-gray-500">No recent export runs found.</li>
+                  <li className="text-[var(--dt-text-muted)]">No recent export runs found.</li>
                 ) : exportRuns.map((item) => (
-                  <li key={item?.exportId || item?._id} className="rounded border border-gray-200 px-3 py-2">
-                    <p className="font-medium text-gray-900">{item?.exportId || 'Export run'}</p>
-                    <p className="text-gray-600">
+                  <li key={item?.exportId || item?._id} className="rounded border border-[var(--dt-border-whisper)] px-3 py-2">
+                    <p className="font-medium text-[var(--dt-text)]">{item?.exportId || 'Export run'}</p>
+                    <p className="text-[var(--dt-text-secondary)]">
                       Created: {formatDateTime(item?.createdAt || item?.timestamp)} · Files: {Number(item?.fileCount || 0)} · Size: {Number(item?.size || 0)} bytes
                     </p>
                     {!item?.downloadUrl ? (
-                      <p className="text-amber-700">Download link unavailable for this provider. Use support recovery path with export ID.</p>
+                      <p className="text-[var(--dt-warning)]">Download link unavailable for this provider. Use support recovery path with export ID.</p>
                     ) : null}
                   </li>
                 ))}

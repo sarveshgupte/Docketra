@@ -280,7 +280,7 @@ export const FirmSettingsPage = () => {
 
   return (
     <PlatformShell moduleLabel="Settings" title="Firm settings" subtitle="Configure operational defaults, SLA policy, and feature visibility for this firm.">
-      <div className="min-h-screen w-full flex-1 bg-gray-50">
+      <div className="min-h-screen w-full flex-1 bg-[var(--dt-bg-warm)]">
         <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 space-y-8">
           <PageHeader
             title="Firm Settings"
@@ -289,8 +289,8 @@ export const FirmSettingsPage = () => {
 
           <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
             <div className="space-y-2 lg:col-span-1">
-              <h2 className="text-lg font-medium text-gray-900">Operational Configuration</h2>
-              <p className="text-sm text-gray-500">Set the default thresholds that guide case routing, SLAs, and escalation timing.</p>
+              <h2 className="text-lg font-medium text-[var(--dt-text)]">Operational Configuration</h2>
+              <p className="text-sm text-[var(--dt-text-muted)]">Set the default thresholds that guide case routing, SLAs, and escalation timing.</p>
             </div>
             <Card className="lg:col-span-2 lg:max-w-4xl">
               <div className="space-y-5">
@@ -333,8 +333,8 @@ export const FirmSettingsPage = () => {
 
           <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
             <div className="space-y-2 lg:col-span-1">
-              <h2 className="text-lg font-medium text-gray-900">View &amp; Action Controls</h2>
-              <p className="text-sm text-gray-500">Enable or hide operational views and bulk actions for firm users.</p>
+              <h2 className="text-lg font-medium text-[var(--dt-text)]">View &amp; Action Controls</h2>
+              <p className="text-sm text-[var(--dt-text-muted)]">Enable or hide operational views and bulk actions for firm users.</p>
             </div>
             <Card className="lg:col-span-2 lg:max-w-4xl">
               <div className="space-y-5">
@@ -365,7 +365,7 @@ export const FirmSettingsPage = () => {
                 <StatusMessageStack messages={primaryStatusMessages} />
               </div>
 
-              <div className="mt-6 pt-5 border-t border-gray-200 flex flex-wrap justify-end gap-3">
+              <div className="mt-6 pt-5 border-t border-[var(--dt-border-whisper)] flex flex-wrap justify-end gap-3">
                 <Button type="button" variant="outline" onClick={() => navigate(`/app/firm/${firmSlug}/admin`)}>
                   Back to Admin
                 </Button>
@@ -378,8 +378,8 @@ export const FirmSettingsPage = () => {
 
           <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
             <div className="space-y-2 lg:col-span-1">
-              <h2 className="text-lg font-medium text-gray-900">SLA Rules</h2>
-              <p className="text-sm text-gray-500">Create simple default, category, subcategory, or workbasket SLA rules. The most specific rule wins.</p>
+              <h2 className="text-lg font-medium text-[var(--dt-text)]">SLA Rules</h2>
+              <p className="text-sm text-[var(--dt-text-muted)]">Create simple default, category, subcategory, or workbasket SLA rules. The most specific rule wins.</p>
             </div>
             <Card className="lg:col-span-2 lg:max-w-4xl">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -432,12 +432,12 @@ export const FirmSettingsPage = () => {
                 </Button>
               </div>
 
-              <div className="mt-6 overflow-x-auto rounded-lg border border-gray-200">
+              <div className="mt-6 overflow-x-auto rounded-lg border border-[var(--dt-border-whisper)]">
                 {loadingSlaData ? (
-                  <div className="px-4 py-6 text-sm text-gray-500">Loading SLA rules…</div>
+                  <div className="px-4 py-6 text-sm text-[var(--dt-text-muted)]">Loading SLA rules…</div>
                 ) : slaRules.length ? (
-                  <table className="min-w-full divide-y divide-gray-200 text-sm">
-                    <thead className="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">
+                  <table className="min-w-full divide-y divide-[var(--dt-border-whisper)] text-sm">
+                    <thead className="bg-[var(--dt-bg-warm)] text-left text-xs uppercase tracking-wider text-[var(--dt-text-muted)]">
                       <tr>
                         <th className="px-4 py-3">Category / Workbasket</th>
                         <th className="px-4 py-3">SLA hours</th>
@@ -445,10 +445,10 @@ export const FirmSettingsPage = () => {
                         <th className="px-4 py-3 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200 bg-white text-gray-700">
+                    <tbody className="divide-y divide-[var(--dt-border-whisper)] bg-[var(--dt-surface)] text-[var(--dt-text-secondary)]">
                       {slaRules.map((rule) => (
                         <tr key={rule._id || rule.id}>
-                          <td className="px-4 py-3 font-medium text-gray-900">{getRuleScopeLabel(rule)}</td>
+                          <td className="px-4 py-3 font-medium text-[var(--dt-text)]">{getRuleScopeLabel(rule)}</td>
                           <td className="px-4 py-3">{rule.slaHours}</td>
                           <td className="px-4 py-3">{rule.isActive === false ? 'Disabled' : 'Active'}</td>
                           <td className="px-4 py-3">
@@ -486,15 +486,15 @@ export const FirmSettingsPage = () => {
           <Card className="max-w-4xl">
             <div className="space-y-5">
               <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Admin Settings Change Log</h2>
-                <p className="text-sm text-gray-500">Last 10 admin configuration changes from firm-scoped audit logs (xID + timestamp).</p>
+                <h2 className="text-lg font-medium text-[var(--dt-text)] mb-4">Admin Settings Change Log</h2>
+                <p className="text-sm text-[var(--dt-text-muted)]">Last 10 admin configuration changes from firm-scoped audit logs (xID + timestamp).</p>
               </div>
               {loadingActivity ? (
-                <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                <div className="rounded-lg border border-[var(--dt-border-whisper)] bg-[var(--dt-bg-warm)] px-4 py-3 text-sm text-[var(--dt-text-secondary)]">
                   Loading recent activity…
                 </div>
               ) : activityError ? (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                <div className="rounded-lg border border-[var(--dt-warning)] bg-[var(--dt-warning-subtle)] px-4 py-3 text-sm text-[var(--dt-warning)]">
                   <p>{activityError}</p>
                   <Button type="button" variant="outline" onClick={loadActivity} className="mt-3">
                     Retry Activity Feed
@@ -503,13 +503,13 @@ export const FirmSettingsPage = () => {
               ) : activity.length ? (
                 <ul className="space-y-3">
                   {activity.map((entry) => (
-                    <li key={entry.id} className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600">
+                    <li key={entry.id} className="rounded-lg border border-[var(--dt-border-whisper)] bg-[var(--dt-surface)] px-4 py-3 text-sm text-[var(--dt-text-secondary)]">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span className="font-medium text-gray-900">{entry.actor}</span>
-                        <span className="text-gray-300">•</span>
+                        <span className="font-medium text-[var(--dt-text)]">{entry.actor}</span>
+                        <span className="text-[var(--dt-text-disabled)]">•</span>
                         <span>{formatDateTime(entry.timestamp)}</span>
                       </div>
-                      <p className="mt-1 text-sm text-gray-600">{entry.description}</p>
+                      <p className="mt-1 text-sm text-[var(--dt-text-secondary)]">{entry.description}</p>
                     </li>
                   ))}
                 </ul>

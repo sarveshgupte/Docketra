@@ -99,3 +99,33 @@ Defined in `ui/src/assets/styles/tokens.css` under `--dt-*`:
 - Empty state
 - Table with filters
 - Form with error/success states
+
+## Legacy page token adoption guidance (post-foundation)
+
+To migrate legacy high-traffic pages safely after foundation rollout:
+
+1. **Replace only presentation values**
+   - Swap local hardcoded colors (gray/slate/blue/red/amber/hex) to existing `--dt-*` tokens.
+   - Prioritize wrappers and dense list surfaces first (`CasesPage`, settings detail pages, CRM/CMS dense lists).
+
+2. **Preserve density contract**
+   - Do **not** increase row heights, filter bar heights, card padding, or form vertical rhythm during token adoption.
+   - Token migration should improve consistency without making operational views feel airy.
+
+3. **Preserve semantic colors intentionally**
+   - Keep success/warning/error/info states clearly distinguishable using semantic `--dt-*` tokens.
+   - Do not flatten semantic messaging into neutral tones.
+   - Destructive actions must remain visually dangerous; disabled states must stay readable.
+
+4. **Focus-visible and accessibility parity**
+   - Ensure migrated controls still use clear `--dt-focus`/`--dt-focus-ring` affordances.
+   - Maintain contrast in status banners, table messages, and action controls.
+
+5. **No behavior coupling**
+   - Token migration PRs must avoid route, API, payload, validation, RBAC/auth, pagination, filtering, or workflow behavior changes.
+
+6. **Recommended migration order**
+   - (a) High-traffic legacy wrappers and dense lists.
+   - (b) Settings detail surfaces.
+   - (c) Remaining modal/detail panel internals.
+   - (d) Low-traffic legacy pages last.
