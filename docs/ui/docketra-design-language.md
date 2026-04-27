@@ -154,3 +154,37 @@ For modal/drawer/detail token cleanup PRs, use the rules below to keep risk low 
 4. **Density and sizing guardrails**
    - Do not increase modal width, row heights, form spacing, or button sizes while applying tokens.
    - Preserve existing compact operational rhythm.
+
+## Design-token QA rules
+
+Use these rules for every token-adoption PR.
+
+1. **Review approach for token-only PRs**
+   - Review by diffing presentation changes only (colors, borders, focus rings, surfaces, typography tokens).
+   - Validate against `docs/ui/visual-regression-checklist.md` before merge.
+   - Require at least one dense-table route and one settings route QA pass.
+
+2. **What must not change in token-only PRs**
+   - No route changes, API changes, auth/RBAC changes, workflow/state-machine changes, or payload shape changes.
+   - No CTA hierarchy rewrites unless required to fix a clear visual bug.
+   - No spacing/density inflation that alters operational scan speed.
+
+3. **Density preservation guardrails**
+   - Keep table row heights, toolbar heights, and form rhythm consistent with current operational baseline.
+   - Avoid adding extra vertical wrappers/padding around list and filter surfaces.
+   - Treat “more whitespace” as a regression unless explicitly approved by product UX review.
+
+4. **Semantic color review rules**
+   - Preserve explicit success/warning/error/info distinctions with `--dt-*` semantic tokens.
+   - Do not neutralize danger states or use accent blue for destructive actions.
+   - Ensure semantic notices include supporting text/icon patterns where interaction-critical.
+
+5. **Focus ring verification rules**
+   - Keyboard `Tab` traversal must show an obvious focus style on primary actions, navigation links, table actions, and form controls.
+   - Focus-visible treatment must remain consistent between platform shell and legacy high-traffic pages.
+   - Modal focus trap must remain intact after token updates.
+
+6. **Hardcoded color handling policy**
+   - New code should not introduce raw hex/slate/gray utility colors for product app surfaces when a `--dt-*` token exists.
+   - If a hardcoded color is found in touched files, replace it with the closest semantic token in the same PR when risk is low.
+   - If replacement is risky or unclear, log a follow-up with exact file/path and intended token mapping.
