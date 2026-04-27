@@ -129,3 +129,28 @@ To migrate legacy high-traffic pages safely after foundation rollout:
    - (b) Settings detail surfaces.
    - (c) Remaining modal/detail panel internals.
    - (d) Low-traffic legacy pages last.
+
+## Modal/detail-panel token guidance (dialogs, drawers, and upload internals)
+
+For modal/drawer/detail token cleanup PRs, use the rules below to keep risk low and UX consistent:
+
+1. **Use `--dt-*` tokens only for presentation substitutions**
+   - Surface/background: `--dt-surface`, `--dt-surface-raised`, `--dt-surface-muted`, `--dt-surface-subtle`, `--dt-bg-warm`
+   - Text: `--dt-text`, `--dt-text-secondary`, `--dt-text-muted`, `--dt-text-disabled`, `--dt-text-inverse`
+   - Borders: `--dt-border-whisper`, `--dt-border`, `--dt-border-strong`
+   - Accent/focus: `--dt-accent`, `--dt-accent-hover`, `--dt-accent-subtle`, `--dt-focus`, `--dt-focus-ring`
+   - Semantics: `--dt-success|warning|error|info` and subtle counterparts.
+
+2. **Dialog semantic-state rules**
+   - Destructive confirmations must retain explicit danger tone (`--dt-error` family).
+   - Warning notices remain visually distinct from info and success.
+   - Informational helper/metadata copy should use muted/secondary text, not danger/warning tones.
+   - Disabled/read-only surfaces must remain readable (`--dt-text-disabled` only where appropriate).
+
+3. **Behavior + focus management must remain unchanged during token cleanup**
+   - Do not alter open/close sequencing, escape/overlay close behavior, focus trap logic, or keyboard shortcuts in modal/drawer components.
+   - Token cleanup PRs are visual only; no workflow, validation, routing, or API coupling.
+
+4. **Density and sizing guardrails**
+   - Do not increase modal width, row heights, form spacing, or button sizes while applying tokens.
+   - Preserve existing compact operational rhythm.

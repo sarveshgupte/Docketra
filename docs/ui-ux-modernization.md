@@ -427,3 +427,47 @@ This PR was expanded (still presentation-only and low-risk) to cover more of the
 **PR: Legacy modal + detail-panel token cleanup (low-risk)**
 - Migrate remaining inline and hardcoded colors in high-use modals/detail panels (docket details, upload flows, selected admin modals) to `--dt-*`.
 - Keep density unchanged and preserve all existing API/behavior contracts.
+
+
+## Modal/detail-panel token cleanup PR scope (low-risk)
+
+### Scope completed in this PR
+- Replaced remaining hardcoded gray/slate/blue/red/hex presentation values with `--dt-*` tokens in high-use modal/drawer/detail internals only.
+- Kept all modal and drawer behavior unchanged (open/close flow, focus trap, keyboard handling, and action wiring remain intact).
+- Preserved semantic intent in confirmation and audit surfaces (danger/final actions still read destructive; informational and muted metadata remain visually distinct).
+
+### Exact files changed
+- `ui/src/components/common/ConfirmDialog.jsx`
+- `ui/src/components/common/ActionConfirmModal.jsx`
+- `ui/src/components/common/AuditTimelineDrawer.jsx`
+- `ui/src/components/common/AuditTimelineDrawer.css`
+- `ui/src/components/common/ClientFactSheetModal.css`
+- `ui/src/pages/admin/components/AdminClientModals.jsx`
+- `ui/src/pages/crm/LeadsPage.jsx`
+- `ui/src/pages/crm/CrmClientDetailPage.jsx`
+- `ui/src/pages/UploadPage.jsx`
+- `docs/ui-ux-modernization.md`
+- `docs/ui/docketra-design-language.md`
+
+### Modal/detail surfaces affected
+- Audit history drawer (docket detail side-surface)
+- Client fact sheet modal (attachments/documents surface)
+- Admin client create/edit modal internals (fact-sheet sub-area)
+- CRM lead create/manage modals
+- CRM client detail deal/invoice add modals
+- Shared confirmation dialogs (`ConfirmDialog`, `ActionConfirmModal`)
+- Public upload/attachment intake page
+
+### Before / after UX impact
+- **Before:** modal and drawer internals still mixed older hardcoded neutrals/accent colors with tokenized shells, causing local visual drift in high-use operational dialogs.
+- **After:** those internals now align with Docketra `--dt-*` surfaces/text/borders/semantic colors while keeping the same spacing, control sizing, and interaction contracts.
+
+### Remaining gaps
+1. Some lower-traffic legacy components outside modal/detail surfaces still use hardcoded utility colors.
+2. A few superadmin and marketing-only surfaces intentionally remain outside this operational token cleanup scope.
+3. Additional token cleanup can be done in remaining isolated inline-style components after targeted route-level QA.
+
+### Recommended next PR
+**PR: Remaining low-traffic component token convergence**
+- Target non-critical legacy components with inline hardcoded colors (outside core modals/detail panels).
+- Keep behavior unchanged; continue incremental visual-only migration.
