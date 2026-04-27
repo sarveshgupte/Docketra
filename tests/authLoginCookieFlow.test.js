@@ -31,6 +31,7 @@ async function run() {
     loginOtpAttempts: 0,
   };
   let cookieSet = false;
+  let cookiePayload = null;
   const service = createAuthLoginService({
     models: {
       User: { findOne: async () => user },
@@ -66,7 +67,7 @@ async function run() {
         refreshToken: 'refresh',
         data: { role: 'admin' },
       }),
-      setAuthCookies: () => { cookieSet = true; },
+      setAuthCookies: (_res, payload) => { cookieSet = true; cookiePayload = payload; },
     },
     services: {
       authOtpService: {
@@ -81,6 +82,8 @@ async function run() {
 
   assert.strictEqual(res.state.statusCode, 200);
   assert.strictEqual(cookieSet, true);
+  assert.strictEqual(cookiePayload?.accessToken, 'access');
+  assert.strictEqual(cookiePayload?.refreshToken, 'refresh');
   assert.strictEqual(Object.prototype.hasOwnProperty.call(res.state.body, 'accessToken'), false);
   assert.strictEqual(Object.prototype.hasOwnProperty.call(res.state.body, 'refreshToken'), false);
   console.log('authLoginCookieFlow.test.js passed');

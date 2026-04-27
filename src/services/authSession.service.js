@@ -2,19 +2,36 @@ const log = require('../utils/log');
 const { getCookieValue } = require('../utils/requestCookies');
 const { REASON_CODES, logPilotEvent } = require('./pilotDiagnostics.service');
 
+const isProduction = () => process.env.NODE_ENV === 'production';
+const resolveCookieCrossSiteMode = () => String(process.env.AUTH_COOKIE_CROSS_SITE || '').trim().toLowerCase() === 'true';
+
 const normalizedCookieSameSite = () => {
-  const configured = String(process.env.AUTH_COOKIE_SAMESITE || 'lax').trim().toLowerCase();
+  const configured = String(process.env.AUTH_COOKIE_SAMESITE || '').trim().toLowerCase();
   if (configured === 'strict' || configured === 'lax') return configured;
   if (configured === 'none') {
-    return process.env.NODE_ENV === 'production' ? 'none' : 'lax';
+    return isProduction() ? 'none' : 'lax';
+  }
+  if (isProduction() && resolveCookieCrossSiteMode()) {
+    return 'none';
   }
   return 'lax';
 };
 
+const normalizedCookieDomain = () => {
+  const configured = String(process.env.AUTH_COOKIE_DOMAIN || '').trim();
+  if (!configured) return null;
+  const normalized = configured.replace(/^https?:\/\//i, '').replace(/\/.*$/, '').trim().toLowerCase();
+  if (!normalized || normalized.includes(':')) return null;
+  if (normalized === 'localhost' || normalized.endsWith('.onrender.com') || normalized === 'onrender.com') {
+    return null;
+  }
+  return normalized;
+};
+
 const getAuthCookieOptions = ({ maxAge = undefined } = {}) => {
-  const secureCookies = process.env.NODE_ENV === 'production';
-  const cookieDomain = String(process.env.AUTH_COOKIE_DOMAIN || '').trim();
+  const cookieDomain = normalizedCookieDomain();
   const sameSite = normalizedCookieSameSite();
+  const secureCookies = isProduction() || sameSite === 'none';
   return {
     httpOnly: true,
     secure: secureCookies,
@@ -38,6 +55,13 @@ const setAuthCookies = (res, { accessToken, refreshToken, refreshMaxAge } = {}) 
   if (refreshToken) {
     res.cookie('refreshToken', refreshToken, getAuthCookieOptions({ maxAge: refreshMs }));
   }
+  log.info('[AUTH][cookies] auth cookies set attempted', {
+    attemptedAccessCookie: Boolean(accessToken),
+    attemptedRefreshCookie: Boolean(refreshToken),
+    sameSite: normalizedCookieSameSite(),
+    secure: isProduction(),
+    hasCookieDomain: Boolean(normalizedCookieDomain()),
+  });
 };
 
 const clearAuthCookies = (res) => {
@@ -67,11 +91,40 @@ const createAuthSessionService = (deps) => {
   const {
     jwtService = deps.jwtService,
   } = services;
+  const {
+    SUPERADMIN_USER_ID = deps.SUPERADMIN_USER_ID,
+  } = utils;
 
-  const generateAndStoreRefreshToken = async ({ req, userId = null, firmId = null }) => {
+  const resolveRefreshScope = ({ scope, userId, firmId }) => {
+    const normalizedScope = String(scope || '').trim().toLowerCase();
+    if (normalizedScope === 'superadmin') return 'superadmin';
+    if (normalizedScope === 'tenant') return 'tenant';
+    if (userId || firmId) return 'tenant';
+    return null;
+  };
+
+  const assertRefreshTokenContext = ({ scope, userId, firmId }) => {
+    if (scope === 'superadmin') {
+      if (userId || firmId) {
+        throw new Error('[AUTH][refresh-token] superadmin scope must not include userId/firmId');
+      }
+      return;
+    }
+    if (!userId || !firmId) {
+      throw new Error('[AUTH][refresh-token] tenant scope requires both userId and firmId');
+    }
+  };
+
+  const generateAndStoreRefreshToken = async ({ req, userId = null, firmId = null, scope = null }) => {
     if (!req) {
       throw new Error('Request object is required to capture client IP and user agent for refresh token security');
     }
+
+    const resolvedScope = resolveRefreshScope({ scope, userId, firmId });
+    if (!resolvedScope) {
+      throw new Error('[AUTH][refresh-token] Unable to determine token scope');
+    }
+    assertRefreshTokenContext({ scope: resolvedScope, userId, firmId });
 
     const refreshToken = jwtService.generateRefreshToken();
     const refreshTokenHash = jwtService.hashRefreshToken(refreshToken);
@@ -89,6 +142,7 @@ const createAuthSessionService = (deps) => {
       tokenHash: refreshTokenHash,
       userId,
       firmId,
+      scope: resolvedScope,
       expiresAt,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
@@ -227,24 +281,70 @@ const createAuthSessionService = (deps) => {
         });
       }
 
-      const isSuperAdminToken = !storedToken.userId;
-      const isTokenMissingFirmContext = !storedToken.firmId;
-      if (isSuperAdminToken || isTokenMissingFirmContext) {
-        log.info('[AUTH] Refresh rejected: unsupported token scope.', {
-          isSuperAdminToken,
-          isTokenMissingFirmContext,
+      const tokenScope = String(storedToken.scope || '').trim().toLowerCase();
+      const isSuperAdminToken = tokenScope === 'superadmin';
+      if (isSuperAdminToken) {
+        const superadminRole = 'SUPERADMIN';
+        const superadminUserId = typeof SUPERADMIN_USER_ID === 'function'
+          ? SUPERADMIN_USER_ID()
+          : process.env.SUPERADMIN_OBJECT_ID;
+        if (!superadminUserId) {
+          await noteRefreshTokenFailure({ req, reason: 'refresh_not_supported' });
+          clearAuthCookies(res);
+          return res.status(401).json({
+            success: false,
+            code: 'REFRESH_NOT_SUPPORTED',
+            reasonCode: REASON_CODES.REFRESH_NOT_SUPPORTED,
+            message: 'Session refresh is not supported for SuperAdmin accounts',
+          });
+        }
+
+        await noteRefreshTokenUse({ req, userId: null, firmId: null, tokenIpAddress: storedToken.ipAddress || null });
+        storedToken.isRevoked = true;
+        storedToken.lastUsedAt = now;
+        await storedToken.save();
+
+        const accessToken = jwtService.generateAccessToken({
+          userId: superadminUserId,
+          role: superadminRole,
+          firmId: null,
+          firmSlug: null,
+          defaultClientId: null,
+          isSuperAdmin: true,
         });
-        await noteRefreshTokenFailure({
+        const { refreshToken: newRefreshToken } = await generateAndStoreRefreshToken({
           req,
-          reason: 'refresh_not_supported',
+          userId: null,
+          firmId: null,
+          scope: 'superadmin',
         });
+        setAuthCookies(res, { accessToken, refreshToken: newRefreshToken, refreshMaxAge: jwtService.getRefreshTokenExpiryMs() });
+        logPilotEvent({
+          event: 'auth_refresh_succeeded',
+          metadata: { scope: 'superadmin', route: req.originalUrl || req.url },
+        });
+        return res.json({ success: true, message: 'Token refreshed successfully' });
+      }
+
+      if (tokenScope && tokenScope !== 'tenant') {
+        await noteRefreshTokenFailure({ req, reason: 'refresh_not_supported' });
         logPilotEvent({ event: 'auth_refresh_rejected', severity: 'warn', metadata: { reasonCode: REASON_CODES.REFRESH_NOT_SUPPORTED, route: req.originalUrl || req.url } });
         clearAuthCookies(res);
         return res.status(401).json({
           success: false,
           code: 'REFRESH_NOT_SUPPORTED',
           reasonCode: REASON_CODES.REFRESH_NOT_SUPPORTED,
-          message: 'Session refresh is not supported for SuperAdmin accounts',
+          message: 'Session refresh is not supported for this token scope',
+        });
+      }
+      if (!storedToken.userId || !storedToken.firmId) {
+        await noteRefreshTokenFailure({ req, reason: 'refresh_missing_context' });
+        clearAuthCookies(res);
+        return res.status(401).json({
+          success: false,
+          code: 'REFRESH_INVALID_SCOPE',
+          reasonCode: REASON_CODES.REFRESH_NOT_SUPPORTED,
+          message: 'Invalid refresh token scope',
         });
       }
 
@@ -297,6 +397,7 @@ const createAuthSessionService = (deps) => {
         req,
         userId: user._id,
         firmId: user.firmId,
+        scope: 'tenant',
       });
 
       setAuthCookies(res, {
