@@ -258,6 +258,8 @@ This PR was expanded (still presentation-only and low-risk) to cover more of the
 
 ### Post-review corrections (PR 3 follow-up)
 
+---
+
 #### Corrections made
 1. **CasesPage layout consistency tightened (low-risk):**
    - Removed mixed usage of platform section wrappers in `CasesPage` and kept the page on its established app-level layout (`PageHeader` + `SectionCard` + app `DataTable`) to avoid half-platform/half-legacy visual drift.
@@ -341,3 +343,51 @@ This PR was expanded (still presentation-only and low-risk) to cover more of the
 - Apply the same spacing, typography, and feedback hierarchy to public/embedded form render surfaces.
 - Introduce a reusable warning badge/tone contract for queue tables.
 - Keep submission behavior, routing, and API payload contracts unchanged.
+
+---
+
+## Foundation PR scope (Docketra-native design language tokens)
+
+### Scope completed in this PR
+- Added a Docketra-native `--dt-*` design token layer (warm surfaces, near-black text, whisper borders, accent/focus, semantic colors, radius, shadows, typography primitives).
+- Mapped shared primitives to the token layer with no component API break:
+  - `Button`, `Card`, `Badge`, `Input`, `Select`, `Textarea`, `EmptyState`, `Modal`, `PageHeader`, `Table`, `DataTable`.
+- Updated platform shared surfaces (`platform.css`) to consume Docketra tokens for shell, notices, controls, and table wrappers.
+- Updated design contract docs and added a standalone design language specification for phased rollout.
+
+### Exact files changed
+- `ui/src/assets/styles/tokens.css`
+- `ui/src/theme/tokens.js`
+- `ui/src/components/common/Button.jsx`
+- `ui/src/components/common/Card.jsx`
+- `ui/src/components/common/Badge.jsx`
+- `ui/src/components/common/FormLabel.jsx`
+- `ui/src/components/common/Input.jsx`
+- `ui/src/components/common/Select.jsx`
+- `ui/src/components/common/Textarea.jsx`
+- `ui/src/components/ui/EmptyState.jsx`
+- `ui/src/components/common/Modal.jsx`
+- `ui/src/components/layout/PageHeader.jsx`
+- `ui/src/components/common/Table.jsx`
+- `ui/src/components/common/DataTable.jsx`
+- `ui/src/components/platform/platform.css`
+- `ui/src/assets/styles/enterprise.css`
+- `docs/ui/design-system-contract.md`
+- `docs/ui/docketra-design-language.md`
+- `docs/ui-ux-modernization.md`
+
+### Before / after UX impact
+- **Before:** multiple cold grays, mixed focus ring styles, and hardcoded control/table colors across shared primitives.
+- **After:** shared primitives and shell surfaces now render from one warm-professional token source with consistent focus visibility and semantic state tones.
+
+### Remaining gaps
+1. Some legacy route-level CSS still uses hardcoded slate/gray tokens.
+2. Marketing-only styles continue to use a separate visual system by design.
+3. A few module-specific badges/notices should be migrated to `--dt-*` in follow-up incremental PRs.
+
+### Recommended next PR
+**PR: Token adoption pass for legacy high-traffic pages**
+- Migrate remaining hardcoded colors in `CasesPage`, settings detail pages, and CRM/CMS dense lists to `--dt-*`.
+- Keep routing/business logic/API untouched.
+- Add targeted visual regression checks for tokenized primitives.
+

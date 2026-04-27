@@ -33,7 +33,7 @@ export const Textarea = ({
       <FormLabel htmlFor={textareaId} label={label} required={required} />
       <textarea
         id={textareaId}
-        className={`${formClasses.textareaBase} ${error ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500/20' : ''} ${!error && success ? formClasses.inputSuccess : ''}`}
+        className={`${formClasses.textareaBase} ${error ? 'border-[var(--dt-error)] text-[var(--dt-error)] focus:border-[var(--dt-error)] focus:ring-[var(--dt-error)]/20' : ''} ${!error && success ? formClasses.inputSuccess : ''}`}
         disabled={disabled}
         readOnly={readOnly}
         rows={rows}
