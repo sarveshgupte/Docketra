@@ -171,7 +171,7 @@ export const WorkSettingsPage = () => {
 
   return (
     <PlatformShell moduleLabel="Settings" title="Work settings" subtitle="Configure work taxonomy and docket structuring rules for your firm.">
-      <div className="min-h-screen w-full flex-1 bg-gray-50">
+      <div className="min-h-screen w-full flex-1 bg-[var(--dt-bg-warm)]">
         <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 space-y-6">
           <PageHeader
             title="Work Settings"
@@ -183,8 +183,8 @@ export const WorkSettingsPage = () => {
           <Card>
             <div className={spacingClasses.sectionMargin}>
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Workbasket Management</h2>
-                <p className="mt-1 text-sm text-gray-600">Add, rename, and activate or deactivate workbaskets for docket routing.</p>
+                <h2 className="text-lg font-semibold text-[var(--dt-text)]">Workbasket Management</h2>
+                <p className="mt-1 text-sm text-[var(--dt-text-secondary)]">Add, rename, and activate or deactivate workbaskets for docket routing.</p>
               </div>
 
               <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
@@ -200,13 +200,13 @@ export const WorkSettingsPage = () => {
               </div>
 
               <div className="space-y-2">
-                {loadingWorkbaskets ? <p className="text-sm text-gray-500">Loading workbaskets…</p> : null}
+                {loadingWorkbaskets ? <p className="text-sm text-[var(--dt-text-muted)]">Loading workbaskets…</p> : null}
                 {!loadingWorkbaskets && workbaskets.length === 0 ? (
-                  <p className="text-sm text-gray-500">No workbaskets are configured yet. Create one to start docket routing.</p>
+                  <p className="text-sm text-[var(--dt-text-muted)]">No workbaskets are configured yet. Create one to start docket routing.</p>
                 ) : null}
                 {workbaskets.map((workbasket) => (
-                  <div key={workbasket._id} className="flex flex-wrap items-center justify-between gap-3 rounded border border-gray-200 px-3 py-2">
-                    <div className="text-sm font-medium text-gray-900">{workbasket.name} <span className="text-xs text-gray-500">({workbasket.isActive ? 'Active' : 'Inactive'})</span></div>
+                  <div key={workbasket._id} className="flex flex-wrap items-center justify-between gap-3 rounded border border-[var(--dt-border-whisper)] px-3 py-2">
+                    <div className="text-sm font-medium text-[var(--dt-text)]">{workbasket.name} <span className="text-xs text-[var(--dt-text-muted)]">({workbasket.isActive ? 'Active' : 'Inactive'})</span></div>
                     <div className="flex flex-wrap gap-2">
                       <Button type="button" variant="outline" onClick={() => handleRenameWorkbasket(workbasket)}>Rename</Button>
                       <Button type="button" variant={workbasket.isActive ? 'danger' : 'primary'} onClick={() => handleToggleWorkbasket(workbasket)}>
@@ -222,17 +222,17 @@ export const WorkSettingsPage = () => {
           <Card id="cms-intake-settings">
             <div className={spacingClasses.sectionMargin}>
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">CMS Intake Settings</h2>
-                <p className="mt-1 text-sm text-gray-600">Set predictable intake defaults and API access without changing backend behavior.</p>
+                <h2 className="text-lg font-semibold text-[var(--dt-text)]">CMS Intake Settings</h2>
+                <p className="mt-1 text-sm text-[var(--dt-text-secondary)]">Set predictable intake defaults and API access without changing backend behavior.</p>
               </div>
-              {intakeLoading ? <p className="text-sm text-gray-500">Loading CMS intake settings…</p> : (
+              {intakeLoading ? <p className="text-sm text-[var(--dt-text-muted)]">Loading CMS intake settings…</p> : (
                 <>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {[{ key: 'autoCreateClient', label: 'Auto create client' }, { key: 'autoCreateDocket', label: 'Auto create docket' }, { key: 'intakeApiEnabled', label: 'Intake API enabled' }].map((item) => (
-                      <label key={item.key} className="inline-flex items-center gap-2 rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                      <label key={item.key} className="inline-flex items-center gap-2 rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-bg-warm)] px-3 py-2 text-sm text-[var(--dt-text-secondary)]">
                         <input
                           type="checkbox"
-                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                          className="h-4 w-4 rounded border-[var(--dt-border)] text-[var(--dt-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dt-focus-ring)]"
                           checked={Boolean(intakeState[item.key])}
                           onChange={(event) => setIntakeState((prev) => ({ ...prev, [item.key]: event.target.checked }))}
                         />
@@ -263,8 +263,8 @@ export const WorkSettingsPage = () => {
                     </Select>
                   </div>
 
-                  <div className="rounded border border-gray-200 bg-gray-50 p-3">
-                    <p className="text-sm text-gray-700"><strong>Intake API key:</strong> {intakeKey || intakeMeta.intakeApiKeyMasked || 'Not generated yet'}</p>
+                  <div className="rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-bg-warm)] p-3">
+                    <p className="text-sm text-[var(--dt-text-secondary)]"><strong>Intake API key:</strong> {intakeKey || intakeMeta.intakeApiKeyMasked || 'Not generated yet'}</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <Button type="button" variant="outline" onClick={() => navigator.clipboard.writeText(intakeKey)} disabled={!intakeKey}>Copy new key</Button>
                       <Button type="button" variant="outline" onClick={handleRegenerateApiKey} disabled={intakeRegenerating}>{intakeRegenerating ? 'Regenerating…' : 'Regenerate key'}</Button>
@@ -282,8 +282,8 @@ export const WorkSettingsPage = () => {
           <Card>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Category Management</h2>
-                <p className="mt-1 text-sm text-gray-600">Create categories and subcategories that define where dockets are created.</p>
+                <h2 className="text-lg font-semibold text-[var(--dt-text)]">Category Management</h2>
+                <p className="mt-1 text-sm text-[var(--dt-text-secondary)]">Create categories and subcategories that define where dockets are created.</p>
               </div>
               <Button
                 variant="primary"

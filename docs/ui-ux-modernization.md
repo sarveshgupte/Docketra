@@ -391,3 +391,39 @@ This PR was expanded (still presentation-only and low-risk) to cover more of the
 - Keep routing/business logic/API untouched.
 - Add targeted visual regression checks for tokenized primitives.
 
+
+## Token adoption PR scope (legacy high-traffic pages)
+
+### Scope completed in this PR
+- Adopted `--dt-*` tokens in **All Dockets (`CasesPage`)** legacy stylesheet (`CasesPage.css`) by replacing hardcoded white/slate/blue/red/amber values with Docketra tokenized surface/text/border/accent/semantic values.
+- Adopted `--dt-*` tokenized color classes in settings detail pages:
+  - `FirmSettingsPage`
+  - `WorkSettingsPage`
+  - `StorageSettingsPage`
+  - `AiSettingsPage`
+- Applied safe token-only updates to common dense list/editor wrappers in `platform.css` that power CRM/CMS table and form-dense surfaces (toolbar controls, CMS form editor fields/toggles, inline notices, pagination/message controls).
+- Preserved existing spacing/density contracts (row height, section spacing, card padding, filter bar density) and preserved all page behavior/contracts.
+
+### Exact files changed
+- `ui/src/pages/CasesPage.css`
+- `ui/src/pages/FirmSettingsPage.jsx`
+- `ui/src/pages/WorkSettingsPage.jsx`
+- `ui/src/pages/StorageSettingsPage.jsx`
+- `ui/src/pages/AiSettingsPage.jsx`
+- `ui/src/components/platform/platform.css`
+- `docs/ui-ux-modernization.md`
+- `docs/ui/docketra-design-language.md`
+
+### Before / after UX impact
+- **Before:** Legacy high-traffic pages still mixed gray/slate/blue hardcoded values with tokenized components, causing visible drift across shell, settings detail forms, and dense list/table/editor wrappers.
+- **After:** The same pages now render with shared `--dt-*` visual primitives for surfaces, text, borders, focus, and semantic states, improving cross-page consistency while preserving operational density and interaction behavior.
+
+### Remaining gaps
+1. Some legacy route-level components (outside this low-risk scope) still use hardcoded utility colors and should be migrated incrementally.
+2. A few modal internals and older isolated components still use inline hex colors and can be addressed in targeted follow-ups.
+3. Marketing/public-site routes intentionally remain outside this product token-adoption pass.
+
+### Recommended next PR
+**PR: Legacy modal + detail-panel token cleanup (low-risk)**
+- Migrate remaining inline and hardcoded colors in high-use modals/detail panels (docket details, upload flows, selected admin modals) to `--dt-*`.
+- Keep density unchanged and preserve all existing API/behavior contracts.

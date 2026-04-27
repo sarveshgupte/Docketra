@@ -113,7 +113,7 @@ export function AiSettingsPage() {
 
   return (
     <PlatformShell moduleLabel="Settings" title="AI settings" subtitle="Manage firm-level BYOAI provider configuration.">
-      <div className="min-h-screen w-full flex-1 bg-gray-50">
+      <div className="min-h-screen w-full flex-1 bg-[var(--dt-bg-warm)]">
         <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 space-y-6">
           <PageHeader
             title="AI Settings"
@@ -125,16 +125,16 @@ export function AiSettingsPage() {
           <Card>
             <div className={spacingClasses.sectionMargin}>
               <div>
-                <h2 className="text-lg font-medium text-gray-900">BYOAI Configuration</h2>
-                <p className="text-sm text-gray-600 mt-1">Primary Admin can connect or rotate provider credentials. Existing keys are never displayed.</p>
+                <h2 className="text-lg font-medium text-[var(--dt-text)]">BYOAI Configuration</h2>
+                <p className="text-sm text-[var(--dt-text-secondary)] mt-1">Primary Admin can connect or rotate provider credentials. Existing keys are never displayed.</p>
               </div>
 
-              <div className="rounded border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+              <div className="rounded border border-[var(--dt-warning)] bg-[var(--dt-warning-subtle)] px-3 py-3 text-sm text-[var(--dt-warning)]">
                 <p className="font-medium">Trust and privacy note</p>
                 <p className="mt-1">AI access is optional. Docketra does not require BYOAI to operate, and this setting only controls the configured model provider connection for eligible firm features.</p>
               </div>
 
-              {loading ? <p className="text-sm text-gray-500">Loading AI settings...</p> : (
+              {loading ? <p className="text-sm text-[var(--dt-text-muted)]">Loading AI settings...</p> : (
                 <>
                   <div className={spacingClasses.formFieldSpacing}>
                     <Select
@@ -169,7 +169,7 @@ export function AiSettingsPage() {
 
                   <div className={`${spacingClasses.formActions} ${spacingClasses.formActionsGap} flex-wrap justify-between`}>
                     {!isPrimaryAdmin ? (
-                      <p className="text-xs text-gray-500">Your role can view AI status, but only Primary Admin can edit this setting.</p>
+                      <p className="text-xs text-[var(--dt-text-muted)]">Your role can view AI status, but only Primary Admin can edit this setting.</p>
                     ) : <span />}
                     <div className="flex flex-wrap gap-3">
                       <Button
