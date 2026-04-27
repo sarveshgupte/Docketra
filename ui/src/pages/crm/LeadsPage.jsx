@@ -383,8 +383,8 @@ export const LeadsPage = () => {
           <Input label="Source (optional)" value={form.source} onChange={(event) => setForm((prev) => ({ ...prev, source: event.target.value }))} />
           {isAdmin ? (
             <div>
-              <label className="block text-sm font-medium text-gray-700" htmlFor="lead-owner">Owner</label>
-              <select id="lead-owner" value={form.ownerXid} onChange={(event) => setForm((prev) => ({ ...prev, ownerXid: event.target.value }))} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm">
+              <label className="block text-sm font-medium text-[var(--dt-text-secondary)]" htmlFor="lead-owner">Owner</label>
+              <select id="lead-owner" value={form.ownerXid} onChange={(event) => setForm((prev) => ({ ...prev, ownerXid: event.target.value }))} className="mt-1 w-full rounded border border-[var(--dt-border)] bg-[var(--dt-surface)] px-3 py-2 text-sm text-[var(--dt-text)]">
                 <option value="">Unassigned</option>
                 {users.map((item) => {
                   const xid = item.xid || item.xID;
@@ -404,15 +404,15 @@ export const LeadsPage = () => {
       <Modal isOpen={showDetail} onClose={closeDetail} title={`Manage Lead${selectedLead?.name ? `: ${selectedLead.name}` : ''}`} maxWidth="lg">
         <div className="grid gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700" htmlFor="detail-stage">Stage</label>
-            <select id="detail-stage" value={detailForm.stage} onChange={(event) => setDetailForm((prev) => ({ ...prev, stage: event.target.value }))} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm">
+            <label className="block text-sm font-medium text-[var(--dt-text-secondary)]" htmlFor="detail-stage">Stage</label>
+            <select id="detail-stage" value={detailForm.stage} onChange={(event) => setDetailForm((prev) => ({ ...prev, stage: event.target.value }))} className="mt-1 w-full rounded border border-[var(--dt-border)] bg-[var(--dt-surface)] px-3 py-2 text-sm text-[var(--dt-text)]">
               {STAGES.map((option) => <option key={option} value={option}>{LEAD_STAGE_LABEL[option]}</option>)}
             </select>
           </div>
           {isAdmin ? (
             <div>
-              <label className="block text-sm font-medium text-gray-700" htmlFor="detail-owner">Owner</label>
-              <select id="detail-owner" value={detailForm.ownerXid} onChange={(event) => setDetailForm((prev) => ({ ...prev, ownerXid: event.target.value }))} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm">
+              <label className="block text-sm font-medium text-[var(--dt-text-secondary)]" htmlFor="detail-owner">Owner</label>
+              <select id="detail-owner" value={detailForm.ownerXid} onChange={(event) => setDetailForm((prev) => ({ ...prev, ownerXid: event.target.value }))} className="mt-1 w-full rounded border border-[var(--dt-border)] bg-[var(--dt-surface)] px-3 py-2 text-sm text-[var(--dt-text)]">
                 <option value="">Unassigned</option>
                 {users.map((item) => {
                   const xid = item.xid || item.xID;
@@ -425,18 +425,18 @@ export const LeadsPage = () => {
           <Input label="Last Contact" type="date" value={detailForm.lastContactAt} onChange={(event) => setDetailForm((prev) => ({ ...prev, lastContactAt: event.target.value }))} />
           {detailForm.stage === 'lost' ? <Input label="Lost Reason" value={detailForm.lostReason} onChange={(event) => setDetailForm((prev) => ({ ...prev, lostReason: event.target.value }))} /> : null}
           <div>
-            <label className="block text-sm font-medium text-gray-700" htmlFor="detail-note">Add Note</label>
-            <textarea id="detail-note" value={detailForm.note} onChange={(event) => setDetailForm((prev) => ({ ...prev, note: event.target.value }))} rows={3} className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm" placeholder="Capture qualification context" />
+            <label className="block text-sm font-medium text-[var(--dt-text-secondary)]" htmlFor="detail-note">Add Note</label>
+            <textarea id="detail-note" value={detailForm.note} onChange={(event) => setDetailForm((prev) => ({ ...prev, note: event.target.value }))} rows={3} className="mt-1 w-full rounded border border-[var(--dt-border)] bg-[var(--dt-surface)] px-3 py-2 text-sm text-[var(--dt-text)]" placeholder="Capture qualification context" />
           </div>
-          <div className="rounded bg-gray-50 p-3">
-            <p className="mb-2 text-xs font-semibold text-gray-700">Recent Activity</p>
+          <div className="rounded bg-[var(--dt-surface-subtle)] p-3">
+            <p className="mb-2 text-xs font-semibold text-[var(--dt-text-secondary)]">Recent Activity</p>
             {Array.isArray(selectedLead?.activitySummary) && selectedLead.activitySummary.length > 0 ? (
-              <ul className="space-y-1 text-xs text-gray-600">
+              <ul className="space-y-1 text-xs text-[var(--dt-text-muted)]">
                 {selectedLead.activitySummary.slice(-5).reverse().map((item, idx) => (
                   <li key={`${item.createdAt || idx}-${item.message}`}>{formatDate(item.createdAt)} · {item.message}</li>
                 ))}
               </ul>
-            ) : <p className="text-xs text-gray-500">No activity yet.</p>}
+            ) : <p className="text-xs text-[var(--dt-text-muted)]">No activity yet.</p>}
           </div>
           <div className="flex justify-end gap-2">
             {selectedLead?.linkedClientId ? (
