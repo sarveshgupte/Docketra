@@ -185,6 +185,7 @@ const createAuthOtpService = (deps) => {
           userId: user._id,
           firmId: user.firmId || null,
           req,
+          scope: 'tenant',
         }));
       } catch (tokenError) {
         log.error('[AUTH] Refresh token persistence failed', tokenError);

@@ -200,7 +200,7 @@ export const FirmLoginPage = () => {
 
     const profileResult = await fetchProfile({ force: true });
     if (!profileResult?.success || !profileResult?.data) {
-      throw new Error('Login succeeded, but workspace context could not be loaded. Please retry.');
+      throw new Error('Login succeeded, but your session could not be established. Please refresh and sign in again.');
     }
 
     const nextRoute = resolvePostAuthNavigation({

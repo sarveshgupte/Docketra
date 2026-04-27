@@ -77,7 +77,7 @@ export const LoginPage = () => {
         const profileResult = await fetchProfile({ force: true });
 
         if (!profileResult?.success || !profileResult?.data) {
-          setError('Login succeeded, but your workspace context could not be loaded. Please retry.');
+          setError('Login succeeded, but your session could not be established. Please refresh and sign in again.');
           return;
         }
 
