@@ -41,8 +41,11 @@ const runMiddleware = async (mw, req) => {
 };
 
 async function shouldRejectJwtFirmMismatch() {
+  const Client = require('../src/models/Client.model');
   const originalFindOne = Firm.findOne;
-  Firm.findOne = async () => ({ _id: OBJECT_ID_A, firmSlug: 'firm-a', status: 'ACTIVE' });
+  const originalClientFindOne = Client.findOne;
+  Firm.findOne = () => ({ lean: () => Promise.resolve({ _id: OBJECT_ID_A, firmSlug: 'firm-a', status: 'ACTIVE' }) });
+  Client.findOne = () => ({ lean: () => Promise.resolve(null) });
 
   const req = {
     params: { firmId: OBJECT_ID_A },
@@ -56,11 +59,15 @@ async function shouldRejectJwtFirmMismatch() {
   console.log('✓ JWT firm mismatch is rejected');
 
   Firm.findOne = originalFindOne;
+  Client.findOne = originalClientFindOne;
 }
 
 async function shouldBlockDisabledFirm() {
+  const Client = require('../src/models/Client.model');
   const originalFindOne = Firm.findOne;
-  Firm.findOne = async () => ({ _id: OBJECT_ID_A, firmSlug: 'firm-a', status: 'SUSPENDED' });
+  const originalClientFindOne = Client.findOne;
+  Firm.findOne = () => ({ lean: () => Promise.resolve({ _id: OBJECT_ID_A, firmSlug: 'firm-a', status: 'SUSPENDED' }) });
+  Client.findOne = () => ({ lean: () => Promise.resolve(null) });
 
   const req = {
     params: { firmId: OBJECT_ID_A },
@@ -73,11 +80,15 @@ async function shouldBlockDisabledFirm() {
   console.log('✓ Disabled firm blocks access');
 
   Firm.findOne = originalFindOne;
+  Client.findOne = originalClientFindOne;
 }
 
 async function shouldAllowActiveFirmRegardlessOfStatusCase() {
+  const Client = require('../src/models/Client.model');
   const originalFindOne = Firm.findOne;
-  Firm.findOne = async () => ({ _id: OBJECT_ID_A, firmSlug: 'firm-a', status: 'ACTIVE' });
+  const originalClientFindOne = Client.findOne;
+  Firm.findOne = () => ({ lean: () => Promise.resolve({ _id: OBJECT_ID_A, firmSlug: 'firm-a', status: 'ACTIVE' }) });
+  Client.findOne = () => ({ lean: () => Promise.resolve({ _id: OBJECT_ID_A, firmSlug: 'firm-a', status: 'ACTIVE' }) });
 
   const req = {
     params: { firmId: OBJECT_ID_A },
@@ -86,12 +97,13 @@ async function shouldAllowActiveFirmRegardlessOfStatusCase() {
   };
 
   const { res, nextCalled } = await runMiddleware(attachFirmContext, req);
-  assert.strictEqual(res.statusCode, null, 'Uppercase ACTIVE status should still be treated as active');
+  assert.strictEqual(res.statusCode == null, true, 'Uppercase ACTIVE status should still be treated as active');
   assert.strictEqual(nextCalled, true, 'Middleware should continue for active firms regardless of status casing');
   assert.strictEqual(req.firmId, OBJECT_ID_A, 'Firm context should still be attached');
   console.log('✓ Uppercase ACTIVE firm status is accepted');
 
   Firm.findOne = originalFindOne;
+  Client.findOne = originalClientFindOne;
 }
 
 async function shouldBlockSuperadminFromFirmRoutes() {

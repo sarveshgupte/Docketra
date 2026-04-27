@@ -1,4 +1,5 @@
 const storageService = require('../services/docketFileStorage.service');
+const { sanitizeFilename } = require('../utils/fileUtils');
 
 function mapStorageError(error, res) {
   if (error?.code === 'STORAGE_NOT_CONNECTED') {
@@ -62,7 +63,7 @@ async function getDocketFile(req, res) {
     const result = await storageService.getFile({ attachmentId, firmId });
 
     res.setHeader('Content-Type', result.metadata.mimeType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(result.metadata.fileName || 'file')}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${sanitizeFilename(result.metadata.fileName || 'file')}"`);
 
     result.stream.on('error', () => {
       if (!res.headersSent) {
