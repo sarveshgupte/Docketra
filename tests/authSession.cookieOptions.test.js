@@ -34,6 +34,7 @@ function run() {
   const originalNodeEnv = process.env.NODE_ENV;
   const originalSameSite = process.env.AUTH_COOKIE_SAMESITE;
   const originalDomain = process.env.AUTH_COOKIE_DOMAIN;
+  const originalCrossSite = process.env.AUTH_COOKIE_CROSS_SITE;
 
   process.env.NODE_ENV = 'production';
   process.env.AUTH_COOKIE_SAMESITE = 'none';
@@ -54,6 +55,25 @@ function run() {
   assert.strictEqual(Object.prototype.hasOwnProperty.call(opts, 'domain'), false);
 
   process.env.NODE_ENV = 'production';
+  process.env.AUTH_COOKIE_DOMAIN = 'https://my-api.onrender.com';
+  service = buildService();
+  opts = service.getAuthCookieOptions();
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(opts, 'domain'), false);
+
+  process.env.NODE_ENV = 'production';
+  delete process.env.AUTH_COOKIE_SAMESITE;
+  if (typeof originalCrossSite === 'undefined') delete process.env.AUTH_COOKIE_CROSS_SITE;
+  else process.env.AUTH_COOKIE_CROSS_SITE = originalCrossSite;
+  service = buildService();
+  opts = service.getAuthCookieOptions();
+  assert.strictEqual(opts.sameSite, 'lax');
+
+  process.env.AUTH_COOKIE_CROSS_SITE = 'true';
+  service = buildService();
+  opts = service.getAuthCookieOptions();
+  assert.strictEqual(opts.sameSite, 'none');
+  assert.strictEqual(opts.secure, true);
+
   process.env.AUTH_COOKIE_SAMESITE = 'strict';
   service = buildService();
   opts = service.getAuthCookieOptions({ maxAge: 1000 });
@@ -64,6 +84,7 @@ function run() {
   else process.env.NODE_ENV = originalNodeEnv;
   if (typeof originalSameSite === 'undefined') delete process.env.AUTH_COOKIE_SAMESITE;
   else process.env.AUTH_COOKIE_SAMESITE = originalSameSite;
+  delete process.env.AUTH_COOKIE_CROSS_SITE;
   if (typeof originalDomain === 'undefined') delete process.env.AUTH_COOKIE_DOMAIN;
   else process.env.AUTH_COOKIE_DOMAIN = originalDomain;
 

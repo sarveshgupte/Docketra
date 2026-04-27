@@ -8,8 +8,8 @@
  * - Login returns 200 with access token
  * - Profile fetch returns 200 with virtual profile
  * - No firm resolution errors
- * - No refresh attempts
- * - No transaction logs
+ * - Refresh token is issued for superadmin sessions
+ * - No tenant DB lookups for profile hydration
  */
 
 const assert = require('assert');
@@ -35,6 +35,7 @@ async function fullSuperAdminLoginProfileFlow() {
   let userLookupCalled = false;
   let userProfileLookupCalled = false;
   let refreshTokenCreated = false;
+  let refreshTokenScope = null;
 
   const originalUserFindOne = User.findOne;
   const originalUserCountDocuments = User.countDocuments;
@@ -56,13 +57,15 @@ async function fullSuperAdminLoginProfileFlow() {
     throw new Error('SuperAdmin flow should not query UserProfile collection');
   };
 
-  RefreshToken.create = async (doc) => {
+  RefreshToken.create = async ([doc]) => {
     refreshTokenCreated = true;
-    throw new Error('SuperAdmin should not create refresh token');
+    refreshTokenScope = doc.scope;
+    return [{}];
   };
 
   // Step 1: Login
-  let loginResBody = {};
+  const loginResBody = {};
+  const cookieJar = {};
   const loginRes = {
     status: function (code) {
       this.statusCode = code;
@@ -70,6 +73,10 @@ async function fullSuperAdminLoginProfileFlow() {
     },
     json: function (body) {
       Object.assign(loginResBody, body);
+      return this;
+    },
+    cookie: function (name, value) {
+      cookieJar[name] = value;
       return this;
     },
   };
@@ -95,14 +102,15 @@ async function fullSuperAdminLoginProfileFlow() {
   // Verify login response
   assert.strictEqual(loginResBody.success, true, 'Login should succeed');
   assert.strictEqual(loginResBody.isSuperAdmin, true, 'Login should flag SuperAdmin');
-  assert.strictEqual(loginResBody.refreshEnabled, false, 'Login should disable refresh');
-  assert.strictEqual(loginResBody.refreshToken, null, 'Login should not return refresh token');
-  assert(loginResBody.accessToken, 'Login should return access token');
+  assert.strictEqual(loginResBody.refreshEnabled, true, 'Login should enable refresh');
+  assert(cookieJar.accessToken, 'Login should set access token cookie');
+  assert(cookieJar.refreshToken, 'Login should set refresh token cookie');
+  assert.strictEqual(refreshTokenScope, 'superadmin', 'SuperAdmin login must persist refresh token as superadmin scope');
 
   console.log('✓ Step 1: SuperAdmin login succeeded');
 
-  // Decode the access token to extract user data
-  const decoded = jwtService.verifyAccessToken(loginResBody.accessToken);
+  // Decode the access token cookie to extract user data
+  const decoded = jwtService.verifyAccessToken(cookieJar.accessToken);
   assert.strictEqual(decoded.userId, '000000000000000000000001', 'Token userId must be SUPERADMIN_OBJECT_ID');
   assert.strictEqual(decoded.role, 'SUPERADMIN', 'Token role must be SUPERADMIN');
   assert.strictEqual(decoded.firmId, null, 'Token firmId must be null');
@@ -145,7 +153,7 @@ async function fullSuperAdminLoginProfileFlow() {
       isSuperAdmin: decoded.isSuperAdmin,
     },
     headers: {
-      authorization: `Bearer ${loginResBody.accessToken}`,
+      cookie: `accessToken=${cookieJar.accessToken}; refreshToken=${cookieJar.refreshToken}`,
     },
     ip: '127.0.0.1',
     get: () => 'test-agent',
@@ -166,7 +174,7 @@ async function fullSuperAdminLoginProfileFlow() {
   // Verify profile response
   assert.strictEqual(userLookupCalled, false, 'Profile fetch should not query User collection');
   assert.strictEqual(userProfileLookupCalled, false, 'Profile fetch should not query UserProfile collection');
-  assert.strictEqual(refreshTokenCreated, false, 'SuperAdmin should not create refresh token');
+  assert.strictEqual(refreshTokenCreated, true, 'SuperAdmin should create refresh token');
   assert.strictEqual(profileResBody.success, true, 'Profile fetch should succeed');
   assert.strictEqual(profileRes.statusCode, undefined, 'Profile should return 200 (no explicit status)');
 
@@ -179,12 +187,12 @@ async function fullSuperAdminLoginProfileFlow() {
   assert.strictEqual(profile.firmSlug, null, 'Profile firmSlug must be null');
   assert.strictEqual(profile.defaultClientId, null, 'Profile defaultClientId must be null');
   assert.strictEqual(profile.isSuperAdmin, true, 'Profile must flag isSuperAdmin');
-  assert.strictEqual(profile.refreshEnabled, false, 'Profile must show refreshEnabled: false');
+  assert.strictEqual(profile.refreshEnabled, true, 'Profile must show refreshEnabled: true');
   assert.deepStrictEqual(profile.permissions, ['*'], 'Profile must show all permissions');
 
   console.log('✓ Step 3: Profile fetch succeeded with virtual profile');
   console.log('✓ Step 4: No firm resolution errors');
-  console.log('✓ Step 5: No refresh token created');
+  console.log('✓ Step 5: Refresh token cookie was issued');
   console.log('✓ Step 6: No DB queries executed');
 }
 

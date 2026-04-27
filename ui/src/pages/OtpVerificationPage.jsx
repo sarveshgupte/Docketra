@@ -104,7 +104,7 @@ export const OtpVerificationPage = () => {
         });
         navigate(nextRoute, { replace: true });
       } else {
-        setError('OTP verified, but your workspace context could not be loaded. Please sign in again.');
+        setError('OTP verified, but your session could not be established. Please sign in again.');
       }
     } catch (submitError) {
       setError(submitError?.response?.data?.message || 'Invalid OTP. Enter the latest 6-digit code and try again.');
