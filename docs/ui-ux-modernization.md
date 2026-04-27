@@ -471,3 +471,40 @@ This PR was expanded (still presentation-only and low-risk) to cover more of the
 **PR: Remaining low-traffic component token convergence**
 - Target non-critical legacy components with inline hardcoded colors (outside core modals/detail panels).
 - Keep behavior unchanged; continue incremental visual-only migration.
+
+## Visual QA/regression checklist PR scope (low-risk documentation)
+
+### Scope completed in this PR
+- Added a new repeatable visual QA and regression checklist for design-token and layout-contract PRs.
+- Added explicit shared primitive checks (buttons, inputs/selects/textareas, badges, cards, modal, table/data table, empty/status/header/shell).
+- Added high-traffic route inventory with QA priority labels (P0/P1/P2) for consistent PR verification planning.
+- Added explicit interaction/a11y/density verification gates to prevent regressions in operational workflows.
+- Added design-token-specific QA rules to the design language guide for future token-only PR review discipline.
+
+### Exact files changed
+- `docs/ui/visual-regression-checklist.md`
+- `docs/ui/docketra-design-language.md`
+- `docs/ui-ux-modernization.md`
+
+### QA coverage added
+- Manual regression checklist now covers:
+  - Shared primitives and semantic states
+  - High-traffic authenticated + public routes
+  - Accessibility guardrails (focus, labels, contrast, keyboard flows)
+  - Density guardrails for tables, toolbars, settings forms, CRM/CMS list surfaces
+- Added route-priority based visual QA guidance so token PRs can focus first on highest-risk routes.
+
+### Automated checks status
+- **Deferred (intentional):** no new screenshot-based visual regression tooling was added in this PR.
+- **Reason:** repository already has lightweight route/design-system smoke checks, but no existing baseline screenshot workflow; adding one here would exceed this documentation-first, low-risk scope.
+
+### Remaining UI/UX gaps
+1. Establish optional screenshot baseline workflow (Playwright-based) for a small P0 route set when team capacity allows.
+2. Continue migrating remaining low-traffic hardcoded color surfaces to `--dt-*` tokens.
+3. Consolidate duplicate table primitives over time without changing queue/docket behavior.
+
+### Recommended next PR
+**PR: P0 visual snapshot harness (opt-in, low blast radius)**
+- Add minimal Playwright snapshot checks for 3–5 P0 routes under stable fixture data.
+- Gate only on shell/header/table/modals for visual drift, not dynamic content.
+- Keep business logic untouched.
