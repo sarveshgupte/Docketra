@@ -30,6 +30,15 @@ const refreshTokenSchema = new mongoose.Schema({
     required: false, // Allow null for SuperAdmin
     index: true,
   },
+  // Token ownership scope.
+  // tenant => firm user session token
+  // superadmin => platform superadmin session token
+  scope: {
+    type: String,
+    enum: ['tenant', 'superadmin'],
+    default: 'tenant',
+    index: true,
+  },
   
   // Firm/Organization ID for multi-tenancy
   // For SuperAdmin, this can be null (platform-level access)
@@ -80,6 +89,7 @@ const refreshTokenSchema = new mongoose.Schema({
 // Compound index for efficient queries
 refreshTokenSchema.index({ userId: 1, isRevoked: 1, expiresAt: 1 });
 refreshTokenSchema.index({ firmId: 1, userId: 1 });
+refreshTokenSchema.index({ scope: 1, isRevoked: 1, expiresAt: 1 });
 
 // TTL index to auto-delete expired tokens (cleanup after 30 days)
 refreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });

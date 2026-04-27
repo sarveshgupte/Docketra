@@ -569,7 +569,17 @@ const clearCachedLoginOtpState = async (user) => {
  * @returns {Promise<{refreshToken: string, expiresAt: Date}>} Raw refresh token (unhashed) and its expiry timestamp
  * @throws {Error} When request context is missing or refresh token persistence fails
  */
-const generateAndStoreRefreshToken = async ({ req, userId = null, firmId = null }) => authSessionService.generateAndStoreRefreshToken({ req, userId, firmId });
+const generateAndStoreRefreshToken = async ({
+  req,
+  userId = null,
+  firmId = null,
+  scope = null,
+}) => authSessionService.generateAndStoreRefreshToken({
+  req,
+  userId,
+  firmId,
+  scope,
+});
 
 /**
  * Build tokens + audit entry for successful login
@@ -599,6 +609,7 @@ const buildTokenResponse = async (user, req, authMethod = 'Password') => {
     userId: user._id,
     firmId: runtimeTenantId || null,
     req,
+    scope: 'tenant',
   });
 
   await logAuthAudit({
@@ -848,8 +859,13 @@ const handleSuperadminLogin = async (req, res, normalizedXID, password, loginSco
   };
 
   try {
-    log.info('[DEBUG] user object:', user);
-
+    if (process.env.NODE_ENV !== 'production') {
+      log.info('[AUTH][superadmin] user object prepared', {
+        hasId: Boolean(user.id),
+        role: user.role,
+        isSuperAdmin: user.isSuperAdmin,
+      });
+    }
     const accessToken = jwtService.generateAccessToken({
       userId: user.id,
       role: user.role,
@@ -858,13 +874,19 @@ const handleSuperadminLogin = async (req, res, normalizedXID, password, loginSco
       defaultClientId: null,
       isSuperAdmin: user.isSuperAdmin,
     });
-    authSessionService.setAuthCookies(res, { accessToken });
+    const { refreshToken } = await generateAndStoreRefreshToken({
+      userId: null,
+      firmId: null,
+      req,
+      scope: 'superadmin',
+    });
+    authSessionService.setAuthCookies(res, { accessToken, refreshToken });
 
     return res.json({
       success: true,
       message: 'Login successful',
       isSuperAdmin: true,
-      refreshEnabled: false,
+      refreshEnabled: true,
       data: user,
       redirectTo: '/app/superadmin',
     });
@@ -1527,7 +1549,7 @@ const getProfile = async (req, res) => {
           firmSlug: null,
           defaultClientId: null,
           isSuperAdmin: true,
-          refreshEnabled: false,
+          refreshEnabled: true,
           permissions: ['*'],
         },
         redirectTo: '/app/superadmin',
@@ -3413,6 +3435,7 @@ const issueAuthTokens = async (req, user) => {
     req,
     userId: user._id,
     firmId: user.firmId || null,
+    scope: 'tenant',
   });
 
   return { accessToken, refreshToken };
@@ -3467,6 +3490,8 @@ const authSessionService = createAuthSessionService({
     disconnectSocketsForUser: disconnectUserSockets,
     isSuperAdminRole,
     DEFAULT_FIRM_ID,
+    getSuperadminEnv,
+    SUPERADMIN_USER_ID,
   },
   services: {
     jwtService,
