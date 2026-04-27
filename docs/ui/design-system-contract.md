@@ -4,6 +4,27 @@
 
 This contract defines the shared UI foundation for operational Docketra surfaces. The target is professional B2B SaaS usability: clear hierarchy, high signal density, predictable interactions, and low visual noise.
 
+## Design language foundation (April 26, 2026)
+
+- Docketra uses a warm-professional light theme token set (`--dt-*`) as the shared visual source of truth for app surfaces.
+- Implementation focus is intentionally limited to shared primitives and shell surfaces in this foundation pass.
+- Product behavior, API contracts, routing, and RBAC rules are unchanged by design-language changes.
+
+### Token groups
+
+- **Surface/background:** `--dt-bg`, `--dt-bg-warm`, `--dt-surface`, `--dt-surface-raised`, `--dt-surface-muted`, `--dt-surface-subtle`
+- **Text:** `--dt-text`, `--dt-text-secondary`, `--dt-text-muted`, `--dt-text-disabled`, `--dt-text-inverse`
+- **Border:** `--dt-border-whisper`, `--dt-border`, `--dt-border-strong`
+- **Accent/focus:** `--dt-accent`, `--dt-accent-hover`, `--dt-accent-active`, `--dt-accent-subtle`, `--dt-focus`, `--dt-focus-ring`
+- **Semantic:** `--dt-success`, `--dt-warning`, `--dt-error`, `--dt-info` + subtle counterparts
+- **Radius/shadow/typography:** `--dt-radius-*`, `--dt-shadow-*`, `--dt-font-*`
+
+### Component alignment in this phase
+
+- Button, Card, Badge, Input, Select, Textarea, EmptyState, Modal, PageHeader, shared Table/DataTable surfaces, and `platform.css` operational shell styles now consume Docketra tokens.
+- Existing component APIs remain stable (variant names, size aliases, modal sizing aliases, table row interaction hooks).
+- Density is kept operational (compact controls and table rows, no marketing-style spacing expansion).
+
 ## Core principles
 
 - Prefer shared components in `ui/src/components/common` and `ui/src/components/layout` before page-level custom markup.
