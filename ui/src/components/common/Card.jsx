@@ -9,7 +9,7 @@ import { surfaceClasses } from '../../theme/tokens';
 
 export const Card = ({ children, className = '', onClick, interactive = false, animateOnMount = false, ...props }) => {
   const interactiveClass = interactive || onClick
-    ? 'transition-colors duration-150 cursor-pointer hover:border-gray-300 hover:bg-gray-50'
+    ? 'transition-colors duration-150 cursor-pointer hover:border-[var(--dt-border)] hover:bg-[var(--dt-surface-subtle)]'
     : '';
 
   const cardClasses = `${surfaceClasses.card} ${interactiveClass} ${className}`;
@@ -55,5 +55,5 @@ export const CardBody = ({ children, className = '' }) => {
 };
 
 export const CardFooter = ({ children, className = '' }) => {
-  return <div className={`card-footer border-t border-gray-200 pt-4 mt-4 ${className}`}>{children}</div>;
+  return <div className={`card-footer border-t border-[var(--dt-border-whisper)] pt-4 mt-4 ${className}`}>{children}</div>;
 };

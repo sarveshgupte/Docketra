@@ -135,24 +135,24 @@ export const Modal = ({
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-gray-900/50 p-4 backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/45 p-4 backdrop-blur-sm sm:items-center sm:p-6"
       onClick={handleOverlayClick}
       role="presentation"
     >
       <div
         ref={modalRef}
-        className={`relative my-8 flex max-h-[90vh] w-full flex-col overflow-hidden rounded-xl bg-white shadow-xl sm:my-0 ${modalSizeClass}`}
+        className={`relative my-8 flex max-h-[90vh] w-full flex-col overflow-hidden rounded-[var(--dt-radius-panel)] bg-[var(--dt-surface-raised)] shadow-[var(--dt-shadow-modal)] sm:my-0 ${modalSizeClass}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
       >
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+        <div className="flex items-center justify-between border-b border-[var(--dt-border-whisper)] px-6 py-4">
+          <h2 className="text-lg font-semibold text-[var(--dt-text)]">{title}</h2>
           <button
             type="button"
             onClick={() => requestClose('close-button')}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--dt-text-muted)] transition-colors hover:bg-[var(--dt-surface-muted)] hover:text-[var(--dt-text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--dt-focus)] focus:ring-offset-2"
             aria-label="Close modal"
           >
             <span aria-hidden="true" className="text-base leading-none">✕</span>
@@ -160,7 +160,7 @@ export const Modal = ({
         </div>
         <div className="overflow-y-auto px-6 py-5">{children}</div>
         {actions ? (
-          <div className="flex justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4">
+          <div className="flex justify-end gap-3 border-t border-[var(--dt-border-whisper)] bg-[var(--dt-surface-subtle)] px-6 py-4">
             {actions}
           </div>
         ) : null}

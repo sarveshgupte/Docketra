@@ -20,7 +20,7 @@ export const Badge = ({ children, variant, status, className = '' }) => {
   const variantClass = variantClasses[badgeVariant] || variantClasses.neutral;
 
   return (
-    <span className={`badge border-0 ${variantClass} ${className}`}>
+    <span className={`badge ${variantClass} ${className}`}>
       {children}
     </span>
   );

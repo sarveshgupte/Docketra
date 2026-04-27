@@ -42,9 +42,9 @@ export const DataTable = ({
   const getSortIcon = (key, sortable) => {
     if (!sortable) return null;
     if (sortState?.key !== key) {
-      return <span className="ml-1 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">↕</span>;
+      return <span className="ml-1 text-[var(--dt-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity">↕</span>;
     }
-    return <span className="ml-1 text-slate-700">{sortState.direction === 'asc' ? '↑' : '↓'}</span>;
+    return <span className="ml-1 text-[var(--dt-text-secondary)]">{sortState.direction === 'asc' ? '↑' : '↓'}</span>;
   };
 
   const cellPaddingClass = dense ? 'px-4 py-2.5' : 'px-6 py-4';
@@ -69,11 +69,11 @@ export const DataTable = ({
                     type="button"
                     key={f.key}
                     onClick={() => onRemoveFilter?.(f.key)}
-                    className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700 hover:bg-slate-200 transition-colors"
+                    className="inline-flex items-center gap-1 rounded-[var(--dt-radius-control)] bg-[var(--dt-surface-muted)] px-2 py-1 text-xs text-[var(--dt-text-secondary)] hover:bg-[var(--dt-surface-subtle)] transition-colors"
                     aria-label={`Remove filter: ${f.label} ${f.value}`}
                   >
                     <span className="font-medium">{f.label}:</span> {f.value}
-                    <span aria-hidden className="ml-0.5 text-slate-500 hover:text-slate-900">&times;</span>
+                    <span aria-hidden className="ml-0.5 text-[var(--dt-text-muted)] hover:text-[var(--dt-text)]">&times;</span>
                   </button>
                 ))}
                 <Button variant="ghost" size="xs" onClick={onResetFilters}>
@@ -87,7 +87,7 @@ export const DataTable = ({
       )}
 
       {refreshing ? (
-        <p className="text-xs text-slate-500" role="status" aria-live="polite">{refreshingMessage}</p>
+        <p className="text-xs text-[var(--dt-text-muted)]" role="status" aria-live="polite">{refreshingMessage}</p>
       ) : null}
 
       <Table loading={loading} loadingMessage={loadingMessage} className="max-h-[70vh] overflow-auto">
@@ -103,7 +103,7 @@ export const DataTable = ({
                   key={String(col.key)}
                   className={joinClasses(
                     headerPaddingClass,
-                    'text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap bg-slate-50',
+                    'text-left text-xs font-semibold text-[var(--dt-text-muted)] uppercase tracking-wider whitespace-nowrap bg-[var(--dt-surface-subtle)]',
                     col.headerClassName
                   )}
                   style={{ width: col.width }}
@@ -114,7 +114,7 @@ export const DataTable = ({
                     <button
                       type="button"
                       onClick={() => handleSortClick(col.key, col.sortable)}
-                      className={joinClasses('flex items-center w-full group hover:text-slate-700 transition-colors', col.align === 'right' ? 'justify-end' : 'justify-start')}
+                      className={joinClasses('flex items-center w-full group hover:text-[var(--dt-text-secondary)] transition-colors', col.align === 'right' ? 'justify-end' : 'justify-start')}
                     >
                       {col.label || col.header || col.key}
                       {getSortIcon(col.key, col.sortable)}
@@ -133,7 +133,7 @@ export const DataTable = ({
         <TableBody>
           {!loading && errorMessage ? (
             <tr>
-              <td colSpan={columns.length} className="px-6 py-8 text-center text-sm text-red-700">
+              <td colSpan={columns.length} className="px-6 py-8 text-center text-sm text-[var(--dt-error)]">
                 <p>{errorMessage}</p>
                 {onRetry ? <Button variant="outline" size="sm" onClick={onRetry} className="mt-3">Retry</Button> : null}
               </td>
@@ -156,14 +156,14 @@ export const DataTable = ({
                   onRowClick(row);
                 }
               } : undefined}
-              className={onRowClick ? 'cursor-pointer hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset transition-colors' : ''}
+              className={onRowClick ? 'cursor-pointer hover:bg-[var(--dt-surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dt-focus)] focus-visible:ring-inset transition-colors' : ''}
             >
               {columns.map((col) => (
                 <td
                   key={String(col.key)}
                   className={joinClasses(
                     cellPaddingClass,
-                    'whitespace-nowrap text-sm text-slate-800',
+                    'whitespace-nowrap text-sm text-[var(--dt-text)]',
                     col.align === 'right' ? 'text-right' : 'text-left',
                     col.className || col.cellClassName,
                   )}
@@ -177,7 +177,7 @@ export const DataTable = ({
       </Table>
 
       {pagination?.pages > 1 ? (
-        <div className="flex items-center justify-between text-sm text-slate-600" role="navigation" aria-label="Queue pagination">
+        <div className="flex items-center justify-between text-sm text-[var(--dt-text-secondary)]" role="navigation" aria-label="Queue pagination">
           <span>Page {pagination.page} of {pagination.pages} · {pagination.total || 0} dockets</span>
           <div className="flex items-center gap-2">
             <Button type="button" variant="outline" size="sm" disabled={pagination.page <= 1} onClick={() => pagination.onPageChange?.(pagination.page - 1)}>Previous</Button>
