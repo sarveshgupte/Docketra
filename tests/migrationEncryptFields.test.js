@@ -44,10 +44,9 @@ async function testClientMigration() {
     businessName: 'Acme Corp',
     businessEmail: ' TEST@ACME.COM ',
     primaryContactNumber: ' 1234567890 ',
-    businessAddress: '123 Main St',
     createdByXid: 'X000001',
     isActive: true,
-    status: 'ACTIVE',
+    status: 'active',
     clientId: 'C000001'
   };
 
@@ -60,7 +59,7 @@ async function testClientMigration() {
     businessAddress: '123 Deleted St',
     createdByXid: 'X000001',
     isActive: false,
-    status: 'INACTIVE',
+    status: 'inactive',
     clientId: 'C000002',
     deletedAt: new Date()
   };
