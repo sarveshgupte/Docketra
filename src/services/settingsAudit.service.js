@@ -145,8 +145,9 @@ const getSettingsAudit = async ({
       .sort({ timestamp: -1 })
       .skip((parsedPage - 1) * parsedLimit)
       .limit(parsedLimit)
-      .lean(),
-    SettingsAuditLog.countDocuments(query),
+      .lean()
+      .exec(),
+    SettingsAuditLog.countDocuments(query).exec(),
   ]);
 
   return {
