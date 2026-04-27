@@ -279,8 +279,8 @@ export const CrmClientDetailPage = () => {
           <Input label="Title" value={dealForm.title} onChange={(event) => setDealForm((prev) => ({ ...prev, title: event.target.value }))} required />
           <Input label="Value (₹)" type="number" value={dealForm.value} onChange={(event) => setDealForm((prev) => ({ ...prev, value: event.target.value }))} />
           <div>
-            <label className="block text-sm font-medium text-gray-700" htmlFor="deal-stage">Stage</label>
-            <select id="deal-stage" className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={dealForm.stage} onChange={(event) => setDealForm((prev) => ({ ...prev, stage: event.target.value }))}>
+            <label className="block text-sm font-medium text-[var(--dt-text-secondary)]" htmlFor="deal-stage">Stage</label>
+            <select id="deal-stage" className="mt-1 w-full rounded-md border border-[var(--dt-border)] bg-[var(--dt-surface)] px-3 py-2 text-sm text-[var(--dt-text)]" value={dealForm.stage} onChange={(event) => setDealForm((prev) => ({ ...prev, stage: event.target.value }))}>
               <option value="new">New</option>
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
@@ -297,8 +297,8 @@ export const CrmClientDetailPage = () => {
         <form onSubmit={handleCreateInvoice} className="grid gap-4">
           <Input label="Amount (₹)" type="number" value={invoiceForm.amount} onChange={(event) => setInvoiceForm((prev) => ({ ...prev, amount: event.target.value }))} required />
           <div>
-            <label className="block text-sm font-medium text-gray-700" htmlFor="invoice-deal">Link to Deal (optional)</label>
-            <select id="invoice-deal" className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={invoiceForm.dealId} onChange={(event) => setInvoiceForm((prev) => ({ ...prev, dealId: event.target.value }))}>
+            <label className="block text-sm font-medium text-[var(--dt-text-secondary)]" htmlFor="invoice-deal">Link to Deal (optional)</label>
+            <select id="invoice-deal" className="mt-1 w-full rounded-md border border-[var(--dt-border)] bg-[var(--dt-surface)] px-3 py-2 text-sm text-[var(--dt-text)]" value={invoiceForm.dealId} onChange={(event) => setInvoiceForm((prev) => ({ ...prev, dealId: event.target.value }))}>
               <option value="">— None —</option>
               {deals.map((deal) => <option key={deal._id || deal.id} value={deal._id || deal.id}>{deal.title}</option>)}
             </select>

@@ -9,7 +9,7 @@
 }
 
 .client-fact-sheet-header {
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 2px solid var(--dt-border-whisper);
   padding-bottom: 1rem;
   margin-bottom: 1.5rem;
 }
@@ -17,20 +17,20 @@
 .client-fact-sheet-header h3 {
   margin: 0 0 0.5rem 0;
   font-size: 1.5rem;
-  color: #333;
+  color: var(--dt-text);
 }
 
 .client-fact-sheet-header .client-id {
   margin: 0;
   font-size: 0.9rem;
-  color: #666;
+  color: var(--dt-text-muted);
   font-weight: 500;
 }
 
 .no-content {
   text-align: center;
   padding: 2rem;
-  color: #999;
+  color: var(--dt-text-disabled);
   font-style: italic;
 }
 
@@ -47,29 +47,29 @@
 .fact-sheet-section h4 {
   margin: 0 0 1rem 0;
   font-size: 1.1rem;
-  color: #444;
+  color: var(--dt-text-secondary);
   font-weight: 600;
 }
 
 .fact-sheet-content {
-  background-color: #f9f9f9;
-  border: 1px solid #e0e0e0;
+  background-color: var(--dt-surface-subtle);
+  border: 1px solid var(--dt-border-whisper);
   border-radius: 4px;
   padding: 1rem;
   white-space: pre-wrap;
   word-wrap: break-word;
   line-height: 1.6;
-  color: #333;
+  color: var(--dt-text);
 }
 
 .fact-sheet-content.notes {
-  background-color: #fff9e6;
-  border-color: #ffd966;
+  background-color: var(--dt-warning-subtle);
+  border-color: var(--dt-warning);
 }
 
 .fact-sheet-updated-at {
   font-size: 0.85rem;
-  color: #6b7280;
+  color: var(--dt-text-muted);
   margin-bottom: 0.5rem;
 }
 
@@ -84,15 +84,15 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1rem;
-  background-color: #f5f5f5;
-  border: 1px solid #e0e0e0;
+  background-color: var(--dt-surface-muted);
+  border: 1px solid var(--dt-border-whisper);
   border-radius: 4px;
   transition: all 0.2s ease;
 }
 
 .file-item:hover {
-  background-color: #eee;
-  border-color: #ccc;
+  background-color: var(--dt-surface-subtle);
+  border-color: var(--dt-border);
 }
 
 .file-info {
@@ -114,18 +114,18 @@
 
 .file-name {
   font-weight: 500;
-  color: #333;
+  color: var(--dt-text);
 }
 
 .file-date {
   font-size: 0.85rem;
-  color: #666;
+  color: var(--dt-text-muted);
 }
 
 .btn-view-file {
   padding: 0.5rem 1rem;
-  background-color: #4CAF50;
-  color: white;
+  background-color: var(--dt-info);
+  color: var(--dt-text-inverse);
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -136,7 +136,7 @@
 }
 
 .btn-view-file:hover {
-  background-color: #45a049;
+  background-color: var(--dt-accent-hover);
 }
 
 .btn-view-file:active {
@@ -146,7 +146,7 @@
 .modal-footer {
   margin-top: 2rem;
   padding-top: 1rem;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--dt-border-whisper);
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;

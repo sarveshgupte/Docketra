@@ -135,8 +135,8 @@ export const AdminClientModals = ({
 
         {selectedClient && (
           <>
-            <div style={{ marginTop: '2rem', marginBottom: '1rem', borderTop: '2px solid #e0e0e0', paddingTop: '1rem' }}>
-              <h3 style={{ marginBottom: '1rem' }}>Client Fact Sheet</h3>
+            <div style={{ marginTop: '2rem', marginBottom: '1rem', borderTop: '2px solid var(--dt-border-whisper)', paddingTop: '1rem' }}>
+              <h3 style={{ marginBottom: '1rem', color: 'var(--dt-text)' }}>Client Fact Sheet</h3>
             </div>
 
             <Textarea
@@ -165,7 +165,7 @@ export const AdminClientModals = ({
                 disabled={uploadingFactSheetFile}
                 style={{ marginBottom: '1rem' }}
               />
-              {uploadingFactSheetFile && <p style={{ fontSize: '0.9rem', color: '#666' }}>Uploading...</p>}
+              {uploadingFactSheetFile && <p style={{ fontSize: '0.9rem', color: 'var(--dt-text-muted)' }}>Uploading...</p>}
 
               {factSheetFiles && factSheetFiles.length > 0 && (
                 <div style={{ marginTop: '1rem' }}>
@@ -177,7 +177,7 @@ export const AdminClientModals = ({
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         padding: '0.5rem',
-                        background: '#f5f5f5',
+                        background: 'var(--dt-surface-muted)',
                         borderRadius: '4px',
                         marginBottom: '0.5rem',
                       }}
