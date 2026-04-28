@@ -337,22 +337,17 @@ module.exports = (deps) => {
       enforceDocketLifecycleDefault(caseObject);
       caseObject.updatedAt = caseObject.updatedAt || new Date();
 
-      let assignedUser = null;
-      if (caseObject.assignedTo) {
-        assignedUser = await User.findOne({ _id: caseObject.assignedTo, firmId: scopedFirmId })
-          .select('_id name email xID')
-          .maxTimeMS(8000)
-          .lean();
-      } else if (caseObject.assignedToXID) {
-        assignedUser = await User.findOne({ xID: caseObject.assignedToXID, firmId: scopedFirmId })
-          .select('_id name email xID')
-          .maxTimeMS(8000)
-          .lean();
-      }
-      log.info('STEP 2 after assignedUser');
-      const canonicalAssignmentXID = caseObject.assignedToXID || assignedUser?.xID || null;
       const lifecycle = normalizeLifecycle(caseObject.lifecycle);
-      const [ownerTeam, routedTeam, docketInvoices] = await Promise.all([
+
+      // ⚡ Bolt Performance Optimization:
+      // Executed independent database queries (assignedUser, ownerTeam, routedTeam, invoices) concurrently instead of sequentially.
+      // Expected improvement: Reduces endpoint latency when fetching a single case.
+      const [assignedUser, ownerTeam, routedTeam, docketInvoices] = await Promise.all([
+        caseObject.assignedTo
+          ? User.findOne({ _id: caseObject.assignedTo, firmId: scopedFirmId }).select('_id name email xID').maxTimeMS(8000).lean()
+          : (caseObject.assignedToXID
+            ? User.findOne({ xID: caseObject.assignedToXID, firmId: scopedFirmId }).select('_id name email xID').maxTimeMS(8000).lean()
+            : null),
         caseObject.ownerTeamId
           ? Team.findOne({ _id: caseObject.ownerTeamId, firmId: scopedFirmId }).select('_id name').maxTimeMS(8000).lean()
           : null,
@@ -364,6 +359,10 @@ module.exports = (deps) => {
           { amount: 1, status: 1, issuedAt: 1, paidAt: 1, clientId: 1, dealId: 1, createdAt: 1 }
         ).sort({ createdAt: -1 }).maxTimeMS(8000).lean(),
       ]);
+
+      log.info('STEP 2 after assignedUser');
+
+      const canonicalAssignmentXID = caseObject.assignedToXID || assignedUser?.xID || null;
 
       log.info('DOCKET_STATE_DEBUG', {
         caseId: displayCaseId,
