@@ -578,3 +578,49 @@ This PR was expanded (still presentation-only and low-risk) to cover more of the
 ### Rollback notes
 - Rollback is low risk and can be achieved by reverting the files listed in this section.
 - No backend/API/route/data contract changes were made.
+
+## Final cleanup PR scope (April 28, 2026)
+
+### Scope completed
+- Performed a conservative legacy-style cleanup pass focused on stale `neo-*` and hardcoded color leftovers without changing layout, behavior, routes, or component APIs.
+- Restored and retained `ui/src/assets/styles/neomorphic.css` as a **deprecated compatibility bridge** because active `neo-*` usage still exists in live routes/components.
+- Token-aligned low-risk hardcoded app-surface colors in two legacy module stylesheets (`AdminPage.css`, `ComplianceCalendarPage.css`) to `--dt-*` tokens.
+- Standardized focus-visible treatment in these legacy surfaces to use `--dt-focus` and existing focus-ring tokens.
+- Replaced one remaining hardcoded notification-dot color in `Layout.css` with `--dt-error` for semantic parity.
+- Updated a stale "glass" wording reference in `Layout.jsx` header comment to reflect current flat tokenized surfaces.
+
+### Exact files changed
+- `ui/src/assets/styles/neomorphic.css` (restored + marked deprecated + token-aligned)
+- `ui/src/pages/AdminPage.css`
+- `ui/src/pages/ComplianceCalendarPage.css`
+- `ui/src/components/common/Layout.css`
+- `ui/src/components/common/Layout.jsx`
+- `docs/ui-ux-modernization.md`
+- `docs/ui/docketra-design-language.md`
+- `docs/ui/legacy-css-cleanup.md` (new)
+
+### Legacy styling status
+- **Retained intentionally:** `ui/src/assets/styles/neomorphic.css` as a deprecated compatibility bridge during route-by-route migration of active `neo-*` usage.
+- **Retained intentionally:** active `neo-*` class usage in JSX (`neo-alert`, `neo-button`, `neo-table`, `neo-input`, `neo-dropzone`, `neo-spinner`, etc.) because these classes are still referenced by live routes/components and require dedicated module migration to avoid regressions.
+- **Retained intentionally:** compatibility token aliases (including `--glass-*`) in `tokens.css` because they support transitional mappings and are currently part of the active style contract.
+
+### Token cleanup impact
+- Improved consistency of legacy admin/compliance module visuals with the current design language by replacing hardcoded and legacy fallback status/surface/border/focus colors with `--dt-*` equivalents.
+- Reduced divergence between legacy module focus treatments and shared platform focus conventions.
+- No spacing, density, sizing, interaction model, or logic changes.
+
+### Visual QA notes (checklist-aligned)
+Using `docs/ui/visual-regression-checklist.md` as the gate:
+
+- **Code-level review completed** for app shell, dashboard, All Dockets, Worklist/Workbench/QC, CRM, CMS, Admin, Settings, modal, table/list, form error/success states, and public upload routes in the context of this token-only diff.
+- **Manual runtime QA recommended before deployment** for the same surfaces because runtime screenshots/session-based visual verification were not captured in this environment.
+- This PR should be treated as **presentation-only**, with runtime verification as release-gate confirmation.
+
+### Final modernization track status
+- **Core rollout status:** complete for the planned low-risk consistency track (shell + table/list contract + legacy parity + final token/stale-css cleanup).
+- **Current state:** product-app styling now primarily follows `--dt-*` tokenized surfaces with isolated legacy areas documented for module-level follow-ups.
+
+### Remaining module-specific UX opportunities
+1. Replace active `neo-*` classnames in legacy auth/reports/upload/alerts with shared component primitives (`Button`, `Input`, `StatusMessageStack`, modern tables) module-by-module.
+2. Decouple cross-module helper classes currently anchored in `AdminPage.css` (e.g., shared `neo-info-text`/`neo-form-actions`) into scoped shared legacy-bridge styles to reduce accidental coupling.
+3. Continue targeted hardcoded color cleanup in low-traffic page-local JSX inline styles (`DashboardPage`, legacy helper components), preserving density and behavior.

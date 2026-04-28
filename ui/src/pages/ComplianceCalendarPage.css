@@ -25,16 +25,16 @@
 .compliance-calendar-page__weekdays span {
   font-size: 0.75rem;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--dt-text-muted);
   font-weight: 600;
 }
 
 .compliance-calendar-page__day {
   min-height: 108px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dt-border-whisper);
   border-radius: 0.75rem;
   padding: 0.5rem;
-  background: #fff;
+  background: var(--dt-surface);
   display: flex;
   flex-direction: column;
   text-align: left;
@@ -46,8 +46,8 @@
 }
 
 .compliance-calendar-page__day.is-selected {
-  border-color: #1d4ed8;
-  box-shadow: 0 0 0 1px #1d4ed8;
+  border-color: var(--dt-focus);
+  box-shadow: 0 0 0 1px var(--dt-focus);
 }
 
 .compliance-calendar-page__day small {
@@ -55,29 +55,29 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #1e3a8a;
+  color: var(--dt-info);
 }
 
 .compliance-calendar-page__details,
 .compliance-calendar-page__form {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dt-border-whisper);
   border-radius: 1rem;
   padding: 1rem;
-  background: #fff;
+  background: var(--dt-surface);
 }
 
 .compliance-calendar-page__event {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dt-border-whisper);
   border-radius: 0.75rem;
   padding: 0.75rem;
   margin-top: 0.5rem;
 }
 
 .compliance-calendar-page__error {
-  color: #b91c1c;
+  color: var(--dt-error);
   font-size: 0.9rem;
 }
 
@@ -89,9 +89,11 @@
 .compliance-calendar-page__form input,
 .compliance-calendar-page__form textarea,
 .compliance-calendar-page__form select {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--dt-border);
   border-radius: 0.5rem;
   padding: 0.5rem;
+  background: var(--dt-surface);
+  color: var(--dt-text);
 }
 
 .compliance-calendar-page__checkbox {
@@ -105,4 +107,14 @@
 .compliance-calendar-page__form-actions {
   display: flex;
   gap: 0.5rem;
+}
+
+
+.compliance-calendar-page__form input:focus-visible,
+.compliance-calendar-page__form textarea:focus-visible,
+.compliance-calendar-page__form select:focus-visible,
+.compliance-calendar-page__day:focus-visible {
+  outline: 2px solid var(--dt-focus);
+  outline-offset: 2px;
+  box-shadow: var(--dt-focus-ring);
 }
