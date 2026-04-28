@@ -188,3 +188,11 @@ Use these rules for every token-adoption PR.
    - New code should not introduce raw hex/slate/gray utility colors for product app surfaces when a `--dt-*` token exists.
    - If a hardcoded color is found in touched files, replace it with the closest semantic token in the same PR when risk is low.
    - If replacement is risky or unclear, log a follow-up with exact file/path and intended token mapping.
+
+## Table/list token contract addendum (April 27, 2026)
+
+- Shared and platform table headers should use `--dt-surface-subtle` + `--dt-border-whisper` with muted uppercase header text.
+- Row interaction states should rely on subtle surface shift (`--dt-surface-subtle`) for hover/focus-within, not decorative effects.
+- Active filter chips attached to table/list toolbars should use pill radius + subtle token surfaces/borders (`--dt-surface-subtle`, `--dt-border-whisper`) with explicit remove affordance.
+- Empty/loading/error table row states should remain compact, centered, and readable; retry actions stay present when previously supported.
+- Density guardrail remains strict: no inflation of row height, cell padding, toolbar height, or pagination height in token-only table/list passes.
