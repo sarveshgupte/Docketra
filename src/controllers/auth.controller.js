@@ -97,8 +97,45 @@ const getFirmSlug = async (firmId) => {
   return tenantContext?.firmSlug || null;
 };
 
+const normalizeMongoId = (value) => {
+  if (!value) return null;
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (value instanceof mongoose.Types.ObjectId) {
+    return value.toString();
+  }
+
+  if (typeof value === 'object' && value._id) {
+    return normalizeMongoId(value._id);
+  }
+
+  if (typeof value.toString === 'function') {
+    const serialized = value.toString();
+    if (serialized && serialized !== '[object Object]') {
+      return serialized;
+    }
+  }
+
+  return null;
+};
+
+const getUserFirmContext = (user = null, requestJwt = null) => {
+  const firmMongoId = normalizeMongoId(user?.firmId?._id || user?.firmId);
+  return {
+    firmMongoId,
+    firmCode: user?.firmId?.firmId || requestJwt?.firmIdString || null,
+    firmSlug: requestJwt?.firmSlug || user?.firmId?.firmSlug || null,
+    tenantId: requestJwt?.firmId || null,
+    defaultClientId: normalizeMongoId(user?.defaultClientId) || normalizeMongoId(requestJwt?.defaultClientId),
+  };
+};
+
 const ensureUserDefaultClientLink = async (user, req = null) => {
-  if (!user?.firmId) {
+  const firmMongoId = normalizeMongoId(user?.firmId?._id || user?.firmId);
+  if (!firmMongoId) {
     throw new Error('MISSING_FIRM_CONTEXT');
   }
 
@@ -112,11 +149,11 @@ const ensureUserDefaultClientLink = async (user, req = null) => {
   const needsRepair = (
     !defaultClient
     || !defaultClient.isDefaultClient
-    || String(defaultClient.firmId) !== String(user.firmId)
+    || normalizeMongoId(defaultClient.firmId) !== firmMongoId
   );
 
   if (needsRepair) {
-    defaultClient = await getOrCreateDefaultClient(user.firmId, {
+    defaultClient = await getOrCreateDefaultClient(firmMongoId, {
       userId: user._id,
       requestId: req?.id || req?.requestId || null,
     });
@@ -1569,8 +1606,13 @@ const getProfile = async (req, res) => {
       });
     }
 
-    const userFirmId = dbUser?.firmId?._id?.toString() || null;
-    if (!userFirmId) {
+    const {
+      firmMongoId,
+      firmCode,
+      firmSlug: resolvedFirmSlug,
+      tenantId,
+    } = getUserFirmContext(dbUser, req.jwt);
+    if (!firmMongoId) {
       return res.status(401).json({
         success: false,
         message: 'Invalid session. Please log in again.',
@@ -1581,12 +1623,21 @@ const getProfile = async (req, res) => {
     try {
       await ensureUserDefaultClientLink(dbUser, req);
     } catch (defaultClientError) {
-      log.error('[AUTH] Failed to self-heal default client during profile fetch:', defaultClientError.message);
+      log.error('[AUTH] AUTH_FAILED_TO_SELF_HEAL_DEFAULT_CLIENT_DURING_PROFILE_FETCH', {
+        requestId: req.id || req.requestId || null,
+        userId: normalizeMongoId(dbUser?._id),
+        firmMongoId,
+        firmSlug: resolvedFirmSlug,
+        tenantId,
+        reason: defaultClientError.code || 'DEFAULT_CLIENT_GET_OR_CREATE_DEFAULT_CLIENT_FAILED',
+        error: defaultClientError.message,
+      });
       return res.status(503).json({
         success: false,
         message: 'Unable to resolve account context. Please try again.',
       });
     }
+    const resolvedDefaultClientId = normalizeMongoId(req.jwt?.defaultClientId) || normalizeMongoId(dbUser.defaultClientId);
     
     // Get profile info
     let profile = await UserProfile.findOne({ xID: dbUser.xID });
@@ -1661,7 +1712,7 @@ const getProfile = async (req, res) => {
     const mappedWorkbaskets = resolvedTeamIds.length > 0
       ? await Team.find({
           _id: { $in: resolvedTeamIds },
-          firmId: userFirmId,
+          firmId: firmMongoId,
         })
           .select('_id name type parentWorkbasketId')
           .lean()
@@ -1689,8 +1740,6 @@ const getProfile = async (req, res) => {
       }))
       .filter((workbasket) => workbasket.name);
 
-    const resolvedFirmSlug = req.jwt?.firmSlug || dbUser.firmId?.firmSlug || null;
-
     res.json({
       success: true,
       data: {
@@ -1714,12 +1763,15 @@ const getProfile = async (req, res) => {
         // Firm metadata (read-only, admin-controlled)
         firm: dbUser.firmId ? {
           id: dbUser.firmId._id.toString(),
-          firmId: dbUser.firmId.firmId,
+          firmId: firmCode,
           name: dbUser.firmId.name,
+          firmSlug: dbUser.firmId.firmSlug || resolvedFirmSlug,
         } : null,
-        firmId: userFirmId,
+        firmId: firmMongoId,
+        firmCode,
         firmSlug: resolvedFirmSlug, // JWT-first: use token claim, fallback to DB
-        defaultClientId: req.jwt?.defaultClientId || (dbUser.defaultClientId ? dbUser.defaultClientId.toString() : null), // JWT-first
+        tenantId: tenantId || firmMongoId,
+        defaultClientId: resolvedDefaultClientId, // JWT-first
         // Mutable fields from UserProfile model (editable)
         dateOfBirth: profile.dob || profile.dateOfBirth,
         gender: profile.gender,
