@@ -192,3 +192,12 @@ Checks:
 ## Automated regression status (current)
 
 Docketra currently has route and design-system contract script tests (`ui/tests/*.test.mjs`) but does not yet maintain baseline screenshot snapshots. Visual regression remains a manual checklist gate in this phase to keep PR risk and tooling overhead low.
+
+## PR QA Notes — Table/List UX Contract Consistency (April 27, 2026)
+
+- PASS — Dense docket table (`/app/firm/:firmSlug/dockets`), checked header/row hierarchy and compact density.
+- PASS — Worklist/Workbench queue table (`/app/firm/:firmSlug/my-worklist`, `/app/firm/:firmSlug/global-worklist`), checked token parity for hover/focus and table messages.
+- PASS — CRM/CMS lists (`/app/firm/:firmSlug/crm/leads`, `/app/firm/:firmSlug/cms` intake queue), checked empty/error/loading readability and action alignment.
+- PASS — Admin tables (`/app/firm/:firmSlug/admin?tab=users|clients|categories`), checked shared DataTable consistency.
+- PASS — Settings-linked category table context (`/app/firm/:firmSlug/admin?tab=categories&context=work-settings`).
+- PASS — Active filters, pagination, row focus-visible, and retry action presence across updated table contracts.

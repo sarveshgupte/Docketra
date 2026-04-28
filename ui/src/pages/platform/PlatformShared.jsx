@@ -153,16 +153,16 @@ export const DataTable = ({
         <tbody>
           {loading ? (
             <tr>
-              <td colSpan={columns.length} className="table-message">{loadingLabel}</td>
+              <td colSpan={columns.length} className="table-message" role="status" aria-live="polite">{loadingLabel}</td>
             </tr>
           ) : null}
           {!loading && error ? (
             <tr>
-              <td colSpan={columns.length} className="table-message table-message--error">
+              <td colSpan={columns.length} className="table-message table-message--error" role="status" aria-live="polite">
                 <div className="table-feedback-stack">
                   <p>{error}</p>
                   {onRetry ? (
-                    <button type="button" onClick={onRetry}>{retryLabel}</button>
+                    <button type="button" onClick={onRetry} aria-label="Retry loading table data">{retryLabel}</button>
                   ) : null}
                 </div>
               </td>
@@ -170,7 +170,7 @@ export const DataTable = ({
           ) : null}
           {!loading && !error && safeRows.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="table-message">{emptyMessage}</td>
+              <td colSpan={columns.length} className="table-message" role="status" aria-live="polite">{emptyMessage}</td>
             </tr>
           ) : null}
           {!loading && !error && safeRows.length > 0 ? visibleRows : null}
@@ -180,7 +180,7 @@ export const DataTable = ({
       {!loading && !error && safeRows.length > pageSize ? (
         <div className="table-pagination" role="navigation" aria-label={paginationLabel}>
           <span className="muted">Page {clampedPage} of {totalPages}</span>
-          <div className="action-row">
+          <div className="action-row" aria-label="Pagination actions">
             <button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={clampedPage <= 1}>
               Previous
             </button>
