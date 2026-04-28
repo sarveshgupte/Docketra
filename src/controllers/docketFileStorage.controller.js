@@ -1,3 +1,4 @@
+const { sanitizeFilename } = require("../utils/fileUtils");
 const storageService = require('../services/docketFileStorage.service');
 
 function mapStorageError(error, res) {
@@ -62,7 +63,8 @@ async function getDocketFile(req, res) {
     const result = await storageService.getFile({ attachmentId, firmId });
 
     res.setHeader('Content-Type', result.metadata.mimeType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(result.metadata.fileName || 'file')}"`);
+    const safeFileName = sanitizeFilename(result.metadata.fileName || 'file');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFileName}"`);
 
     result.stream.on('error', () => {
       if (!res.headersSent) {
