@@ -4,7 +4,7 @@ const optionsPreflight = require('../src/middleware/optionsPreflight.middleware'
 const { authenticate } = require('../src/middleware/auth.middleware');
 
 const ALLOWED_ORIGINS = ['https://example.com', 'https://app.example.org'];
-const ALLOWED_HEADERS = ['Content-Type', 'Authorization', 'X-Requested-With', 'Idempotency-Key'];
+const ALLOWED_HEADERS = ['Content-Type', 'Authorization', 'X-Requested-With', 'Idempotency-Key', 'X-Correlation-ID'];
 const ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'];
 
 const createRes = () => ({
@@ -31,8 +31,10 @@ async function testOptionsReturns204() {
   assert.strictEqual(nextCalled, false, 'OPTIONS should be handled immediately');
   assert.strictEqual(res.statusCode, 204);
   assert.strictEqual(res.headers['Access-Control-Allow-Origin'], 'https://example.com');
+  assert.notStrictEqual(res.headers['Access-Control-Allow-Origin'], '*');
   assert.strictEqual(res.headers['Access-Control-Allow-Credentials'], 'true');
   assert.ok(res.headers['Access-Control-Allow-Headers'].includes('Authorization'));
+  assert.ok(res.headers['Access-Control-Allow-Headers'].includes('X-Correlation-ID'));
   assert.ok(res.headers['Access-Control-Allow-Methods'].includes('OPTIONS'));
   assert.strictEqual(res.headers.Vary, 'Origin');
 }

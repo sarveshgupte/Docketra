@@ -9,6 +9,7 @@ const helmet = require('helmet');
 const { validateEnv } = require('../config/validateEnv');
 const { loadEnv, maskEnvForLog } = require('../config/env');
 const { logBuildMetadata } = require('../services/buildInfo.service');
+const authSessionServiceFactory = require('../services/authSession.service');
 const { maskSensitiveObject } = require('../utils/pii');
 require('../utils/transactionSessionEnforcer');
 
@@ -188,6 +189,28 @@ const createApp = () => {
   const allowedOrigins = configuredOrigins.length > 0 ? configuredOrigins : (!isProduction ? ['http://localhost:5173'] : []);
   const cspReportingEnabled = env.CSP_REPORTING_ENABLED === true;
   log.info('CORS_ALLOWED_ORIGINS', { allowedOrigins });
+  const cookieConfig = authSessionServiceFactory.getAuthCookieRuntimeDiagnostics();
+  log.info('AUTH_COOKIE_CONFIG_RESOLVED', cookieConfig);
+
+  const apiPublicOriginRaw = String(process.env.API_PUBLIC_ORIGIN || process.env.RENDER_EXTERNAL_URL || '').trim();
+  const apiPublicOrigin = apiPublicOriginRaw ? apiPublicOriginRaw.replace(/\/+$/, '') : null;
+  if (isProduction && apiPublicOrigin && allowedOrigins.length > 0) {
+    const hasCrossOriginFrontend = allowedOrigins.some((origin) => {
+      try {
+        return new URL(origin).origin !== new URL(apiPublicOrigin).origin;
+      } catch (_) {
+        return false;
+      }
+    });
+    if (hasCrossOriginFrontend && !cookieConfig.crossSiteEnabled && cookieConfig.sameSite === 'lax') {
+      log.warn('AUTH_COOKIE_CROSS_ORIGIN_MISCONFIG', {
+        apiPublicOrigin,
+        allowedOrigins,
+        crossSiteEnabled: cookieConfig.crossSiteEnabled,
+        sameSite: cookieConfig.sameSite,
+      });
+    }
+  }
 
   // SECURITY: Defense-in-depth middleware
   // Security Headers - Helmet

@@ -4,12 +4,13 @@ const { REASON_CODES, logPilotEvent } = require('./pilotDiagnostics.service');
 
 const isProduction = () => process.env.NODE_ENV === 'production';
 const resolveCookieCrossSiteMode = () => String(process.env.AUTH_COOKIE_CROSS_SITE || '').trim().toLowerCase() === 'true';
+const isAuthDebugDiagnosticsEnabled = () => String(process.env.AUTH_DEBUG_DIAGNOSTICS || '').trim().toLowerCase() === 'true';
 
 const normalizedCookieSameSite = () => {
   const configured = String(process.env.AUTH_COOKIE_SAMESITE || '').trim().toLowerCase();
   if (configured === 'strict' || configured === 'lax') return configured;
   if (configured === 'none') {
-    return isProduction() ? 'none' : 'lax';
+    return 'none';
   }
   if (isProduction() && resolveCookieCrossSiteMode()) {
     return 'none';
@@ -42,6 +43,18 @@ const getAuthCookieOptions = ({ maxAge = undefined } = {}) => {
   };
 };
 
+const getAuthCookieRuntimeDiagnostics = () => {
+  const options = getAuthCookieOptions();
+  return {
+    sameSite: options.sameSite,
+    secure: Boolean(options.secure),
+    domainPresent: Boolean(options.domain),
+    path: options.path || '/',
+    crossSiteEnabled: resolveCookieCrossSiteMode(),
+    debugDiagnosticsEnabled: isAuthDebugDiagnosticsEnabled(),
+  };
+};
+
 const setAuthCookies = (res, { accessToken, refreshToken, refreshMaxAge } = {}) => {
   if (!res || typeof res.cookie !== 'function') return;
   const fifteenMinutesMs = 15 * 60 * 1000;
@@ -56,11 +69,9 @@ const setAuthCookies = (res, { accessToken, refreshToken, refreshMaxAge } = {}) 
     res.cookie('refreshToken', refreshToken, getAuthCookieOptions({ maxAge: refreshMs }));
   }
   log.info('[AUTH][cookies] auth cookies set attempted', {
-    attemptedAccessCookie: Boolean(accessToken),
-    attemptedRefreshCookie: Boolean(refreshToken),
-    sameSite: normalizedCookieSameSite(),
-    secure: isProduction(),
-    hasCookieDomain: Boolean(normalizedCookieDomain()),
+    accessCookieAttempted: Boolean(accessToken),
+    refreshCookieAttempted: Boolean(refreshToken),
+    ...getAuthCookieRuntimeDiagnostics(),
   });
 };
 
@@ -433,6 +444,8 @@ const createAuthSessionService = (deps) => {
 
   return {
     getAuthCookieOptions,
+    getAuthCookieRuntimeDiagnostics,
+    isAuthDebugDiagnosticsEnabled,
     setAuthCookies,
     clearAuthCookies,
     generateAndStoreRefreshToken,
@@ -442,3 +455,5 @@ const createAuthSessionService = (deps) => {
 };
 
 module.exports = createAuthSessionService;
+module.exports.getAuthCookieRuntimeDiagnostics = getAuthCookieRuntimeDiagnostics;
+module.exports.isAuthDebugDiagnosticsEnabled = isAuthDebugDiagnosticsEnabled;

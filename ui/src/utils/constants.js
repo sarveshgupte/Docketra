@@ -55,6 +55,18 @@ export const API_BASE_URL = normalizeApiBaseUrl(rawApiBaseUrl || defaultApiBaseU
 
 safeConsole.info(`✓ Using API base URL: ${API_BASE_URL}`);
 
+if (typeof window !== 'undefined' && isProduction) {
+  try {
+    const runtimeApiOrigin = new URL(API_BASE_URL, window.location.origin).origin;
+    const runtimeFrontendOrigin = window.location.origin;
+    if (runtimeApiOrigin !== runtimeFrontendOrigin) {
+      safeConsole.warn(`[AUTH] Cross-origin API detected (${runtimeApiOrigin} != ${runtimeFrontendOrigin}). Ensure backend sets AUTH_COOKIE_CROSS_SITE=true, SameSite=None, Secure=true, and CORS allows the exact frontend origin.`);
+    }
+  } catch (_) {
+    // no-op: leave existing URL validation behavior unchanged
+  }
+}
+
 export const CASE_STATUS = {
   // Canonical lifecycle states (NEW - use these)
   UNASSIGNED: 'UNASSIGNED',
