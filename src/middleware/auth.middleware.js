@@ -87,9 +87,23 @@ const authenticate = async (req, res, next) => {
     }
     const noteAuthFailure = () => metricsService.recordAuthFailure(req.originalUrl || req.url);
     const cookieHeader = req.headers.cookie;
-    const token = req.cookies?.accessToken || getCookieValue(cookieHeader, 'accessToken');
+    const accessTokenFromCookie = req.cookies?.accessToken || getCookieValue(cookieHeader, 'accessToken');
+    const authorizationHeader = String(req.headers?.authorization || '');
+    const bearerToken = authorizationHeader.startsWith('Bearer ')
+      ? authorizationHeader.slice('Bearer '.length).trim()
+      : '';
+    const token = accessTokenFromCookie || bearerToken;
+    const tokenSource = accessTokenFromCookie ? 'cookie' : (bearerToken ? 'header' : 'none');
     
     if (!token) {
+      log.warn('[AUTH][profile] authentication failed', {
+        route: req.originalUrl || req.url,
+        hasCookieHdr: Boolean(cookieHeader),
+        hasAccessCookie: Boolean(accessTokenFromCookie),
+        hasAuthzHdr: Boolean(authorizationHeader),
+        tokenSource,
+        reason: 'missing_token',
+      });
       noteAuthFailure();
       return res.status(401).json({
         success: false,
@@ -103,6 +117,14 @@ const authenticate = async (req, res, next) => {
       decoded = jwtService.verifyAccessToken(token);
     } catch (error) {
       if (error.message === 'Token expired') {
+        log.warn('[AUTH][profile] authentication failed', {
+          route: req.originalUrl || req.url,
+          hasCookieHdr: Boolean(cookieHeader),
+          hasAccessCookie: Boolean(accessTokenFromCookie),
+          hasAuthzHdr: Boolean(authorizationHeader),
+          tokenSource,
+          reason: 'expired_token',
+        });
         noteAuthFailure();
         return res.status(401).json({
           success: false,
@@ -110,6 +132,14 @@ const authenticate = async (req, res, next) => {
           code: 'TOKEN_EXPIRED',
         });
       }
+      log.warn('[AUTH][profile] authentication failed', {
+        route: req.originalUrl || req.url,
+        hasCookieHdr: Boolean(cookieHeader),
+        hasAccessCookie: Boolean(accessTokenFromCookie),
+        hasAuthzHdr: Boolean(authorizationHeader),
+        tokenSource,
+        reason: 'invalid_token',
+      });
       noteAuthFailure();
       return res.status(401).json({
         success: false,

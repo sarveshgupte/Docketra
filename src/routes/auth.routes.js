@@ -34,6 +34,7 @@ const {
    forgotPassword,
    getAllUsers,
   refreshAccessToken, // NEW: JWT token refresh
+  debugCookieState,
   verifyTotp,
   completeMfaLogin,
   setupAccount,
@@ -97,6 +98,7 @@ router.post('/login/init', authBlockEnforcer, authLimiter, attachFirmFromSlug, l
 router.post('/login/verify', authBlockEnforcer, authLimiter, otpVerifyLimiter, attachFirmFromSlug, loginVerify);
 router.post('/login/resend', authBlockEnforcer, authLimiter, otpResendLimiter, attachFirmFromSlug, loginResend);
 router.post('/refresh', refreshIpLimiter, refreshUserLimiter, refreshAccessToken); // NEW: JWT token refresh
+router.get('/debug-cookie-state', debugCookieState);
 router.post('/verify-totp', otpVerifyLimiter, verifyTotp);
 router.post('/complete-mfa-login', otpVerifyLimiter, completeMfaLogin);
 router.post('/signup/init', authBlockEnforcer, authLimiter, signupInit);
