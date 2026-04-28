@@ -12,7 +12,7 @@
 }
 
 .admin__header h1 {
-  color: var(--text-primary);
+  color: var(--dt-text);
   font-size: var(--font-size-2xl);
   margin-bottom: var(--spacing-sm);
 }
@@ -44,7 +44,7 @@
 
 .admin__section-title {
   margin: 0;
-  color: #0f172a;
+  color: var(--dt-text);
   font-size: 1rem;
   line-height: 1.4;
   font-weight: 650;
@@ -52,7 +52,7 @@
 
 .admin__section-description {
   margin: 0.25rem 0 0;
-  color: #475569;
+  color: var(--dt-text-muted);
   font-size: 0.8125rem;
   line-height: 1.45;
 }
@@ -90,21 +90,21 @@
 }
 
 .admin__status--info {
-  color: #1e3a8a;
-  background: #eff6ff;
-  border-color: #bfdbfe;
+  color: var(--dt-info);
+  background: var(--dt-info-subtle);
+  border-color: var(--dt-border);
 }
 
 .admin__status--warning {
-  color: #92400e;
-  background: #fffbeb;
-  border-color: #fde68a;
+  color: var(--dt-warning);
+  background: var(--dt-warning-subtle);
+  border-color: var(--dt-warning);
 }
 
 .admin__status--error {
-  color: #b91c1c;
-  background: #fef2f2;
-  border-color: #fecaca;
+  color: var(--dt-error);
+  background: var(--dt-error-subtle);
+  border-color: var(--dt-error);
 }
 
 .admin__readonly-group {
@@ -114,16 +114,16 @@
 
 .admin__readonly-label {
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--dt-text);
   font-size: 0.875rem;
 }
 
 .admin__readonly-value {
   font-size: 0.875rem;
-  color: #475569;
+  color: var(--dt-text-muted);
   padding: var(--spacing-sm);
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background-color: var(--dt-surface-subtle);
+  border: 1px solid var(--dt-border-whisper);
   border-radius: var(--radius-sm);
 }
 
@@ -137,7 +137,7 @@
 
 .admin button:focus-visible,
 .admin a:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--dt-focus);
   outline-offset: 2px;
 }
 
@@ -158,9 +158,9 @@
 .admin__primary-label {
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--color-primary, #1976D2);
+  color: var(--dt-accent);
   padding: 4px 8px;
-  border: 1px solid var(--color-primary, #1976D2);
+  border: 1px solid var(--dt-accent);
   border-radius: 4px;
   white-space: nowrap;
 }
@@ -186,15 +186,15 @@
 
 .neo-label {
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--dt-text);
 }
 
 .neo-info-text {
   font-size: 0.875rem;
-  color: var(--text-secondary);
+  color: var(--dt-text-secondary);
   font-style: italic;
   padding: var(--spacing-sm);
-  background-color: var(--bg-secondary);
+  background-color: var(--dt-surface-subtle);
   border-radius: var(--radius-sm);
 }
 
@@ -208,17 +208,17 @@
 .neo-table td {
   padding: 0.625rem 0.75rem;
   text-align: left;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--dt-border-whisper);
   vertical-align: middle;
 }
 
 .neo-table th {
   font-weight: 600;
-  background-color: var(--bg-secondary);
+  background-color: var(--dt-surface-subtle);
 }
 
 .neo-table tbody tr:hover {
-  background-color: var(--bg-hover);
+  background-color: var(--dt-surface-subtle);
   cursor: pointer;
 }
 
@@ -253,7 +253,7 @@
 
 .admin__cell-business {
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--dt-text);
 }
 
 .admin__cell-truncate {
@@ -280,7 +280,7 @@
 
 .category-card {
   padding: var(--spacing-lg);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--dt-border-whisper);
   border-radius: var(--radius-md);
 }
 
@@ -290,12 +290,12 @@
   align-items: flex-start;
   margin-bottom: var(--spacing-md);
   padding-bottom: var(--spacing-md);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--dt-border-whisper);
 }
 
 .category-header h3 {
   margin: 0 0 var(--spacing-xs) 0;
-  color: var(--text-primary);
+  color: var(--dt-text);
 }
 
 .category-actions {
@@ -309,7 +309,7 @@
 
 .subcategories-list h4 {
   margin-bottom: var(--spacing-sm);
-  color: var(--text-secondary);
+  color: var(--dt-text-secondary);
   font-size: var(--font-size-sm);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -325,8 +325,8 @@
 /* Client Management Styles */
 .client-warning-box {
   padding: 15px;
-  background-color: #fff3cd;
-  border: 1px solid #ffc107;
+  background-color: var(--dt-warning-subtle);
+  border: 1px solid var(--dt-warning);
   border-radius: 4px;
   margin-bottom: 15px;
 }
@@ -339,7 +339,7 @@
 .client-reason-textarea {
   width: 100%;
   padding: 10px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--dt-border);
   border-radius: 4px;
   font-family: inherit;
   font-size: 0.95em;
@@ -348,15 +348,15 @@
 
 .client-reason-textarea:focus {
   outline: none;
-  border-color: var(--color-primary, #007bff);
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+  border-color: var(--dt-focus);
+  box-shadow: var(--dt-focus-ring);
 }
 
 .client-field-hint {
   margin-top: -10px;
   margin-bottom: 15px;
   font-size: 0.85em;
-  color: #666;
+  color: var(--dt-text-muted);
 }
 
 .client-current-name {
@@ -371,7 +371,7 @@
 .admin__client-access-list {
   max-height: 320px;
   overflow: auto;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--dt-border-whisper);
   border-radius: var(--radius-sm);
 }
 
@@ -381,7 +381,7 @@
   align-items: center;
   gap: var(--spacing-md);
   padding: var(--spacing-sm) var(--spacing-md);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--dt-border-whisper);
 }
 
 .admin__client-access-item:last-child {
