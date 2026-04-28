@@ -624,3 +624,45 @@ Using `docs/ui/visual-regression-checklist.md` as the gate:
 1. Replace active `neo-*` classnames in legacy auth/reports/upload/alerts with shared component primitives (`Button`, `Input`, `StatusMessageStack`, modern tables) module-by-module.
 2. Decouple cross-module helper classes currently anchored in `AdminPage.css` (e.g., shared `neo-info-text`/`neo-form-actions`) into scoped shared legacy-bridge styles to reduce accidental coupling.
 3. Continue targeted hardcoded color cleanup in low-traffic page-local JSX inline styles (`DashboardPage`, legacy helper components), preserving density and behavior.
+
+## CRM product UX PR scope (module-specific shift, April 28, 2026)
+
+### Shift marker
+- This PR marks the transition from broad cross-module UI modernization into **module-specific product UX**, starting with CRM.
+- The focus moved from general consistency cleanup to day-to-day CRM operator clarity (lead follow-up, pipeline handling, client workspace action hierarchy).
+
+### Exact files changed
+- `ui/src/pages/crm/LeadsPage.jsx`
+- `ui/src/pages/crm/CrmClientsPage.jsx`
+- `ui/src/pages/crm/CrmClientDetailPage.jsx`
+- `ui/src/pages/crm/crmUiUtils.js`
+- `docs/crm-ux.md`
+- `docs/ui-ux-modernization.md`
+
+### Before / after UX impact
+- **Before:** CRM pages were functional but had weaker operational cues for follow-up timing, stage-context readability, role-safe action explanation, and filtered-empty guidance.
+- **After:** CRM leads and client pages provide clearer next actions, better follow-up scanability (including relative timing), stronger lead/client contextual separation, and more actionable empty/filter states.
+
+### Remaining CRM gaps
+1. Add deeper keyboard-only QA and focus traversal checks for CRM list rows/modals on mobile/tablet breakpoints.
+2. Normalize any remaining CRM-local utility classes to strict tokenized control wrappers where safe.
+3. Evaluate CRM-specific active filter chips for high-density lead/client filtering workflows.
+4. Consider richer follow-up analytics (aging, due-today buckets) in a future backend-approved phase.
+
+### Recommended next PR
+**PR: CRM follow-up operations hardening (frontend-only + test expansion)**
+- Add CRM-focused regression tests covering lead pipeline filter/reset behavior and client detail tab empty-state contracts.
+- Add focused responsive checks for lead pipeline columns and client row action wrapping.
+- Keep backend/API contracts, RBAC logic, and route contracts unchanged.
+
+### Post-review corrections applied (same CRM PR)
+- Removed duplicate CRM client load error presentation by keeping table-level error/retry as the single error location; status stack now carries refresh-only signal.
+- Clarified lead filters as auto-applied and renamed the manual action button from `Apply Filters` to `Refresh` for accurate behavior expectation.
+- Corrected non-admin lead helper language to avoid implying mutation permissions.
+- Tokenized newly introduced lead surface utility colors to `--dt-*` tokens for text/border/surface/warning/focus consistency.
+- Added a targeted UI utility test for relative follow-up labeling (`ui/tests/crmRelativeDateLabel.test.mjs`) covering empty/invalid/timezone cases.
+- Adjusted client status badge presentation in CRM client detail to explicit visual variants (`success`/`neutral`) without changing status values.
+- Updated invoice modal helper copy to confirm existing billing behavior is unchanged while keeping CRM payment visibility framing.
+
+### Frontend-only safety confirmation
+- No backend logic/API contract/auth/RBAC/tenant/routing/database/lifecycle changes were made in this CRM pass.

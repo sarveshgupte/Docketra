@@ -16,15 +16,22 @@ import {
   FilterBar,
   InlineNotice,
   PageSection,
-  RefreshNotice,
+  StatusMessageStack,
   StatGrid,
 } from '../platform/PlatformShared';
-import { resolveCrmErrorMessage } from './crmUiUtils';
+import { formatRelativeDateLabel, resolveCrmErrorMessage } from './crmUiUtils';
 
 const LEAD_STAGE_MAP = { new: 'Draft', contacted: 'Pending', qualified: 'Pending', converted: 'Approved', lost: 'Rejected' };
 const LEAD_STAGE_LABEL = { new: 'New', contacted: 'Contacted', qualified: 'Qualified', converted: 'Converted', lost: 'Lost' };
 const STAGES = ['new', 'contacted', 'qualified', 'converted', 'lost'];
 const PHONE_REGEX = /^[+()\-\s0-9]{7,20}$/;
+const LEAD_STAGE_HELPER = {
+  new: 'Unworked intake. Confirm ownership and set first follow-up.',
+  contacted: 'Initial outreach in progress. Capture latest response.',
+  qualified: 'Validated lead with active fit and next action.',
+  converted: 'Converted to client workspace and lifecycle tracking.',
+  lost: 'Closed-lost outcome. Capture reason for reporting.',
+};
 
 const toDateInputValue = (value) => {
   if (!value) return '';
@@ -258,6 +265,7 @@ export const LeadsPage = () => {
     acc[stage] = leads.filter((lead) => (lead.stage || lead.status) === stage).length;
     return acc;
   }, {}), [leads]);
+  const hasActiveFilters = Boolean(filters.stage || filters.ownerXid || filters.dueOnly);
 
   const leadsByStage = useMemo(() => STAGES.reduce((acc, stage) => {
     acc[stage] = leads.filter((lead) => (lead.stage || lead.status) === stage);
@@ -272,16 +280,19 @@ export const LeadsPage = () => {
       <tr key={id}>
         <td>
           <div className="font-medium">{lead.name || '—'}</div>
-          <div className="text-xs text-gray-500">{lead.email || lead.phone || 'No contact info'}</div>
+          <div className="text-xs text-[var(--dt-text-muted)]">{lead.email || lead.phone || 'No contact info'}</div>
         </td>
         <td>
           <div className="flex items-center gap-2">
             <Badge status={LEAD_STAGE_MAP[stage] || 'Draft'}>{LEAD_STAGE_LABEL[stage] || stage || '—'}</Badge>
-            {isOverdue(lead) ? <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Overdue follow-up</span> : null}
+            {isOverdue(lead) ? <span className="rounded border border-[var(--dt-warning)] bg-[var(--dt-warning-subtle)] px-2 py-0.5 text-xs font-medium text-[var(--dt-warning)]">Overdue follow-up</span> : null}
           </div>
         </td>
         <td>{lead.owner?.name || lead.ownerXid || 'Unassigned'}</td>
-        <td>{formatDate(lead.nextFollowUpAt) || '—'}</td>
+        <td>
+          <div>{formatDate(lead.nextFollowUpAt) || '—'}</div>
+          <div className="text-xs text-[var(--dt-text-muted)]">{formatRelativeDateLabel(lead.nextFollowUpAt)}</div>
+        </td>
         <td>
           <div className="action-row">
             {isAdmin && stage !== 'converted' ? (
@@ -298,8 +309,11 @@ export const LeadsPage = () => {
 
   return (
     <PlatformShell moduleLabel="CRM" title="Leads" subtitle="Track pipeline stages, follow-up commitments, and conversion readiness.">
-      <InlineNotice tone="error" message={error} />
-      <RefreshNotice refreshing={refreshing} message="Refreshing leads in the background…" />
+      <StatusMessageStack messages={[
+        { tone: 'error', message: error },
+        { tone: 'info', message: refreshing ? 'Refreshing leads in the background…' : '' },
+      ]}
+      />
 
       <PageSection title="Quick actions" description="Keep terminology and controls aligned with CRM overview and client management.">
         <div className="action-row">
@@ -307,6 +321,7 @@ export const LeadsPage = () => {
           <Button variant="outline" onClick={() => setViewMode('list')}>List View</Button>
           <Button variant="outline" onClick={() => setViewMode('pipeline')}>Pipeline View</Button>
         </div>
+        <InlineNotice tone="info" message={isAdmin ? 'Admins can change owner and stage.' : 'You can review lead context. Change controls remain limited by your role.'} />
       </PageSection>
 
       <StatGrid items={STAGES.map((stage) => ({ label: LEAD_STAGE_LABEL[stage], value: stageStats[stage] || 0 }))} />
@@ -314,15 +329,15 @@ export const LeadsPage = () => {
       <PageSection title="Filters" description="Filter by stage, owner, and overdue follow-up status.">
         <FilterBar>
           <div>
-            <label className="block text-xs text-gray-600" htmlFor="lead-filter-stage">Stage</label>
-            <select id="lead-filter-stage" value={filters.stage} onChange={(event) => setFilters((prev) => ({ ...prev, stage: event.target.value }))} className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm">
+            <label className="block text-xs text-[var(--dt-text-secondary)]" htmlFor="lead-filter-stage">Stage</label>
+            <select id="lead-filter-stage" value={filters.stage} onChange={(event) => setFilters((prev) => ({ ...prev, stage: event.target.value }))} className="mt-1 w-full rounded border border-[var(--dt-border)] bg-[var(--dt-surface)] px-2 py-2 text-sm text-[var(--dt-text)]">
               <option value="">All stages</option>
               {STAGES.map((stage) => <option key={stage} value={stage}>{LEAD_STAGE_LABEL[stage]}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs text-gray-600" htmlFor="lead-filter-owner">Owner</label>
-            <select id="lead-filter-owner" value={filters.ownerXid} onChange={(event) => setFilters((prev) => ({ ...prev, ownerXid: event.target.value }))} className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm">
+            <label className="block text-xs text-[var(--dt-text-secondary)]" htmlFor="lead-filter-owner">Owner</label>
+            <select id="lead-filter-owner" value={filters.ownerXid} onChange={(event) => setFilters((prev) => ({ ...prev, ownerXid: event.target.value }))} className="mt-1 w-full rounded border border-[var(--dt-border)] bg-[var(--dt-surface)] px-2 py-2 text-sm text-[var(--dt-text)]">
               <option value="">All owners</option>
               {users.map((item) => {
                 const xid = item.xid || item.xID;
@@ -330,33 +345,43 @@ export const LeadsPage = () => {
               })}
             </select>
           </div>
-          <label className="mt-6 flex items-center gap-2 text-sm text-gray-700">
+          <label className="mt-6 flex items-center gap-2 text-sm text-[var(--dt-text-secondary)]">
             <input type="checkbox" checked={filters.dueOnly} onChange={(event) => setFilters((prev) => ({ ...prev, dueOnly: event.target.checked }))} />
             Follow-up overdue only
           </label>
           <Button variant="outline" onClick={() => void loadLeads({ background: leads.length > 0 })} loading={refreshing} disabled={refreshing}>
-            {refreshing ? 'Refreshing…' : 'Apply Filters'}
+            {refreshing ? 'Refreshing…' : 'Refresh'}
           </Button>
+          {hasActiveFilters ? (
+            <Button
+              variant="outline"
+              onClick={() => setFilters({ stage: '', ownerXid: '', dueOnly: false })}
+            >
+              Clear Filters
+            </Button>
+          ) : null}
         </FilterBar>
+        <p className="text-xs text-[var(--dt-text-muted)]">Filters apply automatically as you change them. Use Refresh to re-check latest lead data.</p>
       </PageSection>
 
       <PageSection title={viewMode === 'pipeline' ? 'Pipeline board' : 'Lead queue'} description="Operational lead tracking surface.">
         {viewMode === 'pipeline' ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             {STAGES.map((stage) => (
-              <div key={stage} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <div key={stage} className="rounded-lg border border-[var(--dt-border-whisper)] bg-[var(--dt-surface-subtle)] p-3">
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-sm font-semibold">{LEAD_STAGE_LABEL[stage]}</p>
-                  <span className="rounded border border-gray-200 bg-white px-2 py-0.5 text-xs">{leadsByStage[stage]?.length || 0}</span>
+                  <span className="rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-surface)] px-2 py-0.5 text-xs">{leadsByStage[stage]?.length || 0}</span>
                 </div>
+                <p className="mb-2 text-xs text-[var(--dt-text-secondary)]">{LEAD_STAGE_HELPER[stage]}</p>
                 <div className="space-y-2">
                   {(leadsByStage[stage] || []).length ? leadsByStage[stage].map((lead) => (
-                    <button key={lead._id || lead.id} type="button" onClick={() => openDetail(lead)} className="w-full rounded border border-gray-200 bg-white p-2 text-left text-xs hover:border-gray-300">
+                    <button key={lead._id || lead.id} type="button" onClick={() => openDetail(lead)} className="w-full rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-surface)] p-2 text-left text-xs hover:border-[var(--dt-border)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--dt-focus)]">
                       <p className="font-semibold text-sm">{lead.name || '—'}</p>
-                      <p className="text-gray-600">Owner: {lead.owner?.name || lead.ownerXid || 'Unassigned'}</p>
-                      <p className="text-gray-600">Follow-up: {lead.nextFollowUpAt ? formatDate(lead.nextFollowUpAt) : 'Not set'}</p>
+                      <p className="text-[var(--dt-text-secondary)]">Owner: {lead.owner?.name || lead.ownerXid || 'Unassigned'}</p>
+                      <p className="text-[var(--dt-text-secondary)]">Follow-up: {lead.nextFollowUpAt ? formatDate(lead.nextFollowUpAt) : 'Not set'} ({formatRelativeDateLabel(lead.nextFollowUpAt)})</p>
                     </button>
-                  )) : <p className="rounded border border-dashed border-gray-300 bg-white p-2 text-xs text-gray-500">No leads in this stage yet. New intake submissions will appear here.</p>}
+                  )) : <p className="rounded border border-dashed border-[var(--dt-border)] bg-[var(--dt-surface)] p-2 text-xs text-[var(--dt-text-muted)]">No leads in this stage yet. New intake submissions will appear here.</p>}
                 </div>
               </div>
             ))}
@@ -369,7 +394,7 @@ export const LeadsPage = () => {
             error={error}
             onRetry={() => void loadLeads()}
             emptyLabel="No leads yet. Create a lead manually or publish an intake form to start the pipeline."
-            hasActiveFilters={Boolean(filters.stage || filters.ownerXid || filters.dueOnly)}
+            hasActiveFilters={hasActiveFilters}
             emptyLabelFiltered="No leads match current filters. Adjust stage/owner filters or disable overdue-only mode."
           />
         )}
