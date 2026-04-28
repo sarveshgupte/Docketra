@@ -169,16 +169,16 @@ export const PlatformQcQueuePage = () => {
           </FilterBar>
         </SectionToolbar>
         {activeFilters.length > 0 ? (
-          <div className="mt-3 flex flex-wrap items-center gap-2" role="list" aria-label="Active QC filters">
+          <div className="table-filter-chip-group" role="list" aria-label="Active QC filters">
             {activeFilters.map((filter) => (
               <button
                 key={filter.key}
                 type="button"
                 onClick={() => removeFilter(filter.key)}
-                className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700 hover:bg-slate-200"
+                className="table-filter-chip"
               >
-                <span className="font-medium">{filter.label}:</span> {filter.value}
-                <span aria-hidden>&times;</span>
+                <span className="table-filter-chip__label">{filter.label}:</span> {filter.value}
+                <span aria-hidden className="table-filter-chip__close">&times;</span>
               </button>
             ))}
           </div>

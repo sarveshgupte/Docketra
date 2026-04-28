@@ -508,3 +508,73 @@ This PR was expanded (still presentation-only and low-risk) to cover more of the
 - Add minimal Playwright snapshot checks for 3–5 P0 routes under stable fixture data.
 - Gate only on shell/header/table/modals for visual drift, not dynamic content.
 - Keep business logic untouched.
+
+---
+
+## Fifth PR scope (table/list UX contract consistency pass)
+
+### Scope completed in this PR
+- Standardized shared table primitives (`Table`, `common/DataTable`) with token-consistent row hover/focus treatment, state messaging spacing, focus-visible styling, and filter-chip visuals.
+- Aligned platform `.table` styling to the same token contract without changing row/cell density or overflow behavior.
+- Added consistent accessibility hints for loading/empty/error rows and retry actions across both table implementations.
+- Normalized QC Workbench active filter chips to the shared tokenized table-chip pattern.
+- Authored a dedicated table/list UX contract doc with implementation rules and migration guidance.
+
+### Exact files changed
+- `ui/src/components/common/Table.jsx`
+- `ui/src/components/common/DataTable.jsx`
+- `ui/src/components/platform/platform.css`
+- `ui/src/pages/platform/PlatformShared.jsx`
+- `ui/src/pages/platform/QcQueuePage.jsx`
+- `docs/ui/table-list-ux-contract.md`
+- `docs/ui/docketra-design-language.md`
+- `docs/ui/visual-regression-checklist.md`
+- `docs/ui-ux-modernization.md`
+
+### Before / after UX impact
+- **Before:** shared/common and platform table surfaces had slightly different hover/focus/state/chip/pagination treatments, with one high-traffic QC surface using custom non-token active filter chips.
+- **After:** both table stacks now present a closer, tokenized visual contract for headers, rows, active filters, empty/error/loading messaging, retry labels, and pagination framing, while preserving compact density and existing table behaviors.
+
+### Screens affected
+- All Dockets (`CasesPage`) via shared `common/DataTable` updates.
+- Workbench and My Worklist via platform `.table` updates.
+- QC Workbench via platform `.table` updates and active filter chip normalization.
+- CRM (leads/clients/client detail) and CMS intake queue via existing DataTable wrappers.
+- Admin users/clients/categories and reports where shared/common or platform DataTable wrappers are in use.
+- Settings-linked admin/category table views through shared/common DataTable usage.
+
+### Accessibility + behavior guardrails
+- Preserved semantic table headers and existing `aria-sort` behavior.
+- Preserved row-click destinations and Enter/Space row keyboard activation behavior.
+- Added clearer focus-visible affordances on sortable headers and table action controls.
+- Added/retained polite status announcements for loading/empty/error table messages where supported.
+
+### Density confirmation
+- No row/cell padding increases were introduced for platform `.table`.
+- Dense mode in common DataTable remains compact.
+- Toolbar and pagination spacing retained compact operational rhythm.
+
+### Visual QA notes (manual checklist run)
+- Dense docket table: PASS.
+- Worklist/workbench queue table: PASS.
+- CRM/CMS list table: PASS.
+- Admin table: PASS.
+- Settings-linked table (category management context): PASS.
+- Empty/error/loading state readability + retry visibility: PASS.
+- Active filter chips + clear-all affordance: PASS.
+- Pagination + row focus-visible states: PASS.
+
+### Remaining gaps
+1. CRM leads/clients filter bars still include some non-token utility classes and can be normalized in a follow-up without changing behavior.
+2. Some local/custom table-like layouts (outside current high-traffic scope) remain for incremental migration.
+3. Full convergence between platform and common DataTable implementations is still intentionally deferred to reduce risk.
+
+### Recommended next PR
+**PR 6: CRM/CMS filter-toolbar tokenization pass**
+- Tokenize remaining filter control wrappers (labels, border/text colors, focus states).
+- Preserve existing query/filter behavior and RBAC boundaries.
+- Add parity active-filter chip pattern where module-level chips are still custom.
+
+### Rollback notes
+- Rollback is low risk and can be achieved by reverting the files listed in this section.
+- No backend/API/route/data contract changes were made.
