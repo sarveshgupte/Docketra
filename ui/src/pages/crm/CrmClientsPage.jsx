@@ -15,7 +15,7 @@ import {
   FilterBar,
   InlineNotice,
   PageSection,
-  RefreshNotice,
+  StatusMessageStack,
   StatGrid,
 } from '../platform/PlatformShared';
 import { normalizeRows, resolveCrmErrorMessage } from './crmUiUtils';
@@ -145,6 +145,7 @@ export const CrmClientsPage = () => {
       return searchable.includes(needle);
     });
   }, [clients, query, sourceFilter, statusFilter, tagFilter, typeFilter]);
+  const hasActiveFilters = Boolean(query.trim() || typeFilter || statusFilter || tagFilter.trim() || sourceFilter.trim());
 
   const cards = useMemo(() => {
     const total = clients.length;
@@ -281,8 +282,10 @@ export const CrmClientsPage = () => {
       subtitle="Manage client records, ownership, and conversion readiness in one consistent workspace."
       actions={isAdmin ? <Button onClick={() => { setFormErrors({}); setEditingClient(null); resetForm(); setShowModal(true); }}>New Client</Button> : null}
     >
-      <InlineNotice tone="error" message={error} />
-      <RefreshNotice refreshing={refreshing} message="Refreshing client records in the background…" />
+      <StatusMessageStack messages={[
+        { tone: 'info', message: refreshing ? 'Refreshing client records in the background…' : '' },
+      ]}
+      />
       <StatGrid items={cards} />
 
       <PageSection title="Quick actions" description="Use the same CRM language across overview, leads, and client detail.">
@@ -292,8 +295,8 @@ export const CrmClientsPage = () => {
         </div>
       </PageSection>
 
-      <PageSection title="Client records" description="Search and open CRM client profiles.">
-        <FilterBar>
+      <PageSection title="Client records" description="Search and open CRM client profiles. Keep lead and client records clearly separated for daily operations.">
+        <FilterBar onClear={() => { setQuery(''); setTypeFilter(''); setStatusFilter(''); setTagFilter(''); setSourceFilter(''); }} clearDisabled={!hasActiveFilters}>
           <Input
             label="Search clients"
             value={query}
@@ -323,6 +326,10 @@ export const CrmClientsPage = () => {
             {refreshing ? 'Refreshing…' : 'Refresh'}
           </Button>
         </FilterBar>
+        <InlineNotice
+          tone="info"
+          message={isAdmin ? 'Client create/edit/deactivate actions are shown only for admin roles.' : 'You can review client records. Change controls remain hidden for your role.'}
+        />
 
         <DataTable
           columns={['Client', 'Type', 'Email', 'Phone', 'Tags', 'Status', 'Created', 'Actions']}
@@ -331,8 +338,8 @@ export const CrmClientsPage = () => {
           error={error}
           onRetry={() => void loadClients()}
           emptyLabel="No clients yet. Create your first CRM client using New Client."
-          hasActiveFilters={Boolean(query.trim() || typeFilter || statusFilter || tagFilter.trim() || sourceFilter.trim())}
-          emptyLabelFiltered="No clients match your current search."
+          hasActiveFilters={hasActiveFilters}
+          emptyLabelFiltered="No clients match current filters. Clear filters or broaden your search."
         />
       </PageSection>
 
