@@ -196,3 +196,28 @@ Use these rules for every token-adoption PR.
 - Active filter chips attached to table/list toolbars should use pill radius + subtle token surfaces/borders (`--dt-surface-subtle`, `--dt-border-whisper`) with explicit remove affordance.
 - Empty/loading/error table row states should remain compact, centered, and readable; retry actions stay present when previously supported.
 - Density guardrail remains strict: no inflation of row height, cell padding, toolbar height, or pagination height in token-only table/list passes.
+
+## Ongoing maintenance rules (added April 28, 2026)
+
+To preserve modernization gains and prevent style regressions:
+
+1. **Product-app UI must default to `--dt-*` tokens**
+   - New firm-facing UI (authenticated app shell routes, admin, settings, CRM/CMS, worklists, dockets) should use existing `--dt-*` tokens for surfaces, borders, text, semantic states, and focus.
+
+2. **Hardcoded product-app colors require explicit justification**
+   - New raw hex or Tailwind hardcoded semantic colors in product-app surfaces should be avoided when an equivalent `--dt-*` token exists.
+   - If a hardcoded value is intentionally kept, include a short inline comment or PR note with rationale and intended future token mapping.
+
+3. **Focus-visible consistency is mandatory**
+   - New interactive controls should expose a clear, keyboard-visible focus treatment that aligns with `--dt-focus` / `--dt-focus-ring`.
+
+4. **Legacy compatibility classes should be isolated, not expanded**
+   - Existing transitional `neo-*` usage may remain temporarily where migration risk exists.
+   - Do not add new `neo-*` classes in product-app code; migrate touched surfaces toward shared modern primitives.
+
+5. **Marketing/public surfaces may use a separate visual system only when documented**
+   - Public marketing/landing/upload visual variants are allowed only when explicitly scoped and documented as non-product-app design language.
+   - Shared product components should not inherit marketing-specific tokens unless intentionally adapted and documented.
+
+6. **Token-only PR constraints remain strict**
+   - Styling cleanup PRs must remain presentation-only: no API, routing, RBAC/auth, workflow, storage/BYOS/BYOAI, or payload behavior changes.
