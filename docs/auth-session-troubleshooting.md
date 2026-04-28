@@ -10,7 +10,7 @@ For both tenant users and superadmin users:
 - Backend must set **both** `accessToken` and `refreshToken` cookies on successful login.
 - Cookies must be `HttpOnly`.
 - Cookies must be `Secure` in production.
-- `SameSite` defaults to `lax`.
+- `SameSite` defaults to `lax` only for same-origin deployments.
 - Set `AUTH_COOKIE_CROSS_SITE=true` (or `AUTH_COOKIE_SAMESITE=none`) for cross-origin Render deployments (separate frontend/backend hosts).
 - Cookie `path` must be `/`.
 - Avoid setting `AUTH_COOKIE_DOMAIN` to Render hostnames (`*.onrender.com`) or invalid values with protocol/port.
@@ -21,6 +21,15 @@ If your frontend and API are on different Render hostnames:
 - Keep `AUTH_COOKIE_DOMAIN` unset.
 - Use CORS allowlist for exact frontend origin(s).
 - Ensure frontend requests use credentials (`withCredentials: true` / `credentials: 'include'`).
+- Required envs for cross-origin Render:
+  - `AUTH_COOKIE_CROSS_SITE=true`
+  - `AUTH_COOKIE_DOMAIN` **unset**
+  - `FRONTEND_ORIGINS=https://<your-frontend-host>`
+  - (recommended) `API_PUBLIC_ORIGIN=https://<your-api-host>` for startup misconfiguration warnings.
+
+At backend startup, verify:
+- `AUTH_COOKIE_CONFIG_RESOLVED` log includes `sameSite`, `secure`, `domainPresent`, `crossSiteEnabled`.
+- If frontend/API origins are cross-origin and `sameSite=lax`, backend emits `AUTH_COOKIE_CROSS_ORIGIN_MISCONFIG`.
 
 ## Expected auth flow: superadmin
 1. `POST /api/superadmin/login` validates credentials.
@@ -50,6 +59,13 @@ Superadmin must **not** require firm/workspace context.
 - Do not log token values.
 - Do not log full user objects with PII in production.
 - Do not log email/xID for auth refresh diagnostics.
+- Optional gated endpoint: `GET /api/auth/debug-cookie-state` when `AUTH_DEBUG_DIAGNOSTICS=true`.
+  - Returns safe metadata only:
+    - `hasCookieHeader`, `hasAccessTokenCookie`, `hasRefreshTokenCookie`
+    - `cookieNames` (names only)
+    - request origin/host/forwarded host/proto
+    - computed cookie options (`sameSite`, `secure`, `domainPresent`, `path`, `crossSiteEnabled`)
+  - Disabled by default and responds `404` when diagnostics mode is off.
 
 ## Frontend credential requirements
 - All auth-sensitive calls must use shared credential-aware Axios client (`withCredentials: true`):
@@ -60,8 +76,9 @@ Superadmin must **not** require firm/workspace context.
   - forgot/reset endpoints that rely on session cookies.
 
 ## Quick verification checklist
-1. Login response has `Set-Cookie` headers for both auth cookies.
-2. Browser stores both cookies for the API origin.
-3. Next `GET /api/auth/profile` returns `200`.
-4. `POST /api/auth/refresh` returns `200` when cookies are present.
-5. Superadmin route lands on `/app/superadmin` without workspace errors.
+1. In Chrome DevTools → **Network** → login response, verify two `Set-Cookie` headers (`accessToken`, `refreshToken`).
+2. In Chrome DevTools → **Application** → **Cookies**, verify API origin stores both cookies.
+3. In Chrome DevTools → profile request, verify request contains `Cookie` header.
+4. Next `GET /api/auth/profile` returns `200`.
+5. `POST /api/auth/refresh` returns `200` when cookies are present.
+6. Superadmin route lands on `/app/superadmin` without workspace errors.

@@ -3397,6 +3397,34 @@ const getAllUsers = async (req, res) => {
  */
 const refreshAccessToken = async (req, res) => authSessionService.refreshAccessToken(req, res);
 
+const debugCookieState = async (req, res) => {
+  if (!authSessionService.isAuthDebugDiagnosticsEnabled()) {
+    return res.status(404).json({ success: false, message: 'Not found' });
+  }
+  const cookieHeader = String(req.headers?.cookie || '');
+  const accessToken = req.cookies?.accessToken || getCookieValue(cookieHeader, 'accessToken');
+  const refreshToken = req.cookies?.refreshToken || getCookieValue(cookieHeader, 'refreshToken');
+  const cookieNames = cookieHeader
+    .split(';')
+    .map((chunk) => String(chunk || '').split('=')[0].trim())
+    .filter(Boolean);
+
+  return res.json({
+    success: true,
+    data: {
+      hasCookieHeader: Boolean(cookieHeader),
+      hasAccessTokenCookie: Boolean(accessToken),
+      hasRefreshTokenCookie: Boolean(refreshToken),
+      cookieNames: Array.from(new Set(cookieNames)),
+      requestOrigin: req.headers?.origin || null,
+      requestHost: req.headers?.host || null,
+      xForwardedHost: req.headers?.['x-forwarded-host'] || null,
+      xForwardedProto: req.headers?.['x-forwarded-proto'] || null,
+      computedCookieOptions: authSessionService.getAuthCookieRuntimeDiagnostics(),
+    },
+  });
+};
+
 /**
  * Verify TOTP code for MFA
  * POST /api/auth/verify-totp
@@ -3589,6 +3617,7 @@ module.exports = {
   forgotPasswordResetWithOtp: wrapWriteHandler(forgotPasswordResetWithOtp),
   getAllUsers,
   refreshAccessToken: wrapWriteHandler(refreshAccessToken), // NEW: JWT token refresh
+  debugCookieState,
   verifyTotp: wrapWriteHandler(verifyTotp),
   verifyLoginOtp: wrapWriteHandler(verifyLoginOtp),
   completeMfaLogin: wrapWriteHandler(completeMfaLogin),
