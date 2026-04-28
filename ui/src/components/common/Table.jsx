@@ -13,7 +13,9 @@ export const Table = ({
   if (loading) {
     return (
       <div className={joinClasses(surfaceClasses.tableWrapper, className)}>
-        <Loading message={loadingMessage} />
+        <div className="px-4 py-6" role="status" aria-live="polite">
+          <Loading message={loadingMessage} />
+        </div>
       </div>
     );
   }
@@ -41,7 +43,7 @@ export const TableRow = ({ children, onClick, className = '', ...rest }) => {
       onClick={onClick}
       {...rest}
       className={joinClasses(
-        'transition-colors duration-150 hover:bg-[var(--dt-surface-subtle)]',
+        'transition-colors duration-150 hover:bg-[var(--dt-surface-subtle)] focus-within:bg-[var(--dt-surface-subtle)]',
         onClick && 'cursor-pointer',
         className,
       )}
@@ -82,7 +84,7 @@ export const TableFooter = ({ children, colSpan, className = '' }) => {
 
 export const TableEmptyState = ({ colSpan, message = 'No records found.' }) => (
   <tr>
-    <td colSpan={colSpan} className={`${spacingClasses.tableCellPadding} py-8 text-center text-sm text-[var(--dt-text-muted)]`}>
+    <td colSpan={colSpan} className={`${spacingClasses.tableCellPadding} py-8 text-center text-sm text-[var(--dt-text-muted)]`} role="status" aria-live="polite">
       {message}
     </td>
   </tr>
