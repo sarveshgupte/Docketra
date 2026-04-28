@@ -1209,7 +1209,8 @@ const downloadClientCFSFileForCase = async (req, res) => {
 
     // Set response headers
     res.setHeader('Content-Type', attachment.mimeType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${attachment.fileName}"`);
+    const safeFileName = sanitizeFilename(attachment.fileName);
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFileName}"`);
 
     // Stream file to response
     fileStream.pipe(res);
