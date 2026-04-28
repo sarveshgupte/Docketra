@@ -46,6 +46,7 @@ const { recordFailedLoginAttempt, clearFailedLoginAttempts } = require('../middl
 const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError, assertCanDeactivateUser, PrimaryAdminActionError } = require('../services/user.service');
 const { logAuthEvent } = require('../services/audit.service');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
+const { getCookieValue } = require('../utils/requestCookies');
 const { mapUserResponse } = require('../mappers/user.mapper');
 const { decrypt: decryptProtectedValue } = require('../utils/encryption');
 const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('../services/securityAudit.service');

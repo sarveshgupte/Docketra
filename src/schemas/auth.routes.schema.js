@@ -154,6 +154,9 @@ module.exports = {
   'POST /refresh': {
     body: z.object({}).strip(),
   },
+  'GET /debug-cookie-state': {
+    query: z.object({}).strip(),
+  },
   'POST /verify-totp': {
     body: z.object({
       xID: xidString,
