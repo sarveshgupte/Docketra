@@ -11,6 +11,7 @@ const { attachFirmContext } = require('../src/middleware/firmContext.middleware'
 const { authorizeFirmPermission } = require('../src/middleware/permission.middleware');
 const requireTenant = require('../src/middleware/requireTenant');
 
+const Client = require('../src/models/Client.model');
 const OBJECT_ID_A = '507f1f77bcf86cd799439011';
 const OBJECT_ID_B = '507f1f77bcf86cd799439012';
 const FIRM_KEY_A = 'firm-a';
@@ -41,6 +42,8 @@ const runMiddleware = async (mw, req) => {
 };
 
 async function shouldRejectJwtFirmMismatch() {
+  const originalClientFindOne = Client.findOne;
+  Client.findOne = () => ({ lean: async () => null });
   const originalFindOne = Firm.findOne;
   Firm.findOne = async () => ({ _id: OBJECT_ID_A, firmSlug: 'firm-a', status: 'ACTIVE' });
 
