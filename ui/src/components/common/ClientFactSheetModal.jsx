@@ -81,9 +81,9 @@ export const ClientFactSheetModal = ({ isOpen, onClose, factSheet, caseId, clien
                     className="btn-view-file"
                     onClick={() => handleViewFile(file.fileId)}
                     title="View or download file (opens in new tab)"
-                    aria-label={`Open document ${file.fileName}`}
                   >
-                    Open
+                    <span aria-hidden="true">Open</span>
+                    <span className="sr-only"> document {file.fileName}</span>
                   </button>
                 </div>
               ))}
