@@ -1,6 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { caseApi } from '../api/case.api';
-import { worklistApi } from '../api/worklist.api';
 import { categoryService } from '../services/categoryService';
 import { getCaseListRecords } from '../utils/caseResponse';
 import { CASE_STATUS } from '../utils/constants';
@@ -37,14 +36,7 @@ export const useCasesListQuery = ({
     queryFn: async () => {
       let casesData = [];
       const normalizedWorkTypeFilter = normalizeWorkTypeFilter(workTypeFilter);
-      if (isAdmin) {
-        const response = await caseApi.getCases(
-          normalizedWorkTypeFilter !== WORK_TYPE.ALL ? { workType: normalizedWorkTypeFilter } : {}
-        );
-        if (response.success) {
-          casesData = getCaseListRecords(response);
-        }
-      } else if (statusFilter === CASE_STATUS.QC_PENDING) {
+      if (statusFilter === CASE_STATUS.QC_PENDING) {
         if (!hasQcAccess) {
           casesData = [];
         } else {
@@ -64,18 +56,17 @@ export const useCasesListQuery = ({
         if (response.success) {
           casesData = getCaseListRecords(response);
         }
-      } else if (normalizedWorkTypeFilter !== WORK_TYPE.ALL) {
-        const response = await caseApi.getCases({ workType: normalizedWorkTypeFilter });
-        if (response.success) {
-          casesData = getCaseListRecords(response).filter((item) => {
-            if (statusFilter === 'ALL') return true;
-            return item.status === statusFilter;
-          });
-        }
       } else {
-        const response = await worklistApi.getEmployeeWorklist();
+        const filters = {};
+        if (statusFilter !== 'ALL') {
+          filters.status = statusFilter;
+        }
+        if (normalizedWorkTypeFilter !== WORK_TYPE.ALL) {
+          filters.workType = normalizedWorkTypeFilter;
+        }
+        const response = await caseApi.getCases(filters);
         if (response.success) {
-          casesData = response.data || [];
+          casesData = getCaseListRecords(response);
         }
       }
 
