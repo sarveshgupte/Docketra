@@ -45,6 +45,7 @@ const markErrorToasted = (error, message) => {
 const REDIRECT_TIMEOUT_MS = 5000;
 const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 4000;
+const SAME_ORIGIN_API_BASE_URL = '/api';
 const isPublicAuthFlowRequest = (requestConfig) => {
   const requestUrl = String(requestConfig?.url || '');
   return /\/auth\/(resend-otp|verify-totp|complete-mfa-login|forgot-password|forgot-password\/init|forgot-password\/verify|forgot-password\/reset|reset-password-with-token|resend-credentials|login\/init|login\/verify|login\/resend)$/.test(requestUrl)
@@ -249,6 +250,23 @@ api.interceptors.response.use(
         await delay(backoffMs);
         return api(originalRequest);
       }
+
+      const currentBaseUrl = String(originalRequest?.baseURL || api.defaults.baseURL || '');
+      const hasTriedSameOriginFallback = Boolean(originalRequest?._sameOriginFallbackTried);
+      const canFallbackToSameOrigin = !hasTriedSameOriginFallback && currentBaseUrl !== SAME_ORIGIN_API_BASE_URL;
+      if (canFallbackToSameOrigin) {
+        originalRequest._sameOriginFallbackTried = true;
+        originalRequest._networkRetryCount = 0;
+        originalRequest.baseURL = SAME_ORIGIN_API_BASE_URL;
+        emitDiagnosticEvent('warn', 'api_network_fallback_same_origin', {
+          previousBaseUrl: currentBaseUrl,
+          fallbackBaseUrl: SAME_ORIGIN_API_BASE_URL,
+          workflow: originalRequest?.metadata?.workflow,
+          correlationId: originalRequest?.metadata?.correlationId,
+        });
+        return api(originalRequest);
+      }
+
       const message = 'Network error. Please check your connection and retry.';
       sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
         message,
