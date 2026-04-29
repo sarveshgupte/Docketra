@@ -5,6 +5,13 @@ const { REASON_CODES, logPilotEvent } = require('./pilotDiagnostics.service');
 const isProduction = () => process.env.NODE_ENV === 'production';
 const resolveCookieCrossSiteMode = () => String(process.env.AUTH_COOKIE_CROSS_SITE || '').trim().toLowerCase() === 'true';
 const isAuthDebugDiagnosticsEnabled = () => String(process.env.AUTH_DEBUG_DIAGNOSTICS || '').trim().toLowerCase() === 'true';
+const cookieDomainWarnings = new Set();
+const warnCookieDomainOnce = (code, details = {}) => {
+  const key = `${code}:${JSON.stringify(details)}`;
+  if (cookieDomainWarnings.has(key)) return;
+  cookieDomainWarnings.add(key);
+  log.warn(code, details);
+};
 
 const normalizedCookieSameSite = () => {
   const configured = String(process.env.AUTH_COOKIE_SAMESITE || '').trim().toLowerCase();
@@ -22,8 +29,12 @@ const normalizedCookieDomain = () => {
   const configured = String(process.env.AUTH_COOKIE_DOMAIN || '').trim();
   if (!configured) return null;
   const normalized = configured.replace(/^https?:\/\//i, '').replace(/\/.*$/, '').trim().toLowerCase();
-  if (!normalized || normalized.includes(':')) return null;
+  if (!normalized || normalized.includes(':')) {
+    warnCookieDomainOnce('AUTH_COOKIE_DOMAIN_INVALID', { configured });
+    return null;
+  }
   if (normalized === 'localhost' || normalized.endsWith('.onrender.com') || normalized === 'onrender.com') {
+    warnCookieDomainOnce('AUTH_COOKIE_DOMAIN_HOST_ONLY_REQUIRED', { configured: normalized });
     return null;
   }
   return normalized;
