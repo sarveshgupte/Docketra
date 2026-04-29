@@ -136,7 +136,9 @@ const getUserFirmContext = (user = null, requestJwt = null) => {
 const ensureUserDefaultClientLink = async (user, req = null) => {
   const firmMongoId = normalizeMongoId(user?.firmId?._id || user?.firmId);
   if (!firmMongoId) {
-    throw new Error('MISSING_FIRM_CONTEXT');
+    const error = new Error('MISSING_FIRM_CONTEXT');
+    error.code = 'MISSING_FIRM_CONTEXT';
+    throw error;
   }
 
   let defaultClient = null;
@@ -157,8 +159,19 @@ const ensureUserDefaultClientLink = async (user, req = null) => {
       userId: user._id,
       requestId: req?.id || req?.requestId || null,
     });
+    if (!defaultClient?._id) {
+      const error = new Error('DEFAULT_CLIENT_REQUIRED');
+      error.code = 'DEFAULT_CLIENT_REQUIRED';
+      throw error;
+    }
     user.defaultClientId = defaultClient._id;
     await user.save();
+  }
+
+  if (!defaultClient?._id) {
+    const error = new Error('DEFAULT_CLIENT_REQUIRED');
+    error.code = 'DEFAULT_CLIENT_REQUIRED';
+    throw error;
   }
 
   return defaultClient;
@@ -298,6 +311,10 @@ const getLoginOtpConfig = () => (
 const getTwoFactorSecret = (user) => decryptProtectedValue(user?.twoFactorSecret);
 
 const logLoginOtpEvent = (event, req, user, metadata = {}) => {
+  const maskedEmail = user?.email ? emailService.maskEmail(user.email) : null;
+  const maskedXid = user?.xID
+    ? `${String(user.xID).slice(0, 2)}***${String(user.xID).slice(-2)}`
+    : null;
   log.info(event, {
     req: {
       requestId: req?.requestId || req?.id || null,
@@ -305,8 +322,8 @@ const logLoginOtpEvent = (event, req, user, metadata = {}) => {
       path: req?.originalUrl || req?.url,
     },
     userId: user?._id || null,
-    userXID: user?.xID || null,
-    email: user?.email || null,
+    userXID: maskedXid,
+    email: maskedEmail,
     firmId: user?.firmId || null,
     firmSlug: req?.params?.firmSlug || req?.firmSlug || metadata.firmSlug || null,
     ...metadata,
@@ -1619,11 +1636,11 @@ const getProfile = async (req, res) => {
       });
     }
 
-    // Harden profile fetch: heal missing/stale default-client linkage without middleware writes.
+    // Default client is mandatory for tenant workspace bootstrapping.
     try {
       await ensureUserDefaultClientLink(dbUser, req);
     } catch (defaultClientError) {
-      log.error('[AUTH] AUTH_FAILED_TO_SELF_HEAL_DEFAULT_CLIENT_DURING_PROFILE_FETCH', {
+      log.error('[AUTH] AUTH_FAILED_TO_RESOLVE_DEFAULT_CLIENT_DURING_PROFILE_FETCH', {
         requestId: req.id || req.requestId || null,
         userId: normalizeMongoId(dbUser?._id),
         firmMongoId,
@@ -1634,7 +1651,8 @@ const getProfile = async (req, res) => {
       });
       return res.status(503).json({
         success: false,
-        message: 'Unable to resolve account context. Please try again.',
+        code: 'DEFAULT_CLIENT_CONTEXT_UNAVAILABLE',
+        message: 'Workspace context could not be loaded. Please retry or contact support.',
       });
     }
     const resolvedDefaultClientId = normalizeMongoId(req.jwt?.defaultClientId) || normalizeMongoId(dbUser.defaultClientId);
@@ -1793,6 +1811,11 @@ const getProfile = async (req, res) => {
       redirectTo: resolvedFirmSlug ? `/app/firm/${resolvedFirmSlug}/dashboard` : '/complete-profile',
     });
   } catch (error) {
+    log.error('[AUTH][profile] failed to fetch profile', {
+      requestId: req?.id || req?.requestId || null,
+      userId: normalizeMongoId(req?.user?._id),
+      error: error?.message,
+    });
     res.status(500).json({
       success: false,
       message: 'Error fetching profile',
