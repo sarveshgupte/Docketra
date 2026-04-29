@@ -56,10 +56,24 @@ export function StorageSettingsPage() {
     try {
       const data = await getStorageConfiguration();
       setConfig(data);
-      const summary = await getStorageOwnershipSummary();
-      setOwnershipSummary(summary);
-      const exportData = await listStorageExports(10);
-      setExportRuns(Array.isArray(exportData?.data) ? exportData.data : []);
+
+      const [summaryResult, exportsResult] = await Promise.allSettled([
+        getStorageOwnershipSummary(),
+        listStorageExports(10),
+      ]);
+
+      if (summaryResult.status === 'fulfilled') {
+        setOwnershipSummary(summaryResult.value);
+      } else {
+        setOwnershipSummary(null);
+      }
+
+      if (exportsResult.status === 'fulfilled') {
+        const exportData = exportsResult.value;
+        setExportRuns(Array.isArray(exportData?.data) ? exportData.data : []);
+      } else {
+        setExportRuns([]);
+      }
     } catch (error) {
       const recovery = getRecoveryPayload(error, 'storage_settings');
       setLoadError(`${recovery.copy.message} ${recovery.copy.action}`);
