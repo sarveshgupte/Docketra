@@ -17,11 +17,11 @@
     "test:security": "node tests/securityHardening.test.js && node tests/coreSecurityHardeningPhase2.test.js && node tests/csrfOrigin.middleware.test.js && node tests/authSession.refreshAccessToken.test.js",
     "test:hardening": "node tests/requestId.middleware.test.js && node tests/productionHardening.test.js && node tests/backendRuntimeEntrypoints.smoke.test.js",
     "test": "npm run test:integrity && npm run test:security && npm run test:hardening && node tests/fileUtils.test.js && node tests/reports.controller.test.js",
-    "validate:env": "node -e \"process.env.NODE_ENV=process.env.NODE_ENV||'test'; process.env.JWT_SECRET=process.env.JWT_SECRET||'0123456789abcdef0123456789abcdef'; process.env.SUPERADMIN_PASSWORD_HASH=process.env.SUPERADMIN_PASSWORD_HASH||'\\\\\\$2b\\\\\\$10\\\\\\$replace_this_with_a_real_bcrypt_hash_before_deploying'; process.env.SUPERADMIN_XID=process.env.SUPERADMIN_XID||'X000001'; process.env.SUPERADMIN_EMAIL=process.env.SUPERADMIN_EMAIL||'superadmin@example.com'; process.env.SUPERADMIN_OBJECT_ID=process.env.SUPERADMIN_OBJECT_ID||'000000000000000000000001'; process.env.MONGO_URI=process.env.MONGO_URI||'mongodb://127.0.0.1:27017/docketra'; process.env.ENCRYPTION_PROVIDER=process.env.ENCRYPTION_PROVIDER||'disabled'; require('./src/config/validateEnv').validateEnv();\"",
+    "validate:env": "node -e \"require('./src/config/validateEnv').validateEnv();\"",
     "ci:backend:syntax": "npm run lint",
     "ci:backend:routes": "node tests/routeValidationContract.test.js",
     "ci:backend:core": "npm run test:integrity",
-    "ci:backend:security": "npm run validate:env && npm run test:security && npm run test:hardening",
+    "ci:backend:security": "npm run validate:env:test && npm run validate:env:production && npm run test:security && npm run test:hardening",
     "ci:frontend:install": "npm --prefix ui install --include=dev",
     "ci:frontend:build": "npm --prefix ui run build",
     "ci:frontend:checks": "npm --prefix ui run test:ci",
@@ -33,7 +33,9 @@
     "migration:rollback_starter_plan_fields": "node scripts/migrations/add_starter_plan_fields.js down",
     "worker": "node src/workers/bulkUpload.worker.js",
     "migrate:rbac-team": "node src/scripts/migrateRbacTeamHierarchy.js",
-    "seed:rbac-team": "node src/scripts/seedRbacHierarchy.js"
+    "seed:rbac-team": "node src/scripts/seedRbacHierarchy.js",
+    "validate:env:production": "node -e \"process.env.NODE_ENV='production'; process.env.PORT='5000'; process.env.MONGO_URI='mongodb://127.0.0.1:27017/test'; process.env.REDIS_URL='redis://127.0.0.1:6379'; process.env.JWT_SECRET='A'.repeat(64); process.env.JWT_PASSWORD_SETUP_SECRET='B'.repeat(64); process.env.SUPERADMIN_PASSWORD_HASH='\\\\\\$2b\\\\\\$10\\\\\\$wioLOkqqceK.iu9MZavNOua7yV2AzOpqlR4fuMWHf2.YeYpV4mEFC'; process.env.SUPERADMIN_XID='X000001'; process.env.SUPERADMIN_EMAIL='superadmin@example.com'; process.env.SUPERADMIN_OBJECT_ID='000000000000000000000001'; process.env.ENCRYPTION_PROVIDER='local'; process.env.MASTER_ENCRYPTION_KEY='f'.repeat(64); process.env.METRICS_TOKEN='C'.repeat(64); process.env.STORAGE_TOKEN_SECRET='D'.repeat(64); process.env.UPLOAD_SCAN_STRICT='true'; process.env.AUTH_DEBUG_DIAGNOSTICS='false'; process.env.DISABLE_GOOGLE_AUTH='true'; process.env.ENABLE_EXTERNAL_STORAGE='false'; require('./src/config/validateEnv').validateEnv();\"",
+    "validate:env:test": "node -e \"process.env.NODE_ENV='test'; process.env.JWT_SECRET=process.env.JWT_SECRET||'0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'; process.env.JWT_PASSWORD_SETUP_SECRET=process.env.JWT_PASSWORD_SETUP_SECRET||'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789'; process.env.SUPERADMIN_PASSWORD_HASH=process.env.SUPERADMIN_PASSWORD_HASH||'\\\\\\$2b\\\\\\$10\\\\\\$wioLOkqqceK.iu9MZavNOua7yV2AzOpqlR4fuMWHf2.YeYpV4mEFC'; process.env.SUPERADMIN_XID=process.env.SUPERADMIN_XID||'X000001'; process.env.SUPERADMIN_EMAIL=process.env.SUPERADMIN_EMAIL||'superadmin@example.com'; process.env.SUPERADMIN_OBJECT_ID=process.env.SUPERADMIN_OBJECT_ID||'000000000000000000000001'; process.env.MONGO_URI=process.env.MONGO_URI||'mongodb://127.0.0.1:27017/docketra'; process.env.ENCRYPTION_PROVIDER=process.env.ENCRYPTION_PROVIDER||'disabled'; require('./src/config/validateEnv').validateEnv();\""
   },
   "keywords": [
     "task-management",
