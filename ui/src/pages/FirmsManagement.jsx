@@ -839,3 +839,6 @@ export const FirmsManagement = () => {
     </ErrorBoundary>
   );
 };
+
+
+export default FirmsManagement;
