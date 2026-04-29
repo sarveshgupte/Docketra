@@ -11,6 +11,7 @@ const NAV_BLUEPRINT = [
       {
         id: 'docket-workbench',
         label: 'Docket Workbench',
+        icon: '🗂️',
         route: (firmSlug) => ROUTES.TASK_MANAGER(firmSlug),
         command: {
           id: 'go-docket-workbench',
@@ -22,6 +23,7 @@ const NAV_BLUEPRINT = [
       {
         id: 'dashboard',
         label: 'Dashboard',
+        icon: '🏠',
         route: (firmSlug) => ROUTES.DASHBOARD(firmSlug),
         command: {
           id: 'go-dashboard',
@@ -38,6 +40,7 @@ const NAV_BLUEPRINT = [
       {
         id: 'intake',
         label: 'Intake (CMS)',
+        icon: '📥',
         route: (firmSlug) => ROUTES.CMS(firmSlug),
         minRole: 'ADMIN',
         command: {
@@ -49,6 +52,7 @@ const NAV_BLUEPRINT = [
       {
         id: 'crm',
         label: 'Pipeline (CRM)',
+        icon: '🧭',
         route: (firmSlug) => ROUTES.CRM(firmSlug),
         minRole: 'ADMIN',
         command: {
@@ -60,6 +64,7 @@ const NAV_BLUEPRINT = [
       {
         id: 'clients',
         label: 'Clients',
+        icon: '👥',
         route: (firmSlug) => ROUTES.CLIENTS(firmSlug),
         minRole: 'ADMIN',
         command: {
@@ -76,6 +81,7 @@ const NAV_BLUEPRINT = [
       {
         id: 'reports',
         label: 'Reports',
+        icon: '📊',
         route: (firmSlug) => ROUTES.ADMIN_REPORTS(firmSlug),
         minRole: 'ADMIN',
         activeMatch: 'exactOrDescendant',
@@ -93,6 +99,7 @@ const NAV_BLUEPRINT = [
       {
         id: 'team-access',
         label: 'Team & Access',
+        icon: '🛡️',
         route: (firmSlug) => ROUTES.ADMIN(firmSlug),
         minRole: 'ADMIN',
         activeMatch: 'exactOrDescendant',
@@ -106,6 +113,7 @@ const NAV_BLUEPRINT = [
       {
         id: 'settings',
         label: 'Settings',
+        icon: '⚙️',
         route: (firmSlug) => ROUTES.SETTINGS(firmSlug),
         minRole: 'ADMIN',
         activeMatch: 'exactOrDescendant',
@@ -122,6 +130,7 @@ const NAV_BLUEPRINT = [
 const toResolvedNavItem = (item, firmSlug) => ({
   id: item.id,
   label: item.label,
+  icon: item.icon || '•',
   to: item.route(firmSlug),
   activeMatch: item.activeMatch,
   excludeActiveFor: typeof item.excludeActiveFor === 'function' ? item.excludeActiveFor(firmSlug) : item.excludeActiveFor,
