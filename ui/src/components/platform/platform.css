@@ -88,6 +88,16 @@
   line-height: 1.2;
 }
 
+.platform__sidebar--collapsed .platform__nav-link {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.platform__nav-link-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
 .platform__nav-link:hover {
   background: var(--dt-surface-muted);
 }
