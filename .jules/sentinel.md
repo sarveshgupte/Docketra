@@ -16,3 +16,7 @@
 **Vulnerability:** Debug routes were globally imported and advertised in the public-facing root `/api` discovery endpoint, even if they were gated for mounting.
 **Learning:** Top-level `require` statements load modules into memory regardless of runtime conditions, and static endpoint maps in API discovery routes can leak internal infrastructure details.
 **Prevention:** Use conditional lazy loading (`require` inside an environment check) to reduce production footprint and ensure discovery endpoints dynamically reflect available routes based on the environment.
+## 2026-04-29 - HTTP Response Splitting/Header Injection via File Names
+**Vulnerability:** User-controlled filenames were interpolated directly into the `Content-Disposition` header during file downloads without sanitization.
+**Learning:** If a filename contains newline characters (`\r\n`), an attacker can inject arbitrary HTTP headers, potentially leading to XSS or cache poisoning.
+**Prevention:** Always wrap untrusted filenames in a sanitization function (e.g., `sanitizeFilename`) to strip control characters before setting headers.
