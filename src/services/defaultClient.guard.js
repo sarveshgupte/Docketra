@@ -3,6 +3,22 @@ const { generateNextClientId } = require('./clientIdGenerator');
 const { resolveClientOwnershipFirmId } = require('./tenantIdentity.service');
 const log = require('../utils/log');
 
+const normalizeFirmMongoId = (value) => {
+  if (!value) return null;
+  if (typeof value === 'object' && value._id) {
+    return normalizeFirmMongoId(value._id);
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed && trimmed !== '[object Object]' ? trimmed : null;
+  }
+  if (typeof value.toString === 'function') {
+    const serialized = value.toString().trim();
+    return serialized && serialized !== '[object Object]' ? serialized : null;
+  }
+  return null;
+};
+
 /**
  * Build a non-routable internal email address for system-created default clients.
  * The tenant identifier is reduced to lowercase alphanumeric characters so the
@@ -35,7 +51,8 @@ const findDefaultClient = (firmId, session = null) => {
 };
 
 const getOrCreateDefaultClient = async (firmId, options = {}) => {
-  if (!firmId) {
+  const normalizedFirmMongoId = normalizeFirmMongoId(firmId);
+  if (!normalizedFirmMongoId) {
     throw new Error('firmId is required to get or create the default client');
   }
 
@@ -45,26 +62,30 @@ const getOrCreateDefaultClient = async (firmId, options = {}) => {
     userId = null,
     session = null,
   } = options;
-  const ownershipFirmId = await resolveClientOwnershipFirmId(firmId, { session });
+  const ownershipFirmId = await resolveClientOwnershipFirmId(normalizedFirmMongoId, { session });
+  const normalizedOwnershipFirmId = normalizeFirmMongoId(ownershipFirmId);
+  if (!normalizedOwnershipFirmId) {
+    throw new Error('firmId could not be normalized for default client resolution');
+  }
   try {
-    const existingDefaultClient = await findDefaultClient(ownershipFirmId, session);
+    const existingDefaultClient = await findDefaultClient(normalizedOwnershipFirmId, session);
     if (existingDefaultClient) {
       return existingDefaultClient;
     }
-    const clientId = await generateNextClientId(ownershipFirmId, session);
+    const clientId = await generateNextClientId(normalizedOwnershipFirmId, session);
     const defaultClient = await Client.findOneAndUpdate(
-      { firmId: ownershipFirmId, isDefaultClient: true },
+      { firmId: normalizedOwnershipFirmId, isDefaultClient: true },
       {
         $setOnInsert: {
           clientId,
-          firmId: ownershipFirmId,
+          firmId: normalizedOwnershipFirmId,
           isDefaultClient: true,
           isSystemClient: true,
           isInternal: true,
           createdBySystem: true,
           businessName: firmName || 'Default Client',
           primaryContactNumber: '0000000000',
-          businessEmail: buildSystemEmail(ownershipFirmId),
+          businessEmail: buildSystemEmail(normalizedOwnershipFirmId),
           status: 'ACTIVE',
           isActive: true,
           createdByXid: 'SYSTEM',
@@ -81,14 +102,14 @@ const getOrCreateDefaultClient = async (firmId, options = {}) => {
     return defaultClient;
   } catch (error) {
     if (error?.code === 11000) {
-      const repairedClient = await findDefaultClient(ownershipFirmId, session);
+      const repairedClient = await findDefaultClient(normalizedOwnershipFirmId, session);
       if (repairedClient) {
         return repairedClient;
       }
     }
 
     log.error('[DEFAULT_CLIENT] getOrCreateDefaultClient failed', {
-      firmId,
+      firmId: normalizedFirmMongoId,
       requestId,
       userId,
       error: error.message,
