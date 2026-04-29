@@ -185,7 +185,14 @@ const getClients = async (req, res) => {
     // When older tenants are missing this record, admin client listing can fail
     // across related flows (case creation, permissions, and client management).
     const firm = await Firm.findById(accessContext.firmId).select('_id name defaultClientId');
-    await ensureDefaultClientForFirm(firm || accessContext.firmId);
+    try {
+      await ensureDefaultClientForFirm(firm || accessContext.firmId);
+    } catch (defaultClientError) {
+      log.warn('CLIENT_DEFAULT_SELF_HEAL_FAILED', buildClientLogContext(req, {
+        firmId: String(accessContext.firmId || ''),
+        message: defaultClientError.message,
+      }));
+    }
 
     setNoCacheHeaders(res);
     const { activeOnly, forCreateCase, search } = req.query;
