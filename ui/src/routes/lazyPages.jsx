@@ -24,7 +24,7 @@ const importWithRetry = async (importer, attempts = 2) => {
 
 const lazyPage = (importer, exportName) => lazy(async () => {
   const module = await importWithRetry(importer);
-  const pageExport = module?.[exportName];
+  const pageExport = module?.[exportName] ?? module?.default;
 
   if (!pageExport) {
     throw new Error(`Missing expected export "${exportName}" in lazy module.`);
