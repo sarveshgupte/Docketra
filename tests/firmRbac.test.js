@@ -7,6 +7,7 @@
 const assert = require('assert');
 const Firm = require('../src/models/Firm.model');
 const User = require('../src/models/User.model');
+const Client = require('../src/models/Client.model');
 const { attachFirmContext } = require('../src/middleware/firmContext.middleware');
 const { authorizeFirmPermission } = require('../src/middleware/permission.middleware');
 const requireTenant = require('../src/middleware/requireTenant');
