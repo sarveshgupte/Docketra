@@ -931,7 +931,7 @@ const generateClientFactSheetPdf = async (req, res) => {
     if (!/^[A-Za-z0-9_-]+$/.test(String(clientId || ''))) {
       return res.status(400).json({ success: false, message: 'Invalid clientId format' });
     }
-    // 💡 What: Replaced sequential parent/child queries with concurrent Promise.all() execution.
+    // 💡 What: Replaced sequential database queries (`Client.findOne`, `Case.find`, `Case.distinct`) with concurrent execution via `Promise.all`.
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const [client, activeCases, clientCaseIds] = await Promise.all([
       Client.findOne({ clientId, firmId }).lean().exec(),
