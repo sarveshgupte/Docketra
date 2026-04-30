@@ -59,6 +59,14 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
     return <Navigate to={loginPathWithReturnTo} replace />;
   }
 
+  if (!requireSuperadmin && routeFirmSlug && isSuperAdminUser) {
+    return <Navigate to={ROUTES.SUPERADMIN_DASHBOARD} replace />;
+  }
+
+  if (!requireSuperadmin && routeFirmSlug && user?.firmSlug && user.firmSlug !== routeFirmSlug) {
+    return <Navigate to={ROUTES.DASHBOARD(user.firmSlug)} replace />;
+  }
+
   if (hasInvalidRouteFirmSlug && !requireSuperadmin) {
     return <Navigate to={ROUTES.PUBLIC_LOGIN} replace />;
   }
@@ -87,7 +95,7 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
   // 4. Firm route authorization: SuperAdmin users cannot access firm routes
   // They use a separate routing namespace (/superadmin)
   if (!requireSuperadmin && isSuperAdminUser) {
-    return <Navigate to="/superadmin" replace />;
+    return <Navigate to={ROUTES.SUPERADMIN_DASHBOARD} replace />;
   }
 
   // 5. Admin-only route authorization

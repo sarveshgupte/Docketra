@@ -22,12 +22,24 @@ assert(
   'API interceptor should avoid hard-redirect loops when the user is already on a login route.'
 );
 assert(
+  apiSource.includes('skipAuthRedirect'),
+  'API interceptor should support explicit skipAuthRedirect metadata for public-page profile checks.'
+);
+assert(
+  apiSource.includes('isPublicAuthPage && isAuthStateRequest'),
+  'API interceptor should suppress auth redirect/refresh handling for profile/refresh on public auth pages.'
+);
+assert(
   authContextSource.includes('authFailureResolvedRef'),
   'AuthContext should keep a resolved-unauthenticated guard to prevent repeated profile hydration loops.'
 );
 assert(
   authContextSource.includes('Skipping profile fetch after resolved unauthenticated state'),
   'AuthContext should explicitly short-circuit profile hydration after refresh failure.'
+);
+assert(
+  authContextSource.includes('getProfile({ skipAuthRedirect: true })'),
+  'AuthContext bootstrap profile hydration should skip interceptor-driven auth redirects.'
 );
 assert(
   authContextSource.includes('queryClient.clear();'),

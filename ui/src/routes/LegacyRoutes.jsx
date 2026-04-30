@@ -3,6 +3,9 @@ import { Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { DefaultRoute } from '../components/routing/DefaultRoute';
 import { NotFoundPage } from './lazyPages';
 import { RouteSuspenseOutlet } from './RouteSuspenseOutlet';
+import { useAuth } from '../hooks/useAuth';
+import { isSuperAdmin } from '../utils/authUtils';
+import { sanitizeFirmSlug } from '../utils/tenantRouting';
 
 const LEGACY_SLUG_BLOCKLIST = new Set([
   'about',
@@ -44,10 +47,25 @@ const LegacyFirmRedirect = () => {
 const LegacySlugRedirect = () => {
   const { firmSlug, '*': legacyPath = '' } = useParams();
   const location = useLocation();
+  const { isAuthResolved, isAuthenticated, user } = useAuth();
   const normalizedFirmSlug = (firmSlug || '').toLowerCase();
 
   if (!FIRM_SLUG_PATTERN.test(normalizedFirmSlug) || LEGACY_SLUG_BLOCKLIST.has(normalizedFirmSlug)) {
     return <NotFoundPage />;
+  }
+
+  if (!isAuthResolved) {
+    return null;
+  }
+
+  const userFirmSlug = sanitizeFirmSlug(user?.firmSlug);
+  const canAccessFirmApp = isAuthenticated
+    && !isSuperAdmin(user)
+    && userFirmSlug
+    && userFirmSlug === normalizedFirmSlug;
+
+  if (!canAccessFirmApp) {
+    return <Navigate to={`/${normalizedFirmSlug}/login${location.search || ''}`} replace />;
   }
 
   const suffix = legacyPath ? `/${legacyPath}` : DEFAULT_FIRM_SUFFIX;
