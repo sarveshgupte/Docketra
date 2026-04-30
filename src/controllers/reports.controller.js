@@ -931,24 +931,22 @@ const generateClientFactSheetPdf = async (req, res) => {
     if (!/^[A-Za-z0-9_-]+$/.test(String(clientId || ''))) {
       return res.status(400).json({ success: false, message: 'Invalid clientId format' });
     }
+    // 💡 What: Replaced sequential parent/child queries with concurrent Promise.all() execution.
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
-    const client = await Client.findOne({ clientId, firmId }).lean();
+    const [client, activeCases, clientCaseIds] = await Promise.all([
+      Client.findOne({ clientId, firmId }).lean().exec(),
+      Case.find({
+        firmId,
+        clientId,
+        status: { $in: ['UNASSIGNED', 'OPEN', 'PENDING', 'UNDER_REVIEW', 'SUBMITTED', 'APPROVED'] },
+      }).select('caseId caseNumber title status').lean().exec(),
+      Case.find({ firmId, clientId }).distinct('_id').exec(),
+    ]);
 
     if (!client) {
       return res.status(404).json({ success: false, message: 'Client not found' });
     }
 
-    // SECURITY: Enforcing tenant isolation (firm-scoped query)
-    const activeCases = await Case.find({
-      firmId,
-      clientId,
-      status: { $in: ['UNASSIGNED', 'OPEN', 'PENDING', 'UNDER_REVIEW', 'SUBMITTED', 'APPROVED'] },
-    })
-      .select('caseId caseNumber title status')
-      .lean();
-
-    // SECURITY: Enforcing tenant isolation (firm-scoped query)
-    const clientCaseIds = await Case.find({ firmId, clientId }).distinct('_id');
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const pendingTasks = await Task.find({
       firmId,
