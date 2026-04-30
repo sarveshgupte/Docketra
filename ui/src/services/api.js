@@ -58,6 +58,8 @@ const isPublicAuthPagePath = (pathname) => {
   if (!value) return false;
   if (value === '/' || value === '/login' || value === '/superadmin' || value === '/superadmin/login') return true;
   if (value === '/forgot-password' || value === '/reset-password' || value === '/auth/otp') return true;
+  if (value === '/signup' || value === '/auth/setup-account' || value === '/setup-password') return true;
+  if (/^\/[a-z0-9]+(?:-[a-z0-9]+)*\/forgot-password$/i.test(value)) return true;
   if (/^\/[a-z0-9]+(?:-[a-z0-9]+)*\/login$/i.test(value)) return true;
   return false;
 };
@@ -214,6 +216,12 @@ api.interceptors.response.use(
     }
     const hasResponse = !!error.response;
     const firmSlug = localStorage.getItem(STORAGE_KEYS.FIRM_SLUG);
+    const currentPath = String(window.location.pathname || '');
+    const isPublicAuthPage = isPublicAuthPagePath(currentPath);
+    const isProfileRequest = /\/auth\/profile$/.test(String(originalRequest?.url || ''));
+    const isAuthStateRequest = isProfileRequest || isRefreshRequest(originalRequest);
+    const skipAuthRedirect = Boolean(originalRequest?.metadata?.skipAuthRedirect);
+    const shouldSuppressPublicAuthHandling = isPublicAuthPage && isAuthStateRequest;
     const redirectToLogin = () => {
       if (redirecting) return;
       redirecting = true;
@@ -278,6 +286,9 @@ api.interceptors.response.use(
     
     // Handle token expiry
     if (status === 401 && refreshFailureDetected && !isPublicAuthFlowRequest(originalRequest)) {
+      if (shouldSuppressPublicAuthHandling || skipAuthRedirect) {
+        return Promise.reject(error);
+      }
       clearAuthStorage();
       redirectToLogin();
       return Promise.reject(error);
@@ -288,6 +299,8 @@ api.interceptors.response.use(
       && !originalRequest._retry
       && !isPublicAuthFlowRequest(originalRequest)
       && !isRefreshRequest(originalRequest)
+      && !(isPublicAuthPage && isProfileRequest)
+      && !skipAuthRedirect
     ) {
       originalRequest._retry = true;
       
@@ -318,7 +331,7 @@ api.interceptors.response.use(
     
     // Handle other 401 errors (invalid token, etc.)
     if (status === 401) {
-      if (isPublicAuthFlowRequest(originalRequest)) {
+      if (isPublicAuthFlowRequest(originalRequest) || shouldSuppressPublicAuthHandling || skipAuthRedirect) {
         return Promise.reject(error);
       }
       clearAuthStorage();
