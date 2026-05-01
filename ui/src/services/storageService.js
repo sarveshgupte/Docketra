@@ -20,6 +20,7 @@ export async function getStorageOwnershipSummary() {
 }
 
 export async function sendStorageChangeOtp(email) {
+  // AUTH_CONTRACT_ALLOWLIST: legacy OTP endpoint retained for storage change step-up verification.
   const response = await api.post('/auth/send-otp', {
     email,
     purpose: 'storage_change',
@@ -28,6 +29,7 @@ export async function sendStorageChangeOtp(email) {
 }
 
 export async function verifyStorageChangeOtp(identifier, code) {
+  // AUTH_CONTRACT_ALLOWLIST: legacy OTP endpoint retained for storage change step-up verification.
   const response = await api.post('/auth/verify-otp', {
     identifier,
     code,
