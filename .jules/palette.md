@@ -20,3 +20,6 @@
 ## 2025-04-29 - Dynamic Action Buttons
 **Learning:** When rendering lists of items with generic action buttons (e.g., 'Open', 'View') that have dynamic inner text states, applying `aria-label` directly to the container overrides the visible text for screen readers. This breaks the connection between visual content and screen reader output.
 **Action:** Avoid applying `aria-label` to containers with visible text. Instead, wrap the generic visible text in `<span aria-hidden="true">` and append a `<span className="sr-only">` containing both the action and the specific item identifier.
+## 2026-04-19 - SuperAdmin Layout Accessibility improvements
+**Learning:** The SuperAdminLayout component had missing landmark roles, active states for screen readers, and focus indicators for interactive elements.
+**Action:** Add `aria-label` attributes to `<aside>` and `<nav>` elements, add `aria-label` and `focus-visible` classes to logout buttons, and use `aria-current="page"` on active navigation links across the platform.

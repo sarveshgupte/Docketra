@@ -105,6 +105,34 @@ const tenantResolver = require('../middleware/tenantResolver');
 const { login } = require('../controllers/auth.controller');
 const mutatingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const forceTransactionPaths = ['/google/callback', '/my-pending'];
+const RESERVED_FIRM_SLUGS = [
+  'auth',
+  'public',
+  'superadmin',
+  'users',
+  'admin',
+  'dashboard',
+  'dockets',
+  'clients',
+  'settings',
+  'reports',
+  'security',
+  'tenant',
+  'files',
+  'storage',
+  'ai',
+  'notifications',
+  'teams',
+  'bulk-upload',
+  'product-updates',
+  'cases',
+  'tasks',
+  'search',
+  'worklists',
+  'attachments',
+  'firm',
+];
+const firmSlugMatcher = `/api/:firmSlug((?!${RESERVED_FIRM_SLUGS.join('|')}$)[a-z0-9-]+)`;
 const writeGuardChain = (req, res, next) => {
   const shouldForceTransaction = forceTransactionPaths.some((path) => req.path && req.path.startsWith(path));
   if (!mutatingMethods.has(req.method) && !shouldForceTransaction) {
@@ -387,6 +415,11 @@ const createApp = () => {
     return res.redirect(301, `/${req.params.firmSlug}/login`);
   });
 
+  // Firm-scoped public login + OTP routes
+  // Register before protected '/api' tenant middleware mounts so '/api/:firmSlug/*'
+  // login and metadata requests are never intercepted by auth middleware.
+  app.use(firmSlugMatcher, firmRoutes);
+
   // Auth routes (excluding login endpoints)
   ['/api/auth', '/auth'].forEach((basePath) => {
     app.use(basePath, writeGuardChain, authRoutes);
@@ -472,15 +505,11 @@ const createApp = () => {
   app.use('/api/files', authLimiter, ...tenantScopedApiAccess, writeGuardChain, filesRoutes);
   app.use('/api/tenant', authLimiter, ...tenantScopedApiAccess, writeGuardChain, tenantRoutes);
   app.use('/api/docket-storage', authLimiter, ...tenantScopedApiAccess, writeGuardChain, docketFileStorageRoutes);
-  // Firm-scoped API auth routes for tenant login and OTP verification.
-  // IMPORTANT: Register before generic '/api' mounts so '/api/:firmSlug/*'
-  // requests are not intercepted by tenant-authenticated API middleware.
   app.use('/api/notifications', ...tenantScopedApiAccess, writeGuardChain, notificationsRoutes);
   app.use('/api/teams', ...tenantScopedApiAccess, writeGuardChain, teamRoutes);
   app.use('/api/bulk-upload', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), bulkUploadRoutes);
   app.use('/api/product-updates', authenticate, writeGuardChain, productUpdateRoutes);
   app.use('/api/settings', ...tenantScopedApiAccess, writeGuardChain, settingsRoutes);
-  app.use('/api/:firmSlug', firmRoutes);
   app.use('/api', authLimiter, ...tenantScopedApiAccess, writeGuardChain, docketFileStorageRoutes);
 
   // Legacy /f routes removed: tenant login is available only on /:firmSlug/login and /api/:firmSlug/login

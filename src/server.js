@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const log = require('./utils/log');
 const { startServer } = require('./runtime/startServer');
 
