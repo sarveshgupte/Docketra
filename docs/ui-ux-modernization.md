@@ -258,6 +258,8 @@ This PR was expanded (still presentation-only and low-risk) to cover more of the
 
 ### Post-review corrections (PR 3 follow-up)
 
+---
+
 #### Corrections made
 1. **CasesPage layout consistency tightened (low-risk):**
    - Removed mixed usage of platform section wrappers in `CasesPage` and kept the page on its established app-level layout (`PageHeader` + `SectionCard` + app `DataTable`) to avoid half-platform/half-legacy visual drift.
@@ -341,3 +343,326 @@ This PR was expanded (still presentation-only and low-risk) to cover more of the
 - Apply the same spacing, typography, and feedback hierarchy to public/embedded form render surfaces.
 - Introduce a reusable warning badge/tone contract for queue tables.
 - Keep submission behavior, routing, and API payload contracts unchanged.
+
+---
+
+## Foundation PR scope (Docketra-native design language tokens)
+
+### Scope completed in this PR
+- Added a Docketra-native `--dt-*` design token layer (warm surfaces, near-black text, whisper borders, accent/focus, semantic colors, radius, shadows, typography primitives).
+- Mapped shared primitives to the token layer with no component API break:
+  - `Button`, `Card`, `Badge`, `Input`, `Select`, `Textarea`, `EmptyState`, `Modal`, `PageHeader`, `Table`, `DataTable`.
+- Updated platform shared surfaces (`platform.css`) to consume Docketra tokens for shell, notices, controls, and table wrappers.
+- Updated design contract docs and added a standalone design language specification for phased rollout.
+
+### Exact files changed
+- `ui/src/assets/styles/tokens.css`
+- `ui/src/theme/tokens.js`
+- `ui/src/components/common/Button.jsx`
+- `ui/src/components/common/Card.jsx`
+- `ui/src/components/common/Badge.jsx`
+- `ui/src/components/common/FormLabel.jsx`
+- `ui/src/components/common/Input.jsx`
+- `ui/src/components/common/Select.jsx`
+- `ui/src/components/common/Textarea.jsx`
+- `ui/src/components/ui/EmptyState.jsx`
+- `ui/src/components/common/Modal.jsx`
+- `ui/src/components/layout/PageHeader.jsx`
+- `ui/src/components/common/Table.jsx`
+- `ui/src/components/common/DataTable.jsx`
+- `ui/src/components/platform/platform.css`
+- `ui/src/assets/styles/enterprise.css`
+- `docs/ui/design-system-contract.md`
+- `docs/ui/docketra-design-language.md`
+- `docs/ui-ux-modernization.md`
+
+### Before / after UX impact
+- **Before:** multiple cold grays, mixed focus ring styles, and hardcoded control/table colors across shared primitives.
+- **After:** shared primitives and shell surfaces now render from one warm-professional token source with consistent focus visibility and semantic state tones.
+
+### Remaining gaps
+1. Some legacy route-level CSS still uses hardcoded slate/gray tokens.
+2. Marketing-only styles continue to use a separate visual system by design.
+3. A few module-specific badges/notices should be migrated to `--dt-*` in follow-up incremental PRs.
+
+### Recommended next PR
+**PR: Token adoption pass for legacy high-traffic pages**
+- Migrate remaining hardcoded colors in `CasesPage`, settings detail pages, and CRM/CMS dense lists to `--dt-*`.
+- Keep routing/business logic/API untouched.
+- Add targeted visual regression checks for tokenized primitives.
+
+
+## Token adoption PR scope (legacy high-traffic pages)
+
+### Scope completed in this PR
+- Adopted `--dt-*` tokens in **All Dockets (`CasesPage`)** legacy stylesheet (`CasesPage.css`) by replacing hardcoded white/slate/blue/red/amber values with Docketra tokenized surface/text/border/accent/semantic values.
+- Adopted `--dt-*` tokenized color classes in settings detail pages:
+  - `FirmSettingsPage`
+  - `WorkSettingsPage`
+  - `StorageSettingsPage`
+  - `AiSettingsPage`
+- Applied safe token-only updates to common dense list/editor wrappers in `platform.css` that power CRM/CMS table and form-dense surfaces (toolbar controls, CMS form editor fields/toggles, inline notices, pagination/message controls).
+- Preserved existing spacing/density contracts (row height, section spacing, card padding, filter bar density) and preserved all page behavior/contracts.
+
+### Exact files changed
+- `ui/src/pages/CasesPage.css`
+- `ui/src/pages/FirmSettingsPage.jsx`
+- `ui/src/pages/WorkSettingsPage.jsx`
+- `ui/src/pages/StorageSettingsPage.jsx`
+- `ui/src/pages/AiSettingsPage.jsx`
+- `ui/src/components/platform/platform.css`
+- `docs/ui-ux-modernization.md`
+- `docs/ui/docketra-design-language.md`
+
+### Before / after UX impact
+- **Before:** Legacy high-traffic pages still mixed gray/slate/blue hardcoded values with tokenized components, causing visible drift across shell, settings detail forms, and dense list/table/editor wrappers.
+- **After:** The same pages now render with shared `--dt-*` visual primitives for surfaces, text, borders, focus, and semantic states, improving cross-page consistency while preserving operational density and interaction behavior.
+
+### Remaining gaps
+1. Some legacy route-level components (outside this low-risk scope) still use hardcoded utility colors and should be migrated incrementally.
+2. A few modal internals and older isolated components still use inline hex colors and can be addressed in targeted follow-ups.
+3. Marketing/public-site routes intentionally remain outside this product token-adoption pass.
+
+### Recommended next PR
+**PR: Legacy modal + detail-panel token cleanup (low-risk)**
+- Migrate remaining inline and hardcoded colors in high-use modals/detail panels (docket details, upload flows, selected admin modals) to `--dt-*`.
+- Keep density unchanged and preserve all existing API/behavior contracts.
+
+
+## Modal/detail-panel token cleanup PR scope (low-risk)
+
+### Scope completed in this PR
+- Replaced remaining hardcoded gray/slate/blue/red/hex presentation values with `--dt-*` tokens in high-use modal/drawer/detail internals only.
+- Kept all modal and drawer behavior unchanged (open/close flow, focus trap, keyboard handling, and action wiring remain intact).
+- Preserved semantic intent in confirmation and audit surfaces (danger/final actions still read destructive; informational and muted metadata remain visually distinct).
+
+### Exact files changed
+- `ui/src/components/common/ConfirmDialog.jsx`
+- `ui/src/components/common/ActionConfirmModal.jsx`
+- `ui/src/components/common/AuditTimelineDrawer.jsx`
+- `ui/src/components/common/AuditTimelineDrawer.css`
+- `ui/src/components/common/ClientFactSheetModal.css`
+- `ui/src/pages/admin/components/AdminClientModals.jsx`
+- `ui/src/pages/crm/LeadsPage.jsx`
+- `ui/src/pages/crm/CrmClientDetailPage.jsx`
+- `ui/src/pages/UploadPage.jsx`
+- `docs/ui-ux-modernization.md`
+- `docs/ui/docketra-design-language.md`
+
+### Modal/detail surfaces affected
+- Audit history drawer (docket detail side-surface)
+- Client fact sheet modal (attachments/documents surface)
+- Admin client create/edit modal internals (fact-sheet sub-area)
+- CRM lead create/manage modals
+- CRM client detail deal/invoice add modals
+- Shared confirmation dialogs (`ConfirmDialog`, `ActionConfirmModal`)
+- Public upload/attachment intake page
+
+### Before / after UX impact
+- **Before:** modal and drawer internals still mixed older hardcoded neutrals/accent colors with tokenized shells, causing local visual drift in high-use operational dialogs.
+- **After:** those internals now align with Docketra `--dt-*` surfaces/text/borders/semantic colors while keeping the same spacing, control sizing, and interaction contracts.
+
+### Remaining gaps
+1. Some lower-traffic legacy components outside modal/detail surfaces still use hardcoded utility colors.
+2. A few superadmin and marketing-only surfaces intentionally remain outside this operational token cleanup scope.
+3. Additional token cleanup can be done in remaining isolated inline-style components after targeted route-level QA.
+
+### Recommended next PR
+**PR: Remaining low-traffic component token convergence**
+- Target non-critical legacy components with inline hardcoded colors (outside core modals/detail panels).
+- Keep behavior unchanged; continue incremental visual-only migration.
+
+## Visual QA/regression checklist PR scope (low-risk documentation)
+
+### Scope completed in this PR
+- Added a new repeatable visual QA and regression checklist for design-token and layout-contract PRs.
+- Added explicit shared primitive checks (buttons, inputs/selects/textareas, badges, cards, modal, table/data table, empty/status/header/shell).
+- Added high-traffic route inventory with QA priority labels (P0/P1/P2) for consistent PR verification planning.
+- Added explicit interaction/a11y/density verification gates to prevent regressions in operational workflows.
+- Added design-token-specific QA rules to the design language guide for future token-only PR review discipline.
+
+### Exact files changed
+- `docs/ui/visual-regression-checklist.md`
+- `docs/ui/docketra-design-language.md`
+- `docs/ui-ux-modernization.md`
+
+### QA coverage added
+- Manual regression checklist now covers:
+  - Shared primitives and semantic states
+  - High-traffic authenticated + public routes
+  - Accessibility guardrails (focus, labels, contrast, keyboard flows)
+  - Density guardrails for tables, toolbars, settings forms, CRM/CMS list surfaces
+- Added route-priority based visual QA guidance so token PRs can focus first on highest-risk routes.
+
+### Automated checks status
+- **Deferred (intentional):** no new screenshot-based visual regression tooling was added in this PR.
+- **Reason:** repository already has lightweight route/design-system smoke checks, but no existing baseline screenshot workflow; adding one here would exceed this documentation-first, low-risk scope.
+
+### Remaining UI/UX gaps
+1. Establish optional screenshot baseline workflow (Playwright-based) for a small P0 route set when team capacity allows.
+2. Continue migrating remaining low-traffic hardcoded color surfaces to `--dt-*` tokens.
+3. Consolidate duplicate table primitives over time without changing queue/docket behavior.
+
+### Recommended next PR
+**PR: P0 visual snapshot harness (opt-in, low blast radius)**
+- Add minimal Playwright snapshot checks for 3–5 P0 routes under stable fixture data.
+- Gate only on shell/header/table/modals for visual drift, not dynamic content.
+- Keep business logic untouched.
+
+---
+
+## Fifth PR scope (table/list UX contract consistency pass)
+
+### Scope completed in this PR
+- Standardized shared table primitives (`Table`, `common/DataTable`) with token-consistent row hover/focus treatment, state messaging spacing, focus-visible styling, and filter-chip visuals.
+- Aligned platform `.table` styling to the same token contract without changing row/cell density or overflow behavior.
+- Added consistent accessibility hints for loading/empty/error rows and retry actions across both table implementations.
+- Normalized QC Workbench active filter chips to the shared tokenized table-chip pattern.
+- Authored a dedicated table/list UX contract doc with implementation rules and migration guidance.
+
+### Exact files changed
+- `ui/src/components/common/Table.jsx`
+- `ui/src/components/common/DataTable.jsx`
+- `ui/src/components/platform/platform.css`
+- `ui/src/pages/platform/PlatformShared.jsx`
+- `ui/src/pages/platform/QcQueuePage.jsx`
+- `docs/ui/table-list-ux-contract.md`
+- `docs/ui/docketra-design-language.md`
+- `docs/ui/visual-regression-checklist.md`
+- `docs/ui-ux-modernization.md`
+
+### Before / after UX impact
+- **Before:** shared/common and platform table surfaces had slightly different hover/focus/state/chip/pagination treatments, with one high-traffic QC surface using custom non-token active filter chips.
+- **After:** both table stacks now present a closer, tokenized visual contract for headers, rows, active filters, empty/error/loading messaging, retry labels, and pagination framing, while preserving compact density and existing table behaviors.
+
+### Screens affected
+- All Dockets (`CasesPage`) via shared `common/DataTable` updates.
+- Workbench and My Worklist via platform `.table` updates.
+- QC Workbench via platform `.table` updates and active filter chip normalization.
+- CRM (leads/clients/client detail) and CMS intake queue via existing DataTable wrappers.
+- Admin users/clients/categories and reports where shared/common or platform DataTable wrappers are in use.
+- Settings-linked admin/category table views through shared/common DataTable usage.
+
+### Accessibility + behavior guardrails
+- Preserved semantic table headers and existing `aria-sort` behavior.
+- Preserved row-click destinations and Enter/Space row keyboard activation behavior.
+- Added clearer focus-visible affordances on sortable headers and table action controls.
+- Added/retained polite status announcements for loading/empty/error table messages where supported.
+
+### Density confirmation
+- No row/cell padding increases were introduced for platform `.table`.
+- Dense mode in common DataTable remains compact.
+- Toolbar and pagination spacing retained compact operational rhythm.
+
+### Visual QA notes (manual checklist run)
+- Dense docket table: PASS.
+- Worklist/workbench queue table: PASS.
+- CRM/CMS list table: PASS.
+- Admin table: PASS.
+- Settings-linked table (category management context): PASS.
+- Empty/error/loading state readability + retry visibility: PASS.
+- Active filter chips + clear-all affordance: PASS.
+- Pagination + row focus-visible states: PASS.
+
+### Remaining gaps
+1. CRM leads/clients filter bars still include some non-token utility classes and can be normalized in a follow-up without changing behavior.
+2. Some local/custom table-like layouts (outside current high-traffic scope) remain for incremental migration.
+3. Full convergence between platform and common DataTable implementations is still intentionally deferred to reduce risk.
+
+### Recommended next PR
+**PR 6: CRM/CMS filter-toolbar tokenization pass**
+- Tokenize remaining filter control wrappers (labels, border/text colors, focus states).
+- Preserve existing query/filter behavior and RBAC boundaries.
+- Add parity active-filter chip pattern where module-level chips are still custom.
+
+### Rollback notes
+- Rollback is low risk and can be achieved by reverting the files listed in this section.
+- No backend/API/route/data contract changes were made.
+
+## Final cleanup PR scope (April 28, 2026)
+
+### Scope completed
+- Performed a conservative legacy-style cleanup pass focused on stale `neo-*` and hardcoded color leftovers without changing layout, behavior, routes, or component APIs.
+- Restored and retained `ui/src/assets/styles/neomorphic.css` as a **deprecated compatibility bridge** because active `neo-*` usage still exists in live routes/components.
+- Token-aligned low-risk hardcoded app-surface colors in two legacy module stylesheets (`AdminPage.css`, `ComplianceCalendarPage.css`) to `--dt-*` tokens.
+- Standardized focus-visible treatment in these legacy surfaces to use `--dt-focus` and existing focus-ring tokens.
+- Replaced one remaining hardcoded notification-dot color in `Layout.css` with `--dt-error` for semantic parity.
+- Updated a stale "glass" wording reference in `Layout.jsx` header comment to reflect current flat tokenized surfaces.
+
+### Exact files changed
+- `ui/src/assets/styles/neomorphic.css` (restored + marked deprecated + token-aligned)
+- `ui/src/pages/AdminPage.css`
+- `ui/src/pages/ComplianceCalendarPage.css`
+- `ui/src/components/common/Layout.css`
+- `ui/src/components/common/Layout.jsx`
+- `docs/ui-ux-modernization.md`
+- `docs/ui/docketra-design-language.md`
+- `docs/ui/legacy-css-cleanup.md` (new)
+
+### Legacy styling status
+- **Retained intentionally:** `ui/src/assets/styles/neomorphic.css` as a deprecated compatibility bridge during route-by-route migration of active `neo-*` usage.
+- **Retained intentionally:** active `neo-*` class usage in JSX (`neo-alert`, `neo-button`, `neo-table`, `neo-input`, `neo-dropzone`, `neo-spinner`, etc.) because these classes are still referenced by live routes/components and require dedicated module migration to avoid regressions.
+- **Retained intentionally:** compatibility token aliases (including `--glass-*`) in `tokens.css` because they support transitional mappings and are currently part of the active style contract.
+
+### Token cleanup impact
+- Improved consistency of legacy admin/compliance module visuals with the current design language by replacing hardcoded and legacy fallback status/surface/border/focus colors with `--dt-*` equivalents.
+- Reduced divergence between legacy module focus treatments and shared platform focus conventions.
+- No spacing, density, sizing, interaction model, or logic changes.
+
+### Visual QA notes (checklist-aligned)
+Using `docs/ui/visual-regression-checklist.md` as the gate:
+
+- **Code-level review completed** for app shell, dashboard, All Dockets, Worklist/Workbench/QC, CRM, CMS, Admin, Settings, modal, table/list, form error/success states, and public upload routes in the context of this token-only diff.
+- **Manual runtime QA recommended before deployment** for the same surfaces because runtime screenshots/session-based visual verification were not captured in this environment.
+- This PR should be treated as **presentation-only**, with runtime verification as release-gate confirmation.
+
+### Final modernization track status
+- **Core rollout status:** complete for the planned low-risk consistency track (shell + table/list contract + legacy parity + final token/stale-css cleanup).
+- **Current state:** product-app styling now primarily follows `--dt-*` tokenized surfaces with isolated legacy areas documented for module-level follow-ups.
+
+### Remaining module-specific UX opportunities
+1. Replace active `neo-*` classnames in legacy auth/reports/upload/alerts with shared component primitives (`Button`, `Input`, `StatusMessageStack`, modern tables) module-by-module.
+2. Decouple cross-module helper classes currently anchored in `AdminPage.css` (e.g., shared `neo-info-text`/`neo-form-actions`) into scoped shared legacy-bridge styles to reduce accidental coupling.
+3. Continue targeted hardcoded color cleanup in low-traffic page-local JSX inline styles (`DashboardPage`, legacy helper components), preserving density and behavior.
+
+## CRM product UX PR scope (module-specific shift, April 28, 2026)
+
+### Shift marker
+- This PR marks the transition from broad cross-module UI modernization into **module-specific product UX**, starting with CRM.
+- The focus moved from general consistency cleanup to day-to-day CRM operator clarity (lead follow-up, pipeline handling, client workspace action hierarchy).
+
+### Exact files changed
+- `ui/src/pages/crm/LeadsPage.jsx`
+- `ui/src/pages/crm/CrmClientsPage.jsx`
+- `ui/src/pages/crm/CrmClientDetailPage.jsx`
+- `ui/src/pages/crm/crmUiUtils.js`
+- `docs/crm-ux.md`
+- `docs/ui-ux-modernization.md`
+
+### Before / after UX impact
+- **Before:** CRM pages were functional but had weaker operational cues for follow-up timing, stage-context readability, role-safe action explanation, and filtered-empty guidance.
+- **After:** CRM leads and client pages provide clearer next actions, better follow-up scanability (including relative timing), stronger lead/client contextual separation, and more actionable empty/filter states.
+
+### Remaining CRM gaps
+1. Add deeper keyboard-only QA and focus traversal checks for CRM list rows/modals on mobile/tablet breakpoints.
+2. Normalize any remaining CRM-local utility classes to strict tokenized control wrappers where safe.
+3. Evaluate CRM-specific active filter chips for high-density lead/client filtering workflows.
+4. Consider richer follow-up analytics (aging, due-today buckets) in a future backend-approved phase.
+
+### Recommended next PR
+**PR: CRM follow-up operations hardening (frontend-only + test expansion)**
+- Add CRM-focused regression tests covering lead pipeline filter/reset behavior and client detail tab empty-state contracts.
+- Add focused responsive checks for lead pipeline columns and client row action wrapping.
+- Keep backend/API contracts, RBAC logic, and route contracts unchanged.
+
+### Post-review corrections applied (same CRM PR)
+- Removed duplicate CRM client load error presentation by keeping table-level error/retry as the single error location; status stack now carries refresh-only signal.
+- Clarified lead filters as auto-applied and renamed the manual action button from `Apply Filters` to `Refresh` for accurate behavior expectation.
+- Corrected non-admin lead helper language to avoid implying mutation permissions.
+- Tokenized newly introduced lead surface utility colors to `--dt-*` tokens for text/border/surface/warning/focus consistency.
+- Added a targeted UI utility test for relative follow-up labeling (`ui/tests/crmRelativeDateLabel.test.mjs`) covering empty/invalid/timezone cases.
+- Adjusted client status badge presentation in CRM client detail to explicit visual variants (`success`/`neutral`) without changing status values.
+- Updated invoice modal helper copy to confirm existing billing behavior is unchanged while keeping CRM payment visibility framing.
+
+### Frontend-only safety confirmation
+- No backend logic/API contract/auth/RBAC/tenant/routing/database/lifecycle changes were made in this CRM pass.

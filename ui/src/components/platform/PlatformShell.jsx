@@ -305,8 +305,13 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                   to={item.to}
                   className={`platform__nav-link ${isNavItemActive(pathname, item) ? 'is-active' : ''}`}
                   title={item.label}
+                  aria-label={item.label}
                 >
-                  <span>{item.label}</span>
+                  {collapsed ? (
+                    <span className="platform__nav-link-icon" aria-hidden="true">{item.icon}</span>
+                  ) : (
+                    <span>{item.label}</span>
+                  )}
                 </Link>
               ))}
             </div>

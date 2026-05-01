@@ -1,13 +1,16 @@
 /**
- * Legacy neomorphic class names mapped to flat minimal styles.
+ * @deprecated Legacy neo-* compatibility bridge.
+ *
+ * Keep this file during incremental migration while live routes still render neo-* classes.
+ * Do not add new neo-* usage; migrate route-by-route to shared tokenized primitives, then remove.
  */
 
 .neo-card,
 .neo-section,
 .neo-inset {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  background: var(--dt-surface);
+  border: 1px solid var(--dt-border);
+  border-radius: var(--dt-radius-card);
   box-shadow: none;
 }
 
@@ -18,17 +21,17 @@
 
 .neo-card:hover,
 .neo-section:hover {
-  background: var(--layout-surface);
-  border-color: var(--border-strong);
+  background: var(--dt-surface-subtle);
+  border-color: var(--dt-border-strong);
   box-shadow: none;
 }
 
 .neo-button,
 .neo-btn {
-  background: var(--color-surface);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  color: var(--text-main);
+  background: var(--dt-surface);
+  border: 1px solid var(--dt-border-strong);
+  border-radius: var(--dt-radius-control);
+  color: var(--dt-text);
   cursor: pointer;
   font-family: var(--font-family);
   font-size: var(--font-size-sm);
@@ -47,59 +50,59 @@
 
 .neo-button:hover:not(:disabled),
 .neo-btn:hover:not(:disabled) {
-  background: var(--color-bg-app);
-  border-color: var(--border-strong);
+  background: var(--dt-bg);
+  border-color: var(--dt-border-strong);
 }
 
 .neo-button:active:not(:disabled),
 .neo-btn:active:not(:disabled) {
-  background: #F3F4F6;
+  background: var(--dt-surface-muted);
 }
 
 .neo-button:focus-visible,
 .neo-btn:focus-visible,
 .neo-input:focus {
-  box-shadow: var(--focus-ring);
+  box-shadow: var(--dt-focus-ring);
   outline: none;
 }
 
 .neo-button:disabled,
 .neo-btn:disabled {
-  color: var(--text-muted);
+  color: var(--dt-text-muted);
   cursor: not-allowed;
   opacity: 0.55;
 }
 
 .neo-button--primary,
 .neo-btn--primary {
-  background: var(--color-primary);
-  color: white;
-  border-color: var(--color-primary);
+  background: var(--dt-accent);
+  color: var(--dt-text-inverse);
+  border-color: var(--dt-accent);
 }
 
 .neo-button--primary:hover:not(:disabled),
 .neo-btn--primary:hover:not(:disabled) {
-  background: var(--color-primary-dark);
-  border-color: var(--color-primary-dark);
+  background: var(--dt-accent-hover);
+  border-color: var(--dt-accent-hover);
 }
 
 .neo-button--danger {
-  background: var(--danger);
-  color: white;
-  border-color: var(--danger);
+  background: var(--dt-error);
+  color: var(--dt-text-inverse);
+  border-color: var(--dt-error);
 }
 
 .neo-button--success {
-  background: var(--success);
-  color: white;
-  border-color: var(--success);
+  background: var(--dt-success);
+  color: var(--dt-text-inverse);
+  border-color: var(--dt-success);
 }
 
 .neo-input {
-  background: var(--color-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  color: var(--text-main);
+  background: var(--dt-surface);
+  border: 1px solid var(--dt-border-whisper);
+  border-radius: var(--dt-radius-control);
+  color: var(--dt-text);
   font-family: var(--font-family);
   font-size: var(--font-size-sm);
   padding: var(--spacing-sm) var(--spacing-md);
@@ -112,30 +115,30 @@
 }
 
 .neo-input:hover:not(:disabled) {
-  background: var(--layout-surface-muted);
-  border-color: var(--border-strong);
+  background: var(--dt-surface-muted);
+  border-color: var(--dt-border-strong);
 }
 
 .neo-input:disabled {
-  color: var(--text-muted);
+  color: var(--dt-text-muted);
   cursor: not-allowed;
   opacity: 0.65;
-  background: var(--color-bg-app);
+  background: var(--dt-bg);
 }
 
 .neo-input::placeholder {
-  color: var(--text-muted);
+  color: var(--dt-text-muted);
 }
 
 .neo-badge {
   background: var(--status-neutral-bg);
-  border: 1px solid var(--status-neutral-border, var(--color-border));
-  border-radius: var(--radius-pill);
+  border: 1px solid var(--status-neutral-border, var(--dt-border));
+  border-radius: var(--dt-radius-pill);
   color: var(--status-neutral-color);
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: var(--font-size-xs);
+  font-size: var(--dt-font-size-caption);
   font-weight: 500;
   padding: 2px 8px;
   letter-spacing: 0;
@@ -174,9 +177,9 @@
 }
 
 .neo-section__header {
-  border-bottom: 1px solid var(--border-subtle);
-  color: var(--text-main);
-  font-size: var(--font-size-md);
+  border-bottom: 1px solid var(--dt-border-whisper);
+  color: var(--dt-text);
+  font-size: var(--dt-font-size-body);
   font-weight: 600;
   margin-bottom: var(--spacing-md);
   padding-bottom: var(--spacing-md);

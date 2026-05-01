@@ -18,18 +18,18 @@ export const spacingClasses = {
 };
 
 export const formClasses = {
-  label: 'mb-1.5 block text-sm font-medium text-gray-800',
+  label: 'mb-1.5 block text-sm font-medium text-[var(--dt-text-secondary)]',
   inputBase:
-    'min-h-11 w-full rounded-md border border-gray-300 bg-white px-3.5 py-2.5 text-sm leading-5 text-gray-900 shadow-sm transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-gray-400 hover:border-gray-400 focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/15 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-500',
+    'min-h-11 w-full rounded-[var(--dt-radius-control)] border border-[var(--dt-border)] bg-[var(--dt-surface)] px-3.5 py-2.5 text-sm leading-5 text-[var(--dt-text)] shadow-[var(--dt-shadow-control)] transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-[var(--dt-text-muted)] hover:border-[var(--dt-border-strong)] focus:border-[var(--dt-focus)] focus:bg-[var(--dt-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--dt-focus)]/20 disabled:cursor-not-allowed disabled:border-[var(--dt-border-whisper)] disabled:bg-[var(--dt-surface-muted)] disabled:text-[var(--dt-text-disabled)]',
   inputError:
-    'border-red-400 bg-red-50/60 text-red-900 placeholder:text-red-400 focus:border-red-500 focus:ring-red-500/20',
+    'border-[var(--dt-error)] bg-[var(--dt-error-subtle)] text-[var(--dt-error)] placeholder:text-[var(--dt-error)]/70 focus:border-[var(--dt-error)] focus:ring-[var(--dt-error)]/20',
   inputSuccess:
-    'border-emerald-400 bg-emerald-50/40 text-emerald-900 focus:border-emerald-500 focus:ring-emerald-500/20',
+    'border-[var(--dt-success)] bg-[var(--dt-success-subtle)] text-[var(--dt-success)] focus:border-[var(--dt-success)] focus:ring-[var(--dt-success)]/20',
   textareaBase:
-    'w-full rounded-md border border-gray-300 bg-white px-3.5 py-2.5 text-sm leading-5 text-gray-900 shadow-sm transition-colors hover:border-gray-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/15 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500',
-  errorText: `${spacingClasses.formMessageSpacing} text-sm text-red-500`,
-  successText: `${spacingClasses.formMessageSpacing} flex items-center gap-1 text-sm text-emerald-600`,
-  helpText: `${spacingClasses.formMessageSpacing} text-xs leading-5 text-gray-500`,
+    'w-full rounded-[var(--dt-radius-control)] border border-[var(--dt-border)] bg-[var(--dt-surface)] px-3.5 py-2.5 text-sm leading-5 text-[var(--dt-text)] shadow-[var(--dt-shadow-control)] transition-colors hover:border-[var(--dt-border-strong)] focus:border-[var(--dt-focus)] focus:outline-none focus:ring-2 focus:ring-[var(--dt-focus)]/20 disabled:cursor-not-allowed disabled:bg-[var(--dt-surface-muted)] disabled:text-[var(--dt-text-disabled)]',
+  errorText: `${spacingClasses.formMessageSpacing} text-sm text-[var(--dt-error)]`,
+  successText: `${spacingClasses.formMessageSpacing} flex items-center gap-1 text-sm text-[var(--dt-success)]`,
+  helpText: `${spacingClasses.formMessageSpacing} text-xs leading-5 text-[var(--dt-text-muted)]`,
 };
 
 export const fontSizes = {
@@ -59,6 +59,6 @@ export const colors = {
 };
 
 export const surfaceClasses = {
-  card: `bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden ${spacingClasses.cardPadding}`,
-  tableWrapper: 'bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm',
+  card: `bg-[var(--dt-surface)] border border-[var(--dt-border-whisper)] rounded-[var(--dt-radius-card)] shadow-[var(--dt-shadow-card)] overflow-hidden ${spacingClasses.cardPadding}`,
+  tableWrapper: 'bg-[var(--dt-surface)] border border-[var(--dt-border-whisper)] rounded-[var(--dt-radius-card)] overflow-hidden shadow-[var(--dt-shadow-card)]',
 };

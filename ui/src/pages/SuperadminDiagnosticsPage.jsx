@@ -144,3 +144,6 @@ export const SuperadminDiagnosticsPage = () => {
     </SuperAdminLayout>
   );
 };
+
+
+export default SuperadminDiagnosticsPage;

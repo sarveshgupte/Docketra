@@ -1,4 +1,4 @@
-const { getRedisClient } = require('../config/redis');
+const { getRedisClient, isRedisReady } = require('../config/redis');
 const config = require('../config/config');
 const { hashIdentifier } = require('../utils/hashIdentifier');
 
@@ -78,6 +78,13 @@ const getOtpResendRateLimitKey = (scope, identifier) => `docketra:otp:resend:${s
 
 const inMemoryCounters = new Map();
 
+const getSignupRedisClient = () => {
+  const redis = getRedisClient();
+  if (!redis) return null;
+  if (process.env.NODE_ENV === 'production') return redis;
+  return isRedisReady() ? redis : null;
+};
+
 const resolveEntry = (key, ttlSeconds) => {
   const now = Date.now();
   const existing = inMemoryCounters.get(key);
@@ -100,7 +107,7 @@ const incrementMemoryCounter = async (key, ttlSeconds) => {
 };
 
 const applyRedisRateLimit = async (key, limit, ttlSeconds) => {
-  const redis = getRedisClient();
+  const redis = getSignupRedisClient();
   if (!redis) {
     const counter = await incrementMemoryCounter(key, ttlSeconds);
     return {
@@ -139,7 +146,7 @@ const consumeSignupQuota = async ({ email, ip }) => {
 const consumeOtpAttemptCounter = async ({ scope, identifier }) => {
   const key = getOtpAttemptKey(scope, identifier);
   const blockKey = getOtpBlockKey(scope, identifier);
-  const redis = getRedisClient();
+  const redis = getSignupRedisClient();
 
   if (!redis) {
     const counter = await incrementMemoryCounter(key, OTP_BLOCK_SECONDS);
@@ -205,7 +212,7 @@ const clearOtpAttempts = async ({ email, ip }) => {
     getOtpAttemptKey('ip', normalizedIp),
     getOtpBlockKey('ip', normalizedIp),
   ];
-  const redis = getRedisClient();
+  const redis = getSignupRedisClient();
   if (!redis) {
     keys.forEach((key) => inMemoryCounters.delete(key));
     return;

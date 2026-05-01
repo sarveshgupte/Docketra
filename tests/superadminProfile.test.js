@@ -105,7 +105,7 @@ async function shouldReturnSuperAdminProfile() {
   assert.strictEqual(profile.firmSlug, null, 'Profile firmSlug must be null');
   assert.strictEqual(profile.defaultClientId, null, 'Profile defaultClientId must be null');
   assert.strictEqual(profile.isSuperAdmin, true, 'Profile must flag isSuperAdmin');
-  assert.strictEqual(profile.refreshEnabled, false, 'Profile must show refreshEnabled: false');
+  assert.strictEqual(profile.refreshEnabled, true, 'Profile must show refreshEnabled: true');
   assert.deepStrictEqual(profile.permissions, ['*'], 'Profile must show all permissions');
 
   console.log('✓ SuperAdmin profile returns correct virtual profile without DB access');

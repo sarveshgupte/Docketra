@@ -176,8 +176,10 @@ export const authService = {
   /**
    * Get user profile
    */
-  getProfile: async () => {
-    const response = await api.get('/auth/profile');
+  getProfile: async ({ skipAuthRedirect = false } = {}) => {
+    const response = await api.get('/auth/profile', {
+      metadata: { skipAuthRedirect },
+    });
     return response.data;
   },
 

@@ -38,31 +38,31 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-muted);
+  color: var(--dt-text-muted);
 }
 
 .cases-page__filter-select {
   min-width: 220px;
   padding: 8px 10px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--dt-border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--dt-surface);
   transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .cases-page__filter-select:focus {
   outline: none;
-  border-color: var(--color-border-strong);
-  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+  border-color: var(--dt-border-strong);
+  box-shadow: 0 0 0 3px var(--dt-focus-ring);
 }
 
 .cases-page__error {
   margin-bottom: 16px;
   padding: 10px 12px;
   border-radius: 6px;
-  border: 1px solid #fecdd3;
-  background: #fff1f2;
-  color: #9f1239;
+  border: 1px solid var(--dt-error);
+  background: var(--dt-error-subtle);
+  color: var(--dt-error);
   font-size: 13px;
 }
 
@@ -73,12 +73,12 @@
 }
 
 .cases-page__name-cell--sla-breach {
-  border-left: 3px solid #f87171;
+  border-left: 3px solid var(--dt-error);
   padding-left: 8px;
 }
 
 .cases-page__name-cell--sla-warning {
-  border-left: 3px solid #fbbf24;
+  border-left: 3px solid var(--dt-warning);
   padding-left: 8px;
 }
 
@@ -87,7 +87,7 @@
 }
 
 .cases-page__case-meta {
-  color: var(--text-muted);
+  color: var(--dt-text-muted);
   font-size: 12px;
 }
 
@@ -104,7 +104,7 @@
 
 .cases-page__toolbar-copy {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--dt-text-muted);
 }
 
 /* Preset view tabs */
@@ -117,20 +117,20 @@
 
 .cases-page__view-tab {
   padding: 6px 14px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--dt-border);
   border-radius: 20px;
-  background: #fff;
+  background: var(--dt-surface);
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-muted);
+  color: var(--dt-text-muted);
   cursor: pointer;
   transition: all 120ms ease;
   white-space: nowrap;
 }
 
 .cases-page__view-tab:hover {
-  border-color: var(--color-border-strong);
-  color: var(--text-body);
+  border-color: var(--dt-border-strong);
+  color: var(--dt-text);
 }
 
 .cases-page__view-tab:focus-visible,
@@ -139,19 +139,19 @@
 .cases-page__saved-view-remove:focus-visible,
 .cases-page__search-input:focus-visible,
 .cases-page__filter-select:focus-visible {
-  outline: 2px solid var(--color-accent, #4f46e5);
+  outline: 2px solid var(--dt-focus);
   outline-offset: 2px;
 }
 
 .cases-page__view-tab--active {
-  background: var(--color-accent, #4f46e5);
-  border-color: var(--color-accent, #4f46e5);
-  color: #fff;
+  background: var(--dt-accent);
+  border-color: var(--dt-accent);
+  color: var(--dt-text-inverse);
 }
 
 .cases-page__view-tab--active:hover {
   opacity: 0.9;
-  color: #fff;
+  color: var(--dt-text-inverse);
 }
 
 /* Row overflow menu */
@@ -174,10 +174,10 @@
   right: 0;
   top: 24px;
   z-index: 10;
-  border: 1px solid #e2e8f0;
-  background: #fff;
+  border: 1px solid var(--dt-border-whisper);
+  background: var(--dt-surface);
   border-radius: 6px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--dt-shadow-popover);
   overflow: hidden;
   min-width: 160px;
 }
@@ -190,13 +190,13 @@
   border: none;
   background: transparent;
   font-size: 13px;
-  color: #334155;
+  color: var(--dt-text-secondary);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .cases-page__row-menu-panel button:hover {
-  background: #f8fafc;
+  background: var(--dt-surface-subtle);
 }
 
 .cases-page__row-menu-panel button:disabled {
@@ -219,42 +219,42 @@
   align-items: flex-start;
   gap: 4px;
   padding: 14px 16px;
-  border: 1px solid var(--color-border, #e2e8f0);
+  border: 1px solid var(--dt-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--dt-surface);
   cursor: pointer;
   text-align: left;
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
 .cases-page__sla-tile:hover {
-  border-color: var(--color-border-strong, #94a3b8);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  border-color: var(--dt-border-strong);
+  box-shadow: var(--dt-shadow-card);
 }
 
 .cases-page__sla-tile--warning {
-  border-color: #fde68a;
-  background: #fffbeb;
+  border-color: var(--dt-warning);
+  background: var(--dt-warning-subtle);
 }
 
 .cases-page__sla-tile--danger {
-  border-color: #fecdd3;
-  background: #fff1f2;
+  border-color: var(--dt-error);
+  background: var(--dt-error-subtle);
 }
 
 .cases-page__sla-tile-value {
   font-size: 22px;
   font-weight: 700;
-  color: var(--text-main, #0f172a);
+  color: var(--dt-text);
   line-height: 1;
 }
 
 .cases-page__sla-tile--warning .cases-page__sla-tile-value {
-  color: #b45309;
+  color: var(--dt-warning);
 }
 
 .cases-page__sla-tile--danger .cases-page__sla-tile-value {
-  color: #be123c;
+  color: var(--dt-error);
 }
 
 .cases-page__sla-tile-label {
@@ -262,13 +262,13 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted, #64748b);
+  color: var(--dt-text-muted);
 }
 
 /* Task 5: Activity Recency Indicator */
 .cases-page__recency {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--dt-text-disabled);
   font-style: italic;
 }
 
@@ -280,30 +280,30 @@
 .cases-page__search-input {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid var(--color-border, #e2e8f0);
+  border: 1px solid var(--dt-border);
   border-radius: 6px;
   font-size: 13px;
-  background: #fff;
+  background: var(--dt-surface);
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .cases-page__search-input:focus {
   outline: none;
-  border-color: var(--color-border-strong, #94a3b8);
-  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+  border-color: var(--dt-border-strong);
+  box-shadow: 0 0 0 3px var(--dt-focus-ring);
 }
 
 /* Task 3: Row menu info row */
 .cases-page__row-menu-info {
   padding: 6px 14px;
   font-size: 12px;
-  color: #64748b;
-  border-bottom: 1px solid #f1f5f9;
+  color: var(--dt-text-muted);
+  border-bottom: 1px solid var(--dt-border-whisper);
   white-space: nowrap;
 }
 
 .cases-page__row-menu-info--locked {
-  color: #b45309;
+  color: var(--dt-warning);
 }
 
 /* Task 7: Performance View */
@@ -313,9 +313,9 @@
   gap: 12px;
   flex-wrap: wrap;
   padding: 16px;
-  border: 1px solid var(--color-border, #e2e8f0);
+  border: 1px solid var(--dt-border);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--dt-surface-subtle);
 }
 
 .cases-page__perf-metric {
@@ -330,26 +330,26 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted, #64748b);
+  color: var(--dt-text-muted);
 }
 
 .cases-page__perf-metric-value {
   font-size: 20px;
   font-weight: 700;
-  color: var(--text-main, #0f172a);
+  color: var(--dt-text);
 }
 
 .cases-page__perf-metric-value--danger {
-  color: #be123c;
+  color: var(--dt-error);
 }
 
 .cases-page__perf-metric-value--good {
-  color: #15803d;
+  color: var(--dt-success);
 }
 
 .cases-page__perf-empty {
   font-size: 13px;
-  color: var(--text-muted, #64748b);
+  color: var(--dt-text-muted);
   margin: 0;
 }
 
@@ -371,16 +371,16 @@
 
 /* Task 1: Escalated SLA badge */
 .cases-page__sla-badge--escalated {
-  background: #fdf4ff;
-  color: #7e22ce;
-  border: 1px solid #e9d5ff;
+  background: var(--dt-info-subtle);
+  color: var(--dt-info);
+  border: 1px solid var(--dt-info);
 }
 
 /* Task 1: Escalated SLA tile */
 .cases-page__sla-tile--escalated {
-  border-color: #e9d5ff;
-  background: #fdf4ff;
-  color: #7e22ce;
+  border-color: var(--dt-info);
+  background: var(--dt-info-subtle);
+  color: var(--dt-info);
 }
 
 /* Task 4: High workload indicator */
@@ -397,9 +397,9 @@
   gap: 4px;
   font-size: 12px;
   font-weight: 600;
-  color: #92400e;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
+  color: var(--dt-warning);
+  background: var(--dt-warning-subtle);
+  border: 1px solid var(--dt-warning);
   border-radius: 6px;
   padding: 4px 10px;
 }
@@ -410,8 +410,8 @@
   align-items: center;
   gap: 0.75rem;
   padding: 8px 12px;
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
+  background: var(--dt-info-subtle);
+  border: 1px solid var(--dt-info);
   border-radius: 8px;
   flex-wrap: wrap;
 }
@@ -419,7 +419,7 @@
 .cases-page__bulk-count {
   font-size: 13px;
   font-weight: 600;
-  color: #0369a1;
+  color: var(--dt-info);
   margin-right: 4px;
 }
 
@@ -427,7 +427,7 @@
   background: transparent;
   border: none;
   font-size: 12px;
-  color: var(--text-muted, #64748b);
+  color: var(--dt-text-muted);
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -435,7 +435,7 @@
 }
 
 .cases-page__bulk-clear:hover {
-  color: var(--text-main);
+  color: var(--dt-text);
 }
 
 .cases-page__onboarding-list {
@@ -468,28 +468,28 @@
 
 .cases-page__saved-views-toggle {
   background: none;
-  border: 1px solid var(--color-border, #e2e8f0);
+  border: 1px solid var(--dt-border);
   border-radius: 20px;
   padding: 4px 12px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-muted, #64748b);
+  color: var(--dt-text-muted);
   cursor: pointer;
   transition: border-color 120ms ease, color 120ms ease;
   white-space: nowrap;
 }
 
 .cases-page__saved-views-toggle:hover {
-  border-color: var(--color-border-strong, #94a3b8);
-  color: var(--text-body, #334155);
+  border-color: var(--dt-border-strong);
+  color: var(--dt-text-secondary);
 }
 
 .cases-page__saved-view-chip {
   display: inline-flex;
   align-items: center;
-  border: 1px solid var(--color-border, #e2e8f0);
+  border: 1px solid var(--dt-border);
   border-radius: 20px;
-  background: #fff;
+  background: var(--dt-surface);
   overflow: hidden;
   font-size: 12px;
 }
@@ -498,30 +498,30 @@
   background: none;
   border: none;
   padding: 3px 8px 3px 10px;
-  color: var(--text-body, #334155);
+  color: var(--dt-text-secondary);
   cursor: pointer;
   font-size: 12px;
   font-weight: 500;
 }
 
 .cases-page__saved-view-load:hover {
-  color: var(--color-accent, #4f46e5);
+  color: var(--dt-accent);
 }
 
 .cases-page__saved-view-remove {
   background: none;
   border: none;
-  border-left: 1px solid var(--color-border, #e2e8f0);
+  border-left: 1px solid var(--dt-border);
   padding: 3px 8px;
-  color: var(--text-muted, #64748b);
+  color: var(--dt-text-muted);
   cursor: pointer;
   font-size: 14px;
   line-height: 1;
 }
 
 .cases-page__saved-view-remove:hover {
-  color: #be123c;
-  background: #fff1f2;
+  color: var(--dt-error);
+  background: var(--dt-error-subtle);
 }
 
 .cases-page__saved-views-form {
@@ -535,8 +535,8 @@
   flex: 1;
   max-width: 280px;
   padding: 6px 10px;
-  border: 1px solid var(--color-border, #e2e8f0);
+  border: 1px solid var(--dt-border);
   border-radius: 6px;
   font-size: 13px;
-  background: #fff;
+  background: var(--dt-surface);
 }
