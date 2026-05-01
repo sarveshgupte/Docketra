@@ -7,6 +7,18 @@ const getAuthLogRequest = (req) => ({
   path: req?.originalUrl || req?.url || req?.path || null,
 });
 
+const toSafeLogId = (value) => {
+  if (!value) return null;
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  if (typeof value === 'bigint') return value.toString();
+  if (value?._id) return toSafeLogId(value._id);
+  if (typeof value.toString === 'function') {
+    const serialized = value.toString();
+    return serialized && serialized !== '[object Object]' ? serialized : null;
+  }
+  return null;
+};
+
 const createAuthLoginService = (deps) => {
   const models = deps.models || {};
   const utils = deps.utils || {};
@@ -52,7 +64,7 @@ const createAuthLoginService = (deps) => {
         req: getAuthLogRequest(req),
         loginScope,
         firmSlug: requestedFirmSlug,
-        tenantId: req.firmId || req.user?.firmId || null,
+        tenantId: toSafeLogId(req.firmId || req.user?.firmId),
       });
 
       const normalizedXID = (xid || xID || XID)?.trim().toUpperCase();
@@ -85,7 +97,7 @@ const createAuthLoginService = (deps) => {
         req: getAuthLogRequest(req),
         firmSlug: requestedFirmSlug,
         xID: normalizedXID,
-        tenantId: req.firmId,
+        tenantId: toSafeLogId(req.firmId),
       });
       const user = await User.findOne({
         firmId: req.firmId,
@@ -110,7 +122,7 @@ const createAuthLoginService = (deps) => {
         const otpConfig = getLoginOtpConfig();
         log.info('AUTH_LOGIN_CHALLENGE_SENT', {
           req: getAuthLogRequest(req),
-          tenantId: req.firmId,
+          tenantId: toSafeLogId(req.firmId),
           userId: user?._id || null,
           userXID: user?.xID || null,
         });
@@ -132,7 +144,7 @@ const createAuthLoginService = (deps) => {
         }
         log.error('AUTH_LOGIN_CHALLENGE_FAILED', {
           req: getAuthLogRequest(req),
-          tenantId: req.firmId,
+          tenantId: toSafeLogId(req.firmId),
           userId: user?._id || null,
           userXID: user?.xID || null,
           error: otpError,
@@ -412,7 +424,7 @@ const createAuthLoginService = (deps) => {
 
       log.info('AUTH_LOGIN_SUCCESS', {
         req: getAuthLogRequest(req),
-        tenantId: user?.firmId || req.firmId || null,
+        tenantId: toSafeLogId(user?.firmId || req.firmId),
         userId: user?._id || null,
         userXID: user?.xID || null,
       });
