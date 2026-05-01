@@ -43,6 +43,11 @@ async function updateAiConfiguration(req, res) {
     }
   }
   const nextConfig = applyAiConfigUpdate(firm.aiConfig || {}, req.body || {}, actor);
+  nextConfig.enabledFeatures = {
+    documentAnalysis: nextConfig?.features?.documentSummary === true,
+    docketDrafting: nextConfig?.features?.docketDrafting === true,
+    routingSuggestions: nextConfig?.features?.routingSuggestions === true,
+  };
 
   if (nextConfig.enabled) {
     const validation = validateAiConfigForEnablement(nextConfig);
