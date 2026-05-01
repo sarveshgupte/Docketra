@@ -4,6 +4,7 @@ const { decrypt } = require('./services/TokenEncryption.service');
 const GoogleDriveProvider = require('./providers/GoogleDriveProvider');
 const OneDriveProvider = require('./providers/OneDriveProvider');
 const { S3Provider } = require('./providers/S3Provider');
+const DocketraManagedStorageProvider = require('./providers/DocketraManagedStorageProvider');
 const log = require('../../utils/log');
 const {
   StorageConfigMissingError,
@@ -21,7 +22,7 @@ function decryptCredentials(encryptedBlob, firmId) {
 }
 
 async function getFirmStorageConfig(firmId) {
-  const firm = await Firm.findById(firmId).select('storageConfig').lean();
+  const firm = await Firm.findById(firmId).select('storageConfig storage').lean();
   if (!firm) {
     throw new StorageConfigMissingError(firmId);
   }
@@ -30,13 +31,20 @@ async function getFirmStorageConfig(firmId) {
     log.error('[STORAGE] Missing storageConfig for firm', firmId);
   }
 
-  if (!firm.storageConfig?.provider) {
+  const mode = firm?.storage?.mode || 'docketra_managed';
+  const explicitProvider = firm?.storageConfig?.provider || firm?.storage?.provider || null;
+
+  if (!explicitProvider && mode === 'docketra_managed') {
+    return { provider: 'docketra_managed', credentials: {}, source: 'firm.storage.mode' };
+  }
+
+  if (!explicitProvider) {
     throw new StorageConfigMissingError(firmId);
   }
 
   return {
-    provider: firm.storageConfig.provider,
-    credentials: decryptCredentials(firm.storageConfig.credentials, firmId),
+    provider: explicitProvider,
+    credentials: decryptCredentials(firm.storageConfig?.credentials, firmId),
     source: 'firm.storageConfig',
   };
 }
@@ -80,14 +88,14 @@ async function getProviderForTenant(firmId) {
     }
     case 'docketra_drive':
     case 'docketra_managed':
-      throw new StorageAccessError('Cloud storage must be connected', firmId);
+      return new DocketraManagedStorageProvider({ firmId });
     case 'onedrive':
       return new OneDriveProvider({
         refreshToken: config.credentials.refreshToken,
         driveId: config.credentials.driveId || null,
       });
     case 's3':
-      return new S3Provider(config.credentials);
+      return new S3Provider({ tenantId: String(firmId), ...config.credentials });
     default:
       throw new UnsupportedProviderError(provider || 'unknown', firmId);
   }
