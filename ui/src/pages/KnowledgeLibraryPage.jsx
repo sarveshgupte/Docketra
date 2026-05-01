@@ -46,6 +46,44 @@ const EMPTY_FORM = {
   checklistSteps: [],
 };
 
+// ── Status badge colours ────────────────────────────────────────────────────
+const STATUS_COLORS = {
+  active:   { background: '#d1fae5', color: '#065f46', border: '1px solid #6ee7b7' },
+  draft:    { background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db' },
+  archived: { background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' },
+  review:   { background: '#fef9c3', color: '#854d0e', border: '1px solid #fde047' },
+};
+
+const TYPE_COLORS = {
+  sop:                { background: '#dbeafe', color: '#1e40af' },
+  checklist:          { background: '#ede9fe', color: '#5b21b6' },
+  template:           { background: '#ccfbf1', color: '#0f766e' },
+  note:               { background: '#fef9c3', color: '#854d0e' },
+  client_instruction: { background: '#e0e7ff', color: '#3730a3' },
+  process:            { background: '#ffedd5', color: '#9a3412' },
+};
+
+const BADGE_BASE = {
+  display: 'inline-block',
+  padding: '0.15em 0.55em',
+  borderRadius: '999px',
+  fontSize: '0.75rem',
+  fontWeight: 600,
+  lineHeight: 1.4,
+  whiteSpace: 'nowrap',
+};
+
+const StatusBadge = ({ status }) => {
+  const style = STATUS_COLORS[status] || STATUS_COLORS.draft;
+  return <span style={{ ...BADGE_BASE, ...style }}>{formatLabel(status)}</span>;
+};
+
+const TypeBadge = ({ type }) => {
+  const style = TYPE_COLORS[type] || { background: '#f3f4f6', color: '#374151' };
+  return <span style={{ ...BADGE_BASE, ...style }}>{formatLabel(type)}</span>;
+};
+
+// ── Form component ──────────────────────────────────────────────────────────
 const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => {
   const [form, setForm] = useState(() => ({
     ...EMPTY_FORM,
@@ -82,25 +120,31 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-
   const updateChecklistStep = (index, patch) => {
     setForm((prev) => ({
       ...prev,
-      checklistSteps: (prev.checklistSteps || []).map((step, stepIndex) => (stepIndex === index ? { ...step, ...patch } : step)),
+      checklistSteps: (prev.checklistSteps || []).map((step, stepIndex) =>
+        stepIndex === index ? { ...step, ...patch } : step,
+      ),
     }));
   };
 
   const addChecklistStep = () => {
     setForm((prev) => ({
       ...prev,
-      checklistSteps: [...(prev.checklistSteps || []), { label: '', description: '', order: (prev.checklistSteps || []).length + 1, required: true }],
+      checklistSteps: [
+        ...(prev.checklistSteps || []),
+        { label: '', description: '', order: (prev.checklistSteps || []).length + 1, required: true },
+      ],
     }));
   };
 
   const removeChecklistStep = (index) => {
     setForm((prev) => ({
       ...prev,
-      checklistSteps: (prev.checklistSteps || []).filter((_, stepIndex) => stepIndex !== index).map((step, idx) => ({ ...step, order: idx + 1 })),
+      checklistSteps: (prev.checklistSteps || [])
+        .filter((_, stepIndex) => stepIndex !== index)
+        .map((step, idx) => ({ ...step, order: idx + 1 })),
     }));
   };
 
@@ -127,191 +171,264 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
       linkedWorkType: normalizeWorkType(form.linkedWorkType) || null,
       linkedClientId: form.linkedClientId.trim() || null,
       reviewDueAt: form.reviewDueAt || null,
-      checklistSteps: Array.isArray(form.checklistSteps) ? form.checklistSteps.map((step, idx) => ({
-        label: String(step.label || '').trim(),
-        description: String(step.description || '').trim() || null,
-        order: Number(step.order) || (idx + 1),
-        required: step.required !== false,
-      })) : undefined,
+      checklistSteps: Array.isArray(form.checklistSteps)
+        ? form.checklistSteps.map((step, idx) => ({
+            label: String(step.label || '').trim(),
+            description: String(step.description || '').trim() || null,
+            order: Number(step.order) || (idx + 1),
+            required: step.required !== false,
+          }))
+        : undefined,
     };
     onSave(payload);
   };
 
+  const fieldsetStyle = {
+    border: '1px solid #e5e7eb',
+    borderRadius: '6px',
+    padding: '1rem',
+    marginBottom: '0.75rem',
+  };
+  const legendStyle = {
+    fontWeight: 700,
+    fontSize: '0.85rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    color: '#374151',
+    padding: '0 0.4rem',
+  };
+  const labelStyle = { display: 'block', marginBottom: '0.25rem', fontWeight: 600 };
+  const fieldGap = { display: 'flex', flexDirection: 'column', gap: '0.75rem' };
+  const rowGap = { display: 'flex', gap: '0.75rem', flexWrap: 'wrap' };
+
   return (
     <form onSubmit={handleSubmit} aria-label="Knowledge item form">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        <div>
-          <label htmlFor="ki-title" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>
-            Title <span aria-hidden="true">*</span>
-          </label>
-          <input
-            id="ki-title"
-            name="title"
-            type="text"
-            value={form.title}
-            onChange={handleChange}
-            required
-            maxLength={500}
-            style={{ width: '100%' }}
-            aria-required="true"
-          />
-        </div>
+      <div style={fieldGap}>
 
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: '140px' }}>
-            <label htmlFor="ki-type" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>
-              Type <span aria-hidden="true">*</span>
-            </label>
-            <select id="ki-type" name="type" value={form.type} onChange={handleChange} required aria-required="true" style={{ width: '100%' }}>
-              {ITEM_TYPES.map((t) => (
-                <option key={t} value={t}>{formatLabel(t)}</option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ flex: 1, minWidth: '140px' }}>
-            <label htmlFor="ki-status" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>
-              Status <span aria-hidden="true">*</span>
-            </label>
-            <select id="ki-status" name="status" value={form.status} onChange={handleChange} required aria-required="true" style={{ width: '100%' }}>
-              {ITEM_STATUSES.map((s) => (
-                <option key={s} value={s}>{formatLabel(s)}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label htmlFor="ki-summary" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>Summary</label>
-          <textarea
-            id="ki-summary"
-            name="summary"
-            value={form.summary}
-            onChange={handleChange}
-            maxLength={2000}
-            rows={2}
-            style={{ width: '100%' }}
-          />
-        </div>
-
-        <div>
-          <label htmlFor="ki-content" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>Content</label>
-          <textarea
-            id="ki-content"
-            name="content"
-            value={form.content}
-            onChange={handleChange}
-            maxLength={50000}
-            rows={6}
-            style={{ width: '100%' }}
-          />
-        </div>
-
-        <div>
-          <label htmlFor="ki-tags" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>
-            Tags <span className="muted" style={{ fontWeight: 400 }}>(comma-separated)</span>
-          </label>
-          <input
-            id="ki-tags"
-            name="tags"
-            type="text"
-            value={form.tags}
-            onChange={handleChange}
-            placeholder="e.g. compliance, filing, annual"
-            style={{ width: '100%' }}
-          />
-        </div>
-
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: '140px' }}>
-            <label htmlFor="ki-ownerXid" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>Owner XID</label>
-            <input
-              id="ki-ownerXid"
-              name="ownerXid"
-              type="text"
-              value={form.ownerXid}
-              onChange={handleChange}
-              style={{ width: '100%' }}
-            />
-          </div>
-
-          <div style={{ flex: 1, minWidth: '140px' }}>
-            <label htmlFor="ki-linkedWorkTypeSelect" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>Linked work type</label>
-            <select
-              id="ki-linkedWorkTypeSelect"
-              name="linkedWorkTypeSelect"
-              value={selectedWorkType}
-              onChange={handleChange}
-              style={{ width: '100%' }}
-            >
-              <option value="">Unlinked</option>
-              {WORK_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-              {!isKnownWorkType(form.linkedWorkType) && form.linkedWorkType.trim() ? (
-                <option value={CUSTOM_WORK_TYPE_OPTION}>{`Custom: ${form.linkedWorkType.trim()}`}</option>
-              ) : null}
-              <option value={CUSTOM_WORK_TYPE_OPTION}>Other / custom (advanced)</option>
-            </select>
-            {selectedWorkType === CUSTOM_WORK_TYPE_OPTION ? (
+        {/* ── A. Basics ── */}
+        <fieldset style={fieldsetStyle}>
+          <legend style={legendStyle}>Basics</legend>
+          <div style={fieldGap}>
+            <div>
+              <label htmlFor="ki-title" style={labelStyle}>
+                Title <span aria-hidden="true">*</span>
+              </label>
               <input
-                id="ki-linkedWorkType"
-                name="linkedWorkType"
+                id="ki-title"
+                name="title"
                 type="text"
-                value={form.linkedWorkType}
+                value={form.title}
                 onChange={handleChange}
-                style={{ width: '100%', marginTop: '0.4rem' }}
-                placeholder="Enter custom work type"
+                required
+                maxLength={500}
+                style={{ width: '100%' }}
+                aria-required="true"
               />
-            ) : null}
-            <p style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem' }}>
-              Use the same work type/category used by dockets so this knowledge appears during work execution.
-            </p>
+            </div>
+
+            <div style={rowGap}>
+              <div style={{ flex: 1, minWidth: '140px' }}>
+                <label htmlFor="ki-type" style={labelStyle}>
+                  Type <span aria-hidden="true">*</span>
+                </label>
+                <select id="ki-type" name="type" value={form.type} onChange={handleChange} required aria-required="true" style={{ width: '100%' }}>
+                  {ITEM_TYPES.map((t) => (
+                    <option key={t} value={t}>{formatLabel(t)}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ flex: 1, minWidth: '140px' }}>
+                <label htmlFor="ki-status" style={labelStyle}>
+                  Status <span aria-hidden="true">*</span>
+                </label>
+                <select id="ki-status" name="status" value={form.status} onChange={handleChange} required aria-required="true" style={{ width: '100%' }}>
+                  {ITEM_STATUSES.map((s) => (
+                    <option key={s} value={s}>{formatLabel(s)}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="ki-summary" style={labelStyle}>Summary</label>
+              <textarea
+                id="ki-summary"
+                name="summary"
+                value={form.summary}
+                onChange={handleChange}
+                maxLength={2000}
+                rows={2}
+                style={{ width: '100%' }}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="ki-content" style={labelStyle}>Content</label>
+              <textarea
+                id="ki-content"
+                name="content"
+                value={form.content}
+                onChange={handleChange}
+                maxLength={50000}
+                rows={6}
+                style={{ width: '100%' }}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="ki-tags" style={labelStyle}>
+                Tags <span style={{ fontWeight: 400, color: '#6b7280' }}>(comma-separated)</span>
+              </label>
+              <input
+                id="ki-tags"
+                name="tags"
+                type="text"
+                value={form.tags}
+                onChange={handleChange}
+                placeholder="e.g. compliance, filing, annual"
+                style={{ width: '100%' }}
+              />
+            </div>
           </div>
+        </fieldset>
 
-          <div style={{ flex: 1, minWidth: '140px' }}>
-            <label htmlFor="ki-linkedClientId" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>Linked client ID <span style={{ fontWeight: 400 }}>(advanced, optional)</span></label>
-            <input
-              id="ki-linkedClientId"
-              name="linkedClientId"
-              type="text"
-              value={form.linkedClientId}
-              onChange={handleChange}
-              style={{ width: '100%' }}
-            />
-            <p style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem' }}>
-              Linking a client lets this knowledge appear in Client Memory. Use the client&apos;s internal Mongo ID. A client picker will be added in a future update.
-            </p>
+        {/* ── B. Ownership & linking ── */}
+        <fieldset style={fieldsetStyle}>
+          <legend style={legendStyle}>Ownership &amp; linking</legend>
+          <div style={fieldGap}>
+            <div style={rowGap}>
+              <div style={{ flex: 1, minWidth: '140px' }}>
+                <label htmlFor="ki-ownerXid" style={labelStyle}>Owner XID</label>
+                <input
+                  id="ki-ownerXid"
+                  name="ownerXid"
+                  type="text"
+                  value={form.ownerXid}
+                  onChange={handleChange}
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <label htmlFor="ki-linkedWorkTypeSelect" style={labelStyle}>Linked work type</label>
+                <select
+                  id="ki-linkedWorkTypeSelect"
+                  name="linkedWorkTypeSelect"
+                  value={selectedWorkType}
+                  onChange={handleChange}
+                  style={{ width: '100%' }}
+                >
+                  <option value="">Unlinked</option>
+                  {WORK_TYPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                  {!isKnownWorkType(form.linkedWorkType) && form.linkedWorkType.trim() ? (
+                    <option value={CUSTOM_WORK_TYPE_OPTION}>{`Custom: ${form.linkedWorkType.trim()}`}</option>
+                  ) : null}
+                  <option value={CUSTOM_WORK_TYPE_OPTION}>Other / custom (advanced)</option>
+                </select>
+                {selectedWorkType === CUSTOM_WORK_TYPE_OPTION ? (
+                  <input
+                    id="ki-linkedWorkType"
+                    name="linkedWorkType"
+                    type="text"
+                    value={form.linkedWorkType}
+                    onChange={handleChange}
+                    style={{ width: '100%', marginTop: '0.4rem' }}
+                    placeholder="Enter custom work type"
+                  />
+                ) : null}
+                <p style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem', marginBottom: 0 }}>
+                  Use the same work type/category used by dockets so this knowledge appears during work execution.
+                </p>
+              </div>
+            </div>
+
+            <div style={rowGap}>
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <label htmlFor="ki-linkedClientId" style={labelStyle}>
+                  Linked client ID <span style={{ fontWeight: 400, color: '#6b7280' }}>(advanced, optional)</span>
+                </label>
+                <input
+                  id="ki-linkedClientId"
+                  name="linkedClientId"
+                  type="text"
+                  value={form.linkedClientId}
+                  onChange={handleChange}
+                  style={{ width: '100%' }}
+                />
+                <p style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem', marginBottom: 0 }}>
+                  Linking a client lets this knowledge appear in Client Memory. Use the client&apos;s internal Mongo ID.
+                </p>
+              </div>
+
+              <div style={{ flex: 1, minWidth: '140px' }}>
+                <label htmlFor="ki-reviewDueAt" style={labelStyle}>Review due</label>
+                <input
+                  id="ki-reviewDueAt"
+                  name="reviewDueAt"
+                  type="date"
+                  value={form.reviewDueAt}
+                  onChange={handleChange}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            </div>
           </div>
+        </fieldset>
 
-          <div style={{ flex: 1, minWidth: '140px' }}>
-            <label htmlFor="ki-reviewDueAt" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>Review due</label>
-            <input
-              id="ki-reviewDueAt"
-              name="reviewDueAt"
-              type="date"
-              value={form.reviewDueAt}
-              onChange={handleChange}
-              style={{ width: '100%' }}
-            />
-          </div>
-        </div>
-
-
+        {/* ── C. Checklist steps (only when type === checklist) ── */}
         {form.type === 'checklist' ? (
-          <div style={{ border: '1px solid #e5e7eb', borderRadius: '6px', padding: '0.75rem' }}>
+          <fieldset style={fieldsetStyle}>
+            <legend style={legendStyle}>Checklist steps</legend>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <strong>Checklist steps</strong>
+              <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                {(form.checklistSteps || []).length} step{(form.checklistSteps || []).length !== 1 ? 's' : ''}
+              </span>
               <button type="button" onClick={addChecklistStep}>Add step</button>
             </div>
+            {(form.checklistSteps || []).length === 0 ? (
+              <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '0.5rem 0' }}>
+                No checklist steps yet. Add the first step to make this checklist useful during work execution.
+              </p>
+            ) : null}
             {(form.checklistSteps || []).map((step, index) => (
-              <div key={`step-${index}`} style={{ borderTop: index ? '1px solid #f3f4f6' : 'none', paddingTop: index ? '0.5rem' : 0, marginTop: index ? '0.5rem' : 0 }}>
+              <div
+                key={`step-${index}`}
+                style={{
+                  borderTop: index ? '1px solid #f3f4f6' : 'none',
+                  paddingTop: index ? '0.5rem' : 0,
+                  marginTop: index ? '0.5rem' : 0,
+                }}
+              >
                 <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                  <span style={{ minWidth: '60px' }}>Step {index + 1}</span>
-                  <input type="text" value={step.label} onChange={(e) => updateChecklistStep(index, { label: e.target.value })} placeholder="Step label" maxLength={300} style={{ flex: 1 }} />
+                  <span style={{ minWidth: '60px', fontSize: '0.85rem', color: '#6b7280' }}>Step {index + 1}</span>
+                  <input
+                    type="text"
+                    value={step.label}
+                    onChange={(e) => updateChecklistStep(index, { label: e.target.value })}
+                    placeholder="Step label"
+                    maxLength={300}
+                    style={{ flex: 1 }}
+                  />
                 </div>
-                <textarea value={step.description || ''} onChange={(e) => updateChecklistStep(index, { description: e.target.value })} placeholder="Description (optional)" rows={2} maxLength={2000} style={{ width: '100%', marginTop: '0.35rem' }} />
-                <label style={{ fontSize: '0.85rem' }}><input type="checkbox" checked={step.required !== false} onChange={(e) => updateChecklistStep(index, { required: e.target.checked })} /> Required</label>
+                <textarea
+                  value={step.description || ''}
+                  onChange={(e) => updateChecklistStep(index, { description: e.target.value })}
+                  placeholder="Description (optional)"
+                  rows={2}
+                  maxLength={2000}
+                  style={{ width: '100%', marginTop: '0.35rem' }}
+                />
+                <label style={{ fontSize: '0.85rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={step.required !== false}
+                    onChange={(e) => updateChecklistStep(index, { required: e.target.checked })}
+                  />{' '}
+                  Required step
+                </label>
                 <div className="action-row" style={{ marginTop: '0.3rem' }}>
                   <button type="button" onClick={() => moveChecklistStep(index, -1)} disabled={index === 0}>Up</button>
                   <button type="button" onClick={() => moveChecklistStep(index, 1)} disabled={index === (form.checklistSteps || []).length - 1}>Down</button>
@@ -319,12 +436,20 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
                 </div>
               </div>
             ))}
-          </div>
+          </fieldset>
         ) : null}
 
         {initial?.type === 'checklist' && form.type !== 'checklist' ? (
           <p className="inline-notice inline-notice--warning">Checklist steps are only used for checklist records.</p>
         ) : null}
+
+        {/* ── D. Privacy reminder ── */}
+        <p
+          className="inline-notice inline-notice--warning"
+          style={{ fontSize: '0.82rem', marginBottom: 0 }}
+        >
+          Structured knowledge only. {'Do not upload or paste sensitive client documents here'}; store heavy documents in firm-controlled storage/BYOS.
+        </p>
 
         {saveError ? (
           <p className="inline-notice inline-notice--error" role="alert">{saveError}</p>
@@ -343,12 +468,13 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
   );
 };
 
+// ── Detail drawer ───────────────────────────────────────────────────────────
 const DRAWER_ASIDE_STYLE = {
   position: 'fixed',
   top: 0,
   right: 0,
   bottom: 0,
-  width: '480px',
+  width: '520px',
   maxWidth: '100vw',
   background: '#fff',
   borderLeft: '1px solid #e5e7eb',
@@ -357,60 +483,89 @@ const DRAWER_ASIDE_STYLE = {
 };
 
 const DetailRow = ({ label, value }) => (
-  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-    <span style={{ fontWeight: 600, minWidth: '160px', color: '#374151' }}>{label}</span>
-    <span style={{ color: '#111827', flex: 1 }}>{value || '—'}</span>
+  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
+    <span style={{ fontWeight: 600, minWidth: '160px', color: '#374151', fontSize: '0.85rem' }}>{label}</span>
+    <span style={{ color: '#111827', flex: 1, fontSize: '0.85rem' }}>{value || '—'}</span>
+  </div>
+);
+
+const DrawerSectionLabel = ({ children }) => (
+  <div style={{
+    fontSize: '0.72rem',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.07em',
+    color: '#9ca3af',
+    marginBottom: '0.5rem',
+    marginTop: '1rem',
+    paddingBottom: '0.25rem',
+    borderBottom: '1px solid #f3f4f6',
+  }}>
+    {children}
   </div>
 );
 
 const KnowledgeItemDetailDrawer = ({ item, onEdit, onArchive, onClose }) => {
   if (!item) return null;
+  const tags = toArray(item.tags);
+
   return (
     <aside
       aria-label="Knowledge Item Detail"
       role="complementary"
       style={{ ...DRAWER_ASIDE_STYLE, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}
     >
-      <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Knowledge Item Detail</h2>
+      {/* Header */}
+      <div style={{
+        padding: '1.25rem 1.5rem',
+        borderBottom: '1px solid #e5e7eb',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        gap: '0.75rem',
+      }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, lineHeight: 1.3, wordBreak: 'break-word' }}>
+            {item.title}
+          </h2>
+          <div style={{ marginTop: '0.35rem' }}>
+            <StatusBadge status={item.status} />
+          </div>
+        </div>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close detail drawer"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', color: '#6b7280' }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', color: '#6b7280', flexShrink: 0 }}
         >
           ✕
         </button>
       </div>
 
-      <div style={{ padding: '1.25rem 1.5rem', flex: 1 }}>
-        <p className="inline-notice inline-notice--warning" style={{ marginBottom: '1rem', fontSize: '0.82rem' }}>
-          KnowledgeItems are for structured operational knowledge. Do not paste sensitive client documents here;
-          store heavy documents in firm-controlled storage/BYOS.
-        </p>
+      <div style={{ padding: '1rem 1.5rem', flex: 1 }}>
 
-        <DetailRow label="Title" value={item.title} />
-        <DetailRow label="Type" value={formatLabel(item.type)} />
-        <DetailRow label="Status" value={formatLabel(item.status)} />
-        <DetailRow label="Summary" value={item.summary} />
+        {/* Metadata */}
+        <DrawerSectionLabel>Metadata</DrawerSectionLabel>
+        <DetailRow label="Type" value={<TypeBadge type={item.type} />} />
+        <DetailRow label="Owner" value={item.ownerXid} />
+        <DetailRow label="Linked work type" value={item.linkedWorkType} />
+        <DetailRow label="Linked client ID" value={item.linkedClientId || item.clientId} />
+        <DetailRow label="Linked docket ID" value={item.linkedDocketId || item.docketId} />
+        <DetailRow label="Review due" value={formatDate(item.reviewDueAt)} />
+        <DetailRow label="Updated" value={formatDate(item.updatedAt)} />
 
-        {item.type === 'checklist' && Array.isArray(item.checklistSteps) && item.checklistSteps.length ? (
-          <div style={{ marginBottom: '0.75rem' }}>
-            <div style={{ fontWeight: 600, marginBottom: '0.25rem', color: '#374151' }}>Checklist steps</div>
-            <ol style={{ margin: 0, paddingLeft: '1.1rem' }}>
-              {item.checklistSteps.map((step, index) => (
-                <li key={`detail-step-${index}`} style={{ marginBottom: '0.4rem' }}>
-                  <div><strong>{step.label}</strong> <span className="muted">({step.required === false ? 'Optional' : 'Required'})</span></div>
-                  {step.description ? <div style={{ fontSize: '0.85rem' }}>{step.description}</div> : null}
-                </li>
-              ))}
-            </ol>
-          </div>
+        {/* Summary */}
+        {item.summary ? (
+          <>
+            <DrawerSectionLabel>Summary</DrawerSectionLabel>
+            <p style={{ fontSize: '0.875rem', color: '#374151', margin: 0 }}>{item.summary}</p>
+          </>
         ) : null}
 
+        {/* Content */}
         {item.content ? (
-          <div style={{ marginBottom: '0.75rem' }}>
-            <div style={{ fontWeight: 600, marginBottom: '0.25rem', color: '#374151' }}>Content</div>
+          <>
+            <DrawerSectionLabel>Content</DrawerSectionLabel>
             <pre style={{
               background: '#f9fafb',
               border: '1px solid #e5e7eb',
@@ -425,43 +580,76 @@ const KnowledgeItemDetailDrawer = ({ item, onEdit, onArchive, onClose }) => {
             }}>
               {item.content}
             </pre>
-          </div>
-        ) : (
-          <DetailRow label="Content" value={null} />
-        )}
+          </>
+        ) : null}
 
-        <DetailRow label="Tags" value={toArray(item.tags).join(', ') || null} />
-        <DetailRow label="Owner" value={item.ownerXid} />
-        <DetailRow label="Linked work type" value={item.linkedWorkType} />
-        <DetailRow label="Linked client ID" value={item.linkedClientId || item.clientId} />
-        <DetailRow label="Linked docket ID" value={item.linkedDocketId || item.docketId} />
-        <DetailRow label="Review due" value={formatDate(item.reviewDueAt)} />
-        <DetailRow label="Last reviewed" value={formatDate(item.lastReviewedAt)} />
+        {/* Checklist steps */}
+        {item.type === 'checklist' && Array.isArray(item.checklistSteps) && item.checklistSteps.length ? (
+          <>
+            <DrawerSectionLabel>Checklist steps</DrawerSectionLabel>
+            <ol style={{ margin: 0, paddingLeft: '1.1rem' }}>
+              {item.checklistSteps.map((step, index) => (
+                <li key={`detail-step-${index}`} style={{ marginBottom: '0.4rem', fontSize: '0.875rem' }}>
+                  <div>
+                    <strong>{step.label}</strong>{' '}
+                    <span style={{ color: '#9ca3af', fontSize: '0.78rem' }}>
+                      ({step.required === false ? 'Optional' : 'Required'})
+                    </span>
+                  </div>
+                  {step.description ? <div style={{ color: '#6b7280', fontSize: '0.82rem' }}>{step.description}</div> : null}
+                </li>
+              ))}
+            </ol>
+          </>
+        ) : null}
+
+        {/* Tags */}
+        {tags.length ? (
+          <>
+            <DrawerSectionLabel>Tags</DrawerSectionLabel>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  style={{
+                    background: '#f3f4f6',
+                    color: '#374151',
+                    borderRadius: '999px',
+                    padding: '0.15em 0.6em',
+                    fontSize: '0.78rem',
+                    fontWeight: 500,
+                  }}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </>
+        ) : null}
+
+        {/* Audit */}
+        <DrawerSectionLabel>Audit</DrawerSectionLabel>
         <DetailRow label="Created by" value={item.createdBy || item.createdByXid} />
         <DetailRow label="Updated by" value={item.updatedBy || item.updatedByXid} />
         <DetailRow label="Created at" value={formatDate(item.createdAt)} />
         <DetailRow label="Updated at" value={formatDate(item.updatedAt)} />
+
       </div>
 
       <div className="action-row" style={{ padding: '1rem 1.5rem', borderTop: '1px solid #e5e7eb', gap: '0.5rem' }}>
         {item.status !== 'archived' ? (
           <>
-            <button type="button" onClick={() => onEdit(item)}>
-              Edit
-            </button>
-            <button type="button" onClick={() => onArchive(item)}>
-              Archive
-            </button>
+            <button type="button" onClick={() => onEdit(item)}>Edit</button>
+            <button type="button" onClick={() => onArchive(item)}>Archive</button>
           </>
         ) : null}
-        <button type="button" onClick={onClose}>
-          Close
-        </button>
+        <button type="button" onClick={onClose}>Close</button>
       </div>
     </aside>
   );
 };
 
+// ── Page ────────────────────────────────────────────────────────────────────
 export const KnowledgeLibraryPage = () => {
   const { firmSlug } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -472,11 +660,12 @@ export const KnowledgeLibraryPage = () => {
   const [statusMessage, setStatusMessage] = useState('');
   const hasLoadedRef = useRef(false);
 
-  // Filters
+  // Client-side filters — no API params
   const [searchQ, setSearchQ] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterTag, setFilterTag] = useState('');
+  const [filterWorkType, setFilterWorkType] = useState('');
 
   // Form state
   const [formMode, setFormMode] = useState(null); // null | 'create' | 'edit'
@@ -577,6 +766,9 @@ export const KnowledgeLibraryPage = () => {
       const tag = filterTag.toLowerCase();
       result = result.filter((item) => toArray(item.tags).some((t) => String(t).toLowerCase().includes(tag)));
     }
+    if (filterWorkType) {
+      result = result.filter((item) => String(item.linkedWorkType || '').toLowerCase() === filterWorkType.toLowerCase());
+    }
     if (searchQ) {
       const q = searchQ.toLowerCase();
       result = result.filter(
@@ -587,7 +779,7 @@ export const KnowledgeLibraryPage = () => {
       );
     }
     return result;
-  }, [items, filterType, filterStatus, filterTag, searchQ]);
+  }, [items, filterType, filterStatus, filterTag, filterWorkType, searchQ]);
 
   const now = Date.now();
   const totalCount = items.length;
@@ -599,14 +791,20 @@ export const KnowledgeLibraryPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [items],
   );
+  const checklistCount = useMemo(() => items.filter((item) => item.type === 'checklist').length, [items]);
+  const unlinkedCount = useMemo(
+    () => items.filter((item) => !item.linkedWorkType && !item.linkedClientId && !item.linkedDocketId).length,
+    [items],
+  );
 
-  const hasActiveFilters = Boolean(searchQ || filterType || filterStatus || filterTag);
+  const hasActiveFilters = Boolean(searchQ || filterType || filterStatus || filterTag || filterWorkType);
 
   const clearFilters = () => {
     setSearchQ('');
     setFilterType('');
     setFilterStatus('');
     setFilterTag('');
+    setFilterWorkType('');
   };
 
   const openCreate = () => {
@@ -662,19 +860,95 @@ export const KnowledgeLibraryPage = () => {
     }
   };
 
-  const columns = ['Title', 'Type', 'Status', 'Tags', 'Owner', 'Review due', 'Updated', 'Actions'];
+  const columns = ['Knowledge item', 'Type', 'Status', 'Links', 'Review due', 'Updated', 'Actions'];
 
   const tableRows = filteredItems.map((item) => {
     const itemId = item._id || item.id;
+    const tags = toArray(item.tags);
+    const summaryPreview = item.summary ? (item.summary.length > 80 ? `${item.summary.slice(0, 80)}…` : item.summary) : null;
+    const hasLinks = item.linkedWorkType || item.linkedClientId || item.linkedDocketId;
+    const stepCount = Array.isArray(item.checklistSteps) ? item.checklistSteps.length : 0;
+
     return (
       <tr key={itemId}>
-        <td>{item.title || '—'}</td>
-        <td>{formatLabel(item.type)}</td>
-        <td>{formatLabel(item.status)}</td>
-        <td>{toArray(item.tags).join(', ') || '—'}</td>
-        <td>{item.ownerXid || '—'}</td>
-        <td>{formatDate(item.reviewDueAt)}</td>
-        <td>{formatDate(item.updatedAt)}</td>
+        {/* Knowledge item cell */}
+        <td style={{ maxWidth: '260px' }}>
+          <div style={{ fontWeight: 600, fontSize: '0.875rem', lineHeight: 1.3 }}>{item.title || '—'}</div>
+          {summaryPreview ? (
+            <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem' }}>{summaryPreview}</div>
+          ) : null}
+          {tags.length ? (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.3rem' }}>
+              {tags.slice(0, 4).map((tag) => (
+                <span
+                  key={tag}
+                  style={{
+                    background: '#f3f4f6',
+                    color: '#374151',
+                    borderRadius: '999px',
+                    padding: '0.1em 0.5em',
+                    fontSize: '0.7rem',
+                    fontWeight: 500,
+                  }}
+                >
+                  {tag}
+                </span>
+              ))}
+              {tags.length > 4 ? (
+                <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>+{tags.length - 4}</span>
+              ) : null}
+            </div>
+          ) : null}
+        </td>
+
+        {/* Type cell */}
+        <td>
+          <TypeBadge type={item.type} />
+          {item.type === 'checklist' && stepCount > 0 ? (
+            <span style={{
+              display: 'inline-block',
+              marginLeft: '0.35rem',
+              background: '#f3f4f6',
+              color: '#374151',
+              borderRadius: '999px',
+              padding: '0.1em 0.5em',
+              fontSize: '0.7rem',
+              fontWeight: 500,
+            }}>
+              {stepCount} step{stepCount !== 1 ? 's' : ''}
+            </span>
+          ) : null}
+        </td>
+
+        {/* Status cell */}
+        <td><StatusBadge status={item.status} /></td>
+
+        {/* Links cell */}
+        <td style={{ fontSize: '0.78rem' }}>
+          {hasLinks ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              {item.linkedWorkType ? (
+                <span style={{ color: '#1e40af' }}>⚙ {formatLabel(item.linkedWorkType)}</span>
+              ) : null}
+              {item.linkedClientId ? (
+                <span style={{ color: '#065f46' }}>👤 {item.linkedClientId}</span>
+              ) : null}
+              {item.linkedDocketId ? (
+                <span style={{ color: '#4338ca' }}>📁 {item.linkedDocketId}</span>
+              ) : null}
+            </div>
+          ) : (
+            <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Unlinked</span>
+          )}
+        </td>
+
+        {/* Review due */}
+        <td style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{formatDate(item.reviewDueAt)}</td>
+
+        {/* Updated */}
+        <td style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{formatDate(item.updatedAt)}</td>
+
+        {/* Actions */}
         <td>
           <div className="action-row" style={{ gap: '0.4rem' }}>
             <button
@@ -719,7 +993,7 @@ export const KnowledgeLibraryPage = () => {
     <PlatformShell
       moduleLabel="Firm Memory"
       title="Knowledge Library"
-      subtitle="SOPs, checklists, templates, notes, client instructions, and process records that feed Company Brain."
+      subtitle="Knowledge Library feeds Company Brain. SOPs, checklists, templates, notes, client instructions, and process records — all in one place."
       actions={(
         <div className="action-row">
           <button type="button" onClick={openCreate} disabled={loading}>
@@ -743,24 +1017,33 @@ export const KnowledgeLibraryPage = () => {
         ]}
       />
 
+      {/* Guidance panel */}
       <PageSection>
-        <p className="inline-notice inline-notice--info" style={{ marginBottom: '0.5rem' }}>
-          Knowledge Library feeds Company Brain. These records will later connect to clients, dockets, work types,
-          and process templates so teams can execute with context.
-        </p>
-        <p className="inline-notice inline-notice--warning">
-          Do not upload or paste sensitive client documents here. Store heavy documents in firm-controlled
-          storage/BYOS and use KnowledgeItems for structured operational knowledge.
+        <div style={{
+          background: '#f0f9ff',
+          border: '1px solid #bae6fd',
+          borderRadius: '6px',
+          padding: '0.85rem 1rem',
+          fontSize: '0.875rem',
+          color: '#0c4a6e',
+          marginBottom: '0.5rem',
+        }}>
+          <strong>Use Knowledge Library for reusable firm knowledge.</strong> Link records to work types, clients, or dockets so they appear during execution.
+        </div>
+        <p className="inline-notice inline-notice--warning" style={{ marginBottom: 0, fontSize: '0.82rem' }}>
+          {'Do not upload or paste sensitive client documents here'}. Store heavy documents in firm-controlled storage/BYOS and use Knowledge Items for structured operational knowledge.
         </p>
       </PageSection>
 
       <StatGrid
         items={[
-          { label: 'Total knowledge items', value: loading ? '…' : totalCount },
+          { label: 'Total records', value: loading ? '…' : totalCount },
           { label: 'Active', value: loading ? '…' : activeCount },
           { label: 'Draft', value: loading ? '…' : draftCount },
           { label: 'Archived', value: loading ? '…' : archivedCount },
           { label: 'Review due', value: loading ? '…' : reviewDueCount, helpText: reviewDueCount > 0 ? 'Items past their scheduled review date.' : '' },
+          { label: 'Checklist records', value: loading ? '…' : checklistCount },
+          { label: 'Unlinked records', value: loading ? '…' : unlinkedCount, helpText: unlinkedCount > 0 ? 'Items with no linked work type, client, or docket.' : '' },
         ]}
       />
 
@@ -813,6 +1096,16 @@ export const KnowledgeLibraryPage = () => {
             <option value="active">Active</option>
             <option value="archived">Archived</option>
           </select>
+          <select
+            value={filterWorkType}
+            onChange={(event) => setFilterWorkType(event.target.value)}
+            aria-label="Filter by work type"
+          >
+            <option value="">All work types</option>
+            {WORK_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
           <input
             type="text"
             placeholder="Filter by tag…"
@@ -828,8 +1121,8 @@ export const KnowledgeLibraryPage = () => {
           rows={tableRows}
           loading={loading}
           loadingLabel="Loading knowledge items…"
-          emptyLabel="Your firm knowledge library is empty. Start by adding an SOP, checklist, template, note, client instruction, or process record."
-          emptyLabelFiltered="No knowledge items match these filters."
+          emptyLabel="Your Knowledge Library is empty. Add your first SOP, checklist, template, note, client instruction, or process record."
+          emptyLabelFiltered="No knowledge items match these filters. Clear filters or adjust your search."
           hasActiveFilters={hasActiveFilters}
           error={error}
           onRetry={() => void loadData()}
