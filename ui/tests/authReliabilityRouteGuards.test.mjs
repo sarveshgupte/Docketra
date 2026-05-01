@@ -1,0 +1,37 @@
+import assert from 'assert';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(__dirname, '..', 'src');
+
+const publicRoutesSource = fs.readFileSync(path.join(root, 'routes', 'PublicRoutes.jsx'), 'utf8');
+const loginPageSource = fs.readFileSync(path.join(root, 'pages', 'LoginPage.jsx'), 'utf8');
+const forgotPasswordSource = fs.readFileSync(path.join(root, 'pages', 'ForgotPasswordPage.jsx'), 'utf8');
+const otpPageSource = fs.readFileSync(path.join(root, 'pages', 'OtpVerificationPage.jsx'), 'utf8');
+const postAuthNavigationSource = fs.readFileSync(path.join(root, 'utils', 'postAuthNavigation.js'), 'utf8');
+
+assert(publicRoutesSource.includes('path="/superadmin"'), 'Superadmin root login route should exist.');
+assert(publicRoutesSource.includes('path="/superadmin/login"'), 'Canonical superadmin login route should exist.');
+assert(publicRoutesSource.includes('path="/:firmSlug/login"'), 'Firm login route should exist.');
+assert(publicRoutesSource.includes('path="/:firmSlug/forgot-password"'), 'Firm forgot-password route should exist.');
+
+assert(loginPageSource.includes('localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);'), 'Superadmin login should clear stale firm routing hint state.');
+
+assert(forgotPasswordSource.includes('const activeFirmSlug = resolvedFirmSlug || firmSlug ||'), 'Forgot-password flow should preserve firm context when present.');
+assert(forgotPasswordSource.includes('const loginPath = activeFirmSlug ? `/${activeFirmSlug}/login` : \'/superadmin\''), 'Forgot-password should route back to firm login when scoped.');
+
+assert(otpPageSource.includes('await fetchProfile({ force: true });'), 'OTP verification must hydrate profile before navigation.');
+assert(otpPageSource.includes('authApi.loginVerify({ firmSlug: firmSlug || undefined, loginToken, otp })'), 'Login OTP verify should use login challenge verify endpoint.');
+assert.equal(otpPageSource.includes("api.post('/auth/verify-otp', { email, otp, purpose })"), true, 'Signup/generic OTP verify path should remain available for non-login OTP purposes.');
+assert(otpPageSource.includes("if (purpose === 'login' && !loginToken) {"), 'Login OTP flow should guard against missing login session token.');
+assert(otpPageSource.includes("setError('Login session expired. Please restart login.');"), 'Missing login token should show explicit restart message.');
+assert(otpPageSource.includes('authApi.loginResendOtp'), 'Login OTP resend should call login resend endpoint.');
+assert(otpPageSource.includes('authApi.signupResendOtp(email)'), 'Signup OTP resend should remain separate from login OTP resend.');
+
+assert(postAuthNavigationSource.includes('if (candidateRoute && isRoleCompatibleRoute(candidateRoute, user)) {'), 'ReturnTo must be role-checked.');
+assert(postAuthNavigationSource.includes('return candidatePath.startsWith(\'/app/superadmin\');'), 'Superadmin routing namespace guard should be enforced.');
+assert(postAuthNavigationSource.includes('return candidatePath.startsWith(`/app/firm/${firmSlug}`);'), 'Firm routing namespace guard should be enforced.');
+
+console.log('authReliabilityRouteGuards.test.mjs passed');
