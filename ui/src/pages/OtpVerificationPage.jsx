@@ -107,7 +107,7 @@ export const OtpVerificationPage = () => {
     try {
       const response = purpose === 'login'
         ? await authApi.loginVerify({ firmSlug: firmSlug || undefined, loginToken, otp })
-        : await api.post('/auth/verify-otp', { email, otp, purpose });
+        : await api.post('/auth/verify-otp', { email, otp, purpose }); // AUTH_CONTRACT_ALLOWLIST: signup/generic OTP verification remains intentionally retained.
       const payload = response?.data || response || {};
       authService.setSessionTokens(payload);
       const profileResult = await fetchProfile({ force: true });
