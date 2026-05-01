@@ -36,6 +36,13 @@ This document defines the canonical authentication flows currently used by activ
   1. `POST /api/auth/forgot-password/init`
   2. `POST /api/auth/forgot-password/verify`
   3. `POST /api/auth/forgot-password/reset`
+- Security/tenant contract:
+  - `init` accepts either email or xID, with optional `firmSlug`.
+  - When `firmSlug` is present, lookup + OTP/reset operations are scoped to that tenant only.
+  - `init` returns a generic success message for unknown/ambiguous identifiers to prevent tenant/account enumeration.
+  - `verify` and `reset` reject cross-tenant, invalid, expired, reused, or locked credentials.
+  - Successful reset clears OTP/reset state so old OTPs/tokens cannot be reused.
+  - Backend may return `firmSlug` in success payloads so global `/forgot-password` can preserve login context.
 
 ## 4) Signup
 - UI route: `/signup`

@@ -133,6 +133,10 @@ export const authService = {
   /**
    * Forgot password - Request password reset email
    */
+  /**
+   * @deprecated Legacy non-canonical forgot-password init endpoint.
+   * Prefer forgotPasswordInit/forgotPasswordVerify/forgotPasswordResetWithOtp.
+   */
   forgotPassword: async (identifier, firmSlug) => {
     const payload = { identifier };
     if (firmSlug) {
