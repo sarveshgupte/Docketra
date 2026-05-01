@@ -155,7 +155,6 @@ export const FirmLoginPage = () => {
 
         if (response.success && response.data?.status === 'active') {
           setFirmData(response.data);
-          localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlug);
         } else {
           setError(getWorkspaceStatusMessage(response?.data?.status));
           setFirmData(null);
@@ -246,7 +245,6 @@ export const FirmLoginPage = () => {
         setOtpHint(response?.otpDeliveryHint || 'A verification code was sent to your email.');
         sessionStorage.setItem(SESSION_KEYS.PENDING_LOGIN_TOKEN, response.loginToken);
         sessionStorage.setItem(SESSION_KEYS.PENDING_LOGIN_FIRM, firmSlug || '');
-        sessionStorage.setItem(SESSION_KEYS.POST_LOGIN_RETURN_TO, location.search || '');
         setOtp('');
         setStep('otp');
       } else if (response?.accessToken) {
@@ -409,7 +407,19 @@ export const FirmLoginPage = () => {
             <Button type="button" variant="outline" fullWidth disabled={loading || cooldown > 0} onClick={handleResendOtp}>
               {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
             </Button>
-            <Button type="button" variant="outline" fullWidth disabled={loading} onClick={() => setStep('credentials')}>Back</Button>
+            <Button
+              type="button"
+              variant="outline"
+              fullWidth
+              disabled={loading}
+              onClick={() => {
+                clearPendingLoginState();
+                setLoginToken('');
+                setStep('credentials');
+              }}
+            >
+              Back
+            </Button>
           </form>
         )}
 
