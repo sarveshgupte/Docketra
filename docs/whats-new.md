@@ -1,5 +1,11 @@
 # What's New
 
+## Work type normalization for Knowledge
+
+- Added normalized work type/category selection for KnowledgeItems so linked SOPs, checklists, templates, and process records surface more reliably in work views.
+- Preserved existing custom linked work type values while encouraging canonical docket category matching.
+- Avoided new backend models, AI, vector search, document extraction, or route changes.
+
 ## May 2026: Client Knowledge in Client Memory
 
 - Added a Client Knowledge section so client-linked SOPs, templates, notes, instructions, and process records can appear inside Client Memory.

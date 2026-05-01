@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { knowledgeItemsApi } from '../../api/knowledgeItems.api';
 import { ROUTES } from '../../constants/routes';
+import { normalizeWorkType } from '../../utils/workTypeOptions';
+import { toArray } from '../platform/PlatformShared';
 
 const formatLabel = (value) => String(value || '').replace(/_/g, ' ');
 
@@ -13,6 +15,14 @@ const formatDate = (value) => {
 };
 
 const getItemKey = (item) => String(item._id || item.id || '');
+
+
+const buildWorkTypeCandidates = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw || raw === '—') return [];
+  const normalized = normalizeWorkType(raw);
+  return normalized && normalized !== raw ? [normalized, raw] : [raw];
+};
 
 const SOURCE_LABELS = {
   docket: 'Linked to this docket',
@@ -63,19 +73,24 @@ export const LinkedKnowledgeSection = ({
           requests.push(
             knowledgeItemsApi
               .listKnowledgeItems({ linkedDocketId: caseId, status: 'active', limit: 50 })
-              .then((res) => res?.data?.data || res?.data?.items || [])
+              .then((res) => toArray(res?.data?.data || res?.data?.items || res?.data || []))
               .catch(() => []),
           );
         } else {
           requests.push(Promise.resolve([]));
         }
 
-        if (categoryLabel && categoryLabel !== '—') {
+        const workTypeCandidates = buildWorkTypeCandidates(categoryLabel);
+        if (workTypeCandidates.length) {
           requests.push(
-            knowledgeItemsApi
-              .listKnowledgeItems({ linkedWorkType: categoryLabel, status: 'active', limit: 50 })
-              .then((res) => res?.data?.data || res?.data?.items || [])
-              .catch(() => []),
+            Promise.all(
+              workTypeCandidates.map((workType) =>
+                knowledgeItemsApi
+                  .listKnowledgeItems({ linkedWorkType: workType, status: 'active', limit: 50 })
+                  .then((res) => toArray(res?.data?.data || res?.data?.items || res?.data || []))
+                  .catch(() => []),
+              ),
+            ).then((responses) => responses.flat()),
           );
         } else {
           requests.push(Promise.resolve([]));
@@ -85,7 +100,7 @@ export const LinkedKnowledgeSection = ({
           requests.push(
             knowledgeItemsApi
               .listKnowledgeItems({ clientId: clientMongoId, status: 'active', limit: 50 })
-              .then((res) => res?.data?.data || res?.data?.items || [])
+              .then((res) => toArray(res?.data?.data || res?.data?.items || res?.data || []))
               .catch(() => []),
           );
         } else {
