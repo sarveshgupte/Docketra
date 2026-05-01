@@ -1,22 +1,12 @@
 const Attachment = require('../models/Attachment.model');
 const Case = require('../models/Case.model');
-const Firm = require('../models/Firm.model');
-const { googleDriveService } = require('./googleDrive.service');
-const { decrypt } = require('./storage/services/TokenEncryption.service');
+const { StorageProviderFactory } = require('./storage/StorageProviderFactory');
 
 class DocketFileStorageService {
   async assertFirmStorageConnected(firmId) {
-    const firm = await Firm.findById(firmId).select('storageConfig storage').lean();
-    const encrypted = firm?.storageConfig?.credentials;
-    const credentials = encrypted ? JSON.parse(decrypt(encrypted)) : {};
-    const refreshToken = credentials.refreshToken || credentials.googleRefreshToken;
-    const rootFolderId = credentials.rootFolderId || firm?.storage?.google?.rootFolderId;
-    if (!refreshToken || !rootFolderId) {
-      const error = new Error('Cloud storage must be connected');
-      error.code = 'STORAGE_NOT_CONNECTED';
-      error.status = 400;
-      throw error;
-    }
+    const provider = await StorageProviderFactory.getProvider(firmId);
+    await provider.testConnection();
+    return provider;
   }
 
   static toPublicAttachment(attachment) {
@@ -54,7 +44,7 @@ class DocketFileStorageService {
   }
 
   async uploadFile({ file, fileName, fileType, docketId, firmId, uploadedBy, uploadedByName }) {
-    await this.assertFirmStorageConnected(firmId);
+    const provider = await this.assertFirmStorageConnected(firmId);
     const caseRecord = await this.assertDocketOwnership({ docketId, firmId });
     const normalizedDocketId = caseRecord.caseId;
 
@@ -69,11 +59,14 @@ class DocketFileStorageService {
 
     const version = Number(latest?.version || 0) + 1;
 
-    const uploadResult = await googleDriveService.uploadFile(firmId, {
-      buffer: file,
-      originalname: fileName,
-      mimetype: fileType,
-    });
+    const uploadResult = await provider.uploadFile(null, fileName, file, fileType);
+    const storageFileId = uploadResult?.fileId || uploadResult?.id;
+    if (!storageFileId) {
+      const error = new Error('Provider upload did not return a file id');
+      error.code = 'STORAGE_UPLOAD_FAILED';
+      error.status = 502;
+      throw error;
+    }
 
     const createdAt = new Date();
     const metadata = await Attachment.create({
@@ -82,9 +75,9 @@ class DocketFileStorageService {
       fileName: uploadResult.name || fileName,
       mimeType: uploadResult.mimeType || fileType,
       size: Number(uploadResult.size || file.length || 0),
-      storageFileId: uploadResult.id,
-      storageProvider: 'google-drive',
-      driveFileId: uploadResult.id,
+      storageFileId,
+      storageProvider: provider.providerName,
+      ...(provider.providerName === 'google-drive' ? { driveFileId: storageFileId } : {}),
       uploadedBy,
       uploadedByName,
       createdBy: `${uploadedBy || 'unknown'}@docketra.internal`,
@@ -106,7 +99,6 @@ class DocketFileStorageService {
     const attachments = await Attachment.find({
       caseId: caseRecord.caseId,
       firmId: String(firmId),
-      storageProvider: 'google-drive',
     })
       .sort({ createdAt: -1 })
       .lean();
@@ -115,7 +107,7 @@ class DocketFileStorageService {
   }
 
   async getFile({ attachmentId, firmId }) {
-    await this.assertFirmStorageConnected(firmId);
+    const provider = await this.assertFirmStorageConnected(firmId);
     const metadata = await Attachment.findOne({ _id: attachmentId, firmId: String(firmId) }).lean();
     if (!metadata || !metadata.storageFileId) {
       const error = new Error('Attachment metadata not found');
@@ -126,7 +118,7 @@ class DocketFileStorageService {
 
     await this.assertDocketOwnership({ docketId: metadata.caseId, firmId });
 
-    const stream = await googleDriveService.downloadFile(firmId, metadata.storageFileId);
+    const stream = await provider.downloadFile(metadata.storageFileId);
 
     return {
       metadata: DocketFileStorageService.toPublicAttachment(metadata),
