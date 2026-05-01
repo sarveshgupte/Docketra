@@ -47,6 +47,25 @@ Use Tasks to run operations:
 
 This structure keeps route compatibility while improving user orientation in navigation, dashboards, and page-level context headers.
 
+---
+
+## Company Brain direction
+
+The CMS → CRM → Tasks handoff flow above remains the route-compatible operating model. Existing routes, navigation, and module boundaries are preserved.
+
+Docketra's long-term product direction is to make these three modules feed a **Company Brain**: a connected, living map of how a firm works, who its clients are, and what has been done.
+
+In this direction, each module plays a named role in a larger system:
+
+- **CMS → Knowledge Intake** — Captures demand, enquiries, and incoming context. Every intake event adds to what the firm knows about the outside world.
+- **CRM → Relationships / Client Memory** — Maintains the ongoing record of clients, prospective clients, interactions, promises, and history. This is institutional memory for the firm's relationships.
+- **Tasks → Work Execution** — Executes delivery work. Every docket, worklist, and QC record adds to the firm's history of what was done, how, and by whom.
+- **Company Brain → Connective layer** — The connections between clients, work, documents, knowledge, and decisions that make the firm's context navigable and usable over time. This is not a separate module; it emerges from well-maintained links across the modules above.
+
+This is a product direction and terminology layer first, not a breaking architecture rewrite. No routes are changed. No models are deleted. No existing functionality is removed.
+
+Future PRs may add knowledge records (SOPs, templates, checklists), process templates linked to work types, and connected views that surface full client and work context across modules. See `docs/product/COMPANY_BRAIN_STRATEGY.md` for the full strategy document.
+
 ## Module landing hubs (April 2026 enhancement)
 
 Docketra now includes dedicated overview hubs for each primary module route:
