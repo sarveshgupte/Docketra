@@ -211,3 +211,22 @@ The detail drawer surfaces all structured metadata fields — title, type, statu
 This approach uses query param navigation so no new route is required and the Knowledge Library list remains visible and active behind the drawer. Closing the drawer removes the query param and restores normal list state.
 
 Loading and error states are handled gracefully: if the item cannot be retrieved (archived, removed, or inaccessible), a clear message is shown and the main list continues to render. Admin-only write controls, BYOS/privacy boundaries, and no-AI/no-document-extraction behavior are all preserved.
+
+---
+
+## Client Knowledge in Client Memory
+
+Client-linked KnowledgeItems now surface inside the client workspace so every team member can see client-specific instructions, SOPs, templates, notes, and process records when viewing a client.
+
+A **Client Knowledge** section is added to the `ClientWorkspacePage` overview tab (the primary Client Memory surface reached from the main Clients navigation). When a client record has a stable internal Mongo ID (`client._id`), the section fetches active KnowledgeItems linked to that client via `listKnowledgeItems({ clientId: clientMongoId, status: 'active', limit: 50 })`.
+
+Each knowledge row shows: title, type, status, tags, owner, review due date, summary, and a "Linked to client" source label. Every row has a "View in Knowledge Library" action that deep-links to the exact item using the existing `?item=<id>` query param.
+
+Safe behaviours:
+- If `clientMongoId` is unavailable, a clear safe empty state is shown instead of an error.
+- If no linked knowledge exists, a descriptive empty state guides the user to add knowledge from Knowledge Library.
+- Non-admin viewers see an additional note to ask an admin.
+- No inline editing of KnowledgeItems is possible from client detail.
+- The CRM-specific `CrmClientDetailPage` is preserved separately and carries a compatibility comment noting that `ClientWorkspacePage` is the primary Client Memory surface.
+
+This is a read-only client-context surface backed by existing metadata links. No AI, vector search, embeddings, document extraction, new backend models, or new routes are used.

@@ -13,6 +13,11 @@ import { ROUTES, safeRoute } from '../../constants/routes';
 import { DataTable, InlineNotice, PageSection, StatGrid } from '../platform/PlatformShared';
 import { resolveCrmErrorMessage } from './crmUiUtils';
 
+// Note: CrmClientDetailPage is the CRM-specific client detail surface (deals, invoices, relationship pipeline).
+// The primary client detail / Client Memory surface with KnowledgeItems is ClientWorkspacePage
+// (reached from the main Clients navigation at ROUTES.CLIENT_WORKSPACE).
+// Client Knowledge is intentionally surfaced in ClientWorkspacePage only to keep scope narrow.
+
 const formatINR = (amount) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount ?? 0);
 const DEAL_STAGE_STATUS = { new: 'Pending', in_progress: 'Pending', completed: 'Approved' };
 const DEAL_STAGE_LABEL = { new: 'New', in_progress: 'In Progress', completed: 'Completed' };
