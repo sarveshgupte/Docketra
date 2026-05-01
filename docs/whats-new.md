@@ -1,5 +1,11 @@
 # What's New
 
+## May 2026: Company Brain strategy
+
+- Defined Docketra's long-term direction as a Company Brain and work execution system for professional firms.
+- Reframed CMS, CRM, and Task Manager as intake, relationship, and execution layers feeding institutional memory.
+- Documented a safe migration path that preserves existing routes and functionality while preparing for connected knowledge workflows.
+
 ## April 2026: Perceived speed + free-tier performance pass
 
 - Improved dashboard and docket list perceived speed with longer safe React Query freshness windows and reduced remount/focus refetch churn.
