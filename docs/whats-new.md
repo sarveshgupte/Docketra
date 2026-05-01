@@ -1,5 +1,11 @@
 # What's New
 
+## May 2026: KnowledgeItem detail view
+
+- Added a read-only KnowledgeItem detail view for inspecting SOPs, checklists, templates, notes, client instructions, and process records.
+- Linked work-context knowledge rows to the exact KnowledgeItem in Knowledge Library using `?item=<id>` query param deep-linking.
+- Preserved admin-only write controls, BYOS/privacy boundaries, and no-AI/no-document-extraction behavior.
+
 ## May 2026: Company Brain connected map v1
 
 - Added Knowledge Library data to Company Brain so clients, prospects, work, and knowledge records appear in one connected read-only view.
