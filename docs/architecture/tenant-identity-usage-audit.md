@@ -21,3 +21,17 @@ _Date: May 1, 2026_
 - Corrected firm-owned storage settings writes to use ownership firm id consistently.
 - Ensured firm-owned storage/settings audit uses ownership id as canonical tenant boundary.
 - Added regression tests for ownership resolution fallback and audit tenant id semantics.
+
+## Controller follow-up review (admin/settings/report/client/CRM/lead)
+
+| File | Usage | Scope | Status | Notes |
+|---|---|---|---|---|
+| `src/controllers/admin.controller.js` | `Firm.findById(...)` in firm settings/CMS/storage/disconnect | ownership firm (`Firm._id`) | **Fixed · Intentionally ownership-scoped** | Now resolves from `req.ownershipFirmId` and fails closed when absent; no runtime fallback to `req.user.firmId` for `Firm` reads/writes. |
+| `src/controllers/admin.controller.js` | case/user/category/team queries (`firmId` filters) | runtime tenant/default client | Safe · Intentionally runtime-scoped | Kept runtime scoping for tenant datasets. |
+| `src/controllers/reports.controller.js` | report filters and export logs using `req.user?.firmId || req.firmId` | runtime tenant/default client | Safe · Intentionally runtime-scoped | Superadmin explicitly blocked for firm-scoped report endpoints. |
+| `src/controllers/client.controller.js` | storage mode check `Firm.findById(...)` | ownership firm (`Firm._id`) | **Fixed · Intentionally ownership-scoped** | Storage configuration lookup now keyed by ownership firm id only; missing ownership disables storage path. |
+| `src/controllers/client.controller.js` | client CRUD/query scoping via repository | runtime tenant/default client (mapped to ownership in repo) | Safe | No behavioral refactor; existing repository boundary remains. |
+| `src/controllers/crmClient.controller.js` | CRM/client/deal/case/invoice filters by `req.user.firmId` | runtime tenant/default client | Safe · Intentionally runtime-scoped | No `Firm` ownership operations present. |
+| `src/controllers/lead.controller.js` | lead/user/client/case scoping by `req.user.firmId` | runtime tenant/default client | Safe · Intentionally runtime-scoped | No `Firm` ownership operations present. |
+| `src/controllers/firmMetrics.controller.js` | metrics filtered by `req.firmId` | runtime tenant/default client | Safe · Intentionally runtime-scoped | Aggregate-only runtime metrics endpoint. |
+| `src/controllers/settings.controller.js` | file not present in current codebase | N/A | Needs follow-up | Validate route ownership model if this controller is reintroduced. |
