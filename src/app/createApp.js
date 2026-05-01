@@ -102,50 +102,10 @@ const docketRoutes = require('../routes/docket.routes');
 const attachmentRoutes = require('../routes/attachment.routes');
 const docketSessionRoutes = require('../routes/docketSession.routes');
 const tenantResolver = require('../middleware/tenantResolver');
+const { RESERVED_FIRM_SLUGS, firmSlugGuard } = require('../middleware/firmSlugGuard.middleware');
 const { login } = require('../controllers/auth.controller');
 const mutatingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const forceTransactionPaths = ['/google/callback', '/my-pending'];
-const RESERVED_FIRM_SLUGS = [
-  'auth',
-  'public',
-  'superadmin',
-  'users',
-  'admin',
-  'dashboard',
-  'dockets',
-  'clients',
-  'settings',
-  'reports',
-  'security',
-  'tenant',
-  'files',
-  'storage',
-  'ai',
-  'notifications',
-  'teams',
-  'bulk-upload',
-  'product-updates',
-  'cases',
-  'tasks',
-  'search',
-  'worklists',
-  'attachments',
-  'firm',
-];
-const FIRM_SLUG_PATTERN = /^[a-z0-9-]+$/;
-const RESERVED_FIRM_SLUG_SET = new Set(RESERVED_FIRM_SLUGS);
-const firmSlugGuard = (req, _res, next) => {
-  const firmSlug = String(req.params?.firmSlug || '').trim().toLowerCase();
-  if (!FIRM_SLUG_PATTERN.test(firmSlug)) {
-    return next();
-  }
-  if (RESERVED_FIRM_SLUG_SET.has(firmSlug)) {
-    return next();
-  }
-  req.params.firmSlug = firmSlug;
-  req.isFirmSlugRoute = true;
-  return next();
-};
 const writeGuardChain = (req, res, next) => {
   const shouldForceTransaction = forceTransactionPaths.some((path) => req.path && req.path.startsWith(path));
   if (!mutatingMethods.has(req.method) && !shouldForceTransaction) {
@@ -480,12 +440,7 @@ const createApp = () => {
   // Firm-scoped public login + OTP routes
   // IMPORTANT: must stay after platform auth/superadmin mounts so reserved namespaces
   // can never be interpreted as tenant slugs under Express 5 routing.
-  app.use('/api/:firmSlug', firmSlugGuard, (req, res, next) => {
-    if (!req.isFirmSlugRoute) {
-      return next();
-    }
-    return firmRoutes(req, res, next);
-  });
+  app.use('/api/:firmSlug', firmSlugGuard, firmRoutes);
 
 
   if (!isProduction) {

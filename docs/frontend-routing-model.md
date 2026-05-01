@@ -50,6 +50,11 @@
 - OTP verification can resume from `sessionStorage` only if pending firm matches the current sanitized firm slug.
 - On pending-token mismatch/expiry, flow resets to credentials step with a clear message (no loop).
 
+## Backend/API firm slug guard behavior
+- Backend firm-scoped API routes use Express 5-safe mount `'/api/:firmSlug'` with dedicated `firmSlugGuard` middleware.
+- `firmSlugGuard` validates slugs with `^[a-z0-9-]+$` and calls `next('router')` for reserved namespaces (`/api/auth`, `/api/public`, `/api/superadmin`, `/api/admin`, `/api/users`, etc.).
+- This avoids startup/runtime issues from inline path regex mounts under Express 5 while preserving route ordering semantics.
+
 ## Firm slug validation
 - Slugs are sanitized through `sanitizeFirmSlug`:
   - lowercase
