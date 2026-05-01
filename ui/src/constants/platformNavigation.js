@@ -10,13 +10,13 @@ const NAV_BLUEPRINT = [
     items: [
       {
         id: 'docket-workbench',
-        label: 'Docket Workbench',
+        label: 'Work',
         icon: '🗂️',
         route: (firmSlug) => ROUTES.TASK_MANAGER(firmSlug),
         command: {
           id: 'go-docket-workbench',
-          label: 'Go to Docket Workbench',
-          description: 'Jump to the main docket execution workspace.',
+          label: 'Go to Work',
+          description: 'Jump into daily work execution for dockets, deadlines, and review queues.',
           shortcut: 'Alt+Shift+T',
         },
       },
@@ -35,30 +35,30 @@ const NAV_BLUEPRINT = [
     ],
   },
   {
-    section: 'Business Modules',
+    section: 'Firm Memory',
     items: [
       {
         id: 'intake',
-        label: 'Intake (CMS)',
+        label: 'Knowledge Intake',
         icon: '📥',
         route: (firmSlug) => ROUTES.CMS(firmSlug),
         minRole: 'ADMIN',
         command: {
           id: 'go-cms',
-          label: 'Go to CMS',
-          description: 'Open intake and submissions module.',
+          label: 'Go to Knowledge Intake',
+          description: 'Open enquiries, submissions, and incoming firm context.',
         },
       },
       {
         id: 'crm',
-        label: 'Pipeline (CRM)',
+        label: 'Relationships',
         icon: '🧭',
         route: (firmSlug) => ROUTES.CRM(firmSlug),
         minRole: 'ADMIN',
         command: {
           id: 'go-crm',
-          label: 'Go to CRM',
-          description: 'Open relationship management module.',
+          label: 'Go to Relationships',
+          description: 'Open prospective clients, relationships, follow-ups, and client memory.',
         },
       },
       {
