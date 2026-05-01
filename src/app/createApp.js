@@ -98,6 +98,7 @@ const notificationsRoutes = require('../routes/notifications.routes');
 const teamRoutes = require('../routes/team.routes');
 const bulkUploadRoutes = require('../routes/bulkUpload.routes');
 const productUpdateRoutes = require('../routes/productUpdate.routes');
+const knowledgeItemRoutes = require('../routes/knowledgeItem.routes');
 const docketRoutes = require('../routes/docket.routes');
 const attachmentRoutes = require('../routes/attachment.routes');
 const docketSessionRoutes = require('../routes/docketSession.routes');
@@ -494,6 +495,7 @@ const createApp = () => {
   app.use('/api/bulk-upload', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), bulkUploadRoutes);
   app.use('/api/product-updates', authenticate, writeGuardChain, productUpdateRoutes);
   app.use('/api/settings', ...tenantScopedApiAccess, writeGuardChain, settingsRoutes);
+  app.use('/api/knowledge-items', ...tenantScopedApiAccess, writeGuardChain, knowledgeItemRoutes);
   app.use('/api', authLimiter, ...tenantScopedApiAccess, writeGuardChain, docketFileStorageRoutes);
 
   // Legacy /f routes removed: tenant login is available only on /:firmSlug/login and /api/:firmSlug/login
