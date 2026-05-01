@@ -2,7 +2,7 @@
  * Login Page
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Input } from '../components/common/Input';
@@ -13,6 +13,7 @@ import { useToast } from '../hooks/useToast';
 import { spacingClasses } from '../theme/tokens';
 import { ErrorState } from '../components/feedback/ErrorState';
 import { resolvePostAuthNavigation } from '../utils/postAuthNavigation';
+import { STORAGE_KEYS } from '../utils/constants';
 import './LoginPage.css';
 
 export const LoginPage = () => {
@@ -29,6 +30,14 @@ export const LoginPage = () => {
 
   const successMessage = location.state?.message;
   const messageType = location.state?.messageType;
+
+  useEffect(() => {
+    try {
+      localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
+    } catch (_error) {
+      // best-effort cleanup for stale workspace routing hints
+    }
+  }, []);
 
   const handleIdentifierChange = (event) => {
     const nextValue = event.target.value.replace(/\s+/g, '').toUpperCase();
