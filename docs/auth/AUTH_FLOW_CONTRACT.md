@@ -20,11 +20,12 @@ This document defines the canonical authentication flows currently used by activ
 
 ## 2) Superadmin login
 - UI route: `/superadmin/login` (also `/superadmin` route renders same login screen)
-- Backend route used: `POST /superadmin/login`
+- Backend routes: `POST /superadmin/login` and `POST /api/superadmin/login` (same handler).
 - Cookie/session behavior:
-  - Successful login sets auth cookies through shared auth session layer.
-  - Existing stale firm slug hints are cleared for superadmin login context.
-- Profile hydration: `GET /api/auth/profile`
+  - Successful login sets `accessToken` + `refreshToken` via shared `setAuthCookies` (HTTP-only, secure/sameSite/domain/path aligned with tenant flow).
+  - Existing stale firm/workspace hints are cleared (`localStorage.firmSlug`, pending login session keys).
+- Profile hydration: `GET /api/auth/profile` immediately resolves a virtual superadmin identity (`firmId=null`, `firmSlug=null`).
+- Refresh behavior: `POST /api/auth/refresh` supports superadmin-scope refresh tokens and rotates cookies. If server config cannot mint superadmin identity, response is `401` with `code=REFRESH_NOT_SUPPORTED` and `reasonCode=REFRESH_NOT_SUPPORTED`.
 - Post-login redirect: `/app/superadmin`
 
 ## 3) Forgot password
@@ -47,6 +48,7 @@ This document defines the canonical authentication flows currently used by activ
 
 ## 5) Logout
 - API route: `POST /api/auth/logout`
+- Server contract: clears both auth cookies (`accessToken`, `refreshToken`) using shared auth cookie options.
 - Client contract:
   - Clears pending login state from session storage.
   - Firm slug preservation is context-driven:
