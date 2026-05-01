@@ -17,7 +17,6 @@ let hasWarnedRedisRateLimitFallback = false;
 const getRateLimitRedisClient = () => {
   const redis = getRedisClient();
   if (!redis) return null;
-  if (process.env.NODE_ENV === 'production') return redis;
   return isRedisReady() ? redis : null;
 };
 
@@ -86,19 +85,31 @@ const createRateLimitHandler = (name, windowMs) => async (req, res) => {
   });
 };
 
-const createLimiter = ({ name, windowMs, max, keyGenerator, skip }) => {
-  const store = createRedisStore();
-  return rateLimit({
+const createLimiter = ({ name, windowMs, max, keyGenerator, skip, failClosedWhenRedisUnavailable = false }) => {
+  const limiter = rateLimit({
     windowMs,
     max,
     keyGenerator,
-    store: store || undefined,
+    store: createRedisStore() || undefined,
     standardHeaders: true,
     legacyHeaders: false,
     skip,
     handler: createRateLimitHandler(name, windowMs),
     validate: false,
   });
+
+  if (!failClosedWhenRedisUnavailable) return limiter;
+
+  return (req, res, next) => {
+    if (process.env.NODE_ENV === 'production' && !isRedisReady()) {
+      return res.status(503).json({
+        success: false,
+        error: 'SECURITY_DEPENDENCY_UNAVAILABLE',
+        message: 'Redis is required for this security-sensitive endpoint.',
+      });
+    }
+    return limiter(req, res, next);
+  };
 };
 
 const normalizeIp = (value) => String(value || '')
@@ -205,6 +216,7 @@ const globalApiLimiter = createLimiter({
 
 const authLimiter = createLimiter({
   name: 'authLimiter',
+  failClosedWhenRedisUnavailable: true,
   windowMs: config.security.rateLimit.authWindowSeconds * 1000,
   max: config.security.rateLimit.auth,
   keyGenerator: ipKeyGenerator,
@@ -219,6 +231,7 @@ const loginLimiter = createLimiter({
 
 const forgotPasswordLimiter = createLimiter({
   name: 'forgotPasswordLimiter',
+  failClosedWhenRedisUnavailable: true,
   windowMs: config.security.rateLimit.forgotPasswordWindowSeconds * 1000,
   max: config.security.rateLimit.forgotPasswordPerMinute,
   keyGenerator: ipKeyGenerator,
@@ -266,6 +279,7 @@ const authBlockEnforcer = async (req, res, next) => {
 
 const sensitiveLimiter = createLimiter({
   name: 'sensitiveLimiter',
+  failClosedWhenRedisUnavailable: true,
   windowMs: config.security.rateLimit.sensitiveWindowSeconds * 1000,
   max: config.security.rateLimit.sensitivePerWindow,
   keyGenerator: userOrIpKeyGenerator,
@@ -273,6 +287,7 @@ const sensitiveLimiter = createLimiter({
 
 const otpVerifyLimiter = createLimiter({
   name: 'otpVerifyLimiter',
+  failClosedWhenRedisUnavailable: true,
   windowMs: config.security.rateLimit.otpVerifyWindowSeconds * 1000,
   max: config.security.rateLimit.otpVerifyPerMinute,
   keyGenerator: otpVerifyKeyGenerator,
@@ -280,6 +295,7 @@ const otpVerifyLimiter = createLimiter({
 
 const otpResendLimiter = createLimiter({
   name: 'otpResendLimiter',
+  failClosedWhenRedisUnavailable: true,
   windowMs: config.security.rateLimit.otpResendWindowSeconds * 1000,
   max: config.security.rateLimit.otpResendPerMinute,
   keyGenerator: otpResendKeyGenerator,
