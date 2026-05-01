@@ -50,7 +50,7 @@
 - OTP verification can resume from `sessionStorage` only if pending firm matches the current sanitized firm slug.
 - On pending-token mismatch/expiry, flow resets to credentials step with a clear message (no loop).
 - `POST_LOGIN_RETURN_TO` is no longer written by firm login; `returnTo` is read only from current URL query and validated centrally.
-- `authRedirect.js` is intentionally a thin compatibility layer that delegates route-safety checks to `postAuthNavigation.js`.
+- `authRedirect.js` is intentionally a thin compatibility layer that uses `isSafeReturnToPath` from `returnToSafety.js` (do not import that helper from `postAuthNavigation.js`).
 
 ## Backend/API firm slug guard behavior
 - Backend firm-scoped API routes use Express 5-safe mount `'/api/:firmSlug'` with dedicated `firmSlugGuard` middleware.

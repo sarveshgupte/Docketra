@@ -1,4 +1,4 @@
-import { isSafeReturnToPath } from './postAuthNavigation.js';
+import { isSafeReturnToPath } from './returnToSafety.js';
 
 export const buildReturnTo = (location) => {
   if (!location) return '';
