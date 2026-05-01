@@ -1,4 +1,5 @@
 const assert = require('assert');
+const createAuthSessionService = require('../src/services/authSession.service');
 
 function createRes(cookieJar) {
   const state = { statusCode: 200, body: null, setCookies: [], clearedCookies: [] };
@@ -12,30 +13,48 @@ function createRes(cookieJar) {
 }
 
 async function run() {
+  const refreshStore = new Map();
+  const authSessionService = createAuthSessionService({
+    jwtService: {
+      generateAccessToken: (payload) => `access:${payload.userId || 'sa'}`,
+      generateRefreshToken: () => `refresh:sa:${Date.now()}`,
+      verifyRefreshToken: () => ({ role: 'SUPERADMIN', isSuperAdmin: true }),
+      hashRefreshToken: (token) => `hash:${token}`,
+      getRefreshTokenExpiry: () => new Date(Date.now() + 3600_000),
+      getRefreshTokenExpiryMs: () => 3600_000,
+    },
+    RefreshToken: {
+      create: async ([doc]) => { refreshStore.set(doc.tokenHash, { ...doc, isRevoked: false, save: async function save() { refreshStore.set(doc.tokenHash, this); } }); return [doc]; },
+      findOne: async ({ tokenHash }) => refreshStore.get(tokenHash) || null,
+      updateMany: async () => ({ modifiedCount: 0 }),
+    },
+    User: { findById: async () => null },
+    getSuperadminEnv: () => ({ objectId: 'sa-id', normalizedXID: 'SATEST', email: 'sa@test.com' }),
+    logAuthAudit: async () => {},
+    getSession: () => null,
+    noteRefreshTokenUse: async () => {},
+  });
+
   const jar = {};
-
   const loginRes = createRes(jar);
-  loginRes.cookie('accessToken', 'sa-access', { httpOnly: true, path: '/' });
-  loginRes.cookie('refreshToken', 'sa-refresh-1', { httpOnly: true, path: '/' });
-  loginRes.status(200).json({ success: true, data: { role: 'SUPERADMIN', firmId: null, firmSlug: null } });
-  assert.strictEqual(loginRes.state.statusCode, 200);
-  assert(jar.accessToken && jar.refreshToken);
+  const { refreshToken } = await authSessionService.generateAndStoreRefreshToken({ req: { ip: '127.0.0.1', get: () => 'ua' }, userId: null, firmId: null, scope: 'superadmin' });
+  authSessionService.setAuthCookies(loginRes, { accessToken: 'access:sa', refreshToken, refreshMaxAge: 3600_000 });
+  assert(loginRes.state.setCookies.some((c) => c.name === 'accessToken' && c.options.httpOnly));
+  assert(loginRes.state.setCookies.some((c) => c.name === 'refreshToken' && c.options.httpOnly));
 
-  const profileRes = createRes(jar);
-  profileRes.status(200).json({ success: true, data: { role: 'SUPERADMIN', isSuperAdmin: true, firmId: null, firmSlug: null } });
-  assert.strictEqual(profileRes.state.body.data.role, 'SUPERADMIN');
+  const profile = { role: 'SUPERADMIN', isSuperAdmin: true, firmId: null, firmSlug: null };
+  assert.strictEqual(profile.role, 'SUPERADMIN');
+  assert.strictEqual(profile.firmId, null);
+  assert.strictEqual(profile.firmSlug, null);
 
   const refreshRes = createRes(jar);
-  refreshRes.cookie('accessToken', 'sa-access-2', { httpOnly: true, path: '/' });
-  refreshRes.cookie('refreshToken', 'sa-refresh-2', { httpOnly: true, path: '/' });
-  refreshRes.status(200).json({ success: true, message: 'Token refreshed successfully' });
+  await authSessionService.refreshAccessToken({ cookies: { refreshToken: jar.refreshToken }, headers: { cookie: `refreshToken=${jar.refreshToken}` }, ip: '127.0.0.1', get: () => 'ua', originalUrl: '/api/auth/refresh' }, refreshRes);
+  assert.strictEqual(refreshRes.state.statusCode, 200);
   assert(refreshRes.state.setCookies.some((c) => c.name === 'accessToken'));
   assert(refreshRes.state.setCookies.some((c) => c.name === 'refreshToken'));
 
   const logoutRes = createRes(jar);
-  logoutRes.clearCookie('accessToken', { path: '/' });
-  logoutRes.clearCookie('refreshToken', { path: '/' });
-  logoutRes.status(200).json({ success: true });
+  authSessionService.clearAuthCookies(logoutRes);
   assert(logoutRes.state.clearedCookies.some((c) => c.name === 'accessToken'));
   assert(logoutRes.state.clearedCookies.some((c) => c.name === 'refreshToken'));
 

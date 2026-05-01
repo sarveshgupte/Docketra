@@ -23,8 +23,8 @@ export const APP_VERSION = '1.1';
  * - MUST be explicitly set to your backend API URL
  * - No silent fallbacks - will fail fast with clear error message
  */
-const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-const isProduction = import.meta.env.PROD;
+const rawApiBaseUrl = import.meta?.env?.VITE_API_BASE_URL;
+const isProduction = Boolean(import.meta?.env?.PROD);
 
 const normalizeApiBaseUrl = (value) => {
   const trimmedValue = value.trim();
