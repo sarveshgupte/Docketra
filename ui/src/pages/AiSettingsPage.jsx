@@ -6,198 +6,137 @@ import { Input } from '../components/common/Input';
 import { Select } from '../components/common/Select';
 import { PageHeader } from '../components/layout/PageHeader';
 import { ToastContext } from '../contexts/ToastContext';
-import { useAuth } from '../hooks/useAuth';
-import { getAiConfigurationStatus, saveAiConfiguration, disconnectAiConfiguration } from '../services/aiSettingsService';
+import { getAiConfiguration, testAiConfiguration, updateAiConfiguration } from '../services/aiService';
 import { spacingClasses } from '../theme/tokens';
 import { StatusMessageStack } from './platform/PlatformShared';
+import { buildAiConfigurationPayload, isProviderDisabled } from '../utils/aiConfiguration';
 
 const PROVIDER_OPTIONS = [
+  { value: 'disabled', label: 'Disabled' },
   { value: 'openai', label: 'OpenAI' },
+  { value: 'google_gemini', label: 'Google Gemini' },
+  { value: 'anthropic', label: 'Anthropic' },
+  { value: 'azure_openai', label: 'Azure OpenAI' },
+  { value: 'docketra_managed', label: 'Docketra Managed AI' },
 ];
+const CREDENTIAL_MODE_OPTIONS = [
+  { value: 'none', label: 'none' },
+  { value: 'encrypted_key', label: 'encrypted_key' },
+  { value: 'credential_ref', label: 'credential_ref' },
+];
+const FEATURE_KEYS = ['taskDescriptionRefinement', 'documentSummary', 'docketDrafting', 'routingSuggestions'];
+const ROLE_KEYS = ['PRIMARY_ADMIN', 'ADMIN', 'MANAGER', 'USER'];
+const RETENTION_KEYS = ['zeroRetention', 'savePrompts', 'saveOutputs', 'redactErrors', 'verboseLogging'];
 
-const normalizeRole = (role) => String(role || '').trim().toUpperCase();
+const modeLabel = (provider, enabled) => {
+  if (!enabled || isProviderDisabled(provider)) return 'Disabled';
+  if (String(provider).toLowerCase() === 'docketra_managed') return 'Docketra-managed AI';
+  return 'Firm-connected BYOAI';
+};
 
 export function AiSettingsPage() {
   const toast = useContext(ToastContext);
-  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [disconnecting, setDisconnecting] = useState(false);
-  const [connected, setConnected] = useState(false);
-  const [provider, setProvider] = useState('openai');
-  const [model, setModel] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [loadError, setLoadError] = useState('');
+  const [testing, setTesting] = useState(false);
   const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
+  const [loadError, setLoadError] = useState('');
+  const [forbidden, setForbidden] = useState(false);
+  const [hasEncryptedKey, setHasEncryptedKey] = useState(false);
+  const [hasCredentialRef, setHasCredentialRef] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+  const [formState, setFormState] = useState({ enabled: false, provider: 'disabled', model: '', credentialMode: 'none', encryptedKey: '', credentialRef: '', features: {}, allowedRoles: [], retention: {} });
 
-  const isPrimaryAdmin = useMemo(() => normalizeRole(user?.role) === 'PRIMARY_ADMIN', [user?.role]);
-  const statusMessages = useMemo(() => ([
-    loadError ? { tone: 'error', message: loadError } : null,
-    statusMessage.text
-      ? {
-        tone: statusMessage.type === 'error' ? 'error' : statusMessage.type === 'success' ? 'success' : 'info',
-        message: statusMessage.text,
-      }
-      : null,
-  ].filter(Boolean)), [loadError, statusMessage]);
-
-  const loadStatus = async () => {
-    setLoading(true);
-    setLoadError('');
+  const loadConfiguration = async () => {
+    setLoading(true); setLoadError(''); setForbidden(false);
     try {
-      const data = await getAiConfigurationStatus();
-      setConnected(Boolean(data?.connected));
-      setProvider(String(data?.provider || 'openai').trim().toLowerCase());
-      setModel(data?.model || '');
+      const config = await getAiConfiguration();
+      setHasEncryptedKey(Boolean(config?.hasEncryptedKey));
+      setHasCredentialRef(Boolean(config?.hasCredentialRef));
+      setFormState({
+        enabled: Boolean(config?.enabled),
+        provider: config?.provider || 'disabled',
+        model: config?.model || '',
+        credentialMode: config?.credentialMode || 'none',
+        encryptedKey: '',
+        credentialRef: '',
+        features: FEATURE_KEYS.reduce((acc, key) => ({ ...acc, [key]: Boolean(config?.features?.[key]) }), {}),
+        allowedRoles: Array.isArray(config?.allowedRoles) ? config.allowedRoles : ['PRIMARY_ADMIN', 'ADMIN'],
+        retention: RETENTION_KEYS.reduce((acc, key) => ({ ...acc, [key]: Boolean(config?.retention?.[key]) }), {}),
+      });
     } catch (error) {
-      const message = error?.response?.data?.message || 'Failed to load AI settings.';
-      setLoadError(message);
-      toast?.showError?.(message);
-    } finally {
-      setLoading(false);
-    }
+      if (error?.response?.status === 403) {
+        setForbidden(true);
+        setLoadError('Only Admin or Primary Admin can manage AI settings.');
+      } else {
+        setLoadError(error?.response?.data?.message || 'Failed to load AI settings.');
+      }
+    } finally { setLoading(false); }
   };
+  useEffect(() => { void loadConfiguration(); }, []);
 
-  useEffect(() => {
-    loadStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const statusMessages = useMemo(() => [
+    loadError ? { tone: 'error', message: loadError } : null,
+    statusMessage.text ? { tone: statusMessage.type || 'info', message: statusMessage.text } : null,
+  ].filter(Boolean), [loadError, statusMessage]);
 
   const onSave = async () => {
-    if (!apiKey.trim()) {
-      toast?.showError?.('API key is required.');
-      setStatusMessage({ type: 'error', text: 'Enter an API key before saving AI settings.' });
-      return;
-    }
-
-    setSaving(true);
-    setStatusMessage({ type: 'info', text: 'Saving AI settings…' });
+    setSaving(true); setStatusMessage({ type: 'info', text: 'Saving AI settings…' });
     try {
-      const result = await saveAiConfiguration({
-        provider,
-        apiKey: apiKey.trim(),
-        ...(model.trim() ? { model: model.trim() } : {}),
-      });
-      setConnected(Boolean(result?.connected));
-      setApiKey('');
-      toast?.showSuccess?.('AI settings updated.');
-      setStatusMessage({ type: 'success', text: 'AI settings saved successfully.' });
-      await loadStatus();
+      const payload = buildAiConfigurationPayload(formState);
+      await updateAiConfiguration(payload);
+      toast?.showSuccess?.('AI settings saved.');
+      setStatusMessage({ type: 'success', text: 'AI settings saved.' });
+      await loadConfiguration();
     } catch (error) {
-      const message = error?.response?.data?.message || 'Failed to save AI settings.';
-      setStatusMessage({ type: 'error', text: message });
-      toast?.showError?.(message);
-    } finally {
-      setSaving(false);
-    }
+      if (error?.response?.status === 403) {
+        setStatusMessage({ type: 'error', text: 'Only Admin or Primary Admin can manage AI settings.' });
+      } else {
+        setStatusMessage({ type: 'error', text: error?.response?.data?.message || 'Failed to save AI settings.' });
+      }
+    } finally { setSaving(false); }
   };
 
-  const onDisconnect = async () => {
-    setDisconnecting(true);
-    setStatusMessage({ type: 'info', text: 'Disconnecting AI provider…' });
-    try {
-      await disconnectAiConfiguration();
-      setConnected(false);
-      setApiKey('');
-      toast?.showSuccess?.('AI provider disconnected.');
-      setStatusMessage({ type: 'success', text: 'AI provider disconnected.' });
-      await loadStatus();
-    } catch (error) {
-      const message = error?.response?.data?.message || 'Failed to disconnect AI provider.';
-      setStatusMessage({ type: 'error', text: message });
-      toast?.showError?.(message);
-    } finally {
-      setDisconnecting(false);
-    }
+  const onTest = async () => {
+    setTesting(true);
+    try { setTestResult(await testAiConfiguration()); } catch (error) {
+      setTestResult(error?.response?.data || { success: false, safeMessage: 'Configuration test failed.' });
+    } finally { setTesting(false); }
   };
 
   return (
-    <PlatformShell moduleLabel="Settings" title="AI settings" subtitle="Manage firm-level BYOAI provider configuration.">
-      <div className="min-h-screen w-full flex-1 bg-[var(--dt-bg-warm)]">
-        <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 space-y-6">
-          <PageHeader
-            title="AI Settings"
-            subtitle="Manage your firm-level BYOAI provider configuration."
-          />
-
-          <StatusMessageStack messages={statusMessages} />
-
-          <Card>
-            <div className={spacingClasses.sectionMargin}>
-              <div>
-                <h2 className="text-lg font-medium text-[var(--dt-text)]">BYOAI Configuration</h2>
-                <p className="text-sm text-[var(--dt-text-secondary)] mt-1">Primary Admin can connect or rotate provider credentials. Existing keys are never displayed.</p>
-              </div>
-
-              <div className="rounded border border-[var(--dt-warning)] bg-[var(--dt-warning-subtle)] px-3 py-3 text-sm text-[var(--dt-warning)]">
-                <p className="font-medium">Trust and privacy note</p>
-                <p className="mt-1">AI access is optional. Docketra does not require BYOAI to operate, and this setting only controls the configured model provider connection for eligible firm features.</p>
-              </div>
-
-              {loading ? <p className="text-sm text-[var(--dt-text-muted)]">Loading AI settings...</p> : (
-                <>
-                  <div className={spacingClasses.formFieldSpacing}>
-                    <Select
-                      label="Provider"
-                      value={provider}
-                      onChange={(event) => setProvider(event.target.value)}
-                      options={PROVIDER_OPTIONS}
-                      disabled={!isPrimaryAdmin || saving || disconnecting}
-                    />
-                    <Input
-                      label="Connection status"
-                      value={connected ? 'Connected' : 'Not connected'}
-                      readOnly
-                    />
-                    <Input
-                      label="Model (optional)"
-                      value={model}
-                      onChange={(event) => setModel(event.target.value)}
-                      placeholder="e.g. gpt-4.1-mini"
-                      disabled={!isPrimaryAdmin || saving || disconnecting}
-                    />
-                    <Input
-                      label="API key"
-                      type="password"
-                      value={apiKey}
-                      onChange={(event) => setApiKey(event.target.value)}
-                      placeholder="Enter a new key to connect or rotate"
-                      helpText={isPrimaryAdmin ? 'For security, existing keys are never shown.' : 'Only Primary Admin can update AI keys.'}
-                      disabled={!isPrimaryAdmin || saving || disconnecting}
-                    />
-                  </div>
-
-                  <div className={`${spacingClasses.formActions} ${spacingClasses.formActionsGap} flex-wrap justify-between`}>
-                    {!isPrimaryAdmin ? (
-                      <p className="text-xs text-[var(--dt-text-muted)]">Your role can view AI status, but only Primary Admin can edit this setting.</p>
-                    ) : <span />}
-                    <div className="flex flex-wrap gap-3">
-                      <Button
-                        type="button"
-                        variant="danger"
-                        onClick={onDisconnect}
-                        loading={disconnecting}
-                        disabled={!isPrimaryAdmin || !connected || saving}
-                      >
-                        Disconnect Provider
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="primary"
-                        onClick={onSave}
-                        loading={saving}
-                        disabled={!isPrimaryAdmin || disconnecting}
-                      >
-                        Save AI Settings
-                      </Button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </Card>
-        </div>
-      </div>
+    <PlatformShell moduleLabel="Settings" title="AI settings" subtitle="Manage firm-level BYOAI configuration contract.">
+      <div className="min-h-screen w-full flex-1 bg-[var(--dt-bg-warm)]"><div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 space-y-6">
+        <PageHeader title="AI Settings" subtitle="Configuration-only BYOAI contract UI. Runtime provider validation is not implemented yet." />
+        <StatusMessageStack messages={statusMessages} />
+        <Card><div className={spacingClasses.sectionMargin}>
+          {loading ? <p className="text-sm text-[var(--dt-text-muted)]">Loading AI settings...</p> : (
+            <>
+              <p className="text-sm text-[var(--dt-text-secondary)]">Recommend restricting AI access to Primary Admin/Admin until governance review is complete.</p>
+              {forbidden ? null : <>
+                <Input label="Current AI mode" value={modeLabel(formState.provider, formState.enabled)} readOnly />
+                <Select label="Provider" value={formState.provider} onChange={(e) => setFormState((s) => ({ ...s, provider: e.target.value, enabled: !isProviderDisabled(e.target.value) }))} options={PROVIDER_OPTIONS} />
+                <Input label="Model" value={formState.model} onChange={(e) => setFormState((s) => ({ ...s, model: e.target.value }))} placeholder="e.g. gpt-4.1-mini" />
+                <Select label="Credential mode" value={formState.credentialMode} onChange={(e) => setFormState((s) => ({ ...s, credentialMode: e.target.value }))} options={CREDENTIAL_MODE_OPTIONS} />
+                <Input label="New secret/API key" type="password" value={formState.encryptedKey} onChange={(e) => setFormState((s) => ({ ...s, encryptedKey: e.target.value }))} placeholder={hasEncryptedKey ? 'Existing key is configured. Enter a new key only to rotate.' : 'Enter new key'} />
+                <Input label="New credential reference" value={formState.credentialRef} onChange={(e) => setFormState((s) => ({ ...s, credentialRef: e.target.value }))} placeholder={hasCredentialRef ? 'Existing reference is configured. Enter a new reference only to rotate.' : 'Enter credential reference'} />
+                <h3 className="text-base font-medium">Feature toggles</h3>
+                {FEATURE_KEYS.map((k) => <label key={k} className="flex gap-2 items-center"><input type="checkbox" checked={Boolean(formState.features[k])} onChange={(e) => setFormState((s) => ({ ...s, features: { ...s.features, [k]: e.target.checked } }))} />{k}</label>)}
+                <h3 className="text-base font-medium">Role access controls</h3>
+                {ROLE_KEYS.map((role) => <label key={role} className="flex gap-2 items-center"><input type="checkbox" checked={formState.allowedRoles.includes(role)} onChange={(e) => setFormState((s) => ({ ...s, allowedRoles: e.target.checked ? [...new Set([...s.allowedRoles, role])] : s.allowedRoles.filter((r) => r !== role) }))} />{role}</label>)}
+                <h3 className="text-base font-medium">Retention & privacy</h3>
+                <p className="text-xs text-[var(--dt-text-muted)]">Raw prompts/outputs are not retained by default. Enabling retention should require firm/legal approval.</p>
+                {RETENTION_KEYS.map((k) => <label key={k} className="flex gap-2 items-center"><input type="checkbox" checked={Boolean(formState.retention[k])} disabled={formState.retention.zeroRetention && (k === 'savePrompts' || k === 'saveOutputs')} onChange={(e) => setFormState((s) => ({ ...s, retention: { ...s.retention, [k]: e.target.checked, ...(k === 'zeroRetention' && e.target.checked ? { savePrompts: false, saveOutputs: false } : {}) } }))} />{k}</label>)}
+                <div className="flex gap-3">
+                  <Button type="button" variant="secondary" onClick={onTest} loading={testing}>Test configuration</Button>
+                  <Button type="button" variant="primary" onClick={onSave} loading={saving}>Save AI settings</Button>
+                </div>
+                {testResult ? <div className="rounded border border-[var(--dt-border-whisper)] p-3 text-sm"><p><strong>Result:</strong> {testResult?.success ? 'success' : 'failure'}</p><p><strong>reasonCode:</strong> {testResult?.reasonCode || '-'}</p><p><strong>safeMessage:</strong> {testResult?.safeMessage || '-'}</p><p><strong>credentialStatus:</strong> {testResult?.credentialStatus || '-'}</p><p><strong>policyVersion:</strong> {testResult?.policyVersion || '-'}</p></div> : null}
+              </>}
+            </>
+          )}
+        </div></Card>
+      </div></div>
     </PlatformShell>
   );
 }
