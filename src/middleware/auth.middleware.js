@@ -10,6 +10,7 @@ const { isActiveStatus, getFirmInactiveCode } = require('../utils/status.utils')
 const { resolveCanonicalTenantForUser } = require('../services/tenantIdentity.service');
 const { buildRequestContext } = require('./attachRequestContext');
 const log = require('../utils/log');
+const { applySupportHeadersToContext } = require('./supportHeaders');
 
 const env = loadEnv({ exitOnError: false }) || {};
 
@@ -191,6 +192,7 @@ const authenticate = async (req, res, next) => {
         ...(req.context || {}),
         ...buildRequestContext(req),
       };
+      applySupportHeadersToContext(req);
       req._authResolved = true;
       
       return next();
@@ -397,6 +399,7 @@ const authenticate = async (req, res, next) => {
       ...(req.context || {}),
       ...buildRequestContext(req),
     };
+    applySupportHeadersToContext(req);
     req._authResolved = true;
 
     const authDurationMs = Date.now() - authStartedAt;
