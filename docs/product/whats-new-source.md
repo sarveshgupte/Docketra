@@ -1,3 +1,5 @@
-- Login and OTP routing were cleaned up so users land in the correct workspace after authentication and stale OTP routes are no longer exposed.
+# What's New Source
 
-- 2026-05-01: Tenant and storage boundaries were hardened so workspace, BYOS, and AI settings consistently resolve the correct firm context.
+## 2026-05-01 — Tenant-boundary hardening (backend)
+
+We tightened backend tenant-boundary checks for firm-owned storage/settings operations so workspace-scoped tenant identities are consistently mapped to ownership firm identities before sensitive config or audit writes are performed.
