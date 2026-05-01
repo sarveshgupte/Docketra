@@ -66,6 +66,8 @@ This is a product direction and terminology layer first, not a breaking architec
 
 Future PRs may add knowledge records (SOPs, templates, checklists), process templates linked to work types, and connected views that surface full client and work context across modules. See `docs/product/COMPANY_BRAIN_STRATEGY.md` for the full strategy document.
 
+`KnowledgeItem` is the first structured knowledge object feeding this direction. It provides a firm-scoped backend foundation for SOPs, checklists, templates, notes, client instructions, and process records. A full Knowledge Library UI and linked-work flows will be layered on top in subsequent PRs.
+
 ## Module landing hubs (April 2026 enhancement)
 
 Docketra now includes dedicated overview hubs for each primary module route:

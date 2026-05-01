@@ -120,3 +120,29 @@ The path to a full Company Brain follows a deliberate sequence:
 5. **Ask Docketra (AI layer)** — Only after the structured foundation is reliable, add natural-language search and AI-assisted retrieval. The AI layer will be meaningful only when the underlying records are well-connected and trustworthy.
 
 Jumping to step 5 before step 1 is complete produces an AI layer with nothing reliable to retrieve from. The sequence matters.
+
+---
+
+## KnowledgeItem foundation
+
+`KnowledgeItem` is the first structured knowledge object in the Company Brain.
+
+KnowledgeItems are firm-scoped records that store operational knowledge in structured form. They are the building blocks for the Knowledge Layer described above.
+
+Supported types:
+- **SOP** — Standard operating procedures
+- **Checklist** — Step-by-step execution checklists
+- **Template** — Reusable document or communication templates
+- **Note** — Internal firm notes and institutional memory
+- **Client instruction** — Client-specific instructions that apply across engagements
+- **Process** — Informal process records and workflow notes
+
+KnowledgeItems are intentionally minimal in this first implementation:
+- They store structured text and metadata only (title, type, summary, content, tags, status, links).
+- They are firm-scoped and admin-managed, with read access for all firm users.
+- They support lifecycle states: `draft`, `active`, `archived`.
+- They can be linked to a client, docket, or work type to support future connected-view queries.
+- They do **not** store raw uploaded files. Heavy or sensitive documents remain in BYOS/storage and will be linked by pointer in future PRs.
+- They do **not** introduce AI processing, vector embeddings, or document extraction.
+
+This foundation enables the future Knowledge Library UI and linked-work flows described in the strategy sequence above.
