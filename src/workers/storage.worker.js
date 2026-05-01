@@ -48,7 +48,8 @@ const { analyzeDocument } = require('../queues/documentAnalysis.queue');
 setDLQSizeProvider(getDLQSize);
 setQueueDepthProvider(getQueueDepth);
 
-const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+const redisUrl = String(process.env.REDIS_URL || '').trim();
+const isProduction = process.env.NODE_ENV === 'production';
 
 /**
  * Build an authenticated Google OAuth2 client from decrypted token strings.
@@ -124,6 +125,16 @@ async function assertTenantSafety(firmId, caseId, caseFile) {
       `[StorageWorker] Tenant safety: CaseFile is soft-deleted, skipping upload`
     );
   }
+}
+
+if (!redisUrl && isProduction) {
+  throw new Error('REDIS_URL is required in production for storage worker');
+}
+
+if (!redisUrl) {
+  setWorkerStatus('storage', 'disabled');
+  module.exports = { isRetryable, worker: null };
+  return;
 }
 
 const storageWorker = new Worker(
