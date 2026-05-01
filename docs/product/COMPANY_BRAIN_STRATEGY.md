@@ -196,3 +196,18 @@ When viewing a docket, the Linked Knowledge tab fetches and displays relevant Kn
 This is the first execution-time surface for the Knowledge Layer. No AI, vector search, embeddings, or document extraction is used. Linking is purely through existing metadata fields on KnowledgeItem records.
 
 Firm admins can link SOPs, checklists, templates, notes, client instructions, and process records to dockets and work types directly from Knowledge Library.
+
+---
+
+## KnowledgeItem detail view
+
+Users can now inspect any specific KnowledgeItem from two surfaces:
+
+1. **Knowledge Library table** — Every row now has a View action that opens a read-only detail drawer/panel for that item without leaving the list.
+2. **Linked Knowledge on docket detail** — "View in Knowledge Library" rows now deep-link directly to the exact KnowledgeItem using a `?item=<id>` query parameter on the Knowledge Library route (`/app/firm/:firmSlug/knowledge?item=<knowledgeItemId>`).
+
+The detail drawer surfaces all structured metadata fields — title, type, status, summary, content, tags, owner, linked work type, linked client/docket, review due, last reviewed, and audit timestamps — in a read-only format. Users can launch Edit or Archive from the drawer without inline editing inside it.
+
+This approach uses query param navigation so no new route is required and the Knowledge Library list remains visible and active behind the drawer. Closing the drawer removes the query param and restores normal list state.
+
+Loading and error states are handled gracefully: if the item cannot be retrieved (archived, removed, or inaccessible), a clear message is shown and the main list continues to render. Admin-only write controls, BYOS/privacy boundaries, and no-AI/no-document-extraction behavior are all preserved.
