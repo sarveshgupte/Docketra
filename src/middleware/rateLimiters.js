@@ -86,19 +86,27 @@ const createRateLimitHandler = (name, windowMs) => async (req, res) => {
 };
 
 const createLimiter = ({ name, windowMs, max, keyGenerator, skip, failClosedWhenRedisUnavailable = false }) => {
-  const limiter = rateLimit({
-    windowMs,
-    max,
-    keyGenerator,
-    store: createRedisStore() || undefined,
-    standardHeaders: true,
-    legacyHeaders: false,
-    skip,
-    handler: createRateLimitHandler(name, windowMs),
-    validate: false,
-  });
+  let limiter = null;
 
-  if (!failClosedWhenRedisUnavailable) return limiter;
+  const getLimiter = () => {
+    if (limiter) return limiter;
+    limiter = rateLimit({
+      windowMs,
+      max,
+      keyGenerator,
+      store: createRedisStore() || undefined,
+      standardHeaders: true,
+      legacyHeaders: false,
+      skip,
+      handler: createRateLimitHandler(name, windowMs),
+      validate: false,
+    });
+    return limiter;
+  };
+
+  if (!failClosedWhenRedisUnavailable) {
+    return (req, res, next) => getLimiter()(req, res, next);
+  }
 
   return (req, res, next) => {
     if (process.env.NODE_ENV === 'production' && !isRedisReady()) {
@@ -108,7 +116,7 @@ const createLimiter = ({ name, windowMs, max, keyGenerator, skip, failClosedWhen
         message: 'Redis is required for this security-sensitive endpoint.',
       });
     }
-    return limiter(req, res, next);
+    return getLimiter()(req, res, next);
   };
 };
 
