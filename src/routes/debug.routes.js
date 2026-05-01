@@ -56,7 +56,7 @@ router.get('/email-test', debugLimiter, requireAdmin, async (req, res) => {
       res.status(500).json({
         success: false,
         message: 'Failed to send test email',
-        error: result.error,
+        ...(process.env.NODE_ENV === 'production' ? {} : { error: result.error }),
         recipient: testEmail,
         timestamp: new Date().toISOString(),
       });
@@ -66,7 +66,7 @@ router.get('/email-test', debugLimiter, requireAdmin, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error sending test email',
-      error: error.message,
+      ...(process.env.NODE_ENV === 'production' ? {} : { error: error.message }),
     });
   }
 });
