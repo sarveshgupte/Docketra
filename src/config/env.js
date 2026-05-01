@@ -148,10 +148,8 @@ const envSchema = z
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['SUPERADMIN_PASSWORD_HASH'], message: 'must be a valid bcrypt hash (not plaintext)' });
       }
 
-      if (!env.REDIS_URL) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['REDIS_URL'], message: 'required in production for Redis-backed idempotency and distributed abuse controls' });
-      } else if (!isValidRedisUrl(env.REDIS_URL)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['REDIS_URL'], message: 'must be a valid redis:// or rediss:// URL in production' });
+      if (env.REDIS_URL && !isValidRedisUrl(env.REDIS_URL)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['REDIS_URL'], message: 'must be a valid redis:// or rediss:// URL when configured' });
       }
 
       if (!env.BREVO_API_KEY) {
