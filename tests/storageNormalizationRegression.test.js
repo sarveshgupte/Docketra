@@ -1,7 +1,9 @@
 const assert = require('assert');
 const Module = require('module');
+const { decrypt } = require('../src/services/storage/services/TokenEncryption.service');
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'a'.repeat(64);
+process.env.STORAGE_TOKEN_SECRET = process.env.STORAGE_TOKEN_SECRET || 'test-storage-secret';
 
 const originalLoad = Module._load;
 
@@ -27,6 +29,8 @@ const originalLoad = Module._load;
             assert.strictEqual(this.cfg.tenantId, 'F1');
             assert.strictEqual(this.cfg.bucket, 'b');
             assert.strictEqual(this.cfg.region, 'r');
+            assert.strictEqual(this.cfg.credentials.accessKeyId, 'ak');
+            assert.strictEqual(this.cfg.credentials.secretAccessKey, 'sk');
           }
         },
       };
@@ -66,9 +70,13 @@ const originalLoad = Module._load;
   update = state.updates[state.updates.length - 1].$set;
   assert.strictEqual(update['storage.provider'], 'docketra_managed');
 
-  await controller.changeFirmStorage({ ...baseReq, body: { provider: 's3', credentials: { bucket: 'b', region: 'r', provider: 'google_drive' }, verificationToken: 'ok' } }, mkRes());
+  await controller.changeFirmStorage({ ...baseReq, body: { provider: 's3', credentials: { bucket: 'b', region: 'r', provider: 'google_drive', accessKeyId: 'ak', secretAccessKey: 'sk' }, verificationToken: 'ok' } }, mkRes());
   update = state.updates[state.updates.length - 1].$set;
   assert.strictEqual(update['storage.provider'], 's3');
+  const storedS3 = JSON.parse(decrypt(update.storageConfig.credentials));
+  assert.strictEqual(storedS3.provider, undefined);
+  assert.strictEqual(storedS3.credentials.accessKeyId, 'ak');
+  assert.strictEqual(storedS3.credentials.secretAccessKey, 'sk');
   assert.strictEqual(state.s3Tested, true);
 
   Module._load = originalLoad;
