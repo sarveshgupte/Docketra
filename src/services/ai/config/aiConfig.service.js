@@ -37,6 +37,25 @@ const DEFAULT_AI_CONFIG = Object.freeze({
   updatedBy: null,
 });
 
+
+function isPlainObject(value) {
+  return value != null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function deepMerge(base = {}, updates = {}) {
+  const result = { ...base };
+  Object.keys(updates || {}).forEach((key) => {
+    const updateValue = updates[key];
+    const baseValue = base ? base[key] : undefined;
+    if (isPlainObject(baseValue) && isPlainObject(updateValue)) {
+      result[key] = deepMerge(baseValue, updateValue);
+      return;
+    }
+    result[key] = updateValue;
+  });
+  return result;
+}
+
 function normalizeProvider(provider) {
   if (provider == null) return null;
   const value = String(provider).trim().toLowerCase();
@@ -123,7 +142,9 @@ function validateAiConfigForEnablement(rawConfig = {}) {
 }
 
 function applyAiConfigUpdate(existingConfig = {}, updatePayload = {}, actor = null) {
-  const merged = normalizeAiConfig({ ...normalizeAiConfig(existingConfig), ...updatePayload });
+  const baseConfig = normalizeAiConfig(existingConfig);
+  const mergedUpdate = deepMerge(baseConfig, updatePayload || {});
+  const merged = normalizeAiConfig(mergedUpdate);
   merged.updatedAt = new Date();
   merged.updatedBy = actor || null;
   return merged;

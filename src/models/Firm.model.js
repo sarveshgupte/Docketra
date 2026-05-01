@@ -239,7 +239,7 @@ const firmSchema = new mongoose.Schema({
     },
     provider: {
       type: String,
-      enum: ['openai', 'gemini', 'anthropic', 'azure_openai', 'docketra_managed', null],
+      enum: ['openai', 'gemini', 'anthropic', 'claude', 'azure_openai', 'docketra_managed', null],
       default: null,
       lowercase: true,
       trim: true,
@@ -302,7 +302,7 @@ const firmSchema = new mongoose.Schema({
     },
     credentialProvider: {
       type: String,
-      enum: ['openai', 'gemini', 'anthropic', 'azure_openai', 'docketra_managed', null],
+      enum: ['openai', 'gemini', 'anthropic', 'claude', 'azure_openai', 'docketra_managed', null],
       default: null,
       lowercase: true,
       trim: true,
