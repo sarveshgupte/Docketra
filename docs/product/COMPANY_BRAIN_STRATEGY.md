@@ -146,3 +146,5 @@ KnowledgeItems are intentionally minimal in this first implementation:
 - They do **not** introduce AI processing, vector embeddings, or document extraction.
 
 This foundation enables the future Knowledge Library UI and linked-work flows described in the strategy sequence above.
+
+Knowledge Library is the UI surface for managing KnowledgeItems. Firm admins can create, view, edit, filter, and archive KnowledgeItems from the Knowledge Library workspace under Firm Memory in the navigation.

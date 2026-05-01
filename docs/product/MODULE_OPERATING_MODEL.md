@@ -68,6 +68,10 @@ Future PRs may add knowledge records (SOPs, templates, checklists), process temp
 
 `KnowledgeItem` is the first structured knowledge object feeding this direction. It provides a firm-scoped backend foundation for SOPs, checklists, templates, notes, client instructions, and process records. A full Knowledge Library UI and linked-work flows will be layered on top in subsequent PRs.
 
+**Knowledge Intake vs Knowledge Library** — these are distinct surfaces with different purposes:
+- **Knowledge Intake** (`/cms`) = incoming enquiries, form submissions, and external context captured from prospective clients and the outside world.
+- **Knowledge Library** (`/knowledge`) = reusable internal firm knowledge such as SOPs, checklists, templates, notes, client instructions, and process records. These are structured operational records created and managed by firm admins.
+
 ## Module landing hubs (April 2026 enhancement)
 
 Docketra now includes dedicated overview hubs for each primary module route:
