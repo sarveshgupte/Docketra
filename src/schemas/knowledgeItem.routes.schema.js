@@ -26,6 +26,8 @@ module.exports = {
       status: z.enum(KNOWLEDGE_ITEM_STATUSES).optional(),
       tag: z.string().trim().optional(),
       clientId: objectIdString.optional(),
+      linkedDocketId: z.string().trim().max(200).optional(),
+      linkedWorkType: z.string().trim().max(200).optional(),
       q: z.string().trim().max(200).optional(),
     })),
   },

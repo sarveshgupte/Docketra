@@ -178,6 +178,9 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
               onChange={handleChange}
               style={{ width: '100%' }}
             />
+            <p style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem' }}>
+              Use the same work type/category used by dockets to surface this knowledge inside work.
+            </p>
           </div>
 
           <div style={{ flex: 1, minWidth: '140px' }}>

@@ -45,6 +45,7 @@ import { CaseDetailSummaryHeader } from './caseDetail/CaseDetailSummaryHeader';
 import { CaseDetailOverviewPanel } from './caseDetail/CaseDetailOverviewPanel';
 import { useCaseDetailTimeline } from './caseDetail/useCaseDetailTimeline';
 import { useClientDocketHistory } from './caseDetail/useClientDocketHistory';
+import { LinkedKnowledgeSection } from './caseDetail/LinkedKnowledgeSection';
 import {
   canAdminMoveAssignedDocketForUser,
   canCloneDocketByPolicy,
@@ -268,6 +269,7 @@ export const CaseDetailPage = () => {
     { name: CASE_DETAIL_TABS.ATTACHMENTS, label: 'Attachments', badge: attachments.length || null },
     { name: CASE_DETAIL_TABS.ACTIVITY, label: 'Activity', badge: mergedTimelineEvents.length || null },
     { name: CASE_DETAIL_TABS.HISTORY, label: 'History' },
+    { name: CASE_DETAIL_TABS.KNOWLEDGE, label: 'Linked Knowledge' },
   ]), [attachments.length, mergedTimelineEvents.length]);
   const {
     loadingClientDockets,
@@ -297,6 +299,7 @@ export const CaseDetailPage = () => {
   const clientName = caseData?.client?.businessName || caseInfo?.clientName || caseInfo?.businessName || '—';
   const clientIdLabel = caseData?.client?.clientId || caseInfo?.clientId || caseData?.clientId || '—';
   const linkedClientId = caseData?.client?.clientId || caseInfo?.clientId || caseData?.clientId || '';
+  const clientMongoId = caseData?.client?._id || caseData?.client?.id || caseData?.clientMongoId || caseInfo?.clientMongoId || '';
   const linkedClientEmail = caseInfo?.clientEmail
     || caseInfo?.client?.email
     || caseInfo?.client?.businessEmail
@@ -1726,6 +1729,15 @@ export const CaseDetailPage = () => {
                   navigate={navigate}
                 />
               </Suspense>
+            ) : null}
+            {activeTab === CASE_DETAIL_TABS.KNOWLEDGE ? (
+              <LinkedKnowledgeSection
+                caseId={caseId}
+                categoryLabel={categoryLabel !== '—' ? categoryLabel : ''}
+                clientMongoId={clientMongoId}
+                firmSlug={firmSlug}
+                isAdmin={permissions?.isAdmin || permissions?.role === 'ADMIN' || permissions?.role === 'PRIMARY_ADMIN'}
+              />
             ) : null}
           </main>
 
