@@ -252,3 +252,14 @@ The Knowledge Library is now easier to scan and manage. The admin workspace has 
 - **Detail drawer** — The read-only detail drawer now opens with a header showing the item title and status badge, followed by a Metadata grid, Summary, Content, Checklist steps (if applicable), Tags, and an Audit section. No inline editing is allowed inside the drawer.
 - **Guidance panel** — A short guidance panel near the top of the page explains the purpose of Knowledge Library and when to link records.
 - All existing create, edit, archive, and detail behavior is preserved. No AI, file uploads, task automation, or route changes are introduced.
+
+## Company Brain UI/UX simplification
+
+Company Brain is now organized as a cleaner operational command center with four sections:
+- **Command Summary**
+- **Needs Attention**
+- **Connected Map**
+- **How to use Company Brain**
+
+This keeps the page scannable at a glance while preserving the same data sources and routes. Company Brain remains read-only and relies on metadata links and rule-based cues from existing records.
+
