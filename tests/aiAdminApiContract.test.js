@@ -54,6 +54,16 @@ async function run() {
   await controller.updateAiConfiguration({ firmId: 't', user: { _id: 'u1' }, body: { enabled: true, provider: null, model: null, credentialMode: 'none' } }, putEnableFail);
   assert.strictEqual(putEnableFail.statusCode, 400);
 
+
+  const putFeatureToggle = makeRes();
+  await controller.updateAiConfiguration({ firmId: 't', user: { _id: 'u1' }, body: { features: { documentSummary: false, docketDrafting: false, routingSuggestions: false } } }, putFeatureToggle);
+  assert.strictEqual(putFeatureToggle.statusCode, 200);
+  assert.deepStrictEqual(saved.aiConfig.enabledFeatures, {
+    documentAnalysis: false,
+    docketDrafting: false,
+    routingSuggestions: false,
+  });
+
   const putRetention = makeRes();
   await controller.updateAiConfiguration({ firmId: 't', user: { _id: 'u1' }, body: { retention: { zeroRetention: true, savePrompts: true, saveOutputs: true } } }, putRetention);
   assert.strictEqual(putRetention.payload.configuration.retention.savePrompts, false);
