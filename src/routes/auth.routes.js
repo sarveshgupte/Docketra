@@ -98,7 +98,12 @@ router.post('/login/init', authBlockEnforcer, authLimiter, attachFirmFromSlug, l
 router.post('/login/verify', authBlockEnforcer, authLimiter, otpVerifyLimiter, attachFirmFromSlug, loginVerify);
 router.post('/login/resend', authBlockEnforcer, authLimiter, otpResendLimiter, attachFirmFromSlug, loginResend);
 router.post('/refresh', refreshIpLimiter, refreshUserLimiter, refreshAccessToken); // NEW: JWT token refresh
-router.get('/debug-cookie-state', debugCookieState);
+router.get('/debug-cookie-state', (req, res, next) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ success: false, message: 'Not found' });
+  }
+  return next();
+}, authenticate, debugCookieState);
 router.post('/verify-totp', otpVerifyLimiter, verifyTotp);
 router.post('/complete-mfa-login', otpVerifyLimiter, completeMfaLogin);
 router.post('/signup/init', authBlockEnforcer, authLimiter, signupInit);

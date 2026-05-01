@@ -266,7 +266,7 @@ const createApp = () => {
     });
   }
 
-  const CORS_ALLOWED_HEADERS = ['Content-Type', 'Authorization', 'X-Requested-With', 'Idempotency-Key', 'X-Correlation-ID'];
+  const CORS_ALLOWED_HEADERS = ['Content-Type', 'Authorization', 'X-Requested-With', 'Idempotency-Key', 'X-Correlation-ID', 'X-Impersonated-Firm-Id', 'X-Impersonation-Session-Id', 'X-Impersonation-Mode'];
   const CORS_ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'];
 
   // CORS Configuration

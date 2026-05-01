@@ -6,7 +6,7 @@ const optionsPreflight = (allowedOrigins = [], allowedHeaders = [], allowedMetho
   }
   const headerList = allowedHeaders.length > 0
     ? allowedHeaders.join(', ')
-    : 'Content-Type, Authorization, X-Requested-With, Idempotency-Key';
+    : 'Content-Type, Authorization, X-Requested-With, Idempotency-Key, X-Impersonated-Firm-Id, X-Impersonation-Session-Id, X-Impersonation-Mode';
   const methodList = allowedMethods.length > 0
     ? allowedMethods.join(', ')
     : 'GET, POST, PUT, PATCH, DELETE, OPTIONS';
