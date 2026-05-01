@@ -1,51 +1,50 @@
-# Auth E2E Smoke Coverage
+# Auth smoke coverage (integration-boundary + helper behavior)
 
-## Covered flows
+## Exact test commands
+- `node tests/authE2ESmoke.test.js`
+- `node tests/authRouteContract.test.js`
+- `node tests/authForgotPasswordOtpReliability.test.js`
+- `node tests/superadminSessionParity.test.js`
+- `node tests/authSession.refreshAccessToken.test.js`
+- `cd ui && node tests/authRedirectBehavior.test.mjs`
+- `cd ui && node tests/authReliabilityRouteGuards.test.mjs`
+- `cd ui && node tests/authSmokeHelpers.test.mjs`
 
-### Backend smoke coverage
-- `tests/authE2ESmoke.test.js`
-  - Firm login boundary smoke:
-    - login init returns OTP challenge (`otpRequired` + `loginToken`) for firm-scoped credentials.
-    - login verify sets `accessToken` and `refreshToken` cookies.
-  - SuperAdmin session boundary smoke:
-    - `/superadmin/login` path via controller login with env-backed credentials.
-    - cookies set on login.
-    - `/auth/profile` returns superadmin identity.
-    - `/auth/refresh` succeeds and sets updated cookies.
-    - `/auth/logout` clears auth cookies.
-- `tests/authForgotPasswordOtpReliability.test.js`
+## Coverage map
+
+### Backend smoke/integration-boundary tests
+- `tests/authE2ESmoke.test.js` (stubbed service dependencies)
+  - Firm login init returns OTP challenge/login token.
+  - Firm login verify accepts valid OTP and sets access/refresh cookies.
+- `tests/superadminSessionParity.test.js` (stubbed session dependencies)
+  - SuperAdmin login payload cookie model parity.
+  - Refresh rotates/sets auth cookies.
+  - Logout clears cookies.
+- `tests/authSession.refreshAccessToken.test.js` (existing)
+  - Valid refresh token behavior.
+  - Invalid/expired/revoked behavior (401 + cleanup behavior).
+  - Refresh token reuse/revocation protections.
+- `tests/authForgotPasswordOtpReliability.test.js` (existing)
   - Firm-scoped forgot-password init/verify/reset.
-  - Cross-tenant reset blocking.
-  - Reset token non-reusability.
-  - OTP/token expiry rejection.
-- `tests/superadminSessionParity.test.js`
-  - SuperAdmin profile and session parity (login/profile/refresh/logout cookie model).
-- `tests/authSession.refreshAccessToken.test.js`
-  - Refresh token rotation/reuse/invalid token protections (including 401 behavior).
+  - Cross-tenant verify/reset blocked.
+  - Reset token reuse blocked.
 
-### Frontend/unit smoke coverage
+### Frontend helper behavior tests
 - `ui/tests/authSmokeHelpers.test.mjs`
-  - `resolvePostAuthNavigation`:
-    - firm user goes to `/app/firm/:firmSlug/dashboard`.
-    - superadmin goes to `/app/superadmin`.
-    - invalid `returnTo` ignored.
-    - cross-namespace `returnTo` ignored.
-  - auth redirect helper expectations:
-    - firm protected route -> `/:firmSlug/login`.
-    - superadmin protected route -> `/superadmin/login`.
-    - public auth pages suppress hard redirects.
-  - logout/session cleanup helpers:
-    - pending login keys removed.
-    - superadmin routing hints + impersonation state removed.
+  - `resolvePostAuthNavigation` behavior:
+    - firm user -> `/app/firm/:firmSlug/dashboard`
+    - SuperAdmin -> `/app/superadmin`
+    - invalid external `returnTo` ignored
+    - cross-namespace `returnTo` ignored
+    - valid same-namespace `returnTo` accepted
+  - `resolveAuthRedirectDestination` + `isPublicAuth401Suppressed` behavior
+  - `clearPendingLoginSessionState` + `clearSuperadminRoutingHints` storage cleanup behavior
 
-## Mocks/stubs used
-- Backend tests stub data/model methods for deterministic auth/session behavior (no live DB).
-- Cookie setting/clearing is asserted through in-memory response doubles.
-- SuperAdmin smoke stubs refresh token model persistence for rotation behavior checks.
-- Frontend helper tests use in-memory storage doubles (`removeItem` collectors).
+## What is mocked/stubbed
+- Backend smoke tests use in-memory model/session/cookie stubs (no Redis, DNS, email, DB dependency).
+- Frontend helper behavior tests execute helper logic with deterministic injected dependencies and fake storage objects.
 
-## Still requiring browser/manual testing
-- Full browser redirect timing and UX states around async 401 handling.
-- Real cookie behavior across domains/samesite/secure flags in deployed environments.
-- OTP delivery channel integration (email/SMS provider) and inbox latency.
-- Multi-tab logout broadcast behavior under real browser storage events.
+## Still manual/browser/deployment validation
+- Real browser cookie policy behavior across domains (SameSite/Secure/CORS).
+- Full-page route transitions and UX timing under real API latency.
+- Live OTP delivery integration and external provider behavior.
