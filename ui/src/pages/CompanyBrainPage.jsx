@@ -108,7 +108,6 @@ export const CompanyBrainPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const now = Date.now();
   const today = new Date();
   today.setHours(23, 59, 59, 999);
   const endOfToday = today;
@@ -118,7 +117,6 @@ export const CompanyBrainPage = () => {
   const activeWork = summary?.myDockets?.total ?? summary?.myDockets?.items?.length ?? null;
   const overdueWork = summary?.overdueDockets?.total ?? summary?.overdueDockets?.items?.length ?? null;
   const pendingReview = summary?.workbasketLoad ? summary.workbasketLoad.reduce((acc, item) => acc + Number(item?.pending || 0), 0) : null;
-  const leadsNeedFollowup = leads.filter((lead) => lead?.nextFollowUpAt && new Date(lead.nextFollowUpAt).getTime() <= now).length;
   const noFollowupLeads = leads.filter((lead) => !lead?.nextFollowUpAt).length;
   const clientsWithoutOwner = clients.filter((client) => !(client?.ownerXid || client?.assignedTo || client?.ownerId)).length;
 
