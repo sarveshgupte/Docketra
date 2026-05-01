@@ -47,6 +47,12 @@ Fallback behavior:
 - Existing legacy tenants can continue authenticating because auth middleware resolves legacy `Firm._id` to canonical tenant id before enforcing JWT/runtime checks.
 - Any future backfill script should migrate legacy user rows from `Firm._id` to `Firm.defaultClientId` in controlled batches.
 
+## API firm-slug routing (Express 5-safe)
+
+- Firm slug API routes are mounted with a plain Express 5-safe path: `app.use('/api/:firmSlug', firmSlugGuard, firmRoutes)`.
+- Reserved namespaces (for example `auth`, `public`, `superadmin`, `admin`, `users`) are excluded by `firmSlugGuard` using `next('router')`, so platform API routes keep precedence.
+- Slug validation is handled in middleware (`^[a-z0-9-]+$`) instead of inline mount regex to remain compatible with Express 5 / path-to-regexp v8.
+
 ## Guardrails
 
 - Cross-tenant checks are performed against canonical runtime tenant id, not raw legacy values.

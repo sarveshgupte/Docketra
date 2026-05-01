@@ -57,6 +57,19 @@ const swap = (modulePath, exportsValue) => {
   await request(app).get('/api/superadmin');
   assert.strictEqual(tenantResolverCalls, beforeSuperadmin, '/api/superadmin must not hit tenantResolver in firm routes');
 
+
+  const beforeAdmin = tenantResolverCalls;
+  await request(app).get('/api/admin');
+  assert.strictEqual(tenantResolverCalls, beforeAdmin, '/api/admin must not hit tenantResolver in firm routes');
+
+  const beforeUsers = tenantResolverCalls;
+  await request(app).get('/api/users');
+  assert.strictEqual(tenantResolverCalls, beforeUsers, '/api/users must not hit tenantResolver in firm routes');
+
+  const beforeReservedSlug = tenantResolverCalls;
+  await request(app).get('/api/auth/login');
+  assert.strictEqual(tenantResolverCalls, beforeReservedSlug, 'reserved firm slugs must not reach tenantResolver');
+
   const beforeInvalid = tenantResolverCalls;
   await request(app).get('/api/acme!!!/login');
   assert.strictEqual(tenantResolverCalls, beforeInvalid, 'invalid firm slug must not reach tenantResolver');
