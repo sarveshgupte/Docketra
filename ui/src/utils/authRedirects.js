@@ -4,9 +4,10 @@ export const isPublicAuthPagePath = (pathname) => {
   const value = String(pathname || '').trim();
   if (!value) return false;
   if (value === '/' || value === '/login' || value === '/superadmin' || value === '/superadmin/login') return true;
-  if (value === '/forgot-password' || value === '/reset-password' || value === '/auth/otp') return true;
+  if (value === '/forgot-password' || value === '/reset-password' || value === '/change-password' || value === '/auth/otp') return true;
   if (value === '/signup' || value === '/auth/setup-account' || value === '/setup-password') return true;
   if (/^\/[a-z0-9]+(?:-[a-z0-9]+)*\/forgot-password$/i.test(value)) return true;
+  if (/^\/app\/[a-z0-9]+(?:-[a-z0-9]+)*\/forgot-password$/i.test(value)) return true;
   if (/^\/[a-z0-9]+(?:-[a-z0-9]+)*\/login$/i.test(value)) return true;
   return false;
 };

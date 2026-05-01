@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { resolveAuthRedirectDestination, isPublicAuth401Suppressed } from '../src/utils/authRedirects.js';
+import { resolveAuthRedirectDestination, isPublicAuth401Suppressed, isPublicAuthPagePath } from '../src/utils/authRedirects.js';
 import { extractFirmSlugFromPath } from '../src/utils/tenantRouting.js';
 import { isRoleCompatibleRoute } from '../src/utils/returnToSafety.js';
 
@@ -20,7 +20,7 @@ assert.strictEqual(extractFirmSlugFromPath('/login'), null);
 assert.strictEqual(extractFirmSlugFromPath('/ACME!/login'), null);
 
 // public auth page 401 loop suppression
-['/login','/superadmin/login','/acme/login','/forgot-password','/acme/forgot-password','/signup'].forEach((pathname) => {
+['/login','/superadmin/login','/acme/login','/forgot-password','/acme/forgot-password','/app/acme/forgot-password','/reset-password','/change-password','/signup'].forEach((pathname) => {
   assert.strictEqual(isPublicAuth401Suppressed({ pathname, isAuthStateRequest: true }), true);
 });
 assert.strictEqual(isPublicAuth401Suppressed({ pathname: '/app/firm/acme/dashboard', isAuthStateRequest: true }), false);
@@ -32,3 +32,11 @@ assert.strictEqual(isRoleCompatibleRoute('/app/firm/wrong/dashboard', { isSuperA
 assert.strictEqual(isRoleCompatibleRoute('/app/firm/acme/reports', { isSuperAdminUser: false, firmSlug: 'acme' }), true);
 
 console.log('authRedirectBehavior.test.mjs passed');
+
+
+['/forgot-password','/acme/forgot-password','/app/acme/forgot-password','/reset-password','/change-password','/login','/superadmin/login','/acme/login'].forEach((pathname) => {
+  assert.strictEqual(isPublicAuthPagePath(pathname), true);
+});
+['/app/firm/acme/dashboard','/app/superadmin/dashboard'].forEach((pathname) => {
+  assert.strictEqual(isPublicAuthPagePath(pathname), false);
+});
