@@ -49,6 +49,8 @@
 - If auth succeeds but profile/workspace hydration fails, UI shows an actionable error and does not silently stall.
 - OTP verification can resume from `sessionStorage` only if pending firm matches the current sanitized firm slug.
 - On pending-token mismatch/expiry, flow resets to credentials step with a clear message (no loop).
+- `POST_LOGIN_RETURN_TO` is no longer written by firm login; `returnTo` is read only from current URL query and validated centrally.
+- `authRedirect.js` is intentionally a thin compatibility layer that delegates route-safety checks to `postAuthNavigation.js`.
 
 ## Backend/API firm slug guard behavior
 - Backend firm-scoped API routes use Express 5-safe mount `'/api/:firmSlug'` with dedicated `firmSlugGuard` middleware.
@@ -68,6 +70,7 @@
 - `localStorage.impersonatedFirm` → superadmin impersonation metadata.
 - `localStorage.authLogoutBroadcastAt` → cross-tab logout broadcast.
 - `sessionStorage.GLOBAL_TOAST` → one-time UX toast across redirects.
+- `sessionStorage.PENDING_LOGIN_TOKEN` / `PENDING_LOGIN_FIRM` → short-lived firm login OTP state.
 
 ## Logout cleanup behavior
 - Logout clears authenticated in-memory state and query cache.
