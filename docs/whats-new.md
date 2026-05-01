@@ -1,5 +1,11 @@
 # What's New
 
+## May 2026: Company Brain connected map v1
+
+- Added Knowledge Library data to Company Brain so clients, prospects, work, and knowledge records appear in one connected read-only view.
+- Added Knowledge health cues for drafts, review due items, missing owners, and unlinked knowledge records.
+- Preserved metadata/rule-based behavior without AI, vector search, document extraction, graph DB, or new backend models.
+
 ## May 2026: Linked Knowledge for work
 
 - Added the first work-context surface for KnowledgeItems so SOPs, checklists, templates, notes, client instructions, and process records can appear inside docket/work views.
