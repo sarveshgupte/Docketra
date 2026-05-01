@@ -221,3 +221,8 @@ This connection — Knowledge Library as the source of firm knowledge, Work Exec
 - The detail drawer shows all structured metadata without allowing inline editing.
 - Users can launch Edit or Archive from the drawer, but editing is only available in the full edit form.
 - The drawer is opened and closed via the `?item=<knowledgeItemId>` query parameter so the URL is shareable and the list remains visible behind the drawer.
+
+
+## Work type/category normalization across Work Execution and Knowledge Library
+
+Work Execution and Knowledge Library now share normalized work type/category options derived from docket categories. This alignment makes Linked Knowledge matching more reliable during docket execution while preserving existing custom linked work types for compatibility.
