@@ -109,8 +109,13 @@ export const LinkedKnowledgeSection = ({
     return () => { cancelled = true; };
   }, [caseId, categoryLabel, clientMongoId]);
 
-  const goToKnowledgeLibrary = () => {
-    navigate(ROUTES.KNOWLEDGE_LIBRARY(firmSlug));
+  const goToKnowledgeItem = (item) => {
+    const itemId = getItemKey(item);
+    if (itemId) {
+      navigate(`${ROUTES.KNOWLEDGE_LIBRARY(firmSlug)}?item=${itemId}`);
+    } else {
+      navigate(ROUTES.KNOWLEDGE_LIBRARY(firmSlug));
+    }
   };
 
   return (
@@ -139,7 +144,7 @@ export const LinkedKnowledgeSection = ({
           ) : (
             <button
               type="button"
-              onClick={goToKnowledgeLibrary}
+              onClick={() => navigate(ROUTES.KNOWLEDGE_LIBRARY(firmSlug))}
               style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}
             >
               Go to Knowledge Library
@@ -185,7 +190,7 @@ export const LinkedKnowledgeSection = ({
                     <td>
                       <button
                         type="button"
-                        onClick={goToKnowledgeLibrary}
+                        onClick={() => goToKnowledgeItem(item)}
                         aria-label={`View ${item.title} in Knowledge Library`}
                         style={{ fontSize: '0.8rem' }}
                       >

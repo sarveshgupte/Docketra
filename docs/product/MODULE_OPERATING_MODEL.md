@@ -209,3 +209,10 @@ This connection — Knowledge Library as the source of firm knowledge, Work Exec
 **Linked Knowledge** surfaces relevant Knowledge Library records during work execution:
 - The Linked Knowledge tab on every docket detail page shows records matched by docket ID, work type, or client.
 - Linking is through existing KnowledgeItem metadata only — no AI or document extraction.
+- Each Linked Knowledge row deep-links directly to the exact KnowledgeItem in Knowledge Library using `?item=<id>`, opening the detail drawer immediately for inspection.
+
+**Knowledge Library** supports item-level detail inspection:
+- Every row in the Knowledge Library table has a View action that opens a read-only detail drawer for that item.
+- The detail drawer shows all structured metadata without allowing inline editing.
+- Users can launch Edit or Archive from the drawer, but editing is only available in the full edit form.
+- The drawer is opened and closed via the `?item=<knowledgeItemId>` query parameter so the URL is shareable and the list remains visible behind the drawer.
