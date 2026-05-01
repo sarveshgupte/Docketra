@@ -54,7 +54,8 @@
     "test:superadmin-screen-reliability": "node tests/superadminScreenReliability.test.mjs",
     "test:knowledge-item-detail-view": "node tests/knowledgeItemDetailView.test.mjs",
     "test:work-type-normalization": "node tests/workTypeNormalization.test.mjs",
-    "test:landing-page": "node tests/companyBrainLandingPage.test.mjs"
+    "test:landing-page": "node tests/companyBrainLandingPage.test.mjs",
+    "test:company-brain-command-center": "node tests/companyBrainCommandCenterSimplification.test.mjs"
   },
   "browserslist": {
     "production": [
