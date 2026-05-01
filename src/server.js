@@ -1,15 +1,9 @@
 require('dotenv').config();
 
 const log = require('./utils/log');
-const { startServer } = require('./runtime/startServer');
-const { sanitizeErrorForLog } = require('./utils/pii');
+const { startServer, buildStartupErrorDetails } = require('./runtime/startServer');
 
 startServer().catch((error) => {
-  const sanitized = sanitizeErrorForLog(error) || {};
-  log.error('FAILED_TO_START_SERVER', {
-    name: sanitized.name || error?.name || 'Error',
-    message: sanitized.message || error?.message || 'Unknown startup error',
-    code: sanitized.code || error?.code || null,
-  });
+  log.error('FAILED_TO_START_SERVER', buildStartupErrorDetails(error));
   process.exit(1);
 });
