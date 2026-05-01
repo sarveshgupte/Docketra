@@ -122,6 +122,7 @@ export const CompanyBrainPage = () => {
   const now = Date.now();
   const today = new Date();
   today.setHours(23, 59, 59, 999);
+  const endOfToday = today;
 
   const activeClients = useMemo(() => clients.filter((client) => String(client?.status || 'active').toLowerCase() !== 'inactive').length, [clients]);
   const prospectiveClients = leads.length;
@@ -141,12 +142,18 @@ export const CompanyBrainPage = () => {
   const archivedKnowledge = knowledgeItems.filter((item) => String(item?.status || '').toLowerCase() === 'archived').length;
   const knowledgeReviewDue = knowledgeItems.filter((item) => {
     if (!item?.reviewDueAt) return false;
-    return new Date(item.reviewDueAt).getTime() <= today.getTime();
+    return new Date(item.reviewDueAt).getTime() <= endOfToday.getTime();
   }).length;
   const knowledgeWithoutOwner = knowledgeItems.filter((item) => !(item?.ownerXid || item?.assignedTo || item?.ownerId || item?.owner)).length;
   const knowledgeWithoutLinks = knowledgeItems.filter(
     (item) => !(item?.linkedWorkType || item?.linkedClientId || item?.linkedDocketId),
   ).length;
+
+  const hasNoKnowledgeIssues = !loading && totalKnowledge > 0
+    && draftKnowledge === 0
+    && knowledgeReviewDue === 0
+    && knowledgeWithoutOwner === 0
+    && knowledgeWithoutLinks === 0;
 
   return (
     <PlatformShell
@@ -344,7 +351,7 @@ export const CompanyBrainPage = () => {
             </div>
           ) : null}
 
-          {!loading && totalKnowledge > 0 && draftKnowledge === 0 && knowledgeReviewDue === 0 && knowledgeWithoutOwner === 0 && knowledgeWithoutLinks === 0 ? (
+          {hasNoKnowledgeIssues ? (
             <p className="muted">No rule-based knowledge health issues detected from available records.</p>
           ) : null}
         </div>
