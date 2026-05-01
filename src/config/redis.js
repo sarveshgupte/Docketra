@@ -9,7 +9,7 @@ const log = require('../utils/log');
  * Provides Redis client for distributed rate limiting across multiple instances.
  * Falls back to null (in-memory store) for development when Redis is not configured.
  * 
- * Production: REDIS_URL must be set for horizontal scaling
+ * Production: REDIS_URL is optional; unavailable Redis degrades to in-memory fallbacks.
  * Development: Optional - can use in-memory store for single instance
  */
 
@@ -50,6 +50,11 @@ const logLocalFallbackOnce = (message) => {
 const getRedisClient = () => {
   // Return existing client if already created
   if (redisConnectionAttempted) {
+    redisClient.connect().catch((error) => {
+      logLocalFallbackOnce(`[REDIS] Redis connect attempt failed; continuing startup without Redis-backed features: ${error.message}`);
+      recordFailure('redis');
+    });
+
     return redisClient;
   }
   
@@ -59,18 +64,12 @@ const getRedisClient = () => {
   
   // No Redis URL configured - use in-memory store
   if (!redisUrl) {
-    if (isProduction()) {
-      throw new Error('REDIS_URL is required in production for Redis-backed idempotency and distributed abuse controls');
-    }
-    log.info('[REDIS] No REDIS_URL configured - using local in-memory fallbacks where supported');
+    logLocalFallbackOnce('[REDIS] REDIS_URL is not configured; Redis-backed features are disabled and in-memory fallbacks will be used where supported');
     return null;
   }
 
   if (!isRedisUrlValid(redisUrl)) {
-    if (isProduction()) {
-      throw new Error('REDIS_URL must be a valid redis:// or rediss:// URL in production');
-    }
-    logLocalFallbackOnce('[REDIS] Invalid REDIS_URL configured - using local in-memory fallbacks where supported');
+    logLocalFallbackOnce('[REDIS] REDIS_URL is invalid; Redis-backed features are disabled and in-memory fallbacks will be used where supported');
     return null;
   }
   
@@ -79,13 +78,12 @@ const getRedisClient = () => {
     redisClient = new Redis(redisUrl, {
       maxRetriesPerRequest: 1,
       enableReadyCheck: true,
-      connectTimeout: isProduction() ? 10000 : 1000,
-      commandTimeout: isProduction() ? 10000 : 1000,
-      enableOfflineQueue: isProduction(),
-      lazyConnect: false,
+      connectTimeout: isProduction() ? 3000 : 1000,
+      commandTimeout: isProduction() ? 3000 : 1000,
+      enableOfflineQueue: false,
+      lazyConnect: true,
       retryStrategy: (times) => {
         if (isProduction()) {
-          log.warn('[REDIS] Retry disabled in production for predictability');
           return null;
         }
         if (times > 1) {
@@ -108,11 +106,7 @@ const getRedisClient = () => {
       try {
         await validateRedisEvictionPolicy(redisClient);
       } catch (err) {
-        const errorMessage = `[REDIS] Eviction policy validation failed: ${err.message}`;
-        if (process.env.NODE_ENV === 'production') {
-          log.error(errorMessage);
-          process.exit(1);
-        }
+        const errorMessage = `[REDIS] Eviction policy validation failed; continuing without hard failure: ${err.message}`;
         log.warn(errorMessage);
       }
     });
@@ -134,13 +128,15 @@ const getRedisClient = () => {
       recordFailure('redis');
     });
     
+    redisClient.connect().catch((error) => {
+      logLocalFallbackOnce(`[REDIS] Redis connect attempt failed; continuing startup without Redis-backed features: ${error.message}`);
+      recordFailure('redis');
+    });
+
     return redisClient;
   } catch (error) {
     log.error('[REDIS] Failed to initialize Redis client:', error.message);
     redisClient = null;
-    if (isProduction()) {
-      throw error;
-    }
     logLocalFallbackOnce('[REDIS] Falling back to local in-memory behavior where supported');
     return null;
   }
