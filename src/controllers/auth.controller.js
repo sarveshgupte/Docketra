@@ -50,7 +50,7 @@ const { getCookieValue } = require('../utils/requestCookies');
 const { mapUserResponse } = require('../mappers/user.mapper');
 const { decrypt: decryptProtectedValue } = require('../utils/encryption');
 const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('../services/securityAudit.service');
-const { getRedisClient } = require('../config/redis');
+const { getRedisClient, isRedisReady } = require('../config/redis');
 const log = require('../utils/log');
 const {
   noteLoginFailure,
@@ -324,7 +324,7 @@ const logLoginOtpEvent = (event, req, user, metadata = {}) => {
     userId: user?._id || null,
     userXID: maskedXid,
     email: maskedEmail,
-    firmId: user?.firmId || null,
+    firmId: normalizeMongoId(user?.firmId) || null,
     firmSlug: req?.params?.firmSlug || req?.firmSlug || metadata.firmSlug || null,
     ...metadata,
   });
@@ -461,6 +461,13 @@ const FORGOT_PASSWORD_OTP_RESEND_COOLDOWN_SECONDS = 30;
 const LOGIN_OTP_COOLDOWN_SECONDS = 30;
 const loginOtpCacheFallback = new Map();
 
+const getAuthRedisClient = () => {
+  const redis = getRedisClient();
+  if (!redis) return null;
+  if (process.env.NODE_ENV === 'production') return redis;
+  return isRedisReady() ? redis : null;
+};
+
 const clearLoginOtpState = (user) => {
   if (!user) return;
   user.loginOtpHash = null;
@@ -550,7 +557,7 @@ const getLoginOtpRedisKeys = (user) => {
 const acquireLoginOtpCooldownLock = async (user) => {
   const { lockKey } = getLoginOtpRedisKeys(user);
   const token = crypto.randomUUID();
-  const redis = getRedisClient();
+  const redis = getAuthRedisClient();
 
   if (redis) {
     const response = await redis.set(lockKey, token, 'NX', 'EX', LOGIN_OTP_COOLDOWN_SECONDS);
@@ -583,7 +590,7 @@ const acquireLoginOtpCooldownLock = async (user) => {
 
 const cacheLoginOtpState = async (user, { otpHash, otpExpiresAt }) => {
   const { otpKey } = getLoginOtpRedisKeys(user);
-  const redis = getRedisClient();
+  const redis = getAuthRedisClient();
   const payload = JSON.stringify({
     otpHash,
     otpExpiresAt: otpExpiresAt.toISOString(),
@@ -605,7 +612,7 @@ const cacheLoginOtpState = async (user, { otpHash, otpExpiresAt }) => {
 
 const clearCachedLoginOtpState = async (user) => {
   const { lockKey, otpKey } = getLoginOtpRedisKeys(user);
-  const redis = getRedisClient();
+  const redis = getAuthRedisClient();
   if (redis) {
     await redis.del(lockKey, otpKey);
     return;
@@ -1088,34 +1095,10 @@ const handlePasswordVerification = async (req, res, user, password) => {
     await recordFailedLoginAttempt(req);
     const lockUntilAt = new Date(Date.now() + LOCK_TIME);
 
-    const updatedUser = await User.findOneAndUpdate(
+    let updatedUser = await User.findOneAndUpdate(
       { _id: user._id, firmId: user.firmId },
-      [
-        {
-          $set: {
-            failedLoginAttempts: {
-              $add: [{ $ifNull: ['$failedLoginAttempts', 0] }, 1],
-            },
-            lockUntil: {
-              $let: {
-                vars: {
-                  nextFailedAttempts: {
-                    $add: [{ $ifNull: ['$failedLoginAttempts', 0] }, 1],
-                  },
-                },
-                in: {
-                  $cond: [
-                    { $gte: ['$$nextFailedAttempts', MAX_FAILED_ATTEMPTS] },
-                    { $ifNull: ['$lockUntil', lockUntilAt] },
-                    '$lockUntil',
-                  ],
-                },
-              },
-            },
-          },
-        },
-      ],
-      { returnDocument: 'after' }
+      { $inc: { failedLoginAttempts: 1 } },
+      { new: true, returnDocument: 'after' }
     );
 
     if (!updatedUser) {
@@ -1127,6 +1110,15 @@ const handlePasswordVerification = async (req, res, user, password) => {
     }
 
     const currentFailedAttempts = updatedUser.failedLoginAttempts || 0;
+    const hasActiveLock = updatedUser.lockUntil && new Date(updatedUser.lockUntil) > new Date();
+    if (currentFailedAttempts >= MAX_FAILED_ATTEMPTS && !hasActiveLock) {
+      updatedUser = await User.findOneAndUpdate(
+        { _id: user._id, firmId: user.firmId },
+        { $set: { lockUntil: lockUntilAt } },
+        { new: true, returnDocument: 'after' }
+      ) || updatedUser;
+    }
+
     const isNowLocked = updatedUser.lockUntil && new Date(updatedUser.lockUntil) > new Date();
 
     if (isNowLocked && currentFailedAttempts >= MAX_FAILED_ATTEMPTS) {

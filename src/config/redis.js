@@ -15,6 +15,30 @@ const log = require('../utils/log');
 
 let redisClient = null;
 let redisConnectionAttempted = false;
+let redisErrorLogged = false;
+let redisFallbackLogged = false;
+
+const normalizeRedisUrl = () => String(process.env.REDIS_URL || '').trim();
+
+const isProduction = () => process.env.NODE_ENV === 'production';
+
+const isRedisUrlConfigured = () => Boolean(normalizeRedisUrl());
+
+const isRedisUrlValid = (value = normalizeRedisUrl()) => {
+  if (!value) return false;
+  try {
+    const parsed = new URL(value);
+    return ['redis:', 'rediss:'].includes(parsed.protocol);
+  } catch (_) {
+    return false;
+  }
+};
+
+const logLocalFallbackOnce = (message) => {
+  if (redisFallbackLogged) return;
+  redisFallbackLogged = true;
+  log.warn(message);
+};
 
 /**
  * Get Redis client for rate limiting
@@ -31,31 +55,44 @@ const getRedisClient = () => {
   
   redisConnectionAttempted = true;
   
-  const redisUrl = process.env.REDIS_URL;
+  const redisUrl = normalizeRedisUrl();
   
   // No Redis URL configured - use in-memory store
   if (!redisUrl) {
-    log.info('[REDIS] No REDIS_URL configured - using in-memory rate limiting (single instance only)');
-    log.info('[REDIS] For production, set REDIS_URL for distributed rate limiting');
+    if (isProduction()) {
+      throw new Error('REDIS_URL is required in production for Redis-backed idempotency and distributed abuse controls');
+    }
+    log.info('[REDIS] No REDIS_URL configured - using local in-memory fallbacks where supported');
+    return null;
+  }
+
+  if (!isRedisUrlValid(redisUrl)) {
+    if (isProduction()) {
+      throw new Error('REDIS_URL must be a valid redis:// or rediss:// URL in production');
+    }
+    logLocalFallbackOnce('[REDIS] Invalid REDIS_URL configured - using local in-memory fallbacks where supported');
     return null;
   }
   
   try {
     // Create Redis client from URL
     redisClient = new Redis(redisUrl, {
-      maxRetriesPerRequest: null, // Allow unlimited retries per request
+      maxRetriesPerRequest: 1,
       enableReadyCheck: true,
-      connectTimeout: 10000,
+      connectTimeout: isProduction() ? 10000 : 1000,
+      commandTimeout: isProduction() ? 10000 : 1000,
+      enableOfflineQueue: isProduction(),
       lazyConnect: false,
       retryStrategy: (times) => {
-        if (process.env.NODE_ENV === 'production') {
+        if (isProduction()) {
           log.warn('[REDIS] Retry disabled in production for predictability');
           return null;
         }
-        // Retry with exponential backoff, max 30 seconds
-        const delay = Math.min(times * 100, 30000);
-        log.info(`[REDIS] Retry attempt ${times}, waiting ${delay}ms`);
-        return delay;
+        if (times > 1) {
+          logLocalFallbackOnce('[REDIS] Redis unavailable locally - using in-memory fallbacks where supported');
+          return null;
+        }
+        return 250;
       },
     });
     
@@ -81,23 +118,35 @@ const getRedisClient = () => {
     });
     
     redisClient.on('error', (err) => {
-      log.error('[REDIS] Redis connection error:', err.message);
+      if (!redisErrorLogged) {
+        redisErrorLogged = true;
+        log.error('[REDIS] Redis connection error:', err.message);
+      }
       recordFailure('redis');
     });
     
     redisClient.on('close', () => {
-      log.warn('[REDIS] Redis connection closed');
+      if (isProduction()) {
+        log.warn('[REDIS] Redis connection closed');
+      } else {
+        logLocalFallbackOnce('[REDIS] Redis connection closed - using in-memory fallbacks where supported');
+      }
       recordFailure('redis');
     });
     
     return redisClient;
   } catch (error) {
     log.error('[REDIS] Failed to initialize Redis client:', error.message);
-    log.warn('[REDIS] Falling back to in-memory rate limiting');
     redisClient = null;
+    if (isProduction()) {
+      throw error;
+    }
+    logLocalFallbackOnce('[REDIS] Falling back to local in-memory behavior where supported');
     return null;
   }
 };
+
+const isRedisReady = () => Boolean(redisClient && redisClient.status === 'ready');
 
 /**
  * Close Redis connection gracefully
@@ -114,7 +163,27 @@ const closeRedisConnection = async () => {
   }
 };
 
+const resetRedisClientForTests = async () => {
+  const client = redisClient;
+  redisClient = null;
+  redisConnectionAttempted = false;
+  redisErrorLogged = false;
+  redisFallbackLogged = false;
+  if (client) {
+    client.removeAllListeners();
+    try {
+      await client.disconnect();
+    } catch (_) {
+      // ignore test cleanup failures
+    }
+  }
+};
+
 module.exports = {
   getRedisClient,
+  isRedisReady,
+  isRedisUrlConfigured,
+  isRedisUrlValid,
   closeRedisConnection,
+  _resetRedisClientForTests: resetRedisClientForTests,
 };

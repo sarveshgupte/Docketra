@@ -18,7 +18,11 @@ const workerModules = [
 
 const startWorkerModule = ({ name, path }) => {
   try {
-    require(path);
+    const workerModule = require(path);
+    if (!workerModule || workerModule.worker === null) {
+      log.info(`${name}_DISABLED`);
+      return;
+    }
     log.info(`${name}_STARTED`);
   } catch (err) {
     log.warn(`${name}_START_FAILED`, { error: err.message });
