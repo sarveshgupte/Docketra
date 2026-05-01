@@ -78,11 +78,11 @@ const generateAccessToken = (payload) => {
     tokenPayload.firm_id = payload.firmId;
   }
 
-  if (payload.firmSlug) {
+  if ('firmSlug' in payload) {
     tokenPayload.firmSlug = payload.firmSlug;
   }
 
-  if (payload.defaultClientId) {
+  if ('defaultClientId' in payload) {
     tokenPayload.defaultClientId = payload.defaultClientId;
   }
 

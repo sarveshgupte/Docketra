@@ -18,6 +18,9 @@ assert(publicRoutesSource.includes('path="/:firmSlug/login"'), 'Firm login route
 assert(publicRoutesSource.includes('path="/:firmSlug/forgot-password"'), 'Firm forgot-password route should exist.');
 
 assert(loginPageSource.includes('localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);'), 'Superadmin login should clear stale firm routing hint state.');
+assert(loginPageSource.includes('sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_TOKEN);'), 'Superadmin login should clear pending login token hints.');
+assert(loginPageSource.includes('sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_FIRM);'), 'Superadmin login should clear pending firm OTP hints.');
+assert(loginPageSource.includes('sessionStorage.removeItem(SESSION_KEYS.POST_LOGIN_RETURN_TO);'), 'Superadmin login should clear stale post-login return hints.');
 
 assert(forgotPasswordSource.includes('const activeFirmSlug = resolvedFirmSlug || firmSlug ||'), 'Forgot-password flow should preserve firm context when present.');
 assert(forgotPasswordSource.includes('const loginPath = activeFirmSlug ? `/${activeFirmSlug}/login` : \'/superadmin\''), 'Forgot-password should route back to firm login when scoped.');

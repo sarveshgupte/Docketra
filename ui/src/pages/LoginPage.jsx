@@ -13,7 +13,7 @@ import { useToast } from '../hooks/useToast';
 import { spacingClasses } from '../theme/tokens';
 import { ErrorState } from '../components/feedback/ErrorState';
 import { resolvePostAuthNavigation } from '../utils/postAuthNavigation';
-import { STORAGE_KEYS } from '../utils/constants';
+import { SESSION_KEYS, STORAGE_KEYS } from '../utils/constants';
 import './LoginPage.css';
 
 export const LoginPage = () => {
@@ -34,6 +34,9 @@ export const LoginPage = () => {
   useEffect(() => {
     try {
       localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
+      sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_TOKEN);
+      sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_FIRM);
+      sessionStorage.removeItem(SESSION_KEYS.POST_LOGIN_RETURN_TO);
     } catch (_error) {
       // best-effort cleanup for stale workspace routing hints
     }
