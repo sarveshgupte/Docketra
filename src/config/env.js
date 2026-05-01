@@ -60,6 +60,7 @@ const envSchema = z
     MONGO_URI: z.string().trim().optional(),
     MONGODB_URI: z.string().trim().optional(),
     REDIS_URL: z.string().trim().optional(),
+    ALLOW_REDIS_FALLBACK: boolFromEnv,
 
     JWT_SECRET: z.string().min(32),
     JWT_PASSWORD_SETUP_SECRET: z.string().trim().optional(),
@@ -126,6 +127,11 @@ const envSchema = z
       });
     }
 
+    
+    if (env.REDIS_URL && !isValidRedisUrl(env.REDIS_URL)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['REDIS_URL'], message: 'must be a valid redis:// or rediss:// URL when configured' });
+    }
+
     if (env.NODE_ENV === 'production') {
       if (env.AUTH_DEBUG_DIAGNOSTICS === true) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['AUTH_DEBUG_DIAGNOSTICS'], message: 'must be false in production' });
@@ -146,10 +152,6 @@ const envSchema = z
 
       if (!BCRYPT_HASH_STRICT_REGEX.test(String(env.SUPERADMIN_PASSWORD_HASH || ''))) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['SUPERADMIN_PASSWORD_HASH'], message: 'must be a valid bcrypt hash (not plaintext)' });
-      }
-
-      if (env.REDIS_URL && !isValidRedisUrl(env.REDIS_URL)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['REDIS_URL'], message: 'must be a valid redis:// or rediss:// URL when configured' });
       }
 
       if (!env.BREVO_API_KEY) {
