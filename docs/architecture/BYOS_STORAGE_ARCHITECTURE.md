@@ -56,3 +56,13 @@ If unsupported, providers must throw `UnsupportedProviderFeatureError`.
 
 - Managed runtime fallback env: `MANAGED_STORAGE_S3_BUCKET` and `MANAGED_STORAGE_S3_REGION` required; `MANAGED_STORAGE_S3_PREFIX` optional; credentials optional when instance/task IAM role is used.
 - Middleware and API client responses must be sanitized (`STORAGE_NOT_CONNECTED`) while detailed provider diagnostics remain server-side logs only.
+
+## Canonical firm storage state
+- `storageConfig.provider` is canonical for active provider selection.
+- `storage.*` fields are derived/legacy compatibility only and should not be treated as source of truth when `storageConfig.provider` exists.
+- Runtime status vocabulary is normalized to: `ACTIVE_MANAGED`, `ACTIVE_BYOS`, `DISCONNECTED`, `ERROR`.
+- `ACTIVE_BYOS` requires a usable firm-owned provider configuration and usable credentials.
+- `DISCONNECTED` is used when a firm-owned provider is selected but credentials/config are incomplete or disconnected.
+- `ERROR` is used for credential decrypt failures or explicit provider error state.
+
+- Drift detection should flag: `firm_connected` without `storageConfig.provider`, legacy `google-drive` name, and `docketra_drive` alias usage.
