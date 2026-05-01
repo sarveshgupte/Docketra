@@ -29,7 +29,7 @@ function testUnsupportedProviderBlocksRequest() {
 }
 
 async function testMissingCredentialBlocksProviderUsage() {
-  const creds = await resolveAiCredentials({ provider: 'openai', firmId: 'f1' });
+  const creds = await resolveAiCredentials({ firmId: 'f1', aiConfig: { provider: 'openai' } });
   assert.strictEqual(creds.status, 'not_configured');
   const decision = evaluateAiPolicy({
     firmId: 'f1', aiEnabled: true, featureEnabled: true, roleAllowed: true,
