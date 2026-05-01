@@ -26,6 +26,14 @@ for (const commandId of ['go-docket-workbench', 'go-dashboard', 'go-cms', 'go-cr
   assert.ok(platformNav.includes(`id: '${commandId}'`), `Navigation command missing metadata id: ${commandId}`);
 }
 
+assert.ok(platformNav.includes("id: 'intake'") && platformNav.includes("id: 'crm'"), 'Knowledge Intake and Relationships items should remain present in nav blueprint.');
+assert.ok(platformNav.includes("id: 'intake'") && platformNav.includes("minRole: 'ADMIN'"), 'Knowledge Intake should remain admin-only.');
+assert.ok(platformNav.includes("id: 'crm'") && platformNav.includes("minRole: 'ADMIN'"), 'Relationships should remain admin-only.');
+assert.ok(platformNav.includes("label: 'Work'"), 'Task Manager navigation label should be Work.');
+assert.ok(platformNav.includes("section: 'Firm Memory'"), 'Business modules section should use Firm Memory label.');
+assert.ok(platformNav.includes("label: 'Knowledge Intake'"), 'CMS navigation label should be Knowledge Intake.');
+assert.ok(platformNav.includes("label: 'Relationships'"), 'CRM navigation label should be Relationships.');
+
 assert.ok(platformShell.includes('hasQcQueueAccess'), 'Command center should include QC access control gate.');
 assert.ok(platformShell.includes('hasAdminAccess ? [{ id: \'go-workbasket\''), 'Workbench command should be role-gated.');
 assert.ok(platformShell.includes('hasQcQueueAccess ? [{ id: \'go-qc\''), 'QC command should be role-gated.');

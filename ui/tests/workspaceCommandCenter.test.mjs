@@ -26,9 +26,9 @@ assert.ok(shellSource.includes('normalizeClientRows'), 'Client IDs should be nor
 for (const requiredCommand of [
   "'New Docket'",
   "'Go to Dashboard'",
-  "'Go to Docket Workbench'",
-  "'Go to CRM'",
-  "'Go to CMS'",
+  "'Go to Work'",
+  "'Go to Relationships'",
+  "'Go to Knowledge Intake'",
   "'Go to Workbench'",
   "'Go to My Worklist'",
   "'Go to QC Workbench'",
