@@ -82,6 +82,7 @@ export const CrmClientDetailPage = () => {
 
   const clientName = client?.businessName || client?.name || crmClientId;
   const clientTags = Array.isArray(client?.tags) ? client.tags : [];
+  const hasClientContact = Boolean(client?.businessEmail || client?.email || client?.primaryContactNumber || client?.phone);
 
   const stats = useMemo(() => {
     const pendingDockets = dockets.filter((item) => !CLOSED_DOCKET_STATUSES.has(String(item.status || '').toUpperCase())).length;
@@ -228,18 +229,24 @@ export const CrmClientDetailPage = () => {
   ));
 
   return (
-    <PlatformShell moduleLabel="CRM" title={clientName} subtitle="Client profile, deals, invoices, and linked dockets in one CRM workspace.">
+    <PlatformShell
+      moduleLabel="CRM"
+      title={clientName}
+      subtitle="Client profile, deals, invoices, and linked dockets in one CRM workspace."
+      actions={<Button variant="outline" onClick={() => navigate(safeRoute(ROUTES.CRM_CLIENTS(firmSlug)))}>Back to Client Management</Button>}
+    >
       <InlineNotice tone="error" message={error} />
 
       <PageSection title="Client header" description="Context and quick navigation.">
         <div className="action-row">
-          <Button variant="outline" onClick={() => navigate(safeRoute(ROUTES.CRM_CLIENTS(firmSlug)))}>Back to Client Management</Button>
           {client?.crmType ? <Badge status={client.crmType === 'company' ? 'Approved' : 'Pending'}>{client.crmType === 'company' ? 'Company' : 'Individual'}</Badge> : null}
+          <Badge variant={(client?.status || 'active') === 'inactive' ? 'neutral' : 'success'}>{client?.status || 'active'}</Badge>
           {clientTags.map((tag) => <Badge key={tag} status="Draft">{tag}</Badge>)}
         </div>
-        {(client?.businessEmail || client?.email || client?.primaryContactNumber || client?.phone) ? (
+        {hasClientContact ? (
           <p className="muted mt-2">{client.businessEmail || client.email || '—'} · {client.primaryContactNumber || client.phone || '—'}</p>
         ) : null}
+        {!hasClientContact ? <InlineNotice tone="info" message="No primary email or phone is saved for this client yet." /> : null}
       </PageSection>
 
       <StatGrid items={stats} />
@@ -258,18 +265,18 @@ export const CrmClientDetailPage = () => {
         {activeTab === 'deals' ? (
           <>
             {isAdmin ? <div className="mb-3"><Button onClick={() => setShowDealModal(true)}>Add Deal</Button></div> : null}
-            <DataTable columns={['Title', 'Stage', 'Value', 'Created']} rows={dealsRows} loading={loading} error={error} onRetry={() => void loadData()} emptyLabel="No deals yet." />
+            <DataTable columns={['Title', 'Stage', 'Value', 'Created']} rows={dealsRows} loading={loading} error={error} onRetry={() => void loadData()} emptyLabel="No deals yet. Add the first deal to track client commercial progress." />
           </>
         ) : null}
 
         {activeTab === 'dockets' ? (
-          <DataTable columns={['Docket', 'Title', 'Status', 'Assigned', 'Due']} rows={docketsRows} loading={loading} error={error} onRetry={() => void loadData()} emptyLabel="No linked dockets yet." />
+          <DataTable columns={['Docket', 'Title', 'Status', 'Assigned', 'Due']} rows={docketsRows} loading={loading} error={error} onRetry={() => void loadData()} emptyLabel="No linked dockets yet. Linked operational work will appear here." />
         ) : null}
 
         {activeTab === 'invoices' ? (
           <>
             {isAdmin ? <div className="mb-3"><Button onClick={() => setShowInvoiceModal(true)}>Add Invoice</Button></div> : null}
-            <DataTable columns={['Amount', 'Status', 'Issued', 'Paid At', 'Actions']} rows={invoicesRows} loading={loading} error={error} onRetry={() => void loadData()} emptyLabel="No invoices yet." />
+            <DataTable columns={['Amount', 'Status', 'Issued', 'Paid At', 'Actions']} rows={invoicesRows} loading={loading} error={error} onRetry={() => void loadData()} emptyLabel="No invoices yet. Invoice and payment visibility starts once one is created." />
           </>
         ) : null}
       </PageSection>
@@ -279,13 +286,14 @@ export const CrmClientDetailPage = () => {
           <Input label="Title" value={dealForm.title} onChange={(event) => setDealForm((prev) => ({ ...prev, title: event.target.value }))} required />
           <Input label="Value (₹)" type="number" value={dealForm.value} onChange={(event) => setDealForm((prev) => ({ ...prev, value: event.target.value }))} />
           <div>
-            <label className="block text-sm font-medium text-gray-700" htmlFor="deal-stage">Stage</label>
-            <select id="deal-stage" className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={dealForm.stage} onChange={(event) => setDealForm((prev) => ({ ...prev, stage: event.target.value }))}>
+            <label className="block text-sm font-medium text-[var(--dt-text-secondary)]" htmlFor="deal-stage">Stage</label>
+            <select id="deal-stage" className="mt-1 w-full rounded-md border border-[var(--dt-border)] bg-[var(--dt-surface)] px-3 py-2 text-sm text-[var(--dt-text)]" value={dealForm.stage} onChange={(event) => setDealForm((prev) => ({ ...prev, stage: event.target.value }))}>
               <option value="new">New</option>
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
             </select>
           </div>
+          <p className="text-xs text-[var(--dt-text-muted)]">Use deal stage to keep pipeline health accurate for this client workspace.</p>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={closeDealModal}>Cancel</Button>
             <Button type="submit" loading={savingDeal} disabled={savingDeal}>Create Deal</Button>
@@ -297,12 +305,13 @@ export const CrmClientDetailPage = () => {
         <form onSubmit={handleCreateInvoice} className="grid gap-4">
           <Input label="Amount (₹)" type="number" value={invoiceForm.amount} onChange={(event) => setInvoiceForm((prev) => ({ ...prev, amount: event.target.value }))} required />
           <div>
-            <label className="block text-sm font-medium text-gray-700" htmlFor="invoice-deal">Link to Deal (optional)</label>
-            <select id="invoice-deal" className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={invoiceForm.dealId} onChange={(event) => setInvoiceForm((prev) => ({ ...prev, dealId: event.target.value }))}>
+            <label className="block text-sm font-medium text-[var(--dt-text-secondary)]" htmlFor="invoice-deal">Link to Deal (optional)</label>
+            <select id="invoice-deal" className="mt-1 w-full rounded-md border border-[var(--dt-border)] bg-[var(--dt-surface)] px-3 py-2 text-sm text-[var(--dt-text)]" value={invoiceForm.dealId} onChange={(event) => setInvoiceForm((prev) => ({ ...prev, dealId: event.target.value }))}>
               <option value="">— None —</option>
               {deals.map((deal) => <option key={deal._id || deal.id} value={deal._id || deal.id}>{deal.title}</option>)}
             </select>
           </div>
+          <p className="text-xs text-[var(--dt-text-muted)]">Use invoices here for CRM payment visibility. Existing billing behavior is unchanged.</p>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={closeInvoiceModal}>Cancel</Button>
             <Button type="submit" loading={savingInvoice} disabled={savingInvoice}>Create Invoice</Button>

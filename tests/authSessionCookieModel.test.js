@@ -24,6 +24,7 @@ const createRes = () => {
 };
 
 async function run() {
+  let refreshCounter = 0;
   const refreshStore = new Map();
   const RefreshToken = {
     create: async ([doc]) => {
@@ -44,7 +45,7 @@ async function run() {
     }),
   };
   const jwtService = {
-    generateRefreshToken: () => 'refresh-raw',
+    generateRefreshToken: () => `refresh-raw-${++refreshCounter}`,
     hashRefreshToken: (v) => `hash:${v}`,
     getRefreshTokenExpiry: () => new Date(Date.now() + 60_000),
     getRefreshTokenExpiryMs: () => 60_000,
@@ -71,9 +72,12 @@ async function run() {
   await service.refreshAccessToken({ ...reqBase, body: { refreshToken: 'refresh-raw' } }, missingRes);
   assert.strictEqual(missingRes.state.statusCode, 401);
 
-  await service.generateAndStoreRefreshToken({ req: reqBase, userId: 'user-1', firmId: 'firm-1' });
+  const tenantToken = await service.generateAndStoreRefreshToken({ req: reqBase, userId: 'user-1', firmId: 'firm-1' });
+  const superadminToken = await service.generateAndStoreRefreshToken({ req: reqBase, userId: null, firmId: null, scope: 'superadmin' });
+  assert.strictEqual(refreshStore.get(`hash:${tenantToken.refreshToken}`)?.scope, 'tenant');
+  assert.strictEqual(refreshStore.get(`hash:${superadminToken.refreshToken}`)?.scope, 'superadmin');
   const refreshRes = createRes();
-  await service.refreshAccessToken({ ...reqBase, cookies: { refreshToken: 'refresh-raw' } }, refreshRes);
+  await service.refreshAccessToken({ ...reqBase, cookies: { refreshToken: tenantToken.refreshToken } }, refreshRes);
   assert.strictEqual(refreshRes.state.statusCode, 200);
   assert.strictEqual(refreshRes.state.body.success, true);
   assert.strictEqual(Object.prototype.hasOwnProperty.call(refreshRes.state.body, 'refreshToken'), false);
@@ -89,6 +93,15 @@ async function run() {
   const expiredRes = createRes();
   await service.refreshAccessToken({ ...reqBase, cookies: { refreshToken: 'expired' } }, expiredRes);
   assert.strictEqual(expiredRes.state.statusCode, 401);
+
+  await assert.rejects(
+    () => service.generateAndStoreRefreshToken({ req: reqBase, userId: 'user-1', firmId: null }),
+    /tenant scope requires both userId and firmId/
+  );
+  await assert.rejects(
+    () => service.generateAndStoreRefreshToken({ req: reqBase, userId: null, firmId: null }),
+    /Unable to determine token scope/
+  );
 
   const logoutResult = await service.logout({ req: { ...reqBase, user: { _id: 'user-1', xID: 'DK-USER', firmId: 'firm-1', role: 'admin' } } });
   assert.strictEqual(logoutResult.statusCode, 200);

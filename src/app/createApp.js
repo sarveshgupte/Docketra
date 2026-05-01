@@ -9,6 +9,7 @@ const helmet = require('helmet');
 const { validateEnv } = require('../config/validateEnv');
 const { loadEnv, maskEnvForLog } = require('../config/env');
 const { logBuildMetadata } = require('../services/buildInfo.service');
+const authSessionServiceFactory = require('../services/authSession.service');
 const { maskSensitiveObject } = require('../utils/pii');
 require('../utils/transactionSessionEnforcer');
 
@@ -104,6 +105,34 @@ const tenantResolver = require('../middleware/tenantResolver');
 const { login } = require('../controllers/auth.controller');
 const mutatingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const forceTransactionPaths = ['/google/callback', '/my-pending'];
+const RESERVED_FIRM_SLUGS = [
+  'auth',
+  'public',
+  'superadmin',
+  'users',
+  'admin',
+  'dashboard',
+  'dockets',
+  'clients',
+  'settings',
+  'reports',
+  'security',
+  'tenant',
+  'files',
+  'storage',
+  'ai',
+  'notifications',
+  'teams',
+  'bulk-upload',
+  'product-updates',
+  'cases',
+  'tasks',
+  'search',
+  'worklists',
+  'attachments',
+  'firm',
+];
+const firmSlugMatcher = `/api/:firmSlug((?!${RESERVED_FIRM_SLUGS.join('|')}$)[a-z0-9-]+)`;
 const writeGuardChain = (req, res, next) => {
   const shouldForceTransaction = forceTransactionPaths.some((path) => req.path && req.path.startsWith(path));
   if (!mutatingMethods.has(req.method) && !shouldForceTransaction) {
@@ -188,6 +217,28 @@ const createApp = () => {
   const allowedOrigins = configuredOrigins.length > 0 ? configuredOrigins : (!isProduction ? ['http://localhost:5173'] : []);
   const cspReportingEnabled = env.CSP_REPORTING_ENABLED === true;
   log.info('CORS_ALLOWED_ORIGINS', { allowedOrigins });
+  const cookieConfig = authSessionServiceFactory.getAuthCookieRuntimeDiagnostics();
+  log.info('AUTH_COOKIE_CONFIG_RESOLVED', cookieConfig);
+
+  const apiPublicOriginRaw = String(process.env.API_PUBLIC_ORIGIN || process.env.RENDER_EXTERNAL_URL || '').trim();
+  const apiPublicOrigin = apiPublicOriginRaw ? apiPublicOriginRaw.replace(/\/+$/, '') : null;
+  if (isProduction && apiPublicOrigin && allowedOrigins.length > 0) {
+    const hasCrossOriginFrontend = allowedOrigins.some((origin) => {
+      try {
+        return new URL(origin).origin !== new URL(apiPublicOrigin).origin;
+      } catch (_) {
+        return false;
+      }
+    });
+    if (hasCrossOriginFrontend && !cookieConfig.crossSiteEnabled && cookieConfig.sameSite === 'lax') {
+      log.warn('AUTH_COOKIE_CROSS_ORIGIN_MISCONFIG', {
+        apiPublicOrigin,
+        allowedOrigins,
+        crossSiteEnabled: cookieConfig.crossSiteEnabled,
+        sameSite: cookieConfig.sameSite,
+      });
+    }
+  }
 
   // SECURITY: Defense-in-depth middleware
   // Security Headers - Helmet
@@ -364,6 +415,11 @@ const createApp = () => {
     return res.redirect(301, `/${req.params.firmSlug}/login`);
   });
 
+  // Firm-scoped public login + OTP routes
+  // Register before protected '/api' tenant middleware mounts so '/api/:firmSlug/*'
+  // login and metadata requests are never intercepted by auth middleware.
+  app.use(firmSlugMatcher, firmRoutes);
+
   // Auth routes (excluding login endpoints)
   ['/api/auth', '/auth'].forEach((basePath) => {
     app.use(basePath, writeGuardChain, authRoutes);
@@ -449,15 +505,11 @@ const createApp = () => {
   app.use('/api/files', authLimiter, ...tenantScopedApiAccess, writeGuardChain, filesRoutes);
   app.use('/api/tenant', authLimiter, ...tenantScopedApiAccess, writeGuardChain, tenantRoutes);
   app.use('/api/docket-storage', authLimiter, ...tenantScopedApiAccess, writeGuardChain, docketFileStorageRoutes);
-  // Firm-scoped API auth routes for tenant login and OTP verification.
-  // IMPORTANT: Register before generic '/api' mounts so '/api/:firmSlug/*'
-  // requests are not intercepted by tenant-authenticated API middleware.
   app.use('/api/notifications', ...tenantScopedApiAccess, writeGuardChain, notificationsRoutes);
   app.use('/api/teams', ...tenantScopedApiAccess, writeGuardChain, teamRoutes);
   app.use('/api/bulk-upload', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), bulkUploadRoutes);
   app.use('/api/product-updates', authenticate, writeGuardChain, productUpdateRoutes);
   app.use('/api/settings', ...tenantScopedApiAccess, writeGuardChain, settingsRoutes);
-  app.use('/api/:firmSlug', firmRoutes);
   app.use('/api', authLimiter, ...tenantScopedApiAccess, writeGuardChain, docketFileStorageRoutes);
 
   // Legacy /f routes removed: tenant login is available only on /:firmSlug/login and /api/:firmSlug/login

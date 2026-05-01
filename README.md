@@ -54,7 +54,7 @@ Web UI (ui/)  -->  API (src/server.js / routes/controllers/services)
 - Node.js 18.x
 - npm 9+
 - MongoDB (local or container)
-- Redis (recommended for full worker/rate-limit behavior)
+- Redis (optional locally; required in production)
 
 ### 1) Install dependencies
 
@@ -81,8 +81,12 @@ SUPERADMIN_EMAIL=superadmin@example.com
 SUPERADMIN_PASSWORD_HASH=<bcrypt hash>
 SUPERADMIN_OBJECT_ID=000000000000000000000001
 ENCRYPTION_PROVIDER=disabled
-REDIS_URL=redis://localhost:6379
+REDIS_URL=
 ```
+
+The root `.env` configures the backend. Frontend Vite variables belong in `ui/.env`; for local development set `VITE_API_BASE_URL=http://localhost:5000/api`.
+
+Local development can leave `REDIS_URL` blank. The API uses in-memory idempotency and other single-process fallbacks. To opt into local Redis, set `REDIS_URL=redis://localhost:6379`. Production deployments must set a valid Redis URL.
 
 ### 3) Start backend and frontend
 

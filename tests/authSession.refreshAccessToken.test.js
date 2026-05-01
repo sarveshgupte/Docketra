@@ -52,6 +52,8 @@ function buildService(overrides = {}) {
       isSuperAdminRole: () => false,
       DEFAULT_FIRM_ID: 'default-firm',
       getSession: () => null,
+      getSuperadminEnv: () => ({ email: 'sa@example.com' }),
+      SUPERADMIN_USER_ID: () => '000000000000000000000001',
     },
     services: {
       jwtService: {
@@ -135,14 +137,48 @@ async function testRefreshNotSupportedScope() {
     isRevoked: false,
     userId: null,
     firmId: null,
+    scope: 'superadmin',
     save: async () => {},
   };
   const { service } = buildService({ storedToken });
   const res = createRes();
   await service.refreshAccessToken({ headers: { cookie: 'refreshToken=token-2' }, cookies: {}, get: () => 'ua', ip: '127.0.0.1', originalUrl: '/api/auth/refresh' }, res);
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.payload?.success, true);
+  assert.ok(res.cookies.some((cookie) => cookie.name === 'refreshToken'));
+  assert.ok(res.cookies.some((cookie) => cookie.name === 'accessToken'));
+}
+
+async function testNullContextWithoutSuperadminScopeRejected() {
+  const storedToken = {
+    expiresAt: new Date(Date.now() + 60_000),
+    isRevoked: false,
+    userId: null,
+    firmId: null,
+    save: async () => {},
+  };
+  const { service } = buildService({ storedToken });
+  const res = createRes();
+  await service.refreshAccessToken({ headers: { cookie: 'refreshToken=legacy' }, cookies: {}, get: () => 'ua', ip: '127.0.0.1' }, res);
   assert.strictEqual(res.statusCode, 401);
-  assert.strictEqual(res.payload?.reasonCode, 'refresh_not_supported');
+  assert.strictEqual(res.payload?.code, 'REFRESH_INVALID_SCOPE');
   assert.ok(res.clearedCookies.some((cookie) => cookie.name === 'refreshToken'));
+}
+
+async function testTenantScopeMissingFirmRejected() {
+  const storedToken = {
+    expiresAt: new Date(Date.now() + 60_000),
+    isRevoked: false,
+    userId: 'user-1',
+    firmId: null,
+    scope: 'tenant',
+    save: async () => {},
+  };
+  const { service } = buildService({ storedToken });
+  const res = createRes();
+  await service.refreshAccessToken({ headers: { cookie: 'refreshToken=tenant-missing' }, cookies: {}, get: () => 'ua', ip: '127.0.0.1' }, res);
+  assert.strictEqual(res.statusCode, 401);
+  assert.strictEqual(res.payload?.code, 'REFRESH_INVALID_SCOPE');
 }
 
 async function testInactiveUserClearsCookies() {
@@ -188,6 +224,8 @@ async function run() {
   await testInvalidToken();
   await testRevokedToken();
   await testRefreshNotSupportedScope();
+  await testNullContextWithoutSuperadminScopeRejected();
+  await testTenantScopeMissingFirmRejected();
   await testInactiveUserClearsCookies();
   await testValidToken();
   await testLogoutDisconnectsSockets();
