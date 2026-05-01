@@ -50,6 +50,15 @@ const toNullableString = (value) => {
   return normalized || null;
 };
 
+
+const resolveOwnershipFirmIdOrReject = (req, res) => {
+  const ownershipFirmId = req.ownershipFirmId || req.firm?.ownershipFirmId || null;
+  if (!ownershipFirmId) {
+    res.status(403).json({ success: false, message: 'Ownership firm context is required' });
+    return null;
+  }
+  return ownershipFirmId;
+};
 const normalizeIntakePriority = (value) => {
   const normalized = toNullableString(value);
   if (!normalized) return null;
@@ -672,12 +681,10 @@ const updateRestrictedClients = async (req, res) => {
  */
 const getFirmSettings = async (req, res) => {
   try {
-    const firmId = req.user?.firmId;
-    if (!firmId) {
-      return res.status(403).json({ success: false, message: 'Firm context is required' });
-    }
+    const ownershipFirmId = resolveOwnershipFirmIdOrReject(req, res);
+    if (!ownershipFirmId) return;
 
-    const firm = await Firm.findById(firmId).select('settings');
+    const firm = await Firm.findById(ownershipFirmId).select('settings');
     if (!firm) {
       return res.status(404).json({ success: false, message: 'Firm not found' });
     }
@@ -705,12 +712,18 @@ const getFirmSettings = async (req, res) => {
  */
 const updateFirmSettings = async (req, res) => {
   try {
-    const firmId = req.user?.firmId;
-    if (!firmId) {
-      return res.status(403).json({ success: false, message: 'Firm context is required' });
+    const ownershipFirmId = resolveOwnershipFirmIdOrReject(req, res);
+    if (!ownershipFirmId) return;
+
+    const tenantId = req.user?.firmId || req.firmId;
+    if (!tenantId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Tenant context is required',
+      });
     }
 
-    const firm = await Firm.findById(firmId);
+    const firm = await Firm.findById(ownershipFirmId);
     if (!firm) {
       return res.status(404).json({ success: false, message: 'Firm not found' });
     }
@@ -756,7 +769,7 @@ const updateFirmSettings = async (req, res) => {
 
     await Promise.all([
       settingsAuditService.logConfigChange({
-        firmId: req.user?.firmId,
+        firmId: ownershipFirmId,
         action: 'FIRM_CONFIG_UPDATED',
         entityType: 'firm.settings.firm',
         entityId: firm.firmId,
@@ -767,7 +780,7 @@ const updateFirmSettings = async (req, res) => {
         metadata: { source: 'admin.controller.updateFirmSettings' },
       }),
       settingsAuditService.logWorkflowChange({
-        firmId: req.user?.firmId,
+        firmId: ownershipFirmId,
         action: 'WORKFLOW_SETTINGS_UPDATED',
         entityType: 'firm.settings.work',
         entityId: firm.firmId,
@@ -800,16 +813,15 @@ const updateFirmSettings = async (req, res) => {
  */
 const getCmsIntakeSettings = async (req, res) => {
   try {
-    const firmId = req.user?.firmId;
-    if (!firmId) {
-      return res.status(403).json({ success: false, message: 'Firm context is required' });
-    }
+    const ownershipFirmId = resolveOwnershipFirmIdOrReject(req, res);
+    if (!ownershipFirmId) return;
+    const tenantId = req.user?.firmId;
 
     const [firm, workbaskets, categories, assignees] = await Promise.all([
-      Firm.findById(firmId).select('intakeConfig.cms firmId'),
-      Team.find({ firmId, isActive: true }).select('_id name').sort({ name: 1 }).lean(),
-      Category.find({ firmId, isActive: true }).select('_id name subcategories').sort({ name: 1 }).lean(),
-      User.find({ firmId, status: { $ne: 'deleted' }, isActive: true, role: { $in: ['PRIMARY_ADMIN', 'ADMIN', 'MANAGER', 'USER'] } })
+      Firm.findById(ownershipFirmId).select('intakeConfig.cms firmId'),
+      Team.find({ firmId: tenantId, isActive: true }).select('_id name').sort({ name: 1 }).lean(),
+      Category.find({ firmId: tenantId, isActive: true }).select('_id name subcategories').sort({ name: 1 }).lean(),
+      User.find({ firmId: tenantId, status: { $ne: 'deleted' }, isActive: true, role: { $in: ['PRIMARY_ADMIN', 'ADMIN', 'MANAGER', 'USER'] } })
         .select('xID name email role')
         .sort({ name: 1 })
         .lean(),
@@ -865,12 +877,18 @@ const getCmsIntakeSettings = async (req, res) => {
  */
 const updateCmsIntakeSettings = async (req, res) => {
   try {
-    const firmId = req.user?.firmId;
-    if (!firmId) {
-      return res.status(403).json({ success: false, message: 'Firm context is required' });
+    const ownershipFirmId = resolveOwnershipFirmIdOrReject(req, res);
+    if (!ownershipFirmId) return;
+
+    const tenantId = req.user?.firmId || req.firmId;
+    if (!tenantId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Tenant context is required',
+      });
     }
 
-    const firm = await Firm.findById(firmId);
+    const firm = await Firm.findById(ownershipFirmId);
     if (!firm) {
       return res.status(404).json({ success: false, message: 'Firm not found' });
     }
@@ -892,7 +910,7 @@ const updateCmsIntakeSettings = async (req, res) => {
     if (nextCmsConfig.defaultCategoryId && nextCmsConfig.defaultSubcategoryId) {
       const category = await Category.findOne({
         _id: nextCmsConfig.defaultCategoryId,
-        firmId,
+        firmId: tenantId,
         isActive: true,
         'subcategories.id': nextCmsConfig.defaultSubcategoryId,
       })
@@ -913,7 +931,7 @@ const updateCmsIntakeSettings = async (req, res) => {
     }
 
     if (nextCmsConfig.defaultWorkbasketId) {
-      const workbasket = await Team.findOne({ _id: nextCmsConfig.defaultWorkbasketId, firmId, isActive: true }).select('_id').lean();
+      const workbasket = await Team.findOne({ _id: nextCmsConfig.defaultWorkbasketId, firmId: tenantId, isActive: true }).select('_id').lean();
       if (!workbasket) {
         return res.status(400).json({
           success: false,
@@ -924,7 +942,7 @@ const updateCmsIntakeSettings = async (req, res) => {
 
     if (nextCmsConfig.defaultAssignee) {
       const assignee = await User.findOne({
-        firmId,
+        firmId: tenantId,
         xID: nextCmsConfig.defaultAssignee,
         status: { $ne: 'deleted' },
         isActive: true,
@@ -980,12 +998,10 @@ const updateCmsIntakeSettings = async (req, res) => {
  */
 const regenerateCmsIntakeApiKey = async (req, res) => {
   try {
-    const firmId = req.user?.firmId;
-    if (!firmId) {
-      return res.status(403).json({ success: false, message: 'Firm context is required' });
-    }
+    const ownershipFirmId = resolveOwnershipFirmIdOrReject(req, res);
+    if (!ownershipFirmId) return;
 
-    const firm = await Firm.findById(firmId).select('intakeConfig');
+    const firm = await Firm.findById(ownershipFirmId).select('intakeConfig');
     if (!firm) {
       return res.status(404).json({ success: false, message: 'Firm not found' });
     }
@@ -1169,16 +1185,10 @@ const getSettingsAudit = async (req, res) => {
  */
 const getStorageConfig = async (req, res) => {
   try {
-    const firmId = req.user?.firmId;
+    const ownershipFirmId = resolveOwnershipFirmIdOrReject(req, res);
+    if (!ownershipFirmId) return;
 
-    if (!firmId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Firm context is required',
-      });
-    }
-
-    const firm = await Firm.findById(firmId).select('storage firmId name');
+    const firm = await Firm.findById(ownershipFirmId).select('storage firmId name');
 
     if (!firm) {
       return res.status(404).json({
@@ -1212,17 +1222,12 @@ const getStorageConfig = async (req, res) => {
  */
 const updateStorageConfig = async (req, res) => {
   try {
-    const firmId = req.user?.firmId;
+    const ownershipFirmId = resolveOwnershipFirmIdOrReject(req, res);
     const { mode, provider, google = {}, onedrive = {} } = req.body || {};
 
-    if (!firmId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Firm context is required',
-      });
-    }
+    if (!ownershipFirmId) return;
 
-    const firm = await Firm.findById(firmId);
+    const firm = await Firm.findById(ownershipFirmId);
     if (!firm) {
       return res.status(404).json({
         success: false,
@@ -1336,16 +1341,11 @@ const updateStorageConfig = async (req, res) => {
  */
 const disconnectStorage = async (req, res) => {
   try {
-    const firmId = req.user?.firmId;
+    const ownershipFirmId = resolveOwnershipFirmIdOrReject(req, res);
 
-    if (!firmId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Firm context is required',
-      });
-    }
+    if (!ownershipFirmId) return;
 
-    const firm = await Firm.findById(firmId);
+    const firm = await Firm.findById(ownershipFirmId);
     if (!firm) {
       return res.status(404).json({
         success: false,
