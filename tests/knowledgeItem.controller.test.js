@@ -413,6 +413,65 @@ async function testLinkedWorkTypeFilterFirmScoped() {
   console.log('  ✓ testLinkedWorkTypeFilterFirmScoped');
 }
 
+async function testCreateChecklistWithChecklistSteps() {
+  reset();
+  const { req, res } = makeReqRes({
+    body: {
+      title: 'Monthly Close Checklist',
+      type: 'checklist',
+      checklistSteps: [{ label: 'Collect statements' }, { label: 'Reconcile ledger', required: false }],
+    },
+  });
+  await createKnowledgeItem(req, res);
+  assert.strictEqual(res.statusCode, 201);
+  assert.strictEqual(res.payload.data.checklistSteps.length, 2);
+  assert.strictEqual(res.payload.data.checklistSteps[0].order, 1);
+  assert.strictEqual(res.payload.data.checklistSteps[1].required, false);
+  console.log('  ✓ testCreateChecklistWithChecklistSteps');
+}
+
+async function testUpdateChecklistSteps() {
+  reset();
+  const { req: cReq, res: cRes } = makeReqRes({ body: { title: 'Checklist', type: 'checklist' } });
+  await createKnowledgeItem(cReq, cRes);
+  const { req, res } = makeReqRes({
+    params: { id: cRes.payload.data._id },
+    body: { checklistSteps: [{ label: 'B', order: 2 }, { label: 'A', order: 1 }] },
+  });
+  await updateKnowledgeItem(req, res);
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.payload.data.checklistSteps[0].label, 'A');
+  assert.strictEqual(res.payload.data.checklistSteps[0].order, 1);
+  console.log('  ✓ testUpdateChecklistSteps');
+}
+
+async function testRejectChecklistStepWithoutLabel() {
+  reset();
+  const { req, res } = makeReqRes({ body: { title: 'Bad', type: 'checklist', checklistSteps: [{ description: 'x' }] } });
+  await createKnowledgeItem(req, res);
+  assert.strictEqual(res.statusCode, 400);
+  assert.ok(/label/i.test(res.payload.message));
+  console.log('  ✓ testRejectChecklistStepWithoutLabel');
+}
+
+async function testRejectTooManyChecklistSteps() {
+  reset();
+  const checklistSteps = Array.from({ length: 101 }).map((_, i) => ({ label: `Step ${i + 1}` }));
+  const { req, res } = makeReqRes({ body: { title: 'Too many', type: 'checklist', checklistSteps } });
+  await createKnowledgeItem(req, res);
+  assert.strictEqual(res.statusCode, 400);
+  assert.ok(/100/i.test(res.payload.message));
+  console.log('  ✓ testRejectTooManyChecklistSteps');
+}
+
+async function testNonChecklistCanOmitChecklistSteps() {
+  reset();
+  const { req, res } = makeReqRes({ body: { title: 'Plain SOP', type: 'sop' } });
+  await createKnowledgeItem(req, res);
+  assert.strictEqual(res.statusCode, 201);
+  console.log('  ✓ testNonChecklistCanOmitChecklistSteps');
+}
+
 // ─── Runner ───────────────────────────────────────────────────────────────────
 
 (async () => {
@@ -435,6 +494,11 @@ async function testLinkedWorkTypeFilterFirmScoped() {
     testListFilterByLinkedWorkType,
     testListFilterByLinkedDocketId,
     testLinkedWorkTypeFilterFirmScoped,
+    testCreateChecklistWithChecklistSteps,
+    testUpdateChecklistSteps,
+    testRejectChecklistStepWithoutLabel,
+    testRejectTooManyChecklistSteps,
+    testNonChecklistCanOmitChecklistSteps,
   ];
 
   let passed = 0;

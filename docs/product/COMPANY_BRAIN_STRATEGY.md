@@ -235,3 +235,7 @@ This is a read-only client-context surface backed by existing metadata links. No
 ## Work type normalization
 
 KnowledgeItems now use the same work type/category vocabulary used by dockets via shared normalized options in the Knowledge Library form. This reduces mismatches caused by free-text variations (for example, case differences or alternate phrasing) and improves the reliability of Linked Knowledge in work execution. Existing custom linked work type values remain supported for backward compatibility, but canonical docket category values are encouraged for best matching behavior.
+
+## Checklist steps v1
+
+Checklist-type KnowledgeItems now support structured checklist steps for read-only execution context. Each step can include a label, optional description, order, and required/optional marker. This improves operational consistency while preserving current constraints: no task creation, no completion tracking, no AI/vector/document extraction, and no file uploads.

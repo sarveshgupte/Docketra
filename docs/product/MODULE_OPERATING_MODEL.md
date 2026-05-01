@@ -226,3 +226,7 @@ This connection — Knowledge Library as the source of firm knowledge, Work Exec
 ## Work type/category normalization across Work Execution and Knowledge Library
 
 Work Execution and Knowledge Library now share normalized work type/category options derived from docket categories. This alignment makes Linked Knowledge matching more reliable during docket execution while preserving existing custom linked work types for compatibility.
+
+- Knowledge Library can store structured checklist steps on checklist KnowledgeItems.
+- Work Execution (linked knowledge) and Client Memory surfaces can display checklist step counts/details for read-only context.
+- Checklist execution automation and completion tracking remain future scope.
