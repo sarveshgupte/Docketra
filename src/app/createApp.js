@@ -132,7 +132,19 @@ const RESERVED_FIRM_SLUGS = [
   'attachments',
   'firm',
 ];
-const firmSlugMatcher = `/api/:firmSlug((?!${RESERVED_FIRM_SLUGS.join('|')}$)[a-z0-9-]+)`;
+const FIRM_SLUG_PATTERN = /^[a-z0-9-]+$/;
+const RESERVED_FIRM_SLUG_SET = new Set(RESERVED_FIRM_SLUGS);
+const firmSlugGuard = (req, _res, next) => {
+  const firmSlug = String(req.params?.firmSlug || '').trim().toLowerCase();
+  if (!FIRM_SLUG_PATTERN.test(firmSlug)) {
+    return next('router');
+  }
+  if (RESERVED_FIRM_SLUG_SET.has(firmSlug)) {
+    return next('router');
+  }
+  req.params.firmSlug = firmSlug;
+  return next();
+};
 const writeGuardChain = (req, res, next) => {
   const shouldForceTransaction = forceTransactionPaths.some((path) => req.path && req.path.startsWith(path));
   if (!mutatingMethods.has(req.method) && !shouldForceTransaction) {
@@ -418,7 +430,7 @@ const createApp = () => {
   // Firm-scoped public login + OTP routes
   // Register before protected '/api' tenant middleware mounts so '/api/:firmSlug/*'
   // login and metadata requests are never intercepted by auth middleware.
-  app.use(firmSlugMatcher, firmRoutes);
+  app.use('/api/:firmSlug', firmSlugGuard, firmRoutes);
 
   // Auth routes (excluding login endpoints)
   ['/api/auth', '/auth'].forEach((basePath) => {
