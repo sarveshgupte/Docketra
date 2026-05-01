@@ -45,3 +45,14 @@ If unsupported, providers must throw `UnsupportedProviderFeatureError`.
 - MongoDB stores metadata/control-plane records only (attachment metadata, backup job metadata, audit state).
 - Provider credentials remain encrypted at rest in firm storage config.
 - Logs/errors/tests must not expose refresh tokens or provider secrets.
+
+
+## Managed fallback contract
+- `docketra_managed` is the default active provider when firm-owned BYOS is not connected.
+- Docketra-managed mode still writes bytes to object/file storage (managed S3 backend), never MongoDB.
+- MongoDB stores only metadata/control-plane records for attachments/backups.
+- Status values: `ACTIVE_MANAGED`, `ACTIVE_BYOS`, `DISCONNECTED`, `ERROR`.
+- Firm-owned BYOS remains recommended for data ownership and control, but is not required for runtime storage.
+
+- Managed runtime fallback env: `MANAGED_STORAGE_S3_BUCKET` and `MANAGED_STORAGE_S3_REGION` required; `MANAGED_STORAGE_S3_PREFIX` optional; credentials optional when instance/task IAM role is used.
+- Middleware and API client responses must be sanitized (`STORAGE_NOT_CONNECTED`) while detailed provider diagnostics remain server-side logs only.
