@@ -17,6 +17,9 @@
 ## 2026-04-18 - Parallelize Independent Validations in Create Endpoints
 **Learning:** Validating multiple optional but independent identifiers (e.g., `dealId`, `docketId`) sequentially in a creation endpoint wastes network roundtrips.
 **Action:** Prepare the Mongoose queries as promises and execute them concurrently with `Promise.all` instead of sequentially awaiting them.
+## 2026-04-28 - [Concurrent Database Validation via Promise.all]
+**Learning:** The application had endpoint latency due to sequential model queries before building dependent variables. By combining `User.findOne` with other model queries inside an existing `Promise.all`, we can eliminate sequential waits.
+**Action:** Always look to move sequential `findOne` operations directly into an existing `Promise.all` alongside related lookups when variables don't immediately depend on prior query resolutions.
 
 ## 2026-04-24 - Grouping countDocuments with $facet aggregation
 **Learning:** Running multiple `countDocuments` queries concurrently (e.g., in `Promise.all`) for different subsets of the same collection still incurs multiple database round-trips and index scans.
