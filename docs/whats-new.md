@@ -1,5 +1,11 @@
 # What's New
 
+## May 2026: Company Brain landing page polish
+
+- Ported the Lovable Company Brain landing page direction into Docketra's existing marketing route.
+- Added premium hero, problem, product pillars, PCS examples, trust, and early-access CTA sections.
+- Preserved existing routes and avoided new backend, AI, or data-model changes.
+
 ## May 2026: KnowledgeItem foundation
 
 - Added a firm-scoped KnowledgeItem backend foundation for SOPs, checklists, templates, notes, client instructions, and process records.
