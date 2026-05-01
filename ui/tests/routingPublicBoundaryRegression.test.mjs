@@ -2,6 +2,7 @@ import assert from 'assert';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { isPublicAuthPagePath } from '../src/utils/authRedirects.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..', 'src');
@@ -117,9 +118,33 @@ assert(
   'API interceptor should guard against redirect loops when already on a login route.'
 );
 assert(
-  apiSource.includes('/:firmSlug/forgot-password') || apiSource.includes('/forgot-password'),
-  'API interceptor should classify forgot-password pages as public auth pages.'
+  apiSource.includes('isPublicAuthPagePath'),
+  'API interceptor should delegate login-like route detection to isPublicAuthPagePath.'
 );
+[
+  '/forgot-password',
+  '/acme/forgot-password',
+  '/app/acme/forgot-password',
+  '/reset-password',
+  '/change-password',
+  '/login',
+  '/superadmin/login',
+  '/acme/login',
+].forEach((pathname) => {
+  assert(
+    isPublicAuthPagePath(pathname),
+    `Expected public auth classification for ${pathname}.`
+  );
+});
+[
+  '/app/firm/acme/dashboard',
+  '/app/superadmin/dashboard',
+].forEach((pathname) => {
+  assert(
+    !isPublicAuthPagePath(pathname),
+    `Expected protected route classification for ${pathname}.`
+  );
+});
 assert(
   publicRoutesSource.includes('<Route path="/login" element={<LoginPage />} />'),
   'Public `/login` route must exist as a safe fallback login entrypoint.'
