@@ -1,27 +1,7 @@
 import { isSuperAdmin } from './authUtils.js';
 import { ROUTES } from '../constants/routes.js';
 
-export const isSafeReturnToPath = (value) => {
-  if (typeof value !== 'string') return false;
-  const trimmed = value.trim();
-  if (!trimmed) return false;
-  if (!trimmed.startsWith('/')) return false;
-  if (trimmed.startsWith('//')) return false;
-  if (/^[a-zA-Z][a-zA-Z0-9+\-.]*:/.test(trimmed)) return false;
-  return trimmed === '/app' || trimmed.startsWith('/app/');
-};
-
-const isRoleCompatibleRoute = (candidatePath, user) => {
-  if (!isSafeReturnToPath(candidatePath)) return false;
-
-  if (isSuperAdmin(user)) {
-    return candidatePath.startsWith('/app/superadmin');
-  }
-
-  const firmSlug = String(user?.firmSlug || '').trim();
-  if (!firmSlug) return false;
-  return candidatePath.startsWith(`/app/firm/${firmSlug}`);
-};
+import { isRoleCompatibleRoute, isSafeReturnToPath } from './returnToSafety.js';
 
 const extractReturnTo = (locationSearch = '') => {
   try {
@@ -42,11 +22,11 @@ export const resolvePostAuthNavigation = ({
   const returnTo = extractReturnTo(locationSearch);
   const candidateRoute = isSafeReturnToPath(returnTo) ? returnTo : '';
 
-  if (candidateRoute && isRoleCompatibleRoute(candidateRoute, user)) {
+  if (candidateRoute && isRoleCompatibleRoute(candidateRoute, { isSuperAdminUser: isSuperAdmin(user), firmSlug: user?.firmSlug })) {
     return candidateRoute;
   }
 
-  if (isRoleCompatibleRoute(fallbackRoute, user)) {
+  if (isRoleCompatibleRoute(fallbackRoute, { isSuperAdminUser: isSuperAdmin(user), firmSlug: user?.firmSlug })) {
     return fallbackRoute;
   }
 
