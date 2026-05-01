@@ -1,6 +1,12 @@
 # What's New
 
 
+## May 2026: Auth session redirect reliability hardening
+
+- Hardened logout and expired-session redirects so firm routes return to `/:firmSlug/login` while superadmin routes return to `/superadmin/login`.
+- Added namespace-safe returnTo enforcement to prevent superadmin-to-firm and firm-to-superadmin stale redirect jumps.
+- Improved auth-state cleanup to clear pending-login keys and superadmin impersonation/routing hints on sign-out and session expiry.
+
 ## May 2026: Knowledge Library UX polish
 
 - Improved Knowledge Library scanning with clearer stats, filters, badges, and row/card structure.

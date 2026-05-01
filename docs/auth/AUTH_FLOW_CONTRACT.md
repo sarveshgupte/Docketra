@@ -62,6 +62,16 @@ This document defines the canonical authentication flows currently used by activ
     - preserve when logging out but staying in the same firm workspace context.
     - clear when exiting workspace context (e.g. superadmin/auth boundary transitions).
 
+## 6) Session expiry + redirect reliability contract
+- Firm app namespace (`/app/firm/:firmSlug/*`): when profile/refresh fails with 401, redirect to `/:firmSlug/login` derived from route context first, then sanitized storage hint fallback.
+- Superadmin namespace (`/app/superadmin*`): when profile/refresh fails with 401, redirect to `/superadmin/login` and ignore any stale `localStorage.firmSlug`.
+- Public auth pages (`/login`, `/superadmin/login`, `/:firmSlug/login`, `/forgot-password`, `/:firmSlug/forgot-password`, `/signup`) suppress hard auth redirects on profile/refresh 401 to prevent loops.
+- `returnTo` safety:
+  - Superadmin users may only use `/app/superadmin*` destinations.
+  - Firm users may only use `/app/firm/:theirFirmSlug*` destinations.
+  - Invalid/stale/cross-namespace `returnTo` values are ignored in favor of role-safe defaults.
+- Superadmin logout clears firm slug hints and impersonation state; firm logout may preserve the active firm slug only for returning to the same firm login.
+
 ## Route redirects and legacy route compatibility
 - `/app/:firmSlug/login` redirects to `/:firmSlug/login`.
 - `/app/:firmSlug/forgot-password` redirects to `/:firmSlug/forgot-password`.
