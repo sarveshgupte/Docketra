@@ -180,3 +180,25 @@ Safe admin endpoints are now implemented for tenant-scoped BYOAI configuration/s
 - No OpenAI/Gemini/Anthropic/Azure SDK integrations.
 - No runtime provider network validation calls.
 - No AI execution wiring into dockets/tasks/CRM/CMS flows.
+
+## 17) Implemented BYOAI Settings UI contract (2026-05-01)
+
+The frontend BYOAI settings contract is now implemented for safe admin configuration workflows.
+
+### Added frontend modules
+- `ui/src/services/aiService.js`
+- `ui/src/pages/AiSettingsPage.jsx`
+- `ui/src/utils/aiConfiguration.js`
+
+### UI contract behavior
+- Loads safe configuration from `GET /api/ai/configuration`.
+- Saves safe configuration to `PUT /api/ai/configuration` with secret-field omission rules (empty/new-only secret inputs).
+- Supports contract validation via `POST /api/ai/test-configuration` and displays safe response fields.
+- Existing credential material is never rendered in UI; status placeholders are shown instead.
+- Retention/privacy controls enforce safe UI invariants (zero-retention disables prompt/output retention toggles).
+
+### Important scope boundary
+- This UI is configuration/contract only.
+- No provider SDKs or runtime AI provider calls are implemented.
+- AI remains default-disabled/fail-closed until future feature integration PRs.
+- First end-user AI feature wiring (tasks/dockets/CRM/CMS) remains explicitly out of scope for this PR.
