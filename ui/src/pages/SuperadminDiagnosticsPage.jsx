@@ -3,6 +3,7 @@ import { SuperAdminLayout } from '../components/common/SuperAdminLayout';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Loading } from '../components/common/Loading';
+import { EmptyState } from '../components/ui/EmptyState';
 import { superadminService } from '../services/superadminService';
 
 const pretty = (value) => String(value || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -139,7 +140,16 @@ export const SuperadminDiagnosticsPage = () => {
               <p className="mt-2 text-xs text-gray-600 break-all">{(diagnostics.requestIds || []).join(', ') || 'No request IDs captured yet.'}</p>
             </Card>
           </>
-        ) : null}
+        ) : (
+          <Card>
+            <EmptyState
+              title="Diagnostics unavailable"
+              description="Support diagnostics could not be loaded. Retry to fetch the latest status."
+              actionLabel="Retry"
+              onAction={loadDiagnostics}
+            />
+          </Card>
+        )}
       </div>
     </SuperAdminLayout>
   );
