@@ -151,6 +151,11 @@ npm run ci:release-gate
 ## Documentation map
 
 - Current product overview: `docs/product/current-product-overview.md`
+- Product PRD (MVP baseline): `docs/product/PRD_DOCKETRA.md`
+- MVP scope and beta gate: `docs/product/MVP_SCOPE.md`
+- Roles and permissions matrix: `docs/product/USER_ROLES_AND_PERMISSIONS.md`
+- Module requirements: `docs/product/MODULE_REQUIREMENTS.md`
+- Non-negotiables: `docs/product/NON_NEGOTIABLES.md`
 - Pilot readiness checklist: `docs/operations/pilot-readiness-checklist.md`
 - Release updates: `docs/whats-new.md`
 - Deployment: `docs/deployment/render-deployment.md`
