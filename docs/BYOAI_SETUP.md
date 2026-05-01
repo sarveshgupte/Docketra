@@ -159,3 +159,24 @@ Backend-authoritative firm AI configuration contract has been added with secure 
 - Credential reference resolution is still contract-only (`CREDENTIAL_REF_LOOKUP_NOT_IMPLEMENTED`).
 - Runtime credential decryption/use is intentionally not enabled in this PR; resolver reports presence/state only.
 - Provider SDK integrations and real provider calls remain a future PR.
+
+## 16) Implemented BYOAI admin API contract (2026-05-01)
+
+Safe admin endpoints are now implemented for tenant-scoped BYOAI configuration/status without provider SDK calls.
+
+### Endpoints
+- `GET /api/ai/configuration`
+- `PUT /api/ai/configuration`
+- `POST /api/ai/test-configuration`
+
+### Scope implemented
+- Endpoints return safe configuration/status only via safe config helpers.
+- Secret material is never returned (`apiKey`, `encryptedKey`, `credentialRef` values remain hidden).
+- Update path normalizes config with policy-safe invariants (including zero-retention forcing prompt/output flags off).
+- Test endpoint is contract-only: validates shape/state using resolver + policy services and returns safe reason/message output.
+- Metadata-only AI audit writer is used for update/test events.
+
+### Explicitly out of scope (future PR)
+- No OpenAI/Gemini/Anthropic/Azure SDK integrations.
+- No runtime provider network validation calls.
+- No AI execution wiring into dockets/tasks/CRM/CMS flows.
