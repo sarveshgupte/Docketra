@@ -68,6 +68,11 @@ Future PRs may add knowledge records (SOPs, templates, checklists), process temp
 
 `KnowledgeItem` is the first structured knowledge object feeding this direction. It provides a firm-scoped backend foundation for SOPs, checklists, templates, notes, client instructions, and process records. A full Knowledge Library UI and linked-work flows will be layered on top in subsequent PRs.
 
+**Knowledge surfaces across modules** — KnowledgeItems are now connected to two execution contexts:
+- **Client Memory** (`ClientWorkspacePage`) can surface KnowledgeItems linked to a client. A Client Knowledge section in the client overview tab shows active client-linked SOPs, templates, notes, instructions, and process records, with deep-links back to Knowledge Library.
+- **Work Execution** (`CaseDetailPage`) surfaces work-linked KnowledgeItems in a Linked Knowledge tab, matching by docket ID, work type, or client.
+- **Company Brain** connects both views through metadata links — clients, prospects, work, and knowledge records are visible together in one connected read-only command center.
+
 **Knowledge Intake vs Knowledge Library** — these are distinct surfaces with different purposes:
 - **Knowledge Intake** (`/cms`) = incoming enquiries, form submissions, and external context captured from prospective clients and the outside world.
 - **Knowledge Library** (`/knowledge`) = reusable internal firm knowledge such as SOPs, checklists, templates, notes, client instructions, and process records. These are structured operational records created and managed by firm admins.

@@ -7,9 +7,11 @@ import { Badge } from '../components/common/Badge';
 import { Loading } from '../components/common/Loading';
 import { Textarea } from '../components/common/Textarea';
 import { clientApi } from '../api/client.api';
+import { useAuth } from '../hooks/useAuth';
 import { ROUTES } from '../constants/routes';
 import { formatDate, formatDocketId } from '../utils/formatters';
 import { formatDateTime } from '../utils/formatDateTime';
+import { ClientKnowledgeSection } from './clientWorkspace/ClientKnowledgeSection';
 
 const tabs = [
   { key: 'overview', label: 'Overview', path: '' },
@@ -34,6 +36,7 @@ export const ClientWorkspacePage = () => {
   const { firmSlug, clientId } = useParams();
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [client, setClient] = useState(null);
   const [dockets, setDockets] = useState([]);
   const [activity, setActivity] = useState([]);
@@ -148,6 +151,9 @@ export const ClientWorkspacePage = () => {
   const tagList = Array.isArray(client?.tags) ? client.tags : [];
   const followupDate = client?.followUpDate || client?.nextFollowUp || null;
   const lastUpdated = client?.updatedAt || client?.lastModifiedAt || client?.createdAt || null;
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'PRIMARY_ADMIN';
+  // Mongo _id of the client record, used to fetch client-linked KnowledgeItems
+  const clientMongoId = client?._id || client?.mongoId || '';
 
   return (
     <PlatformShell
@@ -249,6 +255,12 @@ export const ClientWorkspacePage = () => {
               <Card>
                 <p><strong>Company Brain context:</strong> This client memory becomes part of Company Brain. Linked work, documents, notes, and process history help the firm preserve context beyond individual memory.</p>
               </Card>
+
+              <ClientKnowledgeSection
+                clientMongoId={clientMongoId}
+                firmSlug={firmSlug}
+                isAdmin={isAdmin}
+              />
 
               <Card>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
