@@ -25,7 +25,10 @@ assert.ok(librarySource.includes('Custom:'), 'KnowledgeLibraryPage should preser
 assert.ok(librarySource.includes('normalizeWorkType(form.linkedWorkType)'), 'KnowledgeLibraryPage should normalize linkedWorkType before save');
 assert.ok(librarySource.includes("if (value === '')") && librarySource.includes("linkedWorkType: ''"), 'Selecting Unlinked should clear linkedWorkType instead of preserving stale values');
 assert.ok(librarySource.includes('value !== CUSTOM_WORK_TYPE_OPTION'), 'Known work type selection should update linkedWorkType to canonical value');
-assert.ok(librarySource.includes('Choose the same work type/category used by dockets so this knowledge appears during work execution.'), 'KnowledgeLibraryPage should include helper copy');
+assert.ok(
+  librarySource.includes('Use the same work type/category used by dockets so this knowledge appears during work execution.'),
+  'KnowledgeLibraryPage should include helper copy',
+);
 
 assert.ok(linkedKnowledgeSource.includes('normalizeWorkType'), 'LinkedKnowledgeSection should normalize category work type values');
 assert.ok(linkedKnowledgeSource.includes('buildWorkTypeCandidates'), 'LinkedKnowledgeSection should include safe fallback for legacy category values');
