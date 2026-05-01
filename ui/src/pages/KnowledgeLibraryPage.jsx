@@ -237,11 +237,8 @@ export const KnowledgeLibraryPage = () => {
     setError('');
 
     try {
-      const params = {};
-      if (filterType) params.type = filterType;
-      if (filterStatus) params.status = filterStatus;
-
-      const result = await knowledgeItemsApi.listKnowledgeItems(params);
+      // Load all items; all filter/search narrowing is applied client-side via filteredItems.
+      const result = await knowledgeItemsApi.listKnowledgeItems({});
       const loaded = toArray(result?.data?.data || result?.data?.items || result?.data);
       setItems(loaded);
     } catch (loadError) {

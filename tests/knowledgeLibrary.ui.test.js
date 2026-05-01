@@ -8,9 +8,11 @@
  * - KNOWLEDGE_LIBRARY route constant exists and produces correct path
  * - Navigation includes Knowledge Library under Firm Memory with minRole ADMIN
  * - Command palette includes go-knowledge-library
- * - Knowledge Library API client uses /api/knowledge-items (via /knowledge-items)
+ * - Knowledge Library API client uses /knowledge-items (no /api/ prefix — baseURL convention)
+ * - createApp.js mounts /api/knowledge-items (backend route contract)
  * - KnowledgeLibraryPage exists and contains expected text
  * - BYOS/privacy callout exists in the page
+ * - Page filtering is client-side only (loadData must not send filter params)
  * - No AI/vector/embedding/document extraction infrastructure added
  * - Existing Company Brain, CRM, CMS, Task Manager routes remain unchanged
  * - Knowledge Library route is admin-only in ProtectedRoutes
@@ -97,9 +99,18 @@ function testCommandPaletteIncludesKnowledgeLibrary() {
 
 function testApiClientUsesCorrectEndpoint() {
   const apiSource = read('ui/src/api/knowledgeItems.api.js');
+
+  // The axios instance baseURL already ends in /api (e.g. /api or https://host/api).
+  // All other frontend API clients (crm.api.js, dashboard.api.js, etc.) follow the same
+  // convention: paths begin with / but do NOT repeat the /api prefix.
+  // /knowledge-items  →  baseURL(/api) + /knowledge-items  =  /api/knowledge-items  ✓
   assert.ok(
     apiSource.includes("'/knowledge-items'"),
-    "Knowledge items API client must use /knowledge-items endpoint",
+    "Knowledge items API client must use /knowledge-items (no /api/ prefix — baseURL already contains /api)",
+  );
+  assert.ok(
+    !apiSource.includes("'/api/knowledge-items'"),
+    "Knowledge items API client must NOT double-prefix with /api/ (baseURL already contains /api)",
   );
   assert.ok(
     apiSource.includes('listKnowledgeItems'),
@@ -121,7 +132,73 @@ function testApiClientUsesCorrectEndpoint() {
     apiSource.includes('archiveKnowledgeItem'),
     'API client must export archiveKnowledgeItem',
   );
-  console.log('  ✓ Knowledge Library API client uses /knowledge-items and exports all methods');
+  console.log('  ✓ Knowledge Library API client uses /knowledge-items (no double /api/ prefix) and exports all methods');
+}
+
+function testBackendRouteContractMountsKnowledgeItems() {
+  const createAppSource = read('src/app/createApp.js');
+
+  // Backend must mount the knowledge-items router at /api/knowledge-items.
+  // This is the path the frontend API client resolves to after baseURL expansion.
+  assert.ok(
+    createAppSource.includes("app.use('/api/knowledge-items'"),
+    "createApp.js must mount /api/knowledge-items router",
+  );
+  assert.ok(
+    createAppSource.includes('knowledgeItemRoutes'),
+    "createApp.js must reference knowledgeItemRoutes",
+  );
+
+  // Existing tenant-scoped routes must remain intact.
+  assert.ok(
+    createAppSource.includes("app.use('/api/leads'"),
+    "createApp.js CRM leads route must remain mounted",
+  );
+  assert.ok(
+    createAppSource.includes("app.use('/api/crm/clients'"),
+    "createApp.js CRM clients route must remain mounted",
+  );
+  assert.ok(
+    createAppSource.includes("app.use('/api/dashboard'"),
+    "createApp.js dashboard route must remain mounted",
+  );
+  console.log('  ✓ createApp.js mounts /api/knowledge-items and existing routes remain intact');
+}
+
+function testPageFilteringIsClientSideOnly() {
+  const pageSource = read('ui/src/pages/KnowledgeLibraryPage.jsx');
+
+  // loadData must NOT pass type/status/q/tag params to the API.
+  // All filtering is done client-side via filteredItems so behavior is deterministic:
+  // one full list is loaded once; filter changes narrow the in-memory list immediately.
+  assert.ok(
+    !pageSource.includes('params.type'),
+    'KnowledgeLibraryPage loadData must not send type as an API param (client-side filtering)',
+  );
+  assert.ok(
+    !pageSource.includes('params.status'),
+    'KnowledgeLibraryPage loadData must not send status as an API param (client-side filtering)',
+  );
+  assert.ok(
+    !pageSource.includes('params.q'),
+    'KnowledgeLibraryPage loadData must not send q as an API param (client-side filtering)',
+  );
+  assert.ok(
+    !pageSource.includes('params.tag'),
+    'KnowledgeLibraryPage loadData must not send tag as an API param (client-side filtering)',
+  );
+
+  // filteredItems must still apply all four filters client-side.
+  assert.ok(
+    pageSource.includes('filterType') && pageSource.includes('filterStatus'),
+    'KnowledgeLibraryPage must apply type and status filters client-side via filteredItems',
+  );
+  assert.ok(
+    pageSource.includes('filterTag') && pageSource.includes('searchQ'),
+    'KnowledgeLibraryPage must apply tag and search filters client-side via filteredItems',
+  );
+
+  console.log('  ✓ KnowledgeLibraryPage uses client-side-only filtering (no mixed server/client approach)');
 }
 
 function testPageExistsAndContainsExpectedContent() {
@@ -232,6 +309,8 @@ function run() {
   testExistingNavigationItemsPreserved();
   testCommandPaletteIncludesKnowledgeLibrary();
   testApiClientUsesCorrectEndpoint();
+  testBackendRouteContractMountsKnowledgeItems();
+  testPageFilteringIsClientSideOnly();
   testPageExistsAndContainsExpectedContent();
   testPageHasEmptyStates();
   testRouteIsAdminOnly();
@@ -242,3 +321,4 @@ function run() {
 }
 
 run();
+
