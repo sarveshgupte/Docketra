@@ -1,6 +1,5 @@
 const { google } = require('googleapis');
 const Firm = require('../../models/Firm.model');
-const { decrypt } = require('./services/TokenEncryption.service');
 const GoogleDriveProvider = require('./providers/GoogleDriveProvider');
 const OneDriveProvider = require('./providers/OneDriveProvider');
 const { S3Provider } = require('./providers/S3Provider');
@@ -11,41 +10,27 @@ const {
   StorageAccessError,
   UnsupportedProviderError,
 } = require('./errors');
-
-function decryptCredentials(encryptedBlob, firmId) {
-  if (!encryptedBlob) return {};
-  try {
-    return JSON.parse(decrypt(encryptedBlob));
-  } catch (error) {
-    throw new StorageAccessError('Failed to decrypt firm storage credentials', firmId, error);
-  }
-}
+const { resolveFirmStorageState } = require('./resolveFirmStorageState');
 
 async function getFirmStorageConfig(firmId) {
   const firm = await Firm.findById(firmId).select('storageConfig storage').lean();
-  if (!firm) {
-    throw new StorageConfigMissingError(firmId);
-  }
+  if (!firm) throw new StorageConfigMissingError(firmId);
 
-  if (!firm.storageConfig) {
+  const state = resolveFirmStorageState(firm, { includeCredentials: true });
+  if (state.mode === 'firm_connected' && !state.canonicalProvider) {
+    throw new StorageAccessError('Firm is marked firm_connected but no usable provider is configured', firmId);
+  }
+  if (!state.canonicalProvider) throw new StorageConfigMissingError(firmId);
+
+  if (!firm.storageConfig && state.canonicalProvider !== 'docketra_managed') {
     log.error('[STORAGE] Missing storageConfig for firm', firmId);
   }
 
-  const mode = firm?.storage?.mode || 'docketra_managed';
-  const explicitProvider = firm?.storageConfig?.provider || firm?.storage?.provider || null;
-
-  if (!explicitProvider && mode === 'docketra_managed') {
-    return { provider: 'docketra_managed', credentials: {}, source: 'firm.storage.mode' };
-  }
-
-  if (!explicitProvider) {
-    throw new StorageConfigMissingError(firmId);
-  }
-
   return {
-    provider: explicitProvider,
-    credentials: decryptCredentials(firm.storageConfig?.credentials, firmId),
-    source: 'firm.storageConfig',
+    provider: state.canonicalProvider,
+    credentials: state.credentials || {},
+    source: state.source,
+    connectionStatus: state.connectionStatus,
   };
 }
 
