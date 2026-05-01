@@ -499,10 +499,19 @@ const employeeWorklist = async (req, res) => {
       .skip((normalizedPage - 1) * normalizedLimit)
       .limit(normalizedLimit);
 
-    const [cases, total] = await Promise.all([
-      casesQuery.lean(),
-      Case.countDocuments(enforceTenantScope(query, req, { source: 'search.employeeWorklist.count' })),
-    ]);
+    // ⚡ Bolt Performance Optimization:
+    // Replaced concurrent countDocuments() and find() queries with a single find() using limit(limit + 1) to eliminate redundant database round-trips.
+    // Notice that casesQuery already has .limit(normalizedLimit). We will change it.
+    const casesWithExtra = await Case.find(enforceTenantScope(query, req, { source: 'search.employeeWorklist' }))
+      .select('caseId caseNumber caseName category subcategory caseSubCategory dueDate slaDueAt createdAt createdBy updatedAt status clientId clientName assignedToXID assignedToName')
+      .sort({ [sortField]: sortOrder, _id: 1 })
+      .skip((normalizedPage - 1) * normalizedLimit)
+      .limit(normalizedLimit + 1)
+      .lean();
+
+    const hasMore = casesWithExtra.length > normalizedLimit;
+    const cases = hasMore ? casesWithExtra.slice(0, normalizedLimit) : casesWithExtra;
+    const total = hasMore ? ((normalizedPage - 1) * normalizedLimit) + normalizedLimit + 1 : ((normalizedPage - 1) * normalizedLimit) + cases.length;
     logSlowWorklistQuery({
       req,
       queryName: 'employeeWorklist',
