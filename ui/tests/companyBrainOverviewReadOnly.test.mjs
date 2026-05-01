@@ -9,6 +9,8 @@ const platformNav = read('src/constants/platformNavigation.js');
 const routeConstants = read('src/constants/routes.js');
 const companyBrainPage = read('src/pages/CompanyBrainPage.jsx');
 
+// --- Route / permission assertions ---
+
 assert.ok(
   protectedRoutes.includes('path="company-brain"') && protectedRoutes.includes('<ProtectedRoute requireAdmin>'),
   'Company Brain route should remain admin-only in protected firm routes.'
@@ -24,14 +26,41 @@ assert.ok(
   'Company Brain route constant should remain unchanged.'
 );
 
+// --- API assertions ---
+
 for (const apiCall of ['crmApi.listClients', 'crmApi.listLeads', 'dashboardApi.getSummary']) {
   assert.ok(companyBrainPage.includes(apiCall), `Company Brain should reuse existing API call ${apiCall}.`);
 }
+
+// --- No AI/vector/document extraction ---
 
 assert.equal(
   companyBrainPage.includes('vector') || companyBrainPage.includes('embeddings') || companyBrainPage.includes('document extraction'),
   false,
   'Company Brain read-only overview should not introduce AI/vector/document extraction infrastructure.'
+);
+
+// --- Copy / UX assertions ---
+
+assert.ok(
+  companyBrainPage.includes('Read-only overview') || companyBrainPage.includes('Read-only command center'),
+  'Company Brain page should use "Read-only overview" or "Read-only command center", not "Read-only placeholder".'
+);
+
+assert.equal(
+  companyBrainPage.includes('Read-only placeholder'),
+  false,
+  'Company Brain page should not contain "Read-only placeholder" text.'
+);
+
+assert.ok(
+  companyBrainPage.includes('Needs attention'),
+  'Company Brain page should contain a "Needs attention" section.'
+);
+
+assert.ok(
+  companyBrainPage.includes('Memory map'),
+  'Company Brain page should contain a "Memory map" section.'
 );
 
 console.log('companyBrainOverviewReadOnly.test.mjs passed');

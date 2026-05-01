@@ -6,18 +6,39 @@ import { dashboardApi } from '../api/dashboard.api';
 import { ROUTES } from '../constants/routes';
 import { PageSection, StatGrid, StatusMessageStack, toArray } from './platform/PlatformShared';
 
-const READ_ONLY_NOTES = [
-  'This is a read-only strategy page. No operational data is created or edited here.',
-  'Current implementation is intentionally frontend-only and does not introduce any new backend API dependencies.',
-];
-
-const BulletList = ({ items }) => (
-  <ul className="list-disc pl-6 text-sm text-[var(--dt-text-muted)] space-y-2">
-    {items.map((item) => <li key={item}>{item}</li>)}
-  </ul>
-);
-
 const fmt = (loading, value, fallback = '—') => (loading ? '…' : (value ?? fallback));
+
+const AttentionRow = ({ label, count, loading, reason, linkTo, linkLabel, emptyMessage }) => {
+  const displayCount = fmt(loading, count, 0);
+  const isEmpty = !loading && (count === 0 || count === null || count === undefined);
+  return (
+    <div className="panel attention-row" style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', padding: '0.75rem 1rem' }}>
+      <div style={{ minWidth: '2.5rem', textAlign: 'right' }}>
+        <span className="kpi" style={{ fontSize: '1.25rem' }}>{displayCount}</span>
+      </div>
+      <div style={{ flex: 1 }}>
+        <p style={{ margin: 0, fontWeight: 600 }}>{label}</p>
+        <p className="muted" style={{ margin: '0.15rem 0 0' }}>
+          {isEmpty && emptyMessage ? emptyMessage : reason}
+        </p>
+      </div>
+      {linkTo && linkLabel && !isEmpty ? (
+        <Link to={linkTo} style={{ alignSelf: 'center', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>{linkLabel} →</Link>
+      ) : null}
+    </div>
+  );
+};
+
+const MemoryMapTile = ({ title, description, linkTo }) => (
+  <Link
+    className="module-tile"
+    to={linkTo}
+    style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}
+  >
+    <strong>{title}</strong>
+    <span>{description}</span>
+  </Link>
+);
 
 export const CompanyBrainPage = () => {
   const { firmSlug } = useParams();
@@ -75,7 +96,6 @@ export const CompanyBrainPage = () => {
   const pendingReview = summary?.workbasketLoad ? summary.workbasketLoad.reduce((acc, item) => acc + Number(item?.pending || 0), 0) : null;
   const intakeItems = leads.length ? leads.filter((lead) => String(lead?.source || '').toLowerCase().includes('cms')).length : 0;
   const leadsNeedFollowup = leads.filter((lead) => lead?.nextFollowUpAt && new Date(lead.nextFollowUpAt).getTime() <= now).length;
-  const clientsAdded7d = clients.filter((client) => client?.createdAt && new Date(client.createdAt).getTime() >= now - (7 * 24 * 60 * 60 * 1000)).length;
 
   const noFollowupLeads = leads.filter((lead) => !lead?.nextFollowUpAt).length;
   const clientsWithoutOwner = clients.filter((client) => !(client?.ownerXid || client?.assignedTo || client?.ownerId)).length;
@@ -84,89 +104,186 @@ export const CompanyBrainPage = () => {
     <PlatformShell
       moduleLabel="Firm Memory"
       title="Company Brain"
-      subtitle="A read-only overview of existing clients, work, intake, and firm-memory signals across your workspace."
+      subtitle="Your firm's connected memory for clients, work, follow-ups, documents, and knowledge gaps."
       actions={<button type="button" onClick={() => void loadData({ background: true })} disabled={loading || refreshing}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>}
     >
       <StatusMessageStack messages={[{ tone: 'error', message: error }, { tone: 'info', message: refreshing ? 'Refreshing Company Brain data in the background…' : '' }]} />
 
-      <StatGrid items={[
-        { label: 'Active clients', value: fmt(loading, activeClients) },
-        { label: 'Prospective clients', value: fmt(loading, prospectiveClients) },
-        { label: 'Active work', value: fmt(loading, activeWork), helpText: activeWork == null ? 'Will appear when work data is available.' : '' },
-        { label: 'Overdue work', value: fmt(loading, overdueWork), helpText: overdueWork == null ? 'Will appear when work data is available.' : '' },
-        { label: 'Pending review / QC', value: fmt(loading, pendingReview), helpText: pendingReview == null ? 'Will appear when queue data is available.' : '' },
-        { label: 'Knowledge intake items', value: fmt(loading, intakeItems), helpText: intakeItems == null ? 'Will appear when intake data is available.' : '' },
-      ]}
-      />
-
-      <PageSection title="Connected firm memory" description="Open source modules where Company Brain context currently lives.">
-        <div className="tile-grid">
-          <Link className="module-tile" to={ROUTES.TASK_MANAGER(firmSlug)}><strong>Work</strong><span>Dockets, deadlines, and execution queues.</span></Link>
-          <Link className="module-tile" to={ROUTES.CLIENTS(firmSlug)}><strong>Clients</strong><span>Client records and ongoing relationships.</span></Link>
-          <Link className="module-tile" to={ROUTES.CMS(firmSlug)}><strong>Knowledge Intake</strong><span>Form submissions and intake conversion outcomes.</span></Link>
-          <Link className="module-tile" to={ROUTES.CRM(firmSlug)}><strong>Relationships</strong><span>Leads, follow-up cadence, and progression.</span></Link>
-          <Link className="module-tile" to={ROUTES.ADMIN_REPORTS(firmSlug)}><strong>Reports</strong><span>Operational and executive-level performance views.</span></Link>
-        </div>
+      <PageSection>
+        <p className="muted">
+          Company Brain connects existing Docketra records into one operational view. It does not create or edit data
+          here; it helps you see what needs attention.
+        </p>
       </PageSection>
 
-      <PageSection title="Signals to watch" description="Read-only operational cues assembled from available workspace data.">
-        <BulletList items={[
-          `Leads needing follow-up: ${fmt(loading, leadsNeedFollowup, 0)}`,
-          `Clients recently added (7d): ${fmt(loading, clientsAdded7d, 0)}`,
-          `Work overdue: ${fmt(loading, overdueWork)}`,
-          `Work waiting for review: ${fmt(loading, pendingReview)}`,
-          intakeItems == null ? 'Intake items needing conversion will appear when intake metadata is available.' : `Intake items captured from knowledge intake: ${intakeItems}`,
+      <PageSection title="Attention summary" description="Read-only overview of key firm metrics from available workspace data.">
+        <StatGrid items={[
+          { label: 'Active clients', value: fmt(loading, activeClients) },
+          { label: 'Prospective clients', value: fmt(loading, prospectiveClients) },
+          { label: 'Active work', value: fmt(loading, activeWork), helpText: activeWork == null ? 'Will appear when work data is available.' : '' },
+          { label: 'Overdue work', value: fmt(loading, overdueWork), helpText: overdueWork == null ? 'Will appear when work data is available.' : '' },
+          { label: 'Pending review / QC', value: fmt(loading, pendingReview), helpText: pendingReview == null ? 'Will appear when queue data is available.' : '' },
+          { label: 'Knowledge intake items', value: fmt(loading, intakeItems) },
         ]}
         />
       </PageSection>
 
-      <PageSection title="Knowledge gaps" description="Rule-based visibility for missing context that may affect execution reliability.">
-        {(noFollowupLeads > 0 || clientsWithoutOwner > 0) ? (
-          <BulletList items={[
-            ...(noFollowupLeads > 0 ? [`Prospective clients without next follow-up: ${noFollowupLeads}`] : []),
-            ...(clientsWithoutOwner > 0 ? [`Clients without owner: ${clientsWithoutOwner}`] : []),
-          ]}
+      <PageSection title="Needs attention" description="Action-oriented signals from available workspace data. Go here to decide what to address next.">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <AttentionRow
+            label="Prospects without follow-up date"
+            count={noFollowupLeads}
+            loading={loading}
+            reason="These prospects have no scheduled next follow-up and may go cold."
+            linkTo={ROUTES.CRM(firmSlug)}
+            linkLabel="Relationships"
+            emptyMessage="No prospects need follow-up right now."
           />
-        ) : <p className="muted">Knowledge gap detection will improve as Docketra adds knowledge records and process templates.</p>}
+          <AttentionRow
+            label="Prospects needing follow-up now"
+            count={leadsNeedFollowup}
+            loading={loading}
+            reason="Follow-up date has passed for these prospective clients."
+            linkTo={ROUTES.CRM(firmSlug)}
+            linkLabel="Relationships"
+            emptyMessage="No overdue prospect follow-ups found."
+          />
+          <AttentionRow
+            label="Clients without owner"
+            count={clientsWithoutOwner}
+            loading={loading}
+            reason="These clients have no assigned owner, which may affect accountability."
+            linkTo={ROUTES.CLIENTS(firmSlug)}
+            linkLabel="Clients"
+            emptyMessage="All visible clients have owners."
+          />
+          <AttentionRow
+            label="Overdue work"
+            count={overdueWork}
+            loading={loading}
+            reason="Work past its deadline that has not been closed or extended."
+            linkTo={ROUTES.TASK_MANAGER(firmSlug)}
+            linkLabel="Work"
+            emptyMessage={overdueWork == null ? 'Work data will appear when dashboard summary is available.' : 'No overdue work found from available data.'}
+          />
+          <AttentionRow
+            label="Pending review / QC"
+            count={pendingReview}
+            loading={loading}
+            reason="Work items waiting in the review queue before they can be finalized."
+            linkTo={ROUTES.QC_QUEUE(firmSlug)}
+            linkLabel="Review queue"
+            emptyMessage={pendingReview == null ? 'Review queue data will appear when queue data is available.' : 'No items pending review.'}
+          />
+          <AttentionRow
+            label="Intake items captured"
+            count={intakeItems}
+            loading={loading}
+            reason="Form submissions received through Knowledge Intake."
+            linkTo={ROUTES.CMS(firmSlug)}
+            linkLabel="Knowledge Intake"
+            emptyMessage="No intake items captured from this source yet."
+          />
+        </div>
       </PageSection>
 
-      <PageSection title="Read-only placeholder" description="This landing page explains the Company Brain model and roadmap inside your firm workspace.">
-        <BulletList items={READ_ONLY_NOTES} />
+      <PageSection title="Memory map" description="How Docketra connects firm memory across modules. Click a module to navigate.">
+        <div className="tile-grid">
+          <MemoryMapTile
+            title="Knowledge Intake"
+            description="Captures enquiries and form submissions from prospective clients."
+            linkTo={ROUTES.CMS(firmSlug)}
+          />
+          <MemoryMapTile
+            title="Relationships"
+            description="Tracks prospective clients, follow-ups, proposals, and conversion status."
+            linkTo={ROUTES.CRM(firmSlug)}
+          />
+          <MemoryMapTile
+            title="Clients"
+            description="Active client records, ownership, and ongoing relationship context."
+            linkTo={ROUTES.CLIENTS(firmSlug)}
+          />
+          <MemoryMapTile
+            title="Work"
+            description="Dockets, deadlines, execution queues, and review workflows."
+            linkTo={ROUTES.TASK_MANAGER(firmSlug)}
+          />
+          <MemoryMapTile
+            title="Reports"
+            description="Operational and executive-level performance visibility."
+            linkTo={ROUTES.ADMIN_REPORTS(firmSlug)}
+          />
+        </div>
       </PageSection>
 
-      <PageSection title="What Company Brain connects">
-        <BulletList items={[
-          'Clients and prospective clients',
-          'Dockets, tasks, deadlines, and review queues',
-          'Documents and linked context',
-          'SOPs, checklists, templates, and internal instructions',
-          'Team members, responsibilities, notes, and decisions',
-        ]} />
+      <PageSection title="Knowledge gaps" description="Rule-based visibility gaps detected from existing data.">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {!loading && noFollowupLeads === 0 && clientsWithoutOwner === 0 && activeWork != null && pendingReview != null ? (
+            <p className="muted">No rule-based knowledge gaps detected from available data.</p>
+          ) : null}
+
+          {loading ? (
+            <p className="muted">Checking for knowledge gaps…</p>
+          ) : null}
+
+          {!loading && noFollowupLeads > 0 ? (
+            <div className="panel" style={{ padding: '0.75rem 1rem' }}>
+              <p style={{ margin: 0, fontWeight: 600 }}>
+                {noFollowupLeads} prospective {noFollowupLeads === 1 ? 'client has' : 'clients have'} no next follow-up date
+              </p>
+              <p className="muted" style={{ margin: '0.15rem 0 0' }}>
+                Prospects without a follow-up date are more likely to go cold.{' '}
+                <Link to={ROUTES.CRM(firmSlug)}>Review in Relationships →</Link>
+              </p>
+            </div>
+          ) : null}
+
+          {!loading && clientsWithoutOwner > 0 ? (
+            <div className="panel" style={{ padding: '0.75rem 1rem' }}>
+              <p style={{ margin: 0, fontWeight: 600 }}>
+                {clientsWithoutOwner} {clientsWithoutOwner === 1 ? 'client has' : 'clients have'} no assigned owner
+              </p>
+              <p className="muted" style={{ margin: '0.15rem 0 0' }}>
+                Unowned clients may lack a responsible team member for follow-up.{' '}
+                <Link to={ROUTES.CLIENTS(firmSlug)}>Review in Clients →</Link>
+              </p>
+            </div>
+          ) : null}
+
+          {!loading && activeWork == null ? (
+            <div className="panel" style={{ padding: '0.75rem 1rem' }}>
+              <p style={{ margin: 0, fontWeight: 600 }}>Work data unavailable</p>
+              <p className="muted" style={{ margin: '0.15rem 0 0' }}>
+                Dashboard summary could not be loaded. Work overdue counts are not visible.
+              </p>
+            </div>
+          ) : null}
+
+          {!loading && pendingReview == null ? (
+            <div className="panel" style={{ padding: '0.75rem 1rem' }}>
+              <p style={{ margin: 0, fontWeight: 600 }}>Review queue data unavailable</p>
+              <p className="muted" style={{ margin: '0.15rem 0 0' }}>
+                Queue metrics could not be loaded. Pending review counts are not visible.
+              </p>
+            </div>
+          ) : null}
+
+          <p className="muted" style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
+            Additional gap detection (checklists, SOPs, process templates) will be added in future versions.
+          </p>
+        </div>
       </PageSection>
 
-      <PageSection title="How this helps your firm">
-        <BulletList items={[
-          'Understand what work is pending and why',
-          'See client history before acting',
-          'Reuse checklists and process knowledge',
-          'Reduce dependency on individual memory',
-          'Help new team members understand how the firm works',
-        ]} />
-      </PageSection>
-
-      <PageSection title="Current foundation" description="Today, Docketra already connects core memory-building layers for your firm.">
-        <BulletList items={['Work', 'Clients', 'Knowledge Intake', 'Relationships', 'Reports']} />
-      </PageSection>
-
-      <PageSection title="Coming next">
-        <BulletList items={[
-          'Client memory views',
-          'Knowledge records',
-          'Process templates',
-          'Linked checklists',
-          'Knowledge gaps',
-          'Connected client/work maps',
-        ]} />
+      <PageSection title="How to read this page" description="Read-only command center — no data is created or edited here.">
+        <p className="muted" style={{ marginBottom: '0.5rem' }}>
+          Company Brain is currently a read-only overview. It uses existing clients, prospects, work, intake, and
+          reports data from your Docketra workspace without adding new backend APIs, models, or AI infrastructure.
+        </p>
+        <p className="muted">
+          Future versions will add knowledge records, process templates, linked checklists, and richer connected maps.
+          Detection of SOPs, checklists, and document content is not yet implemented.
+        </p>
       </PageSection>
     </PlatformShell>
   );
