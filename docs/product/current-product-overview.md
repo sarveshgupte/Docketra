@@ -94,6 +94,11 @@ This allows firms to track work from inbound request to completed delivery while
 
 ## In-repo references
 
+- PRD (MVP baseline): `docs/product/PRD_DOCKETRA.md`
+- MVP scope and beta gate: `docs/product/MVP_SCOPE.md`
+- Module requirements (MVP vs next): `docs/product/MODULE_REQUIREMENTS.md`
+- Roles and permissions: `docs/product/USER_ROLES_AND_PERMISSIONS.md`
+- Non-negotiables: `docs/product/NON_NEGOTIABLES.md`
 - Module model: `docs/product/MODULE_OPERATING_MODEL.md`
 - Navigation and terminology: `docs/product/navigation-and-terminology-model.md`
 - Pilot checklist: `docs/operations/pilot-readiness-checklist.md`
