@@ -29,6 +29,8 @@ If unsupported, providers must throw `UnsupportedProviderFeatureError`.
 
 ## Runtime flow boundaries
 
+- OAuth/connect flows may remain provider-specific when required by provider auth protocols (for example Google OAuth connect/callback/confirm handlers).
+- Runtime storage controller operations (health/usage/list/download/export/disconnect behavior) must always resolve the active provider through `StorageProviderFactory.getProvider(firmId)` and must not assume Google Drive.
 - Docket attachment operations use provider methods resolved by `StorageProviderFactory`.
 - Backup operations use provider methods resolved by `StorageProviderFactory`.
 - Docket/backup services do **not** decrypt credentials or construct provider-specific clients directly.
