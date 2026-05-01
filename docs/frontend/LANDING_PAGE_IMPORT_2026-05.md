@@ -46,7 +46,9 @@ Trust copy reflects supported behavior:
 - `cd ui && npm run build`
 - `cd ui && node tests/publicLandingRouteSmoke.test.mjs`
 - `cd ui && node tests/routingPublicBoundaryRegression.test.mjs`
-- `cd ui && node tests/authEndpointContract.test.mjs`
+- `cd ui && node tests/authRedirectBehavior.test.mjs`
+- `cd ui && node tests/postLoginFlowRegression.test.mjs`
+- `cd ui && npm run test:public-auth-routing-sanity`
 
 ## Rollback notes
 To rollback this import:

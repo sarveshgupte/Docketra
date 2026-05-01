@@ -26,7 +26,7 @@ assert(
   'API interceptor should support explicit skipAuthRedirect metadata for public-page profile checks.'
 );
 assert(
-  apiSource.includes('isPublicAuthPage && isAuthStateRequest'),
+  apiSource.includes('isPublicAuth401Suppressed({ pathname: currentPath, isAuthStateRequest })'),
   'API interceptor should suppress auth redirect/refresh handling for profile/refresh on public auth pages.'
 );
 assert(
