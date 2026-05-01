@@ -139,7 +139,19 @@ export const SuperadminDiagnosticsPage = () => {
               <p className="mt-2 text-xs text-gray-600 break-all">{(diagnostics.requestIds || []).join(', ') || 'No request IDs captured yet.'}</p>
             </Card>
           </>
-        ) : null}
+        ) : (
+          <Card>
+            <div className="space-y-3">
+              <h2 className="text-lg font-semibold text-gray-900">Diagnostics unavailable</h2>
+              <p className="text-sm text-gray-600">
+                Support diagnostics could not be loaded. Retry to fetch the latest status.
+              </p>
+              <Button type="button" variant="secondary" onClick={loadDiagnostics}>
+                Retry
+              </Button>
+            </div>
+          </Card>
+        )}
       </div>
     </SuperAdminLayout>
   );
