@@ -16,10 +16,10 @@
 - `tests/authE2ESmoke.test.js` (stubbed service dependencies)
   - Firm login init returns OTP challenge/login token.
   - Firm login verify accepts valid OTP and sets access/refresh cookies.
-- `tests/superadminSessionParity.test.js` (stubbed session dependencies)
-  - SuperAdmin login payload cookie model parity.
+- `tests/superadminSessionParity.test.js` (authSession service smoke with stubbed dependencies)
+  - SuperAdmin-scoped refresh token issuance + cookie set contract.
   - Refresh rotates/sets auth cookies.
-  - Logout clears cookies.
+  - Logout cookie-clear contract.
 - `tests/authSession.refreshAccessToken.test.js` (existing)
   - Valid refresh token behavior.
   - Invalid/expired/revoked behavior (401 + cleanup behavior).
