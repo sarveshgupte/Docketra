@@ -49,9 +49,12 @@ const LegacySuperadminRedirect = () => {
 
 export const PublicRoutes = () => (
   <>
+    <Route element={<RouteSuspenseOutlet />}>
+      <Route path="/" element={<MarketingHomePage />} />
+    </Route>
+
     <Route element={<MarketingLayout />}>
       <Route element={<RouteSuspenseOutlet />}>
-        <Route path="/" element={<MarketingHomePage />} />
         <Route path="/features" element={<MarketingFeaturesPage />} />
         <Route path="/terms" element={<MarketingTermsPage />} />
         <Route path="/privacy" element={<MarketingPrivacyPage />} />
