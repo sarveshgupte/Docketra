@@ -611,7 +611,7 @@ const MarketingFooter = () => (
           <div className="flex flex-col gap-2">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Product</p>
             <Link to="/features" className="text-sm text-slate-600 hover:text-slate-900">Features</Link>
-            <Link to="/signup" className="text-sm text-slate-600 hover:text-slate-900">Sign up</Link>
+            <Link to="/signup" className="text-sm text-slate-600 hover:text-slate-900">Request early access</Link>
             <Link to="/contact" className="text-sm text-slate-600 hover:text-slate-900">Contact</Link>
             <Link to="/about" className="text-sm text-slate-600 hover:text-slate-900">About</Link>
           </div>
