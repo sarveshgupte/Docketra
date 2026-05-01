@@ -105,17 +105,19 @@ export const PlatformCrmPage = () => {
   );
 
   const cards = [
-    { label: 'Leads · new', value: loading ? '…' : (stageCounts.new || 0) },
-    { label: 'Leads · contacted', value: loading ? '…' : (stageCounts.contacted || 0) },
-    { label: 'Overdue follow-ups', value: loading ? '…' : overdueFollowUps },
+    { label: 'New enquiries', value: loading ? '…' : (stageCounts.new || 0) },
+    { label: 'Follow-ups due', value: loading ? '…' : overdueFollowUps },
+    { label: 'Qualified prospects', value: loading ? '…' : (stageCounts.qualified || 0) },
+    { label: 'Proposal / conversion ready', value: loading ? '…' : (stageCounts.qualified || 0) },
+    { label: 'Converted this month', value: loading ? '…' : (stageCounts.converted || 0) },
     { label: 'Clients added (7d)', value: loading ? '…' : clientsAddedLast7Days },
     { label: 'Unpaid invoices', value: loading ? '…' : unpaidInvoices },
   ];
 
   return (
     <PlatformShell
-      moduleLabel="CRM / Relationship Management"
-      title="CRM"
+      moduleLabel="Relationships / Prospective Clients"
+      title="Relationships"
       subtitle="Relationship and client management hub for pipeline visibility, follow-up, and conversion readiness."
       actions={<button type="button" onClick={() => void loadData({ background: true })} disabled={loading || refreshing}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>}
     >
@@ -128,7 +130,7 @@ export const PlatformCrmPage = () => {
       <StatGrid items={cards} />
       <PageSection
         title="What this module is for"
-        description="CRM tracks lead-to-client progression. If this page is empty, start by creating your first client or lead."
+        description="Track prospective-client progression before conversion to active clients. If this page is empty, start from Knowledge Intake or add a prospective client manually."
       >
         <p className="muted">Client records also power clearer docket context and reporting readiness.</p>
       </PageSection>
@@ -136,7 +138,7 @@ export const PlatformCrmPage = () => {
       <PageSection title="Quick actions" description="Use CRM as your summary + routing hub; creation flows remain in Client Management and Leads.">
         <div className="action-row">
           <Link to={safeRoute(`${ROUTES.CRM_CLIENTS(firmSlug)}?action=new`)}>New Client</Link>
-          <Link to={safeRoute(ROUTES.CRM_LEADS(firmSlug))}>Go to Leads Queue</Link>
+          <Link to={safeRoute(ROUTES.CRM_LEADS(firmSlug))}>Open Prospective Clients</Link>
           <Link to={safeRoute(ROUTES.CRM_CLIENTS(firmSlug))}>Open Client Management</Link>
         </div>
       </PageSection>
@@ -148,8 +150,8 @@ export const PlatformCrmPage = () => {
             <span>Client records, profile details, and linked docket context.</span>
           </Link>
           <Link className="module-tile" to={safeRoute(ROUTES.CRM_LEADS(firmSlug))}>
-            <strong>Leads</strong>
-            <span>Pipeline stages, follow-up tracking, and conversion.</span>
+            <strong>Prospective Clients</strong>
+            <span>Enquiry lifecycle, follow-up tracking, and conversion readiness.</span>
           </Link>
         </div>
       </PageSection>
@@ -191,9 +193,9 @@ export const PlatformCrmPage = () => {
         />
       </PageSection>
 
-      <PageSection title="Leads needing follow-up" description="Overdue or due-now follow-up commitments.">
+      <PageSection title="Prospective clients needing follow-up" description="Overdue or due-now follow-up commitments.">
         <DataTable
-          columns={['Lead', 'Stage', 'Next follow-up', 'Owner']}
+          columns={['Prospective client', 'Lifecycle stage', 'Next follow-up', 'Owner']}
           rows={leadsNeedingFollowUp.map((lead) => (
             <tr key={`follow-up-${lead._id || lead.id}`}>
               <td>{lead.name || '-'}</td>
@@ -205,7 +207,7 @@ export const PlatformCrmPage = () => {
           loading={loading}
           error={error}
           onRetry={() => void loadData()}
-          emptyLabel="No follow-up items are currently due. New leads or scheduled follow-ups will appear here."
+          emptyLabel="No follow-up items are currently due. New prospective clients or scheduled follow-ups will appear here."
           pageSize={5}
         />
       </PageSection>

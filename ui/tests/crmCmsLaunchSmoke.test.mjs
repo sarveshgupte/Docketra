@@ -14,8 +14,8 @@ const publicRoutes = read('src/routes/public.routes.js');
 assert.ok(publicRoutes.includes("router.post('/forms/:id/submit'"), 'Public form submission endpoint must stay wired');
 
 const crmSource = read('ui/src/pages/platform/CrmPage.jsx');
-assert.ok(crmSource.includes('Leads · new'), 'CRM overview should show lead stage counts');
-assert.ok(crmSource.includes('Overdue follow-ups'), 'CRM overview should show overdue follow-up count');
+assert.ok(crmSource.includes('New enquiries'), 'CRM overview should show lead stage counts');
+assert.ok(crmSource.includes('Follow-ups due'), 'CRM overview should show overdue follow-up count');
 assert.ok(crmSource.includes('Unpaid invoices'), 'CRM overview should show unpaid invoice count');
 
 const crmApiSource = read('ui/src/api/crm.api.js');
