@@ -10,7 +10,8 @@ const GoogleDriveProvider = require('../services/storage/providers/GoogleDrivePr
 const OneDriveProvider = require('../services/storage/providers/OneDriveProvider');
 const { StorageValidationError } = require('../services/storage/errors/StorageErrors');
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
-const { S3Adapter } = require('../services/storageAdapter.service');
+const { resolveFirmStorageState, normalizeProvider } = require('../services/storage/resolveFirmStorageState');
+const { S3Provider } = require('../services/storage/providers/S3Provider');
 const { writeSettingsAudit } = require('../services/productAudit.service');
 const { REASON_CODES, logPilotEvent } = require('../services/pilotDiagnostics.service');
 const { resolveStorageContextFromTenantId } = require('../services/tenantIdentity.service');
@@ -22,7 +23,7 @@ const GOOGLE_SCOPES = [
 const STATE_COOKIE_NAME = 'storage_oauth_state';
 const STATE_TTL_SECONDS = 10 * 60;
 const MANAGED_STORAGE_MODE = 'docketra_managed';
-const SUPPORTED_STORAGE_PROVIDERS = new Set(['docketra_managed', 'google-drive', 'onedrive', 's3']);
+const SUPPORTED_STORAGE_PROVIDERS = new Set(['docketra_managed', 'google_drive', 'onedrive', 's3']);
 const usedStorageOtpJti = new Map();
 const STORAGE_AUDIT_SOURCES = Object.freeze({
   CHANGE_PROVIDER: 'storage.change_provider',
@@ -32,15 +33,6 @@ const STORAGE_AUDIT_SOURCES = Object.freeze({
   DISCONNECT: 'storage.disconnect',
 });
 const isProduction = () => process.env.NODE_ENV === 'production';
-
-function toConnectionStatus({ provider, mode, credentials, hasStorageConfig }) {
-  if (mode === MANAGED_STORAGE_MODE || provider === 'docketra_managed') {
-    return 'ACTIVE_MANAGED';
-  }
-  if (!hasStorageConfig) return 'DISCONNECTED';
-  if (credentials?.status === 'DISCONNECTED' || credentials?.status === 'ERROR') return credentials.status;
-  return 'ACTIVE_BYOS';
-}
 
 function decodeFirmStorageConfig(firm, firmId) {
   const encrypted = firm?.storageConfig?.credentials;
@@ -58,8 +50,9 @@ function decodeFirmStorageConfig(firm, firmId) {
 }
 
 function toUiProvider(provider) {
-  if (provider === 'google_drive') return 'google-drive';
-  return provider || 'docketra_managed';
+  const normalized = normalizeProvider(provider);
+  if (normalized === 'google_drive') return 'google-drive';
+  return normalized || 'docketra_managed';
 }
 
 function ensureFirmAdmin(req, res) {
@@ -345,19 +338,14 @@ const googleConfirmDrive = async (req, res) => {
 const getStorageConfiguration = async (req, res) => {
   try {
     const ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
-    const firm = await Firm.findById(ownershipFirmId).select('storageConfig settings.storageBackup').lean();
-    const config = firm?.storageConfig;
-
-    if (!config) {
-      return res.json({ provider: 'docketra_managed', isConfigured: true, status: 'ACTIVE_MANAGED', warning: 'Firm-owned BYOS is recommended but not required.' });
-    }
-    const credentials = decodeFirmStorageConfig(firm, ownershipFirmId);
+    const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig settings.storageBackup').lean();
+    const state = resolveFirmStorageState(firm);
 
     let folderPath = null;
-    if (credentials.rootFolderId) {
+    if (state.rootFolderId) {
       try {
         const provider = await StorageProviderFactory.getProvider(ownershipFirmId);
-        folderPath = await provider.getFolderPath(credentials.rootFolderId);
+        folderPath = await provider.getFolderPath(state.rootFolderId);
       } catch {
         folderPath = null;
       }
@@ -365,11 +353,13 @@ const getStorageConfiguration = async (req, res) => {
 
     const backupSettings = firm?.settings?.storageBackup || {};
     return res.json({
-      provider: toUiProvider(config.provider),
-      isConfigured: true,
-      status: 'ACTIVE_BYOS',
-      connectedEmail: credentials.connectedEmail || null,
-      rootFolderId: credentials.rootFolderId || null,
+      provider: toUiProvider(state.canonicalProvider),
+      isConfigured: Boolean(state.canonicalProvider),
+      status: state.connectionStatus,
+      connectedEmail: state.connectedEmail,
+      rootFolderId: state.rootFolderId,
+      driveId: state.driveId,
+      warnings: state.isManaged ? ['Firm-owned BYOS is recommended but not required.'] : state.warnings,
       folderPath,
       createdAt: firm?.storageConfig?.createdAt || null,
       updatedAt: firm?.storageConfig?.updatedAt || null,
@@ -390,16 +380,11 @@ const getStorageOwnershipSummary = async (req, res) => {
   try {
     const ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
     const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig settings.storageBackup').lean();
-    const storageProvider = toUiProvider(firm?.storage?.provider);
-    const storageMode = firm?.storage?.mode || MANAGED_STORAGE_MODE;
-    const hasStorageConfig = Boolean(firm?.storageConfig?.provider);
+    const state = resolveFirmStorageState(firm);
+    const storageProvider = toUiProvider(state.canonicalProvider);
+    const storageMode = state.mode || MANAGED_STORAGE_MODE;
     const credentials = decodeFirmStorageConfig(firm, ownershipFirmId);
-    const connectionStatus = toConnectionStatus({
-      provider: storageProvider,
-      mode: storageMode,
-      credentials,
-      hasStorageConfig,
-    });
+    const connectionStatus = state.connectionStatus;
     const lastHealthCheckAt = credentials?.lastCheckedAt || null;
     const lastHealthError = credentials?.lastError || null;
 
@@ -421,7 +406,7 @@ const getStorageOwnershipSummary = async (req, res) => {
     }
 
     const warnings = [];
-    if (storageMode === MANAGED_STORAGE_MODE || storageProvider === 'docketra_managed') {
+    if (state.isManaged) {
       warnings.push({
         code: 'BYOS_NOT_CONFIGURED',
         message: 'BYOS is not configured. Docketra-managed fallback storage is active for firm operations.',
@@ -478,7 +463,8 @@ const testStorageConnection = async (req, res) => {
     if (typeof provider.testConnection === 'function') {
       await provider.testConnection();
     }
-    return res.json({ success: true, message: 'Storage connection is healthy.' });
+    const status = provider?.providerName === 'docketra_managed' ? 'ACTIVE_MANAGED' : 'ACTIVE_BYOS';
+    return res.json({ success: true, status, message: 'Storage connection is healthy.' });
   } catch {
     return res.status(502).json({ success: false, error: 'storage_connection_failed' });
   }
@@ -490,11 +476,12 @@ const changeFirmStorage = async (req, res) => {
 
   const ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
   const firmId = String(ownershipFirmId || '');
-  const provider = String(req.body?.provider || '').trim();
+  const requestedProvider = String(req.body?.provider || '').trim();
+  const provider = normalizeProvider(requestedProvider);
   const rawCredentials = req.body?.credentials || {};
   const backupSettings = req.body?.backupSettings || null;
 
-  if (!SUPPORTED_STORAGE_PROVIDERS.has(provider)) {
+  if (!provider || !SUPPORTED_STORAGE_PROVIDERS.has(provider)) {
     return res.status(400).json({ success: false, message: 'Unsupported storage provider' });
   }
 
@@ -507,7 +494,7 @@ const changeFirmStorage = async (req, res) => {
     let effectiveRefreshToken = null;
     if (provider === 'docketra_managed') {
       adapter = { providerName: 'docketra_managed' };
-    } else if (provider === 'google-drive') {
+    } else if (provider === 'google_drive') {
       const existingFirm = await Firm.findById(firmId).select('storageConfig').lean();
       const existingCredentials = decodeFirmStorageConfig(existingFirm, firmId);
       effectiveRefreshToken = rawCredentials?.googleRefreshToken || existingCredentials?.refreshToken || existingCredentials?.googleRefreshToken;
@@ -534,11 +521,20 @@ const changeFirmStorage = async (req, res) => {
         await adapter.testConnection();
       }
     } else if (provider === 's3') {
-      adapter = new S3Adapter(rawCredentials);
+      adapter = new S3Provider({
+        tenantId: String(firmId),
+        bucket: rawCredentials.bucket,
+        region: rawCredentials.region,
+        prefix: rawCredentials.prefix,
+        credentials: rawCredentials.credentials || rawCredentials.awsCredentials || undefined,
+        accessKeyId: rawCredentials.accessKeyId,
+        secretAccessKey: rawCredentials.secretAccessKey,
+        sessionToken: rawCredentials.sessionToken,
+      });
       await adapter.testConnection();
     }
 
-    const normalizedCredentials = provider === 'google-drive'
+    const normalizedCredentials = provider === 'google_drive'
       ? {
           ...rawCredentials,
           refreshToken: rawCredentials?.googleRefreshToken || rawCredentials?.refreshToken || effectiveRefreshToken || null,
@@ -550,7 +546,7 @@ const changeFirmStorage = async (req, res) => {
       ? null
       : encrypt(JSON.stringify(normalizedCredentials || {}));
 
-    const canonicalProvider = provider === 'google-drive' ? 'google_drive' : provider;
+    const canonicalProvider = provider;
     await Firm.findByIdAndUpdate(firmId, {
       $set: {
         'storage.mode': provider === 'docketra_managed' ? 'docketra_managed' : 'firm_connected',

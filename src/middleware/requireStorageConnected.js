@@ -1,4 +1,6 @@
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
+const Firm = require('../models/Firm.model');
+const { resolveFirmStorageState } = require('../services/storage/resolveFirmStorageState');
 const log = require('../utils/log');
 
 function storageNotConnectedResponse(res, operation = 'storage_operation_without_connection', message = 'Active storage provider is not available') {
@@ -12,19 +14,32 @@ function storageNotConnectedResponse(res, operation = 'storage_operation_without
 async function requireActiveStorageProvider(req, res, next) {
   try {
     const firmId = req.firmId || req.user?.firmId || req.firm?.id;
-    if (!firmId) {
-      return storageNotConnectedResponse(res, 'missing_firm_context');
-    }
+    if (!firmId) return storageNotConnectedResponse(res, 'missing_firm_context');
 
     const provider = await StorageProviderFactory.getProvider(firmId);
     await provider.testConnection();
 
+    let state = null;
+    try {
+      const firm = await Firm.findById(firmId).select('storage storageConfig').lean();
+      if (!firm) return storageNotConnectedResponse(res, 'missing_firm_record', 'Active storage provider is not available');
+      state = resolveFirmStorageState(firm);
+    } catch (error) {
+      log.warn('[STORAGE] middleware_state_resolution_fallback', { message: error.message });
+      state = {
+        connectionStatus: provider?.providerName === 'docketra_managed' ? 'ACTIVE_MANAGED' : 'ACTIVE_BYOS',
+        isManaged: provider?.providerName === 'docketra_managed',
+        isFirmConnected: provider?.providerName !== 'docketra_managed',
+      };
+    }
+
     req.storageContext = {
       provider,
       providerName: provider.providerName,
-      managed: provider.providerName === 'docketra_managed',
-      firmConnected: provider.providerName !== 'docketra_managed',
-      connected: true,
+      connectionStatus: state.connectionStatus,
+      managed: state.isManaged,
+      firmConnected: state.isFirmConnected,
+      connected: state.connectionStatus === 'ACTIVE_MANAGED' || state.connectionStatus === 'ACTIVE_BYOS',
     };
 
     return next();
