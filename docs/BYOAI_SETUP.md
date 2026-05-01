@@ -113,3 +113,20 @@ Shared control-plane principles:
 - No provider SDK additions.
 - No runtime provider call expansion.
 - No production runtime behavior changes.
+
+## 14) Implemented backend contract skeleton (2026-05-01)
+The backend BYOAI contract skeleton is now implemented with fail-closed defaults and no provider runtime integrations.
+
+### Added modules
+- `src/services/ai/policy/aiPolicy.service.js`
+- `src/services/ai/credentials/aiCredentialResolver.service.js`
+- `src/services/ai/redaction/aiRedaction.service.js`
+- `src/services/ai/providers/providerRegistry.js`
+- `src/services/ai/audit/aiAuditWriter.service.js`
+- `src/services/ai/errors/AiErrors.js`
+
+### Current behavior
+- Provider runtime calls are not implemented.
+- External SDK/provider integrations (OpenAI/Gemini/Anthropic/Azure) remain a future PR.
+- Registry currently exposes metadata + validation stubs only.
+- AI contract defaults to disabled/fail-closed policy decisions unless explicit allowed state is passed.
