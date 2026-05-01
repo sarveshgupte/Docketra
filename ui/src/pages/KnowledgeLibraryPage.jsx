@@ -546,7 +546,7 @@ const KnowledgeItemDetailDrawer = ({ item, onEdit, onArchive, onClose }) => {
 
         {/* Metadata */}
         <DrawerSectionLabel>Metadata</DrawerSectionLabel>
-        <DetailRow label="Type" value={<TypeBadge type={item.type} />} />
+        <DetailRow label="Type" value={formatLabel(item.type)} />
         <DetailRow label="Owner" value={item.ownerXid} />
         <DetailRow label="Linked work type" value={item.linkedWorkType} />
         <DetailRow label="Linked client ID" value={item.linkedClientId || item.clientId} />
