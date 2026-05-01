@@ -118,6 +118,16 @@ const listKnowledgeItems = async (req, res) => {
       }
     }
 
+    if (req.query.linkedDocketId) {
+      const linkedDocketId = String(req.query.linkedDocketId).trim();
+      if (linkedDocketId) filter.linkedDocketId = linkedDocketId;
+    }
+
+    if (req.query.linkedWorkType) {
+      const linkedWorkType = String(req.query.linkedWorkType).trim();
+      if (linkedWorkType) filter.linkedWorkType = linkedWorkType;
+    }
+
     if (req.query.q) {
       const q = String(req.query.q).trim();
       if (q) {

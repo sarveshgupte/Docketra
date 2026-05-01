@@ -169,3 +169,18 @@ CRM now follows one explicit route-level workspace contract across:
 
 - CRM route failures must show CRM-specific recovery guidance.
 - Tenant/firm-resolution copy (for example `Firm not found`) is only valid when firm context is truly invalid at the auth/tenant layer, not for routine CRM data-load failures.
+
+---
+
+## Knowledge Library and Work Execution surface
+
+**Knowledge Library** (`/knowledge`) stores reusable firm knowledge managed by admins:
+- SOPs, checklists, templates, notes, client instructions, and process records.
+- Each KnowledgeItem can be linked to a work type, client, or specific docket via existing metadata fields.
+
+**Work Execution** can surface relevant knowledge during docket execution:
+- The **Linked Knowledge** tab on every docket detail page shows KnowledgeItems matched by docket ID, work type, or client.
+- This is the first step toward executable memory — surfacing the right checklist, SOP, or client instruction at the moment work is being done.
+- No AI, vector search, or document extraction is used. Linking is through existing KnowledgeItem metadata only.
+
+This connection — Knowledge Library as the source of firm knowledge, Work Execution as the point of use — is the first concrete implementation of the Company Brain's Knowledge Layer feeding the Work Layer.

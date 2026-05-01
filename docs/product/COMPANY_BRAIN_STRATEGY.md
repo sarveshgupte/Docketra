@@ -148,3 +148,19 @@ KnowledgeItems are intentionally minimal in this first implementation:
 This foundation enables the future Knowledge Library UI and linked-work flows described in the strategy sequence above.
 
 Knowledge Library is the UI surface for managing KnowledgeItems. Firm admins can create, view, edit, filter, and archive KnowledgeItems from the Knowledge Library workspace under Firm Memory in the navigation.
+
+---
+
+## Linked Knowledge to Work
+
+KnowledgeItems can now surface inside work/docket context through the **Linked Knowledge** tab on every docket detail page.
+
+When viewing a docket, the Linked Knowledge tab fetches and displays relevant KnowledgeItems using three safe matching strategies:
+
+1. **Linked to this docket** — KnowledgeItems where `linkedDocketId` equals the current docket ID.
+2. **Matched by work type** — Active KnowledgeItems where `linkedWorkType` matches the docket's category/work type.
+3. **Linked to client** — Active KnowledgeItems where `linkedClientId` matches the docket's client.
+
+This is the first execution-time surface for the Knowledge Layer. No AI, vector search, embeddings, or document extraction is used. Linking is purely through existing metadata fields on KnowledgeItem records.
+
+Firm admins can link SOPs, checklists, templates, notes, client instructions, and process records to dockets and work types directly from Knowledge Library.

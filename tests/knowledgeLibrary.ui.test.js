@@ -301,6 +301,87 @@ function testCompanyBrainPageUnchanged() {
   console.log('  ✓ CompanyBrainPage content unchanged');
 }
 
+function testCaseDetailPageHasLinkedKnowledgeTab() {
+  const pageSource = read('ui/src/pages/CaseDetailPage.jsx');
+  assert.ok(
+    pageSource.includes('KNOWLEDGE'),
+    'CaseDetailPage must include KNOWLEDGE tab constant reference',
+  );
+  assert.ok(
+    pageSource.includes('Linked Knowledge') || pageSource.includes("label: 'Linked Knowledge'"),
+    'CaseDetailPage must include Linked Knowledge tab label',
+  );
+  assert.ok(
+    pageSource.includes('LinkedKnowledgeSection'),
+    'CaseDetailPage must import and render LinkedKnowledgeSection',
+  );
+  console.log('  ✓ CaseDetailPage has Linked Knowledge tab');
+}
+
+function testLinkedKnowledgeSectionFetchesViaApi() {
+  const sectionSource = read('ui/src/pages/caseDetail/LinkedKnowledgeSection.jsx');
+  assert.ok(
+    sectionSource.includes('knowledgeItemsApi'),
+    'LinkedKnowledgeSection must use knowledgeItemsApi',
+  );
+  assert.ok(
+    sectionSource.includes('listKnowledgeItems'),
+    'LinkedKnowledgeSection must call listKnowledgeItems',
+  );
+  assert.ok(
+    sectionSource.includes('linkedDocketId') || sectionSource.includes('linkedWorkType'),
+    'LinkedKnowledgeSection must pass linked filter params to the API',
+  );
+  console.log('  ✓ LinkedKnowledgeSection fetches via knowledgeItemsApi with link filters');
+}
+
+function testLinkedKnowledgeSectionHasEmptyStates() {
+  const sectionSource = read('ui/src/pages/caseDetail/LinkedKnowledgeSection.jsx');
+  assert.ok(
+    sectionSource.includes('Knowledge records linked to this work will appear here'),
+    'LinkedKnowledgeSection must have empty state message',
+  );
+  assert.ok(
+    sectionSource.includes('Ask an admin'),
+    'LinkedKnowledgeSection must have non-admin empty state message',
+  );
+  console.log('  ✓ LinkedKnowledgeSection has correct empty states');
+}
+
+function testLinkedKnowledgeSectionHasNoAiInfrastructure() {
+  const sectionSource = read('ui/src/pages/caseDetail/LinkedKnowledgeSection.jsx');
+  const forbidden = ['embedding', 'vector', 'openai', 'langchain', 'pinecone', 'weaviate', 'chroma', 'extractDocument', 'pdfParse'];
+  for (const term of forbidden) {
+    assert.ok(
+      !sectionSource.toLowerCase().includes(term.toLowerCase()),
+      `LinkedKnowledgeSection must not contain AI/vector infrastructure term: ${term}`,
+    );
+  }
+  console.log('  ✓ LinkedKnowledgeSection has no AI/vector/embedding infrastructure');
+}
+
+function testKnowledgeLibraryFormHasLinkedWorkTypeHelperCopy() {
+  const pageSource = read('ui/src/pages/KnowledgeLibraryPage.jsx');
+  assert.ok(
+    pageSource.includes('Use the same work type/category used by dockets'),
+    'KnowledgeLibraryPage form must include helper copy for linkedWorkType field',
+  );
+  console.log('  ✓ KnowledgeLibraryPage linkedWorkType field has helper copy');
+}
+
+function testCaseDetailTabConstantIncludesKnowledge() {
+  const constantsSource = read('ui/src/utils/constants.js');
+  assert.ok(
+    constantsSource.includes("KNOWLEDGE: 'knowledge'"),
+    "constants.js must define KNOWLEDGE tab constant",
+  );
+  assert.ok(
+    constantsSource.includes('CASE_DETAIL_TABS.KNOWLEDGE') || constantsSource.includes("'knowledge'"),
+    "VALID_CASE_DETAIL_TAB_NAMES must include knowledge tab",
+  );
+  console.log('  ✓ CASE_DETAIL_TABS.KNOWLEDGE constant defined in constants.js');
+}
+
 function run() {
   console.log('Running knowledgeLibrary.ui.test.js...');
   testRouteConstantExists();
@@ -317,6 +398,12 @@ function run() {
   testLazyPageRegistered();
   testNoAiOrVectorInfrastructureAdded();
   testCompanyBrainPageUnchanged();
+  testCaseDetailPageHasLinkedKnowledgeTab();
+  testLinkedKnowledgeSectionFetchesViaApi();
+  testLinkedKnowledgeSectionHasEmptyStates();
+  testLinkedKnowledgeSectionHasNoAiInfrastructure();
+  testKnowledgeLibraryFormHasLinkedWorkTypeHelperCopy();
+  testCaseDetailTabConstantIncludesKnowledge();
   console.log('✅ knowledgeLibrary.ui.test.js passed');
 }
 
