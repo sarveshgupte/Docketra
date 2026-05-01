@@ -77,6 +77,11 @@ function ensurePrimaryAdmin(req, res) {
   return true;
 }
 
+
+function getResolvedOwnershipAuditTenantId(ownershipFirmId, req) {
+  return ownershipFirmId || req.ownershipFirmId || req.firm?.ownershipFirmId || null;
+}
+
 async function resolveOwnershipFirmId(req, res) {
   const resolved = req.ownershipFirmId || req.firm?.ownershipFirmId;
   if (resolved) return resolved;
@@ -602,9 +607,10 @@ const changeFirmStorage = async (req, res) => {
 };
 
 const exportFirmStorage = async (req, res) => {
+  let ownershipFirmId = null;
   try {
     if (!ensurePrimaryAdmin(req, res)) return;
-    const ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
+    ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
     const backup = await storageBackupService.runBackupForFirm(ownershipFirmId, { sendEmail: true });
     const access = await storageBackupService.buildBackupAccess({
       firmId: ownershipFirmId,
@@ -627,11 +633,12 @@ const exportFirmStorage = async (req, res) => {
     log.info('[STORAGE]', { event: 'backup_generated', firmId: ownershipFirmId, exportId: backup.exportId });
     await writeSettingsAudit({
       req,
-      tenantId: req.firmId,
+      tenantId: getResolvedOwnershipAuditTenantId(ownershipFirmId, req),
       settingsKey: 'storage-export',
       action: 'EXPORT_GENERATED',
       metadata: {
         source: STORAGE_AUDIT_SOURCES.EXPORT_GENERATE,
+        runtimeTenantId: req.firmId,
         exportId: backup.exportId,
         fileCount: backup.fileCount,
       },
@@ -658,17 +665,34 @@ const exportFirmStorage = async (req, res) => {
       severity: 'warn',
       metadata: { firmId: req.ownershipFirmId || req.firm?.ownershipFirmId || req.firmId, reasonCode: REASON_CODES.STORAGE_EXPORT_FAILED },
     });
-    await writeSettingsAudit({
-      req,
-      tenantId: req.firmId,
-      settingsKey: 'storage-export',
-      action: 'EXPORT_FAILED',
-      metadata: {
-        source: STORAGE_AUDIT_SOURCES.EXPORT_GENERATE,
-        reasonCode: REASON_CODES.STORAGE_EXPORT_FAILED,
-        message: error.message || null,
-      },
-    });
+    const auditTenantId = getResolvedOwnershipAuditTenantId(ownershipFirmId, req);
+    if (auditTenantId) {
+      try {
+        await writeSettingsAudit({
+          req,
+          tenantId: auditTenantId,
+          settingsKey: 'storage-export',
+          action: 'EXPORT_FAILED',
+          metadata: {
+            source: STORAGE_AUDIT_SOURCES.EXPORT_GENERATE,
+            runtimeTenantId: req.firmId,
+            reasonCode: REASON_CODES.STORAGE_EXPORT_FAILED,
+            message: error.message || null,
+          },
+        });
+      } catch (auditError) {
+        log.warn('[STORAGE]', {
+          event: 'storage_export_failed_audit_write_failed',
+          tenantId: auditTenantId,
+          message: auditError.message,
+        });
+      }
+    } else {
+      log.warn('[STORAGE]', {
+        event: 'storage_export_failed_audit_skipped_missing_ownership',
+        runtimeTenantId: req.firmId,
+      });
+    }
     return res.status(500).json({
       error: 'export_failed',
       reasonCode: REASON_CODES.STORAGE_EXPORT_FAILED,
@@ -697,11 +721,12 @@ const downloadFirmStorageExport = async (req, res) => {
   }
   await writeSettingsAudit({
     req,
-    tenantId: req.firmId,
+    tenantId: ownershipFirmId,
     settingsKey: 'storage-export',
     action: 'EXPORT_DOWNLOAD_LINK_ISSUED',
     metadata: {
       source: STORAGE_AUDIT_SOURCES.EXPORT_DOWNLOAD,
+      runtimeTenantId: req.firmId,
       exportId: token,
     },
     dedupeKey: `storage-export-download:${token}`,
@@ -741,7 +766,7 @@ const disconnectStorage = async (req, res) => {
     const next = await Firm.findById(ownershipFirmId).select('storage').lean();
     await writeSettingsAudit({
       req,
-      tenantId: req.firmId,
+      tenantId: getResolvedOwnershipAuditTenantId(ownershipFirmId, req),
       settingsKey: 'storage-config',
       action: 'CONFIG_CHANGED',
       oldDoc: {
@@ -752,7 +777,7 @@ const disconnectStorage = async (req, res) => {
         mode: next?.storage?.mode || null,
         provider: next?.storage?.provider || null,
       },
-      metadata: { source: STORAGE_AUDIT_SOURCES.DISCONNECT },
+      metadata: { source: STORAGE_AUDIT_SOURCES.DISCONNECT, runtimeTenantId: req.firmId },
       dedupeKey: 'storage-disconnect',
     });
     const context = await googleDriveService.getClient(ownershipFirmId);

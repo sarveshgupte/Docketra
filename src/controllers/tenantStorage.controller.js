@@ -2,6 +2,7 @@ const TenantStorageConfig = require('../models/TenantStorageConfig.model');
 const Firm = require('../models/Firm.model');
 const { encrypt } = require('../services/storage/services/TokenEncryption.service');
 const { UnsupportedProviderError } = require('../services/storage/errors');
+const { resolveStorageContextFromTenantId } = require('../services/tenantIdentity.service');
 const log = require('../utils/log');
 
 function maskCredentialLog(tenantId, provider) {
@@ -22,6 +23,16 @@ async function updateTenantStorage(req, res) {
   const tenantId = req.firmId;
 
   try {
+    const ownershipFirmId = req.ownershipFirmId
+      || req.firm?.ownershipFirmId
+      || (await resolveStorageContextFromTenantId(tenantId))?.ownershipFirmId;
+    if (!ownershipFirmId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tenant mapping missing',
+        code: 'TENANT_MAPPING_MISSING',
+      });
+    }
     const {
       provider,
       driveId,
@@ -52,7 +63,7 @@ async function updateTenantStorage(req, res) {
       { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
 
-    await Firm.findByIdAndUpdate(tenantId, {
+    await Firm.findByIdAndUpdate(ownershipFirmId, {
       $set: {
         storageConfig: {
           provider,
@@ -67,7 +78,7 @@ async function updateTenantStorage(req, res) {
       },
     });
 
-    log.info('[TenantStorage] Updated storage config', maskCredentialLog(tenantId, provider));
+    log.info('[TenantStorage] Updated storage config', { ...maskCredentialLog(tenantId, provider), ownershipFirmId });
 
     return res.json({
       success: true,
