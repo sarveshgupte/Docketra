@@ -361,6 +361,7 @@ const createAuthPasswordService = (deps) => {
     user.passwordSet = true;
     user.passwordSetAt = new Date();
     user.forcePasswordReset = false;
+    clearForgotPasswordOtpState(user);
     user.forgotPasswordResetTokenHash = null;
     user.forgotPasswordResetTokenExpiresAt = null;
     await user.save();
