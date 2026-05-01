@@ -51,7 +51,7 @@ assert.equal(
 );
 
 assert.equal(
-  homePage.includes('readOnly') || homePage.includes('read-only') && homePage.includes('<input'),
+  (homePage.includes('readOnly') || homePage.includes('read-only')) && homePage.includes('<input'),
   false,
   'Landing page must NOT contain a readOnly email input'
 );
