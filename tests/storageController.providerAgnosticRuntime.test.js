@@ -8,6 +8,7 @@ let mockFirmDoc = { storage: { mode: 'docketra_managed', provider: 'docketra_man
 let mockProvider = { providerName: 'docketra_managed', testConnection: async () => {}, listFiles: async () => [] };
 let googleClientCallCount = 0;
 let googleMarkDisconnectedCallCount = 0;
+let firmUpdatePayloads = [];
 
 const mockFirmModel = {
   findById: () => ({
@@ -18,7 +19,13 @@ const mockFirmModel = {
 
 const originalLoad = Module._load;
 Module._load = function(request, parent, isMain) {
-  if (request === '../models/Firm.model') return mockFirmModel;
+  if (request === '../models/Firm.model') {
+    mockFirmModel.findByIdAndUpdate = async (id, update) => {
+      firmUpdatePayloads.push({ id, update });
+      return {};
+    };
+    return mockFirmModel;
+  }
   if (request === '../services/tenantIdentity.service') return { resolveStorageContextFromTenantId: async () => ({ ownershipFirmId: 'firm-1' }) };
   if (request === '../services/googleDrive.service') {
     return {
@@ -88,10 +95,22 @@ const controller = require('../src/controllers/storage.controller');
   assert.strictEqual(res.body.code, 'STORAGE_PROVIDER_UNSUPPORTED_OPERATION');
 
   googleMarkDisconnectedCallCount = 0;
+  firmUpdatePayloads = [];
   res = resFactory();
   await controller.disconnectStorage(req, res);
   assert.strictEqual(res.statusCode, 200);
   assert.strictEqual(googleMarkDisconnectedCallCount, 0);
+  assert.strictEqual(googleClientCallCount, 0);
+  assert.strictEqual(res.body.status, 'ACTIVE_MANAGED');
+  assert.strictEqual(res.body.connectionStatus, 'ACTIVE_MANAGED');
+  assert.strictEqual(res.body.action, 'SWITCHED_TO_MANAGED_FALLBACK');
+  assert.strictEqual(res.body.provider, 'docketra_managed');
+  assert.strictEqual(res.body.previousProvider, 'google-drive');
+  assert(firmUpdatePayloads.length > 0, 'Expected Firm.findByIdAndUpdate call');
+  const lastUpdate = firmUpdatePayloads[firmUpdatePayloads.length - 1].update;
+  assert.strictEqual(lastUpdate.$set['storage.mode'], 'docketra_managed');
+  assert.strictEqual(lastUpdate.$set['storage.provider'], 'docketra_managed');
+  assert.strictEqual(lastUpdate.$set.storageConfig, null);
 
   assert.strictEqual(typeof controller.googleConnect, 'function');
   assert.strictEqual(typeof controller.googleCallback, 'function');

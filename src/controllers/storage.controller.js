@@ -781,7 +781,9 @@ const disconnectStorage = async (req, res) => {
   try {
     const ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
     const previous = await Firm.findById(ownershipFirmId).select('storage storageConfig').lean();
-    const state = resolveFirmStorageState(previous);
+    const previousProvider = normalizeProvider(previous?.storageConfig?.provider)
+      || normalizeProvider(previous?.storage?.provider)
+      || MANAGED_STORAGE_MODE;
     await Firm.findByIdAndUpdate(ownershipFirmId, {
       $set: {
         'storage.mode': MANAGED_STORAGE_MODE,
@@ -797,7 +799,7 @@ const disconnectStorage = async (req, res) => {
       action: 'CONFIG_CHANGED',
       oldDoc: {
         mode: previous?.storage?.mode || null,
-        provider: previous?.storage?.provider || null,
+        provider: previousProvider,
       },
       newDoc: {
         mode: next?.storage?.mode || null,
@@ -809,7 +811,9 @@ const disconnectStorage = async (req, res) => {
     return res.json({
       success: true,
       provider: toUiProvider(MANAGED_STORAGE_MODE),
-      status: state?.isManaged ? 'ACTIVE_MANAGED' : 'DISCONNECTED',
+      previousProvider: toUiProvider(previousProvider),
+      action: 'SWITCHED_TO_MANAGED_FALLBACK',
+      status: 'ACTIVE_MANAGED',
       connectionStatus: 'ACTIVE_MANAGED',
       rootFolderId: null,
     });
