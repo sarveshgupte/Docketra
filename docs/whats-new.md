@@ -1,6 +1,12 @@
 # What's New
 
 
+## May 2026: Company Brain command center simplification
+
+- Simplified Company Brain into Command Summary, Needs Attention, Connected Map, and How to use Company Brain sections.
+- Reduced repeated explanatory sections and made attention signals easier to act on.
+- Preserved read-only, metadata-based behavior without AI, graph databases, document extraction, new APIs, or route changes.
+
 ## May 2026: Knowledge Library UX polish
 
 - Improved Knowledge Library scanning with clearer stats, filters, badges, and row/card structure.

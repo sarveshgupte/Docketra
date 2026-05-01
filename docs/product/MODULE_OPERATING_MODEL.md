@@ -194,12 +194,22 @@ This connection — Knowledge Library as the source of firm knowledge, Work Exec
 
 ## Company Brain as read-only command center
 
-**Company Brain** (`/company-brain`) is the read-only connected view across all modules:
+**Company Brain** (`/company-brain`) is the read-only connected command center for firm memory. It highlights attention signals and links users back to execution surfaces where action can be taken.
+
+Company Brain is organized into four clear sections:
+
+1. **Command Summary** — Six key firm-memory signals at a glance: Active clients, Prospective clients, Active work, Overdue work, Knowledge records, and Review due.
+2. **Needs Attention** — A single list of actionable signals showing what to address next: overdue work, pending QC, prospects without follow-up, knowledge records due for review, unlinked knowledge records, and clients without owner. Each item has a count and a direct action link.
+3. **Connected Map** — A visual overview showing how firm memory connects across modules: Clients → Prospective Clients → Work → Knowledge Library → Company Brain. Each node shows a count and links to the relevant module.
+4. **How to use Company Brain** — Short practical guidance for first-time users explaining the read-only, metadata-link model and three practical steps.
+
+Company Brain characteristics:
 - It loads clients, prospects, work, and KnowledgeItems together in one view without a new backend endpoint.
-- It derives rule-based cues (knowledge health, attention signals, useful connections) from existing metadata fields.
+- All signals are rule-based cues derived from existing metadata fields.
 - It does not edit, create, or delete any data.
-- It links out to Clients, Relationships, Work, Knowledge Library, and Reports for action.
-- No AI, vector search, embeddings, or graph DB is used. All connections are based on metadata links.
+- It links out to Clients, Relationships, Work, and Knowledge Library for action.
+- No AI, graph databases, embeddings, or document extraction is used. All connections are based on metadata links only.
+- Partial API failure is handled gracefully: if any source fails, available data is still shown with a warning.
 
 **Knowledge Library** (`/knowledge`) feeds reusable internal knowledge to Company Brain and to work execution:
 - SOPs, checklists, templates, notes, client instructions, and process records created by firm admins.

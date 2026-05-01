@@ -252,3 +252,40 @@ The Knowledge Library is now easier to scan and manage. The admin workspace has 
 - **Detail drawer** — The read-only detail drawer now opens with a header showing the item title and status badge, followed by a Metadata grid, Summary, Content, Checklist steps (if applicable), Tags, and an Audit section. No inline editing is allowed inside the drawer.
 - **Guidance panel** — A short guidance panel near the top of the page explains the purpose of Knowledge Library and when to link records.
 - All existing create, edit, archive, and detail behavior is preserved. No AI, file uploads, task automation, or route changes are introduced.
+
+## Company Brain UI/UX simplification
+
+Company Brain is now organized around four clear sections that immediately answer "what needs attention and where do I go next?"
+
+### Command Summary
+A concise stat grid showing six key firm-memory signals: Active clients, Prospective clients, Active work, Overdue work, Knowledge records, and Review due. This replaces the previous denser attention summary that included redundant or less actionable stats.
+
+### Needs Attention
+A single list of actionable signals merged from the former separate "Needs attention", "Knowledge health", "Useful connections", and "Knowledge gaps" sections. Each item has a label, count, short explanation, and action link. Items shown:
+- Overdue work
+- Pending review / QC
+- Prospects without follow-up
+- Knowledge records due for review
+- Knowledge records without links
+- Clients without owner
+
+### Connected Map
+A visual-style grid of module nodes showing how firm memory connects: Clients → Prospective Clients → Work → Knowledge Library → Company Brain. Each node shows a count, one-line description, and a route link. Unchanged from connected map v1 except section title casing.
+
+### How to use Company Brain
+Short practical guidance for new users explaining the read-only, metadata-link model and three practical steps: add knowledge, link records, review Company Brain.
+
+### Removed sections
+The following sections were removed to reduce density and duplication:
+- **Knowledge health** (merged into Needs Attention)
+- **Useful connections** (merged into Needs Attention)
+- **Memory map** (replaced by the simpler Connected Map)
+- **Knowledge gaps** (merged into Needs Attention)
+- **How to read this page** (replaced by "How to use Company Brain")
+
+### Constraints preserved
+- Company Brain remains read-only. No data is created or edited here.
+- All four data sources are unchanged: crmApi.listClients, crmApi.listLeads, dashboardApi.getSummary, knowledgeItemsApi.listKnowledgeItems.
+- Partial API failure behavior is preserved: if KnowledgeItems fails, client/prospect/work data still shows with a warning.
+- No new backend APIs, models, routes, AI, graph databases, or document extraction are used.
+- All connections remain metadata/rule-based only.

@@ -2,15 +2,15 @@
 'use strict';
 
 /**
- * Tests for Company Brain connected map v1.
+ * Tests for Company Brain connected map (updated for command center UX simplification).
  *
  * Validates:
  * - CompanyBrainPage imports knowledgeItemsApi
  * - CompanyBrainPage calls knowledgeItemsApi.listKnowledgeItems
- * - CompanyBrainPage contains "Connected map" section
- * - CompanyBrainPage contains "Knowledge health" section
+ * - CompanyBrainPage contains "Connected Map" section
+ * - CompanyBrainPage surfaces knowledge health cues in Needs Attention
  * - CompanyBrainPage links to ROUTES.KNOWLEDGE_LIBRARY
- * - CompanyBrainPage distinguishes Knowledge Intake and Knowledge Library
+ * - CompanyBrainPage references Knowledge Library
  * - CompanyBrainPage still uses existing crmApi/listClients/listLeads and dashboardApi.getSummary
  * - No AI/vector/embedding/document extraction infrastructure added
  * - Existing Company Brain, Knowledge Library, CRM, CMS, Task Manager routes remain unchanged
@@ -50,19 +50,23 @@ function testCallsListKnowledgeItems() {
 function testContainsConnectedMapSection() {
   const source = read('ui/src/pages/CompanyBrainPage.jsx');
   assert.ok(
-    source.includes('Connected map'),
-    'CompanyBrainPage must contain "Connected map" section',
+    source.includes('Connected Map'),
+    'CompanyBrainPage must contain "Connected Map" section',
   );
-  console.log('  ✓ CompanyBrainPage contains "Connected map" section');
+  console.log('  ✓ CompanyBrainPage contains "Connected Map" section');
 }
 
-function testContainsKnowledgeHealthSection() {
+function testKnowledgeHealthCuesInNeedsAttention() {
   const source = read('ui/src/pages/CompanyBrainPage.jsx');
   assert.ok(
-    source.includes('Knowledge health'),
-    'CompanyBrainPage must contain "Knowledge health" section',
+    source.includes('Knowledge records due for review') || source.includes('knowledgeReviewDue'),
+    'CompanyBrainPage must surface knowledge review due cue',
   );
-  console.log('  ✓ CompanyBrainPage contains "Knowledge health" section');
+  assert.ok(
+    source.includes('Knowledge records without links') || source.includes('knowledgeWithoutLinks'),
+    'CompanyBrainPage must surface knowledge without links cue',
+  );
+  console.log('  ✓ Knowledge health cues are surfaced in Needs Attention');
 }
 
 function testLinksToKnowledgeLibrary() {
@@ -74,24 +78,13 @@ function testLinksToKnowledgeLibrary() {
   console.log('  ✓ CompanyBrainPage links to ROUTES.KNOWLEDGE_LIBRARY');
 }
 
-function testDistinguishesKnowledgeIntakeAndLibrary() {
+function testReferencesKnowledgeLibrary() {
   const source = read('ui/src/pages/CompanyBrainPage.jsx');
-  assert.ok(
-    source.includes('Knowledge Intake'),
-    'CompanyBrainPage must reference Knowledge Intake',
-  );
   assert.ok(
     source.includes('Knowledge Library'),
     'CompanyBrainPage must reference Knowledge Library',
   );
-  // Ensure they are presented as distinct concepts on the same page
-  const intakeIndex = source.indexOf('Knowledge Intake');
-  const libraryIndex = source.indexOf('Knowledge Library');
-  assert.ok(
-    intakeIndex !== -1 && libraryIndex !== -1 && intakeIndex !== libraryIndex,
-    'CompanyBrainPage must distinguish Knowledge Intake from Knowledge Library as separate concepts',
-  );
-  console.log('  ✓ CompanyBrainPage distinguishes Knowledge Intake and Knowledge Library');
+  console.log('  ✓ CompanyBrainPage references Knowledge Library');
 }
 
 function testUsesExistingCrmAndDashboardApis() {
@@ -134,12 +127,11 @@ function testPartialFailureWarningCopy() {
   console.log('  ✓ CompanyBrainPage has partial failure warning copy');
 }
 
-function testKnowledgeStatsInAttentionSummary() {
+function testKnowledgeStatsInCommandSummary() {
   const source = read('ui/src/pages/CompanyBrainPage.jsx');
   assert.ok(source.includes('Knowledge records'), 'CompanyBrainPage must show Knowledge records stat');
-  assert.ok(source.includes('Active knowledge records'), 'CompanyBrainPage must show Active knowledge records stat');
-  assert.ok(source.includes('Knowledge review due'), 'CompanyBrainPage must show Knowledge review due stat');
-  console.log('  ✓ CompanyBrainPage includes knowledge stats in Attention summary');
+  assert.ok(source.includes('Review due'), 'CompanyBrainPage must show Review due stat');
+  console.log('  ✓ CompanyBrainPage includes knowledge stats in Command Summary');
 }
 
 function testKnowledgeHealthCues() {
@@ -170,28 +162,6 @@ function testConnectedMapIncludesAllNodes() {
   assert.ok(source.includes("title=\"Knowledge Library\"") || source.includes("title='Knowledge Library'"), 'Connected map must include Knowledge Library node');
   assert.ok(source.includes("title=\"Company Brain\"") || source.includes("title='Company Brain'"), 'Connected map must include Company Brain node');
   console.log('  ✓ Connected map contains all five nodes');
-}
-
-function testMemoryMapIncludesKnowledgeLibrary() {
-  const source = read('ui/src/pages/CompanyBrainPage.jsx');
-  assert.ok(source.includes('Memory map'), 'CompanyBrainPage must still have Memory map section');
-  // Knowledge Library tile in memory map
-  const memoryMapIndex = source.indexOf('Memory map');
-  const memoryMapBlock = source.slice(memoryMapIndex, memoryMapIndex + 1500);
-  assert.ok(
-    memoryMapBlock.includes('Knowledge Library'),
-    'Memory map section must include Knowledge Library tile',
-  );
-  console.log('  ✓ Memory map section includes Knowledge Library');
-}
-
-function testMemoryMapFlowCopy() {
-  const source = read('ui/src/pages/CompanyBrainPage.jsx');
-  assert.ok(
-    source.includes('Knowledge Intake → Relationships → Clients → Work → Knowledge Library → Company Brain'),
-    'CompanyBrainPage must include the full memory map flow line',
-  );
-  console.log('  ✓ Memory map flow line includes Knowledge Library and Company Brain');
 }
 
 function testNoAiOrVectorInfrastructure() {
@@ -243,36 +213,24 @@ function testExistingRoutesUnchanged() {
   console.log('  ✓ Existing routes remain unchanged');
 }
 
-function testUsefulConnectionsSection() {
-  const source = read('ui/src/pages/CompanyBrainPage.jsx');
-  assert.ok(
-    source.includes('Useful connections'),
-    'CompanyBrainPage must contain "Useful connections" section',
-  );
-  console.log('  ✓ CompanyBrainPage contains "Useful connections" section');
-}
-
 function run() {
   console.log('Running companyBrainConnectedMap.test.js...');
   testImportsKnowledgeItemsApi();
   testCallsListKnowledgeItems();
   testContainsConnectedMapSection();
-  testContainsKnowledgeHealthSection();
+  testKnowledgeHealthCuesInNeedsAttention();
   testLinksToKnowledgeLibrary();
-  testDistinguishesKnowledgeIntakeAndLibrary();
+  testReferencesKnowledgeLibrary();
   testUsesExistingCrmAndDashboardApis();
   testRefreshLoadsAllFourSources();
   testPartialFailureWarningCopy();
-  testKnowledgeStatsInAttentionSummary();
+  testKnowledgeStatsInCommandSummary();
   testKnowledgeHealthCues();
   testKnowledgeWithoutLinksCopy();
   testConnectedMapIncludesAllNodes();
-  testMemoryMapIncludesKnowledgeLibrary();
-  testMemoryMapFlowCopy();
   testNoAiOrVectorInfrastructure();
   testHonestCopyLanguage();
   testExistingRoutesUnchanged();
-  testUsefulConnectionsSection();
   console.log('✅ companyBrainConnectedMap.test.js passed');
 }
 

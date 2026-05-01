@@ -426,8 +426,8 @@ function testCompanyBrainPageUnchanged() {
     'CompanyBrainPage must still exist with Company Brain content',
   );
   assert.ok(
-    pageSource.includes('Memory map'),
-    'CompanyBrainPage memory map section must remain',
+    pageSource.includes('Connected Map'),
+    'CompanyBrainPage Connected Map section must remain',
   );
   console.log('  ✓ CompanyBrainPage content unchanged');
 }
