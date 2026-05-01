@@ -151,6 +151,38 @@ Knowledge Library is the UI surface for managing KnowledgeItems. Firm admins can
 
 ---
 
+## Connected map v1
+
+Company Brain now displays a read-only connected view of Clients, Prospects, Work, and KnowledgeItems in one place.
+
+The connected map is built by loading four existing data sources in parallel:
+- `crmApi.listClients` → active client records
+- `crmApi.listLeads` → prospective clients and enquiries
+- `dashboardApi.getSummary` → active work, overdue work, and review queue
+- `knowledgeItemsApi.listKnowledgeItems` → Knowledge Library records
+
+These sources are combined into a single read-only view without a new backend aggregation endpoint. All connections are based on existing metadata fields on each record. No AI, graph DB, embeddings, or vector search is used.
+
+The connected map shows five nodes, each with a count and a link to the relevant module:
+- **Clients** → active client records (`/clients`)
+- **Prospective Clients** → enquiries and conversion context (`/crm`)
+- **Work** → dockets, deadlines, and review queues (`/task-manager`)
+- **Knowledge Library** → SOPs, checklists, templates, notes, client instructions, and process records (`/knowledge`)
+- **Company Brain** → this read-only connected command center (no link — current page)
+
+Partial failure is handled gracefully: if knowledgeItems fails to load, clients, leads, and work data are still shown. A warning banner indicates partial data availability.
+
+Knowledge health cues are derived from rule-based checks on loaded KnowledgeItems:
+- Draft records that are not yet active
+- Archived records that may need restoration
+- Records with a `reviewDueAt` date on or before today
+- Records with no assigned owner
+- Records without a linked work type, client, or docket (described as "Knowledge without links")
+
+This is still metadata/rule-based, not AI or graph infrastructure. The connected map v1 is a foundation for richer linked views in future versions.
+
+---
+
 ## Linked Knowledge to Work
 
 KnowledgeItems can now surface inside work/docket context through the **Linked Knowledge** tab on every docket detail page.

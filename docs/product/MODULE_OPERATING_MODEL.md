@@ -184,3 +184,28 @@ CRM now follows one explicit route-level workspace contract across:
 - No AI, vector search, or document extraction is used. Linking is through existing KnowledgeItem metadata only.
 
 This connection — Knowledge Library as the source of firm knowledge, Work Execution as the point of use — is the first concrete implementation of the Company Brain's Knowledge Layer feeding the Work Layer.
+
+---
+
+## Company Brain as read-only command center
+
+**Company Brain** (`/company-brain`) is the read-only connected view across all modules:
+- It loads clients, prospects, work, and KnowledgeItems together in one view without a new backend endpoint.
+- It derives rule-based cues (knowledge health, attention signals, useful connections) from existing metadata fields.
+- It does not edit, create, or delete any data.
+- It links out to Clients, Relationships, Work, Knowledge Library, and Reports for action.
+- No AI, vector search, embeddings, or graph DB is used. All connections are based on metadata links.
+
+**Knowledge Library** (`/knowledge`) feeds reusable internal knowledge to Company Brain and to work execution:
+- SOPs, checklists, templates, notes, client instructions, and process records created by firm admins.
+- Each record can be linked to a work type, client, or specific docket via existing metadata fields.
+- Knowledge Library records appear in Company Brain's connected map and knowledge health cues.
+- Knowledge Library records surface during work execution via the Linked Knowledge tab on each docket.
+
+**Knowledge Intake** (`/cms`) and **Knowledge Library** (`/knowledge`) are distinct:
+- Knowledge Intake = incoming enquiries, form submissions, and external context from prospective clients.
+- Knowledge Library = reusable internal firm knowledge managed by firm admins.
+
+**Linked Knowledge** surfaces relevant Knowledge Library records during work execution:
+- The Linked Knowledge tab on every docket detail page shows records matched by docket ID, work type, or client.
+- Linking is through existing KnowledgeItem metadata only — no AI or document extraction.
