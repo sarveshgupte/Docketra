@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { PlatformShell } from '../components/platform/PlatformShell';
 import { knowledgeItemsApi } from '../api/knowledgeItems.api';
+import { WORK_TYPE_OPTIONS, isKnownWorkType, normalizeWorkType } from '../utils/workTypeOptions';
 import {
   DataTable,
   FilterBar,
@@ -29,6 +30,8 @@ const normalizeTagInput = (raw) =>
     .map((tag) => tag.trim())
     .filter(Boolean);
 
+const CUSTOM_WORK_TYPE_OPTION = '__custom__';
+
 const EMPTY_FORM = {
   title: '',
   type: 'sop',
@@ -50,8 +53,25 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
     reviewDueAt: initial?.reviewDueAt ? new Date(initial.reviewDueAt).toISOString().slice(0, 10) : '',
   }));
 
+  const initialLinkedWorkType = String(initial?.linkedWorkType || '').trim();
+  const [selectedWorkType, setSelectedWorkType] = useState(() => {
+    if (!initialLinkedWorkType) return '';
+    return isKnownWorkType(initialLinkedWorkType) ? normalizeWorkType(initialLinkedWorkType) : CUSTOM_WORK_TYPE_OPTION;
+  });
+
   const handleChange = (event) => {
     const { name, value } = event.target;
+    if (name === 'linkedWorkTypeSelect') {
+      setSelectedWorkType(value);
+      if (value === '') {
+        setForm((prev) => ({ ...prev, linkedWorkType: '' }));
+        return;
+      }
+      if (value !== CUSTOM_WORK_TYPE_OPTION) {
+        setForm((prev) => ({ ...prev, linkedWorkType: value }));
+      }
+      return;
+    }
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -65,7 +85,7 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
       content: form.content.trim() || null,
       tags: normalizeTagInput(form.tags),
       ownerXid: form.ownerXid.trim() || null,
-      linkedWorkType: form.linkedWorkType.trim() || null,
+      linkedWorkType: normalizeWorkType(form.linkedWorkType) || null,
       linkedClientId: form.linkedClientId.trim() || null,
       reviewDueAt: form.reviewDueAt || null,
     };
@@ -171,17 +191,36 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
           </div>
 
           <div style={{ flex: 1, minWidth: '140px' }}>
-            <label htmlFor="ki-linkedWorkType" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>Linked work type</label>
-            <input
-              id="ki-linkedWorkType"
-              name="linkedWorkType"
-              type="text"
-              value={form.linkedWorkType}
+            <label htmlFor="ki-linkedWorkTypeSelect" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>Linked work type</label>
+            <select
+              id="ki-linkedWorkTypeSelect"
+              name="linkedWorkTypeSelect"
+              value={selectedWorkType}
               onChange={handleChange}
               style={{ width: '100%' }}
-            />
+            >
+              <option value="">Unlinked</option>
+              {WORK_TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+              {!isKnownWorkType(form.linkedWorkType) && form.linkedWorkType.trim() ? (
+                <option value={CUSTOM_WORK_TYPE_OPTION}>{`Custom: ${form.linkedWorkType.trim()}`}</option>
+              ) : null}
+              <option value={CUSTOM_WORK_TYPE_OPTION}>Other / custom (advanced)</option>
+            </select>
+            {selectedWorkType === CUSTOM_WORK_TYPE_OPTION ? (
+              <input
+                id="ki-linkedWorkType"
+                name="linkedWorkType"
+                type="text"
+                value={form.linkedWorkType}
+                onChange={handleChange}
+                style={{ width: '100%', marginTop: '0.4rem' }}
+                placeholder="Enter custom work type"
+              />
+            ) : null}
             <p style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem' }}>
-              Use the same work type/category used by dockets to surface this knowledge inside work.
+              Choose the same work type/category used by dockets so this knowledge appears during work execution.
             </p>
           </div>
 

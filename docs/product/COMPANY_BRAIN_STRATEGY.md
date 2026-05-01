@@ -230,3 +230,8 @@ Safe behaviours:
 - The CRM-specific `CrmClientDetailPage` is preserved separately and carries a compatibility comment noting that `ClientWorkspacePage` is the primary Client Memory surface.
 
 This is a read-only client-context surface backed by existing metadata links. No AI, vector search, embeddings, document extraction, new backend models, or new routes are used.
+
+
+## Work type normalization
+
+KnowledgeItems now use the same work type/category vocabulary used by dockets via shared normalized options in the Knowledge Library form. This reduces mismatches caused by free-text variations (for example, case differences or alternate phrasing) and improves the reliability of Linked Knowledge in work execution. Existing custom linked work type values remain supported for backward compatibility, but canonical docket category values are encouraged for best matching behavior.
