@@ -1,11 +1,18 @@
 const crypto = require('crypto');
-const { getRedisClient } = require('../config/redis');
+const { getRedisClient, isRedisReady } = require('../config/redis');
 
 const inMemoryLocks = new Map();
 
+const getLockRedisClient = () => {
+  const redis = getRedisClient();
+  if (!redis) return null;
+  if (process.env.NODE_ENV === 'production') return redis;
+  return isRedisReady() ? redis : null;
+};
+
 const acquireLock = async ({ key, ttlSeconds = 30 }) => {
   const token = crypto.randomUUID();
-  const redis = getRedisClient();
+  const redis = getLockRedisClient();
 
   if (!redis) {
     const current = inMemoryLocks.get(key);
@@ -28,7 +35,7 @@ const releaseLock = async ({ key, token }) => {
     return;
   }
 
-  const redis = getRedisClient();
+  const redis = getLockRedisClient();
   if (!redis) {
     const current = inMemoryLocks.get(key);
     if (current?.token === token) {

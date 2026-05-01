@@ -11,7 +11,7 @@ const {
   logFactSheetFileRemoved,
   logClientFactSheetAction
 } = require('../services/clientFactSheetAudit.service');
-const { getMimeType } = require('../utils/fileUtils');
+const { getMimeType, sanitizeFilename } = require('../utils/fileUtils');
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const { areFileUploadsDisabled } = require('../services/featureFlags.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
@@ -185,7 +185,14 @@ const getClients = async (req, res) => {
     // When older tenants are missing this record, admin client listing can fail
     // across related flows (case creation, permissions, and client management).
     const firm = await Firm.findById(accessContext.firmId).select('_id name defaultClientId');
-    await ensureDefaultClientForFirm(firm || accessContext.firmId);
+    try {
+      await ensureDefaultClientForFirm(firm || accessContext.firmId);
+    } catch (defaultClientError) {
+      log.warn('CLIENT_DEFAULT_SELF_HEAL_FAILED', buildClientLogContext(req, {
+        firmId: String(accessContext.firmId || ''),
+        message: defaultClientError.message,
+      }));
+    }
 
     setNoCacheHeaders(res);
     const { activeOnly, forCreateCase, search } = req.query;
@@ -1319,10 +1326,11 @@ const downloadClientCFSFile = async (req, res) => {
     }
 
     const fileStream = await provider.downloadFile(attachment.driveFileId);
+    const safeFilename = sanitizeFilename(attachment.fileName);
 
     // Set response headers
     res.setHeader('Content-Type', attachment.mimeType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${attachment.fileName}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
 
     // Stream file to response
     fileStream.pipe(res);

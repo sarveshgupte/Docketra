@@ -1,6 +1,23 @@
 const { createResponseCapture, sendSuccessResponse, sendErrorResponse } = require('../utils/response.util');
 const { validateRequiredFields } = require('../utils/validation.util');
 const log = require('../utils/log');
+const getAuthLogRequest = (req) => ({
+  requestId: req?.requestId || req?.id || null,
+  method: req?.method || null,
+  path: req?.originalUrl || req?.url || req?.path || null,
+});
+
+const toSafeLogId = (value) => {
+  if (!value) return null;
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  if (typeof value === 'bigint') return value.toString();
+  if (value?._id) return toSafeLogId(value._id);
+  if (typeof value.toString === 'function') {
+    const serialized = value.toString();
+    return serialized && serialized !== '[object Object]' ? serialized : null;
+  }
+  return null;
+};
 
 const createAuthLoginService = (deps) => {
   const models = deps.models || {};
@@ -44,17 +61,17 @@ const createAuthLoginService = (deps) => {
       const requestedFirmSlug = req.params?.firmSlug || req.firmSlug || null;
       const { xid, xID, XID, password } = req.body;
       log.info('AUTH_LOGIN_SERVICE_START', {
-        req,
+        req: getAuthLogRequest(req),
         loginScope,
         firmSlug: requestedFirmSlug,
-        tenantId: req.firmId || req.user?.firmId || null,
+        tenantId: toSafeLogId(req.firmId || req.user?.firmId),
       });
 
       const normalizedXID = (xid || xID || XID)?.trim().toUpperCase();
 
       if (!validateRequiredFields({ xID: normalizedXID, password }, ['xID', 'password']).isValid) {
         log.warn('AUTH_LOGIN_VALIDATION_FAILED', {
-          req,
+          req: getAuthLogRequest(req),
           hasXID: !!(xid || xID || XID),
           hasPassword: !!password,
         });
@@ -77,10 +94,10 @@ const createAuthLoginService = (deps) => {
       }
 
       log.info('AUTH_LOGIN_ATTEMPT', {
-        req,
+        req: getAuthLogRequest(req),
         firmSlug: requestedFirmSlug,
         xID: normalizedXID,
-        tenantId: req.firmId,
+        tenantId: toSafeLogId(req.firmId),
       });
       const user = await User.findOne({
         firmId: req.firmId,
@@ -104,8 +121,8 @@ const createAuthLoginService = (deps) => {
         const loginToken = await sendLoginOtpChallenge(req, user);
         const otpConfig = getLoginOtpConfig();
         log.info('AUTH_LOGIN_CHALLENGE_SENT', {
-          req,
-          tenantId: req.firmId,
+          req: getAuthLogRequest(req),
+          tenantId: toSafeLogId(req.firmId),
           userId: user?._id || null,
           userXID: user?.xID || null,
         });
@@ -126,8 +143,8 @@ const createAuthLoginService = (deps) => {
           });
         }
         log.error('AUTH_LOGIN_CHALLENGE_FAILED', {
-          req,
-          tenantId: req.firmId,
+          req: getAuthLogRequest(req),
+          tenantId: toSafeLogId(req.firmId),
           userId: user?._id || null,
           userXID: user?.xID || null,
           error: otpError,
@@ -138,7 +155,7 @@ const createAuthLoginService = (deps) => {
         });
       }
     } catch (error) {
-      log.error('AUTH_LOGIN_SERVICE_FAILED', { req, error });
+      log.error('AUTH_LOGIN_SERVICE_FAILED', { req: getAuthLogRequest(req), error: error?.message });
       return sendErrorResponse(res, {
         statusCode: 500,
         code: 'AUTH_LOGIN_FAILED',
@@ -222,7 +239,7 @@ const createAuthLoginService = (deps) => {
           retryAfter: error.retryAfter || LOGIN_OTP_COOLDOWN_SECONDS,
         });
       }
-      log.error('AUTH_LOGIN_RESEND_OTP_FAILED', { req, error });
+      log.error('AUTH_LOGIN_RESEND_OTP_FAILED', { req: getAuthLogRequest(req), error: error?.message });
       return sendErrorResponse(res, {
         statusCode: 500,
         message: 'Unable to resend OTP right now. Please try again.',
@@ -354,9 +371,9 @@ const createAuthLoginService = (deps) => {
           });
         } catch (auditError) {
           log.error('AUTH_AUDIT_LOG_FAILURE', {
-            req,
+            req: getAuthLogRequest(req),
             eventType: 'LOGIN_FAILURE',
-            error: auditError,
+            error: auditError?.message,
           });
         }
 
@@ -399,15 +416,15 @@ const createAuthLoginService = (deps) => {
         }, req);
         } catch (auditError) {
           log.error('AUTH_AUDIT_LOG_FAILURE', {
-            req,
+            req: getAuthLogRequest(req),
             eventType: 'OTP_VERIFIED',
-            error: auditError,
+            error: auditError?.message,
           });
         }
 
       log.info('AUTH_LOGIN_SUCCESS', {
-        req,
-        tenantId: user?.firmId || req.firmId || null,
+        req: getAuthLogRequest(req),
+        tenantId: toSafeLogId(user?.firmId || req.firmId),
         userId: user?._id || null,
         userXID: user?.xID || null,
       });
@@ -431,7 +448,7 @@ const createAuthLoginService = (deps) => {
 
       return res.json(response);
     } catch (error) {
-      log.error('AUTH_LOGIN_VERIFY_OTP_FAILED', { req, error });
+      log.error('AUTH_LOGIN_VERIFY_OTP_FAILED', { req: getAuthLogRequest(req), error: error?.message });
       return sendErrorResponse(res, { statusCode: 500, message: 'Error verifying login OTP' });
     }
   };

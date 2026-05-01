@@ -50,7 +50,7 @@ const { getCookieValue } = require('../utils/requestCookies');
 const { mapUserResponse } = require('../mappers/user.mapper');
 const { decrypt: decryptProtectedValue } = require('../utils/encryption');
 const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('../services/securityAudit.service');
-const { getRedisClient } = require('../config/redis');
+const { getRedisClient, isRedisReady } = require('../config/redis');
 const log = require('../utils/log');
 const {
   noteLoginFailure,
@@ -136,7 +136,9 @@ const getUserFirmContext = (user = null, requestJwt = null) => {
 const ensureUserDefaultClientLink = async (user, req = null) => {
   const firmMongoId = normalizeMongoId(user?.firmId?._id || user?.firmId);
   if (!firmMongoId) {
-    throw new Error('MISSING_FIRM_CONTEXT');
+    const error = new Error('MISSING_FIRM_CONTEXT');
+    error.code = 'MISSING_FIRM_CONTEXT';
+    throw error;
   }
 
   let defaultClient = null;
@@ -157,8 +159,19 @@ const ensureUserDefaultClientLink = async (user, req = null) => {
       userId: user._id,
       requestId: req?.id || req?.requestId || null,
     });
+    if (!defaultClient?._id) {
+      const error = new Error('DEFAULT_CLIENT_REQUIRED');
+      error.code = 'DEFAULT_CLIENT_REQUIRED';
+      throw error;
+    }
     user.defaultClientId = defaultClient._id;
     await user.save();
+  }
+
+  if (!defaultClient?._id) {
+    const error = new Error('DEFAULT_CLIENT_REQUIRED');
+    error.code = 'DEFAULT_CLIENT_REQUIRED';
+    throw error;
   }
 
   return defaultClient;
@@ -298,6 +311,10 @@ const getLoginOtpConfig = () => (
 const getTwoFactorSecret = (user) => decryptProtectedValue(user?.twoFactorSecret);
 
 const logLoginOtpEvent = (event, req, user, metadata = {}) => {
+  const maskedEmail = user?.email ? emailService.maskEmail(user.email) : null;
+  const maskedXid = user?.xID
+    ? `${String(user.xID).slice(0, 2)}***${String(user.xID).slice(-2)}`
+    : null;
   log.info(event, {
     req: {
       requestId: req?.requestId || req?.id || null,
@@ -305,9 +322,9 @@ const logLoginOtpEvent = (event, req, user, metadata = {}) => {
       path: req?.originalUrl || req?.url,
     },
     userId: user?._id || null,
-    userXID: user?.xID || null,
-    email: user?.email || null,
-    firmId: user?.firmId || null,
+    userXID: maskedXid,
+    email: maskedEmail,
+    firmId: normalizeMongoId(user?.firmId) || null,
     firmSlug: req?.params?.firmSlug || req?.firmSlug || metadata.firmSlug || null,
     ...metadata,
   });
@@ -444,6 +461,13 @@ const FORGOT_PASSWORD_OTP_RESEND_COOLDOWN_SECONDS = 30;
 const LOGIN_OTP_COOLDOWN_SECONDS = 30;
 const loginOtpCacheFallback = new Map();
 
+const getAuthRedisClient = () => {
+  const redis = getRedisClient();
+  if (!redis) return null;
+  if (process.env.NODE_ENV === 'production') return redis;
+  return isRedisReady() ? redis : null;
+};
+
 const clearLoginOtpState = (user) => {
   if (!user) return;
   user.loginOtpHash = null;
@@ -533,7 +557,7 @@ const getLoginOtpRedisKeys = (user) => {
 const acquireLoginOtpCooldownLock = async (user) => {
   const { lockKey } = getLoginOtpRedisKeys(user);
   const token = crypto.randomUUID();
-  const redis = getRedisClient();
+  const redis = getAuthRedisClient();
 
   if (redis) {
     const response = await redis.set(lockKey, token, 'NX', 'EX', LOGIN_OTP_COOLDOWN_SECONDS);
@@ -566,7 +590,7 @@ const acquireLoginOtpCooldownLock = async (user) => {
 
 const cacheLoginOtpState = async (user, { otpHash, otpExpiresAt }) => {
   const { otpKey } = getLoginOtpRedisKeys(user);
-  const redis = getRedisClient();
+  const redis = getAuthRedisClient();
   const payload = JSON.stringify({
     otpHash,
     otpExpiresAt: otpExpiresAt.toISOString(),
@@ -588,7 +612,7 @@ const cacheLoginOtpState = async (user, { otpHash, otpExpiresAt }) => {
 
 const clearCachedLoginOtpState = async (user) => {
   const { lockKey, otpKey } = getLoginOtpRedisKeys(user);
-  const redis = getRedisClient();
+  const redis = getAuthRedisClient();
   if (redis) {
     await redis.del(lockKey, otpKey);
     return;
@@ -1071,34 +1095,10 @@ const handlePasswordVerification = async (req, res, user, password) => {
     await recordFailedLoginAttempt(req);
     const lockUntilAt = new Date(Date.now() + LOCK_TIME);
 
-    const updatedUser = await User.findOneAndUpdate(
+    let updatedUser = await User.findOneAndUpdate(
       { _id: user._id, firmId: user.firmId },
-      [
-        {
-          $set: {
-            failedLoginAttempts: {
-              $add: [{ $ifNull: ['$failedLoginAttempts', 0] }, 1],
-            },
-            lockUntil: {
-              $let: {
-                vars: {
-                  nextFailedAttempts: {
-                    $add: [{ $ifNull: ['$failedLoginAttempts', 0] }, 1],
-                  },
-                },
-                in: {
-                  $cond: [
-                    { $gte: ['$$nextFailedAttempts', MAX_FAILED_ATTEMPTS] },
-                    { $ifNull: ['$lockUntil', lockUntilAt] },
-                    '$lockUntil',
-                  ],
-                },
-              },
-            },
-          },
-        },
-      ],
-      { returnDocument: 'after' }
+      { $inc: { failedLoginAttempts: 1 } },
+      { new: true, returnDocument: 'after' }
     );
 
     if (!updatedUser) {
@@ -1110,6 +1110,15 @@ const handlePasswordVerification = async (req, res, user, password) => {
     }
 
     const currentFailedAttempts = updatedUser.failedLoginAttempts || 0;
+    const hasActiveLock = updatedUser.lockUntil && new Date(updatedUser.lockUntil) > new Date();
+    if (currentFailedAttempts >= MAX_FAILED_ATTEMPTS && !hasActiveLock) {
+      updatedUser = await User.findOneAndUpdate(
+        { _id: user._id, firmId: user.firmId },
+        { $set: { lockUntil: lockUntilAt } },
+        { new: true, returnDocument: 'after' }
+      ) || updatedUser;
+    }
+
     const isNowLocked = updatedUser.lockUntil && new Date(updatedUser.lockUntil) > new Date();
 
     if (isNowLocked && currentFailedAttempts >= MAX_FAILED_ATTEMPTS) {
@@ -1619,11 +1628,11 @@ const getProfile = async (req, res) => {
       });
     }
 
-    // Harden profile fetch: heal missing/stale default-client linkage without middleware writes.
+    // Default client is mandatory for tenant workspace bootstrapping.
     try {
       await ensureUserDefaultClientLink(dbUser, req);
     } catch (defaultClientError) {
-      log.error('[AUTH] AUTH_FAILED_TO_SELF_HEAL_DEFAULT_CLIENT_DURING_PROFILE_FETCH', {
+      log.error('[AUTH] AUTH_FAILED_TO_RESOLVE_DEFAULT_CLIENT_DURING_PROFILE_FETCH', {
         requestId: req.id || req.requestId || null,
         userId: normalizeMongoId(dbUser?._id),
         firmMongoId,
@@ -1634,7 +1643,8 @@ const getProfile = async (req, res) => {
       });
       return res.status(503).json({
         success: false,
-        message: 'Unable to resolve account context. Please try again.',
+        code: 'DEFAULT_CLIENT_CONTEXT_UNAVAILABLE',
+        message: 'Workspace context could not be loaded. Please retry or contact support.',
       });
     }
     const resolvedDefaultClientId = normalizeMongoId(req.jwt?.defaultClientId) || normalizeMongoId(dbUser.defaultClientId);
@@ -1793,6 +1803,11 @@ const getProfile = async (req, res) => {
       redirectTo: resolvedFirmSlug ? `/app/firm/${resolvedFirmSlug}/dashboard` : '/complete-profile',
     });
   } catch (error) {
+    log.error('[AUTH][profile] failed to fetch profile', {
+      requestId: req?.id || req?.requestId || null,
+      userId: normalizeMongoId(req?.user?._id),
+      error: error?.message,
+    });
     res.status(500).json({
       success: false,
       message: 'Error fetching profile',
