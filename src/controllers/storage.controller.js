@@ -521,15 +521,21 @@ const changeFirmStorage = async (req, res) => {
         await adapter.testConnection();
       }
     } else if (provider === 's3') {
+      const s3Credentials = rawCredentials.credentials || rawCredentials.awsCredentials || (
+        rawCredentials.accessKeyId && rawCredentials.secretAccessKey
+          ? {
+              accessKeyId: rawCredentials.accessKeyId,
+              secretAccessKey: rawCredentials.secretAccessKey,
+              ...(rawCredentials.sessionToken ? { sessionToken: rawCredentials.sessionToken } : {}),
+            }
+          : undefined
+      );
       adapter = new S3Provider({
         tenantId: String(firmId),
         bucket: rawCredentials.bucket,
         region: rawCredentials.region,
         prefix: rawCredentials.prefix,
-        credentials: rawCredentials.credentials || rawCredentials.awsCredentials || undefined,
-        accessKeyId: rawCredentials.accessKeyId,
-        secretAccessKey: rawCredentials.secretAccessKey,
-        sessionToken: rawCredentials.sessionToken,
+        credentials: s3Credentials,
       });
       await adapter.testConnection();
     }
@@ -540,7 +546,22 @@ const changeFirmStorage = async (req, res) => {
           refreshToken: rawCredentials?.googleRefreshToken || rawCredentials?.refreshToken || effectiveRefreshToken || null,
           googleRefreshToken: undefined,
         }
-      : rawCredentials;
+      : provider === 's3'
+        ? {
+            bucket: rawCredentials.bucket,
+            region: rawCredentials.region,
+            prefix: rawCredentials.prefix,
+            credentials: rawCredentials.credentials || rawCredentials.awsCredentials || (
+              rawCredentials.accessKeyId && rawCredentials.secretAccessKey
+                ? {
+                    accessKeyId: rawCredentials.accessKeyId,
+                    secretAccessKey: rawCredentials.secretAccessKey,
+                    ...(rawCredentials.sessionToken ? { sessionToken: rawCredentials.sessionToken } : {}),
+                  }
+                : undefined
+            ),
+          }
+        : rawCredentials;
 
     const encryptedCredentials = provider === 'docketra_managed'
       ? null
