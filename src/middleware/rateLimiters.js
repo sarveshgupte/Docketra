@@ -2,7 +2,7 @@ const rateLimit = require('express-rate-limit');
 const { createHash } = require('crypto');
 const { RedisStore } = require('rate-limit-redis');
 const config = require('../config/config');
-const { getRedisClient } = require('../config/redis');
+const { getRedisClient, isRedisReady } = require('../config/redis');
 const metricsService = require('../services/metrics.service');
 const jwtService = require('../services/jwt.service');
 const { getCookieValue } = require('../utils/requestCookies');
@@ -13,6 +13,13 @@ const DEFAULT_RATE_LIMIT_MESSAGE = 'Too many requests. Please wait a moment befo
 const FORGOT_PASSWORD_RATE_LIMIT_MESSAGE = 'Too many password reset requests. Please wait a few minutes before trying again.';
 const FORGOT_PASSWORD_PATH_PATTERN = /\bforgot[-_]password\b/i;
 let hasWarnedRedisRateLimitFallback = false;
+
+const getRateLimitRedisClient = () => {
+  const redis = getRedisClient();
+  if (!redis) return null;
+  if (process.env.NODE_ENV === 'production') return redis;
+  return isRedisReady() ? redis : null;
+};
 
 const getRetryAfterSeconds = (req, windowMs) => {
   const reset = req.rateLimit?.resetTime;
@@ -29,7 +36,7 @@ const getRateLimitMessage = (req, name) => {
 };
 
 const createRedisStore = () => {
-  const redis = getRedisClient();
+  const redis = getRateLimitRedisClient();
   if (!redis) {
     if (process.env.NODE_ENV === 'production' && !hasWarnedRedisRateLimitFallback) {
       hasWarnedRedisRateLimitFallback = true;
@@ -58,7 +65,7 @@ const createRateLimitHandler = (name, windowMs) => async (req, res) => {
   const retryAfter = getRetryAfterSeconds(req, windowMs);
   const message = getRateLimitMessage(req, name);
   if (name === 'authLimiter') {
-    const redis = getRedisClient();
+    const redis = getRateLimitRedisClient();
     if (redis) {
       const blockKey = `ratelimit:auth:block:${ipKeyGenerator(req)}`;
       await redis.set(blockKey, '1', 'EX', config.security.rateLimit.authBlockSeconds);
@@ -240,7 +247,7 @@ const signupLimiter = createLimiter({
 });
 
 const authBlockEnforcer = async (req, res, next) => {
-  const redis = getRedisClient();
+  const redis = getRateLimitRedisClient();
   if (!redis) return next();
   const key = `ratelimit:auth:block:${ipKeyGenerator(req)}`;
   const ttl = await redis.ttl(key);

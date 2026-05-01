@@ -24,6 +24,13 @@ return 1
 const getAccountKey = (identifier) => `docketra:ratelimit:login:attempts:${hashIdentifier(identifier)}`;
 const getAccountLockKey = (identifier) => `docketra:ratelimit:login:block:${hashIdentifier(identifier)}`;
 
+const getAccountLockoutRedis = () => {
+  const redis = redisConfig.getRedisClient();
+  if (!redis) return null;
+  if (process.env.NODE_ENV === 'production') return redis;
+  return redisConfig.isRedisReady() ? redis : null;
+};
+
 const getAuthIdentifier = (req) => {
   const email = req.body?.email;
   const xid = req.body?.xid || req.body?.xID || req.body?.XID;
@@ -33,7 +40,7 @@ const getAuthIdentifier = (req) => {
 const enforceAccountLockout = async (req, res, next) => {
   const identifier = getAuthIdentifier(req);
   if (!identifier) return next();
-  const redis = redisConfig.getRedisClient();
+  const redis = getAccountLockoutRedis();
   if (!redis) return next();
 
   const ttl = await redis.ttl(getAccountLockKey(identifier));
@@ -51,7 +58,7 @@ const enforceAccountLockout = async (req, res, next) => {
 const recordFailedLoginAttempt = async (req) => {
   const identifier = getAuthIdentifier(req);
   if (!identifier) return;
-  const redis = redisConfig.getRedisClient();
+  const redis = getAccountLockoutRedis();
   if (!redis) return;
 
   const accountKey = getAccountKey(identifier);
@@ -76,7 +83,7 @@ const recordFailedLoginAttempt = async (req) => {
 const clearFailedLoginAttempts = async (req) => {
   const identifier = getAuthIdentifier(req);
   if (!identifier) return;
-  const redis = redisConfig.getRedisClient();
+  const redis = getAccountLockoutRedis();
   if (!redis) return;
 
   await redis.del(getAccountKey(identifier));

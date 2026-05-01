@@ -9,6 +9,7 @@ const BASE64_32_BYTE_KEY_REGEX = /^(?:[A-Za-z0-9+/]{43}=|[A-Za-z0-9+/]{44})$/;
 const HEX_32_BYTE_KEY_REGEX = /^[a-fA-F0-9]{64}$/;
 
 const SENSITIVE_ENV_KEY_PATTERN = /(SECRET|PASSWORD|TOKEN|KEY|PRIVATE|CREDENTIAL|AUTH)/i;
+const SENSITIVE_CONNECTION_ENV_KEY_PATTERN = /^(MONGO_URI|MONGODB_URI|REDIS_URL|DATABASE_URL)$/i;
 const SUPPORTED_ENCRYPTION_PROVIDERS = ['local', 'disabled'];
 const SUPPORTED_AI_PROVIDERS = ['openai'];
 const PLACEHOLDER_PATTERN = /(replace-with|your-secret|change-me|example-secret|dummy|test-secret|placeholder|sample|changethis)/i;
@@ -39,6 +40,17 @@ const isValidMasterEncryptionKey = (value) => {
 };
 
 const isExternalStorageEnabled = (env) => env.ENABLE_EXTERNAL_STORAGE === true;
+
+const isValidRedisUrl = (value) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return false;
+  try {
+    const parsed = new URL(normalized);
+    return ['redis:', 'rediss:'].includes(parsed.protocol);
+  } catch (_) {
+    return false;
+  }
+};
 
 const envSchema = z
   .object({
@@ -137,7 +149,9 @@ const envSchema = z
       }
 
       if (!env.REDIS_URL) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['REDIS_URL'], message: 'required in production for distributed abuse/rate-limit controls' });
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['REDIS_URL'], message: 'required in production for Redis-backed idempotency and distributed abuse controls' });
+      } else if (!isValidRedisUrl(env.REDIS_URL)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['REDIS_URL'], message: 'must be a valid redis:// or rediss:// URL in production' });
       }
 
       if (!env.BREVO_API_KEY) {
@@ -172,7 +186,7 @@ const isSensitiveEnvKey = (key) => SENSITIVE_ENV_KEY_PATTERN.test(String(key || 
 
 const maskEnvValue = (key, value) => {
   if (value === undefined || value === null || value === '') return value;
-  if (isSensitiveEnvKey(key)) return '***REDACTED***';
+  if (isSensitiveEnvKey(key) || SENSITIVE_CONNECTION_ENV_KEY_PATTERN.test(String(key || ''))) return '***REDACTED***';
 
   if (String(key).toUpperCase().includes('EMAIL') && EMAIL_REGEX.test(String(value))) {
     const [local, domain] = String(value).split('@');
