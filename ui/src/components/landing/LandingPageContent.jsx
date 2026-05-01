@@ -54,7 +54,7 @@ const HomeNav = ({ onNav }) => {
               to="/signup"
               className="inline-flex items-center justify-center h-9 px-5 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors shadow-sm"
             >
-              Request access
+              Request early access
             </Link>
           </div>
 
@@ -96,7 +96,7 @@ const HomeNav = ({ onNav }) => {
                   className="block text-center h-9 leading-9 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors"
                   onClick={() => setMenuOpen(false)}
                 >
-                  Request access
+                  Request early access
                 </Link>
               </li>
             </ul>
@@ -509,11 +509,11 @@ const FlowExampleSection = () => (
 const TRUST_CARDS = [
   {
     title: 'Bring Your Own Storage',
-    body: 'Your documents stay in storage you control — Google Drive, S3, or another provider. Docketra never takes custody of client files.',
+    body: 'Your documents stay in storage you control — Google Drive, S3, or another provider. Use your own cloud storage where configured. If BYOS is skipped, Docketra default storage may be used.',
   },
   {
     title: 'Operational context only',
-    body: 'Docketra stores work metadata, assignments, notes, and deadlines — not the underlying documents. You choose where heavy files live.',
+    body: 'Docketra stores work metadata, assignments, notes, and deadlines. Document storage can stay in your connected cloud setup, or use Docketra default storage when BYOS is not configured.',
   },
   {
     title: 'AI off by default',
@@ -532,7 +532,7 @@ const TrustSection = () => (
           Quiet by design. Yours by default.
         </h2>
         <p className="mt-4 text-lg text-slate-300 max-w-2xl leading-relaxed">
-          Built for firms that take confidentiality seriously. No surprise AI, no lock-in, no document hostage.
+          Built for firms that take confidentiality seriously. Storage configuration should be clear to the primary admin.
         </p>
       </motion.div>
 
@@ -647,7 +647,11 @@ export const LandingPageContent = () => {
     const id = location.hash.replace('#', '');
     const timer = window.setTimeout(() => {
       const el = document.getElementById(id);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (el) {
+      const headerOffset = 84;
+      const elementPosition = el.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({ top: Math.max(elementPosition - headerOffset, 0), behavior: 'smooth' });
+    }
     }, 100);
     return () => window.clearTimeout(timer);
   }, [location.hash]);
@@ -659,11 +663,15 @@ export const LandingPageContent = () => {
     }
     navigate({ pathname: '/', hash: `#${sectionId}` });
     const el = document.getElementById(sectionId);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (el) {
+      const headerOffset = 84;
+      const elementPosition = el.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({ top: Math.max(elementPosition - headerOffset, 0), behavior: 'smooth' });
+    }
   };
 
   return (
-    <div className="w-full bg-white text-slate-900">
+    <div className="w-full bg-white text-slate-900 antialiased">
       <HomeNav onNav={handleSectionNavigation} />
       <HeroSection onExplore={() => handleSectionNavigation('why')} />
       <ProblemSection />
