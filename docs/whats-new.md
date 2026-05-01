@@ -1,5 +1,11 @@
 # What's New
 
+## May 2026: Company Brain read-only overview
+
+- Upgraded the Company Brain page from a strategy placeholder into a read-only overview of existing firm data.
+- Added connected-memory cards and module links across Work, Clients, Knowledge Intake, Relationships, and Reports.
+- Added safe loading/error handling without introducing new backend APIs, models, or AI infrastructure.
+
 ## May 2026: Company Brain strategy
 
 - Defined Docketra's long-term direction as a Company Brain and work execution system for professional firms.
