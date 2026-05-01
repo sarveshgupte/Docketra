@@ -134,7 +134,7 @@ export const SuperadminFirmOnboardingDetailPage = () => {
                   <h2 className="text-lg font-semibold text-gray-900">{firm.name}</h2>
                   <p className="text-xs text-gray-500">{firm.firmCode || 'N/A'} • {firm.firmSlug || 'No slug'} • {firm.status || 'Unknown status'}</p>
                 </div>
-                {firm.firmSlug ? <Link className="text-sm text-blue-600 underline" to={`/f/${firm.firmSlug}/login`} target="_blank" rel="noreferrer">Firm login URL</Link> : null}
+                {firm.firmSlug ? <Link className="text-sm text-blue-600 underline" to={`/${firm.firmSlug}/login`} target="_blank" rel="noreferrer">Firm login URL</Link> : null}
               </div>
 
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">

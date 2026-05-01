@@ -296,7 +296,7 @@ export const SuperadminOnboardingInsightsPage = () => {
                         <div className="flex gap-2">
                           <Button variant="primary" onClick={() => navigate(toFirmDetailPath(firm.firmId))}>Open onboarding detail</Button>
                           <Button variant="secondary" onClick={() => navigate('/app/superadmin/firms')}>Open firm controls</Button>
-                          {firm.firmSlug ? <Link className="text-sm text-blue-600 underline" to={`/f/${firm.firmSlug}/login`} target="_blank" rel="noreferrer">Firm login URL</Link> : null}
+                          {firm.firmSlug ? <Link className="text-sm text-blue-600 underline" to={`/${firm.firmSlug}/login`} target="_blank" rel="noreferrer">Firm login URL</Link> : null}
                         </div>
                       </div>
                       <p className="mt-2 text-xs text-slate-600">Blockers: {(firm.blockers || []).map(prettyBlocker).join(', ') || 'None'}</p>

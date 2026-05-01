@@ -67,7 +67,6 @@ export const PublicRoutes = () => (
 
     <Route element={<RouteSuspenseOutlet />}>
       <Route path="/signup" element={<MarketingSignupPage />} />
-      <Route path="/auth/otp" element={<OtpVerificationPage />} />
       <Route path="/:firmSlug/login" element={<FirmLoginPage />} />
       <Route path="/app/:firmSlug" element={<AppFirmRootRedirect />} />
       <Route path="/app/:firmSlug/login" element={<AppFirmLoginRedirect />} />
