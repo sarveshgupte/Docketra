@@ -229,7 +229,7 @@ function testPageExistsAndContainsExpectedContent() {
 function testPageHasEmptyStates() {
   const pageSource = read('ui/src/pages/KnowledgeLibraryPage.jsx');
   assert.ok(
-    pageSource.includes('Your firm knowledge library is empty'),
+    pageSource.includes('Your Knowledge Library is empty'),
     'KnowledgeLibraryPage must have empty state message when no items',
   );
   assert.ok(
@@ -237,6 +237,137 @@ function testPageHasEmptyStates() {
     'KnowledgeLibraryPage must have filtered empty state message',
   );
   console.log('  ✓ KnowledgeLibraryPage has correct empty states');
+}
+
+function testPageHasImprovedGuidanceCopy() {
+  const pageSource = read('ui/src/pages/KnowledgeLibraryPage.jsx');
+  assert.ok(
+    pageSource.includes('Use Knowledge Library for reusable firm knowledge'),
+    'KnowledgeLibraryPage must include improved guidance panel copy',
+  );
+  assert.ok(
+    pageSource.includes('Link records to work types, clients, or dockets so they appear during execution'),
+    'KnowledgeLibraryPage guidance panel must mention linking to work types, clients, or dockets',
+  );
+  console.log('  ✓ KnowledgeLibraryPage contains improved guidance copy');
+}
+
+function testStatsIncludeChecklistAndUnlinked() {
+  const pageSource = read('ui/src/pages/KnowledgeLibraryPage.jsx');
+  assert.ok(
+    pageSource.includes('checklistCount'),
+    'KnowledgeLibraryPage must compute checklistCount stat',
+  );
+  assert.ok(
+    pageSource.includes('unlinkedCount'),
+    'KnowledgeLibraryPage must compute unlinkedCount stat',
+  );
+  assert.ok(
+    pageSource.includes('Checklist records'),
+    'KnowledgeLibraryPage stats must include a Checklist records label',
+  );
+  assert.ok(
+    pageSource.includes('Unlinked records'),
+    'KnowledgeLibraryPage stats must include an Unlinked records label',
+  );
+  console.log('  ✓ Stats include Checklist records and Unlinked records');
+}
+
+function testFiltersIncludeClearFilters() {
+  const pageSource = read('ui/src/pages/KnowledgeLibraryPage.jsx');
+  assert.ok(
+    pageSource.includes('clearFilters') || pageSource.includes('Clear filters'),
+    'KnowledgeLibraryPage must include a Clear filters action',
+  );
+  assert.ok(
+    pageSource.includes('filterWorkType'),
+    'KnowledgeLibraryPage must include a linked work type filter (filterWorkType)',
+  );
+  console.log('  ✓ Filters include Clear filters and work type filter');
+}
+
+function testTableShowsBadgesAndLinkIndicators() {
+  const pageSource = read('ui/src/pages/KnowledgeLibraryPage.jsx');
+  // Table should have type and status badge-style markup and a Links column
+  assert.ok(
+    pageSource.includes('Knowledge item') || pageSource.includes("'Knowledge item'"),
+    'KnowledgeLibraryPage table must use Knowledge item column header',
+  );
+  assert.ok(
+    pageSource.includes('Links') || pageSource.includes("'Links'"),
+    'KnowledgeLibraryPage table must include a Links column for work type/client/docket indicators',
+  );
+  assert.ok(
+    pageSource.includes('Unlinked'),
+    'KnowledgeLibraryPage table rows must show Unlinked badge when no links present',
+  );
+  console.log('  ✓ Table/list shows type/status/link badges or equivalent labels');
+}
+
+function testFormGroupsExist() {
+  const pageSource = read('ui/src/pages/KnowledgeLibraryPage.jsx');
+  assert.ok(
+    pageSource.includes('Basics'),
+    'KnowledgeLibraryPage form must include Basics group',
+  );
+  assert.ok(
+    pageSource.includes('Ownership') && pageSource.includes('linking'),
+    'KnowledgeLibraryPage form must include Ownership & linking group',
+  );
+  assert.ok(
+    pageSource.includes('Checklist steps'),
+    'KnowledgeLibraryPage form must include Checklist steps group',
+  );
+  console.log('  ✓ Form groups include Basics, Ownership & linking, Checklist steps');
+}
+
+function testChecklistEmptyStateCopyExists() {
+  const pageSource = read('ui/src/pages/KnowledgeLibraryPage.jsx');
+  assert.ok(
+    pageSource.includes('No checklist steps yet'),
+    'KnowledgeLibraryPage checklist steps editor must show empty state message',
+  );
+  assert.ok(
+    pageSource.includes('Add the first step to make this checklist useful during work execution'),
+    'KnowledgeLibraryPage checklist empty state must include guidance copy',
+  );
+  console.log('  ✓ Checklist empty state copy exists');
+}
+
+function testDetailDrawerSections() {
+  const pageSource = read('ui/src/pages/KnowledgeLibraryPage.jsx');
+  // Metadata section
+  assert.ok(
+    pageSource.includes('Metadata') || pageSource.includes("'Metadata'"),
+    'KnowledgeLibraryPage detail drawer must include a Metadata section',
+  );
+  // Audit section
+  assert.ok(
+    pageSource.includes('Audit') || pageSource.includes("'Audit'"),
+    'KnowledgeLibraryPage detail drawer must include an Audit section',
+  );
+  // Summary + Content in drawer
+  assert.ok(
+    pageSource.includes('item.summary'),
+    'KnowledgeLibraryPage detail drawer must display summary',
+  );
+  assert.ok(
+    pageSource.includes('item.content'),
+    'KnowledgeLibraryPage detail drawer must display content',
+  );
+  console.log('  ✓ Detail drawer contains metadata/body/audit sections');
+}
+
+function testNoCompletionTrackingUi() {
+  const pageSource = read('ui/src/pages/KnowledgeLibraryPage.jsx');
+  const forbidden = ['completionTracking', 'markComplete', 'Create task from', 'createTaskFrom', 'taskFromStep', 'completeStep'];
+  for (const term of forbidden) {
+    assert.ok(
+      !pageSource.includes(term),
+      `KnowledgeLibraryPage must not contain completion tracking UI: ${term}`,
+    );
+  }
+  console.log('  ✓ No completion tracking UI or task creation from checklist steps');
 }
 
 function testRouteIsAdminOnly() {
@@ -410,6 +541,14 @@ function run() {
   testPageFilteringIsClientSideOnly();
   testPageExistsAndContainsExpectedContent();
   testPageHasEmptyStates();
+  testPageHasImprovedGuidanceCopy();
+  testStatsIncludeChecklistAndUnlinked();
+  testFiltersIncludeClearFilters();
+  testTableShowsBadgesAndLinkIndicators();
+  testFormGroupsExist();
+  testChecklistEmptyStateCopyExists();
+  testDetailDrawerSections();
+  testNoCompletionTrackingUi();
   testRouteIsAdminOnly();
   testLazyPageRegistered();
   testNoAiOrVectorInfrastructureAdded();
