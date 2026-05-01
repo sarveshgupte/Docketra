@@ -57,6 +57,12 @@ assert.ok(
 assert.ok(firmsPage.includes('No firms exist yet'), 'Firms page should provide a readable empty state.');
 
 assert.ok(insightsPage.includes('Insights unavailable') && insightsPage.includes('Retry') && insightsPage.includes('loadInsights'), 'Insights page should provide a readable empty/error state.');
-assert.ok(diagnosticsPage.includes('Diagnostics unavailable') && diagnosticsPage.includes('Retry') && diagnosticsPage.includes('loadDiagnostics'), 'Diagnostics page should provide a readable empty/error state.');
+assert.ok(
+  diagnosticsPage.includes('Diagnostics unavailable')
+    && diagnosticsPage.includes('Support diagnostics could not be loaded')
+    && diagnosticsPage.includes('Retry')
+    && diagnosticsPage.includes('loadDiagnostics'),
+  'Diagnostics page should provide a readable empty/error state.',
+);
 
 console.log('superadminScreenReliability.test.mjs passed');
