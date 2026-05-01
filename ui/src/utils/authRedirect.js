@@ -1,10 +1,4 @@
-const isAllowedAppRoute = (value) => {
-  if (typeof value !== 'string') return false;
-  const trimmed = value.trim();
-  if (!trimmed.startsWith('/')) return false;
-  if (trimmed.startsWith('//')) return false;
-  return trimmed === '/app' || trimmed.startsWith('/app/');
-};
+import { isSafeReturnToPath } from './postAuthNavigation.js';
 
 export const buildReturnTo = (location) => {
   if (!location) return '';
@@ -16,7 +10,7 @@ export const buildReturnTo = (location) => {
 
 export const appendReturnTo = (targetPath, returnTo) => {
   if (!targetPath) return targetPath;
-  if (!isAllowedAppRoute(returnTo)) return targetPath;
+  if (!isSafeReturnToPath(returnTo)) return targetPath;
   const [basePath, existingSearch = ''] = targetPath.split('?');
   const query = new URLSearchParams(existingSearch);
   query.set('returnTo', returnTo);
@@ -25,9 +19,8 @@ export const appendReturnTo = (targetPath, returnTo) => {
 };
 
 export const resolvePostLoginDestination = (returnTo, fallbackPath) => {
-  if (isAllowedAppRoute(returnTo)) {
+  if (isSafeReturnToPath(returnTo)) {
     return returnTo;
   }
   return fallbackPath;
 };
-
