@@ -194,6 +194,9 @@ This connection — Knowledge Library as the source of firm knowledge, Work Exec
 
 ## Company Brain as read-only command center
 
+Company Brain is the read-only command center for firm memory. It highlights attention signals and links users back to execution surfaces (Clients, Relationships, Work, and Knowledge Library) so teams can act where the source records live.
+
+
 **Company Brain** (`/company-brain`) is the read-only connected view across all modules:
 - It loads clients, prospects, work, and KnowledgeItems together in one view without a new backend endpoint.
 - It derives rule-based cues (knowledge health, attention signals, useful connections) from existing metadata fields.
