@@ -2,6 +2,7 @@ import assert from 'assert';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { isRoleCompatibleRoute, isSafeReturnToPath } from '../src/utils/returnToSafety.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..', 'src');
@@ -57,30 +58,56 @@ assert(
   'Firm login should show actionable message when context hydration fails.'
 );
 
-// 7. Stale redirect target ignored.
+// 7. Return-to safety and role compatibility are delegated to returnToSafety helpers.
 assert(
-  postAuthNavigationSource.includes('if (candidateRoute && isRoleCompatibleRoute(candidateRoute, user)) {'),
-  'Post-auth navigation helper should validate candidate redirect target before using it.'
+  postAuthNavigationSource.includes("from './returnToSafety.js'"),
+  'Post-auth navigation helper must import returnToSafety helpers.'
 );
 assert(
-  postAuthNavigationSource.includes('if (trimmed.startsWith(\'//\')) return false;'),
-  'Post-auth navigation helper must reject protocol-relative external targets.'
+  postAuthNavigationSource.includes('isSafeReturnToPath(returnTo)'),
+  'Post-auth navigation helper should validate returnTo via isSafeReturnToPath.'
 );
 assert(
-  postAuthNavigationSource.includes('if (/^[a-zA-Z][a-zA-Z0-9+\\-.]*:/.test(trimmed)) return false;'),
-  'Post-auth navigation helper must reject absolute URL schemes in returnTo.'
+  postAuthNavigationSource.includes('isRoleCompatibleRoute(candidateRoute,'),
+  'Post-auth navigation helper should validate candidate routes via isRoleCompatibleRoute.'
 );
-
-// 8. Firm user never routed to /superadmin/*.
 assert(
-  postAuthNavigationSource.includes('return candidatePath.startsWith(`/app/firm/${firmSlug}`);'),
-  'Post-auth helper must enforce firm namespace for firm users.'
+  postAuthNavigationSource.includes('isRoleCompatibleRoute(fallbackRoute,'),
+  'Post-auth navigation helper should validate fallback routes via isRoleCompatibleRoute.'
 );
 
-// 9. Superadmin user never routed to firm dashboard routes.
-assert(
-  postAuthNavigationSource.includes('return candidatePath.startsWith(\'/app/superadmin\');'),
-  'Post-auth helper must enforce superadmin namespace for superadmin users.'
+// 8. returnToSafety.js rejects unsafe redirect targets.
+assert.equal(isSafeReturnToPath('//evil.com'), false, 'Must reject protocol-relative external targets.');
+assert.equal(isSafeReturnToPath('https://evil.com'), false, 'Must reject absolute URL scheme targets.');
+assert.equal(isSafeReturnToPath('/app'), true, 'Must allow /app returnTo path.');
+assert.equal(isSafeReturnToPath('/app/workspace'), true, 'Must allow /app/* returnTo path.');
+assert.equal(isSafeReturnToPath('/settings'), false, 'Must reject non-/app returnTo paths.');
+
+// 9. returnToSafety.js enforces role-specific namespaces.
+assert.equal(
+  isRoleCompatibleRoute('/app/superadmin/audit', { isSuperAdminUser: true, firmSlug: 'acme' }),
+  true,
+  'Superadmin users must be allowed only in /app/superadmin namespace.'
+);
+assert.equal(
+  isRoleCompatibleRoute('/app/firm/acme/dashboard', { isSuperAdminUser: true, firmSlug: 'acme' }),
+  false,
+  'Superadmin users must not be routed into firm namespace.'
+);
+assert.equal(
+  isRoleCompatibleRoute('/app/firm/acme/dashboard', { isSuperAdminUser: false, firmSlug: 'acme' }),
+  true,
+  'Firm users must be allowed only in their own firm namespace.'
+);
+assert.equal(
+  isRoleCompatibleRoute('/app/firm/other/dashboard', { isSuperAdminUser: false, firmSlug: 'acme' }),
+  false,
+  'Firm users must not be routed into a different firm namespace.'
+);
+assert.equal(
+  isRoleCompatibleRoute('/app/superadmin/audit', { isSuperAdminUser: false, firmSlug: 'acme' }),
+  false,
+  'Firm users must not be routed into superadmin namespace.'
 );
 assert(
   firmLoginSource.includes('if (pendingFirm && pendingFirm !== firmSlug) {'),
