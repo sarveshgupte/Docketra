@@ -60,7 +60,7 @@ const dashboardSource = read('src/pages/platform/DashboardPage.jsx');
 assert.ok(dashboardSource.includes('>New Docket<'), 'Dashboard quick action naming should use New Docket');
 
 const crmSource = read('src/pages/platform/CrmPage.jsx');
-for (const label of ['New Client', 'Go to Leads Queue', 'Open Client Management']) {
+for (const label of ['New Client', 'Open Prospective Clients', 'Open Client Management']) {
   assert.ok(crmSource.includes(`>${label}<`), `CRM quick actions should use consistent wording: ${label}`);
 }
 

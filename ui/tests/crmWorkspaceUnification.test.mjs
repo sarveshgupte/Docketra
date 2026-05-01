@@ -20,8 +20,8 @@ assert.ok(crmDetailSource.includes('Back to Client Management'), 'CRM client det
 assert.equal(crmDetailSource.includes('neo-table'), false, 'CRM client detail should not render neo-table styles');
 
 const leadsSource = read('src/pages/crm/LeadsPage.jsx');
-assert.ok(leadsSource.includes('title="Leads"'), 'Leads page should use Leads title contract');
-assert.ok(leadsSource.includes('moduleLabel="CRM"'), 'Leads page should use CRM module label');
+assert.ok(leadsSource.includes('title="Prospective Clients"'), 'Prospective Clients page should use Prospective Clients title contract');
+assert.ok(leadsSource.includes('moduleLabel="Relationships"'), 'Prospective Clients page should use Relationships module label');
 assert.equal(leadsSource.includes('PageHeader'), false, 'Leads page should not use legacy PageHeader wrapper');
 assert.equal(leadsSource.includes('components/common/Card'), false, 'Leads page should not depend on legacy Card wrapper');
 

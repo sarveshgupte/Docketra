@@ -22,13 +22,14 @@ import {
 import { formatRelativeDateLabel, resolveCrmErrorMessage } from './crmUiUtils';
 
 const LEAD_STAGE_MAP = { new: 'Draft', contacted: 'Pending', qualified: 'Pending', converted: 'Approved', lost: 'Rejected' };
-const LEAD_STAGE_LABEL = { new: 'New', contacted: 'Contacted', qualified: 'Qualified', converted: 'Converted', lost: 'Lost' };
+const LEAD_STAGE_LABEL = { new: 'New enquiry', contacted: 'Contacted', qualified: 'Qualified', converted: 'Converted', lost: 'Lost' };
 const STAGES = ['new', 'contacted', 'qualified', 'converted', 'lost'];
+
 const PHONE_REGEX = /^[+()\-\s0-9]{7,20}$/;
 const LEAD_STAGE_HELPER = {
   new: 'Unworked intake. Confirm ownership and set first follow-up.',
   contacted: 'Initial outreach in progress. Capture latest response.',
-  qualified: 'Validated lead with active fit and next action.',
+  qualified: 'Validated prospect with clear fit and next action.',
   converted: 'Converted to client workspace and lifecycle tracking.',
   lost: 'Closed-lost outcome. Capture reason for reporting.',
 };
@@ -161,7 +162,7 @@ export const LeadsPage = () => {
 
   const leadMatchesFilters = useCallback((lead) => {
     if (!lead) return false;
-    const stage = lead.stage || lead.status;
+    const stage = String(lead.stage || lead.status || 'new').toLowerCase();
     if (filters.stage && stage !== filters.stage) return false;
     if (filters.ownerXid && String(lead.ownerXid || '').toUpperCase() !== String(filters.ownerXid || '').toUpperCase()) return false;
     if (filters.dueOnly && !isOverdue(lead)) return false;
@@ -172,7 +173,7 @@ export const LeadsPage = () => {
     event.preventDefault();
     if (saving) return;
     const nextErrors = {};
-    if (!form.name.trim()) nextErrors.name = 'Lead name is required.';
+    if (!form.name.trim()) nextErrors.name = 'Prospective client name is required.';
     if (!form.email.trim() && !form.phone.trim()) nextErrors.contact = 'Add at least one contact method (email or phone).';
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
       nextErrors.email = 'Please enter a valid email address.';
@@ -193,7 +194,7 @@ export const LeadsPage = () => {
         ownerXid: form.ownerXid || undefined,
         nextFollowUpAt: form.nextFollowUpAt ? new Date(`${form.nextFollowUpAt}T00:00:00.000Z`).toISOString() : undefined,
       });
-      showSuccess('Lead created successfully.');
+      showSuccess('Prospective client created successfully.');
       const createdLead = response?.data;
       if (leadMatchesFilters(createdLead)) setLeads((current) => [createdLead, ...current]);
       closeModal();
@@ -234,11 +235,11 @@ export const LeadsPage = () => {
     setSaving(true);
     try {
       let convertedLeadPayload = null;
-      if (detailForm.stage === 'converted' && (selectedLead.stage || selectedLead.status) !== 'converted') {
+      if (detailForm.stage === 'converted' && String(selectedLead.stage || selectedLead.status || '').toLowerCase() !== 'converted') {
         const converted = await crmApi.convertLead(selectedLead._id);
         convertedLeadPayload = converted?.data?.lead || null;
         if (converted?.data?.legacyCrmClientId) {
-          showSuccess('Lead converted. You can open client workspace from this lead now.');
+          showSuccess('Prospective client converted. You can open the active client workspace now.');
         }
       }
       const payload = {
@@ -252,7 +253,7 @@ export const LeadsPage = () => {
       const response = await crmApi.updateLead(selectedLead._id, payload);
       const nextLead = response?.data || convertedLeadPayload;
       if (nextLead) patchLeadInState(selectedLead._id, nextLead);
-      showSuccess('Lead details updated successfully.');
+      showSuccess('Prospective client details updated successfully.');
       setDetailForm((prev) => ({ ...prev, note: '' }));
     } catch (saveError) {
       showError(resolveCrmErrorMessage(saveError, 'Failed to update lead details.'));
@@ -274,7 +275,7 @@ export const LeadsPage = () => {
 
   const tableRows = leads.map((lead) => {
     const id = lead._id || lead.id;
-    const stage = lead.stage || lead.status;
+    const stage = String(lead.stage || lead.status || 'new').toLowerCase();
     const isUpdating = updatingId === id;
     return (
       <tr key={id}>
@@ -290,8 +291,8 @@ export const LeadsPage = () => {
         </td>
         <td>{lead.owner?.name || lead.ownerXid || 'Unassigned'}</td>
         <td>
-          <div>{formatDate(lead.nextFollowUpAt) || '—'}</div>
-          <div className="text-xs text-[var(--dt-text-muted)]">{formatRelativeDateLabel(lead.nextFollowUpAt)}</div>
+          <div>{formatDate(lead.nextFollowUpAt) || 'No follow-up set'}</div>
+          <div className="text-xs text-[var(--dt-text-muted)]">{lead.nextFollowUpAt ? formatRelativeDateLabel(lead.nextFollowUpAt) : 'No follow-up set — assign one to keep momentum.'}</div>
         </td>
         <td>
           <div className="action-row">
@@ -308,16 +309,16 @@ export const LeadsPage = () => {
   });
 
   return (
-    <PlatformShell moduleLabel="CRM" title="Leads" subtitle="Track pipeline stages, follow-up commitments, and conversion readiness.">
+    <PlatformShell moduleLabel="Relationships" title="Prospective Clients" subtitle="Track enquiries, follow-ups, proposals, and conversion readiness before they become active clients.">
       <StatusMessageStack messages={[
         { tone: 'error', message: error },
-        { tone: 'info', message: refreshing ? 'Refreshing leads in the background…' : '' },
+        { tone: 'info', message: refreshing ? 'Refreshing prospective clients in the background…' : '' },
       ]}
       />
 
-      <PageSection title="Quick actions" description="Keep terminology and controls aligned with CRM overview and client management.">
+      <PageSection title="Quick actions" description="Capture enquiries, assign ownership, and keep relationship follow-ups on track.">
         <div className="action-row">
-          {isAdmin ? <Button onClick={openModal}>New Lead</Button> : null}
+          {isAdmin ? <Button onClick={openModal}>New Prospective Client</Button> : null}
           <Button variant="outline" onClick={() => setViewMode('list')}>List View</Button>
           <Button variant="outline" onClick={() => setViewMode('pipeline')}>Pipeline View</Button>
         </div>
@@ -326,7 +327,18 @@ export const LeadsPage = () => {
 
       <StatGrid items={STAGES.map((stage) => ({ label: LEAD_STAGE_LABEL[stage], value: stageStats[stage] || 0 }))} />
 
-      <PageSection title="Filters" description="Filter by stage, owner, and overdue follow-up status.">
+
+      <PageSection title="Prospective client memory" description="Context captured here becomes client memory after conversion.">
+        <p className="text-sm text-[var(--dt-text-secondary)]">Every enquiry, note, document request, follow-up, and proposal becomes part of the client memory if this prospect converts. This helps the firm preserve context from first contact to execution.</p>
+        <p className="mt-2 text-xs text-[var(--dt-text-muted)]">Example: A founder asks for ROC compliance help. Capture CIN/company details, assign follow-up, record notes, send proposal, and convert to an active client with context preserved.</p>
+        <div className="mt-3 action-row">
+          <Button variant="outline" onClick={() => navigate(safeRoute(ROUTES.CRM(firmSlug)))}>Relationships</Button>
+          <Button variant="outline" onClick={() => navigate(safeRoute(ROUTES.CLIENTS(firmSlug)))}>Clients</Button>
+          <Button variant="outline" onClick={() => navigate(safeRoute(ROUTES.CMS(firmSlug)))}>Knowledge Intake</Button>
+          <Button variant="outline" onClick={() => navigate(safeRoute(ROUTES.COMPANY_BRAIN(firmSlug)))}>Company Brain</Button>
+        </div>
+      </PageSection>
+      <PageSection title="Filters" description="Filter by lifecycle stage, owner, and overdue follow-up status.">
         <FilterBar>
           <div>
             <label className="block text-xs text-[var(--dt-text-secondary)]" htmlFor="lead-filter-stage">Stage</label>
@@ -364,7 +376,7 @@ export const LeadsPage = () => {
         <p className="text-xs text-[var(--dt-text-muted)]">Filters apply automatically as you change them. Use Refresh to re-check latest lead data.</p>
       </PageSection>
 
-      <PageSection title={viewMode === 'pipeline' ? 'Pipeline board' : 'Lead queue'} description="Operational lead tracking surface.">
+      <PageSection title={viewMode === 'pipeline' ? 'Prospective client lifecycle board' : 'Prospective client queue'} description="Who enquired, what they need, ownership, and next follow-up in one place.">
         {viewMode === 'pipeline' ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             {STAGES.map((stage) => (
@@ -381,26 +393,26 @@ export const LeadsPage = () => {
                       <p className="text-[var(--dt-text-secondary)]">Owner: {lead.owner?.name || lead.ownerXid || 'Unassigned'}</p>
                       <p className="text-[var(--dt-text-secondary)]">Follow-up: {lead.nextFollowUpAt ? formatDate(lead.nextFollowUpAt) : 'Not set'} ({formatRelativeDateLabel(lead.nextFollowUpAt)})</p>
                     </button>
-                  )) : <p className="rounded border border-dashed border-[var(--dt-border)] bg-[var(--dt-surface)] p-2 text-xs text-[var(--dt-text-muted)]">No leads in this stage yet. New intake submissions will appear here.</p>}
+                  )) : <p className="rounded border border-dashed border-[var(--dt-border)] bg-[var(--dt-surface)] p-2 text-xs text-[var(--dt-text-muted)]">No prospective clients in this stage yet. New intake submissions will appear here.</p>}
                 </div>
               </div>
             ))}
           </div>
         ) : (
           <DataTable
-            columns={['Lead', 'Stage', 'Owner', 'Next Follow-up', 'Actions']}
+            columns={['Prospective client', 'Lifecycle stage', 'Owner', 'Next follow-up', 'Actions']}
             rows={tableRows}
             loading={initialLoading}
             error={error}
             onRetry={() => void loadLeads()}
-            emptyLabel="No leads yet. Create a lead manually or publish an intake form to start the pipeline."
+            emptyLabel="No prospective clients yet. New enquiries from Knowledge Intake or manually added opportunities will appear here."
             hasActiveFilters={hasActiveFilters}
-            emptyLabelFiltered="No leads match current filters. Adjust stage/owner filters or disable overdue-only mode."
+            emptyLabelFiltered="No prospective clients match current filters. Adjust lifecycle/owner filters or disable overdue-only mode."
           />
         )}
       </PageSection>
 
-      <Modal isOpen={showModal} onClose={closeModal} title="New Lead" maxWidth="lg">
+      <Modal isOpen={showModal} onClose={closeModal} title="New Prospective Client" maxWidth="lg">
         <form onSubmit={handleSubmit} className="grid gap-4">
           <Input label="Name" value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} required error={formErrors.name} />
           <Input label="Email (optional)" type="email" value={form.email} onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))} error={formErrors.email || (formErrors.contact && form.phone.trim() ? '' : formErrors.contact)} />
@@ -421,12 +433,12 @@ export const LeadsPage = () => {
           <Input label="Next Follow-up" type="date" value={form.nextFollowUpAt} onChange={(event) => setForm((prev) => ({ ...prev, nextFollowUpAt: event.target.value }))} />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={closeModal}>Cancel</Button>
-            <Button type="submit" loading={saving} disabled={saving}>{saving ? 'Saving…' : 'Create Lead'}</Button>
+            <Button type="submit" loading={saving} disabled={saving}>{saving ? 'Saving…' : 'Create Prospective Client'}</Button>
           </div>
         </form>
       </Modal>
 
-      <Modal isOpen={showDetail} onClose={closeDetail} title={`Manage Lead${selectedLead?.name ? `: ${selectedLead.name}` : ''}`} maxWidth="lg">
+      <Modal isOpen={showDetail} onClose={closeDetail} title={`Manage Prospective Client${selectedLead?.name ? `: ${selectedLead.name}` : ''}`} maxWidth="lg">
         <div className="grid gap-4">
           <div>
             <label className="block text-sm font-medium text-[var(--dt-text-secondary)]" htmlFor="detail-stage">Stage</label>
@@ -470,7 +482,7 @@ export const LeadsPage = () => {
                 variant="outline"
                 onClick={() => navigate(safeRoute(ROUTES.CRM_CLIENT_DETAIL(firmSlug, selectedLead.linkedClientId)))}
               >
-                Open Client Workspace
+                Open Active Client Workspace
               </Button>
             ) : null}
             <Button type="button" variant="outline" onClick={closeDetail}>Cancel</Button>
