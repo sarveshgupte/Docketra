@@ -76,7 +76,8 @@ Minimum required for stable production:
 - `MAIL_FROM` (or `SMTP_FROM`)
 - `FRONTEND_URL`
 - `FRONTEND_ORIGINS`
-- `REDIS_URL`
+- `REDIS_URL` (required for production-grade behavior)
+- `ALLOW_REDIS_FALLBACK=true` (optional, only for explicitly accepted degraded mode)
 
 Conditional/feature-dependent:
 - `MASTER_ENCRYPTION_KEY` when `ENCRYPTION_PROVIDER` is not `disabled`.
@@ -153,6 +154,11 @@ API runtime remains request/response focused and does not own worker bootstrap.
 ---
 
 ## 10) Troubleshooting
+
+### Redis degraded startup behavior
+- API still binds `PORT` when Redis is unreachable.
+- In production, missing `REDIS_URL` without `ALLOW_REDIS_FALLBACK=true` logs a loud warning and starts degraded.
+- Security-sensitive rate limits fail closed until Redis is healthy.
 
 ### API fails to boot
 - Validate required env vars (especially `MONGO_URI`/`MONGODB_URI`, `JWT_SECRET`, `SUPERADMIN_*`).

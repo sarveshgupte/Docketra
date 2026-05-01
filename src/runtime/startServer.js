@@ -5,6 +5,7 @@ const { runBootstrap } = require('../services/bootstrap.service');
 const { initNotificationSocket } = require('../services/notificationSocket.service');
 const { sanitizeErrorForLog } = require('../utils/pii');
 const { createApp } = require('../app/createApp');
+const { getRedisClient, isRedisReady, isRedisUrlConfigured } = require('../config/redis');
 
 const startServer = async () => {
   const app = createApp();
@@ -14,6 +15,12 @@ const startServer = async () => {
 
   const PORT = config.port;
   const server = app.listen(PORT, () => {
+    log.info(`[REDIS] REDIS_CONFIGURED=${isRedisUrlConfigured()}`);
+    log.info(`[REDIS] REDIS_READY=${isRedisReady()}`);
+    if (!isRedisReady()) {
+      log.warn('[REDIS] Startup continuing with degraded Redis status');
+    }
+
     log.info('API_RUNTIME_SCHEDULERS_DISABLED');
     log.info(`
 ╔════════════════════════════════════════════╗
@@ -29,6 +36,12 @@ const startServer = async () => {
 ╚════════════════════════════════════════════╝
   `);
   });
+
+  try {
+    getRedisClient();
+  } catch (redisInitError) {
+    log.error('[REDIS] Startup Redis init skipped after bind due to error', sanitizeErrorForLog(redisInitError));
+  }
 
   initNotificationSocket(server, { allowedOrigins: app.locals.allowedOrigins || [] });
 
