@@ -5,7 +5,7 @@ const SECRET_KEY_PATTERN = /(password|passcode|otp|totp|token|secret|authorizati
 const IDENTITY_KEY_PATTERN = /(pan|aadhaar|aadhar)/i;
 const PUBLIC_DIAGNOSTIC_SENSITIVE_PATTERN = /(comment|description|notes?|narrative|client(name|email|phone)?|case(name|title)?|attachment(url|name)?)/i;
 const SENSITIVE_URL_PARAM_PATTERN = /(token|otp|password|reset|verification|verify|signature|sig|key|auth|code|state|expires|x-goog-signature|x-amz-signature|googleaccess|refreshtoken)/i;
-const JWT_REGEX = /[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+/;
+const JWT_REGEX = /\b[A-Za-z0-9-_]{10,}\.[A-Za-z0-9-_]{10,}\.[A-Za-z0-9-_]{10,}\b/;
 
 const isPlainObject = (value) => Object.prototype.toString.call(value) === '[object Object]';
 
@@ -26,7 +26,7 @@ const sanitizeUrl = (value) => {
   }
 
   if (/https?:\/\//i.test(value) && SENSITIVE_URL_PARAM_PATTERN.test(value)) {
-    return REDACTED_URL;
+    return value.replace(/([?&][^=]*?(token|otp|password|reset|verification|verify|signature|sig|key|auth|code|state|expires|x-goog-signature|x-amz-signature|googleaccess|refreshtoken)[^=]*=)([^&\s]+)/ig, '$1[REDACTED]');
   }
   return value;
 };
