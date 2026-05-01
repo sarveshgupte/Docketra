@@ -186,6 +186,9 @@ export const LinkedKnowledgeSection = ({
               {items.map((item) => {
                 const itemId = getItemKey(item);
                 const tags = Array.isArray(item.tags) ? item.tags : [];
+                const checklistStepCount = item.type === 'checklist' && Array.isArray(item.checklistSteps)
+                  ? item.checklistSteps.length
+                  : 0;
                 return (
                   <tr key={itemId}>
                     <td>{item.title || '—'}</td>
@@ -196,6 +199,11 @@ export const LinkedKnowledgeSection = ({
                     <td>{formatDate(item.reviewDueAt) || '—'}</td>
                     <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {item.summary || '—'}
+                      {checklistStepCount > 0 ? (
+                        <span className="muted" style={{ marginLeft: '0.35rem', fontSize: '0.75rem' }}>
+                          • {checklistStepCount} steps
+                        </span>
+                      ) : null}
                     </td>
                     <td>
                       <span className="muted" style={{ fontSize: '0.8rem' }}>

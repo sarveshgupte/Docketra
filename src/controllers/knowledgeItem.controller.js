@@ -29,6 +29,30 @@ const parseDateOrNull = (value) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+const normalizeChecklistSteps = (input) => {
+  if (input === undefined) return undefined;
+  if (!Array.isArray(input)) throw new Error('checklistSteps must be an array');
+  if (input.length > 100) throw new Error('checklistSteps must not exceed 100 steps');
+
+  const normalized = input.map((step, index) => {
+    const label = String(step?.label || '').trim();
+    if (!label) throw new Error(`checklistSteps[${index}].label is required`);
+    const description = step?.description ? String(step.description).trim() : '';
+    const rawOrder = step?.order;
+    const parsedOrder = Number(rawOrder);
+    return {
+      label,
+      description: description || null,
+      order: Number.isFinite(parsedOrder) ? parsedOrder : (index + 1),
+      required: step?.required === undefined ? true : Boolean(step.required),
+    };
+  });
+
+  return normalized
+    .sort((a, b) => a.order - b.order)
+    .map((step, index) => ({ ...step, order: index + 1 }));
+};
+
 const createKnowledgeItem = async (req, res) => {
   try {
     const actorXid = normalizeXid(req.user);
@@ -60,6 +84,7 @@ const createKnowledgeItem = async (req, res) => {
     const linkedClientId = req.body?.linkedClientId
       ? req.body.linkedClientId
       : null;
+    const checklistSteps = normalizeChecklistSteps(req.body?.checklistSteps);
 
     const item = await KnowledgeItem.create({
       firmId: req.user.firmId,
@@ -79,6 +104,7 @@ const createKnowledgeItem = async (req, res) => {
       linkedWorkType: req.body?.linkedWorkType
         ? String(req.body.linkedWorkType).trim() || null
         : null,
+      checklistSteps,
       reviewDueAt: parseDateOrNull(req.body?.reviewDueAt),
       lastReviewedAt: parseDateOrNull(req.body?.lastReviewedAt),
       createdByXid: actorXid || 'SYSTEM',
@@ -259,6 +285,10 @@ const updateKnowledgeItem = async (req, res) => {
 
     if (Object.prototype.hasOwnProperty.call(body, 'lastReviewedAt')) {
       item.lastReviewedAt = parseDateOrNull(body.lastReviewedAt);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'checklistSteps')) {
+      item.checklistSteps = normalizeChecklistSteps(body.checklistSteps);
     }
 
     item.updatedByXid = normalizeXid(req.user) || null;

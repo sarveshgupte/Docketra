@@ -1,5 +1,12 @@
 # What's New
 
+
+## May 2026: Checklist steps for KnowledgeItems
+
+- Added structured checklist steps for checklist-type KnowledgeItems.
+- Surfaced checklist step context in Knowledge Library, Linked Knowledge, and Client Knowledge without creating tasks or completion tracking.
+- Preserved no-AI, no-document-extraction, no-file-upload, and existing-route constraints.
+
 ## Work type normalization for Knowledge
 
 - Added normalized work type/category selection for KnowledgeItems so linked SOPs, checklists, templates, and process records surface more reliably in work views.

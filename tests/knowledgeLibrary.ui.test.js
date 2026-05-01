@@ -360,6 +360,22 @@ function testLinkedKnowledgeSectionHasNoAiInfrastructure() {
   console.log('  ✓ LinkedKnowledgeSection has no AI/vector/embedding infrastructure');
 }
 
+
+function testChecklistStepsUiAndReadOnlyDisplay() {
+  const pageSource = read('ui/src/pages/KnowledgeLibraryPage.jsx');
+  assert.ok(pageSource.includes('Checklist steps'), 'KnowledgeLibraryPage must include checklist steps editor label');
+  assert.ok(pageSource.includes("form.type === 'checklist'"), 'KnowledgeLibraryPage must conditionally render checklist steps editor for checklist type');
+  assert.ok(pageSource.includes('Checklist steps are only used for checklist records.'), 'KnowledgeLibraryPage must include checklist-type warning message');
+  assert.ok(pageSource.includes("item.type === 'checklist'"), 'KnowledgeItem detail drawer must support checklist read-only section');
+  console.log('  ✓ KnowledgeLibraryPage checklist steps editor/detail drawer checks');
+}
+
+function testLinkedKnowledgeShowsChecklistStepCount() {
+  const sectionSource = read('ui/src/pages/caseDetail/LinkedKnowledgeSection.jsx');
+  assert.ok(sectionSource.includes('steps'), 'LinkedKnowledgeSection must display checklist step count text');
+  assert.ok(sectionSource.includes('checklistSteps'), 'LinkedKnowledgeSection must read checklistSteps from linked items');
+  console.log('  ✓ LinkedKnowledgeSection checklist step count checks');
+}
 function testKnowledgeLibraryFormHasLinkedWorkTypeHelperCopy() {
   const pageSource = read('ui/src/pages/KnowledgeLibraryPage.jsx');
   assert.ok(
@@ -403,9 +419,10 @@ function run() {
   testLinkedKnowledgeSectionHasEmptyStates();
   testLinkedKnowledgeSectionHasNoAiInfrastructure();
   testKnowledgeLibraryFormHasLinkedWorkTypeHelperCopy();
+  testChecklistStepsUiAndReadOnlyDisplay();
+  testLinkedKnowledgeShowsChecklistStepCount();
   testCaseDetailTabConstantIncludesKnowledge();
   console.log('✅ knowledgeLibrary.ui.test.js passed');
 }
 
 run();
-

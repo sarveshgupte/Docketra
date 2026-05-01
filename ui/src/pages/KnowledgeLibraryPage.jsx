@@ -43,6 +43,7 @@ const EMPTY_FORM = {
   linkedWorkType: '',
   linkedClientId: '',
   reviewDueAt: '',
+  checklistSteps: [],
 };
 
 const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => {
@@ -51,6 +52,12 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
     ...initial,
     tags: Array.isArray(initial?.tags) ? initial.tags.join(', ') : (initial?.tags || ''),
     reviewDueAt: initial?.reviewDueAt ? new Date(initial.reviewDueAt).toISOString().slice(0, 10) : '',
+    checklistSteps: Array.isArray(initial?.checklistSteps) ? initial.checklistSteps.map((step, idx) => ({
+      label: String(step?.label || ''),
+      description: String(step?.description || ''),
+      order: Number.isFinite(Number(step?.order)) ? Number(step.order) : (idx + 1),
+      required: step?.required !== false,
+    })) : [],
   }));
 
   const initialLinkedWorkType = String(initial?.linkedWorkType || '').trim();
@@ -75,6 +82,38 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+
+  const updateChecklistStep = (index, patch) => {
+    setForm((prev) => ({
+      ...prev,
+      checklistSteps: (prev.checklistSteps || []).map((step, stepIndex) => (stepIndex === index ? { ...step, ...patch } : step)),
+    }));
+  };
+
+  const addChecklistStep = () => {
+    setForm((prev) => ({
+      ...prev,
+      checklistSteps: [...(prev.checklistSteps || []), { label: '', description: '', order: (prev.checklistSteps || []).length + 1, required: true }],
+    }));
+  };
+
+  const removeChecklistStep = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      checklistSteps: (prev.checklistSteps || []).filter((_, stepIndex) => stepIndex !== index).map((step, idx) => ({ ...step, order: idx + 1 })),
+    }));
+  };
+
+  const moveChecklistStep = (index, direction) => {
+    setForm((prev) => {
+      const next = [...(prev.checklistSteps || [])];
+      const target = index + direction;
+      if (target < 0 || target >= next.length) return prev;
+      [next[index], next[target]] = [next[target], next[index]];
+      return { ...prev, checklistSteps: next.map((step, idx) => ({ ...step, order: idx + 1 })) };
+    });
+  };
+
   const handleSubmit = (event) => {
     event.preventDefault();
     const payload = {
@@ -88,6 +127,12 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
       linkedWorkType: normalizeWorkType(form.linkedWorkType) || null,
       linkedClientId: form.linkedClientId.trim() || null,
       reviewDueAt: form.reviewDueAt || null,
+      checklistSteps: Array.isArray(form.checklistSteps) ? form.checklistSteps.map((step, idx) => ({
+        label: String(step.label || '').trim(),
+        description: String(step.description || '').trim() || null,
+        order: Number(step.order) || (idx + 1),
+        required: step.required !== false,
+      })) : undefined,
     };
     onSave(payload);
   };
@@ -220,7 +265,7 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
               />
             ) : null}
             <p style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem' }}>
-              Choose the same work type/category used by dockets so this knowledge appears during work execution.
+              Use the same work type/category used by dockets so this knowledge appears during work execution.
             </p>
           </div>
 
@@ -251,6 +296,35 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
             />
           </div>
         </div>
+
+
+        {form.type === 'checklist' ? (
+          <div style={{ border: '1px solid #e5e7eb', borderRadius: '6px', padding: '0.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <strong>Checklist steps</strong>
+              <button type="button" onClick={addChecklistStep}>Add step</button>
+            </div>
+            {(form.checklistSteps || []).map((step, index) => (
+              <div key={`step-${index}`} style={{ borderTop: index ? '1px solid #f3f4f6' : 'none', paddingTop: index ? '0.5rem' : 0, marginTop: index ? '0.5rem' : 0 }}>
+                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  <span style={{ minWidth: '60px' }}>Step {index + 1}</span>
+                  <input type="text" value={step.label} onChange={(e) => updateChecklistStep(index, { label: e.target.value })} placeholder="Step label" maxLength={300} style={{ flex: 1 }} />
+                </div>
+                <textarea value={step.description || ''} onChange={(e) => updateChecklistStep(index, { description: e.target.value })} placeholder="Description (optional)" rows={2} maxLength={2000} style={{ width: '100%', marginTop: '0.35rem' }} />
+                <label style={{ fontSize: '0.85rem' }}><input type="checkbox" checked={step.required !== false} onChange={(e) => updateChecklistStep(index, { required: e.target.checked })} /> Required</label>
+                <div className="action-row" style={{ marginTop: '0.3rem' }}>
+                  <button type="button" onClick={() => moveChecklistStep(index, -1)} disabled={index === 0}>Up</button>
+                  <button type="button" onClick={() => moveChecklistStep(index, 1)} disabled={index === (form.checklistSteps || []).length - 1}>Down</button>
+                  <button type="button" onClick={() => removeChecklistStep(index)}>Remove</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {initial?.type === 'checklist' && form.type !== 'checklist' ? (
+          <p className="inline-notice inline-notice--warning">Checklist steps are only used for checklist records.</p>
+        ) : null}
 
         {saveError ? (
           <p className="inline-notice inline-notice--error" role="alert">{saveError}</p>
@@ -319,6 +393,20 @@ const KnowledgeItemDetailDrawer = ({ item, onEdit, onArchive, onClose }) => {
         <DetailRow label="Type" value={formatLabel(item.type)} />
         <DetailRow label="Status" value={formatLabel(item.status)} />
         <DetailRow label="Summary" value={item.summary} />
+
+        {item.type === 'checklist' && Array.isArray(item.checklistSteps) && item.checklistSteps.length ? (
+          <div style={{ marginBottom: '0.75rem' }}>
+            <div style={{ fontWeight: 600, marginBottom: '0.25rem', color: '#374151' }}>Checklist steps</div>
+            <ol style={{ margin: 0, paddingLeft: '1.1rem' }}>
+              {item.checklistSteps.map((step, index) => (
+                <li key={`detail-step-${index}`} style={{ marginBottom: '0.4rem' }}>
+                  <div><strong>{step.label}</strong> <span className="muted">({step.required === false ? 'Optional' : 'Required'})</span></div>
+                  {step.description ? <div style={{ fontSize: '0.85rem' }}>{step.description}</div> : null}
+                </li>
+              ))}
+            </ol>
+          </div>
+        ) : null}
 
         {item.content ? (
           <div style={{ marginBottom: '0.75rem' }}>

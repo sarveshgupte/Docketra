@@ -17,6 +17,8 @@ const { tenantScopeGuardPlugin } = require('./plugins/tenantScopeGuard.plugin');
 
 const KNOWLEDGE_ITEM_TYPES = ['sop', 'checklist', 'template', 'note', 'client_instruction', 'process'];
 const KNOWLEDGE_ITEM_STATUSES = ['draft', 'active', 'archived'];
+const CHECKLIST_STEP_LABEL_MAX = 300;
+const CHECKLIST_STEP_DESCRIPTION_MAX = 2000;
 
 const knowledgeItemSchema = new mongoose.Schema(
   {
@@ -78,6 +80,38 @@ const knowledgeItemSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: null,
+    },
+    checklistSteps: {
+      type: [{
+        label: {
+          type: String,
+          required: [true, 'Checklist step label is required'],
+          trim: true,
+          maxlength: [CHECKLIST_STEP_LABEL_MAX, `Checklist step label must not exceed ${CHECKLIST_STEP_LABEL_MAX} characters`],
+        },
+        description: {
+          type: String,
+          trim: true,
+          maxlength: [CHECKLIST_STEP_DESCRIPTION_MAX, `Checklist step description must not exceed ${CHECKLIST_STEP_DESCRIPTION_MAX} characters`],
+          default: null,
+        },
+        order: {
+          type: Number,
+          required: true,
+        },
+        required: {
+          type: Boolean,
+          default: true,
+        },
+      }],
+      default: undefined,
+      validate: {
+        validator(steps) {
+          if (steps === undefined || steps === null) return true;
+          return Array.isArray(steps) && steps.length <= 100;
+        },
+        message: 'Checklist steps must be an array with at most 100 items',
+      },
     },
     reviewDueAt: {
       type: Date,
