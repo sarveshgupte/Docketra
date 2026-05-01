@@ -41,6 +41,7 @@ import {
   PlatformCrmPage,
   PlatformCmsPage,
   PlatformTaskManagerPage,
+  CompanyBrainPage,
   PlatformSettingsPage,
 } from './lazyPages';
 import { RouteSuspenseOutlet } from './RouteSuspenseOutlet';
@@ -263,6 +264,14 @@ export const ProtectedRoutes = () => (
           element={(
             <ProtectedRoute requireAdmin>
               <PlatformCmsPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="company-brain"
+          element={(
+            <ProtectedRoute requireAdmin>
+              <CompanyBrainPage />
             </ProtectedRoute>
           )}
         />

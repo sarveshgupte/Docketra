@@ -16,6 +16,7 @@ const sidebarRoutes = [
   ROUTES.CRM_CLIENTS(firmSlug),
   ROUTES.CRM_LEADS(firmSlug),
   ROUTES.CMS(firmSlug),
+  ROUTES.COMPANY_BRAIN(firmSlug),
   ROUTES.ADMIN_REPORTS(firmSlug),
   ROUTES.ADMIN(firmSlug),
   ROUTES.HIERARCHY(firmSlug),
@@ -39,6 +40,7 @@ const knownFirmRoutePrefixes = [
   `/app/firm/${firmSlug}/crm/clients`,
   `/app/firm/${firmSlug}/crm/leads`,
   `/app/firm/${firmSlug}/cms`,
+  `/app/firm/${firmSlug}/company-brain`,
   `/app/firm/${firmSlug}/admin`,
   `/app/firm/${firmSlug}/settings`,
   `/app/firm/${firmSlug}/storage-settings`,
@@ -64,7 +66,7 @@ assert.ok(
   'Firm-scoped routes must render in FirmLayout shell'
 );
 
-for (const expectedPath of ['path="dashboard"', 'path="dockets"', 'path="worklist"', 'path="global-worklist"', 'path="qc-queue"', 'path="clients"', 'path="crm/clients"', 'path="cms"', 'path="admin/reports"', 'path="settings"', 'path="profile"']) {
+for (const expectedPath of ['path="dashboard"', 'path="dockets"', 'path="worklist"', 'path="global-worklist"', 'path="qc-queue"', 'path="clients"', 'path="crm/clients"', 'path="cms"', 'path="company-brain"', 'path="admin/reports"', 'path="settings"', 'path="profile"']) {
   assert.ok(
     protectedRoutesSource.includes(expectedPath),
     `Missing core protected route entry: ${expectedPath}`

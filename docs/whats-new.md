@@ -6,6 +6,12 @@
 - Reframed CMS, CRM, and Task Manager as intake, relationship, and execution layers feeding institutional memory.
 - Documented a safe migration path that preserves existing routes and functionality while preparing for connected knowledge workflows.
 
+## May 2026: Company Brain workspace entry
+
+- Added a read-only Company Brain workspace page to explain the connected firm-memory model.
+- Added Company Brain to the Firm Memory navigation and command palette.
+- Preserved existing Work, Knowledge Intake, Relationships, and Clients routes while introducing the new product entry point.
+
 ## May 2026: Company Brain navigation language
 
 - Updated workspace navigation language from CRM/CMS terminology to Company Brain-oriented labels.

@@ -18,11 +18,11 @@ assert.ok(superadminInsights.includes('/${firm.firmSlug}/login') && superadminFi
 
 assert.equal(notificationView.includes('<Layout>'), false, 'Notification history route must not wrap deprecated Layout inside firm shell route.');
 
-for (const routeFactory of ['ROUTES.TASK_MANAGER', 'ROUTES.DASHBOARD', 'ROUTES.CMS', 'ROUTES.CRM', 'ROUTES.CLIENTS', 'ROUTES.ADMIN_REPORTS', 'ROUTES.ADMIN', 'ROUTES.SETTINGS']) {
+for (const routeFactory of ['ROUTES.TASK_MANAGER', 'ROUTES.DASHBOARD', 'ROUTES.CMS', 'ROUTES.CRM', 'ROUTES.COMPANY_BRAIN', 'ROUTES.CLIENTS', 'ROUTES.ADMIN_REPORTS', 'ROUTES.ADMIN', 'ROUTES.SETTINGS']) {
   assert.ok(platformNav.includes(routeFactory), `Platform nav item missing valid route factory: ${routeFactory}`);
 }
 
-for (const commandId of ['go-docket-workbench', 'go-dashboard', 'go-cms', 'go-crm', 'go-clients', 'go-reports', 'go-team', 'go-settings']) {
+for (const commandId of ['go-docket-workbench', 'go-dashboard', 'go-cms', 'go-crm', 'go-company-brain', 'go-clients', 'go-reports', 'go-team', 'go-settings']) {
   assert.ok(platformNav.includes(`id: '${commandId}'`), `Navigation command missing metadata id: ${commandId}`);
 }
 
@@ -39,3 +39,5 @@ assert.ok(platformShell.includes('hasAdminAccess ? [{ id: \'go-workbasket\''), '
 assert.ok(platformShell.includes('hasQcQueueAccess ? [{ id: \'go-qc\''), 'QC command should be role-gated.');
 
 console.log('navigationActionInventory.test.mjs passed');
+
+assert.ok(platformNav.includes("id: 'company-brain'") && platformNav.includes("minRole: 'ADMIN'"), 'Company Brain should be present and admin-only.');

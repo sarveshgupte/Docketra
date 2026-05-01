@@ -62,6 +62,18 @@ const NAV_BLUEPRINT = [
         },
       },
       {
+        id: 'company-brain',
+        label: 'Company Brain',
+        icon: '🧠',
+        route: (firmSlug) => ROUTES.COMPANY_BRAIN(firmSlug),
+        minRole: 'ADMIN',
+        command: {
+          id: 'go-company-brain',
+          label: 'Go to Company Brain',
+          description: 'Open the connected map of firm memory, work, clients, and knowledge.',
+        },
+      },
+      {
         id: 'clients',
         label: 'Clients',
         icon: '👥',
