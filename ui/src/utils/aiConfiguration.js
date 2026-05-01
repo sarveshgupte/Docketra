@@ -1,6 +1,12 @@
 const DISABLED_PROVIDER_VALUES = new Set(['', 'disabled', 'none', 'null']);
+const ROLE_KEYS = ['PRIMARY_ADMIN', 'ADMIN', 'MANAGER', 'USER'];
 
 export const isProviderDisabled = (value) => DISABLED_PROVIDER_VALUES.has(String(value || '').trim().toLowerCase());
+
+const normalizeRoleAccess = (selectedRoles = []) => ROLE_KEYS.reduce((acc, role) => ({
+  ...acc,
+  [role]: selectedRoles.includes(role),
+}), {});
 
 export function buildAiConfigurationPayload(formState) {
   const provider = String(formState?.provider || '').trim();
@@ -13,8 +19,16 @@ export function buildAiConfigurationPayload(formState) {
     model: String(formState?.model || '').trim() || null,
     credentialMode: providerIsDisabled ? 'none' : credentialMode,
     features: { ...(formState?.features || {}) },
-    allowedRoles: Array.isArray(formState?.allowedRoles) ? formState.allowedRoles : [],
-    retention: { ...(formState?.retention || {}) },
+    roleAccess: normalizeRoleAccess(formState?.allowedRoles || []),
+    retention: {
+      zeroRetention: Boolean(formState?.retention?.zeroRetention),
+      savePrompts: Boolean(formState?.retention?.savePrompts),
+      saveOutputs: Boolean(formState?.retention?.saveOutputs),
+    },
+    privacy: {
+      redactErrors: Boolean(formState?.privacy?.redactErrors),
+      verboseLogging: Boolean(formState?.privacy?.verboseLogging),
+    },
   };
 
   const encryptedKey = String(formState?.encryptedKey || '').trim();

@@ -14,7 +14,7 @@ import { buildAiConfigurationPayload, isProviderDisabled } from '../utils/aiConf
 const PROVIDER_OPTIONS = [
   { value: 'disabled', label: 'Disabled' },
   { value: 'openai', label: 'OpenAI' },
-  { value: 'google_gemini', label: 'Google Gemini' },
+  { value: 'gemini', label: 'Google Gemini' },
   { value: 'anthropic', label: 'Anthropic' },
   { value: 'azure_openai', label: 'Azure OpenAI' },
   { value: 'docketra_managed', label: 'Docketra Managed AI' },
@@ -26,7 +26,8 @@ const CREDENTIAL_MODE_OPTIONS = [
 ];
 const FEATURE_KEYS = ['taskDescriptionRefinement', 'documentSummary', 'docketDrafting', 'routingSuggestions'];
 const ROLE_KEYS = ['PRIMARY_ADMIN', 'ADMIN', 'MANAGER', 'USER'];
-const RETENTION_KEYS = ['zeroRetention', 'savePrompts', 'saveOutputs', 'redactErrors', 'verboseLogging'];
+const RETENTION_KEYS = ['zeroRetention', 'savePrompts', 'saveOutputs'];
+const PRIVACY_KEYS = ['redactErrors', 'verboseLogging'];
 
 const modeLabel = (provider, enabled) => {
   if (!enabled || isProviderDisabled(provider)) return 'Disabled';
@@ -45,7 +46,7 @@ export function AiSettingsPage() {
   const [hasEncryptedKey, setHasEncryptedKey] = useState(false);
   const [hasCredentialRef, setHasCredentialRef] = useState(false);
   const [testResult, setTestResult] = useState(null);
-  const [formState, setFormState] = useState({ enabled: false, provider: 'disabled', model: '', credentialMode: 'none', encryptedKey: '', credentialRef: '', features: {}, allowedRoles: [], retention: {} });
+  const [formState, setFormState] = useState({ enabled: false, provider: 'disabled', model: '', credentialMode: 'none', encryptedKey: '', credentialRef: '', features: {}, allowedRoles: [], retention: {}, privacy: {} });
 
   const loadConfiguration = async () => {
     setLoading(true); setLoadError(''); setForbidden(false);
@@ -61,8 +62,9 @@ export function AiSettingsPage() {
         encryptedKey: '',
         credentialRef: '',
         features: FEATURE_KEYS.reduce((acc, key) => ({ ...acc, [key]: Boolean(config?.features?.[key]) }), {}),
-        allowedRoles: Array.isArray(config?.allowedRoles) ? config.allowedRoles : ['PRIMARY_ADMIN', 'ADMIN'],
+        allowedRoles: ROLE_KEYS.filter((role) => Boolean(config?.roleAccess?.[role])),
         retention: RETENTION_KEYS.reduce((acc, key) => ({ ...acc, [key]: Boolean(config?.retention?.[key]) }), {}),
+        privacy: PRIVACY_KEYS.reduce((acc, key) => ({ ...acc, [key]: Boolean(config?.privacy?.[key]) }), {}),
       });
     } catch (error) {
       if (error?.response?.status === 403) {
@@ -127,6 +129,7 @@ export function AiSettingsPage() {
                 <h3 className="text-base font-medium">Retention & privacy</h3>
                 <p className="text-xs text-[var(--dt-text-muted)]">Raw prompts/outputs are not retained by default. Enabling retention should require firm/legal approval.</p>
                 {RETENTION_KEYS.map((k) => <label key={k} className="flex gap-2 items-center"><input type="checkbox" checked={Boolean(formState.retention[k])} disabled={formState.retention.zeroRetention && (k === 'savePrompts' || k === 'saveOutputs')} onChange={(e) => setFormState((s) => ({ ...s, retention: { ...s.retention, [k]: e.target.checked, ...(k === 'zeroRetention' && e.target.checked ? { savePrompts: false, saveOutputs: false } : {}) } }))} />{k}</label>)}
+                {PRIVACY_KEYS.map((k) => <label key={k} className="flex gap-2 items-center"><input type="checkbox" checked={Boolean(formState.privacy[k])} onChange={(e) => setFormState((s) => ({ ...s, privacy: { ...s.privacy, [k]: e.target.checked } }))} />{k}</label>)}
                 <div className="flex gap-3">
                   <Button type="button" variant="secondary" onClick={onTest} loading={testing}>Test configuration</Button>
                   <Button type="button" variant="primary" onClick={onSave} loading={saving}>Save AI settings</Button>
