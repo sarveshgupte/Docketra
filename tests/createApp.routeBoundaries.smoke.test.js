@@ -44,43 +44,41 @@ const swap = (modulePath, exportsValue) => {
 
   delete require.cache[createAppModulePath];
   const { createApp } = require('../src/app/createApp');
-  assert.doesNotThrow(() => createApp(), 'createApp should not throw with Express 5 route parsing');
+
+  assert.doesNotThrow(() => createApp(), 'createApp should not throw');
   const app = createApp();
 
+  const health = await request(app).get('/health');
+  assert.strictEqual(health.status, 200, 'GET /health should return 200');
+
+  const apiHealth = await request(app).get('/api/health');
+  assert.strictEqual(apiHealth.status, 200, 'GET /api/health should return health response');
+
+  const apiIndex = await request(app).get('/api');
+  assert.strictEqual(apiIndex.status, 200, 'GET /api should return API index');
+  assert.strictEqual(apiIndex.body?.success, true, 'GET /api should return success payload');
+
   const firmLogin = await request(app).get('/api/acme/login');
-  assert.strictEqual(firmLogin.status, 200);
+  assert.strictEqual(firmLogin.status, 200, 'GET /api/acme/login should reach firm route');
   assert.ok(tenantResolverCalls > 0, 'tenantResolver should run for valid firm slug');
-
-  const beforeReserved = tenantResolverCalls;
-  await request(app).get('/api/auth');
-  assert.strictEqual(tenantResolverCalls, beforeReserved, '/api/auth must not hit tenantResolver in firm routes');
-
-  const beforePublic = tenantResolverCalls;
-  await request(app).get('/api/public');
-  assert.strictEqual(tenantResolverCalls, beforePublic, '/api/public must not hit tenantResolver in firm routes');
-
-  const beforeSuperadmin = tenantResolverCalls;
-  await request(app).get('/api/superadmin');
-  assert.strictEqual(tenantResolverCalls, beforeSuperadmin, '/api/superadmin must not hit tenantResolver in firm routes');
-
-
-  const beforeAdmin = tenantResolverCalls;
-  await request(app).get('/api/admin');
-  assert.strictEqual(tenantResolverCalls, beforeAdmin, '/api/admin must not hit tenantResolver in firm routes');
-
-  const beforeUsers = tenantResolverCalls;
-  await request(app).get('/api/users');
-  assert.strictEqual(tenantResolverCalls, beforeUsers, '/api/users must not hit tenantResolver in firm routes');
-
-  const beforeReservedSlug = tenantResolverCalls;
-  await request(app).get('/api/auth/login');
-  assert.strictEqual(tenantResolverCalls, beforeReservedSlug, 'reserved firm slugs must not reach tenantResolver');
 
   const beforeInvalid = tenantResolverCalls;
   await request(app).get('/api/acme!!!/login');
   assert.strictEqual(tenantResolverCalls, beforeInvalid, 'invalid firm slug must not reach tenantResolver');
 
-  console.log('express5FirmSlugRouting.test.js passed');
+  const reservedPaths = ['/api/auth', '/api/public', '/api/superadmin', '/api/admin', '/api/users'];
+  for (const reservedPath of reservedPaths) {
+    const before = tenantResolverCalls;
+    await request(app).get(reservedPath);
+    assert.strictEqual(tenantResolverCalls, before, `${reservedPath} must not reach firmRoutes/tenantResolver`);
+  }
+
+  const beforeDockets = tenantResolverCalls;
+  const dockets = await request(app).get('/api/dockets');
+  assert.ok([401, 403, 404].includes(dockets.status), 'GET /api/dockets should remain protected tenant API');
+  assert.strictEqual(tenantResolverCalls, beforeDockets, 'GET /api/dockets must not be swallowed by firm-slug routing');
+
+  console.log('createApp.routeBoundaries.smoke.test.js passed');
 })().catch((error) => {
   console.error(error);
   process.exit(1);
