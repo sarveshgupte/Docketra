@@ -1,6 +1,12 @@
 # What's New
 
 
+## May 2026: Knowledge Library UX polish
+
+- Improved Knowledge Library scanning with clearer stats, filters, badges, and row/card structure.
+- Reorganized the KnowledgeItem form into basics, linking, checklist steps, and privacy guidance.
+- Preserved existing no-AI, no-file-upload, no-task-automation, and route-stability constraints.
+
 ## May 2026: Checklist steps for KnowledgeItems
 
 - Added structured checklist steps for checklist-type KnowledgeItems.

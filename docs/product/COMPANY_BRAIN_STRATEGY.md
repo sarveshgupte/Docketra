@@ -239,3 +239,16 @@ KnowledgeItems now use the same work type/category vocabulary used by dockets vi
 ## Checklist steps v1
 
 Checklist-type KnowledgeItems now support structured checklist steps for read-only execution context. Each step can include a label, optional description, order, and required/optional marker. This improves operational consistency while preserving current constraints: no task creation, no completion tracking, no AI/vector/document extraction, and no file uploads.
+
+## Knowledge Library UX polish
+
+The Knowledge Library is now easier to scan and manage. The admin workspace has been reorganized to reduce cognitive load and improve daily usability without changing any routes, backend models, or existing behavior.
+
+- **Clearer filters** — Search, type, status, tag, and linked work type filters are grouped in a compact filter bar with a single "Clear filters" action. An empty filtered state guides users to adjust filters.
+- **Richer stats** — The stats grid now shows Total records, Active, Draft, Archived, Review due, Checklist records, and Unlinked records so admins can immediately spot gaps in coverage.
+- **Improved table rows** — Each row shows the knowledge item title, a summary preview, and tag chips in the Knowledge item column. Type and status are shown as colored badges. A Links column surfaces work type, client, and docket indicators, with an "Unlinked" label for records not yet connected to any context. Checklist-type rows show a step count badge.
+- **Grouped form** — The create/edit form is reorganized into four sections: Basics (title, type, status, summary, content, tags), Ownership & linking (owner XID, linked work type, linked client ID, review due), Checklist steps (visible only for checklist type), and a privacy reminder at the bottom.
+- **Checklist steps editing** — The checklist steps editor now shows a descriptive empty state when no steps have been added yet. Step fields are labeled clearly: Step label, Description, Required step.
+- **Detail drawer** — The read-only detail drawer now opens with a header showing the item title and status badge, followed by a Metadata grid, Summary, Content, Checklist steps (if applicable), Tags, and an Audit section. No inline editing is allowed inside the drawer.
+- **Guidance panel** — A short guidance panel near the top of the page explains the purpose of Knowledge Library and when to link records.
+- All existing create, edit, archive, and detail behavior is preserved. No AI, file uploads, task automation, or route changes are introduced.
