@@ -137,12 +137,13 @@ const RESERVED_FIRM_SLUG_SET = new Set(RESERVED_FIRM_SLUGS);
 const firmSlugGuard = (req, _res, next) => {
   const firmSlug = String(req.params?.firmSlug || '').trim().toLowerCase();
   if (!FIRM_SLUG_PATTERN.test(firmSlug)) {
-    return next('router');
+    return next();
   }
   if (RESERVED_FIRM_SLUG_SET.has(firmSlug)) {
-    return next('router');
+    return next();
   }
   req.params.firmSlug = firmSlug;
+  req.isFirmSlugRoute = true;
   return next();
 };
 const writeGuardChain = (req, res, next) => {
@@ -427,11 +428,6 @@ const createApp = () => {
     return res.redirect(301, `/${req.params.firmSlug}/login`);
   });
 
-  // Firm-scoped public login + OTP routes
-  // Register before protected '/api' tenant middleware mounts so '/api/:firmSlug/*'
-  // login and metadata requests are never intercepted by auth middleware.
-  app.use('/api/:firmSlug', firmSlugGuard, firmRoutes);
-
   // Auth routes (excluding login endpoints)
   ['/api/auth', '/auth'].forEach((basePath) => {
     app.use(basePath, writeGuardChain, authRoutes);
@@ -442,7 +438,7 @@ const createApp = () => {
   app.post('/api/superadmin/login', ...superadminLoginChain);
   app.post('/superadmin/login', ...superadminLoginChain);
 
-  // Tenant login must be slug-scoped only
+  // Tenant login must be slug-scoped only and mounted after platform auth/superadmin.
   app.get('/:firmSlug/login', publicLimiter, tenantResolver, (req, res) => {
     res.json({ success: true, data: { firmId: req.firmIdString, firmSlug: req.firmSlug, name: req.firmName, status: req.firm.status } });
   });
@@ -480,6 +476,27 @@ const createApp = () => {
   ['/api/sa', '/api/superadmin', '/superadmin'].forEach((basePath) => {
     app.use(basePath, superadminLimiter, authenticate, writeGuardChain, adminAuditTrail('superadmin'), superadminRoutes);
   });
+
+  // Firm-scoped public login + OTP routes
+  // IMPORTANT: must stay after platform auth/superadmin mounts so reserved namespaces
+  // can never be interpreted as tenant slugs under Express 5 routing.
+  app.use('/api/:firmSlug', firmSlugGuard, (req, res, next) => {
+    if (!req.isFirmSlugRoute) {
+      return next();
+    }
+    return firmRoutes(req, res, next);
+  });
+
+
+  if (!isProduction) {
+    log.info('AUTH_ROUTE_MOUNTS', {
+      authProfile: ['GET /api/auth/profile', 'GET /auth/profile'],
+      authLogout: ['POST /api/auth/logout', 'POST /auth/logout'],
+      superadminLogin: ['POST /api/superadmin/login', 'POST /superadmin/login'],
+      superadminProtectedBasePaths: ['/api/sa', '/api/superadmin', '/superadmin'],
+      reservedFirmNamespaces: RESERVED_FIRM_SLUGS,
+    });
+  }
   app.use('/api/security', authenticate, securityRoutes);
 
   // SECURITY: Debug routes must never be reachable in production environments.
