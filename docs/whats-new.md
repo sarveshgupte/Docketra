@@ -1,5 +1,11 @@
 # What's New
 
+## May 2026: Linked Knowledge for work
+
+- Added the first work-context surface for KnowledgeItems so SOPs, checklists, templates, notes, client instructions, and process records can appear inside docket/work views.
+- Supported safe linking through existing work type, client, or docket metadata without adding AI or document extraction.
+- Preserved existing work routes and execution flows while making Knowledge Library useful during day-to-day work.
+
 ## May 2026: Knowledge Library workspace
 
 - Added a Knowledge Library workspace for managing SOPs, checklists, templates, notes, client instructions, and process records.
