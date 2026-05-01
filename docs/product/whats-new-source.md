@@ -8,3 +8,5 @@ We tightened backend tenant-boundary checks for firm-owned storage/settings oper
 ## 2026-05-01 — Auth/session reliability improvements
 
 Improved auth routing reliability by separating login OTP verification from signup OTP verification and clearing stale firm workspace hints on superadmin login.
+
+- Improved Superadmin screen reliability by fixing or hiding broken routes/actions and adding clearer loading, empty, and error states for pilot operations.

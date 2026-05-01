@@ -45,7 +45,12 @@ export const SuperadminFirmOnboardingDetailPage = () => {
   const sinceDays = Number(searchParams.get('sinceDays') || 30);
 
   const loadDetails = async () => {
-    if (!firmId) return;
+    if (!firmId) {
+      setDetails(null);
+      setError('Missing firm identifier. Return to onboarding insights and retry.');
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     setError('');
