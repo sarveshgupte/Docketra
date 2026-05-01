@@ -128,8 +128,10 @@ api.interceptors.request.use(
     }
 
     // Add impersonation header if SuperAdmin is impersonating a firm
+    const requestUrl = String(config?.url || '');
+    const isSuperadminApiRequest = requestUrl.startsWith('/superadmin');
     const impersonatedFirm = localStorage.getItem(STORAGE_KEYS.IMPERSONATED_FIRM);
-    if (impersonatedFirm) {
+    if (impersonatedFirm && !isSuperadminApiRequest) {
       try {
         const firmData = JSON.parse(impersonatedFirm);
         if (firmData?.impersonatedFirmId) {
