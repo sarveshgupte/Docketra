@@ -1,5 +1,11 @@
 # What's New
 
+## May 2026: Prospective Client lifecycle
+
+- Reframed leads as Prospective Clients to align intake, follow-up, proposal, and conversion context with Company Brain.
+- Improved lifecycle visibility for enquiries, follow-ups, qualified prospects, and conversion readiness using existing data.
+- Preserved existing CRM/lead routes and data flows without adding new backend APIs, models, or AI infrastructure.
+
 ## May 2026: Client Memory workspace
 
 - Reframed the client detail experience around Client Memory instead of isolated CRM records.
