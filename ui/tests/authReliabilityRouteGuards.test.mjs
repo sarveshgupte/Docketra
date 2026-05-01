@@ -12,6 +12,13 @@ const forgotPasswordSource = fs.readFileSync(path.join(root, 'pages', 'ForgotPas
 const otpPageSource = fs.readFileSync(path.join(root, 'pages', 'OtpVerificationPage.jsx'), 'utf8');
 const postAuthNavigationSource = fs.readFileSync(path.join(root, 'utils', 'postAuthNavigation.js'), 'utf8');
 
+const apiSource = fs.readFileSync(path.join(root, 'services', 'api.js'), 'utf8');
+const authContextSource = fs.readFileSync(path.join(root, 'contexts', 'AuthContext.jsx'), 'utf8');
+const platformShellSource = fs.readFileSync(path.join(root, 'components', 'platform', 'PlatformShell.jsx'), 'utf8');
+const superAdminLayoutSource = fs.readFileSync(path.join(root, 'components', 'common', 'SuperAdminLayout.jsx'), 'utf8');
+const returnToSafetySource = fs.readFileSync(path.join(root, 'utils', 'returnToSafety.js'), 'utf8');
+
+
 assert(publicRoutesSource.includes('path="/superadmin"'), 'Superadmin root login route should exist.');
 assert(publicRoutesSource.includes('path="/superadmin/login"'), 'Canonical superadmin login route should exist.');
 assert(publicRoutesSource.includes('path="/:firmSlug/login"'), 'Firm login route should exist.');
@@ -33,8 +40,19 @@ assert(otpPageSource.includes("setError('Login session expired. Please restart l
 assert(otpPageSource.includes('authApi.loginResendOtp'), 'Login OTP resend should call login resend endpoint.');
 assert(otpPageSource.includes('authApi.signupResendOtp(email)'), 'Signup OTP resend should remain separate from login OTP resend.');
 
-assert(postAuthNavigationSource.includes('if (candidateRoute && isRoleCompatibleRoute(candidateRoute, user)) {'), 'ReturnTo must be role-checked.');
-assert(postAuthNavigationSource.includes('return candidatePath.startsWith(\'/app/superadmin\');'), 'Superadmin routing namespace guard should be enforced.');
-assert(postAuthNavigationSource.includes('return candidatePath.startsWith(`/app/firm/${firmSlug}`);'), 'Firm routing namespace guard should be enforced.');
+assert(postAuthNavigationSource.includes('if (candidateRoute && isRoleCompatibleRoute(candidateRoute,'), 'ReturnTo must be role-checked.');
+assert(returnToSafetySource.includes("if (isSuperAdminUser) return candidatePath.startsWith('/app/superadmin');"), 'Superadmin routing namespace guard should be enforced.');
+assert(returnToSafetySource.includes('return candidatePath.startsWith(`/app/firm/${normalizedFirmSlug}`);'), 'Firm routing namespace guard should be enforced.');
+
+
+assert(apiSource.includes("resolveAuthRedirectDestination"), 'API client should resolve auth redirects by namespace.');
+assert(apiSource.includes("resolveAuthRedirectDestination"), 'API auth redirect should use shared destination resolver.');
+assert(apiSource.includes("if (currentPath.startsWith('/app/superadmin') || currentPath.startsWith('/superadmin'))"), 'Superadmin expiry should not reuse stale firm slug.');
+assert(authContextSource.includes('localStorage.removeItem(STORAGE_KEYS.IMPERSONATED_FIRM);'), 'Auth clear state should remove impersonation hints.');
+assert(authContextSource.includes('sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_TOKEN);'), 'Auth clear state should remove pending login token on logout/expiry.');
+assert(authContextSource.includes('sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_FIRM);'), 'Auth clear state should remove pending login firm on logout/expiry.');
+assert(authContextSource.includes('sessionStorage.removeItem(SESSION_KEYS.POST_LOGIN_RETURN_TO);'), 'Auth clear state should remove returnTo hints on logout/expiry.');
+assert(platformShellSource.includes("user?.isSuperAdmin || user?.role === 'SuperAdmin'"), 'Superadmin logout from platform shell should clear firmSlug state.');
+assert(superAdminLayoutSource.includes("navigate('/superadmin/login'"), 'Superadmin logout should redirect to /superadmin/login.');
 
 console.log('authReliabilityRouteGuards.test.mjs passed');

@@ -5,7 +5,8 @@
 
 import axios from 'axios';
 import { API_BASE_URL, ERROR_CODES, SESSION_KEYS, STORAGE_KEYS } from '../utils/constants';
-import { resolveFirmLoginPath } from '../utils/tenantRouting';
+import { clearPendingLoginSessionState, clearSuperadminRoutingHints } from '../utils/authSessionCleanup';
+import { isPublicAuth401Suppressed, isPublicAuthPagePath, resolveAuthRedirectDestination } from '../utils/authRedirects';
 import { emitOnboardingProgressRefresh, shouldRefreshOnboardingProgress } from '../utils/onboardingProgressRefresh';
 import { createCorrelationId, emitDiagnosticEvent, shouldEmitWarning } from '../utils/workflowDiagnostics';
 import { safeConsole } from '../utils/safeConsole';
@@ -53,17 +54,8 @@ const isPublicAuthFlowRequest = (requestConfig) => {
     || /\/login$/.test(requestUrl);
 };
 const isRefreshRequest = (requestConfig) => /\/auth\/refresh$/.test(String(requestConfig?.url || ''));
-const isPublicAuthPagePath = (pathname) => {
-  const value = String(pathname || '').trim();
-  if (!value) return false;
-  if (value === '/' || value === '/login' || value === '/superadmin' || value === '/superadmin/login') return true;
-  if (value === '/forgot-password' || value === '/reset-password' || value === '/auth/otp') return true;
-  if (value === '/signup' || value === '/auth/setup-account' || value === '/setup-password') return true;
-  if (/^\/[a-z0-9]+(?:-[a-z0-9]+)*\/forgot-password$/i.test(value)) return true;
-  if (/^\/[a-z0-9]+(?:-[a-z0-9]+)*\/login$/i.test(value)) return true;
-  return false;
-};
 const isLoginLikePath = (pathname) => isPublicAuthPagePath(pathname) || pathname.includes('/auth/login');
+
 
 function generateIdempotencyKey() {
   if (window.crypto?.randomUUID) {
@@ -223,14 +215,14 @@ api.interceptors.response.use(
     const isProfileRequest = /\/auth\/profile$/.test(String(originalRequest?.url || ''));
     const isAuthStateRequest = isProfileRequest || isRefreshRequest(originalRequest);
     const skipAuthRedirect = Boolean(originalRequest?.metadata?.skipAuthRedirect);
-    const shouldSuppressPublicAuthHandling = isPublicAuthPage && isAuthStateRequest;
+    const shouldSuppressPublicAuthHandling = isPublicAuth401Suppressed({ pathname: currentPath, isAuthStateRequest });
     const redirectToLogin = () => {
       if (redirecting) return;
       redirecting = true;
-      const inSuperadminNamespace = String(window.location.pathname || '').startsWith('/app/superadmin') || String(window.location.pathname || '').startsWith('/superadmin');
-      const destination = inSuperadminNamespace
-        ? '/superadmin/login'
-        : resolveFirmLoginPath({ fallbackFirmSlug: firmSlug });
+      const destination = resolveAuthRedirectDestination({
+        pathname: window.location.pathname,
+        storedFirmSlug: firmSlug,
+      });
       const currentPath = window.location.pathname || '';
       const alreadyOnLoginRoute = currentPath === destination || isLoginLikePath(currentPath);
       if (alreadyOnLoginRoute) {
@@ -243,10 +235,11 @@ api.interceptors.response.use(
       setTimeout(() => { redirecting = false; }, REDIRECT_TIMEOUT_MS);
     };
     const clearAuthStorage = () => {
-      localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
-      sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_TOKEN);
-      sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_FIRM);
-      sessionStorage.removeItem(SESSION_KEYS.POST_LOGIN_RETURN_TO);
+      const currentPath = String(window.location.pathname || '');
+      if (currentPath.startsWith('/app/superadmin') || currentPath.startsWith('/superadmin')) {
+        clearSuperadminRoutingHints(localStorage);
+      }
+      clearPendingLoginSessionState(sessionStorage);
       window.dispatchEvent(new CustomEvent('auth:logout'));
     };
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
