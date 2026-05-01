@@ -6,6 +6,12 @@
 - Reframed CMS, CRM, and Task Manager as intake, relationship, and execution layers feeding institutional memory.
 - Documented a safe migration path that preserves existing routes and functionality while preparing for connected knowledge workflows.
 
+## May 2026: Company Brain navigation language
+
+- Updated workspace navigation language from CRM/CMS terminology to Company Brain-oriented labels.
+- Reframed Task Manager as Work, CMS as Knowledge Intake, and CRM as Relationships.
+- Preserved existing routes and permissions while making the product easier for firms to understand.
+
 ## April 2026: Perceived speed + free-tier performance pass
 
 - Improved dashboard and docket list perceived speed with longer safe React Query freshness windows and reduced remount/focus refetch churn.
