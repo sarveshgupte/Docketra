@@ -8,7 +8,6 @@ const BASE_ENV = {
   NODE_ENV: 'production',
   PORT: '5000',
   MONGO_URI: 'mongodb://127.0.0.1:27017/test',
-  REDIS_URL: 'redis://127.0.0.1:6379',
   JWT_SECRET: 'A'.repeat(64),
   JWT_PASSWORD_SETUP_SECRET: 'B'.repeat(64),
   SUPERADMIN_PASSWORD_HASH: '$2b$10$wioLOkqqceK.iu9MZavNOua7yV2AzOpqlR4fuMWHf2.YeYpV4mEFC',
@@ -48,15 +47,18 @@ function testProductionGuards() {
   console.log('PASS production rejects weak/unsafe auth and upload env settings');
 }
 
-function testRedisRequiredAndValidatedInProduction() {
-  expectFail({ REDIS_URL: undefined }, 'REDIS_URL');
-  expectFail({ REDIS_URL: '' }, 'REDIS_URL');
-  expectFail({ REDIS_URL: '   ' }, 'REDIS_URL');
+function testRedisOptionalButValidatedWhenConfiguredInProduction() {
+  const missingRedis = envSchema.safeParse({ ...BASE_ENV, REDIS_URL: undefined });
+  assert.strictEqual(missingRedis.success, true, 'Expected production env to allow missing REDIS_URL');
+
+  const blankRedis = envSchema.safeParse({ ...BASE_ENV, REDIS_URL: '' });
+  assert.strictEqual(blankRedis.success, true, 'Expected production env to allow blank REDIS_URL');
+
   expectFail({ REDIS_URL: 'http://localhost:6379' }, 'REDIS_URL');
 
   const parsed = envSchema.safeParse({ ...BASE_ENV, REDIS_URL: 'rediss://redis.example.com:6379' });
   assert.strictEqual(parsed.success, true, 'Expected valid rediss:// REDIS_URL to pass production validation');
-  console.log('PASS production requires a valid Redis URL');
+  console.log('PASS production treats Redis as optional and validates URL only when configured');
 }
 
 function testMasterKeyFormats() {
@@ -127,7 +129,7 @@ function testGoogleByosValidationOnlyWhenExternalStorageEnabled() {
 
 function run() {
   testProductionGuards();
-  testRedisRequiredAndValidatedInProduction();
+  testRedisOptionalButValidatedWhenConfiguredInProduction();
   testMasterKeyFormats();
   testMongoTestDbAllowed();
   testDoesNotRequireClamavOrGoogleWhenDisabled();
