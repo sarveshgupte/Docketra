@@ -82,6 +82,7 @@ export const CrmClientsPage = lazyPage(() => import('../pages/crm/CrmClientsPage
 export const CrmClientDetailPage = lazyPage(() => import('../pages/crm/CrmClientDetailPage'), 'CrmClientDetailPage');
 export const LeadsPage = lazyPage(() => import('../pages/crm/LeadsPage'), 'LeadsPage');
 export const CompanyBrainPage = lazyPage(() => import('../pages/CompanyBrainPage'), 'CompanyBrainPage');
+export const KnowledgeLibraryPage = lazyPage(() => import('../pages/KnowledgeLibraryPage'), 'KnowledgeLibraryPage');
 
 export const PlatformDashboardPage = lazyPage(() => import('../pages/platform/DashboardPage'), 'default');
 export const PlatformWorkbasketsPage = lazyPage(() => import('../pages/platform/WorkbasketsPage'), 'default');

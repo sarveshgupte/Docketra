@@ -74,6 +74,18 @@ const NAV_BLUEPRINT = [
         },
       },
       {
+        id: 'knowledge-library',
+        label: 'Knowledge Library',
+        icon: '📚',
+        route: (firmSlug) => ROUTES.KNOWLEDGE_LIBRARY(firmSlug),
+        minRole: 'ADMIN',
+        command: {
+          id: 'go-knowledge-library',
+          label: 'Go to Knowledge Library',
+          description: 'Manage SOPs, checklists, templates, notes, client instructions, and process records.',
+        },
+      },
+      {
         id: 'clients',
         label: 'Clients',
         icon: '👥',
