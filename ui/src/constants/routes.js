@@ -36,6 +36,7 @@ export const ROUTES = {
   QC_QUEUE: (firmSlug) => `/app/firm/${firmSlug}/qc-queue`,
   ADMIN_REPORTS: (firmSlug) => `/app/firm/${firmSlug}/admin/reports`,
   CMS: (firmSlug) => `/app/firm/${firmSlug}/cms`,
+  COMPANY_BRAIN: (firmSlug) => `/app/firm/${firmSlug}/company-brain`,
   TASK_MANAGER: (firmSlug) => `/app/firm/${firmSlug}/task-manager`,
   SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/settings`,
 };
