@@ -1,5 +1,11 @@
 # What's New
 
+## May 2026: Knowledge Library workspace
+
+- Added a Knowledge Library workspace for managing SOPs, checklists, templates, notes, client instructions, and process records.
+- Connected the KnowledgeItem backend foundation to a firm-facing UI under Firm Memory.
+- Preserved BYOS/privacy boundaries and avoided AI, vector search, document extraction, or file-storage behavior.
+
 ## May 2026: Company Brain landing page polish
 
 - Ported the Lovable Company Brain landing page direction into Docketra's existing marketing route.

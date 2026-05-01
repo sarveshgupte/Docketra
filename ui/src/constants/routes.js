@@ -37,6 +37,7 @@ export const ROUTES = {
   ADMIN_REPORTS: (firmSlug) => `/app/firm/${firmSlug}/admin/reports`,
   CMS: (firmSlug) => `/app/firm/${firmSlug}/cms`,
   COMPANY_BRAIN: (firmSlug) => `/app/firm/${firmSlug}/company-brain`,
+  KNOWLEDGE_LIBRARY: (firmSlug) => `/app/firm/${firmSlug}/knowledge`,
   TASK_MANAGER: (firmSlug) => `/app/firm/${firmSlug}/task-manager`,
   SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/settings`,
 };
