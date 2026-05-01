@@ -1,4 +1,4 @@
-import { USER_ROLES } from './constants';
+import { USER_ROLES } from './constants.js';
 
 /**
  * @deprecated User data is no longer stored in localStorage

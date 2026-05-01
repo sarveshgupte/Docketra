@@ -184,7 +184,8 @@ export const Layout = ({ children, title, subtitle }) => {
 
   const handleLogout = async () => {
     setProfileDropdownOpen(false);
-    await logout({ preserveFirmSlug: !!currentFirmSlug });
+    const preserveFirmSlug = !(user?.isSuperAdmin || user?.role === USER_ROLES.SUPER_ADMIN) && !!currentFirmSlug;
+    await logout({ preserveFirmSlug });
     if (currentFirmSlug) {
       navigate(ROUTES.FIRM_LOGIN(currentFirmSlug), { state: { message: 'You have been signed out safely.', messageType: 'success' } });
     } else {

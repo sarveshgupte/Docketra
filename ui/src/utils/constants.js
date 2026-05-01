@@ -1,4 +1,4 @@
-import { safeConsole } from './safeConsole';
+import { safeConsole } from './safeConsole.js';
 
 /**
  * Application Constants

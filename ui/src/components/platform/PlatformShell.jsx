@@ -98,7 +98,8 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   const handleLogout = async () => {
     setMenuOpen(false);
     closeCommandPalette();
-    await logout({ preserveFirmSlug: !!firmSlug });
+    const preserveFirmSlug = !(user?.isSuperAdmin || user?.role === 'SuperAdmin') && !!firmSlug;
+    await logout({ preserveFirmSlug });
     if (firmSlug) {
       navigate(ROUTES.FIRM_LOGIN(firmSlug), { replace: true, state: { message: 'You have been signed out safely.', messageType: 'success' } });
       return;
