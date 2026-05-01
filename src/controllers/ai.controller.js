@@ -2,6 +2,8 @@
 
 const Firm = require('../models/Firm.model');
 const { encrypt } = require('../utils/encryption');
+const { resolveStorageContextFromTenantId } = require('../services/tenantIdentity.service');
+const log = require('../utils/log');
 
 const ALLOWED_PROVIDERS = new Set(['openai']);
 
@@ -36,6 +38,12 @@ function isCredentialConfiguredForProvider(aiConfig, provider) {
 }
 
 async function setAiConfig(req, res) {
+  const tenantContext = await resolveStorageContextFromTenantId(req.firmId);
+  if (!tenantContext?.ownershipFirmId) {
+    log.warn('[AI_SETTINGS] ownership_resolution_failed', { tenantId: req.firmId, path: req.originalUrl });
+    return res.status(400).json({ success: false, message: 'Tenant mapping missing' });
+  }
+  const ownershipFirmId = tenantContext.ownershipFirmId;
   const provider = String(req.body?.provider || '').trim().toLowerCase();
   const apiKey = String(req.body?.apiKey || '').trim();
   const model = String(req.body?.model || '').trim();
@@ -50,7 +58,7 @@ async function setAiConfig(req, res) {
     return res.status(400).json({ success: false, message: 'Invalid API key format', code: 'AI_INVALID_API_KEY' });
   }
 
-  const existingFirm = await Firm.findById(req.firmId).select('aiConfig').lean();
+  const existingFirm = await Firm.findById(ownershipFirmId).select('aiConfig').lean();
   const existingConfig = existingFirm?.aiConfig || {};
   const existingProvider = String(existingConfig?.provider || '').toLowerCase();
   const providerChanged = Boolean(existingProvider && existingProvider !== provider);
@@ -114,7 +122,7 @@ async function setAiConfig(req, res) {
     updateDoc.$unset = updateUnset;
   }
 
-  await Firm.findByIdAndUpdate(req.firmId, updateDoc, { new: true, runValidators: true });
+  await Firm.findByIdAndUpdate(ownershipFirmId, updateDoc, { new: true, runValidators: true });
 
   const connected = Boolean(
     (apiKey || incomingCredentialRef)
@@ -156,7 +164,12 @@ async function setAiConfig(req, res) {
 }
 
 async function getAiConfigStatus(req, res) {
-  const firm = await Firm.findById(req.firmId).select('aiConfig').lean();
+  const tenantContext = await resolveStorageContextFromTenantId(req.firmId);
+  if (!tenantContext?.ownershipFirmId) {
+    log.warn('[AI_SETTINGS] ownership_resolution_failed', { tenantId: req.firmId, path: req.originalUrl });
+    return res.status(400).json({ success: false, message: 'Tenant mapping missing' });
+  }
+  const firm = await Firm.findById(tenantContext.ownershipFirmId).select('aiConfig').lean();
   const provider = String(firm?.aiConfig?.provider || '').toLowerCase() || null;
   const model = firm?.aiConfig?.model || null;
   const credentialConfigured = isCredentialConfiguredForProvider(firm?.aiConfig || {}, provider);
@@ -195,7 +208,12 @@ async function getAiConfigStatus(req, res) {
 }
 
 async function removeAiConfig(req, res) {
-  await Firm.findByIdAndUpdate(req.firmId, {
+  const tenantContext = await resolveStorageContextFromTenantId(req.firmId);
+  if (!tenantContext?.ownershipFirmId) {
+    log.warn('[AI_SETTINGS] ownership_resolution_failed', { tenantId: req.firmId, path: req.originalUrl });
+    return res.status(400).json({ success: false, message: 'Tenant mapping missing' });
+  }
+  await Firm.findByIdAndUpdate(tenantContext.ownershipFirmId, {
     $unset: {
       'aiConfig.apiKey': '',
       'aiConfig.model': '',
