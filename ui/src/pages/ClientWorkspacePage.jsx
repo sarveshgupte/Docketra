@@ -143,11 +143,17 @@ export const ClientWorkspacePage = () => {
   const statusTone = client?.status === 'ACTIVE' ? 'Approved' : 'Rejected';
   const clientWorkspaceRoute = ROUTES.CLIENT_WORKSPACE(firmSlug, clientId);
 
+  const relationshipOwner = client?.ownerName || client?.assignedToName || client?.assignedTo || client?.ownerXid || client?.ownerId || null;
+  const entityType = client?.clientFactSheet?.basicInfo?.entityType || client?.entityType || '—';
+  const tagList = Array.isArray(client?.tags) ? client.tags : [];
+  const followupDate = client?.followUpDate || client?.nextFollowUp || null;
+  const lastUpdated = client?.updatedAt || client?.lastModifiedAt || client?.createdAt || null;
+
   return (
     <PlatformShell
       moduleLabel="Client Management"
-      title={client?.businessName || 'Client Workspace'}
-      subtitle="Client profile, linked dockets, and execution context in one place."
+      title={client?.businessName || 'Client Memory'}
+      subtitle="Client profile, relationship context, linked work, documents, and firm-specific notes in one place."
       actions={(
         <Button onClick={() => navigate(`${ROUTES.CREATE_CASE(firmSlug)}?clientId=${encodeURIComponent(clientId)}`)}>
           + Create Docket for Client
@@ -159,7 +165,7 @@ export const ClientWorkspacePage = () => {
       {!loading && !loadError ? (
         <>
           <div className="admin__header">
-            <h1 className="neo-page__title">Client: {client?.businessName || clientId}</h1>
+            <h1 className="neo-page__title">Client Memory · {client?.businessName || clientId}</h1>
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
             {tabs.map((tab) => <Link key={tab.key} to={`${clientWorkspaceRoute}${tab.path}`} className={`btn ${currentTab === tab.key ? 'btn-primary' : ''}`}>{tab.label}</Link>)}
@@ -168,22 +174,32 @@ export const ClientWorkspacePage = () => {
           {currentTab === 'overview' && (
             <>
               <Card>
+                <div className="case-card__heading"><h2>Client snapshot</h2></div>
                 <div className="field-grid">
-                  <div className="field-group"><span className="field-label">Client ID</span><span className="field-value">{client?.clientId || clientId}</span></div>
-                  <div className="field-group"><span className="field-label">Business Email</span><span className="field-value">{client?.businessEmail || '—'}</span></div>
-                  <div className="field-group"><span className="field-label">Primary Contact</span><span className="field-value">{client?.primaryContactNumber || '—'}</span></div>
+                  <div className="field-group"><span className="field-label">Client name</span><span className="field-value">{client?.businessName || '—'}</span></div>
                   <div className="field-group"><span className="field-label">Status</span><span className="field-value"><Badge status={statusTone}>{client?.status || 'UNKNOWN'}</Badge></span></div>
-                  <div className="field-group"><span className="field-label">Total Dockets</span><span className="field-value">{docketStats.total}</span></div>
-                  <div className="field-group"><span className="field-label">Open Dockets</span><span className="field-value">{docketStats.open}</span></div>
-                  <div className="field-group"><span className="field-label">Filed/Resolved</span><span className="field-value">{docketStats.resolved}</span></div>
-                  <div className="field-group"><span className="field-label">Last Activity</span><span className="field-value">{activity[0]?.timestamp ? formatDateTime(activity[0].timestamp) : '—'}</span></div>
+                  <div className="field-group"><span className="field-label">Client ID</span><span className="field-value">{client?.clientId || clientId}</span></div>
+                  <div className="field-group"><span className="field-label">Entity type</span><span className="field-value">{entityType}</span></div>
+                  <div className="field-group"><span className="field-label">Relationship owner</span><span className="field-value">{relationshipOwner || 'Unassigned'}</span></div>
+                  <div className="field-group"><span className="field-label">Contact summary</span><span className="field-value">{client?.businessEmail || '—'} · {client?.primaryContactNumber || '—'}</span></div>
                 </div>
               </Card>
+
+              <Card>
+                <div className="case-card__heading"><h2>Relationship memory</h2></div>
+                <div className="field-grid">
+                  <div className="field-group"><span className="field-label">Tags</span><span className="field-value">{tagList.length ? tagList.join(', ') : 'No tags yet'}</span></div>
+                  <div className="field-group"><span className="field-label">Lead source/stage</span><span className="field-value">{client?.leadSource || client?.source || '—'} {client?.leadStage || client?.stage ? `· ${client?.leadStage || client?.stage}` : ''}</span></div>
+                  <div className="field-group"><span className="field-label">Instructions</span><span className="field-value">{client?.clientFactSheet?.notes || 'No client-specific instructions saved yet.'}</span></div>
+                  <div className="field-group"><span className="field-label">Last updated</span><span className="field-value">{lastUpdated ? formatDateTime(lastUpdated) : '—'}</span></div>
+                </div>
+              </Card>
+
               <Card>
                 <div className="case-card__heading">
-                  <h2>Recent Dockets</h2>
+                  <h2>Work context</h2>
                 </div>
-                {!recentDockets.length ? <p>No dockets linked to this client yet.</p> : (
+                {!recentDockets.length ? <p>Linked work will appear here as dockets are connected to this client.</p> : (
                   <div className="case-detail-table-wrap">
                     <table className="case-detail-table">
                       <thead>
@@ -221,6 +237,27 @@ export const ClientWorkspacePage = () => {
                   </div>
                 )}
               </Card>
+
+              <Card>
+                <div className="case-card__heading"><h2>Follow-ups and risks</h2></div>
+                <p><strong>Next follow-up:</strong> {followupDate ? formatDate(followupDate) : 'Not set'}</p>
+                {!relationshipOwner ? <p className="text-amber-700">Assign a relationship owner so accountability is clear.</p> : null}
+                {String(client?.status || '').toUpperCase() === 'INACTIVE' ? <p className="text-amber-700">This client is inactive. Confirm before scheduling new work.</p> : null}
+                {!client?.clientFactSheet?.notes ? <p className="text-amber-700">Add client-specific notes/instructions so team context is preserved.</p> : null}
+              </Card>
+
+              <Card>
+                <p><strong>Company Brain context:</strong> This client memory becomes part of Company Brain. Linked work, documents, notes, and process history help the firm preserve context beyond individual memory.</p>
+              </Card>
+
+              <Card>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <Link className="btn" to={ROUTES.CLIENTS(firmSlug)}>Clients</Link>
+                  <Link className="btn" to={ROUTES.TASK_MANAGER(firmSlug)}>Work</Link>
+                  <Link className="btn" to={ROUTES.CRM(firmSlug)}>Relationships</Link>
+                  <Link className="btn" to={ROUTES.COMPANY_BRAIN(firmSlug)}>Company Brain</Link>
+                </div>
+              </Card>
             </>
           )}
 
@@ -232,7 +269,7 @@ export const ClientWorkspacePage = () => {
             </div>
             <Button onClick={onSaveCfs}>Save changes</Button>
             <hr />
-            <h3>Comments</h3>
+            <h3>Relationship notes timeline</h3>
             <Textarea value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Add a comment" />
             <input type="file" onChange={onUpload} aria-label="Upload file for comment" />
             <Button onClick={onAddComment}>Post comment</Button>
@@ -245,7 +282,7 @@ export const ClientWorkspacePage = () => {
             </Card>
           )}
 
-          {currentTab === 'documents' && <Card><p>Corporate Documents · Client Fact Sheet attachments.</p><p>Upload/download/version history from the client fact sheet and docket attachments.</p></Card>}
+          {currentTab === 'documents' && <Card><p>Documents and references</p><p>Linked documents and references will appear here as client files are connected through Docketra.</p></Card>}
 
           {currentTab === 'dockets' && (
             <Card>

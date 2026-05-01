@@ -1,5 +1,11 @@
 # What's New
 
+## May 2026: Client Memory workspace
+
+- Reframed the client detail experience around Client Memory instead of isolated CRM records.
+- Added clearer sections for relationship context, linked work, documents/references, follow-ups, and Company Brain context using existing data.
+- Preserved existing routes and data flows without adding new backend APIs, models, or AI infrastructure.
+
 ## May 2026: Company Brain read-only overview
 
 - Upgraded the Company Brain page from a strategy placeholder into a read-only overview of existing firm data.
