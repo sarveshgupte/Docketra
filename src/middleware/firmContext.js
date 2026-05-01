@@ -105,6 +105,7 @@ const firmContext = async (req, res, next) => {
 
     req.firm = {
       id: tenantId,
+      ownershipFirmId: tenantContext.ownershipFirmId || null,
       slug: tenantSlug,
       status: tenantStatus,
     };
@@ -113,10 +114,12 @@ const firmContext = async (req, res, next) => {
       slug: tenantSlug,
     };
     req.firmId = tenantId;
+    req.ownershipFirmId = tenantContext.ownershipFirmId || null;
     req.firmSlug = tenantSlug;
     req.context = {
       ...req.context,
       firmId: tenantId,
+      ownershipFirmId: tenantContext.ownershipFirmId || null,
       firmSlug: tenantSlug,
       tenantId,
       tenantSlug,
@@ -137,7 +140,7 @@ const firmContext = async (req, res, next) => {
     return res.status(statusCode).json({
       success: false,
       message: statusCode === 400 ? 'Tenant context missing' : 'Failed to resolve tenant context',
-      error: error.message,
+      ...(process.env.NODE_ENV === 'production' ? {} : { error: error.message }),
     });
   }
 };

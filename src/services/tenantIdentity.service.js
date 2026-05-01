@@ -161,6 +161,20 @@ module.exports = {
   resolveCanonicalTenantFromFirmId,
   resolveCanonicalTenantForUser,
   resolveTenantBySlug,
+  resolveFirmOwnershipFromTenantId: async (tenantId, options = {}) => {
+    const context = await resolveCanonicalTenantFromFirmId(tenantId, options);
+    return context?.ownershipFirmId || null;
+  },
+  resolveStorageContextFromTenantId: async (tenantId, options = {}) => {
+    const context = await resolveCanonicalTenantFromFirmId(tenantId, options);
+    if (!context?.tenantId || !context?.ownershipFirmId) return null;
+    return {
+      tenantId: context.tenantId,
+      ownershipFirmId: context.ownershipFirmId,
+      firmSlug: context.firmSlug || null,
+      source: context.source || 'unknown',
+    };
+  },
   resolveClientOwnershipFirmId: async (firmId, options = {}) => {
     if (!firmId) return null;
     if (!mongoose.Types.ObjectId.isValid(String(firmId))) {
