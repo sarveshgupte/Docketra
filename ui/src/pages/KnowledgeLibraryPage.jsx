@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { PlatformShell } from '../components/platform/PlatformShell';
 import { knowledgeItemsApi } from '../api/knowledgeItems.api';
 import {
@@ -213,8 +213,114 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
   );
 };
 
+const DRAWER_ASIDE_STYLE = {
+  position: 'fixed',
+  top: 0,
+  right: 0,
+  bottom: 0,
+  width: '480px',
+  maxWidth: '100vw',
+  background: '#fff',
+  borderLeft: '1px solid #e5e7eb',
+  boxShadow: '-4px 0 24px rgba(0,0,0,0.10)',
+  zIndex: 200,
+};
+
+const DetailRow = ({ label, value }) => (
+  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+    <span style={{ fontWeight: 600, minWidth: '160px', color: '#374151' }}>{label}</span>
+    <span style={{ color: '#111827', flex: 1 }}>{value || '—'}</span>
+  </div>
+);
+
+const KnowledgeItemDetailDrawer = ({ item, onEdit, onArchive, onClose }) => {
+  if (!item) return null;
+  return (
+    <aside
+      aria-label="Knowledge Item Detail"
+      role="complementary"
+      style={{ ...DRAWER_ASIDE_STYLE, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}
+    >
+      <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Knowledge Item Detail</h2>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close detail drawer"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', color: '#6b7280' }}
+        >
+          ✕
+        </button>
+      </div>
+
+      <div style={{ padding: '1.25rem 1.5rem', flex: 1 }}>
+        <p className="inline-notice inline-notice--warning" style={{ marginBottom: '1rem', fontSize: '0.82rem' }}>
+          KnowledgeItems are for structured operational knowledge. Do not paste sensitive client documents here;
+          store heavy documents in firm-controlled storage/BYOS.
+        </p>
+
+        <DetailRow label="Title" value={item.title} />
+        <DetailRow label="Type" value={formatLabel(item.type)} />
+        <DetailRow label="Status" value={formatLabel(item.status)} />
+        <DetailRow label="Summary" value={item.summary} />
+
+        {item.content ? (
+          <div style={{ marginBottom: '0.75rem' }}>
+            <div style={{ fontWeight: 600, marginBottom: '0.25rem', color: '#374151' }}>Content</div>
+            <pre style={{
+              background: '#f9fafb',
+              border: '1px solid #e5e7eb',
+              borderRadius: '4px',
+              padding: '0.75rem',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              fontSize: '0.85rem',
+              maxHeight: '240px',
+              overflowY: 'auto',
+              margin: 0,
+            }}>
+              {item.content}
+            </pre>
+          </div>
+        ) : (
+          <DetailRow label="Content" value={null} />
+        )}
+
+        <DetailRow label="Tags" value={toArray(item.tags).join(', ') || null} />
+        <DetailRow label="Owner" value={item.ownerXid} />
+        <DetailRow label="Linked work type" value={item.linkedWorkType} />
+        <DetailRow label="Linked client ID" value={item.linkedClientId || item.clientId} />
+        <DetailRow label="Linked docket ID" value={item.linkedDocketId || item.docketId} />
+        <DetailRow label="Review due" value={formatDate(item.reviewDueAt)} />
+        <DetailRow label="Last reviewed" value={formatDate(item.lastReviewedAt)} />
+        <DetailRow label="Created by" value={item.createdBy || item.createdByXid} />
+        <DetailRow label="Updated by" value={item.updatedBy || item.updatedByXid} />
+        <DetailRow label="Created at" value={formatDate(item.createdAt)} />
+        <DetailRow label="Updated at" value={formatDate(item.updatedAt)} />
+      </div>
+
+      <div className="action-row" style={{ padding: '1rem 1.5rem', borderTop: '1px solid #e5e7eb', gap: '0.5rem' }}>
+        {item.status !== 'archived' ? (
+          <>
+            <button type="button" onClick={() => onEdit(item)}>
+              Edit
+            </button>
+            <button type="button" onClick={() => onArchive(item)}>
+              Archive
+            </button>
+          </>
+        ) : null}
+        <button type="button" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    </aside>
+  );
+};
+
 export const KnowledgeLibraryPage = () => {
   const { firmSlug } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -233,6 +339,66 @@ export const KnowledgeLibraryPage = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+
+  // Detail drawer state
+  const [drawerItem, setDrawerItem] = useState(null);
+  const [drawerLoading, setDrawerLoading] = useState(false);
+  const [drawerError, setDrawerError] = useState('');
+
+  const itemParam = searchParams.get('item');
+
+  // Open detail drawer when ?item= param is present
+  useEffect(() => {
+    if (!itemParam) {
+      setDrawerItem(null);
+      setDrawerError('');
+      return;
+    }
+
+    let cancelled = false;
+    const fetchItem = async () => {
+      setDrawerLoading(true);
+      setDrawerError('');
+      try {
+        const result = await knowledgeItemsApi.getKnowledgeItem(itemParam);
+        const fetched = result?.data?.data || result?.data;
+        if (!cancelled) {
+          if (fetched && (fetched._id || fetched.id)) {
+            setDrawerItem(fetched);
+          } else {
+            setDrawerItem(null);
+            setDrawerError('Knowledge item could not be opened. It may have been archived, removed, or unavailable to this firm.');
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setDrawerItem(null);
+          setDrawerError('Knowledge item could not be opened. It may have been archived, removed, or unavailable to this firm.');
+        }
+      } finally {
+        if (!cancelled) setDrawerLoading(false);
+      }
+    };
+
+    void fetchItem();
+    return () => { cancelled = true; };
+  }, [itemParam]);
+
+  const closeDrawer = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('item');
+    setSearchParams(next, { replace: true });
+    setDrawerItem(null);
+    setDrawerError('');
+  };
+
+  const openDrawer = (item) => {
+    const itemId = item._id || item.id;
+    if (!itemId) return;
+    const next = new URLSearchParams(searchParams);
+    next.set('item', itemId);
+    setSearchParams(next, { replace: true });
+  };
 
   const loadData = async ({ background = false } = {}) => {
     if (background && hasLoadedRef.current) setRefreshing(true);
@@ -306,6 +472,7 @@ export const KnowledgeLibraryPage = () => {
   };
 
   const openEdit = (item) => {
+    closeDrawer();
     setSaveError('');
     setEditingItem(item);
     setFormMode('edit');
@@ -344,6 +511,7 @@ export const KnowledgeLibraryPage = () => {
     try {
       await knowledgeItemsApi.archiveKnowledgeItem(itemId);
       setStatusMessage('Knowledge item archived.');
+      closeDrawer();
       void loadData({ background: true });
     } catch (archiveErr) {
       setStatusMessage(`Archive failed: ${archiveErr?.message || 'Please try again.'}`);
@@ -365,6 +533,14 @@ export const KnowledgeLibraryPage = () => {
         <td>{formatDate(item.updatedAt)}</td>
         <td>
           <div className="action-row" style={{ gap: '0.4rem' }}>
+            <button
+              type="button"
+              onClick={() => openDrawer(item)}
+              aria-label={`View ${item.title}`}
+              style={{ fontSize: '0.8rem' }}
+            >
+              View
+            </button>
             {item.status !== 'archived' ? (
               <>
                 <button
@@ -392,6 +568,8 @@ export const KnowledgeLibraryPage = () => {
       </tr>
     );
   });
+
+  const drawerOpen = Boolean(itemParam);
 
   return (
     <PlatformShell
@@ -516,6 +694,39 @@ export const KnowledgeLibraryPage = () => {
           paginationLabel="Knowledge items pagination"
         />
       </PageSection>
+
+      {drawerOpen ? (
+        drawerLoading ? (
+          <aside
+            aria-label="Knowledge Item Detail"
+            role="complementary"
+            style={{ ...DRAWER_ASIDE_STYLE, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}
+          >
+            <p>Loading knowledge item…</p>
+            <button type="button" onClick={closeDrawer} style={{ marginTop: '1rem' }}>Close</button>
+          </aside>
+        ) : drawerError ? (
+          <aside
+            aria-label="Knowledge Item Detail"
+            role="complementary"
+            style={{ ...DRAWER_ASIDE_STYLE, display: 'flex', flexDirection: 'column', padding: '1.5rem' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Knowledge Item Detail</h2>
+              <button type="button" onClick={closeDrawer} aria-label="Close detail drawer" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', color: '#6b7280' }}>✕</button>
+            </div>
+            <p className="inline-notice inline-notice--error" role="alert">{drawerError}</p>
+            <button type="button" onClick={closeDrawer} style={{ marginTop: '1rem' }}>Close</button>
+          </aside>
+        ) : (
+          <KnowledgeItemDetailDrawer
+            item={drawerItem}
+            onEdit={openEdit}
+            onArchive={(item) => void handleArchive(item)}
+            onClose={closeDrawer}
+          />
+        )
+      ) : null}
     </PlatformShell>
   );
 };
