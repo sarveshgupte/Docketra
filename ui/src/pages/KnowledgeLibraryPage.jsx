@@ -448,7 +448,7 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
           className="inline-notice inline-notice--warning"
           style={{ fontSize: '0.82rem', marginBottom: 0 }}
         >
-          Structured knowledge only. {'Do not upload or paste sensitive client documents here'}; store heavy documents in firm-controlled storage/BYOS.
+          Structured knowledge only. Do not upload or paste sensitive client documents here; store heavy documents in firm-controlled storage/BYOS.
         </p>
 
         {saveError ? (
@@ -1031,7 +1031,7 @@ export const KnowledgeLibraryPage = () => {
           <strong>Use Knowledge Library for reusable firm knowledge.</strong> Link records to work types, clients, or dockets so they appear during execution.
         </div>
         <p className="inline-notice inline-notice--warning" style={{ marginBottom: 0, fontSize: '0.82rem' }}>
-          {'Do not upload or paste sensitive client documents here'}. Store heavy documents in firm-controlled storage/BYOS and use Knowledge Items for structured operational knowledge.
+          Do not upload or paste sensitive client documents here. Store heavy documents in firm-controlled storage/BYOS and use Knowledge Items for structured operational knowledge.
         </p>
       </PageSection>
 
