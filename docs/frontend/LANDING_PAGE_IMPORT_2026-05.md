@@ -1,42 +1,43 @@
 # Landing Page Import (May 2026)
 
-## Source repository
-- Intended source: `https://github.com/guptesarvesh/firm-memory-hub`.
-- Note: direct network fetch from the build environment failed with HTTP 403 during clone, so the import was completed by porting/adapting the existing Lovable-style landing implementation already present in Docketra and restructuring it into the requested component layout.
+## Duplicate header/footer root cause
+- The public root route (`/`) was grouped under `MarketingLayout` in `ui/src/routes/PublicRoutes.jsx`.
+- `MarketingLayout` wraps content with `AppLayout`, which renders the shared `Navbar` and marketing footer.
+- The imported Lovable-style landing component (`LandingPageContent`) also renders its own `HomeNav` and `MarketingFooter`.
+- Result: duplicate header and duplicate footer on `/`.
 
-## Files/components copied or adapted
-- `ui/src/components/landing/LandingPageContent.jsx`
-  - Created by moving the full landing-page implementation out of `ui/src/pages/marketing/HomePage.jsx`.
-  - Preserved section structure and behavior (hero, problem, solution, product pillars, flow examples, trust, CTA, footer).
-  - Updated branding CTA details for Docketra public routes.
-- `ui/src/pages/marketing/HomePage.jsx`
-  - Reduced to a thin page wrapper that renders `LandingPageContent`.
+## Routing fix
+- Moved `/` out of the `MarketingLayout` route group and into a plain `RouteSuspenseOutlet` group.
+- Kept `MarketingLayout` for these pages only:
+  - `/features`
+  - `/terms`
+  - `/privacy`
+  - `/security`
+  - `/acceptable-use`
+  - `/about`
+  - `/contact`
+  - `/login`
+  - `/superadmin`
+  - `/superadmin/login`
+- Left all other public/auth/firm-slug routes unchanged.
 
-## Assets copied
-- No additional static assets were added.
-- Existing design and mock UI blocks are Tailwind-based and remain in component markup.
+## Routes verified
+- `/` now renders only the landing-specific `HomeNav` and `MarketingFooter` (single header/footer).
+- `/login` still routes via the existing login page.
+- `/signup` remains unchanged.
+- `/:firmSlug/login` remains unchanged.
+- `/features`, `/about`, `/contact`, `/terms`, `/privacy`, `/security`, `/acceptable-use` still render through `MarketingLayout` as before.
+- Legacy superadmin redirect route (`/superadmin/*` -> `/app/superadmin*`) remains unchanged.
 
-## Dependencies added or avoided
-- Added: none.
-- Reused existing dependencies already in Docketra frontend (`react-router-dom`, `framer-motion`, and existing `Container` layout component).
-
-## Routes touched
-- No route definitions changed.
-- Existing `/` route continues to render `MarketingHomePage`, now backed by `LandingPageContent` via `HomePage` wrapper.
-- CTA links wired to existing public routes:
-  - Primary CTA: `/signup`
-  - Login CTA: `/login`
-
-## Verification steps
-1. Run frontend build.
-2. Validate `/` loads the landing page.
-3. Validate `/login` route still renders login UI.
-4. Validate `/signup` route still renders onboarding/signup UI.
-5. Validate `/:firmSlug/login` still renders firm login.
-6. Confirm protected routes remain unchanged (no edits to protected/public route maps beyond component implementation).
+## Copy corrections made
+- Updated Trust/BYOS copy to avoid absolute custody claims.
+- New wording reflects both supported modes:
+  - BYOS where configured.
+  - Docketra default storage may be used when BYOS is not configured.
+- Added clarity that storage configuration should be visible to the primary admin.
 
 ## Rollback notes
-- Revert the following files to roll back this import:
-  - `ui/src/components/landing/LandingPageContent.jsx` (delete)
-  - `ui/src/pages/marketing/HomePage.jsx` (restore prior monolithic page)
-  - `docs/frontend/LANDING_PAGE_IMPORT_2026-05.md` (delete)
+- To roll back this cleanup, revert:
+  - `ui/src/routes/PublicRoutes.jsx`
+  - `ui/src/components/landing/LandingPageContent.jsx`
+  - `docs/frontend/LANDING_PAGE_IMPORT_2026-05.md`
