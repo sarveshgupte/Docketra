@@ -53,7 +53,9 @@ const mockKnowledgeItemModel = {
       lean: async () => _items.filter((i) =>
         String(i.firmId) === String(filter.firmId)
         && (!filter.type || i.type === filter.type)
-        && (!filter.status || i.status === filter.status),
+        && (!filter.status || i.status === filter.status)
+        && (!filter.linkedWorkType || i.linkedWorkType === filter.linkedWorkType)
+        && (!filter.linkedDocketId || i.linkedDocketId === filter.linkedDocketId),
       ),
     };
     return chain;
@@ -342,6 +344,75 @@ async function testNoAiOrVectorCodePaths() {
   console.log('  ✓ testNoAiOrVectorCodePaths');
 }
 
+async function testListFilterByLinkedWorkType() {
+  reset();
+  // Create items with different linkedWorkType values
+  await createKnowledgeItem(
+    { body: { title: 'Compliance SOP', type: 'sop', status: 'active', linkedWorkType: 'Compliance' }, user: { firmId: FIRM_A, xid: 'X000001' } },
+    { statusCode: 200, status() { return this; }, json() { return this; } },
+  );
+  await createKnowledgeItem(
+    { body: { title: 'Payroll Checklist', type: 'checklist', status: 'active', linkedWorkType: 'Payroll' }, user: { firmId: FIRM_A, xid: 'X000001' } },
+    { statusCode: 200, status() { return this; }, json() { return this; } },
+  );
+
+  const { req, res } = makeReqRes({ query: { linkedWorkType: 'Compliance' }, firmId: FIRM_A });
+  await listKnowledgeItems(req, res);
+
+  assert.strictEqual(res.payload.success, true);
+  assert.ok(Array.isArray(res.payload.data));
+  for (const item of res.payload.data) {
+    assert.strictEqual(item.linkedWorkType, 'Compliance', 'must only return items matching linkedWorkType');
+  }
+  assert.ok(res.payload.data.length >= 1, 'must return at least one item with linkedWorkType=Compliance');
+  console.log('  ✓ testListFilterByLinkedWorkType');
+}
+
+async function testListFilterByLinkedDocketId() {
+  reset();
+  const docketId = 'docket-abc-123';
+  await createKnowledgeItem(
+    { body: { title: 'Docket SOP', type: 'sop', status: 'active', linkedDocketId: docketId }, user: { firmId: FIRM_A, xid: 'X000001' } },
+    { statusCode: 200, status() { return this; }, json() { return this; } },
+  );
+  await createKnowledgeItem(
+    { body: { title: 'Other SOP', type: 'sop', status: 'active', linkedDocketId: 'other-docket' }, user: { firmId: FIRM_A, xid: 'X000001' } },
+    { statusCode: 200, status() { return this; }, json() { return this; } },
+  );
+
+  const { req, res } = makeReqRes({ query: { linkedDocketId: docketId }, firmId: FIRM_A });
+  await listKnowledgeItems(req, res);
+
+  assert.strictEqual(res.payload.success, true);
+  assert.ok(Array.isArray(res.payload.data));
+  for (const item of res.payload.data) {
+    assert.strictEqual(item.linkedDocketId, docketId, 'must only return items matching linkedDocketId');
+  }
+  assert.ok(res.payload.data.length >= 1, 'must return at least one item with matching linkedDocketId');
+  console.log('  ✓ testListFilterByLinkedDocketId');
+}
+
+async function testLinkedWorkTypeFilterFirmScoped() {
+  reset();
+  await createKnowledgeItem(
+    { body: { title: 'Firm A SOP', type: 'sop', status: 'active', linkedWorkType: 'HR' }, user: { firmId: FIRM_A, xid: 'X000001' } },
+    { statusCode: 200, status() { return this; }, json() { return this; } },
+  );
+  await createKnowledgeItem(
+    { body: { title: 'Firm B SOP', type: 'sop', status: 'active', linkedWorkType: 'HR' }, user: { firmId: FIRM_B, xid: 'X000002' } },
+    { statusCode: 200, status() { return this; }, json() { return this; } },
+  );
+
+  const { req, res } = makeReqRes({ query: { linkedWorkType: 'HR' }, firmId: FIRM_A });
+  await listKnowledgeItems(req, res);
+
+  assert.strictEqual(res.payload.success, true);
+  for (const item of res.payload.data) {
+    assert.strictEqual(String(item.firmId), FIRM_A, 'linkedWorkType filter must still enforce firm scoping');
+  }
+  console.log('  ✓ testLinkedWorkTypeFilterFirmScoped');
+}
+
 // ─── Runner ───────────────────────────────────────────────────────────────────
 
 (async () => {
@@ -361,6 +432,9 @@ async function testNoAiOrVectorCodePaths() {
     testCrossFirmAccessPrevented,
     testTagsNormalizedToLowercase,
     testNoAiOrVectorCodePaths,
+    testListFilterByLinkedWorkType,
+    testListFilterByLinkedDocketId,
+    testLinkedWorkTypeFilterFirmScoped,
   ];
 
   let passed = 0;
