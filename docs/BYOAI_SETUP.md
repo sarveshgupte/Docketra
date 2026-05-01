@@ -130,3 +130,32 @@ The backend BYOAI contract skeleton is now implemented with fail-closed defaults
 - External SDK/provider integrations (OpenAI/Gemini/Anthropic/Azure) remain a future PR.
 - Registry currently exposes metadata + validation stubs only.
 - AI contract defaults to disabled/fail-closed policy decisions unless explicit allowed state is passed.
+
+## 15) Implemented firm AI config contract (2026-05-01)
+
+Backend-authoritative firm AI configuration contract has been added with secure defaults.
+
+### Implemented fields
+- `enabled` (default `false`)
+- `provider` (`openai | gemini | anthropic | azure_openai | docketra_managed | null`)
+- `model`
+- `credentialMode` (`none | encrypted_key | credential_ref`)
+- `encryptedKey` (canonical future secret field; stored, never exposed by safe config helpers)
+- `credentialRef` (stored, never exposed by safe config helpers)
+- `apiKey` (legacy/deprecated compatibility read path only)
+- `features` (`taskDescriptionRefinement`, `documentSummary`, `docketDrafting`, `routingSuggestions`)
+- `roleAccess` (`PRIMARY_ADMIN`, `ADMIN`, `MANAGER`, `USER`)
+- `retention` (`zeroRetention`, `savePrompts`, `saveOutputs`)
+- `privacy` (`redactErrors`, `verboseLogging`)
+- `updatedAt`, `updatedBy`
+
+### Safety guarantees implemented
+- Default-disabled and fail-closed normalization.
+- `zeroRetention=true` forces prompt/output retention flags to `false`.
+- Safe config output exposes status/flags only and does not return key/ref secret values.
+- Enablement validation returns structured failures for missing provider/model/credential state.
+
+### Current limitations (intentional)
+- Credential reference resolution is still contract-only (`CREDENTIAL_REF_LOOKUP_NOT_IMPLEMENTED`).
+- Runtime credential decryption/use is intentionally not enabled in this PR; resolver reports presence/state only.
+- Provider SDK integrations and real provider calls remain a future PR.
