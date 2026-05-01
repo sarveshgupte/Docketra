@@ -3,7 +3,6 @@ import { SuperAdminLayout } from '../components/common/SuperAdminLayout';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Loading } from '../components/common/Loading';
-import { EmptyState } from '../components/ui/EmptyState';
 import { superadminService } from '../services/superadminService';
 
 const pretty = (value) => String(value || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -142,12 +141,15 @@ export const SuperadminDiagnosticsPage = () => {
           </>
         ) : (
           <Card>
-            <EmptyState
-              title="Diagnostics unavailable"
-              description="Support diagnostics could not be loaded. Retry to fetch the latest status."
-              actionLabel="Retry"
-              onAction={loadDiagnostics}
-            />
+            <div className="space-y-3">
+              <h2 className="text-lg font-semibold text-gray-900">Diagnostics unavailable</h2>
+              <p className="text-sm text-gray-600">
+                Support diagnostics could not be loaded. Retry to fetch the latest status.
+              </p>
+              <Button type="button" variant="secondary" onClick={loadDiagnostics}>
+                Retry
+              </Button>
+            </div>
           </Card>
         )}
       </div>
