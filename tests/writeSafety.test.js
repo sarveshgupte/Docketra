@@ -4,14 +4,25 @@ const assert = require('assert');
 const distributedIdempotencyStore = new Map();
 const redisMock = {
   async set(key, value, exToken, ttl, nxToken) {
-    if (exToken !== 'EX' || nxToken !== 'NX') throw new Error('Unexpected Redis set contract');
+    if (exToken !== 'EX') throw new Error('Unexpected Redis set contract');
     const now = Date.now();
-    const existing = distributedIdempotencyStore.get(key);
-    if (existing && existing.expiresAt > now) {
-      return null;
+    if (nxToken === 'NX') {
+      const existing = distributedIdempotencyStore.get(key);
+      if (existing && existing.expiresAt > now) {
+        return null;
+      }
     }
     distributedIdempotencyStore.set(key, { value, expiresAt: now + (ttl * 1000) });
     return 'OK';
+  },
+  async get(key) {
+    const record = distributedIdempotencyStore.get(key);
+    if (!record) return null;
+    if (record.expiresAt <= Date.now()) {
+      distributedIdempotencyStore.delete(key);
+      return null;
+    }
+    return record.value;
   },
   async keys(pattern) {
     const prefix = pattern.replace('*', '');
@@ -37,6 +48,8 @@ require.cache[redisConfigPath] = {
   loaded: true,
   exports: {
     getRedisClient: () => redisMock,
+    isRedisReady: () => true,
+    isRedisUrlConfigured: () => true,
   },
 };
 
@@ -46,6 +59,7 @@ const { executeWrite } = require('../src/utils/executeWrite');
 const wrapWriteHandler = require('../src/middleware/wrapWriteHandler');
 
 const createMockRes = () => {
+  const finishListeners = [];
   const res = {
     statusCode: 200,
     headers: {},
@@ -59,11 +73,29 @@ const createMockRes = () => {
       if (this.statusCode == null) {
         this.statusCode = 200;
       }
+      for (const listener of finishListeners) listener();
+      return this;
+    },
+    send(payload) {
+      this.body = payload;
+      if (this.statusCode == null) {
+        this.statusCode = 200;
+      }
+      for (const listener of finishListeners) listener();
       return this;
     },
     set(key, value) {
       this.headers[key] = value;
       return this;
+    },
+    setHeader(key, value) {
+      this.headers[key] = value;
+    },
+    getHeader(key) {
+      return this.headers[key];
+    },
+    once(event, listener) {
+      if (event === 'finish') finishListeners.push(listener);
     },
   };
   return res;
