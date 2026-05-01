@@ -1,5 +1,11 @@
 # What's New
 
+## May 2026: Company Brain command center UX
+
+- Redesigned the Company Brain page from an explanatory placeholder into a read-only firm command center.
+- Added clearer attention summaries, memory-map navigation, and rule-based knowledge-gap cues using existing data.
+- Preserved existing routes, APIs, permissions, and no-AI/no-new-model constraints.
+
 ## May 2026: Prospective Client lifecycle
 
 - Reframed leads as Prospective Clients to align intake, follow-up, proposal, and conversion context with Company Brain.
