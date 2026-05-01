@@ -26,6 +26,9 @@ export const OtpVerificationPage = () => {
 
   const email = String(location.state?.email || '').trim().toLowerCase();
   const purpose = location.state?.purpose || 'login';
+  const loginToken = String(location.state?.loginToken || '').trim();
+  const firmSlug = String(location.state?.firmSlug || '').trim();
+  const loginRestartPath = firmSlug ? `/${firmSlug}/login` : '/superadmin';
 
   const otp = otpDigits.join('');
   const isOtpValid = /^\d{6}$/.test(otp);
@@ -71,7 +74,11 @@ export const OtpVerificationPage = () => {
     setInfo('');
     setLoading(true);
     try {
-      await authApi.signupResendOtp(email);
+      if (purpose === 'login' && loginToken) {
+        await authApi.loginResendOtp({ firmSlug: firmSlug || undefined, loginToken });
+      } else {
+        await authApi.signupResendOtp(email);
+      }
       setCooldown(30);
       setInfo(`A new OTP was sent to ${email}.`);
     } catch (resendError) {
@@ -85,15 +92,23 @@ export const OtpVerificationPage = () => {
     event.preventDefault();
     setError('');
 
-    if (!email) {
+    if (purpose === 'login' && !loginToken) {
+      setError('Login session expired. Please restart login.');
+      window.setTimeout(() => navigate(loginRestartPath, { replace: true }), 1200);
+      return;
+    }
+
+    if (purpose !== 'login' && !email) {
       setError('Missing email. Please restart login/signup.');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await api.post('/auth/verify-otp', { email, otp, purpose });
-      const payload = response?.data || {};
+      const response = purpose === 'login'
+        ? await authApi.loginVerify({ firmSlug: firmSlug || undefined, loginToken, otp })
+        : await api.post('/auth/verify-otp', { email, otp, purpose });
+      const payload = response?.data || response || {};
       authService.setSessionTokens(payload);
       const profileResult = await fetchProfile({ force: true });
       if (profileResult?.success) {
