@@ -1,4 +1,13 @@
-import { SESSION_KEYS, STORAGE_KEYS } from './constants.js';
+const SESSION_KEYS = {
+  PENDING_LOGIN_TOKEN: 'PENDING_LOGIN_TOKEN',
+  PENDING_LOGIN_FIRM: 'PENDING_LOGIN_FIRM',
+  POST_LOGIN_RETURN_TO: 'POST_LOGIN_RETURN_TO',
+};
+
+const STORAGE_KEYS = {
+  FIRM_SLUG: 'firmSlug',
+  IMPERSONATED_FIRM: 'impersonatedFirm',
+};
 
 export const clearPendingLoginSessionState = (session = sessionStorage) => {
   session.removeItem(SESSION_KEYS.PENDING_LOGIN_TOKEN);
