@@ -33,6 +33,8 @@ To keep those tenants working safely while migrations complete, runtime resoluti
   - `resolveCanonicalTenantFromFirmId(...)`
   - `resolveCanonicalTenantForUser(...)`
   - `resolveTenantBySlug(...)`
+  - `resolveFirmOwnershipFromTenantId(...)`
+  - `resolveStorageContextFromTenantId(...)`
 
 Fallback behavior:
 
@@ -56,5 +58,6 @@ Fallback behavior:
 ## Guardrails
 
 - Cross-tenant checks are performed against canonical runtime tenant id, not raw legacy values.
+- BYOS/storage/AI settings handlers must resolve ownership with tenant identity helpers and fail closed when ownership mapping is missing.
 - Firm-slug resolution for login APIs resolves to canonical runtime tenant id.
 - Token and middleware context are normalized so downstream code receives a consistent tenant scope.
