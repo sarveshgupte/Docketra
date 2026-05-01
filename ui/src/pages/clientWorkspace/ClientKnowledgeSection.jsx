@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { knowledgeItemsApi } from '../../api/knowledgeItems.api';
 import { ROUTES } from '../../constants/routes';
+import { toArray } from '../platform/PlatformShared';
 
 const formatLabel = (value) => String(value || '').replace(/_/g, ' ');
 
@@ -42,7 +43,8 @@ export const ClientKnowledgeSection = ({
           limit: 50,
         });
         if (!cancelled) {
-          setItems(res?.data?.data || res?.data?.items || []);
+          const loaded = toArray(res?.data?.data || res?.data?.items || res?.data || []);
+          setItems(loaded);
         }
       } catch (loadError) {
         if (!cancelled) {

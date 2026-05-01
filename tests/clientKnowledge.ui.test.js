@@ -156,6 +156,35 @@ function testKnowledgeLibraryFormHasLinkedClientIdHelperCopy() {
   console.log('  ✓ KnowledgeLibraryPage includes linkedClientId field with helper copy');
 }
 
+function testClientKnowledgeSectionUsesToArray() {
+  const sectionSource = read('ui/src/pages/clientWorkspace/ClientKnowledgeSection.jsx');
+  assert.ok(
+    sectionSource.includes('toArray'),
+    'ClientKnowledgeSection must import and use toArray for safe response normalization',
+  );
+  assert.ok(
+    sectionSource.includes("from '../platform/PlatformShared'"),
+    'ClientKnowledgeSection must import toArray from PlatformShared',
+  );
+  console.log('  ✓ ClientKnowledgeSection imports and uses toArray from PlatformShared');
+}
+
+function testClientKnowledgeSectionHandlesResDataFallback() {
+  const sectionSource = read('ui/src/pages/clientWorkspace/ClientKnowledgeSection.jsx');
+  assert.ok(
+    sectionSource.includes('res?.data?.data') &&
+    sectionSource.includes('res?.data?.items') &&
+    sectionSource.includes('res?.data'),
+    'ClientKnowledgeSection must handle res.data.data, res.data.items, and res.data fallback shapes',
+  );
+  // The toArray wrapping ensures a non-array res.data does not break rendering
+  assert.ok(
+    sectionSource.includes('toArray('),
+    'ClientKnowledgeSection must wrap the response parse in toArray() to guard against non-array values',
+  );
+  console.log('  ✓ ClientKnowledgeSection safely handles res.data, res.data.data, and res.data.items response shapes');
+}
+
 function testCrmClientDetailPageHasCompatibilityComment() {
   const pageSource = read('ui/src/pages/crm/CrmClientDetailPage.jsx');
   assert.ok(
@@ -238,6 +267,8 @@ function run() {
   testClientKnowledgeSectionDoesNotEditInline();
   testClientKnowledgeSectionHasSectionTitle();
   testKnowledgeLibraryFormHasLinkedClientIdHelperCopy();
+  testClientKnowledgeSectionUsesToArray();
+  testClientKnowledgeSectionHandlesResDataFallback();
   testCrmClientDetailPageHasCompatibilityComment();
   testNoAiOrVectorInfrastructureAdded();
   testExistingRoutesUntouched();
