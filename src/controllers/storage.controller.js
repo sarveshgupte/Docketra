@@ -12,6 +12,7 @@ const { StorageValidationError } = require('../services/storage/errors/StorageEr
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const { resolveFirmStorageState, normalizeProvider } = require('../services/storage/resolveFirmStorageState');
 const { S3Provider } = require('../services/storage/providers/S3Provider');
+const { supportsListFiles, supportsHealthCheck } = require('../services/storage/providerCapabilities');
 const { writeSettingsAudit } = require('../services/productAudit.service');
 const { REASON_CODES, logPilotEvent } = require('../services/pilotDiagnostics.service');
 const { resolveStorageContextFromTenantId } = require('../services/tenantIdentity.service');
@@ -779,9 +780,16 @@ const disconnectStorage = async (req, res) => {
   if (!ensurePrimaryAdmin(req, res)) return;
   try {
     const ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
-    const previous = await Firm.findById(ownershipFirmId).select('storage').lean();
-    await googleDriveService.markStorageDisconnected(ownershipFirmId, 'Disconnected by primary admin');
-    const next = await Firm.findById(ownershipFirmId).select('storage').lean();
+    const previous = await Firm.findById(ownershipFirmId).select('storage storageConfig').lean();
+    const state = resolveFirmStorageState(previous);
+    await Firm.findByIdAndUpdate(ownershipFirmId, {
+      $set: {
+        'storage.mode': MANAGED_STORAGE_MODE,
+        'storage.provider': MANAGED_STORAGE_MODE,
+        storageConfig: null,
+      },
+    });
+    const next = await Firm.findById(ownershipFirmId).select('storage storageConfig').lean();
     await writeSettingsAudit({
       req,
       tenantId: getResolvedOwnershipAuditTenantId(ownershipFirmId, req),
@@ -798,11 +806,12 @@ const disconnectStorage = async (req, res) => {
       metadata: { source: STORAGE_AUDIT_SOURCES.DISCONNECT, runtimeTenantId: req.firmId },
       dedupeKey: 'storage-disconnect',
     });
-    const context = await googleDriveService.getClient(ownershipFirmId);
     return res.json({
       success: true,
-      provider: context.providerType || PROVIDER_TYPES.USER_GOOGLE_DRIVE,
-      rootFolderId: context.rootFolderId || null,
+      provider: toUiProvider(MANAGED_STORAGE_MODE),
+      status: state?.isManaged ? 'ACTIVE_MANAGED' : 'DISCONNECTED',
+      connectionStatus: 'ACTIVE_MANAGED',
+      rootFolderId: null,
     });
   } catch (error) {
     log.error('[STORAGE]', { event: 'disconnect_failed', tenantId: req.firmId, message: error.message });
@@ -814,31 +823,41 @@ const storageHealthCheck = async (req, res) => {
   let ownershipFirmId = req.ownershipFirmId || req.firm?.ownershipFirmId || null;
   try {
     ownershipFirmId = ownershipFirmId || await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
-    const { drive } = await googleDriveService.getClient(ownershipFirmId);
-    await drive.files.list({ pageSize: 1, fields: 'files(id)', supportsAllDrives: true, includeItemsFromAllDrives: true });
+    const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig').lean();
+    const state = resolveFirmStorageState(firm);
+    const provider = await StorageProviderFactory.getProvider(ownershipFirmId);
+    if (supportsHealthCheck(provider)) await provider.testConnection();
 
-    const firm = await Firm.findById(ownershipFirmId).select('storageConfig').lean();
-    const credentials = decodeFirmStorageConfig(firm, ownershipFirmId);
-    await Firm.findByIdAndUpdate(ownershipFirmId, {
-      $set: {
-        storageConfig: {
-          provider: 'google_drive',
-          credentials: encrypt(JSON.stringify({
-            ...credentials,
-            status: 'ACTIVE_BYOS',
-            lastError: null,
-            lastCheckedAt: new Date().toISOString(),
-          })),
+    if (state.canonicalProvider === 'google_drive' && firm?.storageConfig?.credentials) {
+      const credentials = decodeFirmStorageConfig(firm, ownershipFirmId);
+      await Firm.findByIdAndUpdate(ownershipFirmId, {
+        $set: {
+          storageConfig: {
+            provider: 'google_drive',
+            credentials: encrypt(JSON.stringify({
+              ...credentials,
+              status: 'ACTIVE_BYOS',
+              lastError: null,
+              lastCheckedAt: new Date().toISOString(),
+            })),
+          },
         },
-      },
-    });
-    return res.json({ healthy: true });
+      });
+    }
+    const connectionStatus = state?.isManaged ? 'ACTIVE_MANAGED' : 'ACTIVE_BYOS';
+    return res.json({ healthy: true, provider: toUiProvider(state.canonicalProvider), status: connectionStatus, connectionStatus });
   } catch (error) {
-    const mappedStatus = mapProviderErrorToStatus(error);
-    if (ownershipFirmId && mappedStatus === 'DISCONNECTED') {
-      await googleDriveService.markStorageDisconnected(ownershipFirmId, error.message);
-    } else if (ownershipFirmId) {
-      await googleDriveService.markStorageError(ownershipFirmId, error.message);
+    if (ownershipFirmId) {
+      const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig').lean();
+      const state = resolveFirmStorageState(firm);
+      if (state.canonicalProvider === 'google_drive') {
+        const mappedStatus = mapProviderErrorToStatus(error);
+        if (mappedStatus === 'DISCONNECTED') {
+          await googleDriveService.markStorageDisconnected(ownershipFirmId, error.message);
+        } else {
+          await googleDriveService.markStorageError(ownershipFirmId, error.message);
+        }
+      }
     }
     return res.status(502).json({ healthy: false, error: isProduction() ? 'health_check_failed' : (error.message || 'health_check_failed') });
   }
@@ -847,9 +866,24 @@ const storageHealthCheck = async (req, res) => {
 const storageUsage = async (req, res) => {
   try {
     const ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
-    const files = await googleDriveService.listFiles(ownershipFirmId);
+    const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig').lean();
+    const state = resolveFirmStorageState(firm);
+    const provider = await StorageProviderFactory.getProvider(ownershipFirmId);
+    if (!supportsListFiles(provider)) {
+      return res.status(400).json({
+        error: 'usage_failed',
+        code: 'STORAGE_PROVIDER_UNSUPPORTED_OPERATION',
+        provider: toUiProvider(state.canonicalProvider),
+        status: state.connectionStatus,
+        connectionStatus: state.connectionStatus,
+      });
+    }
+    const files = await provider.listFiles(null);
     const totalSizeBytes = files.reduce((acc, file) => acc + Number(file.size || 0), 0);
     return res.json({
+      provider: toUiProvider(state.canonicalProvider),
+      status: state.connectionStatus,
+      connectionStatus: state.connectionStatus,
       totalFiles: files.length,
       totalSizeBytes,
     });
