@@ -1,5 +1,5 @@
 const StorageProvider = require('./StorageProvider');
-const { StorageAccessError } = require('../errors');
+const { StorageAccessError, UnsupportedProviderFeatureError } = require('../errors');
 
 class OneDriveProvider extends StorageProvider {
   constructor({ refreshToken, driveId }) {
@@ -100,6 +100,32 @@ class OneDriveProvider extends StorageProvider {
     const client = await this.getClient();
     const res = await client(`/drives/${this.driveId}/items/${fileId}`);
     return res.json();
+  }
+
+  async uploadFile(parentOrPath, fileName, streamOrBuffer, mimeType = 'application/octet-stream') {
+    const stream = streamOrBuffer?.pipe ? streamOrBuffer : require('stream').Readable.from(streamOrBuffer); // eslint-disable-line global-require
+    return this.uploadFileStream({ folderId: parentOrPath || 'root', filename: fileName, mimeType, stream });
+  }
+
+  async downloadFile(fileId) {
+    const client = await this.getClient();
+    const res = await client(`/drives/${this.driveId}/items/${fileId}/content`);
+    return res.body;
+  }
+
+  async listFiles(parentOrPath = 'root') {
+    const client = await this.getClient();
+    const res = await client(`/drives/${this.driveId}/items/${parentOrPath}/children`);
+    const data = await res.json();
+    return (data.value || []).map((item) => ({ fileId: item.id, name: item.name, mimeType: item.file?.mimeType || null, size: Number(item.size || 0) }));
+  }
+
+  async getOrCreateFolder() {
+    throw new UnsupportedProviderFeatureError(this.providerName, 'getOrCreateFolder');
+  }
+
+  async generateDownloadUrl() {
+    throw new UnsupportedProviderFeatureError(this.providerName, 'generateDownloadUrl');
   }
 }
 

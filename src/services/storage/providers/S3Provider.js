@@ -5,11 +5,12 @@ const {
   DeleteObjectCommand,
   HeadBucketCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
 } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { randomUUID } = require('crypto');
 const StorageProvider = require('./StorageProvider');
-const { StorageAccessError } = require('../errors');
+const { StorageAccessError, UnsupportedProviderFeatureError } = require('../errors');
 
 const MAX_URL_EXPIRY_SECONDS = 10 * 60;
 const DEFAULT_URL_EXPIRY_SECONDS = 10 * 60;
@@ -17,6 +18,7 @@ const DEFAULT_URL_EXPIRY_SECONDS = 10 * 60;
 class S3Provider extends StorageProvider {
   constructor({ tenantId, bucket, region, prefix, credentials }) {
     super();
+    this.providerName = 's3';
     this.tenantId = tenantId;
     this.bucket = bucket;
     this.region = region;
@@ -25,6 +27,28 @@ class S3Provider extends StorageProvider {
       region,
       credentials,
     });
+  }
+
+  async uploadFile(parentOrPath, fileName, streamOrBuffer, mimeType = 'application/octet-stream') {
+    const key = this.normalizeObjectKey([parentOrPath, fileName].filter(Boolean).join('/'));
+    await this.client.send(new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: streamOrBuffer, ContentType: mimeType }));
+    return { fileId: key };
+  }
+
+  async downloadFile(objectKey) {
+    const key = this.normalizeObjectKey(objectKey);
+    const res = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+    return res.Body;
+  }
+
+  async listFiles(parentOrPath = '') {
+    const prefix = this.normalizeObjectKey(parentOrPath);
+    const res = await this.client.send(new ListObjectsV2Command({ Bucket: this.bucket, Prefix: prefix }));
+    return (res.Contents || []).map((item) => ({ fileId: item.Key, name: item.Key?.split('/').pop(), size: Number(item.Size || 0) }));
+  }
+
+  async getOrCreateFolder() {
+    throw new UnsupportedProviderFeatureError(this.providerName, 'getOrCreateFolder');
   }
 
   normalizeExpiry(expiresIn) {
@@ -36,10 +60,11 @@ class S3Provider extends StorageProvider {
   }
 
   async generateUploadUrl(objectKey, expiresIn = DEFAULT_URL_EXPIRY_SECONDS) {
+    const key = this.normalizeObjectKey(objectKey);
     try {
       const command = new PutObjectCommand({
         Bucket: this.bucket,
-        Key: objectKey,
+        Key: key,
       });
       const expires = this.normalizeExpiry(expiresIn);
       return getSignedUrl(this.client, command, { expiresIn: expires });
@@ -49,10 +74,11 @@ class S3Provider extends StorageProvider {
   }
 
   async generateDownloadUrl(objectKey, expiresIn = DEFAULT_URL_EXPIRY_SECONDS) {
+    const key = this.normalizeObjectKey(objectKey);
     try {
       const command = new GetObjectCommand({
         Bucket: this.bucket,
-        Key: objectKey,
+        Key: key,
       });
       const expires = this.normalizeExpiry(expiresIn);
       return getSignedUrl(this.client, command, { expiresIn: expires });
@@ -62,11 +88,12 @@ class S3Provider extends StorageProvider {
   }
 
   async deleteObject(objectKey) {
+    const key = this.normalizeObjectKey(objectKey);
     try {
       await this.client.send(
         new DeleteObjectCommand({
           Bucket: this.bucket,
-          Key: objectKey,
+          Key: key,
         })
       );
     } catch (error) {
@@ -99,8 +126,22 @@ class S3Provider extends StorageProvider {
     return `${keyPrefix}${String(objectKey).replace(/^\/+/, '')}`;
   }
 
+  isTenantScopedKey(objectKey = '') {
+    const keyPrefix = this.prefix ? `${this.prefix.replace(/^\/+|\/+$/g, '')}/` : '';
+    return keyPrefix ? String(objectKey).startsWith(keyPrefix) : true;
+  }
+
+  normalizeObjectKey(objectKey = '') {
+    const raw = String(objectKey || '').replace(/^\/+/, '');
+    const segments = raw.split('/').filter((segment) => segment.length > 0);
+    if (segments.some((segment) => segment === '..' || segment === '.')) {
+      throw new StorageAccessError('Invalid object key path', this.tenantId);
+    }
+    return this.isTenantScopedKey(raw) ? raw : this.buildTenantScopedKey(raw);
+  }
+
   async createDirectUploadSession({ objectKey, mimeType = 'application/octet-stream' }) {
-    const scopedKey = this.buildTenantScopedKey(objectKey || randomUUID());
+    const scopedKey = this.normalizeObjectKey(objectKey || randomUUID());
     const uploadUrl = await this.generateUploadUrl(scopedKey);
     return {
       provider: 's3',
@@ -116,10 +157,11 @@ class S3Provider extends StorageProvider {
     if (!objectKey) {
       return { ok: false, reason: 'missing_object_key' };
     }
+    const normalizedKey = this.normalizeObjectKey(objectKey);
     try {
       const meta = await this.client.send(new HeadObjectCommand({
         Bucket: this.bucket,
-        Key: objectKey,
+        Key: normalizedKey,
       }));
 
       const sizeMatch = Number(meta.ContentLength || 0) === Number(expectedSize || 0);
@@ -130,7 +172,7 @@ class S3Provider extends StorageProvider {
       return {
         ok: true,
         provider: 's3',
-        fileId: objectKey,
+        fileId: normalizedKey,
         checksum: meta?.ETag
           ? {
               algorithm: 'md5',
