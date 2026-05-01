@@ -10,7 +10,6 @@ const User = require('../models/User.model');
 const BackupJob = require('../models/BackupJob.model');
 const AuditLog = require('../models/AuditLog.model');
 const emailService = require('./email.service');
-const { googleDriveService } = require('./googleDrive.service');
 const { StorageProviderFactory } = require('./storage/StorageProviderFactory');
 const log = require('../utils/log');
 
@@ -96,6 +95,13 @@ class StorageBackupService {
   }
 
   async uploadBackupToProvider({ provider, firmId, archivePath, objectKey }) {
+    if (provider?.providerName === 's3' && typeof provider.uploadFile === 'function') {
+      const uploaded = await provider.uploadFile(null, objectKey, fs.createReadStream(archivePath), 'application/octet-stream');
+      return {
+        archiveObjectKey: objectKey,
+        providerFileId: uploaded?.fileId || uploaded?.id || objectKey,
+      };
+    }
     if (typeof provider.getOrCreateFolder === 'function' && typeof provider.uploadFile === 'function') {
       const root = await provider.getOrCreateFolder(null, 'Docketra');
       const firmFolder = await provider.getOrCreateFolder(root, String(firmId));
@@ -125,15 +131,16 @@ class StorageBackupService {
     return null;
   }
 
-  async createBackupArchiveOnTempDisk(firmId, exportId) {
-    const files = await googleDriveService.listFiles(firmId);
+  async createBackupArchiveOnTempDisk(firmId, exportId, provider) {
+    const files = await provider.listFiles(null);
     const exportDir = path.join(os.tmpdir(), 'docketra-exports', String(firmId), exportId);
     const docsDir = path.join(exportDir, 'documents');
     ensureDir(docsDir);
 
     for (const file of files) {
-      const stream = await googleDriveService.downloadFile(firmId, file.id);
-      const outputPath = path.join(docsDir, sanitizeFileName(file.name || `${file.id}.bin`));
+      const resolvedFileId = file.fileId || file.id;
+      const stream = await provider.downloadFile(resolvedFileId);
+      const outputPath = path.join(docsDir, sanitizeFileName(file.name || `${resolvedFileId}.bin`));
       await pipeline(stream, fs.createWriteStream(outputPath));
     }
 
@@ -145,7 +152,7 @@ class StorageBackupService {
           firmId: String(firmId),
           totalFiles: files.length,
           files: files.map((file) => ({
-            id: file.id,
+            id: file.fileId || file.id,
             name: file.name,
             mimeType: file.mimeType,
             size: Number(file.size || 0),
@@ -190,7 +197,7 @@ class StorageBackupService {
     let exportDir = null;
 
     try {
-      const created = await this.createBackupArchiveOnTempDisk(firmId, exportId);
+      const created = await this.createBackupArchiveOnTempDisk(firmId, exportId, provider);
       zipPath = created.zipPath;
       exportDir = created.exportDir;
       encryptedPath = `${zipPath}.enc`;

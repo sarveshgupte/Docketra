@@ -61,22 +61,28 @@ class GoogleDriveProvider extends StorageProvider {
     return { folderId: created.data.id };
   }
 
-  async uploadFile(folderId, filename, stream, mimeType = 'application/octet-stream') {
+  async uploadFile(folderId, filename, streamOrBuffer, mimeType = 'application/octet-stream') {
     const drive = this.getClient();
+    const requestBody = { name: filename };
+    if (folderId) {
+      requestBody.parents = [folderId];
+    }
+    const body = Buffer.isBuffer(streamOrBuffer) ? Readable.from(streamOrBuffer) : streamOrBuffer;
     const created = await drive.files.create({
-      requestBody: { name: filename, parents: [folderId] },
-      media: { mimeType, body: stream },
+      requestBody,
+      media: { mimeType, body },
       supportsAllDrives: true,
       fields: 'id,webViewLink',
     });
     return {
+      id: created.data.id,
       fileId: created.data.id,
       webViewLink: created.data.webViewLink || null,
     };
   }
 
   async uploadFileBuffer(folderId, filename, fileBuffer, mimeType) {
-    return this.uploadFile(folderId, filename, Readable.from(fileBuffer), mimeType);
+    return this.uploadFile(folderId, filename, fileBuffer, mimeType);
   }
 
   async downloadFile(fileId) {
@@ -92,8 +98,9 @@ class GoogleDriveProvider extends StorageProvider {
 
   async listFiles(folderId) {
     const drive = this.getClient();
+    const resolvedFolderId = folderId || 'root';
     const res = await drive.files.list({
-      q: `'${folderId}' in parents and trashed = false`,
+      q: `'${resolvedFolderId}' in parents and trashed = false`,
       fields: 'files(id,name,mimeType,size)',
       supportsAllDrives: true,
       includeItemsFromAllDrives: true,
@@ -152,9 +159,13 @@ class GoogleDriveProvider extends StorageProvider {
     folderId,
   }) {
     const drive = this.getClient();
+    const requestBody = { name: fileName, mimeType };
+    if (folderId) {
+      requestBody.parents = [folderId];
+    }
     const response = await drive.files.create(
       {
-        requestBody: { name: fileName, parents: [folderId], mimeType },
+        requestBody,
         media: { mimeType },
         fields: 'id',
         supportsAllDrives: true,

@@ -30,8 +30,20 @@ class UnsupportedProviderError extends Error {
   }
 }
 
+class UnsupportedProviderFeatureError extends Error {
+  constructor(provider, feature) {
+    super(`Storage provider "${provider}" does not support feature "${feature}"`);
+    this.name = 'UnsupportedProviderFeatureError';
+    this.code = 'UNSUPPORTED_STORAGE_PROVIDER_FEATURE';
+    this.statusCode = 400;
+    this.provider = provider;
+    this.feature = feature;
+  }
+}
+
 module.exports = {
   StorageConfigMissingError,
   StorageAccessError,
   UnsupportedProviderError,
+  UnsupportedProviderFeatureError,
 };
