@@ -11,16 +11,23 @@
 
 const { Queue } = require('bullmq');
 
-const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+const redisUrl = String(process.env.REDIS_URL || '').trim();
+const isProduction = process.env.NODE_ENV === 'production';
 
-const storageDLQ = new Queue('storage-jobs-dlq', {
-  connection: { url: redisUrl },
-  defaultJobOptions: {
-    // DLQ jobs are kept indefinitely for manual inspection
-    removeOnComplete: false,
-    removeOnFail: false,
-  },
-});
+if (!redisUrl && isProduction) {
+  throw new Error('REDIS_URL is required in production for storage dead letter queue');
+}
+
+const storageDLQ = redisUrl
+  ? new Queue('storage-jobs-dlq', {
+      connection: { url: redisUrl },
+      defaultJobOptions: {
+        // DLQ jobs are kept indefinitely for manual inspection
+        removeOnComplete: false,
+        removeOnFail: false,
+      },
+    })
+  : null;
 
 /**
  * Move a permanently-failed storage job to the dead letter queue.
@@ -36,6 +43,9 @@ const storageDLQ = new Queue('storage-jobs-dlq', {
  * @returns {Promise<import('bullmq').Job>}
  */
 async function moveToDLQ({ firmId, caseId, jobType, provider, errorCode, retryCount, idempotencyKey }) {
+  if (!storageDLQ) {
+    return null;
+  }
   return storageDLQ.add('DEAD_LETTER', {
     firmId,
     caseId: caseId || null,
@@ -56,6 +66,9 @@ async function moveToDLQ({ firmId, caseId, jobType, provider, errorCode, retryCo
  * @returns {Promise<number>}
  */
 async function getDLQSize() {
+  if (!storageDLQ) {
+    return 0;
+  }
   return storageDLQ.getWaitingCount();
 }
 

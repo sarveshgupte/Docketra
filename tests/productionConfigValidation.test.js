@@ -8,7 +8,6 @@ const BASE_ENV = {
   NODE_ENV: 'production',
   PORT: '5000',
   MONGO_URI: 'mongodb://127.0.0.1:27017/test',
-  REDIS_URL: 'redis://127.0.0.1:6379',
   JWT_SECRET: 'A'.repeat(64),
   JWT_PASSWORD_SETUP_SECRET: 'B'.repeat(64),
   SUPERADMIN_PASSWORD_HASH: '$2b$10$wioLOkqqceK.iu9MZavNOua7yV2AzOpqlR4fuMWHf2.YeYpV4mEFC',
@@ -45,7 +44,21 @@ function testProductionGuards() {
   expectFail({ SUPERADMIN_OBJECT_ID: 'not-an-object-id' }, 'SUPERADMIN_OBJECT_ID');
   expectFail({ ENCRYPTION_PROVIDER: 'kms' }, 'ENCRYPTION_PROVIDER');
   expectFail({ AI_PROVIDER: 'gemini' }, 'AI_PROVIDER');
-  console.log('✓ production rejects weak/unsafe auth and upload env settings');
+  console.log('PASS production rejects weak/unsafe auth and upload env settings');
+}
+
+function testRedisOptionalButValidatedWhenConfiguredInProduction() {
+  const missingRedis = envSchema.safeParse({ ...BASE_ENV, REDIS_URL: undefined });
+  assert.strictEqual(missingRedis.success, true, 'Expected production env to allow missing REDIS_URL');
+
+  const blankRedis = envSchema.safeParse({ ...BASE_ENV, REDIS_URL: '' });
+  assert.strictEqual(blankRedis.success, true, 'Expected production env to allow blank REDIS_URL');
+
+  expectFail({ REDIS_URL: 'http://localhost:6379' }, 'REDIS_URL');
+
+  const parsed = envSchema.safeParse({ ...BASE_ENV, REDIS_URL: 'rediss://redis.example.com:6379' });
+  assert.strictEqual(parsed.success, true, 'Expected valid rediss:// REDIS_URL to pass production validation');
+  console.log('PASS production treats Redis as optional and validates URL only when configured');
 }
 
 function testMasterKeyFormats() {
@@ -56,13 +69,13 @@ function testMasterKeyFormats() {
   assert.strictEqual(b64KeyParsed.success, true, 'Expected 44-char base64 master key to pass');
 
   expectFail({ MASTER_ENCRYPTION_KEY: 'short-key' }, 'MASTER_ENCRYPTION_KEY');
-  console.log('✓ production accepts valid master key formats and rejects invalid ones');
+  console.log('PASS production accepts valid master key formats and rejects invalid ones');
 }
 
 function testMongoTestDbAllowed() {
   const parsed = envSchema.safeParse({ ...BASE_ENV, MONGO_URI: 'mongodb://127.0.0.1:27017/test' });
   assert.strictEqual(parsed.success, true, 'Mongo /test database name should remain allowed during testing phase');
-  console.log('✓ production does not fail solely due to MongoDB /test database');
+  console.log('PASS production does not fail solely due to MongoDB /test database');
 }
 
 function testDoesNotRequireClamavOrGoogleWhenDisabled() {
@@ -76,7 +89,7 @@ function testDoesNotRequireClamavOrGoogleWhenDisabled() {
     ENABLE_EXTERNAL_STORAGE: 'false',
   });
   assert.strictEqual(parsed.success, true, 'Should not require CLAMAV_HOST or Google OAuth vars when BYOS/external storage is disabled');
-  console.log('✓ production startup does not require CLAMAV_HOST and optional Google vars when integration is disabled');
+  console.log('PASS production startup does not require CLAMAV_HOST and optional Google vars when integration is disabled');
 }
 
 
@@ -111,11 +124,12 @@ function testGoogleByosValidationOnlyWhenExternalStorageEnabled() {
     STORAGE_TOKEN_SECRET: 'S'.repeat(64),
   });
   assert.strictEqual(passWhenExternalStorageEnabledWithByosVars.success, true, 'BYOS vars should pass when external storage is enabled and configured');
-  console.log('✓ BYOS Google vars are enforced only when external storage is enabled');
+  console.log('PASS BYOS Google vars are enforced only when external storage is enabled');
 }
 
 function run() {
   testProductionGuards();
+  testRedisOptionalButValidatedWhenConfiguredInProduction();
   testMasterKeyFormats();
   testMongoTestDbAllowed();
   testDoesNotRequireClamavOrGoogleWhenDisabled();

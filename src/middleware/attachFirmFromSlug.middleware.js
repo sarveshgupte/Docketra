@@ -1,5 +1,47 @@
-const Firm = require('../models/Firm.model');
 const { normalizeFirmSlug } = require('../utils/slugify');
+const { isActiveStatus } = require('../utils/status.utils');
+const { resolveTenantBySlug } = require('../services/tenantIdentity.service');
+
+const buildFirmContext = (firm, fallbackSlug) => {
+  const tenantId = firm?.tenantId ? String(firm.tenantId) : null;
+  const firmSlug = firm?.firmSlug || fallbackSlug;
+
+  return {
+    _id: tenantId,
+    id: tenantId,
+    slug: firmSlug,
+    firmSlug,
+    name: firm?.firmName || null,
+    status: firm?.status || null,
+    legacyFirmId: firm?.legacyFirmId || null,
+  };
+};
+
+const attachResolvedFirm = (req, firm, fallbackSlug) => {
+  const tenantId = firm?.tenantId ? String(firm.tenantId) : null;
+  const firmSlug = firm?.firmSlug || fallbackSlug;
+
+  req.firm = buildFirmContext(firm, fallbackSlug);
+  req.firmId = tenantId;
+  req.firmIdString = firm?.firmIdString || tenantId;
+  req.firmSlug = firmSlug;
+  req.firmName = firm?.firmName || null;
+  req.tenant = {
+    id: tenantId,
+    slug: firmSlug,
+  };
+  req.context = {
+    ...(req.context || {}),
+    firmId: tenantId,
+    firmSlug,
+    tenantId,
+    tenantSlug: firmSlug,
+  };
+  req.params = {
+    ...(req.params || {}),
+    firmSlug,
+  };
+};
 
 const attachFirmFromSlug = async (req, res, next) => {
   try {
@@ -13,23 +55,15 @@ const attachFirmFromSlug = async (req, res, next) => {
       });
     }
 
-    const firm = await Firm.findOne({ firmSlug, status: 'active' });
-    if (!firm?._id) {
+    const firm = await resolveTenantBySlug(firmSlug);
+    if (!firm?.tenantId || !isActiveStatus(firm.status)) {
       return res.status(404).json({
         success: false,
         message: 'Invalid workspace URL',
       });
     }
 
-    req.firm = firm;
-    req.firmId = firm._id;
-    req.firmIdString = String(firm._id);
-    req.firmSlug = firm.firmSlug;
-    req.firmName = firm.name;
-    req.params = {
-      ...(req.params || {}),
-      firmSlug: firm.firmSlug,
-    };
+    attachResolvedFirm(req, firm, firmSlug);
 
     return next();
   } catch (error) {
@@ -46,23 +80,15 @@ const attachOptionalFirmFromSlug = async (req, res, next) => {
       return next();
     }
 
-    const firm = await Firm.findOne({ firmSlug, status: 'active' });
-    if (!firm?._id) {
+    const firm = await resolveTenantBySlug(firmSlug);
+    if (!firm?.tenantId || !isActiveStatus(firm.status)) {
       return res.status(404).json({
         success: false,
         message: 'Invalid workspace URL',
       });
     }
 
-    req.firm = firm;
-    req.firmId = firm._id;
-    req.firmIdString = String(firm._id);
-    req.firmSlug = firm.firmSlug;
-    req.firmName = firm.name;
-    req.params = {
-      ...(req.params || {}),
-      firmSlug: firm.firmSlug,
-    };
+    attachResolvedFirm(req, firm, firmSlug);
 
     return next();
   } catch (error) {

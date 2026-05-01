@@ -60,7 +60,7 @@ Minimum production baseline:
 - `MAIL_FROM` (or `SMTP_FROM`)
 - `FRONTEND_URL`
 - `FRONTEND_ORIGINS`
-- `REDIS_URL`
+- `REDIS_URL` (optional; recommended for distributed rate limits/queues)
 
 Feature-dependent variables (keep when relevant):
 - Google Auth/BYOS integration vars (`GOOGLE_*`, `STORAGE_TOKEN_SECRET`) if those product features are enabled
