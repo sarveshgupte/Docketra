@@ -1,5 +1,11 @@
 # What's New
 
+## May 2026: KnowledgeItem foundation
+
+- Added a firm-scoped KnowledgeItem backend foundation for SOPs, checklists, templates, notes, client instructions, and process records.
+- Preserved BYOS/privacy boundaries by keeping heavy client documents out of KnowledgeItem storage.
+- Added validation and firm-scoped access controls without introducing AI, vector search, or document extraction.
+
 ## May 2026: Company Brain command center UX
 
 - Redesigned the Company Brain page from an explanatory placeholder into a read-only firm command center.
