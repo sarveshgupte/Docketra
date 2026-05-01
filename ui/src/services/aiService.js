@@ -2,7 +2,7 @@ import api from './api';
 
 export async function getAiConfiguration() {
   const response = await api.get('/ai/configuration');
-  return response.data;
+  return response.data?.configuration || null;
 }
 
 export async function updateAiConfiguration(payload) {
