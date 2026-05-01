@@ -12,6 +12,8 @@ const formatDate = (value) => {
   return date.toLocaleDateString();
 };
 
+const getItemKey = (item) => String(item._id || item.id || '');
+
 const SOURCE_LABELS = {
   docket: 'Linked to this docket',
   workType: 'Matched by work type',
@@ -22,15 +24,15 @@ const mergeItems = (byDocket, byWorkType, byClient) => {
   const seen = new Set();
   const result = [];
   for (const item of byDocket) {
-    const key = String(item._id || item.id || '');
+    const key = getItemKey(item);
     if (!seen.has(key)) { seen.add(key); result.push({ ...item, _source: 'docket' }); }
   }
   for (const item of byWorkType) {
-    const key = String(item._id || item.id || '');
+    const key = getItemKey(item);
     if (!seen.has(key)) { seen.add(key); result.push({ ...item, _source: 'workType' }); }
   }
   for (const item of byClient) {
-    const key = String(item._id || item.id || '');
+    const key = getItemKey(item);
     if (!seen.has(key)) { seen.add(key); result.push({ ...item, _source: 'client' }); }
   }
   return result;
@@ -162,10 +164,10 @@ export const LinkedKnowledgeSection = ({
             </thead>
             <tbody>
               {items.map((item) => {
-                const itemId = String(item._id || item.id || '');
+                const itemId = getItemKey(item);
                 const tags = Array.isArray(item.tags) ? item.tags : [];
                 return (
-                  <tr key={`${itemId}-${item._source}`}>
+                  <tr key={itemId}>
                     <td>{item.title || '—'}</td>
                     <td>{formatLabel(item.type)}</td>
                     <td>{formatLabel(item.status)}</td>
