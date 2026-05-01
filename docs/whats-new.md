@@ -1,5 +1,11 @@
 # What's New
 
+## May 2026: Client Knowledge in Client Memory
+
+- Added a Client Knowledge section so client-linked SOPs, templates, notes, instructions, and process records can appear inside Client Memory.
+- Added deep links from client-context knowledge rows to the exact KnowledgeItem in Knowledge Library using `?item=<id>`.
+- Preserved BYOS/privacy boundaries and avoided AI, vector search, document extraction, or file-storage behavior.
+
 ## May 2026: KnowledgeItem detail view
 
 - Added a read-only KnowledgeItem detail view for inspecting SOPs, checklists, templates, notes, client instructions, and process records.

@@ -38,6 +38,7 @@ const EMPTY_FORM = {
   tags: '',
   ownerXid: '',
   linkedWorkType: '',
+  linkedClientId: '',
   reviewDueAt: '',
 };
 
@@ -65,6 +66,7 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
       tags: normalizeTagInput(form.tags),
       ownerXid: form.ownerXid.trim() || null,
       linkedWorkType: form.linkedWorkType.trim() || null,
+      linkedClientId: form.linkedClientId.trim() || null,
       reviewDueAt: form.reviewDueAt || null,
     };
     onSave(payload);
@@ -180,6 +182,21 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
             />
             <p style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem' }}>
               Use the same work type/category used by dockets to surface this knowledge inside work.
+            </p>
+          </div>
+
+          <div style={{ flex: 1, minWidth: '140px' }}>
+            <label htmlFor="ki-linkedClientId" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>Linked client ID <span style={{ fontWeight: 400 }}>(advanced, optional)</span></label>
+            <input
+              id="ki-linkedClientId"
+              name="linkedClientId"
+              type="text"
+              value={form.linkedClientId}
+              onChange={handleChange}
+              style={{ width: '100%' }}
+            />
+            <p style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem' }}>
+              Linking a client lets this knowledge appear in Client Memory. Use the client&apos;s internal Mongo ID. A client picker will be added in a future update.
             </p>
           </div>
 
