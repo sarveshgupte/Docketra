@@ -117,6 +117,13 @@ function testClientKnowledgeSectionHasGoToKnowledgeLibraryFallback() {
   console.log('  ✓ ClientKnowledgeSection includes Go to Knowledge Library fallback');
 }
 
+
+function testClientKnowledgeShowsChecklistStepCount() {
+  const sectionSource = read('ui/src/pages/clientWorkspace/ClientKnowledgeSection.jsx');
+  assert.ok(sectionSource.includes('checklistSteps'), 'ClientKnowledgeSection must read checklistSteps for checklist records');
+  assert.ok(sectionSource.includes('steps'), 'ClientKnowledgeSection must display checklist step count text');
+  console.log('  ✓ ClientKnowledgeSection checklist step count checks');
+}
 function testClientKnowledgeSectionDoesNotEditInline() {
   const sectionSource = read('ui/src/pages/clientWorkspace/ClientKnowledgeSection.jsx');
   assert.ok(
@@ -265,6 +272,7 @@ function run() {
   testClientKnowledgeSectionHasEmptyStates();
   testClientKnowledgeSectionHasGoToKnowledgeLibraryFallback();
   testClientKnowledgeSectionDoesNotEditInline();
+  testClientKnowledgeShowsChecklistStepCount();
   testClientKnowledgeSectionHasSectionTitle();
   testKnowledgeLibraryFormHasLinkedClientIdHelperCopy();
   testClientKnowledgeSectionUsesToArray();
