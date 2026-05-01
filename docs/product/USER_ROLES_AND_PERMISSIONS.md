@@ -9,7 +9,7 @@ Current UI navigation role filtering uses `USER`, `MANAGER`, `ADMIN`, `PRIMARY_A
 ### Superadmin
 - Platform-wide operational role.
 - Access to superadmin dashboard, firm management, diagnostics, onboarding insights.
-- Must not casually operate within firm data paths without explicit context controls.
+- Must not access firm-scoped business data paths (CRM/CMS/dockets) in normal platform operations.
 
 ### Firm primary admin
 - Highest role within a firm workspace.
@@ -37,11 +37,11 @@ Legend: `F` full, `L` limited, `N` none, `P` planned/future.
 | Capability | Superadmin | Primary admin | Admin | Manager | User | Viewer (future) | Client/external (future) |
 |---|---|---:|---:|---:|---:|---:|---:|
 | Firm switch / platform control | F | N | N | N | N | N | N |
-| CRM | L (ops/support context only) | F | F | L | N/L | P | P |
-| CMS / intake | L (ops/support context only) | F | F | L | N/L | P | P |
-| Dockets / tasks | L (ops/support context only) | F | F | F | L/F (assigned scope) | P | P |
+| CRM | N (firm-scoped business data) | F | F | L | N/L | P | P |
+| CMS / intake | N (firm-scoped business data) | F | F | L | N/L | P | P |
+| Dockets / tasks | N (firm-scoped business data) | F | F | F | L/F (assigned scope) | P | P |
 | Settings | F (platform settings) | F | F | N/L | N | P | N |
-| Storage/BYOS settings | F (platform diagnostics/policies) | F | F | N | N | N | N |
+| Storage/BYOS settings | F (platform diagnostics/policies) | F | L (per module permission contracts) | N | N | N | N |
 | User/team management | F | F | F | N/L | N | N | N |
 | Reports | F (cross-firm operations) | F | F | L | L | P | P |
 | Diagnostics/audit tools | F | F/L (firm-level) | L (firm-level) | N/L | N | N | N |
