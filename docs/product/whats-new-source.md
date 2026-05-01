@@ -1,2 +1,1 @@
-
-- Navigation and workspace actions were cleaned up so incomplete or broken screens are hidden until ready.
+- Login and OTP routing were cleaned up so users land in the correct workspace after authentication and stale OTP routes are no longer exposed.

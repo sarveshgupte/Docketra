@@ -53,7 +53,7 @@ assert(
 
 // 6. Missing workspace context shows actionable error.
 assert(
-  firmLoginSource.includes('workspace context could not be loaded'),
+  firmLoginSource.includes('session could not be established'),
   'Firm login should show actionable message when context hydration fails.'
 );
 
@@ -85,6 +85,15 @@ assert(
 assert(
   firmLoginSource.includes('if (pendingFirm && pendingFirm !== firmSlug) {'),
   'OTP verification must validate pending firm context before using stored token.'
+);
+assert.equal(
+  firmLoginSource.includes('sessionStorage.setItem(SESSION_KEYS.POST_LOGIN_RETURN_TO'),
+  false,
+  'Firm login should not persist stale POST_LOGIN_RETURN_TO state.'
+);
+assert(
+  firmLoginSource.includes('clearPendingLoginState();\n                setLoginToken(\'\');'),
+  'Backing out of OTP step should clear pending OTP session keys.'
 );
 
 // 10. Logout clears pending login/OTP/redirect state.

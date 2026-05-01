@@ -1,7 +1,7 @@
 import { isSuperAdmin } from './authUtils.js';
 import { ROUTES } from '../constants/routes.js';
 
-const isSafeAppRoute = (value) => {
+export const isSafeReturnToPath = (value) => {
   if (typeof value !== 'string') return false;
   const trimmed = value.trim();
   if (!trimmed) return false;
@@ -12,7 +12,7 @@ const isSafeAppRoute = (value) => {
 };
 
 const isRoleCompatibleRoute = (candidatePath, user) => {
-  if (!isSafeAppRoute(candidatePath)) return false;
+  if (!isSafeReturnToPath(candidatePath)) return false;
 
   if (isSuperAdmin(user)) {
     return candidatePath.startsWith('/app/superadmin');
@@ -40,7 +40,7 @@ export const resolvePostAuthNavigation = ({
 }) => {
   const fallbackRoute = resolvePostAuthRoute(user);
   const returnTo = extractReturnTo(locationSearch);
-  const candidateRoute = isSafeAppRoute(returnTo) ? returnTo : '';
+  const candidateRoute = isSafeReturnToPath(returnTo) ? returnTo : '';
 
   if (candidateRoute && isRoleCompatibleRoute(candidateRoute, user)) {
     return candidateRoute;
