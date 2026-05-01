@@ -239,11 +239,21 @@ const firmSchema = new mongoose.Schema({
     },
     provider: {
       type: String,
-      enum: ['openai', 'gemini', 'claude', null],
+      enum: ['openai', 'gemini', 'anthropic', 'azure_openai', 'docketra_managed', null],
       default: null,
       lowercase: true,
       trim: true,
     },
+    credentialMode: {
+      type: String,
+      enum: ['none', 'encrypted_key', 'credential_ref'],
+      default: 'none',
+    },
+    encryptedKey: {
+      type: String,
+      default: null,
+    },
+    // Deprecated legacy field. New writes should use aiConfig.encryptedKey.
     apiKey: {
       type: String,
       default: null,
@@ -252,6 +262,12 @@ const firmSchema = new mongoose.Schema({
       type: String,
       default: null,
       trim: true,
+    },
+    features: {
+      taskDescriptionRefinement: { type: Boolean, default: false },
+      documentSummary: { type: Boolean, default: false },
+      docketDrafting: { type: Boolean, default: false },
+      routingSuggestions: { type: Boolean, default: false },
     },
     enabledFeatures: {
       documentAnalysis: { type: Boolean, default: true },
@@ -286,7 +302,7 @@ const firmSchema = new mongoose.Schema({
     },
     credentialProvider: {
       type: String,
-      enum: ['openai', 'gemini', 'claude', null],
+      enum: ['openai', 'gemini', 'anthropic', 'azure_openai', 'docketra_managed', null],
       default: null,
       lowercase: true,
       trim: true,
@@ -456,6 +472,10 @@ firmSchema.pre('save', async function() {
     );
     error.name = 'ValidationError';
     throw error;
+  }
+
+  if (this.aiConfig?.encryptedKey && !isEncrypted(this.aiConfig.encryptedKey)) {
+    this.aiConfig.encryptedKey = encryptProtectedValue(this.aiConfig.encryptedKey);
   }
 
   if (this.aiConfig?.apiKey && !isEncrypted(this.aiConfig.apiKey)) {
