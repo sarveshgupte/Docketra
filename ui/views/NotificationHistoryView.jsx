@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { notificationsApi } from '../src/api/notifications.api';
 import { Button } from '../src/components/common/Button';
 import { Card } from '../src/components/common/Card';
-import { Layout } from '../src/components/common/Layout';
 import { PageHeader } from '../src/components/layout/PageHeader';
 import { Stack } from '../src/components/layout/Stack';
 import { EmptyState } from '../src/components/ui/EmptyState';
@@ -70,8 +69,7 @@ export function NotificationHistoryView() {
   };
 
   return (
-    <Layout>
-      <Stack space={16}>
+    <Stack space={16}>
         <PageHeader
           title="Notification history"
           subtitle="All notifications, sorted by latest activity."
@@ -160,6 +158,5 @@ export function NotificationHistoryView() {
           ) : null}
         </Card>
       </Stack>
-    </Layout>
   );
 }

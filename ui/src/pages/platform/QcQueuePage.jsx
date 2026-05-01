@@ -186,7 +186,7 @@ export const PlatformQcQueuePage = () => {
         <DataTable
           columns={['Docket ID', 'Client', 'Category', 'QC Status', 'Assignee', 'Updated', 'Actions']}
           rows={filteredRows.map((r) => (
-            <tr key={r.caseInternalId || r._id}>
+            <tr key={r.caseInternalId || r._id || formatDocketLabel(r)}>
               <td>
                 <button className="action-primary" type="button" onMouseEnter={() => prefetchCaseDetail(r)} onFocus={() => prefetchCaseDetail(r)} onClick={() => openFromQueue(r)}>
                   {formatDocketLabel(r)}
@@ -199,11 +199,12 @@ export const PlatformQcQueuePage = () => {
               <td>{formatDateLabel(r.updatedAt || r.createdAt)}</td>
               <td>
                 <div className="action-group-secondary" role="group" aria-label="QC actions">
-                  <button type="button" onClick={() => setConfirmAction({ caseInternalId: r.caseInternalId, action: 'PASS', note: 'Passed from queue', title: `Pass ${formatDocketLabel(r)}?`, description: 'This marks the docket as QC passed and advances it to completion.', confirmText: 'Confirm pass', danger: false })} disabled={pendingQcId === r.caseInternalId}>
+                  {!r.caseInternalId ? <span className="muted">Action unavailable: missing docket ID</span> : null}
+                  <button type="button" onClick={() => setConfirmAction({ caseInternalId: r.caseInternalId, action: 'PASS', note: 'Passed from queue', title: `Pass ${formatDocketLabel(r)}?`, description: 'This marks the docket as QC passed and advances it to completion.', confirmText: 'Confirm pass', danger: false })} disabled={!r.caseInternalId || pendingQcId === r.caseInternalId}>
                     {pendingQcId === r.caseInternalId ? 'Updating…' : 'Pass'}
                   </button>
-                  <button type="button" onClick={() => setConfirmAction({ caseInternalId: r.caseInternalId, action: 'CORRECT', note: 'Needs correction', title: `Return ${formatDocketLabel(r)} for correction?`, description: 'This sends the docket back to execution with a correction request.', confirmText: 'Return for correction', danger: false })} disabled={pendingQcId === r.caseInternalId}>Return for correction</button>
-                  <button type="button" className="action-danger" onClick={() => setConfirmAction({ caseInternalId: r.caseInternalId, action: 'FAIL', note: 'Failed from queue', title: `Fail ${formatDocketLabel(r)}?`, description: 'This records the docket as failed in QC. Continue only if this decision is final.', confirmText: 'Fail docket', danger: true })} disabled={pendingQcId === r.caseInternalId}>Fail</button>
+                  <button type="button" onClick={() => setConfirmAction({ caseInternalId: r.caseInternalId, action: 'CORRECT', note: 'Needs correction', title: `Return ${formatDocketLabel(r)} for correction?`, description: 'This sends the docket back to execution with a correction request.', confirmText: 'Return for correction', danger: false })} disabled={!r.caseInternalId || pendingQcId === r.caseInternalId}>Return for correction</button>
+                  <button type="button" className="action-danger" onClick={() => setConfirmAction({ caseInternalId: r.caseInternalId, action: 'FAIL', note: 'Failed from queue', title: `Fail ${formatDocketLabel(r)}?`, description: 'This records the docket as failed in QC. Continue only if this decision is final.', confirmText: 'Fail docket', danger: true })} disabled={!r.caseInternalId || pendingQcId === r.caseInternalId}>Fail</button>
                 </div>
               </td>
             </tr>

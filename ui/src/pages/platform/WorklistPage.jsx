@@ -158,7 +158,7 @@ export const PlatformWorklistPage = () => {
         <DataTable
           columns={['Docket ID', 'Client', 'Category / Subcategory', 'Status', 'Assignee', 'Updated', 'Actions']}
           rows={filteredRows.map((r) => (
-            <tr key={r.caseInternalId || r._id}>
+            <tr key={r.caseInternalId || r._id || formatDocketLabel(r)}>
               <td>
                 <button className="action-primary" type="button" onClick={() => openFromQueue(r)}>
                   {formatDocketLabel(r)}
@@ -171,9 +171,10 @@ export const PlatformWorklistPage = () => {
               <td>{formatDateLabel(r.updatedAt || r.createdAt)}</td>
               <td>
                 <div className="action-group-secondary" role="group" aria-label="Docket actions">
-                  <button type="button" onClick={() => void transition(r.caseInternalId, 'SEND_TO_QC')} disabled={pendingActionId === r.caseInternalId}>Send to QC</button>
-                  <button type="button" onClick={() => void transition(r.caseInternalId, 'PEND')} disabled={pendingActionId === r.caseInternalId}>Pend</button>
-                  <button type="button" onClick={() => void transition(r.caseInternalId, 'RESOLVE')} disabled={pendingActionId === r.caseInternalId}>
+                  {!r.caseInternalId ? <span className="muted">Action unavailable: missing docket ID</span> : null}
+                  <button type="button" onClick={() => void transition(r.caseInternalId, 'SEND_TO_QC')} disabled={!r.caseInternalId || pendingActionId === r.caseInternalId}>Send to QC</button>
+                  <button type="button" onClick={() => void transition(r.caseInternalId, 'PEND')} disabled={!r.caseInternalId || pendingActionId === r.caseInternalId}>Pend</button>
+                  <button type="button" onClick={() => void transition(r.caseInternalId, 'RESOLVE')} disabled={!r.caseInternalId || pendingActionId === r.caseInternalId}>
                     {pendingActionId === r.caseInternalId ? 'Updating…' : 'Resolve'}
                   </button>
                 </div>

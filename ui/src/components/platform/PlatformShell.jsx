@@ -53,6 +53,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   const searchCacheRef = useRef(new Map());
   const role = String(user?.role || 'USER').toUpperCase();
   const hasAdminAccess = hasAtLeastRole(role, 'ADMIN');
+  const hasQcQueueAccess = hasAdminAccess || (Array.isArray(user?.qcWorkbaskets) && user.qcWorkbaskets.length > 0);
   const navSections = useMemo(() => getPlatformNavigation(firmSlug, role), [firmSlug, role]);
   const userName = user?.name || user?.xID || 'User';
   const currentNavItem = useMemo(
@@ -190,9 +191,9 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
         shortcut: item.shortcut,
         action: () => openRoute(item.to),
       })),
-      { id: 'go-workbasket', label: 'Go to Workbench', shortcut: 'Alt+Shift+B', action: () => openRoute(ROUTES.GLOBAL_WORKLIST(firmSlug)), description: 'Open shared queue dockets available to pull.' },
+      ...(hasAdminAccess ? [{ id: 'go-workbasket', label: 'Go to Workbench', shortcut: 'Alt+Shift+B', action: () => openRoute(ROUTES.GLOBAL_WORKLIST(firmSlug)), description: 'Open shared queue dockets available to pull.' }] : []),
       { id: 'go-worklist', label: 'Go to My Worklist', shortcut: 'Alt+Shift+W', action: () => openRoute(ROUTES.WORKLIST(firmSlug)), description: 'Open your active and pended docket workload.' },
-      { id: 'go-qc', label: 'Go to QC Workbench', shortcut: 'Alt+Shift+Q', action: () => openRoute(ROUTES.QC_QUEUE(firmSlug)), description: 'Open dockets waiting for quality review decisions.' },
+      ...(hasQcQueueAccess ? [{ id: 'go-qc', label: 'Go to QC Workbench', shortcut: 'Alt+Shift+Q', action: () => openRoute(ROUTES.QC_QUEUE(firmSlug)), description: 'Open dockets waiting for quality review decisions.' }] : []),
     ];
 
     const actionsItems = [
@@ -224,7 +225,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     if (clientItems.length) sections.push({ id: 'clients', label: 'Client results', items: clientItems });
 
     return sections;
-  }, [firmSlug, role, openRoute, searchResults]);
+  }, [firmSlug, role, openRoute, searchResults, hasAdminAccess, hasQcQueueAccess]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
