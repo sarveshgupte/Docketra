@@ -49,6 +49,11 @@ Superadmin must **not** require firm/workspace context.
 5. Profile returns user + firm context.
 6. Frontend redirects to firm dashboard route.
 
+### Tenant context requirement
+- `defaultClientId` is **mandatory** for tenant workspace bootstrapping.
+- If profile cannot resolve/create a valid default client, `GET /api/auth/profile` returns `503` with `code=DEFAULT_CLIENT_CONTEXT_UNAVAILABLE`.
+- This is intentional fail-closed behavior to prevent downstream docket/client/task flows from booting with broken tenant context.
+
 ## Refresh token scope/type rules
 - Superadmin refresh is allowed only when refresh token has explicit `scope: superadmin`.
 - A token with `userId: null` and `firmId: null` but without explicit `scope: superadmin` is rejected.
@@ -75,10 +80,45 @@ Superadmin must **not** require firm/workspace context.
   - logout,
   - forgot/reset endpoints that rely on session cookies.
 
-## Quick verification checklist
-1. In Chrome DevTools → **Network** → login response, verify two `Set-Cookie` headers (`accessToken`, `refreshToken`).
-2. In Chrome DevTools → **Application** → **Cookies**, verify API origin stores both cookies.
-3. In Chrome DevTools → profile request, verify request contains `Cookie` header.
-4. Next `GET /api/auth/profile` returns `200`.
-5. `POST /api/auth/refresh` returns `200` when cookies are present.
-6. Superadmin route lands on `/app/superadmin` without workspace errors.
+## Manual QA script (production-ready)
+
+### Superadmin flow
+1. Clear cookies/storage for frontend + API origins.
+2. Open `/superadmin` (or `/superadmin/login`).
+3. Submit valid superadmin credentials.
+4. In DevTools **Network** login response:
+   - verify `Set-Cookie` for `accessToken`
+   - verify `Set-Cookie` for `refreshToken`
+5. Call `GET /api/auth/profile` and verify:
+   - HTTP `200`
+   - `isSuperAdmin=true`
+   - `firmId=null`, `firmSlug=null`
+6. Call `GET /api/superadmin/stats` and verify `200`.
+7. Trigger logout (`POST /api/auth/logout`) and verify both cookies are cleared.
+
+### Tenant firm-slug OTP flow
+1. Clear cookies/storage.
+2. Open `/:firmSlug/login` (example `/gupte-opc/login`).
+3. Verify firm lookup success from `/api/public/firms/:firmSlug`.
+4. Submit login init and verify OTP challenge response.
+5. Complete OTP verify and check response sets both auth cookies.
+6. Call `GET /api/auth/profile` and verify `200` with tenant context:
+   - `firmId` (Mongo id)
+   - `firmCode` (display id)
+   - `firmSlug`
+   - `defaultClientId` (if available)
+7. Refresh page and verify session persists.
+8. Logout and verify cookies are cleared.
+
+### Forgot-password (tenant) flow
+1. From `/:firmSlug/login`, open forgot-password page.
+2. Start reset (`forgot-password/init`) using email/xID.
+3. Verify response is non-enumerating (safe generic messaging).
+4. Complete OTP verify + reset.
+5. Login with the new password and confirm success.
+6. Validate existing sessions are revoked (old refresh token no longer works).
+
+## Known auth limitations / explicit behavior
+- Superadmin forgot-password is not handled via tenant OTP reset flow; treat as controlled/admin-operated credential rotation.
+- Canonical tenant redirect after successful tenant auth/profile hydration is `/app/firm/:firmSlug/dashboard`.
+- `AUTH_DEBUG_DIAGNOSTICS` should be set to `true` only during active troubleshooting; reset to `false` (or unset) immediately after verification.

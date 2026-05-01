@@ -54,53 +54,52 @@ const LegacyCaseDetailRedirect = () => {
 
 export const ProtectedRoutes = () => (
   <>
-    <Route
-      path="/app/superadmin"
-      element={(
-        <ProtectedRoute requireSuperadmin>
-          <PlatformDashboard />
-        </ProtectedRoute>
-      )}
-    />
+    <Route element={<RouteSuspenseOutlet />}>
+      <Route
+        path="/app/superadmin"
+        element={(
+          <ProtectedRoute requireSuperadmin>
+            <PlatformDashboard />
+          </ProtectedRoute>
+        )}
+      />
 
-    <Route
-      path="/app/superadmin/firms"
-      element={(
-        <ProtectedRoute requireSuperadmin>
-          <FirmsManagement />
-        </ProtectedRoute>
-      )}
-    />
+      <Route
+        path="/app/superadmin/firms"
+        element={(
+          <ProtectedRoute requireSuperadmin>
+            <FirmsManagement />
+          </ProtectedRoute>
+        )}
+      />
 
+      <Route
+        path="/app/superadmin/diagnostics"
+        element={(
+          <ProtectedRoute requireSuperadmin>
+            <SuperadminDiagnosticsPage />
+          </ProtectedRoute>
+        )}
+      />
 
-    <Route
-      path="/app/superadmin/diagnostics"
-      element={(
-        <ProtectedRoute requireSuperadmin>
-          <SuperadminDiagnosticsPage />
-        </ProtectedRoute>
-      )}
-    />
+      <Route
+        path="/app/superadmin/onboarding-insights"
+        element={(
+          <ProtectedRoute requireSuperadmin>
+            <SuperadminOnboardingInsightsPage />
+          </ProtectedRoute>
+        )}
+      />
 
-    <Route
-      path="/app/superadmin/onboarding-insights"
-      element={(
-        <ProtectedRoute requireSuperadmin>
-          <SuperadminOnboardingInsightsPage />
-        </ProtectedRoute>
-      )}
-    />
-
-
-    <Route
-      path="/app/superadmin/onboarding-insights/:firmId"
-      element={(
-        <ProtectedRoute requireSuperadmin>
-          <SuperadminFirmOnboardingDetailPage />
-        </ProtectedRoute>
-      )}
-    />
-
+      <Route
+        path="/app/superadmin/onboarding-insights/:firmId"
+        element={(
+          <ProtectedRoute requireSuperadmin>
+            <SuperadminFirmOnboardingDetailPage />
+          </ProtectedRoute>
+        )}
+      />
+    </Route>
 
     <Route
       path="/app/dashboard"

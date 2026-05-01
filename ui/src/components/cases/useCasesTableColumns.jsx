@@ -119,15 +119,20 @@ export const useCasesTableColumns = ({
                 });
               }}
             >
-              View Docket
+              <span aria-hidden="true">View Docket</span>
+              <span className="sr-only">View Docket {formatCaseName(row.caseName)}</span>
             </button>
             {canAssign && (
               <button type="button" disabled={assigningCaseId === row.caseId} onClick={(event) => handleAssignToMe(row, event)}>
-                {assigningCaseId === row.caseId ? 'Assigning…' : UX_COPY.actions.ASSIGN_TO_ME}
+                <span aria-hidden="true">{assigningCaseId === row.caseId ? 'Assigning…' : UX_COPY.actions.ASSIGN_TO_ME}</span>
+                <span className="sr-only">
+                  {assigningCaseId === row.caseId ? `Assigning ${formatCaseName(row.caseName)}…` : `Assign ${formatCaseName(row.caseName)} to me`}
+                </span>
               </button>
             )}
             <button type="button" onClick={(event) => { event.stopPropagation(); setTimelineCaseId(row.caseId); }}>
-              View Timeline
+              <span aria-hidden="true">View Timeline</span>
+              <span className="sr-only">View Timeline for {formatCaseName(row.caseName)}</span>
             </button>
           </div>
         </details>

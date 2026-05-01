@@ -87,6 +87,14 @@ export const AuthProvider = ({ children }) => {
     authFailureResolvedRef.current = !allowProfileRetry;
   }, [clearAuthStorage, clearPrivateClientState]);
 
+  const resolveUnauthenticatedState = useCallback(() => {
+    setUser(null);
+    setIsAuthenticated(false);
+    profileFetchInFlightRef.current = false;
+    profileFetchPromiseRef.current = null;
+    authFailureResolvedRef.current = true;
+  }, []);
+
   /**
    * WARNING:
    * This function MUST NOT be called outside AuthContext.
@@ -140,7 +148,7 @@ export const AuthProvider = ({ children }) => {
 
     const profileFetchPromise = (async () => {
       // Always fetch from API - no cached user fallback
-      const response = await authService.getProfile();
+      const response = await authService.getProfile({ skipAuthRedirect: true });
 
       if (response?.success && response.data) {
         setAuthFromProfile(response.data);
@@ -162,7 +170,8 @@ export const AuthProvider = ({ children }) => {
       // 403 means user is authenticated but profile endpoint denied access (shouldn't happen normally)
       const status = err?.response?.status;
       if (status === 401) {
-        resetAuthState();
+        resolveUnauthenticatedState();
+        return { success: false, data: null };
       }
       // For network errors or other failures, still allow the app to continue
       // The app will render login page since user state is null
@@ -172,7 +181,7 @@ export const AuthProvider = ({ children }) => {
       profileFetchInFlightRef.current = false;
       profileFetchPromiseRef.current = null;
     }
-  }, [resetAuthState, setAuthFromProfile]);
+  }, [resetAuthState, resolveUnauthenticatedState, setAuthFromProfile]);
 
   const login = useCallback(async (xID, password, endpoint) => {
     try {

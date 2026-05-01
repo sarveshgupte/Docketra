@@ -20,3 +20,11 @@
 ## 2026-04-28 - [Concurrent Database Validation via Promise.all]
 **Learning:** The application had endpoint latency due to sequential model queries before building dependent variables. By combining `User.findOne` with other model queries inside an existing `Promise.all`, we can eliminate sequential waits.
 **Action:** Always look to move sequential `findOne` operations directly into an existing `Promise.all` alongside related lookups when variables don't immediately depend on prior query resolutions.
+
+## 2026-04-24 - Grouping countDocuments with $facet aggregation
+**Learning:** Running multiple `countDocuments` queries concurrently (e.g., in `Promise.all`) for different subsets of the same collection still incurs multiple database round-trips and index scans.
+**Action:** Use an aggregation pipeline with `$facet` to group multiple document counting queries on the same collection into a single database network round-trip.
+
+## 2026-04-24 - $facet count vs Promise.all countDocuments
+**Learning:** While using `$facet` groups multiple count operations into a single network roundtrip, it is an anti-pattern for simple counts if the initial `$match` yields a large dataset. Individual `countDocuments` queries can be resolved entirely using index scans, whereas `$facet` forces MongoDB to pull all matching documents into memory to evaluate the sub-pipelines, bypassing indexes and risking the 100MB aggregation memory limit.
+**Action:** Do not replace concurrent `countDocuments` with `$facet` aggregations unless the initial `$match` is heavily constrained and the resulting dataset is known to be small. Reverting the `$facet` optimization.

@@ -9,6 +9,7 @@ const { isFirmCreationDisabled, areFileUploadsDisabled } = require('../services/
 const { getWorkerStatuses } = require('../services/workerRegistry.service');
 
 const DB_LATENCY_THRESHOLD_MS = Number(process.env.DB_LATENCY_THRESHOLD_MS || 750);
+const isRedisConfigured = () => Boolean(String(process.env.REDIS_URL || '').trim());
 
 const liveness = (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -23,7 +24,7 @@ const runReadinessChecks = async () => {
     redis: 'unknown',
     featureFlags: {},
     rateLimit: {
-      enabled: !!process.env.REDIS_URL,
+      enabled: isRedisConfigured(),
       redis: 'unknown',
     },
   };
@@ -59,16 +60,22 @@ const runReadinessChecks = async () => {
     }
   }
 
-  const redisClient = getRedisClient();
-  if (!redisClient) {
-    checks.redis = 'not_configured';
-    checks.rateLimit.redis = 'not_configured';
-  } else {
-    checks.redis = redisClient.status || 'unknown';
-    checks.rateLimit.redis = redisClient.status || 'unknown';
-    if (redisClient.status !== 'ready') {
-      markDegraded('redis_unhealthy', { status: redisClient.status });
+  try {
+    const redisClient = getRedisClient();
+    if (!redisClient) {
+      checks.redis = 'not_configured';
+      checks.rateLimit.redis = 'not_configured';
+    } else {
+      checks.redis = redisClient.status || 'unknown';
+      checks.rateLimit.redis = redisClient.status || 'unknown';
+      if (redisClient.status !== 'ready') {
+        markDegraded('redis_unhealthy', { status: redisClient.status });
+      }
     }
+  } catch (error) {
+    checks.redis = 'error';
+    checks.rateLimit.redis = 'error';
+    markDegraded('redis_config_invalid', { message: error.message });
   }
 
   const featureFlags = {

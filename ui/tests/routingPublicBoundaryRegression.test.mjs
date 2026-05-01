@@ -13,6 +13,7 @@ const tenantRoutingSource = fs.readFileSync(path.join(root, 'utils', 'tenantRout
 const authContextSource = fs.readFileSync(path.join(root, 'contexts', 'AuthContext.jsx'), 'utf8');
 const apiSource = fs.readFileSync(path.join(root, 'services', 'api.js'), 'utf8');
 const routeConstantsSource = fs.readFileSync(path.join(root, 'constants', 'routes.js'), 'utf8');
+const legacyRoutesSource = fs.readFileSync(path.join(root, 'routes', 'LegacyRoutes.jsx'), 'utf8');
 
 // 1) Opening `/` while logged out renders landing page (no auth redirect in DefaultRoute).
 assert(
@@ -116,8 +117,20 @@ assert(
   'API interceptor should guard against redirect loops when already on a login route.'
 );
 assert(
+  apiSource.includes('/:firmSlug/forgot-password') || apiSource.includes('/forgot-password'),
+  'API interceptor should classify forgot-password pages as public auth pages.'
+);
+assert(
   publicRoutesSource.includes('<Route path="/login" element={<LoginPage />} />'),
   'Public `/login` route must exist as a safe fallback login entrypoint.'
+);
+assert(
+  legacyRoutesSource.includes('canAccessFirmApp'),
+  'Legacy firm slug route should only route to firm app after authenticated tenant confirmation.'
+);
+assert(
+  legacyRoutesSource.includes('!isSuperAdmin(user)'),
+  'Legacy firm slug route must prevent superadmin sessions from entering firm dashboard routes.'
 );
 
 console.log('routingPublicBoundaryRegression.test.mjs passed');

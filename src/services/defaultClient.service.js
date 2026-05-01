@@ -1,4 +1,5 @@
 const { getOrCreateDefaultClient } = require('./defaultClient.guard');
+const mongoose = require('mongoose');
 
 /**
  * Ensure an organization has a default client.
@@ -23,8 +24,16 @@ const ensureDefaultClientForFirm = async (firmOrId, session = null) => {
 
   // Determine whether we received a Firm document or a raw ID
   const isFirmDoc = firmOrId && typeof firmOrId === 'object' && firmOrId._id;
-  const firmId = isFirmDoc ? firmOrId._id : firmOrId;
+  const rawFirmId = isFirmDoc ? firmOrId._id : firmOrId;
+  const firmId = (
+    rawFirmId instanceof mongoose.Types.ObjectId
+      ? rawFirmId.toString()
+      : (rawFirmId && rawFirmId._id ? String(rawFirmId._id) : String(rawFirmId || '').trim())
+  );
   const firmName = isFirmDoc ? firmOrId.name : null;
+  if (!firmId || firmId === '[object Object]') {
+    throw new Error('Valid firmId is required to ensure default client');
+  }
 
   // If this is a Firm document and already has a defaultClientId, nothing to do
   if (isFirmDoc && firmOrId.defaultClientId) {
