@@ -1,63 +1,46 @@
-const Firm = require('../models/Firm.model');
-const { decrypt } = require('../services/storage/services/TokenEncryption.service');
+const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const log = require('../utils/log');
 
-function storageNotConnectedResponse(res, operation = 'storage_operation_without_connection') {
+function storageNotConnectedResponse(res, operation = 'storage_operation_without_connection', message = 'Active storage provider is not available') {
   log.warn('[STORAGE] blocked_operation:', operation);
   return res.status(400).json({
     code: 'STORAGE_NOT_CONNECTED',
-    message: 'Cloud storage must be connected',
+    message,
   });
 }
 
-async function requireStorageConnected(req, res, next) {
+async function requireActiveStorageProvider(req, res, next) {
   try {
     const firmId = req.firmId || req.user?.firmId || req.firm?.id;
     if (!firmId) {
       return storageNotConnectedResponse(res, 'missing_firm_context');
     }
 
-    const firm = await Firm.findById(firmId)
-      .select('storageConfig storage')
-      .lean();
-
-    if (!firm?.storageConfig?.provider || firm.storageConfig.provider !== 'google_drive') {
-      return storageNotConnectedResponse(res, 'invalid_provider');
-    }
-
-    if (!firm?.storageConfig?.credentials) {
-      return storageNotConnectedResponse(res, 'missing_storage_credentials');
-    }
-
-    let credentials = {};
-    try {
-      credentials = JSON.parse(decrypt(firm.storageConfig.credentials));
-    } catch {
-      return storageNotConnectedResponse(res, 'invalid_storage_credentials');
-    }
-
-    const refreshToken = credentials.refreshToken || credentials.googleRefreshToken;
-    const rootFolderId = credentials.rootFolderId || firm?.storage?.google?.rootFolderId;
-    if (!refreshToken || !rootFolderId) {
-      return storageNotConnectedResponse(res, 'missing_storage_tokens_or_root');
-    }
+    const provider = await StorageProviderFactory.getProvider(firmId);
+    await provider.testConnection();
 
     req.storageContext = {
-      provider: firm.storageConfig.provider,
-      rootFolderId,
+      provider,
+      providerName: provider.providerName,
+      managed: provider.providerName === 'docketra_managed',
+      firmConnected: provider.providerName !== 'docketra_managed',
       connected: true,
     };
+
     return next();
   } catch (error) {
-    log.error('[STORAGE] blocked_operation: require_storage_connected_failed', { message: error.message });
-    return res.status(400).json({
-      code: 'STORAGE_NOT_CONNECTED',
-      message: 'Cloud storage must be connected',
-    });
+    log.error('[STORAGE] blocked_operation: require_active_storage_provider_failed', { message: error.message, code: error.code });
+    const clientMessage = error?.code === 'MANAGED_STORAGE_NOT_CONFIGURED'
+      ? 'Managed storage is not configured'
+      : 'Active storage provider is not available';
+    return storageNotConnectedResponse(res, 'provider_unavailable', clientMessage);
   }
 }
 
+const requireStorageConnected = requireActiveStorageProvider;
+
 module.exports = {
+  requireActiveStorageProvider,
   requireStorageConnected,
   storageNotConnectedResponse,
 };

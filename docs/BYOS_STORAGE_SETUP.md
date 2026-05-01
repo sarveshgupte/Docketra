@@ -75,3 +75,14 @@ Docketra uses MongoDB as a control plane only. Firm business files are kept in f
   - Reconnect with consent and offline access enabled.
 - **Error: RATE_LIMIT_EXCEEDED**
   - OAuth endpoints are strictly limited. Wait and retry.
+
+
+## Managed fallback contract
+- `docketra_managed` is the default active provider when firm-owned BYOS is not connected.
+- Docketra-managed mode still writes bytes to object/file storage (managed S3 backend), never MongoDB.
+- MongoDB stores only metadata/control-plane records for attachments/backups.
+- Status values: `ACTIVE_MANAGED`, `ACTIVE_BYOS`, `DISCONNECTED`, `ERROR`.
+- Firm-owned BYOS remains recommended for data ownership and control, but is not required for runtime storage.
+
+- Managed runtime fallback env: `MANAGED_STORAGE_S3_BUCKET` and `MANAGED_STORAGE_S3_REGION` required; `MANAGED_STORAGE_S3_PREFIX` optional; credentials optional when instance/task IAM role is used.
+- Middleware and API client responses must be sanitized (`STORAGE_NOT_CONNECTED`) while detailed provider diagnostics remain server-side logs only.

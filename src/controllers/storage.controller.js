@@ -38,7 +38,8 @@ function toConnectionStatus({ provider, mode, credentials, hasStorageConfig }) {
     return 'ACTIVE_MANAGED';
   }
   if (!hasStorageConfig) return 'DISCONNECTED';
-  return credentials?.status || 'ACTIVE';
+  if (credentials?.status === 'DISCONNECTED' || credentials?.status === 'ERROR') return credentials.status;
+  return 'ACTIVE_BYOS';
 }
 
 function decodeFirmStorageConfig(firm, firmId) {
@@ -334,7 +335,7 @@ const googleConfirmDrive = async (req, res) => {
       },
     });
 
-    return res.json({ success: true, status: 'ACTIVE', rootFolderId: firmFolderId });
+    return res.json({ success: true, status: 'ACTIVE_BYOS', rootFolderId: firmFolderId });
   } catch (error) {
     const mappedStatus = mapProviderErrorToStatus(error);
     return res.status(500).json({ error: 'confirm_drive_failed', status: mappedStatus });
@@ -348,7 +349,7 @@ const getStorageConfiguration = async (req, res) => {
     const config = firm?.storageConfig;
 
     if (!config) {
-      return res.json({ provider: 'docketra_managed', isConfigured: true, status: 'ACTIVE' });
+      return res.json({ provider: 'docketra_managed', isConfigured: true, status: 'ACTIVE_MANAGED', warning: 'Firm-owned BYOS is recommended but not required.' });
     }
     const credentials = decodeFirmStorageConfig(firm, ownershipFirmId);
 
@@ -366,7 +367,7 @@ const getStorageConfiguration = async (req, res) => {
     return res.json({
       provider: toUiProvider(config.provider),
       isConfigured: true,
-      status: 'ACTIVE',
+      status: 'ACTIVE_BYOS',
       connectedEmail: credentials.connectedEmail || null,
       rootFolderId: credentials.rootFolderId || null,
       folderPath,
@@ -454,7 +455,7 @@ const getStorageOwnershipSummary = async (req, res) => {
       fallbackStorage: {
         provider: 'docketra_managed',
         enabled: true,
-        status: storageMode === MANAGED_STORAGE_MODE ? 'ACTIVE' : 'STANDBY',
+        status: storageMode === MANAGED_STORAGE_MODE ? 'ACTIVE_MANAGED' : 'STANDBY',
       },
       backupExport: {
         backupEnabled: Boolean(firm?.settings?.storageBackup?.enabled),
@@ -807,7 +808,7 @@ const storageHealthCheck = async (req, res) => {
           provider: 'google_drive',
           credentials: encrypt(JSON.stringify({
             ...credentials,
-            status: 'ACTIVE',
+            status: 'ACTIVE_BYOS',
             lastError: null,
             lastCheckedAt: new Date().toISOString(),
           })),
