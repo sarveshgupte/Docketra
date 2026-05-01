@@ -40,6 +40,7 @@ const getClientAccessContext = (req, res, message) => {
 
   return {
     firmId,
+    ownershipFirmId: req.ownershipFirmId || req.firm?.ownershipFirmId || null,
     role: req.user?.role,
   };
 };
@@ -121,18 +122,19 @@ const logClientWarn = (event, req, extra = {}) => {
   log.warn(event, buildClientLogContext(req, extra));
 };
 
-const isStorageDisabled = async (firmId) => {
-  const firm = await Firm.findById(firmId).select('storage.mode').lean();
+const isStorageDisabled = async (ownershipFirmId) => {
+  if (!ownershipFirmId) return true;
+  const firm = await Firm.findById(ownershipFirmId).select('storage.mode').lean();
   return firm?.storage?.mode !== 'firm_connected';
 };
 
-const setupClientStorage = async ({ req, userFirmId, clientId, clientMongoId }) => {
+const setupClientStorage = async ({ req, userFirmId, ownershipFirmId, clientId, clientMongoId }) => {
   log.info('CLIENT_STORAGE_SETUP_STARTED', buildClientLogContext(req, {
     clientId,
     clientMongoId,
   }));
 
-  if (await isStorageDisabled(userFirmId)) {
+  if (await isStorageDisabled(ownershipFirmId)) {
     logClientWarn('CLIENT_STORAGE_SETUP_SKIPPED', req, {
       clientId,
       clientMongoId,
@@ -184,7 +186,9 @@ const getClients = async (req, res) => {
     // Self-heal invariant: each firm must always have its own default/system client.
     // When older tenants are missing this record, admin client listing can fail
     // across related flows (case creation, permissions, and client management).
-    const firm = await Firm.findById(accessContext.firmId).select('_id name defaultClientId');
+    const firm = accessContext.ownershipFirmId
+      ? await Firm.findById(accessContext.ownershipFirmId).select('_id name defaultClientId')
+      : null;
     try {
       await ensureDefaultClientForFirm(firm || accessContext.firmId);
     } catch (defaultClientError) {
