@@ -11,6 +11,7 @@ const state = {
   uploaded: null,
   downloaded: null,
   attachments: [],
+  uploadResponseMode: 'fileId',
 };
 
 const mocks = {
@@ -66,15 +67,24 @@ const mocks = {
       };
     },
   },
-  './googleDrive.service': {
-    googleDriveService: {
-      async uploadFile(firmId, file) {
-        state.uploaded = { firmId, file };
-        return { id: 'drv-file-1', name: 'doc.pdf', mimeType: 'application/pdf', size: 120, webViewLink: 'https://drive/view/1' };
-      },
-      async downloadFile(firmId, fileId) {
-        state.downloaded = { firmId, fileId };
-        return 'STREAM';
+  './storage/StorageProviderFactory': {
+    StorageProviderFactory: {
+      async getProvider(firmId) {
+        state.providerFirmId = firmId;
+        return {
+          providerName: 'google-drive',
+          async testConnection() { return { healthy: true }; },
+          async uploadFile(parent, fileName, fileBuffer, mimeType) {
+            state.uploaded = { parent, fileName, fileBuffer, mimeType };
+            if (state.uploadResponseMode === 'id') return { id: 'drv-file-1', webViewLink: 'https://drive/view/1' };
+            if (state.uploadResponseMode === 'missing') return { webViewLink: 'https://drive/view/1' };
+            return { fileId: 'drv-file-1', webViewLink: 'https://drive/view/1' };
+          },
+          async downloadFile(fileId) {
+            state.downloaded = { fileId };
+            return 'STREAM';
+          },
+        };
       },
     },
   },
@@ -103,9 +113,38 @@ async function run() {
 
     assert.strictEqual(uploaded.version, 3);
     assert.strictEqual(state.createdPayload.version, 3);
-    assert.strictEqual(state.uploaded.firmId, 'FIRM-1');
+    assert.strictEqual(state.providerFirmId, 'FIRM-1');
     assert.ok(!Object.prototype.hasOwnProperty.call(uploaded, 'storageFileId'));
-    console.log('  ✓ uploadFile increments version and hides storage ids');
+    console.log('  ✓ uploadFile resolves provider via StorageProviderFactory');
+
+    state.uploadResponseMode = 'id';
+    const uploadedLegacy = await service.uploadFile({
+      file: Buffer.from('abc'),
+      fileName: 'doc.pdf',
+      fileType: 'application/pdf',
+      docketId: 'DCK-1',
+      firmId: 'FIRM-1',
+      uploadedBy: 'X123456',
+      uploadedByName: 'Ada',
+    });
+    assert.strictEqual(uploadedLegacy.fileName, 'doc.pdf');
+    console.log('  ✓ uploadFile supports legacy provider upload response id');
+
+    state.uploadResponseMode = 'missing';
+    await assert.rejects(
+      () => service.uploadFile({
+        file: Buffer.from('abc'),
+        fileName: 'doc.pdf',
+        fileType: 'application/pdf',
+        docketId: 'DCK-1',
+        firmId: 'FIRM-1',
+        uploadedBy: 'X123456',
+        uploadedByName: 'Ada',
+      }),
+      (error) => error && error.code === 'STORAGE_UPLOAD_FAILED'
+    );
+    state.uploadResponseMode = 'fileId';
+    console.log('  ✓ uploadFile fails clearly when provider response has no file id');
 
     const list = await service.listAttachments({ docketId: 'DCK-1', firmId: 'FIRM-1' });
     assert.ok(Array.isArray(list));
@@ -114,7 +153,7 @@ async function run() {
     const download = await service.getFile({ attachmentId: 'att-1', firmId: 'FIRM-1' });
     assert.strictEqual(download.stream, 'STREAM');
     assert.strictEqual(state.downloaded.fileId, 'drv-file-1');
-    console.log('  ✓ getFile resolves through googleDriveService.downloadFile');
+    console.log('  ✓ getFile resolves through StorageProviderFactory provider.downloadFile');
 
     console.log('All docketFileStorage.service tests passed.');
   } catch (error) {
