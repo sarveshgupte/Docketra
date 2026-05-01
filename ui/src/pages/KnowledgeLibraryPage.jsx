@@ -359,7 +359,7 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
                   style={{ width: '100%' }}
                 />
                 <p style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem', marginBottom: 0 }}>
-                  Linking a client lets this knowledge appear in Client Memory. Use the client&apos;s internal Mongo ID.
+                  Linking a client lets this knowledge appear in Client Memory. Use the client&apos;s internal Mongo ID. A client picker will be added in a future update.
                 </p>
               </div>
 
