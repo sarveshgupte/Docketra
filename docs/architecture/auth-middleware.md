@@ -41,3 +41,23 @@ After successful auth:
 - downstream tenant middleware should reuse this context rather than recomputing tenant identity.
 
 Superadmin remains platform-scope only (`firmId/defaultClientId = null`) and must still be blocked from firm-scoped routes by downstream boundary middleware.
+
+## `authTenantContext` reuse contract (performance + isolation)
+
+`authenticate` now attaches an immutable `req.authTenantContext` snapshot with canonical tenant fields:
+
+- `tenantId`
+- `defaultClientId`
+- `firmSlug`
+- `ownershipFirmId`
+- `legacyFirmId`
+- `status`
+
+`firmContext` may reuse this snapshot only when all of the following are true:
+
+- caller is not superadmin
+- `req.jwt.firmId` is present, valid, and matches `authTenantContext.tenantId`
+- tenant status is active
+- ownership context (`ownershipFirmId`) is present
+
+If any guard fails, `firmContext` resolves tenant identity again (or fails closed on mismatch/missing context). This keeps tenant boundary behavior unchanged while avoiding duplicate canonical lookups for valid, already-authenticated tenant requests.
