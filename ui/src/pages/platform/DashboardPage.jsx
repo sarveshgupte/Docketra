@@ -68,9 +68,9 @@ export const PlatformDashboardPage = () => {
 
   return (
     <PlatformShell
-      moduleLabel="Dashboard / Firm Ops"
+      moduleLabel="Daily Operations"
       title="Dashboard"
-      subtitle="Unified snapshot across CMS acquisition, CRM relationships, and docket execution."
+      subtitle="Firm snapshot: docket execution, knowledge, client relationships, and team workload."
       actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>New Docket</Link>}
     >
       <StatusMessageStack
@@ -120,12 +120,12 @@ export const PlatformDashboardPage = () => {
 
       <PageSection title="Modules" description="Open the right workspace quickly based on your current objective.">
         <div className="action-row">
-          {isAdmin ? <Link to={ROUTES.CMS(firmSlug)}>CMS · Forms & Intake</Link> : null}
-          {isAdmin ? <Link to={ROUTES.CRM_CLIENTS(firmSlug)}>CRM · Leads & Clients</Link> : null}
-          <Link to={ROUTES.DOCKETS(firmSlug)}>Dockets · Oversight & Worklists</Link>
+          {isAdmin ? <Link to={ROUTES.CMS(firmSlug)}>Knowledge Intake</Link> : null}
+          {isAdmin ? <Link to={ROUTES.CRM_CLIENTS(firmSlug)}>Relationships</Link> : null}
+          <Link to={ROUTES.DOCKETS(firmSlug)}>All Dockets</Link>
           <button type="button" onClick={() => void refetch()} disabled={isFetching}>{isFetching ? 'Refreshing…' : 'Refresh metrics'}</button>
         </div>
-        {!isAdmin ? <p className="muted">CMS and CRM modules are available to admin roles.</p> : null}
+        {!isAdmin ? <p className="muted">Firm Memory modules are available to admin roles.</p> : null}
       </PageSection>
 
       <PageSection title="Productivity trend" description="Quick signal of current workload throughput.">

@@ -158,7 +158,7 @@ export const ClientWorkspacePage = () => {
   return (
     <PlatformShell
       moduleLabel="Client Management"
-      title={client?.businessName || 'Client Memory'}
+      title={client?.businessName || "Client workspace"}
       subtitle="Client profile, relationship context, linked work, documents, and firm-specific notes in one place."
       actions={(
         <Button onClick={() => navigate(`${ROUTES.CREATE_CASE(firmSlug)}?clientId=${encodeURIComponent(clientId)}`)}>
