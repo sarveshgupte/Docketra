@@ -40,6 +40,14 @@ function buildService(overrides = {}) {
     findOne: async () => user,
   };
 
+  const jwtSvc = overrides.jwtService || {
+        generateRefreshToken: () => 'new-refresh-token',
+        hashRefreshToken: (token) => `hash:${token}` ,
+        getRefreshTokenExpiry: () => new Date(Date.now() + 60_000),
+        getRefreshTokenExpiryMs: () => 60_000,
+        generateAccessToken: () => 'new-access-token',
+      };
+
   const service = createAuthSessionService({
     models: { RefreshToken, User },
     utils: {
@@ -56,13 +64,7 @@ function buildService(overrides = {}) {
       SUPERADMIN_USER_ID: () => '000000000000000000000001',
     },
     services: {
-      jwtService: {
-        generateRefreshToken: () => 'new-refresh-token',
-        hashRefreshToken: (token) => `hash:${token}`,
-        getRefreshTokenExpiry: () => new Date(Date.now() + 60_000),
-        getRefreshTokenExpiryMs: () => 60_000,
-        generateAccessToken: () => 'new-access-token',
-      },
+      jwtService: jwtSvc,
     },
   });
   return { service, disconnectSocketCalls };
@@ -197,6 +199,43 @@ async function testInactiveUserClearsCookies() {
   assert.ok(res.clearedCookies.some((cookie) => cookie.name === 'refreshToken'));
 }
 
+
+async function testRefreshAccessTokenIncludesDefaultClientClaim() {
+  const storedToken = {
+    expiresAt: new Date(Date.now() + 60_000),
+    isRevoked: false,
+    userId: 'user-claim',
+    firmId: 'firm-claim',
+    ipAddress: '127.0.0.1',
+    save: async () => {},
+  };
+  const user = {
+    _id: 'user-claim',
+    firmId: { toString: () => 'firm-claim' },
+    defaultClientId: { toString: () => 'client-claim' },
+    role: 'admin',
+    xID: 'DK-CLAIM',
+    status: 'active',
+  };
+  let capturedPayload = null;
+  const { service } = buildService({
+    storedToken,
+    user,
+    jwtService: {
+      generateRefreshToken: () => 'new-refresh-token',
+      hashRefreshToken: (token) => `hash:${token}`,
+      getRefreshTokenExpiry: () => new Date(Date.now() + 60_000),
+      getRefreshTokenExpiryMs: () => 60_000,
+      generateAccessToken: (payload) => { capturedPayload = payload; return 'new-access-token'; },
+    },
+  });
+  const res = createRes();
+  await service.refreshAccessToken({ headers: { cookie: 'refreshToken=token-claims' }, cookies: {}, get: () => 'ua', ip: '127.0.0.1' }, res);
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(capturedPayload?.defaultClientId, 'client-claim');
+  assert.strictEqual(capturedPayload?.firmId, 'firm-claim');
+}
+
 async function testLogoutDisconnectsSockets() {
   const { service, disconnectSocketCalls } = buildService();
   const req = {
@@ -228,6 +267,7 @@ async function run() {
   await testTenantScopeMissingFirmRejected();
   await testInactiveUserClearsCookies();
   await testValidToken();
+  await testRefreshAccessTokenIncludesDefaultClientClaim();
   await testLogoutDisconnectsSockets();
   console.log('authSession refreshAccessToken tests passed');
 }

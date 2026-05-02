@@ -235,7 +235,7 @@ const authenticate = async (req, res, next) => {
     // Authorization decisions use JWT claims (req.jwt.firmId, req.jwt.firmSlug)
     if (user.role !== 'SUPER_ADMIN' && runtimeTenantId) {
       // Try default-client lookup first (new architecture), fall back to Firm (legacy)
-            const defaultClient = await Client.findOne({ _id: runtimeTenantId, isDefaultClient: true })
+      const defaultClient = await Client.findOne({ _id: runtimeTenantId, isDefaultClient: true })
         .select('status').lean();
       if (defaultClient) {
         if (defaultClient.status && !isActiveStatus(defaultClient.status)) {

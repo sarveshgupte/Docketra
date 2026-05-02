@@ -5,6 +5,35 @@ const originalLoad = Module._load;
 
 const clear = (p) => { try { delete require.cache[require.resolve(p)]; } catch (_) {} };
 
+
+async function testSuperadminBypassesTenantGuard() {
+  Module._load = function(request, parent, isMain) {
+    if (request === '../services/jwt.service') return { verifyAccessToken: () => ({ userId: '000000000000000000000001', role: 'SuperAdmin' }) };
+    if (request === '../config/env') return { loadEnv: () => ({ SUPERADMIN_OBJECT_ID: '000000000000000000000001', SUPERADMIN_XID_NORMALIZED: 'X000001', SUPERADMIN_EMAIL_NORMALIZED: 'sa@example.com' }) };
+    if (request === '../utils/role.utils') return { isSuperAdminRole: () => true, normalizeRole: (r) => r };
+    if (request === '../services/metrics.service') return { recordAuthFailure: () => {} };
+    if (request === '../utils/log') return { info: () => {}, warn: () => {}, error: () => {} };
+    if (request === './supportHeaders') return { applySupportHeadersToContext: () => {} };
+    return originalLoad.apply(this, arguments);
+  };
+
+  clear('../src/middleware/auth.middleware');
+  const { authenticate } = require('../src/middleware/auth.middleware');
+  const req = { method: 'GET', headers: { authorization: 'Bearer sa' }, cookies: {}, originalUrl: '/api/admin/tenants', url: '/api/admin/tenants' };
+  const res = { statusCode: 200, body: null, status(c){ this.statusCode = c; return this; }, json(b){ this.body = b; return b; } };
+  let nextCalled = false;
+  await authenticate(req, res, () => { nextCalled = true; });
+
+  assert.strictEqual(nextCalled, true);
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(req.jwt?.isSuperAdmin, true);
+  assert.strictEqual(req.jwt?.firmId, null);
+  assert.strictEqual(req.jwt?.defaultClientId, null);
+
+  Module._load = originalLoad;
+  clear('../src/middleware/auth.middleware');
+}
+
 async function run() {
   let saveCalled = 0;
   let getOrCreateCalled = 0;
@@ -112,6 +141,7 @@ async function run() {
 
   Module._load = originalLoad;
   clear('../src/middleware/auth.middleware');
+  await testSuperadminBypassesTenantGuard();
   console.log('authMiddleware.readOnly.test.js passed');
 }
 
