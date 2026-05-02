@@ -135,7 +135,7 @@ npm run ci:release-gate
 ## Deployment notes
 
 - Production deploy targets are documented in `docs/deployment/render-deployment.md`.
-- Build relies on backend install + `ui` build (`npm run build` / `heroku-postbuild`).
+- Build should run after deterministic dependency install (`npm run ci:install`), then execute `npm run build` (or Render build command below).
 - Ensure production secrets are set explicitly (JWT, encryption/storage, metrics token, OAuth creds).
 - Run env validation and release gate checks before deployment.
 - Keep worker process enabled in production for async and queue-driven workflows.
