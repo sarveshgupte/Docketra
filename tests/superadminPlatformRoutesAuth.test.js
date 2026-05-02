@@ -43,7 +43,7 @@ Module._load = function(request, parent, isMain) {
   }
   if (request === '../controllers/superadmin.controller') {
     return {
-      createFirm: () => {}, listFirms: () => {}, updateFirmStatus: () => {}, createFirmAdmin: () => {}, listFirmAdmins: () => {}, resendAdminAccess: () => {}, getFirmAdminDetails: () => {}, deleteFirmAdmin: () => {}, updateFirmAdminStatus: () => {}, forceResetFirmAdmin: () => {}, disableFirmImmediately: () => {}, getOperationalHealth: () => {}, switchFirm: () => {}, exitFirm: () => {}, activateFirm: () => {}, deactivateFirm: () => {}, getSupportDiagnostics: () => {},
+      createFirm: () => {}, listFirms: () => {}, updateFirmStatus: () => {}, createFirmAdmin: () => {}, listFirmAdmins: () => {}, resendAdminAccess: () => {}, getFirmAdminDetails: () => {}, deleteFirmAdmin: () => {}, updateFirmAdminStatus: () => {}, forceResetFirmAdmin: () => {}, disableFirmImmediately: () => {}, getOperationalHealth: () => {}, switchFirm: () => {}, exitFirm: () => {}, activateFirm: () => {}, deactivateFirm: () => {}, getSupportDiagnostics: () => {}, getSuperadminAuditLogs: () => {},
       getPlatformStats,
       getOnboardingInsights,
       getOnboardingInsightDetails,

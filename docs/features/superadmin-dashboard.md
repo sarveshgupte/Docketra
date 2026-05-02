@@ -81,3 +81,36 @@ The page explicitly enforces and states that superadmin access is limited to pla
 - Per-firm trend sparklines for onboarding and auth issue velocity.
 - Severity scoring for proactive escalation.
 - Direct deep-links to filtered diagnostics incidents for support workflows.
+
+
+## Audit Log Viewer
+- Route: `/app/superadmin/audit`
+- API: `GET /api/superadmin/audit-logs` (superadmin-only, paginated, newest first, limit capped at 100).
+
+### Safe fields shown
+- timestamp
+- actionType
+- performedBy
+- targetEntityType
+- targetEntityId
+- firmId / firmName (if present in safe metadata)
+- requestId (if present)
+- ipAddress / userAgent only when already present in audit rows
+- short metadata summary (sanitized primitives only, sensitive keys redacted)
+
+### Filters
+- actionType
+- actor
+- targetEntityType
+- firmId
+- date range (`from`, `to`)
+- free text (`search`)
+- pagination (`page`, `limit`)
+
+### Privacy boundaries
+Audit log viewer is platform lifecycle/support scoped only. It must never return or expose client records, dockets, tasks, attachments, documents, passwords, hashes, OTPs, auth/session tokens, reset tokens, secrets, or private client content.
+
+### Extension points
+- Add actionType dropdown sourced from model enum.
+- Add CSV export with same sanitization guardrails.
+- Add requestId drill-down to diagnostics incidents for support triage.
