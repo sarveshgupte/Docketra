@@ -69,7 +69,7 @@ for (const removedLink of ['/features', '/about', '/contact']) {
   );
 }
 
-for (const navLabel of ['Why', 'Product', 'In practice', 'Trust']) {
+for (const navLabel of ['Why', 'Product', 'Workflow', 'Pilot readiness', 'Trust']) {
   assert.ok(landingContent.includes(`label: '${navLabel}'`), `Top nav missing in-page label: ${navLabel}`);
 }
 
@@ -77,5 +77,7 @@ assert.ok(landingContent.includes('onClick={() => onNav(id)}'), 'Desktop nav sho
 assert.ok(landingContent.includes('onClick={() => { onNav(id); setMenuOpen(false); }}'), 'Mobile nav should trigger in-page section navigation.');
 assert.ok(landingContent.includes('to="/login"') && landingContent.includes('to="/signup"'), 'Landing nav must preserve Login and Request early access CTAs.');
 assert.ok(landingContent.includes("window.scrollTo({ top: 0, behavior: 'auto' });"), 'Unknown hash should safely scroll to top.');
+
+assert.equal(/href\s*=\s*"#"/.test(landingContent), false, 'Landing page must not include placeholder href="#" links.');
 
 console.log('publicLandingRouteSmoke.test.mjs passed');
