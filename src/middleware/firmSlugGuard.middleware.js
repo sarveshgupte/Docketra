@@ -2,6 +2,7 @@ const RESERVED_FIRM_SLUGS = [
   'auth',
   'public',
   'superadmin',
+  'sa',
   'users',
   'admin',
   'dashboard',

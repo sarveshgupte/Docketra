@@ -17,7 +17,7 @@ The following namespaces are platform-reserved and must **never** be interpreted
 - `/api/superadmin`
 - `/superadmin`
 - `/api/admin`
-- `/api/users`
+- `/api/users` (protected by `firmSlugGuard` reserved slug skip, not platform mount order)
 
 ## Why `/api/:firmSlug` Must Stay Later
 Express 5 path matching can capture broad params early. If `/api/:firmSlug` is mounted before reserved namespaces, requests intended for platform auth/public/admin/superadmin can be misrouted into tenant flows. That risks auth boundary regressions and tenant-context leakage.
@@ -30,3 +30,5 @@ Express 5 path matching can capture broad params early. If `/api/:firmSlug` is m
   - `tests/express5FirmSlugRouting.test.js`
   - `tests/routeMountOrderContract.test.js`
 - Avoid introducing behavior changes in structural refactors.
+
+`/api/users` is mounted later with tenant business routes, but it still cannot be treated as `firmSlug` because `firmSlugGuard` rejects reserved slugs before tenant firm routing executes.
