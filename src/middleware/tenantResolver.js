@@ -98,6 +98,7 @@ module.exports = async function tenantResolver(req, res, next) {
       slug: firm.firmSlug || normalizedSlug,
       status: firm.status || null,
       legacyFirmId: firm.legacyFirmId || null,
+      defaultClientId: firm.defaultClientId || tenantId,
     };
     req.tenant = {
       id: tenantId,

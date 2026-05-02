@@ -19,6 +19,17 @@ const toSafeLogId = (value) => {
   return null;
 };
 
+const uniqueTruthy = (values = []) => {
+  const seen = new Set();
+  return values
+    .map((value) => toSafeLogId(value))
+    .filter((value) => {
+      if (!value || seen.has(value)) return false;
+      seen.add(value);
+      return true;
+    });
+};
+
 const createAuthLoginService = (deps) => {
   const models = deps.models || {};
   const utils = deps.utils || {};
@@ -93,17 +104,52 @@ const createAuthLoginService = (deps) => {
         return sendErrorResponse(res, { statusCode: 400, message: 'Firm context is required for login.' });
       }
 
+      const canonicalTenantId = toSafeLogId(req.firmId);
+      const legacyFirmId = toSafeLogId(req.firm?.legacyFirmId);
+      const tenantCandidateIds = uniqueTruthy([
+        canonicalTenantId,
+        toSafeLogId(req.firm?.id),
+        toSafeLogId(req.firm?.defaultClientId),
+        legacyFirmId,
+      ]);
+
       log.info('AUTH_LOGIN_ATTEMPT', {
         req: getAuthLogRequest(req),
         firmSlug: requestedFirmSlug,
         xID: normalizedXID,
-        tenantId: toSafeLogId(req.firmId),
+        tenantId: canonicalTenantId,
+        legacyFirmId,
       });
-      const user = await User.findOne({
-        firmId: req.firmId,
+
+      const tenantScopedXidQuery = {
         xID: normalizedXID,
         status: { $ne: 'deleted' },
-      });
+        $or: [
+          { firmId: { $in: tenantCandidateIds } },
+          { defaultClientId: { $in: tenantCandidateIds } },
+        ],
+      };
+
+      const users = typeof User.find === 'function'
+        ? await User.find(tenantScopedXidQuery)
+        : [await User.findOne(tenantScopedXidQuery)].filter(Boolean);
+      const user = users.find((candidate) => toSafeLogId(candidate?.firmId) === canonicalTenantId)
+        || users.find((candidate) => toSafeLogId(candidate?.defaultClientId) === canonicalTenantId)
+        || users[0]
+        || null;
+
+      if (!user) {
+        log.warn('AUTH_INVALID_LOGIN_ATTEMPT', {
+          req: getAuthLogRequest(req),
+          firmSlug: requestedFirmSlug,
+          xID: normalizedXID,
+          tenantId: canonicalTenantId,
+          legacyFirmId,
+          reqFirmId: canonicalTenantId,
+          tenantCandidateIds,
+          matchedXidInTenantCandidates: false,
+        });
+      }
 
       if (await validateTenantUserPreconditions(req, res, user, requestedFirmSlug, normalizedXID)) {
         return;

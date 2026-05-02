@@ -97,3 +97,9 @@ Example valid active payload:
   }
 }
 ```
+
+## Canonical tenant vs legacy firm ID mismatch
+
+In tenant login flows, workspace resolution can succeed while `POST /api/auth/login/init` fails when the resolved canonical tenant ID (default client) differs from legacy user firm linkage. This occurs when tenant resolution sets `req.firmId` to `defaultClientId`, but older user records still have `user.firmId` set to the legacy Firm `_id`.
+
+Login lookup now scopes by the resolved tenant context and checks canonical + legacy tenant candidate IDs (`firmId` and `defaultClientId`) to preserve backward compatibility without allowing cross-firm logins.
