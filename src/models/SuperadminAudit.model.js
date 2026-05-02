@@ -31,6 +31,8 @@ const superadminAuditSchema = new mongoose.Schema({
       'AdminStatusChanged',
       'AdminForcePasswordReset',
       'AdminForcePasswordResetEmailFailed',
+      'FeatureFlagUpdated',
+      'FirmPlanCapacityUpdated',
     ],
     index: true,
   },

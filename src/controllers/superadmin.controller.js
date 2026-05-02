@@ -27,7 +27,14 @@ const onboardingAnalyticsService = require('../services/onboardingAnalytics.serv
 const { getSupportDiagnosticsSnapshot } = require('../services/superadminDiagnostics.service');
 const { getFirmHealthSnapshot } = require('../services/superadminFirmHealth.service');
 const { buildPilotReadinessSnapshot } = require('../services/superadminPilotReadiness.service');
-const { getFeatureFlagConfigByKey, getFeatureFlagsSnapshot, updateFeatureFlagState } = require('../services/featureFlags.service');
+const {
+  getFeatureFlagConfigByKey,
+  getFeatureFlagsSnapshot,
+  updateFeatureFlagState,
+  validateFirmIds,
+  PLATFORM_FEATURE_FLAGS_KEY,
+  SuperadminPlatformConfig,
+} = require('../services/featureFlags.service');
 const {
   findFirmAdmin,
   findFirmAdminById,
@@ -58,19 +65,47 @@ const updateSuperadminFeatureFlag = async (req, res) => {
     }
 
     const { enabledGlobally, rolloutStage, firmIds, notes } = req.body || {};
+    if (Array.isArray(firmIds) && !flag.allowFirmOverride && firmIds.length) {
+      return res.status(400).json({ success: false, message: `Firm overrides are not allowed for ${key}` });
+    }
+    const { ids: normalizedFirmIds, invalid } = validateFirmIds(firmIds);
+    if (invalid.length) {
+      return res.status(400).json({ success: false, message: 'Invalid firmIds provided', data: { invalidFirmIds: invalid } });
+    }
     const updateDoc = updateFeatureFlagState({ key, enabledGlobally, rolloutStage, firmIds });
-    if (Object.keys(updateDoc).length === 1) {
+    const hasFirmOverridePayload = Array.isArray(firmIds);
+    if (Object.keys(updateDoc).length === 1 && !hasFirmOverridePayload) {
       return res.status(400).json({ success: false, message: 'No editable fields provided' });
     }
-    await Firm.updateMany({ status: { $ne: 'deleted' } }, { $set: updateDoc });
+    if (Object.keys(updateDoc).length > 1) {
+      await SuperadminPlatformConfig.updateOne(
+        { key: PLATFORM_FEATURE_FLAGS_KEY },
+        { $set: updateDoc, $setOnInsert: { key: PLATFORM_FEATURE_FLAGS_KEY } },
+        { upsert: true },
+      );
+    }
+    if (hasFirmOverridePayload) {
+      await Firm.updateMany({ _id: { $in: normalizedFirmIds }, status: { $ne: 'deleted' } }, {
+        $set: {
+          [`featureFlags.${key}.enabled`]: true,
+          [`featureFlags.${key}.updatedAt`]: new Date(),
+        },
+      });
+      await Firm.updateMany({ _id: { $nin: normalizedFirmIds }, status: { $ne: 'deleted' } }, {
+        $set: {
+          [`featureFlags.${key}.enabled`]: false,
+          [`featureFlags.${key}.updatedAt`]: new Date(),
+        },
+      });
+    }
     await logSuperadminAction({
-      actionType: 'FirmActivated',
+      actionType: 'FeatureFlagUpdated',
       description: `FeatureFlagUpdated:${key}`,
       performedBy: req.user?.email || 'superadmin',
       performedById: req.user?._id || null,
       targetEntityType: 'Firm',
       targetEntityId: String(key),
-      metadata: { key, enabledGlobally, rolloutStage, firmIdsCount: Array.isArray(firmIds) ? firmIds.length : undefined, notes: String(notes || '').slice(0, 500) },
+      metadata: { key, enabledGlobally, rolloutStage, firmIdsCount: hasFirmOverridePayload ? normalizedFirmIds.length : undefined, notes: String(notes || '').slice(0, 500) },
       req,
     });
     const data = await getFeatureFlagsSnapshot();
