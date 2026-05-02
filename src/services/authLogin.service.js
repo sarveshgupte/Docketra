@@ -8,15 +8,32 @@ const getAuthLogRequest = (req) => ({
 });
 
 const toSafeLogId = (value) => {
-  if (!value) return null;
+  if (value == null) return null;
   if (typeof value === 'string' || typeof value === 'number') return String(value);
   if (typeof value === 'bigint') return value.toString();
-  if (value?._id) return toSafeLogId(value._id);
-  if (typeof value.toString === 'function') {
-    const serialized = value.toString();
-    return serialized && serialized !== '[object Object]' ? serialized : null;
+
+  if (typeof value?.toHexString === 'function') {
+    const hex = value.toHexString();
+    return hex ? String(hex) : null;
   }
-  return null;
+
+  if (typeof value === 'object') {
+    const nestedId = value._id;
+
+    if (nestedId != null && nestedId !== value) {
+      if (typeof nestedId === 'string' || typeof nestedId === 'number') return String(nestedId);
+      if (typeof nestedId === 'bigint') return nestedId.toString();
+      if (typeof nestedId?.toHexString === 'function') {
+        const nestedHex = nestedId.toHexString();
+        return nestedHex ? String(nestedHex) : null;
+      }
+      const nestedString = String(nestedId);
+      if (nestedString && nestedString !== '[object Object]') return nestedString;
+    }
+  }
+
+  const serialized = String(value);
+  return serialized && serialized !== '[object Object]' ? serialized : null;
 };
 
 const uniqueTruthy = (values = []) => {
@@ -119,6 +136,7 @@ const createAuthLoginService = (deps) => {
         xID: normalizedXID,
         tenantId: canonicalTenantId,
         legacyFirmId,
+        tenantCandidateIds,
       });
 
       const tenantScopedXidQuery = {
@@ -133,6 +151,13 @@ const createAuthLoginService = (deps) => {
       const users = typeof User.find === 'function'
         ? await User.find(tenantScopedXidQuery)
         : [await User.findOne(tenantScopedXidQuery)].filter(Boolean);
+
+      log.info('AUTH_LOGIN_USER_CANDIDATES', {
+        req: getAuthLogRequest(req),
+        xID: normalizedXID,
+        tenantId: canonicalTenantId,
+        userCandidateCount: users.length,
+      });
       const user = users.find((candidate) => toSafeLogId(candidate?.firmId) === canonicalTenantId)
         || users.find((candidate) => toSafeLogId(candidate?.defaultClientId) === canonicalTenantId)
         || users[0]

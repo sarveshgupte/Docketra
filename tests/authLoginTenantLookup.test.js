@@ -74,6 +74,33 @@ async function testCrossFirmFails() {
   assert.strictEqual(res.state.statusCode, 401);
 }
 
+
+
+async function testObjectIdLikeNormalizationAndSelfRefSafety() {
+  const oid = { toHexString: () => '69de10f8761bb7db6c320184', toString: () => 'oid-str' };
+  const selfRef = {};
+  selfRef._id = selfRef;
+
+  const users = [
+    { xID: 'X000001', status: 'active', isActive: true, firmId: { toHexString: () => '69de10f8761bb7db6c320183', toString: () => '69de10f8761bb7db6c320183' } },
+    { xID: 'X000001', status: 'active', isActive: true, firmId: '69de10f8761bb7db6c320183', defaultClientId: oid },
+  ];
+
+  const service = createAuthLoginService(baseDeps(users));
+  const req = makeReq();
+  req.firmId = oid;
+  req.firm = {
+    id: selfRef,
+    legacyFirmId: { toHexString: () => '69de10f8761bb7db6c320183', toString: () => '69de10f8761bb7db6c320183' },
+    defaultClientId: { _id: { toHexString: () => '69de10f8761bb7db6c320184', toString: () => '69de10f8761bb7db6c320184' } },
+  };
+
+  const res = createRes();
+  await service.login(req, res);
+  assert.strictEqual(res.state.statusCode, 200);
+  assert.strictEqual(res.state.body.otpRequired, true);
+}
+
 async function testDeletedInactiveFail() {
   const serviceDeleted = createAuthLoginService(baseDeps([{ xID: 'X000001', status: 'deleted', isActive: true, firmId: 'legacy-1' }], true));
   const resDeleted = createRes();
@@ -91,5 +118,6 @@ async function testDeletedInactiveFail() {
   await testDefaultClientIdMatch();
   await testCrossFirmFails();
   await testDeletedInactiveFail();
+  await testObjectIdLikeNormalizationAndSelfRefSafety();
   console.log('authLoginTenantLookup.test.js passed');
 })();
