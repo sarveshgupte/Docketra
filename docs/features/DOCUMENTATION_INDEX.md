@@ -35,6 +35,7 @@ This document helps you navigate the documentation in this repository.
 - **[audits/PILOT_RELEASE_GATE_2026-05.md](../audits/PILOT_RELEASE_GATE_2026-05.md)** - Release-gate stabilization outcomes for pilot readiness
 - **[audits/AUTH_E2E_SMOKE_COVERAGE.md](../audits/AUTH_E2E_SMOKE_COVERAGE.md)** - Auth smoke coverage for pilot authentication confidence
 - **[audits/PILOT_MANUAL_QA_CHECKLIST_2026-05.md](../audits/PILOT_MANUAL_QA_CHECKLIST_2026-05.md)** - Founder/operator manual QA checklist and dummy-data runbook before onboarding pilot firms
+- **[operations/release-gate.md](../operations/release-gate.md)** - Release-gate matrix and `test:pilot-readiness` pre-manual-QA command guidance
 
 ## 📋 Feature Implementation Documentation
 
