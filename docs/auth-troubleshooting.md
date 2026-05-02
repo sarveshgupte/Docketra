@@ -72,3 +72,28 @@ In `NODE_ENV !== production`, server startup logs `AUTH_ROUTE_MOUNTS` with:
 - reserved firm namespace slugs.
 
 No secrets are logged.
+
+## Firm login workspace-status smoke test
+
+When debugging `/[:firmSlug]/login` showing `Invalid workspace URL` unexpectedly:
+
+1. Call `GET /api/:firmSlug/login` directly and inspect `data.status` and `data.isActive`.
+2. Backend may return uppercase status values such as `"ACTIVE"`.
+3. Frontend must treat workspace as active when either:
+   - `isActive === true`, or
+   - `String(status || '').toLowerCase() === 'active'`.
+4. Frontend must **not** rely on exact lowercase status comparisons only.
+
+Example valid active payload:
+
+```json
+{
+  "success": true,
+  "data": {
+    "firmSlug": "gupte-opc",
+    "name": "Gupte OPC",
+    "status": "ACTIVE",
+    "isActive": true
+  }
+}
+```

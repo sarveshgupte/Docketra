@@ -17,6 +17,7 @@ import { Row } from '../components/layout/Row';
 import { ErrorState } from '../components/feedback/ErrorState';
 import { resolvePostAuthNavigation } from '../utils/postAuthNavigation';
 import { sanitizeFirmSlug } from '../utils/tenantRouting';
+import { isWorkspaceActive } from '../utils/workspaceStatus';
 import './LoginPage.css';
 
 const mapSafeLoginError = (error) => {
@@ -153,7 +154,7 @@ export const FirmLoginPage = () => {
           }
         }
 
-        if (response.success && response.data?.status === 'active') {
+        if (response.success && isWorkspaceActive(response.data)) {
           setFirmData(response.data);
         } else {
           setError(getWorkspaceStatusMessage(response?.data?.status));

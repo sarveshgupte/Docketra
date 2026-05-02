@@ -44,6 +44,7 @@
     "test:routing-public-boundary": "node tests/routingPublicBoundaryRegression.test.mjs",
     "test:auth-redirect-behavior": "node tests/authRedirectBehavior.test.mjs",
     "test:post-login-flow": "node tests/postLoginFlowRegression.test.mjs",
+    "test:firm-login-workspace-status": "node tests/firmLoginWorkspaceStatus.test.mjs",
     "test:public-auth-routing-sanity": "npm run test:public-landing-route-smoke && npm run test:routing-public-boundary && npm run test:auth-redirect-behavior && npm run test:post-login-flow",
     "test:docket-surface": "node tests/docketSurfaceHardening.test.mjs",
     "test:queue-ux-consistency": "node tests/queueUxConsistency.test.mjs",
