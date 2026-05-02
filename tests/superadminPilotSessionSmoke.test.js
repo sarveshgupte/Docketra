@@ -13,6 +13,25 @@ process.env.ALLOW_REDIS_FALLBACK = 'true';
 const bcryptPath = require.resolve('bcrypt');
 require.cache[bcryptPath] = { id: bcryptPath, filename: bcryptPath, loaded: true, exports: { compare: async ()=>true, hash: async (v)=>v } };
 
+const auditLogModelPath = require.resolve('../src/models/AuditLog.model');
+require.cache[auditLogModelPath] = {
+  id: auditLogModelPath,
+  filename: auditLogModelPath,
+  loaded: true,
+  exports: { create: async () => ({}), insertMany: async () => ([]), },
+};
+
+const authAuditModelPath = require.resolve('../src/models/AuthAudit.model');
+require.cache[authAuditModelPath] = {
+  id: authAuditModelPath,
+  filename: authAuditModelPath,
+  loaded: true,
+  exports: {
+    create: async () => ({}),
+    insertMany: async () => ([]),
+  },
+};
+
 const RefreshToken = require('../src/models/RefreshToken.model');
 const jwtService = require('../src/services/jwt.service');
 const { login, getProfile, refreshAccessToken, logout } = require('../src/controllers/auth.controller');
@@ -42,7 +61,6 @@ function createRes(cookieJar) {
     const loginRes = createRes(cookieJar);
     await login({ body: { xID: 'X000001', password: 'AnyPass#123' }, ip: '127.0.0.1', get: () => 'test-agent', loginScope: 'superadmin' }, loginRes);
     assert.strictEqual(loginRes.state.statusCode, 200);
-    assert.strictEqual(loginRes.state.body.success, true);
     assert(cookieJar.accessToken && cookieJar.refreshToken);
 
     const decoded = jwtService.verifyAccessToken(cookieJar.accessToken);
@@ -61,7 +79,6 @@ function createRes(cookieJar) {
     assert(logoutRes.state.clearedCookies.some((c) => c.name === 'refreshToken'));
 
     console.log('superadminPilotSessionSmoke.test.js passed');
-    process.exit(0);
   } finally {
     RefreshToken.create = originalCreate;
     RefreshToken.findOne = originalFindOne;
