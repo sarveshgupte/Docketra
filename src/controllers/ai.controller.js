@@ -9,6 +9,11 @@ const { getProviderMetadata, buildProviderStatus } = require('../services/ai/pro
 const { writeAiAuditEvent } = require('../services/ai/audit/aiAuditWriter.service');
 const log = require('../utils/log');
 
+function normalizeProviderInput(provider) {
+  const candidate = String(provider || '').trim().toLowerCase();
+  return candidate === 'claude' ? 'anthropic' : candidate;
+}
+
 async function getOwnershipFirmId(tenantId, path) {
   const tenantContext = await resolveStorageContextFromTenantId(tenantId);
   if (!tenantContext?.ownershipFirmId) {
@@ -38,8 +43,8 @@ async function updateAiConfiguration(req, res) {
 
   const actor = req.user?._id ? String(req.user._id) : null;
   if (Object.prototype.hasOwnProperty.call(req.body || {}, 'provider') && req.body.provider != null) {
-    const candidateProvider = String(req.body.provider).trim().toLowerCase();
-    if (!['openai', 'gemini', 'anthropic', 'azure_openai', 'docketra_managed', 'claude'].includes(candidateProvider)) {
+    const candidateProvider = normalizeProviderInput(req.body.provider);
+    if (!['openai', 'gemini', 'anthropic', 'azure_openai', 'docketra_managed'].includes(candidateProvider)) {
       return res.status(400).json({ success: false, reasonCode: 'UNSUPPORTED_PROVIDER' });
     }
   }

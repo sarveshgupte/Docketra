@@ -185,7 +185,7 @@ It is evidence-based only (no speculative implementation assumptions), and maps 
 
 
 ## 2026-05 production-safety hardening update
-- AI provider APIs now return explicit provider status contract (`available`, `configured`, `runtimeSupported`, `disabledReason`) so unsupported runtimes are surfaced safely without throw-based failures on production paths.
+- AI configuration APIs now return explicit provider status contract (`available`, `configured`, `runtimeSupported`, `disabledReason`) so unsupported runtimes are surfaced safely without throw-based failures on production paths.
 - AI configuration runtime checks now return `PROVIDER_RUNTIME_UNAVAILABLE` for config-only providers instead of placeholder "not implemented" messaging.
 - Admin storage setup gate now returns explicit disabled-state messaging instead of a coming-soon placeholder when external storage is disabled.
 - KMS encryption provider selection now fails fast with explicit startup/runtime messaging and remains blocked by production env validation.
