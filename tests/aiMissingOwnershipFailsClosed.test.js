@@ -14,12 +14,18 @@ async function run() {
     return originalLoad.apply(this, arguments);
   };
   clear('../src/controllers/ai.controller');
-  const { getAiConfiguration } = require('../src/controllers/ai.controller');
+  const { getAiConfiguration, updateAiConfiguration } = require('../src/controllers/ai.controller');
   const req = { firmId: 'tenant-default' };
   const res = { statusCode: 200, payload: null, status(c){this.statusCode=c; return this;}, json(p){this.payload=p; return this;} };
   await getAiConfiguration(req, res);
-  assert.strictEqual(res.statusCode, 400);
-  assert.strictEqual(res.payload.message, 'Tenant mapping missing');
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.payload.success, true);
+  assert.ok(!('encryptedKey' in res.payload.configuration));
+  assert.ok(!('apiKey' in res.payload.configuration));
+  const writeRes = { statusCode: 200, payload: null, status(c){this.statusCode=c; return this;}, json(p){this.payload=p; return this;} };
+  await updateAiConfiguration({ firmId: 'tenant-default', body: {} }, writeRes);
+  assert.strictEqual(writeRes.statusCode, 400);
+  assert.strictEqual(writeRes.payload.message, 'Tenant mapping missing');
   console.log('aiMissingOwnershipFailsClosed.test.js passed');
 }
 run().catch((e)=>{console.error(e);process.exit(1);}).finally(()=>{Module._load=originalLoad;});

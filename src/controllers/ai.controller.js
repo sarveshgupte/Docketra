@@ -14,7 +14,7 @@ function normalizeProviderInput(provider) {
   return candidate === 'claude' ? 'anthropic' : candidate;
 }
 
-async function getOwnershipFirmId(tenantId, path) {
+async function getOwnershipFirmIdForWrite(tenantId, path) {
   const tenantContext = await resolveStorageContextFromTenantId(tenantId);
   if (!tenantContext?.ownershipFirmId) {
     log.warn('[AI_SETTINGS] ownership_resolution_failed', { tenantId, path });
@@ -23,8 +23,18 @@ async function getOwnershipFirmId(tenantId, path) {
   return tenantContext.ownershipFirmId;
 }
 
+async function getOwnershipFirmIdForRead(tenantId, path) {
+  const tenantContext = await resolveStorageContextFromTenantId(tenantId);
+  if (tenantContext?.ownershipFirmId) return tenantContext.ownershipFirmId;
+  if (tenantId) {
+    log.warn('[AI_SETTINGS] ownership_read_fallback_to_tenant', { tenantId, path });
+    return tenantId;
+  }
+  return null;
+}
+
 async function getAiConfiguration(req, res) {
-  const ownershipFirmId = await getOwnershipFirmId(req.firmId, req.originalUrl);
+  const ownershipFirmId = await getOwnershipFirmIdForRead(req.firmId, req.originalUrl);
   if (!ownershipFirmId) return res.status(400).json({ success: false, message: 'Tenant mapping missing' });
 
   const firm = await Firm.findById(ownershipFirmId).select('aiConfig').lean();
@@ -35,7 +45,7 @@ async function getAiConfiguration(req, res) {
 }
 
 async function updateAiConfiguration(req, res) {
-  const ownershipFirmId = await getOwnershipFirmId(req.firmId, req.originalUrl);
+  const ownershipFirmId = await getOwnershipFirmIdForWrite(req.firmId, req.originalUrl);
   if (!ownershipFirmId) return res.status(400).json({ success: false, message: 'Tenant mapping missing' });
 
   const firm = await Firm.findById(ownershipFirmId).select('aiConfig');
@@ -75,7 +85,7 @@ async function updateAiConfiguration(req, res) {
 }
 
 async function testAiConfiguration(req, res) {
-  const ownershipFirmId = await getOwnershipFirmId(req.firmId, req.originalUrl);
+  const ownershipFirmId = await getOwnershipFirmIdForWrite(req.firmId, req.originalUrl);
   if (!ownershipFirmId) return res.status(400).json({ success: false, message: 'Tenant mapping missing' });
 
   const firm = await Firm.findById(ownershipFirmId).select('aiConfig').lean();
