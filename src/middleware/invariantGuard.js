@@ -1,6 +1,7 @@
 const { randomUUID } = require('crypto');
 const { recordInvariantViolation } = require('../utils/operationalMetrics');
 const log = require('../utils/log');
+const { isSuperAdminRole } = require('../utils/role.utils');
 
 /**
  * Invariant Guard Middleware
@@ -10,7 +11,7 @@ const invariantGuard = (rules = {}) => (req, res, next) => {
   const { requireFirm, forbidSuperAdmin } = rules;
   req.requestId = req.requestId || randomUUID();
 
-  const derivedSuperAdmin = req.isSuperAdmin ?? (req.user && req.user.role === 'SuperAdmin');
+  const derivedSuperAdmin = req.isSuperAdmin ?? isSuperAdminRole(req.user?.role);
   if (req.isSuperAdmin === undefined) {
     req.isSuperAdmin = derivedSuperAdmin;
   }
