@@ -14,10 +14,10 @@ async function run() {
     return originalLoad.apply(this, arguments);
   };
   clear('../src/controllers/ai.controller');
-  const { getAiConfigStatus } = require('../src/controllers/ai.controller');
+  const { getAiConfiguration } = require('../src/controllers/ai.controller');
   const req = { firmId: 'tenant-default' };
   const res = { statusCode: 200, payload: null, status(c){this.statusCode=c; return this;}, json(p){this.payload=p; return this;} };
-  await getAiConfigStatus(req, res);
+  await getAiConfiguration(req, res);
   assert.strictEqual(res.statusCode, 400);
   assert.strictEqual(res.payload.message, 'Tenant mapping missing');
   console.log('aiMissingOwnershipFailsClosed.test.js passed');
