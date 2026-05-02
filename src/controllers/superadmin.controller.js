@@ -25,6 +25,7 @@ const { getSession } = require('../utils/getSession');
 const log = require('../utils/log');
 const onboardingAnalyticsService = require('../services/onboardingAnalytics.service');
 const { getSupportDiagnosticsSnapshot } = require('../services/superadminDiagnostics.service');
+const { getFirmHealthSnapshot } = require('../services/superadminFirmHealth.service');
 const {
   findFirmAdmin,
   findFirmAdminById,
@@ -172,6 +173,26 @@ const getOnboardingInsightDetails = async (req, res) => {
   }
 };
 
+
+
+const getFirmHealth = async (req, res) => {
+  try {
+    const limit = Number.parseInt(req.query?.limit, 10) || 25;
+    const status = String(req.query?.status || '').trim().toLowerCase() || undefined;
+    const allowed = new Set(['healthy', 'watch', 'at_risk', 'critical']);
+
+    const snapshot = await getFirmHealthSnapshot({
+      limit,
+      status: allowed.has(status) ? status : undefined,
+      search: req.query?.search,
+    });
+
+    return res.json({ success: true, data: snapshot });
+  } catch (error) {
+    log.error('[SUPERADMIN] Error loading firm health snapshot:', error);
+    return res.status(500).json({ success: false, message: 'Failed to load firm health snapshot' });
+  }
+};
 
 const getSupportDiagnostics = async (req, res) => {
   try {
@@ -1833,6 +1854,7 @@ module.exports = {
   getOnboardingInsightDetails,
   getOnboardingAlerts,
   getSupportDiagnostics,
+  getFirmHealth,
   getSuperadminAuditLogs,
   getSuperadminGlobalSearch,
   getFirmBySlug,

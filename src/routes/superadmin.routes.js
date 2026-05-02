@@ -29,6 +29,7 @@ const {
   getOnboardingInsightDetails,
   getOnboardingAlerts,
   getSupportDiagnostics,
+  getFirmHealth,
   getSuperadminAuditLogs,
   getSuperadminGlobalSearch,
 } = require('../controllers/superadmin.controller');
@@ -58,6 +59,7 @@ router.get('/onboarding-insights/details', requireSuperadmin, authorize(SuperAdm
 router.get('/onboarding-alerts', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingAlerts);
 router.get('/health', requireSuperadmin, getOperationalHealth);
 router.get('/diagnostics', requireSuperadmin, getSupportDiagnostics);
+router.get('/firm-health', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getFirmHealth);
 router.get('/audit-logs', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getSuperadminAuditLogs);
 router.get('/search', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getSuperadminGlobalSearch);
 
