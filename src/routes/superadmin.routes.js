@@ -50,10 +50,10 @@ const {
  */
 
 // Platform statistics
-router.get('/stats', authorize(SuperAdminPolicy.canViewPlatformStats), getPlatformStats);
-router.get('/onboarding-insights', authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingInsights);
-router.get('/onboarding-insights/details', authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingInsightDetails);
-router.get('/onboarding-alerts', authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingAlerts);
+router.get('/stats', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getPlatformStats);
+router.get('/onboarding-insights', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingInsights);
+router.get('/onboarding-insights/details', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingInsightDetails);
+router.get('/onboarding-alerts', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingAlerts);
 router.get('/health', requireSuperadmin, getOperationalHealth);
 router.get('/diagnostics', requireSuperadmin, getSupportDiagnostics);
 
