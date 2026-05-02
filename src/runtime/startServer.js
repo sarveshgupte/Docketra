@@ -44,7 +44,11 @@ const startServer = async () => {
     log.info(`[REDIS] REDIS_CONFIGURED=${isRedisUrlConfigured()}`);
     log.info(`[REDIS] REDIS_READY=${isRedisReady()}`);
     if (!isRedisReady()) {
-      log.warn('[REDIS] Startup continuing with degraded Redis status');
+      if (config.env === 'production') {
+        log.warn('[REDIS] Startup continuing with degraded Redis status: security-sensitive endpoints will fail closed with HTTP 503 until Redis is ready.');
+      } else {
+        log.warn('[REDIS] Startup continuing with degraded Redis status: local/development mode will use in-memory fallbacks where supported.');
+      }
     }
 
     log.info('API_RUNTIME_SCHEDULERS_DISABLED');
