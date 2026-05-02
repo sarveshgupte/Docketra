@@ -45,7 +45,7 @@ Render is the active deployment target with separate runtimes:
 
 ### Build command
 ```bash
-npm install && npm --prefix ui install && npm --prefix ui run build
+npm ci && npm --prefix ui ci && npm run build
 ```
 
 ### Start command (API service)
@@ -130,7 +130,7 @@ API runtime remains request/response focused and does not own worker bootstrap.
 ## 8) Deployment steps on Render
 
 1. Create/update API Web Service.
-   - Build command: `npm install && npm --prefix ui install && npm --prefix ui run build`
+   - Build command: `npm ci && npm --prefix ui ci && npm run build`
    - Start command: `npm start`
 2. Create/update Worker Service from same repo/branch.
    - Build command: same as API (or reuse build cache based on Render setup)
