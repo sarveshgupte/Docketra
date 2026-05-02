@@ -276,46 +276,65 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
 
   const shortcutHint = 'Shortcuts: Ctrl/⌘+K open, / quick open, Alt+Shift+N new docket, Alt+Shift+D dashboard';
 
+  const firmLabel = user?.firm?.name || firmSlug || 'Workspace';
+  const firmInitials = firmLabel.substring(0, 2).toUpperCase();
+  const userInitials = userName.split(' ').map((n) => n[0]).join('').toUpperCase().substring(0, 2) || userName.substring(0, 2).toUpperCase();
+
   return (
     <div className="platform">
       <a href="#platform-main" className="platform__skip-link">Skip to content</a>
       <aside className={`platform__sidebar ${collapsed ? 'platform__sidebar--collapsed' : ''}`} aria-label="Primary navigation">
+        {/* Firm brand */}
         <div className="platform__brand">
+          <div className="platform__firm-badge" aria-hidden="true" title={firmLabel}>
+            {firmInitials}
+          </div>
+          {!collapsed && (
+            <div className="platform__firm-info">
+              <strong className="platform__firm-name" title={firmLabel}>{firmLabel}</strong>
+              <span className="platform__firm-sub">Operations workspace</span>
+            </div>
+          )}
           <button
             type="button"
             className="platform__collapse"
             onClick={() => setCollapsed((value) => !value)}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            {collapsed ? '→' : '←'}
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              {collapsed
+                ? <polyline points="9 18 15 12 9 6" />
+                : <polyline points="15 18 9 12 15 6" />}
+            </svg>
           </button>
-          {!collapsed && (
-            <div>
-              <strong>Docketra</strong>
-              <p>Operations workspace</p>
-            </div>
-          )}
         </div>
 
         <nav className="platform__nav">
           {navSections.map((section) => (
             <div key={section.section} className="platform__nav-section">
               {!collapsed && <span className="platform__section-title">{section.section}</span>}
-              {section.items.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={`platform__nav-link ${isNavItemActive(pathname, item) ? 'is-active' : ''}`}
-                  title={item.label}
-                  aria-label={item.label}
-                >
-                  {collapsed ? (
-                    <span className="platform__nav-link-icon" aria-hidden="true">{item.icon}</span>
-                  ) : (
-                    <span>{item.label}</span>
-                  )}
-                </Link>
-              ))}
+              {section.items.map((item) => {
+                const isActive = isNavItemActive(pathname, item);
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={`platform__nav-link ${isActive ? 'is-active' : ''}`}
+                    title={collapsed ? item.label : undefined}
+                    aria-label={collapsed ? item.label : undefined}
+                    aria-current={isActive ? 'page' : undefined}
+                  >
+                    <span
+                      className="platform__nav-link-icon"
+                      aria-hidden="true"
+                      // eslint-disable-next-line react/no-danger
+                      dangerouslySetInnerHTML={{ __html: item.icon }}
+                    />
+                    {!collapsed && <span className="platform__nav-link-label">{item.label}</span>}
+                  </Link>
+                );
+              })}
             </div>
           ))}
         </nav>
@@ -326,7 +345,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
           <div className="platform__title-block">
             {moduleLabel ? <span className="platform__module-label">{moduleLabel}</span> : null}
             <h1>{title}</h1>
-            <p>{subtitle || 'Use the sidebar to move between modules and continue your workflow.'}</p>
+            {subtitle ? <p>{subtitle}</p> : null}
             <div className="platform__breadcrumbs" aria-label="Breadcrumb">
               <span>Workspace</span>
               <span aria-hidden="true">/</span>
@@ -356,12 +375,21 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                   if (event.key === 'Escape') setMenuOpen(false);
                 }}
               >
-                <span>{userName}</span>
-                <span className="platform__user-pill-chevron" aria-hidden="true">▾</span>
+                <span className="platform__user-avatar" aria-hidden="true">{userInitials}</span>
+                <span className="platform__user-name">{userName}</span>
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
               {menuOpen ? (
                 <div className="platform__account-dropdown" role="menu" aria-label="Account menu">
-                  <button type="button" role="menuitem" onClick={handleLogout}>Sign out</button>
+                  <Link
+                    to={ROUTES.PROFILE(firmSlug)}
+                    className="platform__account-dropdown-item"
+                    role="menuitem"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Profile
+                  </Link>
+                  <button type="button" role="menuitem" className="platform__account-dropdown-item" onClick={handleLogout}>Sign out</button>
                 </div>
               ) : null}
             </div>
