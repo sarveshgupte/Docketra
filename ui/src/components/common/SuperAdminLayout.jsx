@@ -61,6 +61,9 @@ export const SuperAdminLayout = ({ children }) => {
           <Link to="/app/superadmin/diagnostics" className={navItemClass(isActive('/app/superadmin/diagnostics'))} aria-current={isActive('/app/superadmin/diagnostics') ? 'page' : undefined}>
             Support Diagnostics
           </Link>
+          <Link to="/app/superadmin/audit" className={navItemClass(isActive('/app/superadmin/audit'))} aria-current={isActive('/app/superadmin/audit') ? 'page' : undefined}>
+            Audit Logs
+          </Link>
         </nav>
 
         <div className="mt-6 hidden rounded-xl border border-gray-200 bg-gray-50 p-3 md:block">

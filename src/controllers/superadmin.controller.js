@@ -190,6 +190,112 @@ const getSupportDiagnostics = async (req, res) => {
   }
 };
 
+const REDACT_PATTERN = /(token|secret|password|otp|hash|credential|cookie|authorization|bearer|refresh|access)/i;
+
+const sanitizeAuditMetadata = (metadata = {}) => {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return {};
+  }
+
+  return Object.entries(metadata).reduce((acc, [key, value]) => {
+    if (REDACT_PATTERN.test(String(key))) {
+      acc[key] = '[REDACTED]';
+      return acc;
+    }
+    if (value == null || ['string', 'number', 'boolean'].includes(typeof value)) {
+      acc[key] = value;
+      return acc;
+    }
+    if (value instanceof Date) {
+      acc[key] = value.toISOString();
+      return acc;
+    }
+    if (Array.isArray(value)) {
+      acc[key] = `[${value.length} items]`;
+      return acc;
+    }
+    if (typeof value === 'object') {
+      acc[key] = '[OBJECT]';
+    }
+    return acc;
+  }, {});
+};
+
+const getSuperadminAuditLogs = async (req, res) => {
+  try {
+    const page = Math.max(Number.parseInt(req.query?.page, 10) || 1, 1);
+    const requestedLimit = Math.max(Number.parseInt(req.query?.limit, 10) || 25, 1);
+    const limit = Math.min(requestedLimit, 100);
+    const skip = (page - 1) * limit;
+
+    const filter = {};
+    if (req.query?.actionType) filter.actionType = req.query.actionType;
+    if (req.query?.actor) filter.performedBy = { $regex: req.query.actor, $options: 'i' };
+    if (req.query?.targetEntityType) filter.targetEntityType = req.query.targetEntityType;
+    if (req.query?.firmId) filter['metadata.firmId'] = { $regex: req.query.firmId, $options: 'i' };
+
+    const from = req.query?.from ? new Date(req.query.from) : null;
+    const to = req.query?.to ? new Date(req.query.to) : null;
+    if ((from && !Number.isNaN(from.getTime())) || (to && !Number.isNaN(to.getTime()))) {
+      filter.timestamp = {};
+      if (from && !Number.isNaN(from.getTime())) filter.timestamp.$gte = from;
+      if (to && !Number.isNaN(to.getTime())) filter.timestamp.$lte = to;
+    }
+
+    if (req.query?.search) {
+      const searchRegex = { $regex: req.query.search, $options: 'i' };
+      filter.$or = [
+        { actionType: searchRegex },
+        { description: searchRegex },
+        { performedBy: searchRegex },
+        { targetEntityType: searchRegex },
+        { targetEntityId: searchRegex },
+        { 'metadata.firmId': searchRegex },
+        { 'metadata.firmName': searchRegex },
+        { 'metadata.requestId': searchRegex },
+      ];
+    }
+
+    const [rows, total] = await Promise.all([
+      SuperadminAudit.find(filter).sort({ timestamp: -1 }).skip(skip).limit(limit).lean(),
+      SuperadminAudit.countDocuments(filter),
+    ]);
+
+    const data = rows.map((row) => {
+      const safeMetadata = sanitizeAuditMetadata(row.metadata);
+      return {
+        _id: row._id,
+        timestamp: row.timestamp,
+        actionType: row.actionType,
+        description: row.description,
+        performedBy: row.performedBy,
+        targetEntityType: row.targetEntityType || null,
+        targetEntityId: row.targetEntityId || null,
+        firmId: safeMetadata.firmId || null,
+        firmName: safeMetadata.firmName || safeMetadata.name || null,
+        requestId: safeMetadata.requestId || null,
+        ipAddress: row.ipAddress || null,
+        userAgent: row.userAgent || null,
+        metadata: safeMetadata,
+      };
+    });
+
+    return res.json({
+      success: true,
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        hasMore: page * limit < total,
+      },
+    });
+  } catch (error) {
+    log.error('[SUPERADMIN] Error loading audit logs:', error);
+    return res.status(500).json({ success: false, message: 'Failed to load superadmin audit logs' });
+  }
+};
+
 const getOnboardingAlerts = async (req, res) => {
   try {
     const sinceDays = Number.parseInt(req.query?.sinceDays, 10) || 30;
@@ -1558,6 +1664,7 @@ module.exports = {
   getOnboardingInsightDetails,
   getOnboardingAlerts,
   getSupportDiagnostics,
+  getSuperadminAuditLogs,
   getFirmBySlug,
   getOperationalHealth,
   switchFirm,
