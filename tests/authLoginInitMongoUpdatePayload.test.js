@@ -141,9 +141,9 @@ async function shouldProceedToOtpForValidTenantLoginInit() {
     let capturedLoginSession = null;
     let deliveredOtp = null;
 
-    User.findOne = async (query) => {
+    User.find = async (query) => {
       capturedUserQuery = query;
-      return user;
+      return [user];
     };
     LoginSession.deleteMany = async () => ({ deletedCount: 0 });
     LoginSession.create = async (payload) => {
@@ -163,9 +163,12 @@ async function shouldProceedToOtpForValidTenantLoginInit() {
     assert.strictEqual(body.otpRequired, true, 'valid password should proceed to OTP challenge');
     assert.match(body.loginToken, /^[a-f0-9]{64}$/i, 'login token should be an opaque random token');
     assert.deepStrictEqual(capturedUserQuery, {
-      firmId: '507f1f77bcf86cd799439022',
       xID: 'X000001',
       status: { $ne: 'deleted' },
+      $or: [
+        { firmId: { $in: ['507f1f77bcf86cd799439022'] } },
+        { defaultClientId: { $in: ['507f1f77bcf86cd799439022'] } },
+      ],
     });
     assert(capturedLoginSession, 'login init should persist a LoginSession');
     assert.strictEqual(capturedLoginSession.firmId, '507f1f77bcf86cd799439022');
