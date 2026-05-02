@@ -120,6 +120,23 @@ async function run() {
     assert.strictEqual(res.statusCode, 403);
   }
 
+  // matching active tenant but missing ownershipFirmId fails closed with 400
+  {
+    resolverCalls = 0;
+    const firmId = '507f1f77bcf86cd799439015';
+    const req = {
+      method: 'GET', originalUrl: '/api/tenant/data',
+      jwt: { firmId }, user: { role: 'Admin', firmId },
+      authTenantContext: Object.freeze({ tenantId: firmId, status: 'active' }),
+    };
+    const res = resMock();
+    let nextCalled = false;
+    await firmContext(req, res, () => { nextCalled = true; });
+    assert.strictEqual(nextCalled, false);
+    assert.strictEqual(res.statusCode, 400);
+    assert.strictEqual(resolverCalls, 0);
+  }
+
   Module._load = originalLoad;
   clear('../src/middleware/firmContext');
   console.log('firmContext.authTenantContext.test.js passed');
