@@ -524,7 +524,7 @@ const getOnboardingAlerts = async (req, res) => {
 const listFirms = async (req, res) => {
   try {
     const firms = await Firm.find()
-      .select('firmId firmSlug name status createdAt')
+      .select('firmId firmSlug name status createdAt plan maxUsers subscriptionStatus billingStatus billingOwnerId')
       .sort({ createdAt: -1 });
     const firmIds = firms.map((firm) => firm._id);
 
@@ -1837,6 +1837,82 @@ const activateFirm = async (req, res, next) => {
   }
 };
 
+const PLAN_VALUES = ['pilot', 'starter', 'professional', 'enterprise'];
+
+const buildPlanCapacityMetadata = (firm, userCount = 0) => {
+  const maxUsers = Number.isFinite(Number(firm?.maxUsers)) ? Number(firm.maxUsers) : 0;
+  const safeUserCount = Number.isFinite(Number(userCount)) ? Number(userCount) : 0;
+  const capacityUsedPercent = maxUsers > 0 ? Math.min(999, Math.round((safeUserCount / maxUsers) * 100)) : 0;
+  const capacityStatus = safeUserCount > maxUsers ? 'over_capacity' : (capacityUsedPercent >= 85 ? 'near_capacity' : 'within_capacity');
+  return {
+    firmObjectId: firm?._id, firmId: firm?.firmId, firmSlug: firm?.firmSlug, name: firm?.name, status: firm?.status,
+    plan: String(firm?.plan || 'pilot').toLowerCase(), maxUsers, userCount: safeUserCount, capacityUsedPercent, capacityStatus,
+    subscriptionStatus: firm?.subscriptionStatus || null, billingStatus: firm?.billingStatus || null,
+    href: `/app/superadmin/firms/${firm?._id}`,
+  };
+};
+
+const getPlansCapacity = async (req, res) => {
+  try {
+    const firms = await Firm.find().select('firmId firmSlug name status plan maxUsers subscriptionStatus billingStatus').sort({ createdAt: -1 }).lean();
+    const firmIds = firms.map((f) => f._id);
+    const userCounts = await User.aggregate([{ $match: { firmId: { $in: firmIds }, status: { $ne: 'deleted' } } }, { $group: { _id: '$firmId', count: { $sum: 1 } } }]);
+    const userCountMap = new Map(userCounts.map((entry) => [String(entry._id), Number(entry.count) || 0]));
+    const rows = firms.map((firm) => buildPlanCapacityMetadata(firm, userCountMap.get(String(firm._id)) || 0));
+    const totals = rows.reduce((acc, row) => {
+      acc.firms += 1;
+      if (PLAN_VALUES.includes(row.plan)) acc[row.plan] += 1;
+      if (row.capacityStatus === 'over_capacity') acc.overCapacity += 1;
+      if (row.capacityStatus === 'near_capacity') acc.nearCapacity += 1;
+      return acc;
+    }, { firms: 0, pilot: 0, starter: 0, professional: 0, enterprise: 0, overCapacity: 0, nearCapacity: 0 });
+
+    return res.json({ success: true, data: { totals, firms: rows } });
+  } catch (error) {
+    log.error('[SUPERADMIN] Error loading plan/capacity snapshot:', error);
+    return res.status(500).json({ success: false, message: 'Failed to load plans and capacity snapshot' });
+  }
+};
+
+const updateFirmPlanCapacity = async (req, res) => {
+  try {
+    const { firmId } = req.params;
+    const updates = {};
+    if (Object.prototype.hasOwnProperty.call(req.body, 'plan')) updates.plan = String(req.body.plan || '').toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(req.body, 'maxUsers')) updates.maxUsers = Number(req.body.maxUsers);
+    if (Object.prototype.hasOwnProperty.call(req.body, 'subscriptionStatus')) updates.subscriptionStatus = req.body.subscriptionStatus || null;
+    if (Object.prototype.hasOwnProperty.call(req.body, 'billingStatus')) updates.billingStatus = req.body.billingStatus || null;
+
+    if (updates.plan && !PLAN_VALUES.includes(updates.plan)) {
+      return res.status(400).json({ success: false, message: 'Invalid plan. Allowed: pilot, starter, professional, enterprise.' });
+    }
+
+    const firm = await Firm.findById(firmId);
+    if (!firm) return res.status(404).json({ success: false, message: 'Firm not found' });
+
+    const counts = await User.aggregate([{ $match: { firmId: firm._id, status: { $ne: 'deleted' } } }, { $group: { _id: '$firmId', count: { $sum: 1 } } }]);
+    const activeUserCount = counts[0]?.count || 0;
+    if (Number.isFinite(updates.maxUsers) && updates.maxUsers < activeUserCount) {
+      return res.status(400).json({ success: false, message: `maxUsers cannot be lower than current active user count (${activeUserCount}).` });
+    }
+
+    const before = buildPlanCapacityMetadata(firm.toObject(), activeUserCount);
+    let changed = false;
+    for (const [k,v] of Object.entries(updates)) { if (firm[k] !== v) { firm[k]=v; changed = true; } }
+    if (changed) await firm.save();
+    const after = buildPlanCapacityMetadata(firm.toObject(), activeUserCount);
+
+    if (changed) {
+      await logSuperadminAction({ actionType: 'FirmPlanCapacityUpdated', description: `Updated plan/capacity for ${firm.name} (${firm.firmId})`, performedBy: req.user.email, performedById: req.user._id, targetEntityType: 'Firm', targetEntityId: firm._id.toString(), metadata: { firmId: firm.firmId, before, after }, req });
+    }
+
+    return res.json({ success: true, data: after });
+  } catch (error) {
+    log.error('[SUPERADMIN] Error updating firm plan/capacity:', error);
+    return res.status(500).json({ success: false, message: 'Failed to update firm plan/capacity' });
+  }
+};
+
 module.exports = {
   createFirm: wrapWriteHandler(createFirm),
   listFirms,
@@ -1855,6 +1931,8 @@ module.exports = {
   getOnboardingAlerts,
   getSupportDiagnostics,
   getFirmHealth,
+  getPlansCapacity,
+  updateFirmPlanCapacity,
   getSuperadminAuditLogs,
   getSuperadminGlobalSearch,
   getFirmBySlug,

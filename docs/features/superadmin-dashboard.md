@@ -184,3 +184,16 @@ The Firm Health view only surfaces platform lifecycle/support metadata and never
 - Add platform-level auth degradation indicators (aggregate only) into `signals.auth`
 - Add lightweight trend windows (e.g. 7-day score delta) from safe aggregate counters
 - Add risk-notes workflow for superadmin operations without touching firm client data
+
+
+## Plans & Capacity Management
+
+- **UI route:** `/app/superadmin/plans` (Superadmin-only).
+- **API:**
+  - `GET /api/superadmin/plans`
+  - `PATCH /api/superadmin/firms/:firmId/plan-capacity`
+- **Safe fields shown:** firm identity/status metadata, plan, maxUsers, userCount, capacityUsedPercent, capacityStatus, subscriptionStatus, billingStatus, and safe links to Firm 360.
+- **Editable fields:** `plan`, `maxUsers`, `subscriptionStatus`, `billingStatus`.
+- **Validation:** `maxUsers` must be integer 1..500 and cannot be set below current active user count; invalid plan values are rejected.
+- **Privacy boundaries:** no payment instruments, checkout/invoice artifacts, client records, dockets, tasks, documents, secrets, or private client content are returned.
+- **Extension points:** additional read-only readiness metrics can be added to `GET /plans` totals/cards without introducing public billing flows.
