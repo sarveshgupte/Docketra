@@ -32,7 +32,7 @@ const getFirmHealthSnapshot = async ({ limit = 25, status, search } = {}) => {
   }
 
   const [firms, onboarding, storageRows] = await Promise.all([
-    Firm.find(firmQuery).select('_id firmId firmSlug name status createdAt').sort({ createdAt: -1 }).limit(safeLimit).lean(),
+    Firm.find(firmQuery).select('_id firmId firmSlug name status createdAt').sort({ createdAt: -1 }).lean(),
     onboardingAnalyticsService.getOnboardingInsightDetails({ sinceDays: 30, staleAfterDays: 7, completionState: 'all', limit: safeLimit }),
     TenantStorageHealth.find({}).select('tenantId status').lean(),
   ]);
@@ -86,16 +86,19 @@ const getFirmHealthSnapshot = async ({ limit = 25, status, search } = {}) => {
     };
   });
 
+  const totals = {
+    firms: healthRows.length,
+    healthy: healthRows.filter((f) => f.riskLevel === 'healthy').length,
+    watch: healthRows.filter((f) => f.riskLevel === 'watch').length,
+    atRisk: healthRows.filter((f) => f.riskLevel === 'at_risk').length,
+    critical: healthRows.filter((f) => f.riskLevel === 'critical').length,
+  };
   const filtered = status ? healthRows.filter((row) => row.riskLevel === status) : healthRows;
+  const limitedRows = filtered.slice(0, safeLimit);
   return {
-    totals: {
-      firms: filtered.length,
-      healthy: filtered.filter((f) => f.riskLevel === 'healthy').length,
-      watch: filtered.filter((f) => f.riskLevel === 'watch').length,
-      atRisk: filtered.filter((f) => f.riskLevel === 'at_risk').length,
-      critical: filtered.filter((f) => f.riskLevel === 'critical').length,
-    },
-    firms: filtered,
+    totals,
+    filteredTotal: filtered.length,
+    firms: limitedRows,
   };
 };
 
