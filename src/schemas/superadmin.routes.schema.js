@@ -17,6 +17,13 @@ module.exports = {
       limit: z.coerce.number().int().min(5).max(30).optional(),
     }).passthrough(),
   },
+  'GET /search': {
+    query: z.object({
+      q: z.string().trim().max(100).optional(),
+      types: z.string().trim().optional(),
+      limit: z.coerce.number().int().min(1).max(25).optional(),
+    }).passthrough(),
+  },
 
   'POST /firms': {
     body: z.object({

@@ -114,3 +114,34 @@ Audit log viewer is platform lifecycle/support scoped only. It must never return
 - Add actionType dropdown sourced from model enum.
 - Add CSV export with same sanitization guardrails.
 - Add requestId drill-down to diagnostics incidents for support triage.
+
+## Superadmin Global Search
+- Route: `/app/superadmin` (within `SuperAdminLayout` shell search panel).
+- API: `GET /api/superadmin/search` (requires `requireSuperadmin` + superadmin policy authorization).
+- Query params:
+  - `q` (trimmed; max 100 chars)
+  - `types` optional comma list (`firms,admins,audit`)
+  - `limit` optional, capped at 25
+
+### Searchable entities
+- Firms (platform firm identity + lifecycle status)
+- Admins (platform admin identity/support metadata)
+- Audit references (platform action metadata for request/target correlation)
+
+### Safe result fields returned
+- Grouped response shape:
+  - `{ firms: [], admins: [], audit: [] }`
+- Firm result:
+  - `type`, `id`, `firmId`, `firmSlug`, `name`, `status`, optional `adminEmail` (only when already exposed by firm listing patterns), `href`
+- Admin result:
+  - `type`, `id`, `firmId`, `firmName`, `xID`, `name`, `emailMasked`, `status`, `href`
+- Audit result:
+  - `type`, `id`, `actionType`, `performedBy`, `targetEntityType`, `targetEntityId`, `firmId`, `firmName`, `requestId`, `timestamp`, `href`
+
+### Privacy boundaries
+Global search is platform lifecycle/support scoped only. It does **not** search or return client records, docket/task payloads, attachments/documents, private client content, passwords, OTPs, tokens, cookies, secrets, storage credentials, or auth header values.
+
+### Extension points
+- Add type chips/toggles in UI (firms/admins/audit) that map directly to `types` query param.
+- Add keyboard navigation and recent search suggestions (superadmin-only, ephemeral client state).
+- Add requestId deep-link presets to diagnostics/audit filtered views.
