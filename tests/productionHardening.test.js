@@ -192,12 +192,77 @@ async function testDebugRoutesDisabledInProduction() {
   console.log('✓ debug routes are gated outside production and retain 404 fallback behavior');
 }
 
+async function testNonSecurityPublicReadDoesNotFailClosedWhenRedisUnavailable() {
+  const rlPath = require.resolve('../src/middleware/rateLimiters');
+  const redisPath = require.resolve('../src/config/redis');
+  const original = require.cache[redisPath];
+  delete require.cache[rlPath];
+  require.cache[redisPath] = {
+    id: redisPath,
+    filename: redisPath,
+    loaded: true,
+    exports: {
+      getRedisClient: () => null,
+      isRedisReady: () => false,
+    },
+  };
+
+  const priorEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'production';
+  const { publicLimiter } = require('../src/middleware/rateLimiters');
+  const app = express();
+  app.get('/public-health', publicLimiter, (_req, res) => res.status(200).json({ ok: true }));
+  await request(app).get('/public-health').expect(200);
+
+  process.env.NODE_ENV = priorEnv;
+  delete require.cache[rlPath];
+  if (original) require.cache[redisPath] = original;
+  else delete require.cache[redisPath];
+  console.log('✓ non-security public reads keep serving traffic when Redis is unavailable');
+}
+
+async function testDevelopmentSecurityRoutesUseInMemoryFallback() {
+  const rlPath = require.resolve('../src/middleware/rateLimiters');
+  const redisPath = require.resolve('../src/config/redis');
+  const original = require.cache[redisPath];
+  delete require.cache[rlPath];
+  require.cache[redisPath] = {
+    id: redisPath,
+    filename: redisPath,
+    loaded: true,
+    exports: {
+      getRedisClient: () => null,
+      isRedisReady: () => false,
+    },
+  };
+
+  const priorEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'development';
+  process.env.SECURITY_RATE_LIMIT_LOGIN_PER_MINUTE = '2';
+  clearModule('../src/config/config');
+  const { loginLimiter } = require('../src/middleware/rateLimiters');
+  const app = express();
+  app.post('/login', loginLimiter, (_req, res) => res.status(200).json({ ok: true }));
+  await request(app).post('/login').expect(200);
+  await request(app).post('/login').expect(200);
+  await request(app).post('/login').expect(429);
+
+  delete process.env.SECURITY_RATE_LIMIT_LOGIN_PER_MINUTE;
+  process.env.NODE_ENV = priorEnv;
+  delete require.cache[rlPath];
+  if (original) require.cache[redisPath] = original;
+  else delete require.cache[redisPath];
+  console.log('✓ development/test mode retains in-memory fallback for security controls');
+}
+
 async function run() {
   try {
     await testIpv4MappedIpv6RateLimitNormalization();
     await testPrometheusMetricsRendering();
     await testAdminStatusNormalization();
     await testDebugRoutesDisabledInProduction();
+    await testNonSecurityPublicReadDoesNotFailClosedWhenRedisUnavailable();
+    await testDevelopmentSecurityRoutesUseInMemoryFallback();
     delete process.env.SECURITY_RATE_LIMIT_GLOBAL;
     Module._load = originalLoad;
     console.log('Production hardening tests passed.');
