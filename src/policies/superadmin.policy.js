@@ -1,69 +1,24 @@
 /**
  * SuperAdmin Authorization Policies
- * 
+ *
  * Centralized authorization logic for SuperAdmin operations.
- * These policies define SuperAdmin-specific access.
- * 
- * Rules:
- * - SuperAdmin has platform-level access only
- * - SuperAdmin CANNOT access firm data (cases, clients, users)
- * - SuperAdmin CAN manage firms and platform operations
- * 
- * EXPLICIT OPT-IN: SuperAdmin access must be explicitly declared
- * Never rely on implicit bypass logic
  */
+const { isSuperAdminRole } = require('../utils/role.utils');
 
-/**
- * Check if user is SuperAdmin
- * @param {Object} user - Authenticated user from req.user
- * @returns {boolean} - True if SuperAdmin, false otherwise
- */
 const isSuperAdmin = (user) => {
   if (!user) return false;
-  
-  // Explicit check for SuperAdmin role (both variants)
-  return user.role === 'SuperAdmin' || user.role === 'SUPER_ADMIN';
+  return isSuperAdminRole(user.role);
 };
 
-/**
- * Check if user can access platform operations
- * @param {Object} user - Authenticated user from req.user
- * @returns {boolean} - True if allowed, false otherwise
- */
-const canAccessPlatform = (user) => {
-  return isSuperAdmin(user);
-};
+const canAccessPlatform = (user) => isSuperAdmin(user);
+const canManageFirms = (user) => isSuperAdmin(user);
+const canViewPlatformStats = (user) => isSuperAdmin(user);
 
 /**
- * Check if user can manage firms
- * @param {Object} user - Authenticated user from req.user
- * @returns {boolean} - True if allowed, false otherwise
+ * Explicitly indicate if user is blocked from firm-scoped business data.
+ * Contract: returns true for SuperAdmin variants, false for firm users.
  */
-const canManageFirms = (user) => {
-  return isSuperAdmin(user);
-};
-
-/**
- * Check if user can view platform statistics
- * @param {Object} user - Authenticated user from req.user
- * @returns {boolean} - True if allowed, false otherwise
- */
-const canViewPlatformStats = (user) => {
-  return isSuperAdmin(user);
-};
-
-/**
- * Explicitly deny SuperAdmin access to firm data
- * This policy should be used to protect firm-scoped routes
- * @param {Object} user - Authenticated user from req.user
- * @returns {boolean} - True if NOT SuperAdmin, false if SuperAdmin
- */
-const cannotAccessFirmData = (user) => {
-  if (!user) return false;
-  
-  // Deny if SuperAdmin
-  return !isSuperAdmin(user);
-};
+const cannotAccessFirmData = (user) => isSuperAdmin(user);
 
 module.exports = {
   isSuperAdmin,

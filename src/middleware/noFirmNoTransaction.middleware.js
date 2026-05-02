@@ -1,5 +1,7 @@
+const { isSuperAdminRole } = require('../utils/role.utils');
+
 const noFirmNoTransaction = (req, _res, next) => {
-  if (req.user?.role === 'SuperAdmin') {
+  if (isSuperAdminRole(req.user?.role)) {
     return next();
   }
   req.skipFirmContext = true;
