@@ -25,3 +25,19 @@ Method: `createApp + supertest` diagnostic script with temporary auth/tenant stu
 2. **Firm-resolution 500 class second** (leads/forms):
    - Resolve tenant/firm context dependency mismatch and ensure empty-state returns 200 with array payload.
 3. Keep auth model unchanged in these focused PRs.
+
+## 2026-05-02 Route-level 404 Fix Status Update
+
+The route-level 404 class has been fixed for the following endpoints under `createApp` tenant mounts:
+
+- `GET /api/clients?activeOnly=false&page=1&limit=25`
+- `GET /api/reports/case-metrics`
+- `GET /api/storage/configuration`
+- `GET /api/ai/configuration`
+
+Validation test added:
+
+- `tests/primaryAdminSidebarRoute404.createApp.test.js`
+  - Asserts authenticated primary-admin tenant context returns `200` for all four endpoints.
+  - Asserts empty/default-safe response shapes for clients/reports/storage/ai.
+  - Asserts AI config response does not expose plaintext API key fields.
