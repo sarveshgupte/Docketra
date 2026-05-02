@@ -12,6 +12,7 @@ const firmsPage = read('pages/FirmsManagement.jsx');
 const insightsPage = read('pages/SuperadminOnboardingInsightsPage.jsx');
 const diagnosticsPage = read('pages/SuperadminDiagnosticsPage.jsx');
 const dashboardPage = read('pages/SuperadminDashboard.jsx');
+const firmDetailPage = read('pages/SuperadminFirmDetailPage.jsx');
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -21,6 +22,7 @@ const activeSuperadminRoutes = [
   '/app/superadmin/onboarding-insights',
   '/app/superadmin/onboarding-insights/:firmId',
   '/app/superadmin/diagnostics',
+  '/app/superadmin/firms/:firmId',
 ];
 
 for (const route of activeSuperadminRoutes) {
@@ -33,6 +35,7 @@ const requiredLazyExports = [
   'SuperadminOnboardingInsightsPage',
   'SuperadminFirmOnboardingDetailPage',
   'SuperadminDiagnosticsPage',
+  'SuperadminFirmDetailPage',
 ];
 
 for (const exportName of requiredLazyExports) {
@@ -56,6 +59,23 @@ assert.ok(
   'Firms page should provide a readable top-level error state when no data is available.',
 );
 assert.ok(firmsPage.includes('No firms exist yet'), 'Firms page should provide a readable empty state.');
+
+
+assert.ok(firmsPage.includes('to={`/app/superadmin/firms/${firm._id}`}'), 'Firm rows should link to the firm 360 detail page.');
+assert.ok(
+  firmDetailPage.includes('Firm 360 Detail')
+    && firmDetailPage.includes('Firm identity')
+    && firmDetailPage.includes('Admin management')
+    && firmDetailPage.includes('Onboarding health')
+    && firmDetailPage.includes('Storage / BYOS')
+    && firmDetailPage.includes('Plan / limits')
+    && firmDetailPage.includes('Support diagnostics'),
+  'Firm detail page should render key section labels.',
+);
+assert.ok(
+  firmDetailPage.includes('Superadmin can manage tenant lifecycle and support metadata, but cannot access firm client records, dockets, tasks, attachments, or private client content.'),
+  'Firm detail page should include the explicit privacy boundary note.',
+);
 
 
 assert.ok(
