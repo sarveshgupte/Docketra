@@ -6,6 +6,7 @@ const DEFAULT_FILTERS = { actionType: '', actor: '', targetEntityType: '', firmI
 
 export const SuperadminAuditLogPage = () => {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [draftFilters, setDraftFilters] = useState(DEFAULT_FILTERS);
   const [logs, setLogs] = useState([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -33,9 +34,16 @@ export const SuperadminAuditLogPage = () => {
     loadLogs({ reset: page === 1 });
   }, [query]);
 
-  const onFilterChange = (key, value) => setFilters((prev) => ({ ...prev, [key]: value }));
-  const onApply = () => setPage(1);
-  const onReset = () => { setFilters(DEFAULT_FILTERS); setPage(1); };
+  const onFilterChange = (key, value) => setDraftFilters((prev) => ({ ...prev, [key]: value }));
+  const onApply = () => {
+    setPage(1);
+    setFilters(draftFilters);
+  };
+  const onReset = () => {
+    setDraftFilters(DEFAULT_FILTERS);
+    setFilters(DEFAULT_FILTERS);
+    setPage(1);
+  };
 
   return (
     <SuperAdminLayout>
@@ -45,7 +53,7 @@ export const SuperadminAuditLogPage = () => {
 
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
           {['actionType','actor','targetEntityType','firmId','from','to','search'].map((key) => (
-            <input key={key} value={filters[key]} onChange={(e) => onFilterChange(key, e.target.value)} placeholder={key} className="rounded border border-gray-300 px-3 py-2 text-sm" />
+            <input key={key} value={draftFilters[key]} onChange={(e) => onFilterChange(key, e.target.value)} placeholder={key} className="rounded border border-gray-300 px-3 py-2 text-sm" />
           ))}
         </div>
         <div className="mt-3 flex gap-2">

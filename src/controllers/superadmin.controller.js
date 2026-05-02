@@ -191,6 +191,20 @@ const getSupportDiagnostics = async (req, res) => {
 };
 
 const REDACT_PATTERN = /(token|secret|password|otp|hash|credential|cookie|authorization|bearer|refresh|access)/i;
+const MAX_SEARCH_LENGTH = 100;
+
+const escapeRegex = (value) => String(value || '').trim().slice(0, MAX_SEARCH_LENGTH).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const buildSafeContainsRegex = (value) => {
+  const escaped = escapeRegex(value);
+  return escaped ? { $regex: escaped, $options: 'i' } : null;
+};
+
+const sanitizeDescription = (value) => {
+  const description = String(value || '');
+  if (!description) return '';
+  if (REDACT_PATTERN.test(description)) return '[REDACTED]';
+  return description.slice(0, 500);
+};
 
 const sanitizeAuditMetadata = (metadata = {}) => {
   if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
@@ -230,9 +244,11 @@ const getSuperadminAuditLogs = async (req, res) => {
 
     const filter = {};
     if (req.query?.actionType) filter.actionType = req.query.actionType;
-    if (req.query?.actor) filter.performedBy = { $regex: req.query.actor, $options: 'i' };
+    const actorRegex = buildSafeContainsRegex(req.query?.actor);
+    if (actorRegex) filter.performedBy = actorRegex;
     if (req.query?.targetEntityType) filter.targetEntityType = req.query.targetEntityType;
-    if (req.query?.firmId) filter['metadata.firmId'] = { $regex: req.query.firmId, $options: 'i' };
+    const firmIdRegex = buildSafeContainsRegex(req.query?.firmId);
+    if (firmIdRegex) filter['metadata.firmId'] = firmIdRegex;
 
     const from = req.query?.from ? new Date(req.query.from) : null;
     const to = req.query?.to ? new Date(req.query.to) : null;
@@ -242,8 +258,8 @@ const getSuperadminAuditLogs = async (req, res) => {
       if (to && !Number.isNaN(to.getTime())) filter.timestamp.$lte = to;
     }
 
-    if (req.query?.search) {
-      const searchRegex = { $regex: req.query.search, $options: 'i' };
+    const searchRegex = buildSafeContainsRegex(req.query?.search);
+    if (searchRegex) {
       filter.$or = [
         { actionType: searchRegex },
         { description: searchRegex },
@@ -267,7 +283,7 @@ const getSuperadminAuditLogs = async (req, res) => {
         _id: row._id,
         timestamp: row.timestamp,
         actionType: row.actionType,
-        description: row.description,
+        description: sanitizeDescription(row.description),
         performedBy: row.performedBy,
         targetEntityType: row.targetEntityType || null,
         targetEntityId: row.targetEntityId || null,
