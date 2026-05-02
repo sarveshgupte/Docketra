@@ -5,6 +5,18 @@ const { isActiveStatus } = require('../utils/status.utils');
 const { resolveCanonicalTenantFromFirmId } = require('../services/tenantIdentity.service');
 const log = require('../utils/log');
 
+const isReusableAuthTenantContext = (req, authTenantContext) => {
+  if (!authTenantContext) return false;
+  const jwtFirmId = req.jwt?.firmId ? String(req.jwt.firmId) : null;
+  if (!jwtFirmId) return false;
+  if (!mongoose.Types.ObjectId.isValid(jwtFirmId)) return false;
+  if (!authTenantContext.tenantId || !mongoose.Types.ObjectId.isValid(String(authTenantContext.tenantId))) return false;
+  if (String(authTenantContext.tenantId) !== jwtFirmId) return false;
+  if (!isActiveStatus(authTenantContext.status || 'active')) return false;
+  if (!authTenantContext.ownershipFirmId) return false;
+  return true;
+};
+
 /**
  * Resolve the tenant context from the request.
  *
@@ -48,6 +60,35 @@ const firmContext = async (req, res, next) => {
     const jwtFirmId = req.jwt?.firmId;
     const sessionFirmId = req.user?.firmId;
 
+    if (req.authTenantContext?.tenantId && jwtFirmId && String(req.authTenantContext.tenantId) !== String(jwtFirmId)) {
+      log.error(`[FIRM_CONTEXT][${requestId}] JWT and auth tenant context mismatch`, {
+        tokenFirmId: jwtFirmId,
+        authTenantId: req.authTenantContext.tenantId,
+      });
+      return res.status(403).json({
+        success: false,
+        message: 'Account mismatch detected for authenticated user',
+      });
+    }
+
+    if (req.authTenantContext?.tenantId && jwtFirmId && String(req.authTenantContext.tenantId) === String(jwtFirmId)) {
+      if (!isActiveStatus(req.authTenantContext.status || 'active')) {
+        log.warn(`[FIRM_CONTEXT][${requestId}] Tenant disabled from auth context`, {
+          tenantId: req.authTenantContext.tenantId,
+          status: req.authTenantContext.status,
+        });
+        return res.status(403).json({
+          success: false,
+          message: 'Your account is disabled. Please contact support.',
+        });
+      }
+      if (!req.authTenantContext.ownershipFirmId) {
+        const error = new Error('Tenant context missing');
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
     // Prefer the JWT claim; fall back to session value
     const candidateId = (jwtFirmId && mongoose.Types.ObjectId.isValid(jwtFirmId))
       ? jwtFirmId
@@ -65,7 +106,21 @@ const firmContext = async (req, res, next) => {
     let tenantId = null;
     let tenantStatus = 'active';
     let tenantSlug = null;
-    const tenantContext = await resolveCanonicalTenantFromFirmId(candidateId);
+    let tenantContext = null;
+
+    if (!isSuperAdmin && isReusableAuthTenantContext(req, req.authTenantContext)) {
+      tenantContext = {
+        tenantId: String(req.authTenantContext.tenantId),
+        defaultClientId: req.authTenantContext.defaultClientId || null,
+        ownershipFirmId: req.authTenantContext.ownershipFirmId || null,
+        legacyFirmId: req.authTenantContext.legacyFirmId || null,
+        firmSlug: req.authTenantContext.firmSlug || null,
+        status: req.authTenantContext.status || null,
+        source: req.authTenantContext.source || 'auth_context_reuse',
+      };
+    } else {
+      tenantContext = await resolveCanonicalTenantFromFirmId(candidateId);
+    }
 
     if (tenantContext) {
       tenantId = tenantContext.tenantId;
@@ -114,7 +169,7 @@ const firmContext = async (req, res, next) => {
       slug: tenantSlug,
     };
     req.firmId = tenantId;
-    req.ownershipFirmId = tenantContext.ownershipFirmId || null;
+    req.ownershipFirmId = tenantContext?.ownershipFirmId || null;
     req.firmSlug = tenantSlug;
     req.context = {
       ...req.context,
