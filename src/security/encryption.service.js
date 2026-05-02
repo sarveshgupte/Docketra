@@ -43,9 +43,9 @@ function getProvider() {
     _provider = new LocalEncryptionProvider();
   } else {
     if (name === 'kms') {
-    throw new Error('ENCRYPTION_PROVIDER=kms is not available in this deployment. Use ENCRYPTION_PROVIDER=local until KMS is implemented.');
-  }
-  throw new Error(`Unsupported ENCRYPTION_PROVIDER "${name}". Supported providers: local, disabled`);
+      throw new Error('ENCRYPTION_PROVIDER=kms is not available in this deployment. Use ENCRYPTION_PROVIDER=local until KMS is implemented.');
+    }
+    throw new Error(`Unsupported ENCRYPTION_PROVIDER "${name}". Supported providers: local, disabled`);
   }
   return _provider;
 }
