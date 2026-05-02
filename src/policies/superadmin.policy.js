@@ -18,11 +18,11 @@
  * @param {Object} user - Authenticated user from req.user
  * @returns {boolean} - True if SuperAdmin, false otherwise
  */
+const { isSuperAdminRole } = require('../utils/role.utils');
+
 const isSuperAdmin = (user) => {
   if (!user) return false;
-  
-  // Explicit check for SuperAdmin role (both variants)
-  return user.role === 'SuperAdmin' || user.role === 'SUPER_ADMIN';
+  return isSuperAdminRole(user.role);
 };
 
 /**
