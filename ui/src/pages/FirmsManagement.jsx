@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { superadminService } from '../services/superadminService';
 import { SuperAdminLayout } from '../components/common/SuperAdminLayout';
 import { Card } from '../components/common/Card';
@@ -719,7 +719,7 @@ export const FirmsManagement = () => {
                       <tr key={firm._id}>
                         <td>
                           <div className="firm-name">
-                            <div className="firm-name__primary">{firm.name}</div>
+                            <div className="firm-name__primary"><Link className="text-blue-600 underline" to={`/app/superadmin/firms/${firm._id}`}>{firm.name}</Link></div>
                             <div className="firm-name__secondary">{firm.firmId}</div>
                           </div>
                         </td>
