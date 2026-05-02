@@ -37,9 +37,14 @@ const U = (role) => ({ role });
   assert.equal(clientPolicy.canCreate(U('Employee')), false);
 
   // Superadmin variants are denied on firm-scoped business-data policy paths
-  assert.equal(superadminPolicy.cannotAccessFirmData(U('SUPERADMIN')), false);
-  assert.equal(superadminPolicy.cannotAccessFirmData(U('SUPER_ADMIN')), false);
-  assert.equal(superadminPolicy.cannotAccessFirmData(U('SuperAdmin')), false);
+  assert.equal(superadminPolicy.cannotAccessFirmData(U('SUPERADMIN')), true);
+  assert.equal(superadminPolicy.cannotAccessFirmData(U('SUPER_ADMIN')), true);
+  assert.equal(superadminPolicy.cannotAccessFirmData(U('SuperAdmin')), true);
+
+  assert.equal(casePolicy.canView(U('SUPER_ADMIN')), false);
+  assert.equal(clientPolicy.canView(U('SUPER_ADMIN')), false);
+  assert.equal(categoryPolicy.canView(U('SUPER_ADMIN')), false);
+  assert.equal(userPolicy.canView(U('SUPER_ADMIN')), false);
 
   console.log('role contract canonical policy tests passed');
 })();
