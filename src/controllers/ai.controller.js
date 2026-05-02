@@ -16,11 +16,13 @@ function normalizeProviderInput(provider) {
 
 async function getOwnershipFirmId(tenantId, path) {
   const tenantContext = await resolveStorageContextFromTenantId(tenantId);
-  if (!tenantContext?.ownershipFirmId) {
-    log.warn('[AI_SETTINGS] ownership_resolution_failed', { tenantId, path });
-    return null;
+  if (tenantContext?.ownershipFirmId) return tenantContext.ownershipFirmId;
+  if (tenantId) {
+    log.warn('[AI_SETTINGS] ownership_resolution_fallback_to_tenant', { tenantId, path });
+    return tenantId;
   }
-  return tenantContext.ownershipFirmId;
+  log.warn('[AI_SETTINGS] ownership_resolution_failed', { tenantId, path });
+  return null;
 }
 
 async function getAiConfiguration(req, res) {

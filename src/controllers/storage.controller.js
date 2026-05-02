@@ -81,12 +81,16 @@ async function resolveOwnershipFirmId(req, res) {
   const resolved = req.ownershipFirmId || req.firm?.ownershipFirmId;
   if (resolved) return resolved;
   const context = await resolveStorageContextFromTenantId(req.firmId);
-  if (!context?.ownershipFirmId) {
-    log.warn('[STORAGE]', { event: 'ownership_resolution_failed', tenantId: req.firmId, path: req.originalUrl });
-    res.status(400).json({ error: 'Tenant mapping missing' });
-    return null;
+  if (context?.ownershipFirmId) return context.ownershipFirmId;
+
+  if (req.firmId) {
+    log.warn('[STORAGE]', { event: 'ownership_resolution_fallback_to_tenant', tenantId: req.firmId, path: req.originalUrl });
+    return req.firmId;
   }
-  return context.ownershipFirmId;
+
+  log.warn('[STORAGE]', { event: 'ownership_resolution_failed', tenantId: req.firmId, path: req.originalUrl });
+  res.status(400).json({ error: 'Tenant mapping missing' });
+  return null;
 }
 
 
