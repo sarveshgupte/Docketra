@@ -7,4 +7,8 @@ const source = fs.readFileSync(path.resolve(__dirname, '../src/controllers/super
 assert.ok(source.includes('Math.min(requestedLimit, 100)'), 'Audit log endpoint should cap limit at 100');
 assert.ok(source.includes('REDACT_PATTERN'), 'Audit log endpoint should define redact pattern');
 assert.ok(source.includes("acc[key] = '[REDACTED]'"), 'Sensitive metadata keys should be redacted');
+assert.ok(source.includes('escapeRegex'), 'Regex input should be escaped before creating Mongo regex queries');
+assert.ok(source.includes('MAX_SEARCH_LENGTH = 100'), 'Search input should be capped to a safe max length');
+assert.ok(source.includes("sanitizeDescription"), 'Description should be sanitized before returning');
+assert.ok(source.includes("description: sanitizeDescription(row.description)"), 'Sanitized description should be used in response payload');
 console.log('superadminAuditLogController.guardrails.test.js passed');

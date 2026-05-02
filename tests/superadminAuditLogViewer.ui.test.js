@@ -17,6 +17,10 @@ assert.ok(!layout.includes('href="#"'), 'Layout should not include placeholder l
 const page = fs.readFileSync(path.resolve(__dirname, '../ui/src/pages/SuperadminAuditLogPage.jsx'), 'utf8');
 assert.ok(page.includes('Timestamp'), 'Audit page should include Timestamp label');
 assert.ok(page.includes('Action Type'), 'Audit page should include Action Type label');
+assert.ok(page.includes('draftFilters'), 'Audit page should keep draftFilters state to avoid loading on every keystroke');
+assert.ok(page.includes('setFilters(draftFilters)'), 'Apply filters should move draft filters into active query state');
+assert.ok(page.includes('setDraftFilters(DEFAULT_FILTERS)'), 'Reset should clear draft filters');
+assert.ok(page.includes('setFilters(DEFAULT_FILTERS)'), 'Reset should clear active filters');
 assert.ok(page.includes('Audit logs show platform lifecycle/support actions only'), 'Audit page should include privacy boundary text');
 assert.ok(!page.includes('href="#"'), 'Audit page should not include placeholder links');
 
