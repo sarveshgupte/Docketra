@@ -2,6 +2,14 @@
 const assert = require('assert');
 const request = require('supertest');
 
+const bcryptPath = require.resolve('bcrypt');
+require.cache[bcryptPath] = {
+  id: bcryptPath,
+  filename: bcryptPath,
+  loaded: true,
+  exports: { compare: async () => true, hash: async (value) => value },
+};
+
 process.env.NODE_ENV = 'test';
 process.env.UPLOAD_SCAN_STRICT = 'false';
 process.env.JWT_SECRET = 'x'.repeat(80);

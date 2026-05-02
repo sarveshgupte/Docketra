@@ -38,7 +38,7 @@ Deterministic auth/session smoke coverage for pilot-critical flows:
 ## Pass/Fail Status (current run)
 - `node tests/authPilotReadinessSmoke.test.js`: **PASS**
 - `npm --prefix ui run test:public-auth-routing-sanity`: **PASS**
-- `npm run test:auth-pilot-smoke`: **FAIL** (currently failing on SuperAdmin session parity path due environment-coupled auth audit DB buffering in this container run)
+- `npm run test:auth-pilot-smoke`: **PASS**
 
 ## Bugs Found
 - The previous smoke harness used request shapes that did not match auth service expectations (`xID` vs `identifier`), causing false failures.
@@ -49,6 +49,5 @@ Deterministic auth/session smoke coverage for pilot-critical flows:
 - Added deterministic bcrypt-stubbed SuperAdmin pilot session smoke harness (`tests/superadminPilotSessionSmoke.test.js`) to reduce native dependency flake.
 - Kept existing boundary regression coverage for SuperAdmin vs firm route isolation.
 
-## Remaining to reach full pilot-ready acceptance
-- Make `npm run test:auth-pilot-smoke` fully green by removing remaining DB-coupled behavior from the SuperAdmin session path in deterministic test mode.
-- Then re-run and record final PASS for auth pilot smoke + release-gate/fallback.
+## Pilot-ready status
+Core auth pilot smoke commands are green in deterministic test mode, including SuperAdmin session smoke and frontend public auth route sanity.
