@@ -157,9 +157,10 @@ const listKnowledgeItems = async (req, res) => {
     if (req.query.q) {
       const q = String(req.query.q).trim();
       if (q) {
+        const escapedQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         filter.$or = [
-          { title: { $regex: q, $options: 'i' } },
-          { summary: { $regex: q, $options: 'i' } },
+          { title: { $regex: escapedQ, $options: 'i' } },
+          { summary: { $regex: escapedQ, $options: 'i' } },
         ];
       }
     }
