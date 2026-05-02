@@ -1246,7 +1246,7 @@ const updateStorageConfig = async (req, res) => {
       if (!isExternalStorageEnabled()) {
         return res.status(403).json({
           success: false,
-          message: 'Connect Your Storage is coming soon for this environment.',
+          message: 'External storage is disabled in this environment. Docketra-managed storage remains active.',
           code: 'EXTERNAL_STORAGE_DISABLED',
         });
       }
