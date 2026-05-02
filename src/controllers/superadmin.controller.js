@@ -72,6 +72,17 @@ const updateSuperadminFeatureFlag = async (req, res) => {
     if (invalid.length) {
       return res.status(400).json({ success: false, message: 'Invalid firmIds provided', data: { invalidFirmIds: invalid } });
     }
+    if (Array.isArray(firmIds) && normalizedFirmIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'firmIds must contain at least one firm when provided.' });
+    }
+    if (Array.isArray(firmIds) && normalizedFirmIds.length > 0) {
+      const existingFirmRows = await Firm.find({ _id: { $in: normalizedFirmIds }, status: { $ne: 'deleted' } }).select('_id').lean();
+      const existing = new Set(existingFirmRows.map((row) => String(row._id)));
+      const missingFirmIds = normalizedFirmIds.filter((id) => !existing.has(id));
+      if (missingFirmIds.length) {
+        return res.status(400).json({ success: false, message: 'Some firmIds were not found', data: { missingFirmIds } });
+      }
+    }
     const updateDoc = updateFeatureFlagState({ key, enabledGlobally, rolloutStage, firmIds });
     const hasFirmOverridePayload = Array.isArray(firmIds);
     if (Object.keys(updateDoc).length === 1 && !hasFirmOverridePayload) {
@@ -88,12 +99,6 @@ const updateSuperadminFeatureFlag = async (req, res) => {
       await Firm.updateMany({ _id: { $in: normalizedFirmIds }, status: { $ne: 'deleted' } }, {
         $set: {
           [`featureFlags.${key}.enabled`]: true,
-          [`featureFlags.${key}.updatedAt`]: new Date(),
-        },
-      });
-      await Firm.updateMany({ _id: { $nin: normalizedFirmIds }, status: { $ne: 'deleted' } }, {
-        $set: {
-          [`featureFlags.${key}.enabled`]: false,
           [`featureFlags.${key}.updatedAt`]: new Date(),
         },
       });
