@@ -77,7 +77,7 @@ function getResolvedOwnershipAuditTenantId(ownershipFirmId, req) {
   return ownershipFirmId || req.ownershipFirmId || req.firm?.ownershipFirmId || null;
 }
 
-async function resolveOwnershipFirmId(req, res) {
+async function resolveOwnershipFirmIdForWrite(req, res) {
   const resolved = req.ownershipFirmId || req.firm?.ownershipFirmId;
   if (resolved) return resolved;
   const context = await resolveStorageContextFromTenantId(req.firmId);
@@ -87,6 +87,22 @@ async function resolveOwnershipFirmId(req, res) {
     return null;
   }
   return context.ownershipFirmId;
+}
+
+async function resolveOwnershipFirmIdForRead(req) {
+  const resolved = req.ownershipFirmId || req.firm?.ownershipFirmId;
+  if (resolved) return resolved;
+  const context = await resolveStorageContextFromTenantId(req.firmId);
+  if (context?.ownershipFirmId) return context.ownershipFirmId;
+  if (req.firmId) {
+    log.warn('[STORAGE]', {
+      event: 'ownership_read_fallback_to_tenant',
+      tenantId: req.firmId,
+      path: req.originalUrl,
+    });
+    return req.firmId;
+  }
+  return null;
 }
 
 
@@ -193,7 +209,7 @@ function mapProviderErrorToStatus(error) {
 
 const getStorageStatus = async (req, res) => {
   try {
-    const ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
+    const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
     const firm = await Firm.findById(ownershipFirmId).select('storageConfig').lean();
     const credentials = decodeFirmStorageConfig(firm, ownershipFirmId);
     const context = await googleDriveService.getClient(ownershipFirmId);
@@ -214,7 +230,7 @@ const getStorageStatus = async (req, res) => {
 
 const getStorageHealth = async (req, res) => {
   try {
-    const ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
+    const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
     const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig -_id').lean();
 
     const storageMode = firm?.storage?.mode || MANAGED_STORAGE_MODE;
@@ -273,7 +289,7 @@ const googleCallback = async (req, res) => {
     const tokens = result.tokens || {};
     if (!tokens.refresh_token) return res.status(400).json({ error: 'no_refresh_token' });
 
-    const ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
+    const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
     const connection = await googleDriveService.saveUserDriveConnection({ firmId: ownershipFirmId, tokens });
 
     res.setHeader('Set-Cookie', buildStateCookie('', 0));
@@ -294,7 +310,7 @@ const googleCallback = async (req, res) => {
 const googleConfirmDrive = async (req, res) => {
   if (!ensurePrimaryAdmin(req, res)) return;
   if (!ensureStorageOtpVerification(req, res)) return;
-  const ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
+  const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
   const { driveId } = req.body || {};
   if (!driveId) return res.status(400).json({ error: 'driveId is required' });
 
@@ -338,7 +354,8 @@ const googleConfirmDrive = async (req, res) => {
 
 const getStorageConfiguration = async (req, res) => {
   try {
-    const ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
+    const ownershipFirmId = await resolveOwnershipFirmIdForRead(req);
+    if (!ownershipFirmId) return res.status(400).json({ error: 'Tenant mapping missing' });
     const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig settings.storageBackup').lean();
     const state = resolveFirmStorageState(firm);
 
@@ -379,7 +396,7 @@ const getStorageConfiguration = async (req, res) => {
 const getStorageOwnershipSummary = async (req, res) => {
   if (!ensureFirmAdmin(req, res)) return;
   try {
-    const ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
+    const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
     const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig settings.storageBackup').lean();
     const state = resolveFirmStorageState(firm);
     const storageProvider = toUiProvider(state.canonicalProvider);
@@ -459,7 +476,7 @@ const getStorageOwnershipSummary = async (req, res) => {
 
 const testStorageConnection = async (req, res) => {
   try {
-    const ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
+    const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
     const provider = await StorageProviderFactory.getProvider(ownershipFirmId);
     if (typeof provider.testConnection === 'function') {
       await provider.testConnection();
@@ -475,7 +492,7 @@ const changeFirmStorage = async (req, res) => {
   if (!ensureFirmAdmin(req, res)) return;
   if (!ensureStorageOtpVerification(req, res)) return;
 
-  const ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
+  const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
   const firmId = String(ownershipFirmId || '');
   const requestedProvider = String(req.body?.provider || '').trim();
   const provider = normalizeProvider(requestedProvider);
@@ -629,7 +646,7 @@ const exportFirmStorage = async (req, res) => {
   let ownershipFirmId = null;
   try {
     if (!ensurePrimaryAdmin(req, res)) return;
-    ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
+    ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
     const backup = await storageBackupService.runBackupForFirm(ownershipFirmId, { sendEmail: true });
     const access = await storageBackupService.buildBackupAccess({
       firmId: ownershipFirmId,
@@ -722,7 +739,7 @@ const exportFirmStorage = async (req, res) => {
 
 const downloadFirmStorageExport = async (req, res) => {
   const { token } = req.params;
-  const ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
+  const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
   const entry = await storageBackupService.buildBackupAccess({ firmId: ownershipFirmId, exportId: token });
   if (!entry) return res.status(404).json({ error: 'invalid_or_expired_export_link' });
 
@@ -756,7 +773,7 @@ const downloadFirmStorageExport = async (req, res) => {
 const listBackupRuns = async (req, res) => {
   try {
     if (!ensurePrimaryAdmin(req, res)) return;
-    const ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
+    const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
     const items = await storageBackupService.listBackups(ownershipFirmId, req.query?.limit || 20);
     return res.json({
       success: true,
@@ -779,7 +796,7 @@ const listBackupRuns = async (req, res) => {
 const disconnectStorage = async (req, res) => {
   if (!ensurePrimaryAdmin(req, res)) return;
   try {
-    const ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
+    const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
     const previous = await Firm.findById(ownershipFirmId).select('storage storageConfig').lean();
     const previousProvider = normalizeProvider(previous?.storageConfig?.provider)
       || normalizeProvider(previous?.storage?.provider)
@@ -826,7 +843,7 @@ const disconnectStorage = async (req, res) => {
 const storageHealthCheck = async (req, res) => {
   let ownershipFirmId = req.ownershipFirmId || req.firm?.ownershipFirmId || null;
   try {
-    ownershipFirmId = ownershipFirmId || await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
+    ownershipFirmId = ownershipFirmId || await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
     const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig').lean();
     const state = resolveFirmStorageState(firm);
     const provider = await StorageProviderFactory.getProvider(ownershipFirmId);
@@ -869,7 +886,7 @@ const storageHealthCheck = async (req, res) => {
 
 const storageUsage = async (req, res) => {
   try {
-    const ownershipFirmId = await resolveOwnershipFirmId(req, res); if (!ownershipFirmId) return;
+    const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
     const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig').lean();
     const state = resolveFirmStorageState(firm);
     const provider = await StorageProviderFactory.getProvider(ownershipFirmId);
