@@ -145,3 +145,42 @@ Global search is platform lifecycle/support scoped only. It does **not** search 
 - Add type chips/toggles in UI (firms/admins/audit) that map directly to `types` query param.
 - Add keyboard navigation and recent search suggestions (superadmin-only, ephemeral client state).
 - Add requestId deep-link presets to diagnostics/audit filtered views.
+
+## Firm Health and Risk Queue
+
+- **UI route:** `/app/superadmin/firm-health`
+- **API route:** `GET /api/superadmin/firm-health`
+- **Access:** `requireSuperadmin` + superadmin platform policy authorization.
+- **Query params:**
+  - `limit` optional, capped at `100`
+  - `status` optional: `healthy | watch | at_risk | critical`
+  - `search` optional, capped to `100` chars and regex-escaped
+
+### Score signals (safe metadata only)
+
+Firm health starts at `100` and subtracts deterministic penalties for:
+- inactive/suspended lifecycle status
+- no verified admin-access signal
+- stale onboarding users
+- incomplete onboarding users
+- storage health not `HEALTHY`/unknown
+- no active usage/admin signal
+
+Scores are clamped to `0..100`.
+
+### Risk levels
+
+- `80-100`: healthy
+- `60-79`: watch
+- `40-59`: at_risk
+- `0-39`: critical
+
+### Privacy boundaries
+
+The Firm Health view only surfaces platform lifecycle/support metadata and never returns client records, dockets, tasks, attachments, documents, storage credentials, raw admin emails, tokens, OTPs, passwords, cookies, auth headers, or other secrets/private content.
+
+### Extension points
+
+- Add platform-level auth degradation indicators (aggregate only) into `signals.auth`
+- Add lightweight trend windows (e.g. 7-day score delta) from safe aggregate counters
+- Add risk-notes workflow for superadmin operations without touching firm client data

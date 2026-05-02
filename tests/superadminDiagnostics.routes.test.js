@@ -68,6 +68,9 @@ Module._load = function(request, parent, isMain) {
       getOnboardingInsightDetails: () => {},
       getOnboardingAlerts: () => {},
       getSupportDiagnostics,
+      getFirmHealth: () => {},
+      getSuperadminAuditLogs: () => {},
+      getSuperadminGlobalSearch: () => {},
     };
   }
 

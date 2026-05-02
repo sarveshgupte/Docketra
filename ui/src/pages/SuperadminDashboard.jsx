@@ -21,24 +21,29 @@ export const SuperadminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [insights, setInsights] = useState(null);
   const [diagnostics, setDiagnostics] = useState(null);
+  const [firmHealth, setFirmHealth] = useState(null);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     setError('');
 
-    const [statsRes, insightsRes, diagnosticsRes] = await Promise.allSettled([
+    const [statsRes, insightsRes, diagnosticsRes, healthRes] = await Promise.allSettled([
       superadminService.getPlatformStats(),
       superadminService.getOnboardingInsights({ sinceDays: 30, staleAfterDays: 7, recentLimit: 20 }),
       superadminService.getSupportDiagnostics({ limit: 20 }),
+      superadminService.getFirmHealth({ limit: 100 }),
     ]);
 
     const statsData = statsRes.status === 'fulfilled' && statsRes.value?.success ? statsRes.value.data : null;
     const insightsData = insightsRes.status === 'fulfilled' && insightsRes.value?.success ? insightsRes.value.data : null;
     const diagnosticsData = diagnosticsRes.status === 'fulfilled' && diagnosticsRes.value?.success ? diagnosticsRes.value.data : null;
+    const healthData = healthRes.status === 'fulfilled' && healthRes.value?.success ? healthRes.value.data : null;
 
     setStats(statsData);
     setInsights(insightsData);
+
     setDiagnostics(diagnosticsData);
+    setFirmHealth(healthData);
 
     if (!statsData && !insightsData && !diagnosticsData) {
       setError('Platform command center is temporarily unavailable.');
@@ -143,10 +148,17 @@ export const SuperadminDashboard = () => {
             </Card>
 
             <Card className="space-y-3">
+              <h2 className="text-lg font-semibold text-gray-900">Firm Health / Risk Queue</h2>
+              <p className="text-sm text-gray-600">Critical: {firmHealth?.totals?.critical || 0} · At risk: {firmHealth?.totals?.atRisk || 0}</p>
+              <Button variant="secondary" onClick={() => navigate('/app/superadmin/firm-health')}>Open Firm Health Queue</Button>
+            </Card>
+
+            <Card className="space-y-3">
               <h2 className="text-lg font-semibold text-gray-900">Quick links</h2>
               <div className="flex flex-wrap gap-2">
                 <Button variant="primary" onClick={() => navigate('/app/superadmin/firms')}>Firms Management</Button>
                 <Button variant="secondary" onClick={() => navigate('/app/superadmin/onboarding-insights')}>Onboarding Insights</Button>
+                <Button variant="secondary" onClick={() => navigate('/app/superadmin/firm-health')}>Firm Health</Button>
                 <Button variant="secondary" onClick={() => navigate('/app/superadmin/diagnostics')}>Support Diagnostics</Button>
               </div>
             </Card>
