@@ -124,7 +124,7 @@ export const PlatformCrmPage = () => {
       <StatusMessageStack
         messages={[
           { tone: 'error', message: error },
-          { tone: 'info', message: refreshing ? 'Refreshing CRM overview in the background…' : '' },
+          { tone: 'info', message: refreshing ? 'Refreshing Relationships overview in the background…' : '' },
         ]}
       />
       <StatGrid items={cards} />
@@ -135,7 +135,7 @@ export const PlatformCrmPage = () => {
         <p className="muted">Client records also power clearer docket context and reporting readiness.</p>
       </PageSection>
 
-      <PageSection title="Quick actions" description="Use CRM as your summary + routing hub; creation flows remain in Client Management and Leads.">
+      <PageSection title="Quick actions" description="Use this page as a routing hub; creation flows remain in Client Management and Prospective Clients.">
         <div className="action-row">
           <Link to={safeRoute(`${ROUTES.CRM_CLIENTS(firmSlug)}?action=new`)}>New Client</Link>
           <Link to={safeRoute(ROUTES.CRM_LEADS(firmSlug))}>Open Prospective Clients</Link>
@@ -143,7 +143,7 @@ export const PlatformCrmPage = () => {
         </div>
       </PageSection>
 
-      <PageSection title="CRM areas" description="Open the right CRM surface quickly.">
+      <PageSection title="Relationship areas" description="Open the right surface quickly.">
         <div className="tile-grid">
           <Link className="module-tile" to={safeRoute(ROUTES.CRM_CLIENTS(firmSlug))}>
             <strong>Client Management</strong>
@@ -156,7 +156,7 @@ export const PlatformCrmPage = () => {
         </div>
       </PageSection>
 
-      <PageSection title="Recently added clients" description="Latest clients created in CRM.">
+      <PageSection title="Recently added clients" description="Latest clients added.">
         <DataTable
           columns={['Client', 'Email', 'Phone', 'Created']}
           rows={recentlyAdded.map((client) => (
@@ -170,7 +170,7 @@ export const PlatformCrmPage = () => {
           loading={loading}
           error={error}
           onRetry={() => void loadData()}
-          emptyLabel="No CRM clients yet. Add your first client from Client Management."
+          emptyLabel="No clients yet. Add your first client from Client Management."
           pageSize={5}
         />
       </PageSection>

@@ -342,9 +342,9 @@ export const PlatformCmsPage = () => {
 
   return (
     <PlatformShell
-      moduleLabel="CMS / Intake and Submission"
-      title="CMS"
-      subtitle="Intake and submission surface hub for request links, forms, and public intake routing."
+      moduleLabel="Firm Memory / Knowledge Intake"
+      title="Knowledge Intake"
+      subtitle="Submission forms, intake links, and incoming enquiry processing."
       actions={<Link to={ROUTES.CRM_LEADS(firmSlug)}>Go to Intake Queue</Link>}
     >
       <StatusMessageStack
@@ -358,7 +358,7 @@ export const PlatformCmsPage = () => {
       <StatGrid items={cmsStats} />
       <PageSection
         title="What this module is for"
-        description="CMS captures intake submissions. Leads are created first, then client/docket creation follows your configured intake settings."
+        description="Knowledge Intake captures submitted requests. Leads are created first, then client and docket creation follows your configured intake settings."
       >
         <p className="muted">If no data appears yet, publish one form and submit a test intake.</p>
       </PageSection>

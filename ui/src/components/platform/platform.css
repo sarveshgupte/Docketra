@@ -1300,6 +1300,10 @@ select:focus-visible {
     padding: 12px;
   }
 
+  .platform__collapse {
+    display: none;
+  }
+
   .cms-form-editor__status-row {
     margin-bottom: 12px;
   }
