@@ -50,3 +50,10 @@ Landing copy explicitly states:
 1. Revert the files listed in **Files changed**.
 2. Re-run build + route tests listed above.
 3. Verify `/`, `/login`, `/signup`, and `/:firmSlug/login` behavior remains unchanged.
+
+
+## Revisions (May 2026, pass 2)
+- Updated hero copy to align with requested Lovable direction.
+- Added warm gradient hero treatment and premium card/border spacing refinements.
+- Upgraded dashboard mockup into a workspace-style preview with module rail and activity rows.
+- Added trust chips: Built for Indian firms, Metadata-only oversight, BYOS-compatible storage.
