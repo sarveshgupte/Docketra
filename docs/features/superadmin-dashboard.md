@@ -132,7 +132,7 @@ Audit log viewer is platform lifecycle/support scoped only. It must never return
 - Grouped response shape:
   - `{ firms: [], admins: [], audit: [] }`
 - Firm result:
-  - `type`, `id`, `firmId`, `firmSlug`, `name`, `status`, optional `adminEmail` (only when already exposed by firm listing patterns), `href`
+  - `type`, `id`, `firmId`, `firmSlug`, `name`, `status`, optional `adminEmailMasked`, `href`
 - Admin result:
   - `type`, `id`, `firmId`, `firmName`, `xID`, `name`, `emailMasked`, `status`, `href`
 - Audit result:
