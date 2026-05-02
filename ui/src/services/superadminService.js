@@ -39,6 +39,11 @@ export const superadminService = {
     return response.data;
   },
 
+  searchGlobal: async (params = {}) => {
+    const response = await api.get('/superadmin/search', { params });
+    return response.data;
+  },
+
   /**
    * Create a new firm
    */

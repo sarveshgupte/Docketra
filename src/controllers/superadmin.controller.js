@@ -235,6 +235,159 @@ const sanitizeAuditMetadata = (metadata = {}) => {
   }, {});
 };
 
+const maskEmail = (email) => {
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized || !normalized.includes('@')) return null;
+  const [local, domain] = normalized.split('@');
+  if (!local || !domain) return null;
+  const visible = local.length <= 2 ? local[0] : local.slice(0, 2);
+  return `${visible}***@${domain}`;
+};
+
+const parseSearchTypes = (value) => {
+  const allowed = new Set(['firms', 'admins', 'audit']);
+  const requested = String(value || '')
+    .split(',')
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean)
+    .filter((entry) => allowed.has(entry));
+  return requested.length ? new Set(requested) : allowed;
+};
+
+const getSuperadminGlobalSearch = async (req, res) => {
+  try {
+    const trimmedQuery = String(req.query?.q || '').trim().slice(0, MAX_SEARCH_LENGTH);
+    const requestedLimit = Math.max(Number.parseInt(req.query?.limit, 10) || 10, 1);
+    const limit = Math.min(requestedLimit, 25);
+    const requestedTypes = parseSearchTypes(req.query?.types);
+    const searchRegex = buildSafeContainsRegex(trimmedQuery);
+
+    if (!searchRegex) {
+      return res.json({ success: true, data: { firms: [], admins: [], audit: [] } });
+    }
+
+    const result = { firms: [], admins: [], audit: [] };
+
+    if (requestedTypes.has('firms')) {
+      const firms = await Firm.find({
+        $or: [
+          { firmId: searchRegex },
+          { firmSlug: searchRegex },
+          { name: searchRegex },
+        ],
+      })
+        .select('_id firmId firmSlug name status')
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .lean();
+
+      const firmObjectIds = firms.map((firm) => firm._id);
+      const admins = firmObjectIds.length
+        ? await User.find({
+          firmId: { $in: firmObjectIds },
+          isSystem: true,
+          role: { $in: ADMIN_ROLE_VALUES },
+          status: { $ne: 'deleted' },
+        }).select('firmId email').lean()
+        : [];
+      const adminByFirmId = new Map();
+      admins.forEach((admin) => {
+        const key = String(admin.firmId || '');
+        if (key && !adminByFirmId.has(key)) adminByFirmId.set(key, admin);
+      });
+
+      result.firms = firms.map((firm) => {
+        const admin = adminByFirmId.get(String(firm._id));
+        return {
+          type: 'firm',
+          id: firm._id,
+          firmId: firm.firmId,
+          firmSlug: firm.firmSlug,
+          name: firm.name,
+          status: firm.status,
+          adminEmailMasked: maskEmail(admin?.email),
+          href: `/app/superadmin/firms/${firm._id}`,
+        };
+      });
+    }
+
+    if (requestedTypes.has('admins')) {
+      const admins = await User.find({
+        isSystem: true,
+        role: { $in: ADMIN_ROLE_VALUES },
+        status: { $ne: 'deleted' },
+        $or: [{ xID: searchRegex }, { name: searchRegex }, { email: searchRegex }],
+      })
+        .select('_id firmId xID name email status')
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .lean();
+
+      const firmIds = [...new Set(admins.map((admin) => String(admin.firmId || '')).filter(Boolean))];
+      const firms = firmIds.length
+        ? await Firm.find({ _id: { $in: firmIds } }).select('_id firmId name').lean()
+        : [];
+      const firmMap = new Map(firms.map((firm) => [String(firm._id), firm]));
+
+      result.admins = admins.map((admin) => {
+        const firm = firmMap.get(String(admin.firmId || ''));
+        return {
+          type: 'admin',
+          id: admin._id,
+          firmId: firm?.firmId || null,
+          firmName: firm?.name || null,
+          xID: admin.xID || null,
+          name: admin.name || null,
+          emailMasked: maskEmail(admin.email),
+          status: admin.status || null,
+          href: firm ? `/app/superadmin/firms/${firm._id}` : '/app/superadmin/firms',
+        };
+      });
+    }
+
+    if (requestedTypes.has('audit')) {
+      const rows = await SuperadminAudit.find({
+        $or: [
+          { actionType: searchRegex },
+          { performedBy: searchRegex },
+          { targetEntityType: searchRegex },
+          { targetEntityId: searchRegex },
+          { 'metadata.firmId': searchRegex },
+          { 'metadata.firmName': searchRegex },
+          { 'metadata.requestId': searchRegex },
+        ],
+      })
+        .select('_id timestamp actionType performedBy targetEntityType targetEntityId metadata')
+        .sort({ timestamp: -1 })
+        .limit(limit)
+        .lean();
+
+      result.audit = rows.map((row) => {
+        const safeMetadata = sanitizeAuditMetadata(row.metadata || {});
+        const requestRef = safeMetadata.requestId || row.targetEntityId || '';
+        return {
+          type: 'audit',
+          id: row._id,
+          actionType: row.actionType,
+          performedBy: row.performedBy,
+          targetEntityType: row.targetEntityType || null,
+          targetEntityId: row.targetEntityId || null,
+          firmId: safeMetadata.firmId || null,
+          firmName: safeMetadata.firmName || safeMetadata.name || null,
+          requestId: safeMetadata.requestId || null,
+          timestamp: row.timestamp,
+          href: `/app/superadmin/audit?search=${encodeURIComponent(String(requestRef))}`,
+        };
+      });
+    }
+
+    return res.json({ success: true, data: result });
+  } catch (error) {
+    log.error('[SUPERADMIN] Error executing global search:', error);
+    return res.status(500).json({ success: false, message: 'Failed to execute superadmin global search' });
+  }
+};
+
 const getSuperadminAuditLogs = async (req, res) => {
   try {
     const page = Math.max(Number.parseInt(req.query?.page, 10) || 1, 1);
@@ -1681,6 +1834,7 @@ module.exports = {
   getOnboardingAlerts,
   getSupportDiagnostics,
   getSuperadminAuditLogs,
+  getSuperadminGlobalSearch,
   getFirmBySlug,
   getOperationalHealth,
   switchFirm,

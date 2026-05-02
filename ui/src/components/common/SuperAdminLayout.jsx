@@ -3,12 +3,13 @@
  * Dashboard shell for platform-level management
  */
 
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { Loading } from './Loading';
 import { USER_ROLES } from '../../utils/constants';
+import { superadminService } from '../../services/superadminService';
 
 const navItemClass = (isActive) =>
   `rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
@@ -20,6 +21,16 @@ export const SuperAdminLayout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { showSuccess } = useToast();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [searchResults, setSearchResults] = useState({ firms: [], admins: [], audit: [] });
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  const totalResults = useMemo(
+    () => (searchResults.firms.length + searchResults.admins.length + searchResults.audit.length),
+    [searchResults],
+  );
 
   const handleLogout = async () => {
     await logout();
@@ -27,6 +38,24 @@ export const SuperAdminLayout = ({ children }) => {
   };
 
   const isActive = (path) => location.pathname === path;
+  const runSearch = async () => {
+    const q = String(searchQuery || '').trim();
+    setSearchOpen(true);
+    setSearchError('');
+    if (!q) {
+      setSearchResults({ firms: [], admins: [], audit: [] });
+      return;
+    }
+    try {
+      setSearching(true);
+      const response = await superadminService.searchGlobal({ q, limit: 8 });
+      setSearchResults(response?.data || { firms: [], admins: [], audit: [] });
+    } catch (error) {
+      setSearchError(error?.response?.data?.message || 'Search is temporarily unavailable.');
+    } finally {
+      setSearching(false);
+    }
+  };
 
   // Guard: Only render children if user is loaded and is SuperAdmin
   if (user === null || (user?.isSuperAdmin !== true && user?.role !== USER_ROLES.SUPER_ADMIN)) {
@@ -65,6 +94,56 @@ export const SuperAdminLayout = ({ children }) => {
             Audit Logs
           </Link>
         </nav>
+        <div className="mt-6 rounded-xl border border-gray-200 bg-white p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Global search</p>
+          <div className="mt-2 flex gap-2">
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setSearchOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  void runSearch();
+                }
+              }}
+              placeholder="Search firms, admins, audit refs"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+            <button type="button" onClick={() => void runSearch()} className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white">Search</button>
+          </div>
+          <p className="mt-2 text-xs text-gray-500">Search returns platform lifecycle/support metadata only. It does not search client records, dockets, tasks, attachments, or private client content.</p>
+          {searchOpen ? (
+            <div className="mt-3 max-h-72 overflow-auto rounded-lg border border-gray-200 bg-gray-50 p-2 text-sm">
+              {searching ? <p className="text-gray-600">Searching...</p> : null}
+              {!searching && searchError ? <p className="text-red-700">{searchError}</p> : null}
+              {!searching && !searchError && !totalResults && searchQuery.trim() ? <p className="text-gray-600">No matches found.</p> : null}
+              {!searching && !searchError && totalResults > 0 ? (
+                <div className="space-y-2">
+                  {[['Firms', searchResults.firms], ['Admins', searchResults.admins], ['Audit references', searchResults.audit]].map(([label, rows]) => (
+                    <div key={label}>
+                      <p className="px-1 text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
+                      {(rows || []).map((row) => (
+                        <button
+                          key={`${row.type}-${row.id}`}
+                          type="button"
+                          className="mt-1 w-full rounded px-2 py-1.5 text-left hover:bg-white"
+                          onClick={() => {
+                            setSearchOpen(false);
+                            navigate(row.href);
+                          }}
+                        >
+                          <p className="text-sm font-medium text-gray-900">{row.name || row.firmName || row.actionType || row.targetEntityId || row.firmId}</p>
+                          <p className="text-xs text-gray-500">{row.firmId || row.xID || row.requestId || row.targetEntityType || ''}</p>
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
 
         <div className="mt-6 hidden rounded-xl border border-gray-200 bg-gray-50 p-3 md:block">
           <p className="truncate text-xs text-gray-500">Signed in as</p>
