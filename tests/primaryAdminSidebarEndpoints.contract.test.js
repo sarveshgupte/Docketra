@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const assert = require('assert');
 const request = require('supertest');
+const express = require('express');
 
 process.env.NODE_ENV = 'test';
 process.env.UPLOAD_SCAN_STRICT = 'false';
@@ -11,14 +12,16 @@ process.env.REDIS_URL = '';
 
 const createAppModulePath = require.resolve('../src/app/createApp');
 const authMiddlewareModulePath = require.resolve('../src/middleware/auth.middleware');
-const permissionMiddlewareModulePath = require.resolve('../src/middleware/permission.middleware');
-const rbacMiddlewareModulePath = require.resolve('../src/middleware/rbac.middleware');
 const firmModelModulePath = require.resolve('../src/models/Firm.model');
 const clientRepositoryModulePath = require.resolve('../src/repositories/ClientRepository');
 const defaultClientServiceModulePath = require.resolve('../src/services/defaultClient.service');
 const tenantMetricsServiceModulePath = require.resolve('../src/services/tenantCaseMetrics.service');
 const tenantIdentityModulePath = require.resolve('../src/services/tenantIdentity.service');
 const bcryptModulePath = require.resolve('bcrypt');
+const authControllerModulePath = require.resolve('../src/controllers/auth.controller');
+const firmControllerModulePath = require.resolve('../src/controllers/firm.controller');
+const firmRoutesModulePath = require.resolve('../src/routes/firm.routes');
+const firmSlugGuardModulePath = require.resolve('../src/middleware/firmSlugGuard.middleware');
 
 const restore = [];
 const swap = (modulePath, exportsValue) => {
@@ -34,6 +37,15 @@ const queryResult = (value) => ({
 
 (async () => {
   swap(bcryptModulePath, { hash: async () => 'mock-hash', compare: async () => true, genSalt: async () => 'mock-salt' });
+  const noOpHandler = (_req, res) => res.status(501).json({ success: false, message: 'mocked' });
+  swap(authControllerModulePath, new Proxy({}, { get: () => noOpHandler }));
+  swap(firmControllerModulePath, { getFirmSetupStatus: noOpHandler });
+  swap(firmRoutesModulePath, express.Router());
+  swap(firmSlugGuardModulePath, {
+    RESERVED_FIRM_SLUGS: [],
+    FIRM_SLUG_PATTERN: /^[a-z0-9-]+$/,
+    firmSlugGuard: (_req, _res, next) => next(),
+  });
 
   const actor = {
     _id: '507f1f77bcf86cd799439011',
@@ -45,14 +57,6 @@ const queryResult = (value) => ({
   swap(authMiddlewareModulePath, {
     authenticate: (req, _res, next) => { req.user = actor; req.firmId = actor.firmId; next(); },
   });
-
-  const flexibleAllow = (...args) => {
-    if (args.length === 3 && typeof args[2] === 'function') return args[2]();
-    return (_req, _res, next) => next();
-  };
-  swap(permissionMiddlewareModulePath, new Proxy({}, { get: () => flexibleAllow }));
-  swap(rbacMiddlewareModulePath, new Proxy({}, { get: () => flexibleAllow }));
-
 
   swap(firmModelModulePath, {
     findById: () => queryResult({ _id: actor.firmId, name: 'Acme', storage: { mode: 'docketra_managed' }, storageConfig: null, settings: {} }),
@@ -68,7 +72,10 @@ const queryResult = (value) => ({
     getLatestTenantMetrics: async () => null,
     getTenantMetricsByRange: async () => ({ aggregate: {}, range: null, rowsCount: 0 }),
   });
-  swap(tenantIdentityModulePath, { resolveStorageContextFromTenantId: async () => null });
+  swap(tenantIdentityModulePath, {
+    resolveStorageContextFromTenantId: async () => null,
+    resolveCanonicalTenantFromFirmId: async (firmId) => ({ tenantId: firmId, ownershipFirmId: firmId, status: 'active', firmSlug: 'acme' }),
+  });
 
   delete require.cache[createAppModulePath];
   const { createApp } = require('../src/app/createApp');
