@@ -40,7 +40,7 @@
     "test:tenant-identity-boundary": "node tests/storageTenantOwnershipBoundary.test.js && node tests/tenantStorageOwnershipBoundary.test.js && node tests/storageAuditOwnershipFirmId.test.js && node tests/aiMissingOwnershipFailsClosed.test.js",
     "test:admin-tenant-boundary": "node tests/adminTenantBoundary.test.js",
     "test:byos": "node tests/storageStateNormalization.test.js && node tests/storageNormalizationRegression.test.js && node tests/storageProviderFactoryState.test.js && node tests/storageController.providerAgnosticRuntime.test.js && node tests/docketFileStorage.service.test.js && node tests/storageProviderResolutionPath.test.js && node tests/s3ProviderObjectKeyNormalization.test.js && node tests/googleDriveProvider.uploadFileCompatibility.test.js && node tests/byosRegressionSecurityAudit.test.js",
-    "test:auth-pilot-smoke": "node tests/authPilotReadinessSmoke.test.js && node tests/authForgotPasswordOtpReliability.test.js && node tests/authLoginCookieFlow.test.js && node tests/superadminSessionParity.test.js && node tests/authSuperadminRouteRegression.test.js"
+    "test:auth-pilot-smoke": "node tests/authPilotReadinessSmoke.test.js && node tests/authForgotPasswordOtpReliability.test.js && node tests/authLoginCookieFlow.test.js && node tests/superadminPilotSessionSmoke.test.js && node tests/authSuperadminRouteRegression.test.js"
   },
   "keywords": [
     "task-management",

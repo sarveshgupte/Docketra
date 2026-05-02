@@ -21,7 +21,7 @@ async function tenantOtpSmoke() {
   let cookiesSet = 0;
   const service = createAuthLoginService({
     models: {
-      User: { findOne: async (query) => (query._id === 'u-1' ? user : null) },
+      User: { findOne: async (query) => (query.xID === 'X123456' || query._id === 'u-1' ? user : null) },
       LoginSession: { findOne: async () => loginSession, updateOne: async () => ({}) },
     },
     utils: {
@@ -38,8 +38,8 @@ async function tenantOtpSmoke() {
   });
 
   const initRes = createRes();
-  await service.login({ body: { identifier: 'X123456', password: 'Strong#123' }, firmId: 'firm-1', firmSlug: 'pilot' }, initRes);
-  assert.strictEqual(initRes.state.statusCode, 202);
+  await service.login({ body: { xID: 'X123456', password: 'Strong#123' }, firmId: 'firm-1', firmSlug: 'pilot' }, initRes);
+  assert.strictEqual(initRes.state.statusCode, 200);
 
   const verifyRes = createRes();
   await service.verifyLoginOtp({ body: { otp: '123456', loginToken: 'any' }, firmId: 'firm-1', firmSlug: 'pilot' }, verifyRes);
@@ -65,11 +65,11 @@ async function forgotPasswordSmoke() {
   });
 
   const initRes = createRes();
-  await service.forgotPasswordInit({ body: { identifier: 'X123456', firmSlug: 'pilot' } }, initRes);
+  await service.forgotPasswordInit({ body: { identifier: 'X123456', firmSlug: 'pilot' }, ip: '127.0.0.1', get: () => 'test-agent' }, initRes);
   assert.strictEqual(initRes.state.statusCode, 200);
 
   const verifyRes = createRes();
-  await service.forgotPasswordVerify({ body: { identifier: 'X123456', firmSlug: 'pilot', otp: '123456' } }, verifyRes);
+  await service.forgotPasswordVerify({ body: { identifier: 'X123456', firmSlug: 'pilot', otp: '123456' }, ip: '127.0.0.1', get: () => 'test-agent' }, verifyRes);
   assert.strictEqual(verifyRes.state.statusCode, 200);
 }
 
