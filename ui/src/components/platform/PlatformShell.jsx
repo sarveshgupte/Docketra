@@ -35,6 +35,67 @@ const normalizeClientRows = (payload) => {
     .filter((client) => Boolean(client.routeId));
 };
 
+/* Nav icon components — static SVG JSX, never user-controlled */
+const NAV_ICONS = {
+  'docket-workbench': (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2z" />
+    </svg>
+  ),
+  dashboard: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
+      <rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+    </svg>
+  ),
+  intake: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  ),
+  crm: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="5" r="3" /><circle cx="5" cy="19" r="3" /><circle cx="19" cy="19" r="3" />
+      <line x1="12" y1="8" x2="5" y2="16" /><line x1="12" y1="8" x2="19" y2="16" />
+    </svg>
+  ),
+  'company-brain': (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9.5 2a2.5 2.5 0 015 0" /><path d="M9.5 22a2.5 2.5 0 010-5h5a2.5 2.5 0 010 5" />
+      <path d="M4 10a5 5 0 015-5" /><path d="M20 10a5 5 0 00-5-5" />
+      <path d="M4 10a5 5 0 000 5" /><path d="M20 10a5 5 0 010 5" />
+      <path d="M9 17v-7" /><path d="M15 17v-7" />
+    </svg>
+  ),
+  'knowledge-library': (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 19.5A2.5 2.5 0 016.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+    </svg>
+  ),
+  clients: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" />
+    </svg>
+  ),
+  reports: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
+    </svg>
+  ),
+  'team-access': (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  ),
+  settings: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+    </svg>
+  ),
+};
+
 export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -276,46 +337,62 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
 
   const shortcutHint = 'Shortcuts: Ctrl/⌘+K open, / quick open, Alt+Shift+N new docket, Alt+Shift+D dashboard';
 
+  const firmLabel = user?.firm?.name || firmSlug || 'Workspace';
+  const firmInitials = firmLabel.substring(0, 2).toUpperCase();
+  const userInitials = userName.split(' ').map((n) => n[0]).join('').toUpperCase().substring(0, 2) || userName.substring(0, 2).toUpperCase();
+
   return (
     <div className="platform">
       <a href="#platform-main" className="platform__skip-link">Skip to content</a>
       <aside className={`platform__sidebar ${collapsed ? 'platform__sidebar--collapsed' : ''}`} aria-label="Primary navigation">
+        {/* Firm brand */}
         <div className="platform__brand">
+          <div className="platform__firm-badge" aria-hidden="true" title={firmLabel}>
+            {firmInitials}
+          </div>
+          {!collapsed && (
+            <div className="platform__firm-info">
+              <strong className="platform__firm-name" title={firmLabel}>{firmLabel}</strong>
+              <span className="platform__firm-sub">Operations workspace</span>
+            </div>
+          )}
           <button
             type="button"
             className="platform__collapse"
             onClick={() => setCollapsed((value) => !value)}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            {collapsed ? '→' : '←'}
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              {collapsed
+                ? <polyline points="9 18 15 12 9 6" />
+                : <polyline points="15 18 9 12 15 6" />}
+            </svg>
           </button>
-          {!collapsed && (
-            <div>
-              <strong>Docketra</strong>
-              <p>Operations workspace</p>
-            </div>
-          )}
         </div>
 
         <nav className="platform__nav">
           {navSections.map((section) => (
             <div key={section.section} className="platform__nav-section">
               {!collapsed && <span className="platform__section-title">{section.section}</span>}
-              {section.items.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={`platform__nav-link ${isNavItemActive(pathname, item) ? 'is-active' : ''}`}
-                  title={item.label}
-                  aria-label={item.label}
-                >
-                  {collapsed ? (
-                    <span className="platform__nav-link-icon" aria-hidden="true">{item.icon}</span>
-                  ) : (
-                    <span>{item.label}</span>
-                  )}
-                </Link>
-              ))}
+              {section.items.map((item) => {
+                const isActive = isNavItemActive(pathname, item);
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={`platform__nav-link ${isActive ? 'is-active' : ''}`}
+                    title={collapsed ? item.label : undefined}
+                    aria-label={collapsed ? item.label : undefined}
+                    aria-current={isActive ? 'page' : undefined}
+                  >
+                    <span className="platform__nav-link-icon" aria-hidden="true">
+                      {NAV_ICONS[item.id] || null}
+                    </span>
+                    {!collapsed && <span className="platform__nav-link-label">{item.label}</span>}
+                  </Link>
+                );
+              })}
             </div>
           ))}
         </nav>
@@ -326,7 +403,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
           <div className="platform__title-block">
             {moduleLabel ? <span className="platform__module-label">{moduleLabel}</span> : null}
             <h1>{title}</h1>
-            <p>{subtitle || 'Use the sidebar to move between modules and continue your workflow.'}</p>
+            {subtitle ? <p>{subtitle}</p> : null}
             <div className="platform__breadcrumbs" aria-label="Breadcrumb">
               <span>Workspace</span>
               <span aria-hidden="true">/</span>
@@ -356,12 +433,21 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                   if (event.key === 'Escape') setMenuOpen(false);
                 }}
               >
-                <span>{userName}</span>
-                <span className="platform__user-pill-chevron" aria-hidden="true">▾</span>
+                <span className="platform__user-avatar" aria-hidden="true">{userInitials}</span>
+                <span className="platform__user-name">{userName}</span>
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
               {menuOpen ? (
                 <div className="platform__account-dropdown" role="menu" aria-label="Account menu">
-                  <button type="button" role="menuitem" onClick={handleLogout}>Sign out</button>
+                  <Link
+                    to={ROUTES.PROFILE(firmSlug)}
+                    className="platform__account-dropdown-item"
+                    role="menuitem"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Profile
+                  </Link>
+                  <button type="button" role="menuitem" className="platform__account-dropdown-item" onClick={handleLogout}>Sign out</button>
                 </div>
               ) : null}
             </div>

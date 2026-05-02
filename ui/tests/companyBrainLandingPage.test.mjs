@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const read = (p) => fs.readFileSync(path.resolve(__dirname, '..', p), 'utf8');
 
-const homePage = read('src/pages/marketing/HomePage.jsx');
+const homePage = read('src/components/landing/LandingPageContent.jsx');
 const publicRoutes = read('src/routes/PublicRoutes.jsx');
 const protectedRoutes = read('src/routes/ProtectedRoutes.jsx');
 
