@@ -62,6 +62,7 @@ export const SuperadminFirmOnboardingDetailPage = lazyPage(() => import('../page
 export const SuperadminDiagnosticsPage = lazyPage(() => import('../pages/SuperadminDiagnosticsPage'), 'SuperadminDiagnosticsPage');
 export const SuperadminFirmDetailPage = lazyPage(() => import('../pages/SuperadminFirmDetailPage'), 'SuperadminFirmDetailPage');
 export const SuperadminAuditLogPage = lazyPage(() => import('../pages/SuperadminAuditLogPage'), 'SuperadminAuditLogPage');
+export const SuperadminFirmHealthPage = lazyPage(() => import('../pages/SuperadminFirmHealthPage'), 'SuperadminFirmHealthPage');
 export const ReportsDashboard = lazyPage(() => import('../pages/reports/ReportsDashboard'), 'ReportsDashboard');
 export const DetailedReports = lazyPage(() => import('../pages/reports/DetailedReports'), 'DetailedReports');
 export const CasesPage = lazyPage(() => import('../pages/CasesPage'), 'CasesPage');
