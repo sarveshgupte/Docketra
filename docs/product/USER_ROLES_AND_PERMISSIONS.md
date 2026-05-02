@@ -47,6 +47,10 @@ Legend: `F` full, `L` limited, `N` none, `P` planned/future.
 | Diagnostics/audit tools | F | F/L (firm-level) | L (firm-level) | N/L | N | N | N |
 
 ## Notes and constraints
+
+- Canonical enforcement roles are `PRIMARY_ADMIN`, `ADMIN`, `MANAGER`, `USER` (and `SUPER_ADMIN` for platform scope).
+- Backward-compatibility input aliases are normalized at role utility/model boundaries only: `Admin -> ADMIN`, `Employee/Staff -> USER`, `SuperAdmin/SUPERADMIN -> SUPER_ADMIN`.
+- These aliases are compatibility mapping only and must not introduce privilege escalation beyond their canonical mapped role.
 - All role permissions are subordinate to tenant isolation; a high role in one firm does not grant access to another firm.
 - Route-level UI access and API-level authorization must remain aligned; API always wins.
 - If viewer/client roles are introduced, they require explicit backend permission contracts and tenant-safe test coverage.

@@ -198,12 +198,7 @@ const userSchema = new mongoose.Schema({
     enum: ['SUPER_ADMIN', 'PRIMARY_ADMIN', 'ADMIN', 'MANAGER', 'USER'],
     default: 'USER',
     required: true,
-    set: (value) => {
-      const normalized = String(value || '').trim();
-      if (normalized === 'Admin') return 'ADMIN';
-      if (normalized === 'Employee') return 'USER';
-      return normalized;
-    },
+    set: (value) => normalizeRole(value) || 'USER',
   },
   
   // Controls which case categories an Employee can access; empty array for Admin means access to all
