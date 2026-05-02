@@ -117,7 +117,7 @@ export const CompanyBrainPage = () => {
         />
       </PageSection>
 
-      <PageSection title="Needs Attention" description="Actionable items to address next.">
+      <PageSection title="Needs attention" description="Actionable items to address next.">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <AttentionRow label="Overdue work" count={overdueWork} loading={loading} reason="Work past due dates that needs immediate action." linkTo={ROUTES.TASK_MANAGER(firmSlug)} linkLabel="Open Task Manager" emptyMessage={overdueWork == null ? 'Work data will appear when dashboard summary is available.' : 'No overdue work found from available data.'} />
           <AttentionRow label="Pending review / QC" count={pendingReview} loading={loading} reason="Work items waiting for review before completion." linkTo={ROUTES.QC_QUEUE(firmSlug)} linkLabel="Open review queue" emptyMessage={pendingReview == null ? 'Review queue data will appear when queue data is available.' : 'No items pending review.'} />
@@ -129,7 +129,7 @@ export const CompanyBrainPage = () => {
         </div>
       </PageSection>
 
-      <PageSection title="Connected Map" description="How firm memory is connected from existing records.">
+      <PageSection title="Memory map" description="How firm memory is connected from existing records.">
         <div className="tile-grid">
           <ConnectedMapNode title="Clients" description="Active client records and ownership context." count={fmt(loading, activeClients)} linkTo={ROUTES.CLIENTS(firmSlug)} />
           <ConnectedMapNode title="Prospects" description="Relationships, follow-ups, and conversion pipeline." count={fmt(loading, prospectiveClients)} linkTo={ROUTES.CRM(firmSlug)} />
