@@ -52,6 +52,27 @@ async function testKmsProviderThrows() {
   console.log('✓ KMS provider stub throws for all methods');
 }
 
+
+async function testKmsProviderSelectionFailsFast() {
+  const { generateEncryptedDek, _resetProvider } = require('../src/security/encryption.service');
+  const originalProvider = process.env.ENCRYPTION_PROVIDER;
+  process.env.ENCRYPTION_PROVIDER = 'kms';
+  _resetProvider();
+  let threw = false;
+  try {
+    await generateEncryptedDek();
+  } catch (err) {
+    threw = true;
+    assert(err.message.includes('ENCRYPTION_PROVIDER=kms is not available'));
+  } finally {
+    if (originalProvider !== undefined) process.env.ENCRYPTION_PROVIDER = originalProvider;
+    else delete process.env.ENCRYPTION_PROVIDER;
+    _resetProvider();
+  }
+  assert(threw, 'kms provider selection must fail fast');
+  console.log('✓ KMS provider selection fails fast');
+}
+
 async function testPlaintextCompatibilityMode() {
   // Decrypt must return original value for non-encrypted (legacy) plaintext
   const { decrypt, _resetProvider } = require('../src/security/encryption.service');
@@ -501,6 +522,7 @@ async function testClientRepositoryHandlesCorruptedEncryptedField() {
 async function run() {
   // Tests that do NOT need MongoDB
   await testKmsProviderThrows();
+  await testKmsProviderSelectionFailsFast();
   await testPlaintextCompatibilityMode();
   await testGenerateTenantKeyUsesAtomicUpsert();
   await testUnwrapDekUsesSessionWhenProvided();

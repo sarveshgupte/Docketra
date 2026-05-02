@@ -5,7 +5,7 @@ const { resolveStorageContextFromTenantId } = require('../services/tenantIdentit
 const { buildSafeAiConfig, applyAiConfigUpdate, validateAiConfigForEnablement, normalizeAiConfig } = require('../services/ai/config/aiConfig.service');
 const { resolveAiCredentials } = require('../services/ai/credentials/aiCredentialResolver.service');
 const { evaluateAiPolicy, POLICY_VERSION } = require('../services/ai/policy/aiPolicy.service');
-const { getProviderMetadata } = require('../services/ai/providers/providerRegistry');
+const { getProviderMetadata, buildProviderStatus } = require('../services/ai/providers/providerRegistry');
 const { writeAiAuditEvent } = require('../services/ai/audit/aiAuditWriter.service');
 const log = require('../utils/log');
 
@@ -25,7 +25,8 @@ async function getAiConfiguration(req, res) {
   const firm = await Firm.findById(ownershipFirmId).select('aiConfig').lean();
   const safe = buildSafeAiConfig(firm?.aiConfig || {});
   const providerMetadata = safe.provider ? getProviderMetadata(safe.provider) : null;
-  return res.json({ success: true, configuration: { ...safe, providerMetadata } });
+  const providerStatus = safe.provider ? buildProviderStatus(safe.provider, { configuredProvider: safe.provider }) : null;
+  return res.json({ success: true, configuration: { ...safe, providerMetadata, providerStatus } });
 }
 
 async function updateAiConfiguration(req, res) {
@@ -86,10 +87,13 @@ async function testAiConfiguration(req, res) {
     credentialStatus: credentialResult.status,
   });
 
-  const success = policy.allowed;
+  const configuredProvider = normalized.provider || null;
+  const providerStatus = configuredProvider ? buildProviderStatus(configuredProvider, { configuredProvider }) : null;
+  const runtimeSupported = providerStatus ? providerStatus.runtimeSupported : false;
+  const success = policy.allowed && runtimeSupported;
   const safeMessage = success
-    ? 'Configuration shape is valid. Runtime provider validation is not implemented yet.'
-    : policy.safeMessage;
+    ? 'Configuration and runtime are available.'
+    : (runtimeSupported ? policy.safeMessage : (providerStatus?.disabledReason || 'Provider runtime is unavailable in this environment.'));
 
   await writeAiAuditEvent({
     firmId: String(ownershipFirmId),
@@ -98,7 +102,7 @@ async function testAiConfiguration(req, res) {
     provider: normalized.provider,
     model: normalized.model,
     status: success ? 'success' : 'failed',
-    reasonCode: success ? 'CONFIG_SHAPE_VALID' : policy.reasonCode,
+    reasonCode: success ? 'RUNTIME_AVAILABLE' : (runtimeSupported ? policy.reasonCode : 'PROVIDER_RUNTIME_UNAVAILABLE'),
     policyVersion: policy.policyVersion,
   });
 
@@ -106,9 +110,10 @@ async function testAiConfiguration(req, res) {
     success,
     provider: normalized.provider,
     credentialStatus: credentialResult.status,
-    reasonCode: success ? 'CONFIG_SHAPE_VALID' : policy.reasonCode,
+    reasonCode: success ? 'RUNTIME_AVAILABLE' : (runtimeSupported ? policy.reasonCode : 'PROVIDER_RUNTIME_UNAVAILABLE'),
     safeMessage,
     policyVersion: policy.policyVersion,
+    providerStatus,
   });
 }
 
