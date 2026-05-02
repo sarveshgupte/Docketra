@@ -22,9 +22,12 @@ const controller = fs.readFileSync(path.resolve(__dirname, '../src/controllers/s
 assert.ok(controller.includes('Unknown feature flag key'), 'unknown flag key must be rejected');
 assert.ok(controller.includes('Firm overrides are not allowed for'), 'disallowed firm override should be rejected');
 assert.ok(controller.includes('Invalid firmIds provided'), 'invalid firm ids should be rejected');
+assert.ok(controller.includes('firmIds must contain at least one firm when provided.'), 'empty firmIds should be rejected');
+assert.ok(controller.includes('missingFirmIds'), 'missing firm ids should be rejected');
 assert.ok(controller.includes("actionType: 'FeatureFlagUpdated'"), 'audit action should use FeatureFlagUpdated');
 const featureFlagHandlerSlice = controller.slice(controller.indexOf('const updateSuperadminFeatureFlag'), controller.indexOf('// Constants'));
 assert.ok(!featureFlagHandlerSlice.includes("actionType: 'FirmActivated'"), 'audit action should not use FirmActivated for feature flags');
+assert.ok(!featureFlagHandlerSlice.includes('$nin: normalizedFirmIds'), 'PATCH with firmIds must not update non-selected firms with $nin');
 assert.ok(controller.includes('SuperadminPlatformConfig.updateOne'), 'global updates should use platform-level storage');
 assert.ok(controller.includes('Firm.updateMany({ _id: { $in: normalizedFirmIds }'), 'firm override should scope updates to selected firms');
 
