@@ -25,3 +25,16 @@ Method: `createApp + supertest` diagnostic script with temporary auth/tenant stu
 2. **Firm-resolution 500 class second** (leads/forms):
    - Resolve tenant/firm context dependency mismatch and ensure empty-state returns 200 with array payload.
 3. Keep auth model unchanged in these focused PRs.
+
+## 2026-05-02 Route-level 404 Fix Status Update
+
+Status correction for this PR:
+
+- The route-level 404 fix for these endpoints is **still pending** under `createApp` tenant mounts:
+  - `GET /api/clients?activeOnly=false&page=1&limit=25`
+  - `GET /api/reports/case-metrics`
+  - `GET /api/storage/configuration`
+  - `GET /api/ai/configuration`
+- An attempted authenticated `createApp + supertest` test harness was started during development but removed due local harness/module issues before commit.
+- No passing endpoint-level proof for the four route-level 404 endpoints is included in this PR.
+- This PR should not be treated as evidence that any of the four endpoints are fixed.
