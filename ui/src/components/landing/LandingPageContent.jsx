@@ -21,7 +21,8 @@ const HomeNav = ({ onNav }) => {
   const navLinks = [
     { label: 'Why', id: 'why' },
     { label: 'Product', id: 'product' },
-    { label: 'In practice', id: 'in-practice' },
+    { label: 'Workflow', id: 'workflow' },
+    { label: 'Pilot readiness', id: 'pilot-readiness' },
     { label: 'Trust', id: 'trust' },
   ];
 
@@ -49,6 +50,7 @@ const HomeNav = ({ onNav }) => {
           </ul>
 
           <div className="hidden md:flex items-center gap-3">
+            <Link to="/login" className="text-sm font-medium text-slate-600 hover:text-slate-900">Login</Link>
             <Link
               to="/signup"
               className="inline-flex items-center justify-center h-9 px-5 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors shadow-sm"
@@ -86,6 +88,9 @@ const HomeNav = ({ onNav }) => {
                   </button>
                 </li>
               ))}
+              <li className="mt-2 px-4">
+                <Link to="/login" className="block text-center h-9 leading-9 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors" onClick={() => setMenuOpen(false)}>Login</Link>
+              </li>
               <li className="mt-2 px-4">
                 <Link
                   to="/signup"
@@ -190,7 +195,7 @@ const HeroSection = ({ onExplore }) => (
               onClick={onExplore}
               className="inline-flex items-center justify-center h-11 px-6 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
             >
-              See how it works
+              View product overview
             </button>
           </div>
 
@@ -477,11 +482,11 @@ const GreenLeafCard = () => (
 );
 
 const FlowExampleSection = () => (
-  <section id="in-practice" className="w-full bg-white py-20 md:py-28">
+  <section id="workflow" className="w-full bg-white py-20 md:py-28">
     <Container>
       <motion.div {...REVEAL}>
         <p className="text-xs font-semibold uppercase tracking-widest text-amber-500 mb-4">
-          In practice
+          Workflow
         </p>
         <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 leading-tight">
           Two ways Docketra holds the thread.
@@ -494,6 +499,54 @@ const FlowExampleSection = () => (
       <div className="grid md:grid-cols-2 gap-6 mt-12">
         <motion.div {...REVEAL}><PcsScenario /></motion.div>
         <motion.div {...REVEAL}><GreenLeafCard /></motion.div>
+      </div>
+    </Container>
+  </section>
+);
+
+
+const PilotReadinessSection = () => (
+  <section id="pilot-readiness" className="w-full bg-slate-50 py-20 md:py-24">
+    <Container>
+      <motion.div {...REVEAL}>
+        <p className="text-xs font-semibold uppercase tracking-widest text-amber-500 mb-4">Oversight</p>
+        <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">Pilot Readiness with metadata-only oversight.</h2>
+        <p className="mt-4 text-lg text-slate-600 max-w-3xl">Primary admins and superadmins can monitor rollout progress through metadata-only oversight: activity, completion status, and adoption signals without reading document contents.</p>
+      </motion.div>
+      <div className="grid md:grid-cols-3 gap-5 mt-10">
+        {[
+          ['Pilot Readiness', 'Track team adoption by module: Work, Knowledge Intake, Relationships, and Company Brain.'],
+          ['Metadata-only oversight', 'View status changes, ownership, and SLAs while document content stays in firm-controlled storage.'],
+          ['Superadmin visibility', 'See cross-firm readiness snapshots for enablement and support planning.'],
+        ].map(([title, body]) => (
+          <div key={title} className="rounded-xl border border-slate-200 bg-white p-5">
+            <h3 className="font-semibold text-slate-900">{title}</h3>
+            <p className="mt-2 text-sm text-slate-600">{body}</p>
+          </div>
+        ))}
+      </div>
+    </Container>
+  </section>
+);
+
+const UseCasesSection = () => (
+  <section className="w-full bg-white py-20 md:py-24">
+    <Container>
+      <motion.div {...REVEAL}>
+        <p className="text-xs font-semibold uppercase tracking-widest text-amber-500 mb-4">Use cases</p>
+        <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">Built for real firm operations.</h2>
+      </motion.div>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mt-10">
+        {[
+          'Annual compliance and filings with reusable Firm Memory.',
+          'Knowledge Library curation for repeatable execution.',
+          'Client onboarding and follow-ups via Knowledge Intake.',
+          'Relationship continuity across team transitions.',
+          'Partner-level status reviews without document-level exposure.',
+          'Standardized workflow handoffs across Work queues.',
+        ].map((copy) => (
+          <div key={copy} className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">{copy}</div>
+        ))}
       </div>
     </Container>
   </section>
@@ -576,7 +629,7 @@ const FinalCtaSection = () => (
             href={`mailto:${CONTACT_EMAIL}`}
             className="inline-flex items-center justify-center h-12 px-8 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
           >
-            Email us directly
+            Contact
           </a>
         </div>
 
@@ -665,7 +718,9 @@ export const LandingPageContent = () => {
       <SolutionSection />
       <ProductPillarsSection />
       <FlowExampleSection />
+      <PilotReadinessSection />
       <TrustSection />
+      <UseCasesSection />
       <FinalCtaSection />
       <MarketingFooter />
     </div>

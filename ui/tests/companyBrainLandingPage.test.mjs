@@ -106,4 +106,11 @@ assert.ok(
   'Final CTA must link to /signup or a mailto: — no fake form'
 );
 
+
+assert.equal(homePage.includes('Docketra Legal Solutions'), false, 'Landing page must not include banned label Docketra Legal Solutions');
+assert.equal(homePage.includes('billing') || homePage.includes('checkout') || homePage.includes('Stripe') || homePage.includes('subscription') || homePage.includes('payment'), false, 'Landing page must not include billing/payment copy');
+assert.ok(homePage.includes('Metadata-only oversight'), 'Landing page should include metadata-only oversight language');
+assert.ok(homePage.includes('Pilot Readiness'), 'Landing page should include Pilot Readiness section');
+assert.ok(homePage.includes('View product overview'), 'Hero CTA should include View product overview');
+
 console.log('companyBrainLandingPage.test.mjs passed');
