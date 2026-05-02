@@ -4,6 +4,33 @@ This document defines which backend checks are **pure** (no external runtime ser
 
 ## Commands to run before merge
 
+## Command to run before manual pilot QA (dummy data only)
+
+Run this as a single smoke gate before starting founder/operator manual QA flows:
+
+```bash
+npm run test:pilot-readiness
+```
+
+This command is intentionally **pure-first** and does not require external MongoDB/Redis services. It covers:
+- backend route validation + mount order contracts
+- auth pilot smoke coverage (firm + superadmin session/login regressions)
+- tenant/admin boundary enforcement checks
+- full pure hardening/security/core test gate
+- frontend build + frontend CI checks
+
+What it does **not** cover:
+- Mongo runtime integration checks (`test:integrity:integration`)
+- any test requiring real external infrastructure
+
+If you also want integration confidence, run:
+
+```bash
+npm run test:pilot-readiness:integration
+```
+
+Use `ci:release-gate:pure` as the **merge/release blocker** and `test:pilot-readiness` as the **pre-manual-QA operator command**.
+
 ### Required merge blockers (pure gate)
 Run this first for PR safety in local/Codex/CI:
 

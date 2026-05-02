@@ -7,6 +7,26 @@ This runbook is a **manual pre-pilot gate** for founders/operators before onboar
 - It is designed for **dummy-data testing first**, then real-data readiness.
 - It does **not** declare production readiness by itself.
 
+### Required command before starting manual QA
+Run this once and proceed only if it passes:
+
+```bash
+npm run test:pilot-readiness
+```
+
+This smoke command covers:
+- backend route validation and mount order contracts
+- auth pilot smoke checks
+- tenant/admin boundary checks
+- pure security/hardening/core checks
+- frontend build + frontend CI checks
+
+This command does **not** cover Mongo integration runtime tests. For that, run:
+
+```bash
+npm run test:pilot-readiness:integration
+```
+
 ---
 
 ## 1) Pre-QA setup (must be confirmed before testing)
@@ -17,8 +37,8 @@ Mark each item Pass/Fail before running UI flows.
 - [ ] Required environment variables are present for backend and frontend.
 - [ ] Redis is available and healthy in production/pilot environment.
 - [ ] MongoDB is available and healthy in production/pilot environment.
-- [ ] Release gate / deterministic fallback checks were run successfully.
-- [ ] Auth pilot smoke checks were run successfully.
+- [ ] `npm run test:pilot-readiness` was run successfully.
+- [ ] `npm run ci:release-gate:pure` status is known (recommended for merge/release confidence).
 - [ ] Test firm is configured for **dummy data only** (no real client/firm records).
 
 ---
@@ -198,6 +218,8 @@ Run at least this minimum matrix and capture pass/fail notes.
 
 ## 15) Pilot disclaimer (required)
 **The first pilot must use dummy data only** until this manual QA checklist passes and the founder confirms: auth reliability, storage safety, role/access boundaries, and core workflow stability.
+
+Even with `npm run test:pilot-readiness` passing, manual checks in this runbook are still required before Go/No-Go, especially workflow UX validation, role-behavior sanity, and browser/mobile verification.
 
 ---
 
