@@ -28,3 +28,7 @@
 ## 2026-04-24 - $facet count vs Promise.all countDocuments
 **Learning:** While using `$facet` groups multiple count operations into a single network roundtrip, it is an anti-pattern for simple counts if the initial `$match` yields a large dataset. Individual `countDocuments` queries can be resolved entirely using index scans, whereas `$facet` forces MongoDB to pull all matching documents into memory to evaluate the sub-pipelines, bypassing indexes and risking the 100MB aggregation memory limit.
 **Action:** Do not replace concurrent `countDocuments` with `$facet` aggregations unless the initial `$match` is heavily constrained and the resulting dataset is known to be small. Reverting the `$facet` optimization.
+
+## 2024-05-01 - Avoid duplicate countDocuments using find limit
+**Learning:** Found several endpoints executing sequential `countDocuments()` and `find()` or concurrent `Promise.all([find(...), countDocuments(...)])`. This adds database load via index scans for counts and wastes network round-trips.
+**Action:** Replaced sequential or concurrent `countDocuments()` queries with `find().limit(MAX + 1)` wherever pagination or a fixed hard cap makes an exact total count unneeded beyond checking if a next page or limit breach exists. This bypasses the need for the `countDocuments` index scan entirely.
