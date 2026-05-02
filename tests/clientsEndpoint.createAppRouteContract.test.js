@@ -26,6 +26,14 @@ const swap = (modulePath, exportsValue) => {
   require.cache[modulePath] = { id: modulePath, filename: modulePath, loaded: true, exports: exportsValue };
 };
 
+const restoreSwaps = () => {
+  for (const { modulePath, original } of restore) {
+    delete require.cache[modulePath];
+    if (original) require.cache[modulePath] = original;
+  }
+  delete require.cache[createAppModulePath];
+};
+
 (async () => {
   const noOp = (_req, res) => res.status(501).json({ success: false, message: 'mocked' });
   const pass = (_req, _res, next) => next();
@@ -90,13 +98,10 @@ const swap = (modulePath, exportsValue) => {
   assert.strictEqual(response.body.route, '/api/clients/');
 
   console.log('clientsEndpoint.createAppRouteContract.test.js passed');
+  restoreSwaps();
+  process.exit(0);
 })().catch((error) => {
+  restoreSwaps();
   console.error(error);
   process.exit(1);
-}).finally(() => {
-  for (const { modulePath, original } of restore) {
-    delete require.cache[modulePath];
-    if (original) require.cache[modulePath] = original;
-  }
-  delete require.cache[createAppModulePath];
 });

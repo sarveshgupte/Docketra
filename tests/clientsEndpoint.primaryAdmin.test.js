@@ -17,6 +17,14 @@ const swap = (modulePath, exportsValue) => {
   require.cache[modulePath] = { id: modulePath, filename: modulePath, loaded: true, exports: exportsValue };
 };
 
+const restoreSwaps = () => {
+  for (const { modulePath, original } of restore) {
+    delete require.cache[modulePath];
+    if (original) require.cache[modulePath] = original;
+  }
+  delete require.cache[controllerPath];
+};
+
 (async () => {
   swap(repoPath, {
     find: async () => [],
@@ -52,13 +60,10 @@ const swap = (modulePath, exportsValue) => {
   assert.deepStrictEqual(res.body.pagination, { page: 1, limit: 25, total: 0, pages: 1 }, 'pagination should include empty-state metadata');
 
   console.log('clientsEndpoint.primaryAdmin.test.js passed');
+  restoreSwaps();
+  process.exit(0);
 })().catch((error) => {
+  restoreSwaps();
   console.error(error);
   process.exit(1);
-}).finally(() => {
-  for (const { modulePath, original } of restore) {
-    delete require.cache[modulePath];
-    if (original) require.cache[modulePath] = original;
-  }
-  delete require.cache[controllerPath];
 });
