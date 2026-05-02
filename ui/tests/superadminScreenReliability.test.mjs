@@ -77,6 +77,10 @@ assert.ok(
   'Firm detail page should include the explicit privacy boundary note.',
 );
 
+assert.ok(firmDetailPage.includes("admin.emailMasked || 'N/A'"), 'Firm detail page should only render masked admin email values.');
+assert.ok(!firmDetailPage.includes('admin.emailMasked || admin.email ||'), 'Firm detail page should not fall back to raw admin.email.');
+assert.ok(firmDetailPage.includes("admin.xID || admin.xid || admin.userXid || 'N/A'"), 'Firm detail page should support xID casing variants.');
+
 
 assert.ok(
   dashboardPage.includes('Platform Command Center')
