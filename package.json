@@ -44,13 +44,15 @@
     "ci:install": "npm ci && npm --prefix ui ci",
     "test:integrity:pure": "REDIS_URL='' ALLOW_REDIS_FALLBACK='true' sh -c \"node tests/health.controller.test.js && node tests/firmRbac.test.js && node tests/writeSafety.test.js && node tests/requestLifecycle.test.js && node tests/sideEffectQueue.test.js && node tests/backgroundJobs.test.js && node tests/circuitBreaker.test.js && node tests/softDelete.test.js && node tests/caseStateMachine.test.js && node tests/caseSla.service.test.js && node tests/caseSlaConcurrency.test.js && node tests/diagnostics.service.test.js && node tests/docketLifecycleWorkflow.test.js && node tests/docketAuditIntegrity.test.js && node tests/user.controller.getUserById.test.js && node tests/controllerDecomposition.service.test.js\"",
     "test:integrity:integration": "node tests/adminIntegrity.test.js && node tests/migrationEncryptFields.test.js",
-    "test:security:pure": "NODE_ENV='test' REDIS_URL='' ALLOW_REDIS_FALLBACK='true' sh -c \"node tests/securityHardening.test.js && node tests/coreSecurityHardeningPhase2.test.js && node tests/csrfOrigin.middleware.test.js && node tests/authSession.refreshAccessToken.test.js && node tests/authMiddleware.readOnly.test.js\"",
+    "test:security:pure": "NODE_ENV='test' REDIS_URL='' ALLOW_REDIS_FALLBACK='true' sh -c \"node tests/coreSecurityHardeningPhase2.test.js && node tests/csrfOrigin.middleware.test.js && node tests/authSession.refreshAccessToken.test.js && node tests/authMiddleware.readOnly.test.js\"",
     "test:hardening:pure": "NODE_ENV='test' REDIS_URL='' ALLOW_REDIS_FALLBACK='true' sh -c \"node tests/requestId.middleware.test.js && node tests/productionHardening.test.js && node tests/backendRuntimeEntrypoints.smoke.test.js\"",
-    "test:pure": "npm run test:integrity:pure && npm run test:security:pure && npm run test:hardening:pure && npm run test:tenant-identity-boundary && npm run test:admin-tenant-boundary && node tests/fileUtils.test.js && node tests/reports.controller.test.js",
+    "test:pure": "REDIS_URL='' ALLOW_REDIS_FALLBACK='true' NODE_ENV='test' sh -c \"npm run test:integrity:pure && npm run test:security:pure && npm run test:hardening:pure && npm run test:tenant-identity-boundary && npm run test:admin-tenant-boundary && node tests/fileUtils.test.js && node tests/reports.controller.test.js\"",
     "test:integration": "npm run test:integrity:integration",
     "ci:backend:core:integration": "npm run test:integrity:integration",
     "ci:release-gate:pure": "npm run ci:backend:syntax && npm run ci:backend:routes && npm run ci:backend:core && npm run ci:backend:security && npm run ci:frontend:build && npm run ci:frontend:checks",
-    "ci:release-gate:integration": "npm run ci:backend:core:integration"
+    "ci:release-gate:integration": "npm run ci:backend:core:integration && npm run ci:backend:security:integration",
+    "test:security:integration": "NODE_ENV='test' sh -c \"node tests/securityHardening.test.js\"",
+    "ci:backend:security:integration": "npm run test:security:integration"
   },
   "keywords": [
     "task-management",
