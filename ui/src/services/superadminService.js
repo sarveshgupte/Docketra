@@ -34,6 +34,11 @@ export const superadminService = {
     return response.data;
   },
 
+  getAuditLogs: async (params = {}) => {
+    const response = await api.get('/superadmin/audit-logs', { params });
+    return response.data;
+  },
+
   /**
    * Create a new firm
    */
