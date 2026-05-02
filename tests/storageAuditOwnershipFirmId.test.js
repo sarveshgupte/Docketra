@@ -14,6 +14,7 @@ Module._load = function(request, parent, isMain) {
   if (request === '../models/Firm.model') {
     return {
       findById: () => ({ select: () => ({ lean: async () => ({ storage: { mode: 'firm_connected', provider: 'google_drive' } }) }) }),
+      findByIdAndUpdate: async () => ({ _id: 'firm-owner-9' }),
     };
   }
   if (request === '../services/tenantIdentity.service') {
