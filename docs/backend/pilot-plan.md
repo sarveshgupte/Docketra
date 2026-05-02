@@ -29,3 +29,5 @@ Existing future-billing fields such as `billingStatus`, `subscriptionStatus`, an
 - Superadmin pilot operations now include `GET /api/superadmin/plans` and `PATCH /api/superadmin/firms/:firmId/plan-capacity` for safe metadata-only plan/capacity management during pilot readiness checks.
 
 - Superadmin Pilot Readiness Checklist is the operational readiness surface for go/no-go pilot onboarding decisions (`GET /api/superadmin/pilot-readiness`).
+
+- Pilot rollout controls now include Superadmin feature flags metadata endpoints and dashboard controls.

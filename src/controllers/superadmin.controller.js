@@ -28,6 +28,14 @@ const { getSupportDiagnosticsSnapshot } = require('../services/superadminDiagnos
 const { getFirmHealthSnapshot } = require('../services/superadminFirmHealth.service');
 const { buildPilotReadinessSnapshot } = require('../services/superadminPilotReadiness.service');
 const {
+  getFeatureFlagConfigByKey,
+  getFeatureFlagsSnapshot,
+  updateFeatureFlagState,
+  validateFirmIds,
+  PLATFORM_FEATURE_FLAGS_KEY,
+  SuperadminPlatformConfig,
+} = require('../services/featureFlags.service');
+const {
   findFirmAdmin,
   findFirmAdminById,
   isAdminCurrentlyLocked,
@@ -37,6 +45,81 @@ const {
   logSuperadminAction,
   ADMIN_ROLE_VALUES,
 } = require('../services/superadminLifecycle.service');
+
+const getSuperadminFeatureFlags = async (req, res) => {
+  try {
+    const data = await getFeatureFlagsSnapshot();
+    return res.json({ success: true, data });
+  } catch (error) {
+    log.error('[SUPERADMIN] Error loading feature flags snapshot:', error);
+    return res.status(500).json({ success: false, message: 'Failed to load feature flags' });
+  }
+};
+
+const updateSuperadminFeatureFlag = async (req, res) => {
+  try {
+    const key = String(req.params?.key || '').trim();
+    const flag = getFeatureFlagConfigByKey(key);
+    if (!flag) {
+      return res.status(400).json({ success: false, message: 'Unknown feature flag key' });
+    }
+
+    const { enabledGlobally, rolloutStage, firmIds, notes } = req.body || {};
+    if (Array.isArray(firmIds) && !flag.allowFirmOverride && firmIds.length) {
+      return res.status(400).json({ success: false, message: `Firm overrides are not allowed for ${key}` });
+    }
+    const { ids: normalizedFirmIds, invalid } = validateFirmIds(firmIds);
+    if (invalid.length) {
+      return res.status(400).json({ success: false, message: 'Invalid firmIds provided', data: { invalidFirmIds: invalid } });
+    }
+    if (Array.isArray(firmIds) && normalizedFirmIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'firmIds must contain at least one firm when provided.' });
+    }
+    if (Array.isArray(firmIds) && normalizedFirmIds.length > 0) {
+      const existingFirmRows = await Firm.find({ _id: { $in: normalizedFirmIds }, status: { $ne: 'deleted' } }).select('_id').lean();
+      const existing = new Set(existingFirmRows.map((row) => String(row._id)));
+      const missingFirmIds = normalizedFirmIds.filter((id) => !existing.has(id));
+      if (missingFirmIds.length) {
+        return res.status(400).json({ success: false, message: 'Some firmIds were not found', data: { missingFirmIds } });
+      }
+    }
+    const updateDoc = updateFeatureFlagState({ key, enabledGlobally, rolloutStage, firmIds });
+    const hasFirmOverridePayload = Array.isArray(firmIds);
+    if (Object.keys(updateDoc).length === 1 && !hasFirmOverridePayload) {
+      return res.status(400).json({ success: false, message: 'No editable fields provided' });
+    }
+    if (Object.keys(updateDoc).length > 1) {
+      await SuperadminPlatformConfig.updateOne(
+        { key: PLATFORM_FEATURE_FLAGS_KEY },
+        { $set: updateDoc, $setOnInsert: { key: PLATFORM_FEATURE_FLAGS_KEY } },
+        { upsert: true },
+      );
+    }
+    if (hasFirmOverridePayload) {
+      await Firm.updateMany({ _id: { $in: normalizedFirmIds }, status: { $ne: 'deleted' } }, {
+        $set: {
+          [`featureFlags.${key}.enabled`]: true,
+          [`featureFlags.${key}.updatedAt`]: new Date(),
+        },
+      });
+    }
+    await logSuperadminAction({
+      actionType: 'FeatureFlagUpdated',
+      description: `FeatureFlagUpdated:${key}`,
+      performedBy: req.user?.email || 'superadmin',
+      performedById: req.user?._id || null,
+      targetEntityType: 'Firm',
+      targetEntityId: String(key),
+      metadata: { key, enabledGlobally, rolloutStage, firmIdsCount: hasFirmOverridePayload ? normalizedFirmIds.length : undefined, notes: String(notes || '').slice(0, 500) },
+      req,
+    });
+    const data = await getFeatureFlagsSnapshot();
+    return res.json({ success: true, data });
+  } catch (error) {
+    log.error('[SUPERADMIN] Error updating feature flag:', error);
+    return res.status(500).json({ success: false, message: 'Failed to update feature flag' });
+  }
+};
 
 // Constants
 const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
@@ -1944,6 +2027,8 @@ module.exports = {
   getFirmHealth,
   getPilotReadiness,
   getPlansCapacity,
+  getSuperadminFeatureFlags,
+  updateSuperadminFeatureFlag: wrapWriteHandler(updateSuperadminFeatureFlag),
   updateFirmPlanCapacity,
   getSuperadminAuditLogs,
   getSuperadminGlobalSearch,

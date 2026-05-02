@@ -5,6 +5,7 @@ const SuperadminAudit = require('../models/SuperadminAudit.model');
 const Firm = require('../models/Firm.model');
 const User = require('../models/User.model');
 const { CHECKLIST_KEYS, clampScore, deriveOverallStatus } = require('./superadminPilotReadiness.helpers');
+const { getFeatureFlagsSnapshot, getFeatureFlagRegistry } = require('./featureFlags.service');
 
 const PRIMARY_ADMIN_ROUTE_CONTRACT = [
   '/api/clients',
@@ -35,18 +36,22 @@ const getPlansCapacityTotals = async () => {
 };
 
 const buildPilotReadinessSnapshot = async () => {
-  const [firmHealth, diagnostics, onboarding, planTotals, recentAuditCount] = await Promise.all([
+  const [firmHealth, diagnostics, onboarding, planTotals, recentAuditCount, featureFlags] = await Promise.all([
     getFirmHealthSnapshot({ limit: 100 }),
     getSupportDiagnosticsSnapshot({ limit: 20 }),
     onboardingAnalyticsService.getOnboardingInsights({ sinceDays: 30, staleAfterDays: 7, recentLimit: 20 }),
     getPlansCapacityTotals(),
     SuperadminAudit.countDocuments({ createdAt: { $gte: new Date(Date.now() - (14 * 24 * 60 * 60 * 1000)) } }),
+    getFeatureFlagsSnapshot(),
   ]);
 
   const failedHealth = Number(firmHealth?.totals?.critical || 0);
   const warnedHealth = Number(firmHealth?.totals?.atRisk || 0);
   const staleUsers = Number(onboarding?.summary?.staleUsers || onboarding?.totals?.staleUsers || 0);
   const storageIssues = (diagnostics?.firms || []).filter((row) => String(row?.storageHealthStatus || '').toUpperCase() !== 'HEALTHY').length;
+
+  const registryValid = Array.isArray(getFeatureFlagRegistry()) && getFeatureFlagRegistry().every((f) => f.key);
+  const highRiskGlobal = (featureFlags?.flags || []).filter((f) => f.riskLevel === 'high' && f.enabledGlobally).length;
 
   const checklist = [
     { key: CHECKLIST_KEYS[0], label: 'Superadmin auth and route protection', status: 'pass', summary: 'Route and policy guard configured for readiness endpoint.', evidence: 'requireSuperadmin + SuperAdminPolicy.canViewPlatformStats', nextAction: 'None', href: '/app/superadmin' },
@@ -58,6 +63,7 @@ const buildPilotReadinessSnapshot = async () => {
     { key: CHECKLIST_KEYS[6], label: 'Support diagnostics readiness', status: diagnostics ? 'pass' : 'fail', summary: diagnostics ? 'Support diagnostics snapshot is available.' : 'Diagnostics snapshot unavailable.', evidence: diagnostics ? `Diagnostics generated at ${diagnostics.generatedAt}` : 'No diagnostics payload', nextAction: diagnostics ? 'Continue monitoring.' : 'Restore diagnostics endpoint.', href: '/app/superadmin/diagnostics' },
     { key: CHECKLIST_KEYS[7], label: 'Audit logging readiness', status: recentAuditCount > 0 ? 'pass' : 'watch', summary: `Recent superadmin audit metadata events (14d): ${recentAuditCount}.`, evidence: 'Audit metadata count only; no payload details returned.', nextAction: recentAuditCount > 0 ? 'Continue monitoring audit pipeline.' : 'Verify audit event flow in staging.', href: '/app/superadmin/audit' },
     { key: CHECKLIST_KEYS[8], label: 'Primary-admin sidebar route readiness', status: 'pass', summary: 'Primary-admin API contract paths are fixed and covered by dedicated route-boundary checks.', evidence: `tests/primaryAdminSidebarRouteBoundaries.test.js covers ${PRIMARY_ADMIN_ROUTE_CONTRACT.join(', ')} (see docs/PRIMARY_ADMIN_SIDEBAR_API_CONTRACT.md).`, nextAction: 'Keep boundary test and API contract doc in sync.', href: '/app/superadmin/diagnostics' },
+    { key: 'feature_flag_rollout_readiness', label: 'Feature flag rollout readiness', status: !registryValid ? 'fail' : highRiskGlobal > 0 ? 'watch' : 'pass', summary: `High-risk flags enabled globally: ${highRiskGlobal}.`, evidence: `Registry valid=${registryValid}; flags=${(featureFlags?.flags || []).length}`, nextAction: !registryValid ? 'Repair feature flag registry state.' : highRiskGlobal > 0 ? 'Move high-risk flags to internal/pilot.' : 'Maintain pilot/internal stage for high-risk flags.', href: '/app/superadmin/feature-flags' },
     { key: CHECKLIST_KEYS[9], label: 'No public billing/payment flows during pilot', status: 'pass', summary: 'No payment processor/public checkout flow included in pilot readiness surface.', evidence: 'Plans/capacity readiness uses internal metadata-only counters.', nextAction: 'Do not enable public billing flows during pilot.', href: '/app/superadmin/plans' },
   ];
 
