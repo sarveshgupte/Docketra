@@ -103,3 +103,7 @@ Example valid active payload:
 In tenant login flows, workspace resolution can succeed while `POST /api/auth/login/init` fails when the resolved canonical tenant ID (default client) differs from legacy user firm linkage. This occurs when tenant resolution sets `req.firmId` to `defaultClientId`, but older user records still have `user.firmId` set to the legacy Firm `_id`.
 
 Login lookup now scopes by the resolved tenant context and checks canonical + legacy tenant candidate IDs (`firmId` and `defaultClientId`) to preserve backward compatibility without allowing cross-firm logins.
+
+Follow-up hardening: `POST /api/auth/login/verify` and OTP resend now use the same resolved tenant candidate IDs (`req.firmId`, `req.firm.id`, `req.firm.defaultClientId`, `req.firm.legacyFirmId`) when validating the login session and loading the user. This allows expected canonical/default-client vs legacy Firm `_id` mismatches within the same tenant context while still rejecting cross-firm tokens.
+
+Data model reminder: users remain owned by `Firm._id` (`user.firmId`). `defaultClientId` is a canonical tenant/client representation and must not replace `user.firmId`.
