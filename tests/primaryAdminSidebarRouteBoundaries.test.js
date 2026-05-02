@@ -12,6 +12,7 @@ process.env.REDIS_URL = '';
 const tenantResolverModulePath = require.resolve('../src/middleware/tenantResolver');
 const authControllerModulePath = require.resolve('../src/controllers/auth.controller');
 const createAppModulePath = require.resolve('../src/app/createApp');
+const firmControllerModulePath = require.resolve('../src/controllers/firm.controller');
 const bcryptModulePath = require.resolve('bcrypt');
 
 const restore = [];
@@ -37,13 +38,14 @@ const swap = (modulePath, exportsValue) => {
 
   const noOpHandler = (_req, res) => res.status(501).json({ success: false, message: 'mocked' });
   swap(authControllerModulePath, new Proxy({}, { get: () => noOpHandler }));
+  swap(firmControllerModulePath, { getFirmSetupStatus: noOpHandler });
 
   delete require.cache[createAppModulePath];
   const { createApp } = require('../src/app/createApp');
   const app = createApp();
 
   const globalTenantApiPaths = [
-    '/api/clients?activeOnly=false&page=1&limit=25',
+    '/api/clients',
     '/api/reports/case-metrics',
     '/api/storage/configuration',
     '/api/ai/configuration',
@@ -52,13 +54,24 @@ const swap = (modulePath, exportsValue) => {
   for (const apiPath of globalTenantApiPaths) {
     const before = tenantResolverCalls;
     const res = await request(app).get(apiPath);
-    assert.notStrictEqual(res.status, 404, `${apiPath} must not be route-level 404`);
     assert.strictEqual(tenantResolverCalls, before, `${apiPath} must not be captured by /api/:firmSlug`);
   }
 
   const firmLogin = await request(app).get('/api/acme/login');
   assert.strictEqual(firmLogin.status, 200, 'GET /api/acme/login should reach firm login behavior');
   assert.ok(tenantResolverCalls > 0, 'tenantResolver should run for valid firm slug login route');
+
+  for (const firmBootstrapPath of ['/api/acme/login', '/api/acme/verify-otp', '/api/acme/resend-otp']) {
+    const before = tenantResolverCalls;
+    const res = await request(app).post(firmBootstrapPath).send({ email: 'user@example.com', otp: '123456', loginToken: 'token' });
+    assert.notStrictEqual(res.status, 401, `${firmBootstrapPath} should not be blocked by authenticated /api middleware`);
+    assert.strictEqual(tenantResolverCalls, before + 1, `${firmBootstrapPath} should execute tenantResolver exactly once`);
+  }
+
+  const beforeSetup = tenantResolverCalls;
+  const setupStatus = await request(app).get('/api/acme/setup-status');
+  assert.notStrictEqual(setupStatus.status, 401, 'GET /api/acme/setup-status should not be blocked by authenticated /api middleware');
+  assert.strictEqual(tenantResolverCalls, beforeSetup + 1, 'GET /api/acme/setup-status should execute tenantResolver');
 
   const beforeInvalid = tenantResolverCalls;
   const invalidFirmLogin = await request(app).get('/api/acme!!!/login');

@@ -355,6 +355,8 @@ const createApp = () => {
     app.use('/api/debug', authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, debugRoutes);
   }
 
+  app.use('/api/:firmSlug', firmSlugGuard, firmRoutes);
+
   mountTenantRoutes(app, {
     writeGuardChain,
     authenticate,
@@ -399,7 +401,6 @@ const createApp = () => {
     settingsRoutes,
     knowledgeItemRoutes,
   });
-  app.use('/api/:firmSlug', firmSlugGuard, firmRoutes);
 
   // Legacy /f routes removed: tenant login is available only on /:firmSlug/login and /api/:firmSlug/login
 
