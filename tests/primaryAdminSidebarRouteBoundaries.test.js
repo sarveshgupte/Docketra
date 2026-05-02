@@ -45,7 +45,7 @@ const swap = (modulePath, exportsValue) => {
   const app = createApp();
 
   const globalTenantApiPaths = [
-    '/api/clients?activeOnly=false&page=1&limit=25',
+    '/api/clients',
     '/api/reports/case-metrics',
     '/api/storage/configuration',
     '/api/ai/configuration',
