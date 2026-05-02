@@ -18,7 +18,7 @@ assert(!apiSource.includes("Authorization']"), 'API client must not inject Autho
 assert(!apiSource.includes('ACCESS_TOKEN'), 'API client must not depend on browser token storage keys.');
 assert(apiSource.includes('withCredentials: true'), 'Axios API client must send cookies via withCredentials: true.');
 assert(authServiceSource.includes("api.post('/auth/refresh')"), 'Auth service refresh calls must use the shared credential-aware API client.');
-assert(authServiceSource.includes("api.get('/auth/profile')"), 'Auth service profile calls must use the shared credential-aware API client.');
+assert(authServiceSource.includes("api.get('/auth/profile'"), 'Auth service profile calls must use the shared credential-aware API client.');
 assert(authServiceSource.includes("api.post('/auth/logout')"), 'Auth service logout calls must use the shared credential-aware API client.');
 assert(authServiceSource.includes('api.post(endpoint, payload)'), 'Login must use shared API client for superadmin and tenant routes.');
 assert(otpPageSource.includes("api.post('/auth/verify-otp'"), 'OTP verification page must use shared credential-aware API client.');
