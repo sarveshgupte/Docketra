@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 const assert = require('assert');
 const EventEmitter = require('events');
+
+// Keep this contract test pure/offline regardless of developer .env values.
+process.env.NODE_ENV = 'test';
+process.env.REDIS_URL = '';
+process.env.ALLOW_REDIS_FALLBACK = 'true';
+
 const lifecycle = require('../src/middleware/requestLifecycle.middleware');
 const log = require('../src/utils/log');
 const { reset: resetQueue } = require('../src/services/sideEffectQueue.service');
