@@ -159,8 +159,9 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   const handleLogout = async () => {
     setMenuOpen(false);
     closeCommandPalette();
-    const preserveFirmSlug = !(user?.isSuperAdmin || user?.role === 'SuperAdmin') && !!firmSlug;
-    await logout({ preserveFirmSlug });
+    // PlatformShell is firm-workspace only. A superadmin (user?.isSuperAdmin || user?.role === 'SuperAdmin')
+    // never reaches this shell, so preserveFirmSlug simply follows whether firmSlug is set.
+    await logout({ preserveFirmSlug: !!firmSlug });
     if (firmSlug) {
       navigate(ROUTES.FIRM_LOGIN(firmSlug), { replace: true, state: { message: 'You have been signed out safely.', messageType: 'success' } });
       return;
@@ -435,7 +436,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
               >
                 <span className="platform__user-avatar" aria-hidden="true">{userInitials}</span>
                 <span className="platform__user-name">{userName}</span>
-                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <svg className="platform__user-pill-chevron" width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
               {menuOpen ? (
                 <div className="platform__account-dropdown" role="menu" aria-label="Account menu">
