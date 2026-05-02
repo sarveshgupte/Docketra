@@ -30,6 +30,7 @@ import {
   SuperadminAuditLogPage,
   SuperadminFirmHealthPage,
   SuperadminPlansPage,
+  SuperadminPilotReadinessPage,
   ProfilePage,
   ProductUpdatesHistoryPage,
   ReportsDashboard,
@@ -120,6 +121,16 @@ export const ProtectedRoutes = () => (
         element={(
           <ProtectedRoute requireSuperadmin>
             <SuperadminPlansPage />
+          </ProtectedRoute>
+        )}
+      />
+
+
+      <Route
+        path="/app/superadmin/pilot-readiness"
+        element={(
+          <ProtectedRoute requireSuperadmin>
+            <SuperadminPilotReadinessPage />
           </ProtectedRoute>
         )}
       />

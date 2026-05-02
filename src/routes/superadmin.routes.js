@@ -31,6 +31,7 @@ const {
   getSupportDiagnostics,
   getFirmHealth,
   getPlansCapacity,
+  getPilotReadiness,
   updateFirmPlanCapacity,
   getSuperadminAuditLogs,
   getSuperadminGlobalSearch,
@@ -65,6 +66,7 @@ router.get('/firm-health', requireSuperadmin, authorize(SuperAdminPolicy.canView
 router.get('/audit-logs', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getSuperadminAuditLogs);
 router.get('/search', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getSuperadminGlobalSearch);
 router.get('/plans', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getPlansCapacity);
+router.get('/pilot-readiness', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getPilotReadiness);
 
 // Firm management
 router.post('/firms', authorize(FirmPolicy.canCreate), createFirm);

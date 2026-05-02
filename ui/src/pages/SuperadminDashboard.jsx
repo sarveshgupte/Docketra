@@ -23,17 +23,19 @@ export const SuperadminDashboard = () => {
   const [diagnostics, setDiagnostics] = useState(null);
   const [firmHealth, setFirmHealth] = useState(null);
   const [plans, setPlans] = useState(null);
+  const [pilotReadiness, setPilotReadiness] = useState(null);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     setError('');
 
-    const [statsRes, insightsRes, diagnosticsRes, healthRes, plansRes] = await Promise.allSettled([
+    const [statsRes, insightsRes, diagnosticsRes, healthRes, plansRes, pilotRes] = await Promise.allSettled([
       superadminService.getPlatformStats(),
       superadminService.getOnboardingInsights({ sinceDays: 30, staleAfterDays: 7, recentLimit: 20 }),
       superadminService.getSupportDiagnostics({ limit: 20 }),
       superadminService.getFirmHealth({ limit: 100 }),
       superadminService.getPlansCapacity(),
+      superadminService.getPilotReadiness(),
     ]);
 
     const statsData = statsRes.status === 'fulfilled' && statsRes.value?.success ? statsRes.value.data : null;
@@ -47,6 +49,7 @@ export const SuperadminDashboard = () => {
     setDiagnostics(diagnosticsData);
     setFirmHealth(healthData);
     setPlans(plansRes.status === 'fulfilled' && plansRes.value?.success ? plansRes.value.data : null);
+    setPilotReadiness(pilotRes.status === 'fulfilled' && pilotRes.value?.success ? pilotRes.value.data : null);
 
     if (!statsData && !insightsData && !diagnosticsData) {
       setError('Platform command center is temporarily unavailable.');
@@ -164,6 +167,7 @@ export const SuperadminDashboard = () => {
                 <Button variant="secondary" onClick={() => navigate('/app/superadmin/onboarding-insights')}>Onboarding Insights</Button>
                 <Button variant="secondary" onClick={() => navigate('/app/superadmin/firm-health')}>Firm Health</Button>
                 <Button variant="secondary" onClick={() => navigate('/app/superadmin/plans')}>Plans & Capacity</Button>
+                <Button variant="secondary" onClick={() => navigate('/app/superadmin/pilot-readiness')}>Pilot Readiness{pilotReadiness ? ` (${pilotReadiness.overallStatus} · ${pilotReadiness.score})` : ''}</Button>
                 <Button variant="secondary" onClick={() => navigate('/app/superadmin/diagnostics')}>Support Diagnostics</Button>
               </div>
             </Card>
