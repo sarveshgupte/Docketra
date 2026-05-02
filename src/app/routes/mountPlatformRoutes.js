@@ -49,9 +49,11 @@ const mountPlatformRoutes = (app, deps) => {
   app.post('/api/superadmin/login', ...superadminLoginChain);
   app.post('/superadmin/login', ...superadminLoginChain);
 
-  app.get('/:firmSlug/login', publicLimiter, tenantResolver, (req, res) => {
+  const firmLoginHandler = (req, res) => {
     res.json({ success: true, data: { firmId: req.firmIdString, firmSlug: req.firmSlug, name: req.firmName, status: req.firm.status } });
-  });
+  };
+  app.get('/api/:firmSlug/login', publicLimiter, firmSlugGuard, tenantResolver, firmLoginHandler);
+  app.get('/:firmSlug/login', publicLimiter, tenantResolver, firmLoginHandler);
   app.post('/:firmSlug/login', loginLimiter, tenantResolver, noFirmNoTransaction, (req, res, next) => { req.loginScope = 'tenant'; next(); }, login);
 
   app.use('/api/public', publicLimiter, writeGuardChain, publicRoutes);
@@ -68,8 +70,6 @@ const mountPlatformRoutes = (app, deps) => {
   app.use('/api/sla', ...tenantScopedApiAccess, writeGuardChain, slaRoutes);
 
   ['/api/sa', '/api/superadmin', '/superadmin'].forEach((basePath) => app.use(basePath, superadminLimiter, authenticate, writeGuardChain, adminAuditTrail('superadmin'), superadminRoutes));
-
-  app.use('/api/:firmSlug', firmSlugGuard, firmRoutes);
 
   if (!isProduction) {
     log.info('AUTH_ROUTE_MOUNTS', { authProfile: ['GET /api/auth/profile', 'GET /auth/profile'], authLogout: ['POST /api/auth/logout', 'POST /auth/logout'], superadminLogin: ['POST /api/superadmin/login', 'POST /superadmin/login'], superadminProtectedBasePaths: ['/api/sa', '/api/superadmin', '/superadmin'], reservedFirmNamespaces: RESERVED_FIRM_SLUGS });

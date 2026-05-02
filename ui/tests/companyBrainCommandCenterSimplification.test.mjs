@@ -11,8 +11,8 @@ const routes = read('src/constants/routes.js');
 const protectedRoutes = read('src/routes/ProtectedRoutes.jsx');
 
 assert.ok(companyBrainPage.includes('Command Summary'), 'CompanyBrainPage must contain Command Summary section');
-assert.ok(companyBrainPage.includes('Needs Attention'), 'CompanyBrainPage must contain Needs Attention section');
-assert.ok(companyBrainPage.includes('Connected Map'), 'CompanyBrainPage must contain Connected Map section');
+assert.ok(companyBrainPage.includes('Needs attention'), 'CompanyBrainPage must contain Needs attention section');
+assert.ok(companyBrainPage.includes('Memory map'), 'CompanyBrainPage must contain Memory map section');
 assert.ok(companyBrainPage.includes('How to use Company Brain'), 'CompanyBrainPage must contain How to use Company Brain section');
 
 assert.ok(companyBrainPage.includes('export default CompanyBrainPage;'), 'CompanyBrainPage must retain a default export for lazy/default imports');

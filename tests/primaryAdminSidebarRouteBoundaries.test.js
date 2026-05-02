@@ -1,25 +1,91 @@
 #!/usr/bin/env node
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
+const request = require('supertest');
 
-const contractPaths = ['/api/clients', '/api/reports/case-metrics', '/api/storage/configuration', '/api/ai/configuration'];
+process.env.NODE_ENV = 'test';
+process.env.UPLOAD_SCAN_STRICT = 'false';
+process.env.JWT_SECRET = 'x'.repeat(80);
+process.env.STORAGE_TOKEN_SECRET = 'y'.repeat(80);
+process.env.METRICS_TOKEN = 'z'.repeat(80);
+process.env.REDIS_URL = '';
 
-const sourceChecks = [
-  { file: '../src/routes/admin.routes.js', needle: "router.get('/clients'" },
-  { file: '../src/routes/reports.routes.js', needle: "router.get('/case-metrics'" },
-  { file: '../src/routes/storage.routes.js', needle: "router.get('/configuration'" },
-  { file: '../src/routes/ai.routes.js', needle: "router.get('/configuration'" },
-  { file: '../docs/PRIMARY_ADMIN_SIDEBAR_API_CONTRACT.md', needle: '/api/clients' },
-  { file: '../docs/PRIMARY_ADMIN_SIDEBAR_API_CONTRACT.md', needle: '/api/reports/case-metrics' },
-  { file: '../docs/PRIMARY_ADMIN_SIDEBAR_API_CONTRACT.md', needle: '/api/storage/configuration' },
-  { file: '../docs/PRIMARY_ADMIN_SIDEBAR_API_CONTRACT.md', needle: '/api/ai/configuration' },
-];
+const tenantResolverModulePath = require.resolve('../src/middleware/tenantResolver');
+const authControllerModulePath = require.resolve('../src/controllers/auth.controller');
+const createAppModulePath = require.resolve('../src/app/createApp');
+const firmControllerModulePath = require.resolve('../src/controllers/firm.controller');
+const bcryptModulePath = require.resolve('bcrypt');
 
-for (const check of sourceChecks) {
-  const content = fs.readFileSync(path.resolve(__dirname, check.file), 'utf8');
-  assert.ok(content.includes(check.needle), `${check.file} should include ${check.needle}`);
-}
+const restore = [];
+const swap = (modulePath, exportsValue) => {
+  restore.push({ modulePath, original: require.cache[modulePath] });
+  delete require.cache[modulePath];
+  require.cache[modulePath] = { id: modulePath, filename: modulePath, loaded: true, exports: exportsValue };
+};
 
-assert.strictEqual(contractPaths.length, 4, 'primary-admin contract should enforce all fixed API paths');
-console.log('primaryAdminSidebarRouteBoundaries.test.js passed');
+(async () => {
+  let tenantResolverCalls = 0;
+  swap(bcryptModulePath, { hash: async () => 'mock-hash', compare: async () => true, genSalt: async () => 'mock-salt' });
+
+  swap(tenantResolverModulePath, (req, _res, next) => {
+    tenantResolverCalls += 1;
+    req.firmId = '507f1f77bcf86cd799439022';
+    req.firmIdString = 'FIRM001';
+    req.firmSlug = req.params.firmSlug;
+    req.firmName = 'Acme';
+    req.firm = { status: 'active', firmSlug: req.params.firmSlug };
+    next();
+  });
+
+  const noOpHandler = (_req, res) => res.status(501).json({ success: false, message: 'mocked' });
+  swap(authControllerModulePath, new Proxy({}, { get: () => noOpHandler }));
+  swap(firmControllerModulePath, { getFirmSetupStatus: noOpHandler });
+
+  delete require.cache[createAppModulePath];
+  const { createApp } = require('../src/app/createApp');
+  const app = createApp();
+
+  const globalTenantApiPaths = [
+    '/api/clients',
+    '/api/reports/case-metrics',
+    '/api/storage/configuration',
+    '/api/ai/configuration',
+  ];
+
+  for (const apiPath of globalTenantApiPaths) {
+    const before = tenantResolverCalls;
+    const res = await request(app).get(apiPath);
+    assert.strictEqual(tenantResolverCalls, before, `${apiPath} must not be captured by /api/:firmSlug`);
+  }
+
+  const firmLogin = await request(app).get('/api/acme/login');
+  assert.strictEqual(firmLogin.status, 200, 'GET /api/acme/login should reach firm login behavior');
+  assert.ok(tenantResolverCalls > 0, 'tenantResolver should run for valid firm slug login route');
+
+  for (const firmBootstrapPath of ['/api/acme/login', '/api/acme/verify-otp', '/api/acme/resend-otp']) {
+    const before = tenantResolverCalls;
+    const res = await request(app).post(firmBootstrapPath).send({ email: 'user@example.com', otp: '123456', loginToken: 'token' });
+    assert.notStrictEqual(res.status, 401, `${firmBootstrapPath} should not be blocked by authenticated /api middleware`);
+    assert.strictEqual(tenantResolverCalls, before + 1, `${firmBootstrapPath} should execute tenantResolver exactly once`);
+  }
+
+  const beforeSetup = tenantResolverCalls;
+  const setupStatus = await request(app).get('/api/acme/setup-status');
+  assert.notStrictEqual(setupStatus.status, 401, 'GET /api/acme/setup-status should not be blocked by authenticated /api middleware');
+  assert.strictEqual(tenantResolverCalls, beforeSetup + 1, 'GET /api/acme/setup-status should execute tenantResolver');
+
+  const beforeInvalid = tenantResolverCalls;
+  const invalidFirmLogin = await request(app).get('/api/acme!!!/login');
+  assert.notStrictEqual(invalidFirmLogin.status, 200, 'invalid firm slug must not be treated as valid');
+  assert.strictEqual(tenantResolverCalls, beforeInvalid, 'invalid firm slug must not hit tenantResolver');
+
+  console.log('primaryAdminSidebarRouteBoundaries.test.js passed');
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+}).finally(() => {
+  for (const { modulePath, original } of restore) {
+    delete require.cache[modulePath];
+    if (original) require.cache[modulePath] = original;
+  }
+  delete require.cache[createAppModulePath];
+});
