@@ -47,6 +47,23 @@ const uniqueTruthy = (values = []) => {
     });
 };
 
+const buildTenantCandidateIds = (req) => uniqueTruthy([
+  req?.firmId,
+  req?.firm?.id,
+  req?.firm?.defaultClientId,
+  req?.firm?.legacyFirmId,
+]);
+
+const buildTenantScopedUserQuery = (userId, tenantCandidateIds = []) => ({
+  _id: userId,
+  status: 'active',
+  isActive: true,
+  $or: [
+    { firmId: { $in: tenantCandidateIds } },
+    { defaultClientId: { $in: tenantCandidateIds } },
+  ],
+});
+
 const createAuthLoginService = (deps) => {
   const models = deps.models || {};
   const utils = deps.utils || {};
@@ -123,12 +140,7 @@ const createAuthLoginService = (deps) => {
 
       const canonicalTenantId = toSafeLogId(req.firmId);
       const legacyFirmId = toSafeLogId(req.firm?.legacyFirmId);
-      const tenantCandidateIds = uniqueTruthy([
-        canonicalTenantId,
-        toSafeLogId(req.firm?.id),
-        toSafeLogId(req.firm?.defaultClientId),
-        legacyFirmId,
-      ]);
+      const tenantCandidateIds = buildTenantCandidateIds(req);
 
       log.info('AUTH_LOGIN_ATTEMPT', {
         req: getAuthLogRequest(req),
@@ -258,16 +270,24 @@ const createAuthLoginService = (deps) => {
       if (!loginSession || !loginSession.expiresAt || loginSession.expiresAt.getTime() < Date.now()) {
         return sendErrorResponse(res, { statusCode: 401, message: 'Invalid or expired login token' });
       }
-      if (req.firmId && String(req.firmId) !== String(loginSession.firmId)) {
+      const tenantCandidateIds = buildTenantCandidateIds(req);
+      const loginSessionFirmId = toSafeLogId(loginSession.firmId);
+      if (tenantCandidateIds.length > 0 && !tenantCandidateIds.includes(loginSessionFirmId)) {
+        log.warn('AUTH_LOGIN_RESEND_OTP_TENANT_MISMATCH', {
+          req: getAuthLogRequest(req),
+          firmSlug: req.params?.firmSlug || req.firmSlug || null,
+          reqFirmId: toSafeLogId(req.firmId),
+          loginSessionFirmId,
+          tenantCandidateIds,
+          reasonCode: 'LOGIN_SESSION_FIRM_NOT_IN_TENANT_SCOPE',
+        });
         return sendErrorResponse(res, { statusCode: 401, message: 'Invalid or expired login token' });
       }
 
-      const user = await User.findOne({
-        _id: loginSession.userId,
-        firmId: loginSession.firmId,
-        status: 'active',
-        isActive: true,
-      });
+      const user = await User.findOne(buildTenantScopedUserQuery(loginSession.userId, uniqueTruthy([
+        ...tenantCandidateIds,
+        loginSessionFirmId,
+      ])));
       if (!user) {
         return sendErrorResponse(res, { statusCode: 401, message: 'Invalid or expired login token' });
       }
@@ -339,21 +359,37 @@ const createAuthLoginService = (deps) => {
       }
 
       const normalizedRequestedFirmSlug = normalizeFirmSlug(requestedFirmSlug);
-      if (req.firmId && String(req.firmId) !== String(loginSession.firmId)) {
+      const tenantCandidateIds = buildTenantCandidateIds(req);
+      const loginSessionFirmId = toSafeLogId(loginSession.firmId);
+      if (tenantCandidateIds.length > 0 && !tenantCandidateIds.includes(loginSessionFirmId)) {
+        log.warn('AUTH_LOGIN_VERIFY_OTP_TENANT_MISMATCH', {
+          req: getAuthLogRequest(req),
+          firmSlug: requestedFirmSlug,
+          reqFirmId: toSafeLogId(req.firmId),
+          loginSessionFirmId,
+          tenantCandidateIds,
+          reasonCode: 'LOGIN_SESSION_FIRM_NOT_IN_TENANT_SCOPE',
+        });
         return sendErrorResponse(res, { statusCode: 401, message: 'Invalid or expired login token' });
       }
       if (normalizedRequestedFirmSlug && normalizeFirmSlug(req.firmSlug) && normalizedRequestedFirmSlug !== normalizeFirmSlug(req.firmSlug)) {
         return sendErrorResponse(res, { statusCode: 401, message: 'Invalid or expired login token' });
       }
 
-      const user = await User.findOne({
-        _id: loginSession.userId,
-        firmId: loginSession.firmId,
-        status: 'active',
-        isActive: true,
-      });
+      const user = await User.findOne(buildTenantScopedUserQuery(loginSession.userId, uniqueTruthy([
+        ...tenantCandidateIds,
+        loginSessionFirmId,
+      ])));
 
       if (!user) {
+        log.warn('AUTH_LOGIN_VERIFY_OTP_USER_SCOPE_MISMATCH', {
+          req: getAuthLogRequest(req),
+          firmSlug: requestedFirmSlug,
+          reqFirmId: toSafeLogId(req.firmId),
+          loginSessionFirmId,
+          tenantCandidateIds,
+          reasonCode: 'LOGIN_SESSION_USER_NOT_IN_TENANT_SCOPE',
+        });
         return sendErrorResponse(res, { statusCode: 401, message: 'Invalid authentication token' });
       }
 
