@@ -105,6 +105,10 @@ const docketSessionRoutes = require('../routes/docketSession.routes');
 const tenantResolver = require('../middleware/tenantResolver');
 const { RESERVED_FIRM_SLUGS, firmSlugGuard } = require('../middleware/firmSlugGuard.middleware');
 const { login } = require('../controllers/auth.controller');
+const { mountHealthRoutes } = require('./routes/mountHealthRoutes');
+const { mountPlatformRoutes } = require('./routes/mountPlatformRoutes');
+const { mountTenantRoutes } = require('./routes/mountTenantRoutes');
+const { mountFallbackRoutes } = require('./routes/mountFallbackRoutes');
 const mutatingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const forceTransactionPaths = ['/google/callback', '/my-pending'];
 const writeGuardChain = (req, res, next) => {
@@ -301,214 +305,104 @@ const createApp = () => {
   app.use(degradedGuard);
   app.use('/api', globalApiLimiter);
 
-  // Health check endpoint
-  app.get('/health', (req, res) => {
-    res.json({
-      status: 'ok',
-      service: 'docketra-api',
-      timestamp: new Date().toISOString(),
-    });
+  mountHealthRoutes(app, {
+    healthRoutes,
+    apiHealth,
+    metricsService,
+    allowInternalTokenOrSuperadmin,
+    internalMetricsLimiter,
+    getSecurityMetrics,
   });
-  app.use('/health', healthRoutes);
-  app.get('/api/health', apiHealth);
-  app.get('/api/system/health', apiHealth);
-  app.get('/metrics', async (req, res) => {
-    // SECURITY: Metrics endpoint fail-closed enforcement
-    const configuredMetricsToken = process.env.METRICS_TOKEN;
-    const authHeader = req.headers.authorization || '';
-    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
 
-    let authorized = false;
-    if (configuredMetricsToken && typeof token === 'string') {
-      if (configuredMetricsToken.length === token.length) {
-        let mismatch = 0;
-        for (let i = 0; i < configuredMetricsToken.length; i++) {
-          mismatch |= configuredMetricsToken.charCodeAt(i) ^ token.charCodeAt(i);
-        }
-        if (mismatch === 0) {
-          authorized = true;
-        }
-      }
-    }
-
-    if (!authorized) {
-      return res.status(401).json({ error: 'unauthorized' });
-    }
-
-    if ((req.headers.accept || '').includes('application/json')) {
-      return res.json(await metricsService.getSnapshot());
-    }
-    res.type('text/plain; version=0.0.4; charset=utf-8');
-    return res.send(await metricsService.renderPrometheusMetrics());
-  });
-  app.get('/api/metrics/security', allowInternalTokenOrSuperadmin, internalMetricsLimiter, getSecurityMetrics);
-
-  // API routes
-  app.get('/api', (req, res) => {
-    const endpoints = {
-      health: '/health',
-      apiHealth: '/api/health',
-      users: '/api/users',
-      tasks: '/api/tasks',
-      cases: '/api/cases',
-      search: '/api/search',
-      worklists: '/api/worklists',
-      auth: '/api/auth',
-      authPublic: '/auth',
-      clientApproval: '/api/client-approval',
-      clients: '/api/clients',
-      reports: '/api/reports',
-      insights: '/api/insights',
-      categories: '/api/categories',
-      admin: '/api/admin',
-      dashboard: '/api/dashboard',
-      superadmin: '/api/superadmin',
-      superadminLegacy: '/superadmin',
-    };
-
-    if (!isProduction) {
-      endpoints.debug = '/api/debug';
-    }
-
-    res.json({
-      success: true,
-      message: 'Welcome to Docketra API',
-      version: '1.0.0',
-      endpoints,
-    });
+  mountPlatformRoutes(app, {
+    isProduction,
+    writeGuardChain,
+    authRoutes,
+    publicRoutes,
+    publicSignupRoutes,
+    contactRoutes,
+    categoryRoutes,
+    workTypeRoutes,
+    adminRoutes,
+    dashboardRoutes,
+    slaRoutes,
+    superadminRoutes,
+    firmRoutes,
+    securityRoutes,
+    tenantScopedApiAccess,
+    adminTenantScopedApiAccess,
+    loginLimiter,
+    publicLimiter,
+    contactLimiter,
+    superadminLimiter,
+    authenticate,
+    noFirmNoTransaction,
+    tenantResolver,
+    login,
+    firmSlugGuard,
+    adminAuditTrail,
+    log,
+    RESERVED_FIRM_SLUGS,
+    requireTenant,
+    invariantGuard,
+    requireAdmin,
+    firmContext,
   });
 
 
-  // Explicitly reject removed legacy auth login endpoint
-  app.all('/auth/login', (_req, res) => {
-    return res.status(404).json({ success: false, code: 'ROUTE_NOT_FOUND', message: 'Route not found' });
-  });
-
-  // Legacy tenant login redirect
-  app.get('/f/:firmSlug/login', (req, res) => {
-    return res.redirect(301, `/${req.params.firmSlug}/login`);
-  });
-
-  // Auth routes (excluding login endpoints)
-  ['/api/auth', '/auth'].forEach((basePath) => {
-    app.use(basePath, writeGuardChain, authRoutes);
-  });
-
-  // Isolated superadmin login (platform only)
-  const superadminLoginChain = [loginLimiter, noFirmNoTransaction, (req, _res, next) => { req.loginScope = 'superadmin'; next(); }, login];
-  app.post('/api/superadmin/login', ...superadminLoginChain);
-  app.post('/superadmin/login', ...superadminLoginChain);
-
-  // Tenant login must be slug-scoped only and mounted after platform auth/superadmin.
-  app.get('/:firmSlug/login', publicLimiter, tenantResolver, (req, res) => {
-    res.json({ success: true, data: { firmId: req.firmIdString, firmSlug: req.firmSlug, name: req.firmName, status: req.firm.status } });
-  });
-  app.post('/:firmSlug/login', loginLimiter, tenantResolver, noFirmNoTransaction, (req, res, next) => { req.loginScope = 'tenant'; next(); }, login);
-
-  // Public routes (no authentication required)
-  app.use('/api/public', publicLimiter, writeGuardChain, publicRoutes);
-  app.use('/public', publicLimiter, writeGuardChain, publicRoutes);
-
-  // Public self-serve signup routes (no authentication required)
-  app.use('/api/public', publicLimiter, publicSignupRoutes);
-  app.use('/public', publicLimiter, publicSignupRoutes);
-
-  // Contact form route (public, no authentication required)
-  app.use('/api/contact', contactLimiter, contactRoutes);
-  app.post('/api/cms/submit', contactLimiter, (_req, res) => {
-    return res.status(410).json({
-      success: false,
-      code: 'ROUTE_DEPRECATED',
-      message: 'Legacy endpoint removed. Use POST /api/public/cms/:firmSlug/intake.',
-    });
-  });
-
-  // Category routes (user-facing reads; admin management is also available under /api/admin/categories)
-  app.use('/api/categories', writeGuardChain, categoryRoutes);
-  app.use('/api/work-types', ...tenantScopedApiAccess, writeGuardChain, workTypeRoutes);
-
-  // Admin routes (firm-scoped) - enforce auth + firm context + admin role boundary
-  app.use('/api/admin', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), adminRoutes);
-  app.use('/api/dashboard', ...tenantScopedApiAccess, writeGuardChain, dashboardRoutes);
-  app.use('/api/sla', ...tenantScopedApiAccess, writeGuardChain, slaRoutes);
-
-  // Superadmin routes - platform scope only (no firm context)
-  // Include legacy /superadmin to prevent SPA fallback when UI calls API without /api prefix.
-  ['/api/sa', '/api/superadmin', '/superadmin'].forEach((basePath) => {
-    app.use(basePath, superadminLimiter, authenticate, writeGuardChain, adminAuditTrail('superadmin'), superadminRoutes);
-  });
-
-  // Firm-scoped public login + OTP routes
-  // IMPORTANT: must stay after platform auth/superadmin mounts so reserved namespaces
-  // can never be interpreted as tenant slugs under Express 5 routing.
-  app.use('/api/:firmSlug', firmSlugGuard, firmRoutes);
-
-
-  if (!isProduction) {
-    log.info('AUTH_ROUTE_MOUNTS', {
-      authProfile: ['GET /api/auth/profile', 'GET /auth/profile'],
-      authLogout: ['POST /api/auth/logout', 'POST /auth/logout'],
-      superadminLogin: ['POST /api/superadmin/login', 'POST /superadmin/login'],
-      superadminProtectedBasePaths: ['/api/sa', '/api/superadmin', '/superadmin'],
-      reservedFirmNamespaces: RESERVED_FIRM_SLUGS,
-    });
-  }
-  app.use('/api/security', authenticate, securityRoutes);
-
-  // SECURITY: Debug routes must never be reachable in production environments.
   if (!isProduction) {
     const debugRoutes = require('../routes/debug.routes');  // Debug routes (PR #43)
     app.use('/api/debug', authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, debugRoutes);
   }
 
-  // Protected routes - require authentication
-  // Firm context must be attached for all tenant-scoped operations
-  app.use('/api/users', ...tenantScopedApiAccess, writeGuardChain, userRoutes);
-  app.use('/api/user', authenticate, selfUserRoutes);
-  app.use('/api/tasks', ...tenantScopedApiAccess, writeGuardChain, taskRoutes);
-  app.use('/api/compliance-calendar', ...tenantScopedApiAccess, writeGuardChain, complianceCalendarRoutes);
-  app.use('/api/cases', ...tenantScopedApiAccess, writeGuardChain, caseRoutes);  // backward-compat alias for /api/dockets
-  app.use('/api/dockets', ...tenantScopedApiAccess, writeGuardChain, docketRoutes);  // canonical docket API
-  app.use('/api', ...tenantScopedApiAccess, writeGuardChain, docketSessionRoutes);
-  app.use('/api/attachments', ...tenantScopedApiAccess, writeGuardChain, attachmentRoutes);
-  app.use('/api/search', ...tenantScopedApiAccess, writeGuardChain, searchRoutes);
-  app.use('/api/worklists', ...tenantScopedApiAccess, writeGuardChain, searchRoutes);
-  app.use('/api/client-approval', ...tenantScopedApiAccess, writeGuardChain, clientApprovalRoutes);
-  app.use('/api/clients', ...tenantScopedApiAccess, writeGuardChain, clientRoutes);  // Client management (PR #39)
-  app.use('/api/crm/clients', ...tenantScopedApiAccess, writeGuardChain, crmClientRoutes);
-  app.use('/api/leads', ...tenantScopedApiAccess, writeGuardChain, leadRoutes);
-  app.use('/api/forms', ...tenantScopedApiAccess, writeGuardChain, formRoutes);
-  app.use('/api/landing-pages', ...tenantScopedApiAccess, writeGuardChain, landingPageRoutes);
-  app.use('/api/deals', ...tenantScopedApiAccess, writeGuardChain, dealRoutes);
-  app.use('/api/invoices', ...tenantScopedApiAccess, writeGuardChain, invoiceRoutes);
-  app.use('/api/reports', ...tenantScopedApiAccess, writeGuardChain, reportsRoutes);  // Reports routes
-  app.use('/api/insights', ...tenantScopedApiAccess, writeGuardChain, insightsRoutes);
-  app.use('/api/firm/:firmId', ...tenantScopedApiAccess, writeGuardChain, firmMetricsRoutes);
-  app.use('/api/storage', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), storageRoutes);  // BYOS storage routes (read-only, no writeGuardChain needed)
-  app.use('/api/ai', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), aiRoutes);
-  app.use('/api/firm', ...tenantScopedApiAccess, writeGuardChain, firmStorageRoutes);
-  app.use('/api/files', authLimiter, ...tenantScopedApiAccess, writeGuardChain, filesRoutes);
-  app.use('/api/tenant', authLimiter, ...tenantScopedApiAccess, writeGuardChain, tenantRoutes);
-  app.use('/api/docket-storage', authLimiter, ...tenantScopedApiAccess, writeGuardChain, docketFileStorageRoutes);
-  app.use('/api/notifications', ...tenantScopedApiAccess, writeGuardChain, notificationsRoutes);
-  app.use('/api/teams', ...tenantScopedApiAccess, writeGuardChain, teamRoutes);
-  app.use('/api/bulk-upload', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), bulkUploadRoutes);
-  app.use('/api/product-updates', authenticate, writeGuardChain, productUpdateRoutes);
-  app.use('/api/settings', ...tenantScopedApiAccess, writeGuardChain, settingsRoutes);
-  app.use('/api/knowledge-items', ...tenantScopedApiAccess, writeGuardChain, knowledgeItemRoutes);
-  app.use('/api', authLimiter, ...tenantScopedApiAccess, writeGuardChain, docketFileStorageRoutes);
+  mountTenantRoutes(app, {
+    writeGuardChain,
+    authenticate,
+    firmContext,
+    requireTenant,
+    tenantThrottle,
+    invariantGuard,
+    authLimiter,
+    tenantScopedApiAccess,
+    adminTenantScopedApiAccess,
+    adminAuditTrail,
+    userRoutes,
+    selfUserRoutes,
+    taskRoutes,
+    complianceCalendarRoutes,
+    caseRoutes,
+    docketRoutes,
+    docketSessionRoutes,
+    attachmentRoutes,
+    searchRoutes,
+    clientApprovalRoutes,
+    clientRoutes,
+    crmClientRoutes,
+    leadRoutes,
+    formRoutes,
+    landingPageRoutes,
+    dealRoutes,
+    invoiceRoutes,
+    reportsRoutes,
+    insightsRoutes,
+    firmMetricsRoutes,
+    storageRoutes,
+    aiRoutes,
+    firmStorageRoutes,
+    filesRoutes,
+    tenantRoutes,
+    docketFileStorageRoutes,
+    notificationsRoutes,
+    teamRoutes,
+    bulkUploadRoutes,
+    productUpdateRoutes,
+    settingsRoutes,
+    knowledgeItemRoutes,
+  });
 
   // Legacy /f routes removed: tenant login is available only on /:firmSlug/login and /api/:firmSlug/login
 
-  // Root route - API status
-  app.get('/', (req, res) => {
-    res.json({ status: 'Docketra API running' });
-  });
-
-  // Error handling
-  app.use(notFound);
-  app.use(uploadErrorHandler);
-  app.use(errorHandler);
+  mountFallbackRoutes(app, { notFound, uploadErrorHandler, errorHandler });
 
   app.locals.allowedOrigins = allowedOrigins;
   return app;

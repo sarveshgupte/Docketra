@@ -20,7 +20,7 @@
     "test": "npm run test:integrity && npm run test:security && npm run test:hardening && node tests/fileUtils.test.js && node tests/reports.controller.test.js",
     "validate:env": "node -e \"require('./src/config/validateEnv').validateEnv();\"",
     "ci:backend:syntax": "npm run lint",
-    "ci:backend:routes": "node tests/routeValidationContract.test.js",
+    "ci:backend:routes": "node tests/routeValidationContract.test.js && node tests/routeMountOrderContract.test.js",
     "ci:backend:core": "npm run test:integrity && npm run test:tenant-identity-boundary && npm run test:admin-tenant-boundary",
     "ci:backend:security": "npm run validate:env:test && npm run validate:env:production && npm run test:security && npm run test:hardening",
     "ci:frontend:install": "npm --prefix ui ci",
