@@ -30,6 +30,8 @@ const {
   getOnboardingAlerts,
   getSupportDiagnostics,
   getFirmHealth,
+  getPlansCapacity,
+  updateFirmPlanCapacity,
   getSuperadminAuditLogs,
   getSuperadminGlobalSearch,
 } = require('../controllers/superadmin.controller');
@@ -62,6 +64,7 @@ router.get('/diagnostics', requireSuperadmin, getSupportDiagnostics);
 router.get('/firm-health', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getFirmHealth);
 router.get('/audit-logs', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getSuperadminAuditLogs);
 router.get('/search', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getSuperadminGlobalSearch);
+router.get('/plans', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getPlansCapacity);
 
 // Firm management
 router.post('/firms', authorize(FirmPolicy.canCreate), createFirm);
@@ -70,6 +73,7 @@ router.patch('/firms/:id', authorize(FirmPolicy.canManageStatus), updateFirmStat
 router.patch('/firms/:id/status', authorize(FirmPolicy.canManageStatus), updateFirmStatus);
 router.patch('/firms/:id/activate', authorize(FirmPolicy.canManageStatus), activateFirm);
 router.patch('/firms/:id/deactivate', authorize(FirmPolicy.canManageStatus), deactivateFirm);
+router.patch('/firms/:firmId/plan-capacity', requireSuperadmin, authorize(FirmPolicy.canManageStatus), updateFirmPlanCapacity);
 router.post('/firms/:id/disable', authorize(FirmPolicy.canManageStatus), disableFirmImmediately);
 
 // Firm admin creation

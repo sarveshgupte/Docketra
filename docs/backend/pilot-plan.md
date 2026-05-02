@@ -24,3 +24,6 @@ Public pricing is intentionally deferred during pilot/testing.
 
 No public pricing page, pricing nav links, or billing/payment integration are introduced by this change.
 Existing future-billing fields such as `billingStatus`, `subscriptionStatus`, and `planId` remain intact.
+
+
+- Superadmin pilot operations now include `GET /api/superadmin/plans` and `PATCH /api/superadmin/firms/:firmId/plan-capacity` for safe metadata-only plan/capacity management during pilot readiness checks.
