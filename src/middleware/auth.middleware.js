@@ -24,6 +24,16 @@ const MUST_SET_ALLOWED_PATHS = [
   '/api/auth/reset-password-with-token',
 ];
 
+const buildAuthTenantContext = (tenantContext, runtimeTenantId, runtimeDefaultClientId, runtimeFirmSlug) => Object.freeze({
+  tenantId: runtimeTenantId || null,
+  defaultClientId: runtimeDefaultClientId || null,
+  firmSlug: runtimeFirmSlug || null,
+  ownershipFirmId: tenantContext?.ownershipFirmId || null,
+  legacyFirmId: tenantContext?.legacyFirmId || null,
+  status: tenantContext?.status || null,
+  source: tenantContext?.source || 'auth_runtime',
+});
+
 /**
  * Authentication Middleware for Docketra Case Management System
  * 
@@ -351,6 +361,12 @@ const authenticate = async (req, res, next) => {
       defaultClientId: runtimeDefaultClientId || decoded.defaultClientId || null,
       role: effectiveRole,
     };
+    req.authTenantContext = buildAuthTenantContext(
+      tenantContext,
+      runtimeTenantId,
+      runtimeDefaultClientId,
+      runtimeFirmSlug,
+    );
     // Canonical identity attachment: use Mongo _id as the single source of truth
     req.userId = user?._id ? user._id.toString() : decoded.userId;
     req.identity = {
