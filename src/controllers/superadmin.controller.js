@@ -305,7 +305,7 @@ const getSuperadminGlobalSearch = async (req, res) => {
           firmSlug: firm.firmSlug,
           name: firm.name,
           status: firm.status,
-          adminEmail: admin?.email || null,
+          adminEmailMasked: maskEmail(admin?.email),
           href: `/app/superadmin/firms/${firm._id}`,
         };
       });

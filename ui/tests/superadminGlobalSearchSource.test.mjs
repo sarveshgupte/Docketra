@@ -14,12 +14,20 @@ const layout = readUi('components/common/SuperAdminLayout.jsx');
 const service = readUi('services/superadminService.js');
 const routes = readApi('routes/superadmin.routes.js');
 const controller = readApi('controllers/superadmin.controller.js');
+const globalSearchSectionMatch = controller.match(/const getSuperadminGlobalSearch = async[\s\S]*?const getSuperadminAuditLogs = async/);
+const globalSearchSection = globalSearchSectionMatch?.[0] || '';
 
 assert(routes.includes("router.get('/search', requireSuperadmin"), 'Global search route should exist and require superadmin.');
 assert(routes.includes('authorize(SuperAdminPolicy.canViewPlatformStats)'), 'Global search route should use superadmin authorization policy.');
 assert(controller.includes('slice(0, MAX_SEARCH_LENGTH)'), 'Search query should be capped to MAX_SEARCH_LENGTH.');
 assert(controller.includes('const escapeRegex =') && controller.includes('buildSafeContainsRegex'), 'Search regex input should be escaped.');
 assert(controller.includes("if (!searchRegex)"), 'Empty query should return empty grouped results.');
+assert(!globalSearchSection.includes('adminEmail: admin?.email || null'), 'Firm search results must never expose raw admin email.');
+assert(
+  globalSearchSection.includes('adminEmailMasked: maskEmail(admin?.email)')
+    || !globalSearchSection.includes('adminEmail'),
+  'Firm search results should use masked admin email or omit admin email entirely.',
+);
 assert(controller.includes('emailMasked: maskEmail(admin.email)'), 'Admin search results should return only masked emails.');
 assert(controller.includes('sanitizeAuditMetadata(row.metadata || {})'), 'Audit results should sanitize metadata output.');
 

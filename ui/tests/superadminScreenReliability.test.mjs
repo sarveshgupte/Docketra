@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(process.cwd(), 'src');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(__dirname, '..', 'src');
 const read = (relativePath) => fs.readFileSync(path.resolve(root, relativePath), 'utf8');
 
 const protectedRoutes = read('routes/ProtectedRoutes.jsx');
