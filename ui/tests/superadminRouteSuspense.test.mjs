@@ -10,6 +10,7 @@ const superadminRoutes = [
   'path="/app/superadmin/diagnostics"',
   'path="/app/superadmin/onboarding-insights"',
   'path="/app/superadmin/onboarding-insights/:firmId"',
+  'path="/app/superadmin/firms/:firmId"',
 ];
 
 const suspenseGroupStart = protectedRoutesSource.indexOf('<Route element={<RouteSuspenseOutlet />}>');

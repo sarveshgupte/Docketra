@@ -54,3 +54,30 @@ Potential future enhancements:
 - Direct links to filtered diagnostics and onboarding details
 - Configurable thresholds for “needs attention” categories
 - Optional incident timeline panel using request IDs/audit events
+
+## Firm 360 Detail Page
+- Route: `/app/superadmin/firms/:firmId`
+- Purpose: a firm-level superadmin cockpit for lifecycle and support metadata only.
+
+### Safe data shown
+- Firm identity metadata: firm name, firmId, slug, status, createdAt, login URL, client/user counts, admin email (if already exposed).
+- Admin management metadata from existing admin lifecycle endpoints: masked email, status, system-admin flag, last login, invite/password setup timestamps when available.
+- Onboarding health metadata: completion state, stale/incomplete user counts, blockers, and next suggested action.
+- Storage/BYOS metadata: storage mode/provider/health and connection signal.
+- Plan/limits metadata when available: plan, maxUsers, subscriptionStatus, billingStatus, billingOwnerId.
+- Support diagnostics metadata: redacted login/OTP issue counts, request IDs, storage issue summary, slow endpoint p95.
+
+### Privacy boundaries
+The page explicitly enforces and states that superadmin access is limited to platform lifecycle/support metadata and does not expose firm client records, dockets, tasks, attachments, documents, or private client content.
+
+### Admin actions supported
+- Resend admin access
+- Force password reset
+- Enable/disable admin
+- Add additional admin (via existing Firms Management modal flow)
+- Delete non-system admin
+
+### Future extension points
+- Per-firm trend sparklines for onboarding and auth issue velocity.
+- Severity scoring for proactive escalation.
+- Direct deep-links to filtered diagnostics incidents for support workflows.
