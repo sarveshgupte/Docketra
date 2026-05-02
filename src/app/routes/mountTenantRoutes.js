@@ -55,7 +55,6 @@ const mountTenantRoutes = (app, deps) => {
   app.use('/api/search', ...tenantScopedApiAccess, writeGuardChain, searchRoutes);
   app.use('/api/worklists', ...tenantScopedApiAccess, writeGuardChain, searchRoutes);
   app.use('/api/client-approval', ...tenantScopedApiAccess, writeGuardChain, clientApprovalRoutes);
-  app.use('/api/clients', ...tenantScopedApiAccess, writeGuardChain, clientRoutes);
   app.use('/api/crm/clients', ...tenantScopedApiAccess, writeGuardChain, crmClientRoutes);
   app.use('/api/leads', ...tenantScopedApiAccess, writeGuardChain, leadRoutes);
   app.use('/api/forms', ...tenantScopedApiAccess, writeGuardChain, formRoutes);
