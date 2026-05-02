@@ -51,20 +51,21 @@ export function AiSettingsPage() {
   const loadConfiguration = async () => {
     setLoading(true); setLoadError(''); setForbidden(false);
     try {
-      const config = await getAiConfiguration();
-      setHasEncryptedKey(Boolean(config?.hasEncryptedKey));
-      setHasCredentialRef(Boolean(config?.hasCredentialRef));
+      const response = await getAiConfiguration();
+      const configuration = response?.configuration ?? response ?? {};
+      setHasEncryptedKey(Boolean(configuration?.hasEncryptedKey));
+      setHasCredentialRef(Boolean(configuration?.hasCredentialRef));
       setFormState({
-        enabled: Boolean(config?.enabled),
-        provider: config?.provider || 'disabled',
-        model: config?.model || '',
-        credentialMode: config?.credentialMode || 'none',
+        enabled: Boolean(configuration?.enabled),
+        provider: configuration?.provider || 'disabled',
+        model: configuration?.model || '',
+        credentialMode: configuration?.credentialMode || 'none',
         encryptedKey: '',
         credentialRef: '',
-        features: FEATURE_KEYS.reduce((acc, key) => ({ ...acc, [key]: Boolean(config?.features?.[key]) }), {}),
-        allowedRoles: ROLE_KEYS.filter((role) => Boolean(config?.roleAccess?.[role])),
-        retention: RETENTION_KEYS.reduce((acc, key) => ({ ...acc, [key]: Boolean(config?.retention?.[key]) }), {}),
-        privacy: PRIVACY_KEYS.reduce((acc, key) => ({ ...acc, [key]: Boolean(config?.privacy?.[key]) }), {}),
+        features: FEATURE_KEYS.reduce((acc, key) => ({ ...acc, [key]: Boolean(configuration?.features?.[key]) }), {}),
+        allowedRoles: ROLE_KEYS.filter((role) => Boolean(configuration?.roleAccess?.[role])),
+        retention: RETENTION_KEYS.reduce((acc, key) => ({ ...acc, [key]: Boolean(configuration?.retention?.[key]) }), {}),
+        privacy: PRIVACY_KEYS.reduce((acc, key) => ({ ...acc, [key]: Boolean(configuration?.privacy?.[key]) }), {}),
       });
     } catch (error) {
       if (error?.response?.status === 403) {
