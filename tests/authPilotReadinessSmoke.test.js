@@ -2,6 +2,17 @@ const assert = require('assert');
 const createAuthLoginService = require('../src/services/authLogin.service');
 const createAuthPasswordService = require('../src/services/authPassword.service');
 
+
+function createReq({ body = {}, firmId = 'firm-1', firmSlug = 'pilot', ip = '127.0.0.1' } = {}) {
+  return {
+    body,
+    firmId,
+    firmSlug,
+    ip,
+    get: () => 'test-agent',
+  };
+}
+
 function createRes() {
   const state = { statusCode: 200, body: null };
   return {
@@ -38,16 +49,16 @@ async function tenantOtpSmoke() {
   });
 
   const initRes = createRes();
-  await service.login({ body: { xID: 'X123456', password: 'Strong#123' }, firmId: 'firm-1', firmSlug: 'pilot' }, initRes);
+  await service.login(createReq({ body: { xID: 'X123456', password: 'Strong#123' } }), initRes);
   assert.strictEqual(initRes.state.statusCode, 200);
 
   const verifyRes = createRes();
-  await service.verifyLoginOtp({ body: { otp: '123456', loginToken: 'any' }, firmId: 'firm-1', firmSlug: 'pilot' }, verifyRes);
+  await service.verifyLoginOtp(createReq({ body: { otp: '123456', loginToken: 'any' } }), verifyRes);
   assert.strictEqual(verifyRes.state.statusCode, 200);
   assert.strictEqual(cookiesSet, 1);
 
   const badRes = createRes();
-  await service.verifyLoginOtp({ body: { otp: '000000', loginToken: 'any' }, firmId: 'firm-1', firmSlug: 'pilot' }, badRes);
+  await service.verifyLoginOtp(createReq({ body: { otp: '000000', loginToken: 'any' } }), badRes);
   assert.strictEqual(badRes.state.statusCode, 401);
 }
 
@@ -65,11 +76,11 @@ async function forgotPasswordSmoke() {
   });
 
   const initRes = createRes();
-  await service.forgotPasswordInit({ body: { identifier: 'X123456', firmSlug: 'pilot' }, ip: '127.0.0.1', get: () => 'test-agent' }, initRes);
+  await service.forgotPasswordInit(createReq({ body: { identifier: 'X123456', firmSlug: 'pilot' } }), initRes);
   assert.strictEqual(initRes.state.statusCode, 200);
 
   const verifyRes = createRes();
-  await service.forgotPasswordVerify({ body: { identifier: 'X123456', firmSlug: 'pilot', otp: '123456' }, ip: '127.0.0.1', get: () => 'test-agent' }, verifyRes);
+  await service.forgotPasswordVerify(createReq({ body: { identifier: 'X123456', firmSlug: 'pilot', otp: '123456' } }), verifyRes);
   assert.strictEqual(verifyRes.state.statusCode, 200);
 }
 
