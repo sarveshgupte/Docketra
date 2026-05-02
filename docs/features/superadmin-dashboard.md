@@ -197,3 +197,11 @@ The Firm Health view only surfaces platform lifecycle/support metadata and never
 - **Validation:** `maxUsers` must be integer 1..500 and cannot be set below current active user count; invalid plan values are rejected.
 - **Privacy boundaries:** no payment instruments, checkout/invoice artifacts, client records, dockets, tasks, documents, secrets, or private client content are returned.
 - **Extension points:** additional read-only readiness metrics can be added to `GET /plans` totals/cards without introducing public billing flows.
+
+## Pilot Readiness Checklist
+- Route: `/app/superadmin/pilot-readiness` (Superadmin only).
+- API: `GET /api/superadmin/pilot-readiness`.
+- Categories: auth/route protection, firm creation/admin invite, firm health/risk queue, plans/capacity, onboarding, storage/BYOS, support diagnostics, audit logging, primary-admin sidebar route readiness, and no public billing/payment flows.
+- Scoring: start 100, deduct 30 for fail and 10 for watch, clamp to `0..100`; `ready` if `score >= 85` and no fail, `watch` if `score >= 65`, else `blocked`.
+- Privacy boundary: metadata-only surface. No tenant/client records, dockets, tasks, attachments, documents, emails, payment instruments, tokens, secrets, OTPs, or credentials.
+- Extension points: add new checklist cards by extending `buildPilotReadinessSnapshot` and preserving redaction/privacy boundaries.

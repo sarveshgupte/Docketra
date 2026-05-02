@@ -26,6 +26,7 @@ const log = require('../utils/log');
 const onboardingAnalyticsService = require('../services/onboardingAnalytics.service');
 const { getSupportDiagnosticsSnapshot } = require('../services/superadminDiagnostics.service');
 const { getFirmHealthSnapshot } = require('../services/superadminFirmHealth.service');
+const { buildPilotReadinessSnapshot } = require('../services/superadminPilotReadiness.service');
 const {
   findFirmAdmin,
   findFirmAdminById,
@@ -1852,6 +1853,16 @@ const buildPlanCapacityMetadata = (firm, userCount = 0) => {
   };
 };
 
+const getPilotReadiness = async (req, res) => {
+  try {
+    const snapshot = await buildPilotReadinessSnapshot();
+    return res.json({ success: true, data: snapshot });
+  } catch (error) {
+    log.error('[SUPERADMIN] Error loading pilot readiness snapshot:', error);
+    return res.status(500).json({ success: false, message: 'Failed to load pilot readiness snapshot' });
+  }
+};
+
 const getPlansCapacity = async (req, res) => {
   try {
     const firms = await Firm.find().select('firmId firmSlug name status plan maxUsers subscriptionStatus billingStatus').sort({ createdAt: -1 }).lean();
@@ -1931,6 +1942,7 @@ module.exports = {
   getOnboardingAlerts,
   getSupportDiagnostics,
   getFirmHealth,
+  getPilotReadiness,
   getPlansCapacity,
   updateFirmPlanCapacity,
   getSuperadminAuditLogs,
