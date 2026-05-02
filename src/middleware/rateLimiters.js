@@ -232,6 +232,7 @@ const authLimiter = createLimiter({
 
 const loginLimiter = createLimiter({
   name: 'loginLimiter',
+  failClosedWhenRedisUnavailable: true,
   windowMs: config.security.rateLimit.loginWindowSeconds * 1000,
   max: config.security.rateLimit.loginPerMinute,
   keyGenerator: ipKeyGenerator,
@@ -269,7 +270,16 @@ const signupLimiter = createLimiter({
 
 const authBlockEnforcer = async (req, res, next) => {
   const redis = getRateLimitRedisClient();
-  if (!redis) return next();
+  if (!redis) {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(503).json({
+        success: false,
+        error: 'SECURITY_DEPENDENCY_UNAVAILABLE',
+        message: 'Redis is required for this security-sensitive endpoint.',
+      });
+    }
+    return next();
+  }
   const key = `ratelimit:auth:block:${ipKeyGenerator(req)}`;
   const ttl = await redis.ttl(key);
   if (ttl > 0) {
