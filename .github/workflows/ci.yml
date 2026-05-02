@@ -29,6 +29,12 @@ jobs:
       DISABLE_GOOGLE_AUTH: "true"
       ENCRYPTION_PROVIDER: disabled
       METRICS_TOKEN: test-metrics-token
+      # CI-only placeholder values used exclusively by `validate:env:production`.
+      # These are NOT real credentials. Real production values must be configured
+      # in Render environment variables or GitHub Actions secrets — never committed.
+      # See docs/deployment/ci-env-placeholders.md for details.
+      MAIL_FROM: no-reply@example.com
+      BREVO_API_KEY: ci-placeholder-brevo-key
     steps:
       - uses: actions/checkout@v4
 

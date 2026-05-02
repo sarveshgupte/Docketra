@@ -47,7 +47,7 @@ assert(returnToSafetySource.includes('return candidatePath.startsWith(`/app/firm
 
 assert(apiSource.includes("resolveAuthRedirectDestination"), 'API client should resolve auth redirects by namespace.');
 assert(apiSource.includes("resolveAuthRedirectDestination"), 'API auth redirect should use shared destination resolver.');
-assert(apiSource.includes("if (currentPath.startsWith('/app/superadmin') || currentPath.startsWith('/superadmin'))"), 'Superadmin expiry should not reuse stale firm slug.');
+assert(apiSource.includes("const inSuperadminNamespace = currentPath.startsWith('/app/superadmin')"), 'Superadmin expiry should not reuse stale firm slug.');
 assert(authContextSource.includes('localStorage.removeItem(STORAGE_KEYS.IMPERSONATED_FIRM);'), 'Auth clear state should remove impersonation hints.');
 assert(authContextSource.includes('sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_TOKEN);'), 'Auth clear state should remove pending login token on logout/expiry.');
 assert(authContextSource.includes('sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_FIRM);'), 'Auth clear state should remove pending login firm on logout/expiry.');
