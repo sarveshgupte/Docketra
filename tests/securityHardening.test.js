@@ -154,39 +154,52 @@ async function testProductionSecurityRoutesFailClosedWithoutRedis() {
   const rlPath = require.resolve('../src/middleware/rateLimiters');
   const redisPath = require.resolve('../src/config/redis');
   const original = require.cache[redisPath];
-  delete require.cache[rlPath];
-  require.cache[redisPath] = {
-    id: redisPath,
-    filename: redisPath,
-    loaded: true,
-    exports: {
-      getRedisClient: () => null,
-      isRedisReady: () => false,
-    },
-  };
-
   const originalNodeEnv = process.env.NODE_ENV;
-  process.env.NODE_ENV = 'production';
-  const {
-    loginLimiter,
-    forgotPasswordLimiter,
-    otpVerifyLimiter,
-  } = require('../src/middleware/rateLimiters');
+  try {
+    delete require.cache[rlPath];
+    require.cache[redisPath] = {
+      id: redisPath,
+      filename: redisPath,
+      loaded: true,
+      exports: {
+        getRedisClient: () => null,
+        isRedisReady: () => false,
+      },
+    };
+    process.env.NODE_ENV = 'production';
+    const {
+      authLimiter,
+      loginLimiter,
+      forgotPasswordLimiter,
+      otpVerifyLimiter,
+      otpResendLimiter,
+      sensitiveLimiter,
+      authBlockEnforcer,
+    } = require('../src/middleware/rateLimiters');
 
-  const app = express();
-  app.use(express.json());
-  app.post('/login', loginLimiter, (_req, res) => res.json({ ok: true }));
-  app.post('/forgot-password', forgotPasswordLimiter, (_req, res) => res.json({ ok: true }));
-  app.post('/otp/verify', otpVerifyLimiter, (_req, res) => res.json({ ok: true }));
+    const app = express();
+    app.use(express.json());
+    app.post('/auth', authLimiter, (_req, res) => res.json({ ok: true }));
+    app.post('/login', loginLimiter, (_req, res) => res.json({ ok: true }));
+    app.post('/forgot-password', forgotPasswordLimiter, (_req, res) => res.json({ ok: true }));
+    app.post('/otp/verify', otpVerifyLimiter, (_req, res) => res.json({ ok: true }));
+    app.post('/otp/resend', otpResendLimiter, (_req, res) => res.json({ ok: true }));
+    app.post('/sensitive', sensitiveLimiter, (_req, res) => res.json({ ok: true }));
+    app.post('/auth-block', authBlockEnforcer, (_req, res) => res.json({ ok: true }));
 
-  await request(app).post('/login').send({ email: 'a@b.com' }).expect(503);
-  await request(app).post('/forgot-password').send({ email: 'a@b.com' }).expect(503);
-  await request(app).post('/otp/verify').send({ email: 'a@b.com', otp: '123456' }).expect(503);
-
-  process.env.NODE_ENV = originalNodeEnv;
-  delete require.cache[rlPath];
-  if (original) require.cache[redisPath] = original;
-  else delete require.cache[redisPath];
+    await request(app).post('/auth').send({}).expect(503);
+    await request(app).post('/login').send({ email: 'a@b.com' }).expect(503);
+    await request(app).post('/forgot-password').send({ email: 'a@b.com' }).expect(503);
+    await request(app).post('/otp/verify').send({ email: 'a@b.com', otp: '123456' }).expect(503);
+    await request(app).post('/otp/resend').send({ email: 'a@b.com' }).expect(503);
+    await request(app).post('/sensitive').send({ email: 'a@b.com' }).expect(503);
+    await request(app).post('/auth-block').send({}).expect(503);
+  } finally {
+    process.env.NODE_ENV = originalNodeEnv;
+    delete require.cache[rlPath];
+    if (original) require.cache[redisPath] = original;
+    else delete require.cache[redisPath];
+  }
 }
 
 async function run() {
