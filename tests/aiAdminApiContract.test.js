@@ -26,7 +26,7 @@ async function run() {
       };
     }
     if (request === '../services/tenantIdentity.service') return { resolveStorageContextFromTenantId: async () => ({ ownershipFirmId: 'firm-1' }) };
-    if (request === '../services/ai/credentials/aiCredentialResolver.service') return { resolveAiCredentials: async () => { resolveCalls += 1; return { status: 'not_configured' }; } };
+    if (request === '../services/ai/credentials/aiCredentialResolver.service') return { resolveAiCredentials: async ({ aiConfig }) => { resolveCalls += 1; return { status: aiConfig?.provider ? 'configured' : 'not_configured' }; } };
     if (request === '../utils/log') return { warn: () => {} };
     return originalLoad.apply(this, arguments);
   };
@@ -40,6 +40,7 @@ async function run() {
   assert.strictEqual(getRes.statusCode, 200);
   assert.ok(!('encryptedKey' in getRes.payload.configuration));
   assert.ok(!('apiKey' in getRes.payload.configuration));
+  assert.strictEqual(getRes.payload.configuration.providerStatus.runtimeSupported, true);
 
   const putBadRes = makeRes();
   await controller.updateAiConfiguration({ firmId: 't', user: { _id: 'u1' }, body: { provider: 'bad' } }, putBadRes);
@@ -61,10 +62,26 @@ async function run() {
   assert.ok(!putRetention.payload.configuration.encryptedKey);
   assert.ok(!putRetention.payload.configuration.credentialRef);
 
+  const putOpenAiRes = makeRes();
+  await controller.updateAiConfiguration({ firmId: 't', user: { _id: 'u1' }, body: { provider: 'openai', credentialMode: 'encrypted_key', encryptedKey: 'plain', model: 'gpt-4o' } }, putOpenAiRes);
+  assert.strictEqual(putOpenAiRes.statusCode, 200);
+
   const testRes = makeRes();
   await controller.testAiConfiguration({ firmId: 't', user: { _id: 'u1' } }, testRes);
   assert.strictEqual(resolveCalls, 1);
-  assert.strictEqual(testRes.payload.success, false);
+  assert.strictEqual(testRes.payload.success, true);
+  assert.strictEqual(testRes.payload.reasonCode, 'RUNTIME_AVAILABLE');
+  assert.strictEqual(testRes.payload.providerStatus.runtimeSupported, true);
+
+  const putAnthropicRes = makeRes();
+  await controller.updateAiConfiguration({ firmId: 't', user: { _id: 'u1' }, body: { provider: 'anthropic', credentialMode: 'encrypted_key', encryptedKey: 'plain', model: 'claude-3' } }, putAnthropicRes);
+  assert.strictEqual(putAnthropicRes.statusCode, 200);
+
+  const testAnthropicRes = makeRes();
+  await controller.testAiConfiguration({ firmId: 't', user: { _id: 'u1' } }, testAnthropicRes);
+  assert.strictEqual(testAnthropicRes.payload.success, false);
+  assert.strictEqual(testAnthropicRes.payload.reasonCode, 'PROVIDER_RUNTIME_UNAVAILABLE');
+  assert.strictEqual(testAnthropicRes.payload.providerStatus.runtimeSupported, false);
 
   const forbid = makeRes();
   let called = false;

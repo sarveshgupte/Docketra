@@ -381,6 +381,7 @@ async function testStorageGateBlocksUnavailableProviderMode() {
 
   assert.strictEqual(res.statusCode, 403);
   assert.strictEqual(res.body.code, 'EXTERNAL_STORAGE_DISABLED');
+  assert.match(res.body.message, /disabled in this environment/i);
   console.log('  ✓ storage configuration rejects firm-connected mode when capability is disabled');
 }
 
