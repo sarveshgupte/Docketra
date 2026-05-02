@@ -1,3 +1,12 @@
+/**
+ * Discovery-only diagnostic script (non-CI): primary-admin sidebar endpoint probing.
+ *
+ * IMPORTANT:
+ * - This script temporarily monkeypatches module loading to inject test auth/tenant context.
+ * - Do NOT treat this as production auth/tenant behavior validation.
+ * - Intended for local diagnostics and follow-up PR scoping only.
+ */
+
 const assert = require('assert');
 process.env.NODE_ENV = 'test';
 process.env.UPLOAD_SCAN_STRICT = 'true';
@@ -66,8 +75,8 @@ Module._load = function(requestPath, parent, isMain) {
   return originalLoad(requestPath, parent, isMain);
 };
 
-['../src/app/createApp'].forEach(clear);
-const { createApp } = require('../src/app/createApp');
+['../../src/app/createApp'].forEach(clear);
+const { createApp } = require('../../src/app/createApp');
 
 async function run() {
   const app = createApp();
@@ -110,7 +119,7 @@ async function run() {
     console.log('PRIMARY_ADMIN_ENDPOINT_NON_200', JSON.stringify(non200, null, 2));
   }
 
-  console.log('primaryAdminSidebar.endpoints.integration.test.js completed');
+  console.log('primaryAdminSidebarEndpointDiscovery completed');
 }
 
 run()
