@@ -1,7 +1,6 @@
 const User = require('../models/User.model');
 const Client = require('../models/Client.model');
 const jwtService = require('../services/jwt.service');
-const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
 const { isSuperAdminRole, normalizeRole } = require('../utils/role.utils');
 const { loadEnv } = require('../config/env');
 const metricsService = require('../services/metrics.service');
@@ -24,41 +23,6 @@ const MUST_SET_ALLOWED_PATHS = [
   '/auth/reset-password-with-token',
   '/api/auth/reset-password-with-token',
 ];
-
-const ensureTenantDefaultClient = async (req, user, runtimeTenantId = null) => {
-  if (!user || user.role === 'SUPER_ADMIN') {
-    return null;
-  }
-
-  const tenantId = runtimeTenantId || user.firmId;
-  if (!tenantId) {
-    throw new Error('MISSING_FIRM_CONTEXT');
-  }
-
-  let defaultClient = null;
-  if (user.defaultClientId) {
-    defaultClient = await Client.findById(user.defaultClientId)
-      .select('_id firmId isDefaultClient')
-      .lean();
-  }
-
-  const needsRepair = (
-    !defaultClient
-    || !defaultClient.isDefaultClient
-    || (String(defaultClient.firmId) !== String(defaultClient._id) && String(defaultClient.firmId) !== String(tenantId))
-  );
-
-  if (needsRepair) {
-    defaultClient = await getOrCreateDefaultClient(tenantId, {
-      userId: user._id,
-      requestId: req?.id || req?.requestId || null,
-    });
-    user.defaultClientId = defaultClient._id;
-    await user.save();
-  }
-
-  return defaultClient;
-};
 
 /**
  * Authentication Middleware for Docketra Case Management System
@@ -271,8 +235,7 @@ const authenticate = async (req, res, next) => {
     // Authorization decisions use JWT claims (req.jwt.firmId, req.jwt.firmSlug)
     if (user.role !== 'SUPER_ADMIN' && runtimeTenantId) {
       // Try default-client lookup first (new architecture), fall back to Firm (legacy)
-      const Client = require('../models/Client.model');
-      const defaultClient = await Client.findOne({ _id: runtimeTenantId, isDefaultClient: true })
+            const defaultClient = await Client.findOne({ _id: runtimeTenantId, isDefaultClient: true })
         .select('status').lean();
       if (defaultClient) {
         if (defaultClient.status && !isActiveStatus(defaultClient.status)) {
@@ -346,17 +309,17 @@ const authenticate = async (req, res, next) => {
         databaseRole,
       });
     }
-
-    try {
-      await ensureTenantDefaultClient(req, user, runtimeTenantId);
-    } catch (defaultClientError) {
-      noteAuthFailure();
-      log.error('[AUTH] Failed to enforce tenant default client invariant:', defaultClientError.message);
-      return res.status(500).json({
-        success: false,
-        message: 'Account configuration error. Please contact administrator.',
-      });
+    if (user.role !== 'SUPER_ADMIN') {
+      if (!runtimeTenantId || !runtimeDefaultClientId) {
+        noteAuthFailure();
+        return res.status(403).json({
+          success: false,
+          message: 'Account tenant context is incomplete. Please sign in again or contact administrator.',
+          code: 'TENANT_CONTEXT_REQUIRED',
+        });
+      }
     }
+
 
     // Attach normalized auth context to request
     // NOTE: role is mandatory for downstream repository authorization checks.
