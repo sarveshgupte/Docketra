@@ -21,7 +21,8 @@ const HomeNav = ({ onNav }) => {
   const navLinks = [
     { label: 'Why', id: 'why' },
     { label: 'Product', id: 'product' },
-    { label: 'In practice', id: 'in-practice' },
+    { label: 'Workflow', id: 'workflow' },
+    { label: 'Pilot readiness', id: 'pilot-readiness' },
     { label: 'Trust', id: 'trust' },
   ];
 
@@ -49,6 +50,7 @@ const HomeNav = ({ onNav }) => {
           </ul>
 
           <div className="hidden md:flex items-center gap-3">
+            <Link to="/login" className="text-sm font-medium text-slate-600 hover:text-slate-900">Login</Link>
             <Link
               to="/signup"
               className="inline-flex items-center justify-center h-9 px-5 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors shadow-sm"
@@ -87,6 +89,9 @@ const HomeNav = ({ onNav }) => {
                 </li>
               ))}
               <li className="mt-2 px-4">
+                <Link to="/login" className="block text-center h-9 leading-9 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors" onClick={() => setMenuOpen(false)}>Login</Link>
+              </li>
+              <li className="mt-2 px-4">
                 <Link
                   to="/signup"
                   className="block text-center h-9 leading-9 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors"
@@ -107,53 +112,37 @@ const HomeNav = ({ onNav }) => {
    HERO DASHBOARD MOCK
 ───────────────────────────────────────────── */
 const HeroDashboardMock = () => (
-  <div className="rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden">
-    {/* Browser chrome */}
-    <div className="flex items-center gap-1.5 bg-slate-100 px-4 py-2.5 border-b border-slate-200">
+  <div className="rounded-3xl border border-slate-200/80 bg-white shadow-2xl overflow-hidden">
+    <div className="flex items-center gap-2 bg-slate-100/90 px-4 py-3 border-b border-slate-200">
       <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
       <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
       <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
-      <span className="ml-3 flex-1 rounded bg-white border border-slate-200 text-xs text-slate-400 px-2 py-0.5">
-        app.docketra.com
-      </span>
+      <span className="ml-3 flex-1 rounded-md bg-white border border-slate-200 text-xs text-slate-400 px-2.5 py-1">app.docketra.com/workspace</span>
     </div>
-
-    {/* Diagram body */}
-    <div className="p-6 bg-slate-50">
-      <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-5 text-center">
-        Company Brain · Illustrative view
-      </p>
-
-      {/* Centre node */}
-      <div className="flex justify-center mb-4">
-        <div className="rounded-xl border-2 border-amber-400 bg-amber-50 px-5 py-3 text-center shadow-sm">
-          <p className="text-xs font-bold text-amber-700 uppercase tracking-widest">Company Brain</p>
-          <p className="text-[11px] text-amber-600 mt-0.5">Your firm's living memory</p>
+    <div className="grid md:grid-cols-12 min-h-[360px]">
+      <aside className="md:col-span-3 border-r border-slate-200 bg-slate-50 p-4">
+        <p className="text-[11px] uppercase tracking-widest text-slate-400 mb-3">Workspace</p>
+        <div className="space-y-2 text-xs">
+          {['Work', 'Knowledge Intake', 'Relationships', 'Company Brain', 'Knowledge Library', 'Clients'].map((item) => (
+            <div key={item} className={`rounded-md px-2.5 py-2 ${item === 'Company Brain' ? 'bg-amber-100 text-amber-800 font-semibold' : 'text-slate-600 bg-white border border-slate-200'}`}>{item}</div>
+          ))}
         </div>
-      </div>
-
-      {/* Connected nodes */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {[
-          { label: 'Clients', color: 'bg-blue-50 border-blue-200 text-blue-700' },
-          { label: 'Active Work', color: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
-          { label: 'Documents', color: 'bg-violet-50 border-violet-200 text-violet-700' },
-          { label: 'Deadlines', color: 'bg-rose-50 border-rose-200 text-rose-700' },
-          { label: 'Knowledge Intake', color: 'bg-sky-50 border-sky-200 text-sky-700' },
-          { label: 'Processes & Checklists', color: 'bg-teal-50 border-teal-200 text-teal-700' },
-        ].map(({ label, color }) => (
-          <div
-            key={label}
-            className={`rounded-lg border px-3 py-2.5 text-center text-xs font-medium ${color}`}
-          >
-            {label}
+      </aside>
+      <main className="md:col-span-9 p-5 bg-gradient-to-b from-white to-slate-50">
+        <div className="grid sm:grid-cols-3 gap-3">
+          {['Work active: 24', 'Intake pending: 7', 'Readiness: Pilot-ready'].map((kpi) => (
+            <div key={kpi} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700">{kpi}</div>
+          ))}
+        </div>
+        <div className="mt-4 rounded-xl border border-slate-200 bg-white overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-slate-200 text-xs font-semibold text-slate-700">Docketra workspace preview</div>
+          <div className="p-4 grid gap-3">
+            {['Annual filing docket · Owner: Priya · SLA: On track','Client instruction captured · GreenLeaf Foods · CFO draft review required','Knowledge Library update · FY 24 checklist v2 mapped to Work template'].map((row)=> (
+              <div key={row} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">{row}</div>
+            ))}
           </div>
-        ))}
-      </div>
-
-      <p className="mt-4 text-center text-[10px] text-slate-400">
-        Illustrative view · BYOS · Firm-controlled storage
-      </p>
+        </div>
+      </main>
     </div>
   </div>
 );
@@ -162,20 +151,20 @@ const HeroDashboardMock = () => (
    HERO SECTION
 ───────────────────────────────────────────── */
 const HeroSection = ({ onExplore }) => (
-  <section className="w-full bg-gradient-to-b from-slate-50 to-white py-20 md:py-28">
+  <section className="w-full bg-gradient-to-br from-amber-50 via-white to-orange-50 py-24 md:py-32">
     <Container>
-      <div className="grid grid-cols-1 gap-12 md:grid-cols-12 md:gap-10 items-center">
+      <div className="grid grid-cols-1 gap-14 md:grid-cols-12 md:gap-12 items-center">
         <motion.div className="md:col-span-6 lg:col-span-5" {...REVEAL}>
           <span className="inline-block rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 mb-5">
             For CS · CA · Legal · Tax · Advisory firms
           </span>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.08] text-slate-900">
-            Run your firm with memory.
+            Run your firm's work, clients, and knowledge from one connected workspace.
           </h1>
 
           <p className="mt-5 text-lg text-slate-600 leading-relaxed">
-            Docketra connects your firm's clients, work, documents, deadlines, processes, and team knowledge into one living workspace.
+            Docketra helps teams capture intake, manage relationships, execute work, preserve firm memory, and monitor readiness — without exposing private client content.
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
@@ -190,23 +179,16 @@ const HeroSection = ({ onExplore }) => (
               onClick={onExplore}
               className="inline-flex items-center justify-center h-11 px-6 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
             >
-              See how it works
+              View product overview
             </button>
           </div>
 
-          <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-500">
-            <li className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-              Bring your own storage
-            </li>
-            <li className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-              AI off by default
-            </li>
-            <li className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-              Built in India
-            </li>
+          <ul className="mt-7 flex flex-wrap gap-2 text-xs text-slate-600">
+            {['Built for Indian firms', 'Metadata-only oversight', 'BYOS-compatible storage'].map((chip) => (
+              <li key={chip} className="rounded-full border border-amber-200 bg-white px-3 py-1 font-medium shadow-sm">
+                {chip}
+              </li>
+            ))}
           </ul>
         </motion.div>
 
@@ -477,11 +459,11 @@ const GreenLeafCard = () => (
 );
 
 const FlowExampleSection = () => (
-  <section id="in-practice" className="w-full bg-white py-20 md:py-28">
+  <section id="workflow" className="w-full bg-white py-20 md:py-28">
     <Container>
       <motion.div {...REVEAL}>
         <p className="text-xs font-semibold uppercase tracking-widest text-amber-500 mb-4">
-          In practice
+          Workflow
         </p>
         <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 leading-tight">
           Two ways Docketra holds the thread.
@@ -494,6 +476,54 @@ const FlowExampleSection = () => (
       <div className="grid md:grid-cols-2 gap-6 mt-12">
         <motion.div {...REVEAL}><PcsScenario /></motion.div>
         <motion.div {...REVEAL}><GreenLeafCard /></motion.div>
+      </div>
+    </Container>
+  </section>
+);
+
+
+const PilotReadinessSection = () => (
+  <section id="pilot-readiness" className="w-full bg-slate-50 py-20 md:py-24">
+    <Container>
+      <motion.div {...REVEAL}>
+        <p className="text-xs font-semibold uppercase tracking-widest text-amber-500 mb-4">Oversight</p>
+        <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">Pilot Readiness with metadata-only oversight.</h2>
+        <p className="mt-4 text-lg text-slate-600 max-w-3xl">Primary admins and superadmins can monitor rollout progress through metadata-only oversight: activity, completion status, and adoption signals without reading document contents.</p>
+      </motion.div>
+      <div className="grid md:grid-cols-3 gap-5 mt-10">
+        {[
+          ['Pilot Readiness', 'Track team adoption by module: Work, Knowledge Intake, Relationships, and Company Brain.'],
+          ['Metadata-only oversight', 'View status changes, ownership, and SLAs while document content stays in firm-controlled storage.'],
+          ['Superadmin visibility', 'See cross-firm readiness snapshots for enablement and support planning.'],
+        ].map(([title, body]) => (
+          <div key={title} className="rounded-xl border border-slate-200 bg-white p-5">
+            <h3 className="font-semibold text-slate-900">{title}</h3>
+            <p className="mt-2 text-sm text-slate-600">{body}</p>
+          </div>
+        ))}
+      </div>
+    </Container>
+  </section>
+);
+
+const UseCasesSection = () => (
+  <section className="w-full bg-white py-20 md:py-24">
+    <Container>
+      <motion.div {...REVEAL}>
+        <p className="text-xs font-semibold uppercase tracking-widest text-amber-500 mb-4">Use cases</p>
+        <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">Built for real firm operations.</h2>
+      </motion.div>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mt-10">
+        {[
+          'Annual compliance and filings with reusable Firm Memory.',
+          'Knowledge Library curation for repeatable execution.',
+          'Client onboarding and follow-ups via Knowledge Intake.',
+          'Relationship continuity across team transitions.',
+          'Partner-level status reviews without document-level exposure.',
+          'Standardized workflow handoffs across Work queues.',
+        ].map((copy) => (
+          <div key={copy} className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">{copy}</div>
+        ))}
       </div>
     </Container>
   </section>
@@ -576,7 +606,7 @@ const FinalCtaSection = () => (
             href={`mailto:${CONTACT_EMAIL}`}
             className="inline-flex items-center justify-center h-12 px-8 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
           >
-            Email us directly
+            Contact
           </a>
         </div>
 
@@ -599,7 +629,7 @@ const MarketingFooter = () => (
           <Link to="/" className="font-bold text-slate-900 text-lg">
             Docketra
           </Link>
-          <p className="mt-1 text-sm text-slate-500">Run your firm with memory.</p>
+          <p className="mt-1 text-sm text-slate-500">Run your firm's work, clients, and knowledge from one connected workspace.</p>
           <p className="text-sm text-slate-400">Built for professional firms in India</p>
         </div>
 
@@ -665,7 +695,9 @@ export const LandingPageContent = () => {
       <SolutionSection />
       <ProductPillarsSection />
       <FlowExampleSection />
+      <PilotReadinessSection />
       <TrustSection />
+      <UseCasesSection />
       <FinalCtaSection />
       <MarketingFooter />
     </div>
