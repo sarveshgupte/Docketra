@@ -60,6 +60,7 @@ export const FirmsManagement = lazyPage(() => import('../pages/FirmsManagement')
 export const SuperadminOnboardingInsightsPage = lazyPage(() => import('../pages/SuperadminOnboardingInsightsPage'), 'SuperadminOnboardingInsightsPage');
 export const SuperadminFirmOnboardingDetailPage = lazyPage(() => import('../pages/SuperadminFirmOnboardingDetailPage'), 'SuperadminFirmOnboardingDetailPage');
 export const SuperadminDiagnosticsPage = lazyPage(() => import('../pages/SuperadminDiagnosticsPage'), 'SuperadminDiagnosticsPage');
+export const SuperadminFirmDetailPage = lazyPage(() => import('../pages/SuperadminFirmDetailPage'), 'SuperadminFirmDetailPage');
 export const ReportsDashboard = lazyPage(() => import('../pages/reports/ReportsDashboard'), 'ReportsDashboard');
 export const DetailedReports = lazyPage(() => import('../pages/reports/DetailedReports'), 'DetailedReports');
 export const CasesPage = lazyPage(() => import('../pages/CasesPage'), 'CasesPage');
