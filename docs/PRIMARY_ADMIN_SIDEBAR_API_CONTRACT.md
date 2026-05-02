@@ -8,7 +8,7 @@
 | Firm Memory | Relationships | `/platform/crm` | `GET /api/crm/clients`, `GET /api/leads`, `GET /api/deals` | `200` with `data: []` list payloads | PRIMARY_ADMIN/ADMIN/MANAGER |
 | Firm Memory | Company Brain | `/company-brain` | `GET /api/crm/clients`, `GET /api/knowledge-items` | `200` with empty arrays | PRIMARY_ADMIN/ADMIN/MANAGER |
 | Firm Memory | Knowledge Library | `/knowledge-library` | `GET /api/knowledge-items` | `200` with empty array | PRIMARY_ADMIN/ADMIN/MANAGER/USER with permissions |
-| Firm Memory | Clients | `/clients` | `GET /api/clients?activeOnly=false&page=1&limit=25` | `200` with `data: []` and pagination metadata | PRIMARY_ADMIN/ADMIN/MANAGER with CLIENT_VIEW |
+| Firm Memory | Clients | `/app/firm/:firmSlug/clients` | `GET /api/clients?activeOnly=false&page=1&limit=25` | `200` with `data: []`, `clients: []`, and pagination metadata (`page`, `limit`, `total`) | PRIMARY_ADMIN/ADMIN sidebar visibility today (scoped access handled separately) |
 | Oversight | Reports | `/reports` | `GET /api/reports/case-metrics` (+ filtered report endpoints) | `200` metrics payload with zeros, empty breakdown arrays | PRIMARY_ADMIN/ADMIN/MANAGER with ADMIN_STATS |
 | Administration | Team & Access | `/admin?tab=users` | `GET /api/admin/users`, `GET /api/admin/hierarchy`, `GET /api/admin/workbaskets` | `200` with `data: []` where applicable | PRIMARY_ADMIN/ADMIN |
 | Administration | Settings | `/admin?tab=settings` | `GET /api/admin/firm-settings`, `GET /api/admin/cms-intake-settings` | `200` with normalized settings defaults | PRIMARY_ADMIN/ADMIN |
