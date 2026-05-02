@@ -73,7 +73,7 @@ router.patch('/firms/:id', authorize(FirmPolicy.canManageStatus), updateFirmStat
 router.patch('/firms/:id/status', authorize(FirmPolicy.canManageStatus), updateFirmStatus);
 router.patch('/firms/:id/activate', authorize(FirmPolicy.canManageStatus), activateFirm);
 router.patch('/firms/:id/deactivate', authorize(FirmPolicy.canManageStatus), deactivateFirm);
-router.patch('/firms/:firmId/plan-capacity', requireSuperadmin, authorize(FirmPolicy.canManageStatus), updateFirmPlanCapacity);
+router.patch('/firms/:firmId/plan-capacity', requireSuperadmin, authorize(FirmPolicy.canManageStatus), superadminAdminManagementLimiter, updateFirmPlanCapacity);
 router.post('/firms/:id/disable', authorize(FirmPolicy.canManageStatus), disableFirmImmediately);
 
 // Firm admin creation
