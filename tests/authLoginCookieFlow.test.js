@@ -18,10 +18,11 @@ function createRes() {
 }
 
 async function run() {
-  const loginSession = { _id: 'ls-1', userId: 'u-1', firmId: 'f-1', expiresAt: new Date(Date.now() + 60_000), consumedAt: null };
+  const loginSession = { _id: 'ls-1', userId: 'u-1', firmId: 'legacy-firm-1', expiresAt: new Date(Date.now() + 60_000), consumedAt: null };
   const user = {
     _id: 'u-1',
-    firmId: 'f-1',
+    firmId: 'legacy-firm-1',
+    defaultClientId: 'canonical-client-1',
     xID: 'DK-TEST',
     status: 'active',
     isActive: true,
@@ -34,7 +35,15 @@ async function run() {
   let cookiePayload = null;
   const service = createAuthLoginService({
     models: {
-      User: { findOne: async () => user },
+      User: {
+        findOne: async (query) => {
+          const inScope = query?.$or?.some((clause) => {
+            const ids = clause?.firmId?.$in || clause?.defaultClientId?.$in || [];
+            return ids.includes(user.firmId) || ids.includes(user.defaultClientId);
+          });
+          return query._id === user._id && inScope ? user : null;
+        },
+      },
       LoginSession: {
         findOne: async () => loginSession,
         updateOne: async () => ({}),
@@ -57,7 +66,7 @@ async function run() {
       persistLoginOtpState: async () => {},
       logAuthAudit: async () => {},
       DEFAULT_XID: 'DK-TEST',
-      DEFAULT_FIRM_ID: 'f-1',
+      DEFAULT_FIRM_ID: 'legacy-firm-1',
       noteLoginFailure: async () => {},
       clearCachedLoginOtpState: async () => {},
       normalizeFirmSlug: (v) => v,
@@ -76,7 +85,14 @@ async function run() {
     },
   });
 
-  const req = { body: { otp: '123456', loginToken: 'token' }, firmId: 'f-1', firmSlug: 'firm-a', ip: '127.0.0.1', get: () => 'ua' };
+  const req = {
+    body: { otp: '123456', loginToken: 'token' },
+    firmId: 'canonical-client-1',
+    firm: { id: 'canonical-client-1', defaultClientId: 'canonical-client-1', legacyFirmId: 'legacy-firm-1' },
+    firmSlug: 'firm-a',
+    ip: '127.0.0.1',
+    get: () => 'ua',
+  };
   const res = createRes();
   await service.verifyLoginOtp(req, res);
 
@@ -86,6 +102,18 @@ async function run() {
   assert.strictEqual(cookiePayload?.refreshToken, 'refresh');
   assert.strictEqual(Object.prototype.hasOwnProperty.call(res.state.body, 'accessToken'), false);
   assert.strictEqual(Object.prototype.hasOwnProperty.call(res.state.body, 'refreshToken'), false);
+
+  const resendRes = createRes();
+  await service.resendLoginOtp({ body: { loginToken: 'token' }, ...req }, resendRes);
+  assert.strictEqual(resendRes.state.statusCode, 200);
+
+  const crossFirmRes = createRes();
+  await service.verifyLoginOtp({
+    ...req,
+    firmId: 'different-firm',
+    firm: { id: 'different-firm', defaultClientId: 'different-firm', legacyFirmId: 'different-legacy' },
+  }, crossFirmRes);
+  assert.strictEqual(crossFirmRes.state.statusCode, 401);
   console.log('authLoginCookieFlow.test.js passed');
 }
 
