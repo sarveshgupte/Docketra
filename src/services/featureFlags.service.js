@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Firm = require('../models/Firm.model');
+const SuperadminPlatformConfig = require('../models/SuperadminPlatformConfig.model');
 const {
   isFirmCreationDisabled,
   areFileUploadsDisabled,
@@ -9,6 +10,7 @@ const {
 } = require('./featureGate.service');
 
 const ROLLOUT_STAGES = ['off', 'internal', 'pilot', 'beta', 'general'];
+const PLATFORM_FEATURE_FLAGS_KEY = 'feature_flags';
 
 const FEATURE_FLAG_REGISTRY = [
   { key: 'crm_module', label: 'CRM Module', description: 'Controls CRM workflows in platform surfaces.', defaultStage: 'pilot', riskLevel: 'medium', allowFirmOverride: true },
@@ -23,40 +25,35 @@ const FEATURE_FLAG_REGISTRY = [
 ];
 
 const registryMap = new Map(FEATURE_FLAG_REGISTRY.map((f) => [f.key, f]));
-
 const getFeatureFlagRegistry = () => FEATURE_FLAG_REGISTRY;
 const getFeatureFlagConfigByKey = (key) => registryMap.get(String(key || '').trim());
 
-const getFirmFlagState = (firm, key, defaults) => {
-  const stored = firm?.featureFlags?.[key] || {};
-  const enabledFirms = Array.isArray(stored.enabledFirmIds) ? stored.enabledFirmIds : [];
-  return {
-    enabledGlobally: stored.enabledGlobally === true,
-    rolloutStage: ROLLOUT_STAGES.includes(stored.rolloutStage) ? stored.rolloutStage : defaults.defaultStage,
-    enabledFirmCount: enabledFirms.length,
-    updatedAt: stored.updatedAt || firm?.updatedAt || null,
-  };
+const validateFirmIds = (firmIds = []) => {
+  const ids = Array.isArray(firmIds) ? firmIds.map((id) => String(id || '').trim()) : [];
+  const invalid = ids.filter((id) => !mongoose.Types.ObjectId.isValid(id));
+  return { ids, invalid };
+};
+
+const updateFeatureFlagState = ({ key, enabledGlobally, rolloutStage }) => {
+  const update = {};
+  if (typeof enabledGlobally === 'boolean') update[`featureFlags.${key}.enabledGlobally`] = enabledGlobally;
+  if (rolloutStage) update[`featureFlags.${key}.rolloutStage`] = rolloutStage;
+  update[`featureFlags.${key}.updatedAt`] = new Date();
+  return update;
 };
 
 const getFeatureFlagsSnapshot = async () => {
-  const firms = await Firm.find({ status: { $ne: 'deleted' } }).select('featureFlags updatedAt').lean();
+  const [platformConfig, firms] = await Promise.all([
+    SuperadminPlatformConfig.findOne({ key: PLATFORM_FEATURE_FLAGS_KEY }).lean(),
+    Firm.find({ status: { $ne: 'deleted' } }).select('featureFlags updatedAt').lean(),
+  ]);
 
   const flags = FEATURE_FLAG_REGISTRY.map((flag) => {
-    let enabledGlobally = false;
-    let enabledFirmCount = 0;
-    let updatedAt = null;
-    let rolloutStage = flag.defaultStage;
-
-    for (const firm of firms) {
-      const state = getFirmFlagState(firm, flag.key, flag);
-      if (state.enabledGlobally) enabledGlobally = true;
-      enabledFirmCount += state.enabledFirmCount;
-      if (state.rolloutStage && state.rolloutStage !== flag.defaultStage) rolloutStage = state.rolloutStage;
-      if (state.updatedAt && (!updatedAt || new Date(state.updatedAt) > new Date(updatedAt))) {
-        updatedAt = state.updatedAt;
-      }
-    }
-
+    const platformState = platformConfig?.featureFlags?.[flag.key] || {};
+    const enabledFirmCount = firms.reduce((acc, firm) => (firm?.featureFlags?.[flag.key]?.enabled ? acc + 1 : acc), 0);
+    const updatedAt = platformState?.updatedAt || null;
+    const enabledGlobally = platformState?.enabledGlobally === true;
+    const rolloutStage = ROLLOUT_STAGES.includes(platformState?.rolloutStage) ? platformState.rolloutStage : flag.defaultStage;
     return {
       key: flag.key,
       label: flag.label,
@@ -74,19 +71,6 @@ const getFeatureFlagsSnapshot = async () => {
   return { flags };
 };
 
-const updateFeatureFlagState = async ({ key, enabledGlobally, rolloutStage, firmIds }) => {
-  const update = {};
-  if (typeof enabledGlobally === 'boolean') update[`featureFlags.${key}.enabledGlobally`] = enabledGlobally;
-  if (rolloutStage) update[`featureFlags.${key}.rolloutStage`] = rolloutStage;
-  if (Array.isArray(firmIds)) {
-    update[`featureFlags.${key}.enabledFirmIds`] = firmIds
-      .map((id) => String(id || '').trim())
-      .filter((id) => id && mongoose.Types.ObjectId.isValid(id));
-  }
-  update[`featureFlags.${key}.updatedAt`] = new Date();
-  return update;
-};
-
 module.exports = {
   isFirmCreationDisabled,
   areFileUploadsDisabled,
@@ -98,4 +82,7 @@ module.exports = {
   getFeatureFlagConfigByKey,
   getFeatureFlagsSnapshot,
   updateFeatureFlagState,
+  validateFirmIds,
+  PLATFORM_FEATURE_FLAGS_KEY,
+  SuperadminPlatformConfig,
 };

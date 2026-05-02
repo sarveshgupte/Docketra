@@ -1,5 +1,9 @@
 const mongoose = require('mongoose');
 const { encrypt: encryptProtectedValue, isEncrypted } = require('../utils/encryption');
+const featureFlagFirmStateSchema = new mongoose.Schema({
+  enabled: { type: Boolean, default: false },
+  updatedAt: { type: Date, default: Date.now },
+}, { _id: false });
 
 /**
  * Firm Model for Multi-Tenancy
@@ -149,6 +153,12 @@ const firmSchema = new mongoose.Schema({
   billingStatus: {
     type: String,
     default: null,
+  },
+
+  featureFlags: {
+    type: Map,
+    of: featureFlagFirmStateSchema,
+    default: {},
   },
 
 
