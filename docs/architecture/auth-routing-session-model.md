@@ -41,3 +41,11 @@
 - `SameSite=None; Secure` is required for cross-site frontend/backend deployments.
 - `SameSite=Lax` can be used for same-site deployments.
 - Cookie domain should be explicit only when needed and must be host-valid.
+
+
+## Public landing page auth entry points (May 2026)
+- The public landing page (`/`) is marketing-only and should prioritize **Request early access**.
+- Public marketing navigation must not expose a generic `Login` CTA that could imply superadmin is the default entry path.
+- Superadmin access remains direct-only via `/superadmin` (and `/superadmin/login` for credential submit flow).
+- Firm users must authenticate via firm-specific URLs (`/{firmSlug}/login`), usually from invite/email links or directly-entered firm workspace URLs.
+- This separation protects role boundary clarity: public visitors are onboarding prospects, not platform operators.
