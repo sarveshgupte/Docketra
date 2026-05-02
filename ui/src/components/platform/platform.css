@@ -372,6 +372,16 @@
   max-width: 130px;
 }
 
+.platform__user-pill-chevron {
+  flex-shrink: 0;
+  opacity: 0.55;
+  transition: opacity 0.12s;
+}
+
+.platform__user-pill--button:hover .platform__user-pill-chevron {
+  opacity: 0.85;
+}
+
 .platform__account-menu {
   position: relative;
 }

@@ -237,7 +237,7 @@ api.interceptors.response.use(
     const clearAuthStorage = () => {
       const currentPath = String(window.location.pathname || '');
       const inSuperadminNamespace = currentPath.startsWith('/app/superadmin') || currentPath.startsWith('/superadmin');
-      if (currentPath.startsWith('/app/superadmin') || currentPath.startsWith('/superadmin')) {
+      if (inSuperadminNamespace) {
         clearSuperadminRoutingHints(localStorage);
       }
       clearPendingLoginSessionState(sessionStorage);
