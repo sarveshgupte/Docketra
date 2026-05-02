@@ -33,6 +33,7 @@ module.exports = {
   },
   'GET /audit-logs': { query: passthroughQuery },
   'GET /plans': { query: passthroughQuery },
+  'GET /pilot-readiness': { query: passthroughQuery },
 
   'POST /firms': {
     body: z.object({
