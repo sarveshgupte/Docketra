@@ -236,11 +236,12 @@ api.interceptors.response.use(
     };
     const clearAuthStorage = () => {
       const currentPath = String(window.location.pathname || '');
-      if (currentPath.startsWith('/app/superadmin') || currentPath.startsWith('/superadmin')) {
+      const inSuperadminNamespace = currentPath.startsWith('/app/superadmin') || currentPath.startsWith('/superadmin');
+      if (inSuperadminNamespace) {
         clearSuperadminRoutingHints(localStorage);
       }
       clearPendingLoginSessionState(sessionStorage);
-      window.dispatchEvent(new CustomEvent('auth:logout'));
+      window.dispatchEvent(new CustomEvent('auth:logout', { detail: { inSuperadminNamespace } }));
     };
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
