@@ -24,18 +24,20 @@ export const SuperadminDashboard = () => {
   const [firmHealth, setFirmHealth] = useState(null);
   const [plans, setPlans] = useState(null);
   const [pilotReadiness, setPilotReadiness] = useState(null);
+  const [featureFlags, setFeatureFlags] = useState(null);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     setError('');
 
-    const [statsRes, insightsRes, diagnosticsRes, healthRes, plansRes, pilotRes] = await Promise.allSettled([
+    const [statsRes, insightsRes, diagnosticsRes, healthRes, plansRes, pilotRes, featureRes] = await Promise.allSettled([
       superadminService.getPlatformStats(),
       superadminService.getOnboardingInsights({ sinceDays: 30, staleAfterDays: 7, recentLimit: 20 }),
       superadminService.getSupportDiagnostics({ limit: 20 }),
       superadminService.getFirmHealth({ limit: 100 }),
       superadminService.getPlansCapacity(),
       superadminService.getPilotReadiness(),
+      superadminService.getFeatureFlags(),
     ]);
 
     const statsData = statsRes.status === 'fulfilled' && statsRes.value?.success ? statsRes.value.data : null;
@@ -50,6 +52,7 @@ export const SuperadminDashboard = () => {
     setFirmHealth(healthData);
     setPlans(plansRes.status === 'fulfilled' && plansRes.value?.success ? plansRes.value.data : null);
     setPilotReadiness(pilotRes.status === 'fulfilled' && pilotRes.value?.success ? pilotRes.value.data : null);
+    setFeatureFlags(featureRes.status === 'fulfilled' && featureRes.value?.success ? featureRes.value.data : null);
 
     if (!statsData && !insightsData && !diagnosticsData) {
       setError('Platform command center is temporarily unavailable.');
@@ -161,12 +164,18 @@ export const SuperadminDashboard = () => {
             </Card>
 
             <Card className="space-y-3">
+              <h2 className="text-lg font-semibold text-gray-900">Rollout summary</h2>
+              <p className="text-sm text-gray-600">{featureFlags ? `Total flags: ${featureFlags.flags?.length || 0} · High-risk enabled globally: ${(featureFlags.flags || []).filter((f) => f.riskLevel === 'high' && f.enabledGlobally).length}` : 'Feature flag rollout summary unavailable.'}</p>
+            </Card>
+
+            <Card className="space-y-3">
               <h2 className="text-lg font-semibold text-gray-900">Quick links</h2>
               <div className="flex flex-wrap gap-2">
                 <Button variant="primary" onClick={() => navigate('/app/superadmin/firms')}>Firms Management</Button>
                 <Button variant="secondary" onClick={() => navigate('/app/superadmin/onboarding-insights')}>Onboarding Insights</Button>
                 <Button variant="secondary" onClick={() => navigate('/app/superadmin/firm-health')}>Firm Health</Button>
                 <Button variant="secondary" onClick={() => navigate('/app/superadmin/plans')}>Plans & Capacity</Button>
+                <Button variant="secondary" onClick={() => navigate('/app/superadmin/feature-flags')}>Feature Flags</Button>
                 <Button variant="secondary" onClick={() => navigate('/app/superadmin/pilot-readiness')}>Pilot Readiness{pilotReadiness ? ` (${pilotReadiness.overallStatus} · ${pilotReadiness.score})` : ''}</Button>
                 <Button variant="secondary" onClick={() => navigate('/app/superadmin/diagnostics')}>Support Diagnostics</Button>
               </div>

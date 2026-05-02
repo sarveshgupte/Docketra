@@ -205,3 +205,12 @@ The Firm Health view only surfaces platform lifecycle/support metadata and never
 - Scoring: start 100, deduct 30 for fail and 10 for watch, clamp to `0..100`; `ready` if `score >= 85` and no fail, `watch` if `score >= 65`, else `blocked`.
 - Privacy boundary: metadata-only surface. No tenant/client records, dockets, tasks, attachments, documents, emails, payment instruments, tokens, secrets, OTPs, or credentials.
 - Extension points: add new checklist cards by extending `buildPilotReadinessSnapshot` and preserving redaction/privacy boundaries.
+
+## Feature Flags & Rollout Controls
+- Route: `/app/superadmin/feature-flags`.
+- API: `GET /api/superadmin/feature-flags`, `PATCH /api/superadmin/feature-flags/:key`.
+- Safe metadata fields: key, label, description, status, scope, enabledGlobally, enabledFirmCount, rolloutStage, riskLevel, updatedAt.
+- Editable fields: enabledGlobally, rolloutStage, firmIds (max 100), notes (max 500).
+- Changes attempt superadmin audit logging and stay metadata-only.
+- Privacy boundary: does not expose/modify client records, dockets, tasks, attachments, documents, or private client content.
+- Extension points: add new registry keys in `src/services/featureFlags.service.js`.

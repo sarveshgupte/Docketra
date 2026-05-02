@@ -34,6 +34,16 @@ module.exports = {
   'GET /audit-logs': { query: passthroughQuery },
   'GET /plans': { query: passthroughQuery },
   'GET /pilot-readiness': { query: passthroughQuery },
+  'GET /feature-flags': { query: passthroughQuery },
+  'PATCH /feature-flags/:key': {
+    params: z.object({ key: z.string().trim().min(1).max(100) }),
+    body: z.object({
+      enabledGlobally: z.boolean().optional(),
+      rolloutStage: z.enum(['off', 'internal', 'pilot', 'beta', 'general']).optional(),
+      firmIds: z.array(objectIdString).max(100).optional(),
+      notes: z.string().trim().max(500).optional(),
+    }).strict().refine((data) => Object.keys(data).length > 0, { message: 'At least one editable field is required.' }),
+  },
 
   'POST /firms': {
     body: z.object({
