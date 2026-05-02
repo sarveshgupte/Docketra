@@ -399,6 +399,7 @@ const createApp = () => {
     settingsRoutes,
     knowledgeItemRoutes,
   });
+  app.use('/api/:firmSlug', firmSlugGuard, firmRoutes);
 
   // Legacy /f routes removed: tenant login is available only on /:firmSlug/login and /api/:firmSlug/login
 
