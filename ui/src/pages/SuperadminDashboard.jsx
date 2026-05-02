@@ -22,16 +22,18 @@ export const SuperadminDashboard = () => {
   const [insights, setInsights] = useState(null);
   const [diagnostics, setDiagnostics] = useState(null);
   const [firmHealth, setFirmHealth] = useState(null);
+  const [plans, setPlans] = useState(null);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     setError('');
 
-    const [statsRes, insightsRes, diagnosticsRes, healthRes] = await Promise.allSettled([
+    const [statsRes, insightsRes, diagnosticsRes, healthRes, plansRes] = await Promise.allSettled([
       superadminService.getPlatformStats(),
       superadminService.getOnboardingInsights({ sinceDays: 30, staleAfterDays: 7, recentLimit: 20 }),
       superadminService.getSupportDiagnostics({ limit: 20 }),
       superadminService.getFirmHealth({ limit: 100 }),
+      superadminService.getPlansCapacity(),
     ]);
 
     const statsData = statsRes.status === 'fulfilled' && statsRes.value?.success ? statsRes.value.data : null;
@@ -44,6 +46,7 @@ export const SuperadminDashboard = () => {
 
     setDiagnostics(diagnosticsData);
     setFirmHealth(healthData);
+    setPlans(plansRes.status === 'fulfilled' && plansRes.value?.success ? plansRes.value.data : null);
 
     if (!statsData && !insightsData && !diagnosticsData) {
       setError('Platform command center is temporarily unavailable.');
@@ -150,6 +153,7 @@ export const SuperadminDashboard = () => {
             <Card className="space-y-3">
               <h2 className="text-lg font-semibold text-gray-900">Firm Health / Risk Queue</h2>
               <p className="text-sm text-gray-600">Critical: {firmHealth?.totals?.critical || 0} · At risk: {firmHealth?.totals?.atRisk || 0}</p>
+              <p className="text-sm text-gray-600">Pilot: {plans?.totals?.pilot ?? 'N/A'} · Near capacity: {plans?.totals?.nearCapacity ?? 'N/A'} · Over capacity: {plans?.totals?.overCapacity ?? 'N/A'}</p>
               <Button variant="secondary" onClick={() => navigate('/app/superadmin/firm-health')}>Open Firm Health Queue</Button>
             </Card>
 
@@ -159,6 +163,7 @@ export const SuperadminDashboard = () => {
                 <Button variant="primary" onClick={() => navigate('/app/superadmin/firms')}>Firms Management</Button>
                 <Button variant="secondary" onClick={() => navigate('/app/superadmin/onboarding-insights')}>Onboarding Insights</Button>
                 <Button variant="secondary" onClick={() => navigate('/app/superadmin/firm-health')}>Firm Health</Button>
+                <Button variant="secondary" onClick={() => navigate('/app/superadmin/plans')}>Plans & Capacity</Button>
                 <Button variant="secondary" onClick={() => navigate('/app/superadmin/diagnostics')}>Support Diagnostics</Button>
               </div>
             </Card>

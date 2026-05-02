@@ -32,6 +32,7 @@ module.exports = {
     }).passthrough(),
   },
   'GET /audit-logs': { query: passthroughQuery },
+  'GET /plans': { query: passthroughQuery },
 
   'POST /firms': {
     body: z.object({
@@ -61,6 +62,16 @@ module.exports = {
   'POST /firms/:id/disable': {
     params: firmIdParams,
     body: passthroughBody,
+  },
+
+  'PATCH /firms/:firmId/plan-capacity': {
+    params: firmIdParams2,
+    body: z.object({
+      plan: z.enum(['pilot', 'starter', 'professional', 'enterprise']).optional(),
+      maxUsers: z.coerce.number().int().min(1).max(500).optional(),
+      subscriptionStatus: z.string().trim().max(100).nullable().optional(),
+      billingStatus: z.string().trim().max(100).nullable().optional(),
+    }).passthrough().refine((data) => Object.keys(data).length > 0, { message: 'At least one field is required.' }),
   },
 
   'POST /firms/:firmId/admin': {

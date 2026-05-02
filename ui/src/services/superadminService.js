@@ -49,6 +49,16 @@ export const superadminService = {
     return response.data;
   },
 
+  getPlansCapacity: async () => {
+    const response = await api.get('/superadmin/plans');
+    return response.data;
+  },
+
+  updateFirmPlanCapacity: async (firmId, payload) => {
+    const response = await api.patch(`/superadmin/firms/${firmId}/plan-capacity`, payload);
+    return response.data;
+  },
+
   /**
    * Create a new firm
    */
