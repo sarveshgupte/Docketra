@@ -72,18 +72,22 @@ const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1, role =
   }));
 
   const normalizedPlan = String(firm.plan || 'starter').toLowerCase();
-  if (normalizedPlan === 'starter') {
-    const maxUsers = firm.maxUsers || 2;
-    if ((count + incrementBy) > maxUsers) {
-      log.warn('[PLAN_LIMIT] starter capacity exceeded', {
+  const firmMaxUsers = Number.isFinite(Number(firm.maxUsers)) ? Number(firm.maxUsers) : null;
+
+  if (firmMaxUsers != null && firmMaxUsers > 0) {
+    if ((count + incrementBy) > firmMaxUsers) {
+      log.warn('[PLAN_LIMIT] firm capacity exceeded', {
         firmId: firmId?.toString?.() || firmId,
-        maxUsers,
+        plan: normalizedPlan,
+        maxUsers: firmMaxUsers,
         currentCount: count,
         incrementBy,
       });
-      throw new PlanLimitExceededError(maxUsers);
+      throw new PlanLimitExceededError(firmMaxUsers);
     }
+  }
 
+  if (normalizedPlan === 'starter') {
     if (['ADMIN', 'PRIMARY_ADMIN'].includes(String(role || '').toUpperCase()) && incrementBy > 0) {
       const adminCount = await attachSession(User.countDocuments({
         firmId,

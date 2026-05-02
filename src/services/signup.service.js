@@ -558,8 +558,8 @@ const createFirmAndAdmin = async ({
         name: normalizedFirmName,
         firmSlug,
         source: 'SELF_SERVE',
-        plan: 'starter',
-        maxUsers: 2,
+        plan: 'pilot',
+        maxUsers: 25,
         status: 'active',
         bootstrapStatus: 'PENDING',
       }], { session });

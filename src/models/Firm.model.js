@@ -136,14 +136,14 @@ const firmSchema = new mongoose.Schema({
   plan: {
     type: String,
     lowercase: true,
-    enum: ['starter', 'professional', 'enterprise', 'STARTER', 'PROFESSIONAL', 'ENTERPRISE'],
-    default: 'starter',
+    enum: ['pilot', 'starter', 'professional', 'enterprise', 'PILOT', 'STARTER', 'PROFESSIONAL', 'ENTERPRISE'],
+    default: 'pilot',
     index: true,
   },
 
   maxUsers: {
     type: Number,
-    default: 2,
+    default: 25,
   },
 
   billingStatus: {
