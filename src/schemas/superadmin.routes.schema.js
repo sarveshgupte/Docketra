@@ -71,7 +71,7 @@ module.exports = {
       maxUsers: z.coerce.number().int().min(1).max(500).optional(),
       subscriptionStatus: z.string().trim().max(100).nullable().optional(),
       billingStatus: z.string().trim().max(100).nullable().optional(),
-    }).passthrough().refine((data) => Object.keys(data).length > 0, { message: 'At least one field is required.' }),
+    }).strict().refine((data) => Object.keys(data).length > 0, { message: 'At least one editable field is required.' }),
   },
 
   'POST /firms/:firmId/admin': {
