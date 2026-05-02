@@ -1,12 +1,11 @@
 # AUTH E2E SMOKE COVERAGE (Pilot Readiness)
 
 ## Scope
-Deterministic auth/session smoke coverage for pilot-critical flows only:
-- Tenant login init + OTP verify (success and invalid OTP failure)
-- Forgot-password OTP + reset token flow and tenant context checks
-- SuperAdmin login/profile/refresh/logout parity
-- Firm and SuperAdmin route boundary regression
-- Frontend public auth routing and post-login redirect helpers
+Deterministic auth/session smoke coverage for pilot-critical flows:
+- Tenant login/init + OTP verify (success + invalid OTP)
+- Forgot-password init/verify/reset (including invalid/expired and tenant boundary checks)
+- SuperAdmin auth route boundary separation
+- Frontend public auth routing + post-login redirect sanity
 
 ## Commands Run
 - `node tests/authPilotReadinessSmoke.test.js`
@@ -15,39 +14,41 @@ Deterministic auth/session smoke coverage for pilot-critical flows only:
 
 ## Flow Coverage
 ### Backend tenant auth smoke
-- login/init returns OTP challenge (`202`)
-- OTP verify success returns session payload (`200`)
-- invalid OTP rejects (`401`)
-- forgot-password init/verify/reset and invalid/expired states
-- tenant context preserved by `firmSlug`/`firmId` checks
+- login/init challenge response
+- OTP verify success
+- OTP verify invalid failure
+- forgot-password init + verify
 
-### SuperAdmin auth smoke
-- SuperAdmin login, profile, refresh, logout lifecycle
-- normal firm user blocked from SuperAdmin-only boundaries (existing regression test)
+### Backend forgot-password reliability
+- request/init by email and xID
+- verify with valid OTP
+- invalid OTP, expired OTP, expired reset token rejection
+- reset token one-time use and tenant-context boundary checks
 
-### Frontend auth route/helper smoke
-- public auth route classification and redirect behavior
-- post-login route resolution
-- protected route/public boundary sanity
-- refresh loop prevention covered by existing frontend auth route tests in CI suite
+### SuperAdmin/tenant boundary
+- `/api/superadmin/*` remains isolated from tenant resolver and firm router
+- `/api/auth/*` remains outside tenant-resolved firm routes
+- SuperAdmin login/profile routes exist and return auth semantics (not route misses)
+
+### Frontend auth route/helper sanity
+- public auth route classification
+- redirect behavior and post-login resolution
+- protected/public boundary regression
+
+## Pass/Fail Status (current run)
+- `node tests/authPilotReadinessSmoke.test.js`: **PASS**
+- `npm --prefix ui run test:public-auth-routing-sanity`: **PASS**
+- `npm run test:auth-pilot-smoke`: **FAIL** (currently failing on SuperAdmin session parity path due environment-coupled auth audit DB buffering in this container run)
 
 ## Bugs Found
-- Historical regression context tracked: tenant OTP verify `401` in prior smoke PR.
-- No new production auth/session bug reproduced during this pass in deterministic harnesses.
+- The previous smoke harness used request shapes that did not match auth service expectations (`xID` vs `identifier`), causing false failures.
+- SuperAdmin session-parity command path still has deterministic-run coupling to DB-backed audit buffering in this environment.
 
 ## Fixes Made
-- Added deterministic pilot-auth smoke harness test to pin tenant OTP login/verify and forgot-password baseline paths.
-- Added backend script target `test:auth-pilot-smoke` for repeatable pilot auth validation.
+- Fixed tenant auth smoke request payloads so login/init and OTP verify execute actual service logic.
+- Added deterministic bcrypt-stubbed SuperAdmin pilot session smoke harness (`tests/superadminPilotSessionSmoke.test.js`) to reduce native dependency flake.
+- Kept existing boundary regression coverage for SuperAdmin vs firm route isolation.
 
-## Pass/Fail Status
-- `authPilotReadinessSmoke.test.js`: BLOCKED (environment dependency install restriction)
-- `test:auth-pilot-smoke`: BLOCKED (environment dependency install restriction) (local deterministic suite)
-- `ui test:public-auth-routing-sanity`: BLOCKED (environment dependency install restriction)
-
-## Remaining Manual Browser Checks
-- Manual browser validation for cookie persistence and redirects across real browser restarts.
-- Manual validation of logout and refresh under real reverse proxy / HTTPS cookie policies.
-- Final pilot manual QA checklist PR should include tenant-specific browser matrix verification.
-
-## Pilot QA Readiness
-Auth smoke coverage is deterministic and suitable to unblock the final pilot manual QA checklist PR, subject to remaining manual browser checks above.
+## Remaining to reach full pilot-ready acceptance
+- Make `npm run test:auth-pilot-smoke` fully green by removing remaining DB-coupled behavior from the SuperAdmin session path in deterministic test mode.
+- Then re-run and record final PASS for auth pilot smoke + release-gate/fallback.
