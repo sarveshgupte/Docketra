@@ -11,6 +11,7 @@ const superAdminLayout = read('components/common/SuperAdminLayout.jsx');
 const firmsPage = read('pages/FirmsManagement.jsx');
 const insightsPage = read('pages/SuperadminOnboardingInsightsPage.jsx');
 const diagnosticsPage = read('pages/SuperadminDiagnosticsPage.jsx');
+const dashboardPage = read('pages/SuperadminDashboard.jsx');
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -55,6 +56,16 @@ assert.ok(
   'Firms page should provide a readable top-level error state when no data is available.',
 );
 assert.ok(firmsPage.includes('No firms exist yet'), 'Firms page should provide a readable empty state.');
+
+
+assert.ok(
+  dashboardPage.includes('Platform Command Center')
+    && dashboardPage.includes('Needs attention today')
+    && dashboardPage.includes('Firms Management')
+    && dashboardPage.includes('Onboarding Insights')
+    && dashboardPage.includes('Support Diagnostics'),
+  'Platform dashboard should expose command center sections and quick links.',
+);
 
 assert.ok(insightsPage.includes('Insights unavailable') && insightsPage.includes('Retry') && insightsPage.includes('loadInsights'), 'Insights page should provide a readable empty/error state.');
 assert.ok(
