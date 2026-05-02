@@ -90,6 +90,9 @@ export const SuperAdminLayout = ({ children }) => {
           <Link to="/app/superadmin/firm-health" className={navItemClass(isActive('/app/superadmin/firm-health'))} aria-current={isActive('/app/superadmin/firm-health') ? 'page' : undefined}>
             Firm Health
           </Link>
+          <Link to="/app/superadmin/plans" className={navItemClass(isActive('/app/superadmin/plans'))} aria-current={isActive('/app/superadmin/plans') ? 'page' : undefined}>
+            Plans & Capacity
+          </Link>
           <Link to="/app/superadmin/diagnostics" className={navItemClass(isActive('/app/superadmin/diagnostics'))} aria-current={isActive('/app/superadmin/diagnostics') ? 'page' : undefined}>
             Support Diagnostics
           </Link>
