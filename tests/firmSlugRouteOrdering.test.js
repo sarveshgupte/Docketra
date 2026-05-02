@@ -5,11 +5,14 @@ const controllerModulePath = require.resolve('../src/controllers/auth.controller
 const tenantResolverModulePath = require.resolve('../src/middleware/tenantResolver');
 const superadminControllerModulePath = require.resolve('../src/controllers/superadmin.controller');
 const createAppModulePath = require.resolve('../src/app/createApp');
+const firmControllerModulePath = require.resolve('../src/controllers/firm.controller');
+const bcryptModulePath = require.resolve('bcrypt');
 process.env.NODE_ENV = 'test';
 process.env.UPLOAD_SCAN_STRICT = 'false';
 process.env.JWT_SECRET = 'x'.repeat(80);
 process.env.STORAGE_TOKEN_SECRET = 'y'.repeat(80);
 process.env.METRICS_TOKEN = 'z'.repeat(80);
+process.env.REDIS_URL = '';
 
 const restore = [];
 
@@ -27,6 +30,12 @@ function swapModule(modulePath, exportsValue) {
 async function run() {
   const ok = (_req, res) => res.status(200).json({ success: true });
 
+  swapModule(bcryptModulePath, {
+    hash: async () => 'mock-hash',
+    compare: async () => true,
+    genSalt: async () => 'mock-salt',
+  });
+
   swapModule(tenantResolverModulePath, (req, _res, next) => {
     req.firmId = '507f1f77bcf86cd799439022';
     req.firmIdString = 'FIRM001';
@@ -39,6 +48,9 @@ async function run() {
   swapModule(superadminControllerModulePath, {
     getFirmBySlug: (req, res) => res.status(200).json({ success: true, data: { firmSlug: req.params.firmSlug } }),
   });
+
+  const firmNoOpHandler = (_req, res) => res.status(501).json({ success: false, message: 'mocked' });
+  swapModule(firmControllerModulePath, { getFirmSetupStatus: firmNoOpHandler });
 
   swapModule(controllerModulePath, {
     logout: ok,
