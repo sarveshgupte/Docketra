@@ -12,7 +12,7 @@ Use these Render commands:
 
 - **Build command**
   ```bash
-  npm install && npm --prefix ui install && npm --prefix ui run build
+  npm ci && npm --prefix ui ci && npm run build
   ```
 - **Start command (API web service)**
   ```bash
@@ -22,6 +22,23 @@ Use these Render commands:
   ```bash
   npm run start:worker
   ```
+
+
+## Local install and build commands
+Use the same deterministic install flow locally when you want CI parity:
+
+```bash
+npm run ci:install
+npm run build
+npm run ci:release-gate
+```
+
+For day-to-day development you can still run app workflows directly after install (`npm run dev`, `npm --prefix ui run dev`).
+
+## Why `npm ci` is preferred for CI/deploy
+- Uses lockfiles (`package-lock.json` and `ui/package-lock.json`) to install exact versions for deterministic builds.
+- Fails fast when lockfile and manifest drift, which surfaces dependency issues earlier.
+- Avoids mutating lockfiles during deploy and removes hidden install side effects from build steps.
 
 ## Runtime ownership
 
