@@ -27,6 +27,7 @@ const onboardingAnalyticsService = require('../services/onboardingAnalytics.serv
 const { getSupportDiagnosticsSnapshot } = require('../services/superadminDiagnostics.service');
 const { getFirmHealthSnapshot } = require('../services/superadminFirmHealth.service');
 const { buildPilotReadinessSnapshot } = require('../services/superadminPilotReadiness.service');
+const { getFeatureFlagConfigByKey, getFeatureFlagsSnapshot, updateFeatureFlagState } = require('../services/featureFlags.service');
 const {
   findFirmAdmin,
   findFirmAdminById,
@@ -37,6 +38,48 @@ const {
   logSuperadminAction,
   ADMIN_ROLE_VALUES,
 } = require('../services/superadminLifecycle.service');
+
+const getSuperadminFeatureFlags = async (req, res) => {
+  try {
+    const data = await getFeatureFlagsSnapshot();
+    return res.json({ success: true, data });
+  } catch (error) {
+    log.error('[SUPERADMIN] Error loading feature flags snapshot:', error);
+    return res.status(500).json({ success: false, message: 'Failed to load feature flags' });
+  }
+};
+
+const updateSuperadminFeatureFlag = async (req, res) => {
+  try {
+    const key = String(req.params?.key || '').trim();
+    const flag = getFeatureFlagConfigByKey(key);
+    if (!flag) {
+      return res.status(400).json({ success: false, message: 'Unknown feature flag key' });
+    }
+
+    const { enabledGlobally, rolloutStage, firmIds, notes } = req.body || {};
+    const updateDoc = updateFeatureFlagState({ key, enabledGlobally, rolloutStage, firmIds });
+    if (Object.keys(updateDoc).length === 1) {
+      return res.status(400).json({ success: false, message: 'No editable fields provided' });
+    }
+    await Firm.updateMany({ status: { $ne: 'deleted' } }, { $set: updateDoc });
+    await logSuperadminAction({
+      actionType: 'FirmActivated',
+      description: `FeatureFlagUpdated:${key}`,
+      performedBy: req.user?.email || 'superadmin',
+      performedById: req.user?._id || null,
+      targetEntityType: 'Firm',
+      targetEntityId: String(key),
+      metadata: { key, enabledGlobally, rolloutStage, firmIdsCount: Array.isArray(firmIds) ? firmIds.length : undefined, notes: String(notes || '').slice(0, 500) },
+      req,
+    });
+    const data = await getFeatureFlagsSnapshot();
+    return res.json({ success: true, data });
+  } catch (error) {
+    log.error('[SUPERADMIN] Error updating feature flag:', error);
+    return res.status(500).json({ success: false, message: 'Failed to update feature flag' });
+  }
+};
 
 // Constants
 const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
@@ -1944,6 +1987,8 @@ module.exports = {
   getFirmHealth,
   getPilotReadiness,
   getPlansCapacity,
+  getSuperadminFeatureFlags,
+  updateSuperadminFeatureFlag: wrapWriteHandler(updateSuperadminFeatureFlag),
   updateFirmPlanCapacity,
   getSuperadminAuditLogs,
   getSuperadminGlobalSearch,

@@ -59,6 +59,16 @@ export const superadminService = {
     return response.data;
   },
 
+  getFeatureFlags: async () => {
+    const response = await api.get('/superadmin/feature-flags');
+    return response.data;
+  },
+
+  updateFeatureFlag: async (key, payload) => {
+    const response = await api.patch(`/superadmin/feature-flags/${key}`, payload);
+    return response.data;
+  },
+
   updateFirmPlanCapacity: async (firmId, payload) => {
     const response = await api.patch(`/superadmin/firms/${firmId}/plan-capacity`, payload);
     return response.data;

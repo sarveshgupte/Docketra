@@ -35,6 +35,8 @@ const {
   updateFirmPlanCapacity,
   getSuperadminAuditLogs,
   getSuperadminGlobalSearch,
+  getSuperadminFeatureFlags,
+  updateSuperadminFeatureFlag,
 } = require('../controllers/superadmin.controller');
 
 /**
@@ -67,6 +69,8 @@ router.get('/audit-logs', requireSuperadmin, authorize(SuperAdminPolicy.canViewP
 router.get('/search', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getSuperadminGlobalSearch);
 router.get('/plans', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getPlansCapacity);
 router.get('/pilot-readiness', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getPilotReadiness);
+router.get('/feature-flags', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getSuperadminFeatureFlags);
+router.patch('/feature-flags/:key', requireSuperadmin, authorize(SuperAdminPolicy.canManageFirms), superadminAdminManagementLimiter, updateSuperadminFeatureFlag);
 
 // Firm management
 router.post('/firms', authorize(FirmPolicy.canCreate), createFirm);
