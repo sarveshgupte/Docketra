@@ -1300,6 +1300,7 @@ select:focus-visible {
     padding: 12px;
   }
 
+  /* Collapse button has no function in horizontal mobile nav — hide it */
   .platform__collapse {
     display: none;
   }
