@@ -592,7 +592,7 @@ const FinalCtaSection = () => (
    MARKETING FOOTER
 ───────────────────────────────────────────── */
 const MarketingFooter = () => (
-  <footer className="bg-white border-t border-slate-100 py-12">
+  <footer className="bg-white border-t border-slate-100 py-10">
     <Container>
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
         <div>
@@ -603,25 +603,15 @@ const MarketingFooter = () => (
           <p className="text-sm text-slate-400">Built for professional firms in India</p>
         </div>
 
-        <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-8 gap-y-3">
-          <div className="flex flex-col gap-2">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Product</p>
-            <Link to="/features" className="text-sm text-slate-600 hover:text-slate-900">Features</Link>
-            <Link to="/about" className="text-sm text-slate-600 hover:text-slate-900">About</Link>
-            <Link to="/contact" className="text-sm text-slate-600 hover:text-slate-900">Contact</Link>
-          </div>
-          <div className="flex flex-col gap-2">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Legal</p>
-            <Link to="/terms" className="text-sm text-slate-600 hover:text-slate-900">Terms</Link>
-            <Link to="/privacy" className="text-sm text-slate-600 hover:text-slate-900">Privacy</Link>
-            <Link to="/security" className="text-sm text-slate-600 hover:text-slate-900">Security</Link>
-            <Link to="/acceptable-use" className="text-sm text-slate-600 hover:text-slate-900">Acceptable Use</Link>
-          </div>
+        <nav aria-label="Footer legal navigation" className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <Link to="/terms" className="text-sm text-slate-500 hover:text-slate-900">Terms</Link>
+          <Link to="/privacy" className="text-sm text-slate-500 hover:text-slate-900">Privacy</Link>
+          <Link to="/security" className="text-sm text-slate-500 hover:text-slate-900">Security</Link>
+          <Link to="/acceptable-use" className="text-sm text-slate-500 hover:text-slate-900">Acceptable Use</Link>
         </nav>
       </div>
 
-      <div className="mt-10 border-t border-slate-100 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <p className="text-sm text-slate-400">© 2026 Docketra. All rights reserved.</p>
+      <div className="mt-8 border-t border-slate-100 pt-6 flex flex-col sm:flex-row items-center justify-end gap-4">
         <a href={`mailto:${CONTACT_EMAIL}`} className="text-sm text-slate-500 hover:text-slate-900 hover:underline">
           {CONTACT_EMAIL}
         </a>
@@ -643,10 +633,12 @@ export const LandingPageContent = () => {
     const timer = window.setTimeout(() => {
       const el = document.getElementById(id);
       if (el) {
-      const headerOffset = 84;
-      const elementPosition = el.getBoundingClientRect().top + window.scrollY;
-      window.scrollTo({ top: Math.max(elementPosition - headerOffset, 0), behavior: 'smooth' });
-    }
+        const headerOffset = 84;
+        const elementPosition = el.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({ top: Math.max(elementPosition - headerOffset, 0), behavior: 'smooth' });
+        return;
+      }
+      window.scrollTo({ top: 0, behavior: 'auto' });
     }, 100);
     return () => window.clearTimeout(timer);
   }, [location.hash]);

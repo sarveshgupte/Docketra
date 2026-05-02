@@ -54,19 +54,28 @@ assert.ok(
   'MarketingLayout should still wrap non-home marketing/legal pages via AppLayout.'
 );
 
-const footerLinks = [
-  '/features',
-  '/about',
-  '/contact',
-  '/terms',
-  '/privacy',
-  '/security',
-  '/acceptable-use',
-];
+const footerLinks = ['/terms', '/privacy', '/security', '/acceptable-use'];
 
 for (const link of footerLinks) {
   assert.ok(landingContent.includes(`to="${link}"`), `Landing footer missing link ${link}`);
   assert.ok(publicRoutes.includes(`path="${link}"`), `Landing footer link is not routable: ${link}`);
 }
+
+for (const removedLink of ['/features', '/about', '/contact']) {
+  assert.equal(
+    landingContent.includes(`to="${removedLink}"`),
+    false,
+    `Landing footer must not expose ${removedLink}.`
+  );
+}
+
+for (const navLabel of ['Why', 'Product', 'In practice', 'Trust']) {
+  assert.ok(landingContent.includes(`label: '${navLabel}'`), `Top nav missing in-page label: ${navLabel}`);
+}
+
+assert.ok(landingContent.includes('onClick={() => onNav(id)}'), 'Desktop nav should trigger in-page section navigation.');
+assert.ok(landingContent.includes('onClick={() => { onNav(id); setMenuOpen(false); }}'), 'Mobile nav should trigger in-page section navigation.');
+assert.ok(landingContent.includes('to="/login"') && landingContent.includes('to="/signup"'), 'Landing nav must preserve Login and Request early access CTAs.');
+assert.ok(landingContent.includes("window.scrollTo({ top: 0, behavior: 'auto' });"), 'Unknown hash should safely scroll to top.');
 
 console.log('publicLandingRouteSmoke.test.mjs passed');
