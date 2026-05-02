@@ -47,6 +47,26 @@ const swap = (modulePath, exportsValue) => {
   assert.doesNotThrow(() => createApp(), 'createApp should not throw with Express 5 route parsing');
   const app = createApp();
 
+
+  const apiRoot = await request(app).get('/api');
+  assert.strictEqual(apiRoot.status, 200);
+
+  const apiHealth = await request(app).get('/api/health');
+  assert.strictEqual(apiHealth.status, 200);
+
+  const authLogin = await request(app).post('/api/auth/login').send({ email: 'a@b.com', password: 'x' });
+  assert.notStrictEqual(authLogin.status, 404, 'auth login route should stay on auth namespace');
+
+  const beforePublicNamespace = tenantResolverCalls;
+  await request(app).get('/api/public');
+  assert.strictEqual(tenantResolverCalls, beforePublicNamespace, 'public namespace must not hit tenantResolver');
+
+  const beforePublicPost = tenantResolverCalls;
+  await request(app).post('/api/public/cms/acme/intake').send({});
+  assert.strictEqual(tenantResolverCalls, beforePublicPost, 'public POST namespace must not hit tenantResolver');
+
+  const saLogin = await request(app).post('/api/superadmin/login').send({ email: 'sa@x.com', password: 'y' });
+  assert.notStrictEqual(saLogin.status, 404, 'superadmin login route should remain mounted');
   const firmLogin = await request(app).get('/api/acme/login');
   assert.strictEqual(firmLogin.status, 200);
   assert.ok(tenantResolverCalls > 0, 'tenantResolver should run for valid firm slug');
