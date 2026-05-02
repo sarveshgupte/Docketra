@@ -49,6 +49,11 @@ export const superadminService = {
     return response.data;
   },
 
+  getPilotReadiness: async () => {
+    const response = await api.get('/superadmin/pilot-readiness');
+    return response.data;
+  },
+
   getPlansCapacity: async () => {
     const response = await api.get('/superadmin/plans');
     return response.data;
