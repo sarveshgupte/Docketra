@@ -1,5 +1,13 @@
 # What's New
 
+## May 2026: User-to-Workbasket membership and visibility guardrails
+
+- Enforced active non-superadmin membership guardrails so active users/managers must have at least one PRIMARY workbasket.
+- Added firm-scoped membership normalization for user workbasket assignment updates: invalid, inactive, cross-firm, and QC-only primary assignments are rejected.
+- Preserved operating model fields by keeping `User.teamId` as the default PRIMARY workbasket, de-duplicating `User.teamIds`, and keeping explicit QC membership in `qcExplicitTeamIds` separate.
+- Implemented role-scoped workbasket visibility: Primary Admin/Admin see all firm workbaskets, Managers see managed/linked workbaskets, Users see only linked workbaskets, and Superadmin receives no tenant workbasket listing.
+- This PR does **not** implement docket routing, pull flow, route/submit, pending, deactivation flow changes, QC processing flow changes, or All Dockets behavior.
+
 ## May 2026: Workbasket/QC Workbasket backend guardrails (team/workbasket foundation)
 
 - Enforced PRIMARY/QC workbasket model rules in backend creation flows: creating a PRIMARY workbasket now atomically creates exactly one linked QC workbasket (with rollback on failure).
