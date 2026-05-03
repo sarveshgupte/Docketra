@@ -1,4 +1,4 @@
-> **Historical note:** This file is a PR implementation summary for reference. It does not reflect current product state. See [docs/README.md](docs/README.md) for current documentation.
+> **Historical note:** This file is a PR implementation summary for reference only. It does not reflect current product state. See the [documentation index](../README.md) for current docs.
 
 # PR: Auth stabilization follow-up (default-client strictness, logging safety, cookie diagnostics)
 
