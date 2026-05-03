@@ -1,6 +1,6 @@
 const log = require('../utils/log');
 const Case = require('../models/Case.model');
-const { canPullFromWorkbasket, canAssignFromWorkbasket, getFirmUserByXid } = require('./workbasketAuthorization.service');
+const { canPullFromWorkbasket, canAssignFromWorkbasket } = require('./workbasketAuthorization.service');
 module.exports = (deps) => {
   const {
     mongoose,
@@ -134,19 +134,8 @@ module.exports = (deps) => {
         }
       }
 
-      let effectiveAssigneeXID = user.xID;
-      let effectiveAssigneeUserId = user._id || null;
-      if (assignTo) {
-        if (!['ADMIN', 'Admin'].includes(user.role)) {
-          return res.status(403).json({ success: false, message: 'Only admins can assign dockets to other employees.' });
-        }
-        const targetUser = await User.findOne({ _id: assignTo, firmId: req.user.firmId, role: { $in: ['Employee', 'ADMIN', 'Admin'] } }).select('_id xID');
-        if (!targetUser?.xID) {
-          return res.status(404).json({ success: false, message: 'Selected employee not found for assignment.' });
-        }
-        effectiveAssigneeXID = targetUser.xID;
-        effectiveAssigneeUserId = targetUser._id;
-      }
+      const effectiveAssigneeXID = assigneeCandidate.xID;
+      const effectiveAssigneeUserId = assigneeCandidate._id || null;
 
       log.info('[USER_DEBUG]', req.user);
 

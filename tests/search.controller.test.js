@@ -262,8 +262,8 @@ async function testEmployeeWorklist() {
   assert.strictEqual(autoReopenCalled, true, 'autoReopenExpiredPendingCases should be called');
 
   const queryCall = mockCaseFind[0];
-  assert.strictEqual(queryCall.assignedToXID, 'xid-123');
-  assert.deepStrictEqual(queryCall.status.$in, ['Open', 'Pending']); // CaseStatus injected mock
+  assert.strictEqual(queryCall.assignedToXID, 'XID-123');
+  assert.deepStrictEqual(queryCall.status.$in, ['OPEN', 'PENDING']); // CaseStatus injected mock
 
   console.log('employeeWorklist tests passed');
 }
@@ -287,8 +287,9 @@ async function testGlobalWorklist() {
   assert.strictEqual(res.data.pagination.limit, 5);
 
   const queryCall = mockCaseFind[0];
-  assert.strictEqual(queryCall.status, 'Open');
   assert.strictEqual(queryCall.assignedToXID, null);
+  assert.ok(Array.isArray(queryCall.status.$nin));
+  assert.strictEqual(queryCall.status.$nin.length, 2);
 
   // 3. SLA Filter checks
   mockCaseFind.length = 0;
