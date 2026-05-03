@@ -1,4 +1,4 @@
-> **Historical note:** This is a historical UI/UX sprint planning document. It does not reflect current product state. See [docs/README.md](docs/README.md) for current documentation.
+> **Historical note:** This is a historical sprint planning document. It does not reflect current product state. See the [documentation index](../README.md) for current docs.
 
 # Phase 1 UI/UX Maturity Sprint (Docketra)
 

@@ -1,4 +1,4 @@
-> **Historical note:** This is a historical codebase audit snapshot. Some observations (e.g. xID auth model) reflect an earlier state. See [docs/README.md](docs/README.md) for current documentation.
+> **Historical note:** This is a historical codebase audit snapshot. Some observations (e.g. xID-based auth model) reflect an earlier product state. The current auth model uses JWT cookie-based sessions. See the [documentation index](../README.md) for current docs.
 
 # Docketra Codebase Audit Report
 
