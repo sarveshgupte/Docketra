@@ -3,6 +3,7 @@ const User = require('../models/User.model');
 const { mapUserResponse } = require('../mappers/user.mapper');
 const mongoose = require('mongoose');
 const { createPrimaryWithQc, isValidObjectId } = require('../services/workbasketGuardrails.service');
+const { resolveFirmScopedTeams, normalizeMembership, buildWorkbasketVisibilityQuery, normalizeObjectIdStrings } = require('../services/userWorkbasketMembership.service');
 
 const buildWorkbasketWarnings = async (firmId, workbasketIds = []) => {
   if (!firmId || workbasketIds.length === 0) return {};
@@ -38,8 +39,20 @@ const buildWorkbasketWarnings = async (firmId, workbasketIds = []) => {
 const listWorkbaskets = async (req, res) => {
   try {
     const includeInactive = String(req.query?.includeInactive || '').toLowerCase() === 'true';
+    const visibility = buildWorkbasketVisibilityQuery({ user: req.user });
+    if (visibility.denyAll) return res.json({ success: true, data: [] });
+
     const query = { firmId: req.user?.firmId };
     if (!includeInactive) query.isActive = true;
+    if (!visibility.firmWide) {
+      const orClauses = [];
+      if (Array.isArray(visibility.linkedIds) && visibility.linkedIds.length > 0) {
+        orClauses.push({ _id: { $in: visibility.linkedIds } });
+      }
+      if (visibility.managerId) orClauses.push({ managerId: visibility.managerId });
+      if (orClauses.length === 0) return res.json({ success: true, data: [] });
+      query.$or = orClauses;
+    }
 
     const teams = await Team.find(query).sort({ name: 1 }).lean();
     const warnings = await buildWorkbasketWarnings(req.user?.firmId, teams.map((entry) => entry._id));
@@ -189,31 +202,27 @@ const toggleWorkbasketStatus = async (req, res) => {
 const updateUserWorkbaskets = async (req, res) => {
   try {
     const xID = String(req.params?.xID || '').trim().toUpperCase();
-    const normalizedTeamIds = Array.isArray(req.body?.teamIds)
-      ? [...new Set(req.body.teamIds.map((entry) => String(entry || '').trim()).filter(Boolean))]
-      : [];
-
-    if (normalizedTeamIds.length === 0) {
-      return res.status(400).json({ success: false, message: 'At least one workbasket is required' });
-    }
+    const normalizedTeamIds = normalizeObjectIdStrings(req.body?.teamIds || []);
 
     const user = await User.findOne({ xID, firmId: req.user?.firmId, status: { $ne: 'deleted' } });
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    const teams = await Team.find({
-      _id: { $in: normalizedTeamIds },
-      firmId: req.user?.firmId,
-      isActive: true,
-    }).select('_id type').lean();
-
-    if (teams.length !== normalizedTeamIds.length) {
-      return res.status(400).json({ success: false, message: 'One or more selected workbaskets are invalid or inactive' });
+    const requirePrimary = user.status === 'active' && String(user.role || '').toUpperCase() !== 'SUPER_ADMIN';
+    if (requirePrimary && normalizedTeamIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one PRIMARY workbasket is required for active users' });
     }
 
-    const resolvedTeamIds = teams.map((entry) => entry._id);
+    const teams = await resolveFirmScopedTeams({ firmId: req.user?.firmId, teamIds: normalizedTeamIds });
+    const membership = normalizeMembership({
+      role: user.role,
+      teams,
+      qcExplicitTeamIds: user.qcExplicitTeamIds || [],
+      requirePrimary,
+    });
 
-    user.teamIds = [...new Set(resolvedTeamIds.map((entry) => String(entry)))];
-    user.teamId = user.teamIds[0] || null;
+    user.teamIds = membership.teamIds;
+    user.teamId = membership.teamId;
+    user.qcExplicitTeamIds = membership.qcExplicitTeamIds;
     await user.save();
 
     return res.json({ success: true, message: 'User workbaskets updated', data: mapUserResponse(user) });
