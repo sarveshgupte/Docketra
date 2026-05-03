@@ -9,6 +9,7 @@ const {
   mapCrmClientToClient,
   resolveClientAndLegacyCrm,
 } = require('../services/crmClientMapping.service');
+const { resolveFirmMemoryScope } = require('../services/firmMemoryScope.service');
 
 const parsePagination = (query = {}) => {
   const rawLimit = Number.parseInt(query.limit, 10);
@@ -97,9 +98,16 @@ const normalizeClientPayload = (body = {}) => {
 const listCrmClients = async (req, res) => {
   try {
     const { limit, skip } = parsePagination(req.query);
+    const memoryScope = resolveFirmMemoryScope(req);
+    if (memoryScope.errorStatus) return res.status(memoryScope.errorStatus).json({ success: false, message: memoryScope.errorMessage });
+
+    if (!memoryScope.hasFirmWideAccess && memoryScope.scopedClientIds.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
     const [clients, crmClients] = await Promise.all([
       Client.find({
         firmId: req.user.firmId,
+        ...(!memoryScope.hasFirmWideAccess ? { _id: { $in: memoryScope.scopedClientIds } } : {}),
         isDefaultClient: { $ne: true },
         isInternal: { $ne: true },
       })
@@ -120,9 +128,11 @@ const listCrmClients = async (req, res) => {
         .map((c) => String(c.legacyCrmClientId))
     );
 
-    const mappedLegacyClients = crmClients
-      .filter((crm) => !byLegacyId.has(String(crm._id)))
-      .map((crm) => mapCrmClientToClient(crm));
+    const mappedLegacyClients = memoryScope.hasFirmWideAccess
+      ? crmClients
+        .filter((crm) => !byLegacyId.has(String(crm._id)))
+        .map((crm) => mapCrmClientToClient(crm))
+      : [];
 
     return res.json({ success: true, data: [...clients, ...mappedLegacyClients] });
   } catch (_error) {

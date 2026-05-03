@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const KnowledgeItem = require('../models/KnowledgeItem.model');
+const { resolveFirmMemoryScope } = require('../services/firmMemoryScope.service');
 
 const { KNOWLEDGE_ITEM_TYPES, KNOWLEDGE_ITEM_STATUSES } = KnowledgeItem;
 
@@ -120,7 +121,17 @@ const createKnowledgeItem = async (req, res) => {
 const listKnowledgeItems = async (req, res) => {
   try {
     const { limit, skip, page } = parsePagination(req.query);
+    const memoryScope = resolveFirmMemoryScope(req);
+    if (memoryScope.errorStatus) return res.status(memoryScope.errorStatus).json({ success: false, message: memoryScope.errorMessage });
+
+    if (!memoryScope.hasFirmWideAccess && memoryScope.scopedClientIds.length === 0) {
+      return res.json({ success: true, data: [], pagination: { page, limit, total: 0, pages: 0 } });
+    }
+
     const filter = { firmId: req.user.firmId };
+    if (!memoryScope.hasFirmWideAccess) {
+      filter.linkedClientId = { $in: memoryScope.scopedClientIds };
+    }
 
     if (req.query.type) {
       const type = String(req.query.type).trim().toLowerCase();
