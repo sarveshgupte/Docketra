@@ -1,4 +1,6 @@
 const log = require('../utils/log');
+const Case = require('../models/Case.model');
+const { canPullFromWorkbasket, canAssignFromWorkbasket } = require('./workbasketAuthorization.service');
 module.exports = (deps) => {
   const {
     mongoose,
@@ -108,19 +110,35 @@ module.exports = (deps) => {
         log.info(`[CASE_PULL] ${user.xID} pulling case ${caseId}`);
       }
 
-      let effectiveAssigneeXID = user.xID;
-      let effectiveAssigneeUserId = user._id || null;
-      if (assignTo) {
-        if (!['ADMIN', 'Admin'].includes(user.role)) {
-          return res.status(403).json({ success: false, message: 'Only admins can assign dockets to other employees.' });
-        }
-        const targetUser = await User.findOne({ _id: assignTo, firmId: req.user.firmId, role: { $in: ['Employee', 'ADMIN', 'Admin'] } }).select('_id xID');
-        if (!targetUser?.xID) {
-          return res.status(404).json({ success: false, message: 'Selected employee not found for assignment.' });
-        }
-        effectiveAssigneeXID = targetUser.xID;
-        effectiveAssigneeUserId = targetUser._id;
+      const docketRecords = await Case.find({ firmId: req.user.firmId, caseId: { $in: caseIds } })
+        .select('caseId assignedToXID status state ownerTeamId workbasketId')
+        .lean();
+      if (docketRecords.length !== caseIds.length) {
+        return res.status(404).json({ success: false, message: 'One or more dockets were not found.' });
       }
+
+      const assigneeCandidate = assignTo
+        ? await User.findOne({ _id: assignTo, firmId: req.user.firmId, isActive: true }).select('_id xID role teamId teamIds isActive').lean()
+        : { _id: user._id, xID: user.xID, role: user.role, teamId: user.teamId, teamIds: user.teamIds, isActive: true };
+
+      if (!assigneeCandidate?.xID) {
+        return res.status(404).json({ success: false, message: 'Selected assignee not found.' });
+      }
+
+      for (const docket of docketRecords) {
+        if (String(docket?.assignedToXID || '').trim()) {
+          return res.status(409).json({ success: false, message: `Docket ${docket.caseId} is already assigned. Use reassignment flow.` });
+        }
+        const allowed = assignTo
+          ? canAssignFromWorkbasket({ actor: user, docket, assignee: assigneeCandidate })
+          : canPullFromWorkbasket({ user, docket });
+        if (!allowed) {
+          return res.status(403).json({ success: false, message: `Not allowed to pull/assign docket ${docket.caseId}` });
+        }
+      }
+
+      const effectiveAssigneeXID = assigneeCandidate.xID;
+      const effectiveAssigneeUserId = assigneeCandidate._id || null;
 
       log.info('[USER_DEBUG]', req.user);
 
