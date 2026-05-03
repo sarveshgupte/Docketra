@@ -1,5 +1,11 @@
 # What's New
 
+## May 2026: Pending, QC, deactivation handoff, and terminal queue normalization
+
+- Backend-only normalization for pending ownership, auto-reopen behavior, QC metadata/decision handling, and deactivation docket handoff.
+- Active WL/WB/QC queue queries now consistently exclude terminal states (`RESOLVED`, `FILED`).
+- Added coverage tests for pending auto-reopen ownership continuity, QC failed/corrected outcomes, deactivation remapping behavior, and terminal queue exclusion guardrails.
+
 ## May 2026: Routed docket Route + Submit flow
 
 - Implemented routed docket Route + Submit workflow with mandatory routing/submit comments and routed-team return-to-originator behavior.
