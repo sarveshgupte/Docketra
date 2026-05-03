@@ -1,12 +1,18 @@
 # What's New
 
+## May 2026: Routed docket Route + Submit flow
+
+- Implemented routed docket Route + Submit workflow with mandatory routing/submit comments and routed-team return-to-originator behavior.
+- Route now targets only active PRIMARY workbaskets and moves docket into receiving WB queue (`IN_WB` + `GLOBAL` + unassigned).
+- Routed receiving users now see **Submit** (not Resolve) and cannot file/final-resolve routed dockets.
+- Submit returns docket to the original routing user worklist and does not mark the docket RESOLVED/FILED.
+
 ## May 2026: Workbasket pull and assignment flows
 
 - Added firm-scoped authorization hardening for WB→WL pull and assignment actions across user/manager/admin roles.
 - Managers can assign from linked workbaskets and move dockets between linked users within their WB scope; Admin/Primary Admin can assign/move across firm users.
 - Hardened WB/WL query behavior so WB lists only unassigned non-terminal IN_WB dockets and assigned dockets disappear immediately after pull/assign.
 - This PR does **not** implement route/submit, pending changes, QC processing, deactivation handoff, or All Dockets normalization.
-
 
 ## May 2026: Category/Subcategory Workbasket routing guardrails
 
@@ -46,7 +52,6 @@
 - Simplified Company Brain into Command Summary, Needs Attention, Connected Map, and How to use Company Brain sections.
 - Reduced repeated explanatory sections and made attention signals easier to act on.
 - Preserved read-only, metadata-based behavior without AI, vector search, document extraction, new APIs, or route changes.
-
 
 ## May 2026: Auth session redirect reliability hardening
 
@@ -369,7 +374,6 @@
 - Reaffirmed product behavior that document collection remains inside **Docket → Attachments**, not as a global CMS “Documents” page.
 - Clarified Category Management as the primary configuration anchor for category/subcategory/workbasket mapping workflows under Task Manager.
 - Improved role-aware visibility so operational configuration entries only appear for authorized users.
-
 
 ## April 2026: Role-specific onboarding tutorial upgrade
 
