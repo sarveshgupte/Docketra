@@ -1,219 +1,182 @@
 # Docketra UI
 
-Professional Neomorphic Web UI for Docketra Backend
+React + Vite frontend for the Docketra B2B firm operations SaaS platform.
 
-## 🎨 Design System
+## Tech stack
 
-This UI implements a professional, enterprise-grade neomorphic design system:
-- Soft neomorphic surfaces with subtle light/shadow
-- Rounded corners and muted color palette
-- Clear depth hierarchy between read-only and editable elements
-- Accessible contrast and focus states
-- Minimal functional animations
+- **React 18** with hooks
+- **React Router v6** (firm-scoped routing: `/:firmSlug/login`, `/app/firm/:firmSlug/*`)
+- **Vite 5** for bundling and dev server
+- **TailwindCSS 3** for styling
+- **TanStack Query v5** for data fetching and cache management
+- **react-hook-form + yup** for form validation
+- **Axios** for API calls with JWT cookie-based auth
+- **framer-motion** for animations (vendored)
+- **socket.io-client** for real-time updates
 
-## 🚀 Quick Start
+## Quick start
 
 ### Prerequisites
 
-- Node.js 14+ and npm/yarn
-- Docketra backend running on http://localhost:5000
+- Node.js **18.x** (Node 20 LTS also supported)
+- Docketra backend running on `http://localhost:5000`
 
 ### Installation
 
-1. **Navigate to the UI directory**
-   ```bash
-   cd ui
-   ```
+```bash
+# From the repo root
+npm --prefix ui install
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+# Or from inside ui/
+cd ui
+npm install
+```
 
-3. **Configure environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit `.env` if your backend runs on a different URL:
-   ```
-   VITE_API_URL=http://localhost:5000/api
-   ```
-
-4. **Start the development server**
-   ```bash
-   npm run dev
-   ```
-
-5. **Open your browser**
-   ```
-   http://localhost:5173
-   ```
-
-### Build for Production
+### Configure environment
 
 ```bash
-npm run build
+cp ui/.env.example ui/.env
 ```
 
-The built files will be in the `dist/` directory.
+The default `.env.example` already sets `VITE_API_BASE_URL=http://localhost:5000/api`. No edits needed unless your backend is on a different port.
 
-### Preview Production Build
+### Start the dev server
 
 ```bash
-npm run preview
+npm --prefix ui run dev
 ```
 
-## 📁 Project Structure
+Open `http://localhost:5173` in your browser.
 
-```
-ui/
-├── public/                  # Public assets (empty after moving index.html)
-├── src/                     # Source code
-│   ├── assets/             # CSS and static assets
-│   ├── components/         # React components
-│   ├── contexts/           # React contexts
-│   ├── hooks/              # Custom React hooks
-│   ├── pages/              # Page components
-│   ├── services/           # API services
-│   └── utils/              # Utility functions
-├── index.html              # Entry HTML file (Vite requirement)
-├── package.json            # Dependencies
-├── vite.config.js          # Vite configuration
-└── README.md               # This file
+### Build for production
+
+```bash
+npm --prefix ui run build
 ```
 
-## 🔑 Features
+Built files go to `ui/dist/`.
 
-### Part A — Authentication
-- ✅ Login with xID + password
-- ✅ First-login forced password change
-- ✅ Password expiry handling
-- ✅ Protected routes with auth guard
-- ✅ xID header injection via Axios interceptor
-- ✅ Logout functionality
+### Preview production build
 
-### Part B — Dashboard
-- ✅ My Open Cases count
-- ✅ My Pending Cases count
-- ✅ Admin pending approvals count
-- ✅ Recently accessed cases table
-- ✅ Role-aware display
+```bash
+npm --prefix ui run preview
+```
 
-### Part C — Worklists
-- ✅ Employee worklist (assigned cases)
-- ✅ Status filters (Open/Pending/Closed/Filed)
-- ✅ Permission-aware display
-- ✅ Click to open case details
-
-### Part D — Case View
-- ✅ Read-only case information
-- ✅ Client details display
-- ✅ Lock status indicator
-- ✅ Full audit history
-- ✅ Existing comments (read-only)
-- ✅ Existing attachments (read-only)
-- ✅ Add comment (append-only)
-- ✅ Permission-gated actions
-
-### Part E — Case Creation
-- ✅ Client selector
-- ✅ Category selector
-- ✅ Initial description
-- ✅ 409 duplicate client warning
-- ✅ Force create option
-- ✅ Explicit user choice required
-
-### Part F — User Profile
-- ✅ View profile information
-- ✅ Edit allowed fields (DOB, Phone, Address, PAN, Aadhaar, Email)
-- ✅ Immutable fields marked read-only (Name, xID)
-- ✅ Password expiry date display
-
-### Part G — Admin Panel
-- ✅ Pending approvals overview
-- ✅ User management tab (placeholder)
-- ✅ Admin-only access control
-
-## 🎨 Neomorphic Design Principles
-
-The UI strictly follows neomorphic design principles:
-
-1. **Soft shadows**: Elements use dual light/dark shadows for depth
-2. **Muted colors**: Enterprise-appropriate color palette
-3. **Clear hierarchy**: Visual distinction between read-only and editable
-4. **Focus states**: Accessible focus rings for keyboard navigation
-5. **Restrained animations**: Only functional transitions
-6. **Professional appearance**: Internal compliance system aesthetic
-
-## 🔒 Backend Integration
-
-### API Base URL
-Configurable via `VITE_API_URL` environment variable. If not set, defaults to `/api` (relative path), which works in production when backend serves the frontend.
-
-### Authentication
-- xID stored in localStorage
-- xID sent in `x-user-id` header on all requests
-- 401 responses trigger automatic logout and redirect
-
-### Permission Handling
-- All permissions come from backend responses
-- UI respects backend permission checks
-- No client-side permission bypassing
-
-### Error Handling
-- 401 Unauthorized → Redirect to login
-- 403 Forbidden → Show error message
-- 409 Conflict → Display duplicate warning
-- 500 Server Error → Show user-friendly error
-
-## 📝 Environment Variables
+## Environment variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `VITE_API_URL` | Backend API base URL (optional) | `/api` (relative path) |
+| `VITE_API_BASE_URL` | Backend API base URL | `http://localhost:5000/api` |
+| `VITE_SUPPORT_EMAIL` | Support email shown in help UI | `support@docketra.com` |
+| `VITE_ENABLE_PROD_SOURCEMAPS` | Enable production source maps | `false` |
+| `VITE_ENABLE_GOOGLE_LOGIN` | Show Google login option | `false` |
 
-## 🚫 Non-Negotiable Rules (Backend Compliance)
+All `VITE_*` variables are bundled into the client build and are publicly readable. Do not store secrets here.
 
-The UI strictly enforces:
+## Project structure
 
-1. **Immutable Fields**: Cannot edit xID, name, clientId, caseId, audit records
-2. **No Audit Mutations**: Audit history is strictly read-only
-3. **No Approval Bypass**: All approval flows go through backend
-4. **Permission Respect**: UI shows/hides based on backend permissions
-5. **Warning Surface**: All backend warnings (e.g., duplicates) are displayed
-6. **Append-Only Comments**: Comments cannot be edited or deleted
-7. **Append-Only Attachments**: Attachments cannot be removed
-8. **No Direct Client Edits**: Client changes only through case workflow
+```
+ui/
+├── public/                # Static assets
+├── src/
+│   ├── api/               # API client modules (axios wrappers per domain)
+│   ├── assets/            # CSS and static assets
+│   ├── auth/              # Auth utilities and guards
+│   ├── components/
+│   │   ├── common/        # Shared UI components
+│   │   └── platform/      # PlatformShell — the authenticated workspace shell
+│   ├── constants/
+│   │   ├── platformNavigation.js   # Sidebar nav blueprint
+│   │   └── routes.js               # Route constants
+│   ├── contexts/          # React contexts (Auth, Toast, etc.)
+│   ├── design/            # Design tokens and system components
+│   ├── hooks/             # Custom React hooks
+│   ├── pages/             # Page-level components
+│   ├── routes/            # Route definitions and ProtectedRoutes
+│   ├── services/          # Higher-level service abstractions
+│   ├── styles/            # Global styles
+│   ├── theme/             # Theme constants
+│   ├── utils/             # Utility functions
+│   ├── App.jsx            # App root
+│   ├── Router.jsx         # Top-level router
+│   └── index.jsx          # Entry point
+├── tests/                 # Static analysis / smoke tests (.mjs)
+├── .env.example           # Environment variable template
+├── index.html             # Vite entry HTML
+├── package.json
+├── vite.config.js
+└── README.md              # This file
+```
 
-## 🧪 Development
+## Authentication model
 
-### Tech Stack
-- React 18 (with hooks)
-- React Router v6
-- Axios for API calls
-- Vite for bundling
-- Pure CSS (no heavy UI frameworks)
+- Authentication uses **JWT cookie-based sessions** (HTTP-only cookies set by the backend).
+- Login flows:
+  - Firm users: `/:firmSlug/login` → password or OTP-based login.
+  - Superadmin: `/superadmin/login` → separate credential store.
+- On successful auth, the backend sets a JWT access cookie. The frontend does not store tokens in localStorage.
+- Expired sessions trigger automatic redirect:
+  - Firm routes redirect to `/:firmSlug/login`.
+  - Superadmin routes redirect to `/superadmin/login`.
+- Protected routes are enforced via `ProtectedRoutes.jsx`.
 
-### State Management
-- React Context for global state (Auth, Toast)
-- Local state for component-specific data
-- No Redux or heavy state management
+## Workspace shell
 
-### Styling
-- CSS Variables for design tokens
-- Component-specific CSS files
-- Neomorphic utility classes
-- No CSS-in-JS libraries
+`PlatformShell` (`src/components/platform/PlatformShell.jsx`) is the single authenticated workspace shell for all firm workspace pages. It renders the sidebar, header, and page outlet. The older `Layout` component is deprecated — do not use it for new pages.
 
-## 🤝 Contributing
+## Navigation and product labels
 
-This is an internal compliance system. All changes must:
-- Respect backend as single source of truth
-- Maintain neomorphic design consistency
-- Follow permission and immutability rules
-- Handle errors gracefully
+UI copy uses product labels; internal route segments use technical names:
 
-## 📄 License
+| Product label | Internal route segment |
+|--------------|------------------------|
+| Work | `/task-manager` |
+| Dashboard | `/dashboard` |
+| Knowledge Intake | `/cms` |
+| Relationships | `/crm` |
+| Company Brain | `/company-brain` |
+| Knowledge Library | `/knowledge` |
+| Clients | `/clients` |
+| Reports | `/admin/reports` |
+| Team & Access | `/admin` |
+| Settings | `/settings` |
 
-ISC
+Full route constants are in `src/constants/routes.js`.
+
+## Role hierarchy
+
+Roles (highest to lowest): `PRIMARY_ADMIN` → `ADMIN` → `MANAGER` → `USER`.
+
+Navigation items and UI controls respect `minRole` requirements defined in `platformNavigation.js`. All permission enforcement is ultimately done by the backend — the UI only shows/hides based on role context received from auth responses.
+
+## Testing
+
+```bash
+# Run the 17-test CI suite (static analysis, no browser required)
+npm --prefix ui run test:ci
+
+# Individual test groups
+npm --prefix ui run test:shells          # workspace shell unification
+npm --prefix ui run test:sidebar-active  # sidebar active state reliability
+npm --prefix ui run test:command-center  # command center contract
+
+# Frontend build check
+npm --prefix ui run build
+```
+
+All tests in `ui/tests/` are static analysis tests written as `.mjs` files. No browser or jsdom is required.
+
+## Backend integration
+
+- All API calls go through `VITE_API_BASE_URL` (defaults to `/api` for production when backend serves frontend).
+- 401 responses trigger automatic logout and redirect to the appropriate login page.
+- 403 responses show an error state without redirect.
+- All permissions come from backend responses — the UI does not enforce permissions client-side.
+
+## Contributing
+
+- Backend is the single source of truth for data and permissions.
+- New firm workspace pages must use `PlatformShell`.
+- Use product labels in UI copy; internal route segments are acceptable in code only.
+- Handle loading, error, and empty states for all async data.
+- Do not add `TODO` comments to production code.

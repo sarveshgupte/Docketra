@@ -1,42 +1,59 @@
 # Quick Start Guide
 
-Get Docketra up and running in 5 minutes.
+Get Docketra running locally in under 10 minutes.
 
 ## Prerequisites
 
-- Node.js (v14+)
-- MongoDB (v4.4+)
-- npm
+- **Node.js 18.x** (Node 20 LTS also supported)
+- **npm 9+**
+- **MongoDB** — local instance or container
+- **Redis** — optional locally; required in production
 
 ## Installation Steps
 
-### 1. Clone and Install
+### 1. Clone and install dependencies
 
 ```bash
 git clone <repository-url>
 cd docketra
 npm install
+npm --prefix ui install
 ```
 
-### 2. Configure Environment
+### 2. Configure backend environment
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` if needed:
-```
-PORT=3000
+Minimum variables for local development (edit `.env`):
+
+```dotenv
 NODE_ENV=development
-MONGODB_URI=mongodb://localhost:27017/docketra
-APP_NAME=Docketra
+PORT=5000
+MONGO_URI=mongodb://127.0.0.1:27017/docketra
+JWT_SECRET=<at least 32 random characters>
+SUPERADMIN_XID=X000001
+SUPERADMIN_EMAIL=superadmin@example.com
+SUPERADMIN_PASSWORD_HASH=<bcrypt hash>
+SUPERADMIN_OBJECT_ID=000000000000000000000001
+ENCRYPTION_PROVIDER=disabled
+REDIS_URL=
 ```
 
-### 3. Start MongoDB
+Leave `REDIS_URL` blank locally. The backend uses an in-memory fallback for idempotency and single-process rate limiting. See `.env.example` for the full variable list.
 
-Choose one option:
+### 3. Configure frontend environment
 
-**Option A: Local MongoDB**
+```bash
+cp ui/.env.example ui/.env
+```
+
+The default `ui/.env.example` already points to `http://localhost:5000/api`. No edits needed unless your backend runs on a different port.
+
+### 4. Start MongoDB
+
+**Option A: Local service**
 ```bash
 sudo service mongod start
 ```
@@ -46,214 +63,106 @@ sudo service mongod start
 docker run -d -p 27017:27017 --name mongodb mongo:latest
 ```
 
-### 4. Start the Server
+### 5. Start backend and frontend
 
-**Development mode (auto-restart on changes):**
+In separate terminals:
+
 ```bash
+# Terminal 1 — backend API (port 5000)
 npm run dev
+
+# Terminal 2 — background worker (optional locally)
+npm run start:worker
+
+# Terminal 3 — frontend app (port 5173)
+npm --prefix ui run dev
 ```
 
-**Production mode:**
-```bash
-npm start
-```
-
-### 5. Verify Installation
+### 6. Verify
 
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:5000/health
 ```
 
 Expected response:
+
 ```json
 {
   "success": true,
   "message": "Docketra API is running",
-  "timestamp": "2024-01-07T12:00:00.000Z",
   "environment": "development"
 }
 ```
 
-## Test the API
+Open the frontend at `http://localhost:5173`. Log in with your superadmin credentials or create a firm workspace through the superadmin dashboard at `/superadmin/login`.
 
-### Create Your First User
-
-```bash
-curl -X POST http://localhost:3000/api/users \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Test User",
-    "email": "test@example.com",
-    "role": "consultant"
-  }'
-```
-
-Save the returned `id` - you'll need it for creating cases and tasks.
-
-### Create Your First Case
-
-```bash
-curl -X POST http://localhost:3000/api/cases \
-  -H "Content-Type: application/json" \
-  -d '{
-    "caseNumber": "CASE-001",
-    "title": "My First Case",
-    "priority": "medium",
-    "client": {
-      "name": "Test Client",
-      "email": "client@example.com"
-    },
-    "createdBy": "YOUR_USER_ID"
-  }'
-```
-
-### Create Your First Task
-
-```bash
-curl -X POST http://localhost:3000/api/tasks \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "My First Task",
-    "priority": "medium",
-    "status": "pending",
-    "assignedTo": "YOUR_USER_ID",
-    "createdBy": "YOUR_USER_ID"
-  }'
-```
-
-## Next Steps
-
-1. **Read the Documentation**
-   - [README.md](README.md) - Full API documentation
-   - [API_TESTING_GUIDE.md](API_TESTING_GUIDE.md) - More API examples
-   - [ARCHITECTURE.md](ARCHITECTURE.md) - Design decisions
-
-2. **Explore the API**
-   - Visit http://localhost:3000/api for endpoint list
-   - Try filtering: `GET /api/tasks?status=pending`
-   - Try pagination: `GET /api/cases?page=1&limit=10`
-
-3. **View the Data**
-   - Use MongoDB Compass to view the database
-   - Or use mongo shell: `mongo docketra`
-
-## Common Issues
-
-### MongoDB Connection Error
-
-**Problem:** `Error connecting to MongoDB`
-
-**Solutions:**
-- Check if MongoDB is running: `sudo service mongod status`
-- Verify connection string in `.env`
-- Try: `mongodb://127.0.0.1:27017/docketra` instead of `localhost`
-
-### Port Already in Use
-
-**Problem:** `Port 3000 is already in use`
-
-**Solutions:**
-- Change PORT in `.env`
-- Or kill the process: `lsof -ti:3000 | xargs kill`
-
-### Module Not Found
-
-**Problem:** `Cannot find module 'express'`
-
-**Solution:**
-```bash
-rm -rf node_modules package-lock.json
-npm install
-```
-
-## Development Tips
-
-### Auto-Restart on Changes
-```bash
-npm run dev  # Uses nodemon
-```
-
-### View Logs
-- All requests are logged with timestamps
-- Error details shown in development mode
-- Check console output for debugging
-
-### Test with Postman
-- Import endpoints manually
-- Or use curl examples from API_TESTING_GUIDE.md
-
-### MongoDB GUI Tools
-- **MongoDB Compass** - Official GUI
-- **Studio 3T** - Advanced features
-- **Robo 3T** - Lightweight option
-
-## Project Structure
+## Project structure
 
 ```
 docketra/
-├── src/
-│   ├── config/       # Database and app configuration
-│   ├── models/       # Mongoose schemas
-│   ├── controllers/  # Business logic
-│   ├── routes/       # API endpoints
-│   ├── middleware/   # Error handling, logging
-│   └── server.js     # Main entry point
-├── .env              # Your configuration (not in git)
-├── .env.example      # Template configuration
-├── package.json      # Dependencies and scripts
-└── README.md         # Full documentation
+├── src/               # Backend API (Node.js + Express)
+│   ├── config/        # DB config, env validation
+│   ├── controllers/   # Route handlers
+│   ├── middleware/     # Auth, rate limiting, request IDs
+│   ├── models/        # Mongoose schemas
+│   ├── routes/        # API route definitions
+│   ├── services/      # Business logic
+│   └── server.js      # API entry point
+├── ui/                # Frontend (React + Vite)
+│   └── src/           # React source
+├── tests/             # Backend tests
+├── .env.example       # Backend environment template
+├── package.json       # Backend dependencies and scripts
+└── README.md          # Project overview
 ```
 
-## Available Scripts
+## Available scripts
+
+### Backend
+
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Start backend with auto-restart (nodemon) |
+| `npm start` | Start backend (production) |
+| `npm run start:worker` | Start background worker |
+| `npm run lint` | Check backend JS syntax |
+| `npm run validate:env` | Validate environment variables |
+| `npm run test:pure` | Run backend tests (no DB/Redis required) |
+| `npm run ci:release-gate` | Full local CI check |
+
+### Frontend
+
+| Command | Purpose |
+|---------|---------|
+| `npm --prefix ui run dev` | Start frontend dev server |
+| `npm --prefix ui run build` | Build frontend for production |
+| `npm --prefix ui run test:ci` | Run frontend test suite |
+
+## Common issues
+
+### MongoDB connection error
+
+- Verify MongoDB is running: `sudo service mongod status`
+- Use `127.0.0.1` instead of `localhost` in `MONGO_URI` if DNS resolution is slow.
+
+### Port already in use
+
+- Backend defaults to port **5000** (not 3000). Change `PORT` in `.env` if needed.
+- Frontend defaults to port 5173 (Vite default).
+
+### Module not found
 
 ```bash
-npm start     # Start server
-npm run dev   # Start with auto-restart
+rm -rf node_modules ui/node_modules
+npm install
+npm --prefix ui install
 ```
 
-## API Endpoints Quick Reference
+## Next steps
 
-### Users
-- `GET /api/users` - List all users
-- `POST /api/users` - Create user
-- `GET /api/users/:id` - Get user
-- `PUT /api/users/:id` - Update user
-- `DELETE /api/users/:id` - Deactivate user
-
-### Cases
-- `GET /api/cases` - List all cases
-- `POST /api/cases` - Create case
-- `GET /api/cases/:id` - Get case with tasks
-- `PUT /api/cases/:id` - Update case
-- `DELETE /api/cases/:id` - Delete case
-- `POST /api/cases/:id/notes` - Add note
-
-### Tasks
-- `GET /api/tasks` - List all tasks
-- `POST /api/tasks` - Create task
-- `GET /api/tasks/:id` - Get task
-- `PUT /api/tasks/:id` - Update task
-- `DELETE /api/tasks/:id` - Delete task
-
-### Statistics
-- `GET /api/tasks/stats` - Task statistics
-- `GET /api/cases/stats` - Case statistics
-
-## Support
-
-For issues or questions:
-1. Check the documentation files
-2. Review error logs in console
-3. Verify MongoDB connection
-4. Check that all dependencies are installed
-
-## Success Indicators
-
-You know everything is working when:
-- ✅ Server starts without errors
-- ✅ Health check returns 200
-- ✅ You can create users, cases, and tasks
-- ✅ MongoDB contains your data
-- ✅ Queries and filters work
-
-Happy coding! 🚀
+- [README.md](README.md) — project overview, architecture, security model
+- [docs/README.md](docs/README.md) — full documentation index
+- [docs/local-development.md](docs/local-development.md) — Windows/Docker notes
+- [docs/testing/local-testing.md](docs/testing/local-testing.md) — testing guide
+- [docs/deployment/render-deployment.md](docs/deployment/render-deployment.md) — production deploy on Render
+- [DEPLOYMENT.md](DEPLOYMENT.md) — deployment guide
