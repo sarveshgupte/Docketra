@@ -13,7 +13,6 @@ export const canAdminMoveAssignedDocketForUser = ({ caseInfo, user }) => (
 export const canRouteDocketByPolicy = ({ caseInfo, isViewOnlyMode, routingTeams }) => (
   Boolean(caseInfo)
   && !isViewOnlyMode
-  && !caseInfo?.routedToTeamId
   && Array.isArray(routingTeams)
   && routingTeams.length > 0
 );

@@ -34,6 +34,7 @@ export const CaseDetailOverviewPanel = ({
   actionInFlight,
   isViewOnlyMode,
   onOpenFileModal,
+  showFileAction = true,
   canRouteDocket,
   onOpenRouteModal,
   forceQcReview,
@@ -167,7 +168,7 @@ export const CaseDetailOverviewPanel = ({
                 {action.label}
               </Button>
             )) : null}
-            {!isViewOnlyMode ? (
+            {!isViewOnlyMode && showFileAction ? (
               <Button variant="secondary" onClick={onOpenFileModal} disabled={actionInFlight}>
                 File
               </Button>
