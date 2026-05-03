@@ -4,6 +4,7 @@ const CrmClient = require('../models/CrmClient.model');
 const Case = require('../models/Case.model');
 const User = require('../models/User.model');
 const { upsertCanonicalClientFromCrm } = require('../services/crmClientMapping.service');
+const { resolveFirmMemoryScope } = require('../services/firmMemoryScope.service');
 
 const ALLOWED_STATUSES = new Set(['new', 'contacted', 'qualified', 'lost', 'converted']);
 const ACTIVE_PIPELINE_STAGES = new Set(['new', 'contacted', 'qualified']);
@@ -164,6 +165,12 @@ const createLead = async (req, res) => {
 const listLeads = async (req, res) => {
   try {
     const { limit, skip } = parsePagination(req.query);
+    const memoryScope = resolveFirmMemoryScope(req);
+    if (memoryScope.errorStatus) return res.status(memoryScope.errorStatus).json({ success: false, message: memoryScope.errorMessage });
+    if (!memoryScope.hasFirmWideAccess && memoryScope.scopedClientIds.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
     const query = { firmId: req.user.firmId };
     const stage = normalizeStringOrNull(req.query?.stage || req.query?.status);
     const ownerXid = normalizeStringOrNull(req.query?.ownerXid);
@@ -173,6 +180,21 @@ const listLeads = async (req, res) => {
     if (dueOnly) {
       query.nextFollowUpAt = { $lt: new Date() };
       query.stage = { $in: [...ACTIVE_PIPELINE_STAGES] };
+    }
+
+    if (!memoryScope.hasFirmWideAccess) {
+      const scopeFilter = {
+        $or: [
+          { linkedClientId: { $in: memoryScope.scopedClientIds } },
+          { convertedClientId: { $in: memoryScope.scopedClientIds } },
+        ],
+      };
+      if (query.$or) {
+        query.$and = [{ $or: query.$or }, scopeFilter];
+        delete query.$or;
+      } else {
+        query.$or = scopeFilter.$or;
+      }
     }
 
     const leads = await Lead.find(query)

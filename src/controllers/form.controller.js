@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { resolveFirmMemoryScope } = require('../services/firmMemoryScope.service');
 const Form = require('../models/Form.model');
 const { processCmsSubmission } = require('../services/cmsIntake.service');
 const { REASON_CODES, logPilotEvent } = require('../services/pilotDiagnostics.service');
@@ -172,6 +173,10 @@ const createForm = async (req, res) => {
 
 const listForms = async (req, res) => {
   try {
+    const memoryScope = resolveFirmMemoryScope(req);
+    if (memoryScope.errorStatus) return res.status(memoryScope.errorStatus).json({ success: false, message: memoryScope.errorMessage });
+    if (!memoryScope.hasFirmWideAccess) return res.json({ success: true, data: [] });
+
     const forms = await Form.find({ firmId: req.user.firmId })
       .sort({ createdAt: -1 })
       .lean();

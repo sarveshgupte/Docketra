@@ -21,3 +21,8 @@
 - Frontend CRM client API base path is `/api/crm/clients` (not `/api/crm-clients`).
 - Contract requires empty DB state to return `200` with empty arrays/default objects, not `404`.
 - Secrets (API keys/tokens) must remain masked in all responses.
+
+
+## Firm Memory role scope
+- Primary Admin/Admin: firm-wide Firm Memory reads.
+- Manager/User: scoped by `clientAccess` (minus `restrictedClientIds`), no-scope returns empty lists.
