@@ -6,10 +6,12 @@ const {
   reassign,
   reopenDuePending,
 } = require('../services/docketWorkflow.service');
+const Case = require('../models/Case.model');
+const { canAssignFromWorkbasket, canMoveBetweenWorklists, getFirmUserByXid } = require('../services/workbasketAuthorization.service');
 const { isValidTransition: isValidLifecycleTransition } = require('../domain/docketLifecycle');
 
 function isAdmin(req) {
-  return String(req.user?.role || '').toUpperCase() === 'ADMIN';
+  return ['ADMIN','PRIMARY_ADMIN'].includes(String(req.user?.role || '').toUpperCase());
 }
 
 
@@ -35,6 +37,14 @@ async function assignDocket(req, res) {
     const assigneeXID = req.body?.assigneeXID || req.user?.xID;
     if (!isAdmin(req) && String(assigneeXID || '').toUpperCase() !== String(req.user?.xID || '').toUpperCase()) {
       return res.status(403).json({ success: false, message: 'Only admin can assign to other users' });
+    }
+
+    const docket = await Case.findOne({ caseId, firmId: req.user.firmId }).select('caseId ownerTeamId status state assignedToXID').lean();
+    if (!docket) return res.status(404).json({ success: false, message: 'Docket not found' });
+    const assignee = await getFirmUserByXid(req.user.firmId, assigneeXID);
+    if (!assignee) return res.status(404).json({ success: false, message: 'Assignee not found' });
+    if (!canAssignFromWorkbasket({ actor: req.user, docket, assignee })) {
+      return res.status(403).json({ success: false, message: 'Not allowed to assign this docket' });
     }
 
     const updated = await pullFromWorkbench({
@@ -103,9 +113,16 @@ async function qcAction(req, res) {
 
 async function reassignDocket(req, res) {
   try {
-    if (!isAdmin(req)) return res.status(403).json({ success: false, message: 'Only admins can reassign dockets' });
+
     const { caseId } = req.params;
     const { assigneeXID, comment } = req.body || {};
+    const docket = await Case.findOne({ caseId, firmId: req.user.firmId }).select('caseId ownerTeamId status state assignedToXID').lean();
+    if (!docket) return res.status(404).json({ success: false, message: 'Docket not found' });
+    const assignee = await getFirmUserByXid(req.user.firmId, assigneeXID);
+    if (!assignee) return res.status(404).json({ success: false, message: 'Assignee not found' });
+    if (!canMoveBetweenWorklists({ actor: req.user, docket, toUser: assignee })) {
+      return res.status(403).json({ success: false, message: 'Not allowed to move this docket' });
+    }
     const updated = await reassign({ docketId: caseId, firmId: req.user.firmId, actor: req.user, toUserXID: assigneeXID, comment });
     return res.json({ success: true, data: ensureUpdatedAt(updated), message: 'Docket reassigned' });
   } catch (error) {
