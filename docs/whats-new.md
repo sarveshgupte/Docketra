@@ -1,5 +1,13 @@
 # What's New
 
+## May 2026: Workbasket pull and assignment flows
+
+- Added firm-scoped authorization hardening for WB→WL pull and assignment actions across user/manager/admin roles.
+- Managers can assign from linked workbaskets and move dockets between linked users within their WB scope; Admin/Primary Admin can assign/move across firm users.
+- Hardened WB/WL query behavior so WB lists only unassigned non-terminal IN_WB dockets and assigned dockets disappear immediately after pull/assign.
+- This PR does **not** implement route/submit, pending changes, QC processing, deactivation handoff, or All Dockets normalization.
+
+
 ## May 2026: Category/Subcategory Workbasket routing guardrails
 
 - Enforced active PRIMARY workbasket validation for subcategory mappings (rejects cross-firm/inactive/non-primary/QC mappings).

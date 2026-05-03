@@ -262,8 +262,8 @@ async function testEmployeeWorklist() {
   assert.strictEqual(autoReopenCalled, true, 'autoReopenExpiredPendingCases should be called');
 
   const queryCall = mockCaseFind[0];
-  assert.strictEqual(queryCall.assignedToXID, 'xid-123');
-  assert.deepStrictEqual(queryCall.status.$in, ['Open', 'Pending']); // CaseStatus injected mock
+  assert.strictEqual(queryCall.assignedToXID, 'XID-123');
+  assert.deepStrictEqual(queryCall.status.$in, ['OPEN', 'PENDING']); // CaseStatus injected mock
 
   console.log('employeeWorklist tests passed');
 }
@@ -287,8 +287,9 @@ async function testGlobalWorklist() {
   assert.strictEqual(res.data.pagination.limit, 5);
 
   const queryCall = mockCaseFind[0];
-  assert.strictEqual(queryCall.status, 'Open');
   assert.strictEqual(queryCall.assignedToXID, null);
+  assert.ok(Array.isArray(queryCall.status.$nin));
+  assert.strictEqual(queryCall.status.$nin.length, 2);
 
   // 3. SLA Filter checks
   mockCaseFind.length = 0;
@@ -310,6 +311,15 @@ async function testGlobalWorklist() {
   const onTrackCall = mockCaseFind[0];
   assert.ok(onTrackCall.$or[0].slaDueAt.$gt instanceof Date, 'Should check for future due date');
   assert.strictEqual(onTrackCall.$or[1].slaDueAt, null, 'Should include null SLA cases');
+
+
+  // 4. terminal status filter must be ignored for active queue
+  mockCaseFind.length = 0;
+  req = mockReq({ query: { status: 'FILED' } });
+  res = mockRes();
+  await searchController.globalWorklist(req, res);
+  const filedCall = mockCaseFind[0];
+  assert.notStrictEqual(filedCall.status, 'FILED', 'terminal status override should be blocked');
 
   console.log('globalWorklist tests passed');
 }

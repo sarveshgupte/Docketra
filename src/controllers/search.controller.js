@@ -652,16 +652,18 @@ const globalWorklist = async (req, res) => {
     const parsedLimit = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 20));
     const query = {
       assignedToXID: null,
+      state: 'IN_WB',
+      status: { $nin: [CaseStatus.RESOLVED, CaseStatus.FILED] },
     };
 
     if (normalizedTab === 'routed' && selectedTeamId) {
       query.routedToTeamId = selectedTeamId;
-      query.status = { $in: [CaseStatus.ROUTED, CaseStatus.IN_PROGRESS, CaseStatus.PENDING, CaseStatus.FILED] };
+      query.status = { $nin: [CaseStatus.RESOLVED, CaseStatus.FILED] };
     } else {
       if (selectedTeamId) {
         query.ownerTeamId = selectedTeamId;
       }
-      query.status = { $in: [CaseStatus.OPEN, CaseStatus.RETURNED, CaseStatus.UNASSIGNED] };
+      query.status = { $nin: [CaseStatus.RESOLVED, CaseStatus.FILED] };
     }
     
     // Apply filters
@@ -674,7 +676,10 @@ const globalWorklist = async (req, res) => {
     }
 
     if (status) {
-      query.status = status;
+      const requestedStatus = String(status).trim().toUpperCase();
+      if (!['RESOLVED', 'FILED'].includes(requestedStatus)) {
+        query.status = requestedStatus;
+      }
     }
     
     // Date range filter
