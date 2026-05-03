@@ -782,7 +782,8 @@ async function activateOnOpen({ docketId, firmId, actor }) {
  * queue (state = IN_WB, status = UNASSIGNED/AVAILABLE, queueType = GLOBAL).
  *
  * ownerTeamId is preserved so the docket returns to the correct PRIMARY workbasket.
- * pendingUntil/reopenAt are cleared because the docket is no longer owned by anyone.
+ * assignedToXID, assignedTo, assignedBy, assignedAt, pendingUntil, and reopenAt are all
+ * cleared because the docket is no longer owned by anyone.
  */
 async function handleUserDeactivation({ firmId, userXID }) {
   const normalized = String(userXID || '').toUpperCase();
