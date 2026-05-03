@@ -67,6 +67,7 @@ const {
   renameWorkbasket,
   toggleWorkbasketStatus,
   updateUserWorkbaskets,
+  addQcMember,
 } = require('../controllers/workbasket.controller');
 
 
@@ -124,6 +125,7 @@ router.get('/workbaskets', ...adminBaseAccess, authorizeFirmPermission('USER_VIE
 router.post('/workbaskets', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, createWorkbasket);
 router.put('/workbaskets/:workbasketId', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, renameWorkbasket);
 router.patch('/workbaskets/:workbasketId/status', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, toggleWorkbasketStatus);
+router.post('/workbaskets/:workbasketId/qc-members', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, addQcMember);
 
 router.post('/users/:id/restore', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, restoreUser);
 

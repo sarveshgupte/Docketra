@@ -22,7 +22,24 @@ const createTeam = async (req, res) => {
     const managerId = req.body?.managerId || null;
     if (!name) return res.status(400).json({ success: false, message: 'Team name is required' });
 
-    const team = await Team.create({ name, firmId: req.user.firmId, managerId });
+    const session = await mongoose.startSession();
+    let team;
+    try {
+      await session.withTransaction(async () => {
+        [team] = await Team.create([{ name, firmId: req.user.firmId, managerId, type: 'PRIMARY' }], { session });
+        const [qcTeam] = await Team.create([{
+          name: `${name} - QC`,
+          firmId: req.user.firmId,
+          type: 'QC',
+          parentWorkbasketId: team._id,
+        }], { session });
+        if (managerId) {
+          await User.updateOne({ _id: managerId, firmId: req.user.firmId, status: { $ne: 'deleted' } }, { $addToSet: { teamIds: qcTeam._id } }, { session });
+        }
+      });
+    } finally {
+      await session.endSession();
+    }
     return res.status(201).json({ success: true, data: team });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message || 'Failed to create team' });
@@ -36,6 +53,7 @@ const updateTeam = async (req, res) => {
     if (!team) return res.status(404).json({ success: false, message: 'Team not found' });
 
     if (req.body?.name) team.name = String(req.body.name).trim();
+    const previousManagerId = team.managerId ? String(team.managerId) : null;
     if (Object.prototype.hasOwnProperty.call(req.body || {}, 'managerId')) team.managerId = req.body.managerId || null;
 
     if (team.managerId) {
@@ -46,6 +64,23 @@ const updateTeam = async (req, res) => {
     }
 
     await team.save();
+    if (team.type === 'PRIMARY' && Object.prototype.hasOwnProperty.call(req.body || {}, 'managerId')) {
+      const qcTeam = await Team.findOne({ firmId: req.user.firmId, type: 'QC', parentWorkbasketId: team._id });
+      if (qcTeam) {
+        if (team.managerId) {
+          await User.updateOne({ _id: team.managerId, firmId: req.user.firmId }, { $addToSet: { teamIds: qcTeam._id } });
+        }
+        if (previousManagerId && (!team.managerId || String(team.managerId) !== previousManagerId)) {
+          const oldManager = await User.findOne({ _id: previousManagerId, firmId: req.user.firmId }).lean();
+          if (oldManager) {
+            const primaryTeamIds = (oldManager.teamIds || []).map(String).filter((id) => id !== String(qcTeam._id));
+            if (!primaryTeamIds.includes(String(qcTeam._id))) {
+              await User.updateOne({ _id: previousManagerId }, { $pull: { teamIds: qcTeam._id } });
+            }
+          }
+        }
+      }
+    }
     await logAuditEvent({
       firmId: req.user?.firmId,
       actorId: req.user?._id,
