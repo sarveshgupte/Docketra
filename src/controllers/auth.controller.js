@@ -44,6 +44,7 @@ const config = require('../config/config');
 const { loadEnv } = require('../config/env');
 const { recordFailedLoginAttempt, clearFailedLoginAttempts } = require('../middleware/accountLockout.middleware');
 const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError, assertCanDeactivateUser, PrimaryAdminActionError } = require('../services/user.service');
+const { resolveFirmScopedTeams, normalizeMembership, normalizeObjectIdStrings } = require('../services/userWorkbasketMembership.service');
 const { logAuthEvent } = require('../services/audit.service');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const { getCookieValue } = require('../utils/requestCookies');
@@ -1984,16 +1985,7 @@ const createUser = async (req, res) => {
       });
     }
     
-    const normalizedTeamIds = Array.isArray(teamIds)
-      ? [...new Set(teamIds.map((entry) => String(entry || '').trim()).filter(Boolean))]
-      : [];
-
-    if (normalizedTeamIds.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'At least one workbasket is required',
-      });
-    }
+    const normalizedTeamIds = normalizeObjectIdStrings(teamIds || []);
 
     // Get admin from authenticated request
     const admin = req.user;
@@ -2158,23 +2150,16 @@ const createUser = async (req, res) => {
       && mongoose.Types.ObjectId.isValid(firm.defaultClientId)
     ) ? firm.defaultClientId : null;
 
-    const teams = await Team.find({
-      _id: { $in: normalizedTeamIds },
-      firmId: admin.firmId,
-      isActive: true,
-    }).select('_id type parentWorkbasketId').lean();
+    const teams = await resolveFirmScopedTeams({ firmId: admin.firmId, teamIds: normalizedTeamIds });
+    const membership = normalizeMembership({
+      role: persistedRole,
+      teams,
+      qcExplicitTeamIds: [],
+      requirePrimary: false,
+    });
 
-    if (teams.length !== normalizedTeamIds.length) {
-      return res.status(400).json({
-        success: false,
-        message: 'One or more selected workbaskets are invalid or inactive',
-      });
-    }
-
-    const resolvedTeamIds = teams.map((team) => team._id);
-    const primaryTeamIds = teams
-      .filter((team) => String(team?.type || 'PRIMARY').toUpperCase() !== 'QC')
-      .map((team) => team._id);
+    const resolvedTeamIds = membership.teamIds.map((id) => new mongoose.Types.ObjectId(id));
+    const primaryTeamIds = membership.primaryTeamIds.map((id) => new mongoose.Types.ObjectId(id));
 
     // Only include linked QC workbaskets when explicitly requested via assignQcWorkbaskets.
     // QC access is managed separately in Team Management and is not granted by default.
@@ -2250,7 +2235,7 @@ const createUser = async (req, res) => {
       adminId,
       managerId,
       allowedCategories: allowedCategories || [],
-      teamId: finalTeamIds[0] || null,
+      teamId: membership.teamId ? new mongoose.Types.ObjectId(membership.teamId) : null,
       teamIds: finalTeamIds,
       isActive: false,
       passwordHash: null, // No password until user sets it
@@ -2511,6 +2496,17 @@ const activateUser = async (req, res) => {
     const currentlyCounted = ['active', 'invited'].includes(user.status);
     const incrementBy = currentlyCounted ? 0 : 1;
     await assertFirmPlanCapacity({ firmId: admin.firmId, session, incrementBy, role: user.role });
+
+    const activationTeams = await resolveFirmScopedTeams({ firmId: admin.firmId, teamIds: user.teamIds || [] });
+    const activationMembership = normalizeMembership({
+      role: user.role,
+      teams: activationTeams,
+      qcExplicitTeamIds: user.qcExplicitTeamIds || [],
+      requirePrimary: String(user.role || '').toUpperCase() !== 'SUPER_ADMIN',
+    });
+
+    user.teamId = activationMembership.teamId ? new mongoose.Types.ObjectId(activationMembership.teamId) : null;
+    user.teamIds = activationMembership.teamIds.map((id) => new mongoose.Types.ObjectId(id));
 
     // Activate user
     user.status = 'active';
