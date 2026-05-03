@@ -213,10 +213,21 @@ const updateUserWorkbaskets = async (req, res) => {
     }
 
     const teams = await resolveFirmScopedTeams({ firmId: req.user?.firmId, teamIds: normalizedTeamIds });
+
+    const preservedExplicitQcIds = normalizeObjectIdStrings(user.qcExplicitTeamIds || []);
+    const preservedExplicitQcTeams = preservedExplicitQcIds.length > 0
+      ? await Team.find({
+        _id: { $in: preservedExplicitQcIds },
+        firmId: req.user?.firmId,
+        isActive: true,
+        type: 'QC',
+      }).select('_id type').lean()
+      : [];
+
     const membership = normalizeMembership({
       role: user.role,
-      teams,
-      qcExplicitTeamIds: user.qcExplicitTeamIds || [],
+      teams: [...teams, ...preservedExplicitQcTeams],
+      qcExplicitTeamIds: preservedExplicitQcIds,
       requirePrimary,
     });
 
@@ -227,7 +238,7 @@ const updateUserWorkbaskets = async (req, res) => {
 
     return res.json({ success: true, message: 'User workbaskets updated', data: mapUserResponse(user) });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Failed to update user workbaskets' });
+    return res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to update user workbaskets' });
   }
 };
 

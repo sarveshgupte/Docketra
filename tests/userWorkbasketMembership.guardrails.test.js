@@ -46,10 +46,70 @@ async function testListVisibilityByRole() {
   User.aggregate = originalAggregate;
 }
 
+async function testUpdateWorkbasketsValidationMapsTo400() {
+  const originalUserFindOne = User.findOne;
+  const originalTeamFind = Team.find;
+
+  User.findOne = async () => ({ _id: 'U1', role: 'USER', status: 'active', qcExplicitTeamIds: [], save: async () => {} });
+  Team.find = (query) => {
+    if (query.type === 'QC') return { select: () => ({ lean: async () => [] }) };
+    return { select: () => ({ lean: async () => [] }) };
+  };
+
+  const badId = res();
+  await workbasketController.updateUserWorkbaskets({ params: { xID: 'x000001' }, body: { teamIds: ['not-id'] }, user: { firmId: 'F1' } }, badId);
+  assert.strictEqual(badId.statusCode, 400);
+
+  const qcOnly = new mongoose.Types.ObjectId();
+  Team.find = (query) => {
+    if (query.type === 'QC') return { select: () => ({ lean: async () => [] }) };
+    return { select: () => ({ lean: async () => [{ _id: qcOnly, type: 'QC' }] }) };
+  };
+  const qcOnlyRes = res();
+  await workbasketController.updateUserWorkbaskets({ params: { xID: 'x000001' }, body: { teamIds: [String(qcOnly)] }, user: { firmId: 'F1' } }, qcOnlyRes);
+  assert.strictEqual(qcOnlyRes.statusCode, 400);
+
+  User.findOne = originalUserFindOne;
+  Team.find = originalTeamFind;
+}
+
+async function testPrimaryUpdatePreservesExplicitQcMembership() {
+  const originalUserFindOne = User.findOne;
+  const originalTeamFind = Team.find;
+
+  const primary = new mongoose.Types.ObjectId();
+  const explicitQc = new mongoose.Types.ObjectId();
+  const userDoc = {
+    _id: 'U1',
+    role: 'USER',
+    status: 'active',
+    qcExplicitTeamIds: [explicitQc],
+    teamIds: [],
+    teamId: null,
+    save: async () => {},
+  };
+  User.findOne = async () => userDoc;
+  Team.find = (query) => {
+    if (query.type === 'QC') return { select: () => ({ lean: async () => [{ _id: explicitQc, type: 'QC' }] }) };
+    return { select: () => ({ lean: async () => [{ _id: primary, type: 'PRIMARY' }] }) };
+  };
+
+  const rr = res();
+  await workbasketController.updateUserWorkbaskets({ params: { xID: 'x000001' }, body: { teamIds: [String(primary)] }, user: { firmId: 'F1' } }, rr);
+  assert.strictEqual(rr.statusCode, 200);
+  assert.deepStrictEqual(userDoc.qcExplicitTeamIds, [String(explicitQc)]);
+  assert.deepStrictEqual(userDoc.teamIds, [String(primary), String(explicitQc)]);
+
+  User.findOne = originalUserFindOne;
+  Team.find = originalTeamFind;
+}
+
 async function run(){
   await testActiveCannotHaveZeroPrimary();
   await testMembershipDedupAndTeamIdFirstPrimary();
   await testListVisibilityByRole();
+  await testUpdateWorkbasketsValidationMapsTo400();
+  await testPrimaryUpdatePreservesExplicitQcMembership();
   console.log('userWorkbasketMembership.guardrails tests passed');
 }
 
