@@ -1,5 +1,12 @@
 # What's New
 
+## May 2026: Documentation quality guardrails
+
+- Added `npm run docs:check` to validate markdown relative links across maintained documentation.
+- Added a lightweight repo script (`scripts/check-markdown-links.js`) with clear broken-link output by source file and target.
+- Added docs validation into CI release-gate coverage so documentation regressions are caught with other core checks.
+- Added `docs/documentation-guidelines.md` with canonical-doc ownership, archive-vs-current rules, and a required feature documentation checklist.
+
 ## May 2026: Company Brain command center simplification
 
 - Simplified Company Brain into Command Summary, Needs Attention, Connected Map, and How to use Company Brain sections.
