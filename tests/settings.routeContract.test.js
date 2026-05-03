@@ -138,7 +138,8 @@ const swapModule = (modulePath, exportsValue) => {
         defaultAssignee: null,
         intakeApiEnabled: false,
         intakeApiKeyMasked: '••••••••',
-        // intakeApiKey must NOT appear here – it is plaintext
+        // intakeApiKey plaintext-leak check is proven against the real controller in
+        // tests/settingsControllerSafety.test.js (test 2: admin.getCmsIntakeSettings)
       },
       options: {
         workbaskets: [],

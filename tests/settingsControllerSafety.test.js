@@ -23,7 +23,7 @@ process.env.MASTER_ENCRYPTION_KEY = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 const assert = require('assert');
 const Module = require('module');
 const originalLoad = Module._load;
-const clear = (p) => { try { delete require.cache[require.resolve(p)]; } catch (_) {} };
+const clearModuleCache = (p) => { try { delete require.cache[require.resolve(p)]; } catch (_) {} };
 
 // ── Minimal mock response builder ─────────────────────────────────────────────
 function makeRes() {
@@ -184,9 +184,9 @@ async function run() {
   };
 
   // Clear cached controllers so they reload fresh through the intercept above
-  clear('../src/controllers/admin.controller');
-  clear('../src/controllers/storage.controller');
-  clear('../src/controllers/ai.controller');
+  clearModuleCache('../src/controllers/admin.controller');
+  clearModuleCache('../src/controllers/storage.controller');
+  clearModuleCache('../src/controllers/ai.controller');
 
   const adminCtl = require('../src/controllers/admin.controller');
   const storageCtl = require('../src/controllers/storage.controller');
@@ -209,13 +209,21 @@ async function run() {
     const firmData = res.payload?.data;
     assert.ok(typeof firmData?.firm === 'object', 'getFirmSettings: data.firm must be an object');
     assert.ok(typeof firmData?.work === 'object', 'getFirmSettings: data.work must be an object');
-    // Normalized defaults must be present and safe
+    // Normalized defaults from the real normalizeFirmSettings/normalizeWorkSettings:
     assert.ok(typeof firmData.firm.slaDefaultDays === 'number', 'getFirmSettings: slaDefaultDays must be a number default');
+    assert.ok(typeof firmData.firm.escalationInactivityThresholdHours === 'number', 'getFirmSettings: escalationInactivityThresholdHours must be present');
+    assert.ok(typeof firmData.firm.workloadThreshold === 'number', 'getFirmSettings: workloadThreshold must be present');
+    assert.ok(typeof firmData.firm.brandLogoUrl === 'string', 'getFirmSettings: brandLogoUrl must be a string');
     assert.ok(typeof firmData.work.assignmentStrategy === 'string', 'getFirmSettings: assignmentStrategy must be a string default');
+    assert.ok(typeof firmData.work.statusWorkflowMode === 'string', 'getFirmSettings: statusWorkflowMode must be present');
+    // Response must contain ONLY the expected keys at the top data level, no extras
+    const firmKeys = Object.keys(firmData);
+    assert.deepStrictEqual(firmKeys.sort(), ['firm', 'work'], 'getFirmSettings: data must have only firm and work keys');
     // No passwords/tokens in the response body
     const body = JSON.stringify(res.payload);
     assert.ok(!body.includes('password'), 'getFirmSettings: no passwords in response');
     assert.ok(!body.includes('apiKey'), 'getFirmSettings: no apiKey in response');
+    assert.ok(!body.includes('token'), 'getFirmSettings: no tokens in response');
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -340,7 +348,7 @@ run().catch((e) => {
   process.exit(1);
 }).finally(() => {
   Module._load = originalLoad;
-  clear('../src/controllers/admin.controller');
-  clear('../src/controllers/storage.controller');
-  clear('../src/controllers/ai.controller');
+  clearModuleCache('../src/controllers/admin.controller');
+  clearModuleCache('../src/controllers/storage.controller');
+  clearModuleCache('../src/controllers/ai.controller');
 });
