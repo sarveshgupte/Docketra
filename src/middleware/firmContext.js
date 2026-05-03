@@ -13,7 +13,6 @@ const isReusableAuthTenantContext = (req, authTenantContext) => {
   if (!authTenantContext.tenantId || !mongoose.Types.ObjectId.isValid(String(authTenantContext.tenantId))) return false;
   if (String(authTenantContext.tenantId) !== jwtFirmId) return false;
   if (!isActiveStatus(authTenantContext.status || 'active')) return false;
-  if (!authTenantContext.ownershipFirmId) return false;
   return true;
 };
 
@@ -81,11 +80,6 @@ const firmContext = async (req, res, next) => {
           success: false,
           message: 'Your account is disabled. Please contact support.',
         });
-      }
-      if (!req.authTenantContext.ownershipFirmId) {
-        const error = new Error('Tenant context missing');
-        error.statusCode = 400;
-        throw error;
       }
     }
 
