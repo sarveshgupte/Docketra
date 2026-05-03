@@ -47,6 +47,9 @@ jobs:
       - name: Install backend dependencies (dev included)
         run: npm install --include=dev
 
+      - name: Documentation link validation gate
+        run: npm run docs:check
+
       - name: Backend syntax/lint gate
         run: npm run ci:backend:syntax
 
