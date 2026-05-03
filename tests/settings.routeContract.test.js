@@ -4,16 +4,20 @@
 /**
  * Settings Route Contract Test
  *
- * Validates API contracts for all Settings pages:
+ * Validates route-guard and role-access contracts for all Settings pages:
  *   - Firm Settings  → GET /api/admin/firm-settings
  *   - Work Settings  → GET /api/admin/cms-intake-settings, GET /api/admin/workbaskets,
  *                      GET /api/settings/audit, GET /api/work-types
  *   - Storage        → GET /api/storage/configuration, GET /api/storage/ownership-summary
  *   - AI             → GET /api/ai/configuration
  *
- * Also checks:
- *   - No plaintext secrets in Storage / AI / CMS intake responses
- *   - Write mutations are PRIMARY_ADMIN-only
+ * Checks:
+ *   - Authenticated users (PRIMARY_ADMIN / ADMIN) receive 200 for read endpoints
+ *   - Unauthenticated requests receive 401
+ *   - Write mutations are PRIMARY_ADMIN-only (ADMIN → 403)
+ *
+ * Note: secret masking and real response safety are proven against the REAL
+ * controllers in tests/settingsControllerSafety.test.js.
  */
 
 process.env.NODE_ENV = 'test';
@@ -344,48 +348,7 @@ const swapModule = (modulePath, exportsValue) => {
   assert.strictEqual(managerAiRes.status, 200, 'MANAGER GET /api/ai/configuration should return 200');
 
   // ══════════════════════════════════════════════════════════════════════════
-  // 2. NO PLAINTEXT SECRETS in Storage / AI / CMS intake responses
-  // ══════════════════════════════════════════════════════════════════════════
-
-  // Storage configuration must not expose raw credentials
-  const storageConfigRes = await request(app)
-    .get('/api/storage/configuration')
-    .set('Authorization', 'Bearer valid')
-    .set('x-test-role', 'PRIMARY_ADMIN');
-  const storageJson = JSON.stringify(storageConfigRes.body);
-  assert.ok(!storageJson.includes('refreshToken'), 'Storage config must not expose refreshToken');
-  assert.ok(!storageJson.includes('accessToken'), 'Storage config must not expose accessToken');
-  assert.ok(!storageJson.includes('clientSecret'), 'Storage config must not expose clientSecret');
-  assert.ok(!storageJson.includes('secretAccessKey'), 'Storage config must not expose secretAccessKey');
-
-  // Storage ownership-summary must not expose raw credentials
-  const storageOwnershipRes = await request(app)
-    .get('/api/storage/ownership-summary')
-    .set('Authorization', 'Bearer valid')
-    .set('x-test-role', 'PRIMARY_ADMIN');
-  const ownershipJson = JSON.stringify(storageOwnershipRes.body);
-  assert.ok(!ownershipJson.includes('refreshToken'), 'Storage ownership-summary must not expose refreshToken');
-  assert.ok(!ownershipJson.includes('secretAccessKey'), 'Storage ownership-summary must not expose secretAccessKey');
-
-  // AI configuration must not expose the raw API key or encrypted key
-  const aiConfigRes = await request(app)
-    .get('/api/ai/configuration')
-    .set('Authorization', 'Bearer valid')
-    .set('x-test-role', 'PRIMARY_ADMIN');
-  const aiCfg = aiConfigRes.body?.configuration || {};
-  assert.ok(!('apiKey' in aiCfg), 'AI config must not expose apiKey');
-  assert.ok(!('encryptedKey' in aiCfg), 'AI config must not expose encryptedKey');
-
-  // CMS intake settings must not expose the plaintext intakeApiKey
-  const cmsRes = await request(app)
-    .get('/api/admin/cms-intake-settings')
-    .set('Authorization', 'Bearer valid')
-    .set('x-test-role', 'PRIMARY_ADMIN');
-  const cmsIntake = cmsRes.body?.data?.intake || {};
-  assert.ok(!('intakeApiKey' in cmsIntake), 'CMS intake response must not expose plaintext intakeApiKey');
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // 3. UNAUTHENTICATED REQUESTS → 401
+  // 2. UNAUTHENTICATED REQUESTS → 401
   // ══════════════════════════════════════════════════════════════════════════
   for (const endpoint of ['/api/admin/firm-settings', '/api/storage/configuration', '/api/ai/configuration']) {
     const res = await request(app).get(endpoint);
@@ -393,7 +356,7 @@ const swapModule = (modulePath, exportsValue) => {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // 4. WRITE PROTECTION — ADMIN blocked by requirePrimaryAdmin
+  // 3. WRITE PROTECTION — ADMIN blocked by requirePrimaryAdmin
   // ══════════════════════════════════════════════════════════════════════════
   const writeEndpoints = [
     ['put', '/api/admin/firm-settings'],
@@ -446,40 +409,6 @@ const swapModule = (modulePath, exportsValue) => {
     .set('x-test-role', 'PRIMARY_ADMIN')
     .send({});
   assert.notStrictEqual(regeneratePrimaryRes.status, 403, 'PRIMARY_ADMIN POST cms-intake-settings/regenerate must pass');
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // 5. EMPTY / DEFAULT STATE — read endpoints return success with safe defaults
-  // ══════════════════════════════════════════════════════════════════════════
-
-  // Firm settings: data object with firm and work sub-objects
-  const firmSettingsRes = await request(app)
-    .get('/api/admin/firm-settings')
-    .set('Authorization', 'Bearer valid')
-    .set('x-test-role', 'ADMIN');
-  assert.ok(typeof firmSettingsRes.body?.data?.firm === 'object', 'Firm settings data.firm must be an object');
-  assert.ok(typeof firmSettingsRes.body?.data?.work === 'object', 'Firm settings data.work must be an object');
-
-  // Work-types: data array (empty array is valid)
-  const workTypesRes = await request(app)
-    .get('/api/work-types')
-    .set('Authorization', 'Bearer valid')
-    .set('x-test-role', 'ADMIN');
-  assert.ok(Array.isArray(workTypesRes.body?.data), 'Work-types GET / must return data array');
-
-  // Settings audit: data array + pagination
-  const settingsAuditRes = await request(app)
-    .get('/api/settings/audit')
-    .set('Authorization', 'Bearer valid')
-    .set('x-test-role', 'ADMIN');
-  assert.ok(Array.isArray(settingsAuditRes.body?.data), 'Settings audit must return data array');
-  assert.ok(typeof settingsAuditRes.body?.pagination === 'object', 'Settings audit must include pagination');
-
-  // AI config: configuration sub-object present
-  const aiRes = await request(app)
-    .get('/api/ai/configuration')
-    .set('Authorization', 'Bearer valid')
-    .set('x-test-role', 'ADMIN');
-  assert.ok(typeof aiRes.body?.configuration === 'object', 'AI config must return configuration object');
 
   console.log('settings.routeContract.test.js passed');
 })().catch((error) => {
