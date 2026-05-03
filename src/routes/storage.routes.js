@@ -33,7 +33,7 @@ router.post('/google/confirm-drive', oauthLimiter, requirePrimaryAdmin, googleCo
 
 router.get('/configuration', userReadLimiter, getStorageConfiguration);
 router.get('/ownership-summary', userReadLimiter, getStorageOwnershipSummary);
-router.post('/test-connection', userReadLimiter, testStorageConnection);
+router.post('/test-connection', userReadLimiter, requirePrimaryAdmin, testStorageConnection);
 router.get('/health-check', userReadLimiter, storageHealthCheck);
 router.get('/usage', userReadLimiter, storageUsage);
 router.post('/disconnect', userReadLimiter, requirePrimaryAdmin, disconnectStorage);

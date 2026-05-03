@@ -110,16 +110,16 @@ router.put('/users/:xID/activate', ...adminBaseAccess, requirePrimaryAdmin, auth
 router.put('/users/:xID/deactivate', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('USER_MANAGE'), sensitiveLimiter, deactivateUser);
 router.post('/users/:xID/resend-invite', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, resendInviteEmail);
 
-router.patch('/users/:xID/restrict-clients', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateRestrictedClients);
+router.patch('/users/:xID/restrict-clients', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateRestrictedClients);
 router.patch('/users/:xID/workbaskets', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, updateUserWorkbaskets);
-router.patch('/users/:id/hierarchy', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateUserHierarchy);
+router.patch('/users/:id/hierarchy', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateUserHierarchy);
 router.get('/firm-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getFirmSettings);
 router.get('/firm-settings/activity', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getFirmSettingsActivity);
 router.get('/settings/audit', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getSettingsAudit);
-router.put('/firm-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userWriteLimiter, updateFirmSettings);
+router.put('/firm-settings', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('ADMIN_STATS'), userWriteLimiter, updateFirmSettings);
 router.get('/cms-intake-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getCmsIntakeSettings);
-router.put('/cms-intake-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userWriteLimiter, updateCmsIntakeSettings);
-router.post('/cms-intake-settings/intake-api-key/regenerate', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), sensitiveLimiter, regenerateCmsIntakeApiKey);
+router.put('/cms-intake-settings', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('ADMIN_STATS'), userWriteLimiter, updateCmsIntakeSettings);
+router.post('/cms-intake-settings/intake-api-key/regenerate', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('ADMIN_STATS'), sensitiveLimiter, regenerateCmsIntakeApiKey);
 router.get('/workbaskets', ...adminBaseAccess, authorizeFirmPermission('USER_VIEW'), userReadLimiter, listWorkbaskets);
 router.post('/workbaskets', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, createWorkbasket);
 router.put('/workbaskets/:workbasketId', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, renameWorkbasket);
@@ -136,8 +136,8 @@ router.get('/cases/resolved', ...adminBaseAccess, authorizeFirmPermission('CASE_
 router.post('/cases/:id/restore', ...adminBaseAccess, authorizeFirmPermission('CASE_ADMIN_VIEW'), userWriteLimiter, restoreCase);
 
 router.get('/storage', ...adminBaseAccess, authorizeFirmPermission('STORAGE_MANAGE'), userReadLimiter, getStorageConfig);
-router.put('/storage', ...adminBaseAccess, authorizeFirmPermission('STORAGE_MANAGE'), userWriteLimiter, updateStorageConfig);
-router.post('/storage/disconnect', ...adminBaseAccess, authorizeFirmPermission('STORAGE_MANAGE'), userWriteLimiter, disconnectStorage);
+router.put('/storage', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('STORAGE_MANAGE'), userWriteLimiter, updateStorageConfig);
+router.post('/storage/disconnect', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('STORAGE_MANAGE'), userWriteLimiter, disconnectStorage);
 
 router.post('/clients/:id/restore', ...adminBaseAccess, authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, restoreClient);
 router.post('/tasks/:id/restore', ...adminBaseAccess, authorizeFirmPermission('TASK_MANAGE'), userWriteLimiter, restoreTask);
