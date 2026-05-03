@@ -537,6 +537,30 @@ const caseSchema = new mongoose.Schema({
     trim: true,
     default: null,
   },
+
+
+  routeOriginatorTeamId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    default: null,
+  },
+  routeOriginatorWorkbasketId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    default: null,
+  },
+
+  routeOriginatorUserXID: {
+    type: String,
+    trim: true,
+    uppercase: true,
+    default: null,
+  },
+  routeReturnedAt: {
+    type: Date,
+    default: null,
+  },
+
   aiRouting: {
     suggestedTeam: {
       type: String,

@@ -147,6 +147,7 @@ export const CaseDetailPage = () => {
   // State for Resolve action modal
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [resolveComment, setResolveComment] = useState('');
+  const [submittingRouted, setSubmittingRouted] = useState(false);
   const [resolvingCase, setResolvingCase] = useState(false);
   const [showFileModal, setShowFileModal] = useState(false);
   const [fileComment, setFileComment] = useState('');
@@ -219,7 +220,8 @@ export const CaseDetailPage = () => {
       try {
         const response = await api.get('/teams');
         const teams = Array.isArray(response?.data?.data) ? response.data.data : [];
-        setRoutingTeams(teams);
+        const filtered = teams.filter((team) => team?.isActive !== false && String(team?.type || '').toUpperCase() === 'PRIMARY' && String(team?.isQC || '').toLowerCase() !== 'true');
+        setRoutingTeams(filtered);
       } catch (_error) {
       }
     };
@@ -1332,7 +1334,7 @@ export const CaseDetailPage = () => {
     if (isViewOnlyMode) return [];
     const actions = lifecycleActionMap[lifecycleStatus] || [];
     if (routedTeamCannotResolve) {
-      return actions.filter((action) => action.key !== 'resolve');
+      return actions.map((action) => action.key === 'resolve' ? { ...action, key: 'submit', label: 'Submit', onClick: () => openActionModal('resolve') } : action);
     }
     return actions;
   }, [isViewOnlyMode, lifecycleActionMap, lifecycleStatus, routedTeamCannotResolve]);
@@ -1403,6 +1405,27 @@ export const CaseDetailPage = () => {
       showError(extractErrorMessage(error, 'Failed to apply QC action.'));
     } finally {
       setQcSubmitting(false);
+    }
+  };
+
+
+  const handleSubmitRouted = async () => {
+    if (!String(resolveComment || '').trim()) {
+      showWarning('Comment is mandatory for submit');
+      return;
+    }
+    if (submittingRouted) return;
+    setSubmittingRouted(true);
+    try {
+      await caseApi.returnRoutedCase(caseId, resolveComment.trim());
+      showSuccess('Docket submitted back to routing user.');
+      setShowResolveModal(false);
+      setResolveComment('');
+      loadCase({ background: true });
+    } catch (error) {
+      showError(extractErrorMessage(error, 'Failed to submit routed docket.'));
+    } finally {
+      setSubmittingRouted(false);
     }
   };
 
@@ -1662,6 +1685,7 @@ export const CaseDetailPage = () => {
                 actionInFlight={actionInFlight}
                 isViewOnlyMode={isViewOnlyMode}
                 onOpenFileModal={() => { setFileComment(''); setShowFileModal(true); }}
+                showFileAction={!routedTeamCannotResolve}
                 canRouteDocket={canRouteDocket}
                 onOpenRouteModal={() => setShowRouteModal(true)}
                 forceQcReview={forceQcReview}
@@ -1858,8 +1882,9 @@ export const CaseDetailPage = () => {
           setShowResolveModal={setShowResolveModal}
           resolveComment={resolveComment}
           setResolveComment={setResolveComment}
-          resolvingCase={resolvingCase}
-          handleResolveCase={handleResolveCase}
+          resolvingCase={routedTeamCannotResolve ? submittingRouted : resolvingCase}
+          handleResolveCase={routedTeamCannotResolve ? handleSubmitRouted : handleResolveCase}
+          routedTeamCannotResolve={routedTeamCannotResolve}
           showQcModal={showQcModal}
           setShowQcModal={setShowQcModal}
           qcDecisionType={qcDecisionType}
@@ -1882,7 +1907,7 @@ export const CaseDetailPage = () => {
           setRouteTeamId={setRouteTeamId}
           routingNote={routingNote}
           setRoutingNote={setRoutingNote}
-          routingTeams={routingTeams.filter((team) => String(team._id) !== String(caseInfo?.ownerTeamId || ''))}
+          routingTeams={routingTeams.filter((team) => String(team._id) !== String(caseInfo?.workbasketId || caseInfo?.ownerTeamId || ''))}
           handleRouteToTeam={handleRouteToTeam}
           routeSubmitting={routeSubmitting}
           showFileModal={showFileModal}

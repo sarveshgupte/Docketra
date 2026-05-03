@@ -77,3 +77,10 @@ Current smoke/regression checks:
 - `ui/tests/caseDetailArchitectureSmoke.test.mjs`
 - `ui/tests/docketSurfaceHardening.test.mjs`
 
+## Route/Submit action visibility contract
+
+- Route is available only in docket detail and requires target PRIMARY active workbasket + compulsory comment.
+- When docket is routed to a non-owner receiving team user, action bar shows **Submit** instead of **Resolve**.
+- Submit helper text must state it returns docket to original routing user and does not finally resolve docket.
+- Receiving routed-team users must not see **File** action for routed dockets.
+- Owner/originator receives returned docket back into personal worklist context.
