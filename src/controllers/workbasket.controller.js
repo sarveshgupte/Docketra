@@ -2,6 +2,7 @@ const Team = require('../models/Team.model');
 const User = require('../models/User.model');
 const { mapUserResponse } = require('../mappers/user.mapper');
 const mongoose = require('mongoose');
+const { createPrimaryWithQc, isValidObjectId } = require('../services/workbasketGuardrails.service');
 
 const buildWorkbasketWarnings = async (firmId, workbasketIds = []) => {
   if (!firmId || workbasketIds.length === 0) return {};
@@ -59,42 +60,11 @@ const createWorkbasket = async (req, res) => {
     const name = String(req.body?.name || '').trim();
     if (!name) return res.status(400).json({ success: false, message: 'Workbasket name is required' });
 
-    const existing = await Team.findOne({ firmId: req.user?.firmId, name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') });
-    if (existing) return res.status(409).json({ success: false, message: 'Workbasket already exists' });
-
-    const session = await mongoose.startSession();
-    let created;
-    let qcWorkbasket;
-    try {
-      await session.withTransaction(async () => {
-        [created] = await Team.create([{
-          firmId: req.user?.firmId,
-          name,
-          managerId: req.body?.managerId || null,
-          isActive: true,
-          type: 'PRIMARY',
-          parentWorkbasketId: null,
-        }], { session });
-
-        [qcWorkbasket] = await Team.create([{
-          firmId: req.user?.firmId,
-          name: `${name} - QC`,
-          isActive: true,
-          type: 'QC',
-          parentWorkbasketId: created._id,
-        }], { session });
-
-        if (created.managerId) {
-          await User.updateOne(
-            { _id: created.managerId, firmId: req.user?.firmId, status: { $ne: 'deleted' } },
-            { $addToSet: { teamIds: qcWorkbasket._id } },
-            { session },
-          );
-        }
-      });
-    } finally {
-      await session.endSession();
-    }
+    const { primary: created, qc: qcWorkbasket } = await createPrimaryWithQc({
+      firmId: req.user?.firmId,
+      name,
+      managerId: req.body?.managerId || null,
+    });
 
     return res.status(201).json({
       success: true,
@@ -104,7 +74,7 @@ const createWorkbasket = async (req, res) => {
       message: 'Workbasket created',
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Failed to create workbasket' });
+    return res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to create workbasket' });
   }
 };
 
@@ -142,6 +112,7 @@ const renameWorkbasket = async (req, res) => {
     const name = String(req.body?.name || '').trim();
     if (!name) return res.status(400).json({ success: false, message: 'Workbasket name is required' });
 
+    if (!isValidObjectId(workbasketId)) return res.status(400).json({ success: false, message: 'Invalid workbasketId' });
     const workbasket = await Team.findOne({ _id: workbasketId, firmId: req.user?.firmId });
     if (!workbasket) return res.status(404).json({ success: false, message: 'Workbasket not found' });
 
@@ -166,6 +137,7 @@ const toggleWorkbasketStatus = async (req, res) => {
     const isActive = req.body?.isActive;
     if (typeof isActive !== 'boolean') return res.status(400).json({ success: false, message: 'isActive must be boolean' });
 
+    if (!isValidObjectId(workbasketId)) return res.status(400).json({ success: false, message: 'Invalid workbasketId' });
     const workbasket = await Team.findOne({ _id: workbasketId, firmId: req.user?.firmId });
     if (!workbasket) return res.status(404).json({ success: false, message: 'Workbasket not found' });
 
@@ -254,7 +226,7 @@ const addQcMember = async (req, res) => {
   try {
     const { workbasketId } = req.params;
     const { userId } = req.body || {};
-    if (!mongoose.Types.ObjectId.isValid(workbasketId) || !mongoose.Types.ObjectId.isValid(userId)) {
+    if (!isValidObjectId(workbasketId) || !isValidObjectId(userId)) {
       return res.status(400).json({ success: false, message: 'Invalid id' });
     }
 
@@ -276,7 +248,7 @@ const addQcMember = async (req, res) => {
     const user = await User.findOne({ _id: userId, firmId: req.user?.firmId, status: { $ne: 'deleted' } });
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    await User.updateOne({ _id: user._id }, { $addToSet: { teamIds: qcWorkbasket._id } });
+    await User.updateOne({ _id: user._id }, { $addToSet: { teamIds: qcWorkbasket._id, qcExplicitTeamIds: qcWorkbasket._id } });
     return res.json({ success: true, message: 'QC member added' });
   } catch (_error) {
     return res.status(500).json({ success: false, message: 'Failed to add QC member' });
