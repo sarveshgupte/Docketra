@@ -13,6 +13,12 @@ async function testModelOrphanAndParentType() {
   await assert.rejects(() => t.validate());
 }
 
+async function testDuplicateQcIndexExists() {
+  const indexes = Team.schema.indexes();
+  const has = indexes.some(([keys, options]) => JSON.stringify(keys) === JSON.stringify({ firmId: 1, parentWorkbasketId: 1, type: 1 }) && options?.unique === true);
+  assert.strictEqual(has, true);
+}
+
 async function testCreateInvalidManagerId() {
   const r = res();
   await teamController.createTeam({ user: { role:'PRIMARY_ADMIN', firmId: new mongoose.Types.ObjectId() }, body: { name:'A', managerId:'bad' } }, r);
@@ -42,6 +48,21 @@ async function testCreateConsistency() {
   Team.findOne = origFindOne; Team.create = origCreate; User.updateOne = origUpdateOne; mongoose.startSession = origStart;
 }
 
+async function testAtomicCreateSucceeds() {
+  const origFindOne = Team.findOne;
+  const origCreate = Team.create;
+  const origDeleteOne = Team.deleteOne;
+  const origStart = mongoose.startSession;
+  Team.findOne = async () => null;
+  Team.create = async (docs) => [{ _id: new mongoose.Types.ObjectId(), ...docs[0] }];
+  Team.deleteOne = async () => ({ deletedCount: 1 });
+  mongoose.startSession = async () => ({ withTransaction: async (fn) => fn(), endSession: async () => {} });
+  const result = await createPrimaryWithQc({ firmId: new mongoose.Types.ObjectId(), name: 'Atomic WB' });
+  assert.ok(result.primary?._id);
+  assert.ok(result.qc?._id);
+  Team.findOne = origFindOne; Team.create = origCreate; Team.deleteOne = origDeleteOne; mongoose.startSession = origStart;
+}
+
 async function testRouteLevelLikeControllerQcPermissions() {
   const origTeamFindOne = Team.findOne;
   const origUserFindOne = User.findOne;
@@ -67,6 +88,6 @@ async function testRouteLevelLikeControllerQcPermissions() {
 }
 
 async function run(){
-  try { await testModelOrphanAndParentType(); await testCreateInvalidManagerId(); await testCreateConsistency(); await testRouteLevelLikeControllerQcPermissions(); console.log('workbasket QC foundation tests passed.'); }
+  try { await testModelOrphanAndParentType(); await testDuplicateQcIndexExists(); await testCreateInvalidManagerId(); await testCreateConsistency(); await testAtomicCreateSucceeds(); await testRouteLevelLikeControllerQcPermissions(); console.log('workbasket QC foundation tests passed.'); }
   catch(e){ console.error(e); process.exit(1);} }
 run();
