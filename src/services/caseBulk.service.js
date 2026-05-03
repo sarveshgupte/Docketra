@@ -126,6 +126,9 @@ module.exports = (deps) => {
       }
 
       for (const docket of docketRecords) {
+        if (String(docket?.assignedToXID || '').trim()) {
+          return res.status(409).json({ success: false, message: `Docket ${docket.caseId} is already assigned. Use reassignment flow.` });
+        }
         const allowed = assignTo
           ? canAssignFromWorkbasket({ actor: user, docket, assignee: assigneeCandidate })
           : canPullFromWorkbasket({ user, docket });

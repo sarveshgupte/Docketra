@@ -676,7 +676,10 @@ const globalWorklist = async (req, res) => {
     }
 
     if (status) {
-      query.status = status;
+      const requestedStatus = String(status).trim().toUpperCase();
+      if (!['RESOLVED', 'FILED'].includes(requestedStatus)) {
+        query.status = requestedStatus;
+      }
     }
     
     // Date range filter
