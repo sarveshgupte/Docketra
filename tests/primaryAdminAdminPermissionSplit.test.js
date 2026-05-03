@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+process.env.NODE_ENV = process.env.NODE_ENV || 'test';
+process.env.ALLOW_REDIS_FALLBACK = process.env.ALLOW_REDIS_FALLBACK || 'true';
 const assert = require('assert');
 const request = require('supertest');
 const express = require('express');
