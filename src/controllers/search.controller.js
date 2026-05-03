@@ -658,7 +658,7 @@ const globalWorklist = async (req, res) => {
 
     if (normalizedTab === 'routed' && selectedTeamId) {
       query.routedToTeamId = selectedTeamId;
-      query.status = { $in: [CaseStatus.ROUTED, CaseStatus.IN_PROGRESS, CaseStatus.PENDING, CaseStatus.FILED] };
+      query.status = { $nin: [CaseStatus.RESOLVED, CaseStatus.FILED] };
     } else {
       if (selectedTeamId) {
         query.ownerTeamId = selectedTeamId;

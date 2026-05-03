@@ -7,6 +7,8 @@ const TERMINAL_STATES = new Set(['RESOLVED', 'FILED']);
 const normalizeRole = (role) => String(role || '').trim().toUpperCase();
 const toId = (value) => String(value || '').trim();
 
+const resolveDocketWorkbasketId = (docket) => toId(docket?.ownerTeamId) || toId(docket?.workbasketId) || '';
+
 const isLinkedToWorkbasket = (user, workbasketId) => {
   const target = toId(workbasketId);
   if (!target) return false;
@@ -25,7 +27,7 @@ const canPullFromWorkbasket = ({ user, docket }) => {
   if (String(docket?.assignedToXID || '').trim()) return false;
   if (String(docket?.state || '').toUpperCase() !== 'IN_WB') return false;
   if (ADMIN_ROLES.has(role)) return true;
-  return isLinkedToWorkbasket(user, docket?.ownerTeamId);
+  return isLinkedToWorkbasket(user, resolveDocketWorkbasketId(docket));
 };
 
 const canAssignFromWorkbasket = ({ actor, docket, assignee }) => {
@@ -33,8 +35,9 @@ const canAssignFromWorkbasket = ({ actor, docket, assignee }) => {
   if (isTerminal(docket)) return false;
   if (ADMIN_ROLES.has(role)) return Boolean(assignee?.isActive);
   if (!MANAGER_ROLES.has(role)) return false;
-  if (!isLinkedToWorkbasket(actor, docket?.ownerTeamId)) return false;
-  return isLinkedToWorkbasket(assignee, docket?.ownerTeamId) && Boolean(assignee?.isActive);
+  const docketWorkbasketId = resolveDocketWorkbasketId(docket);
+  if (!isLinkedToWorkbasket(actor, docketWorkbasketId)) return false;
+  return isLinkedToWorkbasket(assignee, docketWorkbasketId) && Boolean(assignee?.isActive);
 };
 
 const canMoveBetweenWorklists = ({ actor, docket, toUser }) => {
@@ -42,10 +45,11 @@ const canMoveBetweenWorklists = ({ actor, docket, toUser }) => {
   if (isTerminal(docket)) return false;
   if (ADMIN_ROLES.has(role)) return Boolean(toUser?.isActive);
   if (!MANAGER_ROLES.has(role)) return false;
-  if (!isLinkedToWorkbasket(actor, docket?.ownerTeamId)) return false;
-  return isLinkedToWorkbasket(toUser, docket?.ownerTeamId) && Boolean(toUser?.isActive);
+  const docketWorkbasketId = resolveDocketWorkbasketId(docket);
+  if (!isLinkedToWorkbasket(actor, docketWorkbasketId)) return false;
+  return isLinkedToWorkbasket(toUser, docketWorkbasketId) && Boolean(toUser?.isActive);
 };
 
 const getFirmUserByXid = (firmId, xID) => User.findOne({ firmId, xID: String(xID || '').toUpperCase(), isActive: true }).select('_id xID role teamId teamIds isActive').lean();
 
-module.exports = { canPullFromWorkbasket, canAssignFromWorkbasket, canMoveBetweenWorklists, getFirmUserByXid };
+module.exports = { canPullFromWorkbasket, canAssignFromWorkbasket, canMoveBetweenWorklists, getFirmUserByXid, resolveDocketWorkbasketId };
