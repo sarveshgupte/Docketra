@@ -6,6 +6,9 @@ const { logAuditEvent } = require('../services/adminActionAudit.service');
 
 const ensureSameFirm = (doc, firmId) => doc && String(doc.firmId) === String(firmId);
 
+/** Validate that a value is a non-empty, valid MongoDB ObjectId string. */
+const isValidObjectId = (value) => value != null && mongoose.isValidObjectId(String(value));
+
 const listTeams = async (req, res) => {
   try {
     const teams = await Team.find({ firmId: req.user?.firmId, isActive: true }).sort({ name: 1 }).lean();
@@ -35,8 +38,12 @@ const createTeam = async (req, res) => {
   try {
     assertPrimaryAdmin(req.user);
     const name = String(req.body?.name || '').trim();
-    const managerId = req.body?.managerId || null;
+    const rawManagerId = req.body?.managerId || null;
+    const managerId = rawManagerId && isValidObjectId(rawManagerId) ? String(rawManagerId) : null;
     if (!name) return res.status(400).json({ success: false, message: 'Team name is required' });
+    if (rawManagerId && !managerId) {
+      return res.status(400).json({ success: false, message: 'Invalid managerId' });
+    }
 
     // PRIMARY workbaskets auto-get exactly one linked QC workbasket (product rule 4).
     const team = await Team.create({ name, firmId: req.user.firmId, managerId, type: 'PRIMARY' });
@@ -51,7 +58,7 @@ const createTeam = async (req, res) => {
 
     // Product rule 6: manager of PRIMARY is auto-linked to QC workbasket.
     if (managerId) {
-      const manager = await User.findOne({ _id: managerId, firmId: req.user.firmId, status: { $ne: 'deleted' } });
+      const manager = await User.findOne({ _id: new mongoose.Types.ObjectId(managerId), firmId: req.user.firmId, status: { $ne: 'deleted' } });
       if (manager) {
         await linkUserToTeam(manager, qcTeam._id);
       }
@@ -80,10 +87,16 @@ const updateTeam = async (req, res) => {
     if (req.body?.name) team.name = String(req.body.name).trim();
 
     const prevManagerId = team.managerId ? String(team.managerId) : null;
-    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'managerId')) team.managerId = req.body.managerId || null;
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'managerId')) {
+      const rawNewManagerId = req.body.managerId || null;
+      if (rawNewManagerId && !isValidObjectId(rawNewManagerId)) {
+        return res.status(400).json({ success: false, message: 'Invalid managerId' });
+      }
+      team.managerId = rawNewManagerId ? new mongoose.Types.ObjectId(String(rawNewManagerId)) : null;
+    }
 
     if (team.managerId) {
-      const manager = await User.findOne({ _id: team.managerId, firmId: req.user.firmId, status: { $ne: 'deleted' } });
+      const manager = await User.findOne({ _id: new mongoose.Types.ObjectId(String(team.managerId)), firmId: req.user.firmId, status: { $ne: 'deleted' } });
       if (!manager) {
         return res.status(400).json({ success: false, message: 'Manager must belong to the same firm' });
       }
@@ -119,7 +132,11 @@ const assignUserToTeam = async (req, res) => {
     const team = await Team.findOne({ _id: req.params.id, firmId: actor.firmId });
     if (!team) return res.status(404).json({ success: false, message: 'Team not found' });
 
-    const user = await User.findOne({ _id: req.body?.userId, status: { $ne: 'deleted' } });
+    const rawUserId = req.body?.userId;
+    if (!rawUserId || !isValidObjectId(rawUserId)) {
+      return res.status(400).json({ success: false, message: 'Invalid userId' });
+    }
+    const user = await User.findOne({ _id: new mongoose.Types.ObjectId(String(rawUserId)), status: { $ne: 'deleted' } });
     if (!user || !ensureSameFirm(user, actor.firmId)) {
       return res.status(404).json({ success: false, message: 'User not found in firm' });
     }
@@ -155,14 +172,20 @@ const addUserToQcWorkbasket = async (req, res) => {
     // Only admin/primary-admin or the manager of the parent PRIMARY WB may add users.
     const isAdminActor = ['PRIMARY_ADMIN', 'ADMIN'].includes(actor?.role);
     if (!isAdminActor) {
-      const parentTeam = await Team.findOne({ _id: qcTeam.parentWorkbasketId, firmId });
+      const parentTeam = qcTeam.parentWorkbasketId
+        ? await Team.findOne({ _id: new mongoose.Types.ObjectId(String(qcTeam.parentWorkbasketId)), firmId })
+        : null;
       const isManager = parentTeam && String(parentTeam.managerId) === String(actor?._id);
       if (!isManager) {
         return res.status(403).json({ success: false, message: 'Only admins or the PRIMARY workbasket manager may add users to the QC workbasket' });
       }
     }
 
-    const user = await User.findOne({ _id: req.body?.userId, firmId, status: { $ne: 'deleted' } });
+    const rawUserId = req.body?.userId;
+    if (!rawUserId || !isValidObjectId(rawUserId)) {
+      return res.status(400).json({ success: false, message: 'Invalid userId' });
+    }
+    const user = await User.findOne({ _id: new mongoose.Types.ObjectId(String(rawUserId)), firmId, status: { $ne: 'deleted' } });
     if (!user) return res.status(404).json({ success: false, message: 'User not found in firm' });
 
     await linkUserToTeam(user, qcTeam._id);

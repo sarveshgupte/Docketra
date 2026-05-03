@@ -90,7 +90,8 @@ async function testManagerAutoLinkedToQCWorkbasket() {
 
   let savedUser = null;
   const createdTeams = [];
-  const managerId = 'manager-obj-1';
+  // Use a valid MongoDB ObjectId string.
+  const managerId = '507f1f77bcf86cd799439011';
   const managerDoc = {
     _id: managerId,
     firmId: 'firm-1',
@@ -123,7 +124,7 @@ async function testManagerAutoLinkedToQCWorkbasket() {
     const res = createRes();
     await createTeam(req, res);
 
-    assert.strictEqual(res.statusCode, 201, 'Should return 201');
+    assert.strictEqual(res.statusCode, 201, `Should return 201, got: ${res.statusCode}, body: ${JSON.stringify(res.body)}`);
     assert.ok(savedUser !== null, 'Manager user should have been saved');
     const qcTeamId = String(res.body.data.qcTeam._id);
     const linkedIds = (savedUser.teamIds || []).map(String);
@@ -146,14 +147,16 @@ async function testAddUserToQCWorkbasket() {
 
   let savedUser = null;
   const qcTeamDoc = {
-    _id: 'qc-team-1',
+    _id: '507f1f77bcf86cd799439021',
     firmId: 'firm-1',
     type: 'QC',
-    parentWorkbasketId: 'primary-team-1',
+    parentWorkbasketId: '507f1f77bcf86cd799439022',
     isActive: true,
   };
+  // Use valid ObjectId string for userId.
+  const userId = '507f1f77bcf86cd799439031';
   const userDoc = {
-    _id: 'user-1',
+    _id: userId,
     firmId: 'firm-1',
     teamIds: [],
     teamId: null,
@@ -165,7 +168,7 @@ async function testAddUserToQCWorkbasket() {
   const originalLogAudit = logAuditEvent;
 
   Team.findOne = async (query) => {
-    if (query?._id === 'qc-team-1') return qcTeamDoc;
+    if (String(query?._id) === '507f1f77bcf86cd799439021') return qcTeamDoc;
     return null;
   };
   User.findOne = async () => userDoc;
@@ -177,18 +180,18 @@ async function testAddUserToQCWorkbasket() {
     const { addUserToQcWorkbasket } = require('../src/controllers/team.controller');
 
     const req = {
-      params: { id: 'qc-team-1' },
+      params: { id: '507f1f77bcf86cd799439021' },
       user: { firmId: 'firm-1', _id: 'admin-1', role: 'PRIMARY_ADMIN', isPrimaryAdmin: true },
-      body: { userId: 'user-1' },
+      body: { userId },
     };
     const res = createRes();
     await addUserToQcWorkbasket(req, res);
 
-    assert.strictEqual(res.statusCode, 200, 'Should return 200');
+    assert.strictEqual(res.statusCode, 200, `Should return 200, got: ${res.statusCode}, body: ${JSON.stringify(res.body)}`);
     assert.ok(res.body.success, 'Should succeed');
     assert.ok(savedUser !== null, 'User should have been saved');
     const linkedIds = (savedUser.teamIds || []).map(String);
-    assert.ok(linkedIds.includes('qc-team-1'), 'User should be linked to the QC WB');
+    assert.ok(linkedIds.includes('507f1f77bcf86cd799439021'), 'User should be linked to the QC WB');
     console.log('✓ Admin can add users to QC workbasket');
   } finally {
     Team.findOne = originalFindOne;
@@ -335,7 +338,7 @@ async function testPendingKeepsAssignedUser() {
 
 // ── 8. Deactivating a user moves non-terminal dockets back to WB ──────────
 
-async function testUserDeactivationMovesDockertsBackToWB() {
+async function testUserDeactivationMovesDocketsBackToWB() {
   const Case = require('../src/models/Case.model');
   const CaseStatus = require('../src/domain/case/caseStatus');
 
@@ -454,7 +457,7 @@ async function run() {
     testNewDocketPlacedInWorkbasket,
     testPullDocketFromWorkbasketSetsAssignee,
     testPendingKeepsAssignedUser,
-    testUserDeactivationMovesDockertsBackToWB,
+    testUserDeactivationMovesDocketsBackToWB,
     testTerminalDocketsExcludedFromWBAndWL,
     testDeactivationSkipsTerminalDockets,
   ];
