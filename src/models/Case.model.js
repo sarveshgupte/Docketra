@@ -412,6 +412,13 @@ const caseSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+
+  qcSubmittedByXID: { type: String, trim: true, uppercase: true, default: null },
+  qcSubmittedAt: { type: Date, default: null },
+  qcDecisionByXID: { type: String, trim: true, uppercase: true, default: null },
+  qcDecisionAt: { type: Date, default: null },
+  qcFailedCorrected: { type: Boolean, default: false },
+
   qc: {
     requestedBy: { type: String, trim: true, uppercase: true },
     handledBy: { type: String, trim: true, uppercase: true },

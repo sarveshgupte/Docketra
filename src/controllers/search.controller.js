@@ -11,6 +11,7 @@ const caseActionService = require('../services/caseAction.service');
 const log = require('../utils/log');
 const { logSlowEndpoint } = require('../utils/slowLog');
 const SLOW_WORKLIST_QUERY_MS = 400;
+const TERMINAL_STATUSES = [CaseStatus.RESOLVED, CaseStatus.FILED];
 
 const toObjectIdStringOrNull = (value) => {
   if (!value) {
@@ -451,7 +452,7 @@ const employeeWorklist = async (req, res) => {
       assignedToXID: targetAssigneeXID, // CANONICAL: Query by xID in assignedToXID field
       // Assignment flow writes ASSIGNED; legacy/older records may still be OPEN/IN_PROGRESS.
       // PENDING must be excluded because pending dockets are shown via /cases/my-pending.
-      status: { $in: filteredStatuses },
+      status: { $in: filteredStatuses.filter((statusValue) => !TERMINAL_STATUSES.includes(statusValue)) },
     };
     if (categoryFilter) {
       query.category = categoryFilter;
@@ -653,17 +654,17 @@ const globalWorklist = async (req, res) => {
     const query = {
       assignedToXID: null,
       state: 'IN_WB',
-      status: { $nin: [CaseStatus.RESOLVED, CaseStatus.FILED] },
+      status: { $nin: TERMINAL_STATUSES },
     };
 
     if (normalizedTab === 'routed' && selectedTeamId) {
       query.routedToTeamId = selectedTeamId;
-      query.status = { $nin: [CaseStatus.RESOLVED, CaseStatus.FILED] };
+      query.status = { $nin: TERMINAL_STATUSES };
     } else {
       if (selectedTeamId) {
         query.ownerTeamId = selectedTeamId;
       }
-      query.status = { $nin: [CaseStatus.RESOLVED, CaseStatus.FILED] };
+      query.status = { $nin: TERMINAL_STATUSES };
     }
     
     // Apply filters
