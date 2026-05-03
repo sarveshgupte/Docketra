@@ -1,5 +1,12 @@
 # What's New
 
+
+## May 2026: Task Manager Worklist / Workbasket operating model documented
+
+- Documented canonical WL/WB/QC WB/All Dockets terminology.
+- Clarified pull, assign, route, submit, pending, QC, deactivation, and All Dockets rules.
+- Established implementation rules for upcoming backend and UI PRs.
+
 ## May 2026: Company Brain command center simplification
 
 - Simplified Company Brain into Command Summary, Needs Attention, Connected Map, and How to use Company Brain sections.
