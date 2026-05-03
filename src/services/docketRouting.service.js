@@ -2,6 +2,7 @@ const Case = require('../models/Case.model');
 const Team = require('../models/Team.model');
 const User = require('../models/User.model');
 const DocketRoute = require('../models/DocketRoute.model');
+const { getCanonicalDocketState } = require('../utils/docketStateMapper');
 const CaseStatus = require('../domain/case/caseStatus');
 const { NotificationTypes, createNotification } = require('../domain/notifications');
 
@@ -9,6 +10,10 @@ const makeError = (message, statusCode = 400) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   return error;
+};
+
+const requireComment = (note, context='Action') => {
+  if (!String(note||'').trim()) throw makeError(`${context} requires comment`,400);
 };
 
 const findDocket = async ({ docketId, firmId }) => {
@@ -23,23 +28,30 @@ async function routeDocket({ docketId, actor, firmId, toTeamId, note }) {
   const docket = await findDocket({ docketId, firmId });
   const actorTeam = String(actor.teamId || '');
   if (!actorTeam) throw makeError('User does not belong to any team', 400);
+  requireComment(note, 'Route');
 
-  if (!isAdmin(actor.role) && String(docket.ownerTeamId || '') !== actorTeam) {
-    throw makeError('Only owner team or admin can route docket', 403);
-  }
-  if (docket.routedToTeamId) {
-    throw makeError('Docket is already routed', 409);
+  const canonicalState = getCanonicalDocketState(docket);
+  if (['RESOLVED','FILED'].includes(canonicalState)) throw makeError('Terminal dockets cannot be routed', 409);
+
+  if (!isAdmin(actor.role) && String(docket.ownerTeamId || '') !== actorTeam && String(docket.routedToTeamId || '') !== actorTeam) {
+    throw makeError('Only owner team, routed team, or admin can route docket', 403);
   }
 
-  const targetTeam = await Team.findOne({ _id: toTeamId, firmId }).select('_id name').lean();
-  if (!targetTeam) throw makeError('Target team not found', 404);
+  const targetTeam = await Team.findOne({ _id: toTeamId, firmId, isActive: true, type: 'PRIMARY' }).select('_id name isActive type').lean();
+  if (!targetTeam) throw makeError('Target workbasket must be an active PRIMARY team in this firm', 404);
   if (String(docket.ownerTeamId || '') === String(toTeamId)) throw makeError('Cannot route to owner team', 400);
 
   docket.routedToTeamId = targetTeam._id;
+  docket.workbasketId = targetTeam._id;
   docket.routedByUserId = String(actor.xID || '').toUpperCase();
   docket.routedAt = new Date();
-  docket.routingNote = note || null;
-  docket.status = CaseStatus.ROUTED || 'ROUTED';
+  docket.routingNote = String(note || '').trim();
+  docket.status = CaseStatus.UNASSIGNED || 'UNASSIGNED';
+  docket.state = 'IN_WB';
+  docket.queueType = 'GLOBAL';
+  docket.assignedToXID = null;
+  docket.assignedTo = null;
+  docket.routeOriginatorUserXID = String(actor.xID || '').toUpperCase();
   await docket.save();
 
   await DocketRoute.create({
@@ -76,9 +88,15 @@ async function acceptRoutedDocket({ docketId, actor, firmId }) {
 
 async function returnRoutedDocket({ docketId, actor, firmId, note }) {
   const docket = await findDocket({ docketId, firmId });
+  requireComment(note, 'Submit');
   if (!docket.routedToTeamId || String(docket.routedToTeamId) !== String(actor.teamId || '')) {
-    throw makeError('Only routed team can return docket', 403);
+    throw makeError('Only routed team can submit routed docket', 403);
   }
+  if (String(docket.assignedToXID || '').toUpperCase() !== String(actor.xID || '').toUpperCase()) {
+    throw makeError('Only assigned routed user can submit', 403);
+  }
+  const originatorXID = String(docket.routeOriginatorUserXID || docket.routedByUserId || '').toUpperCase();
+  if (!originatorXID) throw makeError('Routed docket is missing originator', 409);
 
   const activeRoute = await DocketRoute.findOne({ docketId, firmId, returnedAt: null }).sort({ routedAt: -1 });
   if (activeRoute) {
@@ -88,8 +106,12 @@ async function returnRoutedDocket({ docketId, actor, firmId, note }) {
   }
 
   docket.routedToTeamId = null;
-  docket.status = CaseStatus.RETURNED || 'RETURNED';
-  if (note) docket.routingNote = note;
+  docket.assignedToXID = originatorXID;
+  docket.queueType = 'PERSONAL';
+  docket.state = 'IN_PROGRESS';
+  docket.status = CaseStatus.IN_PROGRESS;
+  docket.routingNote = String(note || '').trim();
+  docket.routeReturnedAt = new Date();
   await docket.save();
   return docket;
 }
