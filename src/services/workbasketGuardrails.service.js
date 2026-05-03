@@ -32,8 +32,18 @@ async function createPrimaryWithQc({ firmId, name, managerId = null }) {
         await User.updateOne({ _id: managerId, firmId, status: { $ne: 'deleted' } }, { $addToSet: { teamIds: qc._id } }, opts.session ? { session: opts.session } : undefined);
       }
     };
-    if (transactionSupported) await session.withTransaction(async () => worker({ session }));
-    else await worker();
+    if (transactionSupported) {
+      try {
+        await session.withTransaction(async () => worker({ session }));
+      } catch (error) {
+        const msg = String(error?.message || '').toLowerCase();
+        const unsupported = msg.includes('transaction') || msg.includes('replica set');
+        if (!unsupported) throw error;
+        primary = null;
+        qc = null;
+        await worker();
+      }
+    } else await worker();
   } finally {
     await session.endSession();
   }

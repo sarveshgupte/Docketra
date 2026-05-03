@@ -53,19 +53,12 @@ teamSchema.index(
   },
 );
 
-teamSchema.pre('validate', async function enforceWorkbasketGuardrails(next) {
+teamSchema.pre('validate', function enforceWorkbasketGuardrails(next) {
   if (this.type === 'QC' && !this.parentWorkbasketId) {
     return next(new Error('QC workbasket must reference a parent PRIMARY workbasket'));
   }
   if (this.type === 'PRIMARY') {
     this.parentWorkbasketId = null;
-  }
-  if (this.type === 'QC' && this.parentWorkbasketId) {
-    const Team = mongoose.model('Team');
-    const parent = await Team.findOne({ _id: this.parentWorkbasketId }).select('_id firmId type').lean();
-    if (!parent) return next(new Error('QC workbasket parent must exist'));
-    if (String(parent.type) !== 'PRIMARY') return next(new Error('QC workbasket parent must be a PRIMARY workbasket'));
-    if (String(parent.firmId) !== String(this.firmId)) return next(new Error('QC workbasket parent must belong to same firm'));
   }
   return next();
 });
