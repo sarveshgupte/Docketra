@@ -1,5 +1,26 @@
 # Quick Reference - Global Search, Worklists & xID Authentication
 
+> For the full canonical Worklist / Workbasket / QC Workbasket / All Dockets lifecycle and all 15 product rules, see **[docs/features/task-manager-worklists.md](./task-manager-worklists.md)**.
+
+## Task Manager Worklist/Workbasket Summary
+
+| Surface | Query | Terminal states excluded |
+|---|---|---|
+| **My Worklist** | `assignedToXID = me`, status in {ASSIGNED, IN_PROGRESS, OPEN, QC_PENDING} | RESOLVED, FILED |
+| **Workbasket Queue** | `assignedToXID = null`, `ownerTeamId = selected WB`, status in {OPEN, UNASSIGNED, RETURNED} | RESOLVED, FILED |
+| **QC Workbasket** | `routedToTeamId = qcTeam._id`, status = QC_PENDING | RESOLVED, FILED |
+| **All Dockets** | firm-scoped, no status filter | none (includes RESOLVED, FILED) |
+
+**Key rules at a glance:**
+- Creating a PRIMARY workbasket **auto-creates** a linked QC workbasket.
+- The manager is **auto-linked** to the QC workbasket.
+- Subcategories **require** a `workbasketId` mapping; dockets route there on creation.
+- **Pulling** a docket is the only way to move it from a workbasket into a user Worklist.
+- **Pending** keeps `assignedToXID` – the docket stays owned by the user.
+- **User deactivation** returns all non-terminal dockets to their mapped workbasket.
+
+---
+
 ## API Endpoints Cheat Sheet
 
 ### Part A: Search & Worklists

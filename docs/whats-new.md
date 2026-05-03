@@ -1,6 +1,15 @@
 # What's New
 
-## May 2026: Company Brain command center simplification
+## May 2026: Task Manager Worklist / Workbasket model clarification and enforcement
+
+- Documented and enforced the canonical Worklist / Workbasket / QC Workbasket / All Dockets operating model (see `docs/features/task-manager-worklists.md`).
+- Creating a PRIMARY workbasket now automatically creates exactly one linked QC workbasket and links the manager to it (product rules 4 and 6).
+- Added `POST /api/teams/:id/qc/add-user` so admins and managers can add users to QC workbaskets (product rule 7).
+- Hardened `handleUserDeactivation` to move all non-terminal dockets (including PENDED and IN_QC) back to their mapped workbasket queue when a user is deactivated (product rule 13).
+- All worklist and workbasket queries now consistently exclude RESOLVED and FILED dockets (product rule 14).
+- Added backend test coverage for the full lifecycle model.
+
+
 
 - Simplified Company Brain into Command Summary, Needs Attention, Connected Map, and How to use Company Brain sections.
 - Reduced repeated explanatory sections and made attention signals easier to act on.

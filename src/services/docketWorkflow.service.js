@@ -773,32 +773,49 @@ async function activateOnOpen({ docketId, firmId, actor }) {
   return docket;
 }
 
+/**
+ * Handle user deactivation by returning all non-terminal assigned dockets to their
+ * mapped PRIMARY workbasket queue (product rule 13).
+ *
+ * All dockets in non-terminal states (IN_WB, IN_PROGRESS, IN_QC, PENDED) that are
+ * assigned to the deactivated user are unassigned and placed back into the workbasket
+ * queue (state = IN_WB, status = UNASSIGNED/AVAILABLE, queueType = GLOBAL).
+ *
+ * ownerTeamId is preserved so the docket returns to the correct PRIMARY workbasket.
+ * pendingUntil/reopenAt are cleared because the docket is no longer owned by anyone.
+ */
 async function handleUserDeactivation({ firmId, userXID }) {
   const normalized = String(userXID || '').toUpperCase();
-  const qcp = await Case.updateMany(
-    { firmId, assignedToXID: normalized, state: 'IN_QC' },
-    { $set: { assignedToXID: null, assignedTo: null, queueType: 'GLOBAL' } },
-  );
+  const TERMINAL_STATES = ['RESOLVED', 'FILED'];
+  const availableStatus = toPersistenceState(DocketStatus.AVAILABLE);
 
-  const pended = await Case.updateMany(
-    { firmId, assignedToXID: normalized, status: toPersistenceState(DocketStatus.PENDING) },
-    { $set: { assignedToXID: null, assignedTo: null, queueType: 'GLOBAL' } },
-  );
-
-  const rest = await Case.updateMany(
+  // All non-terminal dockets owned by this user go back to their workbasket queue.
+  // This covers IN_PROGRESS, IN_QC, PENDED, and any stale OPEN/ASSIGNED records.
+  const result = await Case.updateMany(
     {
       firmId,
       assignedToXID: normalized,
-      state: { $ne: 'IN_QC' },
-      status: { $ne: toPersistenceState(DocketStatus.PENDING) },
+      state: { $nin: TERMINAL_STATES },
+      status: { $nin: TERMINAL_STATES },
     },
-    { $set: { assignedToXID: null, assignedTo: null, queueType: 'GLOBAL', status: toPersistenceState(DocketStatus.AVAILABLE), state: 'IN_WB', qcOutcome: null } },
+    {
+      $set: {
+        assignedToXID: null,
+        assignedTo: null,
+        assignedBy: null,
+        assignedAt: null,
+        queueType: 'GLOBAL',
+        status: availableStatus,
+        state: 'IN_WB',
+        qcOutcome: null,
+        pendingUntil: null,
+        reopenAt: null,
+      },
+    },
   );
 
   return {
-    qcPendingMoved: qcp.modifiedCount || 0,
-    pendingMoved: pended.modifiedCount || 0,
-    workbasketMoved: rest.modifiedCount || 0,
+    workbasketMoved: result.modifiedCount || 0,
   };
 }
 
