@@ -312,6 +312,15 @@ async function testGlobalWorklist() {
   assert.ok(onTrackCall.$or[0].slaDueAt.$gt instanceof Date, 'Should check for future due date');
   assert.strictEqual(onTrackCall.$or[1].slaDueAt, null, 'Should include null SLA cases');
 
+
+  // 4. terminal status filter must be ignored for active queue
+  mockCaseFind.length = 0;
+  req = mockReq({ query: { status: 'FILED' } });
+  res = mockRes();
+  await searchController.globalWorklist(req, res);
+  const filedCall = mockCaseFind[0];
+  assert.notStrictEqual(filedCall.status, 'FILED', 'terminal status override should be blocked');
+
   console.log('globalWorklist tests passed');
 }
 

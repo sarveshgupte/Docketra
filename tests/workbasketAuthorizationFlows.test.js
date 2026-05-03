@@ -21,6 +21,7 @@ assert.strictEqual(canPullFromWorkbasket({ user: primaryAdmin, docket }), true, 
 assert.strictEqual(canAssignFromWorkbasket({ actor: manager, docket, assignee: user }), true, 'manager can assign in linked wb');
 assert.strictEqual(canAssignFromWorkbasket({ actor: manager, docket: { ...docket, ownerTeamId: 'wb-x' }, assignee: user }), false, 'manager cannot assign unrelated wb');
 assert.strictEqual(canAssignFromWorkbasket({ actor: primaryAdmin, docket, assignee: otherUser }), true, 'primary admin can assign');
+assert.strictEqual(canAssignFromWorkbasket({ actor: manager, docket: { ...docket, assignedToXID: 'X000099' }, assignee: user }), false, 'assigned docket must not use WB assign flow');
 assert.strictEqual(canAssignFromWorkbasket({ actor: user, docket, assignee: otherUser }), false, 'normal user cannot assign others');
 
 assert.strictEqual(canMoveBetweenWorklists({ actor: manager, docket: { ...docket, state: 'IN_PROGRESS', assignedToXID: 'X000001' }, toUser: user }), true, 'manager can move between linked users');

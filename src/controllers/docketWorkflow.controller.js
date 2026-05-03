@@ -40,8 +40,12 @@ async function assignDocket(req, res) {
     if (!docket) return res.status(404).json({ success: false, message: 'Docket not found' });
     const assignee = await getFirmUserByXid(req.user.firmId, assigneeXID);
     if (!assignee) return res.status(404).json({ success: false, message: 'Assignee not found' });
-    if (!canAssignFromWorkbasket({ actor: req.user, docket, assignee })) {
-      return res.status(403).json({ success: false, message: 'Not allowed to assign this docket' });
+    const isAlreadyAssigned = Boolean(String(docket?.assignedToXID || '').trim());
+    const allowed = isAlreadyAssigned
+      ? canMoveBetweenWorklists({ actor: req.user, docket, toUser: assignee })
+      : canAssignFromWorkbasket({ actor: req.user, docket, assignee });
+    if (!allowed) {
+      return res.status(403).json({ success: false, message: isAlreadyAssigned ? 'Not allowed to move this docket' : 'Not allowed to assign this docket' });
     }
 
     const updated = await pullFromWorkbench({

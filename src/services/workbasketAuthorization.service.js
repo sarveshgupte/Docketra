@@ -33,6 +33,8 @@ const canPullFromWorkbasket = ({ user, docket }) => {
 const canAssignFromWorkbasket = ({ actor, docket, assignee }) => {
   const role = normalizeRole(actor?.role);
   if (isTerminal(docket)) return false;
+  if (String(docket?.assignedToXID || '').trim()) return false;
+  if (String(docket?.state || '').toUpperCase() !== 'IN_WB') return false;
   if (ADMIN_ROLES.has(role)) return Boolean(assignee?.isActive);
   if (!MANAGER_ROLES.has(role)) return false;
   const docketWorkbasketId = resolveDocketWorkbasketId(docket);
