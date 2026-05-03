@@ -40,7 +40,6 @@ const STORAGE_ERROR_LABELS = {
 export function StorageSettingsPage() {
   const toast = useContext(ToastContext);
   const location = useLocation();
-  const oauthHandled = useRef(false);
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [testing, setTesting] = useState(false);
@@ -99,11 +98,10 @@ export function StorageSettingsPage() {
     }
   };
 
-  // Handle OAuth callback query params once on mount
+  // Handle OAuth callback query params once on initial mount.
+  // Empty dependency array is intentional: this should run exactly once when the
+  // component mounts after the Google OAuth redirect.
   useEffect(() => {
-    if (oauthHandled.current) return;
-    oauthHandled.current = true;
-
     const params = new URLSearchParams(location.search);
     const connected = params.get('connected');
     const storageParam = params.get('storage');
