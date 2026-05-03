@@ -1,11 +1,11 @@
 const Category = require('../models/Category.model');
 const Case = require('../models/Case.model');
-const Team = require('../models/Team.model');
 const mongoose = require('mongoose');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { parseBooleanQuery } = require('../utils/query.utils');
 const { logAuthEvent } = require('../services/audit.service');
 const log = require('../utils/log');
+const { validateCategoryMappedWorkbasket } = require('../services/categoryWorkbasketValidation.service');
 
 /**
  * Category Controller for Admin-Managed Categories
@@ -337,18 +337,17 @@ const addSubcategory = async (req, res) => {
       });
     }
 
-    const workbasket = await Team.findOne({
-      _id: workbasketId,
-      ...firmScope,
-      isActive: true,
-      type: 'PRIMARY',
-    }).select('_id');
-    if (!workbasket) {
+    const workbasketValidation = await validateCategoryMappedWorkbasket({
+      workbasketId,
+      firmId: firmScope.firmId,
+    });
+    if (!workbasketValidation.valid) {
       return res.status(400).json({
         success: false,
-        message: 'Valid active primary workbasket is required',
+        message: workbasketValidation.message,
       });
     }
+    const workbasket = workbasketValidation.workbasket;
     
     // Check for duplicate subcategory name within this category (case-insensitive)
     const duplicate = category.subcategories.find(
@@ -457,19 +456,46 @@ const updateSubcategory = async (req, res) => {
           message: 'Workbasket required',
         });
       }
-      const workbasket = await Team.findOne({
-        _id: workbasketId,
-        ...firmScope,
-        isActive: true,
-        type: 'PRIMARY',
-      }).select('_id');
-      if (!workbasket) {
+      const workbasketValidation = await validateCategoryMappedWorkbasket({
+        workbasketId,
+        firmId: firmScope.firmId,
+      });
+      if (!workbasketValidation.valid) {
         return res.status(400).json({
           success: false,
-          message: 'Valid active primary workbasket is required',
+          message: workbasketValidation.message,
         });
       }
+      const workbasket = workbasketValidation.workbasket;
+      const previousWorkbasketId = subcategory.workbasketId ? String(subcategory.workbasketId) : null;
       subcategory.workbasketId = workbasket._id;
+
+      if (previousWorkbasketId && previousWorkbasketId !== String(workbasket._id)) {
+        const moveResult = await Case.updateMany({
+          firmId: firmScope.firmId,
+          categoryId: category._id,
+          subcategoryId: subcategory.id,
+          ownerTeamId: previousWorkbasketId,
+          assignedToXID: null,
+          $and: [{ state: 'IN_WB' }, { state: { $nin: ['RESOLVED', 'FILED'] } }],
+          status: { $nin: ['RESOLVED', 'FILED'] },
+        }, {
+          $set: {
+            ownerTeamId: workbasket._id,
+            workbasketId: workbasket._id,
+            routedToTeamId: null,
+          },
+        });
+
+        log.info('[CATEGORY] Subcategory mapping changed; moved WB dockets', {
+          firmId: firmScope.firmId,
+          categoryId: String(category._id),
+          subcategoryId: subcategory.id,
+          fromWorkbasketId: previousWorkbasketId,
+          toWorkbasketId: String(workbasket._id),
+          movedCount: moveResult.modifiedCount || 0,
+        });
+      }
     }
     if (typeof defaultSlaDays !== 'undefined') {
       subcategory.defaultSlaDays = Math.max(0, Number(defaultSlaDays) || 0);
