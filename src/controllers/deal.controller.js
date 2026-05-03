@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { resolveFirmMemoryScope } = require('../services/firmMemoryScope.service');
 const Deal = require('../models/Deal.model');
 const CrmClient = require('../models/CrmClient.model');
 const Case = require('../models/Case.model');
@@ -53,6 +54,9 @@ const createDeal = async (req, res) => {
 const listDeals = async (req, res) => {
   try {
     const { limit, skip } = parsePagination(req.query);
+    const memoryScope = resolveFirmMemoryScope(req);
+    if (memoryScope.errorStatus) return res.status(memoryScope.errorStatus).json({ success: false, message: memoryScope.errorMessage });
+    if (!memoryScope.hasFirmWideAccess) return res.json({ success: true, data: [] });
     const deals = await Deal.find({ firmId: req.user.firmId })
       .sort({ createdAt: -1 })
       .skip(skip)

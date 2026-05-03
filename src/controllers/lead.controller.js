@@ -4,6 +4,7 @@ const CrmClient = require('../models/CrmClient.model');
 const Case = require('../models/Case.model');
 const User = require('../models/User.model');
 const { upsertCanonicalClientFromCrm } = require('../services/crmClientMapping.service');
+const { resolveFirmMemoryScope } = require('../services/firmMemoryScope.service');
 
 const ALLOWED_STATUSES = new Set(['new', 'contacted', 'qualified', 'lost', 'converted']);
 const ACTIVE_PIPELINE_STAGES = new Set(['new', 'contacted', 'qualified']);
@@ -173,6 +174,13 @@ const listLeads = async (req, res) => {
     if (dueOnly) {
       query.nextFollowUpAt = { $lt: new Date() };
       query.stage = { $in: [...ACTIVE_PIPELINE_STAGES] };
+    }
+
+    if (!memoryScope.hasFirmWideAccess) {
+      query.$or = [
+        { linkedClientId: { $in: memoryScope.scopedClientIds } },
+        { convertedClientId: { $in: memoryScope.scopedClientIds } },
+      ];
     }
 
     const leads = await Lead.find(query)
