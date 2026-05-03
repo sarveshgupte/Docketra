@@ -128,9 +128,11 @@ const listCrmClients = async (req, res) => {
         .map((c) => String(c.legacyCrmClientId))
     );
 
-    const mappedLegacyClients = crmClients
-      .filter((crm) => !byLegacyId.has(String(crm._id)))
-      .map((crm) => mapCrmClientToClient(crm));
+    const mappedLegacyClients = memoryScope.hasFirmWideAccess
+      ? crmClients
+        .filter((crm) => !byLegacyId.has(String(crm._id)))
+        .map((crm) => mapCrmClientToClient(crm))
+      : [];
 
     return res.json({ success: true, data: [...clients, ...mappedLegacyClients] });
   } catch (_error) {
