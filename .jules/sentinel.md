@@ -20,3 +20,8 @@
 **Vulnerability:** HTTP Response Splitting / Header Injection. The `attachment.fileName` was interpolated directly into the `Content-Disposition` header in `src/controllers/client.controller.js` and `src/controllers/case.controller.js`.
 **Learning:** If an attacker can control the filename of an uploaded file, they could potentially inject CRLF characters or quotes to manipulate the HTTP response headers or perform directory traversal during download.
 **Prevention:** Always use `sanitizeFilename` from `src/utils/fileUtils.js` to strip potentially dangerous characters from filenames before setting them in the `Content-Disposition` header.
+
+## $(date +%Y-%m-%d) - Prevent ReDoS by Escaping Regex Variables
+**Vulnerability:** User-derived inputs (`originalSlug`) were passed unescaped into dynamic `new RegExp(...)` constructors in MongoDB queries.
+**Learning:** This pattern can lead to Regular Expression Denial of Service (ReDoS) or NoSQL injection attacks if the input contains regex special characters.
+**Prevention:** Always escape user-derived inputs or dynamically generated strings before using them in regular expressions. A centralized `escapeRegExp` utility was created in `src/utils/regexp.utils.js` for this purpose.
