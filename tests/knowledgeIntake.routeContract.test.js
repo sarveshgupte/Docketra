@@ -37,7 +37,7 @@ const swap = (modulePath, exportsValue) => {
       }
       req.user = { role: 'ADMIN', firmId: '507f1f77bcf86cd799439011' };
       req.jwt = { firmId: '507f1f77bcf86cd799439011' };
-      req.authTenantContext = { tenantId: '507f1f77bcf86cd799439011', status: 'active', firmSlug: 'acme' };
+      req.authTenantContext = { tenantId: '507f1f77bcf86cd799439011', status: 'active', firmSlug: 'acme', ownershipFirmId: '507f1f77bcf86cd799439099' };
       return next();
     },
   });
@@ -47,8 +47,9 @@ const swap = (modulePath, exportsValue) => {
       tenantId: String(firmId),
       status: 'active',
       firmSlug: 'acme',
-      ownershipFirmId: null,
+      ownershipFirmId: '507f1f77bcf86cd799439099',
     }),
+    resolveTenantBySlug: async () => null,
   });
 
   swap(leadModelPath, { find: () => ({ select: () => ({ sort: () => ({ skip: () => ({ limit: () => ({ lean: async () => [] }) }) }) }) }) });
