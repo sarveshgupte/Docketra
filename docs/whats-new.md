@@ -1,5 +1,11 @@
 # What's New
 
+
+## May 2026: Task Manager Worklist / Workbasket operating model documented
+
+- Documented canonical WL/WB/QC WB/All Dockets terminology.
+- Clarified pull, assign, route, submit, pending, QC, deactivation, and All Dockets rules.
+- Established implementation rules for upcoming backend and UI PRs.
 ## May 2026: Documentation quality guardrails
 
 - Added `npm run docs:check` to validate markdown relative links across maintained documentation.

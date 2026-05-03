@@ -349,3 +349,10 @@ src/
 - Full Documentation: `IMPLEMENTATION_COMPLETE.md`
 - Testing Guide: `/tmp/TESTING_GUIDE.md`
 - Implementation Details: `/tmp/IMPLEMENTATION_SUMMARY.md`
+
+---
+
+## Task Manager WL/WB Operating Model (Canonical)
+
+- See `docs/features/task-manager-worklists.md` for the canonical product rules for Worklists (WL), Workbaskets (WB), QC Workbaskets, routing, pending/TAT, and All Dockets behavior.
+- This is documentation for future implementation PRs; it does not claim enforcement is already implemented.
