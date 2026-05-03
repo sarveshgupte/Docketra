@@ -2,7 +2,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
 const repoRoot = process.cwd();
 
@@ -14,13 +13,31 @@ const EXPLICITLY_IGNORED_FILES = [
   'docs/features/DOCUMENTATION_AUDIT_SUMMARY.md',
   'docs/features/FIRM_SCOPED_ROUTING_COMPLETE.md',
 ];
+const WALKER_IGNORED_DIRS = new Set(['node_modules', '.git', 'dist']);
+
+function collectMarkdownFiles(currentDir, files = [], rootDir = currentDir) {
+  const entries = fs.readdirSync(currentDir);
+  for (const entry of entries) {
+    if (WALKER_IGNORED_DIRS.has(entry)) {
+      continue;
+    }
+
+    const absoluteEntryPath = path.join(currentDir, entry);
+    const stat = fs.statSync(absoluteEntryPath);
+    if (stat.isDirectory()) {
+      collectMarkdownFiles(absoluteEntryPath, files, rootDir);
+      continue;
+    }
+
+    if (stat.isFile() && entry.toLowerCase().endsWith('.md')) {
+      files.push(path.relative(rootDir, absoluteEntryPath).replaceAll(path.sep, '/'));
+    }
+  }
+  return files;
+}
 
 function getMarkdownFiles() {
-  const output = execSync("rg --files -g '*.md'", { encoding: 'utf8' });
-  return output
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
+  return collectMarkdownFiles(repoRoot, [], repoRoot);
 }
 
 function isExternalLink(target) {
@@ -117,4 +134,15 @@ function main() {
   console.log(`✅ Markdown relative link check passed for ${markdownFiles.length - ignoredFiles.length} files.`);
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  collectMarkdownFiles,
+  getMarkdownFiles,
+  normalizeTarget,
+  isExternalLink,
+  isIgnoredMarkdownFile,
+  EXPLICITLY_IGNORED_PREFIXES,
+};
