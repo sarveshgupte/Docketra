@@ -76,6 +76,11 @@ const userSchema = new mongoose.Schema({
     ref: 'Team',
     default: [],
   },
+  qcExplicitTeamIds: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: 'Team',
+    default: [],
+  },
   
   // Email address - REQUIRED for password setup emails
   // Used for notifications, contact, and password setup
