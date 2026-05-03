@@ -73,16 +73,17 @@ const mockAuthAuditModel = {
   })
 };
 
+let mockLatestTenantMetrics = {
+  openCases: 10,
+  overdueCases: 2,
+  pendedCases: 1,
+  filedCases: 0,
+  resolvedCases: 5,
+  totalCases: 16,
+};
 const mockTenantCaseMetricsDaily = {};
 const mockTenantMetricsService = {
-  getLatestTenantMetrics: async () => ({
-    openCases: 10,
-    overdueCases: 2,
-    pendedCases: 1,
-    filedCases: 0,
-    resolvedCases: 5,
-    totalCases: 16
-  }),
+  getLatestTenantMetrics: async () => mockLatestTenantMetrics,
   getTenantMetricsByRange: async () => []
 };
 
@@ -226,6 +227,26 @@ async function runTests() {
     assert.strictEqual(res.jsonData.success, true);
     assert.strictEqual(res.jsonData.data.byStatus.OPEN, 10);
     console.log('✅ getCaseMetrics: success scenario handled');
+  }
+
+  // Test 2a: getCaseMetrics - Empty state returns 200 with zero/default metrics payload
+  {
+    const { req, res } = createMockHttp();
+    const originalLatest = mockLatestTenantMetrics;
+    mockLatestTenantMetrics = null;
+    await reportsController.getCaseMetrics(req, res);
+    mockLatestTenantMetrics = originalLatest;
+
+    assert.strictEqual(res.statusCode, 200);
+    assert.strictEqual(res.jsonData.success, true);
+    assert.strictEqual(res.jsonData.data.totalCases, 0);
+    assert.deepStrictEqual(res.jsonData.data.byStatus, { OPEN: 0, PENDING: 0, FILED: 0, RESOLVED: 0 });
+    assert.deepStrictEqual(res.jsonData.data.byClient, []);
+    assert.deepStrictEqual(res.jsonData.data.byEmployee, []);
+    assert.deepStrictEqual(res.jsonData.data.breakdowns, []);
+    assert.deepStrictEqual(res.jsonData.data.trends, []);
+    assert.deepStrictEqual(res.jsonData.data.tables, []);
+    console.log('✅ getCaseMetrics: empty-state payload returns zero/default shape');
   }
 
   // Test 2b: getCaseMetrics - missing firm context fails closed
