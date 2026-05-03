@@ -4,6 +4,7 @@ This is the canonical entry point for all Docketra documentation.
 
 For a product-facing overview, see the [root README.md](../README.md).
 For a developer quick start, see [QUICK_START.md](../QUICK_START.md).
+For doc contribution standards, see [documentation-guidelines.md](documentation-guidelines.md).
 
 ---
 
