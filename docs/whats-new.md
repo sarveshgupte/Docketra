@@ -1,5 +1,11 @@
 # What's New
 
+## May 2026: Workbasket/QC Workbasket backend guardrails (team/workbasket foundation)
+
+- Enforced PRIMARY/QC workbasket model rules in backend creation flows: creating a PRIMARY workbasket now atomically creates exactly one linked QC workbasket (with rollback on failure).
+- Added QC parent-link guardrails so QC workbaskets must reference a parent PRIMARY workbasket and duplicate QC-per-primary creation is blocked by schema/index constraints.
+- Added manager/QC linkage foundations: PRIMARY manager is auto-linked to QC on create/manager update, and guarded QC-member add endpoint allows only Primary Admin/Admin or the owning PRIMARY manager.
+- This PR intentionally does **not** implement docket routing, pull flow, pending, deactivation behavior changes, All Dockets behavior, or routed Submit.
 
 ## May 2026: Task Manager Worklist / Workbasket operating model documented
 

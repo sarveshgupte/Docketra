@@ -134,6 +134,10 @@ module.exports = {
     params: z.object({ workbasketId: objectIdOrString }),
     body: z.object({ isActive: z.boolean() }).passthrough(),
   },
+  'POST /workbaskets/:workbasketId/qc-members': {
+    params: z.object({ workbasketId: objectIdOrString }),
+    body: z.object({ userId: objectIdOrString }).passthrough(),
+  },
   'POST /users/:id/restore': {
     params: z.object({ id: objectIdOrString }),
     body: passthroughBody,
