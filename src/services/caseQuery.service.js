@@ -757,8 +757,10 @@ module.exports = (deps) => {
         : null;
       const attachments = await Attachment.find(enforceTenantScope({ caseId }, req, { source: 'case.getDocketSummaryPdf.attachments' })).lean();
 
+      const safeFilename = sanitizeFilename(`${caseId}-summary.pdf`);
+
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `inline; filename="${caseId}-summary.pdf"`);
+      res.setHeader('Content-Disposition', `inline; filename="${safeFilename}"`);
 
       const doc = new PDFDocument({ margin: 40 });
       doc.pipe(res);
