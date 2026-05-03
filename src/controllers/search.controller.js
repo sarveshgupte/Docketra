@@ -652,6 +652,8 @@ const globalWorklist = async (req, res) => {
     const parsedLimit = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 20));
     const query = {
       assignedToXID: null,
+      state: 'IN_WB',
+      status: { $nin: [CaseStatus.RESOLVED, CaseStatus.FILED] },
     };
 
     if (normalizedTab === 'routed' && selectedTeamId) {
@@ -661,7 +663,7 @@ const globalWorklist = async (req, res) => {
       if (selectedTeamId) {
         query.ownerTeamId = selectedTeamId;
       }
-      query.status = { $in: [CaseStatus.OPEN, CaseStatus.RETURNED, CaseStatus.UNASSIGNED] };
+      query.status = { $nin: [CaseStatus.RESOLVED, CaseStatus.FILED] };
     }
     
     // Apply filters
