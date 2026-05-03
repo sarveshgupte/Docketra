@@ -8,8 +8,6 @@ const RESERVED_FIRM_SLUGS = [
   'dashboard',
   'dockets',
   'clients',
-  'leads',
-  'forms',
   'settings',
   'reports',
   'security',
