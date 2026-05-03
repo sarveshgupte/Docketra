@@ -57,3 +57,33 @@ Landing copy explicitly states:
 - Added warm gradient hero treatment and premium card/border spacing refinements.
 - Upgraded dashboard mockup into a workspace-style preview with module rail and activity rows.
 - Added trust chips: Built for Indian firms, Metadata-only oversight, BYOS-compatible storage.
+
+## Revisions (May 2026, polish pass 3)
+### UI/UX polish summary
+- Refined the landing visual hierarchy to be closer to Lovable’s premium SaaS style while preserving existing routes, auth surfaces, and app architecture.
+- Increased polish on header, hero, cards, CTA block, and footer with consistent modern spacing, contrast, and elevation.
+
+### Visual changes made
+- Header: stronger glass effect and higher-contrast primary CTA treatment.
+- Hero: layered radial/linear gradient backdrop, improved spacing rhythm, and more premium CTA hierarchy.
+- Dashboard mockup: deeper elevation, cleaner KPI cards, and richer activity rows with status badges.
+- Product pillar cards: subtle hover lift for better desktop affordance.
+- Final CTA: converted into high-contrast dark panel with contained CTA card style.
+- Footer: upgraded to a polished dark footer with improved link contrast and structure.
+
+### Responsive behavior notes
+- Dashboard preview now allows horizontal scroll on narrow screens to avoid clipping/overflow breakage.
+- Hero section spacing is tuned for mobile-first stacking and tighter medium breakpoint transition.
+- CTA and footer continue to use multi-row layouts on smaller viewports for readability and tap targets.
+
+### Tests run
+- `cd ui && npm run build`
+- `cd ui && node tests/publicLandingRouteSmoke.test.mjs`
+- `cd ui && node tests/companyBrainLandingPage.test.mjs`
+- `cd ui && node tests/routingPublicBoundaryRegression.test.mjs`
+- `cd ui && node tests/authRedirectBehavior.test.mjs`
+
+### Rollback notes
+1. Revert `ui/src/components/landing/LandingPageContent.jsx` and this document.
+2. Re-run the same build and public-boundary/auth tests.
+3. Verify `/`, `/login`, `/signup`, and `/:firmSlug/login` behave identically to pre-polish state.
