@@ -120,7 +120,7 @@ router.put('/firm-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_
 router.get('/cms-intake-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getCmsIntakeSettings);
 router.put('/cms-intake-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userWriteLimiter, updateCmsIntakeSettings);
 router.post('/cms-intake-settings/intake-api-key/regenerate', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), sensitiveLimiter, regenerateCmsIntakeApiKey);
-router.get('/workbaskets', ...adminBaseAccess, authorizeFirmPermission('CASE_VIEW'), userReadLimiter, listWorkbaskets);
+router.get('/workbaskets', ...adminBaseAccess, authorizeFirmPermission('USER_VIEW'), userReadLimiter, listWorkbaskets);
 router.post('/workbaskets', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, createWorkbasket);
 router.put('/workbaskets/:workbasketId', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, renameWorkbasket);
 router.patch('/workbaskets/:workbasketId/status', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, toggleWorkbasketStatus);
