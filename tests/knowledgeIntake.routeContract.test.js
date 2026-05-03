@@ -26,6 +26,7 @@ const swap = (modulePath, exportsValue) => {
 };
 
 (async () => {
+  let tenantSlugResolutionCalls = 0;
   swap(bcryptModulePath, { hash: async () => 'mock-hash', compare: async () => true, genSalt: async () => 'mock-salt' });
 
   swap(authMiddlewarePath, {
@@ -49,7 +50,7 @@ const swap = (modulePath, exportsValue) => {
       firmSlug: 'acme',
       ownershipFirmId: '507f1f77bcf86cd799439099',
     }),
-    resolveTenantBySlug: async () => null,
+    resolveTenantBySlug: async () => { tenantSlugResolutionCalls += 1; return null; },
   });
 
   swap(leadModelPath, { find: () => ({ select: () => ({ sort: () => ({ skip: () => ({ limit: () => ({ lean: async () => [] }) }) }) }) }) });
@@ -72,6 +73,7 @@ const swap = (modulePath, exportsValue) => {
   assert.strictEqual(formsRes.body.success, true);
   assert.deepStrictEqual(formsRes.body.data, []);
   assert.notStrictEqual(formsRes.body.code, 'FIRM_RESOLUTION_FAILED');
+  assert.strictEqual(tenantSlugResolutionCalls, 0, 'Knowledge intake API routes must not hit tenant slug resolution');
 
   const noFirmRes = await request(app).get('/api/leads?limit=100').set('x-test-no-firm', '1');
   assert.ok([400, 401, 403].includes(noFirmRes.status), 'Missing firm context should fail closed');
