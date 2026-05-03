@@ -10,7 +10,7 @@ async function run(){
     mongoose: { Types: { ObjectId: { isValid: () => true } } },
     randomUUID: ()=>'req-1', createHash:()=>({update(){return this;}, digest(){return 'h';}}),
     Case, Comment:{}, Attachment:{}, CaseHistory:{create:async()=>{}}, CaseAudit:{}, Client:{findOne:async()=>null}, User:{}, Team:{findOne:()=>({sort:()=>({select:()=>({lean:async()=>({_id:'wb-fallback'})})})})}, WorkType:{}, SubWorkType:{}, CrmClient:{}, Deal:{}, Invoice:{},
-    CaseRepository:{}, ClientRepository:{}, AttachmentRepository:{},
+    CaseRepository:{}, ClientRepository:{findByClientId: async ()=>({status:'ACTIVE'})}, AttachmentRepository:{},
     categoryRepository:{ findActiveCategory: async ()=>({ name:'Tax', subcategories:[{id:'sub-1', name:'GST', isActive:true, workbasketId:'wb-mapped'}] }) },
     detectDuplicates: async()=>({}), generateDuplicateOverrideComment:()=>'', CASE_CATEGORIES:{}, CASE_LOCK_CONFIG:{}, COMMENT_PREVIEW_LENGTH:80, CLIENT_STATUS:{ACTIVE:'ACTIVE'},
     CaseStatus:{ASSIGNED:'ASSIGNED',UNASSIGNED:'UNASSIGNED'}, DocketLifecycle:{ACTIVE:'ACTIVE',CREATED:'CREATED'}, toLifecycleFromStatus:()=>null, normalizeLifecycle:()=>null, isValidState:()=>true, isValidTransition:()=>true, isProduction:false,
@@ -24,6 +24,7 @@ async function run(){
   const res = mkRes();
   await svc.createCase(req,res);
   assert.strictEqual(captured.ownerTeamId, 'wb-mapped');
+  assert.strictEqual(captured.workbasketId, 'wb-mapped');
   assert.strictEqual(captured.assignedToXID, null);
   assert.strictEqual(captured.state, 'IN_WB');
   assert.strictEqual(captured.queueType, 'GLOBAL');
@@ -31,6 +32,7 @@ async function run(){
   const req2 = { body:{ title:'T', categoryId:'cat-1', subcategoryId:'sub-1', assignedTo:'X2' }, user:{ xID:'X1', firmId:'firm-1' } };
   await svc.createCase(req2,mkRes());
   assert.strictEqual(captured.ownerTeamId, 'wb-mapped');
+  assert.strictEqual(captured.workbasketId, 'wb-mapped');
   assert.strictEqual(captured.assignedToXID, 'X2');
   console.log('case create category routing tests passed');
 }
