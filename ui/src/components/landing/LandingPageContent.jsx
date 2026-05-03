@@ -27,7 +27,7 @@ const HomeNav = ({ onNav }) => {
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/90 backdrop-blur-sm">
+    <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-xl">
       <Container>
         <nav className="flex h-16 items-center justify-between" aria-label="Main navigation">
           <Link to="/" className="flex items-center gap-2 font-bold text-slate-900 text-lg tracking-tight">
@@ -53,7 +53,7 @@ const HomeNav = ({ onNav }) => {
             <Link to="/login" className="text-sm font-medium text-slate-600 hover:text-slate-900">Login</Link>
             <Link
               to="/signup"
-              className="inline-flex items-center justify-center h-9 px-5 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors shadow-sm"
+              className="inline-flex items-center justify-center h-9 px-5 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-700 transition-colors shadow-sm"
             >
               Request early access
             </Link>
@@ -94,7 +94,7 @@ const HomeNav = ({ onNav }) => {
               <li className="mt-2 px-4">
                 <Link
                   to="/signup"
-                  className="block text-center h-9 leading-9 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors"
+                  className="block text-center h-9 leading-9 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-700 transition-colors"
                   onClick={() => setMenuOpen(false)}
                 >
                   Request early access
@@ -112,14 +112,14 @@ const HomeNav = ({ onNav }) => {
    HERO DASHBOARD MOCK
 ───────────────────────────────────────────── */
 const HeroDashboardMock = () => (
-  <div className="rounded-3xl border border-slate-200/80 bg-white shadow-2xl overflow-hidden">
+  <div className="rounded-3xl border border-slate-200/80 bg-white shadow-[0_30px_120px_-40px_rgba(15,23,42,0.45)] overflow-hidden">
     <div className="flex items-center gap-2 bg-slate-100/90 px-4 py-3 border-b border-slate-200">
       <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
       <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
       <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
       <span className="ml-3 flex-1 rounded-md bg-white border border-slate-200 text-xs text-slate-400 px-2.5 py-1">app.docketra.com/workspace</span>
     </div>
-    <div className="grid md:grid-cols-12 min-h-[360px]">
+    <div className="grid md:grid-cols-12 min-h-[380px]">
       <aside className="md:col-span-3 border-r border-slate-200 bg-slate-50 p-4">
         <p className="text-[11px] uppercase tracking-widest text-slate-400 mb-3">Workspace</p>
         <div className="space-y-2 text-xs">
@@ -128,17 +128,22 @@ const HeroDashboardMock = () => (
           ))}
         </div>
       </aside>
-      <main className="md:col-span-9 p-5 bg-gradient-to-b from-white to-slate-50">
+      <main className="md:col-span-9 p-5 bg-gradient-to-b from-white via-white to-slate-50">
         <div className="grid sm:grid-cols-3 gap-3">
           {['Work active: 24', 'Intake pending: 7', 'Readiness: Pilot-ready'].map((kpi) => (
-            <div key={kpi} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700">{kpi}</div>
+            <div key={kpi} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm">{kpi}</div>
           ))}
         </div>
         <div className="mt-4 rounded-xl border border-slate-200 bg-white overflow-hidden">
           <div className="px-4 py-2.5 border-b border-slate-200 text-xs font-semibold text-slate-700">Docketra workspace preview</div>
           <div className="p-4 grid gap-3">
-            {['Annual filing docket · Owner: Priya · SLA: On track','Client instruction captured · GreenLeaf Foods · CFO draft review required','Knowledge Library update · FY 24 checklist v2 mapped to Work template'].map((row)=> (
-              <div key={row} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">{row}</div>
+            {['Annual filing docket · Owner: Priya · SLA: On track','Client instruction captured · GreenLeaf Foods · CFO draft review required','Knowledge Library update · FY 24 checklist v2 mapped to Work template'].map((row, idx)=> (
+              <div key={row} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 flex items-center justify-between gap-3">
+                <span>{row}</span>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${idx === 0 ? 'bg-emerald-100 text-emerald-700' : idx === 1 ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700'}`}>
+                  {idx === 0 ? 'On track' : idx === 1 ? 'Needs review' : 'Updated'}
+                </span>
+              </div>
             ))}
           </div>
         </div>
@@ -151,9 +156,9 @@ const HeroDashboardMock = () => (
    HERO SECTION
 ───────────────────────────────────────────── */
 const HeroSection = ({ onExplore }) => (
-  <section className="w-full bg-gradient-to-br from-amber-50 via-white to-orange-50 py-24 md:py-32">
+  <section className="w-full bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.22),_transparent_34%),radial-gradient(circle_at_92%_18%,_rgba(14,165,233,0.1),_transparent_36%),linear-gradient(to_bottom_right,_#fffaf1,_#ffffff_40%,_#f8fafc)] py-20 md:py-28 lg:py-32">
     <Container>
-      <div className="grid grid-cols-1 gap-14 md:grid-cols-12 md:gap-12 items-center">
+      <div className="grid grid-cols-1 gap-14 md:grid-cols-12 md:gap-10 items-center">
         <motion.div className="md:col-span-6 lg:col-span-5" {...REVEAL}>
           <span className="inline-block rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 mb-5">
             For CS · CA · Legal · Tax · Advisory firms
@@ -170,7 +175,7 @@ const HeroSection = ({ onExplore }) => (
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
             <Link
               to="/signup"
-              className="inline-flex items-center justify-center h-11 px-6 rounded-lg bg-amber-500 text-white text-sm font-semibold shadow hover:bg-amber-600 transition-colors"
+            className="inline-flex items-center justify-center h-11 px-6 rounded-lg bg-slate-900 text-white text-sm font-semibold shadow-lg shadow-slate-900/15 hover:bg-slate-700 transition-colors"
             >
               Request early access
             </Link>
@@ -183,7 +188,7 @@ const HeroSection = ({ onExplore }) => (
             </button>
           </div>
 
-          <ul className="mt-7 flex flex-wrap gap-2 text-xs text-slate-600">
+          <ul className="mt-7 flex flex-wrap gap-2.5 text-xs text-slate-600">
             {['Built for Indian firms', 'Metadata-only oversight', 'BYOS-compatible storage'].map((chip) => (
               <li key={chip} className="rounded-full border border-amber-200 bg-white px-3 py-1 font-medium shadow-sm">
                 {chip}
@@ -193,13 +198,17 @@ const HeroSection = ({ onExplore }) => (
         </motion.div>
 
         <motion.div
-          className="md:col-span-6 lg:col-span-7"
+          className="md:col-span-6 lg:col-span-7 md:pl-2"
           initial={{ opacity: 0, x: 24 }}
           whileInView={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
           viewport={{ once: true }}
         >
-          <HeroDashboardMock />
+          <div className="mx-auto w-full max-w-3xl md:max-w-none overflow-x-auto pb-1">
+            <div className="min-w-[640px] md:min-w-0">
+              <HeroDashboardMock />
+            </div>
+          </div>
         </motion.div>
       </div>
     </Container>
@@ -375,7 +384,7 @@ const ProductPillarsSection = () => (
         {PILLARS.map((pillar, idx) => (
           <motion.div
             key={pillar.title}
-            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow"
+            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all"
             initial={{ opacity: 0, y: 18 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: idx * 0.07 }}
@@ -585,32 +594,32 @@ const TrustSection = () => (
    FINAL CTA SECTION
 ───────────────────────────────────────────── */
 const FinalCtaSection = () => (
-  <section id="early-access" className="w-full bg-gradient-to-br from-amber-50 to-white py-24 md:py-32">
+  <section id="early-access" className="w-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-20 md:py-28">
     <Container>
-      <motion.div className="text-center max-w-3xl mx-auto" {...REVEAL}>
-        <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 leading-tight">
+      <motion.div className="text-center max-w-3xl mx-auto rounded-3xl border border-white/15 bg-white/5 px-6 py-12 md:px-10 backdrop-blur-sm" {...REVEAL}>
+        <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-white leading-tight">
           Build your firm's memory before it walks out the door.
         </h2>
-        <p className="mt-5 text-lg text-slate-600 leading-relaxed">
+        <p className="mt-5 text-lg text-slate-200 leading-relaxed">
           Docketra is in early access for select Indian professional firms. Join the next cohort.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
           <Link
             to="/signup"
-            className="inline-flex items-center justify-center h-12 px-8 rounded-lg bg-amber-500 text-white text-sm font-semibold shadow hover:bg-amber-600 transition-colors"
+            className="inline-flex items-center justify-center h-12 px-8 rounded-lg bg-white text-slate-900 text-sm font-semibold shadow hover:bg-slate-100 transition-colors"
           >
             Request early access
           </Link>
           <a
             href={`mailto:${CONTACT_EMAIL}`}
-            className="inline-flex items-center justify-center h-12 px-8 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
+            className="inline-flex items-center justify-center h-12 px-8 rounded-lg border border-white/40 text-white text-sm font-medium hover:bg-white/10 transition-colors"
           >
             Contact
           </a>
         </div>
 
-        <p className="mt-5 text-sm text-slate-400">
+        <p className="mt-5 text-sm text-slate-300">
           Secure onboarding · Role-based access · BYOS-first architecture
         </p>
       </motion.div>
@@ -622,27 +631,27 @@ const FinalCtaSection = () => (
    MARKETING FOOTER
 ───────────────────────────────────────────── */
 const MarketingFooter = () => (
-  <footer className="bg-white border-t border-slate-100 py-10">
+  <footer className="bg-slate-950 text-slate-100 py-12">
     <Container>
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
         <div>
-          <Link to="/" className="font-bold text-slate-900 text-lg">
+          <Link to="/" className="font-bold text-white text-lg">
             Docketra
           </Link>
-          <p className="mt-1 text-sm text-slate-500">Run your firm's work, clients, and knowledge from one connected workspace.</p>
+          <p className="mt-1 text-sm text-slate-300">Run your firm's work, clients, and knowledge from one connected workspace.</p>
           <p className="text-sm text-slate-400">Built for professional firms in India</p>
         </div>
 
         <nav aria-label="Footer legal navigation" className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <Link to="/terms" className="text-sm text-slate-500 hover:text-slate-900">Terms</Link>
-          <Link to="/privacy" className="text-sm text-slate-500 hover:text-slate-900">Privacy</Link>
-          <Link to="/security" className="text-sm text-slate-500 hover:text-slate-900">Security</Link>
-          <Link to="/acceptable-use" className="text-sm text-slate-500 hover:text-slate-900">Acceptable Use</Link>
+          <Link to="/terms" className="text-sm text-slate-300 hover:text-white">Terms</Link>
+          <Link to="/privacy" className="text-sm text-slate-300 hover:text-white">Privacy</Link>
+          <Link to="/security" className="text-sm text-slate-300 hover:text-white">Security</Link>
+          <Link to="/acceptable-use" className="text-sm text-slate-300 hover:text-white">Acceptable Use</Link>
         </nav>
       </div>
 
-      <div className="mt-8 border-t border-slate-100 pt-6 flex flex-col sm:flex-row items-center justify-end gap-4">
-        <a href={`mailto:${CONTACT_EMAIL}`} className="text-sm text-slate-500 hover:text-slate-900 hover:underline">
+      <div className="mt-8 border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-end gap-4">
+        <a href={`mailto:${CONTACT_EMAIL}`} className="text-sm text-slate-400 hover:text-white hover:underline">
           {CONTACT_EMAIL}
         </a>
       </div>
