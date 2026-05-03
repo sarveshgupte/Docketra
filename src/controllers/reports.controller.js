@@ -28,6 +28,26 @@ const MAX_EXPORT_HISTORY_LIMIT = 200;
 const REPORT_CASE_PROJECTION = 'caseId caseName title status category clientId assignedToXID createdAt createdBy pendingUntil';
 const SLOW_REPORT_QUERY_MS = 500;
 const includeInternalErrorDetails = process.env.NODE_ENV !== 'production';
+const buildDefaultCaseMetricsPayload = () => ({
+  totalCases: 0,
+  byStatus: { OPEN: 0, PENDING: 0, FILED: 0, RESOLVED: 0 },
+  overdueCases: 0,
+  avgResolutionTimeSeconds: 0,
+  casesCreatedToday: 0,
+  casesResolvedToday: 0,
+  pendingApprovals: 0,
+  byCategory: {},
+  byClient: [],
+  byEmployee: [],
+  trends: [],
+  tables: [],
+  breakdowns: [],
+  profitability: {
+    totalEstimatedBudget: 0,
+    totalActualCost: 0,
+    variance: 0,
+  },
+});
 
 const isValidDate = (value) => {
   const date = new Date(value);
@@ -186,6 +206,7 @@ const getCaseMetrics = async (req, res) => {
       );
 
       payload = {
+        ...buildDefaultCaseMetricsPayload(),
         totalCases: rangeData.aggregate.totalCases,
         byStatus: {
           OPEN: rangeData.aggregate.openCases,
@@ -200,18 +221,11 @@ const getCaseMetrics = async (req, res) => {
         pendingApprovals: rangeData.aggregate.pendingApprovals,
         range: rangeData.range,
         rowsCount: rangeData.rowsCount,
-        byCategory: {},
-        byClient: [],
-        byEmployee: [],
-        profitability: {
-          totalEstimatedBudget: 0,
-          totalActualCost: 0,
-          variance: 0,
-        },
       };
     } else {
       const latest = await getLatestTenantMetrics(tenantId);
       payload = {
+        ...buildDefaultCaseMetricsPayload(),
         totalCases: latest?.totalCases || 0,
         byStatus: {
           OPEN: latest?.openCases || 0,
@@ -225,14 +239,6 @@ const getCaseMetrics = async (req, res) => {
         casesResolvedToday: latest?.casesResolvedToday || 0,
         pendingApprovals: latest?.pendingApprovals || 0,
         metricsDate: latest?.date || null,
-        byCategory: {},
-        byClient: [],
-        byEmployee: [],
-        profitability: {
-          totalEstimatedBudget: 0,
-          totalActualCost: 0,
-          variance: 0,
-        },
       };
     }
 
