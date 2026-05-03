@@ -538,6 +538,18 @@ const caseSchema = new mongoose.Schema({
     default: null,
   },
 
+
+  routeOriginatorTeamId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    default: null,
+  },
+  routeOriginatorWorkbasketId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    default: null,
+  },
+
   routeOriginatorUserXID: {
     type: String,
     trim: true,

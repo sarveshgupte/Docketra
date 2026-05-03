@@ -220,7 +220,8 @@ export const CaseDetailPage = () => {
       try {
         const response = await api.get('/teams');
         const teams = Array.isArray(response?.data?.data) ? response.data.data : [];
-        setRoutingTeams(teams);
+        const filtered = teams.filter((team) => team?.isActive !== false && String(team?.type || '').toUpperCase() === 'PRIMARY' && String(team?.isQC || '').toLowerCase() !== 'true');
+        setRoutingTeams(filtered);
       } catch (_error) {
       }
     };
@@ -1906,7 +1907,7 @@ export const CaseDetailPage = () => {
           setRouteTeamId={setRouteTeamId}
           routingNote={routingNote}
           setRoutingNote={setRoutingNote}
-          routingTeams={routingTeams.filter((team) => String(team._id) !== String(caseInfo?.ownerTeamId || ''))}
+          routingTeams={routingTeams.filter((team) => String(team._id) !== String(caseInfo?.workbasketId || caseInfo?.ownerTeamId || ''))}
           handleRouteToTeam={handleRouteToTeam}
           routeSubmitting={routeSubmitting}
           showFileModal={showFileModal}

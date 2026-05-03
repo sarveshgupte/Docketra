@@ -76,7 +76,7 @@ export const CaseWorkflowModals = ({
           Pending a docket temporarily pauses it until a specified date.
           The docket will remain in your worklist but move below active dockets until the selected date.
         </p>
-        <Textarea label={routedTeamCannotResolve ? "Submit comment (Required)" : "Comment (Required)"} value={pendComment} onChange={(e) => setPendComment(e.target.value)} placeholder="Explain why this case is being pended…" rows={4} required disabled={pendingCase} />
+        <Textarea label="Comment (Required)" value={pendComment} onChange={(e) => setPendComment(e.target.value)} placeholder="Explain why this case is being pended…" rows={4} required disabled={pendingCase} />
         <div className="mt-3">
           <label htmlFor="pending-until" className="mb-1 block text-sm font-medium text-gray-700">Reopen Date (Required)</label>
           <input id="pending-until" type="date" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={pendingUntil} onChange={(e) => setPendingUntil(e.target.value)} disabled={pendingCase} min={pendingMinDate} />
@@ -135,14 +135,14 @@ export const CaseWorkflowModals = ({
 
     <Modal isOpen={showFileModal} onClose={() => { setShowFileModal(false); setFileComment(''); }} title="File Docket" actions={<><Button variant="outline" onClick={() => { setShowFileModal(false); setFileComment(''); }} disabled={filingCase}>Cancel</Button><Button variant="primary" onClick={handleFileCase} disabled={!String(fileComment || '').trim() || filingCase}>{filingCase ? 'Filing…' : 'File Docket'}</Button></>}>
       <div style={{ padding: 'var(--spacing-md)' }}>
-        <Textarea label={routedTeamCannotResolve ? "Submit comment (Required)" : "Comment (Required)"} value={fileComment} onChange={(e) => setFileComment(e.target.value)} placeholder="Describe the filing context and evidence trail…" rows={4} required disabled={filingCase} />
+        <Textarea label="Comment (Required)" value={fileComment} onChange={(e) => setFileComment(e.target.value)} placeholder="Describe the filing context and evidence trail…" rows={4} required disabled={filingCase} />
       </div>
     </Modal>
 
     <Modal isOpen={showUnpendModal} onClose={() => { setShowUnpendModal(false); setUnpendComment(''); }} title="Unpend Docket" actions={<><Button variant="outline" onClick={() => { setShowUnpendModal(false); setUnpendComment(''); }} disabled={unpendingCase}>Cancel</Button><Button variant="primary" onClick={handleUnpendCase} disabled={!unpendComment.trim() || unpendingCase}>{unpendingCase ? 'Resuming…' : 'Resume Docket'}</Button></>}>
       <div style={{ padding: 'var(--spacing-md)' }}>
         <p className="mb-2 text-sm text-gray-600">Unpending a docket will move it back to OPEN lifecycle and return it to your worklist.</p>
-        <Textarea label={routedTeamCannotResolve ? "Submit comment (Required)" : "Comment (Required)"} value={unpendComment} onChange={(e) => setUnpendComment(e.target.value)} placeholder="Explain why this docket is being unpended…" rows={4} required disabled={unpendingCase} />
+        <Textarea label="Comment (Required)" value={unpendComment} onChange={(e) => setUnpendComment(e.target.value)} placeholder="Explain why this docket is being unpended…" rows={4} required disabled={unpendingCase} />
       </div>
     </Modal>
   </>

@@ -22,7 +22,7 @@ const findDocket = async ({ docketId, firmId }) => {
   return docket;
 };
 
-const isAdmin = (role) => ['ADMIN', 'SUPER_ADMIN', 'SUPERADMIN'].includes(String(role || '').toUpperCase());
+const isAdmin = (role) => ['ADMIN', 'PRIMARY_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN'].includes(String(role || '').toUpperCase());
 
 async function routeDocket({ docketId, actor, firmId, toTeamId, note }) {
   const docket = await findDocket({ docketId, firmId });
@@ -41,7 +41,11 @@ async function routeDocket({ docketId, actor, firmId, toTeamId, note }) {
   if (!targetTeam) throw makeError('Target workbasket must be an active PRIMARY team in this firm', 404);
   if (String(docket.ownerTeamId || '') === String(toTeamId)) throw makeError('Cannot route to owner team', 400);
 
+  const previousOwnerTeamId = docket.ownerTeamId || null;
+  const previousWorkbasketId = docket.workbasketId || null;
+
   docket.routedToTeamId = targetTeam._id;
+  docket.ownerTeamId = targetTeam._id;
   docket.workbasketId = targetTeam._id;
   docket.routedByUserId = String(actor.xID || '').toUpperCase();
   docket.routedAt = new Date();
@@ -52,11 +56,13 @@ async function routeDocket({ docketId, actor, firmId, toTeamId, note }) {
   docket.assignedToXID = null;
   docket.assignedTo = null;
   docket.routeOriginatorUserXID = String(actor.xID || '').toUpperCase();
+  docket.routeOriginatorTeamId = previousOwnerTeamId;
+  docket.routeOriginatorWorkbasketId = previousWorkbasketId;
   await docket.save();
 
   await DocketRoute.create({
     docketId,
-    fromTeamId: docket.ownerTeamId,
+    fromTeamId: previousOwnerTeamId,
     toTeamId: targetTeam._id,
     routedBy: String(actor.xID || '').toUpperCase(),
     routedAt: docket.routedAt,
@@ -106,6 +112,8 @@ async function returnRoutedDocket({ docketId, actor, firmId, note }) {
   }
 
   docket.routedToTeamId = null;
+  docket.ownerTeamId = docket.routeOriginatorTeamId || docket.ownerTeamId;
+  docket.workbasketId = docket.routeOriginatorWorkbasketId || docket.workbasketId;
   docket.assignedToXID = originatorXID;
   docket.queueType = 'PERSONAL';
   docket.state = 'IN_PROGRESS';
@@ -118,7 +126,7 @@ async function returnRoutedDocket({ docketId, actor, firmId, note }) {
 
 async function transitionRoutedTeamStatus({ docketId, actor, firmId, status }) {
   const docket = await findDocket({ docketId, firmId });
-  const allowed = new Set([CaseStatus.IN_PROGRESS, CaseStatus.PENDING, CaseStatus.FILED]);
+  const allowed = new Set([CaseStatus.IN_PROGRESS, CaseStatus.PENDING]);
   if (!allowed.has(status)) throw makeError('Invalid status for routed team', 400);
   if (!docket.routedToTeamId || String(docket.routedToTeamId) !== String(actor.teamId || '')) {
     throw makeError('Only routed team can update routed status', 403);

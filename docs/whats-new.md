@@ -1,3 +1,5 @@
+# What's New
+
 ## May 2026: Routed docket Route + Submit flow
 
 - Implemented routed docket Route + Submit workflow with mandatory routing/submit comments and routed-team return-to-originator behavior.
@@ -5,7 +7,6 @@
 - Routed receiving users now see **Submit** (not Resolve) and cannot file/final-resolve routed dockets.
 - Submit returns docket to the original routing user worklist and does not mark the docket RESOLVED/FILED.
 
-# What's New
 
 ## May 2026: Workbasket pull and assignment flows
 
