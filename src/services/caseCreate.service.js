@@ -525,6 +525,7 @@ module.exports = (deps) => {
           queueType: resolvedAssignee ? 'PERSONAL' : 'GLOBAL',
           state: resolvedAssignee ? 'IN_PROGRESS' : 'IN_WB',
           qcOutcome: null,
+          workbasketId: routedWorkbasketId || null,
           ownerTeamId: routedWorkbasketId || null,
           routedToTeamId: null,
           routedByUserId: null,

@@ -48,7 +48,8 @@ async function run() {
   await categoryController.updateSubcategory({ params: { id: 'c1', subcategoryId: 'sub-1' }, body: { name: 'GST', workbasketId: '507f1f77bcf86cd799439012' }, user: { firmId: 'firm-1', role: 'PRIMARY_ADMIN', xID: 'X1' } }, r);
   assert.strictEqual(r.statusCode, 200);
   assert.strictEqual(updateQuery.assignedToXID, null);
-  assert.strictEqual(updateQuery.state, 'IN_WB');
+  assert.strictEqual(updateQuery.$and[0].state, 'IN_WB');
+  assert.deepStrictEqual(updateQuery.$and[1].state.$nin, ['RESOLVED', 'FILED']);
   assert.deepStrictEqual(updateQuery.status.$nin, ['RESOLVED', 'FILED']);
 
   Category.findOne = origCategoryFindOne;

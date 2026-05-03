@@ -477,10 +477,14 @@ const updateSubcategory = async (req, res) => {
           subcategoryId: subcategory.id,
           ownerTeamId: previousWorkbasketId,
           assignedToXID: null,
-          state: 'IN_WB',
+          $and: [{ state: 'IN_WB' }, { state: { $nin: ['RESOLVED', 'FILED'] } }],
           status: { $nin: ['RESOLVED', 'FILED'] },
         }, {
-          $set: { ownerTeamId: workbasket._id },
+          $set: {
+            ownerTeamId: workbasket._id,
+            workbasketId: workbasket._id,
+            routedToTeamId: null,
+          },
         });
 
         log.info('[CATEGORY] Subcategory mapping changed; moved WB dockets', {

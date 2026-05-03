@@ -18,7 +18,12 @@ export const AdminCategoryModals = ({
   setSubcategoryForm,
   onAddSubcategory,
   workbaskets,
-}) => (
+}) => {
+  const selectableWorkbaskets = (Array.isArray(workbaskets) ? workbaskets : []).filter(
+    (workbasket) => workbasket && workbasket.isActive !== false && workbasket.type === 'PRIMARY'
+  );
+
+  return (
   <>
     <Modal
       isOpen={showCategoryModal}
@@ -78,7 +83,7 @@ export const AdminCategoryModals = ({
           onChange={(e) => setSubcategoryForm({ ...subcategoryForm, workbasketId: e.target.value })}
           options={[
             { value: '', label: 'Select workbasket', disabled: true },
-            ...workbaskets.map((workbasket) => ({ value: String(workbasket._id), label: workbasket.name })),
+            ...selectableWorkbaskets.map((workbasket) => ({ value: String(workbasket._id), label: workbasket.name })),
           ]}
           required
         />
@@ -100,4 +105,5 @@ export const AdminCategoryModals = ({
       </form>
     </Modal>
   </>
-);
+  );
+};

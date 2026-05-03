@@ -1,10 +1,10 @@
-
-## Category/Subcategory Workbasket routing guardrails
-- Enforced active PRIMARY workbasket validation for subcategory mappings (rejects cross-firm/inactive/non-primary/QC mappings).
-- New docket creation now routes unassigned dockets to the mapped subcategory workbasket.
-- When a subcategory mapping changes, only unassigned non-terminal WB dockets are moved to the new mapped WB.
-
 # What's New
+
+## May 2026: Category/Subcategory Workbasket routing guardrails
+
+- Enforced active PRIMARY workbasket validation for subcategory mappings (rejects cross-firm/inactive/non-primary/QC mappings).
+- New docket creation routes unassigned dockets to the mapped subcategory workbasket.
+- When a subcategory mapping changes, only unassigned non-terminal WB dockets are moved to the new mapped WB.
 
 ## May 2026: User-to-Workbasket membership and visibility guardrails
 
