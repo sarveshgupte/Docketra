@@ -28,7 +28,10 @@ router.get('/status', userReadLimiter, getStorageStatus);
 router.get('/health', userReadLimiter, getStorageHealth);
 
 router.get('/google/connect', oauthLimiter, requirePrimaryAdmin, googleConnect);
-router.get('/google/callback', oauthLimiter, requirePrimaryAdmin, googleCallback);
+// requirePrimaryAdmin is intentionally omitted here: the callback arrives via Google's browser
+// redirect, so JSON 403 would be shown as raw text. Role enforcement is inside googleCallback
+// (redirect to error page on failure) and CSRF protection is via the state cookie/param pair.
+router.get('/google/callback', oauthLimiter, googleCallback);
 router.post('/google/confirm-drive', oauthLimiter, requirePrimaryAdmin, googleConfirmDrive);
 
 router.get('/configuration', userReadLimiter, getStorageConfiguration);

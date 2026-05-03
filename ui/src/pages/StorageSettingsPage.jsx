@@ -1,4 +1,5 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -24,8 +25,22 @@ import { getRecoveryPayload } from '../utils/errorRecovery';
 import { SupportContext } from '../components/feedback/SupportContext';
 import { StatusMessageStack } from './platform/PlatformShared';
 
+const STORAGE_ERROR_LABELS = {
+  oauth_denied: 'Google Drive connection was cancelled.',
+  missing_oauth_params: 'OAuth response was incomplete. Please try again.',
+  invalid_state: 'OAuth security check failed. Please try connecting again.',
+  tenant_mismatch: 'Workspace mismatch detected during OAuth. Please try again.',
+  insufficient_role: 'Only a Primary Admin can connect Google Drive.',
+  no_refresh_token: 'Google did not grant offline access. Please try again and accept all permissions.',
+  storage_configuration_invalid: 'Storage configuration is invalid. Please contact support.',
+  oauth_failed: 'Google Drive connection failed. Please try again or contact support.',
+  redirect_failed: 'Google Drive was connected but the redirect failed. Reload to check status.',
+};
+
 export function StorageSettingsPage() {
   const toast = useContext(ToastContext);
+  const location = useLocation();
+  const oauthHandled = useRef(false);
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [testing, setTesting] = useState(false);
@@ -83,6 +98,34 @@ export function StorageSettingsPage() {
       setLoading(false);
     }
   };
+
+  // Handle OAuth callback query params once on mount
+  useEffect(() => {
+    if (oauthHandled.current) return;
+    oauthHandled.current = true;
+
+    const params = new URLSearchParams(location.search);
+    const connected = params.get('connected');
+    const storageParam = params.get('storage');
+    const storageError = params.get('storageError');
+
+    if (connected === '1') {
+      const providerLabel = storageParam === 'google-drive' ? 'Google Drive' : 'Storage provider';
+      toast?.showSuccess?.(`${providerLabel} connected successfully.`);
+      setStatusMessage({ type: 'success', text: `${providerLabel} connected successfully.` });
+    } else if (storageError) {
+      const errorMessage = STORAGE_ERROR_LABELS[storageError] || 'Storage connection failed. Please try again.';
+      toast?.showError?.(errorMessage);
+      setStatusMessage({ type: 'error', text: errorMessage });
+    }
+
+    // Clean up query params without triggering a navigation
+    if ((connected || storageError) && window.history?.replaceState) {
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, '', cleanUrl);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     loadConfiguration();

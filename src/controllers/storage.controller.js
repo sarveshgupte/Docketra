@@ -158,9 +158,9 @@ function getStorageOAuthClient() {
   return googleDriveService.getOAuthClient();
 }
 
-function buildStateToken(tenantId) {
+function buildStateToken(tenantId, firmSlug) {
   const nonce = crypto.randomBytes(16).toString('hex');
-  const payload = Buffer.from(JSON.stringify({ tenantId, provider: 'google_drive', nonce })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({ tenantId, firmSlug: firmSlug || null, provider: 'google_drive', nonce })).toString('base64url');
   const sig = crypto.createHmac('sha256', process.env.JWT_SECRET).update(payload).digest('hex');
   return `${payload}.${sig}`;
 }
@@ -255,7 +255,7 @@ const googleConnect = (req, res) => {
   if (!ensurePrimaryAdmin(req, res)) return;
   try {
     const oauthClient = getStorageOAuthClient();
-    const stateToken = buildStateToken(req.firmId);
+    const stateToken = buildStateToken(req.firmId, req.firmSlug || null);
 
     const authUrl = oauthClient.generateAuthUrl({
       access_type: 'offline',
@@ -271,39 +271,87 @@ const googleConnect = (req, res) => {
   }
 };
 
+const FIRM_SLUG_SAFE_RE = /^[a-z0-9-]+$/;
+
+function buildOAuthErrorRedirect(firmSlug, reason) {
+  const frontendUrl = String(process.env.FRONTEND_URL || '').replace(/\/+$/, '');
+  const safeReason = encodeURIComponent(String(reason || 'oauth_failed').slice(0, 64));
+  const safeFirmSlug = (firmSlug && FIRM_SLUG_SAFE_RE.test(String(firmSlug))) ? String(firmSlug) : null;
+  if (safeFirmSlug) {
+    return `${frontendUrl}/app/firm/${safeFirmSlug}/storage-settings?storageError=${safeReason}`;
+  }
+  return `${frontendUrl}/?storageError=${safeReason}`;
+}
+
 const googleCallback = async (req, res) => {
-  if (!ensurePrimaryAdmin(req, res)) return;
+  const cookieValue = req.cookies?.[STATE_COOKIE_NAME] || getCookieValue(req.headers.cookie, STATE_COOKIE_NAME);
+  const { code, state, error: oauthError } = req.query;
+
+  // Helper: clear state cookie and redirect to error page
+  const clearAndRedirectError = (reason, stateData) => {
+    res.setHeader('Set-Cookie', buildStateCookie('', 0));
+    return res.redirect(buildOAuthErrorRedirect(stateData?.firmSlug || null, reason));
+  };
+
+  // Google returned an error param (e.g. user denied consent)
+  if (oauthError) {
+    const stateData = (cookieValue && state) ? verifyStateToken(cookieValue, state) : null;
+    return clearAndRedirectError('oauth_denied', stateData);
+  }
+
+  // Missing required params – can't build a firm-specific redirect without state
+  if (!code || !state) {
+    return clearAndRedirectError('missing_oauth_params', null);
+  }
+
+  // Validate state token (CSRF / replay protection)
+  const stateData = verifyStateToken(cookieValue, state);
+  if (!stateData || stateData.provider !== 'google_drive') {
+    return clearAndRedirectError('invalid_state', null);
+  }
+
+  // Cross-tenant guard: state tenantId must match the authenticated firm
+  if (req.firmId && stateData.tenantId !== req.firmId) {
+    log.warn('[STORAGE]', {
+      event: 'oauth_tenant_mismatch',
+      stateTenantId: stateData.tenantId,
+      reqFirmId: req.firmId,
+    });
+    return clearAndRedirectError('tenant_mismatch', stateData);
+  }
+
+  // Role guard: only Primary Admin may complete the connection
+  if (!isPrimaryAdminRole(req.user?.role)) {
+    return clearAndRedirectError('insufficient_role', stateData);
+  }
+
+  const firmSlug = stateData.firmSlug || null;
+
   try {
-    const { code, state } = req.query;
-    if (!code) return res.status(400).json({ error: 'missing_oauth_code' });
-    if (!state) return res.status(400).json({ error: 'missing_state' });
-
-    const cookieValue = req.cookies?.[STATE_COOKIE_NAME] || getCookieValue(req.headers.cookie, STATE_COOKIE_NAME);
-    const stateData = verifyStateToken(cookieValue, state);
-    if (!stateData || stateData.tenantId !== req.firmId || stateData.provider !== 'google_drive') {
-      return res.status(400).json({ error: 'invalid_state' });
-    }
-
     const oauthClient = getStorageOAuthClient();
     const result = await oauthClient.getToken(code);
     const tokens = result.tokens || {};
-    if (!tokens.refresh_token) return res.status(400).json({ error: 'no_refresh_token' });
+    if (!tokens.refresh_token) {
+      res.setHeader('Set-Cookie', buildStateCookie('', 0));
+      return res.redirect(buildOAuthErrorRedirect(firmSlug, 'no_refresh_token'));
+    }
 
     const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
-    const connection = await googleDriveService.saveUserDriveConnection({ firmId: ownershipFirmId, tokens });
+    await googleDriveService.saveUserDriveConnection({ firmId: ownershipFirmId, tokens });
 
     res.setHeader('Set-Cookie', buildStateCookie('', 0));
-    const successUrl = `${process.env.FRONTEND_URL || ''}/storage/success?provider=google-drive&connected=1&rootFolderId=${encodeURIComponent(connection.rootFolderId || '')}`;
-    return res.redirect(successUrl);
-  } catch (error) {
-    if (error instanceof StorageValidationError) {
-      return res.status(400).json({
-        error: 'storage_configuration_invalid',
-        ...(isProduction() ? {} : { message: error.message }),
-      });
+    const frontendUrl = String(process.env.FRONTEND_URL || '').replace(/\/+$/, '');
+    if (!firmSlug || !FIRM_SLUG_SAFE_RE.test(firmSlug)) {
+      return res.redirect(`${frontendUrl}/?storageError=redirect_failed`);
     }
+    return res.redirect(`${frontendUrl}/app/firm/${firmSlug}/storage-settings?storage=google-drive&connected=1`);
+  } catch (error) {
     log.error('[STORAGE]', { event: 'oauth_failed', tenantId: req.firmId, message: error.message });
-    return res.status(500).json({ error: 'oauth_failed', ...(isProduction() ? {} : { message: error.message }) });
+    res.setHeader('Set-Cookie', buildStateCookie('', 0));
+    if (error instanceof StorageValidationError) {
+      return res.redirect(buildOAuthErrorRedirect(firmSlug, 'storage_configuration_invalid'));
+    }
+    return res.redirect(buildOAuthErrorRedirect(firmSlug, 'oauth_failed'));
   }
 };
 
