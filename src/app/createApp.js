@@ -357,6 +357,8 @@ const createApp = () => {
 
   app.use('/api/clients', ...tenantScopedApiAccess, writeGuardChain, clientRoutes);
   app.use('/api/reports', ...tenantScopedApiAccess, writeGuardChain, reportsRoutes);
+  app.use('/api/leads', ...tenantScopedApiAccess, writeGuardChain, leadRoutes);
+  app.use('/api/forms', ...tenantScopedApiAccess, writeGuardChain, formRoutes);
   app.use('/api/:firmSlug', firmSlugGuard, firmRoutes);
 
   mountTenantRoutes(app, {
