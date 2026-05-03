@@ -77,8 +77,6 @@ Current smoke/regression checks:
 - `ui/tests/caseDetailArchitectureSmoke.test.mjs`
 - `ui/tests/docketSurfaceHardening.test.mjs`
 
-
-
 ## Route/Submit action visibility contract
 
 - Route is available only in docket detail and requires target PRIMARY active workbasket + compulsory comment.
