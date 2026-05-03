@@ -120,6 +120,9 @@ async function returnRoutedDocket({ docketId, actor, firmId, note }) {
   docket.status = CaseStatus.IN_PROGRESS;
   docket.routingNote = String(note || '').trim();
   docket.routeReturnedAt = new Date();
+  docket.routeOriginatorUserXID = null;
+  docket.routeOriginatorTeamId = null;
+  docket.routeOriginatorWorkbasketId = null;
   await docket.save();
   return docket;
 }
