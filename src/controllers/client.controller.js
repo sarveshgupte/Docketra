@@ -27,6 +27,7 @@ const { clientProfileStorageService } = require('../services/clientProfileStorag
 const { persistClientProfileOrRollback } = require('../services/clientProfileWriteGuard.service');
 const directUploadService = require('../services/directUpload.service');
 const { buildWorkflowMeta, logWorkflowEvent } = require('../utils/workflowDiagnostics');
+const { resolveFirmMemoryScope } = require('../services/firmMemoryScope.service');
 
 const getClientAccessContext = (req, res, message) => {
   const firmId = req.user?.firmId;
@@ -207,9 +208,25 @@ const getClients = async (req, res) => {
     const shouldLoadForCreateCase = parseBooleanQuery(forCreateCase);
     const normalizedSearch = normalizeString(search);
 
+    const memoryScope = resolveFirmMemoryScope(req);
+    if (memoryScope.errorStatus) {
+      return res.status(memoryScope.errorStatus).json({ success: false, message: memoryScope.errorMessage });
+    }
+
+    if (!memoryScope.hasFirmWideAccess && memoryScope.scopedClientIds.length === 0) {
+      return res.json({
+        ...buildClientListResponse([]),
+        pagination: { page, limit, total: 0, pages: 0 },
+      });
+    }
+
     const filter = shouldLoadForCreateCase || shouldFilterActiveOnly
       ? { isActive: true }
       : {};
+
+    if (!memoryScope.hasFirmWideAccess) {
+      filter._id = { $in: memoryScope.scopedClientIds };
+    }
     if (normalizedSearch) {
       const escapedSearch = normalizedSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
