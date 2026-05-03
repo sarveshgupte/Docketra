@@ -165,6 +165,12 @@ const createLead = async (req, res) => {
 const listLeads = async (req, res) => {
   try {
     const { limit, skip } = parsePagination(req.query);
+    const memoryScope = resolveFirmMemoryScope(req);
+    if (memoryScope.errorStatus) return res.status(memoryScope.errorStatus).json({ success: false, message: memoryScope.errorMessage });
+    if (!memoryScope.hasFirmWideAccess && memoryScope.scopedClientIds.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
     const query = { firmId: req.user.firmId };
     const stage = normalizeStringOrNull(req.query?.stage || req.query?.status);
     const ownerXid = normalizeStringOrNull(req.query?.ownerXid);
@@ -177,10 +183,18 @@ const listLeads = async (req, res) => {
     }
 
     if (!memoryScope.hasFirmWideAccess) {
-      query.$or = [
-        { linkedClientId: { $in: memoryScope.scopedClientIds } },
-        { convertedClientId: { $in: memoryScope.scopedClientIds } },
-      ];
+      const scopeFilter = {
+        $or: [
+          { linkedClientId: { $in: memoryScope.scopedClientIds } },
+          { convertedClientId: { $in: memoryScope.scopedClientIds } },
+        ],
+      };
+      if (query.$or) {
+        query.$and = [{ $or: query.$or }, scopeFilter];
+        delete query.$or;
+      } else {
+        query.$or = scopeFilter.$or;
+      }
     }
 
     const leads = await Lead.find(query)
