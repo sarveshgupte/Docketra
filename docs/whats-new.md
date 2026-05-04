@@ -616,3 +616,11 @@
 - Hardened session-expiry redirect handling with explicit session-expired reason code and superadmin-safe redirect behavior.
 - Updated Storage Settings and Docket attachment upload error flows with role-aware, retry-safe recovery guidance.
 - Updated diagnostics panel display to focus on tenant-safe troubleshooting fields only.
+
+## May 2026: Work section queue navigation, QC Workbasket visibility, and All Dockets record view
+
+- Clarified Work section navigation labels to distinguish **My Worklist**, **Workbaskets**, **QC Workbaskets**, and **All Dockets**.
+- Kept QC visibility permission-scoped for admin/primary admin, parent workbasket managers, and explicit QC members only.
+- Reinforced All Dockets as a **record/list/search** surface rather than a pull queue, while queue-specific pull actions remain in Workbaskets.
+- Standardized successful empty queue states to show user-friendly **No work available** / **No dockets found** messaging.
+- This change does **not** include Docket Detail UX polish; that remains in a follow-up PR.

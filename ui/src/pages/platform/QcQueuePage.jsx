@@ -135,7 +135,7 @@ export const PlatformQcQueuePage = () => {
     >
       <StatusMessageStack
         messages={[
-          { tone: 'error', message: error || (isError ? 'Unable to load the QC workbench queue.' : '') },
+          { tone: 'error', message: error || (isError ? 'Unable to load QC workbaskets right now.' : '') },
           { tone: 'success', message: success },
           { tone: 'info', message: isFetching && !isLoading ? 'Refreshing QC queue in the background…' : '' },
         ]}
@@ -210,11 +210,11 @@ export const PlatformQcQueuePage = () => {
             </tr>
           ))}
           loading={isLoading}
-          error={isError ? 'Unable to load the QC workbench queue.' : ''}
+          error={isError ? 'Unable to load QC workbaskets right now.' : ''}
           onRetry={() => void refetch()}
           hasActiveFilters={Boolean(search.trim()) || assigneeFilter !== 'ALL'}
-          emptyLabel="No dockets are waiting for QC right now. Items will appear after users send completed execution work to QC."
-          emptyLabelFiltered="No QC Workbench dockets match your current search or filters."
+          emptyLabel="No work available."
+          emptyLabelFiltered="No dockets found."
         />
       </PageSection>
       <ActionConfirmModal

@@ -110,7 +110,7 @@ export const PlatformWorkbasketsPage = () => {
     >
       <StatusMessageStack
         messages={[
-          { tone: 'error', message: isError ? 'Unable to load the workbench queue.' : '' },
+          { tone: 'error', message: isError ? 'Unable to load workbaskets right now.' : '' },
           { tone: 'success', message: success },
           { tone: 'info', message: isFetching && !isLoading ? 'Refreshing the workbench queue in the background…' : '' },
         ]}
@@ -175,11 +175,11 @@ export const PlatformWorkbasketsPage = () => {
             </tr>
           ))}
           loading={isLoading}
-          error={isError ? 'Unable to load the workbench queue.' : ''}
+          error={isError ? 'Unable to load workbaskets right now.' : ''}
           onRetry={() => void refetch()}
           hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL'}
-          emptyLabel="No dockets are in Workbench yet. Create your first docket or validate routing setup to populate this queue."
-          emptyLabelFiltered="No Workbench dockets match your current search or filters."
+          emptyLabel="No work available."
+          emptyLabelFiltered="No dockets found."
         />
       </PageSection>
     </PlatformShell>

@@ -99,7 +99,6 @@ export const useCasesTableColumns = ({
     key: 'rowActions', header: '', align: 'right', headerClassName: 'w-[1px] whitespace-nowrap', cellClassName: 'w-[1px] whitespace-nowrap',
     render: (row) => {
       const isLocked = Boolean(row.lockStatus?.isLocked);
-      const canAssign = !isAdmin && !isLocked;
       return (
         <details className="cases-page__row-menu" onClick={(event) => event.stopPropagation()}>
           <summary aria-label={`Row actions for ${formatCaseName(row.caseName)}`}>⋯</summary>
@@ -122,14 +121,7 @@ export const useCasesTableColumns = ({
               <span aria-hidden="true">View Docket</span>
               <span className="sr-only">View Docket {formatCaseName(row.caseName)}</span>
             </button>
-            {canAssign && (
-              <button type="button" disabled={assigningCaseId === row.caseId} onClick={(event) => handleAssignToMe(row, event)}>
-                <span aria-hidden="true">{assigningCaseId === row.caseId ? 'Assigning…' : UX_COPY.actions.ASSIGN_TO_ME}</span>
-                <span className="sr-only">
-                  {assigningCaseId === row.caseId ? `Assigning ${formatCaseName(row.caseName)}…` : `Assign ${formatCaseName(row.caseName)} to me`}
-                </span>
-              </button>
-            )}
+            
             <button type="button" onClick={(event) => { event.stopPropagation(); setTimelineCaseId(row.caseId); }}>
               <span aria-hidden="true">View Timeline</span>
               <span className="sr-only">View Timeline for {formatCaseName(row.caseName)}</span>

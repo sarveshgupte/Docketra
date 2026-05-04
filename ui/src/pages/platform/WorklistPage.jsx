@@ -115,7 +115,7 @@ export const PlatformWorklistPage = () => {
     >
       <StatusMessageStack
         messages={[
-          { tone: 'error', message: error || (isError ? 'Unable to load your worklist right now.' : '') },
+          { tone: 'error', message: error || (isError ? 'Unable to load My Worklist right now.' : '') },
           { tone: 'success', message: success },
           { tone: 'info', message: isFetching && !isLoading ? 'Refreshing worklist without interrupting your current view…' : '' },
         ]}
@@ -182,7 +182,7 @@ export const PlatformWorklistPage = () => {
             </tr>
           ))}
           loading={isLoading}
-          error={isError ? 'Unable to load your worklist right now.' : ''}
+          error={isError ? 'Unable to load My Worklist right now.' : ''}
           onRetry={() => void refetch()}
           hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL'}
           emptyLabel="No dockets are assigned to you yet. Pull from Workbench or request assignment from your manager/admin."
