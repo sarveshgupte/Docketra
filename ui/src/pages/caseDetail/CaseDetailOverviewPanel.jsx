@@ -39,6 +39,9 @@ export const CaseDetailOverviewPanel = ({
   onOpenRouteModal,
   forceQcReview,
   onForceQcReviewChange,
+  isQcContext = false,
+  isUnassignedWorkbasket = false,
+  isTerminal = false,
 }) => (
   <>
     <section className="case-card" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
@@ -155,6 +158,9 @@ export const CaseDetailOverviewPanel = ({
         <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Description</span>
         <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent}</span>
       </div>
+      {isTerminal ? (
+        <p className="mt-3 text-sm text-gray-600">This docket is in a terminal state. Record view only; active queue actions are hidden.</p>
+      ) : null}
       {shouldShowActions ? (
         <section className="case-detail__actions-panel mt-4 border-t pt-4" aria-label="Docket actions">
           <div className="case-detail__composer-actions case-detail__lifecycle-actions mt-3">
@@ -179,6 +185,12 @@ export const CaseDetailOverviewPanel = ({
               </Button>
             ) : null}
           </div>
+          {isUnassignedWorkbasket ? (
+            <p className="mt-3 text-sm text-gray-600">This docket is currently unassigned in a workbasket. Pull/Assign it from Workbasket flow before personal worklist actions.</p>
+          ) : null}
+          {isQcContext ? (
+            <p className="mt-3 text-sm text-gray-600">QC context active. Use QC workbasket actions where appropriate.</p>
+          ) : null}
           {canPerformLifecycleActions ? (
             <label className="mt-3 flex items-center gap-2 text-sm text-gray-700">
               <input
@@ -194,4 +206,3 @@ export const CaseDetailOverviewPanel = ({
     </section>
   </>
 );
-
