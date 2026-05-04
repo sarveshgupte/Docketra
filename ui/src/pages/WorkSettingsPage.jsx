@@ -138,8 +138,16 @@ export const WorkSettingsPage = () => {
       setWorkbasketName('');
       await loadWorkbaskets();
       setStatusMessage({ type: 'success', text: 'Workbasket created.' });
-    } catch {
-      setStatusMessage({ type: 'error', text: 'Could not create the workbasket. Retry and confirm the name is unique.' });
+    } catch (error) {
+      if (error?.status === 409) {
+        setStatusMessage({ type: 'error', text: 'A workbasket with this name already exists for this firm.' });
+      } else if (error?.status === 400) {
+        setStatusMessage({ type: 'error', text: 'Workbasket name is required and must be valid.' });
+      } else if (error?.status === 403) {
+        setStatusMessage({ type: 'error', text: 'You do not have permission to manage work settings for this firm.' });
+      } else {
+        setStatusMessage({ type: 'error', text: 'Could not create the workbasket due to a server or network error. Please retry.' });
+      }
     } finally {
       setWorkbasketSaving(false);
     }

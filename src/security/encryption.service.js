@@ -123,7 +123,6 @@ async function decrypt(value, tenantId, role, { session, logContext } = {}) {
   if (!tenantId) {
     const err = new Error('[EncryptionService] tenantId is required for decryption');
     log.error('DECRYPTION_TENANT_ID_MISSING', {
-      valueStart: String(value).substring(0, 50),
       error: err.message,
       logContext,
     });
@@ -137,8 +136,7 @@ async function decrypt(value, tenantId, role, { session, logContext } = {}) {
       log.warn('[EncryptionService] DECRYPTION_RETURNED_NULL', {
         tenantId,
         valueLength: String(value).length,
-        valueStart: String(value).substring(0, 50),
-        logContext,
+          logContext,
       });
       throw new Error('Decryption returned null - possible corrupt encrypted value');
     }
@@ -154,8 +152,6 @@ async function decrypt(value, tenantId, role, { session, logContext } = {}) {
       errorMessage: err.message,
       errorName: err.name,
       valueLength: String(value).length,
-      valueStart: String(value).substring(0, 50),
-      valueEnd: String(value).substring(Math.max(0, String(value).length - 20)),
       logContext,
       errorStack: err.stack,
     });
