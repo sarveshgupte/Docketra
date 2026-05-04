@@ -624,3 +624,5 @@
 - Reinforced All Dockets as a **record/list/search** surface rather than a pull queue, while queue-specific pull actions remain in Workbaskets.
 - Standardized successful empty queue states to show user-friendly **No work available** / **No dockets found** messaging.
 - This change does **not** include Docket Detail UX polish; that remains in a follow-up PR.
+
+- Docket Detail UI/UX hardening

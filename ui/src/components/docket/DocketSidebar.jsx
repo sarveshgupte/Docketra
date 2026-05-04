@@ -90,6 +90,9 @@ export const DocketSidebar = ({
         if (cfsLoading) {
           return <p className="docket-sidebar__empty">Loading client fact sheet…</p>;
         }
+        if (!cfsData) {
+          return <p className="docket-sidebar__empty">Client fact sheet is unavailable for this docket right now. You can continue working this docket while CFS data is missing.</p>;
+        }
 
         return (
           <div className="space-y-4 text-sm text-gray-700">
