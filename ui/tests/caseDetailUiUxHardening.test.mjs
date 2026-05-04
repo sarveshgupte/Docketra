@@ -15,8 +15,11 @@ const activity = read('src/pages/caseDetail/CaseDetailActivityPanel.jsx');
 const history = read('src/pages/caseDetail/CaseDetailHistoryPanel.jsx');
 
 assert.ok(page.includes('isTerminalDocketLifecycle'), 'Terminal lifecycle policy should be explicit.');
+assert.ok(page.includes("badges.push('Assigned Worklist')"), 'Location badges should differentiate assigned worklist vs my worklist.');
+assert.ok(page.includes('showFileAction={!routedTeamCannotResolve && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)}'), 'File action should be hidden in routed/QC/unassigned/terminal contexts.');
 assert.ok(overview.includes('unassigned in a workbasket'), 'Unassigned WB guidance should be visible.');
 assert.ok(overview.includes('QC context active'), 'QC-specific guidance should be visible.');
+assert.ok(overview.includes('Record view only; active queue actions are hidden.'), 'Terminal state record-view guidance should be visible outside action panel gating.');
 assert.ok(modals.includes("This sends the docket to another team's Workbasket."), 'Route modal copy should be explicit.');
 assert.ok(modals.includes('disabled={!routeTeamId || !String(routingNote || \'\').trim() || routeSubmitting}'), 'Route should require target WB + comment.');
 assert.ok(attachmentsPanel.includes('No attachments yet.'), 'Attachments empty state should be explicit.');
