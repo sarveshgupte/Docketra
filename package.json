@@ -49,7 +49,7 @@
     "test:integrity:integration": "node tests/adminIntegrity.test.js && node tests/migrationEncryptFields.test.js",
     "test:security:pure": "NODE_ENV='test' REDIS_URL='' ALLOW_REDIS_FALLBACK='true' sh -c \"node tests/coreSecurityHardeningPhase2.test.js && node tests/csrfOrigin.middleware.test.js && node tests/authSession.refreshAccessToken.test.js && node tests/authMiddleware.readOnly.test.js\"",
     "test:hardening:pure": "NODE_ENV='test' REDIS_URL='' ALLOW_REDIS_FALLBACK='true' sh -c \"node tests/requestId.middleware.test.js && node tests/productionHardening.test.js && node tests/backendRuntimeEntrypoints.smoke.test.js\"",
-    "test:pure": "REDIS_URL='' ALLOW_REDIS_FALLBACK='true' NODE_ENV='test' sh -c \"npm run test:integrity:pure && npm run test:security:pure && npm run test:hardening:pure && npm run test:tenant-identity-boundary && npm run test:admin-tenant-boundary && node tests/fileUtils.test.js && node tests/reports.controller.test.js\"",
+    "test:pure": "REDIS_URL='' ALLOW_REDIS_FALLBACK='true' NODE_ENV='test' sh -c \"npm run test:integrity:pure && npm run test:security:pure && npm run test:hardening:pure && npm run test:tenant-identity-boundary && npm run test:admin-tenant-boundary && node tests/fileUtils.test.js && node tests/reports.controller.test.js && node tests/superadminPilotReadiness.helpers.test.js\"",
     "test:integration": "npm run test:integrity:integration",
     "ci:backend:core:integration": "npm run test:integrity:integration",
     "ci:release-gate:pure": "npm run docs:check && npm run ci:backend:syntax && npm run ci:backend:routes && npm run ci:backend:core && npm run ci:backend:security && npm run ci:frontend:build && npm run ci:frontend:checks",
