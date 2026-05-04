@@ -378,7 +378,8 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
             isActive: true,
           }).session(session).select('_id');
           if (qcWorkbasket?._id) {
-            docket.routedToTeamId = qcWorkbasket._id;
+            docket.ownerTeamId = qcWorkbasket._id;
+            docket.workbasketId = qcWorkbasket._id;
           }
         }
       }
@@ -404,11 +405,6 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
       docket.state = targetCanonicalState;
       if (['IN_PROGRESS', 'IN_WB'].includes(targetCanonicalState)) {
         docket.qcOutcome = null;
-        docket.qcSubmittedByXID = docket.assignedToXID || actor.xID;
-        docket.qcSubmittedAt = new Date();
-        docket.qcDecisionByXID = null;
-        docket.qcDecisionAt = null;
-        docket.qcFailedCorrected = false;
       }
       transitionLifecycle(docket, targetLifecycle, {
         firmId,
@@ -432,6 +428,7 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
       }
 
       if (finalTarget === DocketStatus.QC_PENDING) {
+        const submitterXID = docket.assignedToXID || actor.xID;
         docket.qcStatus = 'REQUESTED';
         docket.qcBy = actor.xID;
         docket.qcAt = new Date();
@@ -441,11 +438,18 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
           status: 'REQUESTED',
           comment: comment || null,
           requestedAt: new Date(),
-          originalAssigneeXID: docket.assignedToXID || actor.xID,
+          originalAssigneeXID: submitterXID,
           attempts: Number(docket.qc?.attempts || 0) + 1,
         };
+        docket.ownerTeamId = docket.routedToTeamId || docket.ownerTeamId || docket.workbasketId || null;
+        docket.workbasketId = docket.ownerTeamId;
+        docket.routedToTeamId = null;
+        docket.assignedToXID = null;
+        docket.assignedTo = null;
+        docket.queueType = 'GLOBAL';
+        docket.state = 'IN_QC';
         docket.qcOutcome = null;
-        docket.qcSubmittedByXID = docket.assignedToXID || actor.xID;
+        docket.qcSubmittedByXID = submitterXID;
         docket.qcSubmittedAt = new Date();
         docket.qcDecisionByXID = null;
         docket.qcDecisionAt = null;
@@ -791,16 +795,16 @@ async function handleUserDeactivation({ firmId, userXID }) {
     firmId,
     assignedToXID: normalized,
     status: { $nin: [toPersistenceState(DocketStatus.RESOLVED), toPersistenceState(DocketStatus.FILED)] },
-  });
+  }).lean();
 
   let moved = 0;
   let skipped = 0;
   for (const docket of assigned) {
-    const category = await Category.findOne({ firmId, name: docket.category, isActive: true });
+    const category = await Category.findOne({ firmId, name: docket.category, isActive: true }).lean();
     const sub = (category?.subcategories || []).find((entry) => entry?.isActive && (entry.id === docket.subcategoryId || entry.name === docket.subcategory || entry.name === docket.caseSubCategory));
     const mappedId = sub?.workbasketId;
     if (!mappedId) { skipped += 1; continue; }
-    const mappedWb = await Team.findOne({ _id: mappedId, firmId, isActive: true, type: 'PRIMARY' });
+    const mappedWb = await Team.findOne({ _id: mappedId, firmId, isActive: true, type: 'PRIMARY' }).lean();
     if (!mappedWb) { skipped += 1; continue; }
 
     const result = await Case.updateOne(
@@ -823,7 +827,9 @@ async function handleUserDeactivation({ firmId, userXID }) {
     moved += Number(result.modifiedCount || 0);
   }
 
-  return { moved, skipped, scanned: assigned.length };
+  const scanned = assigned.length;
+  console.info('[DEACTIVATION_HANDOFF]', { firmId, userXID: normalized, moved, skipped, scanned });
+  return { moved, skipped, scanned, workbasketMoved: moved, pendingMoved: 0, qcPendingMoved: 0 };
 }
 
 module.exports = {
