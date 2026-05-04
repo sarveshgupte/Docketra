@@ -12,8 +12,17 @@ export function RequestDocumentsModal({
   const [requirePin, setRequirePin] = useState(false);
   const [sendEmail, setSendEmail] = useState(true);
   const [showPin, setShowPin] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const expiresInLabel = useMemo(() => (expiry === '7d' ? '7 days' : '24 hours'), [expiry]);
+
+  const handleCopyLink = () => {
+    if (generatedLink?.link) {
+      navigator.clipboard.writeText(generatedLink.link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -56,8 +65,16 @@ export function RequestDocumentsModal({
           <div style={styles.resultBox}>
             <p style={styles.resultTitle}>Upload link ready</p>
             <p style={styles.mono}>{generatedLink.link}</p>
-            <button type="button" style={styles.copyBtn} onClick={() => navigator.clipboard.writeText(generatedLink.link)}>
-              Copy link
+            <button
+              type="button"
+              style={{
+                ...styles.copyBtn,
+                ...(copied ? styles.copiedBtn : {}),
+              }}
+              onClick={handleCopyLink}
+              aria-live="polite"
+            >
+              {copied ? '✓ Copied!' : 'Copy link'}
             </button>
             {generatedLink.pin ? (
               <div style={{ marginTop: 8 }}>
@@ -117,5 +134,6 @@ const styles = {
   footer: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 },
   secondaryBtn: { padding: '8px 12px', border: '1px solid #d1d5db', background: '#fff', borderRadius: 8, cursor: 'pointer' },
   primaryBtn: { padding: '8px 12px', border: 'none', background: '#2563eb', color: '#fff', borderRadius: 8, cursor: 'pointer' },
-  copyBtn: { padding: '6px 10px', border: '1px solid #d1d5db', background: '#fff', borderRadius: 6, cursor: 'pointer' },
+  copyBtn: { padding: '6px 10px', border: '1px solid #d1d5db', background: '#fff', borderRadius: 6, cursor: 'pointer', transition: 'all 0.2s ease' },
+  copiedBtn: { background: '#ecfdf5', borderColor: '#10b981', color: '#047857' },
 };
