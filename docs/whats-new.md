@@ -625,4 +625,8 @@
 - Standardized successful empty queue states to show user-friendly **No work available** / **No dockets found** messaging.
 - This change does **not** include Docket Detail UX polish; that remains in a follow-up PR.
 
-- Docket Detail UI/UX hardening
+## May 2026: Docket Detail UI/UX hardening
+
+- Added clearer docket context badges for My Worklist, Assigned Worklist, Workbasket, QC Workbasket, Routed, Returned from route, and terminal record states.
+- Hardened action visibility so routed, QC, unassigned workbasket, and terminal dockets do not show confusing lifecycle actions.
+- Improved clone, CFS, and overview helper copy while keeping backend lifecycle rules unchanged.

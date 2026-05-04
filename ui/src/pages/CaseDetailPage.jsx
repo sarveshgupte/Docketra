@@ -400,19 +400,22 @@ export const CaseDetailPage = () => {
     return '-';
   })();
   const lifecycleStatus = normalizeLifecycleForUi(caseInfo?.lifecycle);
+  const normalizedUserXid = String(user?.xID || '').trim().toUpperCase();
+  const normalizedAssignedXid = String(caseInfo?.assignedToXID || '').trim().toUpperCase();
   const locationBadges = useMemo(() => {
     const badges = [];
     const queueHint = String(caseInfo?.queueContext || caseInfo?.queueName || caseInfo?.workbasketName || '').toUpperCase();
     if (routedTeamCannotResolve) badges.push('Routed');
     if (String(caseInfo?.returnedFromRoute || caseInfo?.routeReturnStatus || '').toLowerCase() === 'true') badges.push('Returned from route');
     if (queueHint.includes('QC')) badges.push('QC Workbasket');
-    else if (caseInfo?.assignedToXID) badges.push('My Worklist');
+    else if (caseInfo?.assignedToXID && normalizedAssignedXid === normalizedUserXid) badges.push('My Worklist');
+    else if (caseInfo?.assignedToXID) badges.push('Assigned Worklist');
     else if (caseInfo?.workbasketName || caseInfo?.ownerTeamId || caseInfo?.queueName) badges.push('Workbasket');
     if (isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)) {
       badges.push(String(caseInfo?.lifecycle || lifecycleStatus || 'Terminal'));
     }
     return badges;
-  }, [caseInfo, lifecycleStatus, routedTeamCannotResolve]);
+  }, [caseInfo, lifecycleStatus, routedTeamCannotResolve, normalizedAssignedXid, normalizedUserXid]);
   const isMoveLockedByAnotherUser = Boolean(caseInfo?.lockStatus?.isLocked)
     && String(caseInfo?.lockStatus?.activeUserXID || '').trim().toUpperCase() !== String(user?.xID || '').trim().toUpperCase();
   const lockOwnerLabel = [caseInfo?.lockStatus?.activeUserDisplayName, caseInfo?.lockStatus?.activeUserXID]
@@ -1705,7 +1708,7 @@ export const CaseDetailPage = () => {
                 actionInFlight={actionInFlight}
                 isViewOnlyMode={isViewOnlyMode}
                 onOpenFileModal={() => { setFileComment(''); setShowFileModal(true); }}
-                showFileAction={!routedTeamCannotResolve}
+                showFileAction={!routedTeamCannotResolve && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)}
                 canRouteDocket={canRouteDocket}
                 onOpenRouteModal={() => setShowRouteModal(true)}
                 forceQcReview={forceQcReview}
