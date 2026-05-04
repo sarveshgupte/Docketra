@@ -7,6 +7,7 @@ const Case = require('../models/Case.model');
 const Team = require('../models/Team.model');
 const aiService = require('../services/ai/ai.service');
 const { resolveCaseIdentifier } = require('../utils/caseIdentifier');
+const { escapeRegExp } = require('../utils/regexp.utils');
 const log = require('../utils/log');
 const { buildClientStatusQuery } = require('../utils/clientStatus');
 
@@ -290,7 +291,7 @@ async function createDocketFromAttachment(req, res) {
   const workbasketMatch = suggestedTeam
     ? await Team.findOne({
       firmId: req.user?.firmId,
-      name: new RegExp(`^${suggestedTeam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+      name: new RegExp(`^${escapeRegExp(suggestedTeam)}$`, 'i'),
       isActive: true,
     }).select('_id name').lean()
     : null;
@@ -370,7 +371,7 @@ async function ensureAiRoutingSuggestion(docket, req) {
   const matchedWorkbasket = suggestedTeam
     ? await Team.findOne({
       firmId: req.user?.firmId,
-      name: new RegExp(`^${suggestedTeam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+      name: new RegExp(`^${escapeRegExp(suggestedTeam)}$`, 'i'),
       isActive: true,
     }).select('_id name').lean()
     : null;

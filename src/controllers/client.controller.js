@@ -21,6 +21,7 @@ const { CANONICAL_CLIENT_STATUSES } = require('../utils/clientStatus');
 const Firm = require('../models/Firm.model');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { parseBooleanQuery } = require('../utils/query.utils');
+const { escapeRegExp } = require('../utils/regexp.utils');
 const { sanitizePayload, enforceAllowedFields, PayloadValidationError } = require('../utils/payloadValidation');
 const cfsDriveService = require('../services/cfsDrive.service');
 const { clientProfileStorageService } = require('../services/clientProfileStorage.service');
@@ -211,7 +212,7 @@ const getClients = async (req, res) => {
       ? { isActive: true }
       : {};
     if (normalizedSearch) {
-      const escapedSearch = normalizedSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escapedSearch = escapeRegExp(normalizedSearch);
       filter.$or = [
         { businessName: { $regex: escapedSearch, $options: 'i' } },
         { clientId: { $regex: escapedSearch, $options: 'i' } },

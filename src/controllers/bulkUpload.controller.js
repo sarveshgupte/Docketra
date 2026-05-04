@@ -11,6 +11,7 @@ const { enqueueBulkUploadJob } = require('../queues/bulkUpload.queue');
 const { eventBus } = require('../events/eventBus');
 const { logAuthEvent } = require('../services/audit.service');
 const { BULK_UPLOAD_SCHEMA, validateRow: validateSchemaRow } = require('../constants/bulkUploadSchema');
+const { escapeRegExp } = require('../utils/regexp.utils');
 const log = require('../utils/log');
 require('../automations/bulkUpload.handlers');
 
@@ -242,7 +243,7 @@ const buildRowObject = (fieldIndexMap, values) => Object.entries(fieldIndexMap).
 }, {});
 
 const isEmptyRow = (rowObj) => Object.values(rowObj).every((value) => !String(value || '').trim());
-const escapeRegExp = (value) => String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const normalizeTeamRole = (role) => {
   const normalizedRole = String(role || '').trim().toLowerCase();
   if (normalizedRole === 'admin') return 'Admin';

@@ -10,6 +10,7 @@ const { logCaseListViewed } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
 const log = require('../utils/log');
 const { logSlowEndpoint } = require('../utils/slowLog');
+const { escapeRegExp } = require('../utils/regexp.utils');
 const SLOW_WORKLIST_QUERY_MS = 400;
 
 const toObjectIdStringOrNull = (value) => {
@@ -96,7 +97,7 @@ const globalSearch = async (req, res) => {
     const isAdmin = user.role === 'Admin';
     
     // Escape special regex characters to prevent ReDoS (Regular Expression Denial of Service)
-    const escapedSearchTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapedSearchTerm = escapeRegExp(searchTerm);
 
     // Build search query
     let caseQuery = {};
@@ -463,7 +464,7 @@ const employeeWorklist = async (req, res) => {
       ];
     }
     if (search) {
-      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escapedSearch = escapeRegExp(search);
       const regex = new RegExp(escapedSearch, 'i');
       query.$and = [
         ...(Array.isArray(query.$and) ? query.$and : []),

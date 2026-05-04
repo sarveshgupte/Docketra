@@ -1,6 +1,7 @@
 const Team = require('../models/Team.model');
 const User = require('../models/User.model');
 const { mapUserResponse } = require('../mappers/user.mapper');
+const { escapeRegExp } = require('../utils/regexp.utils');
 
 const buildWorkbasketWarnings = async (firmId, workbasketIds = []) => {
   if (!firmId || workbasketIds.length === 0) return {};
@@ -58,7 +59,7 @@ const createWorkbasket = async (req, res) => {
     const name = String(req.body?.name || '').trim();
     if (!name) return res.status(400).json({ success: false, message: 'Workbasket name is required' });
 
-    const existing = await Team.findOne({ firmId: req.user?.firmId, name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') });
+    const existing = await Team.findOne({ firmId: req.user?.firmId, name: new RegExp(`^${escapeRegExp(name)}$`, 'i') });
     if (existing) return res.status(409).json({ success: false, message: 'Workbasket already exists' });
 
     const created = await Team.create({
@@ -128,7 +129,7 @@ const renameWorkbasket = async (req, res) => {
     const duplicate = await Team.findOne({
       _id: { $ne: workbasket._id },
       firmId: req.user?.firmId,
-      name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+      name: new RegExp(`^${escapeRegExp(name)}$`, 'i'),
     });
     if (duplicate) return res.status(409).json({ success: false, message: 'Workbasket already exists' });
 

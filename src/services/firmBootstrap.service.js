@@ -7,6 +7,7 @@ const emailService = require('./email.service');
 const { generateNextClientId } = require('./clientIdGenerator');
 const { generateNextXID } = require('./xIDGenerator');
 const { slugify } = require('../utils/slugify');
+const { escapeRegExp } = require('../utils/regexp.utils');
 const { isFirmCreationDisabled } = require('./featureFlags.service');
 const { loadEnv } = require('../config/env');
 const { coercePrimaryAdminCreationFields } = require('../utils/hierarchy.utils');
@@ -82,7 +83,7 @@ const buildSlug = async (deps, session, name) => {
 
   // Check existing default-client slugs
   const existingSlugs = await deps.Client.find({
-    firmSlug: { $regex: new RegExp(`^${originalSlug}(?:-\\d+)?$`) },
+    firmSlug: { $regex: new RegExp(`^${escapeRegExp(originalSlug)}(?:-\\d+)?$`) },
     isDefaultClient: true,
   }).session(session).select('firmSlug').lean();
 
