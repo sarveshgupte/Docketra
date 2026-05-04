@@ -3,7 +3,7 @@
 ## May 2026: Pending, QC, deactivation handoff, and terminal queue normalization
 
 - Backend-only normalization for pending ownership, auto-reopen behavior, QC metadata/decision handling, and deactivation docket handoff.
-- Active WL/WB/QC queue queries now consistently exclude terminal states (`RESOLVED`, `FILED`).
+- Preserved existing active WL/WB/QC terminal-state exclusion behavior (`RESOLVED`, `FILED`) while normalizing pending/QC/deactivation backend flows.
 - Added coverage tests for pending auto-reopen ownership continuity, QC failed/corrected outcomes, deactivation remapping behavior, and terminal queue exclusion guardrails.
 
 ## May 2026: Routed docket Route + Submit flow
