@@ -235,13 +235,13 @@ module.exports = (deps) => {
       if (!routedWorkbasketId) {
         routedWorkbasketId = resolvedWorkbasketId ? String(resolvedWorkbasketId) : null;
       }
+      let fallbackWorkbasketPromise = null;
       if (!routedWorkbasketId) {
-        const fallbackWorkbasket = await Team.findOne({
+        fallbackWorkbasketPromise = Team.findOne({
           firmId,
           isActive: true,
           type: 'PRIMARY',
         }).sort({ created_at: 1 }).select('_id').lean();
-        routedWorkbasketId = fallbackWorkbasket?._id ? String(fallbackWorkbasket._id) : null;
       }
       
       // Backward compatibility:
@@ -267,26 +267,43 @@ module.exports = (deps) => {
         dealId = String(requestedDealId);
       }
 
+      let crmClientPromise = null;
       if (crmClientId) {
-        const crmClient = await CrmClient.findOne({ _id: crmClientId, firmId }).select('_id').lean();
-        if (!crmClient) {
-          return res.status(400).json({
-            success: false,
-            message: 'Invalid clientId',
-            ...responseMeta,
-          });
-        }
+        crmClientPromise = CrmClient.findOne({ _id: crmClientId, firmId }).select('_id').lean();
       }
 
+      let dealPromise = null;
       if (dealId) {
-        const deal = await Deal.findOne({ _id: dealId, firmId }).select('_id').lean();
-        if (!deal) {
-          return res.status(400).json({
-            success: false,
-            message: 'Invalid dealId',
-            ...responseMeta,
-          });
-        }
+        dealPromise = Deal.findOne({ _id: dealId, firmId }).select('_id').lean();
+      }
+
+      // ⚡ Bolt Performance Optimization:
+      // Prepare independent validation queries (dealId, crmClientId, fallbackWorkbasket)
+      // and execute them concurrently via Promise.all to reduce endpoint latency.
+      const [fallbackWorkbasket, crmClient, deal] = await Promise.all([
+        fallbackWorkbasketPromise,
+        crmClientPromise,
+        dealPromise
+      ]);
+
+      if (!routedWorkbasketId && fallbackWorkbasket) {
+        routedWorkbasketId = fallbackWorkbasket._id ? String(fallbackWorkbasket._id) : null;
+      }
+
+      if (crmClientId && !crmClient) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid clientId',
+          ...responseMeta,
+        });
+      }
+
+      if (dealId && !deal) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid dealId',
+          ...responseMeta,
+        });
       }
 
       // Every new docket must resolve to a firm-scoped client.
