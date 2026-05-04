@@ -129,7 +129,7 @@ export const PlatformQcQueuePage = () => {
 
   return (
     <PlatformShell
-      title="QC Workbench"
+      title="QC Workbaskets"
       subtitle="Quality-control queue for pass, return-for-correction, and fail review decisions."
       actions={<Link to={ROUTES.ADMIN_REPORTS(firmSlug)}>QC Reports</Link>}
     >
@@ -142,7 +142,7 @@ export const PlatformQcQueuePage = () => {
       />
       <PageSection
         title="What this queue is for"
-        description="QC Workbench is where completed execution dockets are reviewed for pass, return-for-correction, or fail decisions."
+        description="QC Workbaskets is where completed execution dockets are reviewed for pass, return-for-correction, or fail decisions."
       >
         <p className="muted">If this is empty, your team may still be executing in My Worklist or has not sent dockets to QC yet.</p>
       </PageSection>

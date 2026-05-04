@@ -32,10 +32,17 @@ for (const [name, source] of [
   assert.ok(source.includes('No dockets found.'), `${name} should use successful empty-state filter messaging.`);
 }
 
-assert.ok(!casesColumns.includes('ASSIGN_TO_ME'), 'All Dockets row actions should not expose pull/assign queue behavior.');
+assert.ok(casesColumns.includes('showQueueActions = true'), 'Column hook should support explicit queue-action visibility control.');
+assert.ok(casesPage.includes('showQueueActions: false'), 'All Dockets should disable queue pull/assign behavior via explicit prop.');
 assert.ok(casesColumns.includes('View Docket'), 'All Dockets should continue to support opening docket detail.');
 
 assert.ok(casesPage.includes('CASE_STATUS.RESOLVED'), 'All Dockets filters should include RESOLVED records.');
 assert.ok(casesPage.includes('CASE_STATUS.FILED'), 'All Dockets filters should include FILED records.');
+
+
+assert.ok(taskManager.includes('Workbaskets'), 'Task Manager should show Workbaskets naming in user-facing copy.');
+assert.ok(workbaskets.includes('title="Workbaskets"'), 'Workbaskets page title should use Workbaskets naming.');
+assert.ok(qcQueue.includes('title="QC Workbaskets"'), 'QC page title should use QC Workbaskets naming.');
+assert.ok(!read('docs/whats-new.md').includes('parent workbasket managers'), 'Whats new should not claim parent manager QC visibility unless explicitly implemented in this PR scope.');
 
 console.log('taskManagerQueueNavigationAndAllDocketsNormalization.test.mjs passed');

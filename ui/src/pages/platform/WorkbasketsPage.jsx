@@ -104,7 +104,7 @@ export const PlatformWorkbasketsPage = () => {
 
   return (
     <PlatformShell
-      title="Workbench"
+      title="Workbaskets"
       subtitle="Shared docket queue for work that can be pulled into individual execution."
       actions={<Link to={ROUTES.DOCKETS(firmSlug)}>All Dockets</Link>}
     >
@@ -112,14 +112,14 @@ export const PlatformWorkbasketsPage = () => {
         messages={[
           { tone: 'error', message: isError ? 'Unable to load workbaskets right now.' : '' },
           { tone: 'success', message: success },
-          { tone: 'info', message: isFetching && !isLoading ? 'Refreshing the workbench queue in the background…' : '' },
+          { tone: 'info', message: isFetching && !isLoading ? 'Refreshing the workbaskets queue in the background…' : '' },
         ]}
       />
       <PageSection
         title="What this queue is for"
-        description="Workbench is the shared pull queue. Dockets appear here when they are unassigned or routed to team intake. Pulling a docket moves it into an owner’s My Worklist."
+        description="Workbaskets is the shared pull queue. Dockets appear here when they are unassigned or routed to team intake. Pulling a docket moves it into an owner’s My Worklist."
       >
-        <p className="muted">If this is empty, create a docket or check category/subcategory-to-workbench mapping in Work Settings.</p>
+        <p className="muted">If this is empty, create a docket or check category/subcategory-to-workbasket mapping in Work Settings.</p>
       </PageSection>
       <PageSection
         title="Shared queue"
@@ -133,7 +133,7 @@ export const PlatformWorkbasketsPage = () => {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search docket, client, category"
-            aria-label="Search workbench queue"
+            aria-label="Search workbaskets queue"
           />
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter by status">
             <option value="ALL">All statuses</option>
