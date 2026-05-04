@@ -9,6 +9,7 @@ const { generateNextXID } = require('./xIDGenerator');
 const { ensureTenantKey } = require('../security/encryption.service');
 const { generateNextClientId } = require('./clientIdGenerator');
 const { slugify } = require('../utils/slugify');
+const { escapeRegExp } = require('../utils/regexp.utils');
 const emailService = require('./email.service');
 const jwtService = require('./jwt.service');
 const config = require('../config/config');
@@ -424,7 +425,7 @@ const generateUniqueSlug = async (firmName, session, retryOffset = 0) => {
   let firmSlug = slugify(firmName.trim());
   const originalSlug = firmSlug;
   const existingSlugs = await Firm.find({
-    firmSlug: { $regex: new RegExp(`^${originalSlug}(?:-\\d+)?$`) },
+    firmSlug: { $regex: new RegExp(`^${escapeRegExp(originalSlug)}(?:-\\d+)?$`) },
   }).session(session).select('firmSlug');
 
   if (existingSlugs.length > 0 || retryOffset > 0) {
