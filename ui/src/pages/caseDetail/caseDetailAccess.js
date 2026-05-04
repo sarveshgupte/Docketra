@@ -22,3 +22,6 @@ export const canCloneDocketByPolicy = ({ permissions, caseData }) => (
   permissions?.canCloneCase?.(caseData) !== false
 );
 
+export const isTerminalDocketLifecycle = (lifecycle) => (
+  ['RESOLVED', 'FILED', 'DONE', 'COMPLETED', 'ARCHIVED', 'CLOSED'].includes(String(lifecycle || '').toUpperCase())
+);

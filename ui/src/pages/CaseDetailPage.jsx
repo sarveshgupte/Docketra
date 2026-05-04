@@ -51,6 +51,7 @@ import {
   canCloneDocketByPolicy,
   canRouteDocketByPolicy,
   isRoutedTeamCannotResolve,
+  isTerminalDocketLifecycle,
 } from './caseDetail/caseDetailAccess';
 const CaseDetailAttachmentsPanel = lazy(() => import('./caseDetail/CaseDetailAttachmentsPanel').then((module) => ({ default: module.CaseDetailAttachmentsPanel })));
 const CaseDetailActivityPanel = lazy(() => import('./caseDetail/CaseDetailActivityPanel').then((module) => ({ default: module.CaseDetailActivityPanel })));
@@ -399,6 +400,22 @@ export const CaseDetailPage = () => {
     return '-';
   })();
   const lifecycleStatus = normalizeLifecycleForUi(caseInfo?.lifecycle);
+  const normalizedUserXid = String(user?.xID || '').trim().toUpperCase();
+  const normalizedAssignedXid = String(caseInfo?.assignedToXID || '').trim().toUpperCase();
+  const locationBadges = useMemo(() => {
+    const badges = [];
+    const queueHint = String(caseInfo?.queueContext || caseInfo?.queueName || caseInfo?.workbasketName || '').toUpperCase();
+    if (routedTeamCannotResolve) badges.push('Routed');
+    if (String(caseInfo?.returnedFromRoute || caseInfo?.routeReturnStatus || '').toLowerCase() === 'true') badges.push('Returned from route');
+    if (queueHint.includes('QC')) badges.push('QC Workbasket');
+    else if (caseInfo?.assignedToXID && normalizedAssignedXid === normalizedUserXid) badges.push('My Worklist');
+    else if (caseInfo?.assignedToXID) badges.push('Assigned Worklist');
+    else if (caseInfo?.workbasketName || caseInfo?.ownerTeamId || caseInfo?.queueName) badges.push('Workbasket');
+    if (isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)) {
+      badges.push(String(caseInfo?.lifecycle || lifecycleStatus || 'Terminal'));
+    }
+    return badges;
+  }, [caseInfo, lifecycleStatus, routedTeamCannotResolve, normalizedAssignedXid, normalizedUserXid]);
   const isMoveLockedByAnotherUser = Boolean(caseInfo?.lockStatus?.isLocked)
     && String(caseInfo?.lockStatus?.activeUserXID || '').trim().toUpperCase() !== String(user?.xID || '').trim().toUpperCase();
   const lockOwnerLabel = [caseInfo?.lockStatus?.activeUserDisplayName, caseInfo?.lockStatus?.activeUserXID]
@@ -1291,10 +1308,7 @@ export const CaseDetailPage = () => {
     }
   };
 
-  const shouldShowActions = useMemo(() => {
-    const hiddenLifecycleStates = new Set(['DONE', 'COMPLETED', 'ARCHIVED']);
-    return !hiddenLifecycleStates.has(lifecycleStatus);
-  }, [lifecycleStatus]);
+  const shouldShowActions = useMemo(() => !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus), [caseInfo?.lifecycle, lifecycleStatus]);
 
   const lifecycleActionMap = useMemo(() => ({
     WL: [
@@ -1330,14 +1344,18 @@ export const CaseDetailPage = () => {
     DONE: [],
   }), [openActionModal]);
 
+  const isQcContext = String(caseInfo?.qc?.status || caseInfo?.qcStatus || '').trim() !== '' || String(caseInfo?.state || '').toUpperCase() === 'IN_QC';
+  const isUnassignedWorkbasket = !caseInfo?.assignedToXID && Boolean(caseInfo?.workbasketName || caseInfo?.ownerTeamId || caseInfo?.queueName);
   const lifecycleQuickActions = useMemo(() => {
     if (isViewOnlyMode) return [];
+    if (isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)) return [];
+    if (isQcContext || isUnassignedWorkbasket) return [];
     const actions = lifecycleActionMap[lifecycleStatus] || [];
     if (routedTeamCannotResolve) {
       return actions.map((action) => action.key === 'resolve' ? { ...action, key: 'submit', label: 'Submit', onClick: () => openActionModal('resolve') } : action);
     }
     return actions;
-  }, [isViewOnlyMode, lifecycleActionMap, lifecycleStatus, routedTeamCannotResolve]);
+  }, [isViewOnlyMode, caseInfo?.lifecycle, lifecycleActionMap, lifecycleStatus, routedTeamCannotResolve, isQcContext, isUnassignedWorkbasket]);
 
   const canPerformLifecycleActions = lifecycleQuickActions.length > 0;
   const canRouteDocket = canRouteDocketByPolicy({ caseInfo, isViewOnlyMode, routingTeams });
@@ -1486,6 +1504,9 @@ export const CaseDetailPage = () => {
       setCloneCategoryId('');
       setCloneSubcategoryId('');
       setActionError(null);
+      if (clonedId && clonedId !== 'new docket') {
+        navigate(ROUTES.CASE_DETAIL(firmSlug, clonedId), { state: { returnTo } });
+      }
     } catch (error) {
       const message = extractErrorMessage(error, 'Failed to clone docket. Please try again.');
       showError(message);
@@ -1652,6 +1673,8 @@ export const CaseDetailPage = () => {
           isInternalWork={isInternalWork}
           assigneeLabel={assigneeLabel}
           queueLabel={queueLabel}
+          locationBadges={locationBadges}
+          slaDaysLabel={slaDaysLabel}
         />
         <StickyTabs tabs={docketTabs} defaultTab={CASE_DETAIL_TABS.OVERVIEW} />
 
@@ -1685,11 +1708,14 @@ export const CaseDetailPage = () => {
                 actionInFlight={actionInFlight}
                 isViewOnlyMode={isViewOnlyMode}
                 onOpenFileModal={() => { setFileComment(''); setShowFileModal(true); }}
-                showFileAction={!routedTeamCannotResolve}
+                showFileAction={!routedTeamCannotResolve && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)}
                 canRouteDocket={canRouteDocket}
                 onOpenRouteModal={() => setShowRouteModal(true)}
                 forceQcReview={forceQcReview}
                 onForceQcReviewChange={setForceQcReview}
+                isQcContext={isQcContext}
+                isUnassignedWorkbasket={isUnassignedWorkbasket}
+                isTerminal={isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)}
               />
             ) : null}
 
@@ -1831,7 +1857,7 @@ export const CaseDetailPage = () => {
         >
           <div style={{ padding: 'var(--spacing-md)' }}>
             <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)' }}>
-              Create a new docket from this one. Select the category and subcategory for the cloned docket.
+              Create a new docket from this one. This copies core docket context and starts a new execution record; activity timeline, assignments, and attachments are not copied.
             </p>
             <Select
               label="Category"
