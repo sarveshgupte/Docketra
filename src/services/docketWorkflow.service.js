@@ -62,8 +62,8 @@ function validateOwnershipRules(docket) {
     throw makeError('WB docket cannot have owner');
   }
 
-  if (['IN_PROGRESS', 'IN_QC'].includes(docket.state) && !docket.assignedToXID) {
-    throw makeError('Active/QC docket must have owner');
+  if (docket.state === 'IN_PROGRESS' && !docket.assignedToXID) {
+    throw makeError('IN_PROGRESS docket must have owner');
   }
 
   return docket;
@@ -368,6 +368,7 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
         docket.forceQc = Boolean(forceQC || sendToQC);
       }
 
+      let qcWorkbasketId = null;
       if (finalTarget === DocketStatus.QC_PENDING) {
         const currentWorkbasketId = docket.routedToTeamId || docket.ownerTeamId || null;
         if (currentWorkbasketId) {
@@ -376,10 +377,9 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
             type: 'QC',
             parentWorkbasketId: currentWorkbasketId,
             isActive: true,
-          }).session(session).select('_id');
+          }).session(session).select('_id').lean();
           if (qcWorkbasket?._id) {
-            docket.ownerTeamId = qcWorkbasket._id;
-            docket.workbasketId = qcWorkbasket._id;
+            qcWorkbasketId = qcWorkbasket._id;
           }
         }
       }
@@ -441,8 +441,10 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
           originalAssigneeXID: submitterXID,
           attempts: Number(docket.qc?.attempts || 0) + 1,
         };
-        docket.ownerTeamId = docket.routedToTeamId || docket.ownerTeamId || docket.workbasketId || null;
-        docket.workbasketId = docket.ownerTeamId;
+        if (qcWorkbasketId) {
+          docket.ownerTeamId = qcWorkbasketId;
+          docket.workbasketId = qcWorkbasketId;
+        }
         docket.routedToTeamId = null;
         docket.assignedToXID = null;
         docket.assignedTo = null;
