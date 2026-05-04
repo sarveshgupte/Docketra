@@ -115,16 +115,16 @@ export const PlatformWorklistPage = () => {
     >
       <StatusMessageStack
         messages={[
-          { tone: 'error', message: error || (isError ? 'Unable to load your worklist right now.' : '') },
+          { tone: 'error', message: error || (isError ? 'Unable to load My Worklist right now.' : '') },
           { tone: 'success', message: success },
           { tone: 'info', message: isFetching && !isLoading ? 'Refreshing worklist without interrupting your current view…' : '' },
         ]}
       />
       <PageSection
         title="What this queue is for"
-        description="My Worklist is your personal execution queue. Dockets appear after assignment from Workbench or direct assignment at creation."
+        description="My Worklist is your personal execution queue. Dockets appear after assignment from Workbaskets or direct assignment at creation."
       >
-        <p className="muted">If this is empty, check Workbench for unassigned intake or ask an admin/manager to assign dockets to you.</p>
+        <p className="muted">If this is empty, check Workbaskets for unassigned intake or ask an admin/manager to assign dockets to you.</p>
       </PageSection>
       <PageSection
         title="My active workload"
@@ -182,10 +182,10 @@ export const PlatformWorklistPage = () => {
             </tr>
           ))}
           loading={isLoading}
-          error={isError ? 'Unable to load your worklist right now.' : ''}
+          error={isError ? 'Unable to load My Worklist right now.' : ''}
           onRetry={() => void refetch()}
           hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL'}
-          emptyLabel="No dockets are assigned to you yet. Pull from Workbench or request assignment from your manager/admin."
+          emptyLabel="No dockets are assigned to you yet. Pull from Workbaskets or request assignment from your manager/admin."
           emptyLabelFiltered="No worklist dockets match your current search or filters."
         />
       </PageSection>

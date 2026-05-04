@@ -129,20 +129,20 @@ export const PlatformQcQueuePage = () => {
 
   return (
     <PlatformShell
-      title="QC Workbench"
+      title="QC Workbaskets"
       subtitle="Quality-control queue for pass, return-for-correction, and fail review decisions."
       actions={<Link to={ROUTES.ADMIN_REPORTS(firmSlug)}>QC Reports</Link>}
     >
       <StatusMessageStack
         messages={[
-          { tone: 'error', message: error || (isError ? 'Unable to load the QC workbench queue.' : '') },
+          { tone: 'error', message: error || (isError ? 'Unable to load QC workbaskets right now.' : '') },
           { tone: 'success', message: success },
           { tone: 'info', message: isFetching && !isLoading ? 'Refreshing QC queue in the background…' : '' },
         ]}
       />
       <PageSection
         title="What this queue is for"
-        description="QC Workbench is where completed execution dockets are reviewed for pass, return-for-correction, or fail decisions."
+        description="QC Workbaskets is where completed execution dockets are reviewed for pass, return-for-correction, or fail decisions."
       >
         <p className="muted">If this is empty, your team may still be executing in My Worklist or has not sent dockets to QC yet.</p>
       </PageSection>
@@ -210,11 +210,11 @@ export const PlatformQcQueuePage = () => {
             </tr>
           ))}
           loading={isLoading}
-          error={isError ? 'Unable to load the QC workbench queue.' : ''}
+          error={isError ? 'Unable to load QC workbaskets right now.' : ''}
           onRetry={() => void refetch()}
           hasActiveFilters={Boolean(search.trim()) || assigneeFilter !== 'ALL'}
-          emptyLabel="No dockets are waiting for QC right now. Items will appear after users send completed execution work to QC."
-          emptyLabelFiltered="No QC Workbench dockets match your current search or filters."
+          emptyLabel="No work available."
+          emptyLabelFiltered="No dockets found."
         />
       </PageSection>
       <ActionConfirmModal
