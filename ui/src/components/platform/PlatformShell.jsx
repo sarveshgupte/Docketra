@@ -254,9 +254,9 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
         shortcut: item.shortcut,
         action: () => openRoute(item.to),
       })),
-      ...(hasAdminAccess ? [{ id: 'go-workbasket', label: 'Go to Workbench', shortcut: 'Alt+Shift+B', action: () => openRoute(ROUTES.GLOBAL_WORKLIST(firmSlug)), description: 'Open shared queue dockets available to pull.' }] : []),
+      ...(hasAdminAccess ? [{ id: 'go-workbasket', label: 'Go to Workbaskets', shortcut: 'Alt+Shift+B', action: () => openRoute(ROUTES.GLOBAL_WORKLIST(firmSlug)), description: 'Open linked team workbasket queues available to pull.' }] : []),
       { id: 'go-worklist', label: 'Go to My Worklist', shortcut: 'Alt+Shift+W', action: () => openRoute(ROUTES.WORKLIST(firmSlug)), description: 'Open your active and pended docket workload.' },
-      ...(hasQcQueueAccess ? [{ id: 'go-qc', label: 'Go to QC Workbench', shortcut: 'Alt+Shift+Q', action: () => openRoute(ROUTES.QC_QUEUE(firmSlug)), description: 'Open dockets waiting for quality review decisions.' }] : []),
+      ...(hasQcQueueAccess ? [{ id: 'go-qc', label: 'Go to QC Workbaskets', shortcut: 'Alt+Shift+Q', action: () => openRoute(ROUTES.QC_QUEUE(firmSlug)), description: 'Open QC workbasket queues waiting for quality review decisions.' }] : []),
     ];
 
     const actionsItems = [
