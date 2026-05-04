@@ -683,6 +683,7 @@ export const CasesPage = () => {
     handleAssignToMe,
     location,
     setTimelineCaseId,
+    showQueueActions: false,
   });
 
   if (!isValidFirm) {

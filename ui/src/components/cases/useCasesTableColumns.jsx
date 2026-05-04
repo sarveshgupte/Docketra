@@ -6,7 +6,6 @@ import { AuditMetadata } from '../ui/AuditMetadata';
 import { formatDateTime } from '../../utils/formatDateTime';
 import { formatCaseName } from '../../utils/formatters';
 import { ROUTES } from '../../constants/routes';
-import { UX_COPY } from '../../constants/uxCopy';
 
 export const useCasesTableColumns = ({
   enableBulkActions,
@@ -25,6 +24,7 @@ export const useCasesTableColumns = ({
   handleAssignToMe,
   location,
   setTimelineCaseId,
+  showQueueActions = true,
 }) => useMemo(() => [
   ...(enableBulkActions ? [{
     key: '__select',
@@ -121,7 +121,14 @@ export const useCasesTableColumns = ({
               <span aria-hidden="true">View Docket</span>
               <span className="sr-only">View Docket {formatCaseName(row.caseName)}</span>
             </button>
-            
+            {showQueueActions && !isAdmin && !isLocked && (
+              <button type="button" disabled={assigningCaseId === row.caseId} onClick={(event) => handleAssignToMe(row, event)}>
+                <span aria-hidden="true">{assigningCaseId === row.caseId ? 'Assigning…' : 'Assign to me'}</span>
+                <span className="sr-only">
+                  {assigningCaseId === row.caseId ? `Assigning ${formatCaseName(row.caseName)}…` : `Assign ${formatCaseName(row.caseName)} to me`}
+                </span>
+              </button>
+            )}
             <button type="button" onClick={(event) => { event.stopPropagation(); setTimelineCaseId(row.caseId); }}>
               <span aria-hidden="true">View Timeline</span>
               <span className="sr-only">View Timeline for {formatCaseName(row.caseName)}</span>
@@ -148,4 +155,5 @@ export const useCasesTableColumns = ({
   handleAssignToMe,
   location,
   setTimelineCaseId,
+  showQueueActions,
 ]);

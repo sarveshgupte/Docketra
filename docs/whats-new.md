@@ -620,7 +620,7 @@
 ## May 2026: Work section queue navigation, QC Workbasket visibility, and All Dockets record view
 
 - Clarified Work section navigation labels to distinguish **My Worklist**, **Workbaskets**, **QC Workbaskets**, and **All Dockets**.
-- Kept QC visibility permission-scoped for admin/primary admin, parent workbasket managers, and explicit QC members only.
+- Kept QC visibility permission-scoped for admin/primary admin, QC-enabled users returned in session scope (including explicit QC members and linked manager access).
 - Reinforced All Dockets as a **record/list/search** surface rather than a pull queue, while queue-specific pull actions remain in Workbaskets.
 - Standardized successful empty queue states to show user-friendly **No work available** / **No dockets found** messaging.
 - This change does **not** include Docket Detail UX polish; that remains in a follow-up PR.
