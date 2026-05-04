@@ -32,6 +32,13 @@ const { resolveClientOwnershipFirmId } = require('../services/tenantIdentity.ser
  */
 const CLIENT_ENCRYPTED_FIELDS = ['primaryContactNumber', 'businessEmail'];
 
+
+async function _ensureTenantKeyForDecryption(tenantId) {
+  if (!tenantId || !process.env.MASTER_ENCRYPTION_KEY) return;
+  await ensureTenantKey(String(tenantId));
+}
+
+
 function resolveDecryptFields(decryptFields) {
   if (!Array.isArray(decryptFields) || !decryptFields.length) {
     return CLIENT_ENCRYPTED_FIELDS;
@@ -87,6 +94,7 @@ async function _decryptClientDoc(doc, firmId, { logContext, decryptFields } = {}
   const tenantId = doc.firmId || firmId;
   if (!tenantId) return doc;
 
+  await _ensureTenantKeyForDecryption(tenantId);
   const fieldsToDecrypt = resolveDecryptFields(decryptFields);
   for (const field of fieldsToDecrypt) {
     if (doc[field] != null && looksEncrypted(doc[field])) {
@@ -120,6 +128,7 @@ async function _decryptClientDocs(docs, firmId, { logContext, decryptFields } = 
     const tenantId = doc.firmId || firmId;
     if (!tenantId) return;
 
+    await _ensureTenantKeyForDecryption(tenantId);
     for (const field of fieldsToDecrypt) {
       if (doc[field] != null && looksEncrypted(doc[field])) {
         const decrypted = await decrypt(doc[field], String(tenantId), undefined, {
