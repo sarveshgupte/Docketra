@@ -69,7 +69,7 @@ Send a test email through the debug endpoint to verify Brevo API integration.
 2. Send test email:
    ```bash
    curl -X GET "http://localhost:5000/api/debug/email-test?email=your-test@email.com" \
-     -H "Authorization: Bearer YOUR_JWT_TOKEN"
+     -H "Authorization: Bearer <test-auth-token>"
    ```
 
 3. Check server logs for:
@@ -120,7 +120,7 @@ Test the actual use case - sending a user invite email.
    ```bash
    curl -X POST http://localhost:5000/api/admin/users \
      -H "Content-Type: application/json" \
-     -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+     -H "Authorization: Bearer <test-auth-token>" \
      -d '{
        "name": "Test User",
        "email": "testuser@example.com",
@@ -157,7 +157,7 @@ Test the resend invite functionality.
 1. Resend invite to existing user:
    ```bash
    curl -X POST http://localhost:5000/api/admin/users/TEST001/resend-invite \
-     -H "Authorization: Bearer YOUR_JWT_TOKEN"
+     -H "Authorization: Bearer <test-auth-token>"
    ```
 
 2. Check server logs

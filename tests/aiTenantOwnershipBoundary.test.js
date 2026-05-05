@@ -25,7 +25,7 @@ async function run() {
   clear('../src/controllers/ai.controller');
   const { setAiConfig } = require('../src/controllers/ai.controller');
 
-  const req = { firmId: 'tenant-default-1', body: { provider: 'openai', apiKey: 'sk-1234567890abc', settings: {} } };
+  const req = { firmId: 'tenant-default-1', body: { provider: 'openai', apiKey: '<dummy-api-key>', settings: {} } };
   const res = { statusCode: 200, payload: null, status(c) { this.statusCode = c; return this; }, json(p) { this.payload = p; return this; } };
   await setAiConfig(req, res);
 

@@ -64,7 +64,7 @@ async function shouldMountFirmScopedApiRoutes() {
       filename: tenantResolverModulePath,
       loaded: true,
       exports: (req, _res, next) => {
-        req.firmId = '507f1f77bcf86cd799439022';
+        req.firmId = 'firm-id-placeholder';
         req.firmIdString = 'FIRM001';
         req.firmSlug = req.params.firmSlug;
         req.firmName = 'Firm A';
@@ -116,7 +116,7 @@ async function shouldRequireEmailOtpForFirmScopedLogin() {
     name: 'Tenant User',
     email: 'tenant@example.com',
     role: 'Admin',
-    firmId: { toString: () => '507f1f77bcf86cd799439022' },
+    firmId: { toString: () => 'firm-id-placeholder' },
     defaultClientId: { toString: () => '507f1f77bcf86cd799439033' },
     status: 'active',
     isActive: true,
@@ -147,7 +147,7 @@ async function shouldRequireEmailOtpForFirmScopedLogin() {
       {
         body: { xid: 'X000001', password: 'Correct#123' },
         params: { firmSlug: 'firm-a' },
-        firmId: '507f1f77bcf86cd799439022',
+        firmId: 'firm-id-placeholder',
         firmSlug: 'firm-a',
         firmName: 'Firm A',
         loginScope: 'tenant',
@@ -180,7 +180,7 @@ async function shouldRequireEmailOtpForFirmScopedLogin() {
   assert.strictEqual(user.loginOtpLockedUntil, null, 'Initial OTP should not be locked');
   const decodedLoginToken = jwt.verify(body.loginToken, 'firm-login-otp-secret');
   assert.strictEqual(decodedLoginToken.userId, '507f1f77bcf86cd799439011');
-  assert.strictEqual(decodedLoginToken.firmId, '507f1f77bcf86cd799439022');
+  assert.strictEqual(decodedLoginToken.firmId, 'firm-id-placeholder');
   assert.strictEqual(decodedLoginToken.firmSlug, 'firm-a');
   assert.strictEqual(decodedLoginToken.loginStage, 'email-otp');
 }
@@ -203,7 +203,7 @@ async function shouldPreventDuplicateOtpGenerationWithinCooldown() {
     name: 'Tenant User',
     email: 'tenant@example.com',
     role: 'Admin',
-    firmId: { toString: () => '507f1f77bcf86cd799439022' },
+    firmId: { toString: () => 'firm-id-placeholder' },
     status: 'active',
     isActive: true,
     passwordHash,
@@ -231,7 +231,7 @@ async function shouldPreventDuplicateOtpGenerationWithinCooldown() {
   const req = {
     body: { xid: 'X000001', password: 'Correct#123' },
     params: { firmSlug: 'firm-a' },
-    firmId: '507f1f77bcf86cd799439022',
+    firmId: 'firm-id-placeholder',
     firmSlug: 'firm-a',
     firmName: 'Firm A',
     loginScope: 'tenant',
@@ -279,7 +279,7 @@ async function shouldVerifyEmailOtpAndIssueTokens() {
     name: 'Tenant User',
     email: 'tenant@example.com',
     role: 'Admin',
-    firmId: { toString: () => '507f1f77bcf86cd799439022' },
+    firmId: { toString: () => 'firm-id-placeholder' },
     defaultClientId: { toString: () => '507f1f77bcf86cd799439033' },
     status: 'active',
     isActive: true,
@@ -306,7 +306,7 @@ async function shouldVerifyEmailOtpAndIssueTokens() {
   const loginToken = jwt.sign(
     {
       userId: '507f1f77bcf86cd799439011',
-      firmId: '507f1f77bcf86cd799439022',
+      firmId: 'firm-id-placeholder',
       firmSlug: 'firm-a',
       role: 'Admin',
       loginStage: 'email-otp',
@@ -322,7 +322,7 @@ async function shouldVerifyEmailOtpAndIssueTokens() {
       {
         body: { loginToken, otp: '123456' },
         params: { firmSlug: 'firm-a' },
-        firmId: '507f1f77bcf86cd799439022',
+        firmId: 'firm-id-placeholder',
         firmSlug: 'firm-a',
         skipTransaction: true,
         ip: '127.0.0.1',
@@ -370,7 +370,7 @@ async function shouldBlockAfterMaxInvalidOtpAttempts() {
     xID: 'X000001',
     email: 'tenant@example.com',
     role: 'Admin',
-    firmId: { toString: () => '507f1f77bcf86cd799439022' },
+    firmId: { toString: () => 'firm-id-placeholder' },
     status: 'active',
     isActive: true,
     loginOtpHash: await bcrypt.hash('654321', 4),
@@ -387,7 +387,7 @@ async function shouldBlockAfterMaxInvalidOtpAttempts() {
   const loginToken = jwt.sign(
     {
       userId: '507f1f77bcf86cd799439011',
-      firmId: '507f1f77bcf86cd799439022',
+      firmId: 'firm-id-placeholder',
       firmSlug: 'firm-a',
       role: 'Admin',
       loginStage: 'email-otp',
@@ -403,7 +403,7 @@ async function shouldBlockAfterMaxInvalidOtpAttempts() {
       {
         body: { loginToken, otp: '000000' },
         params: { firmSlug: 'firm-a' },
-        firmId: '507f1f77bcf86cd799439022',
+        firmId: 'firm-id-placeholder',
         firmSlug: 'firm-a',
         skipTransaction: true,
         ip: '127.0.0.1',
@@ -447,7 +447,7 @@ async function shouldResendOtpWithDevelopmentCooldown() {
     name: 'Tenant User',
     email: 'tenant@example.com',
     role: 'Admin',
-    firmId: '507f1f77bcf86cd799439022',
+    firmId: 'firm-id-placeholder',
     status: 'active',
     isActive: true,
     loginOtpHash: await bcrypt.hash('654321', 4),
@@ -463,7 +463,7 @@ async function shouldResendOtpWithDevelopmentCooldown() {
 
   User.findOne = async () => user;
   Firm.findOne = async () => ({
-    _id: '507f1f77bcf86cd799439022',
+    _id: 'firm-id-placeholder',
     firmSlug: 'firm-a',
     name: 'Firm A',
     status: 'active',

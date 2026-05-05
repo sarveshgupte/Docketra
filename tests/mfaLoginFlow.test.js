@@ -56,7 +56,7 @@ async function shouldRequireEmailOtpBeforeIssuingTokens() {
     role: 'SUPER_ADMIN',
     name: 'MFA User',
     email: 'mfa@example.com',
-    firmId: { toString: () => '507f1f77bcf86cd799439022' },
+    firmId: { toString: () => 'firm-id-placeholder' },
     status: 'active',
     isActive: true,
     passwordHash: 'hashed-password',
@@ -89,7 +89,7 @@ async function shouldRequireEmailOtpBeforeIssuingTokens() {
     await login(
       {
         body: { xID: 'XMFA001', password: 'Correct#123' },
-        firmId: '507f1f77bcf86cd799439022',
+        firmId: 'firm-id-placeholder',
         firmSlug: 'firm-a',
         skipTransaction: true,
         ip: '127.0.0.1',
@@ -116,7 +116,7 @@ async function shouldRequireEmailOtpBeforeIssuingTokens() {
   assert.strictEqual(body.xID, undefined, 'Response must not include xID in OTP challenge');
   const decodedLoginToken = jwt.verify(body.loginToken, testJwtSecret);
   assert.strictEqual(decodedLoginToken.userId, '507f1f77bcf86cd799439011', 'loginToken must include userId');
-  assert.strictEqual(decodedLoginToken.firmId, '507f1f77bcf86cd799439022', 'loginToken must include firmId');
+  assert.strictEqual(decodedLoginToken.firmId, 'firm-id-placeholder', 'loginToken must include firmId');
   assert.strictEqual(decodedLoginToken.role, 'SUPER_ADMIN', 'loginToken must include role');
   assert.strictEqual(decodedLoginToken.loginStage, 'email-otp', 'loginToken must include OTP stage marker');
   assert(/^\d{6}$/.test(deliveredOtp), 'Login should send a 6 digit OTP');
@@ -149,7 +149,7 @@ async function shouldCompleteMfaLoginAndIssueTokens() {
     name: 'MFA User',
     email: 'mfa@example.com',
     role: 'ADMIN',
-    firmId: { toString: () => '507f1f77bcf86cd799439022' },
+    firmId: { toString: () => 'firm-id-placeholder' },
     defaultClientId: { toString: () => '507f1f77bcf86cd799439033' },
     allowedCategories: [],
     isActive: true,
@@ -180,7 +180,7 @@ async function shouldCompleteMfaLoginAndIssueTokens() {
   const preAuthToken = jwt.sign(
     {
       userId: '507f1f77bcf86cd799439011',
-      firmId: '507f1f77bcf86cd799439022',
+      firmId: 'firm-id-placeholder',
       role: 'ADMIN',
       mfaStage: true,
     },
@@ -251,7 +251,7 @@ async function shouldRejectInvalidMfaToken() {
   const preAuthToken = jwt.sign(
     {
       userId: '507f1f77bcf86cd799439011',
-      firmId: '507f1f77bcf86cd799439022',
+      firmId: 'firm-id-placeholder',
       role: 'ADMIN',
       mfaStage: true,
     },
