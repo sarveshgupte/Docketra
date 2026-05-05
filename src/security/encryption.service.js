@@ -24,6 +24,7 @@
  */
 
 const LocalEncryptionProvider = require('./encryption.local.provider');
+const TenantKey = require('./tenantKey.model');
 const { looksEncrypted } = require('./encryption.utils');
 const log = require('../utils/log');
 
@@ -72,6 +73,15 @@ async function ensureTenantKey(tenantId, { session } = {}) {
     throw new Error('tenantId is required for ensureTenantKey');
   }
   await getProvider().generateTenantKey(tenantId, { session });
+}
+
+
+async function tenantKeyExists(tenantId, { session } = {}) {
+  if (!tenantId) return false;
+  const query = TenantKey.exists({ tenantId: String(tenantId) });
+  if (session) query.session(session);
+  const exists = await query;
+  return Boolean(exists);
 }
 
 /**
@@ -123,7 +133,6 @@ async function decrypt(value, tenantId, role, { session, logContext } = {}) {
   if (!tenantId) {
     const err = new Error('[EncryptionService] tenantId is required for decryption');
     log.error('DECRYPTION_TENANT_ID_MISSING', {
-      valueStart: String(value).substring(0, 50),
       error: err.message,
       logContext,
     });
@@ -137,8 +146,7 @@ async function decrypt(value, tenantId, role, { session, logContext } = {}) {
       log.warn('[EncryptionService] DECRYPTION_RETURNED_NULL', {
         tenantId,
         valueLength: String(value).length,
-        valueStart: String(value).substring(0, 50),
-        logContext,
+          logContext,
       });
       throw new Error('Decryption returned null - possible corrupt encrypted value');
     }
@@ -154,8 +162,6 @@ async function decrypt(value, tenantId, role, { session, logContext } = {}) {
       errorMessage: err.message,
       errorName: err.name,
       valueLength: String(value).length,
-      valueStart: String(value).substring(0, 50),
-      valueEnd: String(value).substring(Math.max(0, String(value).length - 20)),
       logContext,
       errorStack: err.stack,
     });
@@ -190,6 +196,7 @@ module.exports = {
   encrypt,
   decrypt,
   ensureTenantKey,
+  tenantKeyExists,
   generateEncryptedDek,
   ForbiddenError,
   looksEncrypted,

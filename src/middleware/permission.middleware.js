@@ -1,5 +1,5 @@
 const User = require('../models/User.model');
-const { resolveRequestFirmRole } = require('../services/authorization.service');
+const { resolveRequestFirmRole, resolveFirmRole } = require('../services/authorization.service');
 const { isSuperAdminRole } = require('../utils/role.utils');
 const { requireAdmin: centralizedRequireAdmin } = require('./authorization.middleware');
 const log = require('../utils/log');
@@ -133,13 +133,21 @@ const authorizeFirmPermission = (requiredPermission) => {
         });
       }
 
-      const membership = await resolveRequestFirmRole(req, req.firm.id);
+      let membership = await resolveRequestFirmRole(req, req.firm.id);
 
       if (!membership) {
         return res.status(403).json({
           success: false,
           message: 'You are not authorized for this firm',
         });
+      }
+
+      const userId = req?.userId || req?.user?._id || req?.user?.id || req?.jwt?.userId || null;
+      if (userId) {
+        const freshMembership = await resolveFirmRole(userId, req.firm.id);
+        if (freshMembership) {
+          membership = freshMembership;
+        }
       }
 
       if (requiredPermission && !membership.permissions.includes(requiredPermission)) {
