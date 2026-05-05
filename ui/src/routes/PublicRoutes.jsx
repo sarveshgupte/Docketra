@@ -8,6 +8,7 @@ import {
   FirmLoginPage,
   ForgotPasswordPage,
   LoginPage,
+  FindWorkspacePage,
   MarketingAboutPage,
   MarketingContactPage,
   MarketingFeaturesPage,
@@ -62,8 +63,9 @@ export const PublicRoutes = () => (
         <Route path="/acceptable-use" element={<MarketingAcceptableUsePage />} />
         <Route path="/about" element={<MarketingAboutPage />} />
         <Route path="/contact" element={<MarketingContactPage />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login" element={<Navigate to="/find-workspace" replace />} />
         <Route path="/superadmin" element={<LoginPage />} />
+        <Route path="/find-workspace" element={<FindWorkspacePage />} />
         <Route path="/superadmin/login" element={<LoginPage />} />
       </Route>
     </Route>

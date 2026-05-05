@@ -27,4 +27,7 @@ export const authApi = {
 
   resendCredentials: (email) =>
     request((http) => http.post('/auth/resend-credentials', { email }), 'Unable to resend welcome email.'),
+
+  findWorkspacesByXid: (xid) =>
+    request((http) => http.post('/auth/find-workspace', { xid }), 'We could not locate a workspace. Please try again later.'),
 };

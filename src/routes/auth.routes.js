@@ -49,6 +49,7 @@ const {
   signupResend,
   sendOtpEndpoint,
   verifyOtpEndpoint,
+  findWorkspaceByXid,
   forgotPasswordInit,
   forgotPasswordVerify,
   forgotPasswordResetWithOtp,
@@ -111,6 +112,7 @@ router.post('/signup/verify', authBlockEnforcer, authLimiter, otpVerifyLimiter, 
 router.post('/signup/resend', authBlockEnforcer, authLimiter, otpResendLimiter, signupResend);
 router.post('/send-otp', authBlockEnforcer, authLimiter, otpResendLimiter, sendOtpEndpoint);
 router.post('/verify-otp', authBlockEnforcer, authLimiter, otpVerifyLimiter, verifyOtpEndpoint);
+router.post('/find-workspace', authBlockEnforcer, authLimiter, sensitiveLimiter, findWorkspaceByXid);
 // Protected authentication endpoints - require authentication
 router.post('/logout', sensitiveLimiter, authenticate, logout);
 router.post('/change-password', sensitiveLimiter, authenticate, changePassword);
