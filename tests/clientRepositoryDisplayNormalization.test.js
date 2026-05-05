@@ -19,6 +19,7 @@ function loadClientRepository({
   findOneResult = null,
   decryptImpl = async (value) => value,
   looksEncryptedImpl = (value) => typeof value === 'string' && value.startsWith('enc:'),
+  ensureTenantKeyImpl = async () => {},
 } = {}) {
   Module._load = function(request, parent, isMain) {
     if (request === '../models/Client.model') {
@@ -35,7 +36,7 @@ function loadClientRepository({
 
       return {
         decrypt: decryptImpl,
-        ensureTenantKey: async () => {},
+        ensureTenantKey: ensureTenantKeyImpl,
         tenantKeyExists: async () => true,
         ForbiddenError,
       };
@@ -140,6 +141,27 @@ async function testSelectiveDecryptOnlyRequestedFields() {
   console.log('  ✓ client repository selectively decrypts requested fields only');
 }
 
+
+async function testCreateEnsuresTenantKeyBeforePersist() {
+  const calls = [];
+  const ClientRepository = loadClientRepository({
+    findOneResult: null,
+    looksEncryptedImpl: () => false,
+    ensureTenantKeyImpl: async (tenantId) => { calls.push(`ensure:${tenantId}`); },
+  });
+
+  const created = await ClientRepository.create({
+    firmId: 'firm-1',
+    businessName: 'Create Client',
+    businessEmail: 'ops@create.test',
+    primaryContactNumber: '9999999999',
+  }, 'Admin');
+
+  assert.strictEqual(calls[0], 'ensure:firm-1');
+  assert.strictEqual(created.businessName, 'Create Client');
+  console.log('  ✓ client repository create ensures tenant key before persistence');
+}
+
 async function run() {
   const originalKey = process.env.MASTER_ENCRYPTION_KEY;
   process.env.MASTER_ENCRYPTION_KEY = 'test-master-key';
@@ -149,6 +171,7 @@ async function run() {
     await testDecryptFailurePreservesStoredValue();
     await testEmptyDisplayValuesNormalizeToNotAvailable();
     await testSelectiveDecryptOnlyRequestedFields();
+    await testCreateEnsuresTenantKeyBeforePersist();
     console.log('Client repository display normalization tests passed.');
   } finally {
     Module._load = originalLoad;
