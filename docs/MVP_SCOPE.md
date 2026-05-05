@@ -22,6 +22,14 @@
 - Dockets are created under clients, so client CRUD and client selection remain mandatory MVP capabilities.
 - Tenant isolation, firm permissions, and encrypted client handling remain unchanged.
 
+## Clients MVP Behavior Contract
+- **Core dependency:** Clients are required before creating client-based dockets.
+- **Minimum client fields:** business/client name is required; email and phone are optional when available.
+- **Admin actions:** PRIMARY_ADMIN/admin can list, create, edit basic details, and activate/deactivate clients.
+- **Activation rules:** deactivation is a reversible status change only; clients are never hard-deleted in MVP.
+- **Docket behavior:** deactivated clients are excluded from active Create Docket client choices, while existing dockets under those clients remain viewable.
+- **Operational error handling:** when client loading fails with `TENANT_KEY_MISSING`, UI must show “Client encryption setup needs repair before clients can be loaded.” and block dependent create/edit actions until repaired.
+
 ## Create Docket Setup Prerequisites (MVP)
 - **Clients are required:** Create Docket requires at least one active client before submit can proceed.
 - **Category + subcategory are required:** Routing depends on active category/subcategory definitions.

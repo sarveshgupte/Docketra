@@ -29,6 +29,10 @@ const toDisplayString = (value, fallback = '—') => {
 };
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const TENANT_KEY_MISSING_COPY = 'Client encryption setup needs repair before clients can be loaded.';
+const FORBIDDEN_COPY = 'You do not have permission to manage clients for this firm.';
+const DUPLICATE_COPY = 'A client with this name or identifier already exists.';
+const DEFAULT_LOAD_ERROR = 'Failed to load clients';
 
 
 export const ClientsPage = () => {
@@ -55,18 +59,8 @@ export const ClientsPage = () => {
   const [searchQuery, setSearchQuery] = useState(query.q || '');
   const [clientForm, setClientForm] = useState({
     businessName: '',
-    businessAddress: '',
-    primaryContactNumber: '',
-    secondaryContactNumber: '',
     businessEmail: '',
-    PAN: '',
-    GST: '',
-    TAN: '',
-    CIN: '',
-    contactPersonName: '',
-    contactPersonDesignation: '',
-    contactPersonPhoneNumber: '',
-    contactPersonEmailAddress: '',
+    primaryContactNumber: '',
   });
   const [clientFormErrors, setClientFormErrors] = useState({});
   const [clientFormMessage, setClientFormMessage] = useState({ type: '', text: '' });
@@ -77,18 +71,8 @@ export const ClientsPage = () => {
 
   const initialClientSnapshot = useMemo(() => ({
     businessName: selectedClient?.businessName || '',
-    businessAddress: selectedClient?.businessAddress || '',
-    primaryContactNumber: selectedClient?.primaryContactNumber || '',
-    secondaryContactNumber: selectedClient?.secondaryContactNumber || '',
     businessEmail: selectedClient?.businessEmail || '',
-    PAN: selectedClient?.PAN || '',
-    GST: selectedClient?.GST || '',
-    TAN: selectedClient?.TAN || '',
-    CIN: selectedClient?.CIN || '',
-    contactPersonName: selectedClient?.contactPersonName || '',
-    contactPersonDesignation: selectedClient?.contactPersonDesignation || '',
-    contactPersonPhoneNumber: selectedClient?.contactPersonPhoneNumber || '',
-    contactPersonEmailAddress: selectedClient?.contactPersonEmailAddress || '',
+    primaryContactNumber: selectedClient?.primaryContactNumber || '',
   }), [selectedClient]);
 
   const isClientFormDirty = useMemo(() => {
@@ -101,6 +85,24 @@ export const ClientsPage = () => {
     isEnabled: showClientModal && !savingClient,
     message: 'You have unsaved client changes. Close this form without saving?',
   });
+
+  const getClientErrorCode = (error) => {
+    const nestedCode = error?.response?.data?.code;
+    const rootCode = error?.code;
+    const message = String(error?.response?.data?.message || error?.message || '');
+    if (rootCode === 'TENANT_KEY_MISSING' || nestedCode === 'TENANT_KEY_MISSING' || message.includes('TENANT_KEY_MISSING')) return 'TENANT_KEY_MISSING';
+    if (error?.response?.status === 403) return 'FORBIDDEN';
+    if (error?.response?.status === 409 || nestedCode === 'DUPLICATE_CLIENT' || /duplicate|already exists|E11000/i.test(message)) return 'DUPLICATE';
+    return '';
+  };
+
+  const getClientErrorMessage = (error, fallback = DEFAULT_LOAD_ERROR) => {
+    const code = getClientErrorCode(error);
+    if (code === 'TENANT_KEY_MISSING') return TENANT_KEY_MISSING_COPY;
+    if (code === 'FORBIDDEN') return FORBIDDEN_COPY;
+    if (code === 'DUPLICATE') return DUPLICATE_COPY;
+    return error?.response?.data?.message || error?.message || fallback;
+  };
 
   const loadClients = useCallback(async () => {
     const hasRows = clients.length > 0;
@@ -131,8 +133,9 @@ export const ClientsPage = () => {
       setClients(normalizedClients);
       setPagination(response?.pagination || { page, pages: 1, total: normalizedClients.length, limit: 25 });
     } catch (error) {
-      setLoadError(error?.response?.data?.message || error?.message || 'Failed to load clients');
-      showError(error?.response?.data?.message || error?.message || 'Failed to load clients');
+      const message = getClientErrorMessage(error, DEFAULT_LOAD_ERROR);
+      setLoadError(message);
+      showError(message);
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -179,18 +182,8 @@ export const ClientsPage = () => {
     setClientFormMessage({ type: '', text: '' });
     setClientForm({
       businessName: '',
-      businessAddress: '',
-      primaryContactNumber: '',
-      secondaryContactNumber: '',
       businessEmail: '',
-      PAN: '',
-      GST: '',
-      TAN: '',
-      CIN: '',
-      contactPersonName: '',
-      contactPersonDesignation: '',
-      contactPersonPhoneNumber: '',
-      contactPersonEmailAddress: '',
+      primaryContactNumber: '',
     });
   }, []);
 
@@ -203,18 +196,8 @@ export const ClientsPage = () => {
     setSelectedClient(client);
     setClientForm({
       businessName: client.businessName || '',
-      businessAddress: client.businessAddress || '',
-      primaryContactNumber: client.primaryContactNumber || '',
-      secondaryContactNumber: client.secondaryContactNumber || '',
       businessEmail: client.businessEmail || '',
-      PAN: client.PAN || '',
-      GST: client.GST || '',
-      TAN: client.TAN || '',
-      CIN: client.CIN || '',
-      contactPersonName: client.contactPersonName || '',
-      contactPersonDesignation: client.contactPersonDesignation || '',
-      contactPersonPhoneNumber: client.contactPersonPhoneNumber || '',
-      contactPersonEmailAddress: client.contactPersonEmailAddress || '',
+      primaryContactNumber: client.primaryContactNumber || '',
     });
     setShowClientModal(true);
   };
@@ -229,15 +212,10 @@ export const ClientsPage = () => {
   const validateClientForm = () => {
     const nextErrors = {};
     const name = clientForm.businessName.trim();
-    const phone = clientForm.primaryContactNumber.trim();
     const email = clientForm.businessEmail.trim();
-    const contactEmail = clientForm.contactPersonEmailAddress.trim();
 
     if (!name) nextErrors.businessName = 'Client name is required.';
-    if (!phone) nextErrors.primaryContactNumber = 'Primary client phone number is required.';
-    if (!email) nextErrors.businessEmail = 'Client email is required.';
     if (email && !EMAIL_REGEX.test(email)) nextErrors.businessEmail = 'Enter a valid client email address.';
-    if (contactEmail && !EMAIL_REGEX.test(contactEmail)) nextErrors.contactPersonEmailAddress = 'Enter a valid contact person email address.';
 
     setClientFormErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -261,18 +239,8 @@ export const ClientsPage = () => {
       if (selectedClient?.clientId) {
         const response = await clientApi.updateClient(selectedClient.clientId, {
           businessName: clientForm.businessName,
-          ...(clientForm.businessAddress ? { businessAddress: clientForm.businessAddress } : {}),
-          businessEmail: clientForm.businessEmail,
-          primaryContactNumber: clientForm.primaryContactNumber,
-          secondaryContactNumber: clientForm.secondaryContactNumber,
-          PAN: clientForm.PAN,
-          GST: clientForm.GST,
-          TAN: clientForm.TAN,
-          CIN: clientForm.CIN,
-          contactPersonName: clientForm.contactPersonName,
-          contactPersonDesignation: clientForm.contactPersonDesignation,
-          contactPersonPhoneNumber: clientForm.contactPersonPhoneNumber,
-          contactPersonEmailAddress: clientForm.contactPersonEmailAddress,
+          ...(clientForm.businessEmail ? { businessEmail: clientForm.businessEmail } : {}),
+          ...(clientForm.primaryContactNumber ? { primaryContactNumber: clientForm.primaryContactNumber } : {}),
         });
         if (!response?.success) throw new Error(response?.message || 'Failed to update client');
         setClients((prev) => prev.map((client) => (client.clientId === selectedClient.clientId
@@ -282,18 +250,8 @@ export const ClientsPage = () => {
       } else {
         const response = await clientApi.createClient({
           businessName: clientForm.businessName,
-          businessEmail: clientForm.businessEmail,
-          primaryContactNumber: clientForm.primaryContactNumber,
-          ...(clientForm.businessAddress ? { businessAddress: clientForm.businessAddress } : {}),
-          ...(clientForm.secondaryContactNumber ? { secondaryContactNumber: clientForm.secondaryContactNumber } : {}),
-          ...(clientForm.PAN ? { PAN: clientForm.PAN } : {}),
-          ...(clientForm.GST ? { GST: clientForm.GST } : {}),
-          ...(clientForm.TAN ? { TAN: clientForm.TAN } : {}),
-          ...(clientForm.CIN ? { CIN: clientForm.CIN } : {}),
-          ...(clientForm.contactPersonName ? { contactPersonName: clientForm.contactPersonName } : {}),
-          ...(clientForm.contactPersonDesignation ? { contactPersonDesignation: clientForm.contactPersonDesignation } : {}),
-          ...(clientForm.contactPersonPhoneNumber ? { contactPersonPhoneNumber: clientForm.contactPersonPhoneNumber } : {}),
-          ...(clientForm.contactPersonEmailAddress ? { contactPersonEmailAddress: clientForm.contactPersonEmailAddress } : {}),
+          ...(clientForm.businessEmail ? { businessEmail: clientForm.businessEmail } : {}),
+          ...(clientForm.primaryContactNumber ? { primaryContactNumber: clientForm.primaryContactNumber } : {}),
         });
         if (!response?.success) throw new Error(response?.message || 'Failed to create client');
         if (response?.data?.clientId) {
@@ -304,7 +262,7 @@ export const ClientsPage = () => {
       setClientFormMessage({ type: 'success', text: 'Client details saved successfully.' });
       closeClientModal();
     } catch (error) {
-      const message = error?.response?.data?.message || error?.message || 'Failed to save client';
+      const message = getClientErrorMessage(error, 'Failed to save client');
       setClientFormMessage({ type: 'error', text: message });
       showError(message);
     } finally {
@@ -384,6 +342,12 @@ export const ClientsPage = () => {
       render: (client) => <Badge status={client.status === 'ACTIVE' ? 'Approved' : 'Rejected'}>{client.status}</Badge>,
     },
     {
+      key: 'primaryContactNumber',
+      header: 'Phone',
+      headerClassName: 'min-w-[10rem]',
+      render: (client) => toDisplayString(client.primaryContactNumber),
+    },
+    {
       key: 'createdAt',
       header: 'Created',
       align: 'right',
@@ -412,13 +376,15 @@ export const ClientsPage = () => {
                   {client.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
                 </Button>
               )}
-              <Button size="small" variant="warning" onClick={() => openEditCfsModal(client)}>Edit CFS</Button>
+              <Button size="small" variant="outline" onClick={() => window.location.assign(`/dashboard/firm/${user?.firmSlug || ''}/create-case?clientId=${encodeURIComponent(client.clientId)}`)}>
+                Create Docket
+              </Button>
             </>
           ) : null}
         </div>
       ),
     },
-  ], [isAdmin, openEditCfsModal, openEditClientModal, handleToggleClientStatus]);
+  ], [isAdmin, openEditClientModal, handleToggleClientStatus, user?.firmSlug]);
 
   const refreshSelectedClient = async () => {
     if (!editCfsClient?.clientId) return;
@@ -517,7 +483,7 @@ export const ClientsPage = () => {
           <div className="p-8">
             <EmptyState
               title="Could not load clients"
-              description="Please retry loading clients. If this continues, verify firm access and network connectivity."
+              description={loadError}
               actionLabel="Retry"
               onAction={loadClients}
             />
@@ -531,7 +497,9 @@ export const ClientsPage = () => {
               <div className="p-8">
                 <EmptyState
                   title="No clients available yet"
-                  description="Create your first client to begin organizing dockets and workspaces."
+                  description="Add your first client to start creating dockets."
+                  actionLabel={isAdmin ? 'Add Client' : undefined}
+                  onAction={isAdmin ? openCreateClientModal : undefined}
                 />
               </div>
             )}
@@ -586,74 +554,18 @@ export const ClientsPage = () => {
             disabled={!isAdmin}
           />
           <Input
-            label="Business Address (Optional)"
-            value={clientForm.businessAddress}
-            onChange={(event) => handleClientFieldChange('businessAddress', event.target.value)}
-            disabled={!isAdmin}
-          />
-          <Input
-            label="Client Phone Number"
+            label="Client Phone Number (Optional)"
             value={clientForm.primaryContactNumber}
             onChange={(event) => handleClientFieldChange('primaryContactNumber', event.target.value)}
-            required
             error={clientFormErrors.primaryContactNumber}
           />
           <Input
-            label="Secondary Contact Number"
-            value={clientForm.secondaryContactNumber}
-            onChange={(event) => handleClientFieldChange('secondaryContactNumber', event.target.value)}
-          />
-          <Input
-            label="Client Email"
+            label="Client Email (Optional)"
             type="email"
             value={clientForm.businessEmail}
             onChange={(event) => handleClientFieldChange('businessEmail', event.target.value)}
-            required
             error={clientFormErrors.businessEmail}
-            helpText="We'll use this email for client communication records."
-          />
-
-          <Input
-            label="PAN"
-            value={clientForm.PAN}
-            onChange={(event) => handleClientFieldChange('PAN', event.target.value)}
-          />
-          <Input
-            label="GST Number"
-            value={clientForm.GST}
-            onChange={(event) => handleClientFieldChange('GST', event.target.value)}
-          />
-          <Input
-            label="TAN"
-            value={clientForm.TAN}
-            onChange={(event) => handleClientFieldChange('TAN', event.target.value)}
-          />
-          <Input
-            label="CIN"
-            value={clientForm.CIN}
-            onChange={(event) => handleClientFieldChange('CIN', event.target.value)}
-          />
-          <Input
-            label="Contact Person Name"
-            value={clientForm.contactPersonName}
-            onChange={(event) => handleClientFieldChange('contactPersonName', event.target.value)}
-          />
-          <Input
-            label="Contact Person Designation"
-            value={clientForm.contactPersonDesignation}
-            onChange={(event) => handleClientFieldChange('contactPersonDesignation', event.target.value)}
-          />
-          <Input
-            label="Contact Person Phone Number"
-            value={clientForm.contactPersonPhoneNumber}
-            onChange={(event) => handleClientFieldChange('contactPersonPhoneNumber', event.target.value)}
-          />
-          <Input
-            label="Contact Person Email Address"
-            type="email"
-            value={clientForm.contactPersonEmailAddress}
-            onChange={(event) => handleClientFieldChange('contactPersonEmailAddress', event.target.value)}
-            error={clientFormErrors.contactPersonEmailAddress}
+            helpText="Optional contact detail for coordination."
           />
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
