@@ -55,7 +55,8 @@
     "ci:release-gate:pure": "npm run docs:check && npm run ci:backend:syntax && npm run ci:backend:routes && npm run ci:backend:core && npm run ci:backend:security && npm run ci:frontend:build && npm run ci:frontend:checks",
     "ci:release-gate:integration": "npm run ci:backend:core:integration && npm run ci:backend:security:integration",
     "test:security:integration": "NODE_ENV='test' sh -c \"node tests/securityHardening.test.js\"",
-    "ci:backend:security:integration": "npm run test:security:integration"
+    "ci:backend:security:integration": "npm run test:security:integration",
+    "security:secrets": "bash scripts/run-secret-scan.sh"
   },
   "keywords": [
     "task-management",

@@ -62,6 +62,9 @@ jobs:
       - name: Security/config gate
         run: npm run ci:backend:security
 
+      - name: Secret scanning gate
+        run: npm run security:secrets
+
   frontend-release-gate:
     name: Frontend release gate
     runs-on: ubuntu-latest
