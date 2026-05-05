@@ -27,6 +27,6 @@ for (const blockedPhrase of ['Firm Memory', 'Relationship continuity', 'firm nev
 }
 
 assert.equal(/import.*vector|import.*embedding|import.*openai|import.*anthropic/i.test(homePage), false, 'Landing page must not import AI/vector/embedding libraries');
-assert.ok(homePage.includes('to="/login"') && homePage.includes('to="/signup"'), 'Landing nav must preserve Login and Signup CTAs.');
+assert.ok(homePage.includes('to="/find-workspace"') && homePage.includes('to="/signup"'), 'Landing nav must preserve Login and Signup CTAs.');
 
 console.log('companyBrainLandingPage.test.mjs passed');
