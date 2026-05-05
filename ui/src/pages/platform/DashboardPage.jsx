@@ -120,12 +120,11 @@ export const PlatformDashboardPage = () => {
 
       <PageSection title="Modules" description="Open the right workspace quickly based on your current objective.">
         <div className="action-row">
-          {isAdmin ? <Link to={ROUTES.CMS(firmSlug)}>Knowledge Intake</Link> : null}
-          {isAdmin ? <Link to={ROUTES.CRM_CLIENTS(firmSlug)}>Relationships</Link> : null}
+          {isAdmin ? <Link to={ROUTES.CLIENTS(firmSlug)}>Clients</Link> : null}
           <Link to={ROUTES.DOCKETS(firmSlug)}>All Dockets</Link>
           <button type="button" onClick={() => void refetch()} disabled={isFetching}>{isFetching ? 'Refreshing…' : 'Refresh metrics'}</button>
         </div>
-        {!isAdmin ? <p className="muted">Firm Memory modules are available to admin roles.</p> : null}
+        {!isAdmin ? <p className="muted">Core work modules are available based on your role.</p> : null}
       </PageSection>
 
       <PageSection title="Productivity trend" description="Quick signal of current workload throughput.">

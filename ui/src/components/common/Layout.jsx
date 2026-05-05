@@ -546,35 +546,6 @@ export const Layout = ({ children, title, subtitle }) => {
       collapsible: false,
       items: [
         {
-          id: 'crm',
-          type: 'group',
-          to: ROUTES.CRM(currentFirmSlug),
-          label: 'CRM',
-          icon: <IconCases />,
-          active: isActivePrefix(`/app/firm/${currentFirmSlug}/crm`),
-          hidden: !hasAdminAccess,
-          children: [
-            { id: 'crm-overview', to: ROUTES.CRM(currentFirmSlug), label: 'Overview', icon: <IconDashboard />, active: isActivePath(ROUTES.CRM(currentFirmSlug)) },
-            { id: 'crm-client-management', to: ROUTES.CRM_CLIENTS(currentFirmSlug), label: 'Client Management', icon: <IconCases />, active: isActivePath(ROUTES.CRM_CLIENTS(currentFirmSlug)) },
-            { id: 'crm-leads', to: ROUTES.CRM_LEADS(currentFirmSlug), label: 'Leads', icon: <IconWorklist />, active: isActivePath(ROUTES.CRM_LEADS(currentFirmSlug)) },
-          ],
-        },
-        {
-          id: 'cms',
-          type: 'group',
-          to: ROUTES.CMS(currentFirmSlug),
-          label: 'CMS',
-          icon: <IconWorklist />,
-          active: isActivePrefix(ROUTES.CMS(currentFirmSlug)),
-          hidden: !hasAdminAccess,
-          children: [
-            { id: 'cms-overview', to: ROUTES.CMS(currentFirmSlug), label: 'Overview', icon: <IconDashboard />, active: isActivePath(ROUTES.CMS(currentFirmSlug)) && !location.hash },
-            { id: 'cms-request-links', to: `${ROUTES.CMS(currentFirmSlug)}#intake-queue`, label: 'Request Links / Intake Links', icon: <IconWorklist />, active: isActivePath(ROUTES.CMS(currentFirmSlug)) && location.hash === '#intake-queue' },
-            { id: 'cms-forms', to: `${ROUTES.CMS(currentFirmSlug)}#embed-forms`, label: 'Forms / Templates', icon: <IconCases />, active: isActivePath(ROUTES.CMS(currentFirmSlug)) && location.hash === '#embed-forms' },
-            { id: 'cms-public-intake', to: `${ROUTES.CMS(currentFirmSlug)}#cms-surfaces`, label: 'Public Intake / Submissions', icon: <IconWorkbasket />, active: isActivePath(ROUTES.CMS(currentFirmSlug)) && location.hash === '#cms-surfaces' },
-          ],
-        },
-        {
           id: 'task-manager',
           type: 'group',
           to: ROUTES.TASK_MANAGER(currentFirmSlug),
@@ -597,6 +568,7 @@ export const Layout = ({ children, title, subtitle }) => {
             { id: 'tm-worklist', to: ROUTES.WORKLIST(currentFirmSlug), label: 'My Worklist', icon: <IconWorklist />, active: isActivePath(ROUTES.WORKLIST(currentFirmSlug)) || isActivePath(ROUTES.MY_WORKLIST(currentFirmSlug)), badge: countsFetched ? worklistCount : 'loading' },
             { id: 'tm-qc', to: ROUTES.QC_QUEUE(currentFirmSlug), label: 'QC Workbasket', icon: <IconAdmin />, active: isActivePath(ROUTES.QC_QUEUE(currentFirmSlug)), hidden: !hasQcQueueAccess },
             { id: 'tm-dockets', to: ROUTES.CASES(currentFirmSlug), label: 'All Dockets', icon: <IconCases />, active: isActivePath(ROUTES.CASES(currentFirmSlug)) },
+            { id: 'tm-clients', to: ROUTES.CLIENTS(currentFirmSlug), label: 'Clients', icon: <IconTeam />, active: isActivePath(ROUTES.CLIENTS(currentFirmSlug)), hidden: !hasAdminAccess },
             {
               id: 'tm-category-management',
               to: `${ROUTES.ADMIN(currentFirmSlug)}?tab=categories&context=work-settings`,
