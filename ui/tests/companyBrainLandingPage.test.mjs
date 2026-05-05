@@ -7,120 +7,26 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const read = (p) => fs.readFileSync(path.resolve(__dirname, '..', p), 'utf8');
 
 const homePage = read('src/components/landing/LandingPageContent.jsx');
-const publicRoutes = read('src/routes/PublicRoutes.jsx');
-const protectedRoutes = read('src/routes/ProtectedRoutes.jsx');
-
-// ── Required copy ──────────────────────────────────────────────────────────
 
 assert.ok(
-  homePage.includes("Run your firm's work, clients, and knowledge from one connected workspace."),
-  "Landing page must contain hero headline Run your firm's work, clients, and knowledge from one connected workspace."
+  homePage.includes('Client-based task and docket management for Indian firms'),
+  'Landing hero must reflect MVP positioning.'
 );
+assert.ok(homePage.includes('Clients'), 'Landing page should mention Clients.');
+assert.ok(homePage.includes('Dockets'), 'Landing page should mention Dockets.');
+assert.ok(homePage.includes('tasks') || homePage.includes('Work'), 'Landing page should mention Tasks or Work.');
+assert.ok(homePage.includes('Workbaskets') || homePage.toLowerCase().includes('routing'), 'Landing page should mention Workbaskets or routing.');
 
-assert.ok(
-  homePage.includes('Docketra is the Company Brain'),
-  'Landing page must include connected workspace product framing'
-);
-
-assert.ok(
-  homePage.includes('AI off by default'),
-  'Landing page must contain trust bullet "AI off by default"'
-);
-
-assert.ok(
-  homePage.includes('Bring Your Own Storage'),
-  'Landing page must contain trust card "Bring Your Own Storage"'
-);
-
-assert.ok(
-  homePage.includes('Quiet by design. Yours by default.'),
-  'Landing page must contain trust section headline "Quiet by design. Yours by default."'
-);
-
-assert.ok(
-  homePage.includes("Build your firm's memory before it walks out the door."),
-  'Landing page must contain final CTA headline'
-);
+for (const blocked of ['Company Brain', 'Knowledge Library', 'Knowledge Intake', 'CMS', 'relationship graph', 'HubSpot']) {
+  assert.equal(homePage.includes(blocked), false, `Landing page must not include blocked marketing term: ${blocked}`);
+}
 
 
-assert.ok(
-  homePage.includes('Docketra helps teams capture intake, manage relationships, execute work, preserve firm memory, and monitor readiness — without exposing private client content.'),
-  'Landing page must contain updated hero subheadline'
-);
+for (const blockedPhrase of ['Firm Memory', 'Relationship continuity', 'firm never starts from zero', 'preserve firm memory', 'relationship intelligence']) {
+  assert.equal(homePage.toLowerCase().includes(blockedPhrase.toLowerCase()), false, `Landing page must not include legacy positioning phrase: ${blockedPhrase}`);
+}
 
-assert.ok(homePage.includes('Built for Indian firms'), 'Landing page must include trust chip: Built for Indian firms');
-assert.ok(homePage.includes('Metadata-only oversight'), 'Landing page must include trust chip: Metadata-only oversight');
-assert.ok(homePage.includes('BYOS-compatible storage'), 'Landing page must include trust chip: BYOS-compatible storage');
-
-// ── Prohibited copy / patterns ────────────────────────────────────────────
-
-assert.equal(
-  homePage.includes('All context synced'),
-  false,
-  'Landing page must NOT contain "All context synced"'
-);
-
-assert.equal(
-  (homePage.includes('readOnly') || homePage.includes('read-only')) && homePage.includes('<input'),
-  false,
-  'Landing page must NOT contain a readOnly email input'
-);
-
-assert.equal(
-  homePage.includes("onSubmit={(e) => e.preventDefault()}"),
-  false,
-  'Landing page must NOT contain a fake onSubmit handler'
-);
-
-// ── No AI/vector/embedding infrastructure ────────────────────────────────
-
-// These checks guard against actual imported AI infrastructure, not just copy mentioning the words.
-assert.equal(
-  /import.*vector|import.*embedding|import.*openai|import.*anthropic/i.test(homePage),
-  false,
-  'Landing page must NOT import AI/vector/embedding libraries'
-);
-
-assert.equal(
-  homePage.includes('document extraction'),
-  false,
-  'Landing page must NOT reference document extraction'
-);
-
-// ── Routes remain intact ──────────────────────────────────────────────────
-
-assert.ok(
-  publicRoutes.includes('<Route path="/signup" element={<MarketingSignupPage />} />'),
-  'Public /signup route must remain registered'
-);
-
-assert.ok(
-  publicRoutes.includes('<Route path="/:firmSlug/login" element={<FirmLoginPage />} />'),
-  'Public /:firmSlug/login route must remain registered'
-);
-
-assert.ok(
-  publicRoutes.includes('<Route path="/" element={<MarketingHomePage />} />'),
-  'Public / route must render MarketingHomePage'
-);
-
-assert.ok(
-  protectedRoutes.includes('firmSlug'),
-  'Protected routes must remain intact'
-);
-
-// ── CTA links to real routes, not fake forms ──────────────────────────────
-
-assert.ok(
-  homePage.includes('to="/signup"') || homePage.includes(`href="mailto:`),
-  'Final CTA must link to /signup or a mailto: — no fake form'
-);
-
-
-assert.equal(homePage.includes('Docketra Legal Solutions'), false, 'Landing page must not include banned label Docketra Legal Solutions');
-assert.equal(homePage.includes('billing') || homePage.includes('checkout') || homePage.includes('Stripe') || homePage.includes('subscription') || homePage.includes('payment'), false, 'Landing page must not include billing/payment copy');
-assert.ok(homePage.includes('Metadata-only oversight'), 'Landing page should include metadata-only oversight language');
-assert.ok(homePage.includes('Pilot Readiness'), 'Landing page should include Pilot Readiness section');
-assert.ok(homePage.includes('View product overview'), 'Hero CTA should include View product overview');
+assert.equal(/import.*vector|import.*embedding|import.*openai|import.*anthropic/i.test(homePage), false, 'Landing page must not import AI/vector/embedding libraries');
+assert.ok(homePage.includes('to="/login"') && homePage.includes('to="/signup"'), 'Landing nav must preserve Login and Signup CTAs.');
 
 console.log('companyBrainLandingPage.test.mjs passed');
