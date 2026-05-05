@@ -20,7 +20,6 @@ jobs:
     env:
       NODE_ENV: test
       JWT_SECRET: ci-placeholder-jwt-secret-for-tests-only-do-not-use
-      SUPERADMIN_PASSWORD_HASH: "$2b$10$replace_this_with_a_real_bcrypt_hash_before_deploying"
       SUPERADMIN_XID: X000001
       SUPERADMIN_EMAIL: superadmin@example.com
       SUPERADMIN_OBJECT_ID: "000000000000000000000001"
