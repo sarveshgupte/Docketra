@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Input } from '../common/Input';
 import { Select } from '../common/Select';
 import { Textarea } from '../common/Textarea';
@@ -11,6 +11,7 @@ import { clientApi } from '../../api/client.api';
 import { useToast } from '../../hooks/useToast';
 import { useUnsavedChangesPrompt } from '../../hooks/useUnsavedChangesPrompt';
 import { buildCreateDocketPayload, validateCreateDocketPayload, resolveEarliestErrorStep } from './createDocketPayload';
+import { ROUTES } from '../../constants/routes';
 
 const STEPS = ['Basic Info', 'Classification', 'Routing', 'Assignment', 'Review & Create'];
 const createSubmissionKey = () => {
@@ -58,6 +59,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState({ categories: true, workbaskets: true, users: true, clients: true, submit: false });
   const [clientLoadIssue, setClientLoadIssue] = useState('');
+  const [dependencyErrors, setDependencyErrors] = useState({});
 
   const isDirty = useMemo(() => {
     return Boolean(
@@ -76,32 +78,50 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
     message: 'You have unsaved docket details. Leave this flow without creating the docket?',
   });
 
-  useEffect(() => {
-    const loadDeps = async () => {
+  const loadDeps = useCallback(async () => {
       setStatusMessage('Loading form dependencies…');
-      try {
-        const [categoryResponse, workbasketResponse, usersResponse, clientResponse] = await Promise.all([
+      setSubmitError('');
+      setDependencyErrors({});
+      setClientLoadIssue('');
+      const [categoryResponse, workbasketResponse, usersResponse, clientResponse] = await Promise.allSettled([
           categoryService.getCategories(true),
           adminApi.listWorkbaskets({ activeOnly: true }),
           adminApi.getUsers({ limit: 200, status: 'active' }),
           clientApi.getClients(true, true),
-        ]);
+      ]);
+      const nextErrors = {};
 
-        const nextCategories = categoryResponse?.data || [];
-        const nextWorkbaskets = workbasketResponse?.data || [];
-        const nextUsers = usersResponse?.data || [];
-        const nextClients = (clientResponse?.data || []).filter((item) => item?.isActive !== false);
+      const nextCategories = categoryResponse.status === 'fulfilled' ? (categoryResponse.value?.data || []) : [];
+      const nextWorkbaskets = workbasketResponse.status === 'fulfilled' ? (workbasketResponse.value?.data || []) : [];
+      const nextUsers = usersResponse.status === 'fulfilled' ? (usersResponse.value?.data || []) : [];
+      const nextClients = clientResponse.status === 'fulfilled'
+        ? (clientResponse.value?.data || []).filter((item) => item?.isActive !== false)
+        : [];
 
-        setCategories(nextCategories);
-        setWorkbaskets(nextWorkbaskets);
-        setUsers(nextUsers);
-        setClients(nextClients);
+      if (categoryResponse.status === 'rejected') nextErrors.categories = 'Categories could not be loaded.';
+      if (workbasketResponse.status === 'rejected') nextErrors.workbaskets = 'Workbaskets could not be loaded.';
+      if (usersResponse.status === 'rejected') nextErrors.users = 'Users could not be loaded.';
+      if (clientResponse.status === 'rejected') {
+        const message = clientResponse.reason?.message || '';
+        if (message.includes('TENANT_KEY_MISSING')) {
+          setClientLoadIssue('Client encryption setup needs repair before clients can be loaded.');
+          nextErrors.clients = 'Client setup repair required.';
+        } else {
+          nextErrors.clients = 'Clients could not be loaded.';
+        }
+      }
 
-        setFormData((prev) => {
-          const firmDefaultClientId = nextClients.find((item) => item.isDefaultClient || item.isSystemClient || item.isInternal || item.clientId === 'C000001')?.clientId || '';
-          const preferredClientId = initialClientId && nextClients.some((item) => item.clientId === initialClientId)
-            ? initialClientId
-            : '';
+      setCategories(nextCategories);
+      setWorkbaskets(nextWorkbaskets);
+      setUsers(nextUsers);
+      setClients(nextClients);
+      setDependencyErrors(nextErrors);
+
+      setFormData((prev) => {
+        const firmDefaultClientId = nextClients.find((item) => item.isDefaultClient || item.isSystemClient || item.isInternal || item.clientId === 'C000001')?.clientId || '';
+        const preferredClientId = initialClientId && nextClients.some((item) => item.clientId === initialClientId)
+          ? initialClientId
+          : '';
         return {
           ...prev,
           clientId: prev.clientId || preferredClientId || firmDefaultClientId || nextClients[0]?.clientId || '',
@@ -109,19 +129,13 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
           idempotencyKey: prev.idempotencyKey || createSubmissionKey(),
         };
       });
-      } catch (error) {
-        if ((error?.message || '').includes('TENANT_KEY_MISSING')) {
-          setClientLoadIssue('Client setup is incomplete for this firm (TENANT_KEY_MISSING). Please complete tenant setup and retry.');
-        }
-        setSubmitError('Failed to load form options. Please refresh and retry.');
-      } finally {
-        setStatusMessage('');
-        setLoading({ categories: false, workbaskets: false, users: false, clients: false, submit: false });
-      }
-    };
-
-    loadDeps();
+      setStatusMessage('');
+      setLoading({ categories: false, workbaskets: false, users: false, clients: false, submit: false });
   }, [initialClientId]);
+
+  useEffect(() => {
+    loadDeps();
+  }, [loadDeps]);
 
   useEffect(() => {
     const selected = categories.find((item) => item._id === formData.categoryId);
@@ -178,7 +192,17 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   const selectedClient = clients.find((item) => item.clientId === formData.clientId);
   const defaultClient = clients.find((item) => item.isDefaultClient || item.isSystemClient || item.isInternal || item.clientId === 'C000001');
   const hasActiveClients = clients.length > 0;
-  const hasRoutingPrerequisites = categories.length > 0 && workbaskets.length > 0;
+  const hasActiveSubcategory = categories.some((item) => (item.subcategories || []).some((sub) => sub.isActive));
+  const hasRoutingPrerequisites = hasActiveSubcategory && workbaskets.length > 0;
+  const isClientsBlocked = Boolean(dependencyErrors.clients) || !hasActiveClients;
+  const isCategoriesBlocked = Boolean(dependencyErrors.categories) || !hasActiveSubcategory;
+  const isWorkbasketsBlocked = Boolean(dependencyErrors.workbaskets) || workbaskets.length === 0;
+  const setupBlockingMessage = isClientsBlocked || isCategoriesBlocked || isWorkbasketsBlocked
+    ? 'Complete setup before creating your first docket.'
+    : '';
+  const canSubmitFromSetup = !isClientsBlocked && !isCategoriesBlocked && !isWorkbasketsBlocked;
+  const retryFailedDependencies = () => loadDeps();
+  const firmSlug = window.location.pathname.split('/')[3] || '';
 
   const updateField = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -258,6 +282,17 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
 
       {submitError ? <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{submitError}</p> : null}
       {statusMessage ? <p className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">{statusMessage}</p> : null}
+      <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
+        <p className="font-semibold text-slate-900">Setup checklist</p>
+        <ul className="mt-2 list-disc pl-5 space-y-1">
+          <li>Clients: {clientLoadIssue || dependencyErrors.clients ? (clientLoadIssue || dependencyErrors.clients) : (hasActiveClients ? 'Ready.' : 'Add a client first.')} <a href={ROUTES.CLIENTS(firmSlug)}>Open Clients</a></li>
+          <li>Categories: {dependencyErrors.categories ? dependencyErrors.categories : (hasActiveSubcategory ? 'Ready.' : 'Create a category and subcategory first.')} <a href={ROUTES.WORK_CATEGORY_MANAGEMENT(firmSlug)}>Open Category Management</a></li>
+          <li>Workbaskets: {dependencyErrors.workbaskets ? dependencyErrors.workbaskets : (workbaskets.length > 0 ? 'Ready.' : 'Create an active workbasket first.')} <a href={ROUTES.WORK_SETTINGS(firmSlug)}>Open Work Settings</a></li>
+          <li>Users: {dependencyErrors.users ? 'Users could not be loaded.' : (users.length > 0 ? 'Ready.' : 'Add or activate a team member first if assignment is required.')} <a href={ROUTES.ADMIN(firmSlug)}>Open Team/Admin</a></li>
+        </ul>
+        {setupBlockingMessage ? <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800">{setupBlockingMessage}</p> : null}
+        {(Object.keys(dependencyErrors).length > 0 || clientLoadIssue) ? <Button type="button" variant="outline" onClick={retryFailedDependencies}>Retry failed loading</Button> : null}
+      </div>
       <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
         <p className="font-semibold text-slate-900">First docket guidance</p>
         <ul className="mt-2 list-disc pl-5 space-y-1">
@@ -366,9 +401,9 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
         <Button type="button" variant="outline" onClick={handleCancel} disabled={loading.submit}>Cancel</Button>
         <Button type="button" variant="outline" onClick={() => setStep((prev) => Math.max(0, prev - 1))} disabled={step === 0 || loading.submit}>Back</Button>
         {step < STEPS.length - 1 ? (
-          <Button type="button" variant="primary" onClick={() => validateStep() && setStep((prev) => Math.min(STEPS.length - 1, prev + 1))} disabled={!canProceed || loading.submit}>Next</Button>
+          <Button type="button" variant="primary" onClick={() => validateStep() && setStep((prev) => Math.min(STEPS.length - 1, prev + 1))} disabled={!canProceed || loading.submit || !canSubmitFromSetup}>Next</Button>
         ) : (
-          <Button type="button" variant="primary" onClick={handleCreate} disabled={loading.submit}>{loading.submit ? 'Creating…' : 'Create Docket'}</Button>
+          <Button type="button" variant="primary" onClick={handleCreate} disabled={loading.submit || !canSubmitFromSetup}>{loading.submit ? 'Creating…' : 'Create Docket'}</Button>
         )}
       </div>
     </Card>
