@@ -3666,12 +3666,28 @@ const findWorkspaceByXid = async (req, res) => {
     isActive: true,
   }).select('firmId').lean();
 
-  const firmIds = [...new Set(users.map((u) => normalizeMongoId(u.firmId)).filter(Boolean))];
-  if (!firmIds.length) return res.status(200).json({ success: true, data: { workspaces: [] } });
+  const firmRefs = [...new Set(users.map((u) => normalizeMongoId(u.firmId)).filter(Boolean))];
+  if (!firmRefs.length) return res.status(200).json({ success: true, data: { workspaces: [] } });
 
-  const firms = await Firm.find({ _id: { $in: firmIds }, isActive: true }).select('firmSlug firmName status').lean();
-  const workspaces = firms
-    .map((firm) => ({ firmSlug: String(firm.firmSlug || '').trim(), firmName: String(firm.firmName || '').trim() || 'Workspace', status: String(firm.status || '').toUpperCase() }))
+  const objectIdRefs = firmRefs.filter((value) => mongoose.Types.ObjectId.isValid(value));
+  const stringRefs = firmRefs.filter((value) => !mongoose.Types.ObjectId.isValid(value)).map((value) => String(value).toUpperCase());
+
+  const firms = await Firm.find({
+    $and: [
+      { $or: [{ status: 'active' }, { isActive: true }] },
+      {
+        $or: [
+          objectIdRefs.length ? { _id: { $in: objectIdRefs } } : null,
+          stringRefs.length ? { firmId: { $in: stringRefs } } : null,
+        ].filter(Boolean),
+      },
+    ],
+  }).select('firmSlug name').lean();
+    const workspaces = firms
+    .map((firm) => ({
+      firmSlug: String(firm.firmSlug || '').trim(),
+      firmName: String(firm.name || firm.firmName || '').trim() || 'Workspace',
+    }))
     .filter((firm) => firm.firmSlug);
 
   return res.status(200).json({ success: true, data: { workspaces } });
