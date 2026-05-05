@@ -24,3 +24,7 @@
 
 ## Roadmap Note
 - CMS and advanced CRM surfaces can be revisited after client-based docket/task workflows are stable in production.
+
+## Public Landing Positioning Note (May 2026)
+- Public marketing/landing copy now reflects MVP scope as **client-based task and docket management**.
+- Public claims for CMS, CRM, Company Brain, Knowledge Library, and related dormant modules remain intentionally excluded until reactivation.
