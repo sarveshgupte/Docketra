@@ -50,7 +50,7 @@ const HomeNav = ({ onNav }) => {
           </ul>
 
           <div className="hidden md:flex items-center gap-3">
-            <Link to="/login" className="text-sm font-medium text-slate-600 hover:text-slate-900">Login</Link>
+            <Link to="/find-workspace" className="text-sm font-medium text-slate-600 hover:text-slate-900">Workspace login</Link>
             <Link
               to="/signup"
               className="inline-flex items-center justify-center h-9 px-5 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-700 transition-colors shadow-sm"
@@ -89,7 +89,7 @@ const HomeNav = ({ onNav }) => {
                 </li>
               ))}
               <li className="mt-2 px-4">
-                <Link to="/login" className="block text-center h-9 leading-9 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors" onClick={() => setMenuOpen(false)}>Login</Link>
+                <Link to="/find-workspace" className="block text-center h-9 leading-9 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors" onClick={() => setMenuOpen(false)}>Workspace login</Link>
               </li>
               <li className="mt-2 px-4">
                 <Link

@@ -13,7 +13,7 @@ const landingContent = read('src/components/landing/LandingPageContent.jsx');
 
 const expectedPublicRoutes = [
   '/',
-  '/login',
+  '/find-workspace',
   '/signup',
   '/:firmSlug/login',
   '/features',
@@ -75,7 +75,7 @@ for (const navLabel of ['Why', 'Product', 'Workflow', 'Pilot readiness', 'Trust'
 
 assert.ok(landingContent.includes('onClick={() => onNav(id)}'), 'Desktop nav should trigger in-page section navigation.');
 assert.ok(landingContent.includes('onClick={() => { onNav(id); setMenuOpen(false); }}'), 'Mobile nav should trigger in-page section navigation.');
-assert.ok(landingContent.includes('to="/login"') && landingContent.includes('to="/signup"'), 'Landing nav must preserve Login and Request early access CTAs.');
+assert.ok(landingContent.includes('to="/find-workspace"') && landingContent.includes('to="/signup"'), 'Landing nav must preserve Login and Request early access CTAs.');
 assert.ok(landingContent.includes("window.scrollTo({ top: 0, behavior: 'auto' });"), 'Unknown hash should safely scroll to top.');
 
 assert.equal(/href\s*=\s*"#"/.test(landingContent), false, 'Landing page must not include placeholder href="#" links.');
