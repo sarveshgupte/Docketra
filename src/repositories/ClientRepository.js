@@ -1,5 +1,5 @@
 const Client = require('../models/Client.model');
-const { decrypt, tenantKeyExists, ForbiddenError } = require('../security/encryption.service');
+const { decrypt, ensureTenantKey, tenantKeyExists, ForbiddenError } = require('../security/encryption.service');
 const { looksEncrypted } = require('../security/encryption.utils');
 const { resolveClientOwnershipFirmId } = require('../services/tenantIdentity.service');
 
