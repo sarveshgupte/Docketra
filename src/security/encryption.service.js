@@ -24,6 +24,7 @@
  */
 
 const LocalEncryptionProvider = require('./encryption.local.provider');
+const TenantKey = require('./tenantKey.model');
 const { looksEncrypted } = require('./encryption.utils');
 const log = require('../utils/log');
 
@@ -72,6 +73,15 @@ async function ensureTenantKey(tenantId, { session } = {}) {
     throw new Error('tenantId is required for ensureTenantKey');
   }
   await getProvider().generateTenantKey(tenantId, { session });
+}
+
+
+async function tenantKeyExists(tenantId, { session } = {}) {
+  if (!tenantId) return false;
+  const query = TenantKey.exists({ tenantId: String(tenantId) });
+  if (session) query.session(session);
+  const exists = await query;
+  return Boolean(exists);
 }
 
 /**
@@ -186,6 +196,7 @@ module.exports = {
   encrypt,
   decrypt,
   ensureTenantKey,
+  tenantKeyExists,
   generateEncryptedDek,
   ForbiddenError,
   looksEncrypted,

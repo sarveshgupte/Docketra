@@ -96,3 +96,16 @@ console.log(report);
 [CaseRepository] DECRYPTION_FAILED - FALLBACK
 [CaseRepository.create] TENANT_KEY_BOOTSTRAP_FAILED
 ```
+
+## Missing Tenant Key Behavior (Hotfix Policy)
+
+- Read-time decrypt paths **must not** auto-create tenant keys when ciphertext already exists.
+- If encrypted values are present but tenant key record is missing, API returns controlled operational error:
+  - `code: TENANT_KEY_MISSING`
+  - HTTP `503`
+  - message indicating repair is required.
+- Rationale: creating a new key cannot decrypt historical ciphertext and would create misleading state.
+
+### Repair / backfill approach
+
+Use an explicit tenant-key repair runbook/command only after confirming recoverability inputs (e.g., original wrapped DEK source, backup restore plan, or known plaintext re-entry plan). Do **not** run blind `ensureTenantKey()` against active encrypted tenants.

@@ -36,6 +36,7 @@ function loadClientRepository({
       return {
         decrypt: decryptImpl,
         ensureTenantKey: async () => {},
+        tenantKeyExists: async () => true,
         ForbiddenError,
       };
     }
