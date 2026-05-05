@@ -18,6 +18,7 @@ import { BulkUploadModal } from '../components/bulk/BulkUploadModal';
 import { buildTemplateCsv } from '../constants/bulkUploadSchema';
 import { useUnsavedChangesPrompt } from '../hooks/useUnsavedChangesPrompt';
 import { useQueryState } from '../hooks/useQueryState';
+import { ROUTES } from '../constants/routes';
 
 const toDisplayString = (value, fallback = '—') => {
   if (typeof value === 'string') {
@@ -37,6 +38,7 @@ const DEFAULT_LOAD_ERROR = 'Failed to load clients';
 
 export const ClientsPage = () => {
   const { user } = useAuth();
+  const firmSlug = user?.firmSlug || window.location.pathname.split('/')[3] || '';
   const { showError, showSuccess } = useToast();
   const { query, setQuery } = useQueryState({ page: '1', q: '' });
   const [loading, setLoading] = useState(true);
@@ -376,7 +378,8 @@ export const ClientsPage = () => {
                   {client.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
                 </Button>
               )}
-              <Button size="small" variant="outline" onClick={() => window.location.assign(`/dashboard/firm/${user?.firmSlug || ''}/create-case?clientId=${encodeURIComponent(client.clientId)}`)}>
+              <Button size="small" variant="warning" onClick={() => openEditCfsModal(client)}>Edit CFS</Button>
+              <Button size="small" variant="outline" onClick={() => window.location.assign(`${ROUTES.CREATE_CASE(firmSlug)}?clientId=${encodeURIComponent(client.clientId)}`)}>
                 Create Docket
               </Button>
             </>
@@ -384,7 +387,7 @@ export const ClientsPage = () => {
         </div>
       ),
     },
-  ], [isAdmin, openEditClientModal, handleToggleClientStatus, user?.firmSlug]);
+  ], [isAdmin, openEditClientModal, handleToggleClientStatus, openEditCfsModal, firmSlug]);
 
   const refreshSelectedClient = async () => {
     if (!editCfsClient?.clientId) return;
