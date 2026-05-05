@@ -22,6 +22,14 @@
 - Dockets are created under clients, so client CRUD and client selection remain mandatory MVP capabilities.
 - Tenant isolation, firm permissions, and encrypted client handling remain unchanged.
 
+## Create Docket Setup Prerequisites (MVP)
+- **Clients are required:** Create Docket requires at least one active client before submit can proceed.
+- **Category + subcategory are required:** Routing depends on active category/subcategory definitions.
+- **Active workbasket is required:** Docket submit is blocked until at least one active workbasket is available for routing.
+- **Users/team members:** Assignee is optional for queue-first routing, but admin setup guidance prompts team activation when assignment is required operationally.
+- **Setup guidance UX:** Create Docket loads clients, categories, workbaskets, and users independently and shows a setup checklist with direct links to fix missing prerequisites.
+- **Operational note (TENANT_KEY_MISSING):** if client loading fails because tenant encryption setup is missing, UI shows a setup-repair message and blocks docket submit until repaired.
+
 ## Roadmap Note
 - CMS and advanced CRM surfaces can be revisited after client-based docket/task workflows are stable in production.
 
