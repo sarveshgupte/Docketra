@@ -1,5 +1,5 @@
 const Client = require('../models/Client.model');
-const { decrypt, ensureTenantKey, ForbiddenError } = require('../security/encryption.service');
+const { decrypt, ensureTenantKey, tenantKeyExists, ForbiddenError } = require('../security/encryption.service');
 const { looksEncrypted } = require('../security/encryption.utils');
 const { resolveClientOwnershipFirmId } = require('../services/tenantIdentity.service');
 
@@ -31,6 +31,22 @@ const { resolveClientOwnershipFirmId } = require('../services/tenantIdentity.ser
  * any plaintext is handed back to the caller.
  */
 const CLIENT_ENCRYPTED_FIELDS = ['primaryContactNumber', 'businessEmail'];
+
+
+
+
+async function _assertTenantKeyPresentForDecryption(tenantId, logContext) {
+  if (!tenantId || !process.env.MASTER_ENCRYPTION_KEY) return;
+  const exists = await tenantKeyExists(String(tenantId));
+  if (!exists) {
+    const err = new Error(`Tenant encryption key is missing for tenant ${tenantId}. Repair is required before decrypting client data.`);
+    err.code = 'TENANT_KEY_MISSING';
+    err.statusCode = 503;
+    err.operational = true;
+    err.logContext = logContext || null;
+    throw err;
+  }
+}
 
 function resolveDecryptFields(decryptFields) {
   if (!Array.isArray(decryptFields) || !decryptFields.length) {
@@ -87,6 +103,7 @@ async function _decryptClientDoc(doc, firmId, { logContext, decryptFields } = {}
   const tenantId = doc.firmId || firmId;
   if (!tenantId) return doc;
 
+  await _assertTenantKeyPresentForDecryption(tenantId, logContext);
   const fieldsToDecrypt = resolveDecryptFields(decryptFields);
   for (const field of fieldsToDecrypt) {
     if (doc[field] != null && looksEncrypted(doc[field])) {
@@ -120,6 +137,7 @@ async function _decryptClientDocs(docs, firmId, { logContext, decryptFields } = 
     const tenantId = doc.firmId || firmId;
     if (!tenantId) return;
 
+    await _assertTenantKeyPresentForDecryption(tenantId, logContext);
     for (const field of fieldsToDecrypt) {
       if (doc[field] != null && looksEncrypted(doc[field])) {
         const decrypted = await decrypt(doc[field], String(tenantId), undefined, {

@@ -232,3 +232,12 @@ The test verifies:
 5. `ADMIN` is blocked (`403`) from all write mutations.
 6. `PRIMARY_ADMIN` passes the route guard for all write mutations.
 7. Empty/default state responses have correct shapes (object for firm/AI, arrays for lists).
+
+## Work Settings permission behavior (hotfix note)
+
+Work Settings remains owned by `/api/admin/*` firm-admin endpoints. Permission evaluation:
+1. Resolve request role context.
+2. If required permission is missing, refresh from firm DB membership.
+3. Deny if refreshed membership still lacks permission.
+
+This protects PRIMARY_ADMIN after stale JWT/req cache drift, while preventing permission escalation for USER/MEMBER accounts.
