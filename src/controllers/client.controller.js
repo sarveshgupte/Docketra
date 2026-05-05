@@ -264,11 +264,19 @@ const getClients = async (req, res) => {
   } catch (error) {
     logClientError('CLIENT_LIST_ERROR', req, error, {
       query: req.query || {},
+      code: error?.code || null,
+      operational: Boolean(error?.operational),
     });
+    if (error?.code === 'TENANT_KEY_MISSING') {
+      return res.status(503).json({
+        success: false,
+        code: 'TENANT_KEY_MISSING',
+        message: 'Client data encryption key is missing for this firm. Run tenant key repair before loading clients.',
+      });
+    }
     return res.status(500).json({
       success: false,
       message: 'Error fetching clients',
-      error: error.message,
     });
   }
 };
