@@ -184,7 +184,7 @@ const HeroSection = ({ onExplore }) => (
               onClick={onExplore}
               className="inline-flex items-center justify-center h-11 px-6 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
             >
-              Create your firm workspace
+              View product overview
             </button>
           </div>
 
@@ -478,7 +478,7 @@ const FlowExampleSection = () => (
           Two ways Docketra holds the thread.
         </h2>
         <p className="mt-4 text-lg text-slate-600 max-w-2xl">
-          From first enquiry to year-after-year compliance, the firm never starts from zero again.
+          From first assignment to final closure, every client docket stays visible and accountable.
         </p>
       </motion.div>
 
@@ -524,10 +524,10 @@ const UseCasesSection = () => (
       </motion.div>
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mt-10">
         {[
-          'Annual compliance and filings with reusable Firm Memory.',
+          'Client-based docket planning with clear owners and deadlines.',
           'Category-based execution with reusable routing standards.',
           'Client work intake and handoffs inside shared worklists.',
-          'Relationship continuity across team transitions.',
+          'Smooth task handoffs across teams and workbaskets.',
           'Partner-level status reviews without document-level exposure.',
           'Standardized workflow handoffs across Work queues.',
         ].map((copy) => (

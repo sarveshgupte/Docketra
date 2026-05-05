@@ -21,6 +21,11 @@ for (const blocked of ['Company Brain', 'Knowledge Library', 'Knowledge Intake',
   assert.equal(homePage.includes(blocked), false, `Landing page must not include blocked marketing term: ${blocked}`);
 }
 
+
+for (const blockedPhrase of ['Firm Memory', 'Relationship continuity', 'firm never starts from zero', 'preserve firm memory', 'relationship intelligence']) {
+  assert.equal(homePage.toLowerCase().includes(blockedPhrase.toLowerCase()), false, `Landing page must not include legacy positioning phrase: ${blockedPhrase}`);
+}
+
 assert.equal(/import.*vector|import.*embedding|import.*openai|import.*anthropic/i.test(homePage), false, 'Landing page must not import AI/vector/embedding libraries');
 assert.ok(homePage.includes('to="/login"') && homePage.includes('to="/signup"'), 'Landing nav must preserve Login and Signup CTAs.');
 
