@@ -32,7 +32,7 @@ This guide provides step-by-step instructions for testing the Default Client inv
 **cURL Command:**
 ```bash
 curl -X PATCH http://localhost:5000/api/clients/C000001/status \
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -H "Authorization: Bearer <test-auth-token>" \
   -H "Content-Type: application/json" \
   -d '{"isActive": false}'
 ```
@@ -63,7 +63,7 @@ curl -X PATCH http://localhost:5000/api/clients/C000001/status \
 **cURL Command:**
 ```bash
 curl -X PATCH http://localhost:5000/api/clients/C000001/status \
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -H "Authorization: Bearer <test-auth-token>" \
   -H "Content-Type: application/json" \
   -d '{"isActive": true}'
 ```
@@ -102,7 +102,7 @@ curl -X PATCH http://localhost:5000/api/clients/C000001/status \
 **cURL Command:**
 ```bash
 curl -X PATCH http://localhost:5000/api/clients/C000002/status \
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -H "Authorization: Bearer <test-auth-token>" \
   -H "Content-Type: application/json" \
   -d '{"isActive": false}'
 ```
@@ -135,7 +135,7 @@ curl -X PATCH http://localhost:5000/api/clients/C000002/status \
 **Test Case A - Default Client is Active:**
 ```bash
 curl -X GET "http://localhost:5000/api/clients?forCreateCase=true" \
-  -H "Authorization: Bearer YOUR_TOKEN"
+  -H "Authorization: Bearer <test-auth-token>"
 ```
 
 **Expected:** C000001 included in results
@@ -300,7 +300,7 @@ curl -X GET "http://localhost:5000/api/clients?forCreateCase=true" \
 **cURL Command:**
 ```bash
 curl -X PATCH http://localhost:5000/api/clients/C999999/status \
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -H "Authorization: Bearer <test-auth-token>" \
   -H "Content-Type: application/json" \
   -d '{"isActive": false}'
 ```

@@ -67,8 +67,8 @@ Added `firmId` field to all core models:
 ```json
 {
   "success": true,
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "8f7a9c3e2d1b4f6a8e3c5d2b1a9f8e7d6c5b4a3e2d1c0b9a8f7e6d5c4b3a2f1e",
+  "accessToken": "<test-access-token>",
+  "refreshToken": "<test-refresh-token>",
   "data": {
     "id": "507f1f77bcf86cd799439011",
     "xID": "X123456",
@@ -93,7 +93,7 @@ Added `firmId` field to all core models:
 **Request:**
 ```json
 {
-  "refreshToken": "8f7a9c3e2d1b4f6a8e3c5d2b1a9f8e7d6c5b4a3e2d1c0b9a8f7e6d5c4b3a2f1e"
+  "refreshToken": "<test-refresh-token>"
 }
 ```
 
@@ -101,8 +101,8 @@ Added `firmId` field to all core models:
 ```json
 {
   "success": true,
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "new_refresh_token_here"
+  "accessToken": "<test-access-token>",
+  "refreshToken": "<new-test-refresh-token>"
 }
 ```
 
@@ -125,7 +125,7 @@ Added `firmId` field to all core models:
 - No expiry checking
 
 **After:**
-- Requires `Authorization: Bearer <token>` header
+- Requires `Authorization: Bearer <test-auth-token>` header
 - Validates JWT signature and expiry
 - Extracts userId, firmId, role from token
 - Reuses the JWT role claim for firm RBAC checks to avoid per-request membership lookups
@@ -146,7 +146,7 @@ Added `firmId` field to all core models:
 - Redirected to login on 401
 
 **After:**
-- Adds `Authorization: Bearer <token>` header
+- Adds `Authorization: Bearer <test-auth-token>` header
 - Automatic token refresh on expiry
 - Stores new tokens after refresh
 - Redirects to login only if refresh fails
