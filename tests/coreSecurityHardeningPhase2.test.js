@@ -29,11 +29,11 @@ function testSensitiveLogMasking() {
     Authorization: 'Bearer very-secret-token',
     cookie: 'refreshToken=very-secret-cookie',
     password: 'SuperSecret123!',
-    accessToken: 'header.payload.signature',
+    accessToken: '<test-access-token>',
     refreshToken: 'refresh-token-value',
-    mfaSecret: 'ABCDEF123456',
-    twoFactorSecret: 'BASE32SECRET2345',
-    totpSecret: 'OTPSECRET',
+    mfaSecret: '<test-mfa-secret>',
+    twoFactorSecret: '<test-twofactor-secret>',
+    totpSecret: '<test-totp-secret>',
   });
 
   assert.strictEqual(masked.Authorization, '[REDACTED]');
@@ -78,10 +78,10 @@ function testRateLimiterExports() {
 }
 
 function testCookieParsingUtility() {
-  const cookieHeader = 'theme=dark; refreshToken=refresh%3Dtoken%3Dvalue; accessToken=header.payload.signature';
+  const cookieHeader = 'theme=dark; refreshToken=refresh%3Dtoken%3Dvalue; accessToken=<test-access-token>';
   assert.strictEqual(getCookieValue(cookieHeader, 'theme'), 'dark');
   assert.strictEqual(getCookieValue(cookieHeader, 'refreshToken'), 'refresh=token=value');
-  assert.strictEqual(getCookieValue(cookieHeader, 'accessToken'), 'header.payload.signature');
+  assert.strictEqual(getCookieValue(cookieHeader, 'accessToken'), '<test-access-token>');
   assert.strictEqual(getCookieValue(cookieHeader, 'missing'), null);
 }
 

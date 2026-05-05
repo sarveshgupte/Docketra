@@ -1,7 +1,7 @@
 const assert = require('assert');
 process.env.NODE_ENV = 'test';
-process.env.JWT_SECRET = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-process.env.JWT_PASSWORD_SETUP_SECRET = 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
+process.env.JWT_SECRET = 'test-jwt-secret-placeholder-for-ci-only';
+process.env.JWT_PASSWORD_SETUP_SECRET = 'test-setup-secret-placeholder-for-ci-only';
 process.env.SUPERADMIN_XID = 'X000001';
 process.env.SUPERADMIN_EMAIL = 'sa@test.com';
 process.env.SUPERADMIN_OBJECT_ID = '000000000000000000000001';

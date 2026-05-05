@@ -65,7 +65,8 @@ function testMasterKeyFormats() {
   const hexKeyParsed = envSchema.safeParse({ ...BASE_ENV, MASTER_ENCRYPTION_KEY: 'f'.repeat(64) });
   assert.strictEqual(hexKeyParsed.success, true, 'Expected 64-char hex master key to pass');
 
-  const b64KeyParsed = envSchema.safeParse({ ...BASE_ENV, MASTER_ENCRYPTION_KEY: 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=' });
+  const validBase64MasterKey = Buffer.alloc(32, 1).toString('base64');
+  const b64KeyParsed = envSchema.safeParse({ ...BASE_ENV, MASTER_ENCRYPTION_KEY: validBase64MasterKey });
   assert.strictEqual(b64KeyParsed.success, true, 'Expected 44-char base64 master key to pass');
 
   expectFail({ MASTER_ENCRYPTION_KEY: 'short-key' }, 'MASTER_ENCRYPTION_KEY');

@@ -19,8 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NODE_ENV: test
-      JWT_SECRET: 0123456789abcdef0123456789abcdef
-      SUPERADMIN_PASSWORD_HASH: "$2b$10$replace_this_with_a_real_bcrypt_hash_before_deploying"
+      JWT_SECRET: ci-placeholder-jwt-secret-for-tests-only-do-not-use
       SUPERADMIN_XID: X000001
       SUPERADMIN_EMAIL: superadmin@example.com
       SUPERADMIN_OBJECT_ID: "000000000000000000000001"
@@ -61,6 +60,9 @@ jobs:
 
       - name: Security/config gate
         run: npm run ci:backend:security
+
+      - name: Secret scanning gate
+        run: npm run security:secrets
 
   frontend-release-gate:
     name: Frontend release gate

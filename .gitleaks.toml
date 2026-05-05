@@ -1,0 +1,4 @@
+title = "Docketra gitleaks config"
+
+[extend]
+useDefault = true

@@ -124,7 +124,7 @@ SUPERADMIN_PASSWORD=<secure_password>
    {
      "success": true,
      "message": "Login successful",
-     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+     "token": "<test-jwt-token>",
      "user": {
        "xID": "SUPERADMIN",
        "email": "superadmin@test.local",
@@ -580,7 +580,7 @@ SUPERADMIN_PASSWORD=<secure_password>
    ```json
    {
      "success": true,
-     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+     "token": "<test-jwt-token>",
      "user": {
        "xID": "X000001",
        "email": "john.doe@testfirm.com",
@@ -607,7 +607,7 @@ SUPERADMIN_PASSWORD=<secure_password>
 
 ```bash
 curl -X POST http://localhost:5000/api/superadmin/firms \
-  -H "Authorization: Bearer <token>" \
+  -H "Authorization: Bearer <test-auth-token>" \
   -d '{
     "adminName": "Test Admin",
     "adminEmail": "test@test.com"
@@ -622,7 +622,7 @@ curl -X POST http://localhost:5000/api/superadmin/firms \
 
 ```bash
 curl -X POST http://localhost:5000/api/superadmin/firms \
-  -H "Authorization: Bearer <token>" \
+  -H "Authorization: Bearer <test-auth-token>" \
   -d '{
     "name": "Test Firm",
     "adminEmail": "test@test.com"
@@ -637,7 +637,7 @@ curl -X POST http://localhost:5000/api/superadmin/firms \
 
 ```bash
 curl -X POST http://localhost:5000/api/superadmin/firms \
-  -H "Authorization: Bearer <token>" \
+  -H "Authorization: Bearer <test-auth-token>" \
   -d '{
     "name": "Test Firm",
     "adminName": "Test Admin",
