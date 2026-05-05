@@ -55,7 +55,7 @@ const HomeNav = ({ onNav }) => {
               to="/signup"
               className="inline-flex items-center justify-center h-9 px-5 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-700 transition-colors shadow-sm"
             >
-              Request early access
+              Start managing work
             </Link>
           </div>
 
@@ -97,7 +97,7 @@ const HomeNav = ({ onNav }) => {
                   className="block text-center h-9 leading-9 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-700 transition-colors"
                   onClick={() => setMenuOpen(false)}
                 >
-                  Request early access
+                  Start managing work
                 </Link>
               </li>
             </ul>
@@ -123,21 +123,21 @@ const HeroDashboardMock = () => (
       <aside className="md:col-span-3 border-r border-slate-200 bg-slate-50 p-4">
         <p className="text-[11px] uppercase tracking-widest text-slate-400 mb-3">Workspace</p>
         <div className="space-y-2 text-xs">
-          {['Work', 'Knowledge Intake', 'Relationships', 'Company Brain', 'Knowledge Library', 'Clients'].map((item) => (
-            <div key={item} className={`rounded-md px-2.5 py-2 ${item === 'Company Brain' ? 'bg-amber-100 text-amber-800 font-semibold' : 'text-slate-600 bg-white border border-slate-200'}`}>{item}</div>
+          {['Dashboard', 'Clients', 'Dockets', 'Workbaskets', 'Tasks', 'Team'].map((item) => (
+            <div key={item} className={`rounded-md px-2.5 py-2 ${item === 'Dockets' ? 'bg-amber-100 text-amber-800 font-semibold' : 'text-slate-600 bg-white border border-slate-200'}`}>{item}</div>
           ))}
         </div>
       </aside>
       <main className="md:col-span-9 p-5 bg-gradient-to-b from-white via-white to-slate-50">
         <div className="grid sm:grid-cols-3 gap-3">
-          {['Work active: 24', 'Intake pending: 7', 'Readiness: Pilot-ready'].map((kpi) => (
+          {['Open dockets: 24', 'Due this week: 7', 'Team on-time: 92%'].map((kpi) => (
             <div key={kpi} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm">{kpi}</div>
           ))}
         </div>
         <div className="mt-4 rounded-xl border border-slate-200 bg-white overflow-hidden">
           <div className="px-4 py-2.5 border-b border-slate-200 text-xs font-semibold text-slate-700">Docketra workspace preview</div>
           <div className="p-4 grid gap-3">
-            {['Annual filing docket · Owner: Priya · SLA: On track','Client instruction captured · GreenLeaf Foods · CFO draft review required','Knowledge Library update · FY 24 checklist v2 mapped to Work template'].map((row, idx)=> (
+            {['Annual filing docket · Client: GreenLeaf Foods · Owner: Priya','GST return task · Client docs pending · Assignee: Arjun','QC handoff queue · 3 items awaiting reviewer assignment'].map((row, idx)=> (
               <div key={row} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 flex items-center justify-between gap-3">
                 <span>{row}</span>
                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${idx === 0 ? 'bg-emerald-100 text-emerald-700' : idx === 1 ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700'}`}>
@@ -161,15 +161,15 @@ const HeroSection = ({ onExplore }) => (
       <div className="grid grid-cols-1 gap-14 md:grid-cols-12 md:gap-10 items-center">
         <motion.div className="md:col-span-6 lg:col-span-5" {...REVEAL}>
           <span className="inline-block rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 mb-5">
-            For CS · CA · Legal · Tax · Advisory firms
+            Built for Indian professional firms
           </span>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.08] text-slate-900">
-            Run your firm's work, clients, and knowledge from one connected workspace.
+            Client-based task and docket management for Indian firms
           </h1>
 
           <p className="mt-5 text-lg text-slate-600 leading-relaxed">
-            Docketra helps teams capture intake, manage relationships, execute work, preserve firm memory, and monitor readiness — without exposing private client content.
+            Track client work, assign dockets, manage deadlines, and keep your team accountable from one focused firm workspace.
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
@@ -177,19 +177,19 @@ const HeroSection = ({ onExplore }) => (
               to="/signup"
             className="inline-flex items-center justify-center h-11 px-6 rounded-lg bg-slate-900 text-white text-sm font-semibold shadow-lg shadow-slate-900/15 hover:bg-slate-700 transition-colors"
             >
-              Request early access
+              Start managing work
             </Link>
             <button
               type="button"
               onClick={onExplore}
               className="inline-flex items-center justify-center h-11 px-6 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
             >
-              View product overview
+              Create your firm workspace
             </button>
           </div>
 
           <ul className="mt-7 flex flex-wrap gap-2.5 text-xs text-slate-600">
-            {['Built for Indian firms', 'Metadata-only oversight', 'BYOS-compatible storage'].map((chip) => (
+            {['Clients first', 'Dockets + tasks', 'Routing with workbaskets'].map((chip) => (
               <li key={chip} className="rounded-full border border-amber-200 bg-white px-3 py-1 font-medium shadow-sm">
                 {chip}
               </li>
@@ -235,7 +235,7 @@ const ProblemSection = () => (
           The problem
         </p>
         <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight max-w-3xl leading-tight">
-          Firm context lives everywhere, and nowhere.
+          Client work falls through the cracks without one system.
         </h2>
         <p className="mt-5 text-lg text-slate-300 max-w-2xl leading-relaxed">
           Professional firms lose context across WhatsApp, Excel, email, Google Drive, and individual staff memory. Every question becomes an investigation.
@@ -270,10 +270,10 @@ const SolutionSection = () => (
           The solution
         </p>
         <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight leading-tight text-slate-900">
-          Scattered firm knowledge becomes connected, executable memory.
+          Focused execution for client work, without the noise.
         </h2>
         <p className="mt-5 text-lg text-slate-600 leading-relaxed">
-          Docketra is the Company Brain — one place where clients, work, documents, deadlines, processes, and decisions live as one connected system.
+          Docketra gives your team one workspace for clients, dockets, tasks, routing, and day-to-day execution.
         </p>
       </motion.div>
     </Container>
@@ -310,7 +310,7 @@ const ClientMemoryMock = () => (
   </div>
 );
 
-const KnowledgeIntakeMock = () => (
+const RoutingMock = () => (
   <div className="mt-4 rounded-lg border border-sky-100 bg-sky-50 p-3 text-xs">
     <p className="font-semibold text-sky-900">New Enquiry</p>
     <p className="text-sky-600 mt-0.5">Aarav Mehta · Lumen Labs Pvt Ltd</p>
@@ -322,7 +322,7 @@ const KnowledgeIntakeMock = () => (
   </div>
 );
 
-const CompanyBrainMock = () => (
+const DashboardMock = () => (
   <div className="mt-4 rounded-lg border border-amber-100 bg-amber-50 p-3 text-xs">
     <p className="font-semibold text-amber-900">Connected context</p>
     <div className="mt-2 flex flex-wrap gap-1.5">
@@ -341,27 +341,27 @@ const CompanyBrainMock = () => (
 const PILLARS = [
   {
     number: '01',
-    title: 'Work',
-    body: 'Dockets, tasks, assignees, and status in one shared view. Every job has an owner.',
+    title: 'Client-based docket tracking',
+    body: 'Keep every docket tied to a client with owners, status, due dates, and priority visibility.',
     mock: <WorkPillarMock />,
   },
   {
     number: '02',
-    title: 'Clients',
-    body: 'Client memory that persists year after year — instructions, history, and live context.',
+    title: 'Task assignment and ownership',
+    body: 'Assign work clearly to users and avoid accountability gaps across teams.',
     mock: <ClientMemoryMock />,
   },
   {
     number: '03',
-    title: 'Knowledge Intake',
-    body: 'Capture enquiries, scope requests, and follow-ups before they live only in someone\'s inbox.',
-    mock: <KnowledgeIntakeMock />,
+    title: 'Workbaskets and routing',
+    body: 'Route work through categories, subcategories, and workbaskets for consistent execution.',
+    mock: <RoutingMock />,
   },
   {
     number: '04',
-    title: 'Company Brain',
-    body: 'Connects work, clients, and knowledge into linked firm memory — from first enquiry to year-after-year compliance.',
-    mock: <CompanyBrainMock />,
+    title: 'Dashboard and worklists',
+    body: 'Give partners and managers real-time visibility into pending work, deadlines, and blockers.',
+    mock: <DashboardMock />,
   },
 ];
 
@@ -373,10 +373,10 @@ const ProductPillarsSection = () => (
           Product
         </p>
         <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 leading-tight">
-          Four pillars. One brain.
+          MVP features your team will use daily.
         </h2>
         <p className="mt-4 text-lg text-slate-600 max-w-2xl">
-          Each pillar stands alone. Together, they remember everything your firm has ever done.
+          Built for operational execution: assign ownership, track deadlines, and move work forward.
         </p>
       </motion.div>
 
@@ -501,7 +501,7 @@ const PilotReadinessSection = () => (
       </motion.div>
       <div className="grid md:grid-cols-3 gap-5 mt-10">
         {[
-          ['Pilot Readiness', 'Track team adoption by module: Work, Knowledge Intake, Relationships, and Company Brain.'],
+          ['Pilot Readiness', 'Track team adoption across clients, dockets, workbaskets, and task queues.'],
           ['Metadata-only oversight', 'View status changes, ownership, and SLAs while document content stays in firm-controlled storage.'],
           ['Superadmin visibility', 'See cross-firm readiness snapshots for enablement and support planning.'],
         ].map(([title, body]) => (
@@ -525,8 +525,8 @@ const UseCasesSection = () => (
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mt-10">
         {[
           'Annual compliance and filings with reusable Firm Memory.',
-          'Knowledge Library curation for repeatable execution.',
-          'Client onboarding and follow-ups via Knowledge Intake.',
+          'Category-based execution with reusable routing standards.',
+          'Client work intake and handoffs inside shared worklists.',
           'Relationship continuity across team transitions.',
           'Partner-level status reviews without document-level exposure.',
           'Standardized workflow handoffs across Work queues.',
@@ -598,10 +598,10 @@ const FinalCtaSection = () => (
     <Container>
       <motion.div className="text-center max-w-3xl mx-auto rounded-3xl border border-white/15 bg-white/5 px-6 py-12 md:px-10 backdrop-blur-sm" {...REVEAL}>
         <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-white leading-tight">
-          Build your firm's memory before it walks out the door.
+          Get your team aligned on client work.
         </h2>
         <p className="mt-5 text-lg text-slate-200 leading-relaxed">
-          Docketra is in early access for select Indian professional firms. Join the next cohort.
+          Create a focused workspace for clients, dockets, tasks, assignments, and deadlines.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
@@ -609,7 +609,7 @@ const FinalCtaSection = () => (
             to="/signup"
             className="inline-flex items-center justify-center h-12 px-8 rounded-lg bg-white text-slate-900 text-sm font-semibold shadow hover:bg-slate-100 transition-colors"
           >
-            Request early access
+            Start managing work
           </Link>
           <a
             href={`mailto:${CONTACT_EMAIL}`}
@@ -620,7 +620,7 @@ const FinalCtaSection = () => (
         </div>
 
         <p className="mt-5 text-sm text-slate-300">
-          Secure onboarding · Role-based access · BYOS-first architecture
+          Secure firm workspace · Role-based access · Team accountability
         </p>
       </motion.div>
     </Container>
@@ -638,7 +638,7 @@ const MarketingFooter = () => (
           <Link to="/" className="font-bold text-white text-lg">
             Docketra
           </Link>
-          <p className="mt-1 text-sm text-slate-300">Run your firm's work, clients, and knowledge from one connected workspace.</p>
+          <p className="mt-1 text-sm text-slate-300">Client-based task and docket management for Indian firms</p>
           <p className="text-sm text-slate-400">Built for professional firms in India</p>
         </div>
 
