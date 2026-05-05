@@ -46,6 +46,9 @@ module.exports = {
       path: ['email'],
     }),
   },
+  'POST /find-workspace': {
+    body: z.object({ xid: xidString }).strip(),
+  },
   'POST /verify-otp': {
     body: z.object({
       email: z.string().trim().email(),

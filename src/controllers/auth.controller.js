@@ -3654,6 +3654,30 @@ const sendOtpEndpoint = async (req, res) => authOtpServiceFacade.sendOtpEndpoint
 const verifyOtpEndpoint = async (req, res) => authOtpServiceFacade.verifyOtpEndpoint(req, res);
 
 
+const findWorkspaceByXid = async (req, res) => {
+  const xid = String(req.body?.xid || '').trim().toUpperCase();
+  if (!/^X\d{6}$/.test(xid)) {
+    return res.status(200).json({ success: true, data: { workspaces: [] } });
+  }
+
+  const users = await User.find({
+    $or: [{ xID: xid }, { xid }],
+    role: { $ne: 'SUPER_ADMIN' },
+    isActive: true,
+  }).select('firmId').lean();
+
+  const firmIds = [...new Set(users.map((u) => normalizeMongoId(u.firmId)).filter(Boolean))];
+  if (!firmIds.length) return res.status(200).json({ success: true, data: { workspaces: [] } });
+
+  const firms = await Firm.find({ _id: { $in: firmIds }, isActive: true }).select('firmSlug firmName status').lean();
+  const workspaces = firms
+    .map((firm) => ({ firmSlug: String(firm.firmSlug || '').trim(), firmName: String(firm.firmName || '').trim() || 'Workspace', status: String(firm.status || '').toUpperCase() }))
+    .filter((firm) => firm.firmSlug);
+
+  return res.status(200).json({ success: true, data: { workspaces } });
+};
+
+
 module.exports = {
   login: wrapWriteHandler(login),
   logout: wrapWriteHandler(logout),
@@ -3691,4 +3715,5 @@ module.exports = {
   signupResend: wrapWriteHandler(signupResend),
   sendOtpEndpoint: wrapWriteHandler(sendOtpEndpoint),
   verifyOtpEndpoint: wrapWriteHandler(verifyOtpEndpoint),
+  findWorkspaceByXid: wrapWriteHandler(findWorkspaceByXid),
 };

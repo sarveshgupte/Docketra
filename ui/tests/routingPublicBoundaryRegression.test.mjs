@@ -146,8 +146,8 @@ assert(
   );
 });
 assert(
-  publicRoutesSource.includes('<Route path="/login" element={<LoginPage />} />'),
-  'Public `/login` route must exist as a safe fallback login entrypoint.'
+  publicRoutesSource.includes('<Route path="/login" element={<Navigate to="/find-workspace" replace />} />'),
+  'Public `/login` route must redirect to workspace discovery to avoid unscoped firm login.'
 );
 assert(
   legacyRoutesSource.includes('canAccessFirmApp'),
