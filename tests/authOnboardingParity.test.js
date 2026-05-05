@@ -101,7 +101,7 @@ function bootstrapAuthController(overrides = {}) {
     getPayload: () => ({ email: 'google@example.com', name: 'Google User', sub: 'google-sub' }),
   }));
 
-  process.env.JWT_SECRET = 'abcdefghijklmnopqrstuvwxyz123456';
+  process.env.JWT_SECRET = 'test-jwt-secret-placeholder-value-32ch';
   process.env.MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/docketra';
   process.env.DISABLE_GOOGLE_AUTH = 'true';
   process.env.ENCRYPTION_PROVIDER = 'disabled';

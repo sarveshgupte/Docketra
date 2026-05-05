@@ -2,9 +2,3 @@ title = "Docketra gitleaks config"
 
 [extend]
 useDefault = true
-
-[allowlist]
-description = "Narrow false-positive allowlist for documentation placeholders only"
-paths = [
-  "docs/features/pr-history/PR_RATE_LIMITING_IMPLEMENTATION_SUMMARY.md"
-]
