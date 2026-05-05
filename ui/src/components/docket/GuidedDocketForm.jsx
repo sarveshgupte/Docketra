@@ -57,6 +57,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   const [users, setUsers] = useState([]);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState({ categories: true, workbaskets: true, users: true, clients: true, submit: false });
+  const [clientLoadIssue, setClientLoadIssue] = useState('');
 
   const isDirty = useMemo(() => {
     return Boolean(
@@ -89,7 +90,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
         const nextCategories = categoryResponse?.data || [];
         const nextWorkbaskets = workbasketResponse?.data || [];
         const nextUsers = usersResponse?.data || [];
-        const nextClients = clientResponse?.data || [];
+        const nextClients = (clientResponse?.data || []).filter((item) => item?.isActive !== false);
 
         setCategories(nextCategories);
         setWorkbaskets(nextWorkbaskets);
@@ -109,6 +110,9 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
         };
       });
       } catch (error) {
+        if ((error?.message || '').includes('TENANT_KEY_MISSING')) {
+          setClientLoadIssue('Client setup is incomplete for this firm (TENANT_KEY_MISSING). Please complete tenant setup and retry.');
+        }
         setSubmitError('Failed to load form options. Please refresh and retry.');
       } finally {
         setStatusMessage('');
@@ -173,6 +177,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   }, [formData.clientId, formData.title, formData.workbasketId, step]);
   const selectedClient = clients.find((item) => item.clientId === formData.clientId);
   const defaultClient = clients.find((item) => item.isDefaultClient || item.isSystemClient || item.isInternal || item.clientId === 'C000001');
+  const hasActiveClients = clients.length > 0;
   const hasRoutingPrerequisites = categories.length > 0 && workbaskets.length > 0;
 
   const updateField = (name, value) => {
@@ -278,12 +283,14 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
             onChange={(e) => updateField('clientId', e.target.value)}
             error={errors.clientId}
             disabled={loading.clients}
-            helpText="Select a client. Use your firm (default) for internal tasks."
+            helpText={hasActiveClients ? 'Select a client. Use your firm (default) for internal tasks.' : 'Add a client first.'}
             options={[
-              { value: '', label: loading.clients ? 'Loading clients...' : 'Use default firm client (auto-filled on submit)' },
+              { value: '', label: loading.clients ? 'Loading clients...' : (hasActiveClients ? 'Use default firm client (auto-filled on submit)' : 'No active clients available') },
               ...clients.map((item) => ({ value: item.clientId, label: `${item.clientId} - ${item.businessName || 'Unnamed client'}` })),
             ]}
           />
+          {!loading.clients && !hasActiveClients ? <p className="mb-2 text-sm text-amber-700">Add a client first.</p> : null}
+          {clientLoadIssue ? <p className="mb-2 text-sm text-amber-700">{clientLoadIssue}</p> : null}
           <Textarea label="Description (optional)" rows={4} value={formData.description} onChange={(e) => updateField('description', e.target.value)} helpText="Include enough context for the assignee and reviewer." />
         </>
       )}
