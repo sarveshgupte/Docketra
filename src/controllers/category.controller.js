@@ -6,6 +6,7 @@ const { parseBooleanQuery } = require('../utils/query.utils');
 const { logAuthEvent } = require('../services/audit.service');
 const log = require('../utils/log');
 const { validateCategoryMappedWorkbasket } = require('../services/categoryWorkbasketValidation.service');
+const { ensureDefaultRoutingForFirm } = require('../services/defaultRouting.service');
 
 /**
  * Category Controller for Admin-Managed Categories
@@ -55,6 +56,7 @@ const safeLogCategoryMutation = async (req, { description, metadata = {} }) => {
 const getCategories = async (req, res) => {
   try {
     const { activeOnly } = req.query;
+    await ensureDefaultRoutingForFirm(req.user?.firmId);
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     const shouldFilterActiveOnly = parseBooleanQuery(activeOnly);

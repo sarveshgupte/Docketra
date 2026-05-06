@@ -48,12 +48,13 @@ export const WorkSettingsPage = () => {
     void loadWorkbaskets();
   }, []);
 
-  const handleCreateWorkbasket = async () => {
-    if (!workbasketName.trim()) return;
+  const createWorkbasketByName = async (name) => {
+    const nextName = String(name || '').trim();
+    if (!nextName) return;
     setWorkbasketSaving(true);
     setStatusMessage({ type: 'info', text: 'Creating workbasket…' });
     try {
-      await adminApi.createWorkbasket(workbasketName.trim());
+      await adminApi.createWorkbasket(nextName);
       setWorkbasketName('');
       await loadWorkbaskets();
       setStatusMessage({ type: 'success', text: 'Workbasket created.' });
@@ -71,6 +72,8 @@ export const WorkSettingsPage = () => {
       setWorkbasketSaving(false);
     }
   };
+
+  const handleCreateWorkbasket = async () => createWorkbasketByName(workbasketName);
 
   const handleRenameWorkbasket = async (workbasket) => {
     const nextName = window.prompt('Rename workbasket', workbasket.name || '');
@@ -114,7 +117,7 @@ export const WorkSettingsPage = () => {
               </div>
               <div className="space-y-2">
                 {loadingWorkbaskets ? <p className="text-sm text-[var(--dt-text-muted)]">Loading workbaskets…</p> : null}
-                {!loadingWorkbaskets && workbaskets.length === 0 ? <p className="text-sm text-[var(--dt-text-muted)]">No workbaskets are configured yet. Create one to start docket routing.</p> : null}
+                {!loadingWorkbaskets && workbaskets.length === 0 ? (<div className="rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-bg)] p-3"><p className="text-sm text-[var(--dt-text-muted)]">No active workbasket is configured yet. Create one to start docket routing.</p><Button type="button" variant="primary" className="mt-2" onClick={() => void createWorkbasketByName('Default Workbasket')} disabled={workbasketSaving}>Create default workbasket</Button></div>) : null}
                 {workbaskets.map((workbasket) => (
                   <div key={workbasket._id} className="flex flex-wrap items-center justify-between gap-3 rounded border border-[var(--dt-border-whisper)] px-3 py-2">
                     <div className="text-sm font-medium text-[var(--dt-text)]">{workbasket.name} <span className="text-xs text-[var(--dt-text-muted)]">({workbasket.isActive ? 'Active' : 'Inactive'})</span></div>
