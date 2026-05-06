@@ -357,7 +357,10 @@ const getClientById = async (req, res) => {
  * - status: Defaults to ACTIVE
  * 
  * Business fields (required from frontend):
- * - businessName, primaryContactNumber, businessEmail
+ * - businessName
+ *
+ * Optional contact fields:
+ * - primaryContactNumber, businessEmail
  * 
  * Optional fields:
  * - secondaryContactNumber, PAN, GST, TAN, CIN, latitude, longitude
@@ -423,19 +426,6 @@ const createClient = async (req, res) => {
       });
     }
     
-    if (!primaryContactNumber || !primaryContactNumber.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Primary contact number is required',
-      });
-    }
-    
-    if (!businessEmail || !businessEmail.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Business email is required',
-      });
-    }
     
     // STEP 6: Get creator xID and firmId from authenticated user (server-side only)
     const createdByXid = req.user?.xID;
@@ -465,8 +455,8 @@ const createClient = async (req, res) => {
         clientId,
         // Business fields from sanitized request
         businessName: businessName.trim(),
-        primaryContactNumber: primaryContactNumber.trim(),
-        businessEmail: businessEmail.trim().toLowerCase(),
+        ...(typeof primaryContactNumber === 'string' && primaryContactNumber.trim() ? { primaryContactNumber: primaryContactNumber.trim() } : {}),
+        ...(typeof businessEmail === 'string' && businessEmail.trim() ? { businessEmail: businessEmail.trim().toLowerCase() } : {}),
         // System-owned fields (injected server-side only, NEVER from client)
         firmId: userFirmId,
         createdByXid,
@@ -487,8 +477,8 @@ const createClient = async (req, res) => {
       profileInput: {
         legalName: businessName.trim(),
         businessAddress: businessAddress ? businessAddress.trim() : null,
-        businessEmail: businessEmail.trim().toLowerCase(),
-        primaryContactNumber: primaryContactNumber.trim(),
+        businessEmail: (typeof businessEmail === 'string' && businessEmail.trim()) ? businessEmail.trim().toLowerCase() : null,
+        primaryContactNumber: (typeof primaryContactNumber === 'string' && primaryContactNumber.trim()) ? primaryContactNumber.trim() : null,
         secondaryContactNumber: secondaryContactNumber ? secondaryContactNumber.trim() : null,
         PAN: PAN ? PAN.trim().toUpperCase() : null,
         GST: GST ? GST.trim().toUpperCase() : null,

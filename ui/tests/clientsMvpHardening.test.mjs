@@ -10,6 +10,8 @@ assert.ok(clientsPage.includes('Client encryption setup needs repair before clie
 assert.ok(clientsPage.includes('You do not have permission to manage clients for this firm.'), 'Clients page must include 403 authorization copy.');
 assert.ok(clientsPage.includes('Are you sure you want to ${action}'), 'Clients page must keep activate/deactivate confirmation prompt.');
 assert.ok(clientsPage.includes('Client Name'), 'Clients page create/edit form should keep client name field.');
+assert.ok(clientsPage.includes('Client Phone Number (Optional)'), 'Phone label should clearly be optional.');
+assert.ok(clientsPage.includes('Client Email (Optional)'), 'Email label should clearly be optional.');
 for (const blocked of ['PAN', 'GST Number', 'TAN', 'CIN', 'Contact Person Name', 'Contact Person Designation']) {
   assert.equal(clientsPage.includes(blocked), false, `Clients page MVP form should not require/display ${blocked}.`);
 }
