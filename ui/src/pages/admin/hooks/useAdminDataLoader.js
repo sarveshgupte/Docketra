@@ -16,6 +16,8 @@ export const useAdminDataLoader = ({
   setAdminStats,
   setStatsEmpty,
   setStatsFailed,
+  setUserLoadWarning,
+  setWorkbasketLoadWarning,
 }) => {
   const fetchClients = useCallback(async () => {
     const response = await adminApi.listClients({ activeOnly: false });
@@ -65,18 +67,36 @@ export const useAdminDataLoader = ({
   const loadAdminData = useCallback(async () => {
     setLoading(true);
     setTabError(null);
+    setUserLoadWarning('');
+    setWorkbasketLoadWarning('');
     try {
       if (activeTab === 'users') {
-        const [response] = await Promise.all([adminApi.getUsers(), fetchWorkbaskets()]);
-        const apiUsers = response?.success ? (response.data || []) : [];
-        const normalizedUsers = Array.isArray(apiUsers)
-          ? apiUsers.map((entry) => ({
-            ...entry,
-            email: toSafeText(entry?.email, ''),
-            name: toSafeText(entry?.name, ''),
-          }))
-          : [];
-        setUsers(ensureLoggedInAdminVisible(normalizedUsers));
+        const [usersResult, workbasketsResult] = await Promise.allSettled([
+          adminApi.getUsers(),
+          fetchWorkbaskets(),
+        ]);
+
+        if (usersResult.status === 'fulfilled') {
+          const response = usersResult.value;
+          const apiUsers = response?.success ? (response.data || []) : [];
+          const normalizedUsers = Array.isArray(apiUsers)
+            ? apiUsers.map((entry) => ({
+              ...entry,
+              email: toSafeText(entry?.email, ''),
+              name: toSafeText(entry?.name, ''),
+            }))
+            : [];
+          setUsers(ensureLoggedInAdminVisible(normalizedUsers));
+        } else {
+          setUsers(ensureLoggedInAdminVisible([]));
+          setUserLoadWarning('Team members could not be loaded. Retry.');
+          notifyLoadError(usersResult.reason, 'admin-load-users');
+        }
+
+        if (workbasketsResult.status === 'rejected') {
+          setWorkbasketLoadWarning('Workbaskets could not be loaded. User workbasket assignment controls may be unavailable.');
+          notifyLoadError(workbasketsResult.reason, 'admin-load-workbaskets');
+        }
       } else if (activeTab === 'categories') {
         const [response] = await Promise.all([
           categoryService.getAdminCategories(false),
@@ -103,7 +123,7 @@ export const useAdminDataLoader = ({
       }
       if (errorType === 'empty') {
         if (activeTab === 'users') {
-          setUsers([]);
+          setUsers(ensureLoggedInAdminVisible([]));
         } else if (activeTab === 'categories') {
           setCategories([]);
         } else if (activeTab === 'clients') {
