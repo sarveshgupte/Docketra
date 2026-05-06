@@ -644,9 +644,10 @@ const globalWorklist = async (req, res) => {
         .filter(Boolean),
     );
     if (userTeamId) permittedTeamIds.add(userTeamId);
-    const selectedTeamId = requestedWorkbasketId && permittedTeamIds.has(requestedWorkbasketId)
-      ? requestedWorkbasketId
-      : userTeamId;
+    if (requestedWorkbasketId && !permittedTeamIds.has(requestedWorkbasketId)) {
+      return res.status(403).json({ success: false, message: 'Not allowed to view this workbasket' });
+    }
+    const selectedTeamId = requestedWorkbasketId || userTeamId;
     const normalizedTab = String(tab || 'own').toLowerCase();
     const parsedPage = Math.max(1, Number.parseInt(page, 10) || 1);
     const parsedLimit = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 20));
