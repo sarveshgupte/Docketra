@@ -44,14 +44,15 @@ Use a tenant-safe inspection flow before creating keys:
 - No destructive migration included.
 - Legacy backend modules/routes remain dormant (not removed).
 
-## Routing defaults and self-heal
+## Routing defaults and explicit setup
 For pilot readiness, firms must have minimal routing defaults: one active workbasket, one active category, and one active subcategory mapping.
 
 - Default workbasket: `Default Workbasket`
 - Default category: `General`
 - Default subcategory: `General Work` (mapped to the default workbasket)
 
-Defaults are seeded idempotently during setup and can self-heal on Work Settings/Create Docket dependency loads for existing firms without overwriting custom routing.
+Defaults are seeded idempotently only through explicit setup paths (bootstrap-safe setup and the admin default-routing setup action) without overwriting custom routing.
+Loading Work Settings or Create Docket never mutates routing configuration.
 
 ## First docket path
 1. Login and land in MVP navigation only.
@@ -61,3 +62,11 @@ Defaults are seeded idempotently during setup and can self-heal on Work Settings
 5. Docket appears in Work/workbasket queues.
 
 Work Settings is routing-only for MVP and has no CMS/CRM/Company Brain dependency.
+
+## Workbasket and Worklist operating model
+- **Workbasket** = a shared team queue used for routing and pull-based execution.
+- **My Worklist** = a single personal queue for one user.
+- A user can be linked to multiple workbaskets (Admin/Manager/Employee supported).
+- Users switch work context between linked workbaskets in Global Workbasket views.
+- Users pull dockets from a linked workbasket into their own My Worklist.
+- Default routing setup never removes, replaces, or collapses existing multi-workbasket memberships.
