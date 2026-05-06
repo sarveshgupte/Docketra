@@ -21,16 +21,18 @@ export const UserAccessModal = ({
   onToggleClientAccess,
   onSave,
   saving,
+  workbasketLoadWarning,
 }) => (
   <Modal isOpen={isOpen} onClose={onClose} title={`User Access & Workbasket Mapping${selectedUser ? ` — ${selectedUser.name}` : ''}`}>
     <div className="admin__create-form">
       <div className="text-sm text-gray-600">Select workbaskets and clients for this user. At least one workbasket is required.</div>
+      {workbasketLoadWarning ? <div className="text-xs text-amber-700">{workbasketLoadWarning}</div> : null}
       <div className="space-y-2">
         <FormLabel>Workbaskets (at least one)</FormLabel>
         <div className="admin__client-access-list">
           {primaryWorkbaskets.map((workbasket) => (
             <label key={workbasket._id} className="admin__client-access-item">
-              <input type="checkbox" checked={selectedWorkbasketDraft.includes(String(workbasket._id))} onChange={() => setSelectedWorkbasketDraft((prev) => toggleInArray(String(workbasket._id), prev))} />
+              <input type="checkbox" disabled={Boolean(workbasketLoadWarning)} checked={selectedWorkbasketDraft.includes(String(workbasket._id))} onChange={() => setSelectedWorkbasketDraft((prev) => toggleInArray(String(workbasket._id), prev))} />
               <span>{workbasket.name}</span>
             </label>
           ))}
@@ -43,7 +45,7 @@ export const UserAccessModal = ({
           <div className="admin__client-access-list">
             {qcOnlyWorkbaskets.map((workbasket) => (
               <label key={workbasket._id} className="admin__client-access-item">
-                <input type="checkbox" checked={selectedWorkbasketDraft.includes(String(workbasket._id))} onChange={() => setSelectedWorkbasketDraft((prev) => toggleInArray(String(workbasket._id), prev))} />
+                <input type="checkbox" disabled={Boolean(workbasketLoadWarning)} checked={selectedWorkbasketDraft.includes(String(workbasket._id))} onChange={() => setSelectedWorkbasketDraft((prev) => toggleInArray(String(workbasket._id), prev))} />
                 <span>{workbasket.name}</span>
               </label>
             ))}
@@ -77,7 +79,7 @@ export const UserAccessModal = ({
 
       <div className="admin__form-actions">
         <Button type="button" variant="default" onClick={onClose}>Cancel</Button>
-        <Button type="button" variant="primary" disabled={saving || selectedWorkbasketDraft.length === 0} onClick={onSave}>{saving ? 'Saving...' : 'Save Access'}</Button>
+        <Button type="button" variant="primary" disabled={saving || Boolean(workbasketLoadWarning) || selectedWorkbasketDraft.length === 0} onClick={onSave}>{saving ? 'Saving...' : 'Save Access'}</Button>
       </div>
     </div>
   </Modal>

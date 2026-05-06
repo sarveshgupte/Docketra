@@ -3428,8 +3428,11 @@ const getAllUsers = async (req, res) => {
       res.setHeader('Expires', '0');
     }
     // Get requesting admin's firmId for same-firm filtering
-    const adminFirmId = req.user.firmId;
-    
+    const adminFirmId = req.user?.firmId;
+    if (!adminFirmId) {
+      return res.status(403).json({ success: false, message: 'Firm context is required' });
+    }
+
     // Get all users in same firm, excluding password-related fields
     // Populate firm metadata for display
     const users = await User.find({
@@ -3440,10 +3443,26 @@ const getAllUsers = async (req, res) => {
       .populate('firmId', 'firmId name')
       .sort({ createdAt: -1 });
     
+    const normalizedUsers = users.map(mapUserResponse);
+    const requesterXid = String(req.user?.xID || '');
+    const hasRequester = requesterXid && normalizedUsers.some((user) => String(user?.xID || '') === requesterXid);
+    if (!hasRequester && requesterXid) {
+      normalizedUsers.unshift(mapUserResponse({
+        _id: req.user._id || req.user.id || req.user.userId || requesterXid,
+        xID: requesterXid,
+        name: req.user.name || req.user.fullName || 'Primary Admin',
+        email: req.user.email || '',
+        role: req.user.role || 'PRIMARY_ADMIN',
+        status: req.user.status || 'active',
+        isPrimaryAdmin: true,
+        firmId: { name: req.user?.firm?.name || req.user?.firmName || null },
+      }));
+    }
+
     res.json({
       success: true,
-      data: users.map(mapUserResponse),
-      count: users.length,
+      data: normalizedUsers,
+      count: normalizedUsers.length,
     });
   } catch (error) {
     res.status(500).json({
