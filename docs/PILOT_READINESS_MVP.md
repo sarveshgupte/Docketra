@@ -43,3 +43,21 @@ Use a tenant-safe inspection flow before creating keys:
 ## Safety guarantees
 - No destructive migration included.
 - Legacy backend modules/routes remain dormant (not removed).
+
+## Routing defaults and self-heal
+For pilot readiness, firms must have minimal routing defaults: one active workbasket, one active category, and one active subcategory mapping.
+
+- Default workbasket: `Default Workbasket`
+- Default category: `General`
+- Default subcategory: `General Work` (mapped to the default workbasket)
+
+Defaults are seeded idempotently during setup and can self-heal on Work Settings/Create Docket dependency loads for existing firms without overwriting custom routing.
+
+## First docket path
+1. Login and land in MVP navigation only.
+2. Use default firm/internal client for internal work.
+3. Confirm routing setup is ready (default or custom).
+4. Create first docket with default client + category/subcategory + active workbasket.
+5. Docket appears in Work/workbasket queues.
+
+Work Settings is routing-only for MVP and has no CMS/CRM/Company Brain dependency.

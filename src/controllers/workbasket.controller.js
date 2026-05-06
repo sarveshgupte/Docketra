@@ -4,6 +4,7 @@ const { mapUserResponse } = require('../mappers/user.mapper');
 const mongoose = require('mongoose');
 const { createPrimaryWithQc, isValidObjectId } = require('../services/workbasketGuardrails.service');
 const { resolveFirmScopedTeams, normalizeMembership, buildWorkbasketVisibilityQuery, normalizeObjectIdStrings } = require('../services/userWorkbasketMembership.service');
+const { ensureDefaultRoutingForFirm } = require('../services/defaultRouting.service');
 
 const buildWorkbasketWarnings = async (firmId, workbasketIds = []) => {
   if (!firmId || workbasketIds.length === 0) return {};
@@ -38,6 +39,7 @@ const buildWorkbasketWarnings = async (firmId, workbasketIds = []) => {
 
 const listWorkbaskets = async (req, res) => {
   try {
+    await ensureDefaultRoutingForFirm(req.user?.firmId);
     const includeInactive = String(req.query?.includeInactive || '').toLowerCase() === 'true';
     const visibility = buildWorkbasketVisibilityQuery({ user: req.user });
     if (visibility.denyAll) return res.json({ success: true, data: [] });
