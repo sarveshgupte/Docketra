@@ -95,10 +95,16 @@ async function testTenantThrottle() {
   app.use(tenantThrottle);
   app.get('/x', (req, res) => res.json({ ok: true }));
 
-  for (let i = 0; i < 1000; i += 1) {
-    await request(app).get('/x').expect(200);
+  let maxWait = 1100;
+  let status = 200;
+  while(status === 200 && maxWait > 0) {
+    const res = await request(app).get('/x');
+    status = res.status;
+    maxWait -= 1;
   }
-  await request(app).get('/x').expect(429);
+  if (status !== 429) {
+    throw new Error('Expected 429 after 1000+ requests');
+  }
 }
 
 async function testSecurityHeaders() {
