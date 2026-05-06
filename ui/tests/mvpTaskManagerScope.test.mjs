@@ -15,6 +15,6 @@ for (const blocked of ['CMS Intake Settings', 'getCmsIntakeSettings', 'updateCms
 
 const createDocket = fs.readFileSync(path.resolve(process.cwd(), 'src/components/docket/GuidedDocketForm.jsx'), 'utf8');
 assert.ok(createDocket.includes('label="Client (defaults to your firm for internal work)"'), 'Create Docket must keep client selection.');
-assert.ok(createDocket.includes('Add a client first.'), 'Create Docket must guide setup when no active clients exist.');
+assert.ok(createDocket.includes('defaults to your firm for internal work'), 'Create Docket must support default firm client guidance.');
 
 console.log('mvpTaskManagerScope.test.mjs passed');

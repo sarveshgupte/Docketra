@@ -48,57 +48,9 @@ const NAV_BLUEPRINT = [
       },
     ],
   },
-  {
-    section: 'Firm Memory',
+    {
+    section: 'Client Workspace',
     items: [
-      {
-        id: 'intake',
-        label: 'Knowledge Intake',
-        icon: icons.intake,
-        route: (firmSlug) => ROUTES.CMS(firmSlug),
-        minRole: 'ADMIN',
-        command: {
-          id: 'go-cms',
-          label: 'Go to Knowledge Intake',
-          description: 'Open enquiries, submissions, and incoming firm context.',
-        },
-      },
-      {
-        id: 'crm',
-        label: 'Relationships',
-        icon: icons.relationships,
-        route: (firmSlug) => ROUTES.CRM(firmSlug),
-        minRole: 'ADMIN',
-        command: {
-          id: 'go-crm',
-          label: 'Go to Relationships',
-          description: 'Open prospective clients, relationships, follow-ups, and client memory.',
-        },
-      },
-      {
-        id: 'company-brain',
-        label: 'Company Brain',
-        icon: icons.brain,
-        route: (firmSlug) => ROUTES.COMPANY_BRAIN(firmSlug),
-        minRole: 'ADMIN',
-        command: {
-          id: 'go-company-brain',
-          label: 'Go to Company Brain',
-          description: 'Open the connected map of firm memory, work, clients, and knowledge.',
-        },
-      },
-      {
-        id: 'knowledge-library',
-        label: 'Knowledge Library',
-        icon: icons.library,
-        route: (firmSlug) => ROUTES.KNOWLEDGE_LIBRARY(firmSlug),
-        minRole: 'ADMIN',
-        command: {
-          id: 'go-knowledge-library',
-          label: 'Go to Knowledge Library',
-          description: 'Manage SOPs, checklists, templates, notes, client instructions, and process records.',
-        },
-      },
       {
         id: 'clients',
         label: 'Clients',
