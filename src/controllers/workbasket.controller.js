@@ -4,6 +4,7 @@ const { mapUserResponse } = require('../mappers/user.mapper');
 const mongoose = require('mongoose');
 const { createPrimaryWithQc, isValidObjectId } = require('../services/workbasketGuardrails.service');
 const { resolveFirmScopedTeams, normalizeMembership, buildWorkbasketVisibilityQuery, normalizeObjectIdStrings } = require('../services/userWorkbasketMembership.service');
+const { ensureDefaultRoutingForFirm } = require('../services/defaultRouting.service');
 
 const buildWorkbasketWarnings = async (firmId, workbasketIds = []) => {
   if (!firmId || workbasketIds.length === 0) return {};
@@ -65,6 +66,19 @@ const listWorkbaskets = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Failed to load workbaskets' });
+  }
+};
+
+const createDefaultRouting = async (req, res) => {
+  try {
+    const result = await ensureDefaultRoutingForFirm(req.user?.firmId);
+    return res.status(201).json({
+      success: true,
+      data: result,
+      message: result?.created ? 'Default routing configured' : 'Default routing already configured',
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Failed to configure default routing' });
   }
 };
 
@@ -277,6 +291,7 @@ const addQcMember = async (req, res) => {
 
 module.exports = {
   listWorkbaskets,
+  createDefaultRouting,
   createWorkbasket,
   getCoreWork,
   renameWorkbasket,

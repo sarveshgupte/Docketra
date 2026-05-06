@@ -298,13 +298,13 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
         <ul className="mt-2 list-disc pl-5 space-y-1">
           <li>Client: {selectedClient ? `${selectedClient.clientId} - ${selectedClient.businessName || 'Unnamed client'}` : (defaultClient ? `${defaultClient.clientId} - ${defaultClient.businessName || 'Default firm client'}` : 'Will use your default firm client if available')}.</li>
           <li>Category + subcategory are required because they determine routing and downstream queue visibility.</li>
-          <li>Workbench is required and auto-selected from category/subcategory mapping.</li>
-          <li>After creation, the docket appears in All Dockets and enters Workbench or the selected assignee’s My Worklist.</li>
+          <li>Workbasket is required and auto-selected from category/subcategory mapping.</li>
+          <li>After creation, the docket appears in All Dockets and enters the Workbasket or the selected assignee’s My Worklist.</li>
         </ul>
       </div>
       {!hasRoutingPrerequisites ? (
         <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Docket creation may be blocked until categories/subcategories and at least one active workbench are configured in Work Settings.
+          Docket creation may be blocked until categories/subcategories and at least one active workbasket are configured in Work Settings.
         </p>
       ) : null}
 
