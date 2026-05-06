@@ -63,6 +63,7 @@ const {
 } = require('../controllers/client.controller');
 const {
   listWorkbaskets,
+  createDefaultRouting,
   createWorkbasket,
   renameWorkbasket,
   toggleWorkbasketStatus,
@@ -122,6 +123,7 @@ router.get('/cms-intake-settings', ...adminBaseAccess, authorizeFirmPermission('
 router.put('/cms-intake-settings', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('ADMIN_STATS'), userWriteLimiter, updateCmsIntakeSettings);
 router.post('/cms-intake-settings/intake-api-key/regenerate', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('ADMIN_STATS'), sensitiveLimiter, regenerateCmsIntakeApiKey);
 router.get('/workbaskets', ...adminBaseAccess, authorizeFirmPermission('USER_VIEW'), userReadLimiter, listWorkbaskets);
+router.post('/work-settings/default-routing', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), authorizeFirmPermission('CATEGORY_MANAGE'), userWriteLimiter, createDefaultRouting);
 router.post('/workbaskets', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, createWorkbasket);
 router.put('/workbaskets/:workbasketId', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, renameWorkbasket);
 router.patch('/workbaskets/:workbasketId/status', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, toggleWorkbasketStatus);

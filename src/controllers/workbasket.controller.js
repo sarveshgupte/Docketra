@@ -39,7 +39,6 @@ const buildWorkbasketWarnings = async (firmId, workbasketIds = []) => {
 
 const listWorkbaskets = async (req, res) => {
   try {
-    await ensureDefaultRoutingForFirm(req.user?.firmId);
     const includeInactive = String(req.query?.includeInactive || '').toLowerCase() === 'true';
     const visibility = buildWorkbasketVisibilityQuery({ user: req.user });
     if (visibility.denyAll) return res.json({ success: true, data: [] });
@@ -67,6 +66,19 @@ const listWorkbaskets = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Failed to load workbaskets' });
+  }
+};
+
+const createDefaultRouting = async (req, res) => {
+  try {
+    const result = await ensureDefaultRoutingForFirm(req.user?.firmId);
+    return res.status(201).json({
+      success: true,
+      data: result,
+      message: result?.created ? 'Default routing configured' : 'Default routing already configured',
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Failed to configure default routing' });
   }
 };
 
@@ -279,6 +291,7 @@ const addQcMember = async (req, res) => {
 
 module.exports = {
   listWorkbaskets,
+  createDefaultRouting,
   createWorkbasket,
   getCoreWork,
   renameWorkbasket,
