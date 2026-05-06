@@ -27,8 +27,8 @@ const restoreSwaps = () => {
 
 (async () => {
   swap(repoPath, {
-    find: async () => [],
-    count: async () => 0,
+    find: async (_f, filter) => (filter?.isActive ? [{ clientId: 'C000001', businessName: 'Default Firm Client', isActive: true, isDefaultClient: true, isInternal: true, isSystemClient: true, status: 'ACTIVE' }] : []),
+    count: async (_f, filter) => (filter?.isActive ? 1 : 0),
   });
 
   swap(firmPath, {
@@ -58,6 +58,11 @@ const restoreSwaps = () => {
   assert.strictEqual(res.body.data.length, 0, 'data should be empty in empty-state');
   assert.strictEqual(res.body.clients.length, 0, 'clients should be empty in empty-state');
   assert.deepStrictEqual(res.body.pagination, { page: 1, limit: 25, total: 0, pages: 1 }, 'pagination should include empty-state metadata');
+
+  const forCreateRes = await request(app).get('/api/clients?forCreateCase=true');
+  assert.strictEqual(forCreateRes.status, 200, 'GET /api/clients?forCreateCase=true should return 200');
+  assert.ok(Array.isArray(forCreateRes.body.data), 'forCreateCase data must be array');
+  assert.strictEqual(forCreateRes.body.data[0].isDefaultClient, true, 'forCreateCase should include default client');
 
   console.log('clientsEndpoint.primaryAdmin.test.js passed');
   restoreSwaps();
