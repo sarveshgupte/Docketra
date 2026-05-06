@@ -5,7 +5,7 @@ import { ROUTES } from '../../constants/routes';
 import { getPlatformDestinationCommands, getPlatformNavigation, PLATFORM_SHORTCUT_ROUTES } from '../../constants/platformNavigation';
 import { CommandPalette } from '../common/CommandPalette';
 import api from '../../services/api';
-import { crmApi } from '../../api/crm.api';
+import { clientApi } from '../../api/client.api';
 import { isShortcutAllowedTarget } from '../../utils/keyboardShortcuts';
 import { isNavItemActive } from '../../utils/navActive';
 import { trackAsync } from '../../utils/performanceMonitor';
@@ -29,7 +29,7 @@ const normalizeClientRows = (payload) => {
       return {
         routeId,
         label: client?.businessName || client?.name || 'Client record',
-        description: client?.businessEmail || client?.email || 'Open CRM client detail',
+        description: client?.businessEmail || client?.email || 'Open client workspace',
       };
     })
     .filter((client) => Boolean(client.routeId));
@@ -208,7 +208,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
         const [docketRes, clientsRes] = await Promise.allSettled([
           trackAsync('command-center.search.dockets', `command-center:dockets:${cacheKey}`, () => api.get('/search', { params: { q: term } })),
           hasAdminAccess && clientDirectory.length === 0
-            ? trackAsync('command-center.search.clients.initial-load', 'command-center:clients', () => crmApi.listClients({ limit: 50 }))
+            ? trackAsync('command-center.search.clients.initial-load', 'command-center:clients', () => clientApi.getClients(true, false, { limit: 50 }))
             : Promise.resolve({ data: [] }),
         ]);
 
@@ -276,7 +276,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
       id: `client-${client.routeId}`,
       label: client.label,
       description: client.description,
-      action: () => openRoute(ROUTES.CRM_CLIENT_DETAIL(firmSlug, client.routeId)),
+      action: () => openRoute(ROUTES.CLIENTS(firmSlug)),
     }));
 
     const sections = [
