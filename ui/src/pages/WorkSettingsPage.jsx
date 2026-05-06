@@ -75,6 +75,24 @@ export const WorkSettingsPage = () => {
 
   const handleCreateWorkbasket = async () => createWorkbasketByName(workbasketName);
 
+  const handleCreateDefaultRouting = async () => {
+    setWorkbasketSaving(true);
+    setStatusMessage({ type: 'info', text: 'Configuring default routing…' });
+    try {
+      await adminApi.createDefaultRouting();
+      await loadWorkbaskets();
+      setStatusMessage({ type: 'success', text: 'Default routing configured.' });
+    } catch (error) {
+      if (error?.status === 403) {
+        setStatusMessage({ type: 'error', text: 'You do not have permission to configure default routing for this firm.' });
+      } else {
+        setStatusMessage({ type: 'error', text: 'Could not configure default routing. Please retry.' });
+      }
+    } finally {
+      setWorkbasketSaving(false);
+    }
+  };
+
   const handleRenameWorkbasket = async (workbasket) => {
     const nextName = window.prompt('Rename workbasket', workbasket.name || '');
     if (!nextName || !nextName.trim() || nextName.trim() === workbasket.name) return;
@@ -117,7 +135,7 @@ export const WorkSettingsPage = () => {
               </div>
               <div className="space-y-2">
                 {loadingWorkbaskets ? <p className="text-sm text-[var(--dt-text-muted)]">Loading workbaskets…</p> : null}
-                {!loadingWorkbaskets && workbaskets.length === 0 ? (<div className="rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-bg)] p-3"><p className="text-sm text-[var(--dt-text-muted)]">No active workbasket is configured yet. Create one to start docket routing.</p><Button type="button" variant="primary" className="mt-2" onClick={() => void createWorkbasketByName('Default Workbasket')} disabled={workbasketSaving}>Create default workbasket</Button></div>) : null}
+                {!loadingWorkbaskets && workbaskets.length === 0 ? (<div className="rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-bg)] p-3"><p className="text-sm text-[var(--dt-text-muted)]">No active workbasket is configured yet. Create one to start docket routing.</p><Button type="button" variant="primary" className="mt-2" onClick={() => void handleCreateDefaultRouting()} disabled={workbasketSaving}>Create default routing</Button></div>) : null}
                 {workbaskets.map((workbasket) => (
                   <div key={workbasket._id} className="flex flex-wrap items-center justify-between gap-3 rounded border border-[var(--dt-border-whisper)] px-3 py-2">
                     <div className="text-sm font-medium text-[var(--dt-text)]">{workbasket.name} <span className="text-xs text-[var(--dt-text-muted)]">({workbasket.isActive ? 'Active' : 'Inactive'})</span></div>

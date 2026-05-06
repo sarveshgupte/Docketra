@@ -30,6 +30,7 @@ export const adminApi = {
   updateCmsIntakeSettings: (payload) => request((http) => http.put('/admin/cms-intake-settings', payload), 'Failed to save CMS intake settings'),
   regenerateCmsIntakeApiKey: () => request((http) => http.post('/admin/cms-intake-settings/intake-api-key/regenerate', {}), 'Failed to regenerate intake API key'),
   listWorkbaskets: (params = {}) => request((http) => http.get('/admin/workbaskets', { params }), 'Failed to load workbaskets'),
+  createDefaultRouting: () => request((http) => http.post('/admin/work-settings/default-routing'), 'Failed to configure default routing'),
   createWorkbasket: (name) => request((http) => http.post('/admin/workbaskets', { name }), 'Failed to create workbasket'),
   renameWorkbasket: (workbasketId, name) => request((http) => http.put(`/admin/workbaskets/${workbasketId}`, { name }), 'Failed to rename workbasket'),
   toggleWorkbasketStatus: (workbasketId, isActive) => request((http) => http.patch(`/admin/workbaskets/${workbasketId}/status`, { isActive }), 'Failed to update workbasket status'),
