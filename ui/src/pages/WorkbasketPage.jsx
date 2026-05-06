@@ -96,7 +96,8 @@ export const WorkbasketPage = () => {
   const [activeTab, setActiveTab] = useState('own');
   const [activeWorkbasketId, setActiveWorkbasketId] = useState('');
   const [loadError, setLoadError] = useState('');
-  const isAdmin = ['ADMIN', 'Admin'].includes(user?.role);
+  const normalizedRole = String(user?.role || '').trim().toUpperCase();
+  const isAdmin = ['PRIMARY_ADMIN', 'ADMIN'].includes(normalizedRole);
   const queryClient = useQueryClient();
   const allSelected = cases.length > 0 && selectedCases.length === cases.length;
   const partiallySelected = selectedCases.length > 0 && !allSelected;
@@ -626,13 +627,22 @@ export const WorkbasketPage = () => {
               {workbasket.name}
             </Button>
           ))}
-          {accessibleWorkbaskets.length > 0 ? (<><Button variant={activeTab === 'own' ? 'primary' : 'secondary'} onClick={() => setActiveTab('own')}>
-            My Team WB
-          </Button>
-          <Button variant={activeTab === 'routed' ? 'primary' : 'secondary'} onClick={() => setActiveTab('routed')}>
-            Routed to My Team
-          </Button>
+          {accessibleWorkbaskets.length > 0 ? (
+            <>
+              <Button variant={activeTab === 'own' ? 'primary' : 'secondary'} onClick={() => setActiveTab('own')}>
+                My Team WB
+              </Button>
+              <Button variant={activeTab === 'routed' ? 'primary' : 'secondary'} onClick={() => setActiveTab('routed')}>
+                Routed to My Team
+              </Button>
+            </>
+          ) : null}
         </div>
+        {loadError ? (
+          <Card className="mb-4 border-red-200 bg-red-50">
+            <p className="text-sm text-red-700">{loadError}</p>
+          </Card>
+        ) : null}
         <Card>
           <QueueFilterBar className="mb-6" onClear={handleResetFilters} clearDisabled={activeFilters.length === 0}>
             <div className="filter-group">
