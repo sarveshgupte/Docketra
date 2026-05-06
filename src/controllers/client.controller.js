@@ -241,7 +241,7 @@ const getClients = async (req, res) => {
         filter,
         accessContext.role,
         {
-          select: 'clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal isDefaultClient createdAt profileRef',
+          select: 'clientId businessName status isActive isSystemClient isInternal isDefaultClient createdAt',
           sort: { clientId: 1 },
           limit,
           skip,

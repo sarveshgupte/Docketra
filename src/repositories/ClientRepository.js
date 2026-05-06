@@ -36,16 +36,15 @@ const CLIENT_ENCRYPTED_FIELDS = ['primaryContactNumber', 'businessEmail'];
 
 
 async function _assertTenantKeyPresentForDecryption(tenantId, logContext) {
-  if (!tenantId || !process.env.MASTER_ENCRYPTION_KEY) return;
+  if (!tenantId || !process.env.MASTER_ENCRYPTION_KEY) return false;
   const exists = await tenantKeyExists(String(tenantId));
-  if (!exists) {
-    const err = new Error(`Tenant encryption key is missing for tenant ${tenantId}. Repair is required before decrypting client data.`);
-    err.code = 'TENANT_KEY_MISSING';
-    err.statusCode = 503;
-    err.operational = true;
-    err.logContext = logContext || null;
-    throw err;
-  }
+  if (exists) return true;
+  const err = new Error(`Tenant encryption key is missing for tenant ${tenantId}. Repair is required before decrypting client data.`);
+  err.code = 'TENANT_KEY_MISSING';
+  err.statusCode = 503;
+  err.operational = true;
+  err.logContext = logContext || null;
+  throw err;
 }
 
 function resolveDecryptFields(decryptFields) {
@@ -56,6 +55,11 @@ function resolveDecryptFields(decryptFields) {
   return decryptFields.filter((field) => allowed.has(field));
 }
 
+
+
+function hasEncryptedValues(doc, fields = []) {
+  return fields.some((field) => doc?.[field] != null && looksEncrypted(doc[field]));
+}
 
 function normalizeClientDisplay(client) {
   if (!client) return client;
@@ -103,8 +107,9 @@ async function _decryptClientDoc(doc, firmId, { logContext, decryptFields } = {}
   const tenantId = doc.firmId || firmId;
   if (!tenantId) return doc;
 
-  await _assertTenantKeyPresentForDecryption(tenantId, logContext);
   const fieldsToDecrypt = resolveDecryptFields(decryptFields);
+  if (!hasEncryptedValues(doc, fieldsToDecrypt)) return doc;
+  await _assertTenantKeyPresentForDecryption(tenantId, logContext);
   for (const field of fieldsToDecrypt) {
     if (doc[field] != null && looksEncrypted(doc[field])) {
       const decrypted = await decrypt(doc[field], String(tenantId), undefined, {
@@ -137,6 +142,7 @@ async function _decryptClientDocs(docs, firmId, { logContext, decryptFields } = 
     const tenantId = doc.firmId || firmId;
     if (!tenantId) return;
 
+    if (!hasEncryptedValues(doc, fieldsToDecrypt)) return;
     await _assertTenantKeyPresentForDecryption(tenantId, logContext);
     for (const field of fieldsToDecrypt) {
       if (doc[field] != null && looksEncrypted(doc[field])) {
