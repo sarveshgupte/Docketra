@@ -18,6 +18,7 @@ export const CreateUserModal = ({
   creatingUser,
   primaryWorkbaskets,
   qcOnlyWorkbaskets,
+  workbasketLoadWarning,
 }) => (
   <Modal isOpen={isOpen} onClose={onClose} title="Create New User">
     <form onSubmit={onSubmit} className="admin__create-form">
@@ -47,12 +48,14 @@ export const CreateUserModal = ({
       <Input label="Department" type="text" value={newUser.department} onChange={(e) => setNewUser({ ...newUser, department: e.target.value })} placeholder="e.g., Operations" />
       <div className="space-y-2">
         <FormLabel>Workbaskets (at least one)</FormLabel>
+        {workbasketLoadWarning ? <div className="text-xs text-amber-700">{workbasketLoadWarning}</div> : null}
         <div className="admin__client-access-list">
           {primaryWorkbaskets.map((workbasket) => (
             <label key={workbasket._id} className="admin__client-access-item">
               <input
                 type="checkbox"
                 checked={(newUser.teamIds || []).includes(String(workbasket._id))}
+                disabled={Boolean(workbasketLoadWarning)}
                 onChange={() => setNewUser((prev) => ({ ...prev, teamIds: toggleInArray(String(workbasket._id), Array.isArray(prev.teamIds) ? prev.teamIds : []) }))}
               />
               <span>{workbasket.name}</span>
@@ -70,7 +73,8 @@ export const CreateUserModal = ({
                 <input
                   type="checkbox"
                   checked={(newUser.teamIds || []).includes(String(workbasket._id))}
-                  onChange={() => setNewUser((prev) => ({ ...prev, teamIds: toggleInArray(String(workbasket._id), Array.isArray(prev.teamIds) ? prev.teamIds : []) }))}
+                  disabled={Boolean(workbasketLoadWarning)}
+                onChange={() => setNewUser((prev) => ({ ...prev, teamIds: toggleInArray(String(workbasket._id), Array.isArray(prev.teamIds) ? prev.teamIds : []) }))}
                 />
                 <span>{workbasket.name}</span>
               </label>
@@ -81,7 +85,7 @@ export const CreateUserModal = ({
 
       <div className="admin__form-actions">
         <Button type="button" variant="default" onClick={onClose} disabled={creatingUser}>Cancel</Button>
-        <Button type="submit" variant="primary" disabled={creatingUser || (newUser.teamIds || []).length === 0}>{creatingUser ? 'Creating...' : 'Create User'}</Button>
+        <Button type="submit" variant="primary" disabled={creatingUser || Boolean(workbasketLoadWarning) || (newUser.teamIds || []).length === 0}>{creatingUser ? 'Creating...' : 'Create User'}</Button>
       </div>
     </form>
   </Modal>

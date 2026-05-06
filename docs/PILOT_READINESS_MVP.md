@@ -70,3 +70,11 @@ Work Settings is routing-only for MVP and has no CMS/CRM/Company Brain dependenc
 - Users switch work context between linked workbaskets in Global Workbasket views.
 - Users pull dockets from a linked workbasket into their own My Worklist.
 - Default routing setup never removes, replaces, or collapses existing multi-workbasket memberships.
+
+## Team & Access Pilot Readiness Guardrails (May 2026)
+
+- Team & Access must always show the current logged-in Primary Admin, even if `/api/admin/users` fails or returns an empty set.
+- User list rendering is independent from workbasket loading; workbasket load failures must not block the Team Members table.
+- Workbasket assignment remains multi-select and multi-membership (`teamIds[]`), and save uses `/api/admin/users/:xID/workbaskets`.
+- My Worklist remains a personal/single-user queue view; team assignment belongs to Team & Access.
+- Team & Access is required for pilot setup readiness and cannot be blocked by optional dependency failures.
