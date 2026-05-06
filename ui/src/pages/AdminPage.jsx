@@ -96,6 +96,8 @@ export const AdminPage = () => {
   const [actionLoadingByUser, setActionLoadingByUser] = useState({});
   const [pendingConfirmation, setPendingConfirmation] = useState(null);
   const [userSectionMessage, setUserSectionMessage] = useState('');
+  const [userLoadWarning, setUserLoadWarning] = useState('');
+  const [workbasketLoadWarning, setWorkbasketLoadWarning] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [statsEmpty, setStatsEmpty] = useState(false);
   const [statsFailed, setStatsFailed] = useState(false);
@@ -284,7 +286,7 @@ export const AdminPage = () => {
       status: loggedInUser.status || 'active',
       isActive: loggedInUser.status ? String(loggedInUser.status).toLowerCase() === 'active' : true,
       isSystem: Boolean(loggedInUser.isSystem),
-      isPrimaryAdmin: Boolean(loggedInUser.isPrimaryAdmin || loggedInUser.isAdmin),
+      isPrimaryAdmin: true,
       passwordConfigured: true,
       restrictedClientIds: Array.isArray(loggedInUser.restrictedClientIds) ? loggedInUser.restrictedClientIds : [],
       firm: {
@@ -313,6 +315,8 @@ export const AdminPage = () => {
     setAdminStats,
     setStatsEmpty,
     setStatsFailed,
+    setUserLoadWarning,
+    setWorkbasketLoadWarning,
   });
 
   const handleCreateUser = async (e) => {
@@ -1251,13 +1255,13 @@ export const AdminPage = () => {
             onBulkUpload={() => handleOpenBulkUpload('team')}
             onDownloadTemplate={() => downloadBulkTemplate('team')}
             onCreateUser={() => setShowCreateModal(true)}
-            onEditUser={handleEditUser}
+            onEditUser={workbasketLoadWarning ? () => showToast('Workbaskets could not be loaded. User workbasket assignment controls may be unavailable.', 'error') : handleEditUser}
             onResendInvite={handleResendSetupEmail}
             onToggleUserStatus={handleToggleUserStatus}
             onUnlock={handleUnlockAccount}
             onResetPassword={handleSendPasswordReset}
             actionLoadingByUser={actionLoadingByUser}
-            sectionMessage={userSectionMessage}
+            sectionMessage={[userSectionMessage, userLoadWarning, workbasketLoadWarning].filter(Boolean).join(' ')}
           />
         )}
 
@@ -1331,6 +1335,7 @@ export const AdminPage = () => {
         creatingUser={creatingUser}
         primaryWorkbaskets={primaryWorkbaskets}
         qcOnlyWorkbaskets={qcOnlyWorkbaskets}
+        workbasketLoadWarning={workbasketLoadWarning}
       />
 
       <UserAccessModal
@@ -1352,6 +1357,7 @@ export const AdminPage = () => {
         onToggleClientAccess={handleToggleClientAccess}
         onSave={handleSaveUserAccess}
         saving={savingUserAccess}
+        workbasketLoadWarning={workbasketLoadWarning}
       />
 
       <ActionConfirmModal
