@@ -95,6 +95,7 @@ export const WorkbasketPage = () => {
   const [categories, setCategories] = useState([]);
   const [activeTab, setActiveTab] = useState('own');
   const [activeWorkbasketId, setActiveWorkbasketId] = useState('');
+  const [loadError, setLoadError] = useState('');
   const isAdmin = ['ADMIN', 'Admin'].includes(user?.role);
   const queryClient = useQueryClient();
   const allSelected = cases.length > 0 && selectedCases.length === cases.length;
@@ -224,6 +225,7 @@ export const WorkbasketPage = () => {
       }
     } catch (error) {
       console.error('Failed to load workbasket:', error);
+      setLoadError(error?.response?.data?.message || 'Unable to load workbasket right now.');
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -529,7 +531,7 @@ export const WorkbasketPage = () => {
             onClick={() => handlePullCase(caseItem.caseId)}
             disabled={pullingCase === caseItem.caseId}
           >
-            {pullingCase === caseItem.caseId ? 'Assigning...' : 'Assign'}
+            {pullingCase === caseItem.caseId ? 'Pulling…' : 'Pull to My Worklist'}
           </Button>
         </div>
       ),
@@ -609,16 +611,22 @@ export const WorkbasketPage = () => {
           )}
         />
         <div className="workbasket-tabs">
+          {accessibleWorkbaskets.length === 0 ? (
+            <p className="text-sm text-[var(--dt-text-muted)]">You are not linked to any workbasket yet. Ask your admin to assign you to a workbasket.</p>
+          ) : null}
+          {accessibleWorkbaskets.length === 1 ? (
+            <p className="text-sm font-medium text-[var(--dt-text)]">Workbasket: {accessibleWorkbaskets[0].name}</p>
+          ) : null}
           {accessibleWorkbaskets.length > 1 && accessibleWorkbaskets.map((workbasket) => (
             <Button
               key={workbasket.id}
               variant={activeWorkbasketId === workbasket.id ? 'primary' : 'secondary'}
-              onClick={() => setActiveWorkbasketId(workbasket.id)}
+              onClick={() => { setActiveWorkbasketId(workbasket.id); setFilters((prev) => ({ ...prev, page: 1 })); }}
             >
               {workbasket.name}
             </Button>
           ))}
-          <Button variant={activeTab === 'own' ? 'primary' : 'secondary'} onClick={() => setActiveTab('own')}>
+          {accessibleWorkbaskets.length > 0 ? (<><Button variant={activeTab === 'own' ? 'primary' : 'secondary'} onClick={() => setActiveTab('own')}>
             My Team WB
           </Button>
           <Button variant={activeTab === 'routed' ? 'primary' : 'secondary'} onClick={() => setActiveTab('routed')}>
@@ -721,13 +729,13 @@ export const WorkbasketPage = () => {
             onRemoveFilter={handleRemoveFilter}
             onResetFilters={handleResetFilters}
             loading={loading}
-            loadingMessage="Loading workbasket..."
+            loadingMessage={accessibleWorkbaskets.length === 0 ? 'Loading linked workbaskets…' : 'Loading selected workbasket…'}
             refreshing={isRefreshing && !loading}
             refreshingMessage="Refreshing workbasket in the background…"
             emptyMessage={(
               <EmptyState
-                title="No dockets in backlog"
-                description="New unassigned dockets will appear here as soon as they enter the shared queue."
+                title={accessibleWorkbaskets.length === 0 ? 'No linked workbasket' : 'No dockets in selected workbasket'}
+                description={accessibleWorkbaskets.length === 0 ? 'You are not linked to any workbasket yet. Ask your admin to assign you to a workbasket.' : 'New unassigned dockets will appear here as soon as they enter the selected shared queue.'}
                 actionLabel={isAdmin ? 'Create Docket' : undefined}
                 onAction={isAdmin ? () => navigate(ROUTES.CREATE_CASE(firmSlug)) : undefined}
               />
