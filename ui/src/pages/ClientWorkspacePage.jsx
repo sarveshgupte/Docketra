@@ -232,7 +232,8 @@ export const ClientWorkspacePage = () => {
                                   variant="outline"
                                   onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, docketId), { state: { returnTo: clientWorkspaceRoute, fromClientRoute: clientWorkspaceRoute } })}
                                 >
-                                  Open Docket
+                                  <span aria-hidden="true">Open Docket</span>
+                                  <span className="sr-only">Open docket {docket.title || docket.caseName || docketId}</span>
                                 </Button>
                               </td>
                             </tr>
@@ -328,7 +329,8 @@ export const ClientWorkspacePage = () => {
                               variant="outline"
                               onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, docketId), { state: { returnTo: clientWorkspaceRoute, fromClientRoute: clientWorkspaceRoute } })}
                             >
-                              Open Docket
+                              <span aria-hidden="true">Open Docket</span>
+                              <span className="sr-only">Open docket {docketId}</span>
                             </Button>
                           </td>
                         </tr>

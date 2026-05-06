@@ -172,10 +172,17 @@ export const PlatformWorklistPage = () => {
               <td>
                 <div className="action-group-secondary" role="group" aria-label="Docket actions">
                   {!r.caseInternalId ? <span className="muted">Action unavailable: missing docket ID</span> : null}
-                  <button type="button" onClick={() => void transition(r.caseInternalId, 'SEND_TO_QC')} disabled={!r.caseInternalId || pendingActionId === r.caseInternalId}>Send to QC</button>
-                  <button type="button" onClick={() => void transition(r.caseInternalId, 'PEND')} disabled={!r.caseInternalId || pendingActionId === r.caseInternalId}>Pend</button>
+                  <button type="button" onClick={() => void transition(r.caseInternalId, 'SEND_TO_QC')} disabled={!r.caseInternalId || pendingActionId === r.caseInternalId}>
+                    <span aria-hidden="true">Send to QC</span>
+                    <span className="sr-only">Send docket {formatDocketLabel(r)} to QC</span>
+                  </button>
+                  <button type="button" onClick={() => void transition(r.caseInternalId, 'PEND')} disabled={!r.caseInternalId || pendingActionId === r.caseInternalId}>
+                    <span aria-hidden="true">Pend</span>
+                    <span className="sr-only">Pend docket {formatDocketLabel(r)}</span>
+                  </button>
                   <button type="button" onClick={() => void transition(r.caseInternalId, 'RESOLVE')} disabled={!r.caseInternalId || pendingActionId === r.caseInternalId}>
-                    {pendingActionId === r.caseInternalId ? 'Updating…' : 'Resolve'}
+                    <span aria-hidden="true">{pendingActionId === r.caseInternalId ? 'Updating…' : 'Resolve'}</span>
+                    <span className="sr-only">{pendingActionId === r.caseInternalId ? `Updating docket ${formatDocketLabel(r)}` : `Resolve docket ${formatDocketLabel(r)}`}</span>
                   </button>
                 </div>
               </td>
