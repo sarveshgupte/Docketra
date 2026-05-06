@@ -125,6 +125,7 @@ module.exports = {
   'PUT /cms-intake-settings': { body: passthroughBody },
   'POST /cms-intake-settings/intake-api-key/regenerate': { body: passthroughBody },
   'GET /workbaskets': { query: passthroughQuery },
+  'POST /work-settings/default-routing': { body: z.object({}).strict() },
   'POST /workbaskets': { body: z.object({ name: nonEmptyString }).passthrough() },
   'PUT /workbaskets/:workbasketId': {
     params: z.object({ workbasketId: objectIdOrString }),
