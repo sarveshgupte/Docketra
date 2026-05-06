@@ -75,23 +75,29 @@ const getDealById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Deal not found' });
     }
 
-    const deal = await Deal.findOne(
-      { _id: id, firmId: req.user.firmId },
-      { title: 1, stage: 1, value: 1, clientId: 1, createdAt: 1 }
-    ).lean();
-    if (!deal) return res.status(404).json({ success: false, message: 'Deal not found' });
-
-    const [client, dockets, invoices] = await Promise.all([
-      CrmClient.findOne({ _id: deal.clientId, firmId: req.user.firmId }, { name: 1, type: 1, email: 1, phone: 1 }).lean(),
+    // PERFORMANCE: Parallelize parent and child lookups since Deal ID is known
+    const [deal, dockets, invoices] = await Promise.all([
+      Deal.findOne(
+        { _id: id, firmId: req.user.firmId },
+        { title: 1, stage: 1, value: 1, clientId: 1, createdAt: 1 }
+      ).lean(),
       Case.find(
-        { firmId: req.user.firmId, dealId: deal._id },
+        { firmId: req.user.firmId, dealId: id },
         { caseId: 1, caseNumber: 1, title: 1, status: 1, priority: 1, createdAt: 1, crmClientId: 1 }
       ).sort({ createdAt: -1 }).lean(),
       Invoice.find(
-        { firmId: req.user.firmId, dealId: deal._id },
+        { firmId: req.user.firmId, dealId: id },
         { amount: 1, status: 1, issuedAt: 1, paidAt: 1, clientId: 1, docketId: 1, createdAt: 1 }
       ).sort({ createdAt: -1 }).lean(),
     ]);
+
+    if (!deal) return res.status(404).json({ success: false, message: 'Deal not found' });
+
+    // Client lookup depends on the deal's clientId, executed only if deal exists
+    const client = await CrmClient.findOne(
+      { _id: deal.clientId, firmId: req.user.firmId },
+      { name: 1, type: 1, email: 1, phone: 1 }
+    ).lean();
 
     return res.json({
       success: true,

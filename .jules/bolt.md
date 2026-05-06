@@ -33,3 +33,7 @@
 **Learning:** Found several endpoints executing sequential `countDocuments()` and `find()` or concurrent `Promise.all([find(...), countDocuments(...)])`. This adds database load via index scans for counts and wastes network round-trips.
 **Action:** Replaced sequential or concurrent `countDocuments()` queries with `find().limit(MAX + 1)` wherever pagination or a fixed hard cap makes an exact total count unneeded beyond checking if a next page or limit breach exists. This bypasses the need for the `countDocuments` index scan entirely.
 ## 2026-05-03 - Concurrent Document Fetch in Create Service\n**Learning:** When validating multiple optional or independent entity IDs from a request body (e.g., dealId, docketId), sequential database fetch causes high API response time.\n**Action:** Use Promise.all() for concurrent fetch instead of individual await statements.
+
+## 2026-05-06 - Parallelize Independent Child Lookups in Client Fact Sheet API
+**Learning:** Sequential parent and child lookups in API handlers introduce unnecessary database roundtrips, increasing overall request latency.
+**Action:** Use Promise.all to fetch independent models concurrently (e.g., activeCases and pendingTasks) after or alongside parent validation, ensuring we minimize blocking await statements where data dependencies do not enforce sequential order.

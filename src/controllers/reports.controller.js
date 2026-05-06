@@ -948,17 +948,16 @@ const generateClientFactSheetPdf = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Client not found' });
     }
 
-    // SECURITY: Enforcing tenant isolation (firm-scoped query)
-    const activeCases = await Case.find({
-      firmId,
-      clientId,
-      status: { $in: ['UNASSIGNED', 'OPEN', 'PENDING', 'UNDER_REVIEW', 'SUBMITTED', 'APPROVED'] },
-    })
-      .select('caseId caseNumber title status')
-      .lean();
+    // PERFORMANCE: Execute independent child queries concurrently
+    const [activeCases, clientCaseIds] = await Promise.all([
+      Case.find({
+        firmId,
+        clientId,
+        status: { $in: ['UNASSIGNED', 'OPEN', 'PENDING', 'UNDER_REVIEW', 'SUBMITTED', 'APPROVED'] },
+      }).select('caseId caseNumber title status').lean(),
+      Case.find({ firmId, clientId }).distinct('_id')
+    ]);
 
-    // SECURITY: Enforcing tenant isolation (firm-scoped query)
-    const clientCaseIds = await Case.find({ firmId, clientId }).distinct('_id');
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const pendingTasks = await Task.find({
       firmId,
