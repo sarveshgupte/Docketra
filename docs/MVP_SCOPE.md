@@ -29,6 +29,8 @@
 - **Activation rules:** deactivation is a reversible status change only; clients are never hard-deleted in MVP.
 - **Docket behavior:** deactivated clients are excluded from active Create Docket client choices, while existing dockets under those clients remain viewable.
 - **Operational error handling:** when client loading fails with `TENANT_KEY_MISSING`, UI must show “Client encryption setup needs repair before clients can be loaded.” and block dependent create/edit actions until repaired.
+- **Client Fact Sheet (CFS):** admins can edit CFS from Clients page (`Edit CFS`), and docket detail provides view access from the info (`i`) button in the docket header area.
+- **Docket execution context only:** CFS supports docket execution context (client profile notes/files for active work) and is not a CMS/CRM/Company Brain substitute.
 
 ## Create Docket Setup Prerequisites (MVP)
 - **Clients are required:** Create Docket requires at least one active client before submit can proceed.
