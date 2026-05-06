@@ -21,6 +21,7 @@ export const DocketSidebar = ({
   timelineEvents = [],
   cfsData = null,
   cfsLoading = false,
+  cfsError = '',
   selectedAttachmentFile = null,
   attachmentComment = '',
   uploadingAttachment = false,
@@ -85,19 +86,28 @@ export const DocketSidebar = ({
           || caseInfo?.businessName
           || caseInfo?.client?.businessName
           || '—';
+        const clientStatus = cfsData?.status
+          || cfsData?.clientStatus
+          || caseInfo?.clientStatus
+          || caseInfo?.client?.status
+          || null;
         const notes = cfsData?.description || cfsData?.notes || '';
 
         if (cfsLoading) {
           return <p className="docket-sidebar__empty">Loading client fact sheet…</p>;
         }
+        if (cfsError) {
+          return <p className="docket-sidebar__empty">{cfsError}</p>;
+        }
         if (!cfsData) {
-          return <p className="docket-sidebar__empty">Client fact sheet is unavailable for this docket right now. You can continue working this docket while CFS data is missing.</p>;
+          return <p className="docket-sidebar__empty">No client fact sheet details added yet.</p>;
         }
 
         return (
           <div className="space-y-4 text-sm text-gray-700">
           <div><span className="font-semibold text-gray-900">Client Name:</span> {clientName}</div>
           <div><span className="font-semibold text-gray-900">Client ID:</span> {clientId}</div>
+          <div><span className="font-semibold text-gray-900">Client Status:</span> {clientStatus || 'Unavailable'}</div>
           <div>
             <span className="mb-1 block font-semibold text-gray-900">Notes</span>
             <textarea

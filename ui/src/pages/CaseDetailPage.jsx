@@ -166,6 +166,7 @@ export const CaseDetailPage = () => {
   const [sidebarType, setSidebarType] = useState(null);
   const [clientFactSheet, setClientFactSheet] = useState(null);
   const [loadingClientFactSheet, setLoadingClientFactSheet] = useState(false);
+  const [clientFactSheetError, setClientFactSheetError] = useState('');
   const [realtimeStatus, setRealtimeStatus] = useState('live');
   const [commentWindowSize, setCommentWindowSize] = useState(INITIAL_VIRTUAL_WINDOW);
   const [retryQueue, setRetryQueue] = useState(() => {
@@ -1152,12 +1153,23 @@ export const CaseDetailPage = () => {
   const loadClientFactSheet = useCallback(async () => {
     if (!caseId) return;
     setLoadingClientFactSheet(true);
+    setClientFactSheetError('');
     try {
       const response = await clientApi.getClientFactSheetForCase(caseId);
       setClientFactSheet(response?.data || null);
     } catch (error) {
       setClientFactSheet(null);
-      showError(error?.response?.data?.message || error?.message || 'Failed to load client fact sheet');
+      const nestedCode = error?.response?.data?.code;
+      const rootCode = error?.code;
+      const rawMessage = String(error?.response?.data?.message || error?.message || '');
+      const isTenantKeyMissing = rootCode === 'TENANT_KEY_MISSING'
+        || nestedCode === 'TENANT_KEY_MISSING'
+        || rawMessage.includes('TENANT_KEY_MISSING');
+      const message = isTenantKeyMissing
+        ? 'Client encryption setup needs repair before the fact sheet can be loaded.'
+        : 'Client fact sheet could not be loaded.';
+      setClientFactSheetError(message);
+      showError(message);
     } finally {
       setLoadingClientFactSheet(false);
     }
@@ -1193,6 +1205,7 @@ export const CaseDetailPage = () => {
     setSidebarOpen(false);
     setSidebarType(null);
     setClientFactSheet(null);
+    setClientFactSheetError('');
   }, [caseId]);
 
   const handleAssignDocket = async () => {
@@ -1634,7 +1647,7 @@ export const CaseDetailPage = () => {
           {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
           {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
           {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
-          <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('cfs'), 'Unable to open CFS panel right now.')} title="CFS" className="h-10 w-10 rounded-full p-0" aria-label="Open CFS sidebar">ⓘ</Button>
+          <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('cfs'), 'Unable to open CFS panel right now.')} title="Open Client Fact Sheet" className="h-10 w-10 rounded-full p-0" aria-label="Open client fact sheet">ⓘ</Button>
           <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('attachments'), 'Unable to open attachments panel right now.')} title="Attachments" className="h-10 w-10 rounded-full p-0" aria-label="Open attachments sidebar">📎</Button>
           <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('history'), 'Unable to open history panel right now.')} title="History" className="h-10 w-10 rounded-full p-0" aria-label="Open history sidebar">🕒</Button>
           {canCloneDocket ? (
@@ -1805,6 +1818,7 @@ export const CaseDetailPage = () => {
           timelineEvents={timelineEvents}
           cfsData={clientFactSheet}
           cfsLoading={loadingClientFactSheet}
+          cfsError={clientFactSheetError}
           selectedAttachmentFile={selectedFile}
           attachmentComment={fileDescription}
           uploadingAttachment={uploadingFile}
