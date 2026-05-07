@@ -60,11 +60,23 @@ async function run() {
   assert.strictEqual(savedFirmId, 'firm-owner-77');
   assert.ok(String(resCb.redirected || '').includes('connected=1'), 'google callback should redirect with connected=1 on successful save');
 
+
+  const reqCbInvalid = { firmId: 'tenant-canonical', ownershipFirmId: 'firm-owner-77', user: { role: 'PRIMARY_ADMIN' }, query: { code: 'abc', state: 'invalid-state' }, headers: { cookie: `storage_oauth_state=${callbackState}` }, cookies: { storage_oauth_state: callbackState } };
+  const resCbInvalid = { code: 200, headers: {}, redirected: null, status(c){this.code=c; return this;}, json(p){this.payload=p; return this;}, setHeader(k,v){this.headers[k]=v;}, redirect(u){this.redirected=u; return this;} };
+  await ctl.googleCallback(reqCbInvalid, resCbInvalid);
+  assert.ok(String(resCbInvalid.headers['Set-Cookie'] || '').includes('Max-Age=0'), 'invalid state must clear oauth state cookie');
+
   const reqHealth = { firmId: 'tenant-canonical', ownershipFirmId: 'firm-owner-77', user: { role: 'PRIMARY_ADMIN' } };
   const resHealth = { code: 200, payload: null, status(c){this.code=c; return this;}, json(p){this.payload=p; return this;} };
   await ctl.storageHealthCheck(reqHealth, resHealth);
   assert.strictEqual(resHealth.code, 502);
   assert.strictEqual(Boolean(markCalled), true);
+
+
+  const reqConfig = { firmId: 'tenant-canonical', ownershipFirmId: 'firm-owner-77', user: { role: 'PRIMARY_ADMIN' } };
+  const resConfig = { headers: {}, status(c){this.code=c; return this;}, set(k,v){this.headers[k]=v; return this;}, json(p){this.payload=p; return this;} };
+  await ctl.getStorageConfiguration(reqConfig, resConfig);
+  assert.strictEqual(resConfig.headers['Cache-Control'], 'no-store');
 
   const resUsage = { code: 200, payload: null, status(c){this.code=c; return this;}, json(p){this.payload=p; return this;} };
   await ctl.storageUsage(reqHealth, resUsage);
