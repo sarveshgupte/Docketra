@@ -3,7 +3,7 @@ const { logSlowEndpoint } = require('../utils/slowLog');
 const includeInternalErrorDetails = process.env.NODE_ENV !== 'production';
 const { buildWorkflowMeta, logWorkflowEvent } = require('../utils/workflowDiagnostics');
 const { applyWorkModeFilter, normalizeWorkMode } = require('../utils/workType');
-const CASE_LIST_PROJECTION = 'caseId caseNumber caseName title status category subcategory caseSubCategory priority clientId clientName assignedTo assignedToXID assignedToName createdBy createdByXID createdAt updatedAt dueDate slaDueAt isInternal workType lifecycle state pendingUntil ownerTeamId routedToTeamId';
+const CASE_LIST_PROJECTION = 'caseId caseNumber caseName title status category subcategory caseSubCategory priority clientId clientName assignedTo assignedToXID assignedToName employeeXID employeeSnapshot createdBy createdByXID createdAt updatedAt dueDate slaDueAt isInternal workType lifecycle state pendingUntil ownerTeamId routedToTeamId';
 module.exports = (deps) => {
   const {
     mongoose,

@@ -634,6 +634,7 @@ module.exports = (deps) => {
               priority: normalizedPriority,
               slaDueAt: newCase.slaDueAt,
               assignedToXID: newCase.assignedToXID,
+              employeeXID: newCase.employeeXID || null,
               duplicateOverridden: !!systemComment,
             },
           req,
@@ -674,6 +675,7 @@ module.exports = (deps) => {
             workType: normalizedWorkType,
             priority: normalizedPriority,
             assignedToXID: newCase.assignedToXID || null,
+            employeeXID: newCase.employeeXID || null,
           },
           oldDoc: {},
           newDoc: {
@@ -684,6 +686,7 @@ module.exports = (deps) => {
             workType: normalizedWorkType,
             priority: normalizedPriority,
             assignedToXID: newCase.assignedToXID || null,
+            employeeXID: newCase.employeeXID || null,
           },
           dedupeKey: `case-create:${newCase.caseId}`,
         });
@@ -709,6 +712,7 @@ module.exports = (deps) => {
               queueType: newCase.queueType || null,
               lifecycle: newCase.lifecycle || null,
               assignedToXID: newCase.assignedToXID || null,
+              employeeXID: newCase.employeeXID || null,
               ownerTeamId: newCase.ownerTeamId ? String(newCase.ownerTeamId) : null,
               isInternal: Boolean(newCase.isInternal),
               workType: newCase.workType || (newCase.isInternal ? 'internal' : 'client'),
