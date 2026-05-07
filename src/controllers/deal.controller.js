@@ -82,6 +82,7 @@ const getDealById = async (req, res) => {
 
     if (!deal) return res.status(404).json({ success: false, message: 'Deal not found' });
 
+    // PERFORMANCE: Execute independent child queries concurrently only after parent validation
     const [client, dockets, invoices] = await Promise.all([
       CrmClient.findOne(
         { _id: deal.clientId, firmId: req.user.firmId },

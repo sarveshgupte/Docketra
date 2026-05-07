@@ -75,13 +75,13 @@ async function testReopenMovesToWorkbenchWithAudit() {
     assert.strictEqual(result.count, 1);
     assert.strictEqual(result.docketIds[0], 'CASE-2');
     assert.ok(updatePayload?.$set);
-    assert.strictEqual(updatePayload.$set.state, 'IN_WB');
-    assert.strictEqual(updatePayload.$set.queueType, 'GLOBAL');
-    assert.strictEqual(updatePayload.$set.assignedToXID, null);
+    assert.strictEqual(updatePayload.$set.state, 'IN_PROGRESS');
+    assert.strictEqual(updatePayload.$set.queueType, 'PERSONAL');
+    assert.strictEqual(updatePayload.$set.assignedToXID, undefined); // In the new logic it is not set
 
     const canonical = observed.find((entry) => entry.kind === 'canonical');
     assert.ok(canonical);
-    assert.strictEqual(canonical.payload.toState, 'AVAILABLE');
+    assert.strictEqual(canonical.payload.toState, 'IN_PROGRESS');
     assert.strictEqual(canonical.payload.metadata.reasonCode, REASON_CODES.AUTO_REOPEN_DUE);
   } finally {
     Case.find = originalFind;

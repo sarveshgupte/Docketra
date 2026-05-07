@@ -35,5 +35,5 @@
 ## 2026-05-03 - Concurrent Document Fetch in Create Service\n**Learning:** When validating multiple optional or independent entity IDs from a request body (e.g., dealId, docketId), sequential database fetch causes high API response time.\n**Action:** Use Promise.all() for concurrent fetch instead of individual await statements.
 
 ## 2026-05-06 - Parallelize Independent Child Lookups in Client Fact Sheet API
-**Learning:** Sequential parent and child lookups in API handlers introduce unnecessary database roundtrips, increasing overall request latency.
-**Action:** Use Promise.all to fetch independent models concurrently (e.g., activeCases and pendingTasks) after or alongside parent validation, ensuring we minimize blocking await statements where data dependencies do not enforce sequential order.
+**Learning:** Parallelizing parent and child lookups via Promise.all can incorrectly query dependent data if the parent does not exist, weakening authorization and wasting resources on invalid paths.
+**Action:** Parallelize independent child lookups only after required parent/tenant validation has passed; never weaken authorization freshness or security tests for performance.
