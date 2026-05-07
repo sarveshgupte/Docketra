@@ -1,5 +1,12 @@
 # What's New
 
+## May 2026: BYOS Google Drive OAuth connect flow stabilization
+
+- Fixed production Google Drive BYOS connect navigation so the UI targets the configured backend API origin instead of same-origin `/api`.
+- Updated OAuth callback redirects to return users to valid storage settings routes with success/error query context and automatic status refresh.
+- Clarified provider UX so Google is OAuth-first while OneDrive/S3 are clearly labeled as manual/advanced setup paths.
+- Added regression coverage for connect URL construction, callback error redirect behavior, and OAuth success refresh hooks.
+
 ## May 2026: Pending, QC, deactivation handoff, and terminal queue normalization
 
 - Backend-only normalization for pending ownership, auto-reopen behavior, QC metadata/decision handling, and deactivation docket handoff.
