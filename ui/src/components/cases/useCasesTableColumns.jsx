@@ -7,6 +7,14 @@ import { formatDateTime } from '../../utils/formatDateTime';
 import { formatCaseName } from '../../utils/formatters';
 import { ROUTES } from '../../constants/routes';
 
+const getEmployeeLabel = (row) => {
+  const snapshotXid = String(row?.employeeSnapshot?.xID || '').trim();
+  const snapshotName = String(row?.employeeSnapshot?.name || '').trim();
+  if (snapshotXid) return snapshotName ? `${snapshotXid} - ${snapshotName}` : snapshotXid;
+  const fallbackXid = String(row?.employeeXID || '').trim();
+  return fallbackXid || '';
+};
+
 export const useCasesTableColumns = ({
   enableBulkActions,
   allVisibleSelected,
@@ -72,6 +80,7 @@ export const useCasesTableColumns = ({
             actor={row.updatedByName || row.updatedByXID || row.assignedToName || 'System'}
             timestamp={row.updatedAt}
           />
+          {getEmployeeLabel(row) ? <span className="cases-page__case-meta">Employee: {getEmployeeLabel(row)}</span> : null}
           {recency && (<span className="cases-page__recency" aria-label={recency}>{recency}</span>)}
           <div className="cases-page__pill-row">
             <PriorityPill caseRecord={row} inactivityThresholdHours={inactivityThresholdHours} />

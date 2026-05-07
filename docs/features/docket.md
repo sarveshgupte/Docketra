@@ -25,6 +25,23 @@ To strengthen client context while executing dockets, the following UX/data-link
 
 These updates preserve existing permissions, existing API surface, and queue→docket navigation behavior while reducing context switching friction.
 
+
+## Docket context model (Client / Employee / Internal)
+
+Dockets can carry one of three subject-context modes:
+
+- **Client context**: docket is for a linked client.
+- **Employee context (optional)**: docket is about an employee (`employeeXID` + optional snapshot metadata).
+- **Internal/default firm context**: docket is internal and not client-bound.
+
+Role clarity in execution:
+
+- **Employee** = subject of the docket (who the work is about).
+- **Assignee** = owner/executor of the docket work.
+- **Workbasket** = queue/team responsible for routing and operational ownership.
+
+Employee and Assignee are intentionally independent fields and can differ.
+
 ## Guided Docket Creation Flow
 
 The Create Docket experience now uses a guided, 5-step workflow designed for faster and clearer docket intake.
