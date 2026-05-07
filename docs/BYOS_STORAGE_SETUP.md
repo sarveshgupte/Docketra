@@ -41,8 +41,10 @@ Docketra uses MongoDB as a control plane only. Firm business files are kept in f
 ### Required production OAuth contract
 - `GOOGLE_OAUTH_REDIRECT_URI` **must exactly be**: `https://<api-domain>/api/storage/google/callback`.
 - `FRONTEND_URL` should be the deployed app origin (example: `https://app.example.com`).
+- `FRONTEND_ORIGINS` should include the exact deployed frontend origin (no wildcard).
 - On success, Docketra redirects to: `/app/firm/:firmSlug/storage-settings?provider=google-drive&connected=1`.
 - If firm slug cannot be resolved at callback time, Docketra redirects to `/storage/success?...` as a safe frontend recovery route.
+- If callback reaches backend without a valid auth/session context, Docketra redirects with `reason=session_missing` to a safe frontend recovery route.
 
 ### Cross-origin auth/session requirements
 If frontend and backend run on different origins, ensure auth cookie config supports Google callback-to-API session continuity:
@@ -55,11 +57,17 @@ If frontend and backend run on different origins, ensure auth cookie config supp
 - Default mode is Docketra-managed storage.
 - BYOS providers can be changed from Storage Settings (OTP verification required).
 - Folder layout for new case attachments:
-  - `/Docketra/{firmName}/Cases/{caseId}/Attachments/`
+  - `/Docketra/{firmName}/Cases/{caseId}/Attachments/` (**canonical, current**)
 - Folder layout for backups:
   - `/Docketra/{firmId}/Backups/` (provider folder)
   - logical object key reference: `backups/nightly/YYYY-MM-DD/<jobId>.zip.enc`
 - Existing legacy attachments using `driveFileId` remain readable.
+- Legacy Google-only folder names like `Docketra-<firmId>` may exist from older connections; they are supported but not used as the new canonical naming convention.
+
+### `googleConfirmDrive` endpoint intent
+- `POST /api/storage/google/confirm-drive` is an **advanced/manual** endpoint for selecting a specific Drive/shared drive context after OAuth is already connected.
+- Normal Google BYOS connect flow does not require this endpoint in standard UI flows.
+- Keep this endpoint out of normal user-facing setup unless advanced drive selection is explicitly needed.
 
 ## 4) Nightly backup flow
 - Nightly scheduler runs for firms with `settings.storageBackup.enabled = true`.
