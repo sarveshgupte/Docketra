@@ -66,6 +66,23 @@ async function run() {
   await ctl.googleCallback(reqCbInvalid, resCbInvalid);
   assert.ok(String(resCbInvalid.headers['Set-Cookie'] || '').includes('Max-Age=0'), 'invalid state must clear oauth state cookie');
 
+  const reqCbSessionMissing = { firmId: null, ownershipFirmId: null, user: null, query: { code: 'abc', state: callbackState }, headers: {}, cookies: {} };
+  const resCbSessionMissing = { code: 200, headers: {}, redirected: null, payload: null, status(c){this.code=c; return this;}, json(p){this.payload=p; return this;}, setHeader(k,v){this.headers[k]=v;}, redirect(u){this.redirected=u; return this;} };
+  await ctl.googleCallback(reqCbSessionMissing, resCbSessionMissing);
+  assert.ok(String(resCbSessionMissing.redirected || '').includes('reason=session_missing'), 'missing auth/session should redirect with safe session_missing reason');
+
+  const prevClientId = process.env.GOOGLE_CLIENT_ID;
+  delete process.env.GOOGLE_CLIENT_ID;
+  const reqConnectInvalid = { firmId: 'tenant-canonical', user: { role: 'PRIMARY_ADMIN' }, headers: {} };
+  const resConnectInvalid = { code: 200, payload: null, redirected: null, status(c){this.code=c; return this;}, json(p){this.payload=p; return this;}, redirect(u){this.redirected=u; return this;}, setHeader(){} };
+  ctl.googleConnect(reqConnectInvalid, resConnectInvalid);
+  assert.strictEqual(resConnectInvalid.code, 503, 'invalid oauth env should return 503 from connect');
+  assert.ok(
+    ['google_oauth_not_configured', 'Google OAuth for storage is not configured'].includes(resConnectInvalid.payload?.error),
+    `unexpected safe error payload: ${String(resConnectInvalid.payload?.error)}`
+  );
+  process.env.GOOGLE_CLIENT_ID = prevClientId;
+
   const reqHealth = { firmId: 'tenant-canonical', ownershipFirmId: 'firm-owner-77', user: { role: 'PRIMARY_ADMIN' } };
   const resHealth = { code: 200, payload: null, status(c){this.code=c; return this;}, json(p){this.payload=p; return this;} };
   await ctl.storageHealthCheck(reqHealth, resHealth);
