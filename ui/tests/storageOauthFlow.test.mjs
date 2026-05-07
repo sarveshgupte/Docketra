@@ -12,4 +12,10 @@ const storagePage = read('ui/src/pages/StorageSettingsPage.jsx');
 assert.ok(storagePage.includes('Connect / Refresh Google Drive'), 'Storage settings should expose Google OAuth connect CTA');
 assert.ok(storagePage.includes("providerParam === 'google-drive' && connected === '1'"), 'OAuth success params should trigger configuration refresh');
 
+const successPage = read('ui/src/pages/StorageOAuthSuccessPage.jsx');
+assert.ok(successPage.includes('/app/firm/'), 'Storage OAuth success page should redirect to firm-scoped storage settings route');
+
+const protectedRoutes = read('ui/src/routes/ProtectedRoutes.jsx');
+assert.ok(protectedRoutes.includes('path="/storage/success"'), 'Protected routes should include /storage/success recovery route');
+
 console.log('storageOauthFlow.test.mjs passed');

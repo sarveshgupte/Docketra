@@ -36,6 +36,7 @@ import {
   ProductUpdatesHistoryPage,
   ReportsDashboard,
   StorageSettingsPage,
+  StorageOAuthSuccessPage,
   WorkbasketPage,
   WorkSettingsPage,
   WorklistPage,
@@ -163,6 +164,15 @@ export const ProtectedRoutes = () => (
         )}
       />
     </Route>
+
+    <Route
+      path="/storage/success"
+      element={(
+        <ProtectedRoute>
+          <StorageOAuthSuccessPage />
+        </ProtectedRoute>
+      )}
+    />
 
     <Route
       path="/app/dashboard"
