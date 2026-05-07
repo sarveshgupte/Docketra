@@ -21,9 +21,9 @@ Docketra uses MongoDB as a control plane only. Firm business files are kept in f
 - Unnecessary full-text file content.
 
 ## 1) Supported providers
-- Google Drive (OAuth connect flow in-app)
-- Microsoft OneDrive (manual refresh-token + optional driveId entry)
-- Amazon S3 / S3-compatible (bucket + region, optional IAM credentials)
+- Google Drive (**OAuth connect flow in-app**, recommended)
+- Microsoft OneDrive (**manual / advanced setup only**: refresh-token + optional driveId; no Microsoft OAuth button yet)
+- Amazon S3 / S3-compatible (**manual credentials setup**)
 
 ## 2) Google Drive OAuth setup
 1. Open Google Cloud Console: https://console.cloud.google.com/
@@ -35,7 +35,21 @@ Docketra uses MongoDB as a control plane only. Firm business files are kept in f
    - `GOOGLE_CLIENT_ID`
    - `GOOGLE_CLIENT_SECRET`
    - `GOOGLE_OAUTH_REDIRECT_URI`
+   - `FRONTEND_URL`
    - `STORAGE_TOKEN_SECRET`
+
+### Required production OAuth contract
+- `GOOGLE_OAUTH_REDIRECT_URI` **must exactly be**: `https://<api-domain>/api/storage/google/callback`.
+- `FRONTEND_URL` should be the deployed app origin (example: `https://app.example.com`).
+- On success, Docketra redirects to: `/app/firm/:firmSlug/storage-settings?provider=google-drive&connected=1`.
+- If firm slug cannot be resolved at callback time, Docketra redirects to `/storage/success?...` as a safe frontend recovery route.
+
+### Cross-origin auth/session requirements
+If frontend and backend run on different origins, ensure auth cookie config supports Google callback-to-API session continuity:
+- `AUTH_COOKIE_CROSS_SITE=true`
+- `SameSite=None`
+- `Secure=true`
+- CORS allowlist includes the exact frontend origin.
 
 ## 3) Runtime behavior
 - Default mode is Docketra-managed storage.
@@ -71,6 +85,8 @@ Docketra uses MongoDB as a control plane only. Firm business files are kept in f
 ## 7) Troubleshooting
 - **Error: oauth_failed**
   - Verify OAuth client ID/secret and redirect URI match Google configuration.
+- **Error: invalid_state / missing_state / missing_code**
+  - Retry the full connect flow and ensure browser cookies are enabled for the API origin.
 - **Error: no_refresh_token**
   - Reconnect with consent and offline access enabled.
 - **Error: RATE_LIMIT_EXCEEDED**

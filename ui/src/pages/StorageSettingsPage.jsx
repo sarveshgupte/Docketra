@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -49,6 +50,7 @@ export function StorageSettingsPage() {
   const [exporting, setExporting] = useState(false);
   const [ownershipSummary, setOwnershipSummary] = useState(null);
   const { user } = useAuth();
+  const location = useLocation();
 
   const loadConfiguration = async () => {
     setLoading(true);
@@ -94,6 +96,26 @@ export function StorageSettingsPage() {
       setProvider(config.provider);
     }
   }, [config]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const providerParam = params.get('provider');
+    const connected = params.get('connected');
+    const error = params.get('error');
+    const reason = params.get('reason');
+
+    if (providerParam === 'google-drive' && connected === '1') {
+      setStatusMessage({ type: 'success', text: 'Google Drive connected successfully. Refreshing storage status…' });
+      loadConfiguration();
+      toast?.showSuccess?.('Google Drive connected successfully.');
+    }
+
+    if (error) {
+      const suffix = reason ? ` (${reason})` : '';
+      setStatusMessage({ type: 'error', text: `Google Drive connection failed${suffix}. Please retry.` });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   const onConnectGoogleDrive = () => {
     connectGoogleDrive();
@@ -306,9 +328,9 @@ export function StorageSettingsPage() {
                   onChange={(event) => setProvider(event.target.value)}
                   options={[
                     { value: 'docketra_managed', label: 'Default (Docketra Storage)' },
-                    { value: 'google-drive', label: 'Google Drive' },
-                    { value: 'onedrive', label: 'Microsoft OneDrive' },
-                    { value: 's3', label: 'Amazon S3 (or compatible)' },
+                    { value: 'google-drive', label: 'Google Drive (OAuth)' },
+                    { value: 'onedrive', label: 'Microsoft OneDrive (Manual / advanced setup)' },
+                    { value: 's3', label: 'Amazon S3 (Manual credentials)' },
                   ]}
                 />
                 <Input label="Status" value={connected ? 'Active' : 'Not Connected'} readOnly />
@@ -318,6 +340,7 @@ export function StorageSettingsPage() {
                 <Input label="Connected since" value={formatDateTime(config?.createdAt)} readOnly />
                 {isOneDriveProvider ? (
                   <>
+                    <p className="text-xs text-[var(--dt-text-muted)]">OneDrive currently uses manual refresh token setup only (no Microsoft OAuth connect flow yet).</p>
                     <Input label="OneDrive Refresh Token" value={oneDriveRefreshToken} onChange={(event) => setOneDriveRefreshToken(event.target.value)} />
                     <Input label="OneDrive Drive ID (optional)" value={oneDriveDriveId} onChange={(event) => setOneDriveDriveId(event.target.value)} />
                   </>

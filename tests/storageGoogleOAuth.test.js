@@ -159,7 +159,7 @@ const makeMockRes = () => {
 // Note: requiring the controller here pulls in its module-level code
 // (constants, function definitions) without starting any server.
 // The googleapis and FirmStorage stubs above ensure no real I/O occurs.
-const { buildStateCookie, googleConnect } = require('../src/controllers/storage.controller');
+const { buildStateCookie, googleConnect, googleCallback } = require('../src/controllers/storage.controller');
 
 // ──────────────────────────────────────────────────────────────────
 // Tests
@@ -341,6 +341,21 @@ async function testGoogleCallbackNoRefreshToken() {
   console.log('  ✓ googleCallback redirects when refresh_token is absent');
 }
 
+async function testGoogleCallbackMissingStateRedirectsToFrontend() {
+  const req = {
+    firmId: 'firm-1',
+    user: { role: 'Admin' },
+    query: { code: 'abc' },
+    cookies: {},
+    headers: {},
+  };
+  const res = makeMockRes();
+  await googleCallback(req, res);
+  assert(res.redirectedTo && res.redirectedTo.includes('/storage/success?'), 'Expected redirect to frontend storage success route fallback');
+  assert(res.redirectedTo.includes('reason=missing_state'), `Expected missing_state redirect reason, got: ${res.redirectedTo}`);
+  console.log('  ✓ googleCallback redirects missing state to frontend-safe route');
+}
+
 async function testBuildStateCookieFlags() {
   // Verify cookie flag consistency between set and clear using the real controller helper
   const setCookie = buildStateCookie('token123', 600);
@@ -368,6 +383,7 @@ async function run() {
     await testGoogleCallbackMissingParams();
     await testGoogleCallbackFirmMismatch();
     await testGoogleCallbackNoRefreshToken();
+    await testGoogleCallbackMissingStateRedirectsToFrontend();
     await testBuildStateCookieFlags();
     console.log('All storageGoogleOAuth tests passed.');
   } catch (err) {
