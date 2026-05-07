@@ -8,11 +8,11 @@
 
 ## 2024-04-14 - DataTable Filter Chip Accessibility
 **Learning:** Adding `aria-label`s to filter removal buttons is crucial for screen readers, but the label must include *both* the filter key and its active value. Overriding the content with just the action and the key (e.g., `aria-label="Remove filter: Status"`) causes visually impaired users to lose the context of what value they are actually removing (e.g., "Active").
-**Action:** When adding `aria-label`s to action buttons that represent data states, always interpolate both the label and the value into the accessible description (e.g., `aria-label={`Remove filter: ${f.label} ${f.value}`}`).
+**Action:** When adding `aria-label`s to action buttons that represent data states, always interpolate both the label and the value into the accessible description (e.g., `aria-label={\`Remove filter: \${f.label} \${f.value}\`}`).
 
 ## 2024-04-16 - Dynamic Aria-Labels for Repeated Action Buttons
 **Learning:** When rendering lists of items where each item has an identical, generic action button (e.g., 'Open', 'View'), screen reader users lose context as to which item they are interacting with. Also, adjacent decorative emojis can create unwanted audio clutter if not explicitly hidden.
-**Action:** Always inject specific item identifiers (like `fileName`) into the action button's `aria-label` (e.g., `aria-label={`Open document ${file.fileName}`}`), and ensure nearby decorative icons have `aria-hidden="true"`.
+**Action:** Always inject specific item identifiers (like `fileName`) into the action button's `aria-label` (e.g., `aria-label={\`Open document \${file.fileName}\`}`), and ensure nearby decorative icons have `aria-hidden="true"`.
 
 ## 2025-04-17 - Added `aria-pressed` to Password Visibility Toggle
 **Learning:** Found an accessibility issue where the password visibility toggle button was using an `aria-label` to communicate state (e.g., "Show password" vs. "Hide password"), but lacked the crucial `aria-pressed` attribute which is standard for toggle buttons. Without `aria-pressed`, screen readers don't explicitly treat it as a stateful toggle, leaving the user guessing if the action was correctly registered.
@@ -23,7 +23,6 @@
 ## 2026-04-19 - SuperAdmin Layout Accessibility improvements
 **Learning:** The SuperAdminLayout component had missing landmark roles, active states for screen readers, and focus indicators for interactive elements.
 **Action:** Add `aria-label` attributes to `<aside>` and `<nav>` elements, add `aria-label` and `focus-visible` classes to logout buttons, and use `aria-current="page"` on active navigation links across the platform.
-
-## 2026-05-07 - [Visual Feedback for System Clipboard API]
-**Learning:** Adding immediate, visual feedback alongside standard browser `navigator.clipboard.writeText()` calls improves the overall interactive experience and helps users quickly realize an action succeeded. Providing `aria-live="polite"` to a dedicated status element makes the experience accessible without overloading button semantics.
-**Action:** When adding clipboard interactions, include a temporary "Copied!" state, handle clipboard failures gracefully, announce status updates through a polite live region, and clear timers on unmount to avoid stale state updates.
+## 2024-05-04 - [Visual Feedback for System Clipboard API]
+**Learning:** Adding immediate, visual feedback alongside standard browser `navigator.clipboard.writeText()` calls improves the overall interactive experience and helps users quickly realize an action succeeded. Providing `aria-live="polite"` to the element announcing the feedback makes the experience accessible.
+**Action:** When adding clipboard interactions, include a temporary "Copied!" state and notify screen readers using ARIA live regions. Ensure the temporary state clears (e.g. after 2 seconds) so the user can easily re-copy if needed.
