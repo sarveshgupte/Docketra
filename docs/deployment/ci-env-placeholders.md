@@ -14,6 +14,7 @@ To keep the gate meaningful without hardcoding real secrets, CI provides **safe,
 |---|---|---|
 | `MAIL_FROM` | `no-reply@example.com` | Satisfies "must be present in production" — `example.com` is an IANA-reserved domain that cannot receive mail |
 | `BREVO_API_KEY` | `ci-placeholder-brevo-key` | Satisfies "must be present in production" — obviously a dummy key, never sent to Brevo |
+| `SUPERADMIN_PASSWORD_HASH` | `$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy` | Satisfies required superadmin hash validation using a known test-only bcrypt placeholder (`password`) |
 | `UPLOAD_SCAN_STRICT` | `true` | Already set inline in the validation script |
 
 These values appear in two places so the fix is self-contained:
