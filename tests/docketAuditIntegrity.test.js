@@ -78,6 +78,8 @@ async function testReopenMovesToWorkbenchWithAudit() {
     assert.strictEqual(updatePayload.$set.state, 'IN_WB');
     assert.strictEqual(updatePayload.$set.queueType, 'GLOBAL');
     assert.strictEqual(updatePayload.$set.assignedToXID, null);
+    assert.strictEqual(updatePayload.$set.status, 'IN_PROGRESS');
+    assert.strictEqual(updatePayload.$set.lifecycle, 'ACTIVE');
 
     const canonical = observed.find((entry) => entry.kind === 'canonical');
     assert.ok(canonical);
