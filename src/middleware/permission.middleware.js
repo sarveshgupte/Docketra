@@ -142,6 +142,14 @@ const authorizeFirmPermission = (requiredPermission) => {
         });
       }
 
+      const userId = req?.userId || req?.user?._id || req?.user?.id || req?.jwt?.userId || null;
+      if (userId) {
+        const freshMembership = await resolveFirmRole(userId, req.firm.id);
+        if (freshMembership) {
+          membership = freshMembership;
+        }
+      }
+
       if (requiredPermission && !membership.permissions.includes(requiredPermission)) {
         return res.status(403).json({
           success: false,

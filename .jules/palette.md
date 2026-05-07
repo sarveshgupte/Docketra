@@ -24,6 +24,10 @@
 **Learning:** The SuperAdminLayout component had missing landmark roles, active states for screen readers, and focus indicators for interactive elements.
 **Action:** Add `aria-label` attributes to `<aside>` and `<nav>` elements, add `aria-label` and `focus-visible` classes to logout buttons, and use `aria-current="page"` on active navigation links across the platform.
 
-## 2024-05-06 - Dynamic Action Buttons
+## 2026-05-06 - Dynamic Action Buttons
 **Learning:** When rendering lists of items with generic action buttons (e.g., 'Open', 'View', 'Send to QC', 'Resolve') that have dynamic inner text states (like 'Updating...'), applying `aria-label` directly to the container overrides the visible text changes for screen readers. This breaks the connection between visual content and screen reader output.
 **Action:** Avoid applying `aria-label` to containers with visible text. Instead, wrap the generic visible text in `<span aria-hidden="true">` and append a `<span className="sr-only">` containing both the action and the specific item identifier.
+
+## 2026-05-07 - Auto-Reopen and CI Test Env Clarifications
+**Learning:** `reopenDuePending()` intentionally returns due pending dockets to personal active work (`state: IN_PROGRESS`, `queueType: PERSONAL`) and records canonical `toState: IN_PROGRESS`; this is not a workbench (`IN_WB`) reopen path.
+**Action:** Keep `tests/docketAuditIntegrity.test.js` aligned with this workflow and name tests to reflect personal in-progress auto-reopen behavior. In CI, keep `SUPERADMIN_PASSWORD_HASH` only as a deterministic test-only placeholder required by `validate:env:test`, with an inline comment in `ci.yml`.
