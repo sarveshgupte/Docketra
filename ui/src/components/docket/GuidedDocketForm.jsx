@@ -156,8 +156,15 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
       ...prev,
       subcategoryId: nextSubcategoryId,
       workbasketId: mappedWorkbasketId || prev.workbasketId || workbaskets[0]?._id || '',
+      employeeXID: nextSubcategoryId ? prev.employeeXID : '',
     }));
   }, [categories, formData.categoryId, formData.subcategoryId, workbaskets]);
+
+  useEffect(() => {
+    if (employeeContextEnabled) return;
+    if (!formData.employeeXID) return;
+    setFormData((prev) => ({ ...prev, employeeXID: '' }));
+  }, [employeeContextEnabled, formData.employeeXID]);
 
   const validateStep = (stepIndex = step) => {
     const nextErrors = {};
@@ -199,6 +206,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   const selectedSubcategory = subcategories.find((item) => item.id === formData.subcategoryId);
   const employeeContextEnabled = selectedSubcategory?.employeeContextEnabled === true;
   const activeUsers = users.filter((item) => item?.status === 'active' && item?.isActive !== false);
+  const selectedEmployee = activeUsers.find((item) => item.xID === formData.employeeXID);
   const isClientsBlocked = Boolean(dependencyErrors.clients) || !hasActiveClients;
   const isCategoriesBlocked = Boolean(dependencyErrors.categories) || !hasActiveSubcategory;
   const isWorkbasketsBlocked = Boolean(dependencyErrors.workbaskets) || workbaskets.length === 0;
@@ -411,7 +419,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
           <p><strong>Workbasket:</strong> {(workbaskets.find((item) => item._id === formData.workbasketId)?.name) || '—'}</p>
           <p><strong>Priority:</strong> {formData.priority || 'medium'}</p>
           <p><strong>Assignee:</strong> {formData.assignedTo || 'Unassigned (workbasket queue)'}</p>
-          {formData.employeeXID ? <p><strong>Employee:</strong> {formData.employeeXID}</p> : null}
+          {formData.employeeXID ? <p><strong>Employee:</strong> {selectedEmployee ? `${selectedEmployee.xID} - ${selectedEmployee.name || selectedEmployee.email || 'User'}` : formData.employeeXID}</p> : null}
         </div>
       )}
 
