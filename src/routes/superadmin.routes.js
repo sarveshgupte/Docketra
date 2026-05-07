@@ -39,6 +39,9 @@ const {
   updateSuperadminFeatureFlag,
 } = require('../controllers/superadmin.controller');
 
+// Hard fail-closed boundary: every route in this router is superadmin-only.
+router.use(requireSuperadmin);
+
 /**
  * Superadmin Routes
  * 
@@ -58,19 +61,19 @@ const {
  */
 
 // Platform statistics
-router.get('/stats', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getPlatformStats);
-router.get('/onboarding-insights', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingInsights);
-router.get('/onboarding-insights/details', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingInsightDetails);
-router.get('/onboarding-alerts', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingAlerts);
-router.get('/health', requireSuperadmin, getOperationalHealth);
-router.get('/diagnostics', requireSuperadmin, getSupportDiagnostics);
-router.get('/firm-health', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getFirmHealth);
-router.get('/audit-logs', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getSuperadminAuditLogs);
-router.get('/search', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getSuperadminGlobalSearch);
-router.get('/plans', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getPlansCapacity);
-router.get('/pilot-readiness', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getPilotReadiness);
-router.get('/feature-flags', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getSuperadminFeatureFlags);
-router.patch('/feature-flags/:key', requireSuperadmin, authorize(SuperAdminPolicy.canManageFirms), superadminAdminManagementLimiter, updateSuperadminFeatureFlag);
+router.get('/stats', authorize(SuperAdminPolicy.canViewPlatformStats), getPlatformStats);
+router.get('/onboarding-insights', authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingInsights);
+router.get('/onboarding-insights/details', authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingInsightDetails);
+router.get('/onboarding-alerts', authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingAlerts);
+router.get('/health', getOperationalHealth);
+router.get('/diagnostics', getSupportDiagnostics);
+router.get('/firm-health', authorize(SuperAdminPolicy.canViewPlatformStats), getFirmHealth);
+router.get('/audit-logs', authorize(SuperAdminPolicy.canViewPlatformStats), getSuperadminAuditLogs);
+router.get('/search', authorize(SuperAdminPolicy.canViewPlatformStats), getSuperadminGlobalSearch);
+router.get('/plans', authorize(SuperAdminPolicy.canViewPlatformStats), getPlansCapacity);
+router.get('/pilot-readiness', authorize(SuperAdminPolicy.canViewPlatformStats), getPilotReadiness);
+router.get('/feature-flags', authorize(SuperAdminPolicy.canViewPlatformStats), getSuperadminFeatureFlags);
+router.patch('/feature-flags/:key', authorize(SuperAdminPolicy.canManageFirms), superadminAdminManagementLimiter, updateSuperadminFeatureFlag);
 
 // Firm management
 router.post('/firms', authorize(FirmPolicy.canCreate), createFirm);
@@ -79,7 +82,7 @@ router.patch('/firms/:id', authorize(FirmPolicy.canManageStatus), updateFirmStat
 router.patch('/firms/:id/status', authorize(FirmPolicy.canManageStatus), updateFirmStatus);
 router.patch('/firms/:id/activate', authorize(FirmPolicy.canManageStatus), activateFirm);
 router.patch('/firms/:id/deactivate', authorize(FirmPolicy.canManageStatus), deactivateFirm);
-router.patch('/firms/:firmId/plan-capacity', requireSuperadmin, authorize(FirmPolicy.canManageStatus), superadminAdminManagementLimiter, updateFirmPlanCapacity);
+router.patch('/firms/:firmId/plan-capacity', authorize(FirmPolicy.canManageStatus), superadminAdminManagementLimiter, updateFirmPlanCapacity);
 router.post('/firms/:id/disable', authorize(FirmPolicy.canManageStatus), disableFirmImmediately);
 
 // Firm admin creation
@@ -97,7 +100,7 @@ router.post('/firms/:firmId/admins/:adminId/force-reset', authorize(FirmPolicy.c
 router.delete('/firms/:firmId/admins/:adminId', authorize(FirmPolicy.canResendAdminAccess), superadminAdminManagementLimiter, deleteFirmAdmin);
 
 // Firm context switching (impersonation)
-router.post('/switch-firm', requireSuperadmin, switchFirm);
-router.post('/exit-firm', requireSuperadmin, exitFirm);
+router.post('/switch-firm', switchFirm);
+router.post('/exit-firm', exitFirm);
 
 module.exports = router;
