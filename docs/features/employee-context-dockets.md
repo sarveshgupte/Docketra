@@ -44,7 +44,11 @@ Assignee logic remains unchanged:
 Employee dropdown is sourced from firm users managed in Team Management/Admin (`User` records), filtered to active users.
 
 ## Filtering support
-Backend list endpoint supports filtering by `employeeXID` for firm-scoped queries.
+Backend list endpoint supports filtering by `employeeXID` for firm-scoped queries (`GET /api/cases?employeeXID=X000123`). Tenant scoping remains enforced by the service query guard.
+
+> TODO (UI scope): add a dedicated Employee filter control only when an employee-context subcategory/HR context is active in the docket list filter model.
 
 ## Default setup
-Default setup template includes HR/Finance/Accounts/Operations category structure where HR subcategories are seeded with `employeeContextEnabled=true`, others false.
+Default setup template includes HR/Finance/Accounts/Operations category structure where HR subcategories are seeded with `employeeContextEnabled=true`, others false. This template is applied for new setup/explicit setup flows and does not silently overwrite already-configured firms.
+
+If subcategory-level editing of `employeeContextEnabled` is not yet exposed in Settings UI, current behavior is still deterministic via seeded defaults; admin UI control can be added in a future settings-focused PR.
