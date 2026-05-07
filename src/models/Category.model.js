@@ -55,6 +55,10 @@ const subcategorySchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  employeeContextEnabled: {
+    type: Boolean,
+    default: false,
+  },
 }, {
   _id: false, // Disable automatic _id generation for subdocuments
 });
@@ -102,6 +106,10 @@ const categorySchema = new mongoose.Schema({
     default: 0,
   },
   forceQC: {
+    type: Boolean,
+    default: false,
+  },
+  employeeContextEnabled: {
     type: Boolean,
     default: false,
   },

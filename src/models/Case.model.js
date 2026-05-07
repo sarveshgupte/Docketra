@@ -655,6 +655,21 @@ const caseSchema = new mongoose.Schema({
    * 
    * NEVER use email for assignment or ownership logic.
    */
+
+  employeeXID: {
+    type: String,
+    trim: true,
+    uppercase: true,
+    default: null,
+    index: true,
+  },
+  employeeSnapshot: {
+    xID: { type: String, trim: true, uppercase: true },
+    name: { type: String, trim: true },
+    email: { type: String, trim: true, lowercase: true },
+    department: { type: String, trim: true },
+    statusAtTime: { type: String, trim: true },
+  },
   assignedToXID: {
     type: String,
     uppercase: true,

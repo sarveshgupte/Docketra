@@ -30,6 +30,7 @@ const defaultForm = {
   workbasketId: '',
   priority: 'medium',
   assignedTo: '',
+  employeeXID: '',
   idempotencyKey: '',
 };
 
@@ -43,6 +44,7 @@ const FIELD_TO_STEP = {
   workbasketId: 2,
   priority: 2,
   assignedTo: 3,
+  employeeXID: 3,
 };
 
 export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) => {
@@ -194,6 +196,9 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   const hasActiveClients = clients.length > 0;
   const hasActiveSubcategory = categories.some((item) => (item.subcategories || []).some((sub) => sub.isActive));
   const hasRoutingPrerequisites = hasActiveSubcategory && workbaskets.length > 0;
+  const selectedSubcategory = subcategories.find((item) => item.id === formData.subcategoryId);
+  const employeeContextEnabled = selectedSubcategory?.employeeContextEnabled === true;
+  const activeUsers = users.filter((item) => item?.status === 'active' && item?.isActive !== false);
   const isClientsBlocked = Boolean(dependencyErrors.clients) || !hasActiveClients;
   const isCategoriesBlocked = Boolean(dependencyErrors.categories) || !hasActiveSubcategory;
   const isWorkbasketsBlocked = Boolean(dependencyErrors.workbaskets) || workbaskets.length === 0;
@@ -373,14 +378,26 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
       )}
 
       {step === 3 && (
-        <Select
-          label="Assign to user (optional)"
-          value={formData.assignedTo}
-          onChange={(e) => updateField('assignedTo', e.target.value)}
-          disabled={loading.users}
-          helpText="Leave empty to keep this docket in queue for assignment."
-          options={[{ value: '', label: loading.users ? 'Loading users...' : 'Keep unassigned in workbasket' }, ...users.map((item) => ({ value: item.xID, label: `${item.xID} - ${item.name || item.email || 'User'}` }))]}
-        />
+        <>
+          <Select
+            label="Assign to user (optional)"
+            value={formData.assignedTo}
+            onChange={(e) => updateField('assignedTo', e.target.value)}
+            disabled={loading.users}
+            helpText="Leave empty to keep this docket in queue for assignment."
+            options={[{ value: '', label: loading.users ? 'Loading users...' : 'Keep unassigned in workbasket' }, ...activeUsers.map((item) => ({ value: item.xID, label: `${item.xID} - ${item.name || item.email || 'User'}` }))]}
+          />
+          {employeeContextEnabled ? (
+            <Select
+              label="Employee"
+              value={formData.employeeXID}
+              onChange={(e) => updateField('employeeXID', e.target.value)}
+              disabled={loading.users}
+              helpText="Use this only when the docket relates to a specific employee."
+              options={[{ value: '', label: loading.users ? 'Loading employees...' : 'Select employee, if applicable' }, ...activeUsers.map((item) => ({ value: item.xID, label: `${item.xID} - ${item.name || item.email || 'User'} - ${item.department || 'No Department'}` }))]}
+            />
+          ) : null}
+        </>
       )}
 
       {step === 4 && (
@@ -394,6 +411,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
           <p><strong>Workbasket:</strong> {(workbaskets.find((item) => item._id === formData.workbasketId)?.name) || '—'}</p>
           <p><strong>Priority:</strong> {formData.priority || 'medium'}</p>
           <p><strong>Assignee:</strong> {formData.assignedTo || 'Unassigned (workbasket queue)'}</p>
+          {formData.employeeXID ? <p><strong>Employee:</strong> {formData.employeeXID}</p> : null}
         </div>
       )}
 

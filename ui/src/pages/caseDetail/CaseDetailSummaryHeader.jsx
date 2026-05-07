@@ -17,6 +17,11 @@ export const CaseDetailSummaryHeader = ({
   locationBadges = [],
   slaDaysLabel,
 }) => (
+  (() => {
+    const employeeLabel = caseInfo?.employeeSnapshot?.xID
+      ? `${caseInfo.employeeSnapshot.xID} - ${caseInfo.employeeSnapshot.name || 'Employee'}`
+      : (caseInfo?.employeeXID || null);
+    return (
   <section className="case-card" aria-label="Docket summary header">
     <div className="case-card__heading">
       <h2>{formatDocketId(caseInfo?.caseId || caseId)}</h2>
@@ -43,9 +48,12 @@ export const CaseDetailSummaryHeader = ({
         </span>
       </div>
       <div className="field-group min-w-0"><span className="field-label">Assignee / Owner</span><span className="field-value text-sm break-words">{assigneeLabel}</span></div>
+      {employeeLabel ? <div className="field-group min-w-0"><span className="field-label">Employee</span><span className="field-value text-sm break-words">{employeeLabel}</span></div> : null}
       <div className="field-group min-w-0"><span className="field-label">Queue / Workbasket</span><span className="field-value text-sm break-words">{queueLabel}</span></div>
       <div className="field-group min-w-0"><span className="field-label">SLA / TAT</span><span className="field-value text-sm">{slaDaysLabel && slaDaysLabel !== '-' ? `${slaDaysLabel} day(s)` : 'Not configured'}</span></div>
       <div className="field-group min-w-0"><span className="field-label">Created / Updated</span><span className="field-value text-sm">{formatDateTime(caseInfo?.createdAt)} • {formatDateTime(caseInfo?.updatedAt)}</span></div>
     </div>
   </section>
+    );
+  })()
 );
