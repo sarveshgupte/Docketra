@@ -112,7 +112,7 @@ export function StorageSettingsPage() {
 
     if (error) {
       const suffix = reason ? ` (${reason})` : '';
-      setStatusMessage({ type: 'error', text: `Google Drive connection failed${suffix}. Please retry.` });
+      setStatusMessage({ type: 'error', text: `Google Drive connection failed${suffix}. BYOS is optional—your team can continue using Docketra-managed storage and retry later.` });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
@@ -221,10 +221,10 @@ export function StorageSettingsPage() {
 
   if (loading) {
     return (
-      <PlatformShell moduleLabel="Settings" title="Storage settings" subtitle="Configure and validate your external document storage integration.">
+      <PlatformShell moduleLabel="Settings" title="Storage settings" subtitle="Configure optional BYOS storage and validate uploads. Docketra-managed storage remains the default.">
         <div className="min-h-screen w-full flex-1 bg-[var(--dt-bg-warm)]">
           <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 space-y-6">
-            <PageHeader title="Storage Settings" subtitle="Configure and validate your external document storage integration." />
+            <PageHeader title="Storage Settings" subtitle="Configure optional BYOS storage and validate uploads. Docketra-managed storage remains the default." />
             <Card>
               <p className="text-sm text-[var(--dt-text-muted)]">Loading storage settings...</p>
             </Card>
@@ -252,10 +252,10 @@ export function StorageSettingsPage() {
   ].filter(Boolean);
 
   return (
-    <PlatformShell moduleLabel="Settings" title="Storage settings" subtitle="Configure and validate your external document storage integration.">
+    <PlatformShell moduleLabel="Settings" title="Storage settings" subtitle="Configure optional BYOS storage and validate uploads. Docketra-managed storage remains the default.">
       <div className="min-h-screen bg-[var(--dt-bg-warm)]">
         <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 space-y-6">
-          <PageHeader title="Storage Settings" subtitle="Configure and validate your external document storage integration." />
+          <PageHeader title="Storage Settings" subtitle="Configure optional BYOS storage and validate uploads. Docketra-managed storage remains the default." />
 
           <StatusMessageStack messages={statusMessages} />
 
@@ -311,7 +311,7 @@ export function StorageSettingsPage() {
               <SupportContext context={supportContext} />
               <div>
                 <h2 className="text-lg font-medium text-[var(--dt-text)] mb-2">Storage Provider</h2>
-                <p className="text-sm text-[var(--dt-text-muted)]">BYOS trust mode is firm-connected storage so firm/client document bytes remain in firm-provided storage when configured. Docketra-managed storage remains the default fallback. Provider changes require OTP verification.</p>
+                <p className="text-sm text-[var(--dt-text-muted)]">BYOS is optional. If your firm does not connect BYOS, Docketra-managed storage remains the default upload path. If BYOS health checks fail, uploads should continue using managed fallback. Provider changes require OTP verification.</p>
               </div>
               <div className="rounded border border-[var(--dt-info)] bg-[var(--dt-info-subtle)] px-3 py-3 text-sm text-[var(--dt-info)]">
                 <p className="font-medium">Current storage mode: {storageMode}</p>
