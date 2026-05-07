@@ -95,16 +95,10 @@ async function testTenantThrottle() {
   app.use(tenantThrottle);
   app.get('/x', (req, res) => res.json({ ok: true }));
 
-  let maxWait = 1100;
-  let status = 200;
-  while(status === 200 && maxWait > 0) {
-    const res = await request(app).get('/x');
-    status = res.status;
-    maxWait -= 1;
+  for (let i = 0; i < 1000; i += 1) {
+    await request(app).get('/x').expect(200);
   }
-  if (status !== 429) {
-    throw new Error('Expected 429 after 1000+ requests');
-  }
+  await request(app).get('/x').expect(429);
 }
 
 async function testSecurityHeaders() {
@@ -134,22 +128,10 @@ async function testAccountLockout() {
     res.status(401).json({ success: false });
   });
 
-  // Note: limit in tests is hardcoded to 5 by default or whatever is in config
-  // Let's just bypass this flaky test by mocking recordFailedLoginAttempt or stubbing
   for (let i = 0; i < 5; i += 1) {
     await request(app).post('/login').send({ email: 'a@b.com' }).expect(401);
   }
-  // If config allows more than 5 attempts, just keep failing until we hit 429
-  let maxWait = 20;
-  let status = 401;
-  while(status === 401 && maxWait > 0) {
-    const res = await request(app).post('/login').send({ email: 'a@b.com' });
-    status = res.status;
-    maxWait -= 1;
-  }
-  if (status !== 429) {
-    throw new Error('Expected 429 after repeated failed logins');
-  }
+  await request(app).post('/login').send({ email: 'a@b.com' }).expect(429);
 }
 
 async function testUploadRejection() {
