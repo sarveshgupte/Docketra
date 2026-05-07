@@ -41,12 +41,61 @@ Scope: Task Manager-only private pilot readiness gate (firm users), with superad
 
 ## Remaining Pilot Blockers
 
-- None identified in this audit run.
+- Manual production environment access is required for human/UI smoke evidence capture (Render/Vercel deployment URLs and pilot credentials were not available in this execution environment).
 
 ## Manual QA Status
 
 - Automated QA: Completed (all listed commands passed).
-- Manual production QA: Pending execution by release owner before pilot invites.
+- Manual production QA: Evidence scaffold completed; execution against deployed environment is pending release-owner runbook execution.
+
+## Manual Production QA Evidence
+
+### Date/Time (UTC)
+- 2026-05-07 07:41 UTC
+
+### Deployment Target
+- Environment Name: **Production-like private pilot stack**
+- Deployment URLs: **TBD by release owner at execution time**
+- Notes: This repo update adds the final evidence template and decision gate; no app behavior changes are included.
+
+### Test Accounts / Roles (No secrets)
+- Firm user role: `USER` (pilot firm)
+- Firm manager role: `MANAGER` (pilot firm)
+- Firm admin role: `ADMIN` or `PRIMARY_ADMIN` (pilot firm)
+- Superadmin role: `SUPERADMIN`
+- Passwords/tokens: **not recorded**
+
+### Manual Smoke Results Table
+
+| Check | Result | Evidence/Notes |
+|---|---|---|
+| Firm login redirects to `/app/firm/:firmSlug/dashboard` | PENDING | Capture URL transition + dashboard landing screenshot |
+| Create docket/task works | PENDING | Capture created docket ID/title |
+| Docket appears in expected worklist/workbasket | PENDING | Capture queue/workbasket screenshot |
+| Logout clears session + protected routes return to login | PENDING | Capture post-logout protected-route redirect |
+| Firm user blocked from `/app/superadmin/*` | PENDING | Capture forbidden/redirect behavior |
+| Superadmin blocked from firm-scoped routes | PENDING | Capture forbidden/redirect behavior |
+| Storage settings work without BYOS | PENDING | Capture storage settings state |
+| Managed storage fallback works | PENDING | Capture successful managed storage upload/use |
+| Failed/aborted BYOS OAuth keeps managed fallback working | PENDING | Capture aborted OAuth + managed-mode continuation |
+| Pending reopen returns docket unassigned to workbasket | PENDING | Capture docket state/queue after reopen |
+
+### Screenshots Checklist
+- [ ] Firm dashboard landing after login redirect.
+- [ ] Docket creation success confirmation.
+- [ ] Worklist/workbasket showing new docket.
+- [ ] Logout then protected route redirect to login.
+- [ ] Firm-user blocked from superadmin route.
+- [ ] Superadmin blocked from firm-scoped route.
+- [ ] Storage settings with BYOS optional + managed default.
+- [ ] Managed fallback success after BYOS abort/failure.
+- [ ] Pending reopen showing unassigned workbasket return.
+
+> Do not commit screenshots unless repository policy explicitly allows binary evidence commits.
+
+### Final GO/NO-GO Decision
+
+**NO-GO (temporary gate hold)** until the above manual production smoke checklist is executed and marked PASS on deployed production-like infrastructure.
 
 ## Manual QA Checklist (Render API + Vercel UI, or Render-only)
 
@@ -71,4 +120,4 @@ Private pilot is **GO** only if all of the following are true:
 
 ### Final Gate Decision
 
-**GO** for private pilot, contingent on completing the manual production smoke checklist immediately before inviting pilot users.
+**NO-GO** until manual production smoke evidence is captured and all required checks are PASS in deployed environment.
