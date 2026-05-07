@@ -160,6 +160,16 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
     }));
   }, [categories, formData.categoryId, formData.subcategoryId, workbaskets]);
 
+  const selectedClient = clients.find((item) => item.clientId === formData.clientId);
+  const defaultClient = clients.find((item) => item.isDefaultClient || item.isSystemClient || item.isInternal || item.clientId === 'C000001');
+  const hasActiveClients = clients.length > 0;
+  const hasActiveSubcategory = categories.some((item) => (item.subcategories || []).some((sub) => sub.isActive));
+  const hasRoutingPrerequisites = hasActiveSubcategory && workbaskets.length > 0;
+  const selectedSubcategory = subcategories.find((item) => item.id === formData.subcategoryId);
+  const employeeContextEnabled = selectedSubcategory?.employeeContextEnabled === true;
+  const activeUsers = users.filter((item) => item?.status === 'active' && item?.isActive !== false);
+  const selectedEmployee = activeUsers.find((item) => item.xID === formData.employeeXID);
+
   useEffect(() => {
     if (employeeContextEnabled) return;
     if (!formData.employeeXID) return;
@@ -198,15 +208,6 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
     if (step === 2) return Boolean(formData.workbasketId);
     return true;
   }, [formData.clientId, formData.title, formData.workbasketId, step]);
-  const selectedClient = clients.find((item) => item.clientId === formData.clientId);
-  const defaultClient = clients.find((item) => item.isDefaultClient || item.isSystemClient || item.isInternal || item.clientId === 'C000001');
-  const hasActiveClients = clients.length > 0;
-  const hasActiveSubcategory = categories.some((item) => (item.subcategories || []).some((sub) => sub.isActive));
-  const hasRoutingPrerequisites = hasActiveSubcategory && workbaskets.length > 0;
-  const selectedSubcategory = subcategories.find((item) => item.id === formData.subcategoryId);
-  const employeeContextEnabled = selectedSubcategory?.employeeContextEnabled === true;
-  const activeUsers = users.filter((item) => item?.status === 'active' && item?.isActive !== false);
-  const selectedEmployee = activeUsers.find((item) => item.xID === formData.employeeXID);
   const isClientsBlocked = Boolean(dependencyErrors.clients) || !hasActiveClients;
   const isCategoriesBlocked = Boolean(dependencyErrors.categories) || !hasActiveSubcategory;
   const isWorkbasketsBlocked = Boolean(dependencyErrors.workbaskets) || workbaskets.length === 0;
