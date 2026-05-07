@@ -3,7 +3,7 @@
 ## May 2026: Task Manager launch-readiness audit pass
 
 - Re-verified Task Manager-first primary navigation and kept non-launch CRM/CMS/Company Brain/Knowledge Library out of primary firm nav for launch mode.
-- Clarified Storage Settings UX that BYOS is optional and Docketra-managed storage remains the default upload path with safe fallback messaging when BYOS connect fails.
+- Clarified Storage Settings UX that BYOS is optional and Docketra-managed storage remains the default upload path with clear optional-BYOS messaging when BYOS connect fails.
 - Added a production-focused manual QA checklist for firm auth, task flows, upload paths, role visibility, and superadmin boundary checks.
 
 ## May 2026: BYOS Google Drive OAuth connect flow stabilization

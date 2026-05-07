@@ -311,7 +311,7 @@ export function StorageSettingsPage() {
               <SupportContext context={supportContext} />
               <div>
                 <h2 className="text-lg font-medium text-[var(--dt-text)] mb-2">Storage Provider</h2>
-                <p className="text-sm text-[var(--dt-text-muted)]">BYOS is optional. If your firm does not connect BYOS, Docketra-managed storage remains the default upload path. If BYOS health checks fail, uploads should continue using managed fallback. Provider changes require OTP verification.</p>
+                <p className="text-sm text-[var(--dt-text-muted)]">BYOS is optional. If your firm does not connect BYOS, Docketra-managed storage remains the default upload path. Provider changes require OTP verification.</p>
               </div>
               <div className="rounded border border-[var(--dt-info)] bg-[var(--dt-info-subtle)] px-3 py-3 text-sm text-[var(--dt-info)]">
                 <p className="font-medium">Current storage mode: {storageMode}</p>
