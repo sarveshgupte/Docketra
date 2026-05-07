@@ -11,6 +11,7 @@ export const buildCreateDocketPayload = (formData = {}) => {
   const description = typeof formData.description === 'string' ? formData.description.trim() : '';
   const priority = ensureCanonicalId(formData.priority || 'medium').toLowerCase();
   const idempotencyKey = ensureCanonicalId(formData.idempotencyKey);
+  const employeeXID = ensureCanonicalId(formData.employeeXID).toUpperCase();
 
   return {
     title,
@@ -23,6 +24,7 @@ export const buildCreateDocketPayload = (formData = {}) => {
     workbasketId: workbasketId || undefined,
     priority: ['low', 'medium', 'high', 'urgent'].includes(priority) ? priority : 'medium',
     assignedTo: assignedTo || undefined,
+    employeeXID: employeeXID || undefined,
     idempotencyKey: idempotencyKey || undefined,
   };
 };

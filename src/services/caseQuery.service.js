@@ -3,7 +3,7 @@ const { logSlowEndpoint } = require('../utils/slowLog');
 const includeInternalErrorDetails = process.env.NODE_ENV !== 'production';
 const { buildWorkflowMeta, logWorkflowEvent } = require('../utils/workflowDiagnostics');
 const { applyWorkModeFilter, normalizeWorkMode } = require('../utils/workType');
-const CASE_LIST_PROJECTION = 'caseId caseNumber caseName title status category subcategory caseSubCategory priority clientId clientName assignedTo assignedToXID assignedToName createdBy createdByXID createdAt updatedAt dueDate slaDueAt isInternal workType lifecycle state pendingUntil ownerTeamId routedToTeamId';
+const CASE_LIST_PROJECTION = 'caseId caseNumber caseName title status category subcategory caseSubCategory priority clientId clientName assignedTo assignedToXID assignedToName employeeXID employeeSnapshot createdBy createdByXID createdAt updatedAt dueDate slaDueAt isInternal workType lifecycle state pendingUntil ownerTeamId routedToTeamId';
 module.exports = (deps) => {
   const {
     mongoose,
@@ -504,6 +504,7 @@ module.exports = (deps) => {
         isInternal,
         workType,
         dealId,
+        employeeXID,
         page = 1,
         limit = 20,
       } = req.query;
@@ -565,6 +566,17 @@ module.exports = (deps) => {
           });
         }
         query.dealId = dealId;
+      }
+
+      if (employeeXID) {
+        const trimmedEmployeeXID = String(employeeXID).trim().toUpperCase();
+        if (!/^X\d{6}$/i.test(trimmedEmployeeXID)) {
+          return res.status(400).json({
+            success: false,
+            message: 'employeeXID must be in xID format (X123456)',
+          });
+        }
+        query.employeeXID = trimmedEmployeeXID;
       }
       
       // Apply client access filter from middleware (restrictedClientIds)

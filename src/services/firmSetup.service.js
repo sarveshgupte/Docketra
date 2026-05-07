@@ -12,30 +12,35 @@ const SYSTEM_DEFAULT_TEMPLATE = {
   key: DEFAULT_FIRM_SETUP_TEMPLATE_KEY,
   name: 'Default Firm Setup',
   workbaskets: [
-    { name: 'General', type: 'PRIMARY' },
-    { name: 'Compliance Team', type: 'PRIMARY' },
-    { name: 'Tax Team', type: 'PRIMARY' },
+    { name: 'HR', type: 'PRIMARY' },
+    { name: 'Finance', type: 'PRIMARY' },
+    { name: 'Accounts', type: 'PRIMARY' },
+    { name: 'Operations', type: 'PRIMARY' },
   ],
   categories: [
     {
-      name: 'Compliance',
+      name: 'HR',
       subcategories: [
-        { name: 'GST Filing', workbasket: 'Compliance Team' },
-        { name: 'ROC Filing', workbasket: 'Compliance Team' },
+        { name: 'Employee Query', workbasket: 'HR', employeeContextEnabled: true },
+        { name: 'Policy & Planning', workbasket: 'HR', employeeContextEnabled: true },
       ],
     },
     {
-      name: 'Tax',
+      name: 'Finance',
       subcategories: [
-        { name: 'Income Tax Return', workbasket: 'Tax Team' },
-        { name: 'TDS Filing', workbasket: 'Tax Team' },
+        { name: 'Finance Review', workbasket: 'Finance', employeeContextEnabled: false },
       ],
     },
     {
-      name: 'Internal',
+      name: 'Accounts',
       subcategories: [
-        { name: 'Admin Task', workbasket: 'General' },
-        { name: 'Follow-up', workbasket: 'General' },
+        { name: 'Accounts Task', workbasket: 'Accounts', employeeContextEnabled: false },
+      ],
+    },
+    {
+      name: 'Operations',
+      subcategories: [
+        { name: 'Operations Task', workbasket: 'Operations', employeeContextEnabled: false },
       ],
     },
   ],
@@ -64,6 +69,7 @@ const normalizeTemplate = (template = SYSTEM_DEFAULT_TEMPLATE) => {
       subcategories: (category.subcategories || []).map((subcategory) => ({
         name: String(subcategory.name || '').trim(),
         workbasket: String(subcategory.workbasket || '').trim(),
+        employeeContextEnabled: subcategory.employeeContextEnabled === true,
       })).filter((subcategory) => subcategory.name && subcategory.workbasket),
     })).filter((category) => category.name),
   };
@@ -172,6 +178,7 @@ const createDefaultCategories = async (firmId, { session, workbasketMap, templat
           if (existing) {
             existing.isActive = true;
             existing.workbasketId = existing.workbasketId || mappedWorkbasket?._id || null;
+            if (typeof existing.employeeContextEnabled === 'undefined') existing.employeeContextEnabled = subcategoryTemplate.employeeContextEnabled === true;
           }
         }
         continue;
@@ -181,6 +188,7 @@ const createDefaultCategories = async (firmId, { session, workbasketMap, templat
         id: new mongoose.Types.ObjectId().toString(),
         name: subcategoryTemplate.name,
         workbasketId: mappedWorkbasket._id,
+        employeeContextEnabled: subcategoryTemplate.employeeContextEnabled === true,
         isActive: true,
       });
       existingNameSet.add(lookupKey);
