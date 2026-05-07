@@ -160,7 +160,7 @@ async function shouldUseCachedRoleWithoutDbLookup() {
   let findOneCalls = 0;
   User.findOne = async () => {
     findOneCalls += 1;
-    throw new Error('DB lookup should not run when firm role is cached on the request');
+    return { _id: 'user-321', role: 'ADMIN', isActive: true, firmId: FIRM_KEY_A };
   };
 
   const guard = authorizeFirmPermission('CASE_VIEW');
@@ -174,10 +174,10 @@ async function shouldUseCachedRoleWithoutDbLookup() {
   const { res, nextCalled } = await runMiddleware(guard, req);
   assert.strictEqual(res.statusCode, null, 'Cached firm role should authorize the request');
   assert.strictEqual(nextCalled, true, 'Guard should continue when cached role grants access');
-  assert.strictEqual(findOneCalls, 0, 'Cached request role should avoid membership DB lookups');
+  assert.strictEqual(findOneCalls, 1, 'Fresh membership revalidation should run even when request role is cached');
   assert.strictEqual(req.firmRole, 'ADMIN', 'Cached request role should be attached to the request');
   assert.ok(req.firmPermissions.includes('CASE_VIEW'), 'Cached request role should resolve permissions');
-  console.log('✓ Cached request role bypasses membership DB lookup');
+  console.log('✓ Cached request role still revalidates fresh membership');
 
   User.findOne = originalFindOne;
 }
@@ -201,7 +201,7 @@ async function shouldFallbackToDbLookupWhenCachedRoleMissing() {
   const { res, nextCalled } = await runMiddleware(guard, req);
   assert.strictEqual(res.statusCode, null, 'Missing cached role should fall back to membership lookup');
   assert.strictEqual(nextCalled, true, 'Guard should continue after DB fallback succeeds');
-  assert.strictEqual(findOneCalls, 1, 'DB fallback should run once when role is missing');
+  assert.strictEqual(findOneCalls, 2, 'Missing cached role should resolve once and then revalidate once');
   assert.strictEqual(req.firmRole, 'ADMIN', 'Fallback membership role should be attached to the request');
   console.log('✓ Missing cached role falls back to membership DB lookup');
 
@@ -213,7 +213,7 @@ async function shouldNotAllowAdminToEscalateToSuperadmin() {
   let findOneCalls = 0;
   User.findOne = async () => {
     findOneCalls += 1;
-    throw new Error('Escalation check should use cached firm role');
+    return { _id: 'user-999', role: 'Admin', isActive: true, firmId: 'firm-a' };
   };
 
   const guard = authorizeFirmPermission('ADMIN_STATS');
@@ -227,7 +227,7 @@ async function shouldNotAllowAdminToEscalateToSuperadmin() {
   const { res, nextCalled } = await runMiddleware(guard, req);
   assert.strictEqual(res.statusCode, null, 'Admin should be evaluated by firm membership, not JWT role');
   assert.strictEqual(nextCalled, true, 'Guard should allow Admin based on firm role');
-  assert.strictEqual(findOneCalls, 0, 'Guard should not query membership when request role is already trusted');
+  assert.strictEqual(findOneCalls, 1, 'Guard should revalidate membership to prevent stale authorization');
   assert.strictEqual(req.jwt.role, 'SuperAdmin', 'Test should preserve the elevated JWT claim to verify it is ignored');
   assert.notStrictEqual(req.firmRole, req.jwt.role, 'Guard should ignore the SuperAdmin JWT claim for firm authorization');
   assert.strictEqual(req.firmRole, 'Admin', 'Resolved firm role should remain Admin');
@@ -236,6 +236,31 @@ async function shouldNotAllowAdminToEscalateToSuperadmin() {
   User.findOne = originalFindOne;
 }
 
+
+async function shouldDenyRevokedPermissionEvenWithCachedRole() {
+  const originalFindOne = User.findOne;
+  let findOneCalls = 0;
+  User.findOne = async (filter) => {
+    findOneCalls += 1;
+    return { _id: filter._id, role: 'USER', isActive: true, firmId: filter.firmId };
+  };
+
+  const guard = authorizeFirmPermission('ADMIN_STATS');
+  const req = {
+    firm: { id: FIRM_KEY_A },
+    userId: 'user-777',
+    user: { _id: 'user-777', role: 'ADMIN', firmId: FIRM_KEY_A },
+    jwt: { role: 'ADMIN', firmId: FIRM_KEY_A },
+  };
+
+  const { res, nextCalled } = await runMiddleware(guard, req);
+  assert.strictEqual(findOneCalls, 1, 'Fresh membership should be checked to protect against stale cached roles');
+  assert.strictEqual(res.statusCode, 403, 'Revoked admin permission should be denied even with cached ADMIN role');
+  assert.strictEqual(nextCalled, false, 'Guard should stop request when fresh membership lacks permission');
+  console.log('✓ Revoked permission is denied despite stale cached request role');
+
+  User.findOne = originalFindOne;
+}
 async function shouldRejectMissingTenantContext() {
   const req = { user: { role: 'Admin' } };
   const { res, nextCalled } = await runMiddleware(requireTenant, req);
@@ -263,6 +288,7 @@ async function run() {
   await shouldUseCachedRoleWithoutDbLookup();
   await shouldFallbackToDbLookupWhenCachedRoleMissing();
   await shouldNotAllowAdminToEscalateToSuperadmin();
+  await shouldDenyRevokedPermissionEvenWithCachedRole();
   await shouldRejectMissingTenantContext();
   await shouldRejectLegacyFirmIdFallback();
   console.log('\nFirm-scoped RBAC middleware tests completed.');

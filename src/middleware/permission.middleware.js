@@ -142,6 +142,7 @@ const authorizeFirmPermission = (requiredPermission) => {
         });
       }
 
+
       const userId = req?.userId || req?.user?._id || req?.user?.id || req?.jwt?.userId || null;
       if (userId) {
         const freshMembership = await resolveFirmRole(userId, req.firm.id);
