@@ -2,6 +2,7 @@
 'use strict';
 const assert = require('assert');
 const Module = require('module');
+const crypto = require('crypto');
 const originalLoad = Module._load;
 const clear = (p) => { try { delete require.cache[require.resolve(p)]; } catch (_) {} };
 
@@ -31,7 +32,7 @@ async function run() {
         PROVIDER_TYPES: { USER_GOOGLE_DRIVE: 'google_drive' },
       };
     }
-    if (request === '../models/Firm.model') return { findById: () => ({ select(){return this;}, lean: async()=>({ storageConfig: null, storage: {} }) }), findByIdAndUpdate: async()=>({}) };
+    if (request === '../models/Firm.model') return { findById: () => ({ select(){return this;}, lean: async()=>({ slug: 'acme', storage: { provider: 'google_drive' }, storageConfig: { provider: 'google_drive', credentials: 'enc' } }) }), findByIdAndUpdate: async()=>({}) };
     if (request.includes('TokenEncryption.service')) return { encrypt: (v)=>v, decrypt: ()=> '{}' };
     if (request === '../services/storageBackup.service') return { storageBackupService: { runBackupForFirm: async ()=> { throw new Error('backup secret'); }, listBackups: async()=> { throw new Error('list secret'); } } };
     if (request === '../services/storage/providers/GoogleDriveProvider') return function G() {};
@@ -49,24 +50,21 @@ async function run() {
   clear('../src/controllers/storage.controller');
   const ctl = require('../src/controllers/storage.controller');
 
-  const reqConnect = { firmId: 'tenant-canonical', ownershipFirmId: 'firm-owner-77', user: { role: 'PRIMARY_ADMIN' } };
-  const resConnect = { headers: {}, redirected: null, setHeader(k,v){this.headers[k]=v;}, redirect(u){this.redirected=u; return this;}, status(){return this;}, json(){return this;} };
-  ctl.googleConnect(reqConnect, resConnect);
-  const stateCookie = String(resConnect.headers['Set-Cookie'] || '').split(';')[0].replace('storage_oauth_state=', '');
+  const payload = Buffer.from(JSON.stringify({ tenantId: 'tenant-canonical', provider: 'google_drive', nonce: 'nonce-1' })).toString('base64url');
+  const sig = crypto.createHmac('sha256', process.env.JWT_SECRET).update(payload).digest('hex');
+  const callbackState = `${payload}.${sig}`;
 
-  const reqCb = { firmId: 'tenant-canonical', ownershipFirmId: 'firm-owner-77', user: { role: 'PRIMARY_ADMIN' }, query: { code: 'abc', state: stateCookie }, headers: { cookie: `storage_oauth_state=${stateCookie}` }, cookies: { storage_oauth_state: stateCookie } };
+  const reqCb = { firmId: 'tenant-canonical', ownershipFirmId: 'firm-owner-77', user: { role: 'PRIMARY_ADMIN' }, query: { code: 'abc', state: callbackState }, headers: { cookie: `storage_oauth_state=${callbackState}` }, cookies: { storage_oauth_state: callbackState } };
   const resCb = { code: 200, headers: {}, redirected: null, status(c){this.code=c; return this;}, json(p){this.payload=p; return this;}, setHeader(k,v){this.headers[k]=v;}, redirect(u){this.redirected=u; return this;} };
   await ctl.googleCallback(reqCb, resCb);
-  assert.ok(resCb.redirected, 'google callback should always redirect to storage settings success/error endpoint');
-  if (savedFirmId !== null) {
-    assert.strictEqual(savedFirmId, 'firm-owner-77');
-  }
+  assert.strictEqual(savedFirmId, 'firm-owner-77');
+  assert.ok(String(resCb.redirected || '').includes('connected=1'), 'google callback should redirect with connected=1 on successful save');
 
   const reqHealth = { firmId: 'tenant-canonical', ownershipFirmId: 'firm-owner-77', user: { role: 'PRIMARY_ADMIN' } };
   const resHealth = { code: 200, payload: null, status(c){this.code=c; return this;}, json(p){this.payload=p; return this;} };
   await ctl.storageHealthCheck(reqHealth, resHealth);
   assert.strictEqual(resHealth.code, 502);
-  assert.ok([true, false].includes(Boolean(markCalled)));
+  assert.strictEqual(Boolean(markCalled), true);
 
   const resUsage = { code: 200, payload: null, status(c){this.code=c; return this;}, json(p){this.payload=p; return this;} };
   await ctl.storageUsage(reqHealth, resUsage);
