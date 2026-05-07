@@ -19,7 +19,7 @@ Scope: Task Manager-only launch validation after BYOS Google Drive OAuth stabili
 ## 3) Attachment and storage flows
 - [ ] Attachment upload works with default Docketra-managed storage (no BYOS required).
 - [ ] If BYOS Google Drive is connected, attachment upload works in firm-connected mode.
-- [ ] If BYOS connect/test fails, user messaging is clear and upload can proceed via Docketra-managed fallback path.
+- [ ] If BYOS connect/test fails, user messaging is clear and operators know they can continue using default Docketra-managed storage when BYOS is not connected.
 - [ ] Upload/storage failures return actionable, non-technical messages and do not white-screen the page.
 
 ## 4) Settings access control

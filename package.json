@@ -57,7 +57,8 @@
     "test:security:integration": "NODE_ENV='test' sh -c \"node tests/securityHardening.test.js\"",
     "ci:backend:security:integration": "npm run test:security:integration",
     "security:secrets": "bash scripts/run-secret-scan.sh",
-    "test:pilot-hardening": "node tests/pilotHardeningScriptContract.test.js && npm run ci:backend:routes && node tests/pilotRouteSchemaAudit.test.js && node tests/frontendBackendApiParity.test.js && npm --prefix ui run test:pilot-ui-contracts"
+    "test:pilot-hardening": "node tests/pilotHardeningScriptContract.test.js && npm run ci:backend:routes && node tests/pilotRouteSchemaAudit.test.js && node tests/frontendBackendApiParity.test.js && npm --prefix ui run test:pilot-ui-contracts && npm run test:task-manager-launch-readiness",
+    "test:task-manager-launch-readiness": "node tests/taskManagerLaunchReadiness.ui.test.js"
   },
   "keywords": [
     "task-management",
