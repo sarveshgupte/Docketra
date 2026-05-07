@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 export function RequestDocumentsModal({
   isOpen,
@@ -13,15 +13,34 @@ export function RequestDocumentsModal({
   const [sendEmail, setSendEmail] = useState(true);
   const [showPin, setShowPin] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copyStatusMessage, setCopyStatusMessage] = useState('');
+  const copyFeedbackTimeoutRef = useRef(null);
+
+  useEffect(() => () => {
+    if (copyFeedbackTimeoutRef.current) clearTimeout(copyFeedbackTimeoutRef.current);
+  }, []);
 
   const expiresInLabel = useMemo(() => (expiry === '7d' ? '7 days' : '24 hours'), [expiry]);
 
-  const handleCopyLink = () => {
-    if (generatedLink?.link) {
-      navigator.clipboard.writeText(generatedLink.link);
+  const handleCopyLink = async () => {
+    if (!generatedLink?.link) return;
+
+    if (copyFeedbackTimeoutRef.current) clearTimeout(copyFeedbackTimeoutRef.current);
+
+    try {
+      await navigator.clipboard.writeText(generatedLink.link);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopyStatusMessage('Link copied to clipboard.');
+    } catch (_error) {
+      setCopied(false);
+      setCopyStatusMessage('Unable to copy link. Please copy manually.');
     }
+
+    copyFeedbackTimeoutRef.current = setTimeout(() => {
+      setCopied(false);
+      setCopyStatusMessage('');
+      copyFeedbackTimeoutRef.current = null;
+    }, 2000);
   };
 
   if (!isOpen) return null;
@@ -72,10 +91,10 @@ export function RequestDocumentsModal({
                 ...(copied ? styles.copiedBtn : {}),
               }}
               onClick={handleCopyLink}
-              aria-live="polite"
             >
               {copied ? '✓ Copied!' : 'Copy link'}
             </button>
+            <p style={styles.srOnlyStatus} role="status" aria-live="polite">{copyStatusMessage}</p>
             {generatedLink.pin ? (
               <div style={{ marginTop: 8 }}>
                 <button type="button" style={styles.copyBtn} onClick={() => setShowPin((prev) => !prev)}>
@@ -136,4 +155,14 @@ const styles = {
   primaryBtn: { padding: '8px 12px', border: 'none', background: '#2563eb', color: '#fff', borderRadius: 8, cursor: 'pointer' },
   copyBtn: { padding: '6px 10px', border: '1px solid #d1d5db', background: '#fff', borderRadius: 6, cursor: 'pointer', transition: 'all 0.2s ease' },
   copiedBtn: { background: '#ecfdf5', borderColor: '#10b981', color: '#047857' },
+  srOnlyStatus: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    margin: -1,
+    border: 0,
+    padding: 0,
+    overflow: 'hidden',
+    clip: 'rect(0 0 0 0)',
+  },
 };
