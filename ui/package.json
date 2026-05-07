@@ -60,7 +60,8 @@
     "test:knowledge-item-detail-view": "node tests/knowledgeItemDetailView.test.mjs",
     "test:work-type-normalization": "node tests/workTypeNormalization.test.mjs",
     "test:landing-page": "node tests/companyBrainLandingPage.test.mjs",
-    "test:company-brain-command-center": "node tests/companyBrainCommandCenterSimplification.test.mjs"
+    "test:company-brain-command-center": "node tests/companyBrainCommandCenterSimplification.test.mjs",
+    "test:pilot-ui-contracts": "node tests/pilotUiContracts.test.mjs"
   },
   "browserslist": {
     "production": [

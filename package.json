@@ -56,7 +56,8 @@
     "ci:release-gate:integration": "npm run ci:backend:core:integration && npm run ci:backend:security:integration",
     "test:security:integration": "NODE_ENV='test' sh -c \"node tests/securityHardening.test.js\"",
     "ci:backend:security:integration": "npm run test:security:integration",
-    "security:secrets": "bash scripts/run-secret-scan.sh"
+    "security:secrets": "bash scripts/run-secret-scan.sh",
+    "test:pilot-hardening": "node tests/pilotHardeningScriptContract.test.js && npm run ci:backend:routes && node tests/pilotRouteSchemaAudit.test.js && node tests/frontendBackendApiParity.test.js && npm --prefix ui run test:pilot-ui-contracts"
   },
   "keywords": [
     "task-management",
