@@ -1,4 +1,4 @@
-# BYOS/BYOAI Settings UX Note (April 26, 2026)
+# BYOS/BYOAI Settings UX Note (May 7, 2026)
 
 ## Purpose
 Document trust and privacy messaging shown in Docketra settings surfaces after the settings detail consistency pass.
@@ -34,8 +34,18 @@ Document trust and privacy messaging shown in Docketra settings surfaces after t
 - Improved destructive action clarity (e.g., disconnect/delete treated as explicit risk actions).
 - Removed visible legacy `neo` card usage from Work Settings.
 
+## BYOS provider support status (clarified)
+- **Google Drive:** first-class OAuth connect flow (`Connect / Refresh Google Drive`).
+- **OneDrive:** manual/advanced setup only (paste refresh token + optional drive id); not presented as one-click OAuth.
+- **S3:** manual credential/bucket setup only; no OAuth framing.
+
+## OAuth callback and status-refresh UX
+- Google callback returns users to a real route (`/app/firm/:firmSlug/storage-settings`) when possible.
+- Query params (`provider=google-drive&connected=1`) trigger a configuration reload and a success message in Storage Settings.
+- Failure conditions (`missing_state`, `invalid_state`, `missing_code`, `no_refresh_token`, `storage_configuration_invalid`) now redirect back to frontend with safe error context.
+
 ## What remains unchanged (intentional)
-- No changes to BYOS or BYOAI backend behavior.
+- No changes to BYOAI backend behavior.
 - No changes to provider APIs, payloads, storage behavior, OAuth, auth/RBAC, or tenant boundaries.
 - No changes to setting defaults.
 - No warnings/privacy notes/consent-related guardrails were removed.

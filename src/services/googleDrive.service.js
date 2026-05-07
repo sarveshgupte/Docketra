@@ -9,6 +9,19 @@ const PROVIDER_TYPES = {
 };
 
 class GoogleDriveService {
+  validateOAuthEnvironment() {
+    const required = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_OAUTH_REDIRECT_URI', 'FRONTEND_URL'];
+    const missing = required.filter((key) => !process.env[key]);
+    const redirectUri = process.env.GOOGLE_OAUTH_REDIRECT_URI || '';
+    const hasValidCallback = /\/api\/storage\/google\/callback\/?$/.test(redirectUri);
+    return {
+      valid: missing.length === 0 && hasValidCallback,
+      missing,
+      hasValidCallback,
+      redirectUri,
+    };
+  }
+
   async persistStorageCredentials(firmId, nextCredentials = {}, provider = 'google_drive') {
     const encryptedCredentials = encrypt(JSON.stringify(nextCredentials));
     await Firm.findByIdAndUpdate(firmId, {
@@ -86,10 +99,14 @@ class GoogleDriveService {
   }
 
   getOAuthClient() {
-    const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI } = process.env;
-    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_OAUTH_REDIRECT_URI) {
-      throw new Error('Google OAuth environment variables are not fully configured');
+    const validation = this.validateOAuthEnvironment();
+    if (!validation.valid) {
+      const reason = validation.missing.length
+        ? `missing=${validation.missing.join(',')}`
+        : 'redirect_uri_must_end_with_/api/storage/google/callback';
+      throw new Error(`Google OAuth environment variables are not fully configured (${reason})`);
     }
+    const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI } = process.env;
     return new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI);
   }
 

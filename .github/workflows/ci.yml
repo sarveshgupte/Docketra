@@ -22,6 +22,8 @@ jobs:
       JWT_SECRET: ci-placeholder-jwt-secret-for-tests-only-do-not-use
       SUPERADMIN_XID: X000001
       SUPERADMIN_EMAIL: superadmin@example.com
+      # Test-only bcrypt hash placeholder ("password"). Never use in production.
+      SUPERADMIN_PASSWORD_HASH: "$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy"
       SUPERADMIN_OBJECT_ID: "000000000000000000000001"
       MONGO_URI: mongodb://127.0.0.1:27017/docketra
       REDIS_URL: redis://127.0.0.1:6379
