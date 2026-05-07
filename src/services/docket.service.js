@@ -9,6 +9,7 @@ const normalizeCreateInput = (body = {}) => ({
   workbasketId: body.workbasketId || null,
   priority: typeof body.priority === 'string' && body.priority.trim() ? body.priority.trim().toLowerCase() : 'medium',
   assignedTo: typeof body.assignedTo === 'string' && body.assignedTo.trim() ? body.assignedTo.trim().toUpperCase() : null,
+  employeeXID: typeof body.employeeXID === 'string' && body.employeeXID.trim() ? body.employeeXID.trim().toUpperCase() : null,
 });
 
 const validateStructuredInput = ({ title, workbasketId, categoryId, subcategoryId }) => {

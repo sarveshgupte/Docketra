@@ -11,6 +11,7 @@ const payload = buildCreateDocketPayload({
   workbasketId: 'wb-1',
   priority: 'Medium',
   assignedTo: 'x000001',
+  employeeXID: 'x000123',
   idempotencyKey: ' abc-123 ',
 });
 
@@ -25,8 +26,17 @@ assert.deepStrictEqual(payload, {
   workbasketId: 'wb-1',
   priority: 'medium',
   assignedTo: 'X000001',
+  employeeXID: 'X000123',
   idempotencyKey: 'abc-123',
 });
+
+const noEmployeePayload = buildCreateDocketPayload({
+  title: 'No employee docket',
+  categoryId: 'cat-1',
+  subcategoryId: 'sub-1',
+  workbasketId: 'wb-1',
+});
+assert.ok(!('employeeXID' in noEmployeePayload) || noEmployeePayload.employeeXID === undefined, 'Employee should be omitted when not selected');
 
 const missingIdErrors = validateCreateDocketPayload(
   buildCreateDocketPayload({

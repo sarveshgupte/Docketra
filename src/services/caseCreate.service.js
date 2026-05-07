@@ -156,6 +156,7 @@ module.exports = (deps) => {
         workTypeId,
         subWorkTypeId,
         isInternal,
+        employeeXID,
       } = req.body;
       const guidedInput = normalizeCreateInput(req.body);
       const requestedInternal = guidedInput?.isInternal ?? isInternal;
@@ -190,6 +191,7 @@ module.exports = (deps) => {
       const resolvedTitle = guidedInput.title || (typeof title === 'string' ? title.trim() : '');
       const resolvedCategoryId = guidedInput.categoryId || categoryId;
       const resolvedSubcategoryId = guidedInput.subcategoryId || subcategoryId;
+      const resolvedEmployeeXID = guidedInput.employeeXID || (typeof employeeXID === 'string' ? employeeXID.trim().toUpperCase() : null);
 
       validateStructuredInput({
         title: resolvedTitle || 'Untitled Docket',
@@ -234,6 +236,33 @@ module.exports = (deps) => {
 
       if (!routedWorkbasketId) {
         routedWorkbasketId = resolvedWorkbasketId ? String(resolvedWorkbasketId) : null;
+      }
+
+      const employeeContextEnabled = Boolean(subcategoryDoc?.employeeContextEnabled);
+      let resolvedEmployee = null;
+      if (resolvedEmployeeXID) {
+        if (!employeeContextEnabled) {
+          return res.status(400).json({
+            success: false,
+            message: 'Employee context is not enabled for the selected subcategory.',
+            ...responseMeta,
+          });
+        }
+
+        resolvedEmployee = await User.findOne({
+          firmId,
+          xID: resolvedEmployeeXID,
+          status: 'active',
+          isActive: { $ne: false },
+        }).select('xID name email department status').lean();
+
+        if (!resolvedEmployee) {
+          return res.status(400).json({
+            success: false,
+            message: 'Selected employee must be an active user in your firm.',
+            ...responseMeta,
+          });
+        }
       }
       let fallbackWorkbasketPromise = null;
       if (!routedWorkbasketId) {
@@ -537,6 +566,14 @@ module.exports = (deps) => {
           status: initialStatus,
           lifecycle: resolvedAssignee ? DocketLifecycle.ACTIVE : DocketLifecycle.CREATED,
           assignedToXID: resolvedAssignee || null, // PR: xID Canonicalization - Store in assignedToXID
+          employeeXID: resolvedEmployee?.xID || null,
+          employeeSnapshot: resolvedEmployee ? {
+            xID: resolvedEmployee.xID || null,
+            name: resolvedEmployee.name || '',
+            email: resolvedEmployee.email || '',
+            department: resolvedEmployee.department || '',
+            statusAtTime: resolvedEmployee.status || 'active',
+          } : undefined,
           assignedTo: null,
           assignedBy: null,
           queueType: resolvedAssignee ? 'PERSONAL' : 'GLOBAL',
@@ -597,6 +634,7 @@ module.exports = (deps) => {
               priority: normalizedPriority,
               slaDueAt: newCase.slaDueAt,
               assignedToXID: newCase.assignedToXID,
+              employeeXID: newCase.employeeXID || null,
               duplicateOverridden: !!systemComment,
             },
           req,
@@ -637,6 +675,7 @@ module.exports = (deps) => {
             workType: normalizedWorkType,
             priority: normalizedPriority,
             assignedToXID: newCase.assignedToXID || null,
+            employeeXID: newCase.employeeXID || null,
           },
           oldDoc: {},
           newDoc: {
@@ -647,6 +686,7 @@ module.exports = (deps) => {
             workType: normalizedWorkType,
             priority: normalizedPriority,
             assignedToXID: newCase.assignedToXID || null,
+            employeeXID: newCase.employeeXID || null,
           },
           dedupeKey: `case-create:${newCase.caseId}`,
         });
@@ -672,6 +712,7 @@ module.exports = (deps) => {
               queueType: newCase.queueType || null,
               lifecycle: newCase.lifecycle || null,
               assignedToXID: newCase.assignedToXID || null,
+              employeeXID: newCase.employeeXID || null,
               ownerTeamId: newCase.ownerTeamId ? String(newCase.ownerTeamId) : null,
               isInternal: Boolean(newCase.isInternal),
               workType: newCase.workType || (newCase.isInternal ? 'internal' : 'client'),
