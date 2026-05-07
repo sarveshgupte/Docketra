@@ -39,7 +39,7 @@ async function testCanonicalAuditShape() {
   }
 }
 
-async function testReopenMovesToWorkbenchWithAudit() {
+async function testAutoReopenMovesToPersonalInProgressWithAudit() {
   const originalFind = Case.find;
   const originalUpdateMany = Case.updateMany;
   const originalLogDocketEvent = docketAuditService.logDocketEvent;
@@ -93,7 +93,7 @@ async function testReopenMovesToWorkbenchWithAudit() {
 async function run() {
   try {
     await testCanonicalAuditShape();
-    await testReopenMovesToWorkbenchWithAudit();
+    await testAutoReopenMovesToPersonalInProgressWithAudit();
     console.log('Docket audit integrity tests passed.');
   } catch (error) {
     console.error('Docket audit integrity tests failed:', error);
