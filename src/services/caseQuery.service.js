@@ -504,6 +504,7 @@ module.exports = (deps) => {
         isInternal,
         workType,
         dealId,
+        employeeXID,
         page = 1,
         limit = 20,
       } = req.query;
@@ -565,6 +566,17 @@ module.exports = (deps) => {
           });
         }
         query.dealId = dealId;
+      }
+
+      if (employeeXID) {
+        const trimmedEmployeeXID = String(employeeXID).trim().toUpperCase();
+        if (!/^X\d{6}$/i.test(trimmedEmployeeXID)) {
+          return res.status(400).json({
+            success: false,
+            message: 'employeeXID must be in xID format (X123456)',
+          });
+        }
+        query.employeeXID = trimmedEmployeeXID;
       }
       
       // Apply client access filter from middleware (restrictedClientIds)
