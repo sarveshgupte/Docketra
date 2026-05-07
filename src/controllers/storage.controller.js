@@ -26,6 +26,12 @@ const STATE_TTL_SECONDS = 10 * 60;
 const MANAGED_STORAGE_MODE = 'docketra_managed';
 const SUPPORTED_STORAGE_PROVIDERS = new Set(['docketra_managed', 'google_drive', 'onedrive', 's3']);
 const usedStorageOtpJti = new Map();
+
+function pruneUsedStorageOtpJti(nowMs = Date.now()) {
+  for (const [jti, expiresAtMs] of usedStorageOtpJti.entries()) {
+    if (!expiresAtMs || expiresAtMs <= nowMs) usedStorageOtpJti.delete(jti);
+  }
+}
 const STORAGE_AUDIT_SOURCES = Object.freeze({
   CHANGE_PROVIDER: 'storage.change_provider',
   EXPORT_GENERATE: 'storage.export_generate',
@@ -114,6 +120,7 @@ function ensureStorageOtpVerification(req, res) {
   }
 
   try {
+    pruneUsedStorageOtpJti();
     const decoded = jwt.verify(verificationToken, process.env.JWT_SECRET, {
       issuer: 'docketra',
       audience: 'docketra-api',
@@ -302,6 +309,7 @@ const googleCallback = async (req, res) => {
     const cookieValue = req.cookies?.[STATE_COOKIE_NAME] || getCookieValue(req.headers.cookie, STATE_COOKIE_NAME);
     const stateData = verifyStateToken(cookieValue, state);
     if (!stateData || stateData.tenantId !== req.firmId || stateData.provider !== 'google_drive') {
+      res.setHeader('Set-Cookie', buildStateCookie('', 0));
       return res.redirect(buildFrontendStorageRedirect({ firmSlug, params: { error: 'oauth_failed', reason: 'invalid_state', provider: 'google-drive' } }));
     }
 
@@ -393,6 +401,7 @@ const getStorageConfiguration = async (req, res) => {
     }
 
     const backupSettings = firm?.settings?.storageBackup || {};
+    res.set('Cache-Control', 'no-store');
     return res.json({
       provider: toUiProvider(state.canonicalProvider),
       isConfigured: Boolean(state.canonicalProvider),
@@ -466,6 +475,7 @@ const getStorageOwnershipSummary = async (req, res) => {
       });
     }
 
+    res.set('Cache-Control', 'no-store');
     return res.json({
       activeStorage: {
         provider: storageProvider,
