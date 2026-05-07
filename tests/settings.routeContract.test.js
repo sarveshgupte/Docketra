@@ -189,6 +189,8 @@ const swapModule = (modulePath, exportsValue) => {
     renameWorkbasket: ok,
     toggleWorkbasketStatus: ok,
     updateUserWorkbaskets: ok,
+    createDefaultRouting: ok,
+    addQcMember: ok,
   });
 
   swapModule(workTypeControllerModulePath, {
