@@ -654,7 +654,7 @@ async function reopenDuePending() {
       writeAudit({
         docketId: docket.caseId,
         fromState: DocketStatus.PENDING,
-        toState: DocketStatus.IN_PROGRESS,
+        toState: DocketStatus.AVAILABLE,
         userId: 'SYSTEM',
         comment: 'Auto reopened',
         action: 'PENDING_REOPEN',
@@ -662,7 +662,7 @@ async function reopenDuePending() {
         changes: [{
           field: 'status',
           from: DocketStatus.PENDING,
-          to: DocketStatus.IN_PROGRESS,
+          to: DocketStatus.AVAILABLE,
         }],
         metadata: {
           reasonCode: REASON_CODES.AUTO_REOPEN_DUE,
@@ -680,9 +680,10 @@ async function reopenDuePending() {
       {
         $set: {
           lifecycle: DocketLifecycle.ACTIVE,
-          status: toPersistenceState(DocketStatus.IN_PROGRESS),
-          state: 'IN_PROGRESS',
-          queueType: 'PERSONAL',
+          status: toPersistenceState(DocketStatus.AVAILABLE),
+          state: 'IN_WB',
+          queueType: 'GLOBAL',
+          assignedToXID: null,
           qcOutcome: null,
           reopenAt: null,
           pendingUntil: null,

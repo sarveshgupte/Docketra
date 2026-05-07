@@ -155,12 +155,12 @@ async function shouldDenyCrossFirmMembership() {
   User.findOne = originalFindOne;
 }
 
-async function shouldUseCachedRoleWithoutDbLookup() {
+async function shouldRevalidateCachedRoleAgainstDb() {
   const originalFindOne = User.findOne;
   let findOneCalls = 0;
   User.findOne = async () => {
     findOneCalls += 1;
-    throw new Error('DB lookup should not run when firm role is cached on the request');
+    return { _id: 'user-321', role: 'ADMIN', isActive: true, firmId: FIRM_KEY_A };
   };
 
   const guard = authorizeFirmPermission('CASE_VIEW');
@@ -172,12 +172,12 @@ async function shouldUseCachedRoleWithoutDbLookup() {
   };
 
   const { res, nextCalled } = await runMiddleware(guard, req);
-  assert.strictEqual(res.statusCode, null, 'Cached firm role should authorize the request');
+  assert.strictEqual(res.statusCode, null, 'Cached role should still authorize after DB revalidation');
   assert.strictEqual(nextCalled, true, 'Guard should continue when cached role grants access');
-  assert.strictEqual(findOneCalls, 0, 'Cached request role should avoid membership DB lookups');
+  assert.strictEqual(findOneCalls, 1, 'Guard should revalidate cached role with one DB lookup');
   assert.strictEqual(req.firmRole, 'ADMIN', 'Cached request role should be attached to the request');
   assert.ok(req.firmPermissions.includes('CASE_VIEW'), 'Cached request role should resolve permissions');
-  console.log('✓ Cached request role bypasses membership DB lookup');
+  console.log('✓ Cached request role is revalidated against DB membership');
 
   User.findOne = originalFindOne;
 }
@@ -201,7 +201,7 @@ async function shouldFallbackToDbLookupWhenCachedRoleMissing() {
   const { res, nextCalled } = await runMiddleware(guard, req);
   assert.strictEqual(res.statusCode, null, 'Missing cached role should fall back to membership lookup');
   assert.strictEqual(nextCalled, true, 'Guard should continue after DB fallback succeeds');
-  assert.strictEqual(findOneCalls, 1, 'DB fallback should run once when role is missing');
+  assert.strictEqual(findOneCalls, 2, 'Guard should perform request role resolution plus explicit DB revalidation when role is missing');
   assert.strictEqual(req.firmRole, 'ADMIN', 'Fallback membership role should be attached to the request');
   console.log('✓ Missing cached role falls back to membership DB lookup');
 
@@ -213,7 +213,7 @@ async function shouldNotAllowAdminToEscalateToSuperadmin() {
   let findOneCalls = 0;
   User.findOne = async () => {
     findOneCalls += 1;
-    throw new Error('Escalation check should use cached firm role');
+    return { _id: 'user-999', role: 'Admin', isActive: true, firmId: 'firm-a' };
   };
 
   const guard = authorizeFirmPermission('ADMIN_STATS');
@@ -227,7 +227,7 @@ async function shouldNotAllowAdminToEscalateToSuperadmin() {
   const { res, nextCalled } = await runMiddleware(guard, req);
   assert.strictEqual(res.statusCode, null, 'Admin should be evaluated by firm membership, not JWT role');
   assert.strictEqual(nextCalled, true, 'Guard should allow Admin based on firm role');
-  assert.strictEqual(findOneCalls, 0, 'Guard should not query membership when request role is already trusted');
+  assert.strictEqual(findOneCalls, 1, 'Guard should query DB membership to prevent stale JWT escalation');
   assert.strictEqual(req.jwt.role, 'SuperAdmin', 'Test should preserve the elevated JWT claim to verify it is ignored');
   assert.notStrictEqual(req.firmRole, req.jwt.role, 'Guard should ignore the SuperAdmin JWT claim for firm authorization');
   assert.strictEqual(req.firmRole, 'Admin', 'Resolved firm role should remain Admin');
@@ -260,7 +260,7 @@ async function run() {
   await shouldAllowActiveFirmRegardlessOfStatusCase();
   await shouldBlockSuperadminFromFirmRoutes();
   await shouldDenyCrossFirmMembership();
-  await shouldUseCachedRoleWithoutDbLookup();
+  await shouldRevalidateCachedRoleAgainstDb();
   await shouldFallbackToDbLookupWhenCachedRoleMissing();
   await shouldNotAllowAdminToEscalateToSuperadmin();
   await shouldRejectMissingTenantContext();
