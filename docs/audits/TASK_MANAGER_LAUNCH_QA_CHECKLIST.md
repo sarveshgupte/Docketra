@@ -43,3 +43,7 @@ Scope: Task Manager-only launch validation after BYOS Google Drive OAuth stabili
 - [ ] Primary Admin can configure/test BYOS, but setup is not mandatory.
 - [ ] Superadmin boundary remains intact.
 - [ ] Automated auth/storage/route tests pass in CI.
+
+
+## 8) Evidence log destination
+- [ ] Record final production smoke evidence in `docs/audits/PRIVATE_PILOT_READINESS_SIGNOFF_2026-05.md` under **Manual Production QA Evidence** before pilot GO decision.
