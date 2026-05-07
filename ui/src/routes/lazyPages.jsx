@@ -54,6 +54,7 @@ export const AuditLogsPage = lazyPage(() => import('../pages/AuditLogsPage'), 'A
 export const FirmSettingsPage = lazyPage(() => import('../pages/FirmSettingsPage'), 'FirmSettingsPage');
 export const WorkSettingsPage = lazyPage(() => import('../pages/WorkSettingsPage'), 'WorkSettingsPage');
 export const StorageSettingsPage = lazyPage(() => import('../pages/StorageSettingsPage'), 'StorageSettingsPage');
+export const StorageOAuthSuccessPage = lazyPage(() => import('../pages/StorageOAuthSuccessPage'), 'StorageOAuthSuccessPage');
 export const AiSettingsPage = lazyPage(() => import('../pages/AiSettingsPage'), 'AiSettingsPage');
 export const PlatformDashboard = lazyPage(() => import('../pages/PlatformDashboard'), 'PlatformDashboard');
 export const FirmsManagement = lazyPage(() => import('../pages/FirmsManagement'), 'FirmsManagement');

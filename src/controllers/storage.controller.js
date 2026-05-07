@@ -955,4 +955,8 @@ module.exports = {
   buildStateCookie,
   mapProviderErrorToStatus,
   getStorageOwnershipSummary,
+  __private: {
+    resolveFirmSlugForRedirect,
+    buildFrontendStorageRedirect,
+  },
 };
