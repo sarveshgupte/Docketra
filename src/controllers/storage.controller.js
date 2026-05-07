@@ -199,6 +199,21 @@ function buildStateCookie(value, maxAge) {
   return parts.join('; ');
 }
 
+function buildFrontendStorageRedirect({ firmSlug, params = {} }) {
+  const base = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
+  const path = firmSlug
+    ? `/app/firm/${encodeURIComponent(firmSlug)}/storage-settings`
+    : '/storage/success';
+  const query = new URLSearchParams(params).toString();
+  return `${base}${path}${query ? `?${query}` : ''}`;
+}
+
+async function resolveFirmSlugForRedirect(firmId) {
+  if (!firmId) return null;
+  const firm = await Firm.findById(firmId).select('slug firmSlug').lean();
+  return firm?.slug || firm?.firmSlug || null;
+}
+
 function mapProviderErrorToStatus(error) {
   const message = (error?.message || '').toLowerCase();
   if (error?.status === 401 || message.includes('invalid_grant')) return 'DISCONNECTED';
@@ -254,6 +269,11 @@ const getStorageHealth = async (req, res) => {
 const googleConnect = (req, res) => {
   if (!ensurePrimaryAdmin(req, res)) return;
   try {
+    const validation = googleDriveService.validateOAuthEnvironment();
+    if (!validation.valid) {
+      log.warn('[STORAGE]', { event: 'google_oauth_env_invalid', missing: validation.missing, callbackMatchesRequiredRoute: validation.hasValidCallback });
+      return res.status(503).json({ error: 'google_oauth_not_configured' });
+    }
     const oauthClient = getStorageOAuthClient();
     const stateToken = buildStateToken(req.firmId);
 
@@ -274,36 +294,39 @@ const googleConnect = (req, res) => {
 const googleCallback = async (req, res) => {
   if (!ensurePrimaryAdmin(req, res)) return;
   try {
+    const firmSlug = await resolveFirmSlugForRedirect(req.firmId);
     const { code, state } = req.query;
-    if (!code) return res.status(400).json({ error: 'missing_oauth_code' });
-    if (!state) return res.status(400).json({ error: 'missing_state' });
+    if (!code) return res.redirect(buildFrontendStorageRedirect({ firmSlug, params: { error: 'oauth_failed', reason: 'missing_code', provider: 'google-drive' } }));
+    if (!state) return res.redirect(buildFrontendStorageRedirect({ firmSlug, params: { error: 'oauth_failed', reason: 'missing_state', provider: 'google-drive' } }));
 
     const cookieValue = req.cookies?.[STATE_COOKIE_NAME] || getCookieValue(req.headers.cookie, STATE_COOKIE_NAME);
     const stateData = verifyStateToken(cookieValue, state);
     if (!stateData || stateData.tenantId !== req.firmId || stateData.provider !== 'google_drive') {
-      return res.status(400).json({ error: 'invalid_state' });
+      return res.redirect(buildFrontendStorageRedirect({ firmSlug, params: { error: 'oauth_failed', reason: 'invalid_state', provider: 'google-drive' } }));
     }
 
     const oauthClient = getStorageOAuthClient();
     const result = await oauthClient.getToken(code);
     const tokens = result.tokens || {};
-    if (!tokens.refresh_token) return res.status(400).json({ error: 'no_refresh_token' });
+    if (!tokens.refresh_token) return res.redirect(buildFrontendStorageRedirect({ firmSlug, params: { error: 'oauth_failed', reason: 'no_refresh_token', provider: 'google-drive' } }));
 
     const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
     const connection = await googleDriveService.saveUserDriveConnection({ firmId: ownershipFirmId, tokens });
 
     res.setHeader('Set-Cookie', buildStateCookie('', 0));
-    const successUrl = `${process.env.FRONTEND_URL || ''}/storage/success?provider=google-drive&connected=1&rootFolderId=${encodeURIComponent(connection.rootFolderId || '')}`;
+    const successUrl = buildFrontendStorageRedirect({
+      firmSlug,
+      params: { provider: 'google-drive', connected: '1', rootFolderId: connection.rootFolderId || '' },
+    });
     return res.redirect(successUrl);
   } catch (error) {
     if (error instanceof StorageValidationError) {
-      return res.status(400).json({
-        error: 'storage_configuration_invalid',
-        ...(isProduction() ? {} : { message: error.message }),
-      });
+      const firmSlug = await resolveFirmSlugForRedirect(req.firmId);
+      return res.redirect(buildFrontendStorageRedirect({ firmSlug, params: { error: 'oauth_failed', reason: 'storage_configuration_invalid', provider: 'google-drive' } }));
     }
     log.error('[STORAGE]', { event: 'oauth_failed', tenantId: req.firmId, message: error.message });
-    return res.status(500).json({ error: 'oauth_failed', ...(isProduction() ? {} : { message: error.message }) });
+    const firmSlug = await resolveFirmSlugForRedirect(req.firmId);
+    return res.redirect(buildFrontendStorageRedirect({ firmSlug, params: { error: 'oauth_failed', reason: 'oauth_failed', provider: 'google-drive' } }));
   }
 };
 
@@ -932,4 +955,8 @@ module.exports = {
   buildStateCookie,
   mapProviderErrorToStatus,
   getStorageOwnershipSummary,
+  __private: {
+    resolveFirmSlugForRedirect,
+    buildFrontendStorageRedirect,
+  },
 };

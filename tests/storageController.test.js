@@ -5,20 +5,6 @@ const assert = require('assert');
 const Module = require('module');
 
 let isAdmin = true;
-let storageConfigDoc = null;
-
-const mockStorageConfiguration = {
-  findOne() {
-    return {
-      select() {
-        return {
-          lean: async () => storageConfigDoc,
-        };
-      },
-      lean: async () => storageConfigDoc,
-    };
-  },
-};
 
 function createRes() {
   return {
@@ -36,15 +22,51 @@ function createRes() {
 
 const originalLoad = Module._load;
 Module._load = function(request, parent, isMain) {
-  if (request === '../models/StorageConfiguration.model') return mockStorageConfiguration;
-  if (request === '../models/TenantStorageConfig.model') return { findOne: () => ({ select: async () => null }), updateMany: async () => {}, findOneAndUpdate: async () => {} };
-  if (request === '../models/TenantStorageHealth.model') return { findOne: () => ({ select: () => ({ lean: async () => null }) }) };
-  if (request === '../models/Firm.model') return { findById: () => ({ select: () => ({ lean: async () => ({ storage: { mode: 'docketra_managed' } }) }) }) };
-  if (request === '../storage/services/TokenEncryption.service') return { encrypt: (v) => `enc:${v}`, decrypt: () => 'refresh' };
-  if (request === '../utils/role.utils') return { isAdminRole: () => isAdmin };
+  if (request === '../models/TenantStorageConfig.model') return { findOne: () => ({ select: async () => null }), updateMany: async () => {}, findOneAndUpdate: async () => ({}) };
+  if (request === '../models/Firm.model') {
+    return {
+      findById: () => ({
+        select: () => ({
+          lean: async () => ({
+            storage: { mode: 'firm_connected' },
+            storageConfig: { provider: 'google_drive', credentials: 'enc:stub', createdAt: new Date(), updatedAt: new Date() },
+            settings: { storageBackup: { enabled: true } },
+          }),
+        }),
+      }),
+    };
+  }
+  if (request === '../services/storage/services/TokenEncryption.service') {
+    return {
+      encrypt: (v) => `enc:${v}`,
+      decrypt: () => JSON.stringify({ refreshToken: 'refresh', rootFolderId: 'root-folder-id', connectedEmail: 'admin@example.com', status: 'ACTIVE_BYOS' }),
+    };
+  }
+  if (request === '../utils/role.utils') return { isAdminRole: () => isAdmin, isPrimaryAdminRole: () => isAdmin };
   if (request === '../utils/requestCookies') return { getCookieValue: () => 'state' };
-  if (request === '../storage/providers/GoogleDriveProvider') return class { async createFolder() { return { folderId: 'id' }; } };
-  if (request === '../services/storage/StorageProviderFactory') return { StorageProviderFactory: { getProvider: async () => ({ testConnection: async () => ({}) }) } };
+  if (request === '../services/storage/providers/GoogleDriveProvider') return class { async createFolder() { return { folderId: 'id' }; } };
+  if (request === '../services/storage/providers/OneDriveProvider') return class {};
+  if (request === '../services/storage/providers/S3Provider') return { S3Provider: class {} };
+  if (request === '../services/storage/StorageProviderFactory') return { StorageProviderFactory: { getProvider: async () => ({ testConnection: async () => ({}), getFolderPath: async () => '/Docketra/root-folder-id' }) } };
+  if (request === '../services/storage/resolveFirmStorageState') {
+    return {
+      normalizeProvider: (provider) => provider,
+      resolveFirmStorageState: () => ({
+        canonicalProvider: 'google_drive',
+        connectionStatus: 'ACTIVE_BYOS',
+        connectedEmail: 'admin@example.com',
+        rootFolderId: 'root-folder-id',
+        driveId: null,
+        warnings: [],
+        isManaged: false,
+        mode: 'firm_connected',
+      }),
+    };
+  }
+  if (request === '../services/storageBackup.service') return { storageBackupService: { listBackups: async () => [] } };
+  if (request === '../services/tenantIdentity.service') return { resolveStorageContextFromTenantId: async () => ({ ownershipFirmId: 'FIRM1' }) };
+  if (request === '../services/productAudit.service') return { writeSettingsAudit: async () => ({}) };
+  if (request === '../services/pilotDiagnostics.service') return { REASON_CODES: {}, logPilotEvent: () => {} };
   if (request === 'googleapis') {
     return {
       google: {
@@ -63,21 +85,15 @@ Module._load = function(request, parent, isMain) {
 };
 
 const controller = require('../src/controllers/storage.controller');
-const { oauthLimiter } = require('../src/storage/middleware/oauthLimiter');
+const { oauthLimiter } = require('../src/services/storage/middleware/oauthLimiter');
 
 async function testGetStorageConfiguration() {
-  storageConfigDoc = {
-    provider: 'google-drive',
-    rootFolderId: 'root',
-    credentials: { connectedEmail: 'admin@example.com' },
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-  const req = { firmId: 'FIRM1' };
+  const req = { firmId: 'FIRM1', ownershipFirmId: 'FIRM1', user: { role: 'PRIMARY_ADMIN' } };
   const res = createRes();
   await controller.getStorageConfiguration(req, res);
   assert.strictEqual(res.statusCode, 200);
   assert.strictEqual(res.body.provider, 'google-drive');
+  assert.strictEqual(res.body.connectedEmail, 'admin@example.com');
   console.log('  ✓ getStorageConfiguration returns google-drive config');
 }
 

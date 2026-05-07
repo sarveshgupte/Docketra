@@ -70,7 +70,7 @@ const mockTenantStorageConfig = {
   updateMany: async () => ({}),
 };
 const mockFirmModel = {
-  findById: () => ({ select: async () => ({ name: 'Test Firm' }) }),
+  findById: () => ({ select: () => ({ lean: async () => ({ name: 'Test Firm', firmSlug: 'test-firm' }) }) }),
 };
 
 // Minimal mongoose stub (only Schema/model used by FirmStorage.model.js)
@@ -79,6 +79,8 @@ const mockMongoose = {
     constructor() {}
     index() {}
     pre() {}
+    virtual() { return { get() {} }; }
+    plugin() {}
   },
   model: () => mockFirmStorage,
   Types: { ObjectId: class {} },
@@ -114,6 +116,18 @@ Module._load = function (request, parent, isMain) {
     return class {
       async createFolder() { return { folderId: 'folder-123' }; }
     };
+  }
+  if (request === '../services/storageBackup.service') {
+    return { storageBackupService: { enqueueBackup: async () => ({}) } };
+  }
+  if (request === '../services/productAudit.service') {
+    return { writeSettingsAudit: async () => ({}) };
+  }
+  if (request === '../services/pilotDiagnostics.service') {
+    return { REASON_CODES: {}, logPilotEvent: async () => ({}) };
+  }
+  if (request === '../services/tenantIdentity.service') {
+    return { resolveStorageContextFromTenantId: async () => ({ ownershipFirmId: 'firm-1' }) };
   }
   // Stub the storage queue to avoid Redis connections during tests
   if (request === 'bullmq') {
@@ -159,7 +173,7 @@ const makeMockRes = () => {
 // Note: requiring the controller here pulls in its module-level code
 // (constants, function definitions) without starting any server.
 // The googleapis and FirmStorage stubs above ensure no real I/O occurs.
-const { buildStateCookie, googleConnect } = require('../src/controllers/storage.controller');
+const { buildStateCookie, googleConnect, googleCallback } = require('../src/controllers/storage.controller');
 
 // ──────────────────────────────────────────────────────────────────
 // Tests
@@ -203,7 +217,7 @@ async function testGoogleConnectRedirects() {
 async function testGoogleConnectAcceptsCanonicalAdminRole() {
   const req = {
     firmId: 'firm-abc',
-    user: { role: 'Admin' },
+    user: { role: 'PRIMARY_ADMIN' },
     headers: {},
   };
   const res = makeMockRes();
@@ -277,7 +291,7 @@ async function testVerifyStateToken() {
 async function testGoogleCallbackMissingParams() {
   // Minimal inline controller simulation for the missing-params guard
   const frontendUrl = process.env.FRONTEND_URL.replace(/\/$/, '');
-  const errorUrl = `${frontendUrl}/settings/storage?error=oauth_failed`;
+  const errorUrl = `${frontendUrl}/storage/success?error=oauth_failed`;
 
   // Simulate: no code, no state
   const res = makeMockRes();
@@ -286,11 +300,11 @@ async function testGoogleCallbackMissingParams() {
   // Replicate the guard logic
   const { code, state } = req.query;
   if (!code || !state) {
-    res.redirect(`${errorUrl}&reason=missing_params`);
+    res.redirect(`${errorUrl}&reason=missing_code`);
   }
 
   assert(res.redirectedTo, 'Should redirect on missing params');
-  assert(res.redirectedTo.includes('missing_params'), `Expected missing_params in redirect, got: ${res.redirectedTo}`);
+  assert(res.redirectedTo.includes('missing_code'), `Expected missing_code in redirect, got: ${res.redirectedTo}`);
 
   console.log('  ✓ googleCallback redirects on missing code/state');
 }
@@ -298,7 +312,7 @@ async function testGoogleCallbackMissingParams() {
 async function testGoogleCallbackFirmMismatch() {
   const crypto = require('crypto');
   const frontendUrl = process.env.FRONTEND_URL.replace(/\/$/, '');
-  const errorUrl = `${frontendUrl}/settings/storage?error=oauth_failed`;
+  const errorUrl = `${frontendUrl}/storage/success?error=oauth_failed`;
 
   function buildStateToken(firmId) {
     const nonce = crypto.randomBytes(16).toString('hex');
@@ -315,18 +329,18 @@ async function testGoogleCallbackFirmMismatch() {
   const reqFirmId = 'firm-B';
 
   if (stateData.firmId !== reqFirmId) {
-    res.redirect(`${errorUrl}&reason=firm_mismatch`);
+    res.redirect(`${errorUrl}&reason=invalid_state`);
   }
 
-  assert(res.redirectedTo && res.redirectedTo.includes('firm_mismatch'),
-    `Expected firm_mismatch redirect, got: ${res.redirectedTo}`);
+  assert(res.redirectedTo && res.redirectedTo.includes('invalid_state'),
+    `Expected invalid_state redirect, got: ${res.redirectedTo}`);
 
   console.log('  ✓ googleCallback redirects on firmId mismatch');
 }
 
 async function testGoogleCallbackNoRefreshToken() {
   const frontendUrl = process.env.FRONTEND_URL.replace(/\/$/, '');
-  const errorUrl = `${frontendUrl}/settings/storage?error=oauth_failed`;
+  const errorUrl = `${frontendUrl}/storage/success?error=oauth_failed`;
   const res = makeMockRes();
 
   // Simulate tokens without a refresh_token
@@ -339,6 +353,21 @@ async function testGoogleCallbackNoRefreshToken() {
     `Expected no_refresh_token redirect, got: ${res.redirectedTo}`);
 
   console.log('  ✓ googleCallback redirects when refresh_token is absent');
+}
+
+async function testGoogleCallbackMissingStateRedirectsToFrontend() {
+  const req = {
+    firmId: 'firm-1',
+    user: { role: 'PRIMARY_ADMIN' },
+    query: { code: 'abc' },
+    cookies: {},
+    headers: {},
+  };
+  const res = makeMockRes();
+  await googleCallback(req, res);
+  assert(res.redirectedTo && res.redirectedTo.includes('/app/firm/test-firm/storage-settings?'), 'Expected redirect to firm storage settings route');
+  assert(res.redirectedTo.includes('reason=missing_state'), `Expected missing_state redirect reason, got: ${res.redirectedTo}`);
+  console.log('  ✓ googleCallback redirects missing state to frontend-safe route');
 }
 
 async function testBuildStateCookieFlags() {
@@ -358,6 +387,24 @@ async function testBuildStateCookieFlags() {
   console.log('  ✓ buildStateCookie applies consistent flags for set and clear');
 }
 
+async function testResolveFirmSlugForRedirect() {
+  const controller = require('../src/controllers/storage.controller');
+  const helper = controller.__private.resolveFirmSlugForRedirect;
+
+  const originalFindById = mockFirmModel.findById;
+  mockFirmModel.findById = () => ({ select: () => ({ lean: async () => ({ firmSlug: 'firm-slug-a' }) }) });
+  assert.strictEqual(await helper('firm-a'), 'firm-slug-a');
+
+  mockFirmModel.findById = () => ({ select: () => ({ lean: async () => ({ slug: 'firm-slug-b' }) }) });
+  assert.strictEqual(await helper('firm-b'), 'firm-slug-b');
+
+  mockFirmModel.findById = () => ({ select: () => ({ lean: async () => null }) });
+  assert.strictEqual(await helper('firm-c'), null);
+
+  mockFirmModel.findById = originalFindById;
+  console.log('  ✓ resolveFirmSlugForRedirect handles firmSlug/slug/missing firm');
+}
+
 async function run() {
   console.log('Running storageGoogleOAuth tests...');
   try {
@@ -368,7 +415,9 @@ async function run() {
     await testGoogleCallbackMissingParams();
     await testGoogleCallbackFirmMismatch();
     await testGoogleCallbackNoRefreshToken();
+    await testGoogleCallbackMissingStateRedirectsToFrontend();
     await testBuildStateCookieFlags();
+    await testResolveFirmSlugForRedirect();
     console.log('All storageGoogleOAuth tests passed.');
   } catch (err) {
     console.error('storageGoogleOAuth tests failed:', err);

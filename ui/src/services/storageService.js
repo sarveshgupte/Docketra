@@ -1,4 +1,5 @@
 import api from './api';
+import { API_BASE_URL } from '../utils/constants';
 
 export async function getStorageConfiguration() {
   const response = await api.get('/storage/configuration');
@@ -6,7 +7,8 @@ export async function getStorageConfiguration() {
 }
 
 export async function connectGoogleDrive() {
-  window.location.assign('/api/storage/google/connect');
+  const connectUrl = new URL('storage/google/connect', `${API_BASE_URL}/`).toString();
+  window.location.assign(connectUrl);
 }
 
 export async function testStorageConnection() {
