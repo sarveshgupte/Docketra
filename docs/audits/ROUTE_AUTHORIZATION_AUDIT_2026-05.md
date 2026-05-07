@@ -97,3 +97,15 @@
 ### Remaining untested boundaries
 - Cross-tenant object-level ownership checks for each business domain route (cases/tasks/files/etc.) remain partially covered by existing tests but not exhaustively exercised in this boundary test.
 - Superadmin-denial parity across every tenant namespace is not fully enumerated here; this test focuses on regression-critical representative mounts.
+
+## Real router isolation tests
+- Added `tests/superadminRealRouter.isolation.test.js` to mount the real `src/routes/superadmin.routes.js` in a minimal Express app (without `createApp()`) and run request-level authorization checks.
+- The test stubs only:
+  - superadmin controllers (local deterministic handlers with call counters),
+  - `superadmin.policy` and `firm.policy` authorization predicates,
+  - superadmin rate-limit middleware as no-op pass-through.
+- Verified router-level `router.use(requireSuperadmin)` behavior across representative endpoints:
+  - platform stats: `GET /api/superadmin/stats`
+  - firm management: `GET /api/superadmin/firms`
+  - mutation: `POST /api/superadmin/switch-firm`
+- Verified rejected identities (unauthenticated, `USER`, `ADMIN`, `PRIMARY_ADMIN`) are denied before controller execution by asserting controller call counters remain unchanged.
