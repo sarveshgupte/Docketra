@@ -72,3 +72,28 @@
   - firm user vs admin vs primary admin
   - cross-tenant resource IDs
   - superadmin denial on tenant business data routes.
+
+## Runtime authorization tests added
+- Added `tests/runtimeAuthorizationBoundaries.test.js` to validate request-level auth boundaries (not just structural middleware assertions).
+
+### Boundaries covered
+- **Superadmin route boundary**
+  - `/api/superadmin/stats` rejects unauthenticated requests (`401`).
+  - `/api/superadmin/stats` rejects firm user and firm admin identities (`403`).
+  - `/api/superadmin/stats` allows superadmin identity (`200`) with controller mocked.
+- **Legacy superadmin namespaces**
+  - Verified rejection parity on `/api/sa/stats` and `/superadmin/stats` for non-superadmin identity.
+- **Tenant route boundary**
+  - Verified `forbidSuperAdmin` behavior by rejecting superadmin identity on `/api/tasks/guard-probe` (`403`).
+  - Verified unauthenticated rejection on same protected tenant mount (`401`).
+  - Verified firm user can pass tenant route guard (`200`) with route/controller mocked.
+- **Reserved slug / route-capture protection**
+  - Request-level checks confirm reserved prefixes are not swallowed by `/:firmSlug` tenant resolver pathing:
+    - `/api/superadmin/login`
+    - `/api/auth/*`
+    - `/api/public/*`
+    - `/api/admin/*`
+
+### Remaining untested boundaries
+- Cross-tenant object-level ownership checks for each business domain route (cases/tasks/files/etc.) remain partially covered by existing tests but not exhaustively exercised in this boundary test.
+- Superadmin-denial parity across every tenant namespace is not fully enumerated here; this test focuses on regression-critical representative mounts.
