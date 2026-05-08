@@ -1,5 +1,12 @@
 # What's New
 
+## May 2026: BYOS Google callback/session hardening
+
+- Hardened Google Drive BYOS callback reliability for cross-origin frontend/backend deployments by adding safe `session_missing` recovery redirects when callback auth/session context is unavailable.
+- Ensured OAuth callback state failure handling clears the state cookie and keeps error responses user-safe (no raw auth stack traces or token leakage).
+- Added/expanded regression coverage for callback success, invalid state cookie clearing, session-missing safe redirects, and connect-time invalid OAuth env returning safe `503`.
+- Documented canonical Google Drive folder naming as `/Docketra/{firmName}/...` and clarified `googleConfirmDrive` as advanced/manual drive-selection behavior.
+
 ## May 2026: Task Manager launch-readiness audit pass
 
 - Re-verified Task Manager-first primary navigation and kept non-launch CRM/CMS/Company Brain/Knowledge Library out of primary firm nav for launch mode.
