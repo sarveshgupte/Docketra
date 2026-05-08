@@ -25,3 +25,8 @@
 **Vulnerability:** User-derived inputs (`originalSlug`) were passed unescaped into dynamic `new RegExp(...)` constructors in MongoDB queries.
 **Learning:** This pattern can lead to Regular Expression Denial of Service (ReDoS) or NoSQL injection attacks if the input contains regex special characters.
 **Prevention:** Always escape user-derived inputs or dynamically generated strings before using them in regular expressions. A centralized `escapeRegExp` utility was created in `src/utils/regexp.utils.js` for this purpose.
+
+## 2026-05-08 - Secure Random Jitter
+**Vulnerability:** Weak PRNG (`Math.random()`) was used for socket reconnection jitter.
+**Learning:** Even when random numbers aren't strictly used for cryptographic keys, using insecure PRNGs can flag SAST tools and sets a bad precedent. It's better to default to cryptographically secure RNGs.
+**Prevention:** Use `crypto.randomInt()` instead of `Math.random()` universally.
