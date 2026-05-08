@@ -201,7 +201,8 @@ function verifyStateToken(cookieValue, stateParam) {
 }
 
 function buildStateCookie(value, maxAge) {
-  const parts = [`${STATE_COOKIE_NAME}=${value}`, 'HttpOnly', 'SameSite=Lax', `Max-Age=${maxAge}`, 'Path=/'];
+  const sameSite = 'Lax';
+  const parts = [`${STATE_COOKIE_NAME}=${value}`, 'HttpOnly', `SameSite=${sameSite}`, `Max-Age=${maxAge}`, 'Path=/'];
   if (process.env.NODE_ENV === 'production') parts.push('Secure');
   return parts.join('; ');
 }
@@ -299,7 +300,18 @@ const googleConnect = (req, res) => {
 };
 
 const googleCallback = async (req, res) => {
-  if (!ensurePrimaryAdmin(req, res)) return;
+  if (!isPrimaryAdminRole(req.user?.role) || !req.firmId) {
+    const firmSlug = await resolveFirmSlugForRedirect(req.firmId);
+    log.warn('[STORAGE]', {
+      event: 'google_oauth_callback_session_missing',
+      hasUser: Boolean(req.user),
+      hasFirmId: Boolean(req.firmId),
+    });
+    return res.redirect(buildFrontendStorageRedirect({
+      firmSlug,
+      params: { error: 'oauth_failed', reason: 'session_missing', provider: 'google-drive' },
+    }));
+  }
   try {
     const firmSlug = await resolveFirmSlugForRedirect(req.firmId);
     const { code, state } = req.query;
@@ -339,6 +351,8 @@ const googleCallback = async (req, res) => {
 };
 
 const googleConfirmDrive = async (req, res) => {
+  // Advanced/manual endpoint: used when a firm explicitly confirms a target
+  // drive context (for example, shared drive selection) after OAuth connect.
   if (!ensurePrimaryAdmin(req, res)) return;
   if (!ensureStorageOtpVerification(req, res)) return;
   const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;

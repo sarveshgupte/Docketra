@@ -28,7 +28,7 @@ router.get('/status', userReadLimiter, getStorageStatus);
 router.get('/health', userReadLimiter, getStorageHealth);
 
 router.get('/google/connect', oauthLimiter, requirePrimaryAdmin, googleConnect);
-router.get('/google/callback', oauthLimiter, requirePrimaryAdmin, googleCallback);
+router.get('/google/callback', oauthLimiter, googleCallback);
 router.post('/google/confirm-drive', oauthLimiter, requirePrimaryAdmin, googleConfirmDrive);
 
 router.get('/configuration', userReadLimiter, getStorageConfiguration);
