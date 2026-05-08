@@ -12,8 +12,16 @@ export function RequestDocumentsModal({
   const [requirePin, setRequirePin] = useState(false);
   const [sendEmail, setSendEmail] = useState(true);
   const [showPin, setShowPin] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const expiresInLabel = useMemo(() => (expiry === '7d' ? '7 days' : '24 hours'), [expiry]);
+
+  const handleCopy = () => {
+    if (!generatedLink?.link) return;
+    navigator.clipboard.writeText(generatedLink.link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   if (!isOpen) return null;
 
@@ -53,15 +61,27 @@ export function RequestDocumentsModal({
         </div>
 
         {generatedLink ? (
-          <div style={styles.resultBox}>
+          <div style={styles.resultBox} aria-live="polite">
             <p style={styles.resultTitle}>Upload link ready</p>
             <p style={styles.mono}>{generatedLink.link}</p>
-            <button type="button" style={styles.copyBtn} onClick={() => navigator.clipboard.writeText(generatedLink.link)}>
-              Copy link
+            <button type="button" style={styles.copyBtn} onClick={handleCopy}>
+              {copied ? (
+                <>
+                  <span aria-hidden="true" style={{ color: '#059669', marginRight: 4 }}>✓</span>
+                  Copied!
+                </>
+              ) : (
+                'Copy link'
+              )}
             </button>
             {generatedLink.pin ? (
               <div style={{ marginTop: 8 }}>
-                <button type="button" style={styles.copyBtn} onClick={() => setShowPin((prev) => !prev)}>
+                <button
+                  type="button"
+                  style={styles.copyBtn}
+                  onClick={() => setShowPin((prev) => !prev)}
+                  aria-pressed={showPin}
+                >
                   {showPin ? 'Hide PIN' : 'Show PIN'}
                 </button>
                 <p style={styles.hint}>PIN: {showPin ? generatedLink.pin : '••••'}</p>
