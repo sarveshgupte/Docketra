@@ -56,13 +56,15 @@ If frontend and backend run on different origins, ensure auth cookie config supp
 ## 3) Runtime behavior
 - Default mode is Docketra-managed storage.
 - BYOS providers can be changed from Storage Settings (OTP verification required).
-- Folder layout for new case attachments:
-  - `/Docketra/{firmName}/Cases/{caseId}/Attachments/` (**canonical, current**)
+- Folder layout after OAuth connect root provisioning:
+  - `Docketra-<firmId>` root folder (current default behavior in `saveUserDriveConnection()`).
+- Folder layout for advanced/manual drive confirmation flow:
+  - `/Docketra/{firmName}/Cases/{caseId}/Attachments/` (used when drive context is explicitly confirmed).
 - Folder layout for backups:
   - `/Docketra/{firmId}/Backups/` (provider folder)
   - logical object key reference: `backups/nightly/YYYY-MM-DD/<jobId>.zip.enc`
 - Existing legacy attachments using `driveFileId` remain readable.
-- Legacy Google-only folder names like `Docketra-<firmId>` may exist from older connections; they are supported but not used as the new canonical naming convention.
+- `Docketra-<firmId>` is currently the standard OAuth-connect root naming behavior and remains fully supported.
 
 ### `googleConfirmDrive` endpoint intent
 - `POST /api/storage/google/confirm-drive` is an **advanced/manual** endpoint for selecting a specific Drive/shared drive context after OAuth is already connected.
