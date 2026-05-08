@@ -803,12 +803,36 @@ async function handleUserDeactivation({ firmId, userXID }) {
 
   let moved = 0;
   let skipped = 0;
+  // ⚡ Bolt Performance Optimization:
+  // Instead of fetching categories and teams one by one in a loop (N+1 queries),
+  // we first collect all needed category names, fetch them concurrently in a batch,
+  // then gather all required workbasket IDs, and fetch the teams in a batch.
+  // This reduces the number of database roundtrips from O(N) to O(1).
+  const categoryNames = [...new Set(assigned.map(d => d.category).filter(Boolean))];
+  const categoriesArr = await Category.find({ firmId, name: { $in: categoryNames }, isActive: true }).lean();
+  const categoryMap = new Map(categoriesArr.map(c => [c.name, c]));
+
+  const workbasketIdsToFetch = new Set();
+  const docketToMappedId = new Map();
+
   for (const docket of assigned) {
-    const category = await Category.findOne({ firmId, name: docket.category, isActive: true }).lean();
+    const category = categoryMap.get(docket.category);
+    if (!category) continue;
     const sub = (category?.subcategories || []).find((entry) => entry?.isActive && (entry.id === docket.subcategoryId || entry.name === docket.subcategory || entry.name === docket.caseSubCategory));
     const mappedId = sub?.workbasketId;
+    if (mappedId) {
+      workbasketIdsToFetch.add(mappedId);
+      docketToMappedId.set(docket._id.toString(), mappedId);
+    }
+  }
+
+  const teamsArr = await Team.find({ _id: { $in: Array.from(workbasketIdsToFetch) }, firmId, isActive: true, type: 'PRIMARY' }).lean();
+  const teamMap = new Map(teamsArr.map(t => [t._id.toString(), t]));
+
+  for (const docket of assigned) {
+    const mappedId = docketToMappedId.get(docket._id.toString());
     if (!mappedId) { skipped += 1; continue; }
-    const mappedWb = await Team.findOne({ _id: mappedId, firmId, isActive: true, type: 'PRIMARY' }).lean();
+    const mappedWb = teamMap.get(mappedId.toString());
     if (!mappedWb) { skipped += 1; continue; }
 
     const result = await Case.updateOne(
