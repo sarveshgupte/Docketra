@@ -82,6 +82,8 @@ async function run() {
   assert.strictEqual(refreshRes.state.body.success, true);
   assert.strictEqual(Object.prototype.hasOwnProperty.call(refreshRes.state.body, 'refreshToken'), false);
   assert.strictEqual(refreshRes.state.cookies.some((c) => c.name === 'refreshToken'), true);
+  const refreshCookie = refreshRes.state.cookies.find((c) => c.name === 'refreshToken');
+  assert(refreshCookie.options.maxAge >= 3 * 60 * 60 * 1000, 'refresh cookie maxAge must be at least 3 hours');
 
   refreshStore.set('hash:expired', {
     tokenHash: 'hash:expired',
