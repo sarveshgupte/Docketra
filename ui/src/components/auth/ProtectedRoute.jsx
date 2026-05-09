@@ -14,6 +14,7 @@ import { RouteLoadingShell } from '../routing/RouteLoadingShell';
 import { ROUTES } from '../../constants/routes.js';
 import { AUTH_STATES } from '../../contexts/AuthContext.jsx';
 import { appendReturnTo, buildReturnTo } from '../../utils/authRedirect.js';
+import { canManageClients, isFirmAdminOrAbove } from '../../utils/permissions.js';
 
 // Use sessionStorage to persist toasts across redirects in auth guard flows.
 const setAccessToast = (message) => {
@@ -99,18 +100,13 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
   }
 
   // 5. Admin-only route authorization
-  if (requireAdmin && !isAdmin) {
+  if (requireAdmin && !isAdmin && !isFirmAdminOrAbove(user)) {
     setAccessToast('Admin access is required to view that page.');
     return <Navigate to={ROUTES.DASHBOARD(effectiveFirmSlug)} replace />;
   }
 
   if (requireClientManage) {
-    const normalizedRole = String(user?.role || '').trim().toUpperCase();
-    const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
-    const canManageClients = ['PRIMARY_ADMIN', 'ADMIN', 'MANAGER'].includes(normalizedRole)
-      || permissions.includes('CLIENT_MANAGE')
-      || permissions.includes('CLIENT_CREATE');
-    if (!canManageClients) {
+    if (!canManageClients(user)) {
       setAccessToast('Client management access is required to view that page.');
       return <Navigate to={ROUTES.DASHBOARD(effectiveFirmSlug)} replace />;
     }

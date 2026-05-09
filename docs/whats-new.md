@@ -664,3 +664,7 @@
 - Added deterministic, firm-scoped docket category/subcategory suggestions in guided docket creation (assistive only, explicit apply required).
 
 - Docketra-managed storage default now supports Google Drive service-account fallback when BYOS is not connected.
+
+## May 2026: Firm role hierarchy standardization
+
+- Standardized firm role hierarchy so Primary Admin inherits Admin/Manager access, Admin inherits Manager access, and client-management permissions are enforced consistently.
