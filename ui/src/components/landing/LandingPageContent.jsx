@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import PublicMarketingHeader from '../marketing/PublicMarketingHeader';
 import { motion } from 'framer-motion';
 import Container from '../../components/layout/Container';
 
@@ -10,102 +11,6 @@ const REVEAL = {
   whileInView: { opacity: 1, y: 0 },
   transition: { duration: 0.4, ease: 'easeOut' },
   viewport: { once: true, amount: 0.15 },
-};
-
-/* ─────────────────────────────────────────────
-   NAV
-───────────────────────────────────────────── */
-const HomeNav = ({ onNav }) => {
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  const navLinks = [
-    { label: 'Why', id: 'why' },
-    { label: 'Product', id: 'product' },
-    { label: 'Workflow', id: 'workflow' },
-    { label: 'Pilot readiness', id: 'pilot-readiness' },
-    { label: 'Trust', id: 'trust' },
-  ];
-
-  return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-xl">
-      <Container>
-        <nav className="flex h-16 items-center justify-between" aria-label="Main navigation">
-          <Link to="/" className="flex items-center gap-2 font-bold text-slate-900 text-lg tracking-tight">
-            Docketra
-          </Link>
-
-          {/* Desktop links */}
-          <ul className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
-            {navLinks.map(({ label, id }) => (
-              <li key={id}>
-                <button
-                  type="button"
-                  onClick={() => onNav(id)}
-                  className="hover:text-slate-900 transition-colors"
-                >
-                  {label}
-                </button>
-              </li>
-            ))}
-          </ul>
-
-          <div className="hidden md:flex items-center gap-3">
-            <Link to="/find-workspace" className="text-sm font-medium text-slate-600 hover:text-slate-900">Workspace login</Link>
-            <Link
-              to="/signup"
-              className="inline-flex items-center justify-center h-9 px-5 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-700 transition-colors shadow-sm"
-            >
-              Start managing work
-            </Link>
-          </div>
-
-          {/* Mobile menu toggle */}
-          <button
-            type="button"
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={menuOpen}
-            className="md:hidden p-2 rounded-md text-slate-600 hover:bg-slate-100"
-            onClick={() => setMenuOpen((o) => !o)}
-          >
-            <span className="block w-5 h-0.5 bg-current mb-1" />
-            <span className="block w-5 h-0.5 bg-current mb-1" />
-            <span className="block w-5 h-0.5 bg-current" />
-          </button>
-        </nav>
-
-        {/* Mobile menu */}
-        {menuOpen && (
-          <div className="md:hidden border-t border-slate-100 pb-4 pt-2">
-            <ul className="flex flex-col gap-1">
-              {navLinks.map(({ label, id }) => (
-                <li key={id}>
-                  <button
-                    type="button"
-                    onClick={() => { onNav(id); setMenuOpen(false); }}
-                    className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-md"
-                  >
-                    {label}
-                  </button>
-                </li>
-              ))}
-              <li className="mt-2 px-4">
-                <Link to="/find-workspace" className="block text-center h-9 leading-9 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors" onClick={() => setMenuOpen(false)}>Workspace login</Link>
-              </li>
-              <li className="mt-2 px-4">
-                <Link
-                  to="/signup"
-                  className="block text-center h-9 leading-9 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-700 transition-colors"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Start managing work
-                </Link>
-              </li>
-            </ul>
-          </div>
-        )}
-      </Container>
-    </header>
-  );
 };
 
 /* ─────────────────────────────────────────────
@@ -698,7 +603,7 @@ export const LandingPageContent = () => {
 
   return (
     <div className="w-full bg-white text-slate-900 antialiased">
-      <HomeNav onNav={handleSectionNavigation} />
+      <PublicMarketingHeader />
       <HeroSection onExplore={() => handleSectionNavigation('why')} />
       <ProblemSection />
       <SolutionSection />
