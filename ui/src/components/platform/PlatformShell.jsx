@@ -115,7 +115,10 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   const role = String(user?.role || 'USER').toUpperCase();
   const hasAdminAccess = hasAtLeastRole(role, 'ADMIN');
   const hasQcQueueAccess = hasAdminAccess || (Array.isArray(user?.qcWorkbaskets) && user.qcWorkbaskets.length > 0);
-  const navSections = useMemo(() => getPlatformNavigation(firmSlug, role), [firmSlug, role]);
+  const navSections = useMemo(
+    () => getPlatformNavigation(firmSlug, { role, permissions: user?.permissions }),
+    [firmSlug, role, user?.permissions]
+  );
   const userName = user?.name || user?.xID || 'User';
   const currentNavItem = useMemo(
     () => navSections.flatMap((section) => section.items).find((item) => isNavItemActive(pathname, item)),
@@ -247,7 +250,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
 
   const commandSections = useMemo(() => {
     const navigationItems = [
-      ...getPlatformDestinationCommands(firmSlug, role).map((item) => ({
+      ...getPlatformDestinationCommands(firmSlug, { role, permissions: user?.permissions }).map((item) => ({
         id: item.id,
         label: item.label,
         description: item.description,

@@ -1,4 +1,5 @@
 import { ROUTES } from './routes';
+import { canManageClients } from '../utils/permissions';
 
 const roleRank = { USER: 1, MANAGER: 2, ADMIN: 3, PRIMARY_ADMIN: 4 };
 
@@ -126,22 +127,42 @@ const toResolvedNavItem = (item, firmSlug) => ({
   excludeActiveFor: typeof item.excludeActiveFor === 'function' ? item.excludeActiveFor(firmSlug) : item.excludeActiveFor,
 });
 
-export const getPlatformNavigation = (firmSlug, role = 'USER') => (
+const resolveAccessContext = (roleOrUser = 'USER', permissions = []) => {
+  if (roleOrUser && typeof roleOrUser === 'object' && !Array.isArray(roleOrUser)) {
+    return roleOrUser;
+  }
+  return { role: roleOrUser, permissions };
+};
+
+export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions = []) => {
+  const accessContext = resolveAccessContext(roleOrUser, permissions);
+  const normalizedRole = String(accessContext?.role || 'USER').toUpperCase();
+  return (
   NAV_BLUEPRINT
     .map((section) => ({
       section: section.section,
       items: section.items
-        .filter((item) => !item.minRole || hasAtLeastRole(role, item.minRole))
+        .filter((item) => {
+          if (item.id === 'clients') return canManageClients(accessContext);
+          return !item.minRole || hasAtLeastRole(normalizedRole, item.minRole);
+        })
         .map((item) => toResolvedNavItem(item, firmSlug)),
     }))
     .filter((section) => section.items.length > 0)
-);
+  );
+};
 
-export const getPlatformDestinationCommands = (firmSlug, role = 'USER') => (
+export const getPlatformDestinationCommands = (firmSlug, roleOrUser = 'USER', permissions = []) => {
+  const accessContext = resolveAccessContext(roleOrUser, permissions);
+  const normalizedRole = String(accessContext?.role || 'USER').toUpperCase();
+  return (
   NAV_BLUEPRINT
     .flatMap((section) => section.items)
     .filter((item) => item.command)
-    .filter((item) => !item.minRole || hasAtLeastRole(role, item.minRole))
+    .filter((item) => {
+      if (item.id === 'clients') return canManageClients(accessContext);
+      return !item.minRole || hasAtLeastRole(normalizedRole, item.minRole);
+    })
     .map((item) => ({
       id: item.command.id,
       label: item.command.label,
@@ -149,7 +170,8 @@ export const getPlatformDestinationCommands = (firmSlug, role = 'USER') => (
       shortcut: item.command.shortcut,
       to: item.route(firmSlug),
     }))
-);
+  );
+};
 
 export const PLATFORM_SHORTCUT_ROUTES = {
   n: (firmSlug) => ROUTES.CREATE_CASE(firmSlug),

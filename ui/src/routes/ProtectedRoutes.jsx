@@ -246,7 +246,7 @@ export const ProtectedRoutes = () => (
         <Route
           path="clients"
           element={(
-            <ProtectedRoute>
+            <ProtectedRoute requireClientManage>
               <ClientsPage />
             </ProtectedRoute>
           )}
