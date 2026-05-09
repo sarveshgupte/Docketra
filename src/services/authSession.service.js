@@ -1,6 +1,7 @@
 const log = require('../utils/log');
 const { getCookieValue } = require('../utils/requestCookies');
 const { REASON_CODES, logPilotEvent } = require('./pilotDiagnostics.service');
+const { SESSION_IDLE_TIMEOUT_MS } = require('../config/session.config');
 
 const isProduction = () => process.env.NODE_ENV === 'production';
 const resolveCookieCrossSiteMode = () => String(process.env.AUTH_COOKIE_CROSS_SITE || '').trim().toLowerCase() === 'true';
@@ -69,9 +70,10 @@ const getAuthCookieRuntimeDiagnostics = () => {
 const setAuthCookies = (res, { accessToken, refreshToken, refreshMaxAge } = {}) => {
   if (!res || typeof res.cookie !== 'function') return;
   const fifteenMinutesMs = 15 * 60 * 1000;
-  const refreshMs = typeof refreshMaxAge === 'number'
+  const configuredRefreshMs = typeof refreshMaxAge === 'number'
     ? refreshMaxAge
     : Number(process.env.JWT_REFRESH_EXPIRES_MS || 7 * 24 * 60 * 60 * 1000);
+  const refreshMs = Math.max(configuredRefreshMs, SESSION_IDLE_TIMEOUT_MS);
 
   if (accessToken) {
     res.cookie('accessToken', accessToken, getAuthCookieOptions({ maxAge: fifteenMinutesMs }));
