@@ -9,6 +9,12 @@ module.exports = {
   'GET /:id': {
     params: z.object({ id: z.union([objectIdString, nonEmptyString]) }),
   },
+  'POST /suggest-docket-category': {
+    body: z.object({
+      title: z.string().trim().max(2000).optional(),
+      description: z.string().trim().max(4000).optional(),
+    }).passthrough(),
+  },
   'POST /': {
     body: z.object({
       name: nonEmptyString,

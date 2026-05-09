@@ -102,6 +102,7 @@ export const caseApi = {
   createDocket: async (docketData, forceCreate = false) => {
     return request((http) => http.post('/dockets', { ...docketData, forceCreate }), 'Failed to create docket');
   },
+  suggestDocketCategory: (payload = {}) => request((http) => http.post('/categories/suggest-docket-category', payload), 'Failed to suggest category'),
 
   createCase: (caseData, forceCreate = false) => caseApi.createDocket(caseData, forceCreate),
 

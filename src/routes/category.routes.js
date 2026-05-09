@@ -15,6 +15,7 @@ const {
   updateSubcategory,
   toggleSubcategoryStatus,
   deleteSubcategory,
+  suggestCategory,
 } = require('../controllers/category.controller');
 
 /**
@@ -30,6 +31,7 @@ const {
 
 router.get('/', ...firmReadAccess, authorizeFirmPermission('CATEGORY_VIEW'), getCategories);
 
+router.post('/suggest-docket-category', ...firmReadAccess, authorizeFirmPermission('CATEGORY_VIEW'), suggestCategory);
 router.get('/:id', ...firmReadAccess, authorizeFirmPermission('CATEGORY_VIEW'), getCategoryById);
 
 // Legacy admin-only aliases retained for backward compatibility.

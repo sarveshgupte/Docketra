@@ -6,6 +6,7 @@ const { parseBooleanQuery } = require('../utils/query.utils');
 const { logAuthEvent } = require('../services/audit.service');
 const log = require('../utils/log');
 const { validateCategoryMappedWorkbasket } = require('../services/categoryWorkbasketValidation.service');
+const { suggestDocketCategory } = require('../services/docketCategorySuggestion.service');
 
 /**
  * Category Controller for Admin-Managed Categories
@@ -699,6 +700,30 @@ const deleteSubcategory = async (req, res) => {
   }
 };
 
+
+const suggestCategory = async (req, res) => {
+  try {
+    const firmScope = resolveCategoryFirmScope(req, res);
+    if (!firmScope) return;
+    const title = String(req.body?.title || '');
+    const description = String(req.body?.description || '');
+    if (title.length > 2000 || description.length > 4000) {
+      return res.status(413).json({ success: false, message: 'Input payload too large.' });
+    }
+    const categories = await Category.find({ ...firmScope, isActive: true }).select('_id name isActive subcategories').lean();
+    const result = suggestDocketCategory({
+      firmId: req.user?.firmId,
+      title,
+      description,
+      categories,
+    });
+    return res.json({ success: true, data: result });
+  } catch (error) {
+    log.error('[CATEGORY] Suggestion lookup failed', error.message);
+    return res.status(500).json({ success: false, message: 'Failed to suggest category' });
+  }
+};
+
 module.exports = {
   getCategories,
   getCategoryById,
@@ -710,4 +735,5 @@ module.exports = {
   updateSubcategory: wrapWriteHandler(updateSubcategory),
   toggleSubcategoryStatus: wrapWriteHandler(toggleSubcategoryStatus),
   deleteSubcategory: wrapWriteHandler(deleteSubcategory),
+  suggestCategory,
 };
