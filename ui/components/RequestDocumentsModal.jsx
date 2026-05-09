@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 
 export function RequestDocumentsModal({
   isOpen,
@@ -13,14 +13,38 @@ export function RequestDocumentsModal({
   const [sendEmail, setSendEmail] = useState(true);
   const [showPin, setShowPin] = useState(false);
   const [copied, setCopied] = useState(false);
+  const copyTimeoutRef = useRef(null);
 
   const expiresInLabel = useMemo(() => (expiry === '7d' ? '7 days' : '24 hours'), [expiry]);
 
-  const handleCopy = () => {
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleCopy = async () => {
     if (!generatedLink?.link) return;
-    navigator.clipboard.writeText(generatedLink.link);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(generatedLink.link);
+        setCopied(true);
+        if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+        copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
+      } else {
+        // Fallback or error state
+        setCopied('failed');
+        if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+        copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
+      }
+    } catch (err) {
+      setCopied('failed');
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   if (!isOpen) return null;
@@ -65,7 +89,12 @@ export function RequestDocumentsModal({
             <p style={styles.resultTitle}>Upload link ready</p>
             <p style={styles.mono}>{generatedLink.link}</p>
             <button type="button" style={styles.copyBtn} onClick={handleCopy}>
-              {copied ? (
+              {copied === 'failed' ? (
+                <>
+                  <span aria-hidden="true" style={{ color: '#dc2626', marginRight: 4 }}>✕</span>
+                  Copy failed
+                </>
+              ) : copied ? (
                 <>
                   <span aria-hidden="true" style={{ color: '#059669', marginRight: 4 }}>✓</span>
                   Copied!
