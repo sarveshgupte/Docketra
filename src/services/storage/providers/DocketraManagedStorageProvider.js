@@ -36,6 +36,13 @@ class DocketraManagedStorageProvider extends GoogleDriveProvider {
     this.rootFolderId = rootFolderId;
     this.firmId = normalizedFirmId;
   }
+
+
+  async getOrCreateFolder(parentFolderId = null, folderName) {
+    const resolvedParentFolderId = parentFolderId || this.rootFolderId;
+    return super.getOrCreateFolder(resolvedParentFolderId, folderName);
+  }
 }
+
 
 module.exports = DocketraManagedStorageProvider;
