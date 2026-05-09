@@ -16,7 +16,7 @@
 - Hardened Google Drive BYOS callback reliability for cross-origin frontend/backend deployments by adding safe `session_missing` recovery redirects when callback auth/session context is unavailable.
 - Ensured OAuth callback state failure handling clears the state cookie and keeps error responses user-safe (no raw auth stack traces or token leakage).
 - Added/expanded regression coverage for callback success, invalid state cookie clearing, session-missing safe redirects, and connect-time invalid OAuth env returning safe `503`.
-- Documented canonical Google Drive folder naming as `/Docketra/{firmName}/...` and clarified `googleConfirmDrive` as advanced/manual drive-selection behavior.
+- Documented managed Google Drive folder naming under `DRIVE_ROOT_FOLDER_ID/firm_<firmId>/...` and clarified `googleConfirmDrive` as advanced/manual BYOS drive-selection behavior.
 
 ## May 2026: Task Manager launch-readiness audit pass
 
@@ -662,3 +662,5 @@
 - Hardened action visibility so routed, QC, unassigned workbasket, and terminal dockets do not show confusing lifecycle actions.
 - Improved clone, CFS, and overview helper copy while keeping backend lifecycle rules unchanged.
 - Added deterministic, firm-scoped docket category/subcategory suggestions in guided docket creation (assistive only, explicit apply required).
+
+- Docketra-managed storage default now supports Google Drive service-account fallback when BYOS is not connected.

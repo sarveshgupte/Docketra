@@ -74,7 +74,7 @@ class CFSDriveService {
 
     const provider = providerInstance;
     const folderName = `firm_${firmId}`;
-    const folderId = await provider.getOrCreateFolder(folderName, null);
+    const folderId = await provider.getOrCreateFolder(null, folderName);
     
     return folderId;
   }
@@ -115,15 +115,15 @@ class CFSDriveService {
 
       // Step 2: Create CFS root folder for this case
       const cfsRootName = `cfs_${caseId}`;
-      const cfsRootFolderId = await provider.getOrCreateFolder(cfsRootName, firmFolderId);
+      const cfsRootFolderId = await provider.getOrCreateFolder(firmFolderId, cfsRootName);
 
       // Step 3: Create all subfolders in parallel
       const [attachmentsFolderId, documentsFolderId, evidenceFolderId, internalFolderId] = 
         await Promise.all([
-          provider.getOrCreateFolder(CFSDriveService.CFS_SUBFOLDERS.ATTACHMENTS, cfsRootFolderId),
-          provider.getOrCreateFolder(CFSDriveService.CFS_SUBFOLDERS.DOCUMENTS, cfsRootFolderId),
-          provider.getOrCreateFolder(CFSDriveService.CFS_SUBFOLDERS.EVIDENCE, cfsRootFolderId),
-          provider.getOrCreateFolder(CFSDriveService.CFS_SUBFOLDERS.INTERNAL, cfsRootFolderId),
+          provider.getOrCreateFolder(cfsRootFolderId, CFSDriveService.CFS_SUBFOLDERS.ATTACHMENTS),
+          provider.getOrCreateFolder(cfsRootFolderId, CFSDriveService.CFS_SUBFOLDERS.DOCUMENTS),
+          provider.getOrCreateFolder(cfsRootFolderId, CFSDriveService.CFS_SUBFOLDERS.EVIDENCE),
+          provider.getOrCreateFolder(cfsRootFolderId, CFSDriveService.CFS_SUBFOLDERS.INTERNAL),
         ]);
 
       const folderIds = {
@@ -248,19 +248,19 @@ class CFSDriveService {
 
       // Step 2: Create client root folder
       const clientRootName = `client_${clientId}`;
-      const clientRootFolderId = await provider.getOrCreateFolder(clientRootName, firmFolderId);
+      const clientRootFolderId = await provider.getOrCreateFolder(firmFolderId, clientRootName);
 
       // Step 3: Create CFS root folder for this client
-      const cfsRootFolderId = await provider.getOrCreateFolder('cfs', clientRootFolderId);
+      const cfsRootFolderId = await provider.getOrCreateFolder(clientRootFolderId, 'cfs');
 
       // Step 4: Create all subfolders in parallel
       const [documentsFolderId, contractsFolderId, identityFolderId, financialsFolderId, internalFolderId] = 
         await Promise.all([
-          provider.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.DOCUMENTS, cfsRootFolderId),
-          provider.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.CONTRACTS, cfsRootFolderId),
-          provider.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.IDENTITY, cfsRootFolderId),
-          provider.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.FINANCIALS, cfsRootFolderId),
-          provider.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.INTERNAL, cfsRootFolderId),
+          provider.getOrCreateFolder(cfsRootFolderId, CFSDriveService.CLIENT_CFS_SUBFOLDERS.DOCUMENTS),
+          provider.getOrCreateFolder(cfsRootFolderId, CFSDriveService.CLIENT_CFS_SUBFOLDERS.CONTRACTS),
+          provider.getOrCreateFolder(cfsRootFolderId, CFSDriveService.CLIENT_CFS_SUBFOLDERS.IDENTITY),
+          provider.getOrCreateFolder(cfsRootFolderId, CFSDriveService.CLIENT_CFS_SUBFOLDERS.FINANCIALS),
+          provider.getOrCreateFolder(cfsRootFolderId, CFSDriveService.CLIENT_CFS_SUBFOLDERS.INTERNAL),
         ]);
 
       const folderIds = {
@@ -448,7 +448,6 @@ class CFSDriveService {
       const duplicateCount = await Attachment.countDocuments({
         driveFileId: attachment.driveFileId,
         _id: { $ne: attachment._id },
-        deletedAt: null // Ensure we only count active attachments
       });
 
       const caseFileCount = await CaseFile.countDocuments({

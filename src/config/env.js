@@ -75,6 +75,11 @@ const envSchema = z
     DISABLE_GOOGLE_AUTH: boolFromEnv,
     ENABLE_EXTERNAL_STORAGE: boolFromEnv,
 
+    MANAGED_STORAGE_PROVIDER: z.string().trim().optional(),
+    DRIVE_ROOT_FOLDER_ID: z.string().trim().optional(),
+    MANAGED_GOOGLE_CLIENT_EMAIL: z.string().trim().optional(),
+    MANAGED_GOOGLE_PRIVATE_KEY: z.string().trim().optional(),
+
     ENCRYPTION_PROVIDER: z.string().trim().optional().default('local'),
     MASTER_ENCRYPTION_KEY: z.string().trim().optional(),
 
@@ -162,6 +167,18 @@ const envSchema = z
       }
       if (env.SMTP_FROM && !env.SMTP_PASS) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['SMTP_PASS'], message: 'required when SMTP_FROM is configured in production' });
+      }
+
+
+      if (String(env.MANAGED_STORAGE_PROVIDER || '').toLowerCase() === 'google_drive') {
+        ['DRIVE_ROOT_FOLDER_ID', 'MANAGED_GOOGLE_CLIENT_EMAIL', 'MANAGED_GOOGLE_PRIVATE_KEY'].forEach((key) => {
+          if (!env[key]) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: [key], message: 'required when MANAGED_STORAGE_PROVIDER=google_drive' });
+          }
+        });
+        if (env.MANAGED_GOOGLE_PRIVATE_KEY && !String(env.MANAGED_GOOGLE_PRIVATE_KEY).includes('PRIVATE KEY')) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['MANAGED_GOOGLE_PRIVATE_KEY'], message: 'must look like a valid private key block' });
+        }
       }
 
       const googleStorageEnabled = isExternalStorageEnabled(env);
