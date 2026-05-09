@@ -3,14 +3,22 @@
  */
 
 import { USER_ROLES } from './constants.js';
+export {
+  normalizeFirmRole,
+  getFirmRoleRank,
+  hasFirmRoleAtLeast,
+  isPrimaryAdmin,
+  isFirmAdminOrAbove,
+  isFirmManagerOrAbove,
+} from './roleHierarchy.js';
+import { canManageClientsByRoleOrPermission, isFirmAdminUser } from './firmAccess.js';
 
 export const isSuperadmin = (user) => {
   return user?.role === USER_ROLES.SUPER_ADMIN;
 };
 
 export const isAdmin = (user) => {
-  const normalizedRole = String(user?.role || '').trim().toUpperCase();
-  return user?.role === USER_ROLES.ADMIN || normalizedRole === 'PRIMARY_ADMIN';
+  return user?.role === USER_ROLES.ADMIN || isFirmAdminUser(user);
 };
 
 export const isEmployee = (user) => {
@@ -71,8 +79,5 @@ export const canCloneCase = (user) => {
 };
 
 export const canManageClients = (user) => {
-  const normalizedRole = String(user?.role || '').trim().toUpperCase();
-  if (normalizedRole === 'PRIMARY_ADMIN' || normalizedRole === 'ADMIN' || normalizedRole === 'MANAGER') return true;
-  const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
-  return permissions.includes('CLIENT_MANAGE') || permissions.includes('CLIENT_CREATE');
+  return canManageClientsByRoleOrPermission(user);
 };

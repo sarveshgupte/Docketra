@@ -12,9 +12,7 @@ const platformShellSource = fs.readFileSync(path.join(uiRoot, 'ui', 'src', 'comp
 assert(navSource.includes("if (item.id === 'clients') return canManageClients(accessContext);"));
 assert(navSource.includes('resolveAccessContext'));
 assert(protectedRouteSource.includes('requireClientManage = false'));
-assert(protectedRouteSource.includes("['PRIMARY_ADMIN', 'ADMIN', 'MANAGER'].includes(normalizedRole)"));
-assert(protectedRouteSource.includes("permissions.includes('CLIENT_MANAGE')"));
-assert(protectedRouteSource.includes("permissions.includes('CLIENT_CREATE')"));
+assert(protectedRouteSource.includes('canManageClients(user)'));
 assert(protectedRoutesSource.includes('<ProtectedRoute requireClientManage>'));
 assert(clientsPageSource.includes('canManageClientsByRoleOrPermission(user)'));
 assert(clientsPageSource.includes('actions={canManageClients ? ('));
