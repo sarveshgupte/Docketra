@@ -39,8 +39,8 @@ const svc = require('../src/services/docketWorkflow.service');
   const originalInfo = console.info;
   console.info = (...args) => { logPayload = args; };
   CaseMock.find = () => ({ lean: async () => ([{ _id: '2', category: 'Cat', subcategoryId: 'SUB1', status: 'ASSIGNED' }]) });
-  CategoryMock.findOne = () => ({ lean: async () => ({ firmId: 'F1', name: 'Cat', isActive: true, subcategories: [{ id: 'SUB1', isActive: true, workbasketId: 'WB1' }] }) });
-  TeamMock.findOne = () => ({ lean: async () => ({ _id: 'WB1', firmId: 'F1', isActive: true, type: 'PRIMARY' }) });
+  CategoryMock.find = () => ({ lean: async () => ([{ firmId: 'F1', name: 'Cat', isActive: true, subcategories: [{ id: 'SUB1', isActive: true, workbasketId: 'WB1' }] }]) });
+  TeamMock.find = () => ({ lean: async () => ([{ _id: 'WB1', firmId: 'F1', isActive: true, type: 'PRIMARY' }]) });
   const out = await svc.handleUserDeactivation({ firmId: 'F1', userXID: 'x1' });
   console.info = originalInfo;
 

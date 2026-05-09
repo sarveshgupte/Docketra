@@ -33,3 +33,7 @@
 **Learning:** Found several endpoints executing sequential `countDocuments()` and `find()` or concurrent `Promise.all([find(...), countDocuments(...)])`. This adds database load via index scans for counts and wastes network round-trips.
 **Action:** Replaced sequential or concurrent `countDocuments()` queries with `find().limit(MAX + 1)` wherever pagination or a fixed hard cap makes an exact total count unneeded beyond checking if a next page or limit breach exists. This bypasses the need for the `countDocuments` index scan entirely.
 ## 2026-05-03 - Concurrent Document Fetch in Create Service\n**Learning:** When validating multiple optional or independent entity IDs from a request body (e.g., dealId, docketId), sequential database fetch causes high API response time.\n**Action:** Use Promise.all() for concurrent fetch instead of individual await statements.
+
+## 2026-05-08 - Prevent N+1 loops in user deactivation logic
+**Learning:** In user deactivation, iterating over a large array of dockets and waiting for sequential category and team lookups (with multiple `findOne` queries) incurs high database network latency when many cases are assigned to a single user.
+**Action:** Replaced sequential `findOne` lookup in a loop with two concurrent query strategies. First, collected all unique category names and retrieved them using `$in`. Then mapped category subcategories to necessary team IDs, deduped the IDs, and retrieved all necessary workbasket Teams via an `$in` query. This eliminates N+1 latency.
