@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useParams } from 'react-router-dom';
 import { publicFormsApi } from '../api/forms.api';
+import { generateSecureRandomString } from '../utils/crypto';
 
 const DEFAULT_FIELDS = [
   { key: 'name', label: 'Name', type: 'text', required: true },
@@ -10,10 +11,7 @@ const DEFAULT_FIELDS = [
 const HONEYPOT_KEY = 'website';
 
 const createSubmissionKey = () => {
-  if (typeof window !== 'undefined' && window.crypto?.randomUUID) {
-    return window.crypto.randomUUID();
-  }
-  return `submission-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return `submission-${Date.now()}-${generateSecureRandomString(8)}`;
 };
 
 const normalizeFieldKey = (value) => String(value || '').trim();

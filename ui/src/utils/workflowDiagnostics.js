@@ -1,4 +1,5 @@
 import { safeConsole } from './safeConsole';
+import { generateSecureRandomString } from './crypto';
 
 const MAX_EVENTS = 80;
 const WARN_TTL_MS = 20000;
@@ -9,7 +10,7 @@ const warningKeys = new Map();
 const nowIso = () => new Date().toISOString();
 
 export const createCorrelationId = (workflow = 'workflow') => {
-  const suffix = Math.random().toString(36).slice(2, 10);
+  const suffix = generateSecureRandomString(8);
   return `${workflow}-${Date.now()}-${suffix}`;
 };
 
