@@ -1,4 +1,5 @@
 import { ROUTES } from './routes';
+import { canManageClients } from '../utils/permissions';
 
 const roleRank = { USER: 1, MANAGER: 2, ADMIN: 3, PRIMARY_ADMIN: 4 };
 
@@ -131,7 +132,10 @@ export const getPlatformNavigation = (firmSlug, role = 'USER') => (
     .map((section) => ({
       section: section.section,
       items: section.items
-        .filter((item) => !item.minRole || hasAtLeastRole(role, item.minRole))
+        .filter((item) => {
+          if (item.id === 'clients') return canManageClients({ role });
+          return !item.minRole || hasAtLeastRole(role, item.minRole);
+        })
         .map((item) => toResolvedNavItem(item, firmSlug)),
     }))
     .filter((section) => section.items.length > 0)
@@ -141,7 +145,10 @@ export const getPlatformDestinationCommands = (firmSlug, role = 'USER') => (
   NAV_BLUEPRINT
     .flatMap((section) => section.items)
     .filter((item) => item.command)
-    .filter((item) => !item.minRole || hasAtLeastRole(role, item.minRole))
+    .filter((item) => {
+      if (item.id === 'clients') return canManageClients({ role });
+      return !item.minRole || hasAtLeastRole(role, item.minRole);
+    })
     .map((item) => ({
       id: item.command.id,
       label: item.command.label,

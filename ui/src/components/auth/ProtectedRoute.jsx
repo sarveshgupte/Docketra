@@ -23,7 +23,7 @@ const setAccessToast = (message) => {
   }));
 };
 
-export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadmin = false }) => {
+export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadmin = false, requireClientManage = false }) => {
   const { isAuthenticated, isAuthResolved, user, authState } = useAuth();
   const { isAdmin } = usePermissions();
   const location = useLocation();
@@ -102,6 +102,18 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
   if (requireAdmin && !isAdmin) {
     setAccessToast('Admin access is required to view that page.');
     return <Navigate to={ROUTES.DASHBOARD(effectiveFirmSlug)} replace />;
+  }
+
+  if (requireClientManage) {
+    const normalizedRole = String(user?.role || '').trim().toUpperCase();
+    const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
+    const canManageClients = ['PRIMARY_ADMIN', 'ADMIN', 'MANAGER'].includes(normalizedRole)
+      || permissions.includes('CLIENT_MANAGE')
+      || permissions.includes('CLIENT_CREATE');
+    if (!canManageClients) {
+      setAccessToast('Client management access is required to view that page.');
+      return <Navigate to={ROUTES.DASHBOARD(effectiveFirmSlug)} replace />;
+    }
   }
 
   return children;
