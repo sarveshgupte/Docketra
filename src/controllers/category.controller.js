@@ -719,7 +719,8 @@ const suggestCategory = async (req, res) => {
     });
     return res.json({ success: true, data: result });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Failed to suggest category', error: error.message });
+    log.error('[CATEGORY] Suggestion lookup failed', error.message);
+    return res.status(500).json({ success: false, message: 'Failed to suggest category' });
   }
 };
 

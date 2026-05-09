@@ -4,7 +4,7 @@ Docket creation now includes an assistive category/subcategory suggestion capabi
 
 ## Behavior
 - Suggestions are computed deterministically from docket title/description text.
-- Matching uses active firm-scoped category/subcategory names plus legal/compliance keyword groups.
+- Matching uses active firm-scoped category/subcategory names plus deterministic India-focused legal/compliance keywords (e.g., GST/GSTR/TDS/ITR, ROC/MCA/AOC-4/MGT-7, board resolutions, legal notices).
 - Suggestions include confidence levels: `high`, `medium`, `low`.
 - Suggestions are **assistive only**: users must explicitly click **Apply suggestion**.
 - Manual category/subcategory changes are respected and never overwritten automatically.
