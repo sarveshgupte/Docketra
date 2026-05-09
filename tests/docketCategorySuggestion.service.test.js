@@ -20,6 +20,13 @@ assert.ok(sec.suggestions[0].categoryName.toLowerCase().includes('secretarial'))
 const legal = suggestDocketCategory({ firmId: 'f1', title: 'Draft NDA and lease agreement', description: 'Reply to legal notice under contract terms', categories });
 assert.ok(legal.suggestions[0].categoryName.toLowerCase().includes('legal'));
 
+
+const secSpacingVariants = suggestDocketCategory({ firmId: 'f1', title: 'MCA AOC 4 filing and MGT 7 annual return', description: '', categories });
+assert.ok(secSpacingVariants.suggestions[0].categoryName.toLowerCase().includes('secretarial'));
+
+const taxHyphenVariant = suggestDocketCategory({ firmId: 'f1', title: 'Income-tax assessment notice response', description: '', categories });
+assert.ok(taxHyphenVariant.suggestions[0].categoryName.toLowerCase().includes('tax'));
+
 const inactiveHit = suggestDocketCategory({ firmId: 'f1', title: 'dormant ignore', description: 'ignore', categories });
 assert.ok(!inactiveHit.suggestions.some((s) => s.categoryId === 'inactive'));
 
