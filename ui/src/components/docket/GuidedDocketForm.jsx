@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Input } from '../common/Input';
 import { Select } from '../common/Select';
 import { Textarea } from '../common/Textarea';
@@ -64,6 +64,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   const [dependencyErrors, setDependencyErrors] = useState({});
   const [suggestion, setSuggestion] = useState(null);
   const [manualClassification, setManualClassification] = useState(false);
+  const latestSuggestionRequestRef = useRef(0);
 
   const isDirty = useMemo(() => {
     return Boolean(
@@ -182,16 +183,20 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   useEffect(() => {
     if (manualClassification) return;
     const timer = setTimeout(async () => {
+      const requestId = latestSuggestionRequestRef.current + 1;
+      latestSuggestionRequestRef.current = requestId;
+
       if (!formData.title.trim() && !formData.description.trim()) {
-        setSuggestion(null);
+        if (requestId === latestSuggestionRequestRef.current) setSuggestion(null);
         return;
       }
       try {
         const response = await caseApi.suggestDocketCategory({ title: formData.title, description: formData.description });
+        if (requestId !== latestSuggestionRequestRef.current) return;
         const top = response?.data?.suggestions?.[0] || null;
         setSuggestion(top);
       } catch (error) {
-        setSuggestion(null);
+        if (requestId === latestSuggestionRequestRef.current) setSuggestion(null);
       }
     }, 450);
     return () => clearTimeout(timer);
