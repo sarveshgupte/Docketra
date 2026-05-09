@@ -62,6 +62,8 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   const [loading, setLoading] = useState({ categories: true, workbaskets: true, users: true, clients: true, submit: false });
   const [clientLoadIssue, setClientLoadIssue] = useState('');
   const [dependencyErrors, setDependencyErrors] = useState({});
+  const [suggestion, setSuggestion] = useState(null);
+  const [manualClassification, setManualClassification] = useState(false);
 
   const isDirty = useMemo(() => {
     return Boolean(
@@ -176,6 +178,39 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
     setFormData((prev) => ({ ...prev, employeeXID: '' }));
   }, [employeeContextEnabled, formData.employeeXID]);
 
+
+  useEffect(() => {
+    if (manualClassification) return;
+    const timer = setTimeout(async () => {
+      if (!formData.title.trim() && !formData.description.trim()) {
+        setSuggestion(null);
+        return;
+      }
+      try {
+        const response = await caseApi.suggestDocketCategory({ title: formData.title, description: formData.description });
+        const top = response?.data?.suggestions?.[0] || null;
+        setSuggestion(top);
+      } catch (error) {
+        setSuggestion(null);
+      }
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [formData.title, formData.description, manualClassification]);
+
+  const applySuggestion = () => {
+    if (!suggestion || manualClassification) return;
+    const selectedCategory = categories.find((item) => item._id === suggestion.categoryId);
+    const isValidSubcategory = (selectedCategory?.subcategories || []).some((item) => item.isActive && item.id === suggestion.subcategoryId);
+    setFormData((prev) => ({
+      ...prev,
+      categoryId: suggestion.categoryId,
+      subcategoryId: isValidSubcategory ? suggestion.subcategoryId : '',
+    }));
+    setErrors((prev) => ({ ...prev, categoryId: '', subcategoryId: '' }));
+    setSuggestion(null);
+    setSubmitError('');
+  };
+
   const validateStep = (stepIndex = step) => {
     const nextErrors = {};
     const payload = buildCreateDocketPayload(formData);
@@ -219,6 +254,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   const firmSlug = window.location.pathname.split('/')[3] || '';
 
   const updateField = (name, value) => {
+    if (name === 'categoryId' || name === 'subcategoryId') setManualClassification(true);
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: '' }));
     setSubmitError('');
@@ -346,6 +382,15 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
 
       {step === 1 && (
         <>
+          {suggestion ? (
+            <div className="mb-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm" role="status" aria-live="polite">
+              <p><strong>Suggested category:</strong> {suggestion.categoryName} / {suggestion.subcategoryName} ({suggestion.confidence})</p>
+              <div className="mt-2" style={{ display: 'flex', gap: 8 }}>
+                <Button type="button" onClick={applySuggestion} disabled={manualClassification}>Apply suggestion</Button>
+                <Button type="button" variant="outline" onClick={() => setSuggestion(null)}>Dismiss</Button>
+              </div>
+            </div>
+          ) : null}
           <Select
             label="Category"
             required
