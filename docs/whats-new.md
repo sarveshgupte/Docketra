@@ -1,5 +1,10 @@
 # What's New
 
+## May 2026: Public header and CTA consistency
+
+- Standardized public page headers and CTAs across homepage and workspace login flows.
+- Consolidated duplicated public header implementations into a shared component so `/`, `/find-workspace`, and marketing-layout pages use one canonical nav vocabulary and CTA strategy.
+
 ## May 2026: BYOS Google callback/session hardening
 
 - Hardened Google Drive BYOS callback reliability for cross-origin frontend/backend deployments by adding safe `session_missing` recovery redirects when callback auth/session context is unavailable.
