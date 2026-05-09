@@ -23,3 +23,11 @@
 ## 2026-04-19 - SuperAdmin Layout Accessibility improvements
 **Learning:** The SuperAdminLayout component had missing landmark roles, active states for screen readers, and focus indicators for interactive elements.
 **Action:** Add `aria-label` attributes to `<aside>` and `<nav>` elements, add `aria-label` and `focus-visible` classes to logout buttons, and use `aria-current="page"` on active navigation links across the platform.
+
+## 2026-05-09 - Clipboard Action Feedback
+**Learning:** Clipboard-driven actions need temporary, visible confirmation so users can tell whether a copy action actually completed.
+**Action:** For clipboard copy UI, provide short-lived status feedback (e.g., success text) and keep the feedback region under `aria-live="polite"` so assistive technologies announce dynamic updates.
+
+## 2026-05-09 - Clipboard Failure Feedback & Timeout Hygiene
+**Learning:** Clipboard APIs can be unavailable in some contexts and write operations can reject, which makes optimistic success messaging misleading and inaccessible.
+**Action:** Await clipboard writes before showing success, expose an explicit failure state when unavailable/rejected, and manage feedback timers with refs that are cleared before restart and cleaned up on unmount.

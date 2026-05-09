@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 export function RequestDocumentsModal({
   isOpen,
@@ -12,8 +12,48 @@ export function RequestDocumentsModal({
   const [requirePin, setRequirePin] = useState(false);
   const [sendEmail, setSendEmail] = useState(true);
   const [showPin, setShowPin] = useState(false);
+  const [copyStatus, setCopyStatus] = useState('idle');
+  const copyFeedbackTimeoutRef = useRef(null);
 
   const expiresInLabel = useMemo(() => (expiry === '7d' ? '7 days' : '24 hours'), [expiry]);
+
+  useEffect(() => {
+    return () => {
+      if (copyFeedbackTimeoutRef.current) {
+        clearTimeout(copyFeedbackTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleCopy = async () => {
+    if (copyFeedbackTimeoutRef.current) {
+      clearTimeout(copyFeedbackTimeoutRef.current);
+      copyFeedbackTimeoutRef.current = null;
+    }
+
+    if (!generatedLink?.link) {
+      return;
+    }
+
+    if (!navigator?.clipboard?.writeText) {
+      setCopyStatus('error');
+      copyFeedbackTimeoutRef.current = setTimeout(() => {
+        setCopyStatus('idle');
+      }, 2000);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(generatedLink.link);
+      setCopyStatus('success');
+    } catch (error) {
+      setCopyStatus('error');
+    }
+
+    copyFeedbackTimeoutRef.current = setTimeout(() => {
+      setCopyStatus('idle');
+    }, 2000);
+  };
 
   if (!isOpen) return null;
 
@@ -53,15 +93,24 @@ export function RequestDocumentsModal({
         </div>
 
         {generatedLink ? (
-          <div style={styles.resultBox}>
+          <div style={styles.resultBox} aria-live="polite">
             <p style={styles.resultTitle}>Upload link ready</p>
             <p style={styles.mono}>{generatedLink.link}</p>
-            <button type="button" style={styles.copyBtn} onClick={() => navigator.clipboard.writeText(generatedLink.link)}>
-              Copy link
+            <button type="button" style={styles.copyBtn} onClick={handleCopy}>
+              {copyStatus === 'success' ? (
+                <>
+                  <span aria-hidden="true">✓ </span>
+                  Copied!
+                </>
+              ) : copyStatus === 'error' ? (
+                'Copy failed'
+              ) : (
+                'Copy link'
+              )}
             </button>
             {generatedLink.pin ? (
               <div style={{ marginTop: 8 }}>
-                <button type="button" style={styles.copyBtn} onClick={() => setShowPin((prev) => !prev)}>
+                <button type="button" style={styles.copyBtn} onClick={() => setShowPin((prev) => !prev)} aria-pressed={showPin}>
                   {showPin ? 'Hide PIN' : 'Show PIN'}
                 </button>
                 <p style={styles.hint}>PIN: {showPin ? generatedLink.pin : '••••'}</p>
