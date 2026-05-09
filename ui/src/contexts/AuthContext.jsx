@@ -13,7 +13,12 @@
 
 import React, { createContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { authService } from '../services/authService';
-import { SESSION_KEYS, STORAGE_KEYS } from '../utils/constants';
+import {
+  SESSION_IDLE_TIMEOUT_MS,
+  SESSION_KEEPALIVE_INTERVAL_MS,
+  SESSION_KEYS,
+  STORAGE_KEYS,
+} from '../utils/constants';
 import { isSuperAdmin } from '../utils/authUtils';
 import { queryClient } from '../queryClient';
 
@@ -34,6 +39,9 @@ export const AuthProvider = ({ children }) => {
   const profileFetchInFlightRef = useRef(false);
   const profileFetchPromiseRef = useRef(null);
   const authFailureResolvedRef = useRef(false);
+  const lastActivityAtRef = useRef(Date.now());
+  const idleTimeoutRef = useRef(null);
+  const keepaliveIntervalRef = useRef(null);
 
   useEffect(() => {
     if (bootHydratedRef.current) return;
@@ -262,6 +270,47 @@ export const AuthProvider = ({ children }) => {
       }
     }
   }, [user, clearAuthStorage, clearPrivateClientState]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const markActivity = () => {
+      lastActivityAtRef.current = Date.now();
+      if (idleTimeoutRef.current) {
+        window.clearTimeout(idleTimeoutRef.current);
+      }
+      if (isAuthenticated) {
+        idleTimeoutRef.current = window.setTimeout(() => {
+          logout({ preserveFirmSlug: true });
+        }, SESSION_IDLE_TIMEOUT_MS);
+      }
+    };
+
+    if (isAuthenticated) {
+      markActivity();
+      if (keepaliveIntervalRef.current) {
+        window.clearInterval(keepaliveIntervalRef.current);
+      }
+      keepaliveIntervalRef.current = window.setInterval(() => {
+        const idleDurationMs = Date.now() - lastActivityAtRef.current;
+        if (idleDurationMs < SESSION_IDLE_TIMEOUT_MS && document.visibilityState === 'visible') {
+          authService.getProfile({ skipAuthRedirect: true }).catch(() => {});
+        }
+      }, SESSION_KEEPALIVE_INTERVAL_MS);
+    } else {
+      if (idleTimeoutRef.current) window.clearTimeout(idleTimeoutRef.current);
+      if (keepaliveIntervalRef.current) window.clearInterval(keepaliveIntervalRef.current);
+    }
+
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'focus'];
+    events.forEach((eventName) => window.addEventListener(eventName, markActivity, { passive: true }));
+
+    return () => {
+      events.forEach((eventName) => window.removeEventListener(eventName, markActivity));
+      if (idleTimeoutRef.current) window.clearTimeout(idleTimeoutRef.current);
+      if (keepaliveIntervalRef.current) window.clearInterval(keepaliveIntervalRef.current);
+    };
+  }, [isAuthenticated, logout]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return undefined;

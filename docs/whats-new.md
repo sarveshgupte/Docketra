@@ -668,3 +668,5 @@
 ## May 2026: Firm role hierarchy standardization
 
 - Standardized firm role hierarchy so Primary Admin inherits Admin/Manager access, Admin inherits Manager access, and client-management permissions are enforced consistently.
+
+- Extended authenticated workspace idle timeout to 3 hours and hardened session-expiry handling so normal work breaks do not force unnecessary re-login.
