@@ -650,3 +650,4 @@
 - Added clearer docket context badges for My Worklist, Assigned Worklist, Workbasket, QC Workbasket, Routed, Returned from route, and terminal record states.
 - Hardened action visibility so routed, QC, unassigned workbasket, and terminal dockets do not show confusing lifecycle actions.
 - Improved clone, CFS, and overview helper copy while keeping backend lifecycle rules unchanged.
+- Added deterministic, firm-scoped docket category/subcategory suggestions in guided docket creation (assistive only, explicit apply required).
