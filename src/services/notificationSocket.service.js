@@ -1,4 +1,5 @@
 const { Server } = require('socket.io');
+const crypto = require('crypto');
 const User = require('../models/User.model');
 const jwtService = require('./jwt.service');
 const { isActiveStatus } = require('../utils/status.utils');
@@ -10,7 +11,7 @@ const socketMetaById = new Map();
 const REVALIDATION_WINDOW_MS = 60 * 1000;
 const REVALIDATION_TICK_MS = 7_500;
 
-const randomJitterMs = () => Math.floor(Math.random() * 30_000);
+const randomJitterMs = () => crypto.randomInt(0, 30000);
 
 function toRoomKey(firmId, userId) {
   return `notifications:${String(firmId || '')}:${String(userId || '').toUpperCase()}`;
