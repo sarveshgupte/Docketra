@@ -199,8 +199,16 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
 
   const applySuggestion = () => {
     if (!suggestion || manualClassification) return;
-    updateField('categoryId', suggestion.categoryId);
-    updateField('subcategoryId', suggestion.subcategoryId);
+    const selectedCategory = categories.find((item) => item._id === suggestion.categoryId);
+    const isValidSubcategory = (selectedCategory?.subcategories || []).some((item) => item.isActive && item.id === suggestion.subcategoryId);
+    setFormData((prev) => ({
+      ...prev,
+      categoryId: suggestion.categoryId,
+      subcategoryId: isValidSubcategory ? suggestion.subcategoryId : '',
+    }));
+    setErrors((prev) => ({ ...prev, categoryId: '', subcategoryId: '' }));
+    setSuggestion(null);
+    setSubmitError('');
   };
 
   const validateStep = (stepIndex = step) => {

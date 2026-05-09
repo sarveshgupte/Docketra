@@ -1,12 +1,12 @@
 const MAX_INPUT_LENGTH = 2000;
 
 const KEYWORDS = {
-  immigration: ['visa', 'uscis', 'i-130', 'i-485', 'ead', 'immigration', 'green card'],
-  tax: ['irs', 'tax', '1099', 'w2', 'withholding', 'ein', 'filing'],
-  compliance: ['compliance', 'audit', 'policy', 'regulation', 'kyc', 'aml'],
-  litigation: ['lawsuit', 'court', 'hearing', 'plaintiff', 'defendant', 'complaint'],
-  employment: ['employee', 'termination', 'payroll', 'hr', 'benefits', 'onboarding'],
-  contract: ['agreement', 'msa', 'nda', 'contract', 'renewal', 'terms'],
+  tax: ['gst', 'gstr', 'tds', 'tcs', 'itr', 'income tax', 'notice', 'assessment', 'scrutiny'],
+  secretarial: ['roc', 'mca', 'aoc-4', 'mgt-7', 'dir-3', 'din', 'board meeting', 'resolution', 'minutes'],
+  accounting: ['audit', 'ledger', 'balance sheet', 'reconciliation', 'bookkeeping'],
+  contract: ['agreement', 'nda', 'lease', 'legal notice', 'reply notice', 'contract'],
+  compliance: ['compliance', 'policy', 'regulation', 'filing', 'statutory'],
+  litigation: ['court', 'hearing', 'plaint', 'petition', 'advocate', 'notice'],
 };
 
 const normalizeText = (value = '') => String(value)
