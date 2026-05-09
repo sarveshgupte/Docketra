@@ -29,6 +29,11 @@
 
 ## Tests added/updated
 - Updated `tests/authSessionCookieModel.test.js` to assert refresh cookie `maxAge` is at least 3 hours.
+- Added `ui/tests/authSessionInactivitySourceGuards.test.mjs` to assert:
+  - 3-hour idle constant;
+  - listener registration is gated behind authenticated state;
+  - logout/keepalive timers use centralized constants;
+  - timeout/interval/listener cleanup and duplicate interval guard patterns are present.
 
 ## Future direction (docs-only, not implemented here)
 - Enterprise SSO (Microsoft Entra ID / Google Workspace).

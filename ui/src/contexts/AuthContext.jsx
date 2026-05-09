@@ -274,41 +274,54 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
 
+    if (!isAuthenticated) {
+      if (idleTimeoutRef.current) {
+        window.clearTimeout(idleTimeoutRef.current);
+        idleTimeoutRef.current = null;
+      }
+      if (keepaliveIntervalRef.current) {
+        window.clearInterval(keepaliveIntervalRef.current);
+        keepaliveIntervalRef.current = null;
+      }
+      return undefined;
+    }
+
     const markActivity = () => {
       lastActivityAtRef.current = Date.now();
       if (idleTimeoutRef.current) {
         window.clearTimeout(idleTimeoutRef.current);
+        idleTimeoutRef.current = null;
       }
-      if (isAuthenticated) {
-        idleTimeoutRef.current = window.setTimeout(() => {
-          logout({ preserveFirmSlug: true });
-        }, SESSION_IDLE_TIMEOUT_MS);
-      }
+      idleTimeoutRef.current = window.setTimeout(() => {
+        logout({ preserveFirmSlug: true });
+      }, SESSION_IDLE_TIMEOUT_MS);
     };
 
-    if (isAuthenticated) {
-      markActivity();
-      if (keepaliveIntervalRef.current) {
-        window.clearInterval(keepaliveIntervalRef.current);
-      }
-      keepaliveIntervalRef.current = window.setInterval(() => {
-        const idleDurationMs = Date.now() - lastActivityAtRef.current;
-        if (idleDurationMs < SESSION_IDLE_TIMEOUT_MS && document.visibilityState === 'visible') {
-          authService.getProfile({ skipAuthRedirect: true }).catch(() => {});
-        }
-      }, SESSION_KEEPALIVE_INTERVAL_MS);
-    } else {
-      if (idleTimeoutRef.current) window.clearTimeout(idleTimeoutRef.current);
-      if (keepaliveIntervalRef.current) window.clearInterval(keepaliveIntervalRef.current);
+    markActivity();
+    if (keepaliveIntervalRef.current) {
+      window.clearInterval(keepaliveIntervalRef.current);
+      keepaliveIntervalRef.current = null;
     }
+    keepaliveIntervalRef.current = window.setInterval(() => {
+      const idleDurationMs = Date.now() - lastActivityAtRef.current;
+      if (idleDurationMs < SESSION_IDLE_TIMEOUT_MS && document.visibilityState === 'visible') {
+        authService.getProfile({ skipAuthRedirect: true }).catch(() => {});
+      }
+    }, SESSION_KEEPALIVE_INTERVAL_MS);
 
     const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'focus'];
     events.forEach((eventName) => window.addEventListener(eventName, markActivity, { passive: true }));
 
     return () => {
       events.forEach((eventName) => window.removeEventListener(eventName, markActivity));
-      if (idleTimeoutRef.current) window.clearTimeout(idleTimeoutRef.current);
-      if (keepaliveIntervalRef.current) window.clearInterval(keepaliveIntervalRef.current);
+      if (idleTimeoutRef.current) {
+        window.clearTimeout(idleTimeoutRef.current);
+        idleTimeoutRef.current = null;
+      }
+      if (keepaliveIntervalRef.current) {
+        window.clearInterval(keepaliveIntervalRef.current);
+        keepaliveIntervalRef.current = null;
+      }
     };
   }, [isAuthenticated, logout]);
 
