@@ -21,9 +21,10 @@ Module._load = function(request, parent, isMain) {
   return originalLoad.apply(this, arguments);
 };
 
+const GoogleDriveProvider = require('../src/services/storage/providers/GoogleDriveProvider');
 const DocketraManagedStorageProvider = require('../src/services/storage/providers/DocketraManagedStorageProvider');
 
-(() => {
+(async () => {
   try {
     process.env.MANAGED_STORAGE_PROVIDER = 'google_drive';
     process.env.DRIVE_ROOT_FOLDER_ID = 'root123';
@@ -36,6 +37,22 @@ const DocketraManagedStorageProvider = require('../src/services/storage/provider
     assert.strictEqual(jwtArgs.email, process.env.MANAGED_GOOGLE_CLIENT_EMAIL);
     assert.ok(String(jwtArgs.key).includes('BEGIN PRIVATE KEY'));
 
+    const originalGetOrCreateFolder = GoogleDriveProvider.prototype.getOrCreateFolder;
+    const capturedCalls = [];
+    GoogleDriveProvider.prototype.getOrCreateFolder = async function(parentFolderId, folderName) {
+      capturedCalls.push({ parentFolderId, folderName });
+      return `${parentFolderId}/${folderName}`;
+    };
+
+    const resolvedFirmFolder = await provider.getOrCreateFolder(null, 'firm_F001');
+    assert.strictEqual(resolvedFirmFolder, 'root123/firm_F001');
+    assert.deepStrictEqual(capturedCalls[0], { parentFolderId: 'root123', folderName: 'firm_F001' });
+
+    const clientFolder = await provider.getOrCreateFolder('firm-folder-id', 'client_C000001');
+    assert.strictEqual(clientFolder, 'firm-folder-id/client_C000001');
+    assert.deepStrictEqual(capturedCalls[1], { parentFolderId: 'firm-folder-id', folderName: 'client_C000001' });
+    GoogleDriveProvider.prototype.getOrCreateFolder = originalGetOrCreateFolder;
+
     delete process.env.DRIVE_ROOT_FOLDER_ID;
     assert.throws(() => new DocketraManagedStorageProvider({ firmId: 'F001' }), /Managed storage backend is not configured/);
 
@@ -47,4 +64,4 @@ const DocketraManagedStorageProvider = require('../src/services/storage/provider
   } finally {
     Module._load = originalLoad;
   }
-})();
+})().catch((error) => { console.error(error); process.exit(1); });
