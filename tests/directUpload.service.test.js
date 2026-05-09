@@ -9,7 +9,7 @@ const state = {
   attachments: [],
   providerMode: 'connected',
   connectedVerifyResult: { ok: true, provider: 'google-drive', fileId: 'drv-1', webViewLink: 'https://view', checksum: { raw: 'md5:abc123', algorithm: 'md5', value: 'abc123' } },
-  fallbackVerifyResult: { ok: true, provider: 's3', fileId: 'managed-key', checksum: { raw: 'md5:def456', algorithm: 'md5', value: 'def456' } },
+  fallbackVerifyResult: { ok: true, provider: 'docketra_managed', fileId: 'managed-key', checksum: { raw: 'md5:def456', algorithm: 'md5', value: 'def456' } },
 };
 
 const connectedProvider = {
@@ -102,18 +102,20 @@ const mocks = {
       },
     },
   },
-  './storage/providers/S3Provider': {
-    S3Provider: class MockS3Provider {
-      constructor() {
-        this.providerName = 's3';
-      }
-      async createDirectUploadSession({ objectKey }) {
-        return { provider: 's3', uploadUrl: 'https://s3-upload', method: 'PUT', headers: {}, objectKey, providerFileId: null };
-      }
-      async verifyUploadedObject() {
-        return state.fallbackVerifyResult;
-      }
-    },
+  './storage/providers/DocketraManagedStorageProvider': class MockManagedProvider {
+    constructor() {
+      this.providerName = 'docketra_managed';
+      this.rootFolderId = 'root-folder';
+    }
+    async getOrCreateFolder(parentFolderId, folderName) {
+      return `${parentFolderId}/${folderName}`;
+    }
+    async createDirectUploadSession({ objectKey }) {
+      return { provider: 'docketra_managed', uploadUrl: 'https://managed-upload', method: 'PUT', headers: {}, objectKey, providerFileId: 'managed-key' };
+    }
+    async verifyUploadedObject() {
+      return state.fallbackVerifyResult;
+    }
   },
   '@aws-sdk/client-s3': {
     S3Client: class MockS3Client {},
@@ -130,8 +132,10 @@ const directUploadService = require('../src/services/directUpload.service');
 
 (async () => {
   try {
-    process.env.MANAGED_STORAGE_S3_BUCKET = 'bucket';
-    process.env.MANAGED_STORAGE_S3_REGION = 'us-east-1';
+    process.env.MANAGED_STORAGE_PROVIDER = 'google_drive';
+    process.env.DRIVE_ROOT_FOLDER_ID = 'root-folder';
+    process.env.MANAGED_GOOGLE_CLIENT_EMAIL = 'sa@demo.iam.gserviceaccount.com';
+    process.env.MANAGED_GOOGLE_PRIVATE_KEY = '-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n';
 
     const intent = await directUploadService.createIntent({
       firmId: 'FIRM-1',
@@ -250,7 +254,7 @@ const directUploadService = require('../src/services/directUpload.service');
       fileType: 'documents',
       user: { xID: 'X123', email: 'a@b.com', name: 'Ada' },
     });
-    assert.strictEqual(fallbackIntent.provider, 's3');
+    assert.strictEqual(fallbackIntent.provider, 'docketra_managed');
     assert.strictEqual(fallbackIntent.providerMode, 'managed_fallback');
 
     state.providerMode = 'connected';
@@ -261,7 +265,7 @@ const directUploadService = require('../src/services/directUpload.service');
       checksum: 'md5:def456',
       user: { xID: 'X123', email: 'a@b.com', name: 'Ada' },
     });
-    assert.strictEqual(fallbackAttachment.storageProvider, 's3', 'finalize should honor session backend');
+    assert.strictEqual(fallbackAttachment.storageProvider, 'docketra_managed', 'finalize should honor session backend');
 
     const firstFinalize = await directUploadService.finalizeIntent({
       uploadId: intent.uploadId,

@@ -4,7 +4,7 @@ const Attachment = require('../models/Attachment.model');
 const { CaseRepository, ClientRepository } = require('../repositories');
 const cfsDriveService = require('./cfsDrive.service');
 const { StorageProviderFactory } = require('./storage/StorageProviderFactory');
-const { S3Provider } = require('./storage/providers/S3Provider');
+const DocketraManagedStorageProvider = require('./storage/providers/DocketraManagedStorageProvider');
 
 const DIRECT_UPLOAD_TTL_MS = Number(process.env.DIRECT_UPLOAD_TTL_MS || 15 * 60 * 1000);
 const DIRECT_UPLOAD_RETENTION_MS = Number(process.env.DIRECT_UPLOAD_RETENTION_MS || 30 * 24 * 60 * 60 * 1000);
@@ -50,31 +50,16 @@ const resolveActor = (user = {}) => ({
 });
 
 const buildManagedFallbackProvider = (firmId) => {
-  const bucket = process.env.MANAGED_STORAGE_S3_BUCKET;
-  const region = process.env.MANAGED_STORAGE_S3_REGION;
-  if (!bucket || !region) return null;
-
-  const credentials = process.env.MANAGED_STORAGE_S3_ACCESS_KEY_ID && process.env.MANAGED_STORAGE_S3_SECRET_ACCESS_KEY
-    ? {
-        accessKeyId: process.env.MANAGED_STORAGE_S3_ACCESS_KEY_ID,
-        secretAccessKey: process.env.MANAGED_STORAGE_S3_SECRET_ACCESS_KEY,
-        ...(process.env.MANAGED_STORAGE_S3_SESSION_TOKEN ? { sessionToken: process.env.MANAGED_STORAGE_S3_SESSION_TOKEN } : {}),
-      }
-    : undefined;
-
-  const prefix = `${(process.env.MANAGED_STORAGE_S3_PREFIX || 'docketra-managed').replace(/^\/+|\/+$/g, '')}/firms/${String(firmId)}`;
-  const provider = new S3Provider({
-    tenantId: String(firmId),
-    bucket,
-    region,
-    prefix,
-    credentials,
-  });
-  return {
-    mode: 'managed_fallback',
-    provider,
-    providerName: 'docketra_managed',
-  };
+  try {
+    const provider = new DocketraManagedStorageProvider({ firmId: String(firmId) });
+    return {
+      mode: 'managed_fallback',
+      provider,
+      providerName: 'docketra_managed',
+    };
+  } catch (_error) {
+    return null;
+  }
 };
 
 const resolveUploadBackend = async (firmId) => {
@@ -94,6 +79,23 @@ const resolveUploadBackend = async (firmId) => {
     noBackendError.code = 'STORAGE_NOT_AVAILABLE';
     throw noBackendError;
   }
+};
+
+
+const ensureManagedFolderForSource = async ({ provider, firmId, source, caseId, clientId, fileType = 'documents' }) => {
+  const rootFolderId = provider.rootFolderId;
+  if (!rootFolderId) return null;
+
+  const firmFolderId = await provider.getOrCreateFolder(rootFolderId, `firm_${firmId}`);
+  if (source === 'client_cfs') {
+    const clientFolder = await provider.getOrCreateFolder(firmFolderId, `client_${clientId}`);
+    const cfsFolder = await provider.getOrCreateFolder(clientFolder, 'cfs');
+    const target = fileType || 'documents';
+    return provider.getOrCreateFolder(cfsFolder, target);
+  }
+
+  const docketFolder = await provider.getOrCreateFolder(firmFolderId, `cfs_${caseId}`);
+  return provider.getOrCreateFolder(docketFolder, 'attachments');
 };
 
 const resolveUploadBackendForSession = async (firmId, uploadRecord) => {
@@ -245,11 +247,17 @@ const createIntent = async ({
   const provider = backend.provider;
 
   let folderId = null;
-  const requireFolder = backend.mode === 'firm_connected';
+  const requireFolder = backend.providerName !== 'docketra_managed';
   if (source === 'upload') {
     ({ folderId } = await resolveCaseContext({ firmId, caseId, role, requireFolder }));
+    if (!folderId && backend.providerName === 'docketra_managed') {
+      folderId = await ensureManagedFolderForSource({ provider, firmId: String(firmId), source, caseId, clientId, fileType });
+    }
   } else if (source === 'client_cfs') {
     ({ folderId } = await resolveClientContext({ firmId, clientId, role, fileType, provider, requireFolder }));
+    if (!folderId && backend.providerName === 'docketra_managed') {
+      folderId = await ensureManagedFolderForSource({ provider, firmId: String(firmId), source, caseId, clientId, fileType });
+    }
   } else {
     const err = new Error('Unsupported upload source');
     err.status = 400;
