@@ -662,3 +662,5 @@
 - Hardened action visibility so routed, QC, unassigned workbasket, and terminal dockets do not show confusing lifecycle actions.
 - Improved clone, CFS, and overview helper copy while keeping backend lifecycle rules unchanged.
 - Added deterministic, firm-scoped docket category/subcategory suggestions in guided docket creation (assistive only, explicit apply required).
+
+- Docketra-managed storage default now supports Google Drive service-account fallback when BYOS is not connected.

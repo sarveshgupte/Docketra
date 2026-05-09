@@ -448,7 +448,6 @@ class CFSDriveService {
       const duplicateCount = await Attachment.countDocuments({
         driveFileId: attachment.driveFileId,
         _id: { $ne: attachment._id },
-        deletedAt: null // Ensure we only count active attachments
       });
 
       const caseFileCount = await CaseFile.countDocuments({
