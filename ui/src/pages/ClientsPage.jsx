@@ -19,6 +19,7 @@ import { buildTemplateCsv } from '../constants/bulkUploadSchema';
 import { useUnsavedChangesPrompt } from '../hooks/useUnsavedChangesPrompt';
 import { useQueryState } from '../hooks/useQueryState';
 import { ROUTES } from '../constants/routes';
+import { canManageClients as canManageClientsByRoleOrPermission } from '../utils/permissions';
 
 const toDisplayString = (value, fallback = '—') => {
   if (typeof value === 'string') {
@@ -68,8 +69,7 @@ export const ClientsPage = () => {
   const [clientFormMessage, setClientFormMessage] = useState({ type: '', text: '' });
   const fileInputRef = useRef(null);
   const searchDebounceRef = useRef(null);
-  const normalizedRole = String(user?.role || '').trim().toUpperCase();
-  const isAdmin = normalizedRole === 'ADMIN' || normalizedRole === 'PRIMARY_ADMIN' || Boolean(user?.isPrimaryAdmin);
+  const canManageClients = canManageClientsByRoleOrPermission(user);
 
   const initialClientSnapshot = useMemo(() => ({
     businessName: selectedClient?.businessName || '',
@@ -231,7 +231,7 @@ export const ClientsPage = () => {
 
   const handleSaveClient = async (event) => {
     event.preventDefault();
-    if (!isAdmin) return;
+    if (!canManageClients) return;
     if (!validateClientForm()) {
       setClientFormMessage({ type: 'error', text: 'Please resolve the highlighted fields before saving.' });
       return;
@@ -273,7 +273,7 @@ export const ClientsPage = () => {
   };
 
   const handleToggleClientStatus = async (client) => {
-    if (!isAdmin) return;
+    if (!canManageClients) return;
     const isProtectedClient = client?.isDefaultClient || client?.isSystemClient || client?.isInternal;
     if (isProtectedClient) {
       showError('Default client cannot be deactivated');
@@ -366,7 +366,7 @@ export const ClientsPage = () => {
       cellClassName: 'min-w-[15rem]',
       render: (client) => (
         <div className="admin__actions justify-end">
-          {isAdmin ? (
+          {canManageClients ? (
             <>
               <Button size="small" variant="secondary" onClick={() => openEditClientModal(client)}>Edit Client</Button>
               {!(client.isDefaultClient || client.isSystemClient || client.isInternal) && (
@@ -387,7 +387,7 @@ export const ClientsPage = () => {
         </div>
       ),
     },
-  ], [isAdmin, openEditClientModal, handleToggleClientStatus, openEditCfsModal, firmSlug]);
+  ], [canManageClients, openEditClientModal, handleToggleClientStatus, openEditCfsModal, firmSlug]);
 
   const refreshSelectedClient = async () => {
     if (!editCfsClient?.clientId) return;
@@ -455,7 +455,7 @@ export const ClientsPage = () => {
       moduleLabel="Operations"
       title="Clients"
       subtitle="View and manage registered client workspaces, compliance notes, and attachments."
-      actions={isAdmin ? (
+      actions={canManageClients ? (
           <div className="flex items-center gap-2">
             <Button variant="default" onClick={() => setShowBulkUpload(true)}>Bulk Upload</Button>
             <Button variant="default" onClick={() => {
@@ -501,8 +501,8 @@ export const ClientsPage = () => {
                 <EmptyState
                   title="No clients available yet"
                   description="Add your first client to start creating dockets."
-                  actionLabel={isAdmin ? 'Add Client' : undefined}
-                  onAction={isAdmin ? openCreateClientModal : undefined}
+                  actionLabel={canManageClients ? 'Add Client' : undefined}
+                  onAction={canManageClients ? openCreateClientModal : undefined}
                 />
               </div>
             )}
@@ -554,7 +554,7 @@ export const ClientsPage = () => {
             onChange={(event) => handleClientFieldChange('businessName', event.target.value)}
             required
             error={clientFormErrors.businessName}
-            disabled={!isAdmin}
+            disabled={!canManageClients}
           />
           <Input
             label="Client Phone Number (Optional)"

@@ -69,3 +69,10 @@ export const canCloneCase = (user) => {
   // All authenticated users can clone cases
   return true;
 };
+
+export const canManageClients = (user) => {
+  const normalizedRole = String(user?.role || '').trim().toUpperCase();
+  if (normalizedRole === 'PRIMARY_ADMIN' || normalizedRole === 'ADMIN' || normalizedRole === 'MANAGER') return true;
+  const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
+  return permissions.includes('CLIENT_MANAGE') || permissions.includes('CLIENT_CREATE');
+};

@@ -666,3 +666,8 @@ Using `docs/ui/visual-regression-checklist.md` as the gate:
 
 ### Frontend-only safety confirmation
 - No backend logic/API contract/auth/RBAC/tenant/routing/database/lifecycle changes were made in this CRM pass.
+
+
+## Client management navigation rule
+
+- Client management navigation is Admin/Manager only in the firm workspace sidebar (Primary Admin, Admin, Manager, or explicit client-management permission).
