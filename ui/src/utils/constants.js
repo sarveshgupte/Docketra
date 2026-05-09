@@ -140,6 +140,10 @@ export const SESSION_KEYS = {
   POST_LOGIN_RETURN_TO: 'POST_LOGIN_RETURN_TO',
 };
 
+export const SESSION_IDLE_TIMEOUT_MS = 3 * 60 * 60 * 1000;
+export const SESSION_TIMEOUT_WARNING_MS = 5 * 60 * 1000;
+export const SESSION_KEEPALIVE_INTERVAL_MS = 10 * 60 * 1000;
+
 /**
  * Error codes returned by backend API
  * Used to identify specific error conditions and handle them appropriately in the UI
