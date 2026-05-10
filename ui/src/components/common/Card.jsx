@@ -8,11 +8,25 @@ import { motion } from 'framer-motion';
 import { surfaceClasses } from '../../theme/tokens';
 
 export const Card = ({ children, className = '', onClick, interactive = false, animateOnMount = false, ...props }) => {
-  const interactiveClass = interactive || onClick
-    ? 'transition-colors duration-150 cursor-pointer hover:border-[var(--dt-border)] hover:bg-[var(--dt-surface-subtle)]'
+  const isInteractive = interactive || !!onClick;
+  const interactiveClass = isInteractive
+    ? 'transition-colors duration-150 cursor-pointer hover:border-[var(--dt-border)] hover:bg-[var(--dt-surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dt-focus)]'
     : '';
 
   const cardClasses = `${surfaceClasses.card} ${interactiveClass} ${className}`;
+
+  const handleKeyDown = (event) => {
+    if (onClick && (event.key === 'Enter' || event.key === ' ')) {
+      event.preventDefault();
+      onClick(event);
+    }
+  };
+
+  const interactiveProps = isInteractive ? {
+    role: 'button',
+    tabIndex: 0,
+    onKeyDown: handleKeyDown,
+  } : {};
 
   if (animateOnMount) {
     return (
@@ -22,6 +36,7 @@ export const Card = ({ children, className = '', onClick, interactive = false, a
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
+        {...interactiveProps}
         {...props}
       >
         {children}
@@ -33,6 +48,7 @@ export const Card = ({ children, className = '', onClick, interactive = false, a
     <div
       className={cardClasses}
       onClick={onClick}
+      {...interactiveProps}
       {...props}
     >
       {children}

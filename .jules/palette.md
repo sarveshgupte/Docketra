@@ -31,3 +31,7 @@
 ## 2026-05-09 - Clipboard Failure Feedback & Timeout Hygiene
 **Learning:** Clipboard APIs can be unavailable in some contexts and write operations can reject, which makes optimistic success messaging misleading and inaccessible.
 **Action:** Await clipboard writes before showing success, expose an explicit failure state when unavailable/rejected, and manage feedback timers with refs that are cleared before restart and cleaned up on unmount.
+
+## 2026-05-10 - Interactive Card Accessibility
+**Learning:** When using generic HTML elements like `div` as interactive components (e.g., clickable Cards), screen readers and keyboard users cannot interact with them by default. Simply adding an `onClick` handler is insufficient.
+**Action:** Always add `role="button"`, `tabIndex={0}`, an `onKeyDown` handler (for `Enter` and `Space` keys), and `focus-visible` styles to any generic element that acts as an interactive button.
