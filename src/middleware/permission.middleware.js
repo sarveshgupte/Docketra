@@ -117,6 +117,10 @@ const requireFirmContext = async (req, res, next) => {
  * for direct role checks. This guard continues to enforce firm capability checks.
  */
 const authorizeFirmPermission = (requiredPermission) => {
+  const deniedMessage = requiredPermission === 'CLIENT_MANAGE'
+    ? 'Client management access is required'
+    : 'Insufficient firm permissions';
+
   return async (req, res, next) => {
     try {
       if (req.user && isSuperAdminRole(req.user.role)) {
@@ -154,7 +158,7 @@ const authorizeFirmPermission = (requiredPermission) => {
       if (requiredPermission && !membership.permissions.includes(requiredPermission)) {
         return res.status(403).json({
           success: false,
-          message: 'Insufficient firm permissions',
+          message: deniedMessage,
         });
       }
 

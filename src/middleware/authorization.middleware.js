@@ -29,7 +29,7 @@ async function requireAdmin(req, res, next) {
     if (!req.user || isSuperAdminRole(req.user.role)) {
       return res.status(403).json({
         success: false,
-        message: 'Client management access is required',
+        message: 'Admin access required',
       });
     }
 
@@ -37,7 +37,7 @@ async function requireAdmin(req, res, next) {
     if (!tenantId) {
       return res.status(403).json({
         success: false,
-        message: 'Client management access is required',
+        message: 'Admin access required',
       });
     }
 
@@ -57,7 +57,7 @@ async function requireAdmin(req, res, next) {
     if (!user || !isAdminRole(user.role)) {
       return res.status(403).json({
         success: false,
-        message: 'Client management access is required',
+        message: 'Admin access required',
       });
     }
 
