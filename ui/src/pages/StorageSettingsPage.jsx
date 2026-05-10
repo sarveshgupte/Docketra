@@ -31,7 +31,7 @@ export function StorageSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [testing, setTesting] = useState(false);
   const [savingProvider, setSavingProvider] = useState(false);
-  const [provider, setProvider] = useState('docketra_managed');
+  const [provider, setProvider] = useState('onedrive');
   const [otpCode, setOtpCode] = useState('');
   const [verificationToken, setVerificationToken] = useState('');
   const [oneDriveRefreshToken, setOneDriveRefreshToken] = useState('');
@@ -43,6 +43,8 @@ export function StorageSettingsPage() {
   const [s3SecretAccessKey, setS3SecretAccessKey] = useState('');
   const [s3SessionToken, setS3SessionToken] = useState('');
   const [loadError, setLoadError] = useState('');
+  const [summaryWarning, setSummaryWarning] = useState('');
+  const [exportWarning, setExportWarning] = useState('');
   const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
   const [supportContext, setSupportContext] = useState(null);
   const [exportRuns, setExportRuns] = useState([]);
@@ -55,6 +57,8 @@ export function StorageSettingsPage() {
   const loadConfiguration = async () => {
     setLoading(true);
     setLoadError('');
+    setSummaryWarning('');
+    setExportWarning('');
     try {
       const data = await getStorageConfiguration();
       setConfig(data);
@@ -68,6 +72,7 @@ export function StorageSettingsPage() {
         setOwnershipSummary(summaryResult.value);
       } else {
         setOwnershipSummary(null);
+        setSummaryWarning('Storage ownership summary is temporarily unavailable.');
       }
 
       if (exportsResult.status === 'fulfilled') {
@@ -75,21 +80,18 @@ export function StorageSettingsPage() {
         setExportRuns(Array.isArray(exportData?.data) ? exportData.data : []);
       } else {
         setExportRuns([]);
+        setExportWarning('Export history is temporarily unavailable.');
       }
     } catch (error) {
       const status = Number(error?.response?.status || 0);
       const requestId = error?.response?.headers?.['x-request-id'] || error?.response?.headers?.['x-correlation-id'];
-      const summary = requestId ? ` (status ${status || 'unknown'}, request ${requestId})` : (status ? ` (status ${status})` : '');
       if (status === 404) {
-        setLoadError(`Storage settings API route is unavailable${summary}.`);
+        setLoadError(`Storage settings API route is unavailable. Contact support with request ID.${requestId ? ` Request ID: ${requestId}.` : ''}`);
         setSupportContext({ area: 'storage_settings', status, requestId: requestId || null });
       } else {
         const recovery = getRecoveryPayload(error, 'storage_settings');
-        setLoadError(`${recovery.copy.message} ${recovery.copy.action}${summary}`);
+        setLoadError(`${recovery.copy.message} ${recovery.copy.action}`);
         setSupportContext(recovery.supportContext);
-        if (!(config?.status === 'ACTIVE_MANAGED' || config?.provider === 'docketra_managed')) {
-          toast?.showError?.(recovery.copy.message);
-        }
       }
     } finally {
       setLoading(false);
@@ -98,360 +100,77 @@ export function StorageSettingsPage() {
 
   useEffect(() => {
     loadConfiguration();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (config?.provider) {
-      setProvider(config.provider);
-    }
-  }, [config]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const providerParam = params.get('provider');
     const connected = params.get('connected');
     const error = params.get('error');
-    const reason = params.get('reason');
 
     if (providerParam === 'google-drive' && connected === '1') {
-      setStatusMessage({ type: 'success', text: 'Google Drive connected successfully. Refreshing storage status…' });
+      setStatusMessage({ type: 'success', text: 'Google Drive connected successfully. Future uploads will use firm-owned Google Drive.' });
       loadConfiguration();
       toast?.showSuccess?.('Google Drive connected successfully.');
     }
 
     if (error) {
-      const suffix = reason ? ` (${reason})` : '';
-      setStatusMessage({ type: 'error', text: `Google Drive connection failed${suffix}. BYOS is optional—your team can continue using Docketra-managed storage and retry later.` });
+      setStatusMessage({ type: 'error', text: 'Google Drive connection was not completed. Docketra-managed storage is still active.' });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
 
-  const onConnectGoogleDrive = () => {
-    connectGoogleDrive();
-  };
-
-  const onTestConnection = async () => {
-    setTesting(true);
-    setStatusMessage({ type: 'info', text: 'Testing storage connection…' });
-    try {
-      const result = await testStorageConnection();
-      toast?.showSuccess?.(result?.message || 'Storage connection is healthy.');
-      setStatusMessage({ type: 'success', text: result?.message || 'Storage connection is healthy.' });
-      await loadConfiguration();
-    } catch (error) {
-      const recovery = getRecoveryPayload(error, 'storage_settings');
-      setStatusMessage({ type: 'error', text: `${recovery.copy.message} ${recovery.copy.action}` });
-      setSupportContext(recovery.supportContext);
-      toast?.showError?.(recovery.copy.message);
-    } finally {
-      setTesting(false);
-    }
-  };
-
-  const requestOtp = async () => {
-    try {
-      await sendStorageChangeOtp(user?.email);
-      toast?.showSuccess?.('OTP sent to your email.');
-    } catch (error) {
-      toast?.showError?.(error?.response?.data?.message || 'Unable to send OTP');
-    }
-  };
-
-  const verifyOtp = async () => {
-    try {
-      const result = await verifyStorageChangeOtp(user?.email, otpCode);
-      setVerificationToken(result?.data?.verificationToken || '');
-      toast?.showSuccess?.('OTP verified.');
-    } catch (error) {
-      toast?.showError?.(error?.response?.data?.message || 'OTP verification failed');
-    }
-  };
+  const currentProvider = config?.provider || 'docketra_managed';
+  const normalizedProvider = currentProvider === 'google_drive' ? 'google-drive' : currentProvider;
+  const isGoogleConnected = (normalizedProvider === 'google-drive' || normalizedProvider === 'google_drive') && Boolean(config?.isConfigured);
+  const currentModeLabel = isGoogleConnected ? 'Firm-owned Google Drive' : 'Docketra-managed storage';
+  const statusLabel = config?.status?.includes('ERROR') || config?.status?.includes('DISCONNECTED')
+    ? 'Error / disconnected'
+    : config?.isConfigured
+      ? 'Active'
+      : 'Not connected';
 
   const onSaveStorageSettings = async () => {
     setSavingProvider(true);
-    setStatusMessage({ type: 'info', text: 'Saving storage provider settings…' });
     try {
       let credentials = {};
-      if (provider === 'onedrive') {
-        credentials = {
-          refreshToken: oneDriveRefreshToken,
-          driveId: oneDriveDriveId || null,
-        };
-      } else if (provider === 's3') {
-        credentials = {
-          bucket: s3Bucket,
-          region: s3Region,
-          prefix: s3Prefix || '',
-          accessKeyId: s3AccessKeyId || undefined,
-          secretAccessKey: s3SecretAccessKey || undefined,
-          sessionToken: s3SessionToken || undefined,
-        };
-      }
-
-      await changeStorageProvider({
-        provider,
-        verificationToken,
-        credentials,
-      });
-      toast?.showSuccess?.('Storage settings updated.');
-      setStatusMessage({ type: 'success', text: 'Storage settings updated.' });
+      if (provider === 'onedrive') credentials = { refreshToken: oneDriveRefreshToken, driveId: oneDriveDriveId || null };
+      if (provider === 's3') credentials = {
+        bucket: s3Bucket,
+        region: s3Region,
+        prefix: s3Prefix || '',
+        accessKeyId: s3AccessKeyId || undefined,
+        secretAccessKey: s3SecretAccessKey || undefined,
+        sessionToken: s3SessionToken || undefined,
+      };
+      await changeStorageProvider({ provider, verificationToken, credentials });
+      setStatusMessage({ type: 'success', text: 'Advanced provider settings updated.' });
       await loadConfiguration();
     } catch (error) {
       const recovery = getRecoveryPayload(error, 'storage_settings');
       setStatusMessage({ type: 'error', text: `${recovery.copy.message} ${recovery.copy.action}` });
-      setSupportContext(recovery.supportContext);
-      toast?.showError?.(recovery.copy.message);
     } finally {
       setSavingProvider(false);
     }
   };
 
-  const onRunExport = async () => {
-    setExporting(true);
-    setStatusMessage({ type: 'info', text: 'Generating export archive…' });
-    try {
-      const result = await exportFirmStorage();
-      setStatusMessage({
-        type: 'success',
-        text: result?.downloadUrl
-          ? 'Export generated. Use the download link or export history below.'
-          : 'Export generated. Download link may be provider-limited; use export history and support recovery guidance.',
-      });
-      await loadConfiguration();
-    } catch (error) {
-      const recovery = getRecoveryPayload(error, 'storage_export');
-      setStatusMessage({ type: 'error', text: `${recovery.copy.message} ${recovery.copy.action}` });
-      setSupportContext(recovery.supportContext);
-      toast?.showError?.(recovery.copy.message);
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <PlatformShell moduleLabel="Settings" title="Storage settings" subtitle="Configure optional BYOS storage and validate uploads. Docketra-managed storage remains the default.">
-        <div className="min-h-screen w-full flex-1 bg-[var(--dt-bg-warm)]">
-          <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 space-y-6">
-            <PageHeader title="Storage Settings" subtitle="Configure optional BYOS storage and validate uploads. Docketra-managed storage remains the default." />
-            <Card>
-              <p className="text-sm text-[var(--dt-text-muted)]">Loading storage settings...</p>
-            </Card>
-          </div>
-        </div>
-      </PlatformShell>
-    );
-  }
-
-  const connected = config?.isConfigured;
-  const storageMode = provider === 'docketra_managed' ? 'Docketra-managed storage' : 'Firm-connected storage';
-  const isGoogleProvider = provider === 'google-drive';
-  const isOneDriveProvider = provider === 'onedrive';
-  const isS3Provider = provider === 's3';
-  const canSwitchProvider = provider !== (config?.provider || 'docketra_managed');
-  const summaryWarnings = Array.isArray(ownershipSummary?.warnings) ? ownershipSummary.warnings : [];
-  const statusMessages = [
-    loadError ? { tone: 'error', message: loadError } : null,
-    statusMessage.text
-      ? {
-        tone: statusMessage.type === 'error' ? 'error' : statusMessage.type === 'success' ? 'success' : 'info',
-        message: statusMessage.text,
-      }
-      : null,
-  ].filter(Boolean);
+  if (loading) return <PlatformShell moduleLabel="Settings" title="Storage settings"><div className="p-8">Loading…</div></PlatformShell>;
 
   return (
-    <PlatformShell moduleLabel="Settings" title="Storage settings" subtitle="Configure optional BYOS storage and validate uploads. Docketra-managed storage remains the default.">
+    <PlatformShell moduleLabel="Settings" title="Storage settings" subtitle="Docketra-managed storage works by default. You can optionally connect your firm’s own Google Drive.">
       <div className="min-h-screen bg-[var(--dt-bg-warm)]">
         <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 space-y-6">
-          <PageHeader title="Storage Settings" subtitle="Configure optional BYOS storage and validate uploads. Docketra-managed storage remains the default." />
+          <PageHeader title="Storage Settings" subtitle="Docketra-managed storage works by default. You can optionally connect your firm’s own Google Drive." />
+          <StatusMessageStack messages={[loadError ? { tone: 'error', message: loadError } : null, statusMessage.text ? { tone: statusMessage.type === 'error' ? 'error' : 'success', message: statusMessage.text } : null].filter(Boolean)} />
 
-          <StatusMessageStack messages={statusMessages} />
+          <Card><div className={spacingClasses.sectionMargin}><h2 className="text-lg font-medium">Current storage</h2><p>Current mode: {currentModeLabel}</p><p>Status: {statusLabel}</p>{isGoogleConnected ? <p>Connected email: {config?.connectedEmail || 'N/A'}</p> : null}<p>Last checked: {formatDateTime(ownershipSummary?.lastHealthCheck?.checkedAt || config?.updatedAt)}</p><p className="text-sm text-[var(--dt-text-muted)]">Your team can upload files even without BYOS. Files are stored in Docketra-managed Google Drive unless firm-owned storage is connected.</p>{summaryWarning ? <p className="text-sm text-[var(--dt-warning)]">{summaryWarning}</p> : null}</div></Card>
 
-          <Card>
-            <div className={spacingClasses.sectionMargin}>
-              <div>
-                <h2 className="text-lg font-medium text-[var(--dt-text)] mb-2">Storage & Data Ownership</h2>
-                <p className="text-sm text-[var(--dt-text-secondary)]">
-                  Docketra acts as a control plane. Firm/client data should stay in your configured storage provider based on your data ownership model.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div className="rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-surface)] px-3 py-2">
-                  <p className="font-medium text-[var(--dt-text)]">Active provider</p>
-                  <p className="text-[var(--dt-text-secondary)]">{ownershipSummary?.activeStorage?.provider || provider}</p>
-                </div>
-                <div className="rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-surface)] px-3 py-2">
-                  <p className="font-medium text-[var(--dt-text)]">Connection status</p>
-                  <p className="text-[var(--dt-text-secondary)]">{ownershipSummary?.activeStorage?.connectionStatus || 'UNKNOWN'}</p>
-                </div>
-                <div className="rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-surface)] px-3 py-2">
-                  <p className="font-medium text-[var(--dt-text)]">Last health check</p>
-                  <p className="text-[var(--dt-text-secondary)]">{formatDateTime(ownershipSummary?.lastHealthCheck?.checkedAt)}</p>
-                </div>
-                <div className="rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-surface)] px-3 py-2">
-                  <p className="font-medium text-[var(--dt-text)]">Fallback storage</p>
-                  <p className="text-[var(--dt-text-secondary)]">
-                    {ownershipSummary?.fallbackStorage?.provider || 'docketra_managed'} · {ownershipSummary?.fallbackStorage?.status || 'ACTIVE'}
-                  </p>
-                </div>
-                <div className="rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-surface)] px-3 py-2 md:col-span-2">
-                  <p className="font-medium text-[var(--dt-text)]">Backup / export status</p>
-                  <p className="text-[var(--dt-text-secondary)]">
-                    Backup enabled: {ownershipSummary?.backupExport?.backupEnabled ? 'Yes' : 'No'} · Last export: {formatDateTime(ownershipSummary?.backupExport?.lastExport?.createdAt)}
-                  </p>
-                </div>
-              </div>
-              {summaryWarnings.length ? (
-                <div className="rounded border border-[var(--dt-warning)] bg-[var(--dt-warning-subtle)] px-3 py-3 text-sm text-[var(--dt-warning)]">
-                  <p className="font-medium">Warnings</p>
-                  <ul className="list-disc pl-5 mt-1 space-y-1">
-                    {summaryWarnings.map((warning) => (
-                      <li key={warning.code}>{warning.message}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-          </Card>
+          <Card><div className={spacingClasses.sectionMargin}><h2 className="text-lg font-medium">Default storage</h2><p className="font-medium">Default: Docketra-managed Google Drive</p><p>Status: {ownershipSummary?.fallbackStorage?.status || ownershipSummary?.managedFallback?.status || 'Active'}</p><p className="text-sm text-[var(--dt-text-muted)]">No setup is required from your firm.</p></div></Card>
 
-          <Card>
-            <div className={spacingClasses.sectionMargin}>
-              <SupportContext context={supportContext} />
-              <div>
-                <h2 className="text-lg font-medium text-[var(--dt-text)] mb-2">Storage Provider</h2>
-                <p className="text-sm text-[var(--dt-text-muted)]">BYOS is optional. If your firm does not connect BYOS, Docketra-managed storage remains the default upload path. Provider changes require OTP verification.</p>
-              </div>
-              <div className="rounded border border-[var(--dt-info)] bg-[var(--dt-info-subtle)] px-3 py-3 text-sm text-[var(--dt-info)]">
-                <p className="font-medium">Current storage mode: {storageMode}</p>
-                <p className="mt-1">
-                  Firm-connected storage keeps document bytes in your firm-owned cloud environment.
-                  Docketra-managed mode is operational fallback when BYOS is not connected.
-                </p>
-              </div>
+          <Card><div className={spacingClasses.sectionMargin}><h2 className="text-lg font-medium">Firm-owned Google Drive (optional)</h2>{!isGoogleConnected ? <><p className="text-sm">You’ll be redirected to Google to approve Drive access. After approval, Docketra will store future uploads in your firm-owned Drive.</p><Button type="button" variant="primary" onClick={connectGoogleDrive}>Connect firm Google Drive</Button></> : <><p>Connected email: {config?.connectedEmail || 'N/A'}</p><div className="flex gap-3"><Button type="button" variant="primary" onClick={connectGoogleDrive}>Refresh Google Drive connection</Button><Button type="button" variant="outline" onClick={async () => { setTesting(true); try { await testStorageConnection(); await loadConfiguration(); } finally { setTesting(false); } }} disabled={testing}>{testing ? 'Testing...' : 'Test connection'}</Button></div></>}</div></Card>
 
-              <div className={spacingClasses.formFieldSpacing}>
-                <Select
-                  label="Provider"
-                  value={provider}
-                  onChange={(event) => setProvider(event.target.value)}
-                  options={[
-                    { value: 'docketra_managed', label: 'Default (Docketra Storage)' },
-                    { value: 'google-drive', label: 'Google Drive (OAuth)' },
-                    { value: 'onedrive', label: 'Microsoft OneDrive (Manual / advanced setup)' },
-                    { value: 's3', label: 'Amazon S3 (Manual credentials)' },
-                  ]}
-                />
-                <Input label="Status" value={connected ? 'Active' : 'Not Connected'} readOnly />
-                <Input label="Storage mode" value={storageMode} readOnly />
-                <Input label="Connected email" value={config?.connectedEmail || 'N/A'} readOnly />
-                <Input label="Folder path" value={config?.folderPath || config?.rootFolderId || 'N/A'} readOnly />
-                <Input label="Connected since" value={formatDateTime(config?.createdAt)} readOnly />
-                {isOneDriveProvider ? (
-                  <>
-                    <p className="text-xs text-[var(--dt-text-muted)]">OneDrive currently uses manual refresh token setup only (no Microsoft OAuth connect flow yet).</p>
-                    <Input label="OneDrive Refresh Token" value={oneDriveRefreshToken} onChange={(event) => setOneDriveRefreshToken(event.target.value)} />
-                    <Input label="OneDrive Drive ID (optional)" value={oneDriveDriveId} onChange={(event) => setOneDriveDriveId(event.target.value)} />
-                  </>
-                ) : null}
-                {isS3Provider ? (
-                  <>
-                    <Input label="S3 Bucket" value={s3Bucket} onChange={(event) => setS3Bucket(event.target.value)} />
-                    <Input label="S3 Region" value={s3Region} onChange={(event) => setS3Region(event.target.value)} />
-                    <Input label="S3 Prefix (optional)" value={s3Prefix} onChange={(event) => setS3Prefix(event.target.value)} />
-                    <Input label="S3 Access Key ID (optional)" value={s3AccessKeyId} onChange={(event) => setS3AccessKeyId(event.target.value)} />
-                    <Input label="S3 Secret Access Key (optional)" value={s3SecretAccessKey} onChange={(event) => setS3SecretAccessKey(event.target.value)} />
-                    <Input label="S3 Session Token (optional)" value={s3SessionToken} onChange={(event) => setS3SessionToken(event.target.value)} />
-                  </>
-                ) : null}
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-3 items-end">
-                  <Input label="OTP Code" value={otpCode} onChange={(event) => setOtpCode(event.target.value)} />
-                  <Button type="button" variant="outline" onClick={requestOtp}>Send OTP</Button>
-                  <Button type="button" variant="outline" onClick={verifyOtp}>Verify OTP</Button>
-                </div>
-              </div>
+          <Card><div className={spacingClasses.sectionMargin}><details><summary className="cursor-pointer font-medium">Advanced manual storage providers</summary><p className="text-sm mt-2">Not recommended for normal setup. Use only if support has instructed you.</p><SupportContext context={supportContext} /><div className="mt-3"><Select label="Manual provider" value={provider} onChange={(event) => setProvider(event.target.value)} options={[{ value: 'onedrive', label: 'Microsoft OneDrive — manual setup only' }, { value: 's3', label: 'Amazon S3 — advanced setup' }]} />{provider === 'onedrive' ? <><Input label="OneDrive Refresh Token" value={oneDriveRefreshToken} onChange={(e) => setOneDriveRefreshToken(e.target.value)} /><Input label="OneDrive Drive ID (optional)" value={oneDriveDriveId} onChange={(e) => setOneDriveDriveId(e.target.value)} /></> : null}{provider === 's3' ? <><Input label="S3 Bucket" value={s3Bucket} onChange={(e) => setS3Bucket(e.target.value)} /><Input label="S3 Region" value={s3Region} onChange={(e) => setS3Region(e.target.value)} /><Input label="S3 Prefix (optional)" value={s3Prefix} onChange={(e) => setS3Prefix(e.target.value)} /><Input label="S3 Access Key ID (optional)" value={s3AccessKeyId} onChange={(e) => setS3AccessKeyId(e.target.value)} /><Input label="S3 Secret Access Key (optional)" value={s3SecretAccessKey} onChange={(e) => setS3SecretAccessKey(e.target.value)} /><Input label="S3 Session Token (optional)" value={s3SessionToken} onChange={(e) => setS3SessionToken(e.target.value)} /></> : null}<div className="grid grid-cols-1 gap-3 md:grid-cols-3 items-end"><Input label="OTP Code" value={otpCode} onChange={(e) => setOtpCode(e.target.value)} /><Button type="button" variant="outline" onClick={() => sendStorageChangeOtp(user?.email)}>Send OTP</Button><Button type="button" variant="outline" onClick={async () => { const result = await verifyStorageChangeOtp(user?.email, otpCode); setVerificationToken(result?.data?.verificationToken || ''); }}>Verify OTP</Button></div><Button type="button" variant="primary" onClick={onSaveStorageSettings} disabled={!verificationToken || savingProvider}>{savingProvider ? 'Saving…' : 'Save Provider'}</Button></div></details></div></Card>
 
-              <div className={`${spacingClasses.formActions} ${spacingClasses.formActionsGap} flex-wrap`}>
-                {isGoogleProvider ? (
-                  <Button type="button" variant="primary" onClick={onConnectGoogleDrive} disabled={testing}>
-                    Connect / Refresh Google Drive
-                  </Button>
-                ) : null}
-                {connected ? (
-                  <Button type="button" variant="outline" onClick={onTestConnection} disabled={testing} loading={testing}>
-                    {testing ? 'Testing' : 'Test Connection'}
-                  </Button>
-                ) : null}
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={onSaveStorageSettings}
-                  disabled={!verificationToken || testing || savingProvider || !canSwitchProvider}
-                >
-                  {savingProvider ? 'Saving…' : canSwitchProvider ? 'Save Provider' : 'Provider Unchanged'}
-                </Button>
-                {!canSwitchProvider ? (
-                  <p className="text-xs text-[var(--dt-text-muted)]">
-                    Select a different provider before saving.
-                  </p>
-                ) : null}
-                {!verificationToken ? (
-                  <p className="text-xs text-[var(--dt-text-muted)]">
-                    OTP verification is required before provider changes.
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <div className={spacingClasses.sectionMargin}>
-              <div>
-                <h2 className="text-lg font-medium text-[var(--dt-text)] mb-2">Data ownership, backup, and export readiness</h2>
-                <p className="text-sm text-[var(--dt-text-secondary)]">
-                  Primary Admins can generate a firm backup export and review recent runs. If a download link is unavailable for your provider,
-                  use the export history plus support diagnostics as the recovery path.
-                </p>
-              </div>
-              <div className={`${spacingClasses.formActions} ${spacingClasses.formActionsGap} flex-wrap`}>
-                <Button type="button" variant="primary" onClick={onRunExport} disabled={exporting} loading={exporting}>
-                  {exporting ? 'Generating Export…' : 'Generate Firm Export'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={async () => {
-                    setExportsLoading(true);
-                    try {
-                      const exportData = await listStorageExports(10);
-                      setExportRuns(Array.isArray(exportData?.data) ? exportData.data : []);
-                    } finally {
-                      setExportsLoading(false);
-                    }
-                  }}
-                  disabled={exportsLoading}
-                >
-                  {exportsLoading ? 'Refreshing…' : 'Refresh Export History'}
-                </Button>
-              </div>
-              <ul className="space-y-2 text-sm">
-                {exportRuns.length === 0 ? (
-                  <li className="text-[var(--dt-text-muted)]">No recent export runs found.</li>
-                ) : exportRuns.map((item) => (
-                  <li key={item?.exportId || item?._id} className="rounded border border-[var(--dt-border-whisper)] px-3 py-2">
-                    <p className="font-medium text-[var(--dt-text)]">{item?.exportId || 'Export run'}</p>
-                    <p className="text-[var(--dt-text-secondary)]">
-                      Created: {formatDateTime(item?.createdAt || item?.timestamp)} · Files: {Number(item?.fileCount || 0)} · Size: {Number(item?.size || 0)} bytes
-                    </p>
-                    {!item?.downloadUrl ? (
-                      <p className="text-[var(--dt-warning)]">Download link unavailable for this provider. Use support recovery path with export ID.</p>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </Card>
+          <Card><div className={spacingClasses.sectionMargin}><h2 className="text-lg font-medium">Backup / export</h2><p className="text-sm">Export generates a backup of firm storage metadata/files where supported.</p><Button type="button" variant="primary" onClick={async () => { setExporting(true); try { await exportFirmStorage(); await loadConfiguration(); } finally { setExporting(false); } }} disabled={exporting}>{exporting ? 'Generating Export…' : 'Generate Firm Export'}</Button>{exportWarning ? <p className="text-sm text-[var(--dt-warning)]">{exportWarning}</p> : null}</div></Card>
         </div>
       </div>
     </PlatformShell>

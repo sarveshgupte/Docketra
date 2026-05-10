@@ -20,6 +20,13 @@ Docketra uses MongoDB as a control plane only. Firm business files are kept in f
 - Large attachment bodies.
 - Unnecessary full-text file content.
 
+## Primary Admin setup (Storage Settings UX)
+
+- **Default behavior:** Docketra-managed Google Drive is active by default. Firms can upload files immediately with no setup.
+- **Optional BYOS:** Primary Admin can click **Connect firm Google Drive** in Storage Settings and approve Google consent.
+- **No OTP for Google OAuth:** OTP is **not** required for Google OAuth connect/refresh.
+- **OTP scope:** OTP is only required for **advanced/manual** provider changes (OneDrive/S3 manual setup).
+
 ## 1) Supported providers
 - Google Drive (**OAuth connect flow in-app**, recommended)
 - Microsoft OneDrive (**manual / advanced setup only**: refresh-token + optional driveId; no Microsoft OAuth button yet)

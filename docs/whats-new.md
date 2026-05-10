@@ -1,5 +1,11 @@
 # What's New
 
+## May 2026: Storage Settings UX split for managed default vs optional BYOS
+
+- Separated Storage Settings into clear cards for current mode, default managed storage, optional firm-owned Google Drive OAuth, advanced manual providers, and backup/export.
+- Removed OTP confusion from the normal Google OAuth connect flow; Primary Admin now uses one clear **Connect firm Google Drive** action.
+- Kept BYOS-not-connected as a normal state and clarified that Docketra-managed storage remains active by default.
+
 ## May 2026: Client management access tightening
 
 - Client management navigation is now Admin/Manager-only (Primary Admin, Admin, Manager, or explicit client-management permission).
