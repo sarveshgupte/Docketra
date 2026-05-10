@@ -32,6 +32,7 @@ function makeRes() {
     payload: null,
     status(c) { this.statusCode = c; return this; },
     json(p) { this.payload = p; return this; },
+    set() { return this; },
   };
 }
 
