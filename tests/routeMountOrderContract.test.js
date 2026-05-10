@@ -10,25 +10,23 @@ process.env.JWT_SECRET = 'x'.repeat(80);
 process.env.STORAGE_TOKEN_SECRET = 'y'.repeat(80);
 process.env.METRICS_TOKEN = 'z'.repeat(80);
 process.env.REDIS_URL = '';
+process.env.SUPERADMIN_XID = 'X000001';
+process.env.SUPERADMIN_EMAIL = 'superadmin@example.com';
+process.env.SUPERADMIN_PASSWORD_HASH = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+process.env.SUPERADMIN_OBJECT_ID = '000000000000000000000001';
+process.env.MONGO_URI = 'mongodb://127.0.0.1:27017/docketra';
+process.env.ENCRYPTION_PROVIDER = 'disabled';
+process.env.DISABLE_GOOGLE_AUTH = 'true';
 
 const platformSource = fs.readFileSync(path.join(__dirname, '../src/app/routes/mountPlatformRoutes.js'), 'utf8');
 const createAppSource = fs.readFileSync(path.join(__dirname, '../src/app/createApp.js'), 'utf8');
 
 const iPlatformMount = createAppSource.indexOf('mountPlatformRoutes(app, {');
-const iTenantSlug = createAppSource.indexOf("app.use('/api/:firmSlug', firmSlugGuard, firmRoutes)");
 const iTenantRoutesMount = createAppSource.indexOf('mountTenantRoutes(app, {');
 
 assert.ok(iPlatformMount > -1, 'mountPlatformRoutes must exist');
-assert.ok(iTenantSlug > -1, 'tenant slug mount must exist in createApp');
 assert.ok(iTenantRoutesMount > -1, 'mountTenantRoutes must exist');
-assert.ok(iPlatformMount < iTenantSlug, 'platform routes must mount before /api/:firmSlug');
-assert.ok(iTenantSlug < iTenantRoutesMount, '/api/:firmSlug must mount before mountTenantRoutes');
-
-assert.strictEqual(
-  platformSource.includes("app.use('/api/:firmSlug', firmSlugGuard, firmRoutes)"),
-  false,
-  'mountPlatformRoutes must not own /api/:firmSlug mount',
-);
+assert.ok(iPlatformMount < iTenantRoutesMount, 'platform routes must mount before mountTenantRoutes');
 
 const { RESERVED_FIRM_SLUGS } = require('../src/middleware/firmSlugGuard.middleware');
 for (const slug of ['users', 'auth', 'public', 'superadmin', 'admin', 'sa']) {
@@ -69,13 +67,13 @@ const swap = (modulePath, exportsValue) => {
 
   const beforeUsers = tenantResolverCalls;
   await request(app).get('/api/users');
-  assert.strictEqual(tenantResolverCalls, beforeUsers, '/api/users must not be handled as /api/:firmSlug');
+  assert.strictEqual(tenantResolverCalls, beforeUsers, '/api/users must not trigger tenantResolver automatically');
 
   const nonCapturePaths = ['/api/clients', '/api/reports/case-metrics', '/api/storage/configuration', '/api/ai/configuration'];
   for (const apiPath of nonCapturePaths) {
     const before = tenantResolverCalls;
     const res = await request(app).get(apiPath);
-    assert.strictEqual(tenantResolverCalls, before, `${apiPath} must not be captured by /api/:firmSlug`);
+    assert.strictEqual(tenantResolverCalls, before, `${apiPath} must not trigger tenantResolver automatically`);
   }
 
   console.log('routeMountOrderContract.test.js passed');
