@@ -32,7 +32,7 @@ const toDisplayString = (value, fallback = '—') => {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TENANT_KEY_MISSING_COPY = 'Client encryption setup needs repair before clients can be loaded.';
-const FORBIDDEN_COPY = 'You do not have permission to manage clients for this firm.';
+const FORBIDDEN_COPY = 'Client management access is required';
 const DUPLICATE_COPY = 'A client with this name or identifier already exists.';
 const DEFAULT_LOAD_ERROR = 'Failed to load clients';
 
@@ -64,6 +64,12 @@ export const ClientsPage = () => {
     businessName: '',
     businessEmail: '',
     primaryContactNumber: '',
+    businessAddress: '',
+    contactPersonName: '',
+    PAN: '',
+    CIN: '',
+    TAN: '',
+    GST: '',
   });
   const [clientFormErrors, setClientFormErrors] = useState({});
   const [clientFormMessage, setClientFormMessage] = useState({ type: '', text: '' });
@@ -75,6 +81,12 @@ export const ClientsPage = () => {
     businessName: selectedClient?.businessName || '',
     businessEmail: selectedClient?.businessEmail || '',
     primaryContactNumber: selectedClient?.primaryContactNumber || '',
+    businessAddress: selectedClient?.businessAddress || '',
+    contactPersonName: selectedClient?.contactPersonName || '',
+    PAN: selectedClient?.PAN || '',
+    CIN: selectedClient?.CIN || '',
+    TAN: selectedClient?.TAN || '',
+    GST: selectedClient?.GST || '',
   }), [selectedClient]);
 
   const isClientFormDirty = useMemo(() => {
@@ -186,6 +198,12 @@ export const ClientsPage = () => {
       businessName: '',
       businessEmail: '',
       primaryContactNumber: '',
+      businessAddress: '',
+      contactPersonName: '',
+      PAN: '',
+      CIN: '',
+      TAN: '',
+      GST: '',
     });
   }, []);
 
@@ -200,6 +218,12 @@ export const ClientsPage = () => {
       businessName: client.businessName || '',
       businessEmail: client.businessEmail || '',
       primaryContactNumber: client.primaryContactNumber || '',
+      businessAddress: client.businessAddress || '',
+      contactPersonName: client.contactPersonName || '',
+      PAN: client.PAN || '',
+      CIN: client.CIN || '',
+      TAN: client.TAN || '',
+      GST: client.GST || '',
     });
     setShowClientModal(true);
   };
@@ -243,6 +267,12 @@ export const ClientsPage = () => {
           businessName: clientForm.businessName,
           ...(clientForm.businessEmail ? { businessEmail: clientForm.businessEmail } : {}),
           ...(clientForm.primaryContactNumber ? { primaryContactNumber: clientForm.primaryContactNumber } : {}),
+          ...(clientForm.businessAddress ? { businessAddress: clientForm.businessAddress } : {}),
+          ...(clientForm.contactPersonName ? { contactPersonName: clientForm.contactPersonName } : {}),
+          ...(clientForm.PAN ? { PAN: clientForm.PAN } : {}),
+          ...(clientForm.CIN ? { CIN: clientForm.CIN } : {}),
+          ...(clientForm.TAN ? { TAN: clientForm.TAN } : {}),
+          ...(clientForm.GST ? { GST: clientForm.GST } : {}),
         });
         if (!response?.success) throw new Error(response?.message || 'Failed to update client');
         setClients((prev) => prev.map((client) => (client.clientId === selectedClient.clientId
@@ -254,6 +284,12 @@ export const ClientsPage = () => {
           businessName: clientForm.businessName,
           ...(clientForm.businessEmail ? { businessEmail: clientForm.businessEmail } : {}),
           ...(clientForm.primaryContactNumber ? { primaryContactNumber: clientForm.primaryContactNumber } : {}),
+          ...(clientForm.businessAddress ? { businessAddress: clientForm.businessAddress } : {}),
+          ...(clientForm.contactPersonName ? { contactPersonName: clientForm.contactPersonName } : {}),
+          ...(clientForm.PAN ? { PAN: clientForm.PAN } : {}),
+          ...(clientForm.CIN ? { CIN: clientForm.CIN } : {}),
+          ...(clientForm.TAN ? { TAN: clientForm.TAN } : {}),
+          ...(clientForm.GST ? { GST: clientForm.GST } : {}),
         });
         if (!response?.success) throw new Error(response?.message || 'Failed to create client');
         if (response?.data?.clientId) {
@@ -548,8 +584,9 @@ export const ClientsPage = () => {
           {clientFormMessage.text ? (
             <p className={`rounded-md border px-3 py-2 text-sm ${clientFormMessage.type === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>{clientFormMessage.text}</p>
           ) : null}
+          <h3 className="text-sm font-semibold text-gray-700">Basic Details</h3>
           <Input
-            label="Client Name"
+            label="Business Name"
             value={clientForm.businessName}
             onChange={(event) => handleClientFieldChange('businessName', event.target.value)}
             required
@@ -557,19 +594,37 @@ export const ClientsPage = () => {
             disabled={!canManageClients}
           />
           <Input
-            label="Client Phone Number (Optional)"
+            label="Business Address (Optional)"
+            value={clientForm.businessAddress}
+            onChange={(event) => handleClientFieldChange('businessAddress', event.target.value)}
+            error={clientFormErrors.businessAddress}
+          />
+          <h3 className="text-sm font-semibold text-gray-700">Contact Details</h3>
+          <Input
+            label="Primary Contact Number (Optional)"
             value={clientForm.primaryContactNumber}
             onChange={(event) => handleClientFieldChange('primaryContactNumber', event.target.value)}
             error={clientFormErrors.primaryContactNumber}
           />
           <Input
-            label="Client Email (Optional)"
+            label="Business Email (Optional)"
             type="email"
             value={clientForm.businessEmail}
             onChange={(event) => handleClientFieldChange('businessEmail', event.target.value)}
             error={clientFormErrors.businessEmail}
             helpText="Optional contact detail for coordination."
           />
+          <Input
+            label="Contact Person Name (Optional)"
+            value={clientForm.contactPersonName}
+            onChange={(event) => handleClientFieldChange('contactPersonName', event.target.value)}
+            error={clientFormErrors.contactPersonName}
+          />
+          <h3 className="text-sm font-semibold text-gray-700">Statutory / Registration Details</h3>
+          <Input label="PAN (Optional)" value={clientForm.PAN} onChange={(event) => handleClientFieldChange('PAN', event.target.value)} error={clientFormErrors.PAN} />
+          <Input label="CIN (Optional)" value={clientForm.CIN} onChange={(event) => handleClientFieldChange('CIN', event.target.value)} error={clientFormErrors.CIN} />
+          <Input label="TAN (Optional)" value={clientForm.TAN} onChange={(event) => handleClientFieldChange('TAN', event.target.value)} error={clientFormErrors.TAN} />
+          <Input label="GST (Optional)" value={clientForm.GST} onChange={(event) => handleClientFieldChange('GST', event.target.value)} error={clientFormErrors.GST} />
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
             <Button type="button" variant="outline" onClick={() => requestCloseClientModal() && closeClientModal()}>Cancel</Button>

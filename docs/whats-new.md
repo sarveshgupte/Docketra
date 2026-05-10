@@ -1,5 +1,11 @@
 # What's New
 
+## May 2026: Client Add/Edit and bulk template field alignment
+
+- Aligned manual Add/Edit Client fields with the bulk client CSV template fields (`businessName`, `businessEmail`, `primaryContactNumber`, `businessAddress`, `PAN`, `CIN`, `TAN`, `GST`, `contactPersonName`) while keeping only `businessName` required in the modal.
+- Preserved unsaved-change protection and create/update payload normalization by omitting optional blank fields.
+- Fixed client-management denial messaging and stale admin-only denial copy so allowed Manager/Admin/Primary Admin paths use: **"Client management access is required"**.
+
 ## May 2026: Client management access tightening
 
 - Client management navigation is now Admin/Manager-only (Primary Admin, Admin, Manager, or explicit client-management permission).
