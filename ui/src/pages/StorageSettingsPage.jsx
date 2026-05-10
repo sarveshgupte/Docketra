@@ -77,10 +77,20 @@ export function StorageSettingsPage() {
         setExportRuns([]);
       }
     } catch (error) {
-      const recovery = getRecoveryPayload(error, 'storage_settings');
-      setLoadError(`${recovery.copy.message} ${recovery.copy.action}`);
-      setSupportContext(recovery.supportContext);
-      toast?.showError?.(recovery.copy.message);
+      const status = Number(error?.response?.status || 0);
+      const requestId = error?.response?.headers?.['x-request-id'] || error?.response?.headers?.['x-correlation-id'];
+      const summary = requestId ? ` (status ${status || 'unknown'}, request ${requestId})` : (status ? ` (status ${status})` : '');
+      if (status === 404) {
+        setLoadError(`Storage settings API route is unavailable${summary}.`);
+        setSupportContext({ area: 'storage_settings', status, requestId: requestId || null });
+      } else {
+        const recovery = getRecoveryPayload(error, 'storage_settings');
+        setLoadError(`${recovery.copy.message} ${recovery.copy.action}${summary}`);
+        setSupportContext(recovery.supportContext);
+        if (!(config?.status === 'ACTIVE_MANAGED' || config?.provider === 'docketra_managed')) {
+          toast?.showError?.(recovery.copy.message);
+        }
+      }
     } finally {
       setLoading(false);
     }
