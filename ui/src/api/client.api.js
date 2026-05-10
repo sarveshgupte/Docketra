@@ -22,10 +22,10 @@ export const clientApi = {
   },
 
   getClientById: (clientId) => request((http) => http.get(`/clients/${clientId}`), 'Failed to load client details'),
-  createClient: (clientData) => request((http) => http.post('/admin/clients', clientData), 'Failed to create client'),
-  updateClient: (clientId, clientData) => request((http) => http.put(`/admin/clients/${clientId}`, clientData), 'Failed to update client'),
-  toggleClientStatus: (clientId, isActive) => request((http) => http.patch(`/admin/clients/${clientId}/status`, { isActive }), 'Failed to update client status'),
-  changeLegalName: (clientId, newBusinessName, reason) => request((http) => http.post(`/admin/clients/${clientId}/change-name`, { newBusinessName, reason }), 'Failed to change legal name'),
+  createClient: (clientData) => request((http) => http.post('/clients', clientData), 'Failed to create client'),
+  updateClient: (clientId, clientData) => request((http) => http.put(`/clients/${clientId}`, clientData), 'Failed to update client'),
+  toggleClientStatus: (clientId, isActive) => request((http) => http.patch(`/clients/${clientId}/status`, { isActive }), 'Failed to update client status'),
+  changeLegalName: (clientId, newBusinessName, reason) => request((http) => http.post(`/clients/${clientId}/change-name`, { newBusinessName, reason }), 'Failed to change legal name'),
 
   updateClientFactSheet: (clientId, description, notes, basicInfo) => request(
     (http) => http.put(`/clients/${clientId}/fact-sheet`, { description, notes, basicInfo }),
