@@ -1,5 +1,10 @@
 # What's New
 
+## May 2026: Storage Settings UX split for managed default vs optional BYOS
+
+- Separated Storage Settings into clear cards for current mode, default managed storage, optional firm-owned Google Drive OAuth, advanced manual providers, and backup/export.
+- Removed OTP confusion from the normal Google OAuth connect flow; Primary Admin now uses one clear **Connect firm Google Drive** action.
+- Kept BYOS-not-connected as a normal state and clarified that Docketra-managed storage remains active by default.
 ## May 2026: Client Add/Edit and bulk template field alignment
 
 - Aligned manual Add/Edit Client fields with the bulk client CSV template fields (`businessName`, `businessEmail`, `primaryContactNumber`, `businessAddress`, `PAN`, `CIN`, `TAN`, `GST`, `contactPersonName`) while keeping only `businessName` required in the modal.
