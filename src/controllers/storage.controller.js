@@ -421,8 +421,6 @@ const getStorageConfiguration = async (req, res) => {
       isConfigured: Boolean(state.canonicalProvider),
       status: state.connectionStatus,
       connectedEmail: state.connectedEmail,
-      rootFolderId: state.rootFolderId,
-      driveId: state.driveId,
       warnings: state.isManaged ? ['Firm-owned BYOS is recommended but not required.'] : state.warnings,
       folderPath,
       createdAt: firm?.storageConfig?.createdAt || null,

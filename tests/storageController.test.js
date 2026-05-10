@@ -94,7 +94,15 @@ async function testGetStorageConfiguration() {
   assert.strictEqual(res.statusCode, 200);
   assert.strictEqual(res.body.provider, 'google-drive');
   assert.strictEqual(res.body.connectedEmail, 'admin@example.com');
-  console.log('  ✓ getStorageConfiguration returns google-drive config');
+  assert.ok(Object.prototype.hasOwnProperty.call(res.body, 'status'), 'response should include status');
+  assert.ok(Object.prototype.hasOwnProperty.call(res.body, 'backup'), 'response should include backup section');
+  assert.ok(!Object.prototype.hasOwnProperty.call(res.body, 'rootFolderId'), 'response must not expose folder IDs');
+  assert.ok(!Object.prototype.hasOwnProperty.call(res.body, 'driveId'), 'response must not expose drive IDs');
+  const serialized = JSON.stringify(res.body);
+  assert.ok(!serialized.includes('refreshToken'), 'response must not include refresh tokens');
+  assert.ok(!serialized.includes('accessToken'), 'response must not include access tokens');
+  assert.ok(!serialized.includes('privateKey'), 'response must not include private keys');
+  console.log('  ✓ getStorageConfiguration returns sanitized storage config');
 }
 
 async function testGoogleConnectAdminOnly() {
