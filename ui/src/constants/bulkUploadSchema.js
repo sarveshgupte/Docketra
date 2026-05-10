@@ -30,11 +30,11 @@ export const BULK_UPLOAD_SCHEMA = {
     ],
   },
   clients: {
-    helperText: ['Business email and primary contact number are required'],
+    helperText: ['Only businessName is required; all other fields are optional.'],
     fields: [
       { key: 'businessName', required: true, description: 'client legal name', aliases: ['name', 'client_name'] },
-      { key: 'businessEmail', required: true, description: 'required', aliases: ['email', 'client_email'], validator: (value) => EMAIL_REGEX.test(String(value || '').trim()), validatorMessage: 'must be a valid email' },
-      { key: 'primaryContactNumber', required: true, description: 'required', aliases: ['phone', 'mobile'] },
+      { key: 'businessEmail', required: false, description: 'optional', aliases: ['email', 'client_email'], validator: (value) => EMAIL_REGEX.test(String(value || '').trim()), validatorMessage: 'must be a valid email' },
+      { key: 'primaryContactNumber', required: false, description: 'optional', aliases: ['phone', 'mobile'] },
       { key: 'businessAddress', required: false, description: 'optional', aliases: ['address', 'client_address'] },
       { key: 'PAN', required: false, description: 'optional', aliases: ['pan_number'] },
       { key: 'CIN', required: false, description: 'optional', aliases: ['cin_number'] },
