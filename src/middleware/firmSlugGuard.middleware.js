@@ -25,6 +25,20 @@ const RESERVED_FIRM_SLUGS = [
   'worklists',
   'attachments',
   'firm',
+  'compliance-calendar',
+  'client-approval',
+  'crm',
+  'landing-pages',
+  'deals',
+  'invoices',
+  'insights',
+  'knowledge-items',
+  'docket-storage',
+  'forms',
+  'leads',
+  'categories',
+  'work-types',
+  'sla',
 ];
 
 const FIRM_SLUG_PATTERN = /^[a-z0-9-]+$/;
