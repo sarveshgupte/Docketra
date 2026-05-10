@@ -32,6 +32,7 @@ function makeRes() {
     payload: null,
     status(c) { this.statusCode = c; return this; },
     json(p) { this.payload = p; return this; },
+    set() { return this; },
   };
 }
 
@@ -279,6 +280,9 @@ async function run() {
     assert.ok(!body.includes('accessToken'), 'getStorageConfiguration: must not expose accessToken');
     assert.ok(!body.includes('clientSecret'), 'getStorageConfiguration: must not expose clientSecret');
     assert.ok(!body.includes('secretAccessKey'), 'getStorageConfiguration: must not expose secretAccessKey');
+    assert.ok(!body.includes('rootFolderId'), 'getStorageConfiguration: must not expose rootFolderId');
+    assert.ok(!body.includes('driveId'), 'getStorageConfiguration: must not expose driveId');
+    assert.ok(!body.includes('privateKey'), 'getStorageConfiguration: must not expose privateKey');
     // Must still return safe provider metadata
     assert.strictEqual(res.payload?.provider, 'docketra_managed', 'getStorageConfiguration: must return managed provider default');
   }

@@ -9,8 +9,14 @@ assert.ok(storageService.includes("new URL('storage/google/connect', `${API_BASE
 assert.ok(!storageService.includes("window.location.assign('/api/storage/google/connect')"), 'connectGoogleDrive should not use same-origin /api path');
 
 const storagePage = read('ui/src/pages/StorageSettingsPage.jsx');
-assert.ok(storagePage.includes('Connect / Refresh Google Drive'), 'Storage settings should expose Google OAuth connect CTA');
+assert.ok(storagePage.includes('Firm-owned Google Drive (optional)'), 'Storage settings should include dedicated Google OAuth card');
+assert.ok(storagePage.includes('Connect firm Google Drive'), 'Storage settings should expose clear Google OAuth connect CTA');
+assert.ok(storagePage.includes("onClick={connectGoogleDrive}"), 'Google OAuth CTA should call connectGoogleDrive directly');
+assert.ok(storagePage.includes('Advanced manual storage providers'), 'OneDrive/S3 should be behind advanced manual section');
+assert.ok(storagePage.includes('Default: Docketra-managed Google Drive'), 'Storage settings should show managed default fallback');
 assert.ok(storagePage.includes("providerParam === 'google-drive' && connected === '1'"), 'OAuth success params should trigger configuration refresh');
+assert.ok(storagePage.includes('Google Drive connection was not completed. Docketra-managed storage is still active.'), 'OAuth error should show non-blocking fallback message');
+assert.ok(!storagePage.includes('Connect / Refresh Google Drive'), 'Legacy mixed Google provider CTA copy should be removed');
 
 const successPage = read('ui/src/pages/StorageOAuthSuccessPage.jsx');
 assert.ok(successPage.includes('/app/firm/'), 'Storage OAuth success page should redirect to firm-scoped storage settings route');
