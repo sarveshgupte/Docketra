@@ -10,11 +10,17 @@ const ROLE_PERMISSIONS = {
     'CASE_VIEW','CASE_CREATE','CASE_UPDATE','CASE_ACTION','CASE_ASSIGN','CASE_ADMIN_VIEW','USER_VIEW','USER_MANAGE','CLIENT_VIEW','CLIENT_MANAGE','CLIENT_APPROVE','CATEGORY_VIEW','CATEGORY_MANAGE','WORKTYPE_VIEW','WORKTYPE_MANAGE','REPORT_VIEW','TASK_VIEW','TASK_MANAGE','ADMIN_STATS','TEAM_MANAGE','FIRM_SETTINGS','WORK_SETTINGS'
   ],
   MANAGER: [
-    'CASE_VIEW','CASE_ACTION','USER_VIEW','TEAM_MEMBER_MANAGE','WORKBASKET_MANAGE'
+    'CASE_VIEW','CASE_ACTION','USER_VIEW','TEAM_MEMBER_MANAGE','WORKBASKET_MANAGE','CLIENT_VIEW','CLIENT_MANAGE'
   ],
   USER: [
     'CASE_VIEW','CASE_CREATE','CASE_UPDATE','CASE_ACTION','USER_VIEW','CLIENT_VIEW','CATEGORY_VIEW','WORKTYPE_VIEW','TASK_VIEW'
   ],
+};
+
+
+const normalizePermissions = (permissions) => {
+  if (!Array.isArray(permissions)) return [];
+  return [...new Set(permissions.filter((permission) => typeof permission === 'string' && permission.trim()).map((permission) => permission.trim().toUpperCase()))];
 };
 
 const toIdString = (value) => {
@@ -47,7 +53,7 @@ const buildRoleContext = (role) => {
   return {
     role,
     canonicalRole: normalizedRole,
-    permissions,
+    permissions: normalizePermissions(permissions),
   };
 };
 
@@ -76,7 +82,14 @@ const resolveFirmRole = async (userId, firmId) => {
     return null;
   }
 
-  return buildRoleContext(membership.role);
+  const roleContext = buildRoleContext(membership.role);
+  if (!roleContext) return null;
+
+  const explicitPermissions = normalizePermissions(membership.permissions || membership.firmPermissions);
+  return {
+    ...roleContext,
+    permissions: normalizePermissions([...roleContext.permissions, ...explicitPermissions]),
+  };
 };
 
 const resolveRequestFirmRole = async (req, firmId) => {
@@ -86,7 +99,11 @@ const resolveRequestFirmRole = async (req, firmId) => {
   const cachedRoleContext = buildRoleContext(cachedRole);
 
   if (cachedRoleContext && requestedFirmId && cachedFirmId && requestedFirmId === cachedFirmId) {
-    return cachedRoleContext;
+    const explicitPermissions = normalizePermissions(req?.user?.permissions || req?.jwt?.permissions);
+    return {
+      ...cachedRoleContext,
+      permissions: normalizePermissions([...cachedRoleContext.permissions, ...explicitPermissions]),
+    }; 
   }
 
   const userId = toIdString(req?.userId || req?.user?._id || req?.user?.id || req?.jwt?.userId || null);
