@@ -16,6 +16,11 @@ assert.ok(storagePage.includes('Advanced manual storage providers'), 'OneDrive/S
 assert.ok(storagePage.includes('Default: Docketra-managed Google Drive'), 'Storage settings should show managed default fallback');
 assert.ok(storagePage.includes("providerParam === 'google-drive' && connected === '1'"), 'OAuth success params should trigger configuration refresh');
 assert.ok(storagePage.includes('Google Drive connection was not completed. Docketra-managed storage is still active.'), 'OAuth error should show non-blocking fallback message');
+
+assert.ok(storageService.includes("api.post('/storage/disconnect')"), 'disconnectStorage should POST /storage/disconnect');
+assert.ok(storagePage.includes('Disconnect firm Google Drive'), 'Disconnect action should exist for connected firm Google Drive state');
+assert.ok(storagePage.includes('Disconnect firm Google Drive? Future uploads will use Docketra-managed storage.'), 'Disconnect confirmation copy should be present');
+assert.ok(storagePage.includes('onClick={connectGoogleDrive}'), 'Google OAuth connect remains direct and OTP-free');
 assert.ok(!storagePage.includes('Connect / Refresh Google Drive'), 'Legacy mixed Google provider CTA copy should be removed');
 
 const successPage = read('ui/src/pages/StorageOAuthSuccessPage.jsx');

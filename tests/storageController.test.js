@@ -5,6 +5,7 @@ const assert = require('assert');
 const Module = require('module');
 
 let isAdmin = true;
+let lastUpdate = null;
 
 function createRes() {
   return {
@@ -28,12 +29,13 @@ Module._load = function(request, parent, isMain) {
       findById: () => ({
         select: () => ({
           lean: async () => ({
-            storage: { mode: 'firm_connected' },
+            storage: { mode: 'firm_connected', provider: 'google_drive' },
             storageConfig: { provider: 'google_drive', credentials: 'enc:stub', createdAt: new Date(), updatedAt: new Date() },
             settings: { storageBackup: { enabled: true } },
           }),
         }),
       }),
+      findByIdAndUpdate: async (_id, update) => { lastUpdate = update; return {}; },
     };
   }
   if (request === '../services/storage/services/TokenEncryption.service') {
@@ -140,11 +142,32 @@ async function testOauthLimiter() {
   console.log('  ✓ oauthLimiter blocks requests beyond threshold');
 }
 
+
+async function testDisconnectStorage() {
+  isAdmin = true;
+  const req = { firmId: 'FIRM1', ownershipFirmId: 'FIRM1', user: { role: 'PRIMARY_ADMIN' } };
+  const res = createRes();
+  await controller.disconnectStorage(req, res);
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.body.provider, 'docketra_managed');
+  assert.strictEqual(res.body.status, 'ACTIVE_MANAGED');
+  assert.strictEqual(lastUpdate.$set['storage.mode'], 'docketra_managed');
+  assert.strictEqual(lastUpdate.$set['storage.provider'], 'docketra_managed');
+  assert.strictEqual(lastUpdate.$set.storageConfig, null);
+  const serialized = JSON.stringify(res.body);
+  assert.ok(!serialized.includes('refreshToken'));
+  assert.ok(!serialized.includes('accessToken'));
+  assert.ok(!serialized.includes('rootFolderId'));
+  assert.ok(!serialized.includes('driveId'));
+  console.log('  ✓ disconnectStorage resets BYOS and returns sanitized response');
+}
+
 async function run() {
   console.log('Running storageController tests...');
   try {
     await testGetStorageConfiguration();
     await testGoogleConnectAdminOnly();
+    await testDisconnectStorage();
     await testOauthLimiter();
     console.log('All storageController tests passed.');
   } catch (error) {
