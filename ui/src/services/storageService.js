@@ -16,6 +16,11 @@ export async function testStorageConnection() {
   return response.data;
 }
 
+export async function disconnectStorage() {
+  const response = await api.post('/storage/disconnect');
+  return response.data;
+}
+
 export async function getStorageOwnershipSummary() {
   const response = await api.get('/storage/ownership-summary');
   return response.data;

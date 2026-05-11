@@ -877,7 +877,6 @@ const disconnectStorage = async (req, res) => {
       action: 'SWITCHED_TO_MANAGED_FALLBACK',
       status: 'ACTIVE_MANAGED',
       connectionStatus: 'ACTIVE_MANAGED',
-      rootFolderId: null,
     });
   } catch (error) {
     log.error('[STORAGE]', { event: 'disconnect_failed', tenantId: req.firmId, message: error.message });
