@@ -2,6 +2,7 @@
 
 ## May 2026: Storage Settings UX split for managed default vs optional BYOS
 
+- Polished Primary Admin BYOS controls with safer disconnect/recovery behavior in Storage Settings; disconnect returns uploads to Docketra-managed fallback without deleting existing firm Google Drive files.
 - Separated Storage Settings into clear cards for current mode, default managed storage, optional firm-owned Google Drive OAuth, advanced manual providers, and backup/export.
 - Removed OTP confusion from the normal Google OAuth connect flow; Primary Admin now uses one clear **Connect firm Google Drive** action.
 - Kept BYOS-not-connected as a normal state and clarified that Docketra-managed storage remains active by default.
