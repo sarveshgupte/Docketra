@@ -26,6 +26,8 @@ Docketra uses MongoDB as a control plane only. Firm business files are kept in f
 - **Optional BYOS:** Primary Admin can click **Connect firm Google Drive** in Storage Settings and approve Google consent.
 - **No OTP for Google OAuth:** OTP is **not** required for Google OAuth connect/refresh.
 - **OTP scope:** OTP is only required for **advanced/manual** provider changes (OneDrive/S3 manual setup).
+- **Disconnect firm-owned Google Drive:** Primary Admin can use **Disconnect firm Google Drive** in Storage Settings when BYOS is connected.
+- Disconnect switches future uploads back to Docketra-managed storage and does **not** delete existing files from firm Google Drive.
 
 ## 1) Supported providers
 - Google Drive (**OAuth connect flow in-app**, recommended)

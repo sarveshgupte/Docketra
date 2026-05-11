@@ -13,6 +13,7 @@ import {
   getStorageOwnershipSummary,
   sendStorageChangeOtp,
   testStorageConnection,
+  disconnectStorage,
   verifyStorageChangeOtp,
   exportFirmStorage,
   listStorageExports,
@@ -35,6 +36,7 @@ export function StorageSettingsPage() {
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [testing, setTesting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
   const [savingProvider, setSavingProvider] = useState(false);
   const [provider, setProvider] = useState('onedrive');
   const [otpCode, setOtpCode] = useState('');
@@ -154,6 +156,80 @@ export function StorageSettingsPage() {
     }
   };
 
+
+  const onSendOtp = async () => {
+    try {
+      await sendStorageChangeOtp(user?.email);
+      setStatusMessage({ type: 'success', text: 'OTP sent. Check your email and enter the code below.' });
+      toast?.showSuccess?.('OTP sent.');
+    } catch (error) {
+      const recovery = getRecoveryPayload(error, 'storage_settings');
+      const message = `${recovery.copy.message} ${recovery.copy.action}`;
+      setStatusMessage({ type: 'error', text: message });
+      toast?.showError?.('Unable to send OTP right now.');
+    }
+  };
+
+  const onVerifyOtp = async () => {
+    try {
+      const result = await verifyStorageChangeOtp(user?.email, otpCode);
+      setVerificationToken(result?.data?.verificationToken || '');
+      setStatusMessage({ type: 'success', text: 'OTP verified. You can now save advanced provider settings.' });
+      toast?.showSuccess?.('OTP verified.');
+    } catch (error) {
+      const recovery = getRecoveryPayload(error, 'storage_settings');
+      const message = `${recovery.copy.message} ${recovery.copy.action}`;
+      setStatusMessage({ type: 'error', text: message });
+      toast?.showError?.('OTP verification failed.');
+    }
+  };
+
+  const onTestConnection = async () => {
+    setTesting(true);
+    try {
+      await testStorageConnection();
+      setStatusMessage({ type: 'success', text: 'Storage connection test passed.' });
+      await loadConfiguration();
+    } catch (error) {
+      const recovery = getRecoveryPayload(error, 'storage_settings');
+      setStatusMessage({ type: 'error', text: `${recovery.copy.message} ${recovery.copy.action}` });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const onDisconnectGoogle = async () => {
+    const confirmed = window.confirm('Disconnect firm Google Drive? Future uploads will use Docketra-managed storage.');
+    if (!confirmed) return;
+    setDisconnecting(true);
+    try {
+      await disconnectStorage();
+      setStatusMessage({ type: 'success', text: 'Firm Google Drive disconnected. Docketra-managed storage is active.' });
+      toast?.showSuccess?.('Firm Google Drive disconnected.');
+      await loadConfiguration();
+    } catch (error) {
+      const recovery = getRecoveryPayload(error, 'storage_settings');
+      setStatusMessage({ type: 'error', text: `${recovery.copy.message} ${recovery.copy.action}` });
+      toast?.showError?.('Unable to disconnect firm Google Drive.');
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  const onGenerateExport = async () => {
+    setExporting(true);
+    try {
+      await exportFirmStorage();
+      setStatusMessage({ type: 'success', text: 'Export started successfully.' });
+      await loadConfiguration();
+    } catch (error) {
+      const recovery = getRecoveryPayload(error, 'storage_settings');
+      setStatusMessage({ type: 'error', text: `${recovery.copy.message} ${recovery.copy.action}` });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const statusMessages = [
     loadError ? { tone: 'error', message: loadError } : null,
     statusMessage.text
@@ -217,18 +293,13 @@ export function StorageSettingsPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={async () => {
-                        setTesting(true);
-                        try {
-                          await testStorageConnection();
-                          await loadConfiguration();
-                        } finally {
-                          setTesting(false);
-                        }
-                      }}
+                      onClick={onTestConnection}
                       disabled={testing}
                     >
                       {testing ? 'Testing...' : 'Test connection'}
+                    </Button>
+                                      <Button type="button" variant="outline" onClick={onDisconnectGoogle} disabled={disconnecting}>
+                      {disconnecting ? 'Disconnecting...' : 'Disconnect firm Google Drive'}
                     </Button>
                   </div>
                 </>
@@ -273,14 +344,11 @@ export function StorageSettingsPage() {
 
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-3 items-end">
                     <Input label="OTP Code" value={otpCode} onChange={(event) => setOtpCode(event.target.value)} />
-                    <Button type="button" variant="outline" onClick={() => sendStorageChangeOtp(user?.email)}>Send OTP</Button>
+                    <Button type="button" variant="outline" onClick={onSendOtp}>Send OTP</Button>
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={async () => {
-                        const result = await verifyStorageChangeOtp(user?.email, otpCode);
-                        setVerificationToken(result?.data?.verificationToken || '');
-                      }}
+                      onClick={onVerifyOtp}
                     >
                       Verify OTP
                     </Button>
@@ -301,15 +369,7 @@ export function StorageSettingsPage() {
               <Button
                 type="button"
                 variant="primary"
-                onClick={async () => {
-                  setExporting(true);
-                  try {
-                    await exportFirmStorage();
-                    await loadConfiguration();
-                  } finally {
-                    setExporting(false);
-                  }
-                }}
+                onClick={onGenerateExport}
                 disabled={exporting}
               >
                 {exporting ? 'Generating Export…' : 'Generate Firm Export'}
