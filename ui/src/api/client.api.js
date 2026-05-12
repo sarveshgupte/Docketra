@@ -5,7 +5,7 @@ const uploadViaSignedUrl = ({ uploadUrl, uploadMethod = 'PUT', uploadHeaders = {
   Object.entries(uploadHeaders || {}).forEach(([key, value]) => {
     if (value !== undefined && value !== null) xhr.setRequestHeader(key, value);
   });
-  xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed with status ${xhr.status}`)));
+  xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(Object.assign(new Error(`Upload failed with status ${xhr.status}`), { status: xhr.status })));
   xhr.onerror = () => reject(new Error('Upload failed due to network error'));
   xhr.send(file);
 });
@@ -38,7 +38,20 @@ export const clientApi = {
   addClientCfsComment: (clientId, payload) => request((http) => http.post(`/clients/${clientId}/cfs/comments`, payload), 'Failed to add comment'),
 
   uploadClientCFSFile: async (clientId, file) => {
-    const intentResponse = await request(
+    const buildStageError = (stage, error) => {
+      const status = error?.response?.status || error?.status || null;
+      const requestId = error?.response?.data?.requestId || error?.response?.headers?.['x-request-id'] || null;
+      const message = error?.response?.data?.message || error?.message || 'Upload failed';
+      return Object.assign(new Error(`${stage}: ${message}`), {
+        stage,
+        status,
+        requestId,
+      });
+    };
+
+    let intentResponse;
+    try {
+      intentResponse = await request(
       (http) => http.post(`/clients/${clientId}/cfs/files/upload-intent`, {
         fileName: file.name,
         mimeType: file.type || 'application/octet-stream',
@@ -48,15 +61,25 @@ export const clientApi = {
       }),
       'Failed to create upload intent',
     );
+    } catch (error) {
+      throw buildStageError('create upload intent failed', error);
+    }
+
     const intent = intentResponse?.data;
-    await uploadViaSignedUrl({
+
+    try {
+      await uploadViaSignedUrl({
       uploadUrl: intent?.uploadUrl,
       uploadMethod: intent?.uploadMethod,
       uploadHeaders: intent?.uploadHeaders,
       file,
     });
+    } catch (error) {
+      throw buildStageError('direct upload failed', error);
+    }
 
-    return request(
+    try {
+      return await request(
       (http) => http.post(`/clients/${clientId}/cfs/files/finalize`, {
         uploadId: intent.uploadId,
         completion: {
@@ -66,6 +89,9 @@ export const clientApi = {
       }),
       'Failed to finalize upload',
     );
+    } catch (error) {
+      throw buildStageError('finalize upload failed', error);
+    }
   },
 
   uploadFactSheetFile: (clientId, file) => clientApi.uploadClientCFSFile(clientId, file),
