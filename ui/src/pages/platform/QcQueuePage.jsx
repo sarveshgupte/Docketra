@@ -176,6 +176,7 @@ export const PlatformQcQueuePage = () => {
                 type="button"
                 onClick={() => removeFilter(filter.key)}
                 className="table-filter-chip"
+                aria-label={`Remove filter: ${filter.label} ${filter.value}`}
               >
                 <span className="table-filter-chip__label">{filter.label}:</span> {filter.value}
                 <span aria-hidden className="table-filter-chip__close">&times;</span>
