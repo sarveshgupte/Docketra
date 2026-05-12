@@ -1,5 +1,12 @@
 # What's New
 
+## May 2026: Client CFS upload reliability and soft-delete guardrail fixes
+
+- Fixed client detail loading crashes by removing manual `deletedAt` filters from client CFS attachment queries and relying on the soft-delete plugin defaults.
+- Hardened wrapped write handlers so transaction wrapper failures no longer surface as `next is not a function` when a downstream caller omits `next`; responses now fail safely with structured error payloads.
+- Improved client CFS upload API stage diagnostics in frontend upload flow so support can distinguish upload-intent, direct-upload, and finalize failures with safe status/request-id context.
+- Confirmed CFS attachments continue to upload via the active storage provider path (firm-owned Google Drive BYOS when connected, otherwise Docketra-managed fallback).
+
 ## May 2026: Storage Settings UX split for managed default vs optional BYOS
 
 - Polished Primary Admin BYOS controls with safer disconnect/recovery behavior in Storage Settings; disconnect returns uploads to Docketra-managed fallback without deleting existing firm Google Drive files.
