@@ -48,5 +48,38 @@ const createRes = () => ({
   });
   assert.equal(parsed.PAN, 'abcde1234f');
 
+  // Create schema should require businessName and support canonical optional fields
+  const postSchema = clientRouteSchema['POST /'].body;
+
+  const createMinimal = postSchema.parse({ businessName: 'Pranali Ltd' });
+  assert.equal(createMinimal.businessName, 'Pranali Ltd');
+
+  assert.throws(
+    () => postSchema.parse({}),
+    /businessName/i,
+    'POST / schema must reject payloads without businessName'
+  );
+
+  const createFull = postSchema.parse({
+    businessName: 'Acme Pvt Ltd',
+    businessEmail: 'ops@acme.com',
+    primaryContactNumber: '9999999999',
+    businessAddress: 'Address 1',
+    PAN: 'abcde1234f',
+    CIN: 'l12345mh2020plc000001',
+    TAN: 'blra12345b',
+    GST: '22abcde1234f1z5',
+    contactPersonName: 'Jane Doe',
+  });
+  assert.equal(createFull.contactPersonName, 'Jane Doe');
+
+  // Guard against regressions that reintroduce legacy body.name checks in client create path
+  const clientControllerSource = require('fs').readFileSync(require('path').join(__dirname, '..', 'src', 'controllers', 'client.controller.js'), 'utf8');
+  assert.equal(
+    clientControllerSource.includes('req.body.name'),
+    false,
+    'Client create/update paths must not require or depend on legacy body.name'
+  );
+
   console.log('clientManagementPermissionsAndSchema.audit.test.js passed');
 })();

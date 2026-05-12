@@ -4,7 +4,17 @@ module.exports = {
   'GET /': { query: z.object({}).passthrough() },
   'GET /:clientId': { params: z.object({ clientId: clientIdString }), query: z.object({}).passthrough() },
   'POST /': {
-    body: z.object({ name: nonEmptyString }).passthrough(),
+    body: z.object({
+      businessName: nonEmptyString,
+      businessEmail: z.string().trim().optional(),
+      primaryContactNumber: z.string().trim().optional(),
+      businessAddress: z.string().trim().optional(),
+      PAN: z.string().trim().optional(),
+      CIN: z.string().trim().optional(),
+      TAN: z.string().trim().optional(),
+      GST: z.string().trim().optional(),
+      contactPersonName: z.string().trim().optional(),
+    }).passthrough(),
   },
   'PUT /:clientId': {
     params: z.object({ clientId: clientIdString }),
