@@ -61,7 +61,8 @@
     "test:work-type-normalization": "node tests/workTypeNormalization.test.mjs",
     "test:landing-page": "node tests/companyBrainLandingPage.test.mjs",
     "test:company-brain-command-center": "node tests/companyBrainCommandCenterSimplification.test.mjs",
-    "test:pilot-ui-contracts": "node tests/pilotUiContracts.test.mjs"
+    "test:pilot-ui-contracts": "node tests/pilotUiContracts.test.mjs",
+    "test:card-accessibility": "node tests/cardAccessibilityContract.test.mjs"
   },
   "browserslist": {
     "production": [
