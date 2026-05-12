@@ -6,7 +6,6 @@ class AttachmentRepository {
       firmId,
       clientId,
       source,
-      deletedAt: { $exists: false },
     }).sort({ createdAt: -1 });
   }
 }

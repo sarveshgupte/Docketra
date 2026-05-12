@@ -35,7 +35,17 @@ const wrapWriteHandler = (controllerFn) => {
         res.status(statusCode).json(result);
       }
     } catch (error) {
-      next(error);
+      if (typeof next === 'function') {
+        next(error);
+        return;
+      }
+      if (!res.headersSent) {
+        res.status(error?.status || 500).json({
+          success: false,
+          code: error?.code || 'WRITE_HANDLER_ERROR',
+          message: error?.message || 'Unexpected write handler failure',
+        });
+      }
     } finally {
       delete req._transactionResponse;
     }
