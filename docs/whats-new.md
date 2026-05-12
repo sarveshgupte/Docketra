@@ -10,6 +10,7 @@
 
 - Aligned manual Add/Edit Client fields with the bulk client CSV template fields (`businessName`, `businessEmail`, `primaryContactNumber`, `businessAddress`, `PAN`, `CIN`, `TAN`, `GST`, `contactPersonName`) while keeping only `businessName` required in the modal.
 - Preserved unsaved-change protection and create/update payload normalization by omitting optional blank fields.
+- Fixed Add Client validation to use businessName consistently across UI, API schema, controller, and bulk upload.
 - Fixed client-management denial messaging and stale admin-only denial copy so allowed Manager/Admin/Primary Admin paths use: **"Client management access is required"**.
 
 ## May 2026: Client management access tightening

@@ -9,6 +9,7 @@ const clientController = read('src/controllers/client.controller.js');
 const bulkUploadController = read('src/controllers/bulkUpload.controller.js');
 const bulkSchema = read('ui/src/constants/bulkUploadSchema.js');
 const clientRoutes = read('src/routes/client.routes.js');
+const clientRouteSchema = read('src/schemas/client.routes.schema.js');
 const authzMiddleware = read('src/middleware/authorization.middleware.js');
 const permissionMiddleware = read('src/middleware/permission.middleware.js');
 
@@ -16,7 +17,10 @@ for (const field of ['businessName', 'businessEmail', 'primaryContactNumber', 'b
   assert.ok(clientController.includes(field), `client.controller must support field: ${field}`);
   assert.ok(bulkUploadController.includes(field), `bulkUpload.controller must support field: ${field}`);
   assert.ok(bulkSchema.includes(field), `bulk upload schema must support field: ${field}`);
+  assert.ok(clientRouteSchema.includes(field), `client route schema must support field: ${field}`);
 }
+
+assert.ok(clientRouteSchema.includes("'POST /'"), 'client route schema must define POST / validation');
 
 assert.ok(clientRoutes.includes("authorizeFirmPermission('CLIENT_MANAGE')"), 'client write routes must require CLIENT_MANAGE permission');
 assert.ok(authzMiddleware.includes('Admin access required'), 'generic admin middleware must keep admin denial copy');
