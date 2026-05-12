@@ -342,7 +342,6 @@ const getClientById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching client',
-      error: error.message,
     });
   }
 };

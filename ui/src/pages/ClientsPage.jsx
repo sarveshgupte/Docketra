@@ -343,7 +343,7 @@ export const ClientsPage = () => {
       setDescriptionDraft(fullClient?.clientFactSheet?.description || '');
       setNotesDraft(fullClient?.clientFactSheet?.notes || '');
     } catch (error) {
-      showError(error?.response?.data?.message || error?.message || 'Failed to load latest client details');
+      showError(getCfsFetchErrorMessage(error));
     }
   }, [showError]);
 
@@ -732,4 +732,17 @@ export const ClientsPage = () => {
       </Modal>
     </PlatformShell>
   );
+};
+
+
+const getCfsFetchErrorMessage = (error) => {
+  const status = error?.response?.status;
+  const serverMessage = error?.response?.data?.message;
+
+  if (status === 403) return 'Client management access is required';
+  if (status === 404) return 'Client not found or no longer available';
+  if (status === 503) return 'Client record loaded, but some fact sheet resources are unavailable right now. Please try again shortly.';
+  if (typeof serverMessage === 'string' && serverMessage.trim()) return serverMessage;
+
+  return 'Failed to load latest client details';
 };
