@@ -12,13 +12,11 @@ import { useToast } from '../../hooks/useToast';
 import { useUnsavedChangesPrompt } from '../../hooks/useUnsavedChangesPrompt';
 import { buildCreateDocketPayload, validateCreateDocketPayload, resolveEarliestErrorStep } from './createDocketPayload';
 import { ROUTES } from '../../constants/routes';
+import { generateSecureRandomString } from '../../utils/crypto';
 
 const STEPS = ['Basic Info', 'Classification', 'Routing', 'Assignment', 'Review & Create'];
 const createSubmissionKey = () => {
-  if (typeof window !== 'undefined' && window.crypto?.randomUUID) {
-    return window.crypto.randomUUID();
-  }
-  return `docket-create-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return `docket-create-${Date.now()}-${generateSecureRandomString(8)}`;
 };
 
 const defaultForm = {

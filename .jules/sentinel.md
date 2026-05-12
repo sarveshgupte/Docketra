@@ -30,3 +30,8 @@
 **Vulnerability:** Weak PRNG (`Math.random()`) was used for socket reconnection jitter.
 **Learning:** Even when random numbers aren't strictly used for cryptographic keys, using insecure PRNGs can flag SAST tools and sets a bad precedent. It's better to default to cryptographically secure RNGs.
 **Prevention:** Use `crypto.randomInt()` instead of `Math.random()` universally.
+
+## 2024-05-09 - Replaced Insecure Math.random() in Frontend
+**Vulnerability:** Found multiple usages of `Math.random()` in the frontend for generating ID strings like correlation IDs, idempotency keys, and submission keys.
+**Learning:** Even for non-cryptographic usages (like DOM IDs or tracking IDs), using `Math.random()` triggers SAST (Static Application Security Testing) warnings and provides weak randomness that could theoretically lead to ID collisions or predictability, compromising tracking workflows.
+**Prevention:** Use the centralized secure randomness utilities (e.g., `generateSecureRandomString`, `generateUUID` from `ui/src/utils/crypto.js`) that leverage the Web Crypto API (`window.crypto.getRandomValues`) to ensure robust, cryptographically secure IDs on the client side.
