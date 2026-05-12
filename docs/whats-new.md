@@ -14,6 +14,7 @@
 
 ## May 2026: Client management access tightening
 
+- Fixed Edit CFS client fetch route/schema alignment so client fact sheets open reliably.
 - Client management navigation is now Admin/Manager-only (Primary Admin, Admin, Manager, or explicit client-management permission).
 - Regular firm users no longer see the Clients sidebar item and are blocked from direct `/app/firm/:firmSlug/clients` access.
 - Client mutation actions (Add Client, Bulk Upload, Edit Client, Edit CFS) now follow the same Admin/Manager client-management permission gate.
