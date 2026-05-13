@@ -940,6 +940,7 @@ export const Layout = ({ children, title, subtitle }) => {
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                 aria-expanded={profileDropdownOpen}
                 aria-haspopup="true"
+                aria-label="User profile menu"
               >
                 <div className="enterprise-header__user-avatar" aria-hidden="true">{getUserInitials()}</div>
                 <span className="enterprise-header__user-name">{user?.name || user?.xID}</span>
