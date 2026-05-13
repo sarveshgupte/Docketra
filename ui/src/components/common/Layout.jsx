@@ -842,7 +842,8 @@ export const Layout = ({ children, title, subtitle }) => {
             <div className="dropdown" ref={notificationDropdownRef}>
               <button
                 className="enterprise-header__icon-btn"
-                aria-label="Notifications"
+                aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : 'Notifications'}
+                title={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
                 aria-expanded={notificationOpen}
                 aria-haspopup="menu"
                 onClick={() => setNotificationOpen((v) => !v)}
