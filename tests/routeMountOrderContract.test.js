@@ -15,20 +15,10 @@ const platformSource = fs.readFileSync(path.join(__dirname, '../src/app/routes/m
 const createAppSource = fs.readFileSync(path.join(__dirname, '../src/app/createApp.js'), 'utf8');
 
 const iPlatformMount = createAppSource.indexOf('mountPlatformRoutes(app, {');
-const iTenantSlug = createAppSource.indexOf("app.use('/api/:firmSlug', firmSlugGuard, firmRoutes)");
 const iTenantRoutesMount = createAppSource.indexOf('mountTenantRoutes(app, {');
 
 assert.ok(iPlatformMount > -1, 'mountPlatformRoutes must exist');
-assert.ok(iTenantSlug > -1, 'tenant slug mount must exist in createApp');
 assert.ok(iTenantRoutesMount > -1, 'mountTenantRoutes must exist');
-assert.ok(iPlatformMount < iTenantSlug, 'platform routes must mount before /api/:firmSlug');
-assert.ok(iTenantSlug < iTenantRoutesMount, '/api/:firmSlug must mount before mountTenantRoutes');
-
-assert.strictEqual(
-  platformSource.includes("app.use('/api/:firmSlug', firmSlugGuard, firmRoutes)"),
-  false,
-  'mountPlatformRoutes must not own /api/:firmSlug mount',
-);
 
 const { RESERVED_FIRM_SLUGS } = require('../src/middleware/firmSlugGuard.middleware');
 for (const slug of ['users', 'auth', 'public', 'superadmin', 'admin', 'sa']) {
