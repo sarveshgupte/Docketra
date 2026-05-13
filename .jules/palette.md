@@ -31,3 +31,6 @@
 ## 2026-05-09 - Clipboard Failure Feedback & Timeout Hygiene
 **Learning:** Clipboard APIs can be unavailable in some contexts and write operations can reject, which makes optimistic success messaging misleading and inaccessible.
 **Action:** Await clipboard writes before showing success, expose an explicit failure state when unavailable/rejected, and manage feedback timers with refs that are cleared before restart and cleaned up on unmount.
+## 2026-05-13 - Explicit button types and focus states
+**Learning:** Generic buttons rendered in specialized components like `ErrorBoundary` can easily lack explicit `type="button"` attributes and keyboard focus styles, leading to potential a11y issues and unintended form submissions if they are caught wrapping complex views.
+**Action:** Always verify that interactive buttons include explicit `type="button"` attributes and visual focus indicators (e.g., Tailwind's `focus-visible` classes) to ensure keyboard accessibility and prevent unintended form submissions.
