@@ -110,6 +110,7 @@ export const SuperAdminLayout = ({ children }) => {
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Global search</p>
           <div className="mt-2 flex gap-2">
             <input
+              aria-label="Global search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setSearchOpen(true)}
