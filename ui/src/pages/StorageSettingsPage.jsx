@@ -11,6 +11,7 @@ import {
   connectGoogleDrive,
   getStorageConfiguration,
   getStorageOwnershipSummary,
+  getStorageFolderLink,
   sendStorageChangeOtp,
   testStorageConnection,
   disconnectStorage,
@@ -72,6 +73,8 @@ export function StorageSettingsPage() {
   const [usage, setUsage] = useState(null);
   const [usageLoading, setUsageLoading] = useState(false);
   const [usageError, setUsageError] = useState('');
+  const [openingFolder, setOpeningFolder] = useState(false);
+  const [folderLinkAvailable, setFolderLinkAvailable] = useState(false);
 
   const loadStorageUsage = async () => {
     setUsageLoading(true);
@@ -104,6 +107,7 @@ export function StorageSettingsPage() {
 
       if (summaryResult.status === 'fulfilled') {
         setOwnershipSummary(summaryResult.value);
+        setFolderLinkAvailable(Boolean(summaryResult.value?.dataStorageMap?.activeStorageProvider));
       } else {
         setOwnershipSummary(null);
         setSummaryWarning('Storage ownership summary is temporarily unavailable.');
@@ -253,12 +257,30 @@ export function StorageSettingsPage() {
     try {
       await exportFirmStorage();
       setStatusMessage({ type: 'success', text: 'Export started successfully.' });
+      toast?.showSuccess?.('Storage export generated.');
       await loadConfiguration();
     } catch (error) {
       const recovery = getRecoveryPayload(error, 'storage_settings');
       setStatusMessage({ type: 'error', text: `${recovery.copy.message} ${recovery.copy.action}` });
+      toast?.showError?.('Unable to generate storage export.');
     } finally {
       setExporting(false);
+    }
+  };
+  const onOpenStorageFolder = async () => {
+    setOpeningFolder(true);
+    try {
+      const data = await getStorageFolderLink();
+      if (!data?.folderUrl) throw new Error('folder_link_unavailable');
+      window.open(data.folderUrl, '_blank', 'noopener,noreferrer');
+      setStatusMessage({ type: 'success', text: 'Storage folder opened.' });
+      toast?.showSuccess?.('Opened storage folder.');
+    } catch {
+      setFolderLinkAvailable(false);
+      setStatusMessage({ type: 'error', text: 'Folder link unavailable.' });
+      toast?.showError?.('Folder link unavailable.');
+    } finally {
+      setOpeningFolder(false);
     }
   };
   const onDownloadDataResidencySummary = async () => {
@@ -303,13 +325,15 @@ export function StorageSettingsPage() {
               </ul>
               <p className="text-sm">Last storage health check: {formatDateTime(ownershipSummary?.dataStorageMap?.lastStorageHealthCheckAt || ownershipSummary?.lastHealthCheck?.checkedAt)}</p>
               <div className="flex gap-2 mt-2">
-                <Button type="button" variant="outline" disabled={!ownershipSummary?.dataStorageMap?.canOpenStorageFolder}>
-                  Open storage folder
+                <Button type="button" variant="outline" onClick={onOpenStorageFolder} disabled={!folderLinkAvailable || openingFolder} title={!folderLinkAvailable ? 'Folder link unavailable.' : ''}>
+                  {openingFolder ? 'Opening…' : 'Open storage folder'}
                 </Button>
                 <Button type="button" variant="primary" onClick={onDownloadDataResidencySummary} disabled={exporting}>
                   {exporting ? 'Generating…' : 'Generate storage export'}
                 </Button>
               </div>
+              {!folderLinkAvailable ? <p className="text-sm text-[var(--dt-text-muted)] mt-2">Folder link unavailable.</p> : null}
+              <p className="text-sm text-[var(--dt-text-muted)] mt-2">Export includes metadata references (client profiles, CFS, attachments, storage paths, and summary) and excludes secrets.</p>
             </div>
           </Card>
 

@@ -24,3 +24,5 @@ Primary Admins can verify the active storage provider and storage map in **Stora
 - BYOS-first is the target architecture, but Docketra-managed fallback remains available when firm-owned storage is not connected.
 - Existing historical records may include legacy routing/config metadata while migration normalization continues.
 - Folder path displays are canonical conventions for verification and governance; path rendering does not expose raw internal provider IDs.
+
+- Storage folder verification links are resolved server-side through a sanitized endpoint (`GET /api/storage/folder-link`) that returns only a Google Drive folder URL and provider context; secrets (refresh/access tokens, private keys, raw credentials) are never returned.
