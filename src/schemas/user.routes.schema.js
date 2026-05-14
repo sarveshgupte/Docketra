@@ -27,7 +27,7 @@ module.exports = {
   'POST /': {
     body: z.object({
       email: z.string().trim().email(),
-      role: z.enum(['PRIMARY_ADMIN', 'ADMIN', 'MANAGER', 'USER']).optional(),
+      role: z.enum(['ADMIN', 'MANAGER', 'USER']).optional(),
       name: nonEmptyString.optional(),
     }).passthrough(),
   },
@@ -37,7 +37,7 @@ module.exports = {
       firmId: z.undefined().optional(),
       xID: z.undefined().optional(),
       name: nonEmptyString.optional(),
-      role: z.enum(['PRIMARY_ADMIN', 'ADMIN', 'MANAGER', 'USER']).optional(),
+      role: z.enum(['ADMIN', 'MANAGER', 'USER']).optional(),
       isActive: z.boolean().optional(),
     }).passthrough(),
   },
@@ -48,7 +48,7 @@ module.exports = {
   'PATCH /:id/role': {
     params: z.object({ id: nonEmptyString }),
     body: z.object({
-      role: z.enum(['PRIMARY_ADMIN', 'ADMIN', 'MANAGER', 'USER']),
+      role: z.enum(['ADMIN', 'MANAGER', 'USER']),
     }).passthrough(),
   },
   'PATCH /:id/reporting': {
