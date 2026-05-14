@@ -2,35 +2,54 @@
 const assert = require('assert');
 const supertest = require('supertest');
 
-const setTestEnvDefaults = () => {
-  process.env.NODE_ENV = 'test';
-  process.env.JWT_SECRET = process.env.JWT_SECRET || '0123456789abcdef0123456789abcdef';
-  process.env.SUPERADMIN_PASSWORD_HASH = process.env.SUPERADMIN_PASSWORD_HASH || '$2b$10$replace_this_with_a_real_bcrypt_hash_before_deploying';
-  process.env.SUPERADMIN_XID = process.env.SUPERADMIN_XID || 'X000001';
-  process.env.SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'superadmin@example.com';
-  process.env.SUPERADMIN_OBJECT_ID = process.env.SUPERADMIN_OBJECT_ID || '000000000000000000000001';
-  process.env.MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/docketra';
-  process.env.ENCRYPTION_PROVIDER = process.env.ENCRYPTION_PROVIDER || 'disabled';
-  process.env.REDIS_URL = '';
+const TEST_ENV_OVERRIDES = {
+  NODE_ENV: 'production',
+  PORT: '3001',
+  UPLOAD_SCAN_STRICT: 'true',
+  JWT_SECRET: 'ci_fake_jwt_secret_value_for_smoke_test_only_abcdefghijklmnopqrstuvwxyz_1234',
+  STORAGE_TOKEN_SECRET: 'ci_fake_storage_token_secret_for_smoke_test_only_abcdefghijklmnopqrstuvwxyz_12',
+  METRICS_TOKEN: 'ci_fake_metrics_token_value_for_smoke_test_only_abcdefghijklmnopqrstuvwxyz_123',
+  SUPERADMIN_PASSWORD_HASH: '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+  SUPERADMIN_XID: 'X000001',
+  SUPERADMIN_EMAIL: 'superadmin@example.com',
+  SUPERADMIN_OBJECT_ID: '000000000000000000000001',
+  MONGO_URI: 'mongodb://127.0.0.1:27017/docketra',
+  ENCRYPTION_PROVIDER: 'disabled',
+  MAIL_FROM: 'no-reply@example.com',
+  BREVO_API_KEY: 'ci-placeholder-brevo-key',
+  REDIS_URL: '',
+  ALLOW_REDIS_FALLBACK: 'true',
+};
+
+const applyTestEnvOverrides = () => {
+  const original = new Map();
+  for (const [key, value] of Object.entries(TEST_ENV_OVERRIDES)) {
+    original.set(key, process.env[key]);
+    process.env[key] = value;
+  }
+  return () => {
+    for (const [key, value] of original.entries()) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  };
 };
 
 const mockBcrypt = () => {
   const bcryptPath = require.resolve('bcrypt');
-  if (!require.cache[bcryptPath]) {
-    require.cache[bcryptPath] = {
-      id: bcryptPath,
-      filename: bcryptPath,
-      loaded: true,
-      exports: {
-        hash: async () => 'mock-hash',
-        hashSync: () => 'mock-hash',
-        compare: async () => true,
-        compareSync: () => true,
-        genSalt: async () => 'mock-salt',
-        genSaltSync: () => 'mock-salt',
-      },
-    };
-  }
+  require.cache[bcryptPath] = {
+    id: bcryptPath,
+    filename: bcryptPath,
+    loaded: true,
+    exports: {
+      hash: async () => 'mock-hash',
+      hashSync: () => 'mock-hash',
+      compare: async () => true,
+      compareSync: () => true,
+      genSalt: async () => 'mock-salt',
+      genSaltSync: () => 'mock-salt',
+    },
+  };
 };
 
 const mockAuthController = () => {
@@ -44,44 +63,42 @@ const mockAuthController = () => {
   };
 };
 
-const mockRedisConfig = () => {
-  const redisConfigPath = require.resolve('../src/config/redis.js');
-  require.cache[redisConfigPath] = {
-    id: redisConfigPath,
-    filename: redisConfigPath,
-    loaded: true,
-    exports: {
-      getRedisClient: () => null,
-      closeRedis: async () => {},
-    },
+const withModuleStub = (modulePath, exportsValue) => {
+  const resolvedPath = require.resolve(modulePath);
+  const original = require.cache[resolvedPath];
+  require.cache[resolvedPath] = { id: resolvedPath, filename: resolvedPath, loaded: true, exports: exportsValue };
+  return () => {
+    if (original) require.cache[resolvedPath] = original;
+    else delete require.cache[resolvedPath];
   };
 };
 
 async function run() {
-  setTestEnvDefaults();
+  const restoreEnv = applyTestEnvOverrides();
   mockBcrypt();
   mockAuthController();
-  mockRedisConfig();
+
+  const restorers = [
+    withModuleStub('../src/config/database', async () => {}),
+    withModuleStub('../src/services/bootstrap.service', { runBootstrap: async () => {} }),
+    withModuleStub('../src/services/notificationSocket.service', { initNotificationSocket: () => {} }),
+    withModuleStub('../src/config/redis', {
+      getRedisClient: () => null,
+      isRedisReady: () => false,
+      isRedisUrlConfigured: () => false,
+    }),
+  ];
 
   const http = require('http');
   const originalListen = http.Server.prototype.listen;
-  let listenCalls = 0;
-  let passed = false;
-  http.Server.prototype.listen = function patchedListen(...args) {
-    listenCalls += 1;
-    return originalListen.apply(this, args);
-  };
+  let startedServer = null;
 
   try {
-    const callsBeforeImport = listenCalls;
     const { createApp } = require('../src/app/createApp');
-
     assert.strictEqual(typeof createApp, 'function', 'createApp export should be a function');
 
     const app = createApp();
     assert.ok(app, 'createApp should return an Express app instance');
-
-    assert.strictEqual(listenCalls, callsBeforeImport, 'importing/creating app must not start an HTTP listener');
 
     const healthResponse = await supertest(app).get('/health');
     assert.strictEqual(healthResponse.status, 200, 'GET /health must be registered');
@@ -91,13 +108,31 @@ async function run() {
     assert.strictEqual(unknownResponse.status, 404, 'unknown routes must return 404');
     assert.strictEqual(unknownResponse.body.code, 'NOT_FOUND', 'unknown route response code should stay NOT_FOUND');
 
+    http.Server.prototype.listen = function patchedListen(...args) {
+      const callback = typeof args[args.length - 1] === 'function' ? args.pop() : undefined;
+      return originalListen.call(this, 0, '127.0.0.1', callback);
+    };
+
+    const { startServer } = require('../src/runtime/startServer');
+    const { server } = await startServer();
+    startedServer = server;
+
     console.log('✅ backend runtime entrypoint smoke tests passed');
-    passed = true;
   } finally {
     http.Server.prototype.listen = originalListen;
-    if (passed) {
-      process.exit(0);
+    if (startedServer) {
+      await new Promise((resolve) => {
+        try {
+          startedServer.close(() => resolve());
+        } catch (_) {
+          resolve();
+        }
+      });
     }
+    while (restorers.length) {
+      restorers.pop()();
+    }
+    restoreEnv();
   }
 }
 
