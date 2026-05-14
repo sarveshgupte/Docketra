@@ -17,6 +17,7 @@ import {
   verifyStorageChangeOtp,
   exportFirmStorage,
   listStorageExports,
+  getStorageUsage,
 } from '../services/storageService';
 import { useAuth } from '../hooks/useAuth';
 import { spacingClasses } from '../theme/tokens';
@@ -56,6 +57,23 @@ export function StorageSettingsPage() {
   const [supportContext, setSupportContext] = useState(null);
   const [exporting, setExporting] = useState(false);
   const [ownershipSummary, setOwnershipSummary] = useState(null);
+  const [usage, setUsage] = useState(null);
+  const [usageLoading, setUsageLoading] = useState(false);
+  const [usageError, setUsageError] = useState('');
+
+  const loadStorageUsage = async () => {
+    setUsageLoading(true);
+    setUsageError('');
+    try {
+      const usageData = await getStorageUsage();
+      setUsage(usageData);
+    } catch (error) {
+      setUsage(null);
+      setUsageError(error?.response?.data?.error || 'Storage usage is temporarily unavailable.');
+    } finally {
+      setUsageLoading(false);
+    }
+  };
 
   const loadConfiguration = async () => {
     setLoading(true);
@@ -82,6 +100,7 @@ export function StorageSettingsPage() {
       if (exportsResult.status !== 'fulfilled') {
         setExportWarning('Export history is temporarily unavailable.');
       }
+      await loadStorageUsage();
     } catch (error) {
       const status = Number(error?.response?.status || 0);
       const requestId = error?.response?.headers?.['x-request-id'] || error?.response?.headers?.['x-correlation-id'];
@@ -126,6 +145,7 @@ export function StorageSettingsPage() {
   const statusLabel = config?.status?.includes('ERROR') || config?.status?.includes('DISCONNECTED')
     ? 'Error / disconnected'
     : config?.isConfigured ? 'Active' : 'Not connected';
+  const usagePercent = Number(usage?.usagePercent || 0);
 
   const onSaveStorageSettings = async () => {
     setSavingProvider(true);
@@ -263,6 +283,32 @@ export function StorageSettingsPage() {
                 Your team can upload files even without BYOS. Files are stored in Docketra-managed Google Drive unless firm-owned storage is connected.
               </p>
               {summaryWarning ? <p className="text-sm text-[var(--dt-warning)]">{summaryWarning}</p> : null}
+            </div>
+          </Card>
+
+          <Card>
+            <div className={spacingClasses.sectionMargin}>
+              <h2 className="text-lg font-medium">Storage capacity</h2>
+              {usageLoading ? <p>Loading usage…</p> : null}
+              {!usageLoading && usage?.managedFallback ? (
+                <p>Docketra-managed storage is active. Storage quota is managed by Docketra.</p>
+              ) : null}
+              {!usageLoading && !usage?.managedFallback && usage?.quotaAvailable ? (
+                <>
+                  <p>{usage.displayUsed} used of {usage.displayTotal} · {usage.displayAvailable} available</p>
+                  <div className="mt-2 h-2 w-full rounded bg-[var(--dt-border)]">
+                    <div className="h-2 rounded bg-[var(--dt-primary)]" style={{ width: `${Math.max(0, Math.min(100, usagePercent))}%` }} />
+                  </div>
+                  <p className="text-sm text-[var(--dt-text-muted)] mt-2">Last checked: {formatDateTime(usage.lastCheckedAt)}</p>
+                </>
+              ) : null}
+              {!usageLoading && !usage?.managedFallback && !usage?.quotaAvailable ? (
+                <p>Storage quota is not available for this Drive account.</p>
+              ) : null}
+              {usageError ? <p className="text-sm text-[var(--dt-warning)]">{usageError}</p> : null}
+              <Button type="button" variant="outline" onClick={loadStorageUsage} disabled={usageLoading}>
+                {usageLoading ? 'Refreshing…' : 'Refresh usage'}
+              </Button>
             </div>
           </Card>
 

@@ -153,6 +153,35 @@ class GoogleDriveProvider extends StorageProvider {
     return created.folderId;
   }
 
+  async getStorageQuota() {
+    const drive = this.getClient();
+    const about = await drive.about.get({ fields: 'storageQuota,user' });
+    const quota = about?.data?.storageQuota || {};
+
+    const totalBytesRaw = quota.limit != null ? Number(quota.limit) : null;
+    const usedBytesRaw = quota.usage != null ? Number(quota.usage) : null;
+    const totalBytes = Number.isFinite(totalBytesRaw) && totalBytesRaw >= 0 ? totalBytesRaw : null;
+    const usedBytes = Number.isFinite(usedBytesRaw) && usedBytesRaw >= 0 ? usedBytesRaw : null;
+    const availableBytes = totalBytes != null && usedBytes != null ? Math.max(totalBytes - usedBytes, 0) : null;
+    const usagePercent = totalBytes > 0 && usedBytes != null
+      ? Math.min(100, Math.max(0, Number(((usedBytes / totalBytes) * 100).toFixed(2))))
+      : null;
+    const quotaAvailable = totalBytes != null && usedBytes != null;
+
+    return {
+      provider: 'google_drive',
+      quotaAvailable,
+      totalBytes,
+      usedBytes,
+      availableBytes,
+      usagePercent,
+      displayTotal: StorageProvider.formatBytes(totalBytes),
+      displayUsed: StorageProvider.formatBytes(usedBytes),
+      displayAvailable: StorageProvider.formatBytes(availableBytes),
+      lastCheckedAt: new Date().toISOString(),
+    };
+  }
+
   async createDirectUploadSession({
     fileName,
     mimeType = 'application/octet-stream',
