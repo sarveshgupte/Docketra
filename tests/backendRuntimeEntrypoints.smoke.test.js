@@ -7,6 +7,8 @@ const TEST_ENV_OVERRIDES = {
   PORT: '3001',
   UPLOAD_SCAN_STRICT: 'true',
   JWT_SECRET: 'ci_fake_jwt_secret_value_for_smoke_test_only_abcdefghijklmnopqrstuvwxyz_1234',
+  JWT_PASSWORD_SETUP_SECRET: 'ci_fake_jwt_password_setup_secret_value_for_smoke_test_only_abcdefghijklmnopqrstuvwxyz_1234',
+  MASTER_ENCRYPTION_KEY: 'a'.repeat(64),
   STORAGE_TOKEN_SECRET: 'ci_fake_storage_token_secret_for_smoke_test_only_abcdefghijklmnopqrstuvwxyz_12',
   METRICS_TOKEN: 'ci_fake_metrics_token_value_for_smoke_test_only_abcdefghijklmnopqrstuvwxyz_123',
   SUPERADMIN_PASSWORD_HASH: '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
