@@ -657,7 +657,6 @@ export const ClientsPage = () => {
             value={clientForm.businessEmail}
             onChange={(event) => handleClientFieldChange('businessEmail', event.target.value)}
             error={clientFormErrors.businessEmail}
-            
           />
           <Input
             label="Contact Person Name"
