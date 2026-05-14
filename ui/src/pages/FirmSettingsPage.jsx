@@ -130,14 +130,28 @@ export const FirmSettingsPage = () => {
     setLoadingSlaData(true);
     setSlaMessage({ type: '', text: '' });
     try {
-      const [categoryResponse, workbasketResponse, slaResponse] = await Promise.all([
+      const [categoryResult, workbasketResult, slaResult] = await Promise.allSettled([
         categoryService.getAdminCategories(false),
         adminApi.listWorkbaskets({ includeInactive: true }),
         slaApi.getRules({ includeInactive: true }),
       ]);
-      setCategories(Array.isArray(categoryResponse?.data) ? categoryResponse.data : []);
-      setWorkbaskets(Array.isArray(workbasketResponse?.data) ? workbasketResponse.data : []);
-      setSlaRules(Array.isArray(slaResponse?.data) ? slaResponse.data : []);
+
+      const categoriesData = categoryResult.status === 'fulfilled' && Array.isArray(categoryResult.value?.data)
+        ? categoryResult.value.data
+        : [];
+      const workbasketsData = workbasketResult.status === 'fulfilled' && Array.isArray(workbasketResult.value?.data)
+        ? workbasketResult.value.data
+        : [];
+
+      setCategories(categoriesData);
+      setWorkbaskets(workbasketsData);
+
+      if (slaResult.status === 'fulfilled') {
+        setSlaRules(Array.isArray(slaResult.value?.data) ? slaResult.value.data : []);
+      } else {
+        setSlaRules([]);
+        setSlaMessage({ type: 'error', text: 'Could not load SLA configuration.' });
+      }
     } catch {
       setCategories([]);
       setWorkbaskets([]);
