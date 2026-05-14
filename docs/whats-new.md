@@ -698,3 +698,5 @@
 - Extended authenticated workspace idle timeout to 3 hours and hardened session-expiry handling so normal work breaks do not force unnecessary re-login.
 
 - Fixed Primary Admin inheritance for client creation and standardized client-management access messaging.
+
+- Added Google Drive storage capacity visibility in Storage Settings for BYOS-connected firms, with safe fallback messaging for Docketra-managed storage and unavailable quotas.
