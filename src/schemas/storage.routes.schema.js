@@ -37,6 +37,9 @@ module.exports = {
   'GET /usage': {
     query: z.object({}).passthrough(),
   },
+  'GET /folder-link': {
+    query: z.object({}).passthrough(),
+  },
   'POST /disconnect': {
     body: z.object({}).passthrough(),
   },

@@ -16,6 +16,7 @@ import {
   disconnectStorage,
   verifyStorageChangeOtp,
   exportFirmStorage,
+  getStorageFolderLink,
   listStorageExports,
   getStorageUsage,
 } from '../services/storageService';
@@ -60,6 +61,9 @@ export function StorageSettingsPage() {
   const [usage, setUsage] = useState(null);
   const [usageLoading, setUsageLoading] = useState(false);
   const [usageError, setUsageError] = useState('');
+  const [openingFolder, setOpeningFolder] = useState(false);
+  const [folderLinkAvailable, setFolderLinkAvailable] = useState(false);
+  const [folderLinkMessage, setFolderLinkMessage] = useState('');
 
   const loadStorageUsage = async () => {
     setUsageLoading(true);
@@ -92,6 +96,9 @@ export function StorageSettingsPage() {
 
       if (summaryResult.status === 'fulfilled') {
         setOwnershipSummary(summaryResult.value);
+        const canOpen = Boolean(summaryResult.value?.dataStorageMap?.canOpenStorageFolder);
+        setFolderLinkAvailable(canOpen);
+        setFolderLinkMessage(canOpen ? '' : 'Folder link unavailable.');
       } else {
         setOwnershipSummary(null);
         setSummaryWarning('Storage ownership summary is temporarily unavailable.');
@@ -241,12 +248,34 @@ export function StorageSettingsPage() {
     try {
       await exportFirmStorage();
       setStatusMessage({ type: 'success', text: 'Export started successfully.' });
+      toast?.showSuccess?.('Storage export started.');
       await loadConfiguration();
     } catch (error) {
       const recovery = getRecoveryPayload(error, 'storage_settings');
       setStatusMessage({ type: 'error', text: `${recovery.copy.message} ${recovery.copy.action}` });
+      toast?.showError?.('Unable to generate storage export.');
     } finally {
       setExporting(false);
+    }
+  };
+  const onOpenStorageFolder = async () => {
+    setOpeningFolder(true);
+    try {
+      const result = await getStorageFolderLink();
+      if (!result?.canOpenStorageFolder || !result?.folderUrl) {
+        setFolderLinkAvailable(false);
+        setFolderLinkMessage('Folder link unavailable.');
+        toast?.showError?.('Folder link unavailable.');
+        return;
+      }
+      window.open(result.folderUrl, '_blank', 'noopener,noreferrer');
+      toast?.showSuccess?.('Opened storage folder.');
+    } catch (error) {
+      const recovery = getRecoveryPayload(error, 'storage_settings');
+      setStatusMessage({ type: 'error', text: `${recovery.copy.message} ${recovery.copy.action}` });
+      toast?.showError?.('Unable to open storage folder.');
+    } finally {
+      setOpeningFolder(false);
     }
   };
   const onDownloadDataResidencySummary = async () => {
@@ -291,8 +320,8 @@ export function StorageSettingsPage() {
               </ul>
               <p className="text-sm">Last storage health check: {formatDateTime(ownershipSummary?.dataStorageMap?.lastStorageHealthCheckAt || ownershipSummary?.lastHealthCheck?.checkedAt)}</p>
               <div className="flex gap-2 mt-2">
-                <Button type="button" variant="outline" disabled={!ownershipSummary?.dataStorageMap?.canOpenStorageFolder}>
-                  Open storage folder
+                <Button type="button" variant="outline" onClick={onOpenStorageFolder} disabled={!folderLinkAvailable || openingFolder} title={!folderLinkAvailable ? 'Folder link unavailable.' : undefined}>
+                  {openingFolder ? 'Opening…' : 'Open storage folder'}
                 </Button>
                 <Button type="button" variant="primary" onClick={onDownloadDataResidencySummary} disabled={exporting}>
                   {exporting ? 'Generating…' : 'Generate storage export'}
@@ -441,6 +470,7 @@ export function StorageSettingsPage() {
             <div className={spacingClasses.sectionMargin}>
               <h2 className="text-lg font-medium">Backup / export</h2>
               <p className="text-sm">Export generates a backup of firm storage metadata/files where supported.</p>
+              <p className="text-sm text-[var(--dt-text-muted)]">Includes client profile references, CFS references, attachment references, storage object paths, and metadata summary. Secrets are excluded.</p>
               <Button
                 type="button"
                 variant="primary"
@@ -450,6 +480,7 @@ export function StorageSettingsPage() {
                 {exporting ? 'Generating Export…' : 'Generate Firm Export'}
               </Button>
               {exportWarning ? <p className="text-sm text-[var(--dt-warning)]">{exportWarning}</p> : null}
+              {folderLinkMessage ? <p className="text-sm text-[var(--dt-warning)]">{folderLinkMessage}</p> : null}
             </div>
           </Card>
         </div>

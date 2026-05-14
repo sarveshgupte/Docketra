@@ -714,3 +714,9 @@
 - Added strict data-residency audit/policy defining Docketra as a control plane and firm cloud storage as canonical storage for business data.
 
 - 2026-05-14: Client create/update moved to cloud-first profile storage (`firms/{firmId}/clients/{clientId}/profile.json`) and blocked prohibited business/profile fields from Mongo persistence.
+
+## May 2026: Storage Settings action reliability hardening
+
+- Added `GET /api/storage/folder-link` for Primary Admin-safe Google Drive folder opening, with explicit unavailable fallback messaging and no secret/token leakage.
+- Updated Storage Settings UI to prevent dead clicks: disabled states, loading labels, and success/error toasts for **Open storage folder** and **Generate storage export**.
+- Clarified export helper text: exports include metadata references (client profiles, CFS, attachments, object paths, summary) and exclude credentials/secrets.

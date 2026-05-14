@@ -65,7 +65,7 @@ Module._load = function(request, parent, isMain) {
       }),
     };
   }
-  if (request === '../services/storageBackup.service') return { storageBackupService: { listBackups: async () => [] } };
+  if (request === '../services/storageBackup.service') return { storageBackupService: { listBackups: async () => [], runBackupForFirm: async () => ({ exportId: 'exp_1', fileCount: 4, archiveObjectKey: 'k', checksum: 'c', size: 42 }), buildBackupAccess: async () => ({ downloadUrl: 'https://example.com/download', expiresInSeconds: 600 }), emailBackupNotification: async () => ({}) } };
   if (request === '../services/tenantIdentity.service') return { resolveStorageContextFromTenantId: async () => ({ ownershipFirmId: 'FIRM1' }) };
   if (request === '../services/productAudit.service') return { writeSettingsAudit: async () => ({}) };
   if (request === '../services/pilotDiagnostics.service') return { REASON_CODES: {}, logPilotEvent: () => {} };
@@ -177,6 +177,33 @@ async function testStorageUsageSanitizedQuota() {
   console.log('  ✓ storageUsage returns sanitized usage payload');
 }
 
+async function testFolderLinkSanitized() {
+  const req = { firmId: 'FIRM1', ownershipFirmId: 'FIRM1', user: { role: 'PRIMARY_ADMIN' } };
+  const res = createRes();
+  await controller.getStorageFolderLink(req, res);
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.body.canOpenStorageFolder, true);
+  assert.ok(res.body.folderUrl.includes('https://drive.google.com/drive/folders/'));
+  const serialized = JSON.stringify(res.body);
+  assert.ok(!serialized.includes('refreshToken'));
+  assert.ok(!serialized.includes('accessToken'));
+  assert.ok(!serialized.includes('privateKey'));
+  console.log('  ✓ getStorageFolderLink returns sanitized link payload');
+}
+
+async function testExportSanitized() {
+  const req = { firmId: 'FIRM1', ownershipFirmId: 'FIRM1', user: { role: 'PRIMARY_ADMIN' } };
+  const res = createRes();
+  await controller.exportFirmStorage(req, res);
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.body.success, true);
+  const serialized = JSON.stringify(res.body);
+  assert.ok(!serialized.includes('refreshToken'));
+  assert.ok(!serialized.includes('accessToken'));
+  assert.ok(!serialized.includes('privateKey'));
+  console.log('  ✓ exportFirmStorage returns sanitized export payload');
+}
+
 async function run() {
   console.log('Running storageController tests...');
   try {
@@ -184,6 +211,8 @@ async function run() {
     await testGoogleConnectAdminOnly();
     await testDisconnectStorage();
     await testStorageUsageSanitizedQuota();
+    await testFolderLinkSanitized();
+    await testExportSanitized();
     await testOauthLimiter();
     console.log('All storageController tests passed.');
   } catch (error) {

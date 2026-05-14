@@ -1009,6 +1009,41 @@ const storageUsage = async (req, res) => {
   }
 };
 
+function asGoogleDriveFolderUrl(folderId) {
+  const safeId = String(folderId || '').trim();
+  if (!safeId) return null;
+  if (!/^[a-zA-Z0-9_-]+$/.test(safeId)) return null;
+  return `https://drive.google.com/drive/folders/${encodeURIComponent(safeId)}`;
+}
+
+const getStorageFolderLink = async (req, res) => {
+  try {
+    if (!ensurePrimaryAdmin(req, res)) return;
+    const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
+    const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig').lean();
+    const state = resolveFirmStorageState(firm, { includeCredentials: true });
+
+    const folderId = state.rootFolderId || null;
+    const folderUrl = asGoogleDriveFolderUrl(folderId);
+    if (!folderUrl) {
+      return res.json({
+        canOpenStorageFolder: false,
+        folderUrl: null,
+        message: 'Folder link unavailable.',
+      });
+    }
+
+    return res.json({
+      canOpenStorageFolder: true,
+      folderUrl,
+      provider: state.isManaged ? 'docketra_managed' : 'google_drive',
+    });
+  } catch (error) {
+    log.error('[STORAGE]', { event: 'folder_link_resolve_failed', tenantId: req.firmId, message: error.message });
+    return res.status(500).json({ error: 'folder_link_resolve_failed', ...(isProduction() ? {} : { message: error.message }) });
+  }
+};
+
 module.exports = {
   getStorageStatus,
   getStorageHealth,
@@ -1022,6 +1057,7 @@ module.exports = {
   disconnectStorage,
   storageHealthCheck,
   storageUsage,
+  getStorageFolderLink,
   changeFirmStorage,
   listBackupRuns,
   buildStateCookie,

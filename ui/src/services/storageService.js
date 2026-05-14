@@ -55,6 +55,11 @@ export async function exportFirmStorage() {
   return response.data;
 }
 
+export async function getStorageFolderLink() {
+  const response = await api.get('/storage/folder-link');
+  return response.data;
+}
+
 export async function listStorageExports(limit = 10) {
   const response = await api.get('/storage/exports', { params: { limit } });
   return response.data;

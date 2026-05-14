@@ -24,3 +24,7 @@ Primary Admins can verify the active storage provider and storage map in **Stora
 - BYOS-first is the target architecture, but Docketra-managed fallback remains available when firm-owned storage is not connected.
 - Existing historical records may include legacy routing/config metadata while migration normalization continues.
 - Folder path displays are canonical conventions for verification and governance; path rendering does not expose raw internal provider IDs.
+
+## Storage Settings action safety
+- Folder-opening and export actions are now capability-gated to avoid dead-click UX when provider links are unavailable.
+- Folder-link and export responses are sanitized and must not include refresh/access tokens, private keys, or raw provider credentials.

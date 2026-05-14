@@ -13,6 +13,10 @@ assert.ok(
   'exportFirmStorage should call GET /storage/export.',
 );
 assert.ok(
+  source.includes("api.get('/storage/folder-link')"),
+  'getStorageFolderLink should call GET /storage/folder-link.',
+);
+assert.ok(
   source.includes("api.get('/storage/exports', { params: { limit } })"),
   'listStorageExports should call GET /storage/exports with limit params.',
 );
