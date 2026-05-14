@@ -28,6 +28,7 @@ export const ROUTES = {
   FIRM_SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/settings/firm`,
   WORK_SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/settings/work`,
   STORAGE_SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/storage-settings`,
+  DATA_STORAGE_MAP: (firmSlug) => `/app/firm/${firmSlug}/data-storage-map`,
   AI_SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/ai-settings`,
   CRM: (firmSlug) => `/app/firm/${firmSlug}/crm`,
   CRM_CLIENTS: (firmSlug) => `/app/firm/${firmSlug}/crm/clients`,
