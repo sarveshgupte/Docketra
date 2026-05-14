@@ -21,8 +21,13 @@ const BULK_UPLOAD_SCHEMA = {
   clients: {
     fields: [
       { key: 'businessName', required: true },
-      { key: 'businessEmail', required: true, validator: (v) => EMAIL_REGEX.test(String(v || '').trim()) },
-      { key: 'primaryContactNumber', required: true },
+      { key: 'businessEmail', required: false, validator: (v) => EMAIL_REGEX.test(String(v || '').trim()) },
+      { key: 'primaryContactNumber', required: false },
+      { key: 'businessAddress', required: false },
+      { key: 'PAN', required: false },
+      { key: 'CIN', required: false },
+      { key: 'TAN', required: false },
+      { key: 'GST', required: false },
       { key: 'contactPersonName', required: false },
     ],
   },
