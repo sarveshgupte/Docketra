@@ -36,6 +36,16 @@ const TENANT_KEY_MISSING_COPY = 'Client encryption setup needs repair before cli
 const FORBIDDEN_COPY = 'Client management requires Admin access';
 const DUPLICATE_COPY = 'A client with this name or identifier already exists.';
 const DEFAULT_LOAD_ERROR = 'Failed to load clients';
+const resolveCfsDescription = (factSheet = {}) => (
+  factSheet?.description
+  ?? factSheet?.overview
+  ?? ''
+);
+const resolveCfsNotes = (factSheet = {}) => (
+  factSheet?.notes
+  ?? factSheet?.internalNotes
+  ?? ''
+);
 
 
 export const ClientsPage = () => {
@@ -374,16 +384,18 @@ export const ClientsPage = () => {
   };
 
   const openEditCfsModal = useCallback(async (client) => {
+    const initialFactSheet = client?.clientFactSheet || {};
     setEditCfsClient(client);
-    setDescriptionDraft(client?.clientFactSheet?.description || '');
-    setNotesDraft(client?.clientFactSheet?.notes || '');
+    setDescriptionDraft(resolveCfsDescription(initialFactSheet));
+    setNotesDraft(resolveCfsNotes(initialFactSheet));
 
     try {
       const response = await clientApi.getClientById(client.clientId);
       const fullClient = response?.data || client;
+      const latestFactSheet = fullClient?.clientFactSheet || {};
       setEditCfsClient(fullClient);
-      setDescriptionDraft(fullClient?.clientFactSheet?.description || '');
-      setNotesDraft(fullClient?.clientFactSheet?.notes || '');
+      setDescriptionDraft(resolveCfsDescription(latestFactSheet));
+      setNotesDraft(resolveCfsNotes(latestFactSheet));
     } catch (error) {
       showError(getCfsFetchErrorMessage(error));
     }
@@ -471,10 +483,11 @@ export const ClientsPage = () => {
     if (!editCfsClient?.clientId) return;
     const response = await clientApi.getClientById(editCfsClient.clientId);
     const refreshedClient = response?.data || editCfsClient;
+    const refreshedFactSheet = refreshedClient?.clientFactSheet || {};
     setEditCfsClient(refreshedClient);
     setClients((prev) => prev.map((client) => (client.clientId === refreshedClient.clientId ? { ...client, ...refreshedClient } : client)));
-    setDescriptionDraft(refreshedClient?.clientFactSheet?.description || '');
-    setNotesDraft(refreshedClient?.clientFactSheet?.notes || '');
+    setDescriptionDraft(resolveCfsDescription(refreshedFactSheet));
+    setNotesDraft(resolveCfsNotes(refreshedFactSheet));
   };
 
   const handleSaveCfsText = async () => {
@@ -500,7 +513,13 @@ export const ClientsPage = () => {
       showSuccess('Document attached successfully');
       await refreshSelectedClient();
     } catch (error) {
-      showError(error?.response?.data?.message || 'Failed to upload file');
+      const stage = error?.stage || 'upload failed';
+      const safeMessage = error?.response?.data?.message || error?.message || 'Failed to upload file';
+      const suffix = [
+        error?.status ? `status ${error.status}` : null,
+        error?.requestId ? `requestId ${error.requestId}` : null,
+      ].filter(Boolean).join(' · ');
+      showError(`${stage}: ${safeMessage}${suffix ? ` (${suffix})` : ''}`);
     } finally {
       event.target.value = '';
       setUploadingFile(false);
