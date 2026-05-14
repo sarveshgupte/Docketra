@@ -64,3 +64,8 @@ export async function getStorageUsage() {
   const response = await api.get('/storage/usage');
   return response.data;
 }
+
+export async function getStorageDataMap() {
+  const response = await api.get('/storage/data-map');
+  return response.data;
+}
