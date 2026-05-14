@@ -118,7 +118,7 @@ const requireFirmContext = async (req, res, next) => {
  */
 const authorizeFirmPermission = (requiredPermission) => {
   const deniedMessage = requiredPermission === 'CLIENT_MANAGE'
-    ? 'Client management access is required'
+    ? 'Client management requires Admin access'
     : 'Insufficient firm permissions';
 
   return async (req, res, next) => {

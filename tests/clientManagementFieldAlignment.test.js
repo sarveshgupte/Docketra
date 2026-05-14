@@ -24,8 +24,8 @@ assert.ok(clientRouteSchema.includes("'POST /'"), 'client route schema must defi
 
 assert.ok(clientRoutes.includes("authorizeFirmPermission('CLIENT_MANAGE')"), 'client write routes must require CLIENT_MANAGE permission');
 assert.ok(authzMiddleware.includes('Admin access required'), 'generic admin middleware must keep admin denial copy');
-assert.equal(authzMiddleware.includes('Client management access is required'), false, 'generic admin middleware must not use client-management denial copy');
+assert.equal(authzMiddleware.includes('Client management requires Admin access'), false, 'generic admin middleware must not use client-management denial copy');
 assert.ok(permissionMiddleware.includes("requiredPermission === 'CLIENT_MANAGE'"), 'permission middleware must special-case CLIENT_MANAGE denial copy');
-assert.ok(permissionMiddleware.includes('Client management access is required'), 'client-management denial copy must be emitted by permission middleware');
+assert.ok(permissionMiddleware.includes('Client management requires Admin access'), 'client-management denial copy must be emitted by permission middleware');
 
 console.log('clientManagementFieldAlignment.test.js passed');
