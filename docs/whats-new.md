@@ -700,3 +700,7 @@
 - Fixed Primary Admin inheritance for client creation and standardized client-management access messaging.
 
 - Added Google Drive storage capacity visibility in Storage Settings for BYOS-connected firms, with safe fallback messaging for Docketra-managed storage and unavailable quotas.
+
+## May 2026: Strict control-plane data residency policy
+
+- Added strict data-residency audit/policy defining Docketra as a control plane and firm cloud storage as canonical storage for business data.
