@@ -45,6 +45,7 @@ const mapClientResponse = (client) => {
     previousBusinessNames: Array.isArray(client.previousBusinessNames) ? client.previousBusinessNames : [],
     clientFactSheet: client.clientFactSheet ?? null,
     drive: client.drive ?? null,
+    profileWarning: client.profileWarning ?? null,
   };
 };
 

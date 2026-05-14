@@ -5,7 +5,7 @@ const { StorageProviderFactory } = require('./storage/StorageProviderFactory');
 const log = require('../utils/log');
 
 const PROFILE_SCHEMA_VERSION = 1;
-const PROFILE_FOLDER = 'client-profiles';
+const PROFILE_OBJECT_NAME = 'profile.json';
 
 const SENSITIVE_TOP_LEVEL_FIELDS = [
   'businessAddress',
@@ -121,15 +121,15 @@ function redactSensitiveFields(clientDoc) {
 async function uploadProfileToGoogle(provider, payload, { firmId, clientId }) {
   const rootId = await provider.getOrCreateFolder(null, 'Docketra');
   const firmFolder = await provider.getOrCreateFolder(rootId, String(firmId));
-  const profilesFolder = await provider.getOrCreateFolder(firmFolder, PROFILE_FOLDER);
-  const filename = `${clientId}-v${payload.profileVersion}.json`;
+  const clientsFolder = await provider.getOrCreateFolder(firmFolder, 'clients');
+  const clientFolder = await provider.getOrCreateFolder(clientsFolder, String(clientId));
   const body = JSON.stringify(payload);
-  const uploaded = await provider.uploadFile(profilesFolder, filename, Readable.from(body), 'application/json');
+  const uploaded = await provider.uploadFile(clientFolder, PROFILE_OBJECT_NAME, Readable.from(body), 'application/json');
 
   return {
     storageProvider: provider.providerName || 'google-drive',
     fileId: uploaded.fileId,
-    objectKey: `${profilesFolder}/${filename}`,
+    objectKey: `firms/${firmId}/clients/${clientId}/${PROFILE_OBJECT_NAME}`,
     checksum: sha256(body),
     version: payload.profileVersion,
     mode: 'firm_connected',
@@ -138,7 +138,7 @@ async function uploadProfileToGoogle(provider, payload, { firmId, clientId }) {
 
 async function uploadProfileToManagedFallback(backend, payload, { firmId, clientId }) {
   const body = JSON.stringify(payload);
-  const objectKey = `${backend.prefix}/firms/${firmId}/${PROFILE_FOLDER}/${clientId}/v${payload.profileVersion}.json`;
+  const objectKey = `${backend.prefix}/firms/${firmId}/clients/${clientId}/${PROFILE_OBJECT_NAME}`;
   await backend.client.send(new PutObjectCommand({
     Bucket: backend.bucket,
     Key: objectKey,
@@ -298,6 +298,7 @@ class ClientProfileStorageService {
     if (!client || !profilePayload?.profile) return client;
     const profile = profilePayload.profile;
     const clone = typeof client.toObject === 'function' ? client.toObject() : { ...client };
+    clone.businessName = profile?.legalName || clone.businessName || null;
     clone.businessAddress = profile?.addresses?.businessAddress || null;
     clone.secondaryContactNumber = profile?.contacts?.secondaryPhone || null;
     clone.contactPersonName = profile?.contacts?.contactPerson?.name || null;

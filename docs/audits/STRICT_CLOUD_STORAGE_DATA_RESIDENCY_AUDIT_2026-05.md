@@ -83,3 +83,5 @@ Legend:
 4. UserProfile sensitive field minimization.
 5. Guardrail expansion: runtime write guard in services/repositories.
 6. Add CI job gate to require data-residency guard test pass.
+
+- 2026-05-14: Phase 2 started for client profile cloud-first storage; Mongo Client records now control-plane metadata only, with profile hydration from cloud object refs.
