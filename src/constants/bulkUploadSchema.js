@@ -5,7 +5,7 @@ const BULK_UPLOAD_SCHEMA = {
     fields: [
       { key: 'name', required: true },
       { key: 'email', required: true, validator: (v) => EMAIL_REGEX.test(String(v || '').trim()) },
-      { key: 'role', required: true, validator: (v) => ['admin', 'user'].includes(String(v || '').trim().toLowerCase()) },
+      { key: 'role', required: true, validator: (v) => ['admin', 'manager', 'user', 'employee', 'staff'].includes(String(v || '').trim().toLowerCase()) },
       { key: 'department', required: false },
       { key: 'workbaskets', required: true },
       { key: 'clients', required: false },

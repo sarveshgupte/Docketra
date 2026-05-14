@@ -35,8 +35,9 @@ export const CreateUserModal = ({
         onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
         options={[
           { value: '', label: 'Select Role', disabled: true },
-          { value: 'Employee', label: 'Employee' },
           { value: 'Admin', label: 'Admin' },
+          { value: 'Manager', label: 'Manager' },
+          { value: 'Employee', label: 'Employee' },
         ]}
         required
       />
