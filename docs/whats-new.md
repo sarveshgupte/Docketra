@@ -19,6 +19,7 @@
 - Hardened wrapped write handlers so transaction wrapper failures no longer surface as `next is not a function` when a downstream caller omits `next`; responses now fail safely with structured error payloads.
 - Improved client CFS upload API stage diagnostics in frontend upload flow so support can distinguish upload-intent, direct-upload, and finalize failures with safe status/request-id context.
 - Confirmed CFS attachments continue to upload via the active storage provider path (firm-owned Google Drive BYOS when connected, otherwise Docketra-managed fallback).
+- Fixed Client Fact Sheet text field isolation and attachment upload-intent reliability.
 
 ## May 2026: Storage Settings UX split for managed default vs optional BYOS
 
