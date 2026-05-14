@@ -58,7 +58,8 @@
     "ci:backend:security:integration": "npm run test:security:integration",
     "security:secrets": "bash scripts/run-secret-scan.sh",
     "test:pilot-hardening": "node tests/pilotHardeningScriptContract.test.js && npm run ci:backend:routes && node tests/pilotRouteSchemaAudit.test.js && node tests/frontendBackendApiParity.test.js && npm --prefix ui run test:pilot-ui-contracts && npm run test:task-manager-launch-readiness",
-    "test:task-manager-launch-readiness": "node tests/taskManagerLaunchReadiness.ui.test.js"
+    "test:task-manager-launch-readiness": "node tests/taskManagerLaunchReadiness.ui.test.js",
+    "ci:backend:deploy-safety": "NODE_ENV='production' UPLOAD_SCAN_STRICT='true' REDIS_URL='' ALLOW_REDIS_FALLBACK='true' JWT_SECRET='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' STORAGE_TOKEN_SECRET='bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' METRICS_TOKEN='cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc' sh -c \"npm run validate:env:production && npm run validate:env:test && node tests/routeValidationContract.test.js && node tests/backendRuntimeEntrypoints.smoke.test.js\""
   },
   "keywords": [
     "task-management",
