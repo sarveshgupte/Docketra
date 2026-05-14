@@ -31,3 +31,7 @@
 ## 2026-05-09 - Clipboard Failure Feedback & Timeout Hygiene
 **Learning:** Clipboard APIs can be unavailable in some contexts and write operations can reject, which makes optimistic success messaging misleading and inaccessible.
 **Action:** Await clipboard writes before showing success, expose an explicit failure state when unavailable/rejected, and manage feedback timers with refs that are cleared before restart and cleaned up on unmount.
+
+## 2026-05-13 - Dynamic ARIA Labels for Badge Counts
+**Learning:** When displaying notification or message counts inside badges (e.g., a red dot with "3"), hiding the badge with `aria-hidden="true"` prevents visual redundancy for sighted screen reader users, but completely hides the unread status from purely visually impaired users.
+**Action:** When a button contains a visually hidden unread count or badge, always interpolate that count into the parent button's `aria-label` (e.g., `aria-label={count > 0 ? \`Notifications (\${count} unread)\` : 'Notifications'}`).
