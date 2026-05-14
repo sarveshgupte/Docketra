@@ -37,3 +37,7 @@
 ## 2026-05-08 - Prevent N+1 loops in user deactivation logic
 **Learning:** In user deactivation, iterating over a large array of dockets and waiting for sequential category and team lookups (with multiple `findOne` queries) incurs high database network latency when many cases are assigned to a single user.
 **Action:** Replaced sequential `findOne` lookup in a loop with two concurrent query strategies. First, collected all unique category names and retrieved them using `$in`. Then mapped category subcategories to necessary team IDs, deduped the IDs, and retrieved all necessary workbasket Teams via an `$in` query. This eliminates N+1 latency.
+
+## 2026-05-14 - Prevent N+1 loops and redundant static calculations in bulk client creation
+**Learning:** The bulk upload handler for creating default dockets executed `Case.findOne` to check for idempotency and recalculated the SLA due date repeatedly in a loop for each client. Since the inputs to the SLA calculation were static per batch, and we could batch query for case existance, this was wasting network and processing cycles.
+**Action:** When handling bulk processing, extract constants (e.g., current date, fixed SLA metrics) outside the loop. Use MongoDB `$in` with extracted array values (e.g., `idempotencyKeys`) to fetch existing documents into a Set for fast O(1) checks during loop iterations, preventing N+1 API and database calls.
