@@ -49,7 +49,7 @@ Module._load = function(request, parent, isMain) {
   if (request === '../services/storage/providers/GoogleDriveProvider') return class { async createFolder() { return { folderId: 'id' }; } };
   if (request === '../services/storage/providers/OneDriveProvider') return class {};
   if (request === '../services/storage/providers/S3Provider') return { S3Provider: class {} };
-  if (request === '../services/storage/StorageProviderFactory') return { StorageProviderFactory: { getProvider: async () => ({ testConnection: async () => ({}), getFolderPath: async () => '/Docketra/root-folder-id' }) } };
+  if (request === '../services/storage/StorageProviderFactory') return { StorageProviderFactory: { getProvider: async () => ({ testConnection: async () => ({}), getFolderPath: async () => '/Docketra/root-folder-id', getStorageQuota: async () => ({ provider: 'google_drive', quotaAvailable: true, totalBytes: 15, usedBytes: 8.2, availableBytes: 6.8, usagePercent: 54.67, displayTotal: '15 GB', displayUsed: '8.2 GB', displayAvailable: '6.8 GB', lastCheckedAt: new Date().toISOString() }) }) } };
   if (request === '../services/storage/resolveFirmStorageState') {
     return {
       normalizeProvider: (provider) => provider,
@@ -162,12 +162,28 @@ async function testDisconnectStorage() {
   console.log('  ✓ disconnectStorage resets BYOS and returns sanitized response');
 }
 
+async function testStorageUsageSanitizedQuota() {
+  const req = { firmId: 'FIRM1', ownershipFirmId: 'FIRM1', user: { role: 'PRIMARY_ADMIN' } };
+  const res = createRes();
+  await controller.storageUsage(req, res);
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.body.provider, 'google_drive');
+  const serialized = JSON.stringify(res.body);
+  assert.ok(!serialized.includes('refreshToken'));
+  assert.ok(!serialized.includes('accessToken'));
+  assert.ok(!serialized.includes('rootFolderId'));
+  assert.ok(!serialized.includes('driveId'));
+  assert.ok(!serialized.includes('privateKey'));
+  console.log('  ✓ storageUsage returns sanitized usage payload');
+}
+
 async function run() {
   console.log('Running storageController tests...');
   try {
     await testGetStorageConfiguration();
     await testGoogleConnectAdminOnly();
     await testDisconnectStorage();
+    await testStorageUsageSanitizedQuota();
     await testOauthLimiter();
     console.log('All storageController tests passed.');
   } catch (error) {

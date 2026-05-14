@@ -131,3 +131,6 @@ If frontend and backend run on different origins, ensure auth cookie config supp
 - `ERROR` is used for credential decrypt failures or explicit provider error state.
 
 - Drift detection should flag: `firm_connected` without `storageConfig.provider`, legacy `google-drive` name, and `docketra_drive` alias usage.
+
+- Primary Admins can now view firm-owned Google Drive storage capacity (used, total, available, usage percent, and last checked) in Storage Settings after BYOS connection.
+- When Docketra-managed fallback storage is active, Docketra global quota is intentionally not exposed to firms.

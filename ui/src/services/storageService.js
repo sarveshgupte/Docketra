@@ -59,3 +59,8 @@ export async function listStorageExports(limit = 10) {
   const response = await api.get('/storage/exports', { params: { limit } });
   return response.data;
 }
+
+export async function getStorageUsage() {
+  const response = await api.get('/storage/usage');
+  return response.data;
+}
