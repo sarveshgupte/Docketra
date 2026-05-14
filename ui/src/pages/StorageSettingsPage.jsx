@@ -30,6 +30,17 @@ import { ROUTES } from '../constants/routes';
 
 const PAGE_SUBTITLE = 'Docketra-managed storage works by default. You can optionally connect your firm’s own Google Drive.';
 
+function getExportHistoryWarning(error) {
+  const status = Number(error?.response?.status || 0);
+  const errorCode = error?.response?.data?.code || error?.response?.data?.error;
+
+  if (status === 403) return 'Export history is visible to primary admins only.';
+  if (status === 400 && errorCode === 'STORAGE_NOT_CONNECTED') return 'Export history will appear after a storage provider is connected.';
+  if (status === 404) return 'Export history endpoint is not available in this environment yet.';
+
+  return 'Export history is temporarily unavailable.';
+}
+
 export function StorageSettingsPage() {
   const toast = useContext(ToastContext);
   const { user } = useAuth();
@@ -99,7 +110,7 @@ export function StorageSettingsPage() {
       }
 
       if (exportsResult.status !== 'fulfilled') {
-        setExportWarning('Export history is temporarily unavailable.');
+        setExportWarning(getExportHistoryWarning(exportsResult.reason));
       }
       await loadStorageUsage();
     } catch (error) {
