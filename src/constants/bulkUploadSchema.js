@@ -32,6 +32,8 @@ const BULK_UPLOAD_SCHEMA = {
       { key: 'state', required: true },
       { key: 'pincode', required: true, validator: (v) => /^[1-9][0-9]{5}$/.test(String(v || '').trim()) },
       { key: 'contactPersonName', required: true },
+      { key: 'contactPersonEmail', required: true, validator: (v) => EMAIL_REGEX.test(String(v || '').trim()) },
+      { key: 'contactPersonPhone', required: true },
     ],
   },
 };

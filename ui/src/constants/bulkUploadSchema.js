@@ -43,7 +43,9 @@ export const BULK_UPLOAD_SCHEMA = {
       { key: 'city', required: true },
       { key: 'state', required: true },
       { key: 'pincode', required: true, validator: (v) => /^[1-9][0-9]{5}$/.test(String(v || '').trim()) },
-      { key: 'contactPersonName', required: true, description: 'optional', aliases: ['contact_name'] },
+      { key: 'contactPersonName', required: true, description: 'required', aliases: ['contact_name'] },
+      { key: 'contactPersonEmail', required: true, description: 'required', aliases: ['contact_email'], validator: (value) => EMAIL_REGEX.test(String(value || '').trim()), validatorMessage: 'must be a valid email' },
+      { key: 'contactPersonPhone', required: true, description: 'required', aliases: ['contact_phone'] },
     ],
   },
 };
