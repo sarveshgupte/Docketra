@@ -952,7 +952,7 @@ const uploadFactSheetFile = async (req, res) => {
   });
 };
 
-const createClientCFSUploadIntent = async (req, res) => {
+const createClientCFSUploadIntent = async (req, res, next) => {
   const startedAt = Date.now();
   try {
     if (areFileUploadsDisabled()) {
@@ -1007,7 +1007,22 @@ const createClientCFSUploadIntent = async (req, res) => {
       outcome: 'failed',
       error,
     }));
-    return res.status(error.status || 500).json({ success: false, code: error.code || 'CLIENT_UPLOAD_INTENT_FAILED', message: error.message });
+    const status = error?.status || 500;
+    if (error?.code === 'STORAGE_NOT_AVAILABLE') {
+      return res.status(status).json({
+        success: false,
+        code: 'STORAGE_NOT_AVAILABLE',
+        message: 'Client fact sheet storage is not available right now. Please try again or check Storage Settings.',
+      });
+    }
+    if (typeof next === 'function' && error?.forwardToExpress === true) {
+      return next(error);
+    }
+    return res.status(status).json({
+      success: false,
+      code: error.code || 'CLIENT_UPLOAD_INTENT_FAILED',
+      message: error.message || 'Unable to create client fact sheet upload intent',
+    });
   }
 };
 
