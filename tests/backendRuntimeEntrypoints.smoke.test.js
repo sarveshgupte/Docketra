@@ -5,7 +5,10 @@ const supertest = require('supertest');
 const setStartupEnvDefaults = () => {
   process.env.NODE_ENV = 'production';
   process.env.PORT = process.env.PORT || '0';
-  process.env.JWT_SECRET = process.env.JWT_SECRET || '0123456789abcdef0123456789abcdef';
+  process.env.UPLOAD_SCAN_STRICT = process.env.UPLOAD_SCAN_STRICT || 'true';
+  process.env.JWT_SECRET = process.env.JWT_SECRET || 'ci-fake-jwt-secret-placeholder-0000000000000000000000000000000000000';
+  process.env.STORAGE_TOKEN_SECRET = process.env.STORAGE_TOKEN_SECRET || 'ci-fake-storage-token-secret-placeholder-0000000000000000000000000000000';
+  process.env.METRICS_TOKEN = process.env.METRICS_TOKEN || 'ci-fake-metrics-token-placeholder-000000000000000000000000000000000000';
   process.env.SUPERADMIN_PASSWORD_HASH = process.env.SUPERADMIN_PASSWORD_HASH || '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
   process.env.SUPERADMIN_XID = process.env.SUPERADMIN_XID || 'X000001';
   process.env.SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'superadmin@example.com';
@@ -17,7 +20,6 @@ const setStartupEnvDefaults = () => {
   process.env.REDIS_URL = '';
   process.env.ALLOW_REDIS_FALLBACK = 'true';
 };
-
 
 const mockBcrypt = () => {
   const bcryptPath = require.resolve('bcrypt');
@@ -62,43 +64,52 @@ async function run() {
   mockBcrypt();
   mockAuthController();
 
-  const restoreDb = withModuleStub('../src/config/database', async () => {});
-  const restoreBootstrap = withModuleStub('../src/services/bootstrap.service', { runBootstrap: async () => {} });
-  const restoreSocket = withModuleStub('../src/services/notificationSocket.service', { initNotificationSocket: () => {} });
-  const restoreRedis = withModuleStub('../src/config/redis', {
-    getRedisClient: () => null,
-    isRedisReady: () => false,
-    isRedisUrlConfigured: () => false,
-  });
-
-  const { createApp } = require('../src/app/createApp');
-  assert.strictEqual(typeof createApp, 'function', 'createApp export should be a function');
-
-  const app = createApp();
-  assert.ok(app, 'createApp should return an Express app instance');
-
-  const healthResponse = await supertest(app).get('/health');
-  assert.strictEqual(healthResponse.status, 200, 'GET /health must be registered');
-  assert.strictEqual(healthResponse.body.status, 'ok', 'health endpoint must return status ok');
+  const restorers = [
+    withModuleStub('../src/config/database', async () => {}),
+    withModuleStub('../src/services/bootstrap.service', { runBootstrap: async () => {} }),
+    withModuleStub('../src/services/notificationSocket.service', { initNotificationSocket: () => {} }),
+    withModuleStub('../src/config/redis', {
+      getRedisClient: () => null,
+      isRedisReady: () => false,
+      isRedisUrlConfigured: () => false,
+    }),
+  ];
 
   const http = require('http');
   const originalListen = http.Server.prototype.listen;
-  http.Server.prototype.listen = function patchedListen(...args) {
-    const callback = typeof args[args.length - 1] === 'function' ? args.pop() : undefined;
-    return originalListen.call(this, 0, '127.0.0.1', callback);
-  };
+  let startedServer = null;
 
-  const { startServer } = require('../src/runtime/startServer');
-  const { server } = await startServer();
-  await new Promise((resolve) => server.close(resolve));
-  http.Server.prototype.listen = originalListen;
+  try {
+    const { createApp } = require('../src/app/createApp');
+    assert.strictEqual(typeof createApp, 'function', 'createApp export should be a function');
 
-  restoreRedis();
-  restoreSocket();
-  restoreBootstrap();
-  restoreDb();
+    const app = createApp();
+    assert.ok(app, 'createApp should return an Express app instance');
 
-  console.log('✅ backend runtime entrypoint smoke tests passed');
+    const healthResponse = await supertest(app).get('/health');
+    assert.strictEqual(healthResponse.status, 200, 'GET /health must be registered');
+    assert.strictEqual(healthResponse.body.status, 'ok', 'health endpoint must return status ok');
+
+    http.Server.prototype.listen = function patchedListen(...args) {
+      const callback = typeof args[args.length - 1] === 'function' ? args.pop() : undefined;
+      return originalListen.call(this, 0, '127.0.0.1', callback);
+    };
+
+    const { startServer } = require('../src/runtime/startServer');
+    const { server } = await startServer();
+    startedServer = server;
+
+    console.log('✅ backend runtime entrypoint smoke tests passed');
+  } finally {
+    http.Server.prototype.listen = originalListen;
+    if (startedServer && startedServer.listening) {
+      await new Promise((resolve) => startedServer.close(resolve));
+    }
+    while (restorers.length) {
+      const restore = restorers.pop();
+      restore();
+    }
+  }
 }
 
 run().catch((error) => {
