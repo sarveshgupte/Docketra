@@ -1,5 +1,10 @@
 # What's New
 
+## May 2026: Team Management role hierarchy alignment
+
+- Team Management now supports **Admin**, **Manager**, and **Employee** role assignment while keeping **Primary Admin** unique and non-assignable.
+- Updated Team role validation and bulk upload role handling to accept Manager while preventing Primary Admin assignment via normal team-management flows.
+
 ## May 2026: Client CFS upload reliability and soft-delete guardrail fixes
 
 - Fixed client detail loading crashes by removing manual `deletedAt` filters from client CFS attachment queries and relying on the soft-delete plugin defaults.
