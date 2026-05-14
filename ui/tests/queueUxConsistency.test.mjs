@@ -22,6 +22,8 @@ for (const [name, source] of [
 assert.ok(worklistView.includes('QueueFilterBar'), 'Worklist should use shared queue filter bar pattern.');
 assert.ok(workbasketPage.includes('QueueFilterBar'), 'Workbasket should use shared queue filter bar pattern.');
 assert.ok(qcQueuePage.includes('ActionConfirmModal'), 'QC queue actions should use in-app confirmation modal.');
+assert.ok(qcQueuePage.includes('aria-label={`Remove filter: ${filter.label} ${filter.value}`}'), 'QC queue filter chip remove buttons should expose dynamic accessible names.');
+assert.ok(qcQueuePage.includes('<span aria-hidden className="table-filter-chip__close">&times;</span>'), 'QC queue filter chip close glyph should remain decorative-only.');
 assert.ok(dataTable.includes('tabIndex={onRowClick ? 0 : undefined}'), 'Shared DataTable should provide keyboard row focus for openable rows.');
 assert.ok(dataTable.includes('focus-visible:ring-2'), 'Shared DataTable should render visible focus state for row navigation.');
 assert.ok(dataTable.includes('refreshingMessage'), 'Shared DataTable should support background refresh messaging.');

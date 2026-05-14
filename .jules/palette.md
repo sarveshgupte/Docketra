@@ -34,3 +34,7 @@
 ## 2026-05-13 - Explicit button types and focus states
 **Learning:** Generic buttons rendered in specialized components like `ErrorBoundary` can easily lack explicit `type="button"` attributes and keyboard focus styles, leading to potential a11y issues and unintended form submissions if they are caught wrapping complex views.
 **Action:** Always verify that interactive buttons include explicit `type="button"` attributes and visual focus indicators (e.g., Tailwind's `focus-visible` classes) to ensure keyboard accessibility and prevent unintended form submissions.
+
+## 2026-05-13 - Dynamic ARIA Labels for Badge Counts
+**Learning:** When displaying notification or message counts inside badges (e.g., a red dot with "3"), hiding the badge with `aria-hidden="true"` prevents visual redundancy for sighted screen reader users, but completely hides the unread status from purely visually impaired users.
+**Action:** When a button contains a visually hidden unread count or badge, always interpolate that count into the parent button's `aria-label` (e.g., `aria-label={count > 0 ? \`Notifications (\${count} unread)\` : 'Notifications'}`).
