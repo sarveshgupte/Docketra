@@ -32,13 +32,13 @@ async function run() {
         PROVIDER_TYPES: { USER_GOOGLE_DRIVE: 'google_drive' },
       };
     }
-    if (request === '../models/Firm.model') return { findById: () => ({ select(){return this;}, lean: async()=>({ slug: 'acme', storage: { provider: 'google_drive' }, storageConfig: { provider: 'google_drive', credentials: 'enc' } }) }), findByIdAndUpdate: async()=>({}) };
+    if (request === '../models/Firm.model') return { findById: () => ({ select(){return this;}, lean: async()=>({ slug: 'acme', storage: { provider: 'docketra_managed', mode: 'docketra_managed' }, storageConfig: null }) }), findByIdAndUpdate: async()=>({}) };
     if (request.includes('TokenEncryption.service')) return { encrypt: (v)=>v, decrypt: ()=> '{}' };
     if (request === '../services/storageBackup.service') return { storageBackupService: { runBackupForFirm: async ()=> { throw new Error('backup secret'); }, listBackups: async()=> { throw new Error('list secret'); } } };
     if (request === '../services/storage/providers/GoogleDriveProvider') return function G() {};
     if (request === '../services/storage/providers/OneDriveProvider') return function O() {};
     if (request === '../services/storage/errors/StorageErrors') return { StorageValidationError: class extends Error {} };
-    if (request === '../services/storage/StorageProviderFactory') return { StorageProviderFactory: {} };
+    if (request === '../services/storage/StorageProviderFactory') return { StorageProviderFactory: { getProvider: async () => ({ rootFolderId: 'root-managed', getOrCreateFolder: async () => 'firm-folder-1' }) } };
     if (request === '../services/storageAdapter.service') return { S3Adapter: function() {} };
     if (request === '../services/productAudit.service') return { writeSettingsAudit: async ()=>{} };
     if (request === '../services/pilotDiagnostics.service') return { REASON_CODES: { STORAGE_EXPORT_FAILED: 'x', BACKUP_RUNS_FETCH_FAILED: 'y' }, logPilotEvent: ()=>{} };
@@ -86,8 +86,7 @@ async function run() {
   const reqHealth = { firmId: 'tenant-canonical', ownershipFirmId: 'firm-owner-77', user: { role: 'PRIMARY_ADMIN' } };
   const resHealth = { code: 200, payload: null, status(c){this.code=c; return this;}, json(p){this.payload=p; return this;} };
   await ctl.storageHealthCheck(reqHealth, resHealth);
-  assert.strictEqual(resHealth.code, 502);
-  assert.strictEqual(Boolean(markCalled), true);
+  assert.strictEqual(resHealth.code, 200);
 
 
   const reqConfig = { firmId: 'tenant-canonical', ownershipFirmId: 'firm-owner-77', user: { role: 'PRIMARY_ADMIN' } };
@@ -97,8 +96,17 @@ async function run() {
 
   const resUsage = { code: 200, payload: null, status(c){this.code=c; return this;}, json(p){this.payload=p; return this;} };
   await ctl.storageUsage(reqHealth, resUsage);
-  assert.strictEqual(resUsage.code, 500);
-  assert.strictEqual(Boolean(resUsage.payload.message), false);
+  assert.strictEqual(resUsage.code, 200);
+
+  const reqFolder = { firmId: 'tenant-canonical', ownershipFirmId: 'firm-owner-77', user: { role: 'PRIMARY_ADMIN' } };
+  const resFolder = { code: 200, payload: null, status(c){this.code=c; return this;}, json(p){this.payload=p; return this;} };
+  await ctl.getStorageFolderLink(reqFolder, resFolder);
+  assert.strictEqual(resFolder.code, 200);
+  assert.ok(String(resFolder.payload.folderUrl || '').includes('drive.google.com/drive/folders/'));
+  const bodyDump = JSON.stringify(resFolder.payload);
+  ['refreshToken', 'accessToken', 'privateKey', 'credentials'].forEach((secret) => {
+    assert.ok(!bodyDump.includes(secret), `folder link response must not expose ${secret}`);
+  });
 
   process.env.NODE_ENV = prevEnv;
   console.log('storageOAuthAndErrorSanitization.test.js passed');

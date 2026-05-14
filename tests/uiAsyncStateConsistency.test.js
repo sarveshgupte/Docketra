@@ -31,6 +31,8 @@ assert(aiSettings.includes('statusMessage'), 'AI settings should provide inline 
 const storageSettings = read('ui/src/pages/StorageSettingsPage.jsx');
 assert(storageSettings.includes('Retry loading'), 'Storage settings should provide retry affordance for load failures');
 assert(storageSettings.includes('statusMessage'), 'Storage settings should provide inline mutation status message');
+assert(storageSettings.includes('Folder link unavailable.'), 'Storage settings should provide explicit disabled state copy for missing folder link');
+assert(storageSettings.includes('Generating…'), 'Storage settings should provide export loading feedback');
 
 const workSettings = read('ui/src/pages/WorkSettingsPage.jsx');
 assert(workSettings.includes('statusMessage'), 'Work settings should provide inline mutation status message');

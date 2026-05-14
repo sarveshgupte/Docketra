@@ -718,3 +718,5 @@
 ## 2026-05-14 — Data Storage Map / Trust Transparency
 - Added **Data Storage Map** in Storage Settings for Admin/Primary Admin with clear boundaries between business data storage paths and MongoDB control-plane metadata categories.
 - Added sanitized `GET /api/storage/data-map` endpoint with verification actions and no token/folder-id/private-key exposure.
+
+- Fixed Storage Settings actions: **Open storage folder** now resolves a safe Google Drive folder URL via `/api/storage/folder-link` and gracefully disables with "Folder link unavailable." when unresolved. **Generate storage export** now shows loading/success/error feedback and helper text clarifying metadata-only export contents (no secrets).
