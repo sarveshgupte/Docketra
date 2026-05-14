@@ -106,7 +106,8 @@ export function NotificationHistoryView() {
                       </p>
                       {!(item.read || item.isRead) ? (
                         <Button type="button" variant="ghost" onClick={() => markNotificationRead(item._id)}>
-                          Mark as read
+                          <span aria-hidden="true">Mark as read</span>
+                          <span className="sr-only">Mark as read: {item.message}</span>
                         </Button>
                       ) : null}
                     </div>

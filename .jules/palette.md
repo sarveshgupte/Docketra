@@ -38,3 +38,6 @@
 ## 2026-05-13 - Dynamic ARIA Labels for Badge Counts
 **Learning:** When displaying notification or message counts inside badges (e.g., a red dot with "3"), hiding the badge with `aria-hidden="true"` prevents visual redundancy for sighted screen reader users, but completely hides the unread status from purely visually impaired users.
 **Action:** When a button contains a visually hidden unread count or badge, always interpolate that count into the parent button's `aria-label` (e.g., `aria-label={count > 0 ? \`Notifications (\${count} unread)\` : 'Notifications'}`).
+## 2026-05-18 - Accessibility for Context-Dependent Action Buttons
+**Learning:** When using generic action buttons in a list (like "Mark as read"), screen reader users lack context on which item they are acting upon if the button only announces the generic text.
+**Action:** Enhance list item action buttons with item-specific screen-reader context by combining `aria-hidden="true"` on the generic visible text and a `<span className="sr-only">` element providing the full context (e.g., `<span className="sr-only">Mark as read: {item.message}</span>`).
