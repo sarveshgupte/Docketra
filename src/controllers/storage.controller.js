@@ -1009,6 +1009,77 @@ const storageUsage = async (req, res) => {
   }
 };
 
+const getStorageDataMap = async (req, res) => {
+  if (!ensureFirmAdmin(req, res)) return;
+  try {
+    const ownershipFirmId = await resolveOwnershipFirmIdForRead(req);
+    if (!ownershipFirmId) return res.status(400).json({ error: 'Tenant mapping missing' });
+    const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig slug firmSlug').lean();
+    const state = resolveFirmStorageState(firm);
+    const credentials = decodeFirmStorageConfig(firm, ownershipFirmId);
+
+    let usage = null;
+    try {
+      if (!state.isManaged) {
+        const provider = await StorageProviderFactory.getProvider(ownershipFirmId);
+        if (typeof provider.getStorageQuota === 'function') {
+          const quota = await provider.getStorageQuota();
+          usage = quota?.quotaAvailable ? {
+            displayUsed: quota.displayUsed || null,
+            displayTotal: quota.displayTotal || null,
+            displayAvailable: quota.displayAvailable || null,
+            usagePercent: Number(quota.usagePercent || 0),
+            lastCheckedAt: quota.lastCheckedAt || null,
+          } : null;
+        }
+      }
+    } catch {
+      usage = null;
+    }
+
+    const firmSlug = firm?.slug || firm?.firmSlug || req.firm?.slug || req.firm?.firmSlug || null;
+    const openDriveUrl = state.canonicalProvider === 'google_drive'
+      ? 'https://drive.google.com/drive/my-drive'
+      : null;
+
+    return res.json({
+      title: 'Data Storage Map',
+      message: 'Your business data lives in your firm cloud storage. Docketra stores only control-plane metadata needed to run the app.',
+      activeStorage: {
+        provider: state.isManaged ? 'docketra_managed' : 'firm_owned_google_drive',
+        providerLabel: state.isManaged ? 'Docketra-managed fallback' : 'Firm-owned Google Drive',
+        connectedEmail: credentials?.connectedEmail || null,
+        connectionStatus: state.connectionStatus || null,
+        lastStorageHealthCheck: credentials?.lastCheckedAt || null,
+        storageCapacity: usage,
+      },
+      businessDataLocations: {
+        clientProfiles: 'firms/{firmId}/clients/{clientId}/profile.json',
+        clientCfs: 'firms/{firmId}/clients/{clientId}/cfs.json',
+        attachments: 'firms/{firmId}/clients/{clientId}/attachments/',
+        docketsTasksComments: 'planned cloud storage path: firms/{firmId}/clients/{clientId}/dockets/{docketId}/',
+      },
+      mongoControlPlaneCategories: [
+        'workspace id/slug/name/status',
+        'users, xIDs, emails, roles',
+        'auth/session/security metadata',
+        'storage provider routing/status metadata',
+        'audit logs and request IDs',
+      ],
+      verificationActions: {
+        openFirmCloudFolderUrl: openDriveUrl,
+        downloadResidencySummaryPath: `/api/storage/data-map?format=text`,
+        policyDocPath: '/docs/DATA_RESIDENCY_POLICY.md',
+      },
+      firm: {
+        slug: firmSlug,
+      },
+    });
+  } catch {
+    return res.status(500).json({ error: 'storage_data_map_fetch_failed' });
+  }
+};
+
 module.exports = {
   getStorageStatus,
   getStorageHealth,
@@ -1027,6 +1098,7 @@ module.exports = {
   buildStateCookie,
   mapProviderErrorToStatus,
   getStorageOwnershipSummary,
+  getStorageDataMap,
   __private: {
     resolveFirmSlugForRedirect,
     buildFrontendStorageRedirect,

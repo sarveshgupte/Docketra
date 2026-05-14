@@ -20,6 +20,7 @@ const {
   disconnectStorage,
   storageHealthCheck,
   storageUsage,
+  getStorageDataMap,
 } = require('../controllers/storage.controller');
 
 const router = applyRouteValidation(express.Router(), routeSchemas);
@@ -36,6 +37,7 @@ router.get('/ownership-summary', userReadLimiter, getStorageOwnershipSummary);
 router.post('/test-connection', userReadLimiter, requirePrimaryAdmin, testStorageConnection);
 router.get('/health-check', userReadLimiter, storageHealthCheck);
 router.get('/usage', userReadLimiter, storageUsage);
+router.get('/data-map', userReadLimiter, getStorageDataMap);
 router.post('/disconnect', userReadLimiter, requirePrimaryAdmin, disconnectStorage);
 router.get('/export', userReadLimiter, requirePrimaryAdmin, requireStorageConnected, exportFirmStorage);
 router.get('/exports', userReadLimiter, requirePrimaryAdmin, requireStorageConnected, listBackupRuns);
