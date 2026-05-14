@@ -26,6 +26,11 @@ export async function getStorageOwnershipSummary() {
   return response.data;
 }
 
+export async function getStorageFolderLink() {
+  const response = await api.get('/storage/folder-link');
+  return response.data;
+}
+
 export async function sendStorageChangeOtp(email) {
   // AUTH_CONTRACT_ALLOWLIST: legacy OTP endpoint retained for storage change step-up verification.
   const response = await api.post('/auth/send-otp', {

@@ -534,7 +534,7 @@ const getStorageOwnershipSummary = async (req, res) => {
         businessDataCanonicalLocation: DATA_STORAGE_MAP.businessDataCanonicalLocation,
         mongoControlPlaneMetadata: DATA_STORAGE_MAP.mongoControlPlaneMetadata,
         googleDriveFolderPaths: DATA_STORAGE_MAP.googleDrivePaths,
-        canOpenStorageFolder: Boolean(storageProvider === 'google-drive' && credentials?.connectedEmail),
+        canOpenStorageFolder: false,
         openStorageFolderUrl: null,
         lastStorageHealthCheckAt: lastHealthCheckAt,
       },
@@ -542,6 +542,30 @@ const getStorageOwnershipSummary = async (req, res) => {
     });
   } catch {
     return res.status(500).json({ error: 'storage_summary_fetch_failed' });
+  }
+};
+
+const getStorageFolderLink = async (req, res) => {
+  try {
+    if (!ensurePrimaryAdmin(req, res)) return;
+    const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
+    const firm = await Firm.findById(ownershipFirmId).select('name storage storageConfig').lean();
+    const state = resolveFirmStorageState(firm, { includeCredentials: true });
+    const provider = await StorageProviderFactory.getProvider(ownershipFirmId);
+
+    let folderId = null;
+    if (state.canonicalProvider === 'google_drive') {
+      folderId = state.rootFolderId || null;
+    } else if (state.isManaged && provider?.rootFolderId) {
+      const firmFolderName = `firm_${String(ownershipFirmId)}`;
+      folderId = await provider.getOrCreateFolder(provider.rootFolderId, firmFolderName);
+    }
+
+    if (!folderId) return res.status(404).json({ success: false, error: 'folder_link_unavailable' });
+    const folderUrl = `https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`;
+    return res.json({ success: true, folderUrl, provider: state.canonicalProvider || 'docketra_managed' });
+  } catch {
+    return res.status(404).json({ success: false, error: 'folder_link_unavailable' });
   }
 };
 
@@ -1099,6 +1123,7 @@ module.exports = {
   mapProviderErrorToStatus,
   getStorageOwnershipSummary,
   getStorageDataMap,
+  getStorageFolderLink,
   __private: {
     resolveFirmSlugForRedirect,
     buildFrontendStorageRedirect,
