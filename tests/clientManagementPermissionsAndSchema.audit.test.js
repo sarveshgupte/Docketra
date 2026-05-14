@@ -14,10 +14,12 @@ const createRes = () => ({
 
 (async () => {
   // Role hierarchy access checks
-  for (const role of ['PRIMARY_ADMIN', 'ADMIN', 'MANAGER']) {
+  for (const role of ['PRIMARY_ADMIN', 'ADMIN']) {
     const ctx = buildRoleContext(role);
     assert(ctx.permissions.includes('CLIENT_MANAGE'), `${role} must include CLIENT_MANAGE`);
   }
+  const managerCtx = buildRoleContext('MANAGER');
+  assert(!managerCtx.permissions.includes('CLIENT_MANAGE'), 'MANAGER must not include CLIENT_MANAGE by default');
   const userCtx = buildRoleContext('USER');
   assert(!userCtx.permissions.includes('CLIENT_MANAGE'), 'USER must not include CLIENT_MANAGE by default');
 
@@ -30,12 +32,17 @@ const createRes = () => ({
   await authorizeFirmPermission('CLIENT_MANAGE')(req, res, () => { nextCalled = true; });
   assert.equal(nextCalled, false, 'Unauthorized mutation must be blocked');
   assert.equal(res.statusCode, 403, 'Unauthorized mutation must return 403');
-  assert.equal(res.body.message, 'Client management access is required', 'CLIENT_MANAGE denial message should be specific');
+  assert.equal(res.body.message, 'Client management requires Admin access', 'CLIENT_MANAGE denial message should be specific');
   User.findOne = originalFindOne;
 
   // Update schema should accept canonical client fields
   const putSchema = clientRouteSchema['PUT /:clientId'].body;
   const parsed = putSchema.parse({
+    city: 'Mumbai',
+    state: 'Maharashtra',
+    pincode: '400001',
+    contactPersonEmail: 'jane@acme.com',
+    contactPersonPhone: '9999999998',
     businessName: 'Acme Pvt Ltd',
     businessEmail: 'ops@acme.com',
     primaryContactNumber: '9999999999',
@@ -44,15 +51,19 @@ const createRes = () => ({
     CIN: 'l12345mh2020plc000001',
     TAN: 'blra12345b',
     GST: '22abcde1234f1z5',
+    city: 'Mumbai',
+    state: 'Maharashtra',
+    pincode: '400001',
     contactPersonName: 'Jane Doe',
+    contactPersonEmail: 'jane@acme.com',
+    contactPersonPhone: '9999999998',
   });
   assert.equal(parsed.PAN, 'abcde1234f');
 
   // Create schema should require businessName and support canonical optional fields
   const postSchema = clientRouteSchema['POST /'].body;
 
-  const createMinimal = postSchema.parse({ businessName: 'Pranali Ltd' });
-  assert.equal(createMinimal.businessName, 'Pranali Ltd');
+  assert.throws(() => postSchema.parse({ businessName: 'Pranali Ltd' }), /businessEmail|primaryContactNumber|businessAddress|city|state|pincode|contactPersonName|contactPersonEmail|contactPersonPhone/i);
 
   assert.throws(
     () => postSchema.parse({}),
@@ -69,7 +80,12 @@ const createRes = () => ({
     CIN: 'l12345mh2020plc000001',
     TAN: 'blra12345b',
     GST: '22abcde1234f1z5',
+    city: 'Mumbai',
+    state: 'Maharashtra',
+    pincode: '400001',
     contactPersonName: 'Jane Doe',
+    contactPersonEmail: 'jane@acme.com',
+    contactPersonPhone: '9999999998',
   });
   assert.equal(createFull.contactPersonName, 'Jane Doe');
 

@@ -23,14 +23,14 @@
 - Aligned manual Add/Edit Client fields with the bulk client CSV template fields (`businessName`, `businessEmail`, `primaryContactNumber`, `businessAddress`, `PAN`, `CIN`, `TAN`, `GST`, `contactPersonName`) while keeping only `businessName` required in the modal.
 - Preserved unsaved-change protection and create/update payload normalization by omitting optional blank fields.
 - Fixed Add Client validation to use businessName consistently across UI, API schema, controller, and bulk upload.
-- Fixed client-management denial messaging and stale admin-only denial copy so allowed Manager/Admin/Primary Admin paths use: **"Client management access is required"**.
+- Fixed client-management denial messaging and stale admin-only denial copy so allowed Admin/Primary Admin paths use: **"Client management requires Admin access"**.
 
 ## May 2026: Client management access tightening
 
 - Fixed Edit CFS client fetch route/schema alignment so client fact sheets open reliably.
-- Client management navigation is now Admin/Manager-only (Primary Admin, Admin, Manager, or explicit client-management permission).
+- Client management navigation is now Admin/Primary Admin-only (Primary Admin, Admin, or explicit client-management permission override).
 - Regular firm users no longer see the Clients sidebar item and are blocked from direct `/app/firm/:firmSlug/clients` access.
-- Client mutation actions (Add Client, Bulk Upload, Edit Client, Edit CFS) now follow the same Admin/Manager client-management permission gate.
+- Client mutation actions (Add Client, Bulk Upload, Edit Client, Edit CFS) now follow the same Admin client-management permission gate.
 
 ## May 2026: Public header and CTA consistency
 

@@ -107,7 +107,7 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
 
   if (requireClientManage) {
     if (!canManageClients(user)) {
-      setAccessToast('Client management access is required to view that page.');
+      setAccessToast('Client management requires Admin access.');
       return <Navigate to={ROUTES.DASHBOARD(effectiveFirmSlug)} replace />;
     }
   }

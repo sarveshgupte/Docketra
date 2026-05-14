@@ -31,8 +31,9 @@ const toDisplayString = (value, fallback = '—') => {
 };
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PINCODE_REGEX = /^[1-9][0-9]{5}$/;
 const TENANT_KEY_MISSING_COPY = 'Client encryption setup needs repair before clients can be loaded.';
-const FORBIDDEN_COPY = 'Client management access is required';
+const FORBIDDEN_COPY = 'Client management requires Admin access';
 const DUPLICATE_COPY = 'A client with this name or identifier already exists.';
 const DEFAULT_LOAD_ERROR = 'Failed to load clients';
 
@@ -65,7 +66,12 @@ export const ClientsPage = () => {
     businessEmail: '',
     primaryContactNumber: '',
     businessAddress: '',
+    city: '',
+    state: '',
+    pincode: '',
     contactPersonName: '',
+    contactPersonEmail: '',
+    contactPersonPhone: '',
     PAN: '',
     CIN: '',
     TAN: '',
@@ -82,7 +88,12 @@ export const ClientsPage = () => {
     businessEmail: selectedClient?.businessEmail || '',
     primaryContactNumber: selectedClient?.primaryContactNumber || '',
     businessAddress: selectedClient?.businessAddress || '',
+    city: selectedClient?.city || '',
+    state: selectedClient?.state || '',
+    pincode: selectedClient?.pincode || '',
     contactPersonName: selectedClient?.contactPersonName || '',
+    contactPersonEmail: selectedClient?.contactPersonEmail || '',
+    contactPersonPhone: selectedClient?.contactPersonPhone || '',
     PAN: selectedClient?.PAN || '',
     CIN: selectedClient?.CIN || '',
     TAN: selectedClient?.TAN || '',
@@ -199,7 +210,12 @@ export const ClientsPage = () => {
       businessEmail: '',
       primaryContactNumber: '',
       businessAddress: '',
+      city: '',
+      state: '',
+      pincode: '',
       contactPersonName: '',
+      contactPersonEmail: '',
+      contactPersonPhone: '',
       PAN: '',
       CIN: '',
       TAN: '',
@@ -219,7 +235,12 @@ export const ClientsPage = () => {
       businessEmail: client.businessEmail || '',
       primaryContactNumber: client.primaryContactNumber || '',
       businessAddress: client.businessAddress || '',
+      city: client.city || '',
+      state: client.state || '',
+      pincode: client.pincode || '',
       contactPersonName: client.contactPersonName || '',
+      contactPersonEmail: client.contactPersonEmail || '',
+      contactPersonPhone: client.contactPersonPhone || '',
       PAN: client.PAN || '',
       CIN: client.CIN || '',
       TAN: client.TAN || '',
@@ -240,8 +261,19 @@ export const ClientsPage = () => {
     const name = clientForm.businessName.trim();
     const email = clientForm.businessEmail.trim();
 
-    if (!name) nextErrors.businessName = 'Client name is required.';
-    if (email && !EMAIL_REGEX.test(email)) nextErrors.businessEmail = 'Enter a valid client email address.';
+    if (!name) nextErrors.businessName = 'Business name is required.';
+    if (!email) nextErrors.businessEmail = 'Business email is required.';
+    if (email && !EMAIL_REGEX.test(email)) nextErrors.businessEmail = 'Enter a valid business email address.';
+    if (!clientForm.primaryContactNumber.trim()) nextErrors.primaryContactNumber = 'Business contact number is required.';
+    if (!clientForm.businessAddress.trim()) nextErrors.businessAddress = 'Business address is required.';
+    if (!clientForm.city.trim()) nextErrors.city = 'City is required.';
+    if (!clientForm.state.trim()) nextErrors.state = 'State is required.';
+    if (!clientForm.pincode.trim()) nextErrors.pincode = 'Pincode is required.';
+    if (clientForm.pincode.trim() && !PINCODE_REGEX.test(clientForm.pincode.trim())) nextErrors.pincode = 'Enter a valid 6-digit pincode.';
+    if (!clientForm.contactPersonName.trim()) nextErrors.contactPersonName = 'Contact person name is required.';
+    if (!clientForm.contactPersonEmail.trim()) nextErrors.contactPersonEmail = 'Contact person email is required.';
+    if (clientForm.contactPersonEmail.trim() && !EMAIL_REGEX.test(clientForm.contactPersonEmail.trim())) nextErrors.contactPersonEmail = 'Enter a valid contact person email address.';
+    if (!clientForm.contactPersonPhone.trim()) nextErrors.contactPersonPhone = 'Contact person phone is required.';
 
     setClientFormErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -265,10 +297,15 @@ export const ClientsPage = () => {
       if (selectedClient?.clientId) {
         const response = await clientApi.updateClient(selectedClient.clientId, {
           businessName: clientForm.businessName,
-          ...(clientForm.businessEmail ? { businessEmail: clientForm.businessEmail } : {}),
-          ...(clientForm.primaryContactNumber ? { primaryContactNumber: clientForm.primaryContactNumber } : {}),
-          ...(clientForm.businessAddress ? { businessAddress: clientForm.businessAddress } : {}),
-          ...(clientForm.contactPersonName ? { contactPersonName: clientForm.contactPersonName } : {}),
+          businessEmail: clientForm.businessEmail,
+          primaryContactNumber: clientForm.primaryContactNumber,
+          businessAddress: clientForm.businessAddress,
+          city: clientForm.city,
+          state: clientForm.state,
+          pincode: clientForm.pincode,
+          contactPersonName: clientForm.contactPersonName,
+          contactPersonEmail: clientForm.contactPersonEmail,
+          contactPersonPhone: clientForm.contactPersonPhone,
           ...(clientForm.PAN ? { PAN: clientForm.PAN } : {}),
           ...(clientForm.CIN ? { CIN: clientForm.CIN } : {}),
           ...(clientForm.TAN ? { TAN: clientForm.TAN } : {}),
@@ -282,10 +319,15 @@ export const ClientsPage = () => {
       } else {
         const response = await clientApi.createClient({
           businessName: clientForm.businessName,
-          ...(clientForm.businessEmail ? { businessEmail: clientForm.businessEmail } : {}),
-          ...(clientForm.primaryContactNumber ? { primaryContactNumber: clientForm.primaryContactNumber } : {}),
-          ...(clientForm.businessAddress ? { businessAddress: clientForm.businessAddress } : {}),
-          ...(clientForm.contactPersonName ? { contactPersonName: clientForm.contactPersonName } : {}),
+          businessEmail: clientForm.businessEmail,
+          primaryContactNumber: clientForm.primaryContactNumber,
+          businessAddress: clientForm.businessAddress,
+          city: clientForm.city,
+          state: clientForm.state,
+          pincode: clientForm.pincode,
+          contactPersonName: clientForm.contactPersonName,
+          contactPersonEmail: clientForm.contactPersonEmail,
+          contactPersonPhone: clientForm.contactPersonPhone,
           ...(clientForm.PAN ? { PAN: clientForm.PAN } : {}),
           ...(clientForm.CIN ? { CIN: clientForm.CIN } : {}),
           ...(clientForm.TAN ? { TAN: clientForm.TAN } : {}),
@@ -594,32 +636,36 @@ export const ClientsPage = () => {
             disabled={!canManageClients}
           />
           <Input
-            label="Business Address (Optional)"
+            label="Business Address"
             value={clientForm.businessAddress}
             onChange={(event) => handleClientFieldChange('businessAddress', event.target.value)}
             error={clientFormErrors.businessAddress}
           />
+          <Input label="City" value={clientForm.city} onChange={(event) => handleClientFieldChange('city', event.target.value)} error={clientFormErrors.city} />
+          <Input label="State" value={clientForm.state} onChange={(event) => handleClientFieldChange('state', event.target.value)} error={clientFormErrors.state} />
+          <Input label="Pincode" value={clientForm.pincode} onChange={(event) => handleClientFieldChange('pincode', event.target.value)} error={clientFormErrors.pincode} />
           <h3 className="text-sm font-semibold text-gray-700">Contact Details</h3>
           <Input
-            label="Primary Contact Number (Optional)"
+            label="Business Contact Number"
             value={clientForm.primaryContactNumber}
             onChange={(event) => handleClientFieldChange('primaryContactNumber', event.target.value)}
             error={clientFormErrors.primaryContactNumber}
           />
           <Input
-            label="Business Email (Optional)"
+            label="Business Email"
             type="email"
             value={clientForm.businessEmail}
             onChange={(event) => handleClientFieldChange('businessEmail', event.target.value)}
             error={clientFormErrors.businessEmail}
-            helpText="Optional contact detail for coordination."
           />
           <Input
-            label="Contact Person Name (Optional)"
+            label="Contact Person Name"
             value={clientForm.contactPersonName}
             onChange={(event) => handleClientFieldChange('contactPersonName', event.target.value)}
             error={clientFormErrors.contactPersonName}
           />
+          <Input label="Contact Person Email" type="email" value={clientForm.contactPersonEmail} onChange={(event) => handleClientFieldChange('contactPersonEmail', event.target.value)} error={clientFormErrors.contactPersonEmail} />
+          <Input label="Contact Person Phone" value={clientForm.contactPersonPhone} onChange={(event) => handleClientFieldChange('contactPersonPhone', event.target.value)} error={clientFormErrors.contactPersonPhone} />
           <h3 className="text-sm font-semibold text-gray-700">Statutory / Registration Details</h3>
           <Input label="PAN (Optional)" value={clientForm.PAN} onChange={(event) => handleClientFieldChange('PAN', event.target.value)} error={clientFormErrors.PAN} />
           <Input label="CIN (Optional)" value={clientForm.CIN} onChange={(event) => handleClientFieldChange('CIN', event.target.value)} error={clientFormErrors.CIN} />
@@ -739,7 +785,7 @@ const getCfsFetchErrorMessage = (error) => {
   const status = error?.response?.status;
   const serverMessage = error?.response?.data?.message;
 
-  if (status === 403) return 'Client management access is required';
+  if (status === 403) return 'Client management requires Admin access';
   if (status === 404) return 'Client not found or no longer available';
   if (status === 503) return 'Client record loaded, but some fact sheet resources are unavailable right now. Please try again shortly.';
   if (typeof serverMessage === 'string' && serverMessage.trim()) return serverMessage;
