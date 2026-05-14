@@ -13,7 +13,7 @@ const PROHIBITED_FIELDS = [
 // Each entry is explicit so newly introduced prohibited fields still fail this guardrail test.
 const ALLOWLIST = {
   'Case.model.js': ['description','comment','businessAddress','businessEmail','primaryContactNumber','PAN','GST','CIN'],
-  'Client.model.js': ['businessAddress','businessEmail','primaryContactNumber','secondaryContactNumber','PAN','TAN','GST','CIN','contactPersonName','contactPersonDesignation','contactPersonPhoneNumber','contactPersonEmailAddress','description','notes','comments'],
+  'Client.model.js': ['businessEmail','primaryContactNumber','businessAddress','secondaryContactNumber','PAN','TAN','GST','CIN','contactPersonName','contactPersonDesignation','contactPersonPhoneNumber','contactPersonEmailAddress','description','notes','comments'],
   'Task.js': ['description'],
   'WorkType.model.js': ['description'],
   'KnowledgeItem.model.js': ['description'],

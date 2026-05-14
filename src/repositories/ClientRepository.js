@@ -186,16 +186,22 @@ const applyQueryOptions = (query, options = {}) => {
 const ClientRepository = {
   _assertNoSensitivePersistence(payload = {}) {
     const blockedFields = [
+      'businessName',
+      'businessAddress',
+      'businessEmail',
+      'primaryContactNumber',
+      'secondaryContactNumber',
       'PAN',
       'TAN',
       'GST',
       'CIN',
-      'businessAddress',
-      'secondaryContactNumber',
       'contactPersonName',
       'contactPersonDesignation',
       'contactPersonPhoneNumber',
       'contactPersonEmailAddress',
+      'description',
+      'notes',
+      'comments',
       'clientFactSheet',
     ];
     for (const field of blockedFields) {
