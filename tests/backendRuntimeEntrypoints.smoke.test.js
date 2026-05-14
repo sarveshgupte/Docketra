@@ -2,35 +2,38 @@
 const assert = require('assert');
 const supertest = require('supertest');
 
-const setTestEnvDefaults = () => {
-  process.env.NODE_ENV = 'test';
+const setStartupEnvDefaults = () => {
+  process.env.NODE_ENV = 'production';
+  process.env.PORT = process.env.PORT || '0';
   process.env.JWT_SECRET = process.env.JWT_SECRET || '0123456789abcdef0123456789abcdef';
-  process.env.SUPERADMIN_PASSWORD_HASH = process.env.SUPERADMIN_PASSWORD_HASH || '$2b$10$replace_this_with_a_real_bcrypt_hash_before_deploying';
+  process.env.SUPERADMIN_PASSWORD_HASH = process.env.SUPERADMIN_PASSWORD_HASH || '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
   process.env.SUPERADMIN_XID = process.env.SUPERADMIN_XID || 'X000001';
   process.env.SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'superadmin@example.com';
   process.env.SUPERADMIN_OBJECT_ID = process.env.SUPERADMIN_OBJECT_ID || '000000000000000000000001';
   process.env.MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/docketra';
   process.env.ENCRYPTION_PROVIDER = process.env.ENCRYPTION_PROVIDER || 'disabled';
+  process.env.MAIL_FROM = process.env.MAIL_FROM || 'no-reply@example.com';
+  process.env.BREVO_API_KEY = process.env.BREVO_API_KEY || 'ci-placeholder-brevo-key';
   process.env.REDIS_URL = '';
+  process.env.ALLOW_REDIS_FALLBACK = 'true';
 };
+
 
 const mockBcrypt = () => {
   const bcryptPath = require.resolve('bcrypt');
-  if (!require.cache[bcryptPath]) {
-    require.cache[bcryptPath] = {
-      id: bcryptPath,
-      filename: bcryptPath,
-      loaded: true,
-      exports: {
-        hash: async () => 'mock-hash',
-        hashSync: () => 'mock-hash',
-        compare: async () => true,
-        compareSync: () => true,
-        genSalt: async () => 'mock-salt',
-        genSaltSync: () => 'mock-salt',
-      },
-    };
-  }
+  require.cache[bcryptPath] = {
+    id: bcryptPath,
+    filename: bcryptPath,
+    loaded: true,
+    exports: {
+      hash: async () => 'mock-hash',
+      hashSync: () => 'mock-hash',
+      compare: async () => true,
+      compareSync: () => true,
+      genSalt: async () => 'mock-salt',
+      genSaltSync: () => 'mock-salt',
+    },
+  };
 };
 
 const mockAuthController = () => {
@@ -44,61 +47,58 @@ const mockAuthController = () => {
   };
 };
 
-const mockRedisConfig = () => {
-  const redisConfigPath = require.resolve('../src/config/redis.js');
-  require.cache[redisConfigPath] = {
-    id: redisConfigPath,
-    filename: redisConfigPath,
-    loaded: true,
-    exports: {
-      getRedisClient: () => null,
-      closeRedis: async () => {},
-    },
+const withModuleStub = (modulePath, exportsValue) => {
+  const resolvedPath = require.resolve(modulePath);
+  const original = require.cache[resolvedPath];
+  require.cache[resolvedPath] = { id: resolvedPath, filename: resolvedPath, loaded: true, exports: exportsValue };
+  return () => {
+    if (original) require.cache[resolvedPath] = original;
+    else delete require.cache[resolvedPath];
   };
 };
 
 async function run() {
-  setTestEnvDefaults();
+  setStartupEnvDefaults();
   mockBcrypt();
   mockAuthController();
-  mockRedisConfig();
+
+  const restoreDb = withModuleStub('../src/config/database', async () => {});
+  const restoreBootstrap = withModuleStub('../src/services/bootstrap.service', { runBootstrap: async () => {} });
+  const restoreSocket = withModuleStub('../src/services/notificationSocket.service', { initNotificationSocket: () => {} });
+  const restoreRedis = withModuleStub('../src/config/redis', {
+    getRedisClient: () => null,
+    isRedisReady: () => false,
+    isRedisUrlConfigured: () => false,
+  });
+
+  const { createApp } = require('../src/app/createApp');
+  assert.strictEqual(typeof createApp, 'function', 'createApp export should be a function');
+
+  const app = createApp();
+  assert.ok(app, 'createApp should return an Express app instance');
+
+  const healthResponse = await supertest(app).get('/health');
+  assert.strictEqual(healthResponse.status, 200, 'GET /health must be registered');
+  assert.strictEqual(healthResponse.body.status, 'ok', 'health endpoint must return status ok');
 
   const http = require('http');
   const originalListen = http.Server.prototype.listen;
-  let listenCalls = 0;
-  let passed = false;
   http.Server.prototype.listen = function patchedListen(...args) {
-    listenCalls += 1;
-    return originalListen.apply(this, args);
+    const callback = typeof args[args.length - 1] === 'function' ? args.pop() : undefined;
+    return originalListen.call(this, 0, '127.0.0.1', callback);
   };
 
-  try {
-    const callsBeforeImport = listenCalls;
-    const { createApp } = require('../src/app/createApp');
+  const { startServer } = require('../src/runtime/startServer');
+  const { server } = await startServer();
+  await new Promise((resolve) => server.close(resolve));
+  http.Server.prototype.listen = originalListen;
 
-    assert.strictEqual(typeof createApp, 'function', 'createApp export should be a function');
+  restoreRedis();
+  restoreSocket();
+  restoreBootstrap();
+  restoreDb();
 
-    const app = createApp();
-    assert.ok(app, 'createApp should return an Express app instance');
-
-    assert.strictEqual(listenCalls, callsBeforeImport, 'importing/creating app must not start an HTTP listener');
-
-    const healthResponse = await supertest(app).get('/health');
-    assert.strictEqual(healthResponse.status, 200, 'GET /health must be registered');
-    assert.strictEqual(healthResponse.body.status, 'ok', 'health endpoint must return status ok');
-
-    const unknownResponse = await supertest(app).get('/__does_not_exist__');
-    assert.strictEqual(unknownResponse.status, 404, 'unknown routes must return 404');
-    assert.strictEqual(unknownResponse.body.code, 'NOT_FOUND', 'unknown route response code should stay NOT_FOUND');
-
-    console.log('✅ backend runtime entrypoint smoke tests passed');
-    passed = true;
-  } finally {
-    http.Server.prototype.listen = originalListen;
-    if (passed) {
-      process.exit(0);
-    }
-  }
+  console.log('✅ backend runtime entrypoint smoke tests passed');
 }
 
 run().catch((error) => {

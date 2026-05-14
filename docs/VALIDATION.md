@@ -126,3 +126,13 @@ const router = applyRouteValidation(express.Router(), routeSchemas);
 When a route file uses `applyRouteValidation`, every declared `router.get/post/put/patch/delete` route **must** have a matching `'<METHOD> <path>'` schema key in the corresponding `src/schemas/*.routes.schema.js` file.
 
 If even one key is missing (for example `GET /folder-link` in storage routes), backend startup fails immediately with a `Missing schema for route` error.
+
+### CI deploy-safety gate
+
+Backend deploy safety is CI-blocking through `npm run ci:backend:deploy-safety`, which runs:
+
+- `validate:env:production` and `validate:env:test` (startup env validation)
+- `tests/routeValidationContract.test.js` (route/schema parity)
+- `tests/backendRuntimeEntrypoints.smoke.test.js` (production-mode backend startup smoke)
+
+This gate is designed to fail before merge if route validation contract drift or runtime startup crashes would break a Render deployment.
