@@ -4,7 +4,7 @@ import path from 'node:path';
 import { shouldRefreshOnboardingProgress } from '../src/utils/onboardingProgressRefresh.js';
 
 const shouldRefreshSamples = [
-  { method: 'post', url: '/admin/clients' },
+  { method: 'post', url: '/clients' },
   { method: 'put', url: '/admin/firm-settings' },
   { method: 'post', url: '/firm/storage/change' },
   { method: 'post', url: '/admin/categories/abc/subcategories' },

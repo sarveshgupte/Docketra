@@ -6,7 +6,7 @@ const ONBOARDING_REFRESH_PATH_PATTERNS = [
   /^\/admin\/firm-settings(?:\/|$)/,
   /^\/firm\/storage\/change(?:\/|$)/,
   /^\/admin\/storage(?:\/|$)/,
-  /^\/admin\/clients(?:\/|$)/,
+  /^\/clients(?:\/|$)/,
   /^\/admin\/categories(?:\/|$)/,
   /^\/admin\/workbaskets(?:\/|$)/,
   /^\/admin\/users(?:\/|$)/,
