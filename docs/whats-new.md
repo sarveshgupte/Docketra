@@ -706,3 +706,7 @@
 - Added strict data-residency audit/policy defining Docketra as a control plane and firm cloud storage as canonical storage for business data.
 
 - 2026-05-14: Client create/update moved to cloud-first profile storage (`firms/{firmId}/clients/{clientId}/profile.json`) and blocked prohibited business/profile fields from Mongo persistence.
+
+## 2026-05-14 — Data Storage Map / Trust Transparency
+- Added **Data Storage Map** in Storage Settings for Admin/Primary Admin with clear boundaries between business data storage paths and MongoDB control-plane metadata categories.
+- Added sanitized `GET /api/storage/data-map` endpoint with verification actions and no token/folder-id/private-key exposure.

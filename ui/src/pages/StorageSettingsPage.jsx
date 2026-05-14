@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -26,6 +26,7 @@ import { formatDateTime } from '../utils/formatDateTime';
 import { getRecoveryPayload } from '../utils/errorRecovery';
 import { SupportContext } from '../components/feedback/SupportContext';
 import { StatusMessageStack } from './platform/PlatformShared';
+import { ROUTES } from '../constants/routes';
 
 const PAGE_SUBTITLE = 'Docketra-managed storage works by default. You can optionally connect your firm’s own Google Drive.';
 
@@ -283,6 +284,9 @@ export function StorageSettingsPage() {
                 Your team can upload files even without BYOS. Files are stored in Docketra-managed Google Drive unless firm-owned storage is connected.
               </p>
               {summaryWarning ? <p className="text-sm text-[var(--dt-warning)]">{summaryWarning}</p> : null}
+              <Link className="text-sm underline text-[var(--dt-link)]" to={ROUTES.DATA_STORAGE_MAP(config?.firmSlug || user?.firmSlug || '')}>
+                Open Data Storage Map
+              </Link>
             </div>
           </Card>
 

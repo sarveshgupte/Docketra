@@ -36,6 +36,7 @@ import {
   ProductUpdatesHistoryPage,
   ReportsDashboard,
   StorageSettingsPage,
+  DataStorageMapPage,
   StorageOAuthSuccessPage,
   WorkbasketPage,
   WorkSettingsPage,
@@ -446,6 +447,14 @@ export const ProtectedRoutes = () => (
           element={(
             <ProtectedRoute requireAdmin>
               <StorageSettingsPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="data-storage-map"
+          element={(
+            <ProtectedRoute requireAdmin>
+              <DataStorageMapPage />
             </ProtectedRoute>
           )}
         />
