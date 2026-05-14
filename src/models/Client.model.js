@@ -71,8 +71,8 @@ const clientSchema = new mongoose.Schema({
    */
   businessName: {
     type: String,
-    required: [true, 'Business name is required'],
     trim: true,
+    default: null,
   },
   
   /**
@@ -813,6 +813,12 @@ const NON_PERSISTENT_SENSITIVE_FIELDS = [
   'clientFactSheet',
 ];
 
+
+// DATA-RESIDENCY POLICY: businessName is legacy on Mongo and must not be written
+// for non-system clients. Canonical legal name now lives in cloud profile JSON.
+function _isControlPlaneNameWriteAllowed(doc) {
+  return Boolean(doc?.isSystemClient || doc?.isDefaultClient || doc?.createdBySystem);
+}
 function _hasMeaningfulSensitiveValue(value) {
   if (value === null || value === undefined) return false;
   if (typeof value === 'string') return value.trim().length > 0;
@@ -940,6 +946,10 @@ clientSchema.pre('save', async function () {
 });
 
 clientSchema.pre('validate', function () {
+  if (this.isModified('businessName') && _hasMeaningfulSensitiveValue(this.businessName) && !_isControlPlaneNameWriteAllowed(this)) {
+    throw _sensitivePersistenceError('businessName');
+  }
+
   for (const field of NON_PERSISTENT_SENSITIVE_FIELDS) {
     if (this.isModified(field) && _hasMeaningfulSensitiveValue(this[field])) {
       throw _sensitivePersistenceError(field);
