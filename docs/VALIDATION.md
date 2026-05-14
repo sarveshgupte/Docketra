@@ -119,3 +119,10 @@ const router = applyRouteValidation(express.Router(), routeSchemas);
 - **Strict mode**: Use `.strict()` on schemas where extra keys must be rejected.
 - **Passthrough mode**: Use `.passthrough()` only when additional keys are explicitly allowed.
 - **No direct `express.Router()` without validation**: Always use `applyRouteValidation`.
+
+
+### Startup Safety Note
+
+When a route file uses `applyRouteValidation`, every declared `router.get/post/put/patch/delete` route **must** have a matching `'<METHOD> <path>'` schema key in the corresponding `src/schemas/*.routes.schema.js` file.
+
+If even one key is missing (for example `GET /folder-link` in storage routes), backend startup fails immediately with a `Missing schema for route` error.

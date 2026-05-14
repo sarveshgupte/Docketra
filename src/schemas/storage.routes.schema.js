@@ -28,6 +28,9 @@ module.exports = {
   'GET /ownership-summary': {
     query: z.object({}).passthrough(),
   },
+  'GET /folder-link': {
+    query: z.object({}).passthrough(),
+  },
   'POST /test-connection': {
     body: z.object({}).passthrough(),
   },
@@ -35,6 +38,9 @@ module.exports = {
     query: z.object({}).passthrough(),
   },
   'GET /usage': {
+    query: z.object({}).passthrough(),
+  },
+  'GET /data-map': {
     query: z.object({}).passthrough(),
   },
   'POST /disconnect': {
