@@ -71,8 +71,8 @@ const clientSchema = new mongoose.Schema({
    */
   businessName: {
     type: String,
-    required: [true, 'Business name is required'],
     trim: true,
+    default: null,
   },
   
   /**

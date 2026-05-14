@@ -51,3 +51,6 @@ This policy is enforced through:
 - Schema guardrail tests.
 - Architecture review in PRs affecting models/repositories/services.
 - Periodic audits recorded in `docs/audits/`.
+
+## Client control-plane enforcement update (2026-05-14)
+Client business/profile fields are no longer canonical in MongoDB. Client documents must only store control-plane metadata and cloud profile references (`profileRef`).

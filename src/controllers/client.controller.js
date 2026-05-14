@@ -55,11 +55,16 @@ const normalizeString = (value) => {
   return trimmed.length ? trimmed : undefined;
 };
 
+
 const hydrateClientFromProfileIfAvailable = async (firmId, client) => {
   if (!client) return client;
   try {
     const profile = await clientProfileStorageService.getClientProfile({ firmId, client });
-    if (!profile) return client;
+    if (!profile) {
+      const fallback = typeof client.toObject === 'function' ? client.toObject() : { ...client };
+      fallback.profileWarning = 'client_profile_unavailable';
+      return fallback;
+    }
     return clientProfileStorageService.hydrateClientWithProfile(client, profile);
   } catch (error) {
     log.warn('CLIENT_PROFILE_HYDRATE_FAILED', {
@@ -67,10 +72,11 @@ const hydrateClientFromProfileIfAvailable = async (firmId, client) => {
       clientId: client?.clientId || null,
       message: error.message,
     });
-    return client;
+    const fallback = typeof client.toObject === 'function' ? client.toObject() : { ...client };
+    fallback.profileWarning = 'client_profile_unavailable';
+    return fallback;
   }
 };
-
 const setNoCacheHeaders = (res) => {
   const headers = {
     'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -229,10 +235,7 @@ const getClients = async (req, res) => {
     }
     if (normalizedSearch) {
       const escapedSearch = normalizedSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      filter.$or = [
-        { businessName: { $regex: escapedSearch, $options: 'i' } },
-        { clientId: { $regex: escapedSearch, $options: 'i' } },
-      ];
+      filter.clientId = { $regex: escapedSearch, $options: 'i' };
     }
 
     const [clients, total] = await Promise.all([
@@ -241,7 +244,7 @@ const getClients = async (req, res) => {
         filter,
         accessContext.role,
         {
-          select: 'clientId businessName status isActive isSystemClient isInternal isDefaultClient createdAt',
+          select: 'clientId status isActive isSystemClient isInternal isDefaultClient createdAt profileRef',
           sort: { clientId: 1 },
           limit,
           skip,
@@ -251,7 +254,8 @@ const getClients = async (req, res) => {
       ClientRepository.count(accessContext.firmId, filter),
     ]);
 
-    const normalizedClients = normalizeClientList(clients).map(mapClientResponse);
+    const hydratedClients = await Promise.all(normalizeClientList(clients).map((client) => hydrateClientFromProfileIfAvailable(accessContext.firmId, client)));
+    const normalizedClients = hydratedClients.map(mapClientResponse);
     return res.json({
       ...buildClientListResponse(normalizedClients),
       pagination: {
@@ -452,10 +456,6 @@ const createClient = async (req, res) => {
       return ClientRepository.create({
         // System-generated ID (NEVER from client)
         clientId,
-        // Business fields from sanitized request
-        businessName: businessName.trim(),
-        ...(typeof primaryContactNumber === 'string' && primaryContactNumber.trim() ? { primaryContactNumber: primaryContactNumber.trim() } : {}),
-        ...(typeof businessEmail === 'string' && businessEmail.trim() ? { businessEmail: businessEmail.trim().toLowerCase() } : {}),
         // System-owned fields (injected server-side only, NEVER from client)
         firmId: userFirmId,
         createdByXid,
@@ -514,9 +514,10 @@ const createClient = async (req, res) => {
       logContext: buildClientLogContext(req, { model: 'Client', clientId: client.clientId }),
     });
 
+    const hydratedCreatedClient = await hydrateClientFromProfileIfAvailable(userFirmId, createdClient || client);
     return res.status(201).json({
       success: true,
-      data: mapClientResponse(createdClient || client),
+      data: mapClientResponse(hydratedCreatedClient),
       message: 'Client created successfully',
     });
   } catch (error) {
@@ -595,21 +596,6 @@ const updateClient = async (req, res) => {
         contactPersonEmailAddress: contactPersonEmailAddress !== undefined ? (contactPersonEmailAddress ? String(contactPersonEmailAddress).trim().toLowerCase() : null) : undefined,
       },
     });
-
-    if (businessName !== undefined) {
-      client.businessName = String(businessName).trim();
-    }
-
-    // Update allowed metadata fields
-    if (businessEmail !== undefined) {
-      client.businessEmail = String(businessEmail).trim().toLowerCase();
-    }
-    
-    if (primaryContactNumber !== undefined) {
-      client.primaryContactNumber = String(primaryContactNumber).trim();
-    }
-
-    await client.save();
 
     const hydrated = await hydrateClientFromProfileIfAvailable(accessContext.firmId, client);
     

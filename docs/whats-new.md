@@ -704,3 +704,5 @@
 ## May 2026: Strict control-plane data residency policy
 
 - Added strict data-residency audit/policy defining Docketra as a control plane and firm cloud storage as canonical storage for business data.
+
+- 2026-05-14: Client create/update moved to cloud-first profile storage (`firms/{firmId}/clients/{clientId}/profile.json`) and blocked prohibited business/profile fields from Mongo persistence.
