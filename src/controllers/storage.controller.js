@@ -24,6 +24,22 @@ const GOOGLE_SCOPES = [
 const STATE_COOKIE_NAME = 'storage_oauth_state';
 const STATE_TTL_SECONDS = 10 * 60;
 const MANAGED_STORAGE_MODE = 'docketra_managed';
+const DATA_STORAGE_MAP = Object.freeze({
+  businessDataCanonicalLocation: 'Firm-owned cloud storage (active provider)',
+  mongoControlPlaneMetadata: [
+    'Tenant identity, firm/user auth, role hierarchy and permissions',
+    'Legacy control metadata for docket/task operations (migration to firm cloud paths is in progress)',
+    'Storage provider mode/configuration metadata and health diagnostics',
+    'Backup/export metadata and platform reliability telemetry',
+  ],
+  googleDrivePaths: [
+    { key: 'client_profile_current', path: 'firms/{firmId}/clients/{clientId}/profile.json' },
+    { key: 'client_cfs_current', path: 'firms/{firmId}/clients/{clientId}/cfs/{folderKey}/...' },
+    { key: 'dockets_planned', path: 'firms/{firmId}/dockets/{docketId}/... (planned migration)' },
+    { key: 'tasks_planned', path: 'firms/{firmId}/tasks/{taskId}/... (planned migration)' },
+    { key: 'comments_planned', path: 'firms/{firmId}/dockets/{docketId}/comments/{commentId}.json (planned migration)' },
+  ],
+});
 const SUPPORTED_STORAGE_PROVIDERS = new Set(['docketra_managed', 'google_drive', 'onedrive', 's3']);
 const usedStorageOtpJti = new Map();
 
@@ -512,6 +528,16 @@ const getStorageOwnershipSummary = async (req, res) => {
       },
       ownershipModel:
         'Docketra uses a control-plane model. Firm and client data should remain in the configured storage provider according to your data ownership setup.',
+      dataStorageMap: {
+        activeStorageProvider: storageProvider,
+        connectedGoogleAccount: storageProvider === 'google-drive' ? (credentials?.connectedEmail || null) : null,
+        businessDataCanonicalLocation: DATA_STORAGE_MAP.businessDataCanonicalLocation,
+        mongoControlPlaneMetadata: DATA_STORAGE_MAP.mongoControlPlaneMetadata,
+        googleDriveFolderPaths: DATA_STORAGE_MAP.googleDrivePaths,
+        canOpenStorageFolder: Boolean(storageProvider === 'google-drive' && credentials?.connectedEmail),
+        openStorageFolderUrl: null,
+        lastStorageHealthCheckAt: lastHealthCheckAt,
+      },
       warnings,
     });
   } catch {

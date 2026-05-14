@@ -249,6 +249,9 @@ export function StorageSettingsPage() {
       setExporting(false);
     }
   };
+  const onDownloadDataResidencySummary = async () => {
+    await onGenerateExport();
+  };
 
   const statusMessages = [
     loadError ? { tone: 'error', message: loadError } : null,
@@ -271,6 +274,32 @@ export function StorageSettingsPage() {
         <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 space-y-6">
           <PageHeader title="Storage Settings" subtitle={PAGE_SUBTITLE} />
           <StatusMessageStack messages={statusMessages} />
+
+          <Card>
+            <div className={spacingClasses.sectionMargin}>
+              <h2 className="text-lg font-medium">Storage settings / Data storage map</h2>
+              <p>Active storage provider: {ownershipSummary?.dataStorageMap?.activeStorageProvider || normalizedProvider}</p>
+              <p>Connected Google account: {ownershipSummary?.dataStorageMap?.connectedGoogleAccount || 'Not connected'}</p>
+              <p>Business data canonical location: {ownershipSummary?.dataStorageMap?.businessDataCanonicalLocation || 'Firm-owned cloud storage'}</p>
+              <p className="font-medium mt-2">MongoDB control-plane metadata categories</p>
+              <ul className="list-disc ml-6 text-sm">
+                {(ownershipSummary?.dataStorageMap?.mongoControlPlaneMetadata || []).map((item) => <li key={item}>{item}</li>)}
+              </ul>
+              <p className="font-medium mt-2">Google Drive folder paths</p>
+              <ul className="list-disc ml-6 text-sm">
+                {(ownershipSummary?.dataStorageMap?.googleDriveFolderPaths || []).map((item) => <li key={item.key}>{item.key}: {item.path}</li>)}
+              </ul>
+              <p className="text-sm">Last storage health check: {formatDateTime(ownershipSummary?.dataStorageMap?.lastStorageHealthCheckAt || ownershipSummary?.lastHealthCheck?.checkedAt)}</p>
+              <div className="flex gap-2 mt-2">
+                <Button type="button" variant="outline" disabled={!ownershipSummary?.dataStorageMap?.canOpenStorageFolder}>
+                  Open storage folder
+                </Button>
+                <Button type="button" variant="primary" onClick={onDownloadDataResidencySummary} disabled={exporting}>
+                  {exporting ? 'Generating…' : 'Generate storage export'}
+                </Button>
+              </div>
+            </div>
+          </Card>
 
           <Card>
             <div className={spacingClasses.sectionMargin}>
