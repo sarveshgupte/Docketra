@@ -60,29 +60,19 @@ const getDocketTimeline = async (docketId, firmId, { type, page = 1, limit = 20 
     query.type = String(type).trim().toUpperCase();
   }
 
-  // ⚡ Bolt: Optimize docket timeline queries with $facet aggregation
-  // 💡 What: Replaced concurrent find() and countDocuments() with a single $facet aggregation.
-  // 🎯 Why: Reduces database network round-trips from 2 to 1 for fetching paginated items and total counts.
-  // 📊 Impact: Decreases database query latency and overhead.
-  const aggResult = await DocketActivity.aggregate([
-    { $match: query },
-    { $sort: { createdAt: -1 } },
-    {
-      $facet: {
-        items: [
-          { $skip: skip },
-          { $limit: pageLimit },
-          { $project: { type: 1, description: 1, metadata: 1, performedByXID: 1, createdAt: 1 } }
-        ],
-        totalCount: [
-          { $count: "count" }
-        ]
-      }
-    }
+  // ⚡ Bolt: Revert $facet for simple counts
+  // 💡 What: Reverted $facet aggregation back to concurrent find() and countDocuments().
+  // 🎯 Why: While $facet groups multiple count operations into a single network roundtrip, it is an anti-pattern for simple counts if the initial $match yields a large dataset. Individual countDocuments queries can be resolved entirely using index scans, whereas $facet forces MongoDB to pull all matching documents into memory to evaluate the sub-pipelines, bypassing indexes and risking the 100MB aggregation memory limit.
+  // 📊 Impact: Reduces memory usage and leverages MongoDB index scans for counts.
+  const [items, total] = await Promise.all([
+    DocketActivity.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(pageLimit)
+      .select({ type: 1, description: 1, metadata: 1, performedByXID: 1, createdAt: 1 })
+      .lean(),
+    DocketActivity.countDocuments(query),
   ]);
-
-  const items = aggResult[0]?.items || [];
-  const total = aggResult[0]?.totalCount?.[0]?.count || 0;
 
   const xids = [...new Set(items.map((item) => item.performedByXID).filter(Boolean))];
   const users = xids.length
