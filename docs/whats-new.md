@@ -1,5 +1,13 @@
 # What's New
 
+## May 2026: Firm Data Transparency page and trust/data residency documentation
+
+- Added a **Storage settings / Data storage map** section for Primary Admin visibility into active provider posture, connected account context, canonical business data location, MongoDB control-plane metadata categories, and standardized Google Drive path conventions.
+- Added a **Download Data Residency Summary** action in Storage Settings for audit/export workflows.
+- Kept sensitive values out of this visibility surface (no secrets/tokens, `rootFolderId`, `driveId`, `privateKey`, or raw internal IDs).
+- Added `docs/TRUST_AND_DATA_RESIDENCY.md` describing Docketra's control-plane-only model, data boundaries, verification steps, and migration limitations.
+- Added regression tests to verify transparency UI copy and controller responses do not expose sensitive credential fields.
+
 ## May 2026: Team Management role hierarchy alignment
 
 - Team Management now supports **Admin**, **Manager**, and **Employee** role assignment while keeping **Primary Admin** unique and non-assignable.

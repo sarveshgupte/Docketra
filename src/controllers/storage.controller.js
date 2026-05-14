@@ -24,6 +24,22 @@ const GOOGLE_SCOPES = [
 const STATE_COOKIE_NAME = 'storage_oauth_state';
 const STATE_TTL_SECONDS = 10 * 60;
 const MANAGED_STORAGE_MODE = 'docketra_managed';
+const DATA_STORAGE_MAP = Object.freeze({
+  businessDataCanonicalLocation: 'Firm-owned cloud storage (active provider)',
+  mongoControlPlaneMetadata: [
+    'Tenant identity, firm/user auth, role hierarchy and permissions',
+    'Docket/task metadata, operational statuses, assignments, and audit timestamps',
+    'Storage provider mode/configuration metadata and health diagnostics',
+    'Backup/export metadata and platform reliability telemetry',
+  ],
+  googleDrivePaths: [
+    { key: 'clients', path: '/Docketra/Clients/{clientNameOrId}/' },
+    { key: 'cfs', path: '/Docketra/Clients/{clientNameOrId}/CFS/' },
+    { key: 'dockets', path: '/Docketra/Dockets/{docketTitleOrId}/' },
+    { key: 'tasks', path: '/Docketra/Tasks/{taskTitleOrId}/' },
+    { key: 'attachments', path: '/Docketra/Attachments/{year}/{month}/' },
+  ],
+});
 const SUPPORTED_STORAGE_PROVIDERS = new Set(['docketra_managed', 'google_drive', 'onedrive', 's3']);
 const usedStorageOtpJti = new Map();
 
@@ -512,6 +528,16 @@ const getStorageOwnershipSummary = async (req, res) => {
       },
       ownershipModel:
         'Docketra uses a control-plane model. Firm and client data should remain in the configured storage provider according to your data ownership setup.',
+      dataStorageMap: {
+        activeStorageProvider: storageProvider,
+        connectedGoogleAccount: storageProvider === 'google-drive' ? (credentials?.connectedEmail || null) : null,
+        businessDataCanonicalLocation: DATA_STORAGE_MAP.businessDataCanonicalLocation,
+        mongoControlPlaneMetadata: DATA_STORAGE_MAP.mongoControlPlaneMetadata,
+        googleDriveFolderPaths: DATA_STORAGE_MAP.googleDrivePaths,
+        canOpenStorageFolder: Boolean(storageProvider === 'google-drive' && credentials?.connectedEmail),
+        openStorageFolderUrl: null,
+        lastStorageHealthCheckAt: lastHealthCheckAt,
+      },
       warnings,
     });
   } catch {

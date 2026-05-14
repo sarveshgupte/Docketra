@@ -23,6 +23,10 @@ assert.ok(storageService.includes("api.post('/storage/disconnect')"), 'disconnec
 assert.ok(storagePage.includes('Disconnect firm Google Drive'), 'Disconnect action should exist for connected firm Google Drive state');
 assert.ok(storagePage.includes('Disconnect firm Google Drive? Future uploads will use Docketra-managed storage.'), 'Disconnect confirmation copy should be present');
 assert.ok(storagePage.includes('onClick={connectGoogleDrive}'), 'Google OAuth connect remains direct and OTP-free');
+assert.ok(storagePage.includes('Storage settings / Data storage map'), 'Storage settings should include data storage map section');
+assert.ok(storagePage.includes('Download Data Residency Summary'), 'Storage settings should include data residency summary action');
+assert.ok(!storagePage.includes('rootFolderId'), 'Storage settings page source should not expose rootFolderId');
+assert.ok(!storagePage.includes('privateKey'), 'Storage settings page source should not expose privateKey');
 assert.ok(!storagePage.includes('Connect / Refresh Google Drive'), 'Legacy mixed Google provider CTA copy should be removed');
 
 const successPage = read('ui/src/pages/StorageOAuthSuccessPage.jsx');
