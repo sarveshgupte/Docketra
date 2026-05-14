@@ -295,7 +295,7 @@ export function StorageSettingsPage() {
                   Open storage folder
                 </Button>
                 <Button type="button" variant="primary" onClick={onDownloadDataResidencySummary} disabled={exporting}>
-                  {exporting ? 'Preparing…' : 'Download Data Residency Summary'}
+                  {exporting ? 'Generating…' : 'Generate storage export'}
                 </Button>
               </div>
             </div>
