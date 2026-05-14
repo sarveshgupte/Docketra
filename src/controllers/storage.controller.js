@@ -28,16 +28,16 @@ const DATA_STORAGE_MAP = Object.freeze({
   businessDataCanonicalLocation: 'Firm-owned cloud storage (active provider)',
   mongoControlPlaneMetadata: [
     'Tenant identity, firm/user auth, role hierarchy and permissions',
-    'Docket/task metadata, operational statuses, assignments, and audit timestamps',
+    'Legacy control metadata for docket/task operations (migration to firm cloud paths is in progress)',
     'Storage provider mode/configuration metadata and health diagnostics',
     'Backup/export metadata and platform reliability telemetry',
   ],
   googleDrivePaths: [
-    { key: 'clients', path: '/Docketra/Clients/{clientNameOrId}/' },
-    { key: 'cfs', path: '/Docketra/Clients/{clientNameOrId}/CFS/' },
-    { key: 'dockets', path: '/Docketra/Dockets/{docketTitleOrId}/' },
-    { key: 'tasks', path: '/Docketra/Tasks/{taskTitleOrId}/' },
-    { key: 'attachments', path: '/Docketra/Attachments/{year}/{month}/' },
+    { key: 'client_profile_current', path: 'firms/{firmId}/clients/{clientId}/profile.json' },
+    { key: 'client_cfs_current', path: 'firms/{firmId}/clients/{clientId}/cfs/{folderKey}/...' },
+    { key: 'dockets_planned', path: 'firms/{firmId}/dockets/{docketId}/... (planned migration)' },
+    { key: 'tasks_planned', path: 'firms/{firmId}/tasks/{taskId}/... (planned migration)' },
+    { key: 'comments_planned', path: 'firms/{firmId}/dockets/{docketId}/comments/{commentId}.json (planned migration)' },
   ],
 });
 const SUPPORTED_STORAGE_PROVIDERS = new Set(['docketra_managed', 'google_drive', 'onedrive', 's3']);

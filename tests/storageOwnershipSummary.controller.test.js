@@ -98,6 +98,14 @@ async function testTenantIsolation() {
   assert.ok(Array.isArray(res.body.warnings));
   assert.ok(res.body?.dataStorageMap, 'data storage map should be present');
   assert.ok(Array.isArray(res.body?.dataStorageMap?.googleDriveFolderPaths), 'googleDriveFolderPaths should be an array');
+  assert.ok(
+    JSON.stringify(res.body?.dataStorageMap?.googleDriveFolderPaths || []).includes('firms/{firmId}/clients/{clientId}/profile.json'),
+    'data storage map should expose current cloud-first client profile path',
+  );
+  assert.ok(
+    JSON.stringify(res.body?.dataStorageMap?.googleDriveFolderPaths || []).toLowerCase().includes('planned'),
+    'docket/task/comment cloud paths should be marked planned until migration is complete',
+  );
   const serialized = JSON.stringify(res.body);
   assert.ok(!serialized.includes('refreshToken'), 'response must not include refreshToken');
   assert.ok(!serialized.includes('rootFolderId'), 'response must not include rootFolderId');
