@@ -930,28 +930,53 @@ const storageHealthCheck = async (req, res) => {
 
 const storageUsage = async (req, res) => {
   try {
+    if (!isAdminRole(req.user?.role)) {
+      return res.status(403).json({ error: 'Only firm admin can view storage usage' });
+    }
     const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
     const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig').lean();
     const state = resolveFirmStorageState(firm);
-    const provider = await StorageProviderFactory.getProvider(ownershipFirmId);
-    if (!supportsListFiles(provider)) {
-      return res.status(400).json({
-        error: 'usage_failed',
-        code: 'STORAGE_PROVIDER_UNSUPPORTED_OPERATION',
-        provider: toUiProvider(state.canonicalProvider),
+    if (state.isManaged) {
+      log.info('[STORAGE]', {
+        event: 'storage_usage_resolved',
+        tenantId: req.firmId,
+        provider: 'docketra_managed',
+        providerMode: state.mode,
+        quotaAvailable: false,
+      });
+      return res.json({
+        provider: 'docketra_managed',
+        providerMode: state.mode,
         status: state.connectionStatus,
         connectionStatus: state.connectionStatus,
+        quotaAvailable: false,
+        managedFallback: true,
+        message: 'Docketra-managed storage is active. Storage quota is managed by Docketra.',
+        lastCheckedAt: new Date().toISOString(),
       });
     }
+    const provider = await StorageProviderFactory.getProvider(ownershipFirmId);
+    if (typeof provider.getStorageQuota === 'function') {
+      const quota = await provider.getStorageQuota();
+      log.info('[STORAGE]', {
+        event: 'storage_usage_resolved',
+        tenantId: req.firmId,
+        provider: quota?.provider || state.canonicalProvider,
+        providerMode: state.mode,
+        quotaAvailable: Boolean(quota?.quotaAvailable),
+      });
+      return res.json({
+        provider: quota?.provider || state.canonicalProvider,
+        providerMode: state.mode,
+        status: state.connectionStatus,
+        connectionStatus: state.connectionStatus,
+        ...quota,
+      });
+    }
+    if (!supportsListFiles(provider)) throw new Error('Storage provider does not support usage lookup');
     const files = await provider.listFiles(null);
-    const totalSizeBytes = files.reduce((acc, file) => acc + Number(file.size || 0), 0);
-    return res.json({
-      provider: toUiProvider(state.canonicalProvider),
-      status: state.connectionStatus,
-      connectionStatus: state.connectionStatus,
-      totalFiles: files.length,
-      totalSizeBytes,
-    });
+    const usedBytes = files.reduce((acc, file) => acc + Number(file.size || 0), 0);
+    return res.json({ provider: state.canonicalProvider, providerMode: state.mode, quotaAvailable: false, usedBytes, totalFiles: files.length });
   } catch (error) {
     log.error('[STORAGE]', { event: 'usage_failed', tenantId: req.firmId, message: error.message });
     return res.status(500).json({ error: 'usage_failed', ...(isProduction() ? {} : { message: error.message }) });

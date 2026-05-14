@@ -14,6 +14,8 @@ assert.ok(storagePage.includes('Connect firm Google Drive'), 'Storage settings s
 assert.ok(storagePage.includes("onClick={connectGoogleDrive}"), 'Google OAuth CTA should call connectGoogleDrive directly');
 assert.ok(storagePage.includes('Advanced manual storage providers'), 'OneDrive/S3 should be behind advanced manual section');
 assert.ok(storagePage.includes('Default: Docketra-managed Google Drive'), 'Storage settings should show managed default fallback');
+assert.ok(storagePage.includes('Storage capacity'), 'Storage settings should include storage capacity section');
+assert.ok(storagePage.includes('Refresh usage'), 'Storage settings should provide usage refresh action');
 assert.ok(storagePage.includes("providerParam === 'google-drive' && connected === '1'"), 'OAuth success params should trigger configuration refresh');
 assert.ok(storagePage.includes('Google Drive connection was not completed. Docketra-managed storage is still active.'), 'OAuth error should show non-blocking fallback message');
 
