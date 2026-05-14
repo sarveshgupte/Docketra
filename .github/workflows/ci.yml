@@ -63,6 +63,9 @@ jobs:
       - name: Security/config gate
         run: npm run ci:backend:security
 
+      - name: Backend deploy-safety gate
+        run: npm run ci:backend:deploy-safety
+
       - name: Secret scanning gate
         run: npm run security:secrets
 
