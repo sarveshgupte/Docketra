@@ -12,6 +12,8 @@ function createRes() {
   return {
     statusCode: 200,
     body: null,
+    headers: {},
+    set(name, value) { this.headers[name] = value; return this; },
     status(code) { this.statusCode = code; return this; },
     json(payload) { this.body = payload; return this; },
   };
@@ -87,13 +89,20 @@ async function testTenantIsolation() {
   isAdmin = true;
   capturedFirmId = null;
   backupLookupFirmId = null;
-  const req = { firmId: 'firm-tenant-a', user: { role: 'Primary Admin' } };
+  const req = { firmId: 'firm-tenant-a', ownershipFirmId: 'firm-tenant-a', user: { role: 'Primary Admin' } };
   const res = createRes();
   await controller.getStorageOwnershipSummary(req, res);
   assert.strictEqual(res.statusCode, 200);
   assert.strictEqual(capturedFirmId, 'firm-tenant-a');
   assert.strictEqual(backupLookupFirmId, 'firm-tenant-a');
   assert.ok(Array.isArray(res.body.warnings));
+  assert.ok(res.body?.dataStorageMap, 'data storage map should be present');
+  assert.ok(Array.isArray(res.body?.dataStorageMap?.googleDriveFolderPaths), 'googleDriveFolderPaths should be an array');
+  const serialized = JSON.stringify(res.body);
+  assert.ok(!serialized.includes('refreshToken'), 'response must not include refreshToken');
+  assert.ok(!serialized.includes('rootFolderId'), 'response must not include rootFolderId');
+  assert.ok(!serialized.includes('driveId'), 'response must not include driveId');
+  assert.ok(!serialized.includes('privateKey'), 'response must not include privateKey');
   console.log('  ✓ storage ownership summary scopes reads to req.firmId');
 }
 
