@@ -2,23 +2,37 @@
 const assert = require('assert');
 const supertest = require('supertest');
 
-const setStartupEnvDefaults = () => {
-  process.env.NODE_ENV = 'production';
-  process.env.PORT = process.env.PORT || '0';
-  process.env.UPLOAD_SCAN_STRICT = process.env.UPLOAD_SCAN_STRICT || 'true';
-  process.env.JWT_SECRET = process.env.JWT_SECRET || 'ci-fake-jwt-secret-placeholder-0000000000000000000000000000000000000';
-  process.env.STORAGE_TOKEN_SECRET = process.env.STORAGE_TOKEN_SECRET || 'ci-fake-storage-token-secret-placeholder-0000000000000000000000000000000';
-  process.env.METRICS_TOKEN = process.env.METRICS_TOKEN || 'ci-fake-metrics-token-placeholder-000000000000000000000000000000000000';
-  process.env.SUPERADMIN_PASSWORD_HASH = process.env.SUPERADMIN_PASSWORD_HASH || '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
-  process.env.SUPERADMIN_XID = process.env.SUPERADMIN_XID || 'X000001';
-  process.env.SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'superadmin@example.com';
-  process.env.SUPERADMIN_OBJECT_ID = process.env.SUPERADMIN_OBJECT_ID || '000000000000000000000001';
-  process.env.MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/docketra';
-  process.env.ENCRYPTION_PROVIDER = process.env.ENCRYPTION_PROVIDER || 'disabled';
-  process.env.MAIL_FROM = process.env.MAIL_FROM || 'no-reply@example.com';
-  process.env.BREVO_API_KEY = process.env.BREVO_API_KEY || 'ci-placeholder-brevo-key';
-  process.env.REDIS_URL = '';
-  process.env.ALLOW_REDIS_FALLBACK = 'true';
+const TEST_ENV_OVERRIDES = {
+  NODE_ENV: 'production',
+  PORT: '3001',
+  UPLOAD_SCAN_STRICT: 'true',
+  JWT_SECRET: 'ci_fake_jwt_secret_value_for_smoke_test_only_abcdefghijklmnopqrstuvwxyz_1234',
+  STORAGE_TOKEN_SECRET: 'ci_fake_storage_token_secret_for_smoke_test_only_abcdefghijklmnopqrstuvwxyz_12',
+  METRICS_TOKEN: 'ci_fake_metrics_token_value_for_smoke_test_only_abcdefghijklmnopqrstuvwxyz_123',
+  SUPERADMIN_PASSWORD_HASH: '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+  SUPERADMIN_XID: 'X000001',
+  SUPERADMIN_EMAIL: 'superadmin@example.com',
+  SUPERADMIN_OBJECT_ID: '000000000000000000000001',
+  MONGO_URI: 'mongodb://127.0.0.1:27017/docketra',
+  ENCRYPTION_PROVIDER: 'disabled',
+  MAIL_FROM: 'no-reply@example.com',
+  BREVO_API_KEY: 'ci-placeholder-brevo-key',
+  REDIS_URL: '',
+  ALLOW_REDIS_FALLBACK: 'true',
+};
+
+const applyTestEnvOverrides = () => {
+  const original = new Map();
+  for (const [key, value] of Object.entries(TEST_ENV_OVERRIDES)) {
+    original.set(key, process.env[key]);
+    process.env[key] = value;
+  }
+  return () => {
+    for (const [key, value] of original.entries()) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  };
 };
 
 const mockBcrypt = () => {
@@ -60,7 +74,7 @@ const withModuleStub = (modulePath, exportsValue) => {
 };
 
 async function run() {
-  setStartupEnvDefaults();
+  const restoreEnv = applyTestEnvOverrides();
   mockBcrypt();
   mockAuthController();
 
@@ -90,6 +104,10 @@ async function run() {
     assert.strictEqual(healthResponse.status, 200, 'GET /health must be registered');
     assert.strictEqual(healthResponse.body.status, 'ok', 'health endpoint must return status ok');
 
+    const unknownResponse = await supertest(app).get('/__does_not_exist__');
+    assert.strictEqual(unknownResponse.status, 404, 'unknown routes must return 404');
+    assert.strictEqual(unknownResponse.body.code, 'NOT_FOUND', 'unknown route response code should stay NOT_FOUND');
+
     http.Server.prototype.listen = function patchedListen(...args) {
       const callback = typeof args[args.length - 1] === 'function' ? args.pop() : undefined;
       return originalListen.call(this, 0, '127.0.0.1', callback);
@@ -102,13 +120,19 @@ async function run() {
     console.log('✅ backend runtime entrypoint smoke tests passed');
   } finally {
     http.Server.prototype.listen = originalListen;
-    if (startedServer && startedServer.listening) {
-      await new Promise((resolve) => startedServer.close(resolve));
+    if (startedServer) {
+      await new Promise((resolve) => {
+        try {
+          startedServer.close(() => resolve());
+        } catch (_) {
+          resolve();
+        }
+      });
     }
     while (restorers.length) {
-      const restore = restorers.pop();
-      restore();
+      restorers.pop()();
     }
+    restoreEnv();
   }
 }
 
