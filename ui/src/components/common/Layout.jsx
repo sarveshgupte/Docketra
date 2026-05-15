@@ -163,7 +163,7 @@ export const Layout = ({ children, title, subtitle }) => {
 
   const currentFirmSlug = firmSlug || user?.firmSlug;
   const normalizedRole = String(user?.role || '').trim().toUpperCase();
-  const hasAdminAccess = user?.role === USER_ROLES.ADMIN || normalizedRole === 'PRIMARY_ADMIN';
+  const hasAdminAccess = normalizedRole === USER_ROLES.ADMIN || normalizedRole === 'PRIMARY_ADMIN';
   const hasManagerAccess = normalizedRole === 'MANAGER';
   const hasQcQueueAccess = hasAdminAccess || hasManagerAccess || (Array.isArray(user?.qcWorkbaskets) && user.qcWorkbaskets.length > 0);
   const workbasketNavLabel = 'Workbasket';
