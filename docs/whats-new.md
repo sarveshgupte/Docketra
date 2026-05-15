@@ -1,5 +1,10 @@
 # What's New
 
+## May 2026: Forgot-password tenant safety and reliability hardening
+
+- Hardened forgot-password OTP flow to use tenant-safe generic responses when workspace context is invalid, reducing account/workspace enumeration signals.
+- Aligned forgot-password OTP API schema with existing optional firm-context resolution to avoid firmSlug mismatch failures in valid recovery entry points.
+
 
 ## May 2026: SuperAdmin dashboard hardening pass
 
