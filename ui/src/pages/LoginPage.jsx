@@ -193,8 +193,7 @@ export const LoginPage = () => {
             {loading ? 'Signing in' : 'Submit & Sign in'}
           </Button>
 
-          <div className="auth-header">
-          <p className="auth-kicker">Docketra · Built for professional firms</p>
+          <div className="auth-footer-links">
             <Link
               to="/forgot-password"
               className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
