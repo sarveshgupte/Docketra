@@ -82,7 +82,7 @@ export const OtpVerificationPage = () => {
       setCooldown(30);
       setInfo(`A new OTP was sent to ${email}.`);
     } catch (resendError) {
-      setError(resendError?.response?.data?.message || 'Unable to resend OTP right now. Please try again.');
+      setError('Unable to resend OTP right now. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -122,7 +122,7 @@ export const OtpVerificationPage = () => {
         setError('OTP verified, but your session could not be established. Please sign in again.');
       }
     } catch (submitError) {
-      setError(submitError?.response?.data?.message || 'Invalid OTP. Enter the latest 6-digit code and try again.');
+      setError('Invalid verification code. Enter the latest 6-digit code and try again.');
     } finally {
       setLoading(false);
     }
@@ -131,7 +131,8 @@ export const OtpVerificationPage = () => {
   return (
     <div className="auth-wrapper">
       <Card className="auth-card max-w-form">
-        <Stack space={8} className="items-center">
+        <Stack space={8} className="items-center auth-header">
+          <p className="auth-kicker">Docketra · Secure access</p>
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Verify OTP</h1>
           <Row justify="center" gap={8}>
             <span className="h-2.5 w-2.5 rounded-full bg-blue-200" aria-hidden="true" />
@@ -143,7 +144,7 @@ export const OtpVerificationPage = () => {
         <form onSubmit={onSubmit} className={`mt-6 ${spacingClasses.formFieldSpacing}`} noValidate>
           <div className="space-y-2">
             <p className="text-sm font-medium text-gray-800">Email OTP <span className="text-red-500">*</span></p>
-            <div className="grid grid-cols-6 gap-2" onPaste={handleOtpPaste}>
+            <div className="grid grid-cols-6 gap-2 sm:gap-3" onPaste={handleOtpPaste}>
               {otpDigits.map((digit, index) => (
                 <Input
                   key={`otp-${index + 1}`}

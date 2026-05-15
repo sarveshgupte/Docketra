@@ -738,3 +738,6 @@
 
 - Blocked reserved `api` firm slug namespace and hardened signup slug fallback for reserved slug candidates.
 - Added authenticated `/signup` redirect safety to route existing sessions to the canonical workspace dashboard or workspace finder.
+
+## 2026-05 Auth UX hardening
+- Refined public auth flows (signup/login/forgot/OTP/reset) with unified layout, safer error copy, and improved responsive OTP/form behavior.

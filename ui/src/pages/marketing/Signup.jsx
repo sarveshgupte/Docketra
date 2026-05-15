@@ -15,7 +15,7 @@ const buildFallbackFirmLoginUrl = (firmSlug) => (firmSlug ? `${getOrigin()}/${fi
 const mapSafeError = (error, fallback) => {
   const status = error?.response?.status;
   if (status === 429) return 'Too many attempts. Please wait and try again.';
-  if (status === 409) return 'Email or phone is already registered.';
+  if (status === 409) return 'This email or phone may already be registered. Use login or password recovery.';
   if (status === 400 || status === 401) return 'Please check your details and try again.';
   return fallback;
 };
@@ -217,9 +217,12 @@ export default function Signup() {
 
   if (signupSuccessData) {
     return (
-      <div className="flex min-h-screen w-full items-center justify-center bg-gray-50 p-4 sm:p-6">
-        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-sm sm:p-8">
-          <h1 className="text-xl font-semibold text-center">🎉 Workspace created successfully</h1>
+      <div className="auth-wrapper">
+        <div className="auth-card max-w-form">
+          <div className="auth-header">
+            <p className="auth-kicker">Docketra · Built for professional firms</p>
+            <h1 className="text-xl font-semibold text-center">🎉 Workspace created successfully</h1>
+          </div>
           <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 space-y-2">
             <p><span className="font-medium">Firm URL:</span> {signupSuccessData.firmUrl || buildFallbackFirmLoginUrl(signupSuccessData.firmSlug)}</p>
             <p><span className="font-medium">Your XID:</span> {signupSuccessData.xid}</p>
@@ -237,9 +240,12 @@ export default function Signup() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-gray-50 p-4 sm:p-6">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-sm sm:p-8">
-        <h1 className="text-xl font-semibold text-center">Create your workspace</h1>
+    <div className="auth-wrapper">
+      <div className="auth-card max-w-form">
+        <div className="auth-header">
+          <p className="auth-kicker">Docketra · Built for professional firms</p>
+          <h1 className="text-xl font-semibold text-center">Create your workspace</h1>
+        </div>
         <p className="mt-2 text-sm text-gray-500 text-center">Step {step} of 2</p>
         <p className="mt-2 text-sm text-gray-500 text-center">{step === 1 ? 'Takes less than 1 minute' : 'Enter the 6-digit code sent to your email'}</p>
 
@@ -247,14 +253,15 @@ export default function Signup() {
 
         {step === 1 ? (
           <form className={`mt-6 ${spacingClasses.formFieldSpacing} w-full`} onSubmit={submitStepOne} noValidate>
-            <Input id="signup-name" type="text" name="name" label="Name" className="w-full" value={form.name} onChange={onFormChange} disabled={loading} error={errors.name} required />
-            <Input id="signup-email" type="email" name="email" label="Email" className="w-full" value={form.email} onChange={onFormChange} disabled={loading} error={errors.email} required autoComplete="username" />
+            <Input id="signup-name" type="text" name="name" label="Primary Admin Name" className="w-full" value={form.name} onChange={onFormChange} disabled={loading} error={errors.name} required />
+            <Input id="signup-email" type="email" name="email" label="Primary Admin Email" className="w-full" value={form.email} onChange={onFormChange} disabled={loading} error={errors.email} required autoComplete="username" />
             <Input id="signup-password" type="password" name="password" label="Password" className="w-full" value={form.password} onChange={onFormChange} disabled={loading} error={errors.password} required autoComplete="current-password" />
-            <Input id="signup-firm" type="text" name="firmName" label="Firm name" className="w-full" value={form.firmName} onChange={onFormChange} disabled={loading} error={errors.firmName} required />
-            <Input id="signup-phone" type="text" name="phone" label="Phone" className="w-full" value={form.phone} onChange={onFormChange} disabled={loading} error={errors.phone} required />
+            <Input id="signup-firm" type="text" name="firmName" label="Firm Name" className="w-full" value={form.firmName} onChange={onFormChange} disabled={loading} error={errors.firmName} required />
+            <Input id="signup-phone" type="text" name="phone" label="Primary Admin Phone" className="w-full" value={form.phone} onChange={onFormChange} disabled={loading} error={errors.phone} required />
             <p className="text-xs text-gray-500">{STRONG_PASSWORD_MESSAGE}</p>
+            <p className="text-xs text-gray-500">Your workspace URL will look like: docketra.com/gupte-opc</p>
             <Button type="submit" variant="primary" fullWidth disabled={loading} loading={loading}>
-              {loading ? 'Sending OTP...' : 'Send OTP'}
+              {loading ? 'Sending verification code...' : 'Send verification code'}
             </Button>
           </form>
         ) : (

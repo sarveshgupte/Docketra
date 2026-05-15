@@ -162,13 +162,14 @@ export const ForgotPasswordPage = () => {
   };
 
   return (
-    <div className="forgot-password-page">
-      <Card className="forgot-password-card">
-        <div className="forgot-password-header">
+    <div className="auth-wrapper">
+      <Card className="auth-card max-w-form">
+        <div className="auth-header">
+          <p className="auth-kicker">Docketra · Secure access</p>
           <h1>Forgot Password</h1>
           <p className="text-secondary">
-            Enter your xID or email and we'll send an OTP to reset your password.
-            {firmSlug ? ' Password recovery is scoped to this workspace.' : ''}
+            We'll send a verification code if the account exists.
+            {firmSlug ? ' Workspace-aware recovery is enabled for this login URL.' : ''}
           </p>
         </div>
 
@@ -238,7 +239,7 @@ export const ForgotPasswordPage = () => {
           )}
 
           <Button type="submit" variant="primary" fullWidth loading={loading}>
-            {step === 1 ? 'Send OTP' : step === 2 ? 'Verify OTP' : 'Set New Password'}
+            {step === 1 ? 'Send verification code' : step === 2 ? 'Verify code' : 'Set new password'}
           </Button>
           {step === 2 && (
             <Button type="button" variant="outline" fullWidth disabled={loading || cooldown > 0} onClick={handleResend}>
