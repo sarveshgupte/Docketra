@@ -174,8 +174,9 @@ const handleClientPostCreate = async ({ type, user, createdClients = [] }) => {
   const existingKeysSet = new Set(existingCases.map((c) => c.idempotencyKey));
 
   for (const createdClient of createdClients) {
+    const clientId = String(createdClient?.clientId || '').trim();
+
     try {
-      const clientId = String(createdClient?.clientId || '').trim();
       if (!clientId) continue;
 
       const idempotencyKey = `automation:bulk-upload:default-docket:${user.firmId}:${clientId}`;
