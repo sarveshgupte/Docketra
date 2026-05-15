@@ -11,8 +11,22 @@
  */
 function validateCreateClient(body = {}) {
   const errors = [];
-  if (!body.name || !String(body.name).trim()) {
-    errors.push('name is required');
+  const requiredFields = [
+    'businessName',
+    'businessEmail',
+    'primaryContactNumber',
+    'businessAddress',
+    'city',
+    'state',
+    'pincode',
+    'contactPersonName',
+    'contactPersonEmail',
+    'contactPersonPhone',
+  ];
+  for (const field of requiredFields) {
+    if (!body[field] || !String(body[field]).trim()) {
+      errors.push(`${field} is required`);
+    }
   }
   return errors.length ? { valid: false, errors } : { valid: true };
 }
@@ -22,8 +36,22 @@ function validateCreateClient(body = {}) {
  */
 function validateUpdateClient(body = {}) {
   const errors = [];
-  if (body.name !== undefined && !String(body.name).trim()) {
-    errors.push('name must not be blank');
+  const nonBlankIfPresent = [
+    'businessName',
+    'businessEmail',
+    'primaryContactNumber',
+    'businessAddress',
+    'city',
+    'state',
+    'pincode',
+    'contactPersonName',
+    'contactPersonEmail',
+    'contactPersonPhone',
+  ];
+  for (const field of nonBlankIfPresent) {
+    if (body[field] !== undefined && !String(body[field]).trim()) {
+      errors.push(`${field} must not be blank`);
+    }
   }
   return errors.length ? { valid: false, errors } : { valid: true };
 }

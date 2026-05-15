@@ -32,7 +32,7 @@ const createRes = () => ({
   await authorizeFirmPermission('CLIENT_MANAGE')(req, res, () => { nextCalled = true; });
   assert.equal(nextCalled, false, 'Unauthorized mutation must be blocked');
   assert.equal(res.statusCode, 403, 'Unauthorized mutation must return 403');
-  assert.equal(res.body.message, 'Client management requires Admin access', 'CLIENT_MANAGE denial message should be specific');
+  assert.equal(res.body.message, 'Client management requires Admin access.', 'CLIENT_MANAGE denial message should be specific');
   User.findOne = originalFindOne;
 
   // Update schema should accept canonical client fields

@@ -755,3 +755,10 @@
 
 ## 2026-05 Auth UX hardening
 - Refined public auth flows (signup/login/forgot/OTP/reset) with unified layout, safer error copy, and improved responsive OTP/form behavior.
+
+
+## 2026-05-15 — Client Management hardening
+- Hardened Admin-only Client Management denial copy and permission UX consistency.
+- Tightened client mutation schemas to reject unknown payload keys on critical endpoints.
+- Replaced legacy `name` validation usage with canonical client business/contact fields.
+- Sanitized backend client/CFS error payloads to reduce sensitive internal error leakage.
