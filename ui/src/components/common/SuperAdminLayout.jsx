@@ -3,7 +3,7 @@
  * Dashboard shell for platform-level management
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
@@ -37,12 +37,16 @@ export const SuperAdminLayout = ({ children }) => {
     navigate('/superadmin/login', { state: { message: 'You have been signed out safely.', messageType: 'success' } });
   };
 
-  const isActive = (path) => location.pathname === path;
-  const runSearch = async () => {
-    const q = String(searchQuery || '').trim();
+  const isActive = (path) => location.pathname === path || location.pathname.startsWith(`${path}/`);
+  const runSearch = async (rawQuery = searchQuery) => {
+    const q = String(rawQuery || '').trim();
     setSearchOpen(true);
     setSearchError('');
     if (!q) {
+      setSearchResults({ firms: [], admins: [], audit: [] });
+      return;
+    }
+    if (q.length < 2) {
       setSearchResults({ firms: [], admins: [], audit: [] });
       return;
     }
@@ -56,6 +60,20 @@ export const SuperAdminLayout = ({ children }) => {
       setSearching(false);
     }
   };
+
+  useEffect(() => {
+    const q = String(searchQuery || '').trim();
+    if (!q || q.length < 2) {
+      setSearchError('');
+      setSearching(false);
+      setSearchResults({ firms: [], admins: [], audit: [] });
+      return;
+    }
+    const timer = setTimeout(() => {
+      void runSearch(q);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // Guard: Only render children if user is loaded and is SuperAdmin
   if (user === null || (user?.isSuperAdmin !== true && user?.role !== USER_ROLES.SUPER_ADMIN)) {
@@ -130,7 +148,8 @@ export const SuperAdminLayout = ({ children }) => {
             <div className="mt-3 max-h-72 overflow-auto rounded-lg border border-gray-200 bg-gray-50 p-2 text-sm">
               {searching ? <p className="text-gray-600">Searching...</p> : null}
               {!searching && searchError ? <p className="text-red-700">{searchError}</p> : null}
-              {!searching && !searchError && !totalResults && searchQuery.trim() ? <p className="text-gray-600">No matches found.</p> : null}
+              {!searching && !searchError && searchQuery.trim().length === 1 ? <p className="text-gray-600">Enter at least 2 characters.</p> : null}
+              {!searching && !searchError && !totalResults && searchQuery.trim().length >= 2 ? <p className="text-gray-600">No matches found.</p> : null}
               {!searching && !searchError && totalResults > 0 ? (
                 <div className="space-y-2">
                   {[['Firms', searchResults.firms], ['Admins', searchResults.admins], ['Audit references', searchResults.audit]].map(([label, rows]) => (
