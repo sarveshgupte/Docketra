@@ -513,24 +513,40 @@ export const AdminPage = () => {
 
   const handleSaveUserAccess = async () => {
     if (!selectedUserForAccess) return;
+    if (clientAccessModeDraft === 'SELECTED' && restrictedClientDraft.length === 0) {
+      showToast('Select at least one client for Selected clients only mode.', 'error');
+      return;
+    }
     setSavingUserAccess(true);
     try {
-      const [response, wbResponse] = await Promise.all([
-        adminApi.updateRestrictedClients(selectedUserForAccess.xID, clientAccessModeDraft === 'ALL' ? { accessMode: 'ALL' } : { accessMode: 'SELECTED', clientIds: restrictedClientDraft }),
-        adminApi.updateUserWorkbaskets(selectedUserForAccess.xID, selectedWorkbasketDraft),
-      ]);
-      if (response.success && wbResponse.success) {
-        showToast('User client docket access updated', 'success');
-        setShowAccessModal(false);
-        setSelectedUserForAccess(null);
-        setSelectedWorkbasketDraft([]);
-        setClientAccessModeDraft('ALL');
-        await loadAdminData();
-      } else {
-        showToast(response.message || 'Failed to update user access', 'error');
+      const response = await adminApi.updateRestrictedClients(
+        selectedUserForAccess.xID,
+        clientAccessModeDraft === 'ALL' ? { accessMode: 'ALL' } : { accessMode: 'SELECTED', clientIds: restrictedClientDraft },
+      );
+      if (!response?.success) {
+        showToast(response?.message || 'Failed to update client access', 'error');
+        return;
       }
-    } catch (error) {
-      showToast(error.response?.data?.message || 'Failed to update user access', 'error');
+
+      try {
+        const wbResponse = await adminApi.updateUserWorkbaskets(selectedUserForAccess.xID, selectedWorkbasketDraft);
+        if (!wbResponse?.success) {
+          showToast(wbResponse?.message || 'Client access saved, but workbasket update failed. Please retry.', 'error');
+          return;
+        }
+      } catch (workbasketError) {
+        showToast(workbasketError.response?.data?.message || 'Client access saved, but workbasket update failed. Please retry.', 'error');
+        return;
+      }
+
+      showToast('User client docket access updated', 'success');
+      setShowAccessModal(false);
+      setSelectedUserForAccess(null);
+      setSelectedWorkbasketDraft([]);
+      setClientAccessModeDraft('ALL');
+      await loadAdminData();
+    } catch (clientAccessError) {
+      showToast(clientAccessError.response?.data?.message || 'Failed to update client access', 'error');
     } finally {
       setSavingUserAccess(false);
     }

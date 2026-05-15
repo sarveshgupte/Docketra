@@ -718,7 +718,6 @@ const updateRestrictedClients = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating client access restrictions',
-      error: error.message,
     });
   }
 };

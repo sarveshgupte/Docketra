@@ -194,7 +194,7 @@ async function run() {
       })
     });
 
-    const reqStorage = { user: { firmId: 'firm123' } };
+    const reqStorage = { user: { firmId: 'firm123' }, ownershipFirmId: 'firm123' };
     const resStorage = createMockRes();
     await getStorageConfig(reqStorage, resStorage);
 

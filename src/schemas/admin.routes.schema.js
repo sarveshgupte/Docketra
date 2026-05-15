@@ -98,10 +98,15 @@ module.exports = {
   },
   'PATCH /users/:xID/restrict-clients': {
     params: z.object({ xID: xidString }),
-    body: z.object({
-      accessMode: z.enum(['ALL', 'SELECTED']),
-      clientIds: z.array(clientIdString).optional(),
-    }).strict(),
+    body: z.union([
+      z.object({
+        accessMode: z.literal('ALL'),
+      }).strict(),
+      z.object({
+        accessMode: z.literal('SELECTED'),
+        clientIds: z.array(clientIdString).min(1),
+      }).strict(),
+    ]),
   },
   'PATCH /users/:xID/workbaskets': {
     params: z.object({ xID: xidString }),
