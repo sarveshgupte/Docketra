@@ -9,6 +9,7 @@ const authPages = [
   'src/pages/ForgotPasswordPage.jsx',
   'src/pages/OtpVerificationPage.jsx',
   'src/pages/ResetPasswordPage.jsx',
+  'src/pages/marketing/Signup.jsx',
 ];
 for (const page of authPages) {
   const content = read(page);
@@ -26,5 +27,11 @@ assert.equal(otp.includes('submitError?.response?.data?.message'), false, 'OTP p
 const login = read('src/pages/LoginPage.jsx');
 assert.equal(login.includes('errorData?.message ||'), false, 'Login page must avoid raw backend error fallback text.');
 assert.ok(login.includes('disabled={loading || !canSubmit}'), 'Login submit button should disable during loading/invalid state.');
+assert.ok(login.includes('<div className="auth-footer-links">'), 'Login footer should use shared auth-footer-links.');
+assert.equal((login.match(/auth-kicker/g) || []).length, 1, 'Login should render auth kicker only once.');
+
+const signup = read('src/pages/marketing/Signup.jsx');
+assert.ok(signup.includes('Send verification code'), 'Signup CTA should use verification-code language.');
+assert.ok(signup.includes('auth-header'), 'Signup should use shared auth header primitives.');
 
 console.log('authUiUxHardening.test.mjs passed');
