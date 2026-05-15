@@ -45,11 +45,9 @@ const {
   createCategory,
   updateCategory,
   toggleCategoryStatus,
-  deleteCategory,
   addSubcategory,
   updateSubcategory,
   toggleSubcategoryStatus,
-  deleteSubcategory,
 } = require('../controllers/category.controller');
 const {
   getClients,
@@ -98,11 +96,9 @@ router.get('/categories', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_
 router.post('/categories', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_MANAGE'), userWriteLimiter, createCategory);
 router.put('/categories/:id', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_MANAGE'), userWriteLimiter, updateCategory);
 router.patch('/categories/:id/status', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_MANAGE'), userWriteLimiter, toggleCategoryStatus);
-router.delete('/categories/:id', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_MANAGE'), userWriteLimiter, deleteCategory);
 router.post('/categories/:id/subcategories', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_MANAGE'), userWriteLimiter, addSubcategory);
 router.put('/categories/:id/subcategories/:subcategoryId', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_MANAGE'), userWriteLimiter, updateSubcategory);
 router.patch('/categories/:id/subcategories/:subcategoryId/status', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_MANAGE'), userWriteLimiter, toggleSubcategoryStatus);
-router.delete('/categories/:id/subcategories/:subcategoryId', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_MANAGE'), userWriteLimiter, deleteSubcategory);
 
 router.get('/hierarchy', ...adminBaseAccess, authorizeFirmPermission('USER_VIEW'), userReadLimiter, getHierarchyTree);
 router.get('/audit-logs', ...adminBaseAccess, authorizeFirmPermission('USER_VIEW'), userReadLimiter, getAdminAuditLogs);
