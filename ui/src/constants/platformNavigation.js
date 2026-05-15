@@ -1,5 +1,5 @@
-import { ROUTES } from './routes';
-import { canManageClients } from '../utils/permissions';
+import { ROUTES } from './routes.js';
+import { canManageClients } from '../utils/permissions.js';
 
 const roleRank = { USER: 1, MANAGER: 2, ADMIN: 3, PRIMARY_ADMIN: 4 };
 
@@ -137,6 +137,25 @@ const resolveAccessContext = (roleOrUser = 'USER', permissions = []) => {
 export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions = []) => {
   const accessContext = resolveAccessContext(roleOrUser, permissions);
   const normalizedRole = String(accessContext?.role || 'USER').toUpperCase();
+  const assignedWorkbaskets = Array.isArray(accessContext?.workbaskets) ? accessContext.workbaskets : [];
+  const assignedQcWorkbaskets = Array.isArray(accessContext?.qcWorkbaskets) ? accessContext.qcWorkbaskets : [];
+  const showQcWorkbaskets = hasAtLeastRole(normalizedRole, 'MANAGER') || assignedQcWorkbaskets.length > 0;
+  const directWorkbasketItems = assignedWorkbaskets.slice(0, 4).map((wb) => ({
+    id: `workbasket-${String(wb?._id || wb?.id || wb?.workbasketId || '').trim()}`,
+    label: wb?.name || 'Workbasket',
+    icon: icons.work,
+    to: ROUTES.WORKBASKET_DETAIL(firmSlug, String(wb?._id || wb?.id || wb?.workbasketId || '').trim()),
+    activeMatch: 'exactOrDescendant',
+  })).filter((item) => !item.to.endsWith('/workbaskets/'));
+  const directQcWorkbasketItems = showQcWorkbaskets
+    ? assignedQcWorkbaskets.slice(0, 4).map((wb) => ({
+      id: `qc-workbasket-${String(wb?._id || wb?.id || wb?.workbasketId || '').trim()}`,
+      label: `QC: ${wb?.name || 'Workbasket'}`,
+      icon: icons.intake,
+      to: ROUTES.QC_WORKBASKET_DETAIL(firmSlug, String(wb?._id || wb?.id || wb?.workbasketId || '').trim()),
+      activeMatch: 'exactOrDescendant',
+    })).filter((item) => !item.to.endsWith('/qc-workbaskets/'))
+    : [];
   return (
   NAV_BLUEPRINT
     .map((section) => ({
@@ -148,6 +167,11 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
         })
         .map((item) => toResolvedNavItem(item, firmSlug)),
     }))
+    .map((section) => (
+      section.section === 'Daily Operations'
+        ? { ...section, items: [section.items.find((item) => item.id === 'docket-workbench'), ...directWorkbasketItems, ...directQcWorkbasketItems].filter(Boolean) }
+        : section
+    ))
     .filter((section) => section.items.length > 0)
   );
 };

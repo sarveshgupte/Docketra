@@ -24,11 +24,11 @@ const setAccessToast = (message) => {
   }));
 };
 
-export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadmin = false, requireClientManage = false }) => {
+export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadmin = false, requireClientManage = false, requireAssignedWorkbasket = false, requireAssignedQcWorkbasket = false }) => {
   const { isAuthenticated, isAuthResolved, user, authState } = useAuth();
   const { isAdmin } = usePermissions();
   const location = useLocation();
-  const { firmSlug } = useParams();
+  const { firmSlug, workbasketId } = useParams();
   const routeFirmSlug = sanitizeFirmSlug(firmSlug);
   const storedFirmSlug = sanitizeFirmSlug(localStorage.getItem(STORAGE_KEYS.FIRM_SLUG));
   const effectiveFirmSlug = routeFirmSlug || storedFirmSlug;
@@ -109,6 +109,24 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
     if (!canManageClients(user)) {
       setAccessToast('Client management requires Admin access.');
       return <Navigate to={ROUTES.DASHBOARD(effectiveFirmSlug)} replace />;
+    }
+  }
+
+  if (requireAssignedWorkbasket) {
+    const assignedIds = new Set((Array.isArray(user?.workbaskets) ? user.workbaskets : []).map((item) => String(item?._id || item?.id || item?.workbasketId || '').trim()).filter(Boolean));
+    const targetId = String(workbasketId || '').trim();
+    if (!targetId || !assignedIds.has(targetId)) {
+      setAccessToast('You are not assigned to that workbasket.');
+      return <Navigate to={ROUTES.GLOBAL_WORKLIST(effectiveFirmSlug)} replace />;
+    }
+  }
+
+  if (requireAssignedQcWorkbasket) {
+    const assignedIds = new Set((Array.isArray(user?.qcWorkbaskets) ? user.qcWorkbaskets : []).map((item) => String(item?._id || item?.id || item?.workbasketId || '').trim()).filter(Boolean));
+    const targetId = String(workbasketId || '').trim();
+    if (!targetId || !assignedIds.has(targetId)) {
+      setAccessToast('You are not assigned to that QC workbasket.');
+      return <Navigate to={ROUTES.WORKLIST(effectiveFirmSlug)} replace />;
     }
   }
 
