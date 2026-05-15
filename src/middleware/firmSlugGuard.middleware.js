@@ -1,5 +1,6 @@
 const RESERVED_FIRM_SLUGS = [
   'auth',
+  'api',
   'public',
   'superadmin',
   'sa',

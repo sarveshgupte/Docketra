@@ -25,6 +25,7 @@ const {
 const { coercePrimaryAdminCreationFields } = require('../utils/hierarchy.utils');
 const { setupDefaultFirm } = require('./firmSetup.service');
 const { resolveCanonicalTenantFromFirmId } = require('./tenantIdentity.service');
+const { RESERVED_FIRM_SLUGS } = require('../middleware/firmSlugGuard.middleware');
 
 const SALT_ROUNDS = 10;
 const OTP_EXPIRY_MINUTES = 5;
@@ -39,6 +40,7 @@ const GENERIC_VERIFICATION_FAILURE_MESSAGE = 'Verification failed';
 const MIN_PUBLIC_RESPONSE_MS = 350;
 const DUMMY_BCRYPT_HASH = '$2b$10$7EqJtq98hPqEX7fNZaFWoOhi8sB0QYfJOLLm1Aun1vDLteA94ppI.';
 const OTP_RATE_LIMIT_MESSAGE = 'Too many OTP attempts. Try again later.';
+const RESERVED_FIRM_SLUG_SET = new Set(RESERVED_FIRM_SLUGS);
 
 const logSignupAuthEvent = async ({
   eventType,
@@ -423,6 +425,9 @@ const resendOtp = async ({ email, req = null }) => {
 
 const generateUniqueSlug = async (firmName, session, retryOffset = 0) => {
   let firmSlug = slugify(firmName.trim());
+  if (RESERVED_FIRM_SLUG_SET.has(firmSlug)) {
+    firmSlug = `${firmSlug}-workspace`;
+  }
   const originalSlug = firmSlug;
   const existingSlugs = await Firm.find({
     firmSlug: { $regex: new RegExp(`^${escapeRegExp(originalSlug)}(?:-\\d+)?$`) },
