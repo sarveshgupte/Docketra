@@ -5,6 +5,7 @@ import { Button } from '../../components/common/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../../utils/validators';
 import { spacingClasses } from '../../theme/tokens';
+import { ROUTES } from '../../constants/routes';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^\d{10}$/;
@@ -21,7 +22,7 @@ const mapSafeError = (error, fallback) => {
 
 export default function Signup() {
   const navigate = useNavigate();
-  const { signup, verifySignup, resendSignupOtp, resendCredentials } = useAuth();
+  const { signup, verifySignup, resendSignupOtp, resendCredentials, isAuthenticated, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   const [apiError, setApiError] = useState('');
@@ -46,6 +47,16 @@ export default function Signup() {
     setErrors((prev) => ({ ...prev, [name]: '' }));
     setApiError('');
   };
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const firmSlug = user?.firmSlug;
+    if (firmSlug) {
+      navigate(ROUTES.DASHBOARD(firmSlug), { replace: true });
+      return;
+    }
+    navigate('/find-workspace', { replace: true });
+  }, [isAuthenticated, user?.firmSlug, navigate]);
 
   useEffect(() => {
     if (step === 2) {
