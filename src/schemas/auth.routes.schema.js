@@ -93,7 +93,7 @@ module.exports = {
       identifier: loginIdentifierString.optional(),
       xid: xidString.optional(),
       xID: xidString.optional(),
-      firmSlug: nonEmptyString,
+      firmSlug: nonEmptyString.optional(),
     }).strip().refine((value) => Boolean(value.email || value.identifier || value.xid || value.xID), {
       message: 'email or xID is required',
       path: ['email'],
@@ -105,7 +105,7 @@ module.exports = {
       identifier: loginIdentifierString.optional(),
       xid: xidString.optional(),
       xID: xidString.optional(),
-      firmSlug: nonEmptyString,
+      firmSlug: nonEmptyString.optional(),
       otp: z.string().trim().regex(/^\d{6}$/),
     }).strip().refine((value) => Boolean(value.email || value.identifier || value.xid || value.xID), {
       message: 'email or xID is required',
@@ -118,7 +118,7 @@ module.exports = {
       identifier: loginIdentifierString.optional(),
       xid: xidString.optional(),
       xID: xidString.optional(),
-      firmSlug: nonEmptyString,
+      firmSlug: nonEmptyString.optional(),
       resetToken: nonEmptyString,
       password: strongPassword,
     }).strip().refine((value) => Boolean(value.email || value.identifier || value.xid || value.xID), {
