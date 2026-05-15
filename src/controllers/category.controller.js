@@ -74,7 +74,6 @@ const getCategories = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching categories',
-      error: error.message,
     });
   }
 };
@@ -106,7 +105,6 @@ const getCategoryById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching category',
-      error: error.message,
     });
   }
 };
@@ -170,7 +168,6 @@ const createCategory = async (req, res) => {
     res.status(400).json({
       success: false,
       message: 'Error creating category',
-      error: error.message,
     });
   }
 };
@@ -241,7 +238,6 @@ const updateCategory = async (req, res) => {
     res.status(400).json({
       success: false,
       message: 'Error updating category',
-      error: error.message,
     });
   }
 };
@@ -294,13 +290,12 @@ const toggleCategoryStatus = async (req, res) => {
     res.json({
       success: true,
       data: category,
-      message: `Category ${isActive ? 'enabled' : 'disabled'} successfully`,
+      message: `Category ${isActive ? 'activated' : 'deactivated'} successfully`,
     });
   } catch (error) {
     res.status(400).json({
       success: false,
       message: 'Error updating category status',
-      error: error.message,
     });
   }
 };
@@ -396,7 +391,6 @@ const addSubcategory = async (req, res) => {
     res.status(400).json({
       success: false,
       message: 'Error adding subcategory',
-      error: error.message,
     });
   }
 };
@@ -524,7 +518,6 @@ const updateSubcategory = async (req, res) => {
     res.status(400).json({
       success: false,
       message: 'Error updating subcategory',
-      error: error.message,
     });
   }
 };
@@ -582,13 +575,12 @@ const toggleSubcategoryStatus = async (req, res) => {
     res.json({
       success: true,
       data: category,
-      message: `Subcategory ${isActive ? 'enabled' : 'disabled'} successfully`,
+      message: `Subcategory ${isActive ? 'activated' : 'deactivated'} successfully`,
     });
   } catch (error) {
     res.status(400).json({
       success: false,
       message: 'Error updating subcategory status',
-      error: error.message,
     });
   }
 };
@@ -619,7 +611,7 @@ const deleteCategory = async (req, res) => {
     category.isActive = false;
     await category.save();
     await safeLogCategoryMutation(req, {
-      description: `Category deleted (soft): ${category.name}`,
+      description: `Category deactivated: ${category.name}`,
       metadata: {
         action: 'CATEGORY_DELETED_SOFT',
         categoryId: category._id?.toString(),
@@ -630,13 +622,12 @@ const deleteCategory = async (req, res) => {
     res.json({
       success: true,
       data: category,
-      message: 'Category deleted successfully (soft delete)',
+      message: 'Category deactivated successfully',
     });
   } catch (error) {
     res.status(400).json({
       success: false,
       message: 'Error deleting category',
-      error: error.message,
     });
   }
 };
@@ -676,7 +667,7 @@ const deleteSubcategory = async (req, res) => {
     subcategory.isActive = false;
     await category.save();
     await safeLogCategoryMutation(req, {
-      description: `Subcategory deleted (soft): ${category.name} / ${subcategory.name}`,
+      description: `Subcategory deactivated: ${category.name} / ${subcategory.name}`,
       metadata: {
         action: 'SUBCATEGORY_DELETED_SOFT',
         categoryId: category._id?.toString(),
@@ -689,13 +680,12 @@ const deleteSubcategory = async (req, res) => {
     res.json({
       success: true,
       data: category,
-      message: 'Subcategory deleted successfully (soft delete)',
+      message: 'Subcategory deactivated successfully',
     });
   } catch (error) {
     res.status(400).json({
       success: false,
       message: 'Error deleting subcategory',
-      error: error.message,
     });
   }
 };
