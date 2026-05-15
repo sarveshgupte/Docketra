@@ -40,6 +40,8 @@ export const DocketSidebar = ({
   const [requestRequirePin, setRequestRequirePin] = useState(false);
   const [requestSendEmail, setRequestSendEmail] = useState(true);
   const [showGeneratedPin, setShowGeneratedPin] = useState(false);
+  const [copyStatus, setCopyStatus] = useState('idle');
+  const copyFeedbackTimeoutRef = useRef(null);
   const expiryLabel = useMemo(() => (requestExpiry === '7d' ? '7 days' : '24 hours'), [requestExpiry]);
   const formatDatePart = (value) => {
     const formatted = formatDateOnly(value);
@@ -57,6 +59,42 @@ export const DocketSidebar = ({
   };
 
   const resolveActorXid = (event) => event?.performedByXID || event?.actorXID || event?.createdByXID || event?.xID || 'SYSTEM';
+
+  useEffect(() => {
+    return () => {
+      if (copyFeedbackTimeoutRef.current) {
+        clearTimeout(copyFeedbackTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleCopyLink = async () => {
+    if (!uploadLinkResult?.link) return;
+
+    if (copyFeedbackTimeoutRef.current) {
+      clearTimeout(copyFeedbackTimeoutRef.current);
+      copyFeedbackTimeoutRef.current = null;
+    }
+
+    if (!navigator?.clipboard?.writeText) {
+      setCopyStatus('error');
+      copyFeedbackTimeoutRef.current = setTimeout(() => {
+        setCopyStatus('idle');
+      }, 2000);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(uploadLinkResult.link);
+      setCopyStatus('success');
+    } catch (error) {
+      setCopyStatus('error');
+    }
+
+    copyFeedbackTimeoutRef.current = setTimeout(() => {
+      setCopyStatus('idle');
+    }, 2000);
+  };
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -239,9 +277,16 @@ export const DocketSidebar = ({
                       <button
                         type="button"
                         className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
-                        onClick={() => navigator.clipboard.writeText(uploadLinkResult.link)}
+                        onClick={handleCopyLink}
+                        aria-live="polite"
                       >
-                        Copy link
+                        {copyStatus === 'success' ? (
+                          <><span aria-hidden="true">✓ </span>Copied!</>
+                        ) : copyStatus === 'error' ? (
+                          'Copy failed'
+                        ) : (
+                          'Copy link'
+                        )}
                       </button>
                       {uploadLinkResult.pin ? (
                         <button
