@@ -6,6 +6,7 @@ const Module = require('module');
 
 let isAdmin = true;
 let lastUpdate = null;
+let mockStorageState = null;
 
 function createRes() {
   return {
@@ -53,7 +54,7 @@ Module._load = function(request, parent, isMain) {
   if (request === '../services/storage/resolveFirmStorageState') {
     return {
       normalizeProvider: (provider) => provider,
-      resolveFirmStorageState: () => ({
+      resolveFirmStorageState: () => (mockStorageState || {
         canonicalProvider: 'google_drive',
         connectionStatus: 'ACTIVE_BYOS',
         connectedEmail: 'admin@example.com',
@@ -191,6 +192,32 @@ async function testFolderLinkSanitized() {
   console.log('  ✓ getStorageFolderLink returns sanitized link payload');
 }
 
+
+async function testFolderLinkRequiresActiveGoogleDriveConnection() {
+  mockStorageState = {
+    canonicalProvider: 'docketra_managed',
+    connectionStatus: 'ACTIVE_MANAGED',
+    connectedEmail: null,
+    rootFolderId: 'stale-root-folder-id',
+    driveId: null,
+    warnings: [],
+    isManaged: true,
+    mode: 'docketra_managed',
+  };
+
+  const req = { firmId: 'FIRM1', ownershipFirmId: 'FIRM1', user: { role: 'PRIMARY_ADMIN' } };
+  const res = createRes();
+  await controller.getStorageFolderLink(req, res);
+
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.body.canOpenStorageFolder, false);
+  assert.strictEqual(res.body.folderUrl, null);
+  assert.strictEqual(res.body.message, 'Folder link unavailable.');
+
+  mockStorageState = null;
+  console.log('  ✓ getStorageFolderLink requires active Google Drive BYOS connection');
+}
+
 async function testExportSanitized() {
   const req = { firmId: 'FIRM1', ownershipFirmId: 'FIRM1', user: { role: 'PRIMARY_ADMIN' } };
   const res = createRes();
@@ -212,6 +239,7 @@ async function run() {
     await testDisconnectStorage();
     await testStorageUsageSanitizedQuota();
     await testFolderLinkSanitized();
+    await testFolderLinkRequiresActiveGoogleDriveConnection();
     await testExportSanitized();
     await testOauthLimiter();
     console.log('All storageController tests passed.');

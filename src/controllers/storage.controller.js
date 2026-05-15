@@ -1023,6 +1023,15 @@ const getStorageFolderLink = async (req, res) => {
     const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig').lean();
     const state = resolveFirmStorageState(firm, { includeCredentials: true });
 
+    const isActiveGoogleDriveConnection = state.canonicalProvider === 'google_drive' && state.connectionStatus === 'ACTIVE_BYOS';
+    if (!isActiveGoogleDriveConnection) {
+      return res.json({
+        canOpenStorageFolder: false,
+        folderUrl: null,
+        message: 'Folder link unavailable.',
+      });
+    }
+
     const folderId = state.rootFolderId || null;
     const folderUrl = asGoogleDriveFolderUrl(folderId);
     if (!folderUrl) {
@@ -1036,7 +1045,7 @@ const getStorageFolderLink = async (req, res) => {
     return res.json({
       canOpenStorageFolder: true,
       folderUrl,
-      provider: state.isManaged ? 'docketra_managed' : 'google_drive',
+      provider: 'google_drive',
     });
   } catch (error) {
     log.error('[STORAGE]', { event: 'folder_link_resolve_failed', tenantId: req.firmId, message: error.message });
