@@ -83,7 +83,7 @@ module.exports = {
     }).passthrough(),
   },
   'GET /users': { query: passthroughQuery },
-  'POST /users': { body: z.object({ name: nonEmptyString, email: z.string().trim().email(), role: z.enum(['ADMIN','MANAGER','USER']), teamIds: z.array(objectIdOrString).min(1), department: z.string().trim().max(120).optional() }).strict() },
+  'POST /users': { body: z.object({ name: nonEmptyString, email: z.string().trim().email(), role: z.enum(['ADMIN','MANAGER','USER']), teamIds: z.array(objectIdOrString).min(1), department: z.string().trim().max(120).optional(), assignQcWorkbaskets: z.boolean().optional() }).strict() },
   'PUT /users/:xID/activate': {
     params: z.object({ xID: xidString }),
     body: z.object({}).strict(),
