@@ -46,9 +46,18 @@ module.exports = {
 
   'POST /firms': {
     body: z.object({
-      name: nonEmptyString,
+      // Legacy onboarding payload expected by createFirm/createFirmWithAdmin.
+      firmName: nonEmptyString.optional(),
+      adminName: nonEmptyString.optional(),
+      adminEmail: z.string().trim().email().optional(),
+      // Compatibility payload used by newer clients.
+      name: nonEmptyString.optional(),
       slug: z.string().trim().min(1).optional(),
-    }).strict(),
+    }).strict().refine((data) => {
+      const hasLegacy = data.firmName && data.adminName && data.adminEmail;
+      const hasModern = data.name;
+      return Boolean(hasLegacy || hasModern);
+    }, { message: 'Provide either { firmName, adminName, adminEmail } or { name }.' }),
   },
   'GET /firms': { query: passthroughQuery },
   'PATCH /firms/:id': {
