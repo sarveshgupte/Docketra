@@ -1,5 +1,12 @@
 # What's New
 
+
+## May 2026: SuperAdmin dashboard hardening pass
+
+- Hardened SuperAdmin global search UX and safety with debounce, tiny-input request guards, and explicit empty/no-result states.
+- Improved SuperAdmin sidebar navigation active-state behavior for nested pages.
+- Tightened SuperAdmin route validation on sensitive write endpoints to reject unexpected payload fields.
+
 ## May 2026: Firm Data Transparency page and trust/data residency documentation
 
 - Added a **Storage settings / Data storage map** section for Primary Admin visibility into active provider posture, connected account context, canonical business data location, MongoDB control-plane metadata categories, and standardized Google Drive path conventions.
