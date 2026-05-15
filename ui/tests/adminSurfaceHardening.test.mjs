@@ -16,6 +16,7 @@ assert.ok(adminPageSource.includes('ActionConfirmModal'), 'AdminPage should use 
 assert.ok(!adminPageSource.includes('window.confirm('), 'AdminPage should not use native window.confirm for user admin actions');
 assert.ok(adminPageSource.includes('pendingConfirmation'), 'AdminPage should keep centralized confirmation state');
 assert.ok(adminPageSource.includes('if (creatingUser) return;'), 'Create user should protect against duplicate submits');
+assert.ok(adminPageSource.includes("role: ['EMPLOYEE', 'USER', 'STAFF'].includes(normalizedRole) ? 'USER' : normalizedRole"), 'Create user submit should normalize employee role aliases to USER API contract');
 
 const usersSectionSource = read('src/pages/admin/components/AdminUsersSection.jsx');
 assert.ok(usersSectionSource.includes('Team Members'), 'Users section should use clearer heading copy');
