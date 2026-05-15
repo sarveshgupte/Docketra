@@ -17,6 +17,7 @@ assert.equal(superadminFirmDetail.includes('/f/${firm.firmSlug}/login'), false, 
 assert.ok(superadminInsights.includes('/${firm.firmSlug}/login') && superadminFirmDetail.includes('/${firm.firmSlug}/login'), 'Superadmin firm login URLs should target /:firmSlug/login.');
 
 assert.equal(notificationView.includes('<Layout>'), false, 'Notification history route must not wrap deprecated Layout inside firm shell route.');
+assert.ok(notificationView.includes('<span className="sr-only">'), 'Notification view must contain sr-only context for accessibility');
 
 for (const routeFactory of ['ROUTES.TASK_MANAGER', 'ROUTES.DASHBOARD', 'ROUTES.CLIENTS', 'ROUTES.ADMIN_REPORTS', 'ROUTES.ADMIN', 'ROUTES.SETTINGS']) {
   assert.ok(platformNav.includes(routeFactory), `Platform nav item missing valid route factory: ${routeFactory}`);
