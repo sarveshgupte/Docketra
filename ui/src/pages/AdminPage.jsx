@@ -322,8 +322,8 @@ export const AdminPage = () => {
   const handleCreateUser = async (e) => {
     e.preventDefault();
     if (creatingUser) return;
-    if (!isPrimaryAdminActor) {
-      showToast('Only PRIMARY_ADMIN can modify hierarchy', 'error');
+    if (!(isPrimaryAdminActor || String(loggedInUser?.role || "").trim().toUpperCase() === "ADMIN")) {
+      showToast('Admin access is required to manage team members.', 'error');
       return;
     }
     
@@ -362,8 +362,8 @@ export const AdminPage = () => {
   };
 
   const handleToggleUserStatus = async (user) => {
-    if (!isPrimaryAdminActor) {
-      showToast('Only PRIMARY_ADMIN can modify hierarchy', 'error');
+    if (!(isPrimaryAdminActor || String(loggedInUser?.role || "").trim().toUpperCase() === "ADMIN")) {
+      showToast('Admin access is required to manage team members.', 'error');
       return;
     }
     if (isPrimaryAdminUser(user)) {
