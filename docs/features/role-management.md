@@ -37,3 +37,9 @@ Team Management supports these assignable roles only:
 - Primary Admin and Admin can manage user client access from Team Management.
 - Access modes: **All clients** or **Selected clients only**.
 - Primary Admin users remain protected from normal restriction edits.
+
+## Work Management access (manager-and-above)
+- Allowed: `PRIMARY_ADMIN`, `ADMIN`, `MANAGER`.
+- Denied: `USER` (Employee) and `SUPER_ADMIN` on firm-scoped Work Management routes.
+- Work Management governs workflow structure (categories/subcategories/workbaskets + routing); user assignment to workbaskets/QC remains Team Management-owned.
+
