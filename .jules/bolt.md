@@ -37,3 +37,7 @@
 ## 2026-05-08 - Prevent N+1 loops in user deactivation logic
 **Learning:** In user deactivation, iterating over a large array of dockets and waiting for sequential category and team lookups (with multiple `findOne` queries) incurs high database network latency when many cases are assigned to a single user.
 **Action:** Replaced sequential `findOne` lookup in a loop with two concurrent query strategies. First, collected all unique category names and retrieved them using `$in`. Then mapped category subcategories to necessary team IDs, deduped the IDs, and retrieved all necessary workbasket Teams via an `$in` query. This eliminates N+1 latency.
+
+## 2026-05-15 - Concurrent Document Fetch in Case Create Service
+**Learning:** In the `caseCreate` service, the `User.findOne` for the resolved employee was being awaited sequentially before preparing and concurrently executing other database validation queries (`dealId`, `crmClientId`, `fallbackWorkbasket`) via `Promise.all`. This sequential structure causes high API response time.
+**Action:** Use `Promise.all()` for concurrent fetching of independent database queries to eliminate unnecessary sequential waits and reduce endpoint latency.
