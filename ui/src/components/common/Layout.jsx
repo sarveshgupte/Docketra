@@ -164,7 +164,7 @@ export const Layout = ({ children, title, subtitle }) => {
   const currentFirmSlug = firmSlug || user?.firmSlug;
   const normalizedRole = String(user?.role || '').trim().toUpperCase();
   const hasAdminAccess = user?.role === USER_ROLES.ADMIN || normalizedRole === 'PRIMARY_ADMIN';
-  const hasManagerAccess = userRole === 'manager';
+  const hasManagerAccess = normalizedRole === 'MANAGER';
   const hasQcQueueAccess = hasAdminAccess || hasManagerAccess || (Array.isArray(user?.qcWorkbaskets) && user.qcWorkbaskets.length > 0);
   const workbasketNavLabel = 'Workbasket';
   const firmLabel = user?.firm?.name || currentFirmSlug || 'Firm';
