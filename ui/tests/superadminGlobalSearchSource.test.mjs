@@ -17,7 +17,8 @@ const controller = readApi('controllers/superadmin.controller.js');
 const globalSearchSectionMatch = controller.match(/const getSuperadminGlobalSearch = async[\s\S]*?const getSuperadminAuditLogs = async/);
 const globalSearchSection = globalSearchSectionMatch?.[0] || '';
 
-assert(routes.includes("router.get('/search', requireSuperadmin"), 'Global search route should exist and require superadmin.');
+assert(routes.includes("router.get('/search'"), 'Global search route should exist.');
+assert(routes.includes('router.use(requireSuperadmin);'), 'Superadmin router should enforce requireSuperadmin boundary for all routes.');
 assert(routes.includes('authorize(SuperAdminPolicy.canViewPlatformStats)'), 'Global search route should use superadmin authorization policy.');
 assert(controller.includes('slice(0, MAX_SEARCH_LENGTH)'), 'Search query should be capped to MAX_SEARCH_LENGTH.');
 assert(controller.includes('const escapeRegex =') && controller.includes('buildSafeContainsRegex'), 'Search regex input should be escaped.');
@@ -32,6 +33,11 @@ assert(controller.includes('emailMasked: maskEmail(admin.email)'), 'Admin search
 assert(controller.includes('sanitizeAuditMetadata(row.metadata || {})'), 'Audit results should sanitize metadata output.');
 
 assert(layout.includes('Global search'), 'SuperAdmin layout should include global search UI.');
+
+assert(layout.includes('aria-label="Global search"'), 'Global search input must have an accessible label.');
+assert(layout.includes('setTimeout(() => {'), 'Global search should debounce network requests.');
+assert(layout.includes('q.length < 2'), 'Global search should avoid tiny-input network calls.');
+assert(layout.includes('Enter at least 2 characters.'), 'Global search should show a safe tiny-input helper state.');
 assert(layout.includes('Search returns platform lifecycle/support metadata only.'), 'Global search privacy helper text should exist.');
 assert(!/href\s*=\s*"#"/.test(layout), 'SuperAdmin layout should not include placeholder href="#" links.');
 assert(service.includes('searchGlobal: async'), 'Superadmin service should include global search API method.');

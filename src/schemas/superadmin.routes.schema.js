@@ -4,7 +4,6 @@ const firmIdParams = z.object({ id: objectIdString });
 const firmIdAndAdminParams = z.object({ firmId: objectIdString, adminId: objectIdString });
 const firmIdParams2 = z.object({ firmId: objectIdString });
 const passthroughQuery = z.object({}).passthrough();
-const passthroughBody = z.object({}).passthrough();
 
 module.exports = {
   'GET /stats': { query: passthroughQuery },
@@ -15,21 +14,21 @@ module.exports = {
   'GET /diagnostics': {
     query: z.object({
       limit: z.coerce.number().int().min(5).max(30).optional(),
-    }).passthrough(),
+    }).strict(),
   },
   'GET /firm-health': {
     query: z.object({
       limit: z.coerce.number().int().min(1).max(100).optional(),
       status: z.enum(['healthy', 'watch', 'at_risk', 'critical']).optional(),
       search: z.string().trim().max(100).optional(),
-    }).passthrough(),
+    }).strict(),
   },
   'GET /search': {
     query: z.object({
       q: z.string().trim().max(100).optional(),
       types: z.string().trim().optional(),
       limit: z.coerce.number().int().min(1).max(25).optional(),
-    }).passthrough(),
+    }).strict(),
   },
   'GET /audit-logs': { query: passthroughQuery },
   'GET /plans': { query: passthroughQuery },
@@ -49,30 +48,30 @@ module.exports = {
     body: z.object({
       name: nonEmptyString,
       slug: z.string().trim().min(1).optional(),
-    }).passthrough(),
+    }).strict(),
   },
   'GET /firms': { query: passthroughQuery },
   'PATCH /firms/:id': {
     params: firmIdParams,
-    body: passthroughBody,
+    body: z.object({}).strict(),
   },
   'PATCH /firms/:id/status': {
     params: firmIdParams,
     body: z.object({
       status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),
-    }).passthrough(),
+    }).strict(),
   },
   'PATCH /firms/:id/activate': {
     params: firmIdParams,
-    body: passthroughBody,
+    body: z.object({}).strict(),
   },
   'PATCH /firms/:id/deactivate': {
     params: firmIdParams,
-    body: passthroughBody,
+    body: z.object({}).strict(),
   },
   'POST /firms/:id/disable': {
     params: firmIdParams,
-    body: passthroughBody,
+    body: z.object({}).strict(),
   },
 
   'PATCH /firms/:firmId/plan-capacity': {
@@ -90,19 +89,19 @@ module.exports = {
     body: z.object({
       name: nonEmptyString,
       email: z.string().trim().email(),
-    }).passthrough(),
+    }).strict(),
   },
   'POST /firms/:firmId/admins': {
     params: firmIdParams2,
     body: z.object({
       name: nonEmptyString,
       email: z.string().trim().email(),
-    }).passthrough(),
+    }).strict(),
   },
 
   'POST /firms/:firmId/admin/resend-access': {
     params: firmIdParams2,
-    body: passthroughBody,
+    body: z.object({}).strict(),
   },
   'GET /firms/:firmId/admin': {
     params: firmIdParams2,
@@ -117,22 +116,22 @@ module.exports = {
     body: z.object({
       isActive: z.boolean().optional(),
       status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),
-    }).passthrough(),
+    }).strict(),
   },
   'PATCH /firms/:firmId/admins/:adminId/status': {
     params: firmIdAndAdminParams,
     body: z.object({
       isActive: z.boolean().optional(),
       status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),
-    }).passthrough(),
+    }).strict(),
   },
   'POST /firms/:firmId/admin/force-reset': {
     params: firmIdParams2,
-    body: passthroughBody,
+    body: z.object({}).strict(),
   },
   'POST /firms/:firmId/admins/:adminId/force-reset': {
     params: firmIdAndAdminParams,
-    body: passthroughBody,
+    body: z.object({}).strict(),
   },
   'DELETE /firms/:firmId/admins/:adminId': {
     params: firmIdAndAdminParams,
@@ -141,9 +140,9 @@ module.exports = {
   'POST /switch-firm': {
     body: z.object({
       firmId: objectIdString,
-    }).passthrough(),
+    }).strict(),
   },
   'POST /exit-firm': {
-    body: passthroughBody,
+    body: z.object({}).strict(),
   },
 };
