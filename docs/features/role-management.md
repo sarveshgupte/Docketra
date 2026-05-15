@@ -22,7 +22,7 @@ Team Management supports these assignable roles only:
 
 - **Admin** inherits Manager-level access.
 - **Primary Admin** inherits Admin and Manager-level access.
-- **Manager** retains manager-level permissions (including client-management access where manager permissions are already enabled by policy).
+- **Manager** has manager-level access for workbaskets, assigned QC workbaskets, worklists, and reports. Manager does not get Client Management or Team Management by default.
 - **Employee/User** remains regular staff access.
 
 

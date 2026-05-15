@@ -18,6 +18,11 @@ for (const role of ['Admin', 'Manager', 'Employee']) {
 assert.ok(!createModal.includes("label: 'Primary Admin'"), 'Primary Admin must not be assignable in dropdown.');
 assert.ok(!createModal.includes("label: 'SuperAdmin'"), 'SuperAdmin must not be assignable in dropdown.');
 
+
+const roleMgmtDoc = read('docs/features/role-management.md');
+assert.ok(roleMgmtDoc.includes('Manager does not get Client Management or Team Management by default.'), 'Role docs must state that Manager lacks Client Management and Team Management by default.');
+assert.ok(!roleMgmtDoc.includes('including client-management access where manager permissions are already enabled by policy'), 'Legacy manager client-management wording must not regress.');
+
 const routeSchemas = read('src/schemas/admin.routes.schema.js');
 assert.ok(routeSchemas.includes("'POST /users': { body: z.object({ name: nonEmptyString, email: z.string().trim().email(), role: z.enum(['ADMIN','MANAGER','USER'])"), 'Create user schema should restrict assignable roles.');
 assert.ok(routeSchemas.includes("'PATCH /users/:xID/workbaskets':"), 'Workbasket mutation schema should exist.');
