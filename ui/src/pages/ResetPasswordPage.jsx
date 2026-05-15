@@ -65,18 +65,19 @@ export const ResetPasswordPage = () => {
       }
     } catch (err) {
       const errorData = err.response?.data;
-      setError(errorData?.message || 'Failed to reset password. The link may have expired.');
+      setError('Unable to reset password with this link. It may have expired. Please request a new reset link.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="reset-password-page">
-      <Card className="reset-password-card">
-        <div className="reset-password-header">
+    <div className="auth-wrapper">
+      <Card className="auth-card max-w-form">
+        <div className="auth-header">
+          <p className="auth-kicker">Docketra · Secure access</p>
           <h1>Reset Password</h1>
-          <p className="text-secondary">Enter your new password below.</p>
+          <p className="text-secondary">Use a strong password to secure your workspace account.</p>
         </div>
 
         <form onSubmit={handleSubmit} noValidate className={spacingClasses.formFieldSpacing}>
