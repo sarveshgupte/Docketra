@@ -14,8 +14,8 @@ export const adminApi = {
 
   resetPassword: (xID) => request((http) => http.post('/auth/reset-password', { xID }), 'Failed to reset password'),
   resendSetupEmail: (xID) => request((http) => http.post(`/admin/users/${xID}/resend-invite`), 'Failed to resend setup email'),
-  updateRestrictedClients: (xID, restrictedClientIds = []) => request(
-    (http) => http.patch(`/admin/users/${xID}/restrict-clients`, { restrictedClientIds }),
+  updateRestrictedClients: (xID, payload = { accessMode: 'ALL' }) => request(
+    (http) => http.patch(`/admin/users/${xID}/restrict-clients`, payload),
     'Failed to update user client access'
   ),
   updateUserWorkbaskets: (xID, teamIds = []) => request(

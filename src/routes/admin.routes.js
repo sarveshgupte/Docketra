@@ -112,7 +112,7 @@ router.put('/users/:xID/activate', ...adminBaseAccess, authorizeFirmPermission('
 router.put('/users/:xID/deactivate', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), sensitiveLimiter, deactivateUser);
 router.post('/users/:xID/resend-invite', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, resendInviteEmail);
 
-router.patch('/users/:xID/restrict-clients', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateRestrictedClients);
+router.patch('/users/:xID/restrict-clients', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateRestrictedClients);
 router.patch('/users/:xID/workbaskets', ...adminBaseAccess, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, updateUserWorkbaskets);
 router.patch('/users/:id/hierarchy', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateUserHierarchy);
 router.get('/firm-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getFirmSettings);
