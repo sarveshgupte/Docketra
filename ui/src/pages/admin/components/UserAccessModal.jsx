@@ -17,6 +17,10 @@ export const UserAccessModal = ({
   setSelectedWorkbasketDraft,
   clients,
   restrictedClientDraft,
+  clientAccessModeDraft,
+  setClientAccessModeDraft,
+  canManageClientAccess,
+  isPrimaryAdminTarget,
   isClientAllowedForDraft,
   onToggleClientAccess,
   onSave,
@@ -53,25 +57,27 @@ export const UserAccessModal = ({
         </div>
       ) : null}
 
+      <FormLabel>Client access</FormLabel>
+      {!canManageClientAccess || isPrimaryAdminTarget ? <div className="text-xs text-gray-600">{isPrimaryAdminTarget ? 'Primary Admin always has all-client access.' : 'You do not have permission to change client access.'}</div> : null}
+      <div className="space-y-2">
+        <label className="admin__client-access-item"><input type="radio" name="client-access-mode" checked={clientAccessModeDraft === 'ALL'} disabled={!canManageClientAccess || isPrimaryAdminTarget} onChange={() => setClientAccessModeDraft('ALL')} /> <span>All clients</span></label>
+        <label className="admin__client-access-item"><input type="radio" name="client-access-mode" checked={clientAccessModeDraft === 'SELECTED'} disabled={!canManageClientAccess || isPrimaryAdminTarget || clients.length === 0} onChange={() => setClientAccessModeDraft('SELECTED')} /> <span>Selected clients only</span></label>
+      </div>
       <div className="admin__access-summary">
-        {clients.length === 0 ? (
-          <Badge status="Pending">No Clients Found</Badge>
-        ) : restrictedClientDraft.length === 0 ? (
-          <Badge status="Approved">All Clients Allowed</Badge>
-        ) : (
-          <Badge status="Pending">{clients.length - restrictedClientDraft.length} of {clients.length} clients allowed</Badge>
-        )}
+        {clientAccessModeDraft === 'ALL' ? <Badge status="Approved">All Clients Allowed</Badge> : <Badge status="Pending">{restrictedClientDraft.length} selected client(s)</Badge>}
       </div>
 
       <div className="admin__client-access-list">
         {clients.length === 0 ? (
           <div className="text-sm text-gray-600">No clients available yet.</div>
+        ) : clientAccessModeDraft === 'ALL' ? (
+          <div className="text-sm text-gray-600">All clients are currently accessible.</div>
         ) : (
           clients.map((client) => (
             <label key={client.clientId} className="admin__client-access-item">
-              <input type="checkbox" checked={isClientAllowedForDraft(client.clientId)} onChange={() => onToggleClientAccess(client.clientId)} />
+              <input type="checkbox" disabled={!canManageClientAccess || isPrimaryAdminTarget} checked={isClientAllowedForDraft(client.clientId)} onChange={() => onToggleClientAccess(client.clientId)} />
               <span><strong>{client.businessName}</strong> ({client.clientId})</span>
-              <Badge status={isClientAllowedForDraft(client.clientId) ? 'Approved' : 'Rejected'}>{isClientAllowedForDraft(client.clientId) ? 'Allowed' : 'Blocked'}</Badge>
+              <Badge status={isClientAllowedForDraft(client.clientId) ? 'Approved' : 'Pending'}>{isClientAllowedForDraft(client.clientId) ? 'Selected' : 'Not selected'}</Badge>
             </label>
           ))
         )}
@@ -79,7 +85,7 @@ export const UserAccessModal = ({
 
       <div className="admin__form-actions">
         <Button type="button" variant="default" onClick={onClose}>Cancel</Button>
-        <Button type="button" variant="primary" disabled={saving || Boolean(workbasketLoadWarning) || selectedWorkbasketDraft.length === 0} onClick={onSave}>{saving ? 'Saving...' : 'Save Access'}</Button>
+        <Button type="button" variant="primary" disabled={saving || Boolean(workbasketLoadWarning) || selectedWorkbasketDraft.length === 0 || (clientAccessModeDraft === 'SELECTED' && restrictedClientDraft.length === 0)} onClick={onSave}>{saving ? 'Saving...' : 'Save Access'}</Button>
       </div>
     </div>
   </Modal>

@@ -32,3 +32,8 @@ Team Management supports these assignable roles only:
 - SuperAdmin is platform-only and excluded from firm role hierarchy and assignment.
 - Admin/Primary Admin can manage team settings; Manager/Employee cannot.
 - Workbasket/QC visibility remains assignment-aware for non-admin roles.
+
+### Team Management client access controls
+- Primary Admin and Admin can manage user client access from Team Management.
+- Access modes: **All clients** or **Selected clients only**.
+- Primary Admin users remain protected from normal restriction edits.

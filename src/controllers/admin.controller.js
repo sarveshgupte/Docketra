@@ -4,6 +4,7 @@ const User = require('../models/User.model');
 const Case = require('../models/Case.model');
 const Task = require('../models/Task');
 const Firm = require('../models/Firm.model');
+const Client = require('../models/Client.model');
 const Team = require('../models/Team.model');
 const Category = require('../models/Category.model');
 const AuthAudit = require('../models/AuthAudit.model');
@@ -607,7 +608,7 @@ const getAllResolvedCases = async (req, res) => {
 const updateRestrictedClients = async (req, res) => {
   try {
     const { xID } = req.params;
-    const { restrictedClientIds } = req.body;
+    const { accessMode, clientIds = [] } = req.body;
     
     if (!xID) {
       return res.status(400).json({
@@ -616,10 +617,10 @@ const updateRestrictedClients = async (req, res) => {
       });
     }
     
-    if (!Array.isArray(restrictedClientIds)) {
+    if (!['ALL', 'SELECTED'].includes(accessMode)) {
       return res.status(400).json({
         success: false,
-        message: 'restrictedClientIds must be an array',
+        message: 'accessMode must be ALL or SELECTED',
       });
     }
     
@@ -638,33 +639,67 @@ const updateRestrictedClients = async (req, res) => {
         message: 'User not found in your firm',
       });
     }
-    
+
+    if (String(user.role || '').toUpperCase() === 'PRIMARY_ADMIN') {
+      return res.status(403).json({
+        success: false,
+        message: 'Primary Admin client access cannot be restricted through Team Management',
+      });
+    }
+
+    const normalizedClientIds = Array.isArray(clientIds) ? [...new Set(clientIds.map((id) => String(id).trim().toUpperCase()).filter(Boolean))] : [];
+
     // Validate all client IDs are in correct format
-    const invalidIds = restrictedClientIds.filter(id => !/^C\d{6}$/.test(id));
+    const invalidIds = normalizedClientIds.filter(id => !/^C\d{6}$/.test(id));
     if (invalidIds.length > 0) {
       return res.status(400).json({
         success: false,
         message: `Invalid client ID format: ${invalidIds.join(', ')}. Must be C123456 format.`,
       });
     }
-    
-    // Capture previous value before update for accurate audit (after validation)
-    const previousRestrictedClientIds = user.restrictedClientIds || [];
-    
-    // Update restricted clients list
-    user.restrictedClientIds = restrictedClientIds;
+
+    if (accessMode === 'SELECTED' && normalizedClientIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'SELECTED accessMode requires at least one clientId',
+      });
+    }
+
+    if (normalizedClientIds.length > 0) {
+      const firmClientCount = await Client.countDocuments({
+        firmId: admin.firmId,
+        clientId: { $in: normalizedClientIds },
+      });
+      if (firmClientCount !== normalizedClientIds.length) {
+        return res.status(400).json({
+          success: false,
+          message: 'All selected clients must belong to your firm',
+        });
+      }
+    }
+
+    // Capture previous values before update for accurate audit (after validation)
+    const previousClientAccess = Array.isArray(user.clientAccess) ? user.clientAccess.map((id) => String(id)) : [];
+
+    if (accessMode === 'ALL') {
+      user.clientAccess = [];
+    } else {
+      const clientDocs = await Client.find({ firmId: admin.firmId, clientId: { $in: normalizedClientIds } }).select('_id').lean();
+      user.clientAccess = clientDocs.map((doc) => doc._id);
+    }
     await user.save();
     
     // Log admin action for audit
     await logAdminAction({
       adminXID: admin.xID,
       actionType: 'USER_CLIENT_ACCESS_UPDATED',
-      targetXID: user.xID,
-      metadata: {
-        previousClientIds: previousRestrictedClientIds,
-        restrictedClientIds,
-        previousCount: previousRestrictedClientIds.length,
-        newCount: restrictedClientIds.length,
+        targetXID: user.xID,
+        metadata: {
+        accessMode,
+        previousClientAccess,
+        clientIds: normalizedClientIds,
+        previousCount: previousClientAccess.length,
+        newCount: normalizedClientIds.length,
       },
       req,
     });
@@ -674,7 +709,8 @@ const updateRestrictedClients = async (req, res) => {
       message: 'User client access restrictions updated successfully',
       data: {
         xID: user.xID,
-        restrictedClientIds: user.restrictedClientIds,
+        accessMode,
+        clientIds: normalizedClientIds,
       },
     });
   } catch (error) {

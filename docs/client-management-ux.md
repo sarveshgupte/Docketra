@@ -34,3 +34,8 @@ Optional:
 - Create/update contract clarified for required vs optional fields.
 - Client mutation route schema tightened (strict create/status/change-name payload parsing).
 - Backend error payloads for client/CFS mutation failures are sanitized.
+
+## Team Management integration
+- Client access assignment is available inside Team Management user access workflows for Primary Admin/Admin.
+- Users can be assigned **All clients** or **Selected clients only** with client pick-list selection.
+- Primary Admin account access is displayed as all-clients and non-editable in normal flows.

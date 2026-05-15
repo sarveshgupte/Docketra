@@ -125,7 +125,7 @@ async function run() {
     console.log('Testing updateRestrictedClients...');
 
     // Test 1: Missing xID
-    const reqRestrict1 = { params: {}, body: { restrictedClientIds: [] } };
+    const reqRestrict1 = { params: {}, body: { accessMode: 'ALL' } };
     const resRestrict1 = createMockRes();
     await updateRestrictedClients(reqRestrict1, resRestrict1);
     assert.strictEqual(resRestrict1.statusCode, 400);
@@ -136,7 +136,7 @@ async function run() {
     const resRestrict2 = createMockRes();
     await updateRestrictedClients(reqRestrict2, resRestrict2);
     assert.strictEqual(resRestrict2.statusCode, 400);
-    assert.strictEqual(resRestrict2.body.message, 'restrictedClientIds must be an array');
+    assert.strictEqual(resRestrict2.body.message, 'accessMode must be ALL or SELECTED');
 
     // Test 3: Success
     let savedUser = null;
@@ -144,7 +144,8 @@ async function run() {
       if (query.xID === 'U123') {
         return {
           xID: 'U123',
-          restrictedClientIds: [],
+          role: 'USER',
+          clientAccess: [],
           save: async function() {
              savedUser = this;
              return this;
@@ -156,16 +157,23 @@ async function run() {
 
     const reqRestrict3 = {
       params: { xID: 'U123' },
-      body: { restrictedClientIds: ['C123456', 'C654321'] },
+      body: { accessMode: 'SELECTED', clientIds: ['C123456', 'C654321'] },
       user: { firmId: 'firm123' }
     };
+    const Client = require('../src/models/Client.model');
+    const origCount = Client.countDocuments;
+    const origFind = Client.find;
+    Client.countDocuments = async () => 2;
+    Client.find = () => ({ select: () => ({ lean: async () => [{ _id: 'id1' }, { _id: 'id2' }] }) });
     const resRestrict3 = createMockRes();
     await updateRestrictedClients(reqRestrict3, resRestrict3);
 
     assert.strictEqual(resRestrict3.statusCode, 200);
     assert.strictEqual(resRestrict3.body.success, true);
-    assert.deepStrictEqual(savedUser.restrictedClientIds, ['C123456', 'C654321']);
-    assert.deepStrictEqual(resRestrict3.body.data.restrictedClientIds, ['C123456', 'C654321']);
+    assert.deepStrictEqual(savedUser.clientAccess, ['id1', 'id2']);
+    assert.deepStrictEqual(resRestrict3.body.data.clientIds, ['C123456', 'C654321']);
+    Client.countDocuments = origCount;
+    Client.find = origFind;
     console.log('  ✅ updateRestrictedClients handled success and validation');
     passed++;
 
