@@ -136,23 +136,49 @@ const handleClientPostCreate = async ({ type, user, createdClients = [] }) => {
     Math.max(0, Number(subcategory.defaultSlaDays || category.defaultSlaDays || 3)),
   );
 
-  const dueDate = await slaService.calculateSlaDueDate({
-    firmId: user.firmId,
-    category: category.name,
-    subcategory: subcategory.name,
-    workbasketId: subcategory.workbasketId || null,
-    createdAt,
-  }) || fallbackDueDate;
+  let dueDate = fallbackDueDate;
+  try {
+    const calculatedSlaDate = await slaService.calculateSlaDueDate({
+      firmId: user.firmId,
+      category: category.name,
+      subcategory: subcategory.name,
+      workbasketId: subcategory.workbasketId || null,
+      createdAt,
+    });
+    if (calculatedSlaDate) dueDate = calculatedSlaDate;
+  } catch (error) {
+    log.error('[AUTOMATION] Failed to calculate SLA due date for imported clients; using fallback due date', {
+      firmId: user.firmId,
+      error: error.message,
+    });
+  }
 
   // ⚡ Bolt Performance Optimization:
   // Batch query to prevent N+1 queries for idempotency keys
-  const idempotencyKeys = createdClients.map(c => `automation:bulk-upload:default-docket:${user.firmId}:${c.clientId}`);
-  const existingCases = await Case.find({ firmId: user.firmId, idempotencyKey: { $in: idempotencyKeys } }).select('idempotencyKey').lean();
-  const existingKeysSet = new Set(existingCases.map(c => c.idempotencyKey));
+  const idempotencyKeys = Array.from(
+    new Set(
+      createdClients
+        .map((client) => String(client?.clientId || '').trim())
+        .filter(Boolean)
+        .map((clientId) => `automation:bulk-upload:default-docket:${user.firmId}:${clientId}`),
+    ),
+  );
+
+  const existingCases = idempotencyKeys.length
+    ? await Case.find({
+      firmId: user.firmId,
+      idempotencyKey: { $in: idempotencyKeys },
+    }).select('idempotencyKey').lean()
+    : [];
+
+  const existingKeysSet = new Set(existingCases.map((c) => c.idempotencyKey));
 
   for (const createdClient of createdClients) {
     try {
-      const idempotencyKey = `automation:bulk-upload:default-docket:${user.firmId}:${createdClient.clientId}`;
+      const clientId = String(createdClient?.clientId || '').trim();
+      if (!clientId) continue;
+
+      const idempotencyKey = `automation:bulk-upload:default-docket:${user.firmId}:${clientId}`;
       if (existingKeysSet.has(idempotencyKey)) continue;
 
       await Case.create({
@@ -164,7 +190,7 @@ const handleClientPostCreate = async ({ type, user, createdClients = [] }) => {
         caseCategory: category.name,
         caseSubCategory: subcategory.name,
         subcategory: subcategory.name,
-        clientId: createdClient.clientId,
+        clientId,
         firmId: user.firmId,
         createdByXID: user.xID || 'SYSTEM',
         createdBy: user.email || user.xID || 'system',
@@ -180,7 +206,7 @@ const handleClientPostCreate = async ({ type, user, createdClients = [] }) => {
       if (error?.code === 11000) continue;
       log.error('[AUTOMATION] Failed to create default docket for imported client', {
         firmId: user.firmId,
-        clientId: createdClient.clientId,
+        clientId,
         error: error.message,
       });
     }
