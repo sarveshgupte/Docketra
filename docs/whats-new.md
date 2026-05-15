@@ -770,3 +770,5 @@
 - Tightened admin route schemas for create user, activate/deactivate, and workbasket assignment mutations.
 - Updated Team Management empty state copy to "No team members added yet".
 - Added targeted regression coverage for role-dropdown and strict schema constraints.
+
+- Hardened Team Management client-access assignment: Admin/Primary Admin can now set `All clients` or `Selected clients only` directly in the user access modal, with strict backend validation and Primary Admin restriction protection.

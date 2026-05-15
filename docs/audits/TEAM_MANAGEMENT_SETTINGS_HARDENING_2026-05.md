@@ -40,3 +40,8 @@ Primary Admin and SuperAdmin are explicitly non-assignable.
 
 ## Readiness score
 **8.5 / 10** for private pilot, with core role-boundary and schema-hardening controls in place.
+
+## Team Management Client Access Hardening (May 2026)
+- Team Management user access modal now supports explicit client access modes: `All clients` and `Selected clients only` for Admin/Primary Admin actors.
+- Primary Admin target accounts are non-editable for client restriction through normal Team Management flows.
+- Backend `PATCH /api/admin/users/:xID/restrict-clients` now uses strict mode payloads (`ALL` or `SELECTED`) and validates selected client IDs against firm ownership.
