@@ -149,7 +149,7 @@ const approveNewClient = async (req, res) => {
       status: CANONICAL_CLIENT_STATUSES.ACTIVE,
       createdByXid: approverXid,
       createdBy: approverEmail.toLowerCase(),
-    }, req.user?.role);
+    }, req.user?.role, { allowSensitivePersistence: true });
 
     await persistClientProfileOrRollback({
       firmId: req.user.firmId,
