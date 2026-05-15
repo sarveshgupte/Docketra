@@ -31,7 +31,7 @@ Primary Admin and SuperAdmin are explicitly non-assignable.
 - Primary Admin and SuperAdmin remain invalid in bulk role assignment contract.
 
 ## Tests run
-- `node ui/tests/adminSurfaceHardening.test.mjs`
+- `node ui/tests/adminSurfaceHardening.test.mjs` (initially failed due legacy path mismatch; fixed in PR #1339 follow-up and now passing)
 - `node ui/tests/teamManagementHardening.test.mjs`
 
 ## Remaining limitations
