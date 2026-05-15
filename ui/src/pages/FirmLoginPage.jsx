@@ -345,14 +345,15 @@ export const FirmLoginPage = () => {
   return (
     <div className="auth-wrapper">
       <Card className="auth-card max-w-form">
-        <Stack space={12} className="text-center">
+        <Stack space={12} className="text-center auth-header">
+          <p className="auth-kicker">Docketra · Built for professional firms</p>
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">{firmData.name}</h1>
           <Row justify="center" gap={8}>
             <span className={`h-2.5 w-2.5 rounded-full ${step === 'credentials' ? 'bg-blue-600' : 'bg-blue-200'}`} aria-hidden="true" />
             <span className={`h-2.5 w-2.5 rounded-full ${step === 'otp' ? 'bg-blue-600' : 'bg-blue-200'}`} aria-hidden="true" />
           </Row>
           <p className="text-sm text-gray-500 text-center">Step {step === 'credentials' ? '1' : '2'} of 2</p>
-          <p className="text-sm text-gray-500 text-center">{step === 'credentials' ? 'Enter your XID and password' : 'Enter the 6-digit code sent to your email'}</p>
+          <p className="text-sm text-gray-500 text-center">{step === 'credentials' ? 'Secure cloud workspace sign in.' : 'Enter the 6-digit verification code sent to your email.'}</p>
           <p className="text-xs text-gray-500 text-center">{`Firm login URL: /${firmSlug}/login`}</p>
         </Stack>
 
@@ -424,7 +425,7 @@ export const FirmLoginPage = () => {
           </form>
         )}
 
-        <div className={`text-center mt-4 ${spacingClasses.formFieldSpacing}`}>
+        <div className={`auth-footer-links ${spacingClasses.formFieldSpacing}`}>
           <Link to={`/app/${firmSlug}/forgot-password`} className="block text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline">Forgot Password?</Link>
           <Link to="/signup" className="block text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline">Need a workspace? Create one here.</Link>
         </div>
