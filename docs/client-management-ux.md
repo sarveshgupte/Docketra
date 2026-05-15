@@ -27,3 +27,10 @@ Optional:
 - Edit CFS error states now use safe role-aware copy: `403 -> Client management requires Admin access`, `404 -> Client not found or no longer available`, and `503 -> fact sheet resources unavailable` fallback messaging.
 - Kept BYOS-not-connected as a normal state and clarified that Docketra-managed storage remains active by default.
 - Fixed Client Fact Sheet text field isolation and attachment upload-intent reliability.
+
+
+## 2026-05 hardening updates
+- Admin denial copy standardized to: "Client management requires Admin access."
+- Create/update contract clarified for required vs optional fields.
+- Client mutation route schema tightened (strict create/status/change-name payload parsing).
+- Backend error payloads for client/CFS mutation failures are sanitized.

@@ -33,7 +33,7 @@ const toDisplayString = (value, fallback = '—') => {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PINCODE_REGEX = /^[1-9][0-9]{5}$/;
 const TENANT_KEY_MISSING_COPY = 'Client encryption setup needs repair before clients can be loaded.';
-const FORBIDDEN_COPY = 'Client management requires Admin access';
+const FORBIDDEN_COPY = 'Client management requires Admin access.';
 const DUPLICATE_COPY = 'A client with this name or identifier already exists.';
 const DEFAULT_LOAD_ERROR = 'Failed to load clients';
 const resolveCfsDescription = (factSheet = {}) => (
@@ -804,7 +804,7 @@ const getCfsFetchErrorMessage = (error) => {
   const status = error?.response?.status;
   const serverMessage = error?.response?.data?.message;
 
-  if (status === 403) return 'Client management requires Admin access';
+  if (status === 403) return 'Client management requires Admin access.';
   if (status === 404) return 'Client not found or no longer available';
   if (status === 503) return 'Client record loaded, but some fact sheet resources are unavailable right now. Please try again shortly.';
   if (typeof serverMessage === 'string' && serverMessage.trim()) return serverMessage;

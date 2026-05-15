@@ -19,7 +19,7 @@ module.exports = {
       contactPersonName: z.string().trim().min(1),
       contactPersonEmail: z.string().trim().email(),
       contactPersonPhone: z.string().trim().min(1),
-    }).passthrough(),
+    }).strict(),
   },
   'PUT /:clientId': {
     params: z.object({ clientId: clientIdString }),
@@ -45,11 +45,14 @@ module.exports = {
   },
   'PATCH /:clientId/status': {
     params: z.object({ clientId: clientIdString }),
-    body: z.object({ status: z.enum(['ACTIVE', 'INACTIVE']) }).passthrough(),
+    body: z.object({ isActive: z.boolean() }).strict(),
   },
   'POST /:clientId/change-name': {
     params: z.object({ clientId: clientIdString }),
-    body: z.object({ legalName: nonEmptyString }).passthrough(),
+    body: z.object({
+      newBusinessName: nonEmptyString,
+      reason: nonEmptyString,
+    }).strict(),
   },
   'PUT /:clientId/fact-sheet': {
     params: z.object({ clientId: clientIdString }),
