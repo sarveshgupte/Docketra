@@ -772,3 +772,10 @@
 - Added targeted regression coverage for role-dropdown and strict schema constraints.
 
 - Hardened Team Management client-access assignment: Admin/Primary Admin can now set `All clients` or `Selected clients only` directly in the user access modal, with strict backend validation and Primary Admin restriction protection.
+
+## 2026-05-15 — Work Management settings hardening (slice 1: contract hardening only)
+- Removed category/subcategory hard-delete route exposure from admin Work Management contract.
+- Tightened Work Management mutation schemas to strict payloads for category/subcategory/workbasket endpoints.
+- Sanitized category controller mutation error responses to avoid raw backend error leakage.
+- Added regression test coverage for no-delete schema contract and strict payload rejection.
+

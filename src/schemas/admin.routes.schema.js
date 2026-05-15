@@ -37,33 +37,27 @@ module.exports = {
     query: z.object({ activeOnly: queryBoolean.optional() }).passthrough(),
   },
   'POST /categories': {
-    body: z.object({ name: nonEmptyString }).passthrough(),
+    body: z.object({ name: nonEmptyString }).strict(),
   },
   'PUT /categories/:id': {
     params: z.object({ id: objectIdOrString }),
-    body: z.object({ name: nonEmptyString.optional() }).passthrough(),
+    body: z.object({ name: nonEmptyString.optional(), defaultSlaDays: z.number().int().min(0).optional() }).strict(),
   },
   'PATCH /categories/:id/status': {
     params: z.object({ id: objectIdOrString }),
-    body: z.object({ isActive: z.boolean() }).passthrough(),
-  },
-  'DELETE /categories/:id': {
-    params: z.object({ id: objectIdOrString }),
+    body: z.object({ isActive: z.boolean() }).strict(),
   },
   'POST /categories/:id/subcategories': {
     params: z.object({ id: objectIdOrString }),
-    body: z.object({ name: nonEmptyString, workbasketId: objectIdString }).passthrough(),
+    body: z.object({ name: nonEmptyString, workbasketId: objectIdString, defaultSlaDays: z.number().int().min(0).optional() }).strict(),
   },
   'PUT /categories/:id/subcategories/:subcategoryId': {
     params: z.object({ id: objectIdOrString, subcategoryId: nonEmptyString }),
-    body: z.object({ name: nonEmptyString.optional(), workbasketId: objectIdString.optional() }).passthrough(),
+    body: z.object({ name: nonEmptyString.optional(), workbasketId: objectIdString.optional(), defaultSlaDays: z.number().int().min(0).optional() }).strict(),
   },
   'PATCH /categories/:id/subcategories/:subcategoryId/status': {
     params: z.object({ id: objectIdOrString, subcategoryId: nonEmptyString }),
-    body: z.object({ isActive: z.boolean() }).passthrough(),
-  },
-  'DELETE /categories/:id/subcategories/:subcategoryId': {
-    params: z.object({ id: objectIdOrString, subcategoryId: nonEmptyString }),
+    body: z.object({ isActive: z.boolean() }).strict(),
   },
 
   'GET /hierarchy': { query: passthroughQuery },
@@ -134,18 +128,18 @@ module.exports = {
   'POST /cms-intake-settings/intake-api-key/regenerate': { body: passthroughBody },
   'GET /workbaskets': { query: passthroughQuery },
   'POST /work-settings/default-routing': { body: z.object({}).strict() },
-  'POST /workbaskets': { body: z.object({ name: nonEmptyString }).passthrough() },
+  'POST /workbaskets': { body: z.object({ name: nonEmptyString }).strict() },
   'PUT /workbaskets/:workbasketId': {
     params: z.object({ workbasketId: objectIdOrString }),
-    body: z.object({ name: nonEmptyString }).passthrough(),
+    body: z.object({ name: nonEmptyString }).strict(),
   },
   'PATCH /workbaskets/:workbasketId/status': {
     params: z.object({ workbasketId: objectIdOrString }),
-    body: z.object({ isActive: z.boolean() }).passthrough(),
+    body: z.object({ isActive: z.boolean() }).strict(),
   },
   'POST /workbaskets/:workbasketId/qc-members': {
     params: z.object({ workbasketId: objectIdOrString }),
-    body: z.object({ userId: objectIdOrString }).passthrough(),
+    body: z.object({ userId: objectIdOrString }).strict(),
   },
   'POST /users/:id/restore': {
     params: z.object({ id: objectIdOrString }),
