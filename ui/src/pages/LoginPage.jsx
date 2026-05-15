@@ -111,13 +111,13 @@ export const LoginPage = () => {
       } else if (errorData?.passwordSetupRequired) {
         setError('Please set your password using the link sent to your email. If you haven\'t received it, contact your administrator.');
       } else if (errorData?.lockedUntil) {
-        setError(errorData?.message || 'Account is locked. Please try again later or contact an administrator.');
+        setError('Account is locked. Please try again later or contact an administrator.');
       } else if (statusCode === 401) {
         setError('Invalid xID or password. Please verify and try again.');
       } else if (statusCode >= 500) {
         setError('Sign-in is temporarily unavailable. Please retry in a moment.');
       } else {
-        setError(errorData?.message || 'Unable to sign in. Please verify your credentials and try again.');
+        setError('Unable to sign in. Please verify your credentials and try again.');
       }
     } finally {
       setLoading(false);
@@ -128,12 +128,13 @@ export const LoginPage = () => {
   return (
     <div className="auth-wrapper">
       <Card className="auth-card max-w-form">
-        <div className="text-center">
+        <div className="auth-header">
+          <p className="auth-kicker">Docketra · Built for professional firms</p>
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Sign in to Docketra</h1>
         </div>
 
         <p className="mt-6 text-sm text-gray-500 text-center">
-          Sign in to your workspace using your xID and password.
+          Secure cloud workspace access for Indian professional firms.
         </p>
 
         {successMessage && (
@@ -192,7 +193,7 @@ export const LoginPage = () => {
             {loading ? 'Signing in' : 'Submit & Sign in'}
           </Button>
 
-          <div className="text-center">
+          <div className="auth-footer-links">
             <Link
               to="/forgot-password"
               className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
