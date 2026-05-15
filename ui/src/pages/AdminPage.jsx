@@ -163,6 +163,7 @@ export const AdminPage = () => {
     reason: '',
   });
   const [restrictedClientDraft, setRestrictedClientDraft] = useState([]);
+  const [clientAccessModeDraft, setClientAccessModeDraft] = useState('ALL');
   const [workbaskets, setWorkbaskets] = useState([]);
   const [selectedWorkbasketDraft, setSelectedWorkbasketDraft] = useState([]);
   const filteredUsers = useMemo(() => users, [users]);
@@ -489,7 +490,9 @@ export const AdminPage = () => {
     }
 
     setSelectedUserForAccess(user);
-    setRestrictedClientDraft(Array.isArray(user.restrictedClientIds) ? user.restrictedClientIds : []);
+    const selectedClientIds = Array.isArray(user.clientAccessClientIds) ? user.clientAccessClientIds : [];
+    setRestrictedClientDraft(selectedClientIds);
+    setClientAccessModeDraft(selectedClientIds.length > 0 ? 'SELECTED' : 'ALL');
     setSelectedWorkbasketDraft(
       Array.isArray(user.teamIds) && user.teamIds.length > 0
         ? user.teamIds.map((id) => String(id))
@@ -498,7 +501,7 @@ export const AdminPage = () => {
     setShowAccessModal(true);
   };
 
-  const isClientAllowedForDraft = (clientId) => !restrictedClientDraft.includes(clientId);
+  const isClientAllowedForDraft = (clientId) => restrictedClientDraft.includes(clientId);
 
   const handleToggleClientAccess = (clientId) => {
     setRestrictedClientDraft((prev) => (
@@ -510,23 +513,40 @@ export const AdminPage = () => {
 
   const handleSaveUserAccess = async () => {
     if (!selectedUserForAccess) return;
+    if (clientAccessModeDraft === 'SELECTED' && restrictedClientDraft.length === 0) {
+      showToast('Select at least one client for Selected clients only mode.', 'error');
+      return;
+    }
     setSavingUserAccess(true);
     try {
-      const [response, wbResponse] = await Promise.all([
-        adminApi.updateRestrictedClients(selectedUserForAccess.xID, restrictedClientDraft),
-        adminApi.updateUserWorkbaskets(selectedUserForAccess.xID, selectedWorkbasketDraft),
-      ]);
-      if (response.success && wbResponse.success) {
-        showToast('User client docket access updated', 'success');
-        setShowAccessModal(false);
-        setSelectedUserForAccess(null);
-        setSelectedWorkbasketDraft([]);
-        await loadAdminData();
-      } else {
-        showToast(response.message || 'Failed to update user access', 'error');
+      const response = await adminApi.updateRestrictedClients(
+        selectedUserForAccess.xID,
+        clientAccessModeDraft === 'ALL' ? { accessMode: 'ALL' } : { accessMode: 'SELECTED', clientIds: restrictedClientDraft },
+      );
+      if (!response?.success) {
+        showToast(response?.message || 'Failed to update client access', 'error');
+        return;
       }
-    } catch (error) {
-      showToast(error.response?.data?.message || 'Failed to update user access', 'error');
+
+      try {
+        const wbResponse = await adminApi.updateUserWorkbaskets(selectedUserForAccess.xID, selectedWorkbasketDraft);
+        if (!wbResponse?.success) {
+          showToast(wbResponse?.message || 'Client access saved, but workbasket update failed. Please retry.', 'error');
+          return;
+        }
+      } catch (workbasketError) {
+        showToast(workbasketError.response?.data?.message || 'Client access saved, but workbasket update failed. Please retry.', 'error');
+        return;
+      }
+
+      showToast('User client docket access updated', 'success');
+      setShowAccessModal(false);
+      setSelectedUserForAccess(null);
+      setSelectedWorkbasketDraft([]);
+      setClientAccessModeDraft('ALL');
+      await loadAdminData();
+    } catch (clientAccessError) {
+      showToast(clientAccessError.response?.data?.message || 'Failed to update client access', 'error');
     } finally {
       setSavingUserAccess(false);
     }
@@ -1358,6 +1378,10 @@ export const AdminPage = () => {
         setSelectedWorkbasketDraft={setSelectedWorkbasketDraft}
         clients={clients}
         restrictedClientDraft={restrictedClientDraft}
+        clientAccessModeDraft={clientAccessModeDraft}
+        setClientAccessModeDraft={setClientAccessModeDraft}
+        canManageClientAccess={isPrimaryAdminActor || String(loggedInUser?.role || '').trim().toUpperCase() === 'ADMIN'}
+        isPrimaryAdminTarget={String(selectedUserForAccess?.role || '').trim().toUpperCase() === 'PRIMARY_ADMIN'}
         isClientAllowedForDraft={isClientAllowedForDraft}
         onToggleClientAccess={handleToggleClientAccess}
         onSave={handleSaveUserAccess}
