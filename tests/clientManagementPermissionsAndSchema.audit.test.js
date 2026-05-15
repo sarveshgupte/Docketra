@@ -92,7 +92,7 @@ const createRes = () => ({
   // Status route must match controller contract (isActive boolean) and be strict
   const statusSchema = clientRouteSchema['PATCH /:clientId/status'].body;
   assert.deepStrictEqual(statusSchema.parse({ isActive: true }), { isActive: true });
-  assert.throws(() => statusSchema.parse({ status: 'ACTIVE' }), /isActive/i, 'Status schema must require isActive');
+  assert.deepStrictEqual(statusSchema.parse({ status: 'ACTIVE' }), { status: 'ACTIVE' });
   assert.throws(() => statusSchema.parse({ isActive: true, extra: 'x' }), /unrecognized/i, 'Status schema must reject unknown keys');
 
   // Change-name route must match controller contract and be strict
@@ -101,7 +101,10 @@ const createRes = () => ({
     changeNameSchema.parse({ newBusinessName: 'Acme Legal LLP', reason: 'Registered legal entity rename' }),
     { newBusinessName: 'Acme Legal LLP', reason: 'Registered legal entity rename' }
   );
-  assert.throws(() => changeNameSchema.parse({ legalName: 'Acme Legal LLP' }), /newBusinessName|reason/i);
+  assert.deepStrictEqual(
+    changeNameSchema.parse({ legalName: 'Acme Legal LLP', reason: 'Registered legal entity rename' }),
+    { legalName: 'Acme Legal LLP', reason: 'Registered legal entity rename' }
+  );
   assert.throws(() => changeNameSchema.parse({ newBusinessName: 'Acme', reason: 'Audit', extra: true }), /unrecognized/i, 'Change-name schema must reject unknown keys');
 
   // Guard against regressions that reintroduce legacy body.name checks in client create path
@@ -112,14 +115,14 @@ const createRes = () => ({
     'Client create/update paths must not require or depend on legacy body.name'
   );
   assert.equal(
-    clientControllerSource.includes('const { isActive } = req.body;'),
+    clientControllerSource.includes('const { isActive: rawIsActive, status } = req.body;'),
     true,
-    'Controller status mutation should continue reading isActive boolean'
+    'Controller status mutation should accept isActive and status payloads'
   );
   assert.equal(
-    clientControllerSource.includes('const { newBusinessName, reason } = req.body;'),
+    clientControllerSource.includes('const { newBusinessName: rawNewBusinessName, legalName, reason } = req.body;'),
     true,
-    'Change-name controller should continue using newBusinessName/reason contract'
+    'Change-name controller should accept newBusinessName and legalName aliases'
   );
 
   console.log('clientManagementPermissionsAndSchema.audit.test.js passed');
