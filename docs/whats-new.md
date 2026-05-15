@@ -1,5 +1,12 @@
 # What's New
 
+
+## May 2026: Direct assigned Workbasket and QC Workbasket sidebar links
+
+- Firm sidebar now renders **assigned Workbaskets** as direct links for faster queue access (no generic filter-first click required).
+- QC Workbasket direct links now appear for Admin/Primary Admin, Managers, and Employees only when explicitly assigned to QC workbaskets.
+- Added direct queue routes (`/workbaskets/:workbasketId`, `/qc-workbaskets/:workbasketId`) with role and assignment-aware route guards.
+
 ## May 2026: Worklist-first workspace routing and navigation hardening
 
 - Firm users now land on **Worklist** after authentication instead of Dashboard; SuperAdmin routing remains unchanged.

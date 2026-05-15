@@ -227,9 +227,25 @@ export const ProtectedRoutes = () => (
           )}
         />
         <Route
+          path="workbaskets/:workbasketId"
+          element={(
+            <ProtectedRoute requireAssignedWorkbasket>
+              <PlatformWorkbasketsPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
           path="qc-queue"
           element={(
             <ProtectedRoute>
+              <PlatformQcQueuePage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="qc-workbaskets/:workbasketId"
+          element={(
+            <ProtectedRoute requireAssignedQcWorkbasket>
               <PlatformQcQueuePage />
             </ProtectedRoute>
           )}
