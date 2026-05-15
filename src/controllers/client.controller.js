@@ -559,6 +559,11 @@ const updateClient = async (req, res) => {
       contactPersonDesignation,
       contactPersonPhoneNumber,
       contactPersonEmailAddress,
+      contactPersonPhone,
+      contactPersonEmail,
+      city,
+      state,
+      pincode,
     } = req.body;
     
     // Get firmId from authenticated user for query scoping
@@ -574,6 +579,13 @@ const updateClient = async (req, res) => {
         message: 'Client not found',
       });
     }
+
+    const resolvedContactPersonPhone = contactPersonPhone !== undefined
+      ? contactPersonPhone
+      : contactPersonPhoneNumber;
+    const resolvedContactPersonEmail = contactPersonEmail !== undefined
+      ? contactPersonEmail
+      : contactPersonEmailAddress;
     
     await clientProfileStorageService.updateClientProfile({
       firmId: accessContext.firmId,
@@ -591,8 +603,15 @@ const updateClient = async (req, res) => {
         GST: GST !== undefined ? (GST ? String(GST).trim().toUpperCase() : null) : undefined,
         contactPersonName: contactPersonName !== undefined ? (contactPersonName ? String(contactPersonName).trim() : null) : undefined,
         contactPersonDesignation: contactPersonDesignation !== undefined ? (contactPersonDesignation ? String(contactPersonDesignation).trim() : null) : undefined,
-        contactPersonPhoneNumber: contactPersonPhoneNumber !== undefined ? (contactPersonPhoneNumber ? String(contactPersonPhoneNumber).trim() : null) : undefined,
-        contactPersonEmailAddress: contactPersonEmailAddress !== undefined ? (contactPersonEmailAddress ? String(contactPersonEmailAddress).trim().toLowerCase() : null) : undefined,
+        contactPersonPhoneNumber: resolvedContactPersonPhone !== undefined ? (resolvedContactPersonPhone ? String(resolvedContactPersonPhone).trim() : null) : undefined,
+        contactPersonEmailAddress: resolvedContactPersonEmail !== undefined ? (resolvedContactPersonEmail ? String(resolvedContactPersonEmail).trim().toLowerCase() : null) : undefined,
+        customFields: (city !== undefined || state !== undefined || pincode !== undefined)
+          ? {
+              ...(city !== undefined ? { city: city ? String(city).trim() : null } : {}),
+              ...(state !== undefined ? { state: state ? String(state).trim() : null } : {}),
+              ...(pincode !== undefined ? { pincode: pincode ? String(pincode).trim() : null } : {}),
+            }
+          : undefined,
       },
     });
 
