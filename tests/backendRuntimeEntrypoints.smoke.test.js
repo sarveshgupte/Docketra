@@ -19,6 +19,8 @@ const TEST_ENV_OVERRIDES = {
   BREVO_API_KEY: 'ci-placeholder-brevo-key',
   REDIS_URL: '',
   ALLOW_REDIS_FALLBACK: 'true',
+  JWT_PASSWORD_SETUP_SECRET: 'ci_fake_jwt_password_setup_secret_for_smoke_test_abcdefghijklmnopqrstuvwxyz_1234',
+  MASTER_ENCRYPTION_KEY: '01234567890123456789012345678901234567890123',
 };
 
 const applyTestEnvOverrides = () => {
