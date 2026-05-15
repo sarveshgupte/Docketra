@@ -25,7 +25,10 @@ const STATE_COOKIE_NAME = 'storage_oauth_state';
 const STATE_TTL_SECONDS = 10 * 60;
 const MANAGED_STORAGE_MODE = 'docketra_managed';
 const DATA_STORAGE_MAP = Object.freeze({
-  businessDataCanonicalLocation: 'Firm-owned cloud storage (active provider)',
+  businessDataCanonicalLocationByProvider: Object.freeze({
+    docketra_managed: 'Docketra-managed encrypted cloud storage (fallback mode currently active)',
+    default: 'Firm-owned cloud storage (active provider)',
+  }),
   mongoControlPlaneMetadata: [
     'Tenant identity, firm/user auth, role hierarchy and permissions',
     'Legacy control metadata for docket/task operations (migration to firm cloud paths is in progress)',
@@ -76,6 +79,13 @@ function toUiProvider(provider) {
   const normalized = normalizeProvider(provider);
   if (normalized === 'google_drive') return 'google-drive';
   return normalized || 'docketra_managed';
+}
+
+function getBusinessDataCanonicalLocation(storageProvider, storageMode) {
+  if (storageMode === MANAGED_STORAGE_MODE || storageProvider === 'docketra_managed') {
+    return DATA_STORAGE_MAP.businessDataCanonicalLocationByProvider.docketra_managed;
+  }
+  return DATA_STORAGE_MAP.businessDataCanonicalLocationByProvider.default;
 }
 
 function ensureFirmAdmin(req, res) {
@@ -531,7 +541,7 @@ const getStorageOwnershipSummary = async (req, res) => {
       dataStorageMap: {
         activeStorageProvider: storageProvider,
         connectedGoogleAccount: storageProvider === 'google-drive' ? (credentials?.connectedEmail || null) : null,
-        businessDataCanonicalLocation: DATA_STORAGE_MAP.businessDataCanonicalLocation,
+        businessDataCanonicalLocation: getBusinessDataCanonicalLocation(storageProvider, storageMode),
         mongoControlPlaneMetadata: DATA_STORAGE_MAP.mongoControlPlaneMetadata,
         googleDriveFolderPaths: DATA_STORAGE_MAP.googleDrivePaths,
         canOpenStorageFolder: Boolean(storageProvider === 'google-drive' && credentials?.connectedEmail),
