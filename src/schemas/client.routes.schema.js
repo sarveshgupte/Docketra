@@ -45,11 +45,14 @@ module.exports = {
   },
   'PATCH /:clientId/status': {
     params: z.object({ clientId: clientIdString }),
-    body: z.object({ status: z.enum(['ACTIVE', 'INACTIVE']) }).strict(),
+    body: z.object({ isActive: z.boolean() }).strict(),
   },
   'POST /:clientId/change-name': {
     params: z.object({ clientId: clientIdString }),
-    body: z.object({ legalName: nonEmptyString }).strict(),
+    body: z.object({
+      newBusinessName: nonEmptyString,
+      reason: nonEmptyString,
+    }).strict(),
   },
   'PUT /:clientId/fact-sheet': {
     params: z.object({ clientId: clientIdString }),
