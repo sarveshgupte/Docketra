@@ -38,7 +38,7 @@ export const AdminUsersSection = ({
       {sectionMessage ? <div className="mb-3 text-sm text-gray-600">{sectionMessage}</div> : null}
 
       {!hasUsers ? (
-        <EmptyState title="No users added yet" description="Invite your team to start collaborating." />
+        <EmptyState title="No team members added yet" description="Invite your team to start collaborating." />
       ) : (
         <DataTable
           columns={[
