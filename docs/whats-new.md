@@ -1,5 +1,12 @@
 # What's New
 
+## May 2026: Worklist-first workspace routing and navigation hardening
+
+- Firm users now land on **Worklist** after authentication instead of Dashboard; SuperAdmin routing remains unchanged.
+- Legacy firm Dashboard route is kept for backward compatibility but now redirects to Worklist.
+- Firm sidebar no longer treats Dashboard as the primary entry surface, aligning workspace navigation to Task Manager-first behavior.
+- Manager workspace navigation now includes **Reports** in primary firm navigation.
+
 ## May 2026: Forgot-password tenant safety and reliability hardening
 
 - Hardened forgot-password OTP flow to use tenant-safe generic responses when workspace context is invalid, reducing account/workspace enumeration signals.

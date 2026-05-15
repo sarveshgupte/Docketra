@@ -1,6 +1,6 @@
 /**
  * Default Route Handler
- * Redirects users to appropriate dashboard based on role
+ * Redirects users to appropriate workspace based on role
  */
 
 import React from 'react';
@@ -28,9 +28,9 @@ export const DefaultRoute = () => {
     return <Navigate to={ROUTES.SUPERADMIN_DASHBOARD} replace />;
   }
 
-  // Redirect regular users to their firm dashboard
+  // Redirect regular users to their firm worklist
   if (user?.firmSlug) {
-    return <Navigate to={ROUTES.DASHBOARD(user.firmSlug)} replace />;
+    return <Navigate to={ROUTES.WORKLIST(user.firmSlug)} replace />;
   }
 
   if (authState === AUTH_STATES.ONBOARDING_REQUIRED) {

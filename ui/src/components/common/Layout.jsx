@@ -164,7 +164,8 @@ export const Layout = ({ children, title, subtitle }) => {
   const currentFirmSlug = firmSlug || user?.firmSlug;
   const normalizedRole = String(user?.role || '').trim().toUpperCase();
   const hasAdminAccess = user?.role === USER_ROLES.ADMIN || normalizedRole === 'PRIMARY_ADMIN';
-  const hasQcQueueAccess = hasAdminAccess || (Array.isArray(user?.qcWorkbaskets) && user.qcWorkbaskets.length > 0);
+  const hasManagerAccess = userRole === 'manager';
+  const hasQcQueueAccess = hasAdminAccess || hasManagerAccess || (Array.isArray(user?.qcWorkbaskets) && user.qcWorkbaskets.length > 0);
   const workbasketNavLabel = 'Workbasket';
   const firmLabel = user?.firm?.name || currentFirmSlug || 'Firm';
   const firmType = typeof user?.firm?.type === 'string' ? user.firm.type.trim() : '';
@@ -524,22 +525,6 @@ export const Layout = ({ children, title, subtitle }) => {
 
   const navSections = [
     {
-      id: 'overview',
-      title: 'OVERVIEW',
-      sticky: true,
-      defaultOpen: true,
-      collapsible: false,
-      items: [
-        {
-          id: 'dashboard',
-          to: ROUTES.DASHBOARD(currentFirmSlug),
-          label: 'Dashboard',
-          icon: <IconDashboard />,
-          active: isActivePath(ROUTES.DASHBOARD(currentFirmSlug)),
-        },
-      ],
-    },
-    {
       id: 'modules',
       title: 'MODULES',
       defaultOpen: true,
@@ -596,7 +581,7 @@ export const Layout = ({ children, title, subtitle }) => {
             && !isActiveQueryRoute(ROUTES.ADMIN(currentFirmSlug), { tab: 'categories' }),
           hidden: !hasAdminAccess,
         },
-        { id: 'reports', to: reportsRoute, label: 'Reports', icon: <IconReport />, active: isActivePrefix(reportsRoute), hidden: !hasAdminAccess },
+        { id: 'reports', to: reportsRoute, label: 'Reports', icon: <IconReport />, active: isActivePrefix(reportsRoute), hidden: !(hasAdminAccess || hasManagerAccess) },
       ],
     },
     {
