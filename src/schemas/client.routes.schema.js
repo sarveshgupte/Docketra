@@ -45,14 +45,22 @@ module.exports = {
   },
   'PATCH /:clientId/status': {
     params: z.object({ clientId: clientIdString }),
-    body: z.object({ isActive: z.boolean() }).strict(),
+    body: z.object({
+      isActive: z.boolean().optional(),
+      status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+    }).strict().refine((body) => typeof body.isActive === 'boolean' || typeof body.status === 'string', {
+      message: 'Provide either isActive boolean or status (ACTIVE/INACTIVE)',
+    }),
   },
   'POST /:clientId/change-name': {
     params: z.object({ clientId: clientIdString }),
     body: z.object({
-      newBusinessName: nonEmptyString,
+      newBusinessName: nonEmptyString.optional(),
+      legalName: nonEmptyString.optional(),
       reason: nonEmptyString,
-    }).strict(),
+    }).strict().refine((body) => body.newBusinessName || body.legalName, {
+      message: 'Provide newBusinessName or legalName',
+    }),
   },
   'PUT /:clientId/fact-sheet': {
     params: z.object({ clientId: clientIdString }),

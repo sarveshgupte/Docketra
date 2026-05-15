@@ -626,7 +626,10 @@ const updateClient = async (req, res) => {
 const toggleClientStatus = async (req, res) => {
   try {
     const { clientId } = req.params;
-    const { isActive } = req.body;
+    const { isActive: rawIsActive, status } = req.body;
+    const isActive = typeof rawIsActive === 'boolean'
+      ? rawIsActive
+      : (status === 'ACTIVE' ? true : (status === 'INACTIVE' ? false : undefined));
     
     if (typeof isActive !== 'boolean') {
       return res.status(400).json({
@@ -706,7 +709,8 @@ const toggleClientStatus = async (req, res) => {
 const changeLegalName = async (req, res) => {
   try {
     const { clientId } = req.params;
-    const { newBusinessName, reason } = req.body;
+    const { newBusinessName: rawNewBusinessName, legalName, reason } = req.body;
+    const newBusinessName = rawNewBusinessName || legalName;
     
     // Validate inputs
     if (!newBusinessName || !newBusinessName.trim()) {
