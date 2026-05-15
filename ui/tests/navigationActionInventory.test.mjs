@@ -17,6 +17,10 @@ assert.equal(superadminFirmDetail.includes('/f/${firm.firmSlug}/login'), false, 
 assert.ok(superadminInsights.includes('/${firm.firmSlug}/login') && superadminFirmDetail.includes('/${firm.firmSlug}/login'), 'Superadmin firm login URLs should target /:firmSlug/login.');
 
 assert.equal(notificationView.includes('<Layout>'), false, 'Notification history route must not wrap deprecated Layout inside firm shell route.');
+assert.ok(notificationView.includes('buildMarkAsReadContext'), 'Notification history should build contextual screen-reader label text for mark-as-read actions.');
+assert.ok(notificationView.includes('className="sr-only">Mark as read: {markAsReadContext}</span>'), 'Mark-as-read action should include sr-only contextual text.');
+assert.ok(notificationView.includes('MARK_AS_READ_LABEL_MAX = 120'), 'Screen-reader label context should cap long notification copy.');
+assert.ok(notificationView.includes("|| 'this notification'"), 'Screen-reader label context should include safe fallback text.');
 
 for (const routeFactory of ['ROUTES.TASK_MANAGER', 'ROUTES.DASHBOARD', 'ROUTES.CLIENTS', 'ROUTES.ADMIN_REPORTS', 'ROUTES.ADMIN', 'ROUTES.SETTINGS']) {
   assert.ok(platformNav.includes(routeFactory), `Platform nav item missing valid route factory: ${routeFactory}`);

@@ -12,10 +12,18 @@ import { formatDate } from '../src/utils/formatters';
 import { ROUTES } from '../src/constants/routes';
 
 const PAGE_SIZE = 25;
+const MARK_AS_READ_LABEL_MAX = 120;
 
 function normalizeList(response) {
   const raw = response?.data;
   return Array.isArray(raw) ? raw : [];
+}
+
+function buildMarkAsReadContext(item) {
+  const primary = typeof item?.message === 'string' && item.message.trim() ? item.message.trim() : '';
+  const fallbackTitle = typeof item?.title === 'string' && item.title.trim() ? item.title.trim() : '';
+  const fallback = primary || fallbackTitle || 'this notification';
+  return fallback.slice(0, MARK_AS_READ_LABEL_MAX);
 }
 
 export function NotificationHistoryView() {
@@ -98,7 +106,9 @@ export function NotificationHistoryView() {
           {!loading && !error && items.length > 0 ? (
             <>
               <ul className="space-y-3" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                {pageRows.map((item) => (
+                {pageRows.map((item) => {
+                  const markAsReadContext = buildMarkAsReadContext(item);
+                  return (
                   <li key={item._id} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                       <p className="text-sm text-gray-900" style={{ margin: 0, fontWeight: (item.read || item.isRead) ? 500 : 700 }}>
@@ -107,7 +117,7 @@ export function NotificationHistoryView() {
                       {!(item.read || item.isRead) ? (
                         <Button type="button" variant="ghost" onClick={() => markNotificationRead(item._id)}>
                           <span aria-hidden="true">Mark as read</span>
-                          <span className="sr-only">Mark as read: {item.message}</span>
+                          <span className="sr-only">Mark as read: {markAsReadContext}</span>
                         </Button>
                       ) : null}
                     </div>
@@ -130,7 +140,8 @@ export function NotificationHistoryView() {
                       ) : null}
                     </p>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
               <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
                 <span className="text-sm text-gray-600">
