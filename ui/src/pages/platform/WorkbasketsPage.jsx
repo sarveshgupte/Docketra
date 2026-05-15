@@ -21,7 +21,7 @@ import { getRecoveryPayload } from '../../utils/errorRecovery';
 import { usePlatformWorkbenchQuery } from '../../hooks/usePlatformDataQueries';
 
 export const PlatformWorkbasketsPage = () => {
-  const { firmSlug } = useParams();
+  const { firmSlug, workbasketId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { openDocket } = useActiveDocket();
@@ -49,6 +49,7 @@ export const PlatformWorkbasketsPage = () => {
     return rows.filter((item) => {
       const matchesStatus = statusFilter === 'ALL' || String(item.status || '').toUpperCase() === statusFilter;
       const matchesCategory = categoryFilter === 'ALL' || String(item.category || '') === categoryFilter;
+      const matchesWorkbasket = !workbasketId || String(item.workbasketId || item.queueId || item.teamId || '').trim() === String(workbasketId).trim();
       const matchesSearch = !needle || [
         formatDocketLabel(item),
         item.clientName,
@@ -57,9 +58,9 @@ export const PlatformWorkbasketsPage = () => {
         item.subcategory,
         item.assigneeName,
       ].some((value) => String(value || '').toLowerCase().includes(needle));
-      return matchesStatus && matchesCategory && matchesSearch;
+      return matchesStatus && matchesCategory && matchesWorkbasket && matchesSearch;
     });
-  }, [rows, search, statusFilter, categoryFilter]);
+  }, [rows, search, statusFilter, categoryFilter, workbasketId]);
 
   const categories = useMemo(() => [...new Set(rows.map((item) => String(item.category || '').trim()).filter(Boolean))], [rows]);
 

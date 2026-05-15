@@ -116,8 +116,8 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   const hasAdminAccess = hasAtLeastRole(role, 'ADMIN');
   const hasQcQueueAccess = hasAdminAccess || (Array.isArray(user?.qcWorkbaskets) && user.qcWorkbaskets.length > 0);
   const navSections = useMemo(
-    () => getPlatformNavigation(firmSlug, { role, permissions: user?.permissions }),
-    [firmSlug, role, user?.permissions]
+    () => getPlatformNavigation(firmSlug, { role, permissions: user?.permissions, workbaskets: user?.workbaskets, qcWorkbaskets: user?.qcWorkbaskets }),
+    [firmSlug, role, user?.permissions, user?.workbaskets, user?.qcWorkbaskets]
   );
   const userName = user?.name || user?.xID || 'User';
   const currentNavItem = useMemo(

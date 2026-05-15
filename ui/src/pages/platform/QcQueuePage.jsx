@@ -24,7 +24,7 @@ import { CASE_QUERY_PARAMS } from '../../hooks/useCaseQuery';
 import { ActionConfirmModal } from '../../components/common/ActionConfirmModal';
 
 export const PlatformQcQueuePage = () => {
-  const { firmSlug } = useParams();
+  const { firmSlug, workbasketId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { openDocket } = useActiveDocket();
@@ -54,11 +54,12 @@ export const PlatformQcQueuePage = () => {
     return rows.filter((item) => {
       const assignee = String(item.assigneeName || item.assignedTo || 'Unassigned');
       const matchesAssignee = assigneeFilter === 'ALL' || assignee === assigneeFilter;
+      const matchesWorkbasket = !workbasketId || String(item.workbasketId || item.qcWorkbasketId || item.queueId || '').trim() === String(workbasketId).trim();
       const matchesSearch = !needle || [formatDocketLabel(item), item.assigneeName, item.assignedTo, item.clientName, item.category]
         .some((value) => String(value || '').toLowerCase().includes(needle));
-      return matchesAssignee && matchesSearch;
+      return matchesAssignee && matchesWorkbasket && matchesSearch;
     });
-  }, [rows, search, assigneeFilter]);
+  }, [rows, search, assigneeFilter, workbasketId]);
 
   const assignees = useMemo(
     () => [...new Set(rows.map((item) => String(item.assigneeName || item.assignedTo || 'Unassigned')).filter(Boolean))],

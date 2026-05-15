@@ -68,3 +68,10 @@
 
 ## Readiness score
 - **7.2/10** for the scoped hardening delivered here (routing/nav). Higher score pending lifecycle+storage contract completion.
+
+
+## 2026-05-15 Update: Direct assigned queue links
+
+- Implemented direct sidebar links for assigned primary workbaskets and assigned QC workbaskets (role and assignment scoped).
+- Added dedicated direct routes for queue access with route guards to prevent unauthorized access to workbasket/QC deep links.
+- Kept Worklist-first flow intact while removing generic workbasket filter-first dependence for assigned users.
