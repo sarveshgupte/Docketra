@@ -83,18 +83,18 @@ module.exports = {
     }).passthrough(),
   },
   'GET /users': { query: passthroughQuery },
-  'POST /users': { body: passthroughBody },
+  'POST /users': { body: z.object({ name: nonEmptyString, email: z.string().trim().email(), role: z.enum(['ADMIN','MANAGER','USER']), teamIds: z.array(objectIdOrString).min(1), department: z.string().trim().max(120).optional(), assignQcWorkbaskets: z.boolean().optional() }).strict() },
   'PUT /users/:xID/activate': {
     params: z.object({ xID: xidString }),
-    body: passthroughBody,
+    body: z.object({}).strict(),
   },
   'PUT /users/:xID/deactivate': {
     params: z.object({ xID: xidString }),
-    body: passthroughBody,
+    body: z.object({}).strict(),
   },
   'POST /users/:xID/resend-invite': {
     params: z.object({ xID: xidString }),
-    body: passthroughBody,
+    body: z.object({}).strict(),
   },
   'PATCH /users/:xID/restrict-clients': {
     params: z.object({ xID: xidString }),
@@ -102,7 +102,7 @@ module.exports = {
   },
   'PATCH /users/:xID/workbaskets': {
     params: z.object({ xID: xidString }),
-    body: z.object({ teamIds: z.array(objectIdOrString).min(1) }).passthrough(),
+    body: z.object({ teamIds: z.array(objectIdOrString).min(1) }).strict(),
   },
   'PATCH /users/:id/hierarchy': {
     params: z.object({ id: objectIdOrString }),
