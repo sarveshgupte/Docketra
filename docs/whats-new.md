@@ -728,3 +728,8 @@
 - Added sanitized `GET /api/storage/data-map` endpoint with verification actions and no token/folder-id/private-key exposure.
 
 - Fixed Storage Settings actions: **Open storage folder** now resolves a safe Google Drive folder URL via `/api/storage/folder-link` and gracefully disables with "Folder link unavailable." when unresolved. **Generate storage export** now shows loading/success/error feedback and helper text clarifying metadata-only export contents (no secrets).
+
+## May 2026: Create Workspace signup hardening
+
+- Blocked reserved `api` firm slug namespace and hardened signup slug fallback for reserved slug candidates.
+- Added authenticated `/signup` redirect safety to route existing sessions to the canonical workspace dashboard or workspace finder.
