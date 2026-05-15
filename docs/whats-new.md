@@ -762,3 +762,11 @@
 - Tightened client mutation schemas to reject unknown payload keys on critical endpoints.
 - Replaced legacy `name` validation usage with canonical client business/contact fields.
 - Sanitized backend client/CFS error payloads to reduce sensitive internal error leakage.
+
+
+## 2026-05-15 — Team Management settings hardening
+- Hardened Team Management role and mutation boundaries for private pilot readiness.
+- Standardized denial copy for non-admin team-management attempts.
+- Tightened admin route schemas for create user, activate/deactivate, and workbasket assignment mutations.
+- Updated Team Management empty state copy to "No team members added yet".
+- Added targeted regression coverage for role-dropdown and strict schema constraints.

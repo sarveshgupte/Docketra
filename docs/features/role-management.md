@@ -24,3 +24,11 @@ Team Management supports these assignable roles only:
 - **Primary Admin** inherits Admin and Manager-level access.
 - **Manager** retains manager-level permissions (including client-management access where manager permissions are already enabled by policy).
 - **Employee/User** remains regular staff access.
+
+
+## Team Management hardening (2026-05)
+- Assignable roles are strictly Admin, Manager, Employee (mapped to USER backend canonical).
+- Primary Admin is not assignable in Team Management and remains single-per-firm.
+- SuperAdmin is platform-only and excluded from firm role hierarchy and assignment.
+- Admin/Primary Admin can manage team settings; Manager/Employee cannot.
+- Workbasket/QC visibility remains assignment-aware for non-admin roles.
