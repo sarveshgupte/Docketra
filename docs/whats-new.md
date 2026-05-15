@@ -1,7 +1,781 @@
 # What's New
 
-## 2026-05 Work Management hardening
-- Removed category/subcategory hard-delete exposure from admin work-management route contract.
-- Tightened mutation validation for category/subcategory/workbasket routes using strict schemas.
-- Sanitized category controller error responses to avoid raw backend `error.message` leakage.
-- Added regression test for no-delete schema contract and strict payload behavior.
+
+## May 2026: Direct assigned Workbasket and QC Workbasket sidebar links
+
+- Firm sidebar now renders **assigned Workbaskets** as direct links for faster queue access (no generic filter-first click required).
+- QC Workbasket direct links now appear for Admin/Primary Admin, Managers, and Employees only when explicitly assigned to QC workbaskets.
+- Added direct queue routes (`/workbaskets/:workbasketId`, `/qc-workbaskets/:workbasketId`) with role and assignment-aware route guards.
+
+## May 2026: Worklist-first workspace routing and navigation hardening
+
+- Firm users now land on **Worklist** after authentication instead of Dashboard; SuperAdmin routing remains unchanged.
+- Legacy firm Dashboard route is kept for backward compatibility but now redirects to Worklist.
+- Firm sidebar no longer treats Dashboard as the primary entry surface, aligning workspace navigation to Task Manager-first behavior.
+- Manager workspace navigation now includes **Reports** in primary firm navigation.
+
+## May 2026: Forgot-password tenant safety and reliability hardening
+
+- Hardened forgot-password OTP flow to use tenant-safe generic responses when workspace context is invalid, reducing account/workspace enumeration signals.
+- Aligned forgot-password OTP API schema with existing optional firm-context resolution to avoid firmSlug mismatch failures in valid recovery entry points.
+
+
+## May 2026: SuperAdmin dashboard hardening pass
+
+- Hardened SuperAdmin global search UX and safety with debounce, tiny-input request guards, and explicit empty/no-result states.
+- Improved SuperAdmin sidebar navigation active-state behavior for nested pages.
+- Tightened SuperAdmin route validation on sensitive write endpoints to reject unexpected payload fields.
+
+## May 2026: Firm Data Transparency page and trust/data residency documentation
+
+- Added a **Storage settings / Data storage map** section for Primary Admin visibility into active provider posture, connected account context, canonical business data location, MongoDB control-plane metadata categories, and standardized Google Drive path conventions.
+- Added a **Generate storage export** action in Storage Settings for audit/export workflows.
+- Kept sensitive values out of this visibility surface (no secrets/tokens, `rootFolderId`, `driveId`, `privateKey`, or raw internal IDs).
+- Added `docs/TRUST_AND_DATA_RESIDENCY.md` describing Docketra's control-plane-only model, data boundaries, verification steps, and migration limitations.
+- Added regression tests to verify transparency UI copy and controller responses do not expose sensitive credential fields.
+
+## May 2026: Team Management role hierarchy alignment
+
+- Team Management now supports **Admin**, **Manager**, and **Employee** role assignment while keeping **Primary Admin** unique and non-assignable.
+- Updated Team role validation and bulk upload role handling to accept Manager while preventing Primary Admin assignment via normal team-management flows.
+
+## May 2026: Client CFS upload reliability and soft-delete guardrail fixes
+
+- Fixed client detail loading crashes by removing manual `deletedAt` filters from client CFS attachment queries and relying on the soft-delete plugin defaults.
+- Hardened wrapped write handlers so transaction wrapper failures no longer surface as `next is not a function` when a downstream caller omits `next`; responses now fail safely with structured error payloads.
+- Improved client CFS upload API stage diagnostics in frontend upload flow so support can distinguish upload-intent, direct-upload, and finalize failures with safe status/request-id context.
+- Confirmed CFS attachments continue to upload via the active storage provider path (firm-owned Google Drive BYOS when connected, otherwise Docketra-managed fallback).
+- Fixed Client Fact Sheet text field isolation and attachment upload-intent reliability.
+
+## May 2026: Storage Settings UX split for managed default vs optional BYOS
+
+- Polished Primary Admin BYOS controls with safer disconnect/recovery behavior in Storage Settings; disconnect returns uploads to Docketra-managed fallback without deleting existing firm Google Drive files.
+- Separated Storage Settings into clear cards for current mode, default managed storage, optional firm-owned Google Drive OAuth, advanced manual providers, and backup/export.
+- Removed OTP confusion from the normal Google OAuth connect flow; Primary Admin now uses one clear **Connect firm Google Drive** action.
+- Kept BYOS-not-connected as a normal state and clarified that Docketra-managed storage remains active by default.
+## May 2026: Client Add/Edit and bulk template field alignment
+
+- Aligned manual Add/Edit Client fields with the bulk client CSV template fields (`businessName`, `businessEmail`, `primaryContactNumber`, `businessAddress`, `PAN`, `CIN`, `TAN`, `GST`, `contactPersonName`) while keeping only `businessName` required in the modal.
+- Preserved unsaved-change protection and create/update payload normalization by omitting optional blank fields.
+- Fixed Add Client validation to use businessName consistently across UI, API schema, controller, and bulk upload.
+- Fixed client-management denial messaging and stale admin-only denial copy so allowed Admin/Primary Admin paths use: **"Client management requires Admin access"**.
+
+## May 2026: Client management access tightening
+
+- Fixed Edit CFS client fetch route/schema alignment so client fact sheets open reliably.
+- Client management navigation is now Admin/Primary Admin-only (Primary Admin, Admin, or explicit client-management permission override).
+- Regular firm users no longer see the Clients sidebar item and are blocked from direct `/app/firm/:firmSlug/clients` access.
+- Client mutation actions (Add Client, Bulk Upload, Edit Client, Edit CFS) now follow the same Admin client-management permission gate.
+
+## May 2026: Public header and CTA consistency
+
+- Standardized public page headers and CTAs across homepage and workspace login flows.
+- Consolidated duplicated public header implementations into a shared component so `/`, `/find-workspace`, and marketing-layout pages use one canonical nav vocabulary and CTA strategy.
+
+## May 2026: BYOS Google callback/session hardening
+
+- Hardened Google Drive BYOS callback reliability for cross-origin frontend/backend deployments by adding safe `session_missing` recovery redirects when callback auth/session context is unavailable.
+- Ensured OAuth callback state failure handling clears the state cookie and keeps error responses user-safe (no raw auth stack traces or token leakage).
+- Added/expanded regression coverage for callback success, invalid state cookie clearing, session-missing safe redirects, and connect-time invalid OAuth env returning safe `503`.
+- Documented managed Google Drive folder naming under `DRIVE_ROOT_FOLDER_ID/firm_<firmId>/...` and clarified `googleConfirmDrive` as advanced/manual BYOS drive-selection behavior.
+
+## May 2026: Task Manager launch-readiness audit pass
+
+- Re-verified Task Manager-first primary navigation and kept non-launch CRM/CMS/Company Brain/Knowledge Library out of primary firm nav for launch mode.
+- Clarified Storage Settings UX that BYOS is optional and Docketra-managed storage remains the default upload path with clear optional-BYOS messaging when BYOS connect fails.
+- Added a production-focused manual QA checklist for firm auth, task flows, upload paths, role visibility, and superadmin boundary checks.
+
+## May 2026: BYOS Google Drive OAuth connect flow stabilization
+
+- Fixed production Google Drive BYOS connect navigation so the UI targets the configured backend API origin instead of same-origin `/api`.
+- Updated OAuth callback redirects to return users to valid storage settings routes with success/error query context and automatic status refresh.
+- Clarified provider UX so Google is OAuth-first while OneDrive/S3 are clearly labeled as manual/advanced setup paths.
+- Added regression coverage for connect URL construction, callback error redirect behavior, and OAuth success refresh hooks.
+
+## May 2026: Pending, QC, deactivation handoff, and terminal queue normalization
+
+- Backend-only normalization for pending ownership, auto-reopen behavior, QC metadata/decision handling, and deactivation docket handoff.
+- Preserved existing active WL/WB/QC terminal-state exclusion behavior (`RESOLVED`, `FILED`) while normalizing pending/QC/deactivation backend flows.
+- Added coverage tests for pending auto-reopen ownership continuity, QC failed/corrected outcomes, deactivation remapping behavior, and terminal queue exclusion guardrails.
+
+## May 2026: Routed docket Route + Submit flow
+
+- Implemented routed docket Route + Submit workflow with mandatory routing/submit comments and routed-team return-to-originator behavior.
+- Route now targets only active PRIMARY workbaskets and moves docket into receiving WB queue (`IN_WB` + `GLOBAL` + unassigned).
+- Routed receiving users now see **Submit** (not Resolve) and cannot file/final-resolve routed dockets.
+- Submit returns docket to the original routing user worklist and does not mark the docket RESOLVED/FILED.
+
+## May 2026: Workbasket pull and assignment flows
+
+- Added firm-scoped authorization hardening for WB→WL pull and assignment actions across user/manager/admin roles.
+- Managers can assign from linked workbaskets and move dockets between linked users within their WB scope; Admin/Primary Admin can assign/move across firm users.
+- Hardened WB/WL query behavior so WB lists only unassigned non-terminal IN_WB dockets and assigned dockets disappear immediately after pull/assign.
+- This PR does **not** implement route/submit, pending changes, QC processing, deactivation handoff, or All Dockets normalization.
+
+## May 2026: Category/Subcategory Workbasket routing guardrails
+
+- Enforced active PRIMARY workbasket validation for subcategory mappings (rejects cross-firm/inactive/non-primary/QC mappings).
+- New docket creation routes unassigned dockets to the mapped subcategory workbasket.
+- When a subcategory mapping changes, only unassigned non-terminal WB dockets are moved to the new mapped WB.
+
+## May 2026: User-to-Workbasket membership and visibility guardrails
+
+- Enforced active non-superadmin membership guardrails so active users/managers must have at least one PRIMARY workbasket.
+- Added firm-scoped membership normalization for user workbasket assignment updates: invalid, inactive, cross-firm, and QC-only primary assignments are rejected.
+- Preserved operating model fields by keeping `User.teamId` as the default PRIMARY workbasket, de-duplicating `User.teamIds`, and keeping explicit QC membership in `qcExplicitTeamIds` separate.
+- Implemented role-scoped workbasket visibility: Primary Admin/Admin see all firm workbaskets, Managers see managed/linked workbaskets, Users see only linked workbaskets, and Superadmin receives no tenant workbasket listing.
+- This PR does **not** implement docket routing, pull flow, route/submit, pending, deactivation flow changes, QC processing flow changes, or All Dockets behavior.
+
+## May 2026: Workbasket/QC Workbasket backend guardrails (team/workbasket foundation)
+
+- Enforced PRIMARY/QC workbasket model rules in backend creation flows: creating a PRIMARY workbasket now atomically creates exactly one linked QC workbasket (with rollback on failure).
+- Added QC parent-link guardrails so QC workbaskets must reference a parent PRIMARY workbasket and duplicate QC-per-primary creation is blocked by schema/index constraints.
+- Added manager/QC linkage foundations: PRIMARY manager is auto-linked to QC on create/manager update, and guarded QC-member add endpoint allows only Primary Admin/Admin or the owning PRIMARY manager.
+- This PR intentionally does **not** implement docket routing, pull flow, pending, deactivation behavior changes, All Dockets behavior, or routed Submit.
+
+## May 2026: Task Manager Worklist / Workbasket operating model documented
+
+- Documented canonical WL/WB/QC WB/All Dockets terminology.
+- Clarified pull, assign, route, submit, pending, QC, deactivation, and All Dockets rules.
+- Established implementation rules for upcoming backend and UI PRs.
+## May 2026: Documentation quality guardrails
+
+- Added `npm run docs:check` to validate markdown relative links across maintained documentation.
+- Added a lightweight repo script (`scripts/check-markdown-links.js`) with clear broken-link output by source file and target.
+- Added docs validation into CI release-gate coverage so documentation regressions are caught with other core checks.
+- Added `docs/documentation-guidelines.md` with canonical-doc ownership, archive-vs-current rules, and a required feature documentation checklist.
+
+## May 2026: Company Brain command center simplification
+
+- Simplified Company Brain into Command Summary, Needs Attention, Connected Map, and How to use Company Brain sections.
+- Reduced repeated explanatory sections and made attention signals easier to act on.
+- Preserved read-only, metadata-based behavior without AI, vector search, document extraction, new APIs, or route changes.
+
+## May 2026: Auth session redirect reliability hardening
+
+- Hardened logout and expired-session redirects so firm routes return to `/:firmSlug/login` while superadmin routes return to `/superadmin/login`.
+- Added namespace-safe returnTo enforcement to prevent superadmin-to-firm and firm-to-superadmin stale redirect jumps.
+- Improved auth-state cleanup to clear pending-login keys and superadmin impersonation/routing hints on sign-out and session expiry.
+
+## May 2026: Knowledge Library UX polish
+
+- Improved Knowledge Library scanning with clearer stats, filters, badges, and row/card structure.
+- Reorganized the KnowledgeItem form into basics, linking, checklist steps, and privacy guidance.
+- Preserved existing no-AI, no-file-upload, no-task-automation, and route-stability constraints.
+
+## May 2026: Checklist steps for KnowledgeItems
+
+- Added structured checklist steps for checklist-type KnowledgeItems.
+- Surfaced checklist step context in Knowledge Library, Linked Knowledge, and Client Knowledge without creating tasks or completion tracking.
+- Preserved no-AI, no-document-extraction, no-file-upload, and existing-route constraints.
+
+## Work type normalization for Knowledge
+
+- Added normalized work type/category selection for KnowledgeItems so linked SOPs, checklists, templates, and process records surface more reliably in work views.
+- Preserved existing custom linked work type values while encouraging canonical docket category matching.
+- Avoided new backend models, AI, vector search, document extraction, or route changes.
+
+## May 2026: Client Knowledge in Client Memory
+
+- Added a Client Knowledge section so client-linked SOPs, templates, notes, instructions, and process records can appear inside Client Memory.
+- Added deep links from client-context knowledge rows to the exact KnowledgeItem in Knowledge Library using `?item=<id>`.
+- Preserved BYOS/privacy boundaries and avoided AI, vector search, document extraction, or file-storage behavior.
+
+## May 2026: KnowledgeItem detail view
+
+- Added a read-only KnowledgeItem detail view for inspecting SOPs, checklists, templates, notes, client instructions, and process records.
+- Linked work-context knowledge rows to the exact KnowledgeItem in Knowledge Library using `?item=<id>` query param deep-linking.
+- Preserved admin-only write controls, BYOS/privacy boundaries, and no-AI/no-document-extraction behavior.
+
+## May 2026: Company Brain connected map v1
+
+- Added Knowledge Library data to Company Brain so clients, prospects, work, and knowledge records appear in one connected read-only view.
+- Added Knowledge health cues for drafts, review due items, missing owners, and unlinked knowledge records.
+- Preserved metadata/rule-based behavior without AI, vector search, document extraction, graph DB, or new backend models.
+
+## May 2026: Linked Knowledge for work
+
+- Added the first work-context surface for KnowledgeItems so SOPs, checklists, templates, notes, client instructions, and process records can appear inside docket/work views.
+- Supported safe linking through existing work type, client, or docket metadata without adding AI or document extraction.
+- Preserved existing work routes and execution flows while making Knowledge Library useful during day-to-day work.
+
+## May 2026: Knowledge Library workspace
+
+- Added a Knowledge Library workspace for managing SOPs, checklists, templates, notes, client instructions, and process records.
+- Connected the KnowledgeItem backend foundation to a firm-facing UI under Firm Memory.
+- Preserved BYOS/privacy boundaries and avoided AI, vector search, document extraction, or file-storage behavior.
+
+## May 2026: Company Brain landing page polish
+
+- Ported the Lovable Company Brain landing page direction into Docketra's existing marketing route.
+- Added premium hero, problem, product pillars, PCS examples, trust, and early-access CTA sections.
+- Preserved existing routes and avoided new backend, AI, or data-model changes.
+
+## May 2026: KnowledgeItem foundation
+
+- Added a firm-scoped KnowledgeItem backend foundation for SOPs, checklists, templates, notes, client instructions, and process records.
+- Preserved BYOS/privacy boundaries by keeping heavy client documents out of KnowledgeItem storage.
+- Added validation and firm-scoped access controls without introducing AI, vector search, or document extraction.
+
+## May 2026: Company Brain command center UX
+
+- Redesigned the Company Brain page from an explanatory placeholder into a read-only firm command center.
+- Added clearer attention summaries, memory-map navigation, and rule-based knowledge-gap cues using existing data.
+- Preserved existing routes, APIs, permissions, and no-AI/no-new-model constraints.
+
+## May 2026: Prospective Client lifecycle
+
+- Reframed leads as Prospective Clients to align intake, follow-up, proposal, and conversion context with Company Brain.
+- Improved lifecycle visibility for enquiries, follow-ups, qualified prospects, and conversion readiness using existing data.
+- Preserved existing CRM/lead routes and data flows without adding new backend APIs, models, or AI infrastructure.
+
+## May 2026: Client Memory workspace
+
+- Reframed the client detail experience around Client Memory instead of isolated CRM records.
+- Added clearer sections for relationship context, linked work, documents/references, follow-ups, and Company Brain context using existing data.
+- Preserved existing routes and data flows without adding new backend APIs, models, or AI infrastructure.
+
+## May 2026: Company Brain read-only overview
+
+- Upgraded the Company Brain page from a strategy placeholder into a read-only overview of existing firm data.
+- Added connected-memory cards and module links across Work, Clients, Knowledge Intake, Relationships, and Reports.
+- Added safe loading/error handling without introducing new backend APIs, models, or AI infrastructure.
+
+## May 2026: Company Brain strategy
+
+- Defined Docketra's long-term direction as a Company Brain and work execution system for professional firms.
+- Reframed CMS, CRM, and Task Manager as intake, relationship, and execution layers feeding institutional memory.
+- Documented a safe migration path that preserves existing routes and functionality while preparing for connected knowledge workflows.
+
+## May 2026: Company Brain workspace entry
+
+- Added a read-only Company Brain workspace page to explain the connected firm-memory model.
+- Added Company Brain to the Firm Memory navigation and command palette.
+- Preserved existing Work, Knowledge Intake, Relationships, and Clients routes while introducing the new product entry point.
+
+## May 2026: Company Brain navigation language
+
+- Updated workspace navigation language from CRM/CMS terminology to Company Brain-oriented labels.
+- Reframed Task Manager as Work, CMS as Knowledge Intake, and CRM as Relationships.
+- Preserved existing routes and permissions while making the product easier for firms to understand.
+
+## April 2026: Perceived speed + free-tier performance pass
+
+- Improved dashboard and docket list perceived speed with longer safe React Query freshness windows and reduced remount/focus refetch churn.
+- Added shared docket-detail query keying (`getCaseQueryKey`) so hover prefetch and detail page load reuse the same request cache path more consistently.
+- Added dashboard card skeleton rows to avoid loading text flashes while keeping card structure stable during fetches.
+- Added low-risk optimistic UI for **Assign to me** in dockets so rows update instantly with rollback on failure.
+- Refactored reports dashboard loading to React Query with parallel metric requests and cache-aware refresh behavior.
+- Improved reports backend pending-list handling with validated pagination parameters and response pagination metadata.
+- Added a targeted pending-report query index for firm/status/pending deadline access pattern.
+- Added the perceived-speed playbook: `docs/performance/perceived-speed-playbook.md`.
+
+## April 2026: CRM + Intake workflow maturity pass
+
+- Improved intake workflow correctness across CMS/public/API ingestion to support real lead → client → docket lifecycle handling.
+- Added explicit intake source attribution metadata (`metadata.sourceAttribution`) so teams can trace where each submission originated (source, mode, page/referrer, UTM, form context).
+- Added intake duplicate warnings (non-blocking) for same email/phone and common firm identifiers (PAN/GST/GSTIN/client code/firm identifier where present).
+- Added stronger conversion auditability in lead diagnostics with structured workflow steps and conversion trail entries for client/docket outcomes.
+- Improved conversion failure clarity with explicit warning reason codes and recovery actions for operators.
+- Improved CRM/CMS empty-state guidance and intake warning visibility in UI so first-run teams understand the next best action.
+- Added/expanded tests for intake-to-client and intake-to-docket conversion paths, duplicate warning diagnostics, and conversion failure recovery messaging.
+- Added product workflow documentation: `docs/product/crm-intake-workflow.md`.
+
+## April 2026: Superadmin support diagnostics console
+
+- Added a new superadmin support diagnostics surface at `/app/superadmin/diagnostics` backed by `GET /api/superadmin/diagnostics`.
+- Added redacted operational triage coverage for firm status, onboarding summary, storage connection/health status, recent failed login/OTP issues, API error categories, slow endpoint percentile summary, and request IDs for tracing.
+- Enforced superadmin-only backend access control for the diagnostics endpoint.
+- Kept privacy boundaries strict by returning summarized/redacted diagnostics only (no client documents, no raw payloads, no secrets).
+- Added focused tests for route-level access control and diagnostics redaction behavior.
+
+## April 2026: Storage & Data Ownership dashboard (BYOS trust visibility)
+
+- Added a firm-facing **Storage & Data Ownership** summary section in Storage settings to clearly show:
+  - active storage provider,
+  - connection status,
+  - last health check,
+  - fallback/default storage state,
+  - backup/export status,
+  - warnings when BYOS is not configured.
+- Added `GET /api/storage/ownership-summary` to provide a single tenant-scoped backend summary for trust and recovery visibility.
+- Enforced admin-only access and retained tenant isolation by scoping reads to `req.firmId`.
+- Kept provider secrets out of summary responses.
+- Added focused controller tests covering permission enforcement and tenant-scoped reads.
+- Added documentation:
+  - `docs/product/storage-and-data-ownership.md`
+  - `docs/architecture/byos-storage-model.md`
+
+## April 2026: Audit Log explorer for firm admins
+
+- Added a dedicated firm-scoped **Audit Log** explorer at `/app/:firmSlug/admin/audit-logs` with readable summaries, actor, module, action type, target entity, severity, and timestamp.
+- Expanded backend `GET /api/admin/audit-logs` to support firm-safe filtering by actor, action type, module, date range, target entity, and severity/risk.
+- Added response pagination (`page`, `limit`, `total`, `totalPages`, `hasNextPage`) to support long-running firms with large admin activity volumes.
+- Strengthened audit response safety by redacting sensitive metadata keys and avoiding full sensitive payload exposure in the explorer response.
+- Broadened access from primary admin-only to authorized admin users with `USER_VIEW` permission while preserving strict tenant scoping.
+- Added focused regression coverage for tenant isolation and filter behavior in the admin audit explorer service.
+- Added product documentation: `docs/product/audit-log.md`.
+
+## April 2026: Documentation refresh — current product + pilot readiness
+
+- Rewrote `README.md` to reflect Docketra as a B2B firm operations SaaS (CMS, CRM, Task Manager, reports, onboarding, BYOS-first, and security posture).
+- Added `docs/product/current-product-overview.md` as the canonical product summary for reviewers and developers.
+- Added `docs/operations/pilot-readiness-checklist.md` with practical go/no-go checks across product, security, reliability, BYOS, and support operations.
+- Marked older audit/readiness docs as **historical** where they no longer represent the current platform shape.
+
+## April 2026: Internal maintainability — admin surface modularization
+
+- Refactored `ui/src/pages/AdminPage.jsx` so the route stays orchestration-focused while section rendering is delegated to dedicated modules.
+- Added focused admin section components for clients (`AdminClientsSection`) and categories/subcategories/workbasket mapping (`AdminCategoriesSection`) while preserving existing behavior and routes.
+- Extracted shared admin data loading into `ui/src/pages/admin/hooks/useAdminDataLoader.js` for tab-aware loading (`users/categories/clients`) and stats loading reuse.
+- Extracted admin modal groups into focused modules (`AdminBulkPasteModal`, `AdminCategoryModals`, `AdminClientModals`) to reduce risk when touching user/client/category concerns.
+- Added targeted regression coverage for modular admin architecture (`ui/tests/adminArchitectureSmoke.test.mjs`) and expanded existing admin hardening checks.
+- Updated admin architecture documentation at `docs/frontend/admin-surface-architecture.md` with extension placement guidance for team, roles/permissions, clients, categories, workbench mapping, storage/settings, firm profile, and hierarchy work.
+
+## April 2026: Internal maintainability — Docket Detail modular architecture hardening
+
+- Refactored `ui/src/pages/CaseDetailPage.jsx` to keep route orchestration focused while delegating render-heavy sections into dedicated modules.
+- Added explicit detail modules for summary/status (`CaseDetailSummaryHeader`), operational alerts (`CaseDetailAlerts`), and overview/details/action composition (`CaseDetailOverviewPanel`).
+- Extracted tab-scoped fetch paths into dedicated hooks:
+  - `useCaseDetailTimeline` (Activity-only timeline fetching/normalization)
+  - `useClientDocketHistory` (Overview/History related client dockets)
+- Centralized role/permission policy checks into explicit helper functions in `ui/src/pages/caseDetail/caseDetailAccess.js` for easier testing and safer future changes.
+- Added docket-detail architecture smoke coverage (`ui/tests/caseDetailArchitectureSmoke.test.mjs`) and wired it into frontend CI checks.
+- Added dedicated architecture documentation at `docs/frontend/docket-detail-architecture.md` with clear component/hook boundaries and extension guidance.
+
+## April 2026: Design system consolidation — shared B2B UI contract
+
+- Consolidated shared component contract for Button, Input, Select, Card, DataTable, Empty/Error states, PageHeader, Modal, Tabs, and Toast usage in `docs/ui/design-system-contract.md`.
+- Standardized Button API normalization with backward-compatible aliases (`small/sm`, `medium/md`, `default/secondary`, `warning/danger`) to reduce component-call drift across legacy surfaces.
+- Clarified Button className policy: safe-by-default layout sanitization remains, with explicit `allowUnsafeClassName` escape hatch for intentional one-off utility styling.
+- Tightened shared queue/table action sizing to canonical `sm/xs` button density on DataTable and QueueFilterBar.
+- Reduced active admin surface dependency on legacy `neo-*` utility classes in create-user and access-mapping modals and team section copy blocks.
+- Added a lightweight design-system contract regression test (`ui/tests/designSystemContract.test.mjs`) and wired it into UI CI checks.
+
+## April 2026: Navigation and terminology cleanup — canonical docket model
+
+- Unified firm navigation and command-center destination definitions under one shared model (`ui/src/constants/platformNavigation.js`) so sidebar and command center stay aligned.
+- Standardized user-facing work-item terminology around **Docket** across updated route labels and operational surface copy.
+- Kept legacy `/cases` route family as compatibility redirects only (`/cases`, `/cases/:caseId`, `/cases/create`) while preserving canonical `/dockets` routes for navigation and direct links.
+- Hardened route and navigation reliability tests to assert canonical dockets routing and legacy alias redirect behavior.
+- Added product reference documentation for canonical module names, queue terms, and legacy aliases in `docs/product/navigation-and-terminology-model.md`.
+
+## April 2026: Internal platform stability — PR CI release gates
+
+- Added a serious PR release-gate workflow in GitHub Actions to enforce backend syntax checks, route validation contract coverage, core backend tests, frontend build, and focused frontend reliability checks.
+- Added explicit CI-oriented npm scripts (`ci:backend:*`, `ci:frontend:*`, `ci:release-gate`) so local developer verification matches CI command-for-command.
+- Added dedicated security/config gate coverage in CI by running environment contract validation plus backend security and hardening suites.
+- Added an operations playbook at `docs/operations/ci-release-gates.md` with exact local pre-PR commands.
+
+## April 2026: Internal security hardening — production defaults and provider fail-closed behavior
+
+- Disabled Vite production source maps by default; source maps now require explicit `VITE_ENABLE_PROD_SOURCEMAPS=true`.
+- Hardened startup validation to fail closed on unsupported encryption providers (`ENCRYPTION_PROVIDER` now supports only implemented values).
+- Hardened AI provider selection so only implemented providers can be configured/used end-to-end (schema, controller, runtime map, and UI selector aligned).
+- Made CSP reporting ingestion opt-in via `CSP_REPORTING_ENABLED=true` instead of always-on route exposure.
+- Tightened internal metrics access: production `/api/metrics/security` now requires bearer token and no longer falls back to superadmin session auth.
+- Added regression coverage for production config validation and internal metrics token enforcement.
+
+## April 2026: Platform stability — backend runtime entrypoint split
+
+- Split backend runtime composition so Express app assembly now lives in `createApp()` (`src/app/createApp.js`) without opening listeners.
+- Added a dedicated server startup runtime (`src/runtime/startServer.js`) that connects Mongo, runs bootstrap, initializes sockets, and starts HTTP listening.
+- Kept middleware order, security headers, rate limits, health endpoints, and route mounts unchanged while improving testability.
+- Added smoke coverage for import-safe app creation, health endpoint registration, unknown-route 404 behavior, and no accidental listener starts during module import.
+- Preserved existing operational startup behavior through the process entrypoint (`src/server.js`).
+
+## April 2026: Internal auth stability — unified login identifier model
+
+- Standardized auth-facing identifiers to a single user-facing format: **xID (`X123456`)**.
+- Removed login/OTP/route-schema acceptance of legacy `DK-XXXXX` style identifiers.
+- Kept legacy `xid` as an internal compatibility alias only, now synchronized to `xID` to avoid drift.
+- Updated forgot-password OTP flow to accept the same login identifier model (`xID` or email, depending on user input), eliminating cross-flow validation mismatches.
+- Added regression tests to enforce frontend/backend validation parity and identifier consistency across login + forgot-password paths.
+
+## April 2026: Route validation contract enforcement + public intake legacy cleanup
+
+- Added a phased backend route-validation contract test (`tests/routeValidationContract.test.js`) that strictly enforces schema correctness for routes already using `applyRouteValidation`, while requiring explicit allowlisting + migration reasons for legacy non-validated route files.
+- Removed legacy `/api/cms/submit` intake flow and replaced it with an explicit deprecation response (`410 ROUTE_DEPRECATED`) that points integrations to `POST /api/public/cms/:firmSlug/intake`.
+- Removed stale Joi-based CMS route schema/controller artifacts so route validation standards are consistently Zod-based.
+- Added focused public intake validation tests for valid and invalid payloads, and verified tenant resolution remains slug-derived rather than caller-controlled fields.
+
+## April 2026: Internal / platform stability — canonical tenant identity scope
+
+- Standardized runtime tenant identity across signup, login, JWT, and tenant middleware to use the workspace default client `_id` as canonical scope.
+- Preserved relational ownership boundaries by keeping `Client.firmId` linked to `Firm._id` for firm-backed tenants while runtime auth scope stays default-client based.
+- Added a central tenant identity resolver with explicit legacy fallback (`Firm._id` -> `Firm.defaultClientId`) to preserve backward compatibility for older tenants.
+- Updated self-serve signup bootstrap so new admin users are created with canonical runtime tenant scope, matching onboarding-created workspaces.
+- Added invariant tests for canonical signup scope, auth token/middleware normalization behavior, and cross-tenant rejection.
+
+## April 2026: Proactive superadmin onboarding alerts for stuck firms/users
+
+- Added derived in-app onboarding alerts (`GET /api/superadmin/onboarding-alerts`) so superadmin can proactively spot blocked firms/users without manually scanning each dashboard tile.
+- Alert types now cover core onboarding friction signals: zero active clients, missing category/workbasket setup, managers without queue assignment, users without dockets, skipped tutorial + incomplete onboarding, and stale onboarding state.
+- Added low-noise dedupe behavior with one open alert per firm + blocker type; alerts auto-clear when underlying blockers resolve.
+- Added simple operational severity model (`HIGH`, `MEDIUM`, `LOW`) plus staleness/age bucketing for triage.
+- Added alert filtering by status (`open`/`resolved`/`all`), severity, blocker type, and age bucket.
+- Added proactive alert surfaces in superadmin UI:
+  - Platform Dashboard observability card now shows top open alerts.
+  - Onboarding insights page now includes a dedicated proactive alerts section with recommended next action and deep links.
+- Added deep-link actions from alerts to firm onboarding detail and firms management while preserving onboarding context query params.
+
+## April 2026: Superadmin onboarding insights firm drill-down + deep links
+
+- Added a new firm-specific onboarding drill-down route at `/app/superadmin/onboarding-insights/:firmId` so superadmin can jump directly into one tenant's onboarding state.
+- Upgraded onboarding triage actions with `Open onboarding detail` per firm and blocker-aware deep links from blocker summary rows.
+- Added firm-focused operational paneling for setup signals (active client, category, workbasket), stale/incomplete counts, top blockers, recent events, and users needing follow-up.
+- Added recommended next-action guidance (for example: first active client, category/workbasket setup, manager queue assignment, unassigned dockets, tutorial skipped but incomplete).
+- Preserved filter context (`blockerType`, `completionState`, `staleAfterDays`, `sinceDays`) in query params for faster investigation loops.
+
+## April 2026: Task Manager queue experience unified across Workbasket, My Worklist, QC Workbasket, and All Dockets
+
+- Refactored the Task Manager execution-list pattern so queue pages now share a consistent operating model (header context, filter bar placement, table density, action affordances, and state treatment).
+- Standardized queue scanning columns around docket identity, client/category context, lifecycle status, assignee/owner, queue cues, and freshness timestamps while preserving queue-specific actions.
+- Improved queue state handling consistency (loading, background refresh, recoverable error + retry, empty state, and filtered no-results messaging).
+- Strengthened queue-to-docket navigation context by passing source list, current index, and return path from Workbasket/My Worklist/QC Workbasket into Docket Detail for more reliable Back + Previous/Next behavior.
+- Clarified queue intent in-page: Workbasket emphasizes pooled shared pull flow, My Worklist emphasizes personal execution, QC Workbasket emphasizes review decisions, and All Dockets remains the strongest oversight/search surface.
+
+## April 2026: Docket Detail refactored into a tabbed execution workspace
+
+- Reworked **Docket Detail** into a structured operational workspace with a stronger summary header (docket ID, title, status, category/subcategory, linked client, owner, queue/workbasket, timestamps).
+- Added first-class tabs for **Overview**, **Attachments**, **Activity**, and **History** with URL-driven tab state (`?tab=`) for deep linking.
+- Elevated **Attachments** as the canonical document collection area inside each docket with clear empty-state guidance and direct upload controls.
+- Improved **Activity** visibility by surfacing operational timeline events (status/assignment/QC/comment/edit flows from existing timeline/audit data) alongside working comments.
+- Improved **History** visibility with an audit-style change stream and client-linked docket history for better execution traceability.
+- Preserved role-aware execution controls while reducing page clutter and avoiding full-page reload behavior across tab switches.
+
+## April 2026: Dedicated module landing pages for CRM, CMS, and Task Manager
+
+- Added first-class module overview pages for **CRM**, **CMS**, and **Task Manager** so each module now opens as a real workspace hub instead of feeling like a grouped-link folder.
+- Parent module clicks in the sidebar now navigate to these module home screens, while chevron controls still support expand/collapse child navigation.
+- CRM landing now includes role-appropriate relationship KPIs, quick actions, recent client widgets, and direct routing tiles for Client Management and Leads.
+- CMS landing now includes intake-focused KPIs, quick actions (including copy-intake-link flow), and clear routing to Request Links/Intake Links, Forms/Templates, and Intake/Submissions.
+- Task Manager landing now clearly owns dockets/worklists/QC/category management with execution KPIs, quick actions, and role-aware configuration shortcuts.
+- Improved onboarding clarity by adding concise purpose copy on each module home, making it easier for users to understand where to start and what each module controls.
+
+## April 2026: Firm workspace async feedback unification
+
+- Standardized async-state UX across major firm workspace modules so loading, empty, no-results, error, retry, and success behavior now follows one consistent pattern.
+- Queue/list pages (`My Worklist`, `Workbaskets`, `QC Queue`, `CRM`, `CMS Intake`, `Reports`) now use recoverable table errors with in-context retry actions.
+- Added explicit first-use empty-state vs filtered no-results copy to reduce “is this broken?” confusion during search/filter workflows.
+- Added non-blocking background refresh notices so users can keep context while data refreshes.
+- Hardened queue action feedback with visible in-flight button states plus clearer success/failure messaging.
+- Improved settings reliability in `AI settings`, `Storage settings`, and `Work settings` with inline load failure recovery (`Retry loading`) and local mutation status banners.
+
+## April 2026: Sidebar Information Architecture Refactor (Workflow-Aligned)
+
+- Refactored the firm sidebar to preserve the existing compact shell while reorganizing navigation into **Overview**, **Modules**, **Workspace**, and **Administration** sections.
+- Introduced expandable module groups for **CRM**, **CMS**, and **Task Manager** with route-aware open/active behavior and keyboard-accessible toggles.
+- Moved **Client Management** under CRM and removed standalone top-level Clients navigation to align entity management under the CRM module.
+- Renamed **Tasks** navigation concept to **Task Manager** and clarified execution ownership for Workbasket, My Worklist, QC Workbasket, Dockets, and Category Management.
+- Kept CMS navigation focused on intake/request surfaces and avoided exposing any misleading standalone documents repository destination.
+- Reaffirmed product behavior that document collection remains inside **Docket → Attachments**, not as a global CMS “Documents” page.
+- Clarified Category Management as the primary configuration anchor for category/subcategory/workbasket mapping workflows under Task Manager.
+- Improved role-aware visibility so operational configuration entries only appear for authorized users.
+
+## April 2026: Role-specific onboarding tutorial upgrade
+
+- Replaced the first-login single-page tutorial with a multi-step guided flow that explains: what Docketra is, role scope, allowed actions, where to begin, and a role-based quick-start checklist.
+- Added role-specific onboarding content for **Superadmin**, **Primary Admin**, **Admin**, **Manager**, and **User**.
+- Upgraded dashboard product tour to include role-aware, practical steps with direct navigation actions to relevant pages.
+- Added manual relaunch controls in Help & Onboarding for both tour replay and welcome tutorial replay.
+- Improved first-session empty-state guidance to reduce confusion when dockets or assignments are not yet configured.
+- Added richer onboarding persistence (`tutorialState`) while retaining backward compatibility with `tutorialCompletedAt`.
+- Added implementation documentation: `docs/onboarding-role-tutorial-flow.md`.
+
+## April 2026: Legal & Compliance Pages
+
+- Added a new **Terms of Use** page with clear coverage for service scope, account responsibilities, acceptable use, data ownership, early-stage availability, liability limits, terms updates, and contact details.
+- Added a rewritten **Privacy Policy** in plain language covering data categories, usage purpose, sharing boundaries, storage approach, safeguards, user controls, cookies/tracking, and broad alignment with applicable Indian IT/data protection expectations.
+- Added a practical **Data & Security Overview** page describing Docketra's firm-owned data model, BYOS/BYOAI direction, intake-to-CRM-to-task data flow, shared responsibility on backups, and baseline security approach.
+- Added an **Acceptable Use Policy** page to state clear prohibitions on illegal activity, harmful content, and platform exploitation attempts.
+- Added legal/compliance footer links across marketing and in-app layouts to improve trust, transparency, and discoverability.
+
+## April 2026: Performance and Speed Improvements
+
+- Reduced unnecessary frontend refetching in CRM lead workflows by applying local state patching for lead creation and updates, including optimistic stage transitions with failure rollback.
+- Improved perceived speed in CRM/CMS surfaces by keeping existing data visible during background refreshes and moving to button-level refresh indicators instead of hard page-blocking loaders.
+- Tuned React Query defaults and key dashboard/list hooks with practical stale/cache windows to avoid excessive remount/navigation refetches for stable data.
+- Split category-count fetching from docket list fetching so category metadata is cached independently and not re-requested on every list filter change.
+- Added backend lead-list projection to trim list payload size, plus no-op lead update write-skipping to avoid unnecessary database writes on unchanged updates.
+- Added targeted lead query indexes for common firm-scoped owner/stage/follow-up list paths to improve hot-path query efficiency on free-tier MongoDB.
+- Improved route-level loading copy to better explain startup latency during backend wake-up on Render free-tier cold starts.
+
+## April 2026: Landing Page Visual Improvements
+
+- Replaced all placeholder “Mock UI panel” blocks on the marketing landing page with realistic product-driven visuals based on Docketra workflows.
+- Added visual walkthrough cards for Dashboard, CRM pipeline, CMS intake submissions, and Task/docket execution so new users can quickly understand how the platform works end to end.
+- Added conversion-focused captions and realistic firm-style examples (GST Filing, ROC Return, Compliance Review) to improve trust and product clarity for first-time visitors.
+- Added a lightweight “Before vs After” micro-visual to communicate the shift from scattered tooling to a connected CMS → CRM → Tasks operating flow.
+
+## April 2026: UI/UX Improvements
+
+- Dashboard usability polish: added quick actions (`+ New Lead`, `+ New Docket`, `+ Internal Task`), cleaner sectioning for Leads/Tasks/Recent Activity, and clearer empty-state guidance for faster first actions.
+- Forms now have more consistent feedback states across inputs/selects/textareas, including success visuals, stronger focus/error treatment, required field clarity, and improved inline guidance.
+- CRM lead flow now provides clearer inline validation during lead creation, stronger overdue follow-up visibility, and more actionable update errors/success messages.
+- Task creation flow now supports faster work-type switching (Client Work vs Internal Task) with fewer clicks and clearer required-field behavior.
+- Login/OTP experience improved with clearer, actionable auth error copy, stronger success feedback, OTP digit-by-digit entry with paste support, and resend timer feedback.
+- Feedback system messaging is more contextual across key actions (lead creation/update, docket creation, login, OTP verification), replacing generic status text with task-specific messages.
+
+## April 2026: API / Webhook Intake Mode for CMS
+
+- Added direct integration endpoint for CMS intake: `POST /public/cms/:firmSlug/intake` (also available under `/api/public/...`).
+- Added conservative integration auth using firm-level `intakeConfig.cms.intakeApiEnabled` + `intakeConfig.cms.intakeApiKey`, verified through `x-docketra-intake-key`.
+- Direct API intake now routes through the existing unified intake orchestration service (no business-flow fork): `Submission -> Lead -> optional Client -> optional Docket`.
+- API-origin submissions are now tagged with `submissionMode=api_intake` and default `source=api_integration` when source is not explicitly supplied.
+- Added practical idempotency support for retries using `idempotencyKey`/`externalSubmissionId` (and optional `idempotency-key` header fallback) to prevent duplicate lead creation.
+- Added stable API integration response contract with `success`, `leadId`, `clientId`, `docketId`, `warnings`, and `idempotentReplay`.
+- Added `docs/product/CMS_API_INTAKE.md` with endpoint/auth/payload/response/failure examples and downstream mapping details.
+
+## April 2026: Fix Lead Metadata Persistence + Dynamic Public/Embed Form Rendering
+
+- Lead metadata schema now explicitly includes all intake attribution fields used by CMS/public/embed intake (`utm_source`, `utm_campaign`, `utm_medium`, `referrer`, `pageUrl`, `pageSlug`, `formSlug`, `formId`, `service`, `message`, `ipAddress`, `userAgent`, `submissionMode`).
+- Public/embed submit validation now accepts dynamic configured field payloads while preserving anti-pollution sanitization and compatibility with existing intake keys.
+- Public form rendering now uses stored `form.fields` as the source of truth (with safe defaults when no explicit config exists), instead of relying on a fixed hardcoded field layout.
+- Public/embed submit payload construction is now field-driven and still appends intake attribution metadata (`pageUrl`, `referrer`, UTM params, `submissionMode`) plus honeypot signal.
+- Added conservative misconfiguration guardrails so public/embed forms require a `name` field; forms without `name` are safely rejected for public submission.
+- CMS module embed tooling now shows which configured fields are rendered publicly to reduce admin/operator confusion.
+
+## April 2026: CRM Pipeline + Lead Ownership + Follow-up System
+
+- Lead records now support a conservative CRM lifecycle with stage/status compatibility (`new`, `contacted`, `qualified`, `converted`, `lost`).
+- CRM leads now support ownership (`ownerXid`), follow-up tracking (`nextFollowUpAt`, `lastContactAt`), conversion metadata (`convertedAt`, `convertedClientId`), and optional `lostReason`.
+- Lead relationship context is now first-class with lightweight `notes[]` and `activitySummary[]` timeline entries.
+- Lead conversion flow now persists pipeline conversion state and returns conversion metadata with backward-compatible legacy CRM client linkage.
+- CRM lead APIs now support scoped filtering (stage/owner/due follow-ups) and safe partial lead updates for stage/owner/follow-up/notes.
+- CRM Leads UI now shows stage, owner, follow-up, conversion/downstream status, stage counters, and includes management controls for assignment, updates, and notes.
+- CRM lifecycle documentation added at `docs/product/CRM_PIPELINE_MODEL.md`.
+
+## April 2026: Embed Forms + Website Intake Integration for CMS
+
+- Public forms now support explicit embed rendering mode using the same route shape (`/forms/:id?embed=true`) so firms can place Docketra intake on existing websites.
+- Form records now include embed-focused settings: `allowEmbed`, `embedTitle`, `successMessage`, `redirectUrl`, `themeMode`, and optional `allowedEmbedDomains`.
+- Public form submit now captures website-oriented source metadata (`submissionMode=embedded_form`, `source=website_embed`, page URL, referrer, UTM fields, form ID/slug).
+- Embedded submissions continue through the shared CMS intake orchestration (`Lead -> optional Client -> optional Docket`) to preserve pipeline continuity.
+- CMS module now exposes an **Embed on your website** section with public link, embed link, and ready-to-copy iframe embed code.
+- Added conservative guardrails for embed intake: `isActive` + `allowEmbed` enforcement, optional domain allowlist check, and honeypot support.
+- Embed submissions support stable post-submit behavior: inline success message and optional redirect URL when configured.
+
+## April 2026: Module-Based UX Separation + Cleanup Fixes for CRM / CMS / Tasks
+
+- Navigation now elevates **CMS**, **CRM**, and **Tasks** as first-class modules in the primary shell.
+- Platform pages now include module context labels (for example: `CMS / Lead Capture`, `CRM / Relationship Management`, `Tasks / Dockets`).
+- Dashboard now includes lightweight module entry shortcuts so teams can jump directly into CMS, CRM, or Tasks.
+- Client status handling is now canonicalized to lowercase (`lead`, `active`, `inactive`) with compatibility normalization for legacy values (`ACTIVE`, `INACTIVE`).
+- CMS intake client auto-create now supports canonical creation when **email OR phone** is available, while retaining duplicate-safe lookup first.
+- Docket `isInternal` / `workType` normalization is now centralized to reduce drift and prevent contradictory values on reads/writes.
+- Work-type filtering behavior is now normalized across docket list and reports for more consistent **Client Work** vs **Internal Work** behavior.
+- Task UI copy is standardized to **Client Work** and **Internal Work**, including filters and guided creation text.
+- Saved views now persist and restore `workType` filter state to avoid filter drift when users reload named views.
+
+## April 2026: First-Class Internal Task Support
+
+- Task Manager now supports both **Client Work** and **Internal Work** as first-class docket modes.
+- Docket (`Case`) records now persist explicit work mode metadata (`isInternal`, `workType`) with backward-compatible defaults.
+- Internal dockets can now be created without a `clientId`; client-linked creation remains unchanged for external work.
+- Docket list and query APIs now accept work-mode filters (`isInternal` / `workType`) for operational views and reporting slices.
+- Create Docket UI now allows users to choose **Client Work** vs **Internal Work** and conditionally requires client selection.
+- Docket list/detail UI now surfaces work-type labels so teams can distinguish internal vs client queues quickly.
+
+## April 2026: Unified CMS Intake Submission Pipeline
+
+- CMS and public intake submissions now run through a shared orchestration service: `Submission -> Lead -> optional Client -> optional Docket`.
+- Every CMS/public submission now creates a Lead first for consistent top-of-funnel tracking.
+- Client and docket auto-creation are now config-driven via firm-level intake settings with safe defaults.
+- CMS/public controllers were slimmed down so they parse request/response only; orchestration now lives in `cmsIntake.service`.
+- Intake responses now return normalized status details (`lead`, `client`, `docket`, `submissionMode`, `metadata`) to support CRM/CMS/Task Manager consistency.
+
+## Workflow + RBAC Core Architecture Upgrade
+
+### Multi-workbasket user support
+- Users can now be assigned to multiple workbaskets using `teamIds` (workbasket access list), while retaining a primary basket in `teamId`.
+- New `GET /api/self/core-work` endpoint returns the current user's active workbaskets in the `[{ id, name, type }]` shape for multi-WB UI rendering.
+
+### QC workbasket system
+- Workbasket model now supports `type` (`PRIMARY`/`QC`) and `parentWorkbasketId` to represent explicit QC lanes.
+- Creating a primary workbasket now auto-creates a paired QC workbasket (`<name> - QC`).
+- Docket workflow transition to QC now attempts to route into the mapped QC workbasket for the current primary basket.
+
+### Manager-based assignment control
+- Workbasket management and user-to-workbasket assignment routes are now gated to `MANAGER` and `PRIMARY_ADMIN`.
+- Introduced firm permission `WORKBASKET_MANAGE` and granted it to manager + primary admin roles only.
+- Admins keep category/client management capability but are blocked from workbasket assignment operations.
+
+### Strict routing + validation improvements
+- Subcategories now require `workbasketId` mapping at data-model and request-validation levels.
+- Subcategory create/update now validates that referenced workbasket is an active primary workbasket in the same firm.
+- Case creation now routes to the subcategory-mapped workbasket and falls back to default active primary workbasket only when no subcategory mapping is involved.
+
+### Client-level access readiness
+- User model now includes `clientAccess` array support for explicit client-level allow-listing and response mapping.
+
+### Operational guardrails
+- Workbasket listing now returns a warning when no users are assigned:
+  - `"No users assigned to this workbasket"`
+
+## April 2026: Platform UI/UX Productivity Refresh
+
+- Upgraded firm platform shell with improved sidebar grouping, sticky topbar clarity, and consistent primary actions.
+- Added reusable platform UI primitives for page sections, filters, notices, metric grids, and resilient tables.
+- Improved daily execution surfaces (My Worklist, Workbaskets, QC Queue) with filter/search, refresh controls, and better loading/empty/error states.
+- Refined Dashboard, Reports, CRM, CMS Intake, and Settings pages for stronger information hierarchy and faster scanning.
+- Standardized visible workflow terminology around **Docket** for better enterprise consistency and trust.
+
+### April 2026: Platform UX refinement pass
+
+- Topbar actions are now page-owned (no hardcoded shell actions), improving context clarity.
+- Platform tables now include lightweight pagination with Previous/Next controls.
+- Filter bars now include a consistent "Clear filters" action.
+- Action layouts are standardized: primary entry first, secondary actions grouped, destructive actions visually distinct.
+- Inline success notices were added to key queue actions (Worklist, Workbaskets, QC) for faster operator feedback.
+- Accessibility improved with focus-visible styling and better disabled-state handling for controls.
+
+## April 2026: Marketing Landing Page Redesign for Clarity + Trial Conversion
+
+- Rebuilt the public homepage information architecture to clearly explain: what Docketra is, who it is for, how it works, feature modules, outcomes, and why teams should try it now.
+- Repositioned homepage messaging around the connected operating model: `CMS -> CRM -> Tasks`.
+- Added cleaner conversion structure: Hero CTAs, problem section, simple operating flow, grouped feature cards, outcomes, onboarding steps, FAQ, and final conversion CTA.
+- Updated public pricing narrative to match current product status: **Early Access is free**, **no billing/subscriptions live yet**, and transparent testing-phase messaging.
+- Updated public-facing contact touchpoints to use `sarveshgupte@gmail.com`.
+- Removed outdated/incorrect company references from public marketing/legal pages where landing visitors are likely to evaluate trust.
+- Added new positioning documentation at `docs/product/LANDING_PAGE_POSITIONING.md` for future copy/design consistency.
+
+## April 2026: CRM Pipeline View
+
+- Added a new **Pipeline View** toggle in CRM Leads so teams can switch between the existing List View and a new visual Kanban-lite layout.
+- Leads are now grouped by stage (`New`, `Contacted`, `Qualified`, `Converted`, `Lost`) in horizontally scrollable columns with per-stage counts for fast pipeline scanning.
+- Each pipeline card highlights lead owner, follow-up date, and a clear overdue indicator when follow-up is missed.
+- Added lightweight stage movement controls directly on pipeline cards using the existing lead update APIs (no drag-and-drop complexity introduced).
+- Clicking a pipeline card opens the existing lead management detail modal for deeper updates and activity visibility.
+- Added a top-level `+ New Lead` action consistent across CRM views to speed up pipeline intake.
+
+## April 2026: Data-driven onboarding setup progress
+
+- Upgraded dashboard onboarding checklist to use real backend signals instead of mostly manual/local progress toggles.
+- Added `GET /api/dashboard/onboarding-progress` to return role-aware setup step status with `detected` vs `manual` completion source.
+- Added conservative detection across Primary Admin/Admin/Manager/User for setup readiness (clients, categories/workbaskets, queue visibility, assigned dockets, workflow interaction).
+- Checklist now shows clearer completion reasons and waiting states to improve trust.
+- Incomplete checklist steps now route users directly to role-appropriate setup pages.
+- Dashboard empty state for no dockets now references real setup blockers (for example, missing active client or missing category/workbasket setup).
+
+- Made onboarding-progress dashboard fetch non-blocking so checklist API issues do not degrade core dashboard load.
+- Separated checklist CTA navigation from completion state for detected steps to preserve backend-driven truth.
+
+## April 2026: Onboarding analytics + blocker observability
+
+- Added lightweight first-party onboarding telemetry for welcome tutorial, product tour, checklist actions, and progress transitions.
+- Added transition-aware anti-spam tracking so onboarding refresh events are only persisted when progress state actually changes.
+- Added a dedicated superadmin onboarding insights API (`GET /api/superadmin/onboarding-insights`) with role-aware friction summaries.
+- Added Platform Dashboard onboarding observability cards for key blockers: firms without active clients, missing category/workbasket setup, managers without queues, and users without assigned dockets.
+- Added derived alert metric for users who skipped tutorial but remain onboarding-incomplete after a threshold.
+- Hardened observability paths so telemetry/insight failures are non-blocking and cannot break tutorial completion, onboarding progress responses, or platform stats rendering.
+
+## April 2026: Command center productivity polish (search + keyboard + quick actions)
+
+- Added a stronger workspace command center in `PlatformShell` with clearer global scope language for dockets, clients, module destinations, and quick commands.
+- Upgraded command palette behavior with grouped results, keyboard navigation (`↑/↓`, `Enter`, `Escape`), and no-results guidance.
+- Added role-aware quick commands for core operations: New Docket, Dashboard, Task Manager, CRM, CMS, Workbasket, My Worklist, QC Queue, Clients, Reports, Settings, Open Profile, and Sign out.
+- Introduced a practical keyboard-first shortcut model:
+  - `Cmd/Ctrl + K` open command center
+  - `/` quick focus/open (outside typing contexts)
+  - `Alt + Shift + N/D/T/W/B/Q` for high-frequency jumps
+- Added strict “do-not-trigger-while-typing” shortcut guards across workspace keyboard handlers.
+- Standardized quick-action wording across landing pages to reduce mental translation cost (`New`, `Go to`, and consistent queue naming conventions).
+- Kept logout reachable in both account menu and command flow (`Sign out` command).
+
+## April 2026: Command center reliability hardening follow-up
+
+- Consolidated global keyboard shortcut ownership into `PlatformShell` to avoid split-listener conflicts.
+- Added shared editable-target detection so `Cmd/Ctrl + K`, `/`, and `Alt + Shift + ...` do not fire while typing in inputs/textareas/selects/contenteditable controls.
+- Hardened command-center async search with stale-response guards and open-state/query checks to prevent out-of-order result overwrites.
+- Ensured command center state resets cleanly on close and route change (query, active selection, search status, and record result groups).
+- Added explicit record-search fallback guidance while keeping module/quick commands operational even if record lookup fails.
+- Added command-center test script wiring in `ui/package.json` (`test:command-center`).
+
+## April 2026: CRM workspace unification and tenant-error messaging fix
+
+- Unified CRM Overview, Client Management, Client Detail, and Leads under one platform page contract (`PlatformShell` + shared `PlatformShared` sections/tables/notices/stats).
+- Refactored CRM Clients away from mixed legacy composition (`Card`, old table wrappers, `neo-*` styles, and inline style-heavy framing) into the shared workspace language.
+- Aligned CRM terminology and quick-action labels across routes (`CRM`, `Client Management`, `Leads`, `New Client`, `Import Clients (CSV)`, `Go to Leads Queue`).
+- Fixed misleading CRM error path by adding CRM-scoped message normalization so valid firm-scoped CRM routes no longer surface false "Firm not found" copy during CRM fetch failures.
+- Added focused regression coverage (`ui/tests/crmWorkspaceUnification.test.mjs`) for CRM route consistency, naming, and error-message correctness safeguards.
+
+## April 2026: Pilot-readiness recovery UX + tenant-safe troubleshooting guardrails
+
+- Added a centralized frontend recovery copy map for auth expiry, access-denied, storage setup, upload failures, tenant-scope guardrails, and inactive client/user scenarios.
+- Added a shared tenant-safe support context UI (request ID, reason code, module, timestamp, status) for safer support handoff.
+- Added shared access-denied recovery state (safe explanation + go back/dashboard actions) on key queue/report surfaces.
+- Hardened session-expiry redirect handling with explicit session-expired reason code and superadmin-safe redirect behavior.
+- Updated Storage Settings and Docket attachment upload error flows with role-aware, retry-safe recovery guidance.
+- Updated diagnostics panel display to focus on tenant-safe troubleshooting fields only.
+
+## May 2026: Work section queue navigation, QC Workbasket visibility, and All Dockets record view
+
+- Clarified Work section navigation labels to distinguish **My Worklist**, **Workbaskets**, **QC Workbaskets**, and **All Dockets**.
+- Kept QC visibility permission-scoped for admin/primary admin, QC-enabled users returned in session scope (including explicit QC members and linked manager access).
+- Reinforced All Dockets as a **record/list/search** surface rather than a pull queue, while queue-specific pull actions remain in Workbaskets.
+- Standardized successful empty queue states to show user-friendly **No work available** / **No dockets found** messaging.
+- This change does **not** include Docket Detail UX polish; that remains in a follow-up PR.
+
+## May 2026: Docket Detail UI/UX hardening
+
+- Added clearer docket context badges for My Worklist, Assigned Worklist, Workbasket, QC Workbasket, Routed, Returned from route, and terminal record states.
+- Hardened action visibility so routed, QC, unassigned workbasket, and terminal dockets do not show confusing lifecycle actions.
+- Improved clone, CFS, and overview helper copy while keeping backend lifecycle rules unchanged.
+- Added deterministic, firm-scoped docket category/subcategory suggestions in guided docket creation (assistive only, explicit apply required).
+
+- Docketra-managed storage default now supports Google Drive service-account fallback when BYOS is not connected.
+
+## May 2026: Firm role hierarchy standardization
+
+- Standardized firm role hierarchy so Primary Admin inherits Admin/Manager access, Admin inherits Manager access, and client-management permissions are enforced consistently.
+
+- Extended authenticated workspace idle timeout to 3 hours and hardened session-expiry handling so normal work breaks do not force unnecessary re-login.
+
+- Fixed Primary Admin inheritance for client creation and standardized client-management access messaging.
+
+- Added Google Drive storage capacity visibility in Storage Settings for BYOS-connected firms, with safe fallback messaging for Docketra-managed storage and unavailable quotas.
+
+## May 2026: Strict control-plane data residency policy
+
+- Added strict data-residency audit/policy defining Docketra as a control plane and firm cloud storage as canonical storage for business data.
+
+- 2026-05-14: Client create/update moved to cloud-first profile storage (`firms/{firmId}/clients/{clientId}/profile.json`) and blocked prohibited business/profile fields from Mongo persistence.
+
+## 2026-05-14 — Data Storage Map / Trust Transparency
+- Added **Data Storage Map** in Storage Settings for Admin/Primary Admin with clear boundaries between business data storage paths and MongoDB control-plane metadata categories.
+- Added sanitized `GET /api/storage/data-map` endpoint with verification actions and no token/folder-id/private-key exposure.
+
+- Fixed Storage Settings actions: **Open storage folder** now resolves a safe Google Drive folder URL via `/api/storage/folder-link` and gracefully disables with "Folder link unavailable." when unresolved. **Generate storage export** now shows loading/success/error feedback and helper text clarifying metadata-only export contents (no secrets).
+
+## May 2026: Create Workspace signup hardening
+
+- Blocked reserved `api` firm slug namespace and hardened signup slug fallback for reserved slug candidates.
+- Added authenticated `/signup` redirect safety to route existing sessions to the canonical workspace dashboard or workspace finder.
+
+## 2026-05 Auth UX hardening
+- Refined public auth flows (signup/login/forgot/OTP/reset) with unified layout, safer error copy, and improved responsive OTP/form behavior.
+
+
+## 2026-05-15 — Client Management hardening
+- Hardened Admin-only Client Management denial copy and permission UX consistency.
+- Tightened client mutation schemas to reject unknown payload keys on critical endpoints.
+- Replaced legacy `name` validation usage with canonical client business/contact fields.
+- Sanitized backend client/CFS error payloads to reduce sensitive internal error leakage.
+
+
+## 2026-05-15 — Team Management settings hardening
+- Hardened Team Management role and mutation boundaries for private pilot readiness.
+- Standardized denial copy for non-admin team-management attempts.
+- Tightened admin route schemas for create user, activate/deactivate, and workbasket assignment mutations.
+- Updated Team Management empty state copy to "No team members added yet".
+- Added targeted regression coverage for role-dropdown and strict schema constraints.
+
+- Hardened Team Management client-access assignment: Admin/Primary Admin can now set `All clients` or `Selected clients only` directly in the user access modal, with strict backend validation and Primary Admin restriction protection.
+
+## 2026-05-15 — Work Management settings hardening (slice 1: contract hardening only)
+- Removed category/subcategory hard-delete route exposure from admin Work Management contract.
+- Tightened Work Management mutation schemas to strict payloads for category/subcategory/workbasket endpoints.
+- Sanitized category controller mutation error responses to avoid raw backend error leakage.
+- Added regression test coverage for no-delete schema contract and strict payload rejection.
+
