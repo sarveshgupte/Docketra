@@ -946,7 +946,13 @@ clientSchema.pre('save', async function () {
 });
 
 clientSchema.pre('validate', function () {
-  if (this.isModified('businessName') && _hasMeaningfulSensitiveValue(this.businessName) && !_isControlPlaneNameWriteAllowed(this)) {
+  const isLegacyNameUpdate = !this.isNew && this.isModified('businessName');
+  if (
+    this.isModified('businessName')
+    && _hasMeaningfulSensitiveValue(this.businessName)
+    && !_isControlPlaneNameWriteAllowed(this)
+    && !isLegacyNameUpdate
+  ) {
     throw _sensitivePersistenceError('businessName');
   }
 
