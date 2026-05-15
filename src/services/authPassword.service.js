@@ -190,9 +190,7 @@ const createAuthPasswordService = (deps) => {
       return res.status(400).json({ success: false, message: 'email or xID is required' });
     }
     const context = await resolveForgotPasswordContext({ req, identifier });
-    if (context.invalidFirm) {
-      return res.status(404).json({ success: false, message: 'Invalid workspace URL' });
-    }
+    if (context.invalidFirm) return res.json({ success: true, message: 'If the account exists, an OTP has been sent to email.' });
     const firm = context.firm;
     const now = Date.now();
 
@@ -261,7 +259,7 @@ const createAuthPasswordService = (deps) => {
     }
     const context = await resolveForgotPasswordContext({ req, identifier });
     if (context.invalidFirm) {
-      return res.status(404).json({ success: false, message: 'Invalid workspace URL' });
+      return res.status(401).json({ success: false, message: 'Invalid or expired OTP' });
     }
     const firm = context.firm;
     const user = context.user;
@@ -346,7 +344,7 @@ const createAuthPasswordService = (deps) => {
 
     const context = await resolveForgotPasswordContext({ req, identifier });
     if (context.invalidFirm) {
-      return res.status(404).json({ success: false, message: 'Invalid workspace URL' });
+      return res.status(401).json({ success: false, message: 'Invalid or expired reset session' });
     }
     const firm = context.firm;
     const user = context.user;
