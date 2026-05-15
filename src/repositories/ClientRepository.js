@@ -357,12 +357,14 @@ const ClientRepository = {
    * @param {string} role - Caller's role (required); superadmin triggers ForbiddenError
    * @returns {Promise<Object>} Created client document (decrypted)
    */
-  async create(clientData, role) {
+  async create(clientData, role, options = {}) {
     if (!clientData.firmId) {
       throw new Error('firmId is required to create a client');
     }
     _guardSuperadmin(role);
-    this._assertNoSensitivePersistence(clientData || {});
+    if (!options.allowSensitivePersistence) {
+      this._assertNoSensitivePersistence(clientData || {});
+    }
     const ownershipFirmId = await resolveOwnershipFirmId(clientData.firmId);
     clientData.firmId = ownershipFirmId;
     // Ensure the per-tenant DEK exists before the model pre-save hook needs it.
