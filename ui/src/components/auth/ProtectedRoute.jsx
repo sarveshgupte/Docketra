@@ -122,11 +122,9 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
   }
 
   if (requireAssignedQcWorkbasket) {
-    const role = String(user?.role || '').toUpperCase();
-    const hasRoleAccess = role === 'ADMIN' || role === 'PRIMARY_ADMIN' || role === 'MANAGER';
     const assignedIds = new Set((Array.isArray(user?.qcWorkbaskets) ? user.qcWorkbaskets : []).map((item) => String(item?._id || item?.id || item?.workbasketId || '').trim()).filter(Boolean));
     const targetId = String(workbasketId || '').trim();
-    if (!targetId || (!hasRoleAccess && !assignedIds.has(targetId))) {
+    if (!targetId || !assignedIds.has(targetId)) {
       setAccessToast('You are not assigned to that QC workbasket.');
       return <Navigate to={ROUTES.WORKLIST(effectiveFirmSlug)} replace />;
     }
