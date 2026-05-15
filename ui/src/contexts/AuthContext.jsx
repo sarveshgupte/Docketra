@@ -378,7 +378,7 @@ export const AuthProvider = ({ children }) => {
     if (!candidateUser) return '/superadmin';
     if (isSuperAdmin(candidateUser)) return '/app/superadmin';
     if (!candidateUser?.firmSlug) return '/complete-profile';
-    return `/app/firm/${candidateUser.firmSlug}/dashboard`;
+    return `/app/firm/${candidateUser.firmSlug}/worklist`;
   }, [user]);
 
   const isAuthResolved = !loading && !isHydrating;

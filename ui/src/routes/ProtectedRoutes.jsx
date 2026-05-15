@@ -189,11 +189,9 @@ export const ProtectedRoutes = () => (
         <Route
           path="dashboard"
           element={(
-            <RouteErrorBoundary title="Unable to load dashboard" message="Please retry or return to your previous page.">
-              <ProtectedRoute>
-                <PlatformDashboardPage />
-              </ProtectedRoute>
-            </RouteErrorBoundary>
+            <ProtectedRoute>
+              <Navigate to="../worklist" replace />
+            </ProtectedRoute>
           )}
         />
         <Route
