@@ -2,9 +2,12 @@
 const assert = require('assert');
 const supertest = require('supertest');
 
+const DEFAULT_SMOKE_PORT = '3001';
+
 const TEST_ENV_OVERRIDES = {
   NODE_ENV: 'production',
-  PORT: '3001',
+  // Keep this > 0: production env validation rejects PORT=0 before startup is exercised.
+  PORT: DEFAULT_SMOKE_PORT,
   UPLOAD_SCAN_STRICT: 'true',
   JWT_SECRET: 'ci_fake_jwt_secret_value_for_smoke_test_only_abcdefghijklmnopqrstuvwxyz_1234',
   STORAGE_TOKEN_SECRET: 'ci_fake_storage_token_secret_for_smoke_test_only_abcdefghijklmnopqrstuvwxyz_12',
