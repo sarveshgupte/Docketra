@@ -77,6 +77,7 @@ async function run() {
     signupResend: ok,
     sendOtpEndpoint: ok,
     verifyOtpEndpoint: ok,
+    findWorkspaceByXid: ok,
     forgotPasswordInit: ok,
     forgotPasswordVerify: ok,
     forgotPasswordResetWithOtp: ok,
