@@ -336,7 +336,12 @@ export const AdminPage = () => {
     setCreatingUser(true);
 
     try {
-      const response = await adminApi.createUser(newUser);
+      const normalizedRole = String(newUser.role || '').trim().toUpperCase();
+      const createUserPayload = {
+        ...newUser,
+        role: ['EMPLOYEE', 'USER', 'STAFF'].includes(normalizedRole) ? 'USER' : normalizedRole,
+      };
+      const response = await adminApi.createUser(createUserPayload);
       
       if (response.success) {
         showToast(`User invited successfully! xID: ${response.data?.xID}.`, 'success');
