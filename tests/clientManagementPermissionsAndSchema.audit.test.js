@@ -89,12 +89,37 @@ const createRes = () => ({
   });
   assert.equal(createFull.contactPersonName, 'Jane Doe');
 
+  // Status route must match controller contract (isActive boolean) and be strict
+  const statusSchema = clientRouteSchema['PATCH /:clientId/status'].body;
+  assert.deepStrictEqual(statusSchema.parse({ isActive: true }), { isActive: true });
+  assert.throws(() => statusSchema.parse({ status: 'ACTIVE' }), /isActive/i, 'Status schema must require isActive');
+  assert.throws(() => statusSchema.parse({ isActive: true, extra: 'x' }), /unrecognized/i, 'Status schema must reject unknown keys');
+
+  // Change-name route must match controller contract and be strict
+  const changeNameSchema = clientRouteSchema['POST /:clientId/change-name'].body;
+  assert.deepStrictEqual(
+    changeNameSchema.parse({ newBusinessName: 'Acme Legal LLP', reason: 'Registered legal entity rename' }),
+    { newBusinessName: 'Acme Legal LLP', reason: 'Registered legal entity rename' }
+  );
+  assert.throws(() => changeNameSchema.parse({ legalName: 'Acme Legal LLP' }), /newBusinessName|reason/i);
+  assert.throws(() => changeNameSchema.parse({ newBusinessName: 'Acme', reason: 'Audit', extra: true }), /unrecognized/i, 'Change-name schema must reject unknown keys');
+
   // Guard against regressions that reintroduce legacy body.name checks in client create path
   const clientControllerSource = require('fs').readFileSync(require('path').join(__dirname, '..', 'src', 'controllers', 'client.controller.js'), 'utf8');
   assert.equal(
     clientControllerSource.includes('req.body.name'),
     false,
     'Client create/update paths must not require or depend on legacy body.name'
+  );
+  assert.equal(
+    clientControllerSource.includes('const { isActive } = req.body;'),
+    true,
+    'Controller status mutation should continue reading isActive boolean'
+  );
+  assert.equal(
+    clientControllerSource.includes('const { newBusinessName, reason } = req.body;'),
+    true,
+    'Change-name controller should continue using newBusinessName/reason contract'
   );
 
   console.log('clientManagementPermissionsAndSchema.audit.test.js passed');

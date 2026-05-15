@@ -8,9 +8,11 @@ Admin-only Client Management (`/clients`) across route validation, permission-de
 |---|---|---|
 | PRIMARY_ADMIN | ✅ | ✅ |
 | ADMIN | ✅ | ✅ |
-| MANAGER | ✅ (client view permission only where granted) | ❌ |
-| USER/EMPLOYEE | ✅ (client view permission only where granted) | ❌ |
+| MANAGER | ❌ (Client Management surface) | ❌ |
+| USER/EMPLOYEE | ❌ (Client Management surface) | ❌ |
 | SUPER_ADMIN | ❌ firm-scoped client routes | ❌ |
+
+Note: any narrow client visibility used in docket-linked workflows is separate from the Client Management settings surface and does not grant `/clients` page access.
 
 Denial copy hardened to: **"Client management requires Admin access."**
 
