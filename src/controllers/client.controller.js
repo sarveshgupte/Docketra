@@ -120,7 +120,7 @@ const buildClientLogContext = (req, extra = {}) => ({
 const logClientError = (event, req, error, extra = {}) => {
   log.error(event, buildClientLogContext(req, {
     ...extra,
-    error: error.message,
+    error: "Internal server error",
     ...(error.stack ? { stack: error.stack } : {}),
   }));
 };
@@ -527,7 +527,7 @@ const createClient = async (req, res) => {
     
     res.status(400).json({
       success: false,
-      message: error.message || 'Error creating client',
+      message: 'Error creating client',
       ...(error.errors && { validationErrors: error.errors }),
     });
   }
@@ -611,7 +611,7 @@ const updateClient = async (req, res) => {
     res.status(400).json({
       success: false,
       message: 'Error updating client',
-      error: error.message,
+      error: "Internal server error",
     });
   }
 };
@@ -686,7 +686,7 @@ const toggleClientStatus = async (req, res) => {
     res.status(400).json({
       success: false,
       message: 'Error updating client status',
-      error: error.message,
+      error: "Internal server error",
     });
   }
 };
@@ -788,7 +788,7 @@ const changeLegalName = async (req, res) => {
     res.status(400).json({
       success: false,
       message: 'Error changing client legal name',
-      error: error.message,
+      error: "Internal server error",
     });
   }
 };
@@ -927,7 +927,7 @@ const updateClientFactSheet = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating client fact sheet',
-      error: error.message,
+      error: "Internal server error",
     });
   }
 };
@@ -1021,7 +1021,7 @@ const createClientCFSUploadIntent = async (req, res, next) => {
     return res.status(status).json({
       success: false,
       code: error.code || 'CLIENT_UPLOAD_INTENT_FAILED',
-      message: error.message || 'Unable to create client fact sheet upload intent',
+      message: 'Unable to create client fact sheet upload intent',
     });
   }
 };
@@ -1082,7 +1082,7 @@ const deleteFactSheetFile = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting file',
-      error: error.message,
+      error: "Internal server error",
     });
   }
 };
@@ -1173,7 +1173,7 @@ const finalizeClientCFSUpload = async (req, res) => {
       success: false,
       code: error.code || 'CLIENT_CFS_UPLOAD_FINALIZE_FAILED',
       message: 'Error finalizing client CFS upload',
-      error: error.message,
+      error: "Internal server error",
     });
   }
 };
@@ -1227,7 +1227,7 @@ const listClientCFSFiles = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error listing client CFS files',
-      error: error.message,
+      error: "Internal server error",
     });
   }
 };
@@ -1284,7 +1284,7 @@ const deleteClientCFSFile = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting file from client CFS',
-      error: error.message,
+      error: "Internal server error",
     });
   }
 };
@@ -1358,7 +1358,7 @@ const downloadClientCFSFile = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error downloading file from client CFS',
-      error: error.message,
+      error: "Internal server error",
     });
   }
 };
@@ -1375,7 +1375,7 @@ const listClientCfsComments = async (req, res) => {
     const comments = profile?.profile?.factSheet?.comments || [];
     return res.json({ success: true, data: comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Error fetching CFS comments', error: error.message });
+    return res.status(500).json({ success: false, message: 'Error fetching CFS comments', error: "Internal server error" });
   }
 };
 
@@ -1429,7 +1429,7 @@ const addClientCfsComment = async (req, res) => {
 
     return res.status(201).json({ success: true, data: entry, message: 'Comment added' });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Error adding CFS comment', error: error.message });
+    return res.status(500).json({ success: false, message: 'Error adding CFS comment', error: "Internal server error" });
   }
 };
 
@@ -1441,7 +1441,7 @@ const listClientActivity = async (req, res) => {
     const data = await ClientAudit.find({ clientId, firmId: userFirmId }).sort({ timestamp: -1 }).limit(100).lean();
     return res.json({ success: true, data: data.map((item) => ({ id: item._id, actionType: item.actionType, description: item.description, timestamp: item.timestamp })) });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Error fetching client activity', error: error.message });
+    return res.status(500).json({ success: false, message: 'Error fetching client activity', error: "Internal server error" });
   }
 };
 
