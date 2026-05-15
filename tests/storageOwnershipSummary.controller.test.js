@@ -7,6 +7,7 @@ const Module = require('module');
 let isAdmin = true;
 let capturedFirmId = null;
 let backupLookupFirmId = null;
+let mockedStorageState = { mode: 'docketra_managed', provider: 'docketra_managed' };
 
 function createRes() {
   return {
@@ -28,7 +29,7 @@ Module._load = function mockLoad(request, parent, isMain) {
         return {
           select: () => ({
             lean: async () => ({
-              storage: { mode: 'docketra_managed', provider: 'docketra_managed' },
+              storage: mockedStorageState,
               storageConfig: null,
               settings: { storageBackup: { enabled: true, retentionDays: 30 } },
             }),
@@ -87,6 +88,7 @@ async function testAdminPermission() {
 
 async function testTenantIsolation() {
   isAdmin = true;
+  mockedStorageState = { mode: 'docketra_managed', provider: 'docketra_managed' };
   capturedFirmId = null;
   backupLookupFirmId = null;
   const req = { firmId: 'firm-tenant-a', ownershipFirmId: 'firm-tenant-a', user: { role: 'Primary Admin' } };
@@ -106,6 +108,11 @@ async function testTenantIsolation() {
     JSON.stringify(res.body?.dataStorageMap?.googleDriveFolderPaths || []).toLowerCase().includes('planned'),
     'docket/task/comment cloud paths should be marked planned until migration is complete',
   );
+  assert.strictEqual(
+    res.body?.dataStorageMap?.businessDataCanonicalLocation,
+    'Docketra-managed encrypted cloud storage (fallback mode currently active)',
+    'managed mode should report docketra-managed canonical location',
+  );
   const serialized = JSON.stringify(res.body);
   assert.ok(!serialized.includes('refreshToken'), 'response must not include refreshToken');
   assert.ok(!serialized.includes('rootFolderId'), 'response must not include rootFolderId');
@@ -114,11 +121,27 @@ async function testTenantIsolation() {
   console.log('  ✓ storage ownership summary scopes reads to req.firmId');
 }
 
+async function testCanonicalLocationForByosProvider() {
+  isAdmin = true;
+  mockedStorageState = { mode: 'google_drive', provider: 'google_drive' };
+  const req = { firmId: 'firm-tenant-b', ownershipFirmId: 'firm-tenant-b', user: { role: 'Primary Admin' } };
+  const res = createRes();
+  await controller.getStorageOwnershipSummary(req, res);
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(
+    res.body?.dataStorageMap?.businessDataCanonicalLocation,
+    'Firm-owned cloud storage (active provider)',
+    'BYOS mode should report firm-owned cloud storage canonical location',
+  );
+  console.log('  ✓ storage ownership summary canonical location reflects active storage mode');
+}
+
 async function run() {
   console.log('Running storage ownership summary controller tests...');
   try {
     await testAdminPermission();
     await testTenantIsolation();
+    await testCanonicalLocationForByosProvider();
     console.log('All storage ownership summary controller tests passed.');
   } catch (error) {
     console.error('storage ownership summary controller tests failed:', error);
