@@ -8,25 +8,17 @@ const read = (p) => fs.readFileSync(path.resolve(__dirname, '..', p), 'utf8');
 
 const homePage = read('src/components/landing/LandingPageContent.jsx');
 
-assert.ok(
-  homePage.includes('Client-based task and docket management for Indian firms'),
-  'Landing hero must reflect MVP positioning.'
-);
-assert.ok(homePage.includes('Clients'), 'Landing page should mention Clients.');
-assert.ok(homePage.includes('Dockets'), 'Landing page should mention Dockets.');
-assert.ok(homePage.includes('tasks') || homePage.includes('Work'), 'Landing page should mention Tasks or Work.');
-assert.ok(homePage.includes('Workbaskets') || homePage.toLowerCase().includes('routing'), 'Landing page should mention Workbaskets or routing.');
+assert.ok(homePage.includes('The Company Brain for Indian professional firms.'), 'Hero must include Company Brain positioning.');
+assert.ok(homePage.includes('CS, CA, law, and compliance teams'), 'Landing page must mention target audience segments.');
+assert.ok(homePage.includes('Built for Indian professional firms'), 'Landing page must call out Indian professional firms.');
+assert.ok(homePage.includes('to="/signup"') && homePage.includes('Create workspace'), 'Primary CTA must keep signup/create workspace route.');
+assert.ok(homePage.includes('to="/find-workspace"') && homePage.includes('Find workspace'), 'Secondary CTA must keep find-workspace route.');
 
-for (const blocked of ['Company Brain', 'Knowledge Library', 'Knowledge Intake', 'CMS', 'relationship graph', 'HubSpot']) {
-  assert.equal(homePage.includes(blocked), false, `Landing page must not include blocked marketing term: ${blocked}`);
+for (const blocked of ['SOC2', 'ISO 27001', 'DPDP certified']) {
+  assert.equal(homePage.toUpperCase().includes(blocked.toUpperCase()), false, `Landing page must not claim unsupported compliance certification: ${blocked}`);
 }
 
-
-for (const blockedPhrase of ['Firm Memory', 'Relationship continuity', 'firm never starts from zero', 'preserve firm memory', 'relationship intelligence']) {
-  assert.equal(homePage.toLowerCase().includes(blockedPhrase.toLowerCase()), false, `Landing page must not include legacy positioning phrase: ${blockedPhrase}`);
-}
-
-assert.equal(/import.*vector|import.*embedding|import.*openai|import.*anthropic/i.test(homePage), false, 'Landing page must not import AI/vector/embedding libraries');
-assert.ok(homePage.includes('to="/find-workspace"') && homePage.includes('to="/signup"'), 'Landing nav must preserve Login and Signup CTAs.');
+assert.equal(homePage.includes('Client-based task and docket management for Indian firms'), false, 'Landing page should not keep legacy generic task-manager style hero positioning.');
+assert.ok(homePage.includes('Worklist') && homePage.includes('Workbaskets') && homePage.includes('QC Workbaskets'), 'Landing page should keep Work Execution wedge grounded in current product reality.');
 
 console.log('companyBrainLandingPage.test.mjs passed');
