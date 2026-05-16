@@ -779,3 +779,10 @@
 - Sanitized category controller mutation error responses to avoid raw backend error leakage.
 - Added regression test coverage for no-delete schema contract and strict payload rejection.
 
+
+## May 2026: BYOS OAuth/state and credential sanitization hardening
+
+- Google Drive OAuth callback now enforces expiring signed state, clears state cookies on every terminal callback path, and uses a minimal success redirect (`provider=google-drive&connected=1`).
+- Removed storage status/root-folder exposure from `/api/storage/status` responses and kept callback redirects free of provider internals (`rootFolderId`, `driveId`, tokens).
+- Stopped persisting Google OAuth access tokens in firm storage credentials; refresh-token based re-auth remains the persisted path.
+- Added route test hardening stubs to keep `/api/storage/*` callback/connect contract coverage stable.

@@ -15,12 +15,14 @@ const rbacPath = require.resolve('../src/middleware/rbac.middleware');
 const oauthLimiterPath = require.resolve('../src/services/storage/middleware/oauthLimiter');
 const requestValidationPath = require.resolve('../src/middleware/requestValidation.middleware');
 const schemaPath = require.resolve('../src/schemas/storage.routes.schema');
+const requireStorageConnectedPath = require.resolve('../src/middleware/requireStorageConnected');
 
 const originalStorageController = require.cache[storageControllerPath];
 const originalRbac = require.cache[rbacPath];
 const originalOAuthLimiter = require.cache[oauthLimiterPath];
 const originalRequestValidation = require.cache[requestValidationPath];
 const originalSchema = require.cache[schemaPath];
+const originalRequireStorageConnected = require.cache[requireStorageConnectedPath];
 
 function stub(modulePath, exportsValue) {
   delete require.cache[modulePath];
@@ -44,6 +46,7 @@ function stub(modulePath, exportsValue) {
       googleConfirmDrive: (_req, res) => res.status(200).json({ ok: true }),
       getStorageConfiguration: (_req, res) => res.status(200).json({ ok: true }),
       getStorageOwnershipSummary: (_req, res) => res.status(200).json({ ok: true }),
+      getStorageFolderLink: (_req, res) => res.status(200).json({ ok: true }),
       testStorageConnection: (_req, res) => res.status(200).json({ ok: true }),
       exportFirmStorage: (_req, res) => res.status(200).json({ ok: true }),
       downloadFirmStorageExport: (_req, res) => res.status(200).json({ ok: true }),
@@ -51,6 +54,7 @@ function stub(modulePath, exportsValue) {
       disconnectStorage: (_req, res) => res.status(200).json({ ok: true }),
       storageHealthCheck: (_req, res) => res.status(200).json({ ok: true }),
       storageUsage: (_req, res) => res.status(200).json({ ok: true }),
+      getStorageDataMap: (_req, res) => res.status(200).json({ ok: true }),
     });
 
     stub(rbacPath, {
@@ -64,6 +68,7 @@ function stub(modulePath, exportsValue) {
     stub(oauthLimiterPath, { oauthLimiter: (_req, _res, next) => next() });
     stub(requestValidationPath, { applyRouteValidation: (router) => router });
     stub(schemaPath, {});
+    stub(requireStorageConnectedPath, { requireStorageConnected: (_req, _res, next) => next() });
 
     const router = require('../src/routes/storage.routes');
     const app = express();
@@ -95,6 +100,7 @@ function stub(modulePath, exportsValue) {
     restore(oauthLimiterPath, originalOAuthLimiter);
     restore(requestValidationPath, originalRequestValidation);
     restore(schemaPath, originalSchema);
+    restore(requireStorageConnectedPath, originalRequireStorageConnected);
   }
 })().catch((err) => {
   console.error(err);

@@ -50,7 +50,13 @@ async function run() {
   clear('../src/controllers/storage.controller');
   const ctl = require('../src/controllers/storage.controller');
 
-  const payload = Buffer.from(JSON.stringify({ tenantId: 'tenant-canonical', provider: 'google_drive', nonce: 'nonce-1' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({
+    tenantId: 'tenant-canonical',
+    provider: 'google_drive',
+    nonce: 'nonce-1',
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 300,
+  })).toString('base64url');
   const sig = crypto.createHmac('sha256', process.env.JWT_SECRET).update(payload).digest('hex');
   const callbackState = `${payload}.${sig}`;
 
