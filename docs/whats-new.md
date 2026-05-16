@@ -1,6 +1,6 @@
 # What's New
 
-May 2026: Landing page repositioned to Company Brain + Work Execution OS
+## May 2026: Landing page repositioned to Company Brain + Work Execution OS
 
 - Repositioned the public landing page around **The Company Brain for Indian professional firms** with grounded Work Execution OS framing.
 - Kept messaging aligned with current product reality: Worklist-first execution, dockets, workbaskets, QC, reports, client memory direction, and audit trails.
