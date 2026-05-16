@@ -2,7 +2,7 @@ const { z, nonEmptyString, objectIdString } = require('./common');
 
 module.exports = {
   'GET /': {
-    query: z.object({}).strict(),
+    query: z.object({}).passthrough(),
   },
   'POST /': {
     body: z.object({

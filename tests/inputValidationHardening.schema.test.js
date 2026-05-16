@@ -16,6 +16,9 @@ function shouldAccept(schema, payload, label) {
 }
 
 (function run() {
+
+  // GET list query remains intentionally permissive for backward compatibility.
+  shouldAccept(teamSchemas['GET /'].query, { page: '2', limit: '20', q: 'ops' }, 'team list query compatibility');
   shouldAccept(teamSchemas['POST /'].body, { name: 'Core Team', managerId: '507f1f77bcf86cd799439011' }, 'team create');
   shouldRejectUnknownKeys(teamSchemas['POST /'].body, { name: 'Core Team', firmId: 'override' }, 'team create');
 
