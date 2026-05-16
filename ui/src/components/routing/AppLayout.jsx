@@ -1,3 +1,4 @@
+import { SUPPORT_EMAIL } from '../../config/publicContact';
 import React from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import Navbar from '../layout/Navbar';
@@ -36,7 +37,7 @@ export const AppLayout = ({ children }) => {
               <Link to="/acceptable-use" className="text-gray-600 hover:text-gray-900">
                 Acceptable Use
               </Link>
-              <a href="mailto:sarveshgupte@gmail.com" className="text-gray-600 hover:text-gray-900">
+              <a href={`mailto:${SUPPORT_EMAIL}`} className="text-gray-600 hover:text-gray-900">
                 Contact
               </a>
             </div>
