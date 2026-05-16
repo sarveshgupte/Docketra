@@ -1,5 +1,11 @@
 # What's New
 
+## May 2026: Landing page repositioned to Company Brain + Work Execution OS
+
+- Repositioned the public landing page around **The Company Brain for Indian professional firms** with grounded Work Execution OS framing.
+- Kept messaging aligned with current product reality: Worklist-first execution, dockets, workbaskets, QC, reports, client memory direction, and audit trails.
+- Kept AI language roadmap/assistive-only and removed overclaim risk in public copy.
+- Preserved public CTA routes for Create workspace (`/signup`) and Find workspace (`/find-workspace`).
 
 ## May 2026: Direct assigned Workbasket and QC Workbasket sidebar links
 
