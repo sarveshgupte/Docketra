@@ -746,6 +746,8 @@
 
 - Added strict data-residency audit/policy defining Docketra as a control plane and firm cloud storage as canonical storage for business data.
 
+- 2026-05-16: Added frontend-configurable public support email via `VITE_SUPPORT_EMAIL` (with `support@docketra.com` fallback), replacing hardcoded personal contact emails across marketing/legal/footer/support UI and adding regression coverage to prevent reintroduction.
+
 - 2026-05-14: Client create/update moved to cloud-first profile storage (`firms/{firmId}/clients/{clientId}/profile.json`) and blocked prohibited business/profile fields from Mongo persistence.
 
 ## 2026-05-14 — Data Storage Map / Trust Transparency
@@ -784,4 +786,3 @@
 - Tightened Work Management mutation schemas to strict payloads for category/subcategory/workbasket endpoints.
 - Sanitized category controller mutation error responses to avoid raw backend error leakage.
 - Added regression test coverage for no-delete schema contract and strict payload rejection.
-

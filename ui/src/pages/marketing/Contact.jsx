@@ -1,3 +1,4 @@
+import { SUPPORT_EMAIL } from '../../config/publicContact';
 import React, { useState } from 'react';
 import { LegalLayout } from '../../components/legal/LegalLayout';
 import { Input } from '../../components/common/Input';
@@ -52,7 +53,7 @@ export const ContactPage = () => {
     <LegalLayout title="Contact" description="Request early access or contact the Docketra team." sections={SECTIONS}>
       <section id="contact-form" className="max-w-2xl">
         <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">Early Access Contact</h2>
-        <p className="mt-4 text-sm text-gray-600">Prefer email? Reach us directly at <a className="underline" href="mailto:sarveshgupte@gmail.com">sarveshgupte@gmail.com</a>.</p>
+        <p className="mt-4 text-sm text-gray-600">Prefer email? Reach us directly at <a className="underline" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.</p>
         {status === 'success' ? (
           <div className="mt-12 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">Inquiry received. We will get back to you soon.</div>
         ) : (

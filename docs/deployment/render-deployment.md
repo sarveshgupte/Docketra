@@ -79,6 +79,9 @@ Minimum production baseline:
 - `FRONTEND_ORIGINS`
 - `REDIS_URL` (optional; recommended for distributed rate limits/queues)
 
+Frontend/public configuration:
+- `VITE_SUPPORT_EMAIL` (optional; defaults to `support@docketra.com`) to control the public support/contact email shown in the marketing/legal UI and support helper links after frontend redeploy.
+
 Feature-dependent variables (keep when relevant):
 - Google Auth/BYOS integration vars (`GOOGLE_*`, `STORAGE_TOKEN_SECRET`) if those product features are enabled
 - Encryption keys (`MASTER_ENCRYPTION_KEY`) when encryption is enabled
