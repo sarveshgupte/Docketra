@@ -143,6 +143,11 @@
   transform: translateY(1px);
 }
 
+.btn-view-file:focus-visible {
+  outline: 2px solid var(--dt-focus);
+  outline-offset: 2px;
+}
+
 .modal-footer {
   margin-top: 2rem;
   padding-top: 1rem;
