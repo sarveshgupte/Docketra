@@ -1,3 +1,4 @@
+import { SUPPORT_EMAIL } from '../../config/publicContact';
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -61,8 +62,8 @@ export const PricingPage = () => (
         </p>
         <p className="mt-6 text-sm text-gray-700">
           Questions? Email{' '}
-          <a href="mailto:sarveshgupte@gmail.com" className="underline">
-            sarveshgupte@gmail.com
+          <a href={`mailto:${SUPPORT_EMAIL}`} className="underline">
+            {SUPPORT_EMAIL}
           </a>
           .
         </p>
