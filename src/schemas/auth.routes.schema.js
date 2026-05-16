@@ -61,7 +61,7 @@ module.exports = {
   'POST /resend-credentials': {
     body: z.object({
       email: z.string().trim().email(),
-    }).passthrough(),
+    }).strict(),
   },
   'POST /resend-otp': {
     body: z.object({
