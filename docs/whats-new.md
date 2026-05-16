@@ -795,3 +795,10 @@
 - Hardened auth resend-credentials and client CFS comment-create payload schemas to reject unknown fields.
 - Added focused regression test coverage for unknown-key rejection on hardened high-risk mutation endpoints.
 - Added audit report: `docs/audits/INPUT_VALIDATION_AUDIT_2026-05.md`.
+
+## May 2026: Input validation hardening PR 2 (legacy mutation passthrough reduction)
+
+- Hardened additional high-risk mutation route schemas in Admin, Client, and Storage modules to reject unknown body keys.
+- Converted selected legacy empty/passthrough mutation bodies to explicit strict contracts (`z.object({}).strict()` where no body fields are expected).
+- Added focused regression coverage in `tests/inputValidationMutationStrictness.test.js`.
+- Kept GET/list/search/report query passthrough behavior intentionally unchanged in this phase for backward compatibility.

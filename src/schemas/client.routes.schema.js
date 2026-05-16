@@ -56,11 +56,11 @@ module.exports = {
   },
   'PUT /:clientId/fact-sheet': {
     params: z.object({ clientId: clientIdString }),
-    body: z.object({}).passthrough(),
+    body: z.object({}).strict(),
   },
-  'POST /:clientId/fact-sheet/files': { params: z.object({ clientId: clientIdString }), body: z.object({}).passthrough() },
+  'POST /:clientId/fact-sheet/files': { params: z.object({ clientId: clientIdString }), body: z.object({}).strict() },
   'DELETE /:clientId/fact-sheet/files/:fileId': { params: z.object({ clientId: clientIdString, fileId: nonEmptyString }) },
-  'POST /:clientId/cfs/files': { params: z.object({ clientId: clientIdString }), body: z.object({}).passthrough() },
+  'POST /:clientId/cfs/files': { params: z.object({ clientId: clientIdString }), body: z.object({}).strict() },
   'POST /:clientId/cfs/files/upload-intent': {
     params: z.object({ clientId: clientIdString }),
     body: z.object({

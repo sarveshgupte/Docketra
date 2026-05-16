@@ -15,11 +15,11 @@ module.exports = {
   },
   'PATCH /clients/:clientId/status': {
     params: z.object({ clientId: clientIdString }),
-    body: z.object({ status: z.enum(['ACTIVE', 'INACTIVE']) }).passthrough(),
+    body: z.object({ status: z.enum(['ACTIVE', 'INACTIVE']) }).strict(),
   },
   'POST /clients/:clientId/change-name': {
     params: z.object({ clientId: clientIdString }),
-    body: z.object({ legalName: nonEmptyString }).passthrough(),
+    body: z.object({ legalName: nonEmptyString }).strict(),
   },
   'PUT /clients/:clientId/fact-sheet': {
     params: z.object({ clientId: clientIdString }),
@@ -111,7 +111,7 @@ module.exports = {
     body: z.object({
       adminId: objectIdOrString.nullish(),
       managerId: objectIdOrString.nullish(),
-    }).passthrough(),
+    }).strict(),
   },
   'GET /firm-settings': { query: passthroughQuery },
   'GET /firm-settings/activity': { query: passthroughQuery },
@@ -122,10 +122,10 @@ module.exports = {
       limit: z.coerce.number().int().min(1).max(100).optional(),
     }).passthrough(),
   },
-  'PUT /firm-settings': { body: passthroughBody },
+  'PUT /firm-settings': { body: z.object({}).strict() },
   'GET /cms-intake-settings': { query: passthroughQuery },
-  'PUT /cms-intake-settings': { body: passthroughBody },
-  'POST /cms-intake-settings/intake-api-key/regenerate': { body: passthroughBody },
+  'PUT /cms-intake-settings': { body: z.object({}).strict() },
+  'POST /cms-intake-settings/intake-api-key/regenerate': { body: z.object({}).strict() },
   'GET /workbaskets': { query: passthroughQuery },
   'POST /work-settings/default-routing': { body: z.object({}).strict() },
   'POST /workbaskets': { body: z.object({ name: nonEmptyString }).strict() },
@@ -143,7 +143,7 @@ module.exports = {
   },
   'POST /users/:id/restore': {
     params: z.object({ id: objectIdOrString }),
-    body: passthroughBody,
+    body: z.object({}).strict(),
   },
 
   'GET /system-diagnostics': { query: passthroughQuery },
@@ -154,20 +154,20 @@ module.exports = {
   'GET /cases/resolved': { query: passthroughQuery },
   'POST /cases/:id/restore': {
     params: z.object({ id: objectIdOrString }),
-    body: passthroughBody,
+    body: z.object({}).strict(),
   },
 
   'GET /storage': { query: passthroughQuery },
-  'PUT /storage': { body: passthroughBody },
-  'POST /storage/disconnect': { body: passthroughBody },
+  'PUT /storage': { body: z.object({}).strict() },
+  'POST /storage/disconnect': { body: z.object({}).strict() },
 
   'POST /clients/:id/restore': {
     params: z.object({ id: objectIdOrString }),
-    body: passthroughBody,
+    body: z.object({}).strict(),
   },
   'POST /tasks/:id/restore': {
     params: z.object({ id: objectIdOrString }),
-    body: passthroughBody,
+    body: z.object({}).strict(),
   },
   'GET /retention-preview': { query: passthroughQuery },
 };
