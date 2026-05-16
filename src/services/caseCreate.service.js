@@ -239,6 +239,7 @@ module.exports = (deps) => {
       }
 
       const employeeContextEnabled = Boolean(subcategoryDoc?.employeeContextEnabled);
+      let resolvedEmployeePromise = null;
       let resolvedEmployee = null;
       if (resolvedEmployeeXID) {
         if (!employeeContextEnabled) {
@@ -249,20 +250,12 @@ module.exports = (deps) => {
           });
         }
 
-        resolvedEmployee = await User.findOne({
+        resolvedEmployeePromise = User.findOne({
           firmId,
           xID: resolvedEmployeeXID,
           status: 'active',
           isActive: { $ne: false },
         }).select('xID name email department status').lean();
-
-        if (!resolvedEmployee) {
-          return res.status(400).json({
-            success: false,
-            message: 'Selected employee must be an active user in your firm.',
-            ...responseMeta,
-          });
-        }
       }
       let fallbackWorkbasketPromise = null;
       if (!routedWorkbasketId) {
@@ -307,13 +300,23 @@ module.exports = (deps) => {
       }
 
       // ⚡ Bolt Performance Optimization:
-      // Prepare independent validation queries (dealId, crmClientId, fallbackWorkbasket)
+      // Prepare independent validation queries (dealId, crmClientId, fallbackWorkbasket, resolvedEmployee)
       // and execute them concurrently via Promise.all to reduce endpoint latency.
-      const [fallbackWorkbasket, crmClient, deal] = await Promise.all([
+      const [fallbackWorkbasket, crmClient, deal, fetchedEmployee] = await Promise.all([
         fallbackWorkbasketPromise,
         crmClientPromise,
-        dealPromise
+        dealPromise,
+        resolvedEmployeePromise
       ]);
+      resolvedEmployee = fetchedEmployee || null;
+
+      if (resolvedEmployeeXID && !resolvedEmployee) {
+        return res.status(400).json({
+          success: false,
+          message: 'Selected employee must be an active user in your firm.',
+          ...responseMeta,
+        });
+      }
 
       if (!routedWorkbasketId && fallbackWorkbasket) {
         routedWorkbasketId = fallbackWorkbasket._id ? String(fallbackWorkbasket._id) : null;
