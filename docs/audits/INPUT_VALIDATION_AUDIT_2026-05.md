@@ -12,7 +12,7 @@
 
 ## Strict vs passthrough findings
 - Current codebase still has many passthrough schemas, especially in legacy admin/docket/storage/superadmin surfaces.
-- High-risk mutation passthrough endpoints hardened in this pass:
+- High-risk mutation passthrough endpoints hardened in this pass (GET/list query hardening is intentionally out-of-scope here):
   - `POST /` (team create) now strict with explicit `managerId` allowance.
   - `PATCH /:id` (team update) now strict.
   - `POST /:id/assign-user` (team assign) now strict.
@@ -26,7 +26,7 @@
 
 ## Remaining legacy exceptions
 - Broad passthrough remains in multiple legacy modules (notably admin, docket, storage, case and select reporting/search endpoints).
-- Recommended phased follow-up: convert mutation routes to strict route-by-route with UI/controller compatibility checks.
+- Recommended phased follow-up: (1) continue mutation-route strictness migration with compatibility checks, then (2) audit and bound list/search/report query schemas route-by-route to avoid breaking consumers.
 
 ## Tests run
 - `node tests/inputValidationHardening.schema.test.js`
@@ -35,4 +35,4 @@
 ## Readiness score
 - **8.2 / 10**
   - Strengths: complete route-schema contract coverage; no missing/stale route keys; targeted hardening on risky write endpoints.
-  - Gaps: broad passthrough still present in legacy mutation areas and should be reduced incrementally.
+  - Gaps: broad passthrough remains in legacy mutation areas, and list/search/report query schemas are still a phased follow-up rather than fully hardened.
