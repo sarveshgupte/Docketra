@@ -137,7 +137,6 @@ class GoogleDriveService {
     const oauthClient = this.getOAuthClient();
     oauthClient.setCredentials({
       refresh_token: refreshToken,
-      access_token: credentials.accessToken || undefined,
       expiry_date: credentials.expiryDate || undefined,
     });
 
@@ -244,7 +243,6 @@ class GoogleDriveService {
     const connectedEmail = about?.data?.user?.emailAddress || null;
 
     const storageCredentials = {
-      accessToken: tokens.access_token || null,
       refreshToken: tokens.refresh_token || null,
       expiryDate: tokens.expiry_date || null,
       rootFolderId: firmFolderId,
