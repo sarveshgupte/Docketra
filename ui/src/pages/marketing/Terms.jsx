@@ -1,3 +1,4 @@
+import { SUPPORT_EMAIL } from '../../config/publicContact';
 import React from 'react';
 import { LegalLayout } from '../../components/legal/LegalLayout';
 
@@ -93,8 +94,8 @@ export const TermsPage = () => (
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">8. Contact</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
         Questions about these Terms can be sent to{' '}
-        <a href="mailto:sarveshgupte@gmail.com" className="text-gray-700 underline hover:no-underline">
-          sarveshgupte@gmail.com
+        <a href={`mailto:${SUPPORT_EMAIL}`} className="text-gray-700 underline hover:no-underline">
+          {SUPPORT_EMAIL}
         </a>
         .
       </p>

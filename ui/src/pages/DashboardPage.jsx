@@ -7,6 +7,7 @@
  * Section 3: Recent Cases worklist panel
  */
 
+import { SUPPORT_EMAIL } from '../config/publicContact';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
@@ -44,16 +45,7 @@ import { trackOnboardingEvent } from '../utils/onboardingAnalytics';
 const DASHBOARD_RECENT_CASES_ROW_COUNT = 5;
 const DASHBOARD_RECENT_CASES_MAX_ROWS = 10;
 const DASHBOARD_RECENT_CASES_LIMIT = Math.min(DASHBOARD_RECENT_CASES_ROW_COUNT, DASHBOARD_RECENT_CASES_MAX_ROWS);
-const resolveSupportEmail = () => {
-  const rawMailFrom = String(import.meta.env.VITE_SUPPORT_EMAIL || '').trim();
-  if (!rawMailFrom) return 'support@docketra.com';
-
-  const bracketMatch = rawMailFrom.match(/<([^>]+)>/);
-  const candidate = (bracketMatch?.[1] || rawMailFrom).trim();
-  return candidate.includes('@') ? candidate : 'support@docketra.com';
-};
-
-const DEFAULT_SUPPORT_EMAIL = resolveSupportEmail();
+const DEFAULT_SUPPORT_EMAIL = SUPPORT_EMAIL;
 
 const FAQ_BY_ROLE = {
   primary_admin: [
