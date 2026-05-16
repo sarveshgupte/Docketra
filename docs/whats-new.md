@@ -1,5 +1,11 @@
 # What's New
 
+## May 2026: Landing page repositioned to Company Brain + Work Execution OS
+
+- Repositioned the public landing page around **The Company Brain for Indian professional firms** with grounded Work Execution OS framing.
+- Kept messaging aligned with current product reality: Worklist-first execution, dockets, workbaskets, QC, reports, client memory direction, and audit trails.
+- Kept AI language roadmap/assistive-only and removed overclaim risk in public copy.
+- Preserved public CTA routes for Create workspace (`/signup`) and Find workspace (`/find-workspace`).
 
 ## May 2026: Direct assigned Workbasket and QC Workbasket sidebar links
 
@@ -740,6 +746,8 @@
 
 - Added strict data-residency audit/policy defining Docketra as a control plane and firm cloud storage as canonical storage for business data.
 
+- 2026-05-16: Added frontend-configurable public support email via `VITE_SUPPORT_EMAIL` (with `support@docketra.com` fallback), replacing hardcoded personal contact emails across marketing/legal/footer/support UI and adding regression coverage to prevent reintroduction.
+
 - 2026-05-14: Client create/update moved to cloud-first profile storage (`firms/{firmId}/clients/{clientId}/profile.json`) and blocked prohibited business/profile fields from Mongo persistence.
 
 ## 2026-05-14 — Data Storage Map / Trust Transparency
@@ -778,11 +786,3 @@
 - Tightened Work Management mutation schemas to strict payloads for category/subcategory/workbasket endpoints.
 - Sanitized category controller mutation error responses to avoid raw backend error leakage.
 - Added regression test coverage for no-delete schema contract and strict payload rejection.
-
-
-## May 2026: BYOS OAuth/state and credential sanitization hardening
-
-- Google Drive OAuth callback now enforces expiring signed state, clears state cookies on every terminal callback path, and uses a minimal success redirect (`provider=google-drive&connected=1`).
-- Removed storage status/root-folder exposure from `/api/storage/status` responses and kept callback redirects free of provider internals (`rootFolderId`, `driveId`, tokens).
-- Stopped persisting Google OAuth access tokens in firm storage credentials; refresh-token based re-auth remains the persisted path.
-- Added route test hardening stubs to keep `/api/storage/*` callback/connect contract coverage stable.
