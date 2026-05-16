@@ -147,3 +147,9 @@ This gate is designed to fail before merge if route validation contract drift or
   - `src/schemas/auth.routes.schema.js`: strict resend-credentials payload.
 - Added regression test coverage in `tests/inputValidationHardening.schema.test.js` to ensure these endpoints reject unsafe extra keys.
 - Legacy passthrough usage still exists in several older modules and should be migrated in phased PRs with compatibility checks.
+
+## May 2026 mutation strictness hardening (PR 2)
+
+Additional high-risk mutation schemas were migrated from permissive passthrough to strict request-body validation in admin/client/storage modules. This phase keeps GET/list/search/report query passthrough behavior unchanged for compatibility while reducing unknown-key injection risk on write paths.
+
+New regression coverage: `tests/inputValidationMutationStrictness.test.js`.

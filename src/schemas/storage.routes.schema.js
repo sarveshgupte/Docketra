@@ -20,7 +20,7 @@ module.exports = {
   'POST /google/confirm-drive': {
     body: z.object({
       driveId: z.string().trim().optional(),
-    }).passthrough(),
+    }).strict(),
   },
   'GET /configuration': {
     query: z.object({}).passthrough(),
@@ -32,7 +32,7 @@ module.exports = {
     query: z.object({}).passthrough(),
   },
   'POST /test-connection': {
-    body: z.object({}).passthrough(),
+    body: z.object({}).strict(),
   },
   'GET /health-check': {
     query: z.object({}).passthrough(),
@@ -44,7 +44,7 @@ module.exports = {
     query: z.object({}).passthrough(),
   },
   'POST /disconnect': {
-    body: z.object({}).passthrough(),
+    body: z.object({}).strict(),
   },
   'GET /export': {
     query: z.object({}).passthrough(),
