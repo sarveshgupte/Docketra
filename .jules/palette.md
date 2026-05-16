@@ -38,3 +38,6 @@
 ## 2026-05-13 - Dynamic ARIA Labels for Badge Counts
 **Learning:** When displaying notification or message counts inside badges (e.g., a red dot with "3"), hiding the badge with `aria-hidden="true"` prevents visual redundancy for sighted screen reader users, but completely hides the unread status from purely visually impaired users.
 **Action:** When a button contains a visually hidden unread count or badge, always interpolate that count into the parent button's `aria-label` (e.g., `aria-label={count > 0 ? \`Notifications (\${count} unread)\` : 'Notifications'}`).
+## 2026-05-18 - Clipboard Feedback Extensibility
+**Learning:** Adding clipboard feedback (success/error states) to icon-only buttons improves UX, especially when `aria-live="polite"` is used.
+**Action:** When implementing copy-to-clipboard functionality, explicitly manage timeout cleanup to prevent memory leaks and handle cases where `navigator.clipboard.writeText` fails or is unavailable.
