@@ -786,3 +786,12 @@
 - Tightened Work Management mutation schemas to strict payloads for category/subcategory/workbasket endpoints.
 - Sanitized category controller mutation error responses to avoid raw backend error leakage.
 - Added regression test coverage for no-delete schema contract and strict payload rejection.
+
+
+## May 2026: Input validation audit + high-risk mutation hardening
+
+- Ran route validation contract audit across `src/routes` + `src/schemas` and confirmed full route-schema parity on validated route files.
+- Hardened Team Management write schemas to strict mode and kept backward-compatible explicit manager assignment support.
+- Hardened auth resend-credentials and client CFS comment-create payload schemas to reject unknown fields.
+- Added focused regression test coverage for unknown-key rejection on hardened high-risk mutation endpoints.
+- Added audit report: `docs/audits/INPUT_VALIDATION_AUDIT_2026-05.md`.
