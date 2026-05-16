@@ -183,7 +183,15 @@ function getStorageOAuthClient() {
 
 function buildStateToken(tenantId) {
   const nonce = crypto.randomBytes(16).toString('hex');
-  const payload = Buffer.from(JSON.stringify({ tenantId, provider: 'google_drive', nonce })).toString('base64url');
+  const issuedAt = Math.floor(Date.now() / 1000);
+  const expiresAt = issuedAt + STATE_TTL_SECONDS;
+  const payload = Buffer.from(JSON.stringify({
+    tenantId,
+    provider: 'google_drive',
+    nonce,
+    iat: issuedAt,
+    exp: expiresAt,
+  })).toString('base64url');
   const sig = crypto.createHmac('sha256', process.env.JWT_SECRET).update(payload).digest('hex');
   return `${payload}.${sig}`;
 }
@@ -210,7 +218,10 @@ function verifyStateToken(cookieValue, stateParam) {
   if (!crypto.timingSafeEqual(sigBuffer, expectedBuffer)) return null;
 
   try {
-    return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    const parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    const now = Math.floor(Date.now() / 1000);
+    if (!parsed?.exp || Number(parsed.exp) < now) return null;
+    return parsed;
   } catch {
     return null;
   }
@@ -258,7 +269,6 @@ const getStorageStatus = async (req, res) => {
       connected: Boolean(context.rootFolderId),
       provider: context.providerType || PROVIDER_TYPES.USER_GOOGLE_DRIVE,
       status,
-      rootFolderId: context.rootFolderId || null,
       connectedEmail: credentials.connectedEmail || null,
       lastCheckedAt: credentials.lastCheckedAt || new Date().toISOString(),
     });
@@ -316,6 +326,7 @@ const googleConnect = (req, res) => {
 };
 
 const googleCallback = async (req, res) => {
+  const clearStateCookie = () => res.setHeader('Set-Cookie', buildStateCookie('', 0));
   if (!isPrimaryAdminRole(req.user?.role) || !req.firmId) {
     const firmSlug = await resolveFirmSlugForRedirect(req.firmId);
     log.warn('[STORAGE]', {
@@ -323,6 +334,7 @@ const googleCallback = async (req, res) => {
       hasUser: Boolean(req.user),
       hasFirmId: Boolean(req.firmId),
     });
+    clearStateCookie();
     return res.redirect(buildFrontendStorageRedirect({
       firmSlug,
       params: { error: 'oauth_failed', reason: 'session_missing', provider: 'google-drive' },
@@ -331,31 +343,41 @@ const googleCallback = async (req, res) => {
   try {
     const firmSlug = await resolveFirmSlugForRedirect(req.firmId);
     const { code, state } = req.query;
-    if (!code) return res.redirect(buildFrontendStorageRedirect({ firmSlug, params: { error: 'oauth_failed', reason: 'missing_code', provider: 'google-drive' } }));
-    if (!state) return res.redirect(buildFrontendStorageRedirect({ firmSlug, params: { error: 'oauth_failed', reason: 'missing_state', provider: 'google-drive' } }));
+    if (!code) {
+      clearStateCookie();
+      return res.redirect(buildFrontendStorageRedirect({ firmSlug, params: { error: 'oauth_failed', reason: 'missing_code', provider: 'google-drive' } }));
+    }
+    if (!state) {
+      clearStateCookie();
+      return res.redirect(buildFrontendStorageRedirect({ firmSlug, params: { error: 'oauth_failed', reason: 'missing_state', provider: 'google-drive' } }));
+    }
 
     const cookieValue = req.cookies?.[STATE_COOKIE_NAME] || getCookieValue(req.headers.cookie, STATE_COOKIE_NAME);
     const stateData = verifyStateToken(cookieValue, state);
     if (!stateData || stateData.tenantId !== req.firmId || stateData.provider !== 'google_drive') {
-      res.setHeader('Set-Cookie', buildStateCookie('', 0));
+      clearStateCookie();
       return res.redirect(buildFrontendStorageRedirect({ firmSlug, params: { error: 'oauth_failed', reason: 'invalid_state', provider: 'google-drive' } }));
     }
 
     const oauthClient = getStorageOAuthClient();
     const result = await oauthClient.getToken(code);
     const tokens = result.tokens || {};
-    if (!tokens.refresh_token) return res.redirect(buildFrontendStorageRedirect({ firmSlug, params: { error: 'oauth_failed', reason: 'no_refresh_token', provider: 'google-drive' } }));
+    if (!tokens.refresh_token) {
+      clearStateCookie();
+      return res.redirect(buildFrontendStorageRedirect({ firmSlug, params: { error: 'oauth_failed', reason: 'no_refresh_token', provider: 'google-drive' } }));
+    }
 
     const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
-    const connection = await googleDriveService.saveUserDriveConnection({ firmId: ownershipFirmId, tokens });
+    await googleDriveService.saveUserDriveConnection({ firmId: ownershipFirmId, tokens });
 
-    res.setHeader('Set-Cookie', buildStateCookie('', 0));
+    clearStateCookie();
     const successUrl = buildFrontendStorageRedirect({
       firmSlug,
-      params: { provider: 'google-drive', connected: '1', rootFolderId: connection.rootFolderId || '' },
+      params: { provider: 'google-drive', connected: '1' },
     });
     return res.redirect(successUrl);
   } catch (error) {
+    clearStateCookie();
     if (error instanceof StorageValidationError) {
       const firmSlug = await resolveFirmSlugForRedirect(req.firmId);
       return res.redirect(buildFrontendStorageRedirect({ firmSlug, params: { error: 'oauth_failed', reason: 'storage_configuration_invalid', provider: 'google-drive' } }));
@@ -561,10 +583,15 @@ const getStorageFolderLink = async (req, res) => {
       folderId = await provider.getOrCreateFolder(provider.rootFolderId, firmFolderName);
     }
 
-    if (!folderId) return res.status(404).json({ success: false, error: 'folder_link_unavailable' });
+    if (!folderId) {
+      log.info('[STORAGE]', { event: 'storage_folder_link_requested', requestId: req.requestId || null, firmId: String(ownershipFirmId), provider: state.canonicalProvider || 'docketra_managed', stage: 'unavailable' });
+      return res.status(404).json({ success: false, error: 'folder_link_unavailable' });
+    }
     const folderUrl = `https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`;
+    log.info('[STORAGE]', { event: 'storage_folder_link_requested', requestId: req.requestId || null, firmId: String(ownershipFirmId), provider: state.canonicalProvider || 'docketra_managed', stage: 'success' });
     return res.json({ success: true, folderUrl, provider: state.canonicalProvider || 'docketra_managed' });
   } catch {
+    log.warn('[STORAGE]', { event: 'storage_folder_link_requested', requestId: req.requestId || null, firmId: String(req.ownershipFirmId || req.firmId || ''), provider: 'unknown', stage: 'error' });
     return res.status(404).json({ success: false, error: 'folder_link_unavailable' });
   }
 };
