@@ -136,3 +136,14 @@ Backend deploy safety is CI-blocking through `npm run ci:backend:deploy-safety`,
 - `tests/backendRuntimeEntrypoints.smoke.test.js` (production-mode backend startup smoke)
 
 This gate is designed to fail before merge if route validation contract drift or runtime startup crashes would break a Render deployment.
+
+
+## May 2026 input-hardening update
+
+- Completed a repo-wide route/schema parity audit using `tests/routeValidationContract.test.js`.
+- Hardened high-risk mutation schemas to reject unknown keys:
+  - `src/schemas/team.routes.schema.js`: strict write payloads with explicit `managerId` support for create.
+  - `src/schemas/client.routes.schema.js`: strict comment-create payload for CFS comments.
+  - `src/schemas/auth.routes.schema.js`: strict resend-credentials payload.
+- Added regression test coverage in `tests/inputValidationHardening.schema.test.js` to ensure these endpoints reject unsafe extra keys.
+- Legacy passthrough usage still exists in several older modules and should be migrated in phased PRs with compatibility checks.
