@@ -1,3 +1,4 @@
+import { SUPPORT_EMAIL } from '../../config/publicContact';
 import React from 'react';
 import { LegalLayout } from '../../components/legal/LegalLayout';
 
@@ -36,10 +37,10 @@ export const AcceptableUsePage = () => (
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
         To report abuse or suspicious activity, contact{' '}
         <a
-          href="mailto:sarveshgupte@gmail.com"
+          href={`mailto:${SUPPORT_EMAIL}`}
           className="text-gray-700 underline hover:no-underline"
         >
-          sarveshgupte@gmail.com
+          {SUPPORT_EMAIL}
         </a>
         .
       </p>
