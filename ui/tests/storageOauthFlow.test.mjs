@@ -22,11 +22,10 @@ assert.ok(storageService.includes("new URL('storage/google/connect', `${API_BASE
 assert.ok(!storageService.includes("window.location.assign('/api/storage/google/connect')"), 'connectGoogleDrive should not use same-origin /api path');
 
 const storagePage = read('src/pages/StorageSettingsPage.jsx');
-assert.ok(storagePage.includes('Firm-owned Google Drive (optional)'), 'Storage settings should include dedicated Google OAuth card');
+assert.ok(storagePage.includes('Firm-owned Google Drive'), 'Storage settings should include dedicated Google OAuth card');
 assert.ok(storagePage.includes('Connect firm Google Drive'), 'Storage settings should expose clear Google OAuth connect CTA');
 assert.ok(storagePage.includes("onClick={connectGoogleDrive}"), 'Google OAuth CTA should call connectGoogleDrive directly');
-assert.ok(storagePage.includes('Advanced manual storage providers'), 'OneDrive/S3 should be behind advanced manual section');
-assert.ok(storagePage.includes('Default: Docketra-managed Google Drive'), 'Storage settings should show managed default fallback');
+assert.ok(storagePage.includes('Advanced manual providers'), 'OneDrive/S3 should be behind advanced manual section');
 assert.ok(storagePage.includes('Storage capacity'), 'Storage settings should include storage capacity section');
 assert.ok(storagePage.includes('Refresh usage'), 'Storage settings should provide usage refresh action');
 assert.ok(storagePage.includes("providerParam === 'google-drive' && connected === '1'"), 'OAuth success params should trigger configuration refresh');
@@ -36,8 +35,11 @@ assert.ok(storageService.includes("api.post('/storage/disconnect')"), 'disconnec
 assert.ok(storagePage.includes('Disconnect firm Google Drive'), 'Disconnect action should exist for connected firm Google Drive state');
 assert.ok(storagePage.includes('Disconnect firm Google Drive? Future uploads will use Docketra-managed storage.'), 'Disconnect confirmation copy should be present');
 assert.ok(storagePage.includes('onClick={connectGoogleDrive}'), 'Google OAuth connect remains direct and OTP-free');
-assert.ok(storagePage.includes('Storage settings / Data storage map'), 'Storage settings should include data storage map section');
+assert.ok(storagePage.includes('Storage overview'), 'Storage overview should render at top of page');
+assert.ok(storagePage.includes('Data storage map'), 'Storage settings should include data storage map section');
+assert.ok(storagePage.includes('Backup and export'), 'Storage settings should include backup/export section');
 assert.ok(storagePage.includes('Generate storage export'), 'Storage settings should include storage export action');
+assert.ok(!storagePage.includes('Generate Firm Export'), 'Legacy duplicate export CTA should be removed');
 assert.ok(!storagePage.includes('rootFolderId'), 'Storage settings page source should not expose rootFolderId');
 assert.ok(!storagePage.includes('privateKey'), 'Storage settings page source should not expose privateKey');
 assert.ok(!storagePage.includes('Connect / Refresh Google Drive'), 'Legacy mixed Google provider CTA copy should be removed');
