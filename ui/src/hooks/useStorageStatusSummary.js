@@ -108,17 +108,22 @@ export default function useStorageStatusSummary(firmSlug) {
     let active = true;
     setState((prev) => ({ ...prev, loading: true }));
 
-    Promise.all([getStorageConfiguration(), getStorageOwnershipSummary()])
-      .then(([configuration, ownershipSummary]) => {
+    Promise.allSettled([getStorageConfiguration(), getStorageOwnershipSummary()])
+      .then(([configurationResult, ownershipResult]) => {
         if (!active) return;
-        const nextState = buildSummary(firmSlug, configuration, ownershipSummary, null);
+
+        const configuration = configurationResult?.status === 'fulfilled' ? configurationResult.value : {};
+        const ownershipSummary = ownershipResult?.status === 'fulfilled' ? ownershipResult.value : {};
+
+        const configurationError = configurationResult?.status === 'rejected' ? configurationResult.reason : null;
+        const ownershipError = ownershipResult?.status === 'rejected' ? ownershipResult.reason : null;
+
+        const nonBlockingConfigurationError = configurationError?.response?.status === 404 ? null : configurationError;
+        const nonBlockingOwnershipError = [403, 404].includes(ownershipError?.response?.status) ? null : ownershipError;
+        const blockingError = nonBlockingConfigurationError || nonBlockingOwnershipError;
+
+        const nextState = buildSummary(firmSlug, configuration, ownershipSummary, blockingError);
         statusCache.set(firmSlug, { data: nextState, timestamp: Date.now() });
-        setState(nextState);
-      })
-      .catch((err) => {
-        if (!active) return;
-        const nonBlockingError = err?.response?.status === 404 ? null : err;
-        const nextState = buildSummary(firmSlug, {}, {}, nonBlockingError);
         setState(nextState);
       });
 

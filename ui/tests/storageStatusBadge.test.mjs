@@ -15,6 +15,9 @@ for (const label of ['Firm-owned storage active', 'Docketra-managed storage', 'S
   assert.ok(hook.includes(label), `Hook should map badge label state: ${label}`);
 }
 
+assert.ok(hook.includes('Promise.allSettled'), 'Hook should tolerate partial API failures when computing status summary');
+assert.ok(hook.includes('[403, 404].includes(ownershipError?.response?.status)'), 'Ownership summary 403/404 should be treated as non-blocking');
+
 assert.ok(badge.includes('Business files are stored in your firm-owned Google Drive.') || hook.includes('Business files are stored in your firm-owned Google Drive.'), 'Safe trust copy should be present for BYOS mode');
 
 for (const secretField of ['rootFolderId', 'driveId', 'refreshToken', 'accessToken', 'privateKey', 'clientSecret', 'credentials']) {
