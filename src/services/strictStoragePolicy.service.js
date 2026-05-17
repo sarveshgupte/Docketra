@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Firm = require('../models/Firm.model');
 const { resolveFirmStorageState } = require('./storage/resolveFirmStorageState');
+const { EVENTS, logStrictStorageEvent } = require('./strictStorageAudit.service');
 
 function buildStrictStorageUnavailableError(requestId = null) {
   const error = new Error('Firm-owned storage is required for this workspace.');
@@ -14,7 +15,7 @@ function buildStrictStorageUnavailableError(requestId = null) {
   return error;
 }
 
-async function requireWritableBusinessStorage({ firmId, requestId = null }) {
+async function requireWritableBusinessStorage({ firmId, requestId = null, actorXid = null, targetPathCategory = null }) {
   if (mongoose.connection.readyState === 0) return { strictFirmOwnedStorage: false, byosWritable: true };
   let firm = null;
   try {
@@ -30,7 +31,17 @@ async function requireWritableBusinessStorage({ firmId, requestId = null }) {
 
   const state = resolveFirmStorageState(firm);
   const byosWritable = state.canonicalProvider === 'google_drive' && state.connectionStatus === 'ACTIVE_BYOS' && !state.isManaged;
-  if (!byosWritable) throw buildStrictStorageUnavailableError(requestId);
+  if (!byosWritable) {
+    logStrictStorageEvent({
+      event: EVENTS.WRITE_BLOCKED,
+      firmId: firm?.firmId || firmId,
+      actorXid,
+      requestId,
+      providerMode: state.mode || (state.isManaged ? 'managed_fallback' : 'firm_connected'),
+      targetPathCategory,
+    });
+    throw buildStrictStorageUnavailableError(requestId);
+  }
   return { strictFirmOwnedStorage: true, byosWritable: true };
 }
 
