@@ -822,3 +822,7 @@
 - Hardened primary↔QC linkage: primary create auto-creates exactly one linked QC (`${primaryWorkbasketName} — QC`), rename keeps generated QC names in sync, and primary deactivate cascades to linked QC deactivate.
 - Preserved Team Management as the only WB/QC assignment surface.
 - This update does not harden docket routing/inactive selector behavior beyond current guardrails.
+
+## May 2026: Strict firm-owned storage auditability + route coverage
+- Added explicit strict-mode audit event logging for enable/disable, BYOS-required rejections, and blocked writes (client profile + upload intents).
+- Added controller-level strict-mode guard coverage for firm settings updates and kept storage/badge trust visibility aligned.

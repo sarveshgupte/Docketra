@@ -242,7 +242,12 @@ const createIntent = async ({
   checksum,
 }) => {
   ensureDirectUploadsEnabled();
-  await requireWritableBusinessStorage({ firmId, requestId: null });
+  await requireWritableBusinessStorage({
+    firmId,
+    requestId: null,
+    actorXid: user?.xID || null,
+    targetPathCategory: source === 'client_cfs' ? 'cfs_upload' : 'direct_upload',
+  });
   assertMimeAndSize({ mimeType, size });
 
   const backend = await resolveUploadBackend(firmId);
