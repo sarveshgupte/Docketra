@@ -3,6 +3,50 @@ const { z, nonEmptyString, objectIdString, xidString, clientIdString, queryBoole
 const objectIdOrString = z.union([objectIdString, nonEmptyString]);
 const passthroughQuery = z.object({}).passthrough();
 const passthroughBody = z.object({}).passthrough();
+const cmsIntakeSettingsBody = z.object({
+  autoCreateClient: z.boolean(),
+  autoCreateDocket: z.boolean(),
+  intakeApiEnabled: z.boolean(),
+  defaultCategoryId: objectIdString.nullable().optional(),
+  defaultSubcategoryId: z.string().trim().min(1).max(120).nullable().optional(),
+  defaultWorkbasketId: objectIdString.nullable().optional(),
+  defaultPriority: z.enum(['LOW', 'MEDIUM', 'HIGH']).nullable().optional(),
+  defaultAssignee: xidString.nullable().optional(),
+}).strict();
+
+const firmSettingsBody = z.object({
+  firm: z.object({
+    slaDefaultDays: z.coerce.number().int().min(1).max(365).optional(),
+    escalationInactivityThresholdHours: z.coerce.number().int().min(1).max(24 * 365).optional(),
+    workloadThreshold: z.coerce.number().int().min(1).max(1000).optional(),
+    enablePerformanceView: z.boolean().optional(),
+    enableEscalationView: z.boolean().optional(),
+    enableBulkActions: z.boolean().optional(),
+    brandLogoUrl: z.string().trim().max(2048).optional(),
+  }).strict().optional(),
+  work: z.object({
+    assignmentStrategy: z.enum(['manual', 'balanced']).optional(),
+    statusWorkflowMode: z.enum(['flexible', 'strict']).optional(),
+    autoAssignmentEnabled: z.boolean().optional(),
+    highPrioritySlaDays: z.coerce.number().int().min(1).max(365).optional(),
+    dueSoonWarningDays: z.coerce.number().int().min(1).max(365).optional(),
+  }).strict().optional(),
+}).strict();
+
+const adminStorageUpdateBody = z.object({
+  mode: z.enum(['docketra_managed', 'firm_connected']).optional(),
+  provider: z.enum(['google_drive', 'onedrive']).nullable().optional(),
+  google: z.object({
+    rootFolderId: z.string().trim().min(1).max(512).optional(),
+    driveId: z.string().trim().min(1).max(512).optional(),
+    connectedEmail: z.string().trim().email().optional(),
+  }).strict().optional(),
+  onedrive: z.object({
+    rootFolderId: z.string().trim().min(1).max(512).optional(),
+    driveId: z.string().trim().min(1).max(512).optional(),
+    connectedEmail: z.string().trim().email().optional(),
+  }).strict().optional(),
+}).strict();
 
 module.exports = {
   'GET /stats': { query: passthroughQuery },
@@ -15,11 +59,11 @@ module.exports = {
   },
   'PATCH /clients/:clientId/status': {
     params: z.object({ clientId: clientIdString }),
-    body: z.object({ status: z.enum(['ACTIVE', 'INACTIVE']) }).passthrough(),
+    body: z.object({ status: z.enum(['ACTIVE', 'INACTIVE']) }).strict(),
   },
   'POST /clients/:clientId/change-name': {
     params: z.object({ clientId: clientIdString }),
-    body: z.object({ legalName: nonEmptyString }).passthrough(),
+    body: z.object({ legalName: nonEmptyString }).strict(),
   },
   'PUT /clients/:clientId/fact-sheet': {
     params: z.object({ clientId: clientIdString }),
@@ -111,7 +155,7 @@ module.exports = {
     body: z.object({
       adminId: objectIdOrString.nullish(),
       managerId: objectIdOrString.nullish(),
-    }).passthrough(),
+    }).strict(),
   },
   'GET /firm-settings': { query: passthroughQuery },
   'GET /firm-settings/activity': { query: passthroughQuery },
@@ -122,10 +166,10 @@ module.exports = {
       limit: z.coerce.number().int().min(1).max(100).optional(),
     }).passthrough(),
   },
-  'PUT /firm-settings': { body: passthroughBody },
+  'PUT /firm-settings': { body: firmSettingsBody },
   'GET /cms-intake-settings': { query: passthroughQuery },
-  'PUT /cms-intake-settings': { body: passthroughBody },
-  'POST /cms-intake-settings/intake-api-key/regenerate': { body: passthroughBody },
+  'PUT /cms-intake-settings': { body: cmsIntakeSettingsBody },
+  'POST /cms-intake-settings/intake-api-key/regenerate': { body: z.object({}).strict() },
   'GET /workbaskets': { query: passthroughQuery },
   'POST /work-settings/default-routing': { body: z.object({}).strict() },
   'POST /workbaskets': { body: z.object({ name: nonEmptyString }).strict() },
@@ -143,7 +187,7 @@ module.exports = {
   },
   'POST /users/:id/restore': {
     params: z.object({ id: objectIdOrString }),
-    body: passthroughBody,
+    body: z.object({}).strict(),
   },
 
   'GET /system-diagnostics': { query: passthroughQuery },
@@ -154,20 +198,20 @@ module.exports = {
   'GET /cases/resolved': { query: passthroughQuery },
   'POST /cases/:id/restore': {
     params: z.object({ id: objectIdOrString }),
-    body: passthroughBody,
+    body: z.object({}).strict(),
   },
 
   'GET /storage': { query: passthroughQuery },
-  'PUT /storage': { body: passthroughBody },
-  'POST /storage/disconnect': { body: passthroughBody },
+  'PUT /storage': { body: adminStorageUpdateBody },
+  'POST /storage/disconnect': { body: z.object({}).strict() },
 
   'POST /clients/:id/restore': {
     params: z.object({ id: objectIdOrString }),
-    body: passthroughBody,
+    body: z.object({}).strict(),
   },
   'POST /tasks/:id/restore': {
     params: z.object({ id: objectIdOrString }),
-    body: passthroughBody,
+    body: z.object({}).strict(),
   },
   'GET /retention-preview': { query: passthroughQuery },
 };
