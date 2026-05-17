@@ -168,8 +168,13 @@ const HeroSection = ({ onExplore }) => (
   </section>
 );
 
+const LegacyAnchor = ({ id }) => (
+  <span id={id} className="relative -top-24 block" aria-hidden="true" />
+);
+
 const ProblemSection = () => (
   <section id="problem" className="w-full bg-slate-900 text-white py-20 md:py-28">
+    <LegacyAnchor id="why" />
     <Container>
       <motion.div {...REVEAL}>
         <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Why execution breaks in many firms.</h2>
@@ -187,6 +192,7 @@ const ProblemSection = () => (
 
 const ProductPillarsSection = () => (
   <section id="pillars" className="w-full bg-slate-50 py-20 md:py-28">
+    <LegacyAnchor id="product" />
     <Container>
       <motion.div {...REVEAL}>
         <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">Four pillars: Company Brain + Work Execution OS.</h2>
@@ -256,6 +262,7 @@ const UseCasesSection = () => (
 
 const TrustSection = () => (
   <section id="trust" className="w-full bg-slate-900 text-white py-20 md:py-28">
+    <LegacyAnchor id="pilot-readiness" />
     <Container>
       <motion.div {...REVEAL}>
         <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Trust and control.</h2>
