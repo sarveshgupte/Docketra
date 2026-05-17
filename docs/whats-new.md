@@ -1,5 +1,12 @@
 # What's New
 
+
+## May 2026: Persistent workspace storage trust indicator
+
+- Added persistent workspace storage indicator showing BYOS/fallback status.
+- Firm users can now see Firm-owned storage active / Docketra-managed storage / Storage needs attention directly in the firm workspace shell, with quick links to Storage Settings and Data Storage Map.
+- Kept storage/security behavior unchanged and avoided exposing secrets, tokens, drive IDs, or raw provider configuration in the UI surface.
+
 ## May 2026: Storage Settings BYOS admin UX reorganization
 
 - Reorganized Storage Settings into a clearer hierarchy: **Storage overview**, **Firm-owned Google Drive**, **Storage capacity**, **Data storage map**, **Backup and export**, and collapsed **Advanced manual providers**.
