@@ -47,6 +47,9 @@ module.exports = {
     params: z.object({ id: objectIdOrString }),
     body: z.object({ isActive: z.boolean() }).strict(),
   },
+  'DELETE /categories/:id': {
+    params: z.object({ id: objectIdOrString }),
+  },
   'POST /categories/:id/subcategories': {
     params: z.object({ id: objectIdOrString }),
     body: z.object({ name: nonEmptyString, workbasketId: objectIdString, defaultSlaDays: z.number().int().min(0).optional() }).strict(),
@@ -58,6 +61,9 @@ module.exports = {
   'PATCH /categories/:id/subcategories/:subcategoryId/status': {
     params: z.object({ id: objectIdOrString, subcategoryId: nonEmptyString }),
     body: z.object({ isActive: z.boolean() }).strict(),
+  },
+  'DELETE /categories/:id/subcategories/:subcategoryId': {
+    params: z.object({ id: objectIdOrString, subcategoryId: nonEmptyString }),
   },
 
   'GET /hierarchy': { query: passthroughQuery },

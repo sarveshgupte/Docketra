@@ -1,9 +1,9 @@
 const adminSchemas = require('../src/schemas/admin.routes.schema');
 
-describe('work management no-delete policy', () => {
-  test('admin category delete routes are not exposed in admin schema', () => {
-    expect(adminSchemas['DELETE /categories/:id']).toBeUndefined();
-    expect(adminSchemas['DELETE /categories/:id/subcategories/:subcategoryId']).toBeUndefined();
+describe('work management deactivate-only compatibility policy', () => {
+  test('admin category delete routes remain exposed as soft-delete compatibility endpoints', () => {
+    expect(adminSchemas['DELETE /categories/:id']).toBeDefined();
+    expect(adminSchemas['DELETE /categories/:id/subcategories/:subcategoryId']).toBeDefined();
   });
 
   test('work management mutation schemas are strict', () => {
