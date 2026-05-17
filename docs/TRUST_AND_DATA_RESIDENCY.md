@@ -32,3 +32,8 @@ Authenticated firm workspace users can now see a persistent storage indicator in
 
 
 - Added **Strict firm-owned storage mode** (Primary Admin controlled). When enabled, business-content writes require active firm-owned Google Drive and Docketra-managed fallback is disabled for writes.
+
+## May 2026: Strict firm-owned storage audit events
+- Added audit/log events: `STRICT_STORAGE_ENABLED`, `STRICT_STORAGE_DISABLED`, `STRICT_STORAGE_WRITE_BLOCKED`, `STRICT_STORAGE_BYOS_REQUIRED`.
+- Event payload is sanitized and includes only: `firmId`, actor xID/user id, `requestId`, provider mode, target write path category (`client_profile`/`cfs_upload`/`direct_upload`), and timestamp.
+- Secrets, credentials, provider tokens, and folder IDs are excluded from strict-mode audit visibility.
