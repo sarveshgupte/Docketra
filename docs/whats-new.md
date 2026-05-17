@@ -818,4 +818,5 @@
 - Kept GET/list/search/report query passthrough behavior intentionally unchanged in this phase for backward compatibility.
 
 
+## 2026-05-17 — Strict firm-owned storage enforcement mode
 - Added **Strict firm-owned storage mode** (Primary Admin controlled). When enabled, business-content writes require active firm-owned Google Drive and Docketra-managed fallback is disabled for writes.
