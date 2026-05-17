@@ -34,6 +34,7 @@ const settingsAuditService = require('../services/settingsAudit.service');
 const { safeDecrypt } = require('../utils/encryption');
 const log = require('../utils/log');
 const { resolveFirmStorageState } = require('../services/storage/resolveFirmStorageState');
+const { EVENTS: STRICT_STORAGE_EVENTS, logStrictStorageEvent } = require('../services/strictStorageAudit.service');
 
 /**
  * Admin Controller for Admin Panel Operations
@@ -787,6 +788,14 @@ const updateFirmSettings = async (req, res) => {
       const state = resolveFirmStorageState(firm);
       const byosHealthy = state.canonicalProvider === 'google_drive' && state.connectionStatus === 'ACTIVE_BYOS' && !state.isManaged;
       if (!byosHealthy) {
+        logStrictStorageEvent({
+          event: STRICT_STORAGE_EVENTS.BYOS_REQUIRED,
+          firmId: firm.firmId || ownershipFirmId,
+          actorXid: req.user?.xID || null,
+          requestId: req.requestId || null,
+          providerMode: state.mode || (state.isManaged ? 'managed_fallback' : 'firm_connected'),
+          targetPathCategory: null,
+        });
         return res.status(400).json({
           success: false,
           error: 'strict_storage_requires_byos',
@@ -826,6 +835,18 @@ const updateFirmSettings = async (req, res) => {
       },
       req,
     });
+
+
+    if (previousSettings.firm.strictFirmOwnedStorage !== nextSettings.firm.strictFirmOwnedStorage) {
+      logStrictStorageEvent({
+        event: nextSettings.firm.strictFirmOwnedStorage ? STRICT_STORAGE_EVENTS.ENABLED : STRICT_STORAGE_EVENTS.DISABLED,
+        firmId: firm.firmId || ownershipFirmId,
+        actorXid: req.user?.xID || null,
+        requestId: req.requestId || null,
+        providerMode: nextSettings.firm.strictFirmOwnedStorage ? 'firm_connected' : 'managed_fallback',
+        targetPathCategory: null,
+      });
+    }
 
     await Promise.all([
       settingsAuditService.logConfigChange({

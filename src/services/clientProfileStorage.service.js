@@ -174,7 +174,7 @@ async function readProfileFromManagedFallback(backend, objectKey) {
 
 class ClientProfileStorageService {
   async createClientProfile({ firmId, client, profileInput, actorXID }) {
-    await requireWritableBusinessStorage({ firmId, requestId: null });
+    await requireWritableBusinessStorage({ firmId, requestId: null, actorXid: actorXID || null, targetPathCategory: 'client_profile' });
     const payload = buildProfilePayload({ client, profileInput, actorXID });
     const backend = await resolveStorageBackend(firmId);
     const ref = backend.type === 'firm_connected'
@@ -215,7 +215,7 @@ class ClientProfileStorageService {
   }
 
   async updateClientProfile({ firmId, client, partialProfileInput = {}, actorXID }) {
-    await requireWritableBusinessStorage({ firmId, requestId: null });
+    await requireWritableBusinessStorage({ firmId, requestId: null, actorXid: actorXID || null, targetPathCategory: 'client_profile' });
     let current = null;
     try {
       current = await this.getClientProfile({ firmId, client });
