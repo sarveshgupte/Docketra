@@ -3,6 +3,7 @@ const { Readable } = require('stream');
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { StorageProviderFactory } = require('./storage/StorageProviderFactory');
 const log = require('../utils/log');
+const { requireWritableBusinessStorage } = require('./strictStoragePolicy.service');
 
 const PROFILE_SCHEMA_VERSION = 1;
 const PROFILE_OBJECT_NAME = 'profile.json';
@@ -173,6 +174,7 @@ async function readProfileFromManagedFallback(backend, objectKey) {
 
 class ClientProfileStorageService {
   async createClientProfile({ firmId, client, profileInput, actorXID }) {
+    await requireWritableBusinessStorage({ firmId, requestId: null });
     const payload = buildProfilePayload({ client, profileInput, actorXID });
     const backend = await resolveStorageBackend(firmId);
     const ref = backend.type === 'firm_connected'
@@ -213,6 +215,7 @@ class ClientProfileStorageService {
   }
 
   async updateClientProfile({ firmId, client, partialProfileInput = {}, actorXID }) {
+    await requireWritableBusinessStorage({ firmId, requestId: null });
     let current = null;
     try {
       current = await this.getClientProfile({ firmId, client });

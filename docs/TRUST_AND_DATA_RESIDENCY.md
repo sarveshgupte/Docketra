@@ -29,3 +29,6 @@ Primary Admins can verify the active storage provider and storage map in **Stora
 
 ## Workspace-visible storage indicators
 Authenticated firm workspace users can now see a persistent storage indicator in the platform header showing whether the workspace is currently using firm-owned Google Drive or Docketra-managed storage. The indicator links directly to Storage Settings and Data Storage Map for deeper verification without exposing secrets or internal provider identifiers.
+
+
+- Added **Strict firm-owned storage mode** (Primary Admin controlled). When enabled, business-content writes require active firm-owned Google Drive and Docketra-managed fallback is disabled for writes.
