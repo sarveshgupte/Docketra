@@ -77,11 +77,15 @@ const softDeleteMany = async ({ model, filter, req, reason, session }) => {
 };
 
 const ensureCategoryNotInUse = async (categoryDoc, session) => {
-  const countQuery = Case.countDocuments({ categoryId: categoryDoc._id });
+  // ⚡ Bolt Performance Optimization:
+  // 💡 What: Replaced Case.countDocuments() with Case.exists()
+  // 🎯 Why: countDocuments forces a full index scan when we only need to know if at least one document exists. exists() provides an O(1) early return upon the first match.
+  // 📊 Impact: Faster query execution for system initialization and validation checks.
+  const countQuery = Case.exists({ categoryId: categoryDoc._id });
   countQuery.includeDeleted();
   if (session && countQuery.session) countQuery.session(session);
-  const inUseCount = await countQuery.exec();
-  if (inUseCount > 0) {
+  const inUseResult = await countQuery.exec();
+  if (inUseResult != null) {
     const err = new Error('Category is in use by existing cases and cannot be deleted');
     err.statusCode = 400;
     throw err;
