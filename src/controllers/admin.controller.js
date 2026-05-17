@@ -33,6 +33,7 @@ const { writeSettingsAudit, listSettingsAudit } = require('../services/productAu
 const settingsAuditService = require('../services/settingsAudit.service');
 const { safeDecrypt } = require('../utils/encryption');
 const log = require('../utils/log');
+const { resolveFirmStorageState } = require('../services/storage/resolveFirmStorageState');
 
 /**
  * Admin Controller for Admin Panel Operations
@@ -781,6 +782,18 @@ const updateFirmSettings = async (req, res) => {
     };
     const requestedFirmSettings = req.body?.firm ? normalizeFirmSettings(req.body.firm) : previousSettings.firm;
     const requestedWorkSettings = req.body?.work ? normalizeWorkSettings(req.body.work) : previousSettings.work;
+
+    if (requestedFirmSettings.strictFirmOwnedStorage) {
+      const state = resolveFirmStorageState(firm);
+      const byosHealthy = state.canonicalProvider === 'google_drive' && state.connectionStatus === 'ACTIVE_BYOS' && !state.isManaged;
+      if (!byosHealthy) {
+        return res.status(400).json({
+          success: false,
+          error: 'strict_storage_requires_byos',
+          message: 'Connect firm Google Drive before enabling strict mode.',
+        });
+      }
+    }
 
     firm.settings = {
       ...(firm.settings || {}),

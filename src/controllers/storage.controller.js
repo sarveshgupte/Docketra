@@ -439,7 +439,7 @@ const getStorageConfiguration = async (req, res) => {
   try {
     const ownershipFirmId = await resolveOwnershipFirmIdForRead(req);
     if (!ownershipFirmId) return res.status(400).json({ error: 'Tenant mapping missing' });
-    const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig settings.storageBackup').lean();
+    const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig settings.storageBackup settings.firm.strictFirmOwnedStorage').lean();
     const state = resolveFirmStorageState(firm);
 
     let folderPath = null;
@@ -463,6 +463,7 @@ const getStorageConfiguration = async (req, res) => {
       folderPath,
       createdAt: firm?.storageConfig?.createdAt || null,
       updatedAt: firm?.storageConfig?.updatedAt || null,
+      strictFirmOwnedStorage: Boolean(firm?.settings?.firm?.strictFirmOwnedStorage),
       backup: {
         enabled: Boolean(backupSettings.enabled),
         notificationRecipients: backupSettings.notificationRecipients || [],
@@ -479,7 +480,7 @@ const getStorageOwnershipSummary = async (req, res) => {
   if (!ensureFirmAdmin(req, res)) return;
   try {
     const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
-    const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig settings.storageBackup').lean();
+    const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig settings.storageBackup settings.firm.strictFirmOwnedStorage').lean();
     const state = resolveFirmStorageState(firm);
     const storageProvider = toUiProvider(state.canonicalProvider);
     const storageMode = state.mode || MANAGED_STORAGE_MODE;
@@ -527,6 +528,7 @@ const getStorageOwnershipSummary = async (req, res) => {
 
     res.set('Cache-Control', 'no-store');
     return res.json({
+      strictFirmOwnedStorage: Boolean(firm?.settings?.firm?.strictFirmOwnedStorage),
       activeStorage: {
         provider: storageProvider,
         mode: storageMode,
@@ -540,7 +542,7 @@ const getStorageOwnershipSummary = async (req, res) => {
       },
       fallbackStorage: {
         provider: 'docketra_managed',
-        enabled: true,
+        enabled: !Boolean(firm?.settings?.firm?.strictFirmOwnedStorage),
         status: storageMode === MANAGED_STORAGE_MODE ? 'ACTIVE_MANAGED' : 'STANDBY',
       },
       backupExport: {
@@ -1096,6 +1098,7 @@ const getStorageDataMap = async (req, res) => {
     return res.json({
       title: 'Data Storage Map',
       message: 'Your business data lives in your firm cloud storage. Docketra stores only control-plane metadata needed to run the app.',
+      strictFirmOwnedStorage: Boolean(firm?.settings?.firm?.strictFirmOwnedStorage),
       activeStorage: {
         provider: state.isManaged ? 'docketra_managed' : 'firm_owned_google_drive',
         providerLabel: state.isManaged ? 'Docketra-managed fallback' : 'Firm-owned Google Drive',

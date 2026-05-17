@@ -54,3 +54,6 @@ This policy is enforced through:
 
 ## Client control-plane enforcement update (2026-05-14)
 Client business/profile fields are no longer canonical in MongoDB. Client documents must only store control-plane metadata and cloud profile references (`profileRef`).
+
+
+- Added **Strict firm-owned storage mode** (Primary Admin controlled). When enabled, business-content writes require active firm-owned Google Drive and Docketra-managed fallback is disabled for writes.

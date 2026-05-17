@@ -816,3 +816,6 @@
 - Converted selected legacy empty/passthrough mutation bodies to explicit strict contracts (`z.object({}).strict()` where no body fields are expected).
 - Added focused regression coverage in `tests/inputValidationMutationStrictness.test.js`.
 - Kept GET/list/search/report query passthrough behavior intentionally unchanged in this phase for backward compatibility.
+
+
+- Added **Strict firm-owned storage mode** (Primary Admin controlled). When enabled, business-content writes require active firm-owned Google Drive and Docketra-managed fallback is disabled for writes.

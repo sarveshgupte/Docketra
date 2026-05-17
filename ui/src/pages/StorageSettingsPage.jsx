@@ -21,6 +21,7 @@ import {
   getStorageUsage,
 } from '../services/storageService';
 import { useAuth } from '../hooks/useAuth';
+import { adminApi } from '../api/admin.api';
 import { spacingClasses } from '../theme/tokens';
 import { PageHeader } from '../components/layout/PageHeader';
 import { formatDateTime } from '../utils/formatDateTime';
@@ -76,6 +77,7 @@ export function StorageSettingsPage() {
   const [openingFolder, setOpeningFolder] = useState(false);
   const [folderLinkAvailable, setFolderLinkAvailable] = useState(false);
   const [folderLinkUrl, setFolderLinkUrl] = useState('');
+  const [strictModeSaving, setStrictModeSaving] = useState(false);
 
   const loadStorageUsage = async () => {
     setUsageLoading(true);
@@ -169,6 +171,31 @@ export function StorageSettingsPage() {
   const currentModeLabel = isGoogleConnected ? 'Firm-owned Google Drive' : 'Docketra-managed Google Drive';
   const statusLabel = config?.status?.includes('ERROR') || config?.status?.includes('DISCONNECTED') ? 'Needs attention' : config?.isConfigured ? 'Active' : 'Not connected';
   const usagePercent = Number(usage?.usagePercent || 0);
+  const strictFirmOwnedStorage = Boolean(config?.strictFirmOwnedStorage);
+
+
+
+  const onToggleStrictMode = async (nextValue) => {
+    if (nextValue && !isGoogleConnected) {
+      setStatusMessage({ type: 'error', text: 'Connect firm Google Drive before enabling strict mode.' });
+      return;
+    }
+    const copy = nextValue
+      ? 'Enable Strict firm-owned storage mode? This disables Docketra-managed fallback for business-content writes.'
+      : 'Disable Strict firm-owned storage mode? This re-enables Docketra-managed fallback storage.';
+    if (!window.confirm(copy)) return;
+    setStrictModeSaving(true);
+    try {
+      await adminApi.updateFirmSettings({ firm: { strictFirmOwnedStorage: nextValue } });
+      setStatusMessage({ type: 'success', text: nextValue ? 'Strict firm-owned storage mode enabled.' : 'Strict firm-owned storage mode disabled.' });
+      await loadConfiguration();
+    } catch (error) {
+      const message = error?.response?.data?.message || 'Unable to update strict storage mode.';
+      setStatusMessage({ type: 'error', text: message });
+    } finally {
+      setStrictModeSaving(false);
+    }
+  };
 
   const onSaveStorageSettings = async () => {
     setSavingProvider(true);
