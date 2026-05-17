@@ -43,3 +43,9 @@ Team Management supports these assignable roles only:
 - Denied: `USER` (Employee) and `SUPER_ADMIN` on firm-scoped Work Management routes.
 - Work Management governs workflow structure (categories/subcategories/workbaskets + routing); user assignment to workbaskets/QC remains Team Management-owned.
 
+
+### Work Management access and WB/QC linkage (May 2026)
+- Work Management is available to `PRIMARY_ADMIN`, `ADMIN`, and `MANAGER`.
+- Employee/User roles are denied Work Management route and mutations.
+- Primary Workbasket creation enforces automatic creation of one linked QC Workbasket (`${primaryWorkbasketName} — QC`).
+- Team Management owns WB/QC user assignment boundaries.
