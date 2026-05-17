@@ -1,5 +1,12 @@
 # What's New
 
+## May 2026: Storage Settings BYOS admin UX reorganization
+
+- Reorganized Storage Settings into a clearer hierarchy: **Storage overview**, **Firm-owned Google Drive**, **Storage capacity**, **Data storage map**, **Backup and export**, and collapsed **Advanced manual providers**.
+- Removed duplicate export CTAs and kept a single **Generate storage export** action in Backup and export.
+- Improved open-folder behavior to rely on actual folder-link availability instead of provider-only assumptions, with clear unavailable messaging.
+- Kept existing security behavior unchanged: BYOS OAuth remains direct/OTP-free, and manual providers still require OTP verification.
+
 ## May 2026: Landing page repositioned to Company Brain + Work Execution OS
 
 - Repositioned the public landing page around **The Company Brain for Indian professional firms** with grounded Work Execution OS framing.
