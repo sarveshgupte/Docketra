@@ -56,7 +56,21 @@ module.exports = {
   },
   'PUT /:clientId/fact-sheet': {
     params: z.object({ clientId: clientIdString }),
-    body: z.object({}).strict(),
+    body: z.object({
+      description: z.string().trim().max(5000).optional(),
+      notes: z.string().trim().max(5000).optional(),
+      basicInfo: z.object({
+        clientName: z.string().trim().max(200).optional(),
+        entityType: z.string().trim().max(120).optional(),
+        PAN: z.string().trim().max(30).optional(),
+        CIN: z.string().trim().max(40).optional(),
+        GSTIN: z.string().trim().max(40).optional(),
+        address: z.string().trim().max(500).optional(),
+        contactPerson: z.string().trim().max(200).optional(),
+        email: z.string().trim().email().optional(),
+        phone: z.string().trim().max(40).optional(),
+      }).strict().optional(),
+    }).strict(),
   },
   'POST /:clientId/fact-sheet/files': { params: z.object({ clientId: clientIdString }), body: z.object({}).strict() },
   'DELETE /:clientId/fact-sheet/files/:fileId': { params: z.object({ clientId: clientIdString, fileId: nonEmptyString }) },
