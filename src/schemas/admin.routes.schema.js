@@ -23,6 +23,7 @@ const firmSettingsBody = z.object({
     enableEscalationView: z.boolean().optional(),
     enableBulkActions: z.boolean().optional(),
     brandLogoUrl: z.string().trim().max(2048).optional(),
+    strictFirmOwnedStorage: z.boolean().optional(),
   }).strict().optional(),
   work: z.object({
     assignmentStrategy: z.enum(['manual', 'balanced']).optional(),

@@ -5,6 +5,7 @@ const { CaseRepository, ClientRepository } = require('../repositories');
 const cfsDriveService = require('./cfsDrive.service');
 const { StorageProviderFactory } = require('./storage/StorageProviderFactory');
 const DocketraManagedStorageProvider = require('./storage/providers/DocketraManagedStorageProvider');
+const { requireWritableBusinessStorage } = require('./strictStoragePolicy.service');
 
 const DIRECT_UPLOAD_TTL_MS = Number(process.env.DIRECT_UPLOAD_TTL_MS || 15 * 60 * 1000);
 const DIRECT_UPLOAD_RETENTION_MS = Number(process.env.DIRECT_UPLOAD_RETENTION_MS || 30 * 24 * 60 * 60 * 1000);
@@ -241,6 +242,7 @@ const createIntent = async ({
   checksum,
 }) => {
   ensureDirectUploadsEnabled();
+  await requireWritableBusinessStorage({ firmId, requestId: null });
   assertMimeAndSize({ mimeType, size });
 
   const backend = await resolveUploadBackend(firmId);

@@ -1008,6 +1008,9 @@ const createClientCFSUploadIntent = async (req, res, next) => {
       error,
     }));
     const status = error?.status || 500;
+    if (error?.code === 'STRICT_STORAGE_UNAVAILABLE') {
+      return res.status(error?.status || 503).json({ success: false, ...(error.payload || { error: 'strict_storage_unavailable', message: 'Firm-owned storage is required for this workspace.' }) });
+    }
     if (error?.code === 'STORAGE_NOT_AVAILABLE') {
       return res.status(status).json({
         success: false,

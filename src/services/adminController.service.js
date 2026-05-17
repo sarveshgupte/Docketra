@@ -9,6 +9,7 @@ const DEFAULT_FIRM_SETTINGS = {
   enableEscalationView: true,
   enableBulkActions: true,
   brandLogoUrl: '',
+  strictFirmOwnedStorage: false,
 };
 
 const DEFAULT_WORK_SETTINGS = {
@@ -59,6 +60,7 @@ const normalizeFirmSettings = (raw = {}) => ({
   enableEscalationView: raw.enableEscalationView !== false,
   enableBulkActions: raw.enableBulkActions !== false,
   brandLogoUrl: typeof raw.brandLogoUrl === 'string' ? raw.brandLogoUrl.trim() : DEFAULT_FIRM_SETTINGS.brandLogoUrl,
+  strictFirmOwnedStorage: Boolean(raw.strictFirmOwnedStorage),
 });
 
 const normalizeWorkSettings = (raw = {}) => ({

@@ -366,6 +366,10 @@ const firmSchema = new mongoose.Schema({
         trim: true,
         default: '',
       },
+      strictFirmOwnedStorage: {
+        type: Boolean,
+        default: false,
+      },
     },
     work: {
       assignmentStrategy: {

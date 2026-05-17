@@ -21,6 +21,7 @@ import {
   getStorageUsage,
 } from '../services/storageService';
 import { useAuth } from '../hooks/useAuth';
+import { adminApi } from '../api/admin.api';
 import { spacingClasses } from '../theme/tokens';
 import { PageHeader } from '../components/layout/PageHeader';
 import { formatDateTime } from '../utils/formatDateTime';
@@ -76,6 +77,7 @@ export function StorageSettingsPage() {
   const [openingFolder, setOpeningFolder] = useState(false);
   const [folderLinkAvailable, setFolderLinkAvailable] = useState(false);
   const [folderLinkUrl, setFolderLinkUrl] = useState('');
+  const [strictModeSaving, setStrictModeSaving] = useState(false);
 
   const loadStorageUsage = async () => {
     setUsageLoading(true);
@@ -169,6 +171,31 @@ export function StorageSettingsPage() {
   const currentModeLabel = isGoogleConnected ? 'Firm-owned Google Drive' : 'Docketra-managed Google Drive';
   const statusLabel = config?.status?.includes('ERROR') || config?.status?.includes('DISCONNECTED') ? 'Needs attention' : config?.isConfigured ? 'Active' : 'Not connected';
   const usagePercent = Number(usage?.usagePercent || 0);
+  const strictFirmOwnedStorage = Boolean(config?.strictFirmOwnedStorage);
+
+
+
+  const onToggleStrictMode = async (nextValue) => {
+    if (nextValue && !isGoogleConnected) {
+      setStatusMessage({ type: 'error', text: 'Connect firm Google Drive before enabling strict mode.' });
+      return;
+    }
+    const copy = nextValue
+      ? 'Enable Strict firm-owned storage mode? This disables Docketra-managed fallback for business-content writes.'
+      : 'Disable Strict firm-owned storage mode? This re-enables Docketra-managed fallback storage.';
+    if (!window.confirm(copy)) return;
+    setStrictModeSaving(true);
+    try {
+      await adminApi.updateFirmSettings({ firm: { strictFirmOwnedStorage: nextValue } });
+      setStatusMessage({ type: 'success', text: nextValue ? 'Strict firm-owned storage mode enabled.' : 'Strict firm-owned storage mode disabled.' });
+      await loadConfiguration();
+    } catch (error) {
+      const message = error?.response?.data?.message || 'Unable to update strict storage mode.';
+      setStatusMessage({ type: 'error', text: message });
+    } finally {
+      setStrictModeSaving(false);
+    }
+  };
 
   const onSaveStorageSettings = async () => {
     setSavingProvider(true);
@@ -317,6 +344,8 @@ export function StorageSettingsPage() {
           <Card><div className={spacingClasses.sectionMargin}><h2 className="text-lg font-medium">Storage overview</h2><p>Active mode: {currentModeLabel}</p><p>Status: {statusLabel}</p>{isGoogleConnected ? <p>Connected account: {config?.connectedEmail || 'N/A'}</p> : null}<p>Last checked: {formatDateTime(ownershipSummary?.lastHealthCheck?.checkedAt || config?.updatedAt)}</p><p className="text-sm text-[var(--dt-text-muted)]">Docketra stores business files in the active storage provider. MongoDB stores only control-plane metadata.</p><div className="flex flex-wrap gap-2 mt-3">{isGoogleConnected ? <><Button type="button" variant="outline" onClick={onOpenStorageFolder} disabled={openingFolder}>{openingFolder ? 'Opening folder…' : 'Open storage folder'}</Button><Button type="button" variant="outline" onClick={onTestConnection} disabled={testing}>{testing ? 'Testing…' : 'Test connection'}</Button><Button type="button" variant="primary" onClick={connectGoogleDrive}>Refresh Google Drive connection</Button><Button type="button" variant="outline" onClick={onDisconnectGoogle} disabled={disconnecting}>{disconnecting ? 'Disconnecting…' : 'Disconnect firm Google Drive'}</Button></> : <Button type="button" variant="primary" onClick={connectGoogleDrive}>Connect firm Google Drive</Button>}</div>{!folderLinkAvailable && isGoogleConnected ? <p className="text-sm text-[var(--dt-text-muted)] mt-2">Folder link unavailable.</p> : null}{summaryWarning ? <p className="text-sm text-[var(--dt-warning)] mt-2">{summaryWarning}</p> : null}</div></Card>
 
           <Card><div className={spacingClasses.sectionMargin}><h2 className="text-lg font-medium">Firm-owned Google Drive</h2>{!isGoogleConnected ? <><ul className="list-disc ml-6 text-sm space-y-1"><li>Your files stay in your firm’s Google Drive.</li><li>Docketra uses Drive only after Primary Admin approval.</li><li>You can disconnect anytime.</li></ul><Button type="button" variant="primary" onClick={connectGoogleDrive}>Connect firm Google Drive</Button></> : <><p>Connected email: {config?.connectedEmail || 'N/A'}</p><p>Status: {statusLabel}</p><p>Last checked: {formatDateTime(ownershipSummary?.lastHealthCheck?.checkedAt || config?.updatedAt)}</p><p className="text-sm text-[var(--dt-text-muted)]">Future uploads use firm-owned Google Drive.</p><div className="flex flex-wrap gap-2 mt-2"><Button type="button" variant="primary" onClick={connectGoogleDrive}>Refresh Google Drive connection</Button><Button type="button" variant="outline" onClick={onDisconnectGoogle} disabled={disconnecting}>{disconnecting ? 'Disconnecting…' : 'Disconnect firm Google Drive'}</Button></div></>}</div></Card>
+
+          {user?.role === 'PRIMARY_ADMIN' ? <Card><div className={spacingClasses.sectionMargin}><h2 className="text-lg font-medium">Strict firm-owned storage mode</h2><p className="text-sm mt-2">Your firm requires all business content to remain in firm-owned cloud storage. Docketra-managed fallback storage is disabled.</p>{!isGoogleConnected ? <p className="text-sm text-[var(--dt-warning)] mt-2">Connect firm Google Drive before enabling strict mode.</p> : null}<Button type="button" variant={strictFirmOwnedStorage ? 'outline' : 'primary'} onClick={() => onToggleStrictMode(!strictFirmOwnedStorage)} disabled={strictModeSaving || (!isGoogleConnected && !strictFirmOwnedStorage)}>{strictModeSaving ? 'Saving…' : strictFirmOwnedStorage ? 'Disable strict mode' : 'Enable strict mode'}</Button></div></Card> : null}
 
           <Card><div className={spacingClasses.sectionMargin}><h2 className="text-lg font-medium">Storage capacity</h2>{usageLoading ? <p>Loading usage…</p> : null}{!usageLoading && usage?.managedFallback ? <p>Docketra-managed storage is active. Storage quota is managed by Docketra.</p> : null}{!usageLoading && !usage?.managedFallback && usage?.quotaAvailable ? <><p>Used: {usage.displayUsed}</p><p>Available: {usage.displayAvailable}</p><p>Total: {usage.displayTotal}</p><p>Usage: {Math.round(usagePercent)}%</p><div className="mt-2 h-2 w-full rounded bg-[var(--dt-border)]"><div className="h-2 rounded bg-[var(--dt-primary)]" style={{ width: `${Math.max(0, Math.min(100, usagePercent))}%` }} /></div>{usagePercent >= 95 ? <p className="text-sm text-[var(--dt-warning)] mt-2">Uploads may fail if Drive is full.</p> : null}{usagePercent >= 85 && usagePercent < 95 ? <p className="text-sm text-[var(--dt-warning)] mt-2">Upgrade Google Drive storage soon.</p> : null}{usagePercent >= 70 && usagePercent < 85 ? <p className="text-sm text-[var(--dt-warning)] mt-2">Storage is filling up.</p> : null}<p className="text-sm text-[var(--dt-text-muted)] mt-2">Last checked: {formatDateTime(usage.lastCheckedAt)}</p></> : null}{!usageLoading && !usage?.managedFallback && !usage?.quotaAvailable ? <p>Storage quota is not available for this Drive account.</p> : null}{usageError ? <p className="text-sm text-[var(--dt-warning)]">{usageError}</p> : null}<Button type="button" variant="outline" onClick={loadStorageUsage} disabled={usageLoading}>{usageLoading ? 'Refreshing usage…' : 'Refresh usage'}</Button></div></Card>
 
