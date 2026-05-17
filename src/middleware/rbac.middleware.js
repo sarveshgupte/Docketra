@@ -1,4 +1,4 @@
-const { normalizeRole } = require('../utils/role.utils');
+const { normalizeRole, hasFirmRoleAtLeast } = require('../utils/role.utils');
 
 const requireAuth = (req, res, next) => {
   if (!req.user) {
@@ -33,7 +33,7 @@ const requirePrimaryAdmin = (req, res, next) => {
 
 const requireManagerOrPrimaryAdmin = (req, res, next) => {
   const currentRole = normalizeRole(req.user?.role);
-  if (!['MANAGER', 'PRIMARY_ADMIN'].includes(currentRole)) {
+  if (!hasFirmRoleAtLeast(currentRole, 'MANAGER')) {
     return res.status(403).json({ success: false, message: 'Manager access required' });
   }
   return next();

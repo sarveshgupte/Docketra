@@ -809,3 +809,9 @@
 - Converted selected legacy empty/passthrough mutation bodies to explicit strict contracts (`z.object({}).strict()` where no body fields are expected).
 - Added focused regression coverage in `tests/inputValidationMutationStrictness.test.js`.
 - Kept GET/list/search/report query passthrough behavior intentionally unchanged in this phase for backward compatibility.
+
+## May 2026: Work Management hardening slice 2
+- Expanded Work Management access to manager-and-above while preserving Employee/User denial and SuperAdmin tenant boundary.
+- Hardened primary↔QC linkage: primary create auto-creates exactly one linked QC (`${primaryWorkbasketName} — QC`), rename keeps generated QC names in sync, and primary deactivate cascades to linked QC deactivate.
+- Preserved Team Management as the only WB/QC assignment surface.
+- This update does not harden docket routing/inactive selector behavior beyond current guardrails.

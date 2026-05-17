@@ -53,3 +53,13 @@
 
 ## Readiness score
 - **6.5 / 10** for private pilot readiness overall; this slice improves baseline API safety but is intentionally partial.
+
+## Slice 2 hardening update
+- Work Management access is Manager-and-above only (`PRIMARY_ADMIN`, `ADMIN`, `MANAGER`); `USER`/Employee is denied.
+- SuperAdmin remains blocked from firm Work Management surfaces.
+- Creating a primary Workbasket auto-creates exactly one linked QC Workbasket named `${primaryWorkbasketName} — QC`.
+- QC linkage uses `Team.parentWorkbasketId` on the QC workbasket and duplicate QC-per-primary remains blocked by unique index and creation guardrails.
+- Primary rename now cascades to linked QC only when QC still matches generated default name.
+- Primary deactivation now deactivates linked QC workbasket automatically.
+- Team Management remains the only assignment surface for WB/QC membership; Work Management does not expose assignment controls.
+- This slice does not change docket lifecycle routing/inactive selector behavior.
