@@ -127,18 +127,18 @@ export const WorkSettingsPage = () => {
             <div className={spacingClasses.sectionMargin}>
               <div>
                 <h2 className="text-lg font-semibold text-[var(--dt-text)]">Workbasket Management</h2>
-                <p className="mt-1 text-sm text-[var(--dt-text-secondary)]">Add, rename, and activate or deactivate workbaskets for docket routing.</p>
+                <p className="mt-1 text-sm text-[var(--dt-text-secondary)]">Add, rename, and activate or deactivate workbaskets for docket routing. A linked QC Workbasket will be created automatically.</p>
               </div>
               <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
                 <Input label="New workbasket" value={workbasketName} onChange={(event) => setWorkbasketName(event.target.value)} placeholder="e.g. Compliance WB" />
-                <Button type="button" variant="primary" onClick={handleCreateWorkbasket} disabled={workbasketSaving || !workbasketName.trim()}>Add Workbasket</Button>
+                <Button type="button" variant="primary" onClick={handleCreateWorkbasket} disabled={workbasketSaving || !workbasketName.trim()}>Add Primary Workbasket</Button>
               </div>
               <div className="space-y-2">
                 {loadingWorkbaskets ? <p className="text-sm text-[var(--dt-text-muted)]">Loading workbaskets…</p> : null}
                 {!loadingWorkbaskets && workbaskets.length === 0 ? (<div className="rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-bg)] p-3"><p className="text-sm text-[var(--dt-text-muted)]">No active workbasket is configured yet. Create one to start docket routing.</p><Button type="button" variant="primary" className="mt-2" onClick={() => void handleCreateDefaultRouting()} disabled={workbasketSaving}>Create default routing</Button></div>) : null}
                 {workbaskets.map((workbasket) => (
                   <div key={workbasket._id} className="flex flex-wrap items-center justify-between gap-3 rounded border border-[var(--dt-border-whisper)] px-3 py-2">
-                    <div className="text-sm font-medium text-[var(--dt-text)]">{workbasket.name} <span className="text-xs text-[var(--dt-text-muted)]">({workbasket.isActive ? 'Active' : 'Inactive'})</span></div>
+                    <div className="text-sm font-medium text-[var(--dt-text)]">{workbasket.name} <span className="text-xs text-[var(--dt-text-muted)]">({workbasket.isActive ? 'Active' : 'Inactive'})</span>{String(workbasket.type || 'PRIMARY').toUpperCase()==='PRIMARY' && workbasket._id ? <span className="ml-2 text-xs text-[var(--dt-text-muted)]">Linked QC: {workbaskets.find((candidate) => String(candidate.parentWorkbasketId || '') === String(workbasket._id))?.name || 'Missing'}</span> : null}</div>
                     <div className="flex flex-wrap gap-2">
                       <Button type="button" variant="outline" onClick={() => handleRenameWorkbasket(workbasket)}>Rename</Button>
                       <Button type="button" variant={workbasket.isActive ? 'danger' : 'primary'} onClick={() => handleToggleWorkbasket(workbasket)}>{workbasket.isActive ? 'Deactivate' : 'Activate'}</Button>
