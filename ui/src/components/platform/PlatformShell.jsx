@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../constants/routes';
 import { getPlatformDestinationCommands, getPlatformNavigation, PLATFORM_SHORTCUT_ROUTES } from '../../constants/platformNavigation';
 import { CommandPalette } from '../common/CommandPalette';
+import StorageStatusBadge from './StorageStatusBadge';
 import api from '../../services/api';
 import { clientApi } from '../../api/client.api';
 import { isShortcutAllowedTarget } from '../../utils/keyboardShortcuts';
@@ -425,6 +426,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
               <kbd>Ctrl/⌘ K</kbd>
             </button>
             {actions}
+            <StorageStatusBadge />
             <div className="platform__account-menu" ref={menuRef}>
               <button
                 type="button"
