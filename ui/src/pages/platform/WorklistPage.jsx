@@ -9,7 +9,6 @@ import {
   DataTable,
   FilterBar,
   PageSection,
-  RefreshNotice,
   SectionToolbar,
   StatusMessageStack,
   formatDateLabel,
@@ -120,10 +119,6 @@ export const PlatformWorklistPage = () => {
           { tone: 'success', message: success },
           { tone: 'info', message: isFetching && !isLoading ? 'Refreshing worklist without interrupting your current view…' : '' },
         ]}
-      />
-      <RefreshNotice
-        show={isFetching && !isLoading}
-        label="Refreshing worklist without interrupting your current view…"
       />
       <PageSection
         title="What this queue is for"
