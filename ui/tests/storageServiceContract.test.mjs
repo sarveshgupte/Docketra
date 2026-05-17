@@ -21,4 +21,9 @@ assert.ok(
   'listStorageExports should call GET /storage/exports with limit params.',
 );
 
+
+const storageStatusHookSource = fs.readFileSync(path.resolve(uiRoot, 'src/hooks/useStorageStatusSummary.js'), 'utf8');
+assert.ok(storageStatusHookSource.includes('getStorageConfiguration'), 'useStorageStatusSummary should use getStorageConfiguration from storageService.');
+assert.ok(storageStatusHookSource.includes('getStorageOwnershipSummary'), 'useStorageStatusSummary should use getStorageOwnershipSummary from storageService.');
+
 console.log('storageServiceContract.test.mjs passed');
