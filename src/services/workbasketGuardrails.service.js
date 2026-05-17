@@ -23,7 +23,7 @@ async function createPrimaryWithQc({ firmId, name, managerId = null }) {
     const worker = async (opts = {}) => {
       [primary] = await Team.create([{ firmId, name, managerId, type: 'PRIMARY', parentWorkbasketId: null, isActive: true }], opts.session ? opts : undefined);
       try {
-        [qc] = await Team.create([{ firmId, name: `${name} - QC`, type: 'QC', parentWorkbasketId: primary._id, isActive: true }], opts.session ? opts : undefined);
+        [qc] = await Team.create([{ firmId, name: `${name} — QC`, type: 'QC', parentWorkbasketId: primary._id, isActive: true }], opts.session ? opts : undefined);
       } catch (error) {
         await Team.deleteOne({ _id: primary._id, firmId }, opts.session ? { session: opts.session } : undefined);
         throw error;
