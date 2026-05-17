@@ -87,7 +87,16 @@ module.exports = {
 
   'GET /:clientId/activity': { params: z.object({ clientId: clientIdString }), query: z.object({}).passthrough() },
   'GET /:clientId/cfs/comments': { params: z.object({ clientId: clientIdString }), query: z.object({}).passthrough() },
-  'POST /:clientId/cfs/comments': { params: z.object({ clientId: clientIdString }), body: z.object({ commentText: nonEmptyString }).strict() },
+  'POST /:clientId/cfs/comments': {
+    params: z.object({ clientId: clientIdString }),
+    body: z.object({
+      commentText: nonEmptyString,
+      attachments: z.array(z.object({
+        file_name: nonEmptyString,
+        file_url: z.string().trim().url(),
+      }).strict()).optional(),
+    }).strict(),
+  },
   'GET /:clientId/cfs/files': { params: z.object({ clientId: clientIdString }), query: z.object({}).passthrough() },
   'GET /:clientId/cfs/files/:attachmentId/download': {
     params: z.object({ clientId: clientIdString, attachmentId: nonEmptyString }),

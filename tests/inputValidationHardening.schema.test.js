@@ -28,6 +28,16 @@ function shouldAccept(schema, payload, label) {
     'team update'
   );
 
+
+  shouldAccept(
+    clientSchemas['POST /:clientId/cfs/comments'].body,
+    {
+      commentText: 'Looks good',
+      attachments: [{ file_name: 'evidence.pdf', file_url: 'https://files.example.com/evidence.pdf' }],
+    },
+    'client cfs comment create with attachments'
+  );
+
   shouldRejectUnknownKeys(
     clientSchemas['POST /:clientId/cfs/comments'].body,
     { commentText: 'Looks good', createdBy: 'attacker' },
