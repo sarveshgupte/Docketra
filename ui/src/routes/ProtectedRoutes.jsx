@@ -443,7 +443,7 @@ export const ProtectedRoutes = () => (
         <Route
           path="settings/work"
           element={(
-            <ProtectedRoute requireAdmin>
+            <ProtectedRoute requireManagerOrAbove>
               <WorkSettingsPage />
             </ProtectedRoute>
           )}

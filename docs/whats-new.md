@@ -817,6 +817,8 @@
 - Added focused regression coverage in `tests/inputValidationMutationStrictness.test.js`.
 - Kept GET/list/search/report query passthrough behavior intentionally unchanged in this phase for backward compatibility.
 
-
-## 2026-05-17 — Strict firm-owned storage enforcement mode
-- Added **Strict firm-owned storage mode** (Primary Admin controlled). When enabled, business-content writes require active firm-owned Google Drive and Docketra-managed fallback is disabled for writes.
+## May 2026: Work Management hardening slice 2
+- Expanded Work Management access to manager-and-above while preserving Employee/User denial and SuperAdmin tenant boundary.
+- Hardened primary↔QC linkage: primary create auto-creates exactly one linked QC (`${primaryWorkbasketName} — QC`), rename keeps generated QC names in sync, and primary deactivate cascades to linked QC deactivate.
+- Preserved Team Management as the only WB/QC assignment surface.
+- This update does not harden docket routing/inactive selector behavior beyond current guardrails.

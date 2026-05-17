@@ -150,8 +150,24 @@ const renameWorkbasket = async (req, res) => {
     });
     if (duplicate) return res.status(409).json({ success: false, message: 'Workbasket already exists' });
 
+    const previousName = String(workbasket.name || '').trim();
+    let linkedQc = null;
+    if (String(workbasket.type || 'PRIMARY').toUpperCase() === 'PRIMARY') {
+      linkedQc = await Team.findOne({ firmId: req.user?.firmId, type: 'QC', parentWorkbasketId: workbasket._id });
+      if (!linkedQc) return res.status(409).json({ success: false, message: 'Primary workbasket must have exactly one linked QC workbasket' });
+    }
+
     workbasket.name = name;
     await workbasket.save();
+
+    if (linkedQc) {
+      const previousDefaultQcName = `${previousName} — QC`;
+      if (String(linkedQc.name || '').trim() === previousDefaultQcName) {
+        linkedQc.name = `${name} — QC`;
+        await linkedQc.save();
+      }
+    }
+
     return res.json({ success: true, data: workbasket, message: 'Workbasket renamed' });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Failed to rename workbasket' });
@@ -168,8 +184,19 @@ const toggleWorkbasketStatus = async (req, res) => {
     const workbasket = await Team.findOne({ _id: workbasketId, firmId: req.user?.firmId });
     if (!workbasket) return res.status(404).json({ success: false, message: 'Workbasket not found' });
 
+    let linkedQc = null;
+    if (String(workbasket.type || 'PRIMARY').toUpperCase() === 'PRIMARY') {
+      linkedQc = await Team.findOne({ firmId: req.user?.firmId, type: 'QC', parentWorkbasketId: workbasket._id });
+      if (!linkedQc) return res.status(409).json({ success: false, message: 'Primary workbasket must have exactly one linked QC workbasket' });
+    }
+
     workbasket.isActive = isActive;
     await workbasket.save();
+
+    if (linkedQc && linkedQc.isActive !== isActive) {
+      linkedQc.isActive = isActive;
+      await linkedQc.save();
+    }
 
     if (!isActive) {
       await User.updateMany(
