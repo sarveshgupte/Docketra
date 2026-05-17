@@ -20,6 +20,7 @@ module.exports = {
   'POST /google/confirm-drive': {
     body: z.object({
       driveId: z.string().trim().optional(),
+      verificationToken: nonEmptyString.optional(),
     }).strict(),
   },
   'GET /configuration': {
