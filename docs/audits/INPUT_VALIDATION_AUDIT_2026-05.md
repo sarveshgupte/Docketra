@@ -36,3 +36,41 @@
 - **8.2 / 10**
   - Strengths: complete route-schema contract coverage; no missing/stale route keys; targeted hardening on risky write endpoints.
   - Gaps: broad passthrough remains in legacy mutation areas, and list/search/report query schemas are still a phased follow-up rather than fully hardened.
+
+## PR 2 — mutation strictness hardening (legacy passthrough migration)
+
+### Mutation endpoints converted to strict mode in this pass
+- `src/schemas/admin.routes.schema.js`
+  - `PATCH /clients/:clientId/status`
+  - `POST /clients/:clientId/change-name`
+  - `PATCH /users/:id/hierarchy`
+  - `PUT /firm-settings` (explicit nested `firm`/`work` schema from controller contract)
+  - `PUT /cms-intake-settings` (explicit intake settings schema from controller contract)
+  - `POST /cms-intake-settings/intake-api-key/regenerate`
+  - `POST /users/:id/restore`
+  - `POST /cases/:id/restore`
+  - `PUT /storage` (explicit mode/provider/google/onedrive update schema)
+  - `POST /storage/disconnect`
+  - `POST /clients/:id/restore`
+  - `POST /tasks/:id/restore`
+- `src/schemas/client.routes.schema.js`
+  - `PUT /:clientId/fact-sheet` (explicit `description`/`notes`/`basicInfo` schema)
+  - `POST /:clientId/fact-sheet/files`
+  - `POST /:clientId/cfs/files`
+- `src/schemas/storage.routes.schema.js`
+  - `POST /google/confirm-drive`
+  - `POST /test-connection`
+  - `POST /disconnect`
+
+### Remaining passthrough exceptions (intentional, temporary)
+- Legacy admin/client create-update fact sheet and other older mutation surfaces that still accept dynamic document payloads are retained only where contract uncertainty remains and require controller/UI payload inventory before tightening.
+- GET/list/search/report query schemas remain broadly passthrough by design in this PR to avoid backward-compatibility regressions.
+
+### Tests run
+- `node tests/inputValidationHardening.schema.test.js`
+- `node tests/inputValidationMutationStrictness.test.js`
+- `node tests/routeValidationContract.test.js`
+
+### Follow-up list (queries/list/report)
+- Route-by-route query hardening for list/search/report endpoints in admin, client, case, docket, reports, and storage modules.
+- Replace query passthrough with bounded, explicit keys + coercion constraints after consumer inventory.
