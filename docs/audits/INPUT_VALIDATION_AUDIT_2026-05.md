@@ -44,17 +44,17 @@
   - `PATCH /clients/:clientId/status`
   - `POST /clients/:clientId/change-name`
   - `PATCH /users/:id/hierarchy`
-  - `PUT /firm-settings`
-  - `PUT /cms-intake-settings`
+  - `PUT /firm-settings` (explicit nested `firm`/`work` schema from controller contract)
+  - `PUT /cms-intake-settings` (explicit intake settings schema from controller contract)
   - `POST /cms-intake-settings/intake-api-key/regenerate`
   - `POST /users/:id/restore`
   - `POST /cases/:id/restore`
-  - `PUT /storage`
+  - `PUT /storage` (explicit mode/provider/google/onedrive update schema)
   - `POST /storage/disconnect`
   - `POST /clients/:id/restore`
   - `POST /tasks/:id/restore`
 - `src/schemas/client.routes.schema.js`
-  - `PUT /:clientId/fact-sheet`
+  - `PUT /:clientId/fact-sheet` (explicit `description`/`notes`/`basicInfo` schema)
   - `POST /:clientId/fact-sheet/files`
   - `POST /:clientId/cfs/files`
 - `src/schemas/storage.routes.schema.js`

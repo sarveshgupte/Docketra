@@ -29,12 +29,72 @@ function expectRejectUnknown(schema, payload, label) {
   expectValid(adminSchemas['POST /storage/disconnect'].body, {}, 'admin storage disconnect');
   expectRejectUnknown(adminSchemas['POST /storage/disconnect'].body, { rootFolderId: 'abc' }, 'admin storage disconnect');
 
+  expectValid(
+    adminSchemas['PUT /cms-intake-settings'].body,
+    {
+      autoCreateClient: true,
+      autoCreateDocket: false,
+      intakeApiEnabled: true,
+      defaultCategoryId: null,
+      defaultSubcategoryId: null,
+      defaultWorkbasketId: null,
+      defaultPriority: 'MEDIUM',
+      defaultAssignee: null,
+    },
+    'admin cms intake settings update compatibility'
+  );
+  expectRejectUnknown(
+    adminSchemas['PUT /cms-intake-settings'].body,
+    { autoCreateClient: true, autoCreateDocket: true, intakeApiEnabled: true, tenantId: 'override' },
+    'admin cms intake settings update'
+  );
+
+  expectValid(
+    adminSchemas['PUT /firm-settings'].body,
+    {
+      firm: { slaDefaultDays: 3, enableBulkActions: true, brandLogoUrl: 'https://example.com/logo.png' },
+      work: { assignmentStrategy: 'manual', autoAssignmentEnabled: false, dueSoonWarningDays: 2 },
+    },
+    'admin firm settings update compatibility'
+  );
+  expectRejectUnknown(
+    adminSchemas['PUT /firm-settings'].body,
+    { firm: { slaDefaultDays: 3, createdBy: 'attacker' } },
+    'admin firm settings update'
+  );
+
+  expectValid(
+    adminSchemas['PUT /storage'].body,
+    { mode: 'firm_connected', provider: 'google_drive', google: { driveId: 'drive-1', rootFolderId: 'root-1' } },
+    'admin storage update compatibility'
+  );
+  expectRejectUnknown(
+    adminSchemas['PUT /storage'].body,
+    { mode: 'firm_connected', provider: 'google_drive', privateKey: 'nope' },
+    'admin storage update'
+  );
+
   // Client strictness hardening
   expectValid(clientSchemas['POST /:clientId/fact-sheet/files'].body, {}, 'client fact-sheet files');
   expectRejectUnknown(clientSchemas['POST /:clientId/fact-sheet/files'].body, { createdBy: 'bad' }, 'client fact-sheet files');
 
   expectValid(clientSchemas['POST /:clientId/cfs/files'].body, {}, 'client cfs files');
   expectRejectUnknown(clientSchemas['POST /:clientId/cfs/files'].body, { actor: 'bad' }, 'client cfs files');
+
+  expectValid(
+    clientSchemas['PUT /:clientId/fact-sheet'].body,
+    {
+      description: 'Overview text',
+      notes: 'Internal notes',
+      basicInfo: { clientName: 'Acme', email: 'ops@acme.com', phone: '+91-9999999999' },
+    },
+    'client fact-sheet update compatibility'
+  );
+  expectRejectUnknown(
+    clientSchemas['PUT /:clientId/fact-sheet'].body,
+    { description: 'Overview text', actorXID: 'X999999' },
+    'client fact-sheet update'
+  );
 
   // Storage strictness hardening
   expectValid(storageSchemas['POST /google/confirm-drive'].body, { driveId: 'abc123' }, 'storage confirm-drive');
