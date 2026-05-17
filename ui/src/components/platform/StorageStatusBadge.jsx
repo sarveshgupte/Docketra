@@ -1,0 +1,64 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import useStorageStatusSummary from '../../hooks/useStorageStatusSummary';
+
+const formatDateTime = (value) => {
+  if (!value) return 'Not available';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Not available';
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+};
+
+export default function StorageStatusBadge() {
+  const { firmSlug } = useParams();
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+  const summary = useStorageStatusSummary(firmSlug);
+
+  useEffect(() => {
+    const onClick = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
+
+  if (!firmSlug) return null;
+
+  return (
+    <div className="platform__storage-badge" ref={containerRef}>
+      <button
+        type="button"
+        className={`platform__storage-pill platform__storage-pill--${summary.badgeTone}`}
+        aria-label={`Storage status: ${summary.badgeLabel}`}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        onClick={() => setOpen((value) => !value)}
+        title={summary.helperText}
+      >
+        <span className="platform__storage-dot" aria-hidden="true" />
+        <span className="platform__storage-label-long">{summary.badgeLabel}</span>
+        <span className="platform__storage-label-short">Storage</span>
+      </button>
+      {open ? (
+        <div className="platform__storage-popover" role="dialog" aria-label="Storage status details">
+          <p className="platform__storage-helper">{summary.helperText}</p>
+          <dl className="platform__storage-meta">
+            <div><dt>Active provider</dt><dd>{summary.providerLabel}</dd></div>
+            <div><dt>Status</dt><dd>{summary.statusLabel}</dd></div>
+            {summary.connectedEmail ? <div><dt>Connected account</dt><dd>{summary.connectedEmail}</dd></div> : null}
+            <div><dt>Last checked</dt><dd>{formatDateTime(summary.lastCheckedAt)}</dd></div>
+            <div><dt>Business data location</dt><dd>{summary.businessDataLocation}</dd></div>
+            <div><dt>Control-plane metadata</dt><dd>MongoDB stores control-plane metadata.</dd></div>
+          </dl>
+          <div className="platform__storage-links">
+            <Link to={summary.storageSettingsPath} onClick={() => setOpen(false)}>Storage Settings</Link>
+            <Link to={summary.dataStorageMapPath} onClick={() => setOpen(false)}>Data Storage Map</Link>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}

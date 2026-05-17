@@ -26,3 +26,6 @@ Primary Admins can verify the active storage provider and storage map in **Stora
 - Folder path displays are canonical conventions for verification and governance; path rendering does not expose raw internal provider IDs.
 
 - Storage folder verification links are resolved server-side through a sanitized endpoint (`GET /api/storage/folder-link`) that returns only a Google Drive folder URL and provider context; secrets (refresh/access tokens, private keys, raw credentials) are never returned.
+
+## Workspace-visible storage indicators
+Authenticated firm workspace users can now see a persistent storage indicator in the platform header showing whether the workspace is currently using firm-owned Google Drive or Docketra-managed storage. The indicator links directly to Storage Settings and Data Storage Map for deeper verification without exposing secrets or internal provider identifiers.
