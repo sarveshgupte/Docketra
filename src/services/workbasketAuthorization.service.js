@@ -53,15 +53,34 @@ const canMoveBetweenWorklists = ({ actor, docket, toUser }) => {
 };
 
 const SUPERVISOR_ROLES = new Set(['PRIMARY_ADMIN', 'ADMIN', 'MANAGER']);
-const canMoveDocketBetweenQueues = ({ viewer, docket, destination }) => {
+const canMoveDocketBetweenQueues = ({ viewer, docket, source = {}, destination = {}, managerScope = {} }) => {
   const role = normalizeRole(viewer?.role);
+  if (role === 'SUPER_ADMIN') return false;
   if (!SUPERVISOR_ROLES.has(role)) return false;
   if (isTerminal(docket)) return false;
-  if (!destination || !destination.type) return false;
-  return true;
+  if (!destination?.type) return false;
+
+  if (ADMIN_ROLES.has(role) || role === 'PRIMARY_ADMIN') return true;
+  if (!MANAGER_ROLES.has(role)) return false;
+
+  const permittedTeamIds = new Set((managerScope?.permittedTeamIds || []).map(toId).filter(Boolean));
+  const permittedUserXids = new Set((managerScope?.permittedUserXids || []).map((xid) => String(xid || '').trim().toUpperCase()).filter(Boolean));
+  const sourceTeamId = toId(source?.teamId || docket?.ownerTeamId || docket?.workbasketId);
+  const sourceAssignedXID = String(source?.assignedToXID || docket?.assignedToXID || '').trim().toUpperCase();
+
+  const canAccessSource = (sourceTeamId && permittedTeamIds.has(sourceTeamId)) || (sourceAssignedXID && permittedUserXids.has(sourceAssignedXID));
+  if (!canAccessSource) return false;
+
+  if (destination.type === 'USER_WORKLIST') {
+    const destinationXid = String(destination?.assigneeXID || '').trim().toUpperCase();
+    return Boolean(destinationXid) && permittedUserXids.has(destinationXid);
+  }
+
+  const destinationTeamId = toId(destination?.teamId);
+  return Boolean(destinationTeamId) && permittedTeamIds.has(destinationTeamId);
 };
 
-const getFirmUserByXid = (firmId, xID) => User.findOne({ firmId, xID: String(xID || '').toUpperCase(), isActive: true }).select('_id xID role teamId teamIds isActive').lean();
+const getFirmUserByXid = (firmId, xID) => User.findOne({ firmId, xID: String(xID || '').toUpperCase(), isActive: true }).select('_id xID name role teamId teamIds isActive').lean();
 
 module.exports = {
   canPullFromWorkbasket,

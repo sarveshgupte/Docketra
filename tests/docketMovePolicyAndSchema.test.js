@@ -6,7 +6,38 @@ const { canMoveDocketBetweenQueues } = require('../src/services/workbasketAuthor
 function testPolicy() {
   const docket = { status: 'OPEN', state: 'IN_WB' };
   assert.strictEqual(canMoveDocketBetweenQueues({ viewer: { role: 'USER' }, docket, destination: { type: 'WORKBASKET' } }), false);
-  assert.strictEqual(canMoveDocketBetweenQueues({ viewer: { role: 'MANAGER' }, docket, destination: { type: 'WORKBASKET' } }), true);
+  assert.strictEqual(canMoveDocketBetweenQueues({ viewer: { role: 'SUPER_ADMIN' }, docket, destination: { type: 'WORKBASKET' } }), false);
+  assert.strictEqual(
+    canMoveDocketBetweenQueues({
+      viewer: { role: 'MANAGER' },
+      docket,
+      source: { teamId: 'T1', assignedToXID: 'X100001' },
+      destination: { type: 'WORKBASKET', teamId: 'T2' },
+      managerScope: { permittedTeamIds: ['T1'], permittedUserXids: ['X100001'] },
+    }),
+    false,
+  );
+  assert.strictEqual(
+    canMoveDocketBetweenQueues({
+      viewer: { role: 'MANAGER' },
+      docket,
+      source: { teamId: 'T1', assignedToXID: 'X100001' },
+      destination: { type: 'WORKBASKET', teamId: 'T1' },
+      managerScope: { permittedTeamIds: ['T1'], permittedUserXids: ['X100001', 'X200001'] },
+    }),
+    true,
+  );
+  assert.strictEqual(
+    canMoveDocketBetweenQueues({
+      viewer: { role: 'MANAGER' },
+      docket,
+      source: { teamId: 'T1', assignedToXID: 'X100001' },
+      destination: { type: 'USER_WORKLIST', assigneeXID: 'X999999' },
+      managerScope: { permittedTeamIds: ['T1'], permittedUserXids: ['X100001'] },
+    }),
+    false,
+  );
+  assert.strictEqual(canMoveDocketBetweenQueues({ viewer: { role: 'PRIMARY_ADMIN' }, docket, destination: { type: 'WORKBASKET', teamId: 'Z' } }), true);
   assert.strictEqual(canMoveDocketBetweenQueues({ viewer: { role: 'ADMIN' }, docket: { status: 'RESOLVED' }, destination: { type: 'WORKBASKET' } }), false);
 }
 
