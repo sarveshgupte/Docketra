@@ -22,6 +22,10 @@ function read(relativePath) {
     'security:secrets script must invoke scripts/run-secret-scan.sh'
   );
 
+
+  const runnerScript = read('scripts/run-secret-scan.sh');
+  assert.match(runnerScript, /run_scan\(\)\s*\{[\s\S]*local scanner="\$1"[\s\S]*shift[\s\S]*"\$@"/m, 'run_scan wrapper must shift label before executing command');
+
   const gitleaksConfig = read('.gitleaks.toml');
   assert.ok(gitleaksConfig.includes("'''<required-[^>]+>'''"), 'gitleaks allowlist must include required placeholder patterns');
   assert.ok(gitleaksConfig.includes("'''<db-host>'''"), 'gitleaks allowlist must include db placeholder patterns');
