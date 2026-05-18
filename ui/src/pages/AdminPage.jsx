@@ -256,12 +256,14 @@ export const AdminPage = () => {
       return errorType;
     }
 
-    if (errorType === 'permission') {
-      showGroupedLoadToast(groupKey, 'You do not have permission');
+    if (errorType === 'unauthorized') {
+      showGroupedLoadToast(`${groupKey}:401`, 'Session expired. Please log in again.');
+    } else if (errorType === 'forbidden') {
+      showGroupedLoadToast(`${groupKey}:403`, 'You do not have permission to view this section.');
     } else if (errorType === 'server' || errorType === 'unknown') {
-      showGroupedLoadToast(groupKey, 'Something went wrong. Please try again.');
+      showGroupedLoadToast(`${groupKey}:5xx`, 'Server error. Please try again.');
     } else if (errorType === 'network') {
-      showGroupedLoadToast(groupKey, 'Unable to connect to server');
+      showGroupedLoadToast(`${groupKey}:network`, 'Unable to connect to server');
     }
 
     return errorType;
