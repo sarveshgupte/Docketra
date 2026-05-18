@@ -20,7 +20,6 @@ import { usePermissions } from '../hooks/usePermissions';
 import { useToast } from '../hooks/useToast';
 import { caseApi } from '../api/case.api';
 import { clientApi } from '../api/client.api';
-import { categoryService } from '../services/categoryService';
 import { extractErrorMessage } from '../services/apiResponse';
 import { getRecoveryPayload } from '../utils/errorRecovery';
 import { formatDateTime, getISODateInTimezone } from '../utils/formatDateTime';
@@ -45,6 +44,10 @@ import { CaseDetailSummaryHeader } from './caseDetail/CaseDetailSummaryHeader';
 import { CaseDetailOverviewPanel } from './caseDetail/CaseDetailOverviewPanel';
 import { useCaseDetailTimeline } from './caseDetail/useCaseDetailTimeline';
 import { useClientDocketHistory } from './caseDetail/useClientDocketHistory';
+import { useDocketLifecycleActions } from './caseDetail/useDocketLifecycleActions';
+import { useDocketAttachments } from './caseDetail/useDocketAttachments';
+import { useDocketClone } from './caseDetail/useDocketClone';
+import { useDocketRetryQueue } from './caseDetail/useDocketRetryQueue';
 import { LinkedKnowledgeSection } from './caseDetail/LinkedKnowledgeSection';
 import {
   canAdminMoveAssignedDocketForUser,
@@ -57,9 +60,7 @@ const CaseDetailAttachmentsPanel = lazy(() => import('./caseDetail/CaseDetailAtt
 const CaseDetailActivityPanel = lazy(() => import('./caseDetail/CaseDetailActivityPanel').then((module) => ({ default: module.CaseDetailActivityPanel })));
 const CaseDetailHistoryPanel = lazy(() => import('./caseDetail/CaseDetailHistoryPanel').then((module) => ({ default: module.CaseDetailHistoryPanel })));
 import {
-  ACTION_RETRY_BASE_DELAY_MS,
   ACTION_RETRY_KEY,
-  ACTION_RETRY_MAX_ATTEMPTS,
   INITIAL_VIRTUAL_WINDOW,
   normalizeCase,
   normalizeLifecycleForUi,
@@ -120,21 +121,11 @@ export const CaseDetailPage = () => {
   const [caseData, setCaseData] = useState(null);
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [fileDescription, setFileDescription] = useState('');
-  const [uploadingFile, setUploadingFile] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [actionConfirmation, setActionConfirmation] = useState('');
   const [actionError, setActionError] = useState(null);
   const pageContainerRef = useRef(null);
   const commentsListRef = useRef(null);
   const commentComposerId = `case-comment-composer-${caseId}`;
-  const [cloneModalOpen, setCloneModalOpen] = useState(false);
-  const [cloneCategoryId, setCloneCategoryId] = useState('');
-  const [cloneSubcategoryId, setCloneSubcategoryId] = useState('');
-  const [cloningCase, setCloningCase] = useState(false);
-  const [categoryCatalog, setCategoryCatalog] = useState([]);
-  const [loadingCloneCatalog, setLoadingCloneCatalog] = useState(false);
   // Confirm modal state (replaces window.confirm)
   const [confirmModal, setConfirmModal] = useState(null);
 
@@ -169,13 +160,6 @@ export const CaseDetailPage = () => {
   const [clientFactSheetError, setClientFactSheetError] = useState('');
   const [realtimeStatus, setRealtimeStatus] = useState('live');
   const [commentWindowSize, setCommentWindowSize] = useState(INITIAL_VIRTUAL_WINDOW);
-  const [retryQueue, setRetryQueue] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem(ACTION_RETRY_KEY) || '[]');
-    } catch (error) {
-      return [];
-    }
-  });
 
   // State for Unpend action modal
   const [showUnpendModal, setShowUnpendModal] = useState(false);
@@ -186,8 +170,6 @@ export const CaseDetailPage = () => {
   const [routingNote, setRoutingNote] = useState('');
   const [showRouteModal, setShowRouteModal] = useState(false);
   const [routeSubmitting, setRouteSubmitting] = useState(false);
-  const [uploadLinkGenerating, setUploadLinkGenerating] = useState(false);
-  const [uploadLinkResult, setUploadLinkResult] = useState(null);
   const [timelineFilter, setTimelineFilter] = useState('ALL');
   const [timelinePage, setTimelinePage] = useState(1);
 
@@ -545,59 +527,6 @@ export const CaseDetailPage = () => {
     }
   }, [caseId, refetchCaseQuery, showError]);
 
-  const queueFailedAction = useCallback((action) => {
-    setRetryQueue((prev) => {
-      const next = [...prev, {
-        ...action,
-        id: `${action.type}-${Date.now()}`,
-        attempts: 0,
-        queuedAt: new Date().toISOString(),
-        nextRetryAt: Date.now(),
-      }];
-      localStorage.setItem(ACTION_RETRY_KEY, JSON.stringify(next));
-      return next;
-    });
-  }, []);
-
-  const ensureNotificationPermission = useCallback(async () => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return false;
-    if (Notification.permission === 'granted') return true;
-    if (Notification.permission === 'denied') return false;
-    if (notificationPermissionRequestedRef.current) return false;
-
-    notificationPermissionRequestedRef.current = true;
-    try {
-      const permission = await Notification.requestPermission();
-      return permission === 'granted';
-    } catch (error) {
-      return false;
-    }
-  }, []);
-
-  const sendBrowserNotification = useCallback(async (title, body, fallbackMessage = null) => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
-    const granted = await ensureNotificationPermission();
-    if (granted) {
-      // eslint-disable-next-line no-new
-      new Notification(title, { body });
-      return;
-    }
-    if (fallbackMessage) {
-      showSuccess(fallbackMessage);
-    }
-  }, [ensureNotificationPermission, showSuccess]);
-
-  const executeQueuedAction = useCallback(async (action) => {
-    if (action.type === 'ADD_COMMENT') {
-      await caseApi.addComment(caseId, action.payload.commentText);
-      return true;
-    }
-    if (action.type === 'RESOLVE_CASE') {
-      await caseApi.resolveCase(caseId, action.payload.comment);
-      return true;
-    }
-    return false;
-  }, [caseId]);
 
   useEffect(() => {
     beginDocketOpen(caseId);
@@ -661,50 +590,6 @@ export const CaseDetailPage = () => {
     }
   }, [caseData, caseQueryResponse, sendBrowserNotification, showSuccess, showWarning, user?.xID]);
 
-  useEffect(() => {
-    localStorage.setItem(ACTION_RETRY_KEY, JSON.stringify(retryQueue));
-  }, [retryQueue]);
-
-  useEffect(() => {
-    const retryQueued = async () => {
-      if (!navigator.onLine || retryQueue.length === 0) return;
-      const remaining = [];
-      const now = Date.now();
-      for (const action of retryQueue) {
-        if ((action.attempts || 0) >= ACTION_RETRY_MAX_ATTEMPTS) {
-          showWarning(`Dropping queued ${action.type} after ${ACTION_RETRY_MAX_ATTEMPTS} attempts.`);
-          continue;
-        }
-        if (action.nextRetryAt && action.nextRetryAt > now) {
-          remaining.push(action);
-          continue;
-        }
-        try {
-          const handled = await executeQueuedAction(action);
-          if (!handled) {
-            remaining.push(action);
-          }
-        } catch (error) {
-          const nextAttempts = (action.attempts || 0) + 1;
-          if (nextAttempts >= ACTION_RETRY_MAX_ATTEMPTS) {
-            showWarning(`Dropping queued ${action.type} after ${ACTION_RETRY_MAX_ATTEMPTS} attempts.`);
-            continue;
-          }
-          const delay = (2 ** nextAttempts) * ACTION_RETRY_BASE_DELAY_MS;
-          remaining.push({ ...action, attempts: nextAttempts, nextRetryAt: Date.now() + delay });
-        }
-      }
-      setRetryQueue(remaining);
-      if (remaining.length === 0) {
-        showSuccess('Queued offline actions synced successfully.');
-        loadCase({ background: true });
-      }
-    };
-
-    window.addEventListener('online', retryQueued);
-    retryQueued();
-    return () => window.removeEventListener('online', retryQueued);
-  }, [executeQueuedAction, loadCase, retryQueue, showSuccess, showWarning]);
 
   useEffect(() => {
     const existingDraft = localStorage.getItem(commentDraftKey);
@@ -736,32 +621,6 @@ export const CaseDetailPage = () => {
     setForceQcReview(Boolean(caseInfo?.forceQc));
   }, [caseInfo?.forceQc]);
 
-  useEffect(() => {
-    if (!cloneModalOpen) return;
-    let ignore = false;
-    const loadCategories = async () => {
-      setLoadingCloneCatalog(true);
-      try {
-        const response = await categoryService.getCategories(true);
-        if (ignore) return;
-        const rows = response?.data || [];
-        setCategoryCatalog(rows);
-      } catch (error) {
-        if (!ignore) {
-          setCategoryCatalog([]);
-          showError('Unable to load categories for cloning.');
-        }
-      } finally {
-        if (!ignore) {
-          setLoadingCloneCatalog(false);
-        }
-      }
-    };
-    loadCategories();
-    return () => {
-      ignore = true;
-    };
-  }, [cloneModalOpen, showError]);
   useEffect(() => {
     const timer = setInterval(() => {
       if (!newComment) return;
@@ -891,6 +750,31 @@ export const CaseDetailPage = () => {
     }
   };
 
+  const { retryQueue, queueFailedAction } = useDocketRetryQueue({ caseId, showSuccess, showWarning, onQueueSynced: () => loadCase({ background: true }) });
+
+  const {
+    selectedFile, setSelectedFile, fileDescription, setFileDescription, uploadingFile, uploadProgress,
+    uploadLinkGenerating, uploadLinkResult, handleUploadFile, handleGenerateUploadLink,
+  } = useDocketAttachments({ caseId, user, showSuccess, showError, showWarning, setCaseData, setActionConfirmation, setActionError });
+
+  const {
+    cloneModalOpen, setCloneModalOpen, cloneCategoryId, setCloneCategoryId, cloneSubcategoryId, setCloneSubcategoryId,
+    cloningCase, loadingCloneCatalog, categoryCatalog, selectedCloneCategory, cloneSubcategories, handleCloneDocket,
+  } = useDocketClone({ caseId, firmSlug, returnTo, canCloneDocket, navigate, showSuccess, showError, showWarning, setActionConfirmation, setActionError });
+
+  const { handlePendCase, handleResolveCase, handleUnpendCase, handleRouteToTeam, handleSubmitRouted, handleFileCase } = useDocketLifecycleActions({
+    caseId, lifecycleStatus, pendComment, pendingUntil, resolveComment, forceQcReview, unpendComment, fileComment,
+    routeTeamId, routingNote, routeSubmitting, submittingRouted, setConfirmModal, setPendingCase, setResolvingCase, setUnpendingCase,
+    setFilingCase, setRouteSubmitting, setSubmittingRouted, setShowPendModal, setPendComment, setPendingUntil, setShowResolveModal,
+    setResolveComment, setShowUnpendModal, setUnpendComment, setShowRouteModal, setRouteTeamId, setRoutingNote, setShowFileModal,
+    setFileComment, setActionConfirmation, setActionError, showSuccess, showWarning, showError, loadCase, setCaseData, caseData,
+    appendTimelineEvent, user, queueFailedAction,
+  });
+
+  const accessMode = caseData?.accessMode || {};
+  const isViewOnlyMode = accessMode.isViewOnlyMode;
+  const canCloneDocket = canCloneDocketByPolicy({ permissions, caseData });
+
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -907,210 +791,9 @@ export const CaseDetailPage = () => {
     }
   };
 
-  const handleUploadFile = async (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    if (!selectedFile || !fileDescription.trim()) {
-      showWarning('Please select a file and provide a description');
-      return;
-    }
 
-    setUploadingFile(true);
-    setUploadProgress(0);
-    try {
-      const uploadedFile = selectedFile;
-      const description = fileDescription.trim();
-      await caseApi.addAttachment(caseId, uploadedFile, description, ({ percent }) => {
-        setUploadProgress(percent);
-      });
-      const newFileObj = {
-        _id: Date.now().toString(), // Temporary ID
-        fileName: uploadedFile.name,
-        filename: uploadedFile.name,
-        description,
-        uploadedBy: user?.email || 'System',
-        createdBy: user?.email || 'System',
-        createdByName: user?.name || null,
-        createdByXID: user?.xID || null,
-        uploadedAt: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-      };
-      setCaseData((prev) => ({
-        ...prev,
-        attachments: [...(prev?.attachments || []), newFileObj],
-      }));
-      setSelectedFile(null);
-      setFileDescription('');
-      const message = `Attachment added to docket ${caseId} • ${formatDateTime()}`;
-      showSuccess(message);
-      setActionConfirmation(message);
-      setActionError(null);
-    } catch (error) {
-      const uploadRecovery = getRecoveryPayload(error, 'docket_attachments_upload');
-      const safeMessage = uploadRecovery.copy.message;
-      showError(safeMessage);
-      setActionError({ message: safeMessage, retry: uploadRecovery.copy.retryAllowed ? handleUploadFile : null, supportContext: uploadRecovery.supportContext });
-    } finally {
-      setUploadingFile(false);
-      setUploadProgress(0);
-    }
-  };
 
-  const handlePendCase = async () => {
-    if (!pendComment.trim()) {
-      showWarning('Comment is mandatory for pending a docket');
-      return;
-    }
 
-    if (!pendingUntil) {
-      showWarning('Reopen date is mandatory for pending a docket');
-      return;
-    }
-
-    // Validate that reopen date is not in the past
-    const selectedDate = new Date(pendingUntil);
-    const today = new Date();
-    // Normalize both dates to midnight for accurate comparison
-    selectedDate.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
-    
-    if (selectedDate < today) {
-      showWarning('Reopen date must be today or in the future');
-      return;
-    }
-
-    const confirmationTimestamp = new Date().toISOString();
-    setConfirmModal({
-      title: 'Pend Docket',
-      description: `Stage change: ${toLifecycleStage(lifecycleStatus)} → Awaiting Partner Approval\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
-      confirmText: 'Pend Docket',
-      onConfirm: async () => {
-        setConfirmModal(null);
-        setPendingCase(true);
-        try {
-          const [year, month, day] = String(pendingUntil).split('-').map(Number);
-          const reopenAt = new Date(Date.UTC(year, month - 1, day, 2, 30, 0)).toISOString(); // 08:00 IST
-          const response = await caseApi.transitionDocket(caseId, {
-            toState: 'PENDING',
-            comment: pendComment.trim(),
-            reopenAt,
-          });
-          if (response.success) {
-            const message = `Docket ${caseId} pended • ${formatDateTime()}`;
-            showSuccess(message);
-            setActionConfirmation(message);
-            setActionError(null);
-            setShowPendModal(false);
-            setPendComment('');
-            setPendingUntil('');
-            loadCase({ background: true });
-          }
-        } catch (error) {
-          const errorMessage = extractErrorMessage(error, 'Failed to pend case. Please try again.');
-          showError(errorMessage);
-          setActionError({ message: errorMessage, retry: handlePendCase });
-        } finally {
-          setPendingCase(false);
-        }
-      },
-    });
-  };
-
-  const handleResolveCase = async () => {
-    if (!resolveComment.trim()) {
-      showWarning('Comment is mandatory for resolving a docket');
-      return;
-    }
-
-    const confirmationTimestamp = new Date().toISOString();
-    setConfirmModal({
-      title: 'Resolve Docket',
-      description: `Stage change: ${toLifecycleStage(lifecycleStatus)} → Executed\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
-      confirmText: 'Resolve Docket',
-      onConfirm: async () => {
-        setConfirmModal(null);
-        const previousState = caseData;
-        setResolvingCase(true);
-        setCaseData((prev) => ({
-          ...prev,
-          lifecycle: 'RESOLVED',
-          case: prev?.case ? { ...prev.case, lifecycle: 'RESOLVED' } : prev?.case,
-        }));
-        try {
-          const response = await caseApi.transitionDocket(caseId, {
-            toState: 'RESOLVED',
-            comment: resolveComment.trim(),
-            sendToQC: forceQcReview,
-            forceQc: forceQcReview,
-          });
-          if (response.success) {
-            const message = forceQcReview
-              ? `Docket ${caseId} sent to QC review • ${formatDateTime()}`
-              : `Docket ${caseId} resolved • ${formatDateTime()}`;
-            showSuccess(message);
-            setActionConfirmation(message);
-            setActionError(null);
-            setShowResolveModal(false);
-            setResolveComment('');
-            appendTimelineEvent({
-              id: `resolved-event-${Date.now()}`,
-              action: forceQcReview ? 'QC_PENDING' : 'RESOLVED',
-              description: resolveComment,
-              createdAt: new Date().toISOString(),
-              createdBy: user?.name || user?.xID || user?.email || 'System',
-            });
-            loadCase({ background: true });
-          }
-        } catch (error) {
-          setCaseData(previousState);
-          const errorMessage = extractErrorMessage(error, 'Failed to resolve docket. Please try again.');
-          showError(errorMessage);
-          if (!navigator.onLine) {
-            queueFailedAction({ type: 'RESOLVE_CASE', payload: { comment: resolveComment } });
-            showWarning('You are offline. Resolve action queued and will retry automatically.');
-          }
-          setActionError({ message: errorMessage, retry: handleResolveCase });
-        } finally {
-          setResolvingCase(false);
-        }
-      },
-    });
-  };
-
-  const handleUnpendCase = async () => {
-    if (!unpendComment.trim()) {
-      showWarning('Comment is mandatory for unpending a docket');
-      return;
-    }
-
-    const confirmationTimestamp = new Date().toISOString();
-    setConfirmModal({
-      title: 'Unpend Docket',
-      description: `Stage change: Awaiting Partner Approval → Under Execution\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
-      confirmText: 'Unpend Docket',
-      onConfirm: async () => {
-        setConfirmModal(null);
-        setUnpendingCase(true);
-        try {
-          const response = await caseApi.unpendCase(caseId, unpendComment);
-          if (response.success) {
-            const message = `Docket ${caseId} unpended • ${formatDateTime()}`;
-            showSuccess(message);
-            setActionConfirmation(message);
-            setActionError(null);
-            setShowUnpendModal(false);
-            setUnpendComment('');
-            loadCase({ background: true });
-          }
-        } catch (error) {
-          const errorMessage = extractErrorMessage(error, 'Failed to unpend case. Please try again.');
-          showError(errorMessage);
-          setActionError({ message: errorMessage, retry: handleUnpendCase });
-        } finally {
-          setUnpendingCase(false);
-        }
-      },
-    });
-  };
 
   const looksEncryptedPayload = (value) => {
     if (typeof value !== 'string') return false;
@@ -1268,11 +951,6 @@ export const CaseDetailPage = () => {
     navigate(`${ROUTES.WORKLIST(firmSlug)}?assigneeXID=${encodeURIComponent(normalized)}`);
   }, [firmSlug, navigate]);
 
-  // PR #45: Extract access mode information from API response
-  const accessMode = caseData?.accessMode || {};
-  const isViewOnlyMode = accessMode.isViewOnlyMode;
-  const canCloneDocket = canCloneDocketByPolicy({ permissions, caseData });
-
   // Task 2: Inactivity warning — OPEN case not updated in 3+ days (not pended)
   const isInactiveWarning = useMemo(() => {
     if (!caseInfo) return false;
@@ -1383,40 +1061,7 @@ export const CaseDetailPage = () => {
     || confirmModal
   );
 
-  const selectedCloneCategory = useMemo(
-    () => categoryCatalog.find((entry) => entry._id === cloneCategoryId),
-    [categoryCatalog, cloneCategoryId]
-  );
-  const cloneSubcategories = useMemo(
-    () => (selectedCloneCategory?.subcategories || []).filter((entry) => entry?.isActive !== false),
-    [selectedCloneCategory]
-  );
 
-
-  const handleRouteToTeam = async () => {
-    if (!routeTeamId) {
-      showWarning('Select a team to route.');
-      return;
-    }
-    if (!String(routingNote || '').trim()) {
-      showWarning('Comment is compulsory while routing a docket.');
-      return;
-    }
-    if (routeSubmitting) return;
-    setRouteSubmitting(true);
-    try {
-      await caseApi.routeToTeam(caseId, routeTeamId, routingNote.trim());
-      showSuccess('Docket routed successfully.');
-      setRouteTeamId('');
-      setRoutingNote('');
-      setShowRouteModal(false);
-      loadCase({ background: true });
-    } catch(err) {
-      showError(err?.response?.data?.message || 'Failed to route docket');
-    } finally {
-      setRouteSubmitting(false);
-    }
-  };
 
   const handleSubmitQcAction = async () => {
     if (!qcComment.trim()) {
@@ -1441,108 +1086,9 @@ export const CaseDetailPage = () => {
   };
 
 
-  const handleSubmitRouted = async () => {
-    if (!String(resolveComment || '').trim()) {
-      showWarning('Comment is mandatory for submit');
-      return;
-    }
-    if (submittingRouted) return;
-    setSubmittingRouted(true);
-    try {
-      await caseApi.returnRoutedCase(caseId, resolveComment.trim());
-      showSuccess('Docket submitted back to routing user.');
-      setShowResolveModal(false);
-      setResolveComment('');
-      loadCase({ background: true });
-    } catch (error) {
-      showError(extractErrorMessage(error, 'Failed to submit routed docket.'));
-    } finally {
-      setSubmittingRouted(false);
-    }
-  };
 
-  const handleFileCase = async () => {
-    if (!String(fileComment || '').trim()) {
-      showWarning('Comment is mandatory for filing a docket');
-      return;
-    }
 
-    const confirmationTimestamp = new Date().toISOString();
-    setConfirmModal({
-      title: 'File Docket',
-      description: `Mark this docket as filed.\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
-      confirmText: 'File Docket',
-      onConfirm: async () => {
-        setConfirmModal(null);
-        setFilingCase(true);
-        try {
-          const response = await caseApi.transitionDocket(caseId, {
-            toState: 'FILED',
-            comment: fileComment.trim(),
-          });
-          if (response.success) {
-            const message = `Case ${caseId} filed • ${formatDateTime()}`;
-            showSuccess(message);
-            setActionConfirmation(message);
-            setActionError(null);
-            setShowFileModal(false);
-            setFileComment('');
-            loadCase({ background: true });
-          }
-        } catch (error) {
-          const errorMessage = extractErrorMessage(error, 'Failed to file case. Please try again.');
-          showError(errorMessage);
-          setActionError({ message: errorMessage, retry: handleFileCase });
-        } finally {
-          setFilingCase(false);
-        }
-      },
-    });
-  };
 
-  const handleCloneDocket = async () => {
-    if (!cloneCategoryId || !cloneSubcategoryId) {
-      showWarning('Select category and subcategory before cloning.');
-      return;
-    }
-    setCloningCase(true);
-    try {
-      const response = await caseApi.cloneCase(caseId, {
-        categoryId: cloneCategoryId,
-        subcategoryId: cloneSubcategoryId,
-      });
-      const clonedId = response?.data?.caseId || response?.data?.docketId || response?.caseId || response?.docketId || 'new docket';
-      showSuccess(`Docket cloned successfully: ${clonedId}. It has been moved to the Workbasket.`);
-      setActionConfirmation(`Docket cloned successfully: ${clonedId}. It has been moved to the Workbasket.`);
-      setCloneModalOpen(false);
-      setCloneCategoryId('');
-      setCloneSubcategoryId('');
-      setActionError(null);
-      if (clonedId && clonedId !== 'new docket') {
-        navigate(ROUTES.CASE_DETAIL(firmSlug, clonedId), { state: { returnTo } });
-      }
-    } catch (error) {
-      const message = extractErrorMessage(error, 'Failed to clone docket. Please try again.');
-      showError(message);
-      setActionError({ message, retry: handleCloneDocket });
-    } finally {
-      setCloningCase(false);
-    }
-  };
-
-  const handleGenerateUploadLink = async (payload) => {
-    if (!caseId) return;
-    setUploadLinkGenerating(true);
-    try {
-      const response = await caseApi.generateUploadLink(caseId, payload);
-      setUploadLinkResult(response?.data || null);
-      showSuccess('Document request link generated.');
-    } catch (error) {
-      showError(extractErrorMessage(error, 'Unable to generate document request link.'));
-    } finally {
-      setUploadLinkGenerating(false);
-    }
-  };
 
   const handleAddCommentSuccess = () => {
     commentsListRef.current?.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
