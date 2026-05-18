@@ -85,6 +85,24 @@ Current smoke/regression checks:
 - Receiving routed-team users must not see **File** action for routed dockets.
 - Owner/originator receives returned docket back into personal worklist context.
 
+## UX contract (polished layout)
+
+- Summary metadata is owned by `CaseDetailSummaryHeader.jsx`; the Overview panel must avoid duplicating core docket metadata (category/subcategory, owner/workbasket/timestamps) already shown in the header.
+- Docket actions appear near the top of the Details card and are grouped by visual hierarchy:
+  - **Primary:** Resolve or Submit (state/policy-driven, never both).
+  - **Secondary:** Pend, Route, File (with existing policy gates unchanged).
+  - **Admin / advanced:** Assign, Move to Workbasket, Force QC.
+- Existing lifecycle and permission gates remain source-of-truth in route orchestration and policy helpers; this contract is presentation-only.
+- Overview client related-dockets presentation is a compact **Recent dockets** card:
+  - limited preview rows (currently 3),
+  - shortcut CTA **View all in History**,
+  - no duplication of full History tab table in Overview.
+- Empty state copy requirements:
+  - No related dockets.
+  - Missing description.
+  - Internal work docket context.
+  - Terminal docket guidance (record-view only).
+
 
 ## History Tab Behavior (Client Docket History)
 
