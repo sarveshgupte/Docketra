@@ -3,11 +3,13 @@ const Case = require('../models/Case.model');
 const Client = require('../models/Client.model');
 const Comment = require('../models/Comment.model');
 const Attachment = require('../models/Attachment.model');
+const User = require('../models/User.model');
 const Team = require('../models/Team.model');
 const { enforceTenantScope } = require('../utils/tenantScope');
 const CaseStatus = require('../domain/case/caseStatus');
 const { logCaseListViewed } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
+const { canViewUserWorklist } = require('../services/worklistAccess.service');
 const log = require('../utils/log');
 const { logSlowEndpoint } = require('../utils/slowLog');
 const SLOW_WORKLIST_QUERY_MS = 400;
@@ -246,7 +248,6 @@ const globalSearch = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error performing search',
-      error: error.message,
     });
   }
 };
@@ -336,7 +337,6 @@ const categoryWorklist = async (req, res) => {
       success: false,
       message: 'Error fetching category worklist',
       data: [],
-      error: error.message,
     });
   }
 };
@@ -408,7 +408,6 @@ const employeeWorklist = async (req, res) => {
     const subcategoryFilter = String(req.query?.subcategory || '').trim();
     const sortBy = String(req.query?.sortBy || 'createdAt').trim();
     const sortOrder = String(req.query?.sortOrder || 'desc').toLowerCase() === 'asc' ? 1 : -1;
-    const isAdmin = ['ADMIN', 'Admin'].includes(String(user?.role || ''));
     const targetAssigneeXID = requestedAssignee || String(user.xID || '').trim().toUpperCase();
 
     if (!targetAssigneeXID) {
@@ -418,11 +417,27 @@ const employeeWorklist = async (req, res) => {
       });
     }
 
-    const isViewingOwnWorklist = targetAssigneeXID === String(user.xID || '').trim().toUpperCase();
-    if (!isViewingOwnWorklist && !isAdmin) {
+    const targetUser = await User.findOne({
+      xID: targetAssigneeXID,
+      firmId,
+      status: { $ne: 'deleted' },
+    })
+      .select('_id xID role firmId managerId reportsToUserId teamId teamIds')
+      .lean();
+
+    if (!targetUser) {
       return res.status(403).json({
         success: false,
-        message: 'Only admins can view another user worklist',
+        message: 'You do not have access to this worklist',
+      });
+    }
+
+    const canAccessWorklist = canViewUserWorklist(user, targetUser, { targetFirmId: firmId });
+    const isViewingOwnWorklist = targetAssigneeXID === String(user.xID || '').trim().toUpperCase();
+    if (!canAccessWorklist) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have access to this worklist',
       });
     }
 
@@ -585,7 +600,6 @@ const employeeWorklist = async (req, res) => {
       success: false,
       message: 'Error fetching employee worklist',
       data: [],
-      error: error.message,
     });
   }
 };
@@ -874,7 +888,6 @@ const globalWorklist = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching global worklist',
-      error: error.message,
     });
   }
 };

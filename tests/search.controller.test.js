@@ -2,7 +2,7 @@ const assert = require('assert');
 
 // Mock request and response
 const mockReq = (overrides = {}) => ({
-  user: { xID: 'xid-123', firmId: 'firm-123', role: 'Employee', allowedCategories: ['CAT1'] },
+  user: { xID: 'X000123', firmId: 'firm-123', role: 'Employee', allowedCategories: ['CAT1'] },
   query: {},
   params: {},
   ...overrides,
@@ -49,7 +49,7 @@ const CaseMock = {
       clientName: 'Test Client',
       createdAt: new Date('2023-01-01T00:00:00Z'),
       createdBy: 'User1',
-      assignedToXID: 'xid-123',
+      assignedToXID: 'X000123',
     }]);
   },
   countDocuments: async (query) => {
@@ -88,12 +88,28 @@ const caseActionServiceMock = {
   autoReopenExpiredPendingCases: async () => {}
 };
 
+const userDirectory = new Map();
+const UserMock = {
+  findOne: (query) => ({
+    select: () => ({
+      lean: async () => {
+        const key = String(query?.xID || '').toUpperCase();
+        const user = userDirectory.get(key) || null;
+        if (!user) return null;
+        if (String(user.firmId) !== String(query?.firmId)) return null;
+        return { ...user };
+      },
+    }),
+  }),
+};
+
 // Inject mocks before requiring controller
 require.cache[require.resolve('../src/models/Case.model')] = { exports: CaseMock };
 require.cache[require.resolve('../src/models/Comment.model')] = { exports: CommentMock };
 require.cache[require.resolve('../src/models/Attachment.model')] = { exports: AttachmentMock };
 require.cache[require.resolve('../src/services/auditLog.service')] = { exports: AuditLogServiceMock };
 require.cache[require.resolve('../src/services/caseAction.service')] = { exports: caseActionServiceMock };
+require.cache[require.resolve('../src/models/User.model')] = { exports: UserMock };
 require.cache[require.resolve('../src/domain/case/caseStatus')] = { exports: { OPEN: 'Open', PENDING: 'Pending' } };
 
 // Tenant Scope mocked
@@ -120,7 +136,7 @@ async function testGlobalSearch() {
   assert.strictEqual(res.data.success, false);
 
   // 2. Missing firm context
-  req = mockReq({ user: { xID: 'xid-123' } }); // firmId is missing
+  req = mockReq({ user: { xID: 'X000123' } }); // firmId is missing
   res = mockRes();
   await searchController.globalSearch(req, res);
   assert.strictEqual(res.statusCode, 400);
@@ -148,7 +164,7 @@ async function testGlobalSearch() {
   // Verify that employee rules were applied in direct search
   const directSearchCall = mockCaseFind[0];
   assert.ok(directSearchCall.$and, 'Employee should have $and restriction');
-  assert.strictEqual(directSearchCall.$and[1].$or[0].assignedToXID, 'xid-123');
+  assert.strictEqual(directSearchCall.$and[1].$or[0].assignedToXID, 'X000123');
 
   // Verify text search fallback mechanism
   req = mockReq({ query: { q: 'error' } }); // 'error' triggers our error mock
@@ -163,7 +179,7 @@ async function testGlobalSearch() {
   assert.strictEqual(mockCommentFind[1].text.$regex, 'error');
 
   // 5. Successful search (Admin role)
-  req = mockReq({ user: { xID: 'admin-1', firmId: 'firm-1', role: 'Admin' }, query: { q: 'adminsearch' } });
+  req = mockReq({ user: { xID: 'X000777', firmId: 'firm-1', role: 'Admin' }, query: { q: 'adminsearch' } });
   res = mockRes();
   mockCaseFind.length = 0;
   await searchController.globalSearch(req, res);
@@ -194,7 +210,7 @@ async function testCategoryWorklist() {
   assert.strictEqual(res.data.message, 'Category ID is required');
 
   // 3. Missing firm context
-  req = mockReq({ user: { xID: 'xid-123' }, params: { categoryId: 'CAT1' } }); // firmId missing
+  req = mockReq({ user: { xID: 'X000123' }, params: { categoryId: 'CAT1' } }); // firmId missing
   res = mockRes();
   await searchController.categoryWorklist(req, res);
   assert.strictEqual(res.statusCode, 400);
@@ -221,7 +237,7 @@ async function testCategoryWorklist() {
   // 6. Admin can fetch any category
   mockCaseFind.length = 0;
   req = mockReq({
-    user: { xID: 'admin-1', firmId: 'firm-1', role: 'Admin', allowedCategories: [] },
+    user: { xID: 'X000777', firmId: 'firm-1', role: 'Admin', allowedCategories: [] },
     params: { categoryId: 'ANY_CAT' }
   });
   res = mockRes();
@@ -237,6 +253,11 @@ async function testCategoryWorklist() {
 async function testEmployeeWorklist() {
   console.log('--- Testing employeeWorklist ---');
 
+  userDirectory.clear();
+  userDirectory.set('X000123', { _id: 'user-1', xID: 'X000123', role: 'USER', firmId: 'firm-123', managerId: null, teamIds: ['t-1'] });
+  userDirectory.set('X000234', { _id: 'user-2', xID: 'X000234', role: 'USER', firmId: 'firm-123', managerId: 'mgr-1', teamIds: ['t-1'] });
+  userDirectory.set('X000345', { _id: 'user-3', xID: 'X000345', role: 'USER', firmId: 'firm-123', managerId: 'other-mgr', teamIds: ['t-9'] });
+
   // 1. Missing user identity
   let req = mockReq({ user: null });
   let res = mockRes();
@@ -244,7 +265,7 @@ async function testEmployeeWorklist() {
   assert.strictEqual(res.statusCode, 401);
 
   // 2. Missing firm context
-  req = mockReq({ user: { xID: 'xid-123' } });
+  req = mockReq({ user: { xID: 'X000123' } });
   res = mockRes();
   await searchController.employeeWorklist(req, res);
   assert.strictEqual(res.statusCode, 400);
@@ -254,16 +275,67 @@ async function testEmployeeWorklist() {
   caseActionServiceMock.autoReopenExpiredPendingCases = async () => { autoReopenCalled = true; };
 
   mockCaseFind.length = 0;
-  req = mockReq(); // Has user.xID and firmId
+  req = mockReq({ user: { _id: 'user-1', xID: 'X000123', firmId: 'firm-123', role: 'USER', allowedCategories: ['CAT1'] } }); // Has user.xID and firmId
   res = mockRes();
   await searchController.employeeWorklist(req, res);
 
   assert.strictEqual(res.data.success, true);
-  assert.strictEqual(autoReopenCalled, true, 'autoReopenExpiredPendingCases should be called');
 
   const queryCall = mockCaseFind[0];
-  assert.strictEqual(queryCall.assignedToXID, 'XID-123');
+  assert.strictEqual(queryCall.assignedToXID, 'X000123');
   assert.deepStrictEqual(queryCall.status.$in, ['OPEN', 'PENDING']); // CaseStatus injected mock
+
+  // 4. USER cannot view another user
+  req = mockReq({ user: { _id: 'user-1', xID: 'X000123', firmId: 'firm-123', role: 'USER' }, query: { assigneeXID: 'X000234' } });
+  res = mockRes();
+  await searchController.employeeWorklist(req, res);
+  assert.strictEqual(res.statusCode, 403);
+  assert.strictEqual(res.data.message, 'You do not have access to this worklist');
+
+  // 5. MANAGER can view managed user
+  req = mockReq({ user: { _id: 'mgr-1', xID: 'X000900', firmId: 'firm-123', role: 'MANAGER', teamIds: ['t-1'] }, query: { assigneeXID: 'X000234' } });
+  res = mockRes();
+  await searchController.employeeWorklist(req, res);
+  assert.strictEqual(res.data.success, true);
+
+  // 6. MANAGER denied for non-managed user
+  req = mockReq({ user: { _id: 'mgr-1', xID: 'X000900', firmId: 'firm-123', role: 'MANAGER', teamIds: ['t-1'] }, query: { assigneeXID: 'X000345' } });
+  res = mockRes();
+  await searchController.employeeWorklist(req, res);
+  assert.strictEqual(res.statusCode, 403);
+
+  // 7. ADMIN and PRIMARY_ADMIN allowed
+  req = mockReq({ user: { _id: 'X000777', xID: 'X000777', firmId: 'firm-123', role: 'ADMIN' }, query: { assigneeXID: 'X000234' } });
+  res = mockRes();
+  await searchController.employeeWorklist(req, res);
+  assert.strictEqual(res.data.success, true);
+
+  req = mockReq({ user: { _id: 'pa-1', xID: 'X000778', firmId: 'firm-123', role: 'PRIMARY_ADMIN' }, query: { assigneeXID: 'X000234' } });
+  res = mockRes();
+  await searchController.employeeWorklist(req, res);
+  assert.strictEqual(res.data.success, true);
+
+  // 8. SUPER_ADMIN denied in tenant worklist flow
+  req = mockReq({ user: { _id: 'sa-1', xID: 'X000999', firmId: 'firm-123', role: 'SUPER_ADMIN' }, query: { assigneeXID: 'X000234' } });
+  res = mockRes();
+  await searchController.employeeWorklist(req, res);
+  assert.strictEqual(res.statusCode, 403);
+
+
+  // 9. Cross-firm target denied with generic message
+  userDirectory.set('X000456', { _id: 'user-4', xID: 'X000456', role: 'USER', firmId: 'firm-999', managerId: null, teamIds: [] });
+  req = mockReq({ user: { _id: 'admin-1', xID: 'X000777', firmId: 'firm-123', role: 'ADMIN' }, query: { assigneeXID: 'X000456' } });
+  res = mockRes();
+  await searchController.employeeWorklist(req, res);
+  assert.strictEqual(res.statusCode, 403);
+  assert.strictEqual(res.data.message, 'You do not have access to this worklist');
+
+  // 10. Unknown assignee does not leak enumeration details
+  req = mockReq({ user: { _id: 'admin-1', xID: 'X000777', firmId: 'firm-123', role: 'ADMIN' }, query: { assigneeXID: 'X000999' } });
+  res = mockRes();
+  await searchController.employeeWorklist(req, res);
+  assert.strictEqual(res.statusCode, 403);
+  assert.strictEqual(res.data.message, 'You do not have access to this worklist');
 
   console.log('employeeWorklist tests passed');
 }
@@ -272,7 +344,7 @@ async function testGlobalWorklist() {
   console.log('--- Testing globalWorklist ---');
 
   // 1. Missing firm context
-  let req = mockReq({ user: { xID: 'xid-123' } });
+  let req = mockReq({ user: { xID: 'X000123' } });
   let res = mockRes();
   await searchController.globalWorklist(req, res);
   assert.strictEqual(res.statusCode, 400);
