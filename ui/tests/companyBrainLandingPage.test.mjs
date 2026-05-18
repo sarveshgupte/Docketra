@@ -21,4 +21,34 @@ for (const blocked of ['SOC2', 'ISO 27001', 'DPDP certified']) {
 assert.equal(homePage.includes('Client-based task and docket management for Indian firms'), false, 'Landing page should not keep legacy generic task-manager style hero positioning.');
 assert.ok(homePage.includes('Worklist') && homePage.includes('Workbaskets') && homePage.includes('QC Workbaskets'), 'Landing page should keep Work Execution wedge grounded in current product reality.');
 
+
+const marketingHeader = read('src/components/marketing/PublicMarketingHeader.jsx');
+
+const navLinkMatches = [...marketingHeader.matchAll(/\{\s*label:\s*'([^']+)',\s*id:\s*'([^']+)'\s*\}/g)];
+const navPairs = navLinkMatches.map(([, label, id]) => ({ label, id }));
+const expectedNav = [
+  { label: 'Why', id: 'why' },
+  { label: 'Product', id: 'product' },
+  { label: 'Workflow', id: 'workflow' },
+  { label: 'Pilot readiness', id: 'pilot-readiness' },
+  { label: 'Trust', id: 'trust' },
+];
+assert.deepEqual(navPairs, expectedNav, 'Public marketing header should keep canonical landing section mapping.');
+
+const sectionIds = [...homePage.matchAll(/<section\s+id=\"([^\"]+)\"/g)].map((m) => m[1]);
+const uniqueSectionIds = new Set(sectionIds);
+assert.equal(uniqueSectionIds.size, sectionIds.length, 'Landing page must not reuse duplicate section ids.');
+
+for (const { id } of expectedNav) {
+  assert.ok(uniqueSectionIds.has(id), `Nav id #${id} must map to an existing landing section.`);
+}
+
+for (const blockedHeroId of ['why', 'product', 'pilot-readiness']) {
+  assert.ok(
+    homePage.includes(`<section id=\"${blockedHeroId}\"`) && !homePage.includes(`HeroSection id=\"${blockedHeroId}\"`),
+    `${blockedHeroId} anchor must not point to hero.`
+  );
+}
+
+
 console.log('companyBrainLandingPage.test.mjs passed');
