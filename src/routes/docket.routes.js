@@ -78,6 +78,7 @@ const {
   reassignDocket,
   reopenPendingDocket,
   runPendingReopen,
+  moveDocket,
 } = require('../controllers/docketWorkflow.controller');
 
 const {
@@ -205,6 +206,7 @@ router.post('/:caseId/transition', authorizeFirmPermission('CASE_UPDATE'), userW
 router.post('/:caseId/reopen-pending', authorizeFirmPermission('CASE_ACTION'), userWriteLimiter, checkCaseClientAccess, reopenPendingDocket);
 router.post('/:caseId/qc-action', authorizeFirmPermission('CASE_ASSIGN'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, qcAction);
 router.post('/:caseId/reassign', authorizeFirmPermission('CASE_ASSIGN'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, reassignDocket);
+router.post('/:caseId/move', authorizeFirmPermission('CASE_ASSIGN'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, moveDocket);
 router.post('/:caseId/apply-ai-routing', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, applyAiRouting);
 router.post('/:caseId/reject-ai-routing', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, rejectAiRouting);
 
