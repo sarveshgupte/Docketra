@@ -149,7 +149,7 @@ module.exports = {
   },
   'PATCH /users/:xID/workbaskets': {
     params: z.object({ xID: xidString }),
-    body: z.object({ teamIds: z.array(objectIdOrString).min(1) }).strict(),
+    body: z.object({ teamIds: z.array(objectIdOrString).min(1), assignQcWorkbaskets: z.boolean().optional() }).strict(),
   },
   'PATCH /users/:id/hierarchy': {
     params: z.object({ id: objectIdOrString }),

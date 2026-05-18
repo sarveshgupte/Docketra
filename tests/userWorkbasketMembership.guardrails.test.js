@@ -104,12 +104,52 @@ async function testPrimaryUpdatePreservesExplicitQcMembership() {
   Team.find = originalTeamFind;
 }
 
+
+async function testUpdateWorkbasketsAssignQcFlagAddsLinkedQcMembership() {
+  const originalUserFindOne = User.findOne;
+  const originalTeamFind = Team.find;
+
+  const primary = new mongoose.Types.ObjectId();
+  const linkedQc = new mongoose.Types.ObjectId();
+  const userDoc = {
+    _id: 'U1',
+    role: 'USER',
+    status: 'active',
+    qcExplicitTeamIds: [],
+    teamIds: [],
+    teamId: null,
+    save: async () => {},
+  };
+
+  User.findOne = async () => userDoc;
+  Team.find = (query) => {
+    if (query.type === 'QC' && query.parentWorkbasketId) return { select: () => ({ lean: async () => [{ _id: linkedQc, type: 'QC' }] }) };
+    if (query.type === 'QC') return { select: () => ({ lean: async () => [] }) };
+    return { select: () => ({ lean: async () => [{ _id: primary, type: 'PRIMARY' }] }) };
+  };
+
+  const rr = res();
+  await workbasketController.updateUserWorkbaskets({
+    params: { xID: 'x000001' },
+    body: { teamIds: [String(primary)], assignQcWorkbaskets: true },
+    user: { firmId: 'F1' },
+  }, rr);
+
+  assert.strictEqual(rr.statusCode, 200);
+  assert.deepStrictEqual(userDoc.teamIds, [String(primary), String(linkedQc)]);
+  assert.deepStrictEqual(userDoc.qcExplicitTeamIds, [String(linkedQc)]);
+
+  User.findOne = originalUserFindOne;
+  Team.find = originalTeamFind;
+}
+
 async function run(){
   await testActiveCannotHaveZeroPrimary();
   await testMembershipDedupAndTeamIdFirstPrimary();
   await testListVisibilityByRole();
   await testUpdateWorkbasketsValidationMapsTo400();
   await testPrimaryUpdatePreservesExplicitQcMembership();
+  await testUpdateWorkbasketsAssignQcFlagAddsLinkedQcMembership();
   console.log('userWorkbasketMembership.guardrails tests passed');
 }
 

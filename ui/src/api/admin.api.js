@@ -18,8 +18,8 @@ export const adminApi = {
     (http) => http.patch(`/admin/users/${xID}/restrict-clients`, payload),
     'Failed to update user client access'
   ),
-  updateUserWorkbaskets: (xID, teamIds = []) => request(
-    (http) => http.patch(`/admin/users/${xID}/workbaskets`, { teamIds }),
+  updateUserWorkbaskets: (xID, payload = { teamIds: [] }) => request(
+    (http) => http.patch(`/admin/users/${xID}/workbaskets`, payload),
     'Failed to update user workbasket access'
   ),
   updateUserHierarchy: (id, payload) => request((http) => http.patch(`/admin/users/${id}/hierarchy`, payload), 'Failed to update hierarchy'),
