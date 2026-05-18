@@ -531,7 +531,7 @@ export const AdminPage = () => {
       }
 
       try {
-        const selectedQcIds = selectedWorkbasketDraft.filter((teamId) => qcWorkbaskets.some((wb) => String(wb?._id) === String(teamId)));
+        const selectedQcIds = selectedWorkbasketDraft.filter((teamId) => qcOnlyWorkbaskets.some((wb) => String(wb?._id) === String(teamId)));
         const wbResponse = await adminApi.updateUserWorkbaskets(selectedUserForAccess.xID, {
           teamIds: selectedWorkbasketDraft,
           assignQcWorkbaskets: selectedQcIds.length > 0,
