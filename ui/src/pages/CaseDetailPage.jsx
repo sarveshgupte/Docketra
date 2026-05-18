@@ -179,6 +179,28 @@ export const CaseDetailPage = () => {
   const loadSequenceRef = useRef(0);
   const previousRealtimeRef = useRef(null);
   const notificationPermissionRequestedRef = useRef(false);
+  const ensureNotificationPermission = useCallback(async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return false;
+    if (Notification.permission === 'granted') return true;
+    if (Notification.permission === 'denied') return false;
+    if (notificationPermissionRequestedRef.current) return false;
+    notificationPermissionRequestedRef.current = true;
+    try {
+      const permission = await Notification.requestPermission();
+      return permission === 'granted';
+    } catch (_error) {
+      return false;
+    }
+  }, []);
+  const sendBrowserNotification = useCallback(async (title, body) => {
+    const canNotify = await ensureNotificationPermission();
+    if (!canNotify) return;
+    try {
+      new Notification(title, { body });
+    } catch (_error) {
+      // best-effort browser notifications
+    }
+  }, [ensureNotificationPermission]);
   const {
     data: caseQueryResponse,
     error: caseQueryError,
@@ -752,6 +774,10 @@ export const CaseDetailPage = () => {
 
   const { retryQueue, queueFailedAction } = useDocketRetryQueue({ caseId, showSuccess, showWarning, onQueueSynced: () => loadCase({ background: true }) });
 
+  const accessMode = caseData?.accessMode || {};
+  const isViewOnlyMode = accessMode.isViewOnlyMode;
+  const canCloneDocket = canCloneDocketByPolicy({ permissions, caseData });
+
   const {
     selectedFile, setSelectedFile, fileDescription, setFileDescription, uploadingFile, uploadProgress,
     uploadLinkGenerating, uploadLinkResult, handleUploadFile, handleGenerateUploadLink,
@@ -770,10 +796,6 @@ export const CaseDetailPage = () => {
     setFileComment, setActionConfirmation, setActionError, showSuccess, showWarning, showError, loadCase, setCaseData, caseData,
     appendTimelineEvent, user, queueFailedAction,
   });
-
-  const accessMode = caseData?.accessMode || {};
-  const isViewOnlyMode = accessMode.isViewOnlyMode;
-  const canCloneDocket = canCloneDocketByPolicy({ permissions, caseData });
 
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
