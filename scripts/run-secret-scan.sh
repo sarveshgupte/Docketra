@@ -6,6 +6,7 @@ GITLEAKS_IMAGE="zricethezav/gitleaks:v${GITLEAKS_VERSION}"
 
 run_scan() {
   local scanner="$1"
+  shift
   echo "[secret-scan] Running gitleaks via ${scanner}"
   "$@"
 }
