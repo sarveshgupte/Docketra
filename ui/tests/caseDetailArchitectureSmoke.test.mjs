@@ -15,6 +15,16 @@ assert.ok(detailSource.includes('CaseDetailOverviewPanel'), 'Case detail should 
 assert.ok(detailSource.includes('CaseDetailAlerts'), 'Case detail should render dedicated alerts/status module.');
 assert.ok(detailSource.includes('Loading message="Loading docket..."'), 'Case detail should preserve loading render state.');
 assert.ok(detailSource.includes('<p>Docket not found</p>'), 'Case detail should preserve empty/not-found render state.');
+assert.ok(
+  detailSource.indexOf('const canCloneDocket = canCloneDocketByPolicy({ permissions, caseData });')
+  < detailSource.indexOf('} = useDocketClone({ caseId, firmSlug, returnTo, canCloneDocket, navigate, showSuccess, showError, showWarning, setActionConfirmation, setActionError });'),
+  'Case detail should declare canCloneDocket before useDocketClone consumes it to avoid TDZ runtime errors.'
+);
+assert.ok(
+  !detailSource.includes('sendBrowserNotification(')
+    || detailSource.includes('const sendBrowserNotification = useCallback('),
+  'Case detail must define sendBrowserNotification when realtime update effects reference it.'
+);
 assert.ok(accessPolicySource.includes('canRouteDocketByPolicy'), 'Permission checks should be explicit in reusable helpers.');
 assert.ok(accessPolicySource.includes('canCloneDocketByPolicy'), 'Clone permission policy should be explicit and testable.');
 assert.ok(overviewPanelSource.includes('aria-label="Docket actions"'), 'Overview module should preserve action surface rendering.');
@@ -22,4 +32,3 @@ assert.ok(summaryHeaderSource.includes('aria-label="Docket summary header"'), 'S
 assert.ok(alertsSource.includes('Role Restricted Action'), 'Alerts module should preserve role restriction alerts.');
 
 console.log('caseDetailArchitectureSmoke.test.mjs passed');
-
