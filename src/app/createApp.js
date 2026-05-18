@@ -60,7 +60,8 @@ const selfUserRoutes = require('../routes/selfUser.routes');
 const taskRoutes = require('../routes/task.routes');
 const complianceCalendarRoutes = require('../routes/complianceCalendar.routes');
 const caseRoutes = require('../routes/docket.routes'); // backward-compat alias for /api/cases
-const searchRoutes = require('../routes/search.routes');  // Search and worklist routes
+const searchRoutes = require('../routes/search.routes');
+const worklistRoutes = require('../routes/worklist.routes');
 const authRoutes = require('../routes/auth.routes');  // Authentication routes
 const clientApprovalRoutes = require('../routes/clientApproval.routes');  // Client approval routes
 const clientRoutes = require('../routes/client.routes');  // Client management routes (PR #39)
@@ -380,6 +381,7 @@ const createApp = () => {
     docketSessionRoutes,
     attachmentRoutes,
     searchRoutes,
+    worklistRoutes,
     clientApprovalRoutes,
     clientRoutes,
     crmClientRoutes,
