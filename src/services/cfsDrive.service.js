@@ -445,12 +445,16 @@ class CFSDriveService {
 
     // Reference counting: Only delete the file from the storage provider if no other active attachments or case files reference it
     if (attachment.driveFileId) {
-      const duplicateCount = await Attachment.countDocuments({
+      // ⚡ Bolt Performance Optimization:
+      // 💡 What: Replaced Attachment.countDocuments() with Attachment.exists() and CaseFile.exists()
+      // 🎯 Why: countDocuments forces a full index scan when we only need to know if at least one document exists. exists() provides an O(1) early return upon the first match.
+      // 📊 Impact: Faster query execution for system initialization and validation checks.
+      const hasDuplicate = await Attachment.exists({
         driveFileId: attachment.driveFileId,
         _id: { $ne: attachment._id },
       });
 
-      const caseFileCount = await CaseFile.countDocuments({
+      const hasCaseFile = await CaseFile.exists({
         storageFileId: attachment.driveFileId,
         $or: [
           { deletedAt: null },
@@ -459,7 +463,7 @@ class CFSDriveService {
         isDeleted: { $ne: true }
       });
 
-      if (duplicateCount === 0 && caseFileCount === 0) {
+      if (!hasDuplicate && !hasCaseFile) {
         try {
           await provider.deleteFile(attachment.driveFileId);
         } catch (error) {
