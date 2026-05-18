@@ -190,7 +190,7 @@ async function moveDocket(req, res) {
     const managedUsers = await User.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('xID').lean();
     const managerScope = {
       permittedTeamIds: [...new Set([
-        ...((Array.isArray(req.user?.teamIds) ? req.user.teamIds : []).map((id) => String(id)),
+        ...(Array.isArray(req.user?.teamIds) ? req.user.teamIds : []).map((id) => String(id)),
         ...managerOwnedTeams.map((team) => String(team._id)),
       ])],
       permittedUserXids: [...new Set([
