@@ -244,6 +244,7 @@ const updateUserWorkbaskets = async (req, res) => {
   try {
     const xID = String(req.params?.xID || '').trim().toUpperCase();
     const normalizedTeamIds = normalizeObjectIdStrings(req.body?.teamIds || []);
+    const assignQcWorkbaskets = Boolean(req.body?.assignQcWorkbaskets);
 
     const user = await User.findOne({ xID, firmId: req.user?.firmId, status: { $ne: 'deleted' } });
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
@@ -265,10 +266,27 @@ const updateUserWorkbaskets = async (req, res) => {
       }).select('_id type').lean()
       : [];
 
+    const selectedPrimaryTeamIds = teams
+      .filter((team) => String(team?.type || 'PRIMARY').toUpperCase() !== 'QC')
+      .map((team) => String(team._id));
+
+    const linkedQcTeams = (assignQcWorkbaskets && selectedPrimaryTeamIds.length > 0)
+      ? await Team.find({
+        firmId: req.user?.firmId,
+        isActive: true,
+        type: 'QC',
+        parentWorkbasketId: { $in: selectedPrimaryTeamIds },
+      }).select('_id type').lean()
+      : [];
+
     const membership = normalizeMembership({
       role: user.role,
-      teams: [...teams, ...preservedExplicitQcTeams],
-      qcExplicitTeamIds: preservedExplicitQcIds,
+      teams: [...teams, ...preservedExplicitQcTeams, ...linkedQcTeams],
+      qcExplicitTeamIds: [
+        ...preservedExplicitQcIds,
+        ...teams.filter((team) => String(team?.type || '').toUpperCase() === 'QC').map((team) => String(team._id)),
+        ...linkedQcTeams.map((team) => String(team._id)),
+      ],
       requirePrimary,
     });
 
@@ -279,7 +297,11 @@ const updateUserWorkbaskets = async (req, res) => {
 
     return res.json({ success: true, message: 'User workbaskets updated', data: mapUserResponse(user) });
   } catch (error) {
-    return res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to update user workbaskets' });
+    const statusCode = error.statusCode || 500;
+    const safeMessage = statusCode >= 500
+      ? 'Failed to update user workbaskets'
+      : (error.message || 'Failed to update user workbaskets');
+    return res.status(statusCode).json({ success: false, message: safeMessage });
   }
 };
 
