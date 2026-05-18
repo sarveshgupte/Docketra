@@ -223,6 +223,22 @@ module.exports = {
   'POST /:caseId/reopen-pending': { params: caseIdParams, body: z.object({}).passthrough() },
   'POST /:caseId/qc-action': { params: caseIdParams, body: z.object({ action: nonEmptyString }).passthrough() },
   'POST /:caseId/reassign': { params: caseIdParams, body: z.object({ assignTo: xidString }).passthrough() },
+  'POST /:caseId/move': {
+    params: caseIdParams,
+    body: z.object({
+      destinationType: z.enum(['USER_WORKLIST', 'WORKBASKET', 'QC_WORKBASKET']),
+      assigneeXID: xidString.optional(),
+      destinationId: objectIdString.optional(),
+      note: z.string().trim().max(500).optional(),
+    }).strict().superRefine((body, ctx) => {
+      if (body.destinationType === 'USER_WORKLIST' && !body.assigneeXID) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['assigneeXID'], message: 'assigneeXID is required for USER_WORKLIST' });
+      }
+      if ((body.destinationType === 'WORKBASKET' || body.destinationType === 'QC_WORKBASKET') && !body.destinationId) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['destinationId'], message: 'destinationId is required for workbasket destinations' });
+      }
+    }),
+  },
   'POST /:caseId/apply-ai-routing': { params: caseIdParams, body: strictEmpty },
   'POST /:caseId/reject-ai-routing': { params: caseIdParams, body: strictEmpty },
   'POST /:caseId/manager-move': { params: caseIdParams, body: z.object({ targetTeamId: objectIdString.optional() }).passthrough() },

@@ -7,7 +7,10 @@ const {
   reopenDuePending,
 } = require('../services/docketWorkflow.service');
 const Case = require('../models/Case.model');
-const { canAssignFromWorkbasket, canMoveBetweenWorklists, getFirmUserByXid } = require('../services/workbasketAuthorization.service');
+const Team = require('../models/Team.model');
+const User = require('../models/User.model');
+const { logCaseHistory } = require('../services/auditLog.service');
+const { canAssignFromWorkbasket, canMoveBetweenWorklists, canMoveDocketBetweenQueues, getFirmUserByXid } = require('../services/workbasketAuthorization.service');
 const { isValidTransition: isValidLifecycleTransition } = require('../domain/docketLifecycle');
 
 function isAdmin(req) {
@@ -140,6 +143,105 @@ async function runPendingReopen(req, res) {
   }
 }
 
+async function moveDocket(req, res) {
+  try {
+    const { caseId } = req.params;
+    const { destinationType, assigneeXID, destinationId, note } = req.body || {};
+    const docket = await Case.findOne({ caseId, firmId: req.user.firmId }).select('caseId firmId ownerTeamId workbasketId assignedToXID status state').lean();
+    if (!docket) return res.status(404).json({ success: false, message: 'Docket not found' });
+
+    let updates = {};
+    let destinationMeta = { destinationType };
+    let destinationPolicyContext = { type: destinationType };
+    if (destinationType === 'USER_WORKLIST') {
+      const assignee = await getFirmUserByXid(req.user.firmId, assigneeXID);
+      if (!assignee) return res.status(404).json({ success: false, message: 'Destination assignee not found' });
+      updates = {
+        assignedToXID: assignee.xID,
+        assignedTo: assignee._id,
+        assignedToName: assignee.name || assignee.xID,
+        queueType: 'PERSONAL',
+      };
+      destinationMeta = { ...destinationMeta, assigneeXID: assignee.xID };
+      destinationPolicyContext = { ...destinationPolicyContext, assigneeXID: assignee.xID, user: assignee };
+    } else {
+      const destinationTeam = await Team.findOne({ _id: destinationId, firmId: req.user.firmId, isActive: true }).select('_id type parentWorkbasketId').lean();
+      if (!destinationTeam) return res.status(404).json({ success: false, message: 'Destination queue not found for this firm' });
+      if (destinationType === 'WORKBASKET' && String(destinationTeam.type || 'PRIMARY').toUpperCase() === 'QC') {
+        return res.status(400).json({ success: false, message: 'Destination must be a primary workbasket' });
+      }
+      if (destinationType === 'QC_WORKBASKET' && String(destinationTeam.type || '').toUpperCase() !== 'QC') {
+        return res.status(400).json({ success: false, message: 'Destination must be a QC workbasket' });
+      }
+      updates = {
+        ownerTeamId: destinationTeam._id,
+        workbasketId: destinationTeam._id,
+        routedToTeamId: null,
+        assignedToXID: null,
+        assignedTo: null,
+        assignedToName: null,
+        queueType: 'GLOBAL',
+      };
+      destinationMeta = { ...destinationMeta, destinationId: String(destinationTeam._id) };
+      destinationPolicyContext = { ...destinationPolicyContext, teamId: String(destinationTeam._id), team: destinationTeam };
+    }
+
+    const managerOwnedTeams = await Team.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('_id').lean();
+    const managedUsers = await User.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('xID').lean();
+    const managerScope = {
+      permittedTeamIds: [...new Set([
+        ...((Array.isArray(req.user?.teamIds) ? req.user.teamIds : []).map((id) => String(id)),
+        ...managerOwnedTeams.map((team) => String(team._id)),
+      ])],
+      permittedUserXids: [...new Set([
+        String(req.user?.xID || '').toUpperCase(),
+        ...managedUsers.map((user) => String(user.xID || '').toUpperCase()),
+      ])],
+    };
+
+    if (!canMoveDocketBetweenQueues({
+      viewer: req.user,
+      docket,
+      source: { teamId: docket.ownerTeamId ? String(docket.ownerTeamId) : (docket.workbasketId ? String(docket.workbasketId) : null), assignedToXID: docket.assignedToXID || null },
+      destination: destinationPolicyContext,
+      managerScope,
+    })) {
+      return res.status(403).json({ success: false, message: 'Not allowed to move this docket' });
+    }
+
+    const updated = await Case.findOneAndUpdate(
+      { caseId, firmId: req.user.firmId },
+      { $set: updates },
+      { new: true },
+    );
+
+    await logCaseHistory({
+      caseId,
+      firmId: req.user.firmId,
+      actionType: 'CASE_UPDATED',
+      actionLabel: 'Docket moved between queues',
+      description: `Docket moved to ${destinationType}`,
+      performedBy: req.user.email || req.user.xID,
+      performedByXID: req.user.xID,
+      actorRole: req.user.role,
+      metadata: {
+        source: {
+          assignedToXID: docket.assignedToXID || null,
+          ownerTeamId: docket.ownerTeamId ? String(docket.ownerTeamId) : null,
+          workbasketId: docket.workbasketId ? String(docket.workbasketId) : null,
+        },
+        destination: destinationMeta,
+        note: note || null,
+      },
+      req,
+    });
+
+    return res.json({ success: true, data: ensureUpdatedAt(updated), message: 'Docket moved' });
+  } catch (error) {
+    return handleError(res, error);
+  }
+}
+
 module.exports = {
   isValidTransition,
   assignDocket,
@@ -148,4 +250,5 @@ module.exports = {
   reassignDocket,
   reopenPendingDocket,
   runPendingReopen,
+  moveDocket,
 };
