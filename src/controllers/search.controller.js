@@ -13,6 +13,27 @@ const { canViewUserWorklist } = require('../services/worklistAccess.service');
 const log = require('../utils/log');
 const { logSlowEndpoint } = require('../utils/slowLog');
 const SLOW_WORKLIST_QUERY_MS = 400;
+const ERROR_CODES = {
+  GLOBAL_SEARCH_FAILED: 'GLOBAL_SEARCH_FAILED',
+  CATEGORY_WORKLIST_FETCH_FAILED: 'CATEGORY_WORKLIST_FETCH_FAILED',
+  EMPLOYEE_WORKLIST_FETCH_FAILED: 'EMPLOYEE_WORKLIST_FETCH_FAILED',
+  GLOBAL_WORKLIST_FETCH_FAILED: 'GLOBAL_WORKLIST_FETCH_FAILED',
+};
+
+const handleControllerError = ({ req, res, error, logEvent, code, message, context = {} }) => {
+  log.error(logEvent, {
+    req,
+    error,
+    code,
+    ...context,
+  });
+
+  return res.status(500).json({
+    success: false,
+    message,
+    code,
+  });
+};
 
 const toObjectIdStringOrNull = (value) => {
   if (!value) {
@@ -245,9 +266,18 @@ const globalSearch = async (req, res) => {
       })),
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    return handleControllerError({
+      req,
+      res,
+      error,
+      logEvent: 'GLOBAL_SEARCH_FAILED',
+      code: ERROR_CODES.GLOBAL_SEARCH_FAILED,
       message: 'Error performing search',
+      context: {
+        query: req.query || null,
+        userXID: req.user?.xID || null,
+        firmId: req.user?.firmId || null,
+      },
     });
   }
 };
@@ -333,10 +363,18 @@ const categoryWorklist = async (req, res) => {
       })),
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    return handleControllerError({
+      req,
+      res,
+      error,
+      logEvent: 'CATEGORY_WORKLIST_FETCH_FAILED',
+      code: ERROR_CODES.CATEGORY_WORKLIST_FETCH_FAILED,
       message: 'Error fetching category worklist',
-      data: [],
+      context: {
+        categoryId: req.params?.categoryId || null,
+        userXID: req.user?.xID || null,
+        firmId: req.user?.firmId || null,
+      },
     });
   }
 };
@@ -596,10 +634,18 @@ const employeeWorklist = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    return handleControllerError({
+      req,
+      res,
+      error,
+      logEvent: 'EMPLOYEE_WORKLIST_FETCH_FAILED',
+      code: ERROR_CODES.EMPLOYEE_WORKLIST_FETCH_FAILED,
       message: 'Error fetching employee worklist',
-      data: [],
+      context: {
+        query: req.query || null,
+        userXID: req.user?.xID || null,
+        firmId: req.user?.firmId || null,
+      },
     });
   }
 };
@@ -878,16 +924,18 @@ const globalWorklist = async (req, res) => {
       },
     });
   } catch (error) {
-    log.error('GLOBAL_WORKLIST_FETCH_FAILED', {
+    return handleControllerError({
       req,
+      res,
       error,
-      query: req.query || null,
-      userXID: req.user?.xID || null,
-      firmId: req.user?.firmId || null,
-    });
-    res.status(500).json({
-      success: false,
+      logEvent: 'GLOBAL_WORKLIST_FETCH_FAILED',
+      code: ERROR_CODES.GLOBAL_WORKLIST_FETCH_FAILED,
       message: 'Error fetching global worklist',
+      context: {
+        query: req.query || null,
+        userXID: req.user?.xID || null,
+        firmId: req.user?.firmId || null,
+      },
     });
   }
 };
