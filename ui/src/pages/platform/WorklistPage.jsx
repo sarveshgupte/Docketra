@@ -19,15 +19,21 @@ import {
 import { AccessDeniedState } from '../../components/feedback/AccessDeniedState';
 import { getRecoveryPayload } from '../../utils/errorRecovery';
 import { usePlatformMyWorklistQuery } from '../../hooks/usePlatformDataQueries';
+import { useAuth } from '../../hooks/useAuth';
+
+const WORKLIST_VIEWER_ROLES = new Set(['PRIMARY_ADMIN', 'ADMIN', 'MANAGER']);
 
 export const PlatformWorklistPage = () => {
   const { firmSlug } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { openDocket } = useActiveDocket();
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [activeOnly, setActiveOnly] = useState(true);
+  const [selectedAssigneeXID, setSelectedAssigneeXID] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [pendingActionId, setPendingActionId] = useState('');
@@ -39,7 +45,24 @@ export const PlatformWorklistPage = () => {
     isError,
     error: queryError,
     refetch,
-  } = usePlatformMyWorklistQuery();
+  } = usePlatformMyWorklistQuery({ assigneeXID: selectedAssigneeXID || undefined });
+
+  const normalizedRole = String(user?.role || '').toUpperCase();
+  const canSelectViewer = WORKLIST_VIEWER_ROLES.has(normalizedRole);
+  const selfXID = user?.xID || '';
+  const selfLabel = user?.name || selfXID || 'Me';
+  const selectedTarget = selectedAssigneeXID || selfXID;
+  const isViewingSelf = !selectedAssigneeXID || selectedTarget === selfXID;
+
+  const assigneeOptions = useMemo(() => {
+    const map = new Map();
+    rows.forEach((row) => {
+      const xid = String(row.assigneeXID || row.assignedToXID || '').trim();
+      if (!xid) return;
+      if (!map.has(xid)) map.set(xid, row.assigneeName || xid);
+    });
+    return Array.from(map.entries()).map(([xid, name]) => ({ xid, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [rows]);
 
 
   const recovery = getRecoveryPayload(queryError, 'platform_queue');
@@ -49,7 +72,8 @@ export const PlatformWorklistPage = () => {
     const needle = search.trim().toLowerCase();
     return rows.filter((item) => {
       const status = String(item.status || '').toUpperCase();
-      const matchesStatus = statusFilter === 'ALL' || status === statusFilter;
+      const activeStatus = activeOnly && status === 'PENDING' ? false : true;
+      const matchesStatus = (statusFilter === 'ALL' || status === statusFilter) && activeStatus;
       const matchesCategory = categoryFilter === 'ALL' || String(item.category || '') === categoryFilter;
       const matchesQuery = !needle || [
         formatDocketLabel(item),
@@ -61,7 +85,7 @@ export const PlatformWorklistPage = () => {
       ].some((value) => String(value || '').toLowerCase().includes(needle));
       return matchesStatus && matchesCategory && matchesQuery;
     });
-  }, [rows, search, statusFilter, categoryFilter]);
+  }, [rows, search, statusFilter, categoryFilter, activeOnly]);
 
   const categories = useMemo(() => [...new Set(rows.map((item) => String(item.category || '').trim()).filter(Boolean))], [rows]);
 
@@ -69,6 +93,7 @@ export const PlatformWorklistPage = () => {
     setSearch('');
     setStatusFilter('ALL');
     setCategoryFilter('ALL');
+    setActiveOnly(true);
   };
 
   const openFromQueue = (row) => {
@@ -100,17 +125,22 @@ export const PlatformWorklistPage = () => {
   };
 
   if (isAccessDenied) {
+    const deniedTargetLabel = selectedAssigneeXID || 'selected assignee';
     return (
-      <PlatformShell title="Access restricted" subtitle="Your session is active, but this module is currently not available for your role.">
+      <PlatformShell title="Access restricted" subtitle={`You do not have permission to view worklist for ${deniedTargetLabel}.`}>
         <AccessDeniedState supportContext={recovery.supportContext} />
       </PlatformShell>
     );
   }
 
+  const currentViewerLabel = isViewingSelf
+    ? 'My Worklist'
+    : `Worklist: ${assigneeOptions.find((option) => option.xid === selectedTarget)?.name || selectedTarget}`;
+
   return (
     <PlatformShell
-      title="My Worklist"
-      subtitle="Your personal docket workload for active execution and pended follow-up."
+      title={currentViewerLabel}
+      subtitle={isViewingSelf ? 'Your personal docket workload for active execution and pended follow-up.' : `Viewing assigned workload for ${selectedTarget}.`}
       actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>Create Docket</Link>}
     >
       <StatusMessageStack
@@ -132,7 +162,19 @@ export const PlatformWorklistPage = () => {
         actions={<button type="button" onClick={() => void refetch()} disabled={isFetching}>{isFetching ? 'Refreshing…' : 'Refresh'}</button>}
       >
         <SectionToolbar>
-          <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL'}>
+          <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL' && activeOnly}>
+            {canSelectViewer ? (
+              <select
+                value={selectedAssigneeXID}
+                onChange={(event) => setSelectedAssigneeXID(event.target.value)}
+                aria-label="Viewing worklist for assignee"
+              >
+                <option value="">Viewing: My Worklist ({selfLabel})</option>
+                {assigneeOptions.filter((option) => option.xid !== selfXID).map((option) => (
+                  <option key={option.xid} value={option.xid}>Viewing: {option.name} ({option.xid})</option>
+                ))}
+              </select>
+            ) : null}
             <input
               type="search"
               value={search}
@@ -152,6 +194,14 @@ export const PlatformWorklistPage = () => {
                 <option key={category} value={category}>{category}</option>
               ))}
             </select>
+            <label>
+              <input
+                type="checkbox"
+                checked={activeOnly}
+                onChange={(event) => setActiveOnly(event.target.checked)}
+              />
+              Show active dockets only
+            </label>
           </FilterBar>
         </SectionToolbar>
 
@@ -184,7 +234,7 @@ export const PlatformWorklistPage = () => {
           loading={isLoading}
           error={isError ? 'Unable to load My Worklist right now.' : ''}
           onRetry={() => void refetch()}
-          hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL'}
+          hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL' || activeOnly}
           emptyLabel="No dockets are assigned to you yet. Pull from Workbaskets or request assignment from your manager/admin."
           emptyLabelFiltered="No worklist dockets match your current search or filters."
         />
