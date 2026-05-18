@@ -1,6 +1,32 @@
 import { normalizeLifecycle } from '../../utils/lifecycle';
 
-export const normalizeCase = (data) => data.case || data;
+const toLegacyCaseShape = (detail = {}, legacy = {}) => ({
+  ...legacy,
+  caseId: detail.docketId || legacy.caseId,
+  title: detail.title || legacy.title,
+  description: detail.description || legacy.description,
+  lifecycle: detail.lifecycle || legacy.lifecycle,
+  status: detail.statusLabel || legacy.status,
+  dueDate: detail?.dates?.dueDate || legacy.dueDate,
+  slaDueAt: detail?.dates?.slaDueAt || legacy.slaDueAt,
+  pendingUntil: detail?.dates?.pendingUntil || legacy.pendingUntil,
+  createdAt: detail?.dates?.createdAt || legacy.createdAt,
+  updatedAt: detail?.dates?.updatedAt || legacy.updatedAt,
+  client: detail.client ? {
+    ...(legacy.client || {}),
+    _id: detail.client.id || legacy?.client?._id,
+    clientId: detail.client.clientId || legacy?.client?.clientId,
+    businessName: detail.client.name || legacy?.client?.businessName,
+    businessEmail: detail.client.email || legacy?.client?.businessEmail,
+    primaryContactNumber: detail.client.contact || legacy?.client?.primaryContactNumber,
+  } : legacy.client,
+});
+
+export const normalizeCase = (data) => {
+  const root = data?.case || data || {};
+  const detail = root?.docketDetail || data?.docketDetail;
+  return detail ? toLegacyCaseShape(detail, root) : root;
+};
 
 export const toLifecycleStage = (lifecycle) => {
   if (lifecycle === 'OPEN') return 'Open';
