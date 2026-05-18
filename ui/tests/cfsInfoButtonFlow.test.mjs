@@ -15,6 +15,9 @@ const docketSidebar = read('src/components/docket/DocketSidebar.jsx');
 assert.ok(docketSidebar.includes("type === 'cfs'"), 'DocketSidebar should support CFS sidebar mode.');
 assert.ok(docketSidebar.includes('No client fact sheet details added yet.'), 'DocketSidebar should provide an empty CFS state.');
 assert.ok(docketSidebar.includes('Client Status:'), 'DocketSidebar should display client status metadata.');
+assert.ok(docketSidebar.includes('role="dialog"'), 'DocketSidebar should expose dialog semantics for the sidebar panel.');
+assert.ok(docketSidebar.includes("event.key === 'Escape'"), 'DocketSidebar should close on Escape for keyboard users.');
+assert.ok(docketSidebar.includes('Upload link copied to clipboard.'), 'DocketSidebar should announce upload link copy feedback.');
 
 const clientsPage = read('src/pages/ClientsPage.jsx');
 assert.ok(clientsPage.includes('Edit CFS'), 'ClientsPage should keep Edit CFS actions.');

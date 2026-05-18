@@ -39,6 +39,9 @@ This page remains the route-level orchestrator and delegates section rendering a
 ### Side surfaces
 - **`DocketSidebar`**
   - Attachments helper, history quick context, and client fact-sheet panel.
+  - Accessibility contract: renders as a keyboard-dismissible dialog (`role="dialog"` + `aria-modal`), moves focus into panel on open, restores focus on close, and supports Escape/backdrop/close-button exit.
+  - Status announcements: CFS loading/error/empty states and upload-link copy feedback use polite live regions for assistive technologies.
+  - Upload-link PIN handling: hidden PIN state is visually masked and not announced by screen readers until explicitly revealed.
 
 ## Hooks and data boundaries
 
@@ -88,6 +91,7 @@ Current smoke/regression checks:
 - `ui/tests/caseDetailPerformanceRefactor.test.mjs`
 - `ui/tests/caseDetailArchitectureSmoke.test.mjs`
 - `ui/tests/docketSurfaceHardening.test.mjs`
+- `ui/tests/cfsInfoButtonFlow.test.mjs` (CFS sidebar wiring + a11y semantics/copy announcements)
 
 ## Route/Submit action visibility contract
 
