@@ -1,6 +1,10 @@
 # What's New
 
 
+## May 2026: Landing page navigation anchor mapping fix
+
+- Fixed landing page navigation anchors so Why, Product, Workflow, Pilot readiness, and Trust scroll to distinct sections.
+
 ## May 2026: Persistent workspace storage trust indicator
 
 - Added persistent workspace storage indicator showing BYOS/fallback status.
