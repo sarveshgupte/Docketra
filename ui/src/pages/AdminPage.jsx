@@ -531,7 +531,11 @@ export const AdminPage = () => {
       }
 
       try {
-        const wbResponse = await adminApi.updateUserWorkbaskets(selectedUserForAccess.xID, selectedWorkbasketDraft);
+        const selectedQcIds = selectedWorkbasketDraft.filter((teamId) => qcWorkbaskets.some((wb) => String(wb?._id) === String(teamId)));
+        const wbResponse = await adminApi.updateUserWorkbaskets(selectedUserForAccess.xID, {
+          teamIds: selectedWorkbasketDraft,
+          assignQcWorkbaskets: selectedQcIds.length > 0,
+        });
         if (!wbResponse?.success) {
           showToast(wbResponse?.message || 'Client access saved, but workbasket update failed. Please retry.', 'error');
           return;
