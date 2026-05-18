@@ -62,16 +62,20 @@ const buildRoleContext = (role) => {
  * Uses firm membership (firmId) as the source of truth.
  * Returns null if the user is not part of the firm or inactive.
  */
-const resolveFirmRole = async (userId, firmId) => {
-  if (!userId || !firmId) {
+const resolveFirmRole = async (userId, firmId, identity = {}) => {
+  if (!firmId) {
     return null;
   }
 
-  const membership = await User.findOne({
-    _id: userId,
-    firmId,
-    isActive: true,
-  });
+  const normalizedUserId = toIdString(userId);
+  const normalizedXid = typeof identity?.xID === 'string' ? identity.xID.trim() : null;
+  const query = { firmId, isActive: true };
+
+  if (normalizedUserId) query._id = normalizedUserId;
+  else if (normalizedXid) query.xID = normalizedXid;
+  else return null;
+
+  const membership = await User.findOne(query);
 
   if (!membership) {
     return null;
@@ -107,11 +111,12 @@ const resolveRequestFirmRole = async (req, firmId) => {
   }
 
   const userId = toIdString(req?.userId || req?.user?._id || req?.user?.id || req?.jwt?.userId || null);
-  if (!userId || !requestedFirmId) {
+  if (!requestedFirmId) {
     return null;
   }
 
-  return resolveFirmRole(userId, requestedFirmId);
+  const cachedXid = typeof req?.user?.xID === 'string' ? req.user.xID : (typeof req?.jwt?.xID === 'string' ? req.jwt.xID : null);
+  return resolveFirmRole(userId, requestedFirmId, { xID: cachedXid });
 };
 
 module.exports = {
