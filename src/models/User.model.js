@@ -4,6 +4,7 @@ const softDeletePlugin = require('../utils/softDelete.plugin');
 const { encrypt: encryptProtectedValue, isEncrypted } = require('../utils/encryption');
 const { normalizeRole } = require('../utils/role.utils');
 const { getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
+const { sanitizeUserForOutput } = require('../utils/userSerialization');
 // NOTE: If upgrading from previous version,
 // ensure MongoDB global unique index on { email: 1 } is dropped:
 // db.users.dropIndex("email_1")
@@ -618,8 +619,16 @@ const userSchema = new mongoose.Schema({
 }, {
   id: false,
   // Enable virtuals in JSON output
-  toJSON: { virtuals: true, getters: true },
-  toObject: { virtuals: true, getters: true },
+  toJSON: {
+    virtuals: true,
+    getters: true,
+    transform: (_doc, ret) => sanitizeUserForOutput(ret),
+  },
+  toObject: {
+    virtuals: true,
+    getters: true,
+    transform: (_doc, ret) => sanitizeUserForOutput(ret),
+  },
 });
 
 const CANONICAL_XID_REGEX = /^X\d{6}$/;
@@ -860,6 +869,10 @@ userSchema.pre('updateMany', function(next) {
   }
 });
 
+
+userSchema.methods.toSafeObject = function toSafeObject() {
+  return sanitizeUserForOutput(this);
+};
 // Indexes for performance
 // CRITICAL: Firm-scoped unique index on (firmId, xID)
 // - Each firm has its own X000001, X000002, etc.
