@@ -4,12 +4,7 @@ const routeSchemas = require('../schemas/search.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { searchLimiter } = require('../middleware/rateLimiters');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
-const {
-  globalSearch,
-  categoryWorklist,
-  employeeWorklist,
-  globalWorklist,
-} = require('../controllers/search.controller');
+const { globalSearch } = require('../controllers/search.controller');
 
 /**
  * Search and Worklist Routes
@@ -20,13 +15,5 @@ const {
 // GET /api/search?q=term - Global search
 router.get('/', authorizeFirmPermission('CASE_VIEW'), searchLimiter, globalSearch);
 
-// GET /api/worklists/global - Global worklist (unassigned cases)
-router.get('/global', authorizeFirmPermission('CASE_VIEW'), searchLimiter, globalWorklist);
-
-// GET /api/worklists/category/:categoryId - Category worklist
-router.get('/category/:categoryId', authorizeFirmPermission('CASE_VIEW'), searchLimiter, categoryWorklist);
-
-// GET /api/worklists/employee/me - Employee worklist
-router.get('/employee/me', authorizeFirmPermission('CASE_VIEW'), searchLimiter, employeeWorklist);
 
 module.exports = router;
