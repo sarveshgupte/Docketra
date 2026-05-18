@@ -1,4 +1,4 @@
-const { z, nonEmptyString } = require('./common');
+const { z, nonEmptyString, xidString } = require('./common');
 
 module.exports = {
   'GET /': {
@@ -25,7 +25,18 @@ module.exports = {
   },
   'GET /employee/me': {
     query: z.object({
-      limit: z.coerce.number().int().positive().max(100).optional(),
-    }).passthrough(),
+      assigneeXID: xidString.optional(),
+      status: z.union([
+        z.enum(['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'QC_PENDING', 'PENDING']),
+        z.array(z.enum(['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'QC_PENDING', 'PENDING'])),
+      ]).optional(),
+      page: z.coerce.number().int().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(100).optional(),
+      search: z.string().trim().min(1).max(200).optional(),
+      category: nonEmptyString.optional(),
+      subcategory: nonEmptyString.optional(),
+      sortBy: z.enum(['caseId', 'clientId', 'clientName', 'category', 'subcategory', 'dueDate', 'pendingUntil', 'updatedAt', 'createdAt']).optional(),
+      sortOrder: z.enum(['asc', 'desc']).optional(),
+    }).strict(),
   },
 };
