@@ -65,6 +65,16 @@ const enforceSameOriginForCookieAuth = (req, res, next) => {
   );
 
   if (!originUrl && !refererUrl) {
+    if (process.env.NODE_ENV === 'production') {
+      log.warn('[CSRF] Same-origin check rejected request in production: missing origin and referer headers.', {
+        path: req.originalUrl || req.url,
+        method: req.method,
+      });
+      return res.status(403).json({
+        success: false,
+        message: 'Invalid request origin',
+      });
+    }
     return next();
   }
   if (requestHosts.size === 0) {
