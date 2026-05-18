@@ -169,7 +169,7 @@ const HeroSection = ({ onExplore }) => (
 );
 
 const ProblemSection = () => (
-  <section id="problem" className="w-full bg-slate-900 text-white py-20 md:py-28">
+  <section id="why" className="scroll-mt-24 w-full bg-slate-900 text-white py-20 md:py-28">
     <Container>
       <motion.div {...REVEAL}>
         <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Why execution breaks in many firms.</h2>
@@ -186,7 +186,7 @@ const ProblemSection = () => (
 );
 
 const ProductPillarsSection = () => (
-  <section id="pillars" className="w-full bg-slate-50 py-20 md:py-28">
+  <section id="product" className="scroll-mt-24 w-full bg-slate-50 py-20 md:py-28">
     <Container>
       <motion.div {...REVEAL}>
         <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">Four pillars: Company Brain + Work Execution OS.</h2>
@@ -205,7 +205,7 @@ const ProductPillarsSection = () => (
 );
 
 const HowItWorksSection = () => (
-  <section id="workflow" className="w-full bg-white py-20 md:py-28">
+  <section id="workflow" className="scroll-mt-24 w-full bg-white py-20 md:py-28">
     <Container>
       <motion.div {...REVEAL}>
         <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">How it works.</h2>
@@ -225,7 +225,7 @@ const HowItWorksSection = () => (
 );
 
 const WhyNotTaskManagerSection = () => (
-  <section id="difference" className="w-full bg-slate-50 py-20 md:py-24">
+  <section id="pilot-readiness" className="scroll-mt-24 w-full bg-slate-50 py-20 md:py-24">
     <Container>
       <motion.div {...REVEAL}>
         <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">Why not another task manager?</h2>
@@ -255,7 +255,7 @@ const UseCasesSection = () => (
 );
 
 const TrustSection = () => (
-  <section id="trust" className="w-full bg-slate-900 text-white py-20 md:py-28">
+  <section id="trust" className="scroll-mt-24 w-full bg-slate-900 text-white py-20 md:py-28">
     <Container>
       <motion.div {...REVEAL}>
         <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Trust and control.</h2>
