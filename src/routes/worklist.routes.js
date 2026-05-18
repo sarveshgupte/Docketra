@@ -1,10 +1,10 @@
 const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
-const routeSchemas = require('../schemas/search.routes.schema.js');
+const routeSchemas = require('../schemas/worklist.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { searchLimiter, sensitiveLimiter, userWriteLimiter } = require('../middleware/rateLimiters');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
-const { checkCaseClientAccess } = require('../middleware/caseAccess.middleware');
+const { checkCaseClientAccess } = require('../middleware/clientAccess.middleware');
 const {
   globalWorklist,
   categoryWorklist,
