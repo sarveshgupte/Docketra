@@ -278,6 +278,7 @@ export const CaseDetailPage = () => {
   const {
     loadingClientDockets,
     clientDockets,
+    clientDocketsError,
   } = useClientDocketHistory({
     activeTab,
     clientId: caseData?.clientId,
@@ -1785,6 +1786,7 @@ export const CaseDetailPage = () => {
                   sortedTimelineEvents={sortedTimelineEvents}
                   loadingClientDockets={loadingClientDockets}
                   clientDockets={clientDockets}
+                  clientDocketsError={clientDocketsError}
                   firmSlug={firmSlug}
                   linkedClientRoute={linkedClientRoute}
                   returnTo={returnTo}

@@ -2,21 +2,29 @@ import { useEffect, useState } from 'react';
 import { caseApi } from '../../api/case.api';
 import { CASE_DETAIL_TABS } from '../../utils/constants';
 
+const resolveDocketId = (row) => row?.caseId || row?.docketId || row?._id || '';
+
 export const useClientDocketHistory = ({ activeTab, clientId, caseId }) => {
   const [loadingClientDockets, setLoadingClientDockets] = useState(false);
   const [clientDockets, setClientDockets] = useState([]);
+  const [clientDocketsError, setClientDocketsError] = useState(false);
 
   useEffect(() => {
     if (!clientId) return;
     if (![CASE_DETAIL_TABS.OVERVIEW, CASE_DETAIL_TABS.HISTORY].includes(activeTab)) return;
     const loadClientDockets = async () => {
       setLoadingClientDockets(true);
+      setClientDocketsError(false);
       try {
         const response = await caseApi.getClientDockets(clientId);
         const rows = response.data || response.dockets || [];
-        setClientDockets(rows.filter((row) => row.caseId !== caseId));
+        const currentDocketId = String(caseId || '');
+        setClientDockets(
+          rows.filter((row) => String(resolveDocketId(row) || '') !== currentDocketId),
+        );
       } catch (_error) {
         setClientDockets([]);
+        setClientDocketsError(true);
       } finally {
         setLoadingClientDockets(false);
       }
@@ -27,6 +35,6 @@ export const useClientDocketHistory = ({ activeTab, clientId, caseId }) => {
   return {
     loadingClientDockets,
     clientDockets,
+    clientDocketsError,
   };
 };
-

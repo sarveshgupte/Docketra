@@ -1457,7 +1457,13 @@ const listClientDockets = async (req, res) => {
     const rows = await Case.find({ firmId: req.user.firmId, clientId })
       .sort({ createdAt: String(order).toLowerCase() === 'asc' ? 1 : -1 })
       .limit(parseInt(limit, 10))
-      .select('caseId category status createdAt')
+      .select([
+        'caseId', 'docketId', 'category', 'caseCategory', 'workType', 'workTypeName', 'categorySnapshot',
+        'subcategory', 'subCategory', 'caseSubCategory', 'subCategoryName', 'subcategoryName', 'subCategorySnapshot',
+        'status', 'lifecycle', 'state', 'createdAt', 'updatedAt', 'resolvedAt', 'filedAt', 'closedAt', 'completedAt',
+        'assignedToName', 'assignedTo', 'assignedToXID', 'ownerName', 'ownerXID',
+        'workbasketName', 'queueName', 'ownerTeamName', 'ownerTeamId', 'workbasket',
+      ].join(' '))
       .lean();
 
     return res.status(200).json({ success: true, data: rows });
