@@ -37,7 +37,9 @@ function invokeMiddleware(reqOverrides = {}) {
 
 function run() {
   const originalFrontendOrigins = process.env.FRONTEND_ORIGINS;
+  const originalNodeEnv = process.env.NODE_ENV;
   process.env.FRONTEND_ORIGINS = 'https://app.docketra.example';
+  process.env.NODE_ENV = 'test';
 
   // valid same-origin mutating request passes
   let result = invokeMiddleware({
@@ -92,6 +94,27 @@ function run() {
   });
   assert.strictEqual(result.nextCalled, true);
 
+  // cookie-auth mutating request with no origin/referer should fail in production
+  process.env.NODE_ENV = 'production';
+  result = invokeMiddleware({
+    headers: {
+      host: 'api.docketra.example',
+      cookie: 'accessToken=test',
+    },
+  });
+  assert.strictEqual(result.statusCode, 403);
+  assert.strictEqual(result.payload?.message, 'Invalid request origin');
+
+  // bearer-token request without cookies should pass even without origin/referer
+  result = invokeMiddleware({
+    headers: {
+      host: 'api.docketra.example',
+      authorization: 'Bearer internal-token',
+    },
+  });
+  assert.strictEqual(result.nextCalled, true);
+  process.env.NODE_ENV = 'test';
+
   // token-auth/internal route (no cookie) should not be blocked
   result = invokeMiddleware({
     originalUrl: '/api/internal/sync',
@@ -103,7 +126,7 @@ function run() {
   });
   assert.strictEqual(result.nextCalled, true);
 
-  // explicit skip path should not be blocked
+  // explicit skip paths should not be blocked
   result = invokeMiddleware({
     originalUrl: '/metrics',
     headers: {
@@ -114,8 +137,28 @@ function run() {
   });
   assert.strictEqual(result.nextCalled, true);
 
+  result = invokeMiddleware({
+    originalUrl: '/health',
+    headers: {
+      host: 'api.docketra.example',
+      cookie: 'accessToken=test',
+    },
+  });
+  assert.strictEqual(result.nextCalled, true);
+
+  result = invokeMiddleware({
+    originalUrl: '/api/csp-violation',
+    headers: {
+      host: 'api.docketra.example',
+      cookie: 'accessToken=test',
+    },
+  });
+  assert.strictEqual(result.nextCalled, true);
+
   if (typeof originalFrontendOrigins === 'undefined') delete process.env.FRONTEND_ORIGINS;
   else process.env.FRONTEND_ORIGINS = originalFrontendOrigins;
+  if (typeof originalNodeEnv === 'undefined') delete process.env.NODE_ENV;
+  else process.env.NODE_ENV = originalNodeEnv;
 
   console.log('csrfOrigin.middleware behavior tests passed');
 }

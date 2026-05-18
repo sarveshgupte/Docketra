@@ -38,3 +38,7 @@ If privileged/security UI needs specific sensitive metadata, it must map explici
 - `toJSON()` strips all sensitive fields.
 - `JSON.stringify(userDoc)` does not leak sensitive fields.
 - List/detail/self/superadmin-style payloads built from safe serialization do not expose restricted fields.
+
+
+## CI/security suites
+`tests/user.serialization.privacy.test.js` is executed by both `npm run test:security` and `npm run test:security:pure`, so privacy serialization regressions are covered in normal CI/security runs (not only manual execution).
