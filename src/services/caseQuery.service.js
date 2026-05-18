@@ -3,6 +3,7 @@ const { logSlowEndpoint } = require('../utils/slowLog');
 const includeInternalErrorDetails = process.env.NODE_ENV !== 'production';
 const { buildWorkflowMeta, logWorkflowEvent } = require('../utils/workflowDiagnostics');
 const { applyWorkModeFilter, normalizeWorkMode } = require('../utils/workType');
+const { serializeDocketDetailDto } = require('../serializers/docketDetail.serializer');
 const CASE_LIST_PROJECTION = 'caseId caseNumber caseName title status category subcategory caseSubCategory priority clientId clientName assignedTo assignedToXID assignedToName employeeXID employeeSnapshot createdBy createdByXID createdAt updatedAt dueDate slaDueAt isInternal workType lifecycle state pendingUntil ownerTeamId routedToTeamId';
 module.exports = (deps) => {
   const {
@@ -383,6 +384,16 @@ module.exports = (deps) => {
       res.removeHeader('ETag');
 
       log.info('STEP 3 before response');
+      const docketDetail = serializeDocketDetailDto({
+        caseObject,
+        client,
+        ownerTeam,
+        routedTeam,
+        assignedUser,
+        attachments,
+        timeline: [...auditLog, ...history],
+      });
+
       const payload = {
         success: true,
         data: {
@@ -431,6 +442,7 @@ module.exports = (deps) => {
             canComment: true, // Always allowed
             canAttach: true, // Always allowed
           },
+          docketDetail,
           pagination: {
             comments: {
               page: commentsPage,
