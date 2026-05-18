@@ -87,6 +87,11 @@ const AuditLogServiceMock = {
 const caseActionServiceMock = {
   autoReopenExpiredPendingCases: async () => {}
 };
+const logErrorCalls = [];
+const logMock = {
+  error: (...args) => { logErrorCalls.push(args); },
+  warn: () => {},
+};
 
 const userDirectory = new Map();
 const UserMock = {
@@ -111,6 +116,7 @@ require.cache[require.resolve('../src/services/auditLog.service')] = { exports: 
 require.cache[require.resolve('../src/services/caseAction.service')] = { exports: caseActionServiceMock };
 require.cache[require.resolve('../src/models/User.model')] = { exports: UserMock };
 require.cache[require.resolve('../src/domain/case/caseStatus')] = { exports: { OPEN: 'Open', PENDING: 'Pending' } };
+require.cache[require.resolve('../src/utils/log')] = { exports: logMock };
 
 // Tenant Scope mocked
 require.cache[require.resolve('../src/utils/tenantScope')] = {
@@ -190,6 +196,20 @@ async function testGlobalSearch() {
   assert.ok(!adminDirectSearchCall.$and, 'Admin should NOT have $and restriction');
   assert.ok(adminDirectSearchCall.$or, 'Admin should use simple $or for search terms');
 
+  // 6. Error payload is sanitized and includes stable code
+  const originalCaseFind = CaseMock.find;
+  CaseMock.find = () => {
+    throw new Error('DB exploded: internal details');
+  };
+  req = mockReq({ query: { q: 'boom' } });
+  res = mockRes();
+  await searchController.globalSearch(req, res);
+  assert.strictEqual(res.statusCode, 500);
+  assert.strictEqual(res.data.success, false);
+  assert.strictEqual(res.data.code, 'GLOBAL_SEARCH_FAILED');
+  assert.ok(!JSON.stringify(res.data).includes('DB exploded'));
+  CaseMock.find = originalCaseFind;
+
   console.log('globalSearch tests passed');
 }
 
@@ -246,6 +266,19 @@ async function testCategoryWorklist() {
 
   const adminQueryCall = mockCaseFind[0];
   assert.strictEqual(adminQueryCall.category, 'ANY_CAT');
+
+  // 7. Error payload is sanitized and includes stable code
+  const originalCaseFind = CaseMock.find;
+  CaseMock.find = () => {
+    throw new Error('category crash: should not leak');
+  };
+  req = mockReq({ params: { categoryId: 'CAT1' } });
+  res = mockRes();
+  await searchController.categoryWorklist(req, res);
+  assert.strictEqual(res.statusCode, 500);
+  assert.strictEqual(res.data.code, 'CATEGORY_WORKLIST_FETCH_FAILED');
+  assert.ok(!JSON.stringify(res.data).includes('category crash'));
+  CaseMock.find = originalCaseFind;
 
   console.log('categoryWorklist tests passed');
 }
@@ -337,6 +370,19 @@ async function testEmployeeWorklist() {
   assert.strictEqual(res.statusCode, 403);
   assert.strictEqual(res.data.message, 'You do not have access to this worklist');
 
+  // 11. Error payload is sanitized and includes stable code
+  const originalUserFindOne = UserMock.findOne;
+  UserMock.findOne = () => {
+    throw new Error('user lookup exploded');
+  };
+  req = mockReq({ user: { _id: 'user-1', xID: 'X000123', firmId: 'firm-123', role: 'USER', allowedCategories: ['CAT1'] } });
+  res = mockRes();
+  await searchController.employeeWorklist(req, res);
+  assert.strictEqual(res.statusCode, 500);
+  assert.strictEqual(res.data.code, 'EMPLOYEE_WORKLIST_FETCH_FAILED');
+  assert.ok(!JSON.stringify(res.data).includes('lookup exploded'));
+  UserMock.findOne = originalUserFindOne;
+
   console.log('employeeWorklist tests passed');
 }
 
@@ -392,6 +438,19 @@ async function testGlobalWorklist() {
   await searchController.globalWorklist(req, res);
   const filedCall = mockCaseFind[0];
   assert.notStrictEqual(filedCall.status, 'FILED', 'terminal status override should be blocked');
+
+  // 5. Error payload is sanitized and includes stable code
+  const originalCaseCountDocuments = CaseMock.countDocuments;
+  CaseMock.countDocuments = async () => {
+    throw new Error('count failed: internal query details');
+  };
+  req = mockReq({ query: { sortBy: 'clientId' } });
+  res = mockRes();
+  await searchController.globalWorklist(req, res);
+  assert.strictEqual(res.statusCode, 500);
+  assert.strictEqual(res.data.code, 'GLOBAL_WORKLIST_FETCH_FAILED');
+  assert.ok(!JSON.stringify(res.data).includes('count failed'));
+  CaseMock.countDocuments = originalCaseCountDocuments;
 
   console.log('globalWorklist tests passed');
 }
