@@ -84,3 +84,12 @@ Current smoke/regression checks:
 - Submit helper text must state it returns docket to original routing user and does not finally resolve docket.
 - Receiving routed-team users must not see **File** action for routed dockets.
 - Owner/originator receives returned docket back into personal worklist context.
+
+
+## History Tab Behavior (Client Docket History)
+
+- **Change History** shows audit/timeline events for the **current docket** only.
+- **Client Docket History** shows **other dockets for the same client** in newest-first order.
+- The current docket is explicitly excluded from Client Docket History.
+- Client docket history is tenant-scoped: backend query filters by both `firmId` and `clientId`.
+- Client Docket History table includes: Docket ID, Category, Subcategory, Status/Lifecycle, Created Date, Updated Date, Closed/Resolved/Filed Date, Assigned To/Owner, Workbasket/Queue, and a View action.

@@ -135,10 +135,20 @@ export const DocketSidebar = ({
           return <p className="docket-sidebar__empty">Loading client fact sheet…</p>;
         }
         if (cfsError) {
-          return <p className="docket-sidebar__empty">{cfsError}</p>;
+          return (
+            <div className="docket-sidebar__empty" role="status" aria-live="polite">
+              <p>{cfsError}</p>
+              <p className="mt-1 text-xs text-gray-500">You can continue working this docket while CFS data is missing.</p>
+            </div>
+          );
         }
         if (!cfsData) {
-          return <p className="docket-sidebar__empty">No client fact sheet details added yet.</p>;
+          return (
+            <div className="docket-sidebar__empty" role="status" aria-live="polite">
+              <p>No client fact sheet details added yet.</p>
+              <p className="mt-1 text-xs text-gray-500">You can continue working this docket while CFS data is missing.</p>
+            </div>
+          );
         }
 
         return (
