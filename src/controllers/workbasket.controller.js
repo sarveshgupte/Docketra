@@ -297,7 +297,11 @@ const updateUserWorkbaskets = async (req, res) => {
 
     return res.json({ success: true, message: 'User workbaskets updated', data: mapUserResponse(user) });
   } catch (error) {
-    return res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to update user workbaskets' });
+    const statusCode = error.statusCode || 500;
+    const safeMessage = statusCode >= 500
+      ? 'Failed to update user workbaskets'
+      : (error.message || 'Failed to update user workbaskets');
+    return res.status(statusCode).json({ success: false, message: safeMessage });
   }
 };
 
