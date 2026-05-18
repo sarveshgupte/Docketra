@@ -51,7 +51,8 @@ export const getApiErrorType = (error) => {
   if (!error?.response) return 'network';
   const status = error.response.status;
   if (status === 404) return 'empty';
-  if (status === 401 || status === 403) return 'permission';
+  if (status === 401) return 'unauthorized';
+  if (status === 403) return 'forbidden';
   if (status >= 500) return 'server';
   return 'unknown';
 };

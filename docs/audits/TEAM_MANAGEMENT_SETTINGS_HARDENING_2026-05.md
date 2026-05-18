@@ -45,3 +45,13 @@ Primary Admin and SuperAdmin are explicitly non-assignable.
 - Team Management user access modal now supports explicit client access modes: `All clients` and `Selected clients only` for Admin/Primary Admin actors.
 - Primary Admin target accounts are non-editable for client restriction through normal Team Management flows.
 - Backend `PATCH /api/admin/users/:xID/restrict-clients` now uses strict mode payloads (`ALL` or `SELECTED`) and validates selected client IDs against firm ownership.
+
+
+## Team & Access authorization policy (2026-05-17)
+- Read endpoints for Team & Access are firm-admin scoped and must allow both `PRIMARY_ADMIN` and `ADMIN`:
+  - `GET /api/admin/users`
+  - `GET /api/admin/stats`
+  - `GET /api/admin/workbaskets`
+  - `GET /api/admin/hierarchy`
+- Sensitive owner/security mutations remain `PRIMARY_ADMIN`-only (for example hierarchy mutations and primary-admin-gated settings/security routes).
+- Frontend error copy must not treat `403` authorization failures as connectivity failures; use permission-specific messaging for `403`, session-expired messaging for `401`, and reserve connectivity copy for network/no-response failures.
