@@ -34,6 +34,8 @@ export const DocketSidebar = ({
   uploadLinkResult = null,
   clientEmail = '',
 }) => {
+  const sidebarPanelRef = useRef(null);
+  const lastFocusedElementRef = useRef(null);
   const attachmentFileInputRef = useRef(null);
   const [requestPanelOpen, setRequestPanelOpen] = useState(false);
   const [requestExpiry, setRequestExpiry] = useState('24h');
@@ -98,12 +100,42 @@ export const DocketSidebar = ({
 
   useEffect(() => {
     if (!isOpen) return undefined;
+    lastFocusedElementRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = previousOverflow;
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const frameId = window.requestAnimationFrame(() => {
+      sidebarPanelRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [isOpen, type]);
+
+  useEffect(() => {
+    if (isOpen) return undefined;
+    const previous = lastFocusedElementRef.current;
+    if (previous && typeof previous.focus === 'function') {
+      previous.focus();
+    }
+    return undefined;
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (uploadLinkResult?.pin) {
@@ -132,7 +164,7 @@ export const DocketSidebar = ({
         const notes = cfsData?.description || cfsData?.notes || '';
 
         if (cfsLoading) {
-          return <p className="docket-sidebar__empty">Loading client fact sheet…</p>;
+          return <p className="docket-sidebar__empty" role="status" aria-live="polite">Loading client fact sheet…</p>;
         }
         if (cfsError) {
           return (
@@ -290,7 +322,6 @@ export const DocketSidebar = ({
                         type="button"
                         className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
                         onClick={handleCopyLink}
-                        aria-live="polite"
                       >
                         {copyStatus === 'success' ? (
                           <><span aria-hidden="true">✓ </span>Copied!</>
@@ -311,7 +342,15 @@ export const DocketSidebar = ({
                         </button>
                       ) : null}
                     </div>
-                    {uploadLinkResult.pin ? <p className="mt-1 text-xs text-gray-500">PIN: {showGeneratedPin ? uploadLinkResult.pin : '••••'}</p> : null}
+                    <p className="sr-only" role="status" aria-live="polite">
+                      {copyStatus === 'success' ? 'Upload link copied to clipboard.' : copyStatus === 'error' ? 'Unable to copy upload link.' : ''}
+                    </p>
+                    {uploadLinkResult.pin ? (
+                      <p className="mt-1 text-xs text-gray-500">
+                        <span>PIN: </span>
+                        {showGeneratedPin ? <span>{uploadLinkResult.pin}</span> : <span aria-hidden="true">••••</span>}
+                      </p>
+                    ) : null}
                     {uploadLinkResult.expiresAt ? <p className="mt-1 text-xs text-gray-500">Expires at: {new Date(uploadLinkResult.expiresAt).toLocaleString()}</p> : null}
                   </div>
                 ) : null}
@@ -381,8 +420,15 @@ export const DocketSidebar = ({
 
   return (
     <div className="docket-sidebar docket-sidebar--open" role="presentation" aria-hidden={false}>
-      <button type="button" className="docket-sidebar__backdrop" onClick={onClose} aria-label="Close docket sidebar" />
-      <aside className="docket-sidebar__panel docket-sidebar__panel--enter" aria-label={`${TITLES[type] || 'Details'} panel`}>
+      <button type="button" className="docket-sidebar__backdrop" onClick={onClose} aria-label="Close docket sidebar backdrop" />
+      <aside
+        ref={sidebarPanelRef}
+        className="docket-sidebar__panel docket-sidebar__panel--enter"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${TITLES[type] || 'Details'} panel`}
+        tabIndex={-1}
+      >
         <div className="docket-sidebar__header">
           <h3 className="text-base font-semibold text-gray-900">{TITLES[type] || 'Details'}</h3>
           <button type="button" onClick={onClose} className="docket-sidebar__close" aria-label="Close panel">✕</button>
