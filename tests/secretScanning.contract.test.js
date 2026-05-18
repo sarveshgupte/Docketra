@@ -12,6 +12,7 @@ function read(relativePath) {
   const workflow = read('.github/workflows/secret-scanning.yml');
   assert.match(workflow, /pull_request:/, 'secret-scanning workflow must run on pull_request');
   assert.match(workflow, /push:\s*\n\s*branches:\s*\n\s*- main/m, 'secret-scanning workflow must run on push to main');
+  assert.match(workflow, /npm ci/, 'secret-scanning workflow must install dependencies with npm ci before checks');
   assert.match(workflow, /npm run security:secrets/, 'secret-scanning workflow must run npm run security:secrets');
 
   const packageJson = JSON.parse(read('package.json'));
