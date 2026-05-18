@@ -92,10 +92,12 @@ const swapModule = (modulePath, exportsValue) => {
   swapModule(workbasketControllerModulePath, {
     listWorkbaskets: (_req, res) => res.status(200).json({ success: true, data: [] }),
     getCoreWork: (_req, res) => res.status(200).json({ success: true, data: [] }),
+    createDefaultRouting: noop,
     createWorkbasket: noop,
     renameWorkbasket: noop,
     toggleWorkbasketStatus: noop,
     updateUserWorkbaskets: noop,
+    addQcMember: noop,
   });
 
   swapModule(userControllerModulePath, new Proxy({}, { get: () => noop }));
