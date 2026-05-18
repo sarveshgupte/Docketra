@@ -271,3 +271,7 @@ Before deploying to production, implement:
 3. Slow endpoint diagnostics do not expose raw query strings.
 4. Audit metadata preserves useful business labels while redacting secrets.
 5. Production error responses remain user-safe and do not expose internal raw errors.
+
+## Secret scanning gate
+
+See `docs/security/SECRET_SCANNING.md` for CI/local secret scanning policy, placeholder allowlist rules, and rotation playbook.

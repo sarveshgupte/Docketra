@@ -1,0 +1,8 @@
+# Cloudflare Workers local development variables (examples only)
+# Never commit real credentials.
+JWT_SECRET=<required-64-char-random-secret>
+MONGO_URI=mongodb://<db-host>:27017/<db-name>
+REDIS_URL=redis://<redis-host>:6379
+BREVO_API_KEY=<required-provider-api-key>
+STORAGE_TOKEN_SECRET=<required-64-char-random-secret>
+METRICS_TOKEN=<required-64-char-random-secret>

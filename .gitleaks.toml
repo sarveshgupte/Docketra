@@ -2,3 +2,15 @@ title = "Docketra gitleaks config"
 
 [extend]
 useDefault = true
+
+[allowlist]
+description = "Allow explicit placeholder/example strings only"
+regexes = [
+  '''<required-[^>]+>''',
+  '''<optional-[^>]+>''',
+  '''<db-host>''',
+  '''<db-name>''',
+  '''<redis-host>''',
+  '''ci-placeholder-[a-z0-9-]+''',
+  '''[a-z0-9._%+-]+@example\.com'''
+]
