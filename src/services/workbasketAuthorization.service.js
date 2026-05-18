@@ -52,6 +52,22 @@ const canMoveBetweenWorklists = ({ actor, docket, toUser }) => {
   return isLinkedToWorkbasket(toUser, docketWorkbasketId) && Boolean(toUser?.isActive);
 };
 
+const SUPERVISOR_ROLES = new Set(['PRIMARY_ADMIN', 'ADMIN', 'MANAGER']);
+const canMoveDocketBetweenQueues = ({ viewer, docket, destination }) => {
+  const role = normalizeRole(viewer?.role);
+  if (!SUPERVISOR_ROLES.has(role)) return false;
+  if (isTerminal(docket)) return false;
+  if (!destination || !destination.type) return false;
+  return true;
+};
+
 const getFirmUserByXid = (firmId, xID) => User.findOne({ firmId, xID: String(xID || '').toUpperCase(), isActive: true }).select('_id xID role teamId teamIds isActive').lean();
 
-module.exports = { canPullFromWorkbasket, canAssignFromWorkbasket, canMoveBetweenWorklists, getFirmUserByXid, resolveDocketWorkbasketId };
+module.exports = {
+  canPullFromWorkbasket,
+  canAssignFromWorkbasket,
+  canMoveBetweenWorklists,
+  canMoveDocketBetweenQueues,
+  getFirmUserByXid,
+  resolveDocketWorkbasketId,
+};

@@ -210,6 +210,10 @@ export const caseApi = {
     caseId,
     () => request((http) => http.post(`/dockets/${caseId}/transition`, payload), 'Failed to transition docket'),
   ),
+  moveDocket: (caseId, payload) => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.post(`/dockets/${caseId}/move`, payload), 'Failed to move docket'),
+  ),
 
 
   routeToTeam: (caseId, toTeamId, note = '') => withCaseInvalidation(
