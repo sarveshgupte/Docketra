@@ -45,6 +45,18 @@ This page remains the route-level orchestrator and delegates section rendering a
 ### Existing orchestration query
 - **`useCaseQuery`** remains the canonical docket query source.
 
+### Workflow action hooks
+- **`useDocketLifecycleActions.js`**
+  - Owns lifecycle transitions and route/submit/file actions (`pend`, `unpend`, `resolve`, `file`, `route`, `submit routed`).
+  - Preserves confirmation copy, optimistic resolve update behavior, and existing offline queue integration.
+- **`useDocketAttachments.js`**
+  - Owns attachment upload flow and generated upload-link flow.
+  - Preserves optimistic attachment insertion and existing toast/error copy.
+- **`useDocketClone.js`**
+  - Owns clone modal category/subcategory state, clone catalog loading, and clone action execution/navigation.
+- **`useDocketRetryQueue.js`**
+  - Owns offline queued action persistence/retry/backoff lifecycle.
+
 ### Extracted section-fetch hooks
 - **`useCaseDetailTimeline.js`**
   - Owns activity timeline fetch and normalization.
