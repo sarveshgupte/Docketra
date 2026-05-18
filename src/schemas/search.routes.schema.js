@@ -1,4 +1,14 @@
 const { z, nonEmptyString, xidString } = require('./common');
+const EMPLOYEE_WORKLIST_STATUSES = ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'QC_PENDING', 'PENDING'];
+const employeeWorklistStatusEnum = z.enum(EMPLOYEE_WORKLIST_STATUSES);
+const employeeWorklistStatusCsv = z.string().trim().refine((value) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return false;
+  const values = normalized.split(',').map((status) => status.trim().toUpperCase()).filter(Boolean);
+  return values.length > 0 && values.every((status) => EMPLOYEE_WORKLIST_STATUSES.includes(status));
+}, {
+  message: `status must include only allowed values: ${EMPLOYEE_WORKLIST_STATUSES.join(', ')}`,
+});
 
 module.exports = {
   'GET /': {
@@ -27,8 +37,8 @@ module.exports = {
     query: z.object({
       assigneeXID: xidString.optional(),
       status: z.union([
-        z.enum(['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'QC_PENDING', 'PENDING']),
-        z.array(z.enum(['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'QC_PENDING', 'PENDING'])),
+        employeeWorklistStatusCsv,
+        z.array(employeeWorklistStatusEnum),
       ]).optional(),
       page: z.coerce.number().int().min(1).optional(),
       limit: z.coerce.number().int().min(1).max(100).optional(),

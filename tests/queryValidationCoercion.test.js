@@ -81,6 +81,15 @@ function runTests() {
     assert.strictEqual(req.query.page, 2, 'Expected page to be coerced to number');
   }
 
+  {
+    const middleware = validateRequest(searchSchemas['GET /employee/me']);
+    const req = { body: {}, params: {}, query: { status: 'OPEN,IN_PROGRESS' } };
+    const result = runMiddleware(middleware, req);
+
+    assert.strictEqual(result.nextCalled, true, 'Expected comma-list status query to pass');
+    assert.strictEqual(req.query.status, 'OPEN,IN_PROGRESS', 'Expected comma-list status to be preserved for controller parsing');
+  }
+
   console.log('✓ Query validation coercion tests passed');
 }
 
