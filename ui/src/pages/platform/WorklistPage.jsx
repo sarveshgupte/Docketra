@@ -28,6 +28,7 @@ export const PlatformWorklistPage = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [activeOnly, setActiveOnly] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [pendingActionId, setPendingActionId] = useState('');
@@ -49,7 +50,8 @@ export const PlatformWorklistPage = () => {
     const needle = search.trim().toLowerCase();
     return rows.filter((item) => {
       const status = String(item.status || '').toUpperCase();
-      const matchesStatus = statusFilter === 'ALL' || status === statusFilter;
+      const activeStatus = activeOnly && status === 'PENDING' ? false : true;
+      const matchesStatus = (statusFilter === 'ALL' || status === statusFilter) && activeStatus;
       const matchesCategory = categoryFilter === 'ALL' || String(item.category || '') === categoryFilter;
       const matchesQuery = !needle || [
         formatDocketLabel(item),
@@ -61,7 +63,7 @@ export const PlatformWorklistPage = () => {
       ].some((value) => String(value || '').toLowerCase().includes(needle));
       return matchesStatus && matchesCategory && matchesQuery;
     });
-  }, [rows, search, statusFilter, categoryFilter]);
+  }, [rows, search, statusFilter, categoryFilter, activeOnly]);
 
   const categories = useMemo(() => [...new Set(rows.map((item) => String(item.category || '').trim()).filter(Boolean))], [rows]);
 
@@ -69,6 +71,7 @@ export const PlatformWorklistPage = () => {
     setSearch('');
     setStatusFilter('ALL');
     setCategoryFilter('ALL');
+    setActiveOnly(true);
   };
 
   const openFromQueue = (row) => {
@@ -101,7 +104,7 @@ export const PlatformWorklistPage = () => {
 
   if (isAccessDenied) {
     return (
-      <PlatformShell title="Access restricted" subtitle="Your session is active, but this module is currently not available for your role.">
+      <PlatformShell title="Access restricted" subtitle="You do not have permission to view this worklist.">
         <AccessDeniedState supportContext={recovery.supportContext} />
       </PlatformShell>
     );
@@ -132,7 +135,8 @@ export const PlatformWorklistPage = () => {
         actions={<button type="button" onClick={() => void refetch()} disabled={isFetching}>{isFetching ? 'Refreshing…' : 'Refresh'}</button>}
       >
         <SectionToolbar>
-          <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL'}>
+          <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL' && activeOnly}>
+            
             <input
               type="search"
               value={search}
@@ -152,6 +156,14 @@ export const PlatformWorklistPage = () => {
                 <option key={category} value={category}>{category}</option>
               ))}
             </select>
+            <label>
+              <input
+                type="checkbox"
+                checked={activeOnly}
+                onChange={(event) => setActiveOnly(event.target.checked)}
+              />
+              Show active dockets only
+            </label>
           </FilterBar>
         </SectionToolbar>
 
@@ -184,7 +196,7 @@ export const PlatformWorklistPage = () => {
           loading={isLoading}
           error={isError ? 'Unable to load My Worklist right now.' : ''}
           onRetry={() => void refetch()}
-          hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL'}
+          hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL' || activeOnly}
           emptyLabel="No dockets are assigned to you yet. Pull from Workbaskets or request assignment from your manager/admin."
           emptyLabelFiltered="No worklist dockets match your current search or filters."
         />
