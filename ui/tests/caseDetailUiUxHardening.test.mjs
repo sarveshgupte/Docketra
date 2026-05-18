@@ -20,6 +20,9 @@ assert.ok(page.includes('showFileAction={!routedTeamCannotResolve && !isQcContex
 assert.ok(overview.includes('unassigned in a workbasket'), 'Unassigned WB guidance should be visible.');
 assert.ok(overview.includes('QC context active'), 'QC-specific guidance should be visible.');
 assert.ok(overview.includes('Record view only; active queue actions are hidden.'), 'Terminal state record-view guidance should be visible outside action panel gating.');
+assert.ok(overview.includes('Recent dockets'), 'Overview should render compact recent dockets card.');
+assert.ok(overview.includes('View all in History'), 'Overview should include a shortcut to History for full client docket list.');
+assert.ok(overview.includes('No description provided for this docket.'), 'Description empty state should be explicit.');
 assert.ok(modals.includes("This sends the docket to another team's Workbasket."), 'Route modal copy should be explicit.');
 assert.ok(modals.includes('disabled={!routeTeamId || !String(routingNote || \'\').trim() || routeSubmitting}'), 'Route should require target WB + comment.');
 assert.ok(attachmentsPanel.includes('No attachments yet.'), 'Attachments empty state should be explicit.');

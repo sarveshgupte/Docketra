@@ -14,8 +14,6 @@ export const CaseDetailOverviewPanel = ({
   isInternalWork,
   clientName,
   clientIdLabel,
-  categoryLabel,
-  subcategoryLabel,
   slaDaysLabel,
   dueDateLabel,
   linkedClientEmail,
@@ -62,14 +60,6 @@ export const CaseDetailOverviewPanel = ({
           <span className="field-value text-sm font-medium text-gray-900 break-words">{clientIdLabel}</span>
         </div>
         <div className="field-group min-w-0">
-          <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Category</span>
-          <span className="field-value text-sm font-medium text-gray-900">{categoryLabel}</span>
-        </div>
-        <div className="field-group min-w-0">
-          <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Subcategory</span>
-          <span className="field-value text-sm font-medium text-gray-900">{subcategoryLabel}</span>
-        </div>
-        <div className="field-group min-w-0">
           <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">SLA (days)</span>
           <span className="field-value text-sm font-medium text-gray-900">{slaDaysLabel}</span>
         </div>
@@ -109,20 +99,25 @@ export const CaseDetailOverviewPanel = ({
         ) : null}
       </div>
       {!isInternalWork ? (
-        loadingClientDockets ? <p className="case-detail__empty-note mt-4">Loading related client dockets…</p> : (
+        loadingClientDockets ? <p className="case-detail__empty-note mt-4">Loading recent dockets…</p> : (
           clientDockets.length ? (
-            <div className="case-detail-table-wrap mt-4">
+            <section className="mt-4 rounded-lg border border-gray-200 bg-white p-3" aria-label="Recent dockets">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold text-gray-900">Recent dockets</h3>
+                <Button variant="ghost" onClick={() => navigate(`${ROUTES.CASE_DETAIL(firmSlug, caseInfo?.caseId || caseInfo?._id || '')}?tab=history`, { state: { returnTo, fromClientRoute } })}>
+                  View all in History
+                </Button>
+              </div>
               <table className="case-detail-table">
                 <thead>
                   <tr>
                     <th>Docket</th>
-                    <th>Title</th>
                     <th>Status</th>
                     <th>Updated</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {clientDockets.slice(0, 5).map((row) => {
+                  {clientDockets.slice(0, 3).map((row) => {
                     const rowId = row.caseId || row.docketId || row._id;
                     return (
                       <tr key={rowId}>
@@ -131,7 +126,6 @@ export const CaseDetailOverviewPanel = ({
                             {formatDocketId(rowId)}
                           </button>
                         </td>
-                        <td>{row.title || row.caseName || 'Untitled docket'}</td>
                         <td>{row.lifecycle || row.status || '—'}</td>
                         <td>{formatDateTime(row.updatedAt || row.createdAt)}</td>
                       </tr>
@@ -139,8 +133,8 @@ export const CaseDetailOverviewPanel = ({
                   })}
                 </tbody>
               </table>
-            </div>
-          ) : <p className="case-detail__empty-note mt-4">No related dockets found for this client.</p>
+            </section>
+          ) : <p className="case-detail__empty-note mt-4">No related dockets found yet. Use Create Docket for Client to start this client’s history.</p>
         )
       ) : <p className="case-detail__empty-note mt-4">This docket is marked internal and uses your firm default client context.</p>}
     </section>
@@ -154,17 +148,11 @@ export const CaseDetailOverviewPanel = ({
           In progress until {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
         </Badge>
       ) : null}
-      <div className="field-group mt-4">
-        <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Description</span>
-        <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent}</span>
-      </div>
-      {isTerminal ? (
-        <p className="mt-3 text-sm text-gray-600">This docket is in a terminal state. Record view only; active queue actions are hidden.</p>
-      ) : null}
       {shouldShowActions ? (
         <section className="case-detail__actions-panel mt-4 border-t pt-4" aria-label="Docket actions">
-          <div className="case-detail__composer-actions case-detail__lifecycle-actions mt-3">
-            {canPerformLifecycleActions ? lifecycleQuickActions.map((action) => (
+          <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Primary</div>
+          <div className="case-detail__composer-actions case-detail__lifecycle-actions mt-2">
+            {canPerformLifecycleActions ? lifecycleQuickActions.filter((action) => ['resolve', 'submit'].includes(action.key)).map((action) => (
               <Button
                 key={action.key}
                 variant={action.variant}
@@ -173,6 +161,12 @@ export const CaseDetailOverviewPanel = ({
               >
                 {action.label}
               </Button>
+            )) : null}
+          </div>
+          <div className="mt-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Secondary</div>
+          <div className="case-detail__composer-actions case-detail__lifecycle-actions mt-2">
+            {canPerformLifecycleActions ? lifecycleQuickActions.filter((action) => action.key === 'pend').map((action) => (
+              <Button key={action.key} variant={action.variant} onClick={action.onClick} disabled={actionInFlight}>{action.label}</Button>
             )) : null}
             {!isViewOnlyMode && showFileAction ? (
               <Button variant="secondary" onClick={onOpenFileModal} disabled={actionInFlight}>
@@ -184,6 +178,12 @@ export const CaseDetailOverviewPanel = ({
                 Route
               </Button>
             ) : null}
+          </div>
+          <div className="mt-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Admin / advanced</div>
+          <div className="case-detail__composer-actions case-detail__lifecycle-actions mt-2">
+            {canPerformLifecycleActions ? lifecycleQuickActions.filter((action) => ['assign', 'move'].includes(action.key)).map((action) => (
+              <Button key={action.key} variant={action.variant} onClick={action.onClick} disabled={actionInFlight}>{action.label}</Button>
+            )) : null}
           </div>
           {isUnassignedWorkbasket ? (
             <p className="mt-3 text-sm text-gray-600">This docket is currently unassigned in a workbasket. Pull/Assign it from Workbasket flow before personal worklist actions.</p>
@@ -203,6 +203,13 @@ export const CaseDetailOverviewPanel = ({
           ) : null}
         </section>
       ) : null}
+      {isTerminal ? (
+        <p className="mt-3 text-sm text-gray-600">This docket is in a terminal state. Record view only; active queue actions are hidden.</p>
+      ) : null}
+      <div className="field-group mt-4">
+        <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Description</span>
+        <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent || 'No description provided for this docket.'}</span>
+      </div>
     </section>
   </>
 );
