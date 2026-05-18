@@ -8,6 +8,7 @@ const {
 } = require('../services/docketWorkflow.service');
 const Case = require('../models/Case.model');
 const Team = require('../models/Team.model');
+const User = require('../models/User.model');
 const { logCaseHistory } = require('../services/auditLog.service');
 const { canAssignFromWorkbasket, canMoveBetweenWorklists, canMoveDocketBetweenQueues, getFirmUserByXid } = require('../services/workbasketAuthorization.service');
 const { isValidTransition: isValidLifecycleTransition } = require('../domain/docketLifecycle');
@@ -149,17 +150,20 @@ async function moveDocket(req, res) {
     const docket = await Case.findOne({ caseId, firmId: req.user.firmId }).select('caseId firmId ownerTeamId workbasketId assignedToXID status state').lean();
     if (!docket) return res.status(404).json({ success: false, message: 'Docket not found' });
 
-    if (!canMoveDocketBetweenQueues({ viewer: req.user, docket, destination: { type: destinationType } })) {
-      return res.status(403).json({ success: false, message: 'Not allowed to move this docket' });
-    }
-
     let updates = {};
     let destinationMeta = { destinationType };
+    let destinationPolicyContext = { type: destinationType };
     if (destinationType === 'USER_WORKLIST') {
       const assignee = await getFirmUserByXid(req.user.firmId, assigneeXID);
       if (!assignee) return res.status(404).json({ success: false, message: 'Destination assignee not found' });
-      updates = { assignedToXID: assignee.xID, assignedTo: assignee._id };
+      updates = {
+        assignedToXID: assignee.xID,
+        assignedTo: assignee._id,
+        assignedToName: assignee.name || assignee.xID,
+        queueType: 'PERSONAL',
+      };
       destinationMeta = { ...destinationMeta, assigneeXID: assignee.xID };
+      destinationPolicyContext = { ...destinationPolicyContext, assigneeXID: assignee.xID, user: assignee };
     } else {
       const destinationTeam = await Team.findOne({ _id: destinationId, firmId: req.user.firmId, isActive: true }).select('_id type parentWorkbasketId').lean();
       if (!destinationTeam) return res.status(404).json({ success: false, message: 'Destination queue not found for this firm' });
@@ -169,8 +173,40 @@ async function moveDocket(req, res) {
       if (destinationType === 'QC_WORKBASKET' && String(destinationTeam.type || '').toUpperCase() !== 'QC') {
         return res.status(400).json({ success: false, message: 'Destination must be a QC workbasket' });
       }
-      updates = { ownerTeamId: destinationTeam._id, workbasketId: destinationTeam._id, assignedToXID: null, assignedTo: null };
+      updates = {
+        ownerTeamId: destinationTeam._id,
+        workbasketId: destinationTeam._id,
+        routedToTeamId: null,
+        assignedToXID: null,
+        assignedTo: null,
+        assignedToName: null,
+        queueType: 'GLOBAL',
+      };
       destinationMeta = { ...destinationMeta, destinationId: String(destinationTeam._id) };
+      destinationPolicyContext = { ...destinationPolicyContext, teamId: String(destinationTeam._id), team: destinationTeam };
+    }
+
+    const managerOwnedTeams = await Team.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('_id').lean();
+    const managedUsers = await User.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('xID').lean();
+    const managerScope = {
+      permittedTeamIds: [...new Set([
+        ...((Array.isArray(req.user?.teamIds) ? req.user.teamIds : []).map((id) => String(id)),
+        ...managerOwnedTeams.map((team) => String(team._id)),
+      ])],
+      permittedUserXids: [...new Set([
+        String(req.user?.xID || '').toUpperCase(),
+        ...managedUsers.map((user) => String(user.xID || '').toUpperCase()),
+      ])],
+    };
+
+    if (!canMoveDocketBetweenQueues({
+      viewer: req.user,
+      docket,
+      source: { teamId: docket.ownerTeamId ? String(docket.ownerTeamId) : (docket.workbasketId ? String(docket.workbasketId) : null), assignedToXID: docket.assignedToXID || null },
+      destination: destinationPolicyContext,
+      managerScope,
+    })) {
+      return res.status(403).json({ success: false, message: 'Not allowed to move this docket' });
     }
 
     const updated = await Case.findOneAndUpdate(
