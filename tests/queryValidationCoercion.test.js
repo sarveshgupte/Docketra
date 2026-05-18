@@ -53,6 +53,43 @@ function runTests() {
     assert.strictEqual(result.statusCode, 400, 'Expected invalid limit to return 400');
   }
 
+  {
+    const middleware = validateRequest(searchSchemas['GET /employee/me']);
+    const req = { body: {}, params: {}, query: { assigneeXID: 'INVALID-XID' } };
+    const result = runMiddleware(middleware, req);
+
+    assert.strictEqual(result.nextCalled, false, 'Expected invalid assigneeXID to be rejected');
+    assert.strictEqual(result.statusCode, 400, 'Expected invalid assigneeXID to return 400');
+  }
+
+  {
+    const middleware = validateRequest(searchSchemas['GET /employee/me']);
+    const req = { body: {}, params: {}, query: { limit: '10', unexpectedKey: 'nope' } };
+    const result = runMiddleware(middleware, req);
+
+    assert.strictEqual(result.nextCalled, false, 'Expected unknown employee worklist query keys to be rejected');
+    assert.strictEqual(result.statusCode, 400, 'Expected unknown employee worklist query keys to return 400');
+  }
+
+  {
+    const middleware = validateRequest(searchSchemas['GET /employee/me']);
+    const req = { body: {}, params: {}, query: { assigneeXID: 'x123456', page: '2', sortOrder: 'asc' } };
+    const result = runMiddleware(middleware, req);
+
+    assert.strictEqual(result.nextCalled, true, 'Expected valid assigneeXID query to pass');
+    assert.strictEqual(req.query.assigneeXID, 'X123456', 'Expected assigneeXID to be canonicalized to uppercase format');
+    assert.strictEqual(req.query.page, 2, 'Expected page to be coerced to number');
+  }
+
+  {
+    const middleware = validateRequest(searchSchemas['GET /employee/me']);
+    const req = { body: {}, params: {}, query: { status: 'OPEN,IN_PROGRESS' } };
+    const result = runMiddleware(middleware, req);
+
+    assert.strictEqual(result.nextCalled, true, 'Expected comma-list status query to pass');
+    assert.strictEqual(req.query.status, 'OPEN,IN_PROGRESS', 'Expected comma-list status to be preserved for controller parsing');
+  }
+
   console.log('✓ Query validation coercion tests passed');
 }
 
