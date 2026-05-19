@@ -8,6 +8,7 @@ import { ROUTES } from '../../constants/routes';
 import { getLifecycleMeta } from '../../../utils/lifecycleMap';
 
 const hasSopContent = (sop) => Boolean(sop?.title && sop?.body);
+const getSortedSopLinks = (sop) => (Array.isArray(sop?.links) ? [...sop.links].sort((a, b) => Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0)) : []);
 
 const normalizeChecklist = (checklist) => (
   Array.isArray(checklist)
@@ -234,6 +235,17 @@ export const CaseDetailOverviewPanel = ({
           <p className="text-xs uppercase tracking-wider text-gray-500">Format: {caseInfo.sop.format || 'plain_text'}</p>
           {caseInfo.sop.capturedAt ? <p className="text-xs text-gray-500">Captured: {formatDateTime(caseInfo.sop.capturedAt)}</p> : null}
           <div className="case-detail__description-text whitespace-pre-wrap break-words text-sm text-gray-800">{caseInfo.sop.body}</div>
+          {sortedSopLinks.length ? (
+            <ul className="space-y-2 pt-2">
+              {sortedSopLinks.map((link, idx) => (
+                <li key={link?.id || `${link?.title || 'sop-link'}-${idx}`} className="rounded-md border border-gray-200 bg-white p-3">
+                  <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-blue-700 underline break-all">{link.title}</a>
+                  {link?.type ? <p className="text-xs uppercase tracking-wider text-gray-500">{link.type}</p> : null}
+                  {link?.description ? <p className="text-sm text-gray-700">{link.description}</p> : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       ) : <p className="case-detail__empty-note">No SOP attached to this docket.</p>}
     </section>

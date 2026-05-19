@@ -21,11 +21,22 @@ const checklistTemplateItemSchema = z.object({
 });
 
 const checklistTemplateSchema = z.array(checklistTemplateItemSchema).optional();
+
+const sopLinkSchema = z.object({
+  id: z.string().trim().min(1).max(120).optional(),
+  title: z.string().trim().min(1).max(200),
+  url: z.string().trim().max(2048).regex(/^https?:\/\//i, 'URL must start with http:// or https://'),
+  description: z.string().trim().max(1000).optional(),
+  type: z.enum(['portal', 'reference', 'template', 'internal', 'other']).optional(),
+  sortOrder: z.coerce.number().int().min(0).optional(),
+}).strict();
+
 const subcategorySopSchema = z.object({
   title: z.string().max(200).optional(),
   body: z.string().max(10000).optional(),
   format: z.enum(['plain_text', 'markdown']).optional(),
   lastUpdatedByXID: z.string().trim().optional(),
+  links: z.array(sopLinkSchema).max(25).optional(),
 }).strict().optional();
 
 

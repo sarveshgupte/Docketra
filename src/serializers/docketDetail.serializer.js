@@ -56,6 +56,14 @@ function serializeDocketDetailDto({ caseObject = {}, client = null, ownerTeam = 
       title: toStringOrNull(caseObject.sopSnapshot.title) || '',
       body: toStringOrNull(caseObject.sopSnapshot.body) || '',
       format: toStringOrNull(caseObject.sopSnapshot.format) || 'plain_text',
+      links: Array.isArray(caseObject.sopSnapshot.links) ? caseObject.sopSnapshot.links.map((link, index) => ({
+        id: toStringOrNull(link?.id),
+        title: toStringOrNull(link?.title) || '',
+        url: toStringOrNull(link?.url) || '',
+        description: toStringOrNull(link?.description) || '',
+        type: toStringOrNull(link?.type) || 'reference',
+        sortOrder: Number.isFinite(Number(link?.sortOrder)) ? Number(link.sortOrder) : index,
+      })) : [],
       capturedAt: caseObject.sopSnapshot.capturedAt || null,
     } : null,
     checklist: Array.isArray(caseObject.checklist) ? caseObject.checklist.map((item) => ({
