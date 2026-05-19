@@ -49,7 +49,10 @@ export const CaseDetailOverviewPanel = ({
   isQcContext = false,
   isUnassignedWorkbasket = false,
   isTerminal = false,
-}) => (
+}) => {
+  const sortedChecklist = normalizeChecklist(caseInfo?.checklist);
+
+  return (
   <>
     <section className="case-card" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
       <div className="case-card__heading">
@@ -239,9 +242,9 @@ export const CaseDetailOverviewPanel = ({
       <div className="case-card__heading">
         <h2 id="checklist-heading">Checklist</h2>
       </div>
-      {normalizeChecklist(caseInfo?.checklist).length ? (
+      {sortedChecklist.length ? (
         <ul className="space-y-2">
-          {normalizeChecklist(caseInfo?.checklist).map((item, idx) => (
+          {sortedChecklist.map((item, idx) => (
             <li key={item?.id || `${item?.title || 'item'}-${idx}`} className="rounded-md border border-gray-200 bg-white p-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm font-medium text-gray-900">{item?.title || 'Untitled item'}</span>
@@ -254,4 +257,5 @@ export const CaseDetailOverviewPanel = ({
       ) : <p className="case-detail__empty-note">No checklist attached to this docket.</p>}
     </section>
   </>
-);
+  );
+};

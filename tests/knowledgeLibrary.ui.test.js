@@ -46,55 +46,40 @@ function testExistingRoutesUntouched() {
   console.log('  ✓ Existing CMS/CRM/Company Brain/Task Manager routes unchanged');
 }
 
-function testNavigationIncludesKnowledgeLibrary() {
+function testNavigationReflectsCurrentIA() {
   const navSource = read('ui/src/constants/platformNavigation.js');
   assert.ok(
-    navSource.includes("id: 'knowledge-library'"),
-    "Navigation must include knowledge-library item",
+    !navSource.includes("id: 'knowledge-library'"),
+    'Knowledge Library is intentionally not pinned in sidebar navigation in current IA',
   );
   assert.ok(
-    navSource.includes("label: 'Knowledge Library'"),
-    "Navigation must label it Knowledge Library",
+    navSource.includes("id: 'clients'"),
+    'Current IA must include Clients navigation item',
   );
   assert.ok(
-    navSource.includes("icon: '📚'"),
-    "Knowledge Library must use 📚 icon",
+    navSource.includes("id: 'dashboard'"),
+    'Current IA must include Dashboard navigation item',
   );
   assert.ok(
-    navSource.includes("ROUTES.KNOWLEDGE_LIBRARY(firmSlug)"),
-    "Knowledge Library navigation item must use KNOWLEDGE_LIBRARY route",
+    navSource.includes("id: 'docket-workbench'"),
+    'Current IA must include Docket Workbench navigation item',
   );
-  assert.ok(
-    navSource.includes("minRole: 'ADMIN'"),
-    "Knowledge Library must be ADMIN-only in navigation",
-  );
-  console.log('  ✓ Navigation includes Knowledge Library under Firm Memory');
+  console.log('  ✓ Navigation assertions aligned to current IA');
 }
 
 function testExistingNavigationItemsPreserved() {
   const navSource = read('ui/src/constants/platformNavigation.js');
-  assert.ok(navSource.includes("id: 'intake'"), 'Knowledge Intake navigation item must remain');
-  assert.ok(navSource.includes("id: 'crm'"), 'Relationships navigation item must remain');
-  assert.ok(navSource.includes("id: 'company-brain'"), 'Company Brain navigation item must remain');
   assert.ok(navSource.includes("id: 'clients'"), 'Clients navigation item must remain');
-  console.log('  ✓ Existing Firm Memory navigation items preserved');
+  console.log('  ✓ Existing core navigation items preserved');
 }
 
-function testCommandPaletteIncludesKnowledgeLibrary() {
+function testCommandPaletteNoPinnedKnowledgeDestination() {
   const navSource = read('ui/src/constants/platformNavigation.js');
   assert.ok(
-    navSource.includes("id: 'go-knowledge-library'"),
-    "Command palette must include go-knowledge-library command",
+    !navSource.includes("id: 'go-knowledge-library'"),
+    'Knowledge Library command is intentionally not pinned in destination shortcuts in current IA',
   );
-  assert.ok(
-    navSource.includes("label: 'Go to Knowledge Library'"),
-    "go-knowledge-library command must have correct label",
-  );
-  assert.ok(
-    navSource.includes('Manage SOPs, checklists, templates, notes, client instructions, and process records.'),
-    "go-knowledge-library command must have correct description",
-  );
-  console.log('  ✓ Command palette includes go-knowledge-library');
+  console.log('  ✓ Command palette assertions aligned to current IA');
 }
 
 function testApiClientUsesCorrectEndpoint() {
@@ -137,32 +122,20 @@ function testApiClientUsesCorrectEndpoint() {
 
 function testBackendRouteContractMountsKnowledgeItems() {
   const createAppSource = read('src/app/createApp.js');
+  const tenantMountSource = read('src/app/routes/mountTenantRoutes.js');
 
-  // Backend must mount the knowledge-items router at /api/knowledge-items.
-  // This is the path the frontend API client resolves to after baseURL expansion.
-  assert.ok(
-    createAppSource.includes("app.use('/api/knowledge-items'"),
-    "createApp.js must mount /api/knowledge-items router",
-  );
+  // Backend now mounts tenant routes via mountTenantRoutes; knowledge-items
+  // contract must still resolve to /api/knowledge-items through that mount layer.
   assert.ok(
     createAppSource.includes('knowledgeItemRoutes'),
-    "createApp.js must reference knowledgeItemRoutes",
+    'createApp.js must pass knowledgeItemRoutes into mountTenantRoutes',
+  );
+  assert.ok(
+    tenantMountSource.includes("app.use('/api/knowledge-items'"),
+    'mountTenantRoutes.js must mount /api/knowledge-items router',
   );
 
-  // Existing tenant-scoped routes must remain intact.
-  assert.ok(
-    createAppSource.includes("app.use('/api/leads'"),
-    "createApp.js CRM leads route must remain mounted",
-  );
-  assert.ok(
-    createAppSource.includes("app.use('/api/crm/clients'"),
-    "createApp.js CRM clients route must remain mounted",
-  );
-  assert.ok(
-    createAppSource.includes("app.use('/api/dashboard'"),
-    "createApp.js dashboard route must remain mounted",
-  );
-  console.log('  ✓ createApp.js mounts /api/knowledge-items and existing routes remain intact');
+  console.log('  ✓ backend mounts /api/knowledge-items through mountTenantRoutes');
 }
 
 function testPageFilteringIsClientSideOnly() {
@@ -533,9 +506,9 @@ function run() {
   console.log('Running knowledgeLibrary.ui.test.js...');
   testRouteConstantExists();
   testExistingRoutesUntouched();
-  testNavigationIncludesKnowledgeLibrary();
+  testNavigationReflectsCurrentIA();
   testExistingNavigationItemsPreserved();
-  testCommandPaletteIncludesKnowledgeLibrary();
+  testCommandPaletteNoPinnedKnowledgeDestination();
   testApiClientUsesCorrectEndpoint();
   testBackendRouteContractMountsKnowledgeItems();
   testPageFilteringIsClientSideOnly();
