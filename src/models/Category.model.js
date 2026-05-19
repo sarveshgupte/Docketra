@@ -15,12 +15,34 @@ const softDeletePlugin = require('../utils/softDelete.plugin');
  */
 
 
+
+const SOP_LINK_TYPES = ['portal', 'reference', 'template', 'internal', 'other'];
+
+const sopLinkSchema = new mongoose.Schema({
+  id: { type: String, required: true, trim: true },
+  title: { type: String, required: true, trim: true, maxlength: 200 },
+  url: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 2048,
+    validate: {
+      validator: (value) => /^https?:\/\//i.test(String(value || '')),
+      message: 'SOP link url must be http or https',
+    },
+  },
+  description: { type: String, trim: true, maxlength: 1000, default: '' },
+  type: { type: String, enum: SOP_LINK_TYPES, default: 'reference' },
+  sortOrder: { type: Number, min: 0 },
+}, { _id: false });
+
 const subcategorySopSchema = new mongoose.Schema({
   title: { type: String, trim: true, maxlength: 200, default: '' },
   body: { type: String, maxlength: 10000, default: '' },
   format: { type: String, enum: ['plain_text', 'markdown'], default: 'plain_text' },
   lastUpdatedAt: { type: Date, default: null },
   lastUpdatedByXID: { type: String, trim: true, default: null },
+  links: { type: [sopLinkSchema], default: [] },
 }, { _id: false });
 
 const subcategorySchema = new mongoose.Schema({

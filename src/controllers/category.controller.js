@@ -24,6 +24,28 @@ const normalizeDeadlineRule = (input = {}) => {
   };
 };
 
+
+const SOP_LINK_TYPES = new Set(['portal', 'reference', 'template', 'internal', 'other']);
+const isHttpUrl = (value) => /^https?:\/\//i.test(String(value || ''));
+const normalizeSopLinks = (links = []) => {
+  if (!Array.isArray(links)) return [];
+  return links.slice(0, 25)
+    .map((link, index) => {
+      const title = typeof link?.title === 'string' ? link.title.trim() : '';
+      const url = typeof link?.url === 'string' ? link.url.trim() : '';
+      if (!title || !url || !isHttpUrl(url)) return null;
+      return {
+        id: String(link?.id || new mongoose.Types.ObjectId()).trim(),
+        title,
+        url,
+        description: typeof link?.description === 'string' ? link.description.trim() : '',
+        type: SOP_LINK_TYPES.has(link?.type) ? link.type : 'reference',
+        sortOrder: Number.isFinite(Number(link?.sortOrder)) ? Number(link.sortOrder) : index,
+      };
+    })
+    .filter(Boolean);
+};
+
 const normalizeSubcategorySop = (input = {}, { actorXID } = {}) => {
   if (!input || typeof input !== 'object') {
     return { title: '', body: '', format: 'plain_text', lastUpdatedAt: null, lastUpdatedByXID: null };
@@ -38,6 +60,7 @@ const normalizeSubcategorySop = (input = {}, { actorXID } = {}) => {
     title,
     body,
     format,
+    links: normalizeSopLinks(input.links),
     lastUpdatedAt: hasContent ? new Date() : null,
     lastUpdatedByXID: hasContent && actorXID ? String(actorXID).trim() : null,
   };

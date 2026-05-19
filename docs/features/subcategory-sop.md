@@ -41,3 +41,9 @@ Docket detail serializer exposes SOP as read-only payload:
 
 Docket Detail now renders the captured SOP snapshot (title, body, format, and captured timestamp when available) as a read-only section so assignees can follow work instructions without editing category configuration.
 
+
+
+## SOP reference links
+- Subcategory SOP now supports text + multiple reference links (`title`, `url`, `description`, `type`, `sortOrder`).
+- On docket creation, SOP links are snapshotted into `sopSnapshot.links` and remain immutable for that docket.
+- File/attachment support is intentionally out of scope in this phase.

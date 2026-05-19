@@ -228,6 +228,18 @@ const caseSchema = new mongoose.Schema({
     title: { type: String, default: '' },
     body: { type: String, default: '' },
     format: { type: String, enum: ['plain_text', 'markdown'], default: 'plain_text' },
+    links: {
+      type: [{
+        _id: false,
+        id: { type: String, required: true, trim: true },
+        title: { type: String, required: true, trim: true, maxlength: 200 },
+        url: { type: String, required: true, trim: true, maxlength: 2048 },
+        description: { type: String, trim: true, maxlength: 1000, default: '' },
+        type: { type: String, enum: ['portal', 'reference', 'template', 'internal', 'other'], default: 'reference' },
+        sortOrder: { type: Number, min: 0, default: 0 },
+      }],
+      default: [],
+    },
     sourceSubcategoryId: { type: String, trim: true, default: null },
     capturedAt: { type: Date, default: null },
   },
