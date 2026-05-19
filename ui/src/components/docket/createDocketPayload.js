@@ -14,6 +14,7 @@ export const buildCreateDocketPayload = (formData = {}) => {
   const employeeXID = ensureCanonicalId(formData.employeeXID).toUpperCase();
   const dueDate = ensureCanonicalId(formData.dueDate);
   const eventDate = ensureCanonicalId(formData.eventDate);
+  const relatedEmployeeUserId = ensureCanonicalId(formData.relatedEmployeeUserId);
 
   return {
     title,
@@ -30,6 +31,7 @@ export const buildCreateDocketPayload = (formData = {}) => {
     idempotencyKey: idempotencyKey || undefined,
     dueDate: dueDate || undefined,
     eventDate: eventDate || undefined,
+    relatedEmployeeUserId: relatedEmployeeUserId || undefined,
   };
 };
 

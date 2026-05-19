@@ -38,6 +38,7 @@ const {
   downloadClientCFSFileForCase,
   getDocketSummaryPdf,
   getDocketAudit,
+  getDocketEligibleUsers,
 } = require('../controllers/case.controller');
 const {
   generateUploadLink,
@@ -96,6 +97,7 @@ router.get('/search', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, app
 // PR #44: Apply xID ownership validation guardrails
 // Apply client access check to prevent creating cases with restricted clients
 router.post('/', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, checkClientAccess, validateCaseCreation, createCase);
+router.get('/eligible-users', authorizeFirmPermission('CASE_CREATE'), userReadLimiter, getDocketEligibleUsers);
 
 // POST /api/cases/pull - Unified pull endpoint for single or multiple cases
 // IMPORTANT: Must come BEFORE /:caseId routes to avoid matching "pull" as a caseId

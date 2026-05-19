@@ -1263,6 +1263,25 @@ const getDocketAudit = async (req, res) => {
   }
 };
 
+const getDocketEligibleUsers = async (req, res) => {
+  try {
+    const firmId = req.user?.firmId;
+    if (!firmId) {
+      return res.status(403).json({ success: false, message: 'Firm context is required' });
+    }
+    const users = await User.find({
+      firmId,
+      status: { $ne: 'deleted' },
+    })
+      .select('_id id xID name fullName displayName email status isActive')
+      .sort({ createdAt: -1 })
+      .lean();
+    return res.json({ success: true, data: users });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Failed to load eligible users', error: error.message });
+  }
+};
+
 module.exports = {
   createCase: wrapWriteHandler(createCase),
   addComment: wrapWriteHandler(addComment),
@@ -1275,6 +1294,7 @@ module.exports = {
   getCaseByCaseId,
   getCaseComments,
   getDocketAudit,
+  getDocketEligibleUsers,
   getDocketSummaryPdf,
   getCases,
   searchCases,

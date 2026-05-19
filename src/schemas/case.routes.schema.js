@@ -30,6 +30,10 @@ const createCaseBody = z.object({
   priority: prioritySchema.optional(),
   assignedTo: xidString.optional(),
   employeeXID: xidString.optional(),
+  relatedEmployeeUserId: objectIdString.optional(),
+  relatedEmployeeUser: z.object({
+    userId: objectIdString,
+  }).strict().optional(),
   slaDueDate: z.coerce.date().optional(),
   dueDate: z.coerce.date().optional(),
   eventDate: z.coerce.date().optional(),
@@ -99,6 +103,7 @@ module.exports = {
     query: z.object({ preview: queryBoolean.optional() }).strict(),
     body: strictEmpty,
   },
+  'GET /eligible-users': { query: strictEmpty },
   'POST /auto-reopen-pended': { body: strictEmpty },
   'POST /:caseId/track-open': { params: caseIdParams, body: strictEmpty },
   'POST /:caseId/track-view': { params: caseIdParams, body: strictEmpty },
