@@ -10,6 +10,8 @@ import {
   FilterBar,
   PageSection,
   SectionToolbar,
+  StatGrid,
+  StatusBadge,
   StatusMessageStack,
   formatDateLabel,
   formatDocketLabel,
@@ -63,6 +65,18 @@ export const PlatformWorkbasketsPage = () => {
   }, [rows, search, statusFilter, categoryFilter, workbasketId]);
 
   const categories = useMemo(() => [...new Set(rows.map((item) => String(item.category || '').trim()).filter(Boolean))], [rows]);
+  const metrics = useMemo(() => {
+    const available = rows.length;
+    const assigned = rows.filter((item) => Boolean(item.assigneeName || item.assignedTo)).length;
+    const pending = rows.filter((item) => String(item.status || '').toUpperCase() === 'PENDING').length;
+    const escalated = rows.filter((item) => String(item.status || '').toUpperCase() === 'ESCALATED').length;
+    return [
+      { label: 'Available', value: isLoading ? '…' : available },
+      { label: 'Assigned', value: isLoading ? '…' : assigned },
+      { label: 'Pending', value: isLoading ? '…' : pending },
+      { label: 'Escalated', value: isLoading ? '…' : escalated },
+    ];
+  }, [rows, isLoading]);
 
   const clearFilters = () => {
     setSearch('');
@@ -116,15 +130,10 @@ export const PlatformWorkbasketsPage = () => {
           { tone: 'info', message: isFetching && !isLoading ? 'Refreshing the workbaskets queue in the background…' : '' },
         ]}
       />
+      <StatGrid items={metrics} compact columns={4} />
       <PageSection
-        title="What this queue is for"
-        description="Workbaskets is the shared pull queue. Dockets appear here when they are unassigned or routed to team intake. Pulling a docket moves it into an owner’s My Worklist."
-      >
-        <p className="muted">If this is empty, create a docket or check category/subcategory-to-workbasket mapping in Work Settings.</p>
-      </PageSection>
-      <PageSection
-        title="Shared queue"
-        description={`${filteredRows.length} dockets available in this shared workflow queue.`}
+        title="Shared intake queue"
+        description={`${filteredRows.length} dockets available in team intake workbaskets.`}
         actions={<button type="button" onClick={() => void refetch()} disabled={isFetching}>{isFetching ? 'Refreshing…' : 'Refresh'}</button>}
       >
         <SectionToolbar>
@@ -154,6 +163,8 @@ export const PlatformWorkbasketsPage = () => {
 
         <DataTable
           columns={['Docket ID', 'Client', 'Category / Subcategory', 'Status', 'Queue', 'Updated', 'Actions']}
+          compact
+          tableClassName="queue-table"
           rows={filteredRows.map((r) => (
             <tr key={r.caseInternalId || r._id}>
               <td>
@@ -162,12 +173,12 @@ export const PlatformWorkbasketsPage = () => {
                 </button>
               </td>
               <td>{r.clientName || r.clientId || '-'}</td>
-              <td>{[r.category || '-', r.subcategory || '-'].join(' / ')}</td>
-              <td>{formatStatusLabel(r.status)}</td>
+              <td className="queue-cell-wrap">{[r.category || '-', r.subcategory || '-'].join(' / ')}</td>
+              <td><StatusBadge status={r.status} label={formatStatusLabel(r.status)} /></td>
               <td>{r.workbasketName || r.queueName || 'Workbasket'}</td>
               <td>{formatDateLabel(r.updatedAt || r.createdAt)}</td>
               <td>
-                <div className="action-group-secondary" role="group" aria-label="Workbasket actions">
+                <div className="action-group-secondary queue-action-group" role="group" aria-label="Workbasket actions">
                   <button onClick={() => void pullToWorklist(r.caseInternalId)} type="button" disabled={pendingPullId === r.caseInternalId}>
                     {pendingPullId === r.caseInternalId ? 'Pulling…' : 'Pull to Worklist'}
                   </button>
@@ -176,11 +187,11 @@ export const PlatformWorkbasketsPage = () => {
             </tr>
           ))}
           loading={isLoading}
-          error={isError ? 'Unable to load workbaskets right now.' : ''}
+          error=""
           onRetry={() => void refetch()}
           hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL'}
-          emptyLabel="No work available."
-          emptyLabelFiltered="No dockets found."
+          emptyLabel="No dockets are waiting in your workbaskets."
+          emptyLabelFiltered="No dockets match your workbasket filters."
         />
       </PageSection>
     </PlatformShell>

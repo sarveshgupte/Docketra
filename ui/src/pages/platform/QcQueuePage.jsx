@@ -11,6 +11,8 @@ import {
   FilterBar,
   PageSection,
   SectionToolbar,
+  StatGrid,
+  StatusBadge,
   StatusMessageStack,
   formatDateLabel,
   formatDocketLabel,
@@ -65,6 +67,18 @@ export const PlatformQcQueuePage = () => {
     () => [...new Set(rows.map((item) => String(item.assigneeName || item.assignedTo || 'Unassigned')).filter(Boolean))],
     [rows]
   );
+  const metrics = useMemo(() => {
+    const awaiting = rows.length;
+    const passed = rows.filter((item) => String(item.qcStatus || '').toUpperCase() === 'PASS').length;
+    const corrections = rows.filter((item) => String(item.qcStatus || '').toUpperCase() === 'CORRECT').length;
+    const failed = rows.filter((item) => String(item.qcStatus || '').toUpperCase() === 'FAIL').length;
+    return [
+      { label: 'Awaiting QC', value: isLoading ? '…' : awaiting },
+      { label: 'Passed', value: isLoading ? '…' : passed },
+      { label: 'Corrections', value: isLoading ? '…' : corrections },
+      { label: 'Failed', value: isLoading ? '…' : failed },
+    ];
+  }, [rows, isLoading]);
 
   const clearFilters = () => {
     setSearch('');
@@ -141,14 +155,9 @@ export const PlatformQcQueuePage = () => {
           { tone: 'info', message: isFetching && !isLoading ? 'Refreshing QC queue in the background…' : '' },
         ]}
       />
+      <StatGrid items={metrics} compact columns={4} />
       <PageSection
-        title="What this queue is for"
-        description="QC Workbaskets is where completed execution dockets are reviewed for pass, return-for-correction, or fail decisions."
-      >
-        <p className="muted">If this is empty, your team may still be executing in My Worklist or has not sent dockets to QC yet.</p>
-      </PageSection>
-      <PageSection
-        title="QC review queue"
+        title="Quality review queue"
         description={`${filteredRows.length} dockets waiting for QC decisions.`}
         actions={<button type="button" onClick={() => void refetch()} disabled={isFetching}>{isFetching ? 'Refreshing…' : 'Refresh'}</button>}
       >
@@ -187,6 +196,8 @@ export const PlatformQcQueuePage = () => {
         ) : null}
         <DataTable
           columns={['Docket ID', 'Client', 'Category', 'QC Status', 'Assignee', 'Updated', 'Actions']}
+          compact
+          tableClassName="queue-table"
           rows={filteredRows.map((r) => (
             <tr key={r.caseInternalId || r._id || formatDocketLabel(r)}>
               <td>
@@ -195,28 +206,28 @@ export const PlatformQcQueuePage = () => {
                 </button>
               </td>
               <td>{r.clientName || r.clientId || '-'}</td>
-              <td>{[r.category || '-', r.subcategory || '-'].join(' / ')}</td>
-              <td>{formatStatusLabel(r.qcStatus || r.status || 'IN_QC')}</td>
+              <td className="queue-cell-wrap">{[r.category || '-', r.subcategory || '-'].join(' / ')}</td>
+              <td><StatusBadge status={r.qcStatus || r.status || 'IN_QC'} label={formatStatusLabel(r.qcStatus || r.status || 'IN_QC')} /></td>
               <td>{r.assigneeName || r.assignedTo || '-'}</td>
               <td>{formatDateLabel(r.updatedAt || r.createdAt)}</td>
               <td>
-                <div className="action-group-secondary" role="group" aria-label="QC actions">
+                <div className="action-group-secondary queue-action-group" role="group" aria-label="QC actions">
                   {!r.caseInternalId ? <span className="muted">Action unavailable: missing docket ID</span> : null}
                   <button type="button" onClick={() => setConfirmAction({ caseInternalId: r.caseInternalId, action: 'PASS', note: 'Passed from queue', title: `Pass ${formatDocketLabel(r)}?`, description: 'This marks the docket as QC passed and advances it to completion.', confirmText: 'Confirm pass', danger: false })} disabled={!r.caseInternalId || pendingQcId === r.caseInternalId}>
                     {pendingQcId === r.caseInternalId ? 'Updating…' : 'Pass'}
                   </button>
-                  <button type="button" onClick={() => setConfirmAction({ caseInternalId: r.caseInternalId, action: 'CORRECT', note: 'Needs correction', title: `Return ${formatDocketLabel(r)} for correction?`, description: 'This sends the docket back to execution with a correction request.', confirmText: 'Return for correction', danger: false })} disabled={!r.caseInternalId || pendingQcId === r.caseInternalId}>Return for correction</button>
+                  <button type="button" onClick={() => setConfirmAction({ caseInternalId: r.caseInternalId, action: 'CORRECT', note: 'Needs correction', title: `Return ${formatDocketLabel(r)} for correction?`, description: 'This sends the docket back to execution with a correction request.', confirmText: 'Return for correction', danger: false })} disabled={!r.caseInternalId || pendingQcId === r.caseInternalId}>Send back</button>
                   <button type="button" className="action-danger" onClick={() => setConfirmAction({ caseInternalId: r.caseInternalId, action: 'FAIL', note: 'Failed from queue', title: `Fail ${formatDocketLabel(r)}?`, description: 'This records the docket as failed in QC. Continue only if this decision is final.', confirmText: 'Fail docket', danger: true })} disabled={!r.caseInternalId || pendingQcId === r.caseInternalId}>Fail</button>
                 </div>
               </td>
             </tr>
           ))}
           loading={isLoading}
-          error={isError ? 'Unable to load QC workbaskets right now.' : ''}
+          error=""
           onRetry={() => void refetch()}
           hasActiveFilters={Boolean(search.trim()) || assigneeFilter !== 'ALL'}
-          emptyLabel="No work available."
-          emptyLabelFiltered="No dockets found."
+          emptyLabel="No dockets are waiting for QC review."
+          emptyLabelFiltered="No QC dockets match your current filters."
         />
       </PageSection>
       <ActionConfirmModal

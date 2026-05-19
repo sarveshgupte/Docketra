@@ -10,6 +10,8 @@ import {
   FilterBar,
   PageSection,
   SectionToolbar,
+  StatGrid,
+  StatusBadge,
   StatusMessageStack,
   formatDateLabel,
   formatDocketLabel,
@@ -68,6 +70,17 @@ export const PlatformWorklistPage = () => {
   }, [rows, search, statusFilter, categoryFilter, activeOnly]);
 
   const categories = useMemo(() => [...new Set(rows.map((item) => String(item.category || '').trim()).filter(Boolean))], [rows]);
+  const metrics = useMemo(() => {
+    const active = rows.filter((item) => String(item.status || '').toUpperCase() !== 'PENDING').length;
+    const pended = rows.filter((item) => String(item.status || '').toUpperCase() === 'PENDING').length;
+    const inQc = rows.filter((item) => String(item.status || '').toUpperCase() === 'IN_QC').length;
+    return [
+      { label: 'Active', value: isLoading ? '…' : active },
+      { label: 'Pended', value: isLoading ? '…' : pended },
+      { label: 'In QC', value: isLoading ? '…' : inQc },
+      { label: 'Visible now', value: isLoading ? '…' : filteredRows.length },
+    ];
+  }, [rows, filteredRows.length, isLoading]);
 
   const clearFilters = () => {
     setSearch('');
@@ -125,14 +138,9 @@ export const PlatformWorklistPage = () => {
           { tone: 'info', message: isFetching && !isLoading ? 'Refreshing worklist without interrupting your current view…' : '' },
         ]}
       />
+      <StatGrid items={metrics} compact columns={4} />
       <PageSection
-        title="What this queue is for"
-        description="My Worklist is your personal execution queue. Dockets appear after assignment from Workbaskets or direct assignment at creation."
-      >
-        <p className="muted">If this is empty, check Workbaskets for unassigned intake or ask an admin/manager to assign dockets to you.</p>
-      </PageSection>
-      <PageSection
-        title="My active workload"
+        title="Personal execution queue"
         description={`${filteredRows.length} dockets in your current worklist view.`}
         actions={<button type="button" onClick={() => void refetch()} disabled={isFetching}>{isFetching ? 'Refreshing…' : 'Refresh'}</button>}
       >
@@ -171,6 +179,8 @@ export const PlatformWorklistPage = () => {
 
         <DataTable
           columns={['Docket ID', 'Client', 'Category / Subcategory', 'Status', 'Assignee', 'Updated', 'Actions']}
+          compact
+          tableClassName="queue-table"
           rows={filteredRows.map((r) => (
             <tr key={r.caseInternalId || r._id || formatDocketLabel(r)}>
               <td>
@@ -179,12 +189,12 @@ export const PlatformWorklistPage = () => {
                 </button>
               </td>
               <td>{r.clientName || r.clientId || '-'}</td>
-              <td>{[r.category || '-', r.subcategory || '-'].join(' / ')}</td>
-              <td>{formatStatusLabel(r.status || 'IN_PROGRESS')}</td>
+              <td className="queue-cell-wrap">{[r.category || '-', r.subcategory || '-'].join(' / ')}</td>
+              <td><StatusBadge status={r.status || 'IN_PROGRESS'} label={formatStatusLabel(r.status || 'IN_PROGRESS')} /></td>
               <td>{r.assigneeName || r.assignedTo || '-'}</td>
               <td>{formatDateLabel(r.updatedAt || r.createdAt)}</td>
               <td>
-                <div className="action-group-secondary" role="group" aria-label="Docket actions">
+                <div className="action-group-secondary queue-action-group" role="group" aria-label="Docket actions">
                   {!r.caseInternalId ? <span className="muted">Action unavailable: missing docket ID</span> : null}
                   <button type="button" onClick={() => void transition(r.caseInternalId, 'SEND_TO_QC')} disabled={!r.caseInternalId || pendingActionId === r.caseInternalId}>Send to QC</button>
                   <button type="button" onClick={() => void transition(r.caseInternalId, 'PEND')} disabled={!r.caseInternalId || pendingActionId === r.caseInternalId}>Pend</button>
