@@ -156,8 +156,8 @@ export const PriorityBadge = ({ priority, label }) => {
 
 /* ── Empty / Loading / Error states ────────────────────────────────────────── */
 
-export const EmptyState = ({ title = 'No records found', body, actionLabel, onAction, actionHref, tone = 'default' }) => (
-  <div className={`empty-state empty-state--${tone}`.trim()} role="status">
+export const EmptyState = ({ title = 'No records found', body, actionLabel, onAction, actionHref, tone = 'default', boxed = false }) => (
+  <div className={`empty-state empty-state--${tone} ${boxed ? 'empty-state--boxed' : ''}`.trim()} role="status">
     <svg className="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
       <path d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
     </svg>
@@ -180,8 +180,8 @@ export const LoadingState = ({ label = 'Loading…', compact = false }) => (
   </div>
 );
 
-export const ErrorState = ({ title = 'Something went wrong', body, actionLabel, onAction, tone = 'error' }) => (
-  <div className={`empty-state empty-state--${tone}`.trim()} role="alert">
+export const ErrorState = ({ title = 'Something went wrong', body, actionLabel, onAction, tone = 'error', boxed = false }) => (
+  <div className={`empty-state empty-state--${tone} ${boxed ? 'empty-state--boxed' : ''}`.trim()} role="alert">
     <svg className="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
       <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
     </svg>
@@ -240,7 +240,7 @@ export const DataTable = ({
         <thead>
           <tr>{columns.map((column) => {
             const definition = typeof column === 'string' ? { label: column } : column;
-            return <th key={definition.key || definition.label} style={definition.width ? { width: definition.width } : undefined}>{definition.label}</th>;
+            return <th key={definition.key || definition.label} className={definition.widthClass || ''}>{definition.label}</th>;
           })}</tr>
         </thead>
         <tbody>
@@ -260,7 +260,7 @@ export const DataTable = ({
           ) : null}
           {!loading && !error && safeRows.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="table-message" role="status" aria-live="polite"><EmptyState title={emptyMessage} body="Try adjusting filters or create a new record." /></td>
+              <td colSpan={columns.length} className="table-message" role="status" aria-live="polite"><EmptyState title={emptyMessage} /></td>
             </tr>
           ) : null}
           {!loading && !error && safeRows.length > 0 ? visibleRows : null}
