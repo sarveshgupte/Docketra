@@ -257,6 +257,30 @@ function mapProviderErrorToStatus(error) {
   return 'ERROR';
 }
 
+function isRecoverableDriveQuotaError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  const code = String(error?.code || error?.response?.data?.error || '').toLowerCase();
+  const combined = `${message} ${code}`.trim();
+
+  const hasAboutQuotaContext = combined.includes('about') || combined.includes('storagequota') || combined.includes('quota');
+  const quotaUnavailableSignals = [
+    'about.get',
+    'about get',
+    'storagequota',
+    'quota not returned',
+    'quota unavailable',
+    'insufficient permissions',
+    'insufficientpermission',
+  ];
+  const hasSignal = quotaUnavailableSignals.some((signal) => combined.includes(signal));
+  if (!hasSignal || !hasAboutQuotaContext) return false;
+
+  if (combined.includes('insufficient')) {
+    return combined.includes('about') || combined.includes('storagequota');
+  }
+  return true;
+}
+
 const getStorageStatus = async (req, res) => {
   try {
     const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
@@ -1057,6 +1081,42 @@ const storageUsage = async (req, res) => {
     const usedBytes = files.reduce((acc, file) => acc + Number(file.size || 0), 0);
     return res.json({ provider: state.canonicalProvider, providerMode: state.mode, quotaAvailable: false, usedBytes, totalFiles: files.length });
   } catch (error) {
+    try {
+      const ownershipFirmId = await resolveOwnershipFirmIdForRead(req);
+      if (ownershipFirmId) {
+        const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig').lean();
+        const state = resolveFirmStorageState(firm);
+        const quotaUnavailableForConnectedProvider = !state?.isManaged
+          && state?.canonicalProvider === 'google_drive'
+          && isRecoverableDriveQuotaError(error);
+
+        if (quotaUnavailableForConnectedProvider) {
+          log.warn('[STORAGE]', {
+            event: 'usage_quota_unavailable',
+            tenantId: req.firmId,
+            provider: state.canonicalProvider,
+            providerMode: state.mode,
+            message: error.message,
+          });
+          return res.json({
+            provider: state.canonicalProvider,
+            providerMode: state.mode,
+            status: state.connectionStatus,
+            connectionStatus: state.connectionStatus,
+            quotaAvailable: false,
+            managedFallback: false,
+            message: 'Storage quota is not available for this Drive account.',
+            lastCheckedAt: new Date().toISOString(),
+          });
+        }
+      }
+    } catch (fallbackError) {
+      log.warn('[STORAGE]', {
+        event: 'usage_recovery_fallback_failed',
+        tenantId: req.firmId,
+        message: fallbackError.message,
+      });
+    }
     log.error('[STORAGE]', { event: 'usage_failed', tenantId: req.firmId, message: error.message });
     return res.status(500).json({ error: 'usage_failed', ...(isProduction() ? {} : { message: error.message }) });
   }
