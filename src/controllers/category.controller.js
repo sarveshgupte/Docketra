@@ -395,6 +395,7 @@ const addSubcategory = async (req, res) => {
       workbasketId: workbasket._id,
       isActive: true,
       defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
+      ...(typeof deadlineRule !== 'undefined' ? { deadlineRule: normalizeDeadlineRule(deadlineRule) } : {}),
       checklistTemplate: normalizeChecklistTemplate(checklistTemplate || []),
     });
     
