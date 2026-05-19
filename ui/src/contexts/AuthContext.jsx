@@ -42,6 +42,7 @@ export const AuthProvider = ({ children }) => {
   const lastActivityAtRef = useRef(Date.now());
   const idleTimeoutRef = useRef(null);
   const keepaliveIntervalRef = useRef(null);
+  const inactivityReasonRef = useRef(null);
 
   useEffect(() => {
     if (bootHydratedRef.current) return;
@@ -261,6 +262,13 @@ export const AuthProvider = ({ children }) => {
       profileFetchPromiseRef.current = null;
 
       clearAuthStorage(firmSlugToPreserve);
+      if (inactivityReasonRef.current === 'idle-timeout') {
+        sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
+          message: 'Session timed out',
+          type: 'info',
+        }));
+      }
+      inactivityReasonRef.current = null;
       try {
         if (typeof window !== 'undefined' && window?.localStorage) {
           window.localStorage.setItem(STORAGE_KEYS.AUTH_LOGOUT_BROADCAST, String(Date.now()));
@@ -286,13 +294,23 @@ export const AuthProvider = ({ children }) => {
       return undefined;
     }
 
+    const persistLastActivityAt = (timestamp) => {
+      lastActivityAtRef.current = timestamp;
+      try {
+        window.localStorage.setItem(STORAGE_KEYS.AUTH_LAST_ACTIVE_AT, String(timestamp));
+      } catch (_error) {
+        // Storage write failures should never force logout.
+      }
+    };
+
     const markActivity = () => {
-      lastActivityAtRef.current = Date.now();
+      persistLastActivityAt(Date.now());
       if (idleTimeoutRef.current) {
         window.clearTimeout(idleTimeoutRef.current);
         idleTimeoutRef.current = null;
       }
       idleTimeoutRef.current = window.setTimeout(() => {
+        inactivityReasonRef.current = 'idle-timeout';
         logout({ preserveFirmSlug: true });
       }, SESSION_IDLE_TIMEOUT_MS);
     };
@@ -311,9 +329,20 @@ export const AuthProvider = ({ children }) => {
 
     const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'focus'];
     events.forEach((eventName) => window.addEventListener(eventName, markActivity, { passive: true }));
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') markActivity();
+    };
+    window.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('popstate', markActivity);
+    window.addEventListener('app:navigation', markActivity);
+    window.addEventListener('app:api-activity', markActivity);
 
     return () => {
       events.forEach((eventName) => window.removeEventListener(eventName, markActivity));
+      window.removeEventListener('popstate', markActivity);
+      window.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('app:navigation', markActivity);
+      window.removeEventListener('app:api-activity', markActivity);
       if (idleTimeoutRef.current) {
         window.clearTimeout(idleTimeoutRef.current);
         idleTimeoutRef.current = null;
@@ -328,6 +357,13 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return undefined;
     const onStorageEvent = (event) => {
+      if (event.key === STORAGE_KEYS.AUTH_LAST_ACTIVE_AT && event.newValue) {
+        const parsed = Number(event.newValue);
+        if (Number.isFinite(parsed) && parsed > 0) {
+          lastActivityAtRef.current = parsed;
+        }
+        return;
+      }
       if (event.key !== STORAGE_KEYS.AUTH_LOGOUT_BROADCAST || !event.newValue) return;
       setUser(null);
       setIsAuthenticated(false);
