@@ -201,6 +201,15 @@ Use a consistent operational layout on queue-heavy pages:
    - QC Worklist: review actions (Pass, Send back/Correct, Fail).
    - Oversight views like All Dockets should remain list/search-first (Open/detail), not pull-queue language.
 
+
+## Legacy UI cleanup rules
+
+- PlatformShell owns each page title/subtitle; do not duplicate that metadata with PageHeader inside PlatformShell page content.
+- Prefer platform layout primitives (`platform-page`, `section-group`, `PageSection`, `form-split`, `settings-form-split`, `action-row`, `settings-action-bar`) over page-level wrapper utilities.
+- Avoid duplicate PageHeader usage in active PlatformShell pages unless explicitly deferred and documented.
+- Do not use inline layout spacing (`style={{ margin... }}`, `style={{ padding... }}`) in active workspace pages.
+- Remove dead UI code only after confirming route reachability, import usage, and test coverage safety.
+
 ## DataTable
 
 Use `<DataTable>` from `PlatformShared.jsx` for all tabular data.

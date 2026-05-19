@@ -1,3 +1,10 @@
+## 2026-05-19 — Cleaned up legacy workspace UI
+
+- Migrated remaining active pages away from older layout wrappers where safe.
+- Removed unused dashboard/layout CSS left behind by recent polish work.
+- Added guardrails to prevent duplicate headers and inline layout drift.
+- Preserved existing routes, permissions, and page behavior.
+
 # What's New
 
 ## 2026-05-19 — Simplified dashboard command center
