@@ -36,8 +36,8 @@ export const buildQueueContext = ({ rows = [], rowId, location, origin }) => {
   };
 };
 
-export const PageSection = ({ id, title, description, actions, children }) => (
-  <section className="panel section-panel" id={id}>
+export const PageSection = ({ id, title, description, actions, children, variant = 'default', className = '' }) => (
+  <section className={`panel section-panel section-panel--${variant} ${className}`.trim()} id={id}>
     {(title || description || actions) && (
       <header className="section-header">
         <div>
@@ -51,8 +51,8 @@ export const PageSection = ({ id, title, description, actions, children }) => (
   </section>
 );
 
-export const FilterBar = ({ children, onClear, clearLabel = 'Clear filters', clearDisabled = false }) => (
-  <div className="filter-bar" role="region" aria-label="Filters and search">
+export const FilterBar = ({ children, onClear, clearLabel = 'Clear filters', clearDisabled = false, compact = false }) => (
+  <div className={`filter-bar ${compact ? 'filter-bar--compact' : ''}`.trim()} role="region" aria-label="Filters and search">
     <div className="filter-bar__controls">{children}</div>
     {onClear ? (
       <button
@@ -68,8 +68,8 @@ export const FilterBar = ({ children, onClear, clearLabel = 'Clear filters', cle
   </div>
 );
 
-export const StatGrid = ({ items = [] }) => (
-  <section className="grid-cards" aria-label="Key metrics">
+export const StatGrid = ({ items = [], compact = false, columns = null }) => (
+  <section className={`grid-cards ${compact ? 'grid-cards--compact' : ''} ${columns ? `grid-cards--${columns}` : ''}`.trim()} aria-label="Key metrics">
     {items.map((item) => (
       <article className="panel metric-card" key={item.label}>
         <p className="metric-label">{item.label}</p>
@@ -85,11 +85,11 @@ export const InlineNotice = ({ tone = 'info', message }) => {
   return <p className={`inline-notice inline-notice--${tone}`}>{message}</p>;
 };
 
-export const StatusMessageStack = ({ messages = [] }) => {
+export const StatusMessageStack = ({ messages = [], emphasis = 'normal' }) => {
   const visible = messages.filter((item) => item?.message);
   if (visible.length === 0) return null;
   return (
-    <div className="status-stack" role="status" aria-live="polite">
+    <div className={`status-stack status-stack--${emphasis}`.trim()} role="status" aria-live="polite">
       {visible.map((item) => (
         <InlineNotice key={`${item.tone || 'info'}-${item.message}`} tone={item.tone || 'info'} message={item.message} />
       ))}
@@ -156,8 +156,8 @@ export const PriorityBadge = ({ priority, label }) => {
 
 /* ── Empty / Loading / Error states ────────────────────────────────────────── */
 
-export const EmptyState = ({ title = 'No records found', body, actionLabel, onAction, actionHref }) => (
-  <div className="empty-state" role="status">
+export const EmptyState = ({ title = 'No records found', body, actionLabel, onAction, actionHref, tone = 'default' }) => (
+  <div className={`empty-state empty-state--${tone}`.trim()} role="status">
     <svg className="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
       <path d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
     </svg>
@@ -171,8 +171,8 @@ export const EmptyState = ({ title = 'No records found', body, actionLabel, onAc
   </div>
 );
 
-export const LoadingState = ({ label = 'Loading…' }) => (
-  <div className="loading-state" role="status" aria-live="polite">
+export const LoadingState = ({ label = 'Loading…', compact = false }) => (
+  <div className={`loading-state ${compact ? 'loading-state--compact' : ''}`.trim()} role="status" aria-live="polite">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
       <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
     </svg>
@@ -180,8 +180,8 @@ export const LoadingState = ({ label = 'Loading…' }) => (
   </div>
 );
 
-export const ErrorState = ({ title = 'Something went wrong', body, actionLabel, onAction }) => (
-  <div className="empty-state" role="alert">
+export const ErrorState = ({ title = 'Something went wrong', body, actionLabel, onAction, tone = 'error' }) => (
+  <div className={`empty-state empty-state--${tone}`.trim()} role="alert">
     <svg className="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
       <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
     </svg>
@@ -205,6 +205,8 @@ export const DataTable = ({
   onRetry,
   retryLabel = 'Retry',
   pageSize = 10,
+  compact = false,
+  tableClassName = '',
   paginationLabel = 'Table pagination',
   hasActiveFilters = false,
   emptyLabelFiltered = 'No results match the current filters.',
@@ -233,32 +235,32 @@ export const DataTable = ({
   const emptyMessage = hasActiveFilters ? emptyLabelFiltered : emptyLabel;
 
   return (
-    <div className="table-wrap" aria-live="polite">
-      <table className="table">
+    <div className={`table-wrap ${compact ? 'table-wrap--compact' : ''}`.trim()} aria-live="polite">
+      <table className={`table ${tableClassName}`.trim()}>
         <thead>
-          <tr>{columns.map((column) => <th key={column}>{column}</th>)}</tr>
+          <tr>{columns.map((column) => {
+            const definition = typeof column === 'string' ? { label: column } : column;
+            return <th key={definition.key || definition.label} style={definition.width ? { width: definition.width } : undefined}>{definition.label}</th>;
+          })}</tr>
         </thead>
         <tbody>
           {loading ? (
             <tr>
-              <td colSpan={columns.length} className="table-message" role="status" aria-live="polite">{loadingLabel}</td>
+              <td colSpan={columns.length} className="table-message" role="status" aria-live="polite"><LoadingState compact label={loadingLabel} /></td>
             </tr>
           ) : null}
           {!loading && error ? (
             <tr>
               <td colSpan={columns.length} className="table-message table-message--error" role="status" aria-live="polite">
                 <div className="table-feedback-stack">
-                  <p>{error}</p>
-                  {onRetry ? (
-                    <button type="button" onClick={onRetry} aria-label="Retry loading table data">{retryLabel}</button>
-                  ) : null}
+                  <ErrorState title="Could not load table data" body={error} actionLabel={onRetry ? retryLabel : undefined} onAction={onRetry} />
                 </div>
               </td>
             </tr>
           ) : null}
           {!loading && !error && safeRows.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="table-message" role="status" aria-live="polite">{emptyMessage}</td>
+              <td colSpan={columns.length} className="table-message" role="status" aria-live="polite"><EmptyState title={emptyMessage} body="Try adjusting filters or create a new record." /></td>
             </tr>
           ) : null}
           {!loading && !error && safeRows.length > 0 ? visibleRows : null}

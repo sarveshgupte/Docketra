@@ -323,3 +323,26 @@ When displaying storage context:
 | Docs / error messages       | Use product language         |
 
 **Rule of thumb:** Routes, JS constants, and internal identifiers may keep legacy names. Anything the user reads must follow the product language defined in this document.
+
+
+## Layout Foundation Primitives
+
+Use these reusable classes for consistent workspace composition:
+
+- `.platform-page` / `.platform-page--narrow`: content-width containers.
+- `.section-group`: vertical grouping for related sections.
+- `.layout-two-col`: balanced two-column layout.
+- `.layout-two-by-two`: balanced 2x2 card grid.
+- `.card-deck`: equal-height cards.
+- `.form-split`: left descriptive metadata + right form/card content.
+- `.action-row` and `.action-row--tight`: normalized action button/link rows.
+- `.secondary-link`: consistent secondary action links.
+- `.table-wrap--compact`: compact, readable operational table density.
+
+Use `PageSection` variants to control section density:
+- `variant="default"`: standard panel section.
+- `variant="compact"`: tighter spacing for utility panels.
+- `variant="split"`: adds visual separation in section headers.
+- `variant="flush"`: removes panel chrome for nested layouts.
+
+Avoid inline spacing/layout styles on platform pages when these primitives apply.
