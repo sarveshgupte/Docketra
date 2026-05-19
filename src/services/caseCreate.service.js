@@ -117,6 +117,29 @@ module.exports = (deps) => {
     };
   };
 
+  const buildChecklistSnapshot = ({ checklistTemplate = [], createdAt = new Date() }) => {
+    if (!Array.isArray(checklistTemplate) || checklistTemplate.length === 0) return [];
+    return checklistTemplate.map((item, index) => {
+      const dueOffsetDays = item?.dueOffsetDays;
+      const dueDate = Number.isFinite(Number(dueOffsetDays))
+        ? new Date(new Date(createdAt).getTime() + (Number(dueOffsetDays) * 24 * 60 * 60 * 1000))
+        : null;
+      return {
+        id: String(item?.id || randomUUID()),
+        templateItemId: item?.id ? String(item.id) : null,
+        title: String(item?.title || '').trim(),
+        description: typeof item?.description === 'string' ? item.description.trim() : '',
+        required: item?.required === true,
+        completed: false,
+        completedAt: null,
+        completedByXID: null,
+        assignedToXID: item?.defaultAssigneeXID ? String(item.defaultAssigneeXID).trim() : null,
+        dueDate,
+        sortOrder: Number.isFinite(Number(item?.sortOrder)) ? Number(item.sortOrder) : index,
+      };
+    });
+  };
+
   const createCase = async (req, res) => {
     const requestId = req.requestId || randomUUID();
     req.requestId = requestId;
@@ -640,6 +663,10 @@ module.exports = (deps) => {
           tatDaysSnapshot,
           slaDays: Math.max(0, Number(tatDaysSnapshot || defaultSlaDays || 0)),
           dueDate: resolvedDueDate,
+          checklist: buildChecklistSnapshot({
+            checklistTemplate: subcategoryDoc?.checklistTemplate || [],
+            createdAt,
+          }),
         });
         
         step('before case create');

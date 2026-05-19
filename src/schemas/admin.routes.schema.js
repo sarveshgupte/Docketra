@@ -1,6 +1,15 @@
 const { z, nonEmptyString, objectIdString, xidString, clientIdString, queryBoolean } = require('./common');
 
 const objectIdOrString = z.union([objectIdString, nonEmptyString]);
+const checklistTemplateItemSchema = z.object({
+  id: nonEmptyString,
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().max(1000).optional(),
+  required: z.boolean().optional(),
+  sortOrder: z.coerce.number().int().min(0).optional(),
+  defaultAssigneeXID: z.string().trim().min(1).max(120).optional(),
+  dueOffsetDays: z.coerce.number().int().min(0).optional(),
+}).strict();
 const passthroughQuery = z.object({}).passthrough();
 const passthroughBody = z.object({}).passthrough();
 const cmsIntakeSettingsBody = z.object({
@@ -94,11 +103,11 @@ module.exports = {
   },
   'POST /categories/:id/subcategories': {
     params: z.object({ id: objectIdOrString }),
-    body: z.object({ name: nonEmptyString, workbasketId: objectIdString, defaultSlaDays: z.number().int().min(0).optional() }).strict(),
+    body: z.object({ name: nonEmptyString, workbasketId: objectIdString, defaultSlaDays: z.number().int().min(0).optional(), checklistTemplate: z.array(checklistTemplateItemSchema).optional() }).strict(),
   },
   'PUT /categories/:id/subcategories/:subcategoryId': {
     params: z.object({ id: objectIdOrString, subcategoryId: nonEmptyString }),
-    body: z.object({ name: nonEmptyString.optional(), workbasketId: objectIdString.optional(), defaultSlaDays: z.number().int().min(0).optional() }).strict(),
+    body: z.object({ name: nonEmptyString.optional(), workbasketId: objectIdString.optional(), defaultSlaDays: z.number().int().min(0).optional(), checklistTemplate: z.array(checklistTemplateItemSchema).optional() }).strict(),
   },
   'PATCH /categories/:id/subcategories/:subcategoryId/status': {
     params: z.object({ id: objectIdOrString, subcategoryId: nonEmptyString }),
