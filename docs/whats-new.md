@@ -1,6 +1,13 @@
 # What's New
 
 
+## May 2026: Fixed firm settings access
+
+- Fixed admin configuration access for Primary Admin users.
+- Resolved false permission errors on SLA rules, categories, workbaskets, and audit activity.
+- Improved permission-denied messaging for firm settings.
+- Added regression coverage for admin settings endpoints.
+
 ## May 2026: Landing page navigation anchor mapping fix
 
 - Fixed landing page navigation anchors so Why, Product, Workflow, Pilot readiness, and Trust scroll to distinct sections.

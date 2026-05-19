@@ -36,6 +36,7 @@ const getRuleScopeLabel = (rule) => {
   if (scopes.length === 0) return 'Default';
   return scopes.join(' • ');
 };
+const isForbidden = (error) => Number(error?.response?.status) === 403;
 
 export const FirmSettingsPage = () => {
   const navigate = useNavigate();
@@ -118,9 +119,13 @@ export const FirmSettingsPage = () => {
         .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
         .slice(0, 10);
       setActivity(normalizedActivity);
-    } catch {
+    } catch (error) {
       setActivity([]);
-      setActivityError('Could not load admin audit activity. You can retry without losing settings changes.');
+      setActivityError(
+        isForbidden(error)
+          ? 'You do not have permission to view admin activity. Ask a workspace admin to update your access.'
+          : 'Could not load admin audit activity. You can retry without losing settings changes.',
+      );
     } finally {
       setLoadingActivity(false);
     }
@@ -150,13 +155,24 @@ export const FirmSettingsPage = () => {
         setSlaRules(Array.isArray(slaResult.value?.data) ? slaResult.value.data : []);
       } else {
         setSlaRules([]);
-        setSlaMessage({ type: 'error', text: 'Could not load SLA configuration.' });
+        const slaError = slaResult.reason;
+        setSlaMessage({
+          type: 'error',
+          text: isForbidden(slaError)
+            ? 'You do not have permission to view SLA settings. Ask a workspace admin to update your access.'
+            : 'Could not load SLA configuration.',
+        });
       }
-    } catch {
+    } catch (error) {
       setCategories([]);
       setWorkbaskets([]);
       setSlaRules([]);
-      setSlaMessage({ type: 'error', text: 'Could not load SLA configuration.' });
+      setSlaMessage({
+        type: 'error',
+        text: isForbidden(error)
+          ? 'You do not have permission to view SLA settings. Ask a workspace admin to update your access.'
+          : 'Could not load SLA configuration.',
+      });
     } finally {
       setLoadingSlaData(false);
     }
