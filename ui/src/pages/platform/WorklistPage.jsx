@@ -189,7 +189,7 @@ export const PlatformWorklistPage = () => {
                 </button>
               </td>
               <td>{r.clientName || r.clientId || '-'}</td>
-              <td>{[r.category || '-', r.subcategory || '-'].join(' / ')}</td>
+              <td className="queue-cell-wrap">{[r.category || '-', r.subcategory || '-'].join(' / ')}</td>
               <td><StatusBadge status={r.status || 'IN_PROGRESS'} label={formatStatusLabel(r.status || 'IN_PROGRESS')} /></td>
               <td>{r.assigneeName || r.assignedTo || '-'}</td>
               <td>{formatDateLabel(r.updatedAt || r.createdAt)}</td>

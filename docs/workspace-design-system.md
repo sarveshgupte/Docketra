@@ -160,7 +160,7 @@ Use `<StatGrid>` for KPI strip panels. Each card shows a label (uppercase), a la
 ---
 
 
-## Queue Workspace Layout (Workbaskets / My Worklist / QC Worklist / All Dockets)
+## Queue Workspace Layout (Workbaskets / My Worklist / QC Worklist)
 
 Use a consistent operational layout on queue-heavy pages:
 
@@ -191,7 +191,7 @@ Use a consistent operational layout on queue-heavy pages:
    - Keep row actions compact and execution-focused by queue type.
    - My Worklist: execution actions (Send to QC, Pend, Resolve).
    - QC Worklist: review actions (Pass, Send back/Correct, Fail).
-   - All Dockets: oversight/list-first actions (Open/detail), not pull-queue language.
+   - Oversight views like All Dockets should remain list/search-first (Open/detail), not pull-queue language.
 
 ## DataTable
 
