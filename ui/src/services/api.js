@@ -20,6 +20,23 @@ const api = axios.create({
   },
 });
 
+if (typeof window !== 'undefined' && !window.__docketraNavigationActivityPatched) {
+  const notifyNavigationActivity = () => {
+    window.dispatchEvent(new CustomEvent('app:navigation'));
+  };
+  const wrapHistoryMethod = (methodName) => {
+    const original = window.history?.[methodName];
+    if (typeof original !== 'function') return;
+    window.history[methodName] = function patchedHistoryMethod(...args) {
+      const result = original.apply(this, args);
+      notifyNavigationActivity();
+      return result;
+    };
+  };
+  wrapHistoryMethod('pushState');
+  window.__docketraNavigationActivityPatched = true;
+}
+
 let redirecting = false;
 let refreshFailureDetected = false;
 const inFlightRequestCounts = new Map();
@@ -89,6 +106,11 @@ api.interceptors.request.use(
     }
 
     const method = (config.method || '').toLowerCase();
+    if (typeof window !== 'undefined' && config?.metadata?.userInitiatedActivity === true) {
+      window.dispatchEvent(new CustomEvent('app:api-activity', {
+        detail: { userInitiated: true }
+      }));
+    }
     if (['post', 'put', 'patch', 'delete'].includes(method)) {
       const hasIdempotencyKey = typeof config.headers?.has === 'function'
         ? config.headers.has('Idempotency-Key') || config.headers.has('idempotency-key')
@@ -299,8 +321,8 @@ api.interceptors.response.use(
         const refreshCode = refreshError?.code || refreshError?.response?.data?.code;
         sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
           message: refreshCode === ERROR_CODES.REFRESH_NOT_SUPPORTED
-            ? 'Your admin session has expired. Please log in again.'
-            : 'Your session expired. Please log in again.',
+            ? 'Your admin session has expired. Please sign in again.'
+            : 'Your session has expired. Please sign in again.',
           type: 'info',
           code: ERROR_CODES.AUTH_SESSION_EXPIRED,
         }));
@@ -316,7 +338,7 @@ api.interceptors.response.use(
       }
       clearAuthStorage();
       sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
-        message: 'Your session expired. Please log in again.',
+        message: 'Your session has expired. Please sign in again.',
         type: 'info',
         code: ERROR_CODES.AUTH_SESSION_EXPIRED,
       }));
