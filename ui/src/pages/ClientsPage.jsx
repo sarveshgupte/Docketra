@@ -65,6 +65,7 @@ export const ClientsPage = () => {
   const [deletingFileId, setDeletingFileId] = useState('');
   const [showClientModal, setShowClientModal] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
+  const [selectedClientId, setSelectedClientId] = useState('');
   const [savingClient, setSavingClient] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [page, setPage] = useState(Math.max(Number.parseInt(query.page, 10) || 1, 1));
@@ -94,7 +95,7 @@ export const ClientsPage = () => {
   const canManageClients = canManageClientsByRoleOrPermission(user);
 
   const initialClientSnapshot = useMemo(() => ({
-    businessName: selectedClient?.businessName || '',
+    businessName: selectedClient?.businessName || selectedClient?.legalName || selectedClient?.name || '',
     businessEmail: selectedClient?.businessEmail || '',
     primaryContactNumber: selectedClient?.primaryContactNumber || '',
     businessAddress: selectedClient?.businessAddress || '',
@@ -102,8 +103,8 @@ export const ClientsPage = () => {
     state: selectedClient?.state || '',
     pincode: selectedClient?.pincode || '',
     contactPersonName: selectedClient?.contactPersonName || '',
-    contactPersonEmail: selectedClient?.contactPersonEmail || '',
-    contactPersonPhone: selectedClient?.contactPersonPhone || '',
+    contactPersonEmail: selectedClient?.contactPersonEmail || selectedClient?.contactPersonEmailAddress || '',
+    contactPersonPhone: selectedClient?.contactPersonPhone || selectedClient?.contactPersonPhoneNumber || '',
     PAN: selectedClient?.PAN || '',
     CIN: selectedClient?.CIN || '',
     TAN: selectedClient?.TAN || '',
@@ -213,6 +214,7 @@ export const ClientsPage = () => {
 
   const resetClientForm = useCallback(() => {
     setSelectedClient(null);
+    setSelectedClientId('');
     setClientFormErrors({});
     setClientFormMessage({ type: '', text: '' });
     setClientForm({
@@ -239,9 +241,11 @@ export const ClientsPage = () => {
   };
 
   const openEditClientModal = (client) => {
-    setSelectedClient(client);
+    const resolvedClientId = client?.clientId || client?.id || '';
+    setSelectedClient({ ...client, clientId: resolvedClientId });
+    setSelectedClientId(resolvedClientId);
     setClientForm({
-      businessName: client.businessName || '',
+      businessName: client.businessName || client.legalName || client.name || '',
       businessEmail: client.businessEmail || '',
       primaryContactNumber: client.primaryContactNumber || '',
       businessAddress: client.businessAddress || '',
@@ -249,8 +253,8 @@ export const ClientsPage = () => {
       state: client.state || '',
       pincode: client.pincode || '',
       contactPersonName: client.contactPersonName || '',
-      contactPersonEmail: client.contactPersonEmail || '',
-      contactPersonPhone: client.contactPersonPhone || '',
+      contactPersonEmail: client.contactPersonEmail || client.contactPersonEmailAddress || '',
+      contactPersonPhone: client.contactPersonPhone || client.contactPersonPhoneNumber || '',
       PAN: client.PAN || '',
       CIN: client.CIN || '',
       TAN: client.TAN || '',
@@ -304,8 +308,9 @@ export const ClientsPage = () => {
     }
     setSavingClient(true);
     try {
-      if (selectedClient?.clientId) {
-        const response = await clientApi.updateClient(selectedClient.clientId, {
+      if (selectedClient) {
+        if (!selectedClientId) throw new Error('This client record is missing an ID. Please refresh the page and try again.');
+        const response = await clientApi.updateClient(selectedClientId, {
           businessName: clientForm.businessName,
           businessEmail: clientForm.businessEmail,
           primaryContactNumber: clientForm.primaryContactNumber,
@@ -316,13 +321,15 @@ export const ClientsPage = () => {
           contactPersonName: clientForm.contactPersonName,
           contactPersonEmail: clientForm.contactPersonEmail,
           contactPersonPhone: clientForm.contactPersonPhone,
+          contactPersonEmailAddress: clientForm.contactPersonEmail,
+          contactPersonPhoneNumber: clientForm.contactPersonPhone,
           ...(clientForm.PAN ? { PAN: clientForm.PAN } : {}),
           ...(clientForm.CIN ? { CIN: clientForm.CIN } : {}),
           ...(clientForm.TAN ? { TAN: clientForm.TAN } : {}),
           ...(clientForm.GST ? { GST: clientForm.GST } : {}),
         });
         if (!response?.success) throw new Error(response?.message || 'Failed to update client');
-        setClients((prev) => prev.map((client) => (client.clientId === selectedClient.clientId
+        setClients((prev) => prev.map((client) => (client.clientId === selectedClientId
           ? { ...client, ...response?.data, ...clientForm }
           : client)));
         showSuccess('Client updated successfully');
@@ -338,6 +345,8 @@ export const ClientsPage = () => {
           contactPersonName: clientForm.contactPersonName,
           contactPersonEmail: clientForm.contactPersonEmail,
           contactPersonPhone: clientForm.contactPersonPhone,
+          contactPersonEmailAddress: clientForm.contactPersonEmail,
+          contactPersonPhoneNumber: clientForm.contactPersonPhone,
           ...(clientForm.PAN ? { PAN: clientForm.PAN } : {}),
           ...(clientForm.CIN ? { CIN: clientForm.CIN } : {}),
           ...(clientForm.TAN ? { TAN: clientForm.TAN } : {}),
@@ -638,7 +647,7 @@ export const ClientsPage = () => {
         isOpen={showClientModal}
         onClose={closeClientModal}
         onRequestClose={requestCloseClientModal}
-        title={selectedClient ? `Edit Client • ${selectedClient.businessName}` : 'Add New Client'}
+        title={selectedClient ? `Edit Client • ${selectedClient.businessName || selectedClientId || 'Client'}` : 'Add New Client'}
         maxWidth="2xl"
       >
         <form onSubmit={handleSaveClient} style={{ display: 'grid', gap: '1rem' }}>
@@ -691,7 +700,7 @@ export const ClientsPage = () => {
           <Input label="TAN (Optional)" value={clientForm.TAN} onChange={(event) => handleClientFieldChange('TAN', event.target.value)} error={clientFormErrors.TAN} />
           <Input label="GST (Optional)" value={clientForm.GST} onChange={(event) => handleClientFieldChange('GST', event.target.value)} error={clientFormErrors.GST} />
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+          <div className="sticky bottom-0 -mx-1 flex justify-end gap-2 border-t border-gray-100 bg-white px-1 pb-1 pt-3">
             <Button type="button" variant="outline" onClick={() => requestCloseClientModal() && closeClientModal()}>Cancel</Button>
             <Button type="submit" disabled={savingClient || !isClientFormDirty}>{savingClient ? 'Saving…' : 'Save Client'}</Button>
           </div>
