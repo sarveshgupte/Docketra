@@ -12,6 +12,8 @@ const toLegacyCaseShape = (detail = {}, legacy = {}) => ({
   pendingUntil: detail?.dates?.pendingUntil || legacy.pendingUntil,
   createdAt: detail?.dates?.createdAt || legacy.createdAt,
   updatedAt: detail?.dates?.updatedAt || legacy.updatedAt,
+  sop: detail.sop || legacy.sop || null,
+  checklist: Array.isArray(detail.checklist) ? detail.checklist : (Array.isArray(legacy.checklist) ? legacy.checklist : []),
   client: detail.client ? {
     ...(legacy.client || {}),
     _id: detail.client.id || legacy?.client?._id,
