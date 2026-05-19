@@ -11,6 +11,7 @@ function testOverviewPanelContainsSopChecklistSections() {
   assert.ok(source.includes('No SOP attached to this docket.'), 'Overview panel must include SOP empty state');
   assert.ok(source.includes('target="_blank"'), 'SOP links should open in new tab');
   assert.ok(source.includes('rel="noopener noreferrer"'), 'SOP links should include noopener noreferrer');
+  assert.ok(source.includes('const sortedSopLinks = getSortedSopLinks(caseInfo?.sop);'), 'Overview panel should define sorted SOP links within component scope');
   assert.ok(source.includes('Checklist'), 'Overview panel must include Checklist heading');
   assert.ok(source.includes('No checklist attached to this docket.'), 'Overview panel must include checklist empty state');
   assert.ok(source.includes("sort((a, b) => Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0))"), 'Checklist items must be sorted by sortOrder ascending');
