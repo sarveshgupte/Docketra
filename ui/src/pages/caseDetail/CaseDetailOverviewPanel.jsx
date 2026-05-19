@@ -51,6 +51,7 @@ export const CaseDetailOverviewPanel = ({
   isUnassignedWorkbasket = false,
   isTerminal = false,
 }) => {
+  const sortedSopLinks = getSortedSopLinks(caseInfo?.sop);
   const sortedChecklist = normalizeChecklist(caseInfo?.checklist);
 
   return (
