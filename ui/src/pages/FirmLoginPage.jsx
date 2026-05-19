@@ -31,7 +31,6 @@ const mapSafeLoginError = (error) => {
 };
 
 const resolveCredentialErrorMessage = (error) => {
-  const status = error?.status || error?.response?.status;
   const backendMessage = String(
     error?.data?.message
     || error?.response?.data?.message
@@ -39,15 +38,11 @@ const resolveCredentialErrorMessage = (error) => {
     || '',
   ).trim().toLowerCase();
 
-  if (
-    status === 401
-    || status === 403
-    || backendMessage.includes('invalid xid or password')
-    || backendMessage.includes('invalid credentials')
-    || backendMessage.includes('wrong password')
-    || backendMessage.includes('incorrect password')
-  ) {
+  if (backendMessage.includes('wrong password') || backendMessage.includes('incorrect password')) {
     return 'Wrong password.';
+  }
+  if (backendMessage.includes('invalid xid or password') || backendMessage.includes('invalid credentials')) {
+    return 'Invalid xID or password.';
   }
 
   return toUserFacingError(error, mapSafeLoginError(error));

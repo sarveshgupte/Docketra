@@ -30,6 +30,18 @@ assert.ok(login.includes('disabled={loading || !canSubmit}'), 'Login submit butt
 assert.ok(login.includes('<div className="auth-footer-links">'), 'Login footer should use shared auth-footer-links.');
 assert.equal((login.match(/auth-kicker/g) || []).length, 1, 'Login should render auth kicker only once.');
 
+const firmLogin = read('src/pages/FirmLoginPage.jsx');
+assert.ok(firmLogin.includes("backendMessage.includes('wrong password')"), 'Firm login should map explicit wrong-password backend text.');
+assert.ok(firmLogin.includes("backendMessage.includes('incorrect password')"), 'Firm login should map explicit incorrect-password backend text.');
+assert.ok(firmLogin.includes("return 'Wrong password.';"), 'Firm login should show "Wrong password." only for password-specific failures.');
+assert.ok(firmLogin.includes("backendMessage.includes('invalid xid or password')"), 'Firm login should detect generic invalid xid/password backend message.');
+assert.ok(firmLogin.includes("backendMessage.includes('invalid credentials')"), 'Firm login should detect generic invalid credentials backend message.');
+assert.ok(firmLogin.includes("return 'Invalid xID or password.';"), 'Firm login should surface generic credential failure without over-claiming password-specific failure.');
+assert.ok(firmLogin.includes('return toUserFacingError(error, mapSafeLoginError(error));'), 'Generic 401/403 fallback should still come from mapSafeLoginError.');
+assert.ok(firmLogin.includes("if (status === 429) return 'Too many attempts. Please wait before retrying.';"), '429 fallback message behavior should remain unchanged.');
+assert.ok(firmLogin.includes("if (status === 423) return 'This workspace is inactive. Contact your admin.';"), '423 fallback message behavior should remain unchanged.');
+assert.ok(firmLogin.includes("if (status >= 500) return 'Workspace lookup is temporarily unavailable. Please try again.';"), '5xx fallback message behavior should remain unchanged.');
+
 const signup = read('src/pages/marketing/Signup.jsx');
 assert.ok(signup.includes('Send verification code'), 'Signup CTA should use verification-code language.');
 assert.ok(signup.includes('auth-header'), 'Signup should use shared auth header primitives.');
