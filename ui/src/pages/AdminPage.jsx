@@ -129,12 +129,14 @@ export const AdminPage = () => {
   // Category form state
   const [categoryForm, setCategoryForm] = useState({
     name: '',
+    requiresRelatedEmployeeUser: false,
   });
   
   // Subcategory form state
   const [subcategoryForm, setSubcategoryForm] = useState({
     name: '',
     workbasketId: '',
+    requiresRelatedEmployeeUser: false,
   });
 
   // Client form state
@@ -570,12 +572,15 @@ export const AdminPage = () => {
     setSubmitting(true);
     
     try {
-      const response = await categoryService.createCategory(categoryForm.name.trim());
+      const response = await categoryService.createCategory(
+        categoryForm.name.trim(),
+        categoryForm.requiresRelatedEmployeeUser === true,
+      );
       
       if (response.success) {
         showToast('Category created successfully', 'success');
         setShowCategoryModal(false);
-        setCategoryForm({ name: '' });
+        setCategoryForm({ name: '', requiresRelatedEmployeeUser: false });
         loadAdminData();
       } else {
         showToast(response.message || 'Failed to create category', 'error');
@@ -629,12 +634,13 @@ export const AdminPage = () => {
         selectedCategory._id,
         subcategoryForm.name.trim(),
         subcategoryForm.workbasketId,
+        subcategoryForm.requiresRelatedEmployeeUser === true,
       );
       
       if (response.success) {
         showToast('Subcategory added successfully', 'success');
         setShowSubcategoryModal(false);
-        setSubcategoryForm({ name: '', workbasketId: '' });
+        setSubcategoryForm({ name: '', workbasketId: '', requiresRelatedEmployeeUser: false });
         setSelectedCategory(null);
         loadAdminData();
       } else {
