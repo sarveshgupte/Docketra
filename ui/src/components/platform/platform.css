@@ -1475,9 +1475,7 @@ select:focus-visible {
   font-size: 12px;
 }
 
-.empty-state--default,
-.empty-state--error,
-.empty-state--warning {
+.empty-state--boxed {
   border: 1px dashed var(--dt-border);
   border-radius: 10px;
   padding: 18px 16px;
@@ -1497,8 +1495,6 @@ select:focus-visible {
 }
 
 @media (max-width: 720px) {
-  .platform { grid-template-columns: 1fr; }
-  .platform__sidebar { position: static; height: auto; }
   .platform__topbar { flex-wrap: wrap; align-items: flex-start; padding: 10px 12px; gap: 10px; }
   .platform__actions { width: 100%; justify-content: flex-start; max-width: 100%; }
   .platform__content { padding: 14px 12px; }

@@ -32,6 +32,13 @@ for (const page of [
   assert.equal(source.includes('style={{ padding'), false, `${page} should avoid inline padding layout styles.`);
 }
 
+assert.equal(sharedSource.includes('style={definition.width ? { width: definition.width } : undefined}'), false, 'DataTable headers should not use inline width styles.');
+assert.ok(sharedSource.includes("className={definition.widthClass || ''}"), 'DataTable should use class-based width hooks when needed.');
+assert.equal(sharedSource.includes('body="Try adjusting filters or create a new record."'), false, 'DataTable empty state should not force generic body copy.');
+assert.ok(cssSource.includes('.empty-state--boxed'), 'Polished empty-state box styling should be opt-in.');
+assert.equal(cssSource.includes('.empty-state--default,'), false, 'Empty-state boxed style should not be global by tone.');
+assert.equal(cssSource.includes('.platform { grid-template-columns: 1fr; }'), false, 'Foundation PR should avoid overriding mobile shell grid layout.');
+
 assert.ok(shellSource.includes('export const PlatformShell'), 'PlatformShell should remain available for major workspace pages.');
 
 console.log('platformDesignSystemHardening.test.mjs passed');
