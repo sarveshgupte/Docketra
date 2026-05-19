@@ -1570,8 +1570,6 @@ select:focus-visible {
   .form-split { grid-template-columns: 1fr; }
 }
 
-.dashboard-next-step-title { margin-bottom: 6px; }
-.dashboard-next-step-list { margin-top: 10px; padding-left: 18px; }
 .dashboard-command-panel { gap: 12px; }
 .dashboard-priority-card { display: grid; gap: 8px; }
 .dashboard-attention-list-items {
@@ -1587,8 +1585,9 @@ select:focus-visible {
   gap: 10px;
 }
 .dashboard-quick-actions .panel,
-.dashboard-attention-list .panel,
-.dashboard-activity-list .empty-state { min-height: 0; }
+.dashboard-attention-list .panel {
+  height: 100%;
+}
 
 .settings-form-split {
   display: grid;
