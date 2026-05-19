@@ -80,6 +80,8 @@ export const AdminPage = () => {
   const [showAccessModal, setShowAccessModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showSubcategoryModal, setShowSubcategoryModal] = useState(false);
+  const [showEditCategoryModal, setShowEditCategoryModal] = useState(false);
+  const [showEditSubcategoryModal, setShowEditSubcategoryModal] = useState(false);
   const [showClientModal, setShowClientModal] = useState(false);
   const [showBulkPasteModal, setShowBulkPasteModal] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
@@ -138,6 +140,8 @@ export const AdminPage = () => {
     workbasketId: '',
     requiresRelatedEmployeeUser: false,
   });
+  const [editCategoryForm, setEditCategoryForm] = useState({ id: '', name: '', requiresRelatedEmployeeUser: false });
+  const [editSubcategoryForm, setEditSubcategoryForm] = useState({ categoryId: '', subcategoryId: '', name: '', workbasketId: '', requiresRelatedEmployeeUser: false });
 
   // Client form state
   const [clientForm, setClientForm] = useState({
@@ -673,6 +677,68 @@ export const AdminPage = () => {
     } catch (error) {
       showToast(error.response?.data?.message || `Failed to ${action} subcategory`, 'error');
     }
+  };
+
+  const handleEditCategory = (category) => {
+    setEditCategoryForm({
+      id: category._id,
+      name: category.name || '',
+      requiresRelatedEmployeeUser: category.requiresRelatedEmployeeUser === true,
+    });
+    setShowEditCategoryModal(true);
+  };
+
+  const handleEditSubcategory = (category, subcategory) => {
+    setEditSubcategoryForm({
+      categoryId: category._id,
+      subcategoryId: subcategory.id,
+      name: subcategory.name || '',
+      workbasketId: String(subcategory.workbasketId || ''),
+      requiresRelatedEmployeeUser: subcategory.requiresRelatedEmployeeUser === true,
+    });
+    setShowEditSubcategoryModal(true);
+  };
+
+  const handleUpdateCategory = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const response = await categoryService.updateCategory(
+        editCategoryForm.id,
+        editCategoryForm.name.trim(),
+        editCategoryForm.requiresRelatedEmployeeUser === true,
+      );
+      if (response.success) {
+        setShowEditCategoryModal(false);
+        setEditCategoryForm({ id: '', name: '', requiresRelatedEmployeeUser: false });
+        showToast('Category updated successfully', 'success');
+        loadAdminData();
+      } else showToast(response.message || 'Failed to update category', 'error');
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to update category', 'error');
+    } finally { setSubmitting(false); }
+  };
+
+  const handleUpdateSubcategory = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const response = await categoryService.updateSubcategory(
+        editSubcategoryForm.categoryId,
+        editSubcategoryForm.subcategoryId,
+        editSubcategoryForm.name.trim(),
+        editSubcategoryForm.workbasketId,
+        editSubcategoryForm.requiresRelatedEmployeeUser === true,
+      );
+      if (response.success) {
+        setShowEditSubcategoryModal(false);
+        setEditSubcategoryForm({ categoryId: '', subcategoryId: '', name: '', workbasketId: '', requiresRelatedEmployeeUser: false });
+        showToast('Subcategory updated successfully', 'success');
+        loadAdminData();
+      } else showToast(response.message || 'Failed to update subcategory', 'error');
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to update subcategory', 'error');
+    } finally { setSubmitting(false); }
   };
 
   const handleDeleteCategory = async (category) => {
@@ -1344,8 +1410,10 @@ export const AdminPage = () => {
               setShowSubcategoryModal(true);
             }}
             onToggleCategoryStatus={handleToggleCategoryStatus}
+            onEditCategory={handleEditCategory}
             onDeleteCategory={handleDeleteCategory}
             onToggleSubcategoryStatus={handleToggleSubcategoryStatus}
+            onEditSubcategory={handleEditSubcategory}
             onDeleteSubcategory={handleDeleteSubcategory}
             StatusBadge={AdminStatusBadge}
           />
@@ -1436,6 +1504,16 @@ export const AdminPage = () => {
         subcategoryForm={subcategoryForm}
         setSubcategoryForm={setSubcategoryForm}
         onAddSubcategory={handleAddSubcategory}
+        showEditCategoryModal={showEditCategoryModal}
+        setShowEditCategoryModal={setShowEditCategoryModal}
+        editCategoryForm={editCategoryForm}
+        setEditCategoryForm={setEditCategoryForm}
+        onUpdateCategory={handleUpdateCategory}
+        showEditSubcategoryModal={showEditSubcategoryModal}
+        setShowEditSubcategoryModal={setShowEditSubcategoryModal}
+        editSubcategoryForm={editSubcategoryForm}
+        setEditSubcategoryForm={setEditSubcategoryForm}
+        onUpdateSubcategory={handleUpdateSubcategory}
         workbaskets={workbaskets}
       />
 

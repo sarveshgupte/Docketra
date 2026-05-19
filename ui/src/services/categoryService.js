@@ -41,8 +41,8 @@ export const categoryService = {
   /**
    * Update category name (Admin only)
    */
-  updateCategory: async (id, name) => {
-    const response = await api.put(`/admin/categories/${id}`, { name });
+  updateCategory: async (id, name, requiresRelatedEmployeeUser = false) => {
+    const response = await api.put(`/admin/categories/${id}`, { name, requiresRelatedEmployeeUser });
     return response.data;
   },
 
@@ -65,8 +65,8 @@ export const categoryService = {
   /**
    * Update subcategory name (Admin only)
    */
-  updateSubcategory: async (categoryId, subcategoryId, name) => {
-    const response = await api.put(`/admin/categories/${categoryId}/subcategories/${subcategoryId}`, { name });
+  updateSubcategory: async (categoryId, subcategoryId, name, workbasketId, requiresRelatedEmployeeUser = false) => {
+    const response = await api.put(`/admin/categories/${categoryId}/subcategories/${subcategoryId}`, { name, workbasketId, requiresRelatedEmployeeUser });
     return response.data;
   },
 

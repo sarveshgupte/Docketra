@@ -26,5 +26,12 @@ assert(categoryModal.includes('Enable this for HR, payroll, onboarding, offboard
 
 const categoryService = read('ui/src/services/categoryService.js');
 assert(categoryService.includes('requiresRelatedEmployeeUser'), 'Category service should persist requiresRelatedEmployeeUser for create/add subcategory');
+assert(categoryService.includes('updateCategory: async (id, name, requiresRelatedEmployeeUser = false)'), 'Category edit service should persist requiresRelatedEmployeeUser');
+assert(categoryService.includes('updateSubcategory: async (categoryId, subcategoryId, name, workbasketId, requiresRelatedEmployeeUser = false)'), 'Subcategory edit service should persist requiresRelatedEmployeeUser');
+
+const adminPage = read('ui/src/pages/AdminPage.jsx');
+assert(adminPage.includes('setEditCategoryForm({'), 'Edit category flow should prefill edit form state');
+assert(adminPage.includes('requiresRelatedEmployeeUser: category.requiresRelatedEmployeeUser === true'), 'Edit category should prefill saved requiresRelatedEmployeeUser value');
+assert(adminPage.includes('requiresRelatedEmployeeUser: subcategory.requiresRelatedEmployeeUser === true'), 'Edit subcategory should prefill saved requiresRelatedEmployeeUser value');
 
 console.log('docket related employee/user UI static checks passed');
