@@ -19,6 +19,14 @@ const checklistTemplateItemSchema = z.object({
   defaultAssigneeXID: z.string().trim().min(1).max(120).optional(),
   dueOffsetDays: z.coerce.number().int().min(0).optional(),
 }).strict();
+
+const subcategorySopSchema = z.object({
+  title: z.string().max(200).optional(),
+  body: z.string().max(10000).optional(),
+  format: z.enum(['plain_text', 'markdown']).optional(),
+  lastUpdatedByXID: z.string().trim().optional(),
+}).strict().optional();
+
 const passthroughQuery = z.object({}).passthrough();
 const passthroughBody = z.object({}).passthrough();
 const cmsIntakeSettingsBody = z.object({
@@ -112,11 +120,11 @@ module.exports = {
   },
   'POST /categories/:id/subcategories': {
     params: z.object({ id: objectIdOrString }),
-    body: z.object({ name: nonEmptyString, workbasketId: objectIdString, defaultSlaDays: z.number().int().min(0).optional(), deadlineRule: deadlineRuleSchema, checklistTemplate: z.array(checklistTemplateItemSchema).optional() }).strict(),
+    body: z.object({ name: nonEmptyString, workbasketId: objectIdString, defaultSlaDays: z.number().int().min(0).optional(), deadlineRule: deadlineRuleSchema, checklistTemplate: z.array(checklistTemplateItemSchema).optional(), sop: subcategorySopSchema }).strict(),
   },
   'PUT /categories/:id/subcategories/:subcategoryId': {
     params: z.object({ id: objectIdOrString, subcategoryId: nonEmptyString }),
-    body: z.object({ name: nonEmptyString.optional(), workbasketId: objectIdString.optional(), defaultSlaDays: z.number().int().min(0).optional(), deadlineRule: deadlineRuleSchema, checklistTemplate: z.array(checklistTemplateItemSchema).optional() }).strict(),
+    body: z.object({ name: nonEmptyString.optional(), workbasketId: objectIdString.optional(), defaultSlaDays: z.number().int().min(0).optional(), deadlineRule: deadlineRuleSchema, checklistTemplate: z.array(checklistTemplateItemSchema).optional(), sop: subcategorySopSchema }).strict(),
   },
   'PATCH /categories/:id/subcategories/:subcategoryId/status': {
     params: z.object({ id: objectIdOrString, subcategoryId: nonEmptyString }),

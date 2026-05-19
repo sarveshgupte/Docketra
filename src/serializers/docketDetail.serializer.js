@@ -52,6 +52,12 @@ function serializeDocketDetailDto({ caseObject = {}, client = null, ownerTeam = 
       total: Array.isArray(timeline) ? timeline.length : 0,
       latestAt: Array.isArray(timeline) && timeline.length ? timeline[0]?.timestamp || timeline[0]?.createdAt || null : null,
     },
+    sop: caseObject.sopSnapshot ? {
+      title: toStringOrNull(caseObject.sopSnapshot.title) || '',
+      body: toStringOrNull(caseObject.sopSnapshot.body) || '',
+      format: toStringOrNull(caseObject.sopSnapshot.format) || 'plain_text',
+      capturedAt: caseObject.sopSnapshot.capturedAt || null,
+    } : null,
     checklist: Array.isArray(caseObject.checklist) ? caseObject.checklist.map((item) => ({
       id: toStringOrNull(item?.id),
       title: toStringOrNull(item?.title),
