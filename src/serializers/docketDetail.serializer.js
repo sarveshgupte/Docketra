@@ -52,6 +52,13 @@ function serializeDocketDetailDto({ caseObject = {}, client = null, ownerTeam = 
       total: Array.isArray(timeline) ? timeline.length : 0,
       latestAt: Array.isArray(timeline) && timeline.length ? timeline[0]?.timestamp || timeline[0]?.createdAt || null : null,
     },
+    checklist: Array.isArray(caseObject.checklist) ? caseObject.checklist.map((item) => ({
+      id: toStringOrNull(item?.id),
+      title: toStringOrNull(item?.title),
+      required: Boolean(item?.required),
+      completed: Boolean(item?.completed),
+      sortOrder: Number.isFinite(Number(item?.sortOrder)) ? Number(item.sortOrder) : 0,
+    })) : [],
   };
 }
 

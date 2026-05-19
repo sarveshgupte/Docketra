@@ -24,6 +24,19 @@ const normalizeDeadlineRule = (input = {}) => {
   };
 };
 
+const normalizeChecklistTemplate = (items = []) => {
+  if (!Array.isArray(items)) return [];
+  return items.map((item, index) => ({
+    id: String(item?.id || new mongoose.Types.ObjectId()).trim(),
+    title: String(item?.title || '').trim(),
+    description: typeof item?.description === 'string' ? item.description.trim() : '',
+    required: item?.required === true,
+    sortOrder: Number.isFinite(Number(item?.sortOrder)) ? Number(item.sortOrder) : index,
+    defaultAssigneeXID: item?.defaultAssigneeXID ? String(item.defaultAssigneeXID).trim() : undefined,
+    dueOffsetDays: item?.dueOffsetDays === undefined ? undefined : Number(item.dueOffsetDays),
+  }));
+};
+
 /**
  * Category Controller for Admin-Managed Categories
  * 
@@ -323,7 +336,7 @@ const toggleCategoryStatus = async (req, res) => {
 const addSubcategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, defaultSlaDays = 0, workbasketId, deadlineRule } = req.body;
+    const { name, defaultSlaDays = 0, workbasketId, deadlineRule, checklistTemplate } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -382,6 +395,7 @@ const addSubcategory = async (req, res) => {
       workbasketId: workbasket._id,
       isActive: true,
       defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
+      checklistTemplate: normalizeChecklistTemplate(checklistTemplate || []),
     });
     
     await category.save();
@@ -418,7 +432,7 @@ const addSubcategory = async (req, res) => {
 const updateSubcategory = async (req, res) => {
   try {
     const { id, subcategoryId } = req.params;
-    const { name, defaultSlaDays, workbasketId, deadlineRule } = req.body;
+    const { name, defaultSlaDays, workbasketId, deadlineRule, checklistTemplate } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -513,6 +527,9 @@ const updateSubcategory = async (req, res) => {
     }
     if (typeof deadlineRule !== 'undefined') {
       subcategory.deadlineRule = normalizeDeadlineRule(deadlineRule);
+    }
+    if (typeof checklistTemplate !== 'undefined') {
+      subcategory.checklistTemplate = normalizeChecklistTemplate(checklistTemplate);
     }
     await category.save();
     await safeLogCategoryMutation(req, {

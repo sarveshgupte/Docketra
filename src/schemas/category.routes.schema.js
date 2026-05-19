@@ -10,6 +10,17 @@ const deadlineRuleSchema = z.object({
   allowManualOverride: z.boolean().optional(),
 }).optional();
 
+const checklistTemplateItemSchema = z.object({
+  id: nonEmptyString,
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().max(1000).optional(),
+  required: z.boolean().optional(),
+  sortOrder: z.coerce.number().int().min(0).optional(),
+  defaultAssigneeXID: z.string().trim().min(1).max(120).optional(),
+  dueOffsetDays: z.coerce.number().int().min(0).optional(),
+});
+
+const checklistTemplateSchema = z.array(checklistTemplateItemSchema).optional();
 
 
 module.exports = {
@@ -57,6 +68,7 @@ module.exports = {
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
       deadlineRule: deadlineRuleSchema,
+      checklistTemplate: checklistTemplateSchema,
     }).passthrough(),
   },
   'PUT /:id/subcategories/:subcategoryId': {
@@ -70,6 +82,7 @@ module.exports = {
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
       deadlineRule: deadlineRuleSchema,
+      checklistTemplate: checklistTemplateSchema,
     }).passthrough(),
   },
   'PATCH /:id/subcategories/:subcategoryId/status': {

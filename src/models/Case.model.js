@@ -224,6 +224,23 @@ const caseSchema = new mongoose.Schema({
     required: [true, 'Subcategory is required'],
     trim: true,
   },
+  checklist: {
+    type: [{
+      _id: false,
+      id: { type: String, required: true, trim: true },
+      templateItemId: { type: String, trim: true, default: null },
+      title: { type: String, required: true, trim: true, maxlength: 200 },
+      description: { type: String, trim: true, maxlength: 1000, default: '' },
+      required: { type: Boolean, default: false },
+      completed: { type: Boolean, default: false },
+      completedAt: { type: Date, default: null },
+      completedByXID: { type: String, trim: true, default: null },
+      assignedToXID: { type: String, trim: true, default: null },
+      dueDate: { type: Date, default: null },
+      sortOrder: { type: Number, min: 0, default: 0 },
+    }],
+    default: [],
+  },
 
   /**
    * Optional work type taxonomy (firm-admin managed).
