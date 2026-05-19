@@ -1057,6 +1057,46 @@ const storageUsage = async (req, res) => {
     const usedBytes = files.reduce((acc, file) => acc + Number(file.size || 0), 0);
     return res.json({ provider: state.canonicalProvider, providerMode: state.mode, quotaAvailable: false, usedBytes, totalFiles: files.length });
   } catch (error) {
+    try {
+      const ownershipFirmId = await resolveOwnershipFirmIdForRead(req);
+      if (ownershipFirmId) {
+        const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig').lean();
+        const state = resolveFirmStorageState(firm);
+        const errorMessage = String(error?.message || '').toLowerCase();
+        const quotaUnavailableForConnectedProvider = !state?.isManaged
+          && state?.canonicalProvider === 'google_drive'
+          && (errorMessage.includes('storagequota')
+            || errorMessage.includes('insufficient')
+            || errorMessage.includes('quota')
+            || errorMessage.includes('about.get'));
+
+        if (quotaUnavailableForConnectedProvider) {
+          log.warn('[STORAGE]', {
+            event: 'usage_quota_unavailable',
+            tenantId: req.firmId,
+            provider: state.canonicalProvider,
+            providerMode: state.mode,
+            message: error.message,
+          });
+          return res.json({
+            provider: state.canonicalProvider,
+            providerMode: state.mode,
+            status: state.connectionStatus,
+            connectionStatus: state.connectionStatus,
+            quotaAvailable: false,
+            managedFallback: false,
+            message: 'Storage quota is not available for this Drive account.',
+            lastCheckedAt: new Date().toISOString(),
+          });
+        }
+      }
+    } catch (fallbackError) {
+      log.warn('[STORAGE]', {
+        event: 'usage_recovery_fallback_failed',
+        tenantId: req.firmId,
+        message: fallbackError.message,
+      });
+    }
     log.error('[STORAGE]', { event: 'usage_failed', tenantId: req.firmId, message: error.message });
     return res.status(500).json({ error: 'usage_failed', ...(isProduction() ? {} : { message: error.message }) });
   }
