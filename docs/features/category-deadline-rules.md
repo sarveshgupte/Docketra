@@ -2,10 +2,17 @@
 
 This feature adds configurable subcategory-level deadline defaults in Category Management.
 
-- Rules are stored under `subcategory.deadlineRule`.
+- Rules are stored under `subcategory.deadlineRule` (not at category level).
 - Rule modes: `NONE`, `TAT_DAYS`, `FIXED_DAY_NEXT_MONTH`, `MANUAL_DATE_REQUIRED`, `EVENT_DATE_OFFSET`.
-- During docket creation, selected subcategory rules can calculate `dueDate` and influence `slaDueAt` behavior via existing flow.
-- Existing categories/subcategories without `deadlineRule` continue to work (defaults to `NONE`).
+- During docket creation, selected subcategory rules calculate default `dueDate`.
+- Manual due-date behavior:
+  - `allowManualOverride=true` + request `dueDate` => manual due date is preserved.
+  - `allowManualOverride=false` => rule-derived due date wins.
+  - `MANUAL_DATE_REQUIRED` requires `dueDate`.
+  - `EVENT_DATE_OFFSET` requires `eventDate`.
+- Missing required inputs return clear `400` validation errors.
+- `slaDueAt` remains SLA-service driven first; when SLA service does not resolve a due date, it falls back to resolved `dueDate`.
+- Existing categories/subcategories without `deadlineRule` continue to work (`mode` defaults to `NONE`).
 
 ## Notes
 

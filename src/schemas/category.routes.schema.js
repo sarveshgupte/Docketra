@@ -1,3 +1,5 @@
+const { z, nonEmptyString, objectIdString, queryBoolean } = require('./common');
+
 const deadlineRuleSchema = z.object({
   mode: z.enum(['NONE', 'TAT_DAYS', 'FIXED_DAY_NEXT_MONTH', 'MANUAL_DATE_REQUIRED', 'EVENT_DATE_OFFSET']).optional(),
   tatDays: z.coerce.number().min(0).optional(),
@@ -8,7 +10,7 @@ const deadlineRuleSchema = z.object({
   allowManualOverride: z.boolean().optional(),
 }).optional();
 
-const { z, nonEmptyString, objectIdString, queryBoolean } = require('./common');
+
 
 module.exports = {
   'GET /': {
@@ -30,8 +32,6 @@ module.exports = {
       name: nonEmptyString,
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
-      deadlineRule: deadlineRuleSchema,
-      deadlineRule: deadlineRuleSchema,
     }).passthrough(),
   },
   'PUT /:id': {
@@ -40,7 +40,6 @@ module.exports = {
       name: nonEmptyString.optional(),
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
-      deadlineRule: deadlineRuleSchema,
     }).passthrough(),
   },
   'PATCH /:id/status': {
