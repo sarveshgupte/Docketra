@@ -25,13 +25,13 @@ const NAV_BLUEPRINT = [
     items: [
       {
         id: 'docket-workbench',
-        label: 'Workbaskets',
+        label: 'Work',
         icon: icons.work,
-        route: (firmSlug) => ROUTES.GLOBAL_WORKLIST(firmSlug),
+        route: (firmSlug) => ROUTES.TASK_MANAGER(firmSlug),
         command: {
-          id: 'go-workbaskets-overview',
-          label: 'Go to Workbaskets',
-          description: 'Open workbasket queues and daily intake navigation.',
+          id: 'go-docket-workbench',
+          label: 'Go to Work',
+          description: 'Open daily work execution queues and workspace context.',
           shortcut: 'Alt+Shift+T',
         },
       },
