@@ -1,11 +1,10 @@
 # PR History: Queue pages polish
 
 ## Summary
-Polished the four high-traffic queue surfaces into a consistent operations-console layout:
+Polished the three high-traffic execution queue surfaces into a consistent operations-console layout:
 - Workbaskets (shared/team intake queue)
 - My Worklist (personal execution queue)
 - QC Worklist (quality review queue)
-- All Dockets (oversight/list registry)
 
 ## What changed
 - Added consistent queue summary strips using real data and loading placeholders.

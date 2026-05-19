@@ -1540,8 +1540,11 @@ select:focus-visible {
   white-space: nowrap;
 }
 
-.queue-table td:nth-child(3),
-.queue-table td:nth-child(7) {
+.queue-table td {
+  overflow-wrap: anywhere;
+}
+
+.queue-table .queue-cell-wrap {
   white-space: normal;
 }
 

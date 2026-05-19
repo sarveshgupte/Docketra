@@ -2,7 +2,7 @@
 
 
 ## Polished queue workspaces
-- Reworked Workbaskets, My Worklist, QC Worklist, and All Dockets into clearer operational queue layouts
+- Reworked Workbaskets, My Worklist, and QC Worklist into clearer operational queue layouts
 - Improved queue summaries, filters, table density, and row action hierarchy
 - Added clearer empty, loading, and error states for queue pages
 - Preserved existing route guards and queue access behavior

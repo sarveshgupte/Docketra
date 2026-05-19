@@ -72,7 +72,7 @@ export const PlatformWorkbasketsPage = () => {
     const escalated = rows.filter((item) => String(item.status || '').toUpperCase() === 'ESCALATED').length;
     return [
       { label: 'Available', value: isLoading ? '…' : available },
-      { label: 'Assigned to me', value: isLoading ? '…' : assigned },
+      { label: 'Assigned', value: isLoading ? '…' : assigned },
       { label: 'Pending', value: isLoading ? '…' : pending },
       { label: 'Escalated', value: isLoading ? '…' : escalated },
     ];
@@ -173,7 +173,7 @@ export const PlatformWorkbasketsPage = () => {
                 </button>
               </td>
               <td>{r.clientName || r.clientId || '-'}</td>
-              <td>{[r.category || '-', r.subcategory || '-'].join(' / ')}</td>
+              <td className="queue-cell-wrap">{[r.category || '-', r.subcategory || '-'].join(' / ')}</td>
               <td><StatusBadge status={r.status} label={formatStatusLabel(r.status)} /></td>
               <td>{r.workbasketName || r.queueName || 'Workbasket'}</td>
               <td>{formatDateLabel(r.updatedAt || r.createdAt)}</td>
@@ -187,7 +187,7 @@ export const PlatformWorkbasketsPage = () => {
             </tr>
           ))}
           loading={isLoading}
-          error={isError ? 'Unable to load workbaskets right now.' : ''}
+          error=""
           onRetry={() => void refetch()}
           hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL'}
           emptyLabel="No dockets are waiting in your workbaskets."

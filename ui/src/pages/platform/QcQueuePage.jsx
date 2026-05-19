@@ -206,7 +206,7 @@ export const PlatformQcQueuePage = () => {
                 </button>
               </td>
               <td>{r.clientName || r.clientId || '-'}</td>
-              <td>{[r.category || '-', r.subcategory || '-'].join(' / ')}</td>
+              <td className="queue-cell-wrap">{[r.category || '-', r.subcategory || '-'].join(' / ')}</td>
               <td><StatusBadge status={r.qcStatus || r.status || 'IN_QC'} label={formatStatusLabel(r.qcStatus || r.status || 'IN_QC')} /></td>
               <td>{r.assigneeName || r.assignedTo || '-'}</td>
               <td>{formatDateLabel(r.updatedAt || r.createdAt)}</td>
@@ -223,7 +223,7 @@ export const PlatformQcQueuePage = () => {
             </tr>
           ))}
           loading={isLoading}
-          error={isError ? 'Unable to load QC workbaskets right now.' : ''}
+          error=""
           onRetry={() => void refetch()}
           hasActiveFilters={Boolean(search.trim()) || assigneeFilter !== 'ALL'}
           emptyLabel="No dockets are waiting for QC review."
