@@ -9,9 +9,11 @@ Active, logged-in firm users should remain signed in during normal usage.
 
 The workspace inactivity tracker updates `lastActiveAt` for normal app usage including:
 - mouse movement/click/keyboard/touch/scroll/focus
-- route navigation events
-- API activity/refetches
+- user-initiated route navigation events
+- explicitly user-initiated API activity (not background keepalive/refetch)
 - tab visibility/focus return when still authenticated
+
+Background keepalive/profile refresh and passive refetch traffic do **not** extend idle time.
 
 ## Timeout behavior
 
