@@ -1585,7 +1585,9 @@ select:focus-visible {
   gap: 10px;
 }
 .dashboard-quick-actions .panel,
-.dashboard-attention-list .panel,
+.dashboard-attention-list .panel {
+  height: 100%;
+}
 
 .settings-form-split {
   display: grid;
