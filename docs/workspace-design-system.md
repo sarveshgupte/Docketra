@@ -159,6 +159,40 @@ Use `<StatGrid>` for KPI strip panels. Each card shows a label (uppercase), a la
 
 ---
 
+
+## Queue Workspace Layout (Workbaskets / My Worklist / QC Worklist / All Dockets)
+
+Use a consistent operational layout on queue-heavy pages:
+
+1. **Status message stack (optional)**
+   - Show API failures, background refresh notices, and action success messages.
+   - Avoid duplicate top-level + table-level error messages.
+
+2. **Queue summary strip**
+   - Use `StatGrid` for 3–5 compact KPIs.
+   - Use only real data; while loading, render `'…'` placeholders.
+
+3. **Operational filter toolbar**
+   - Use `FilterBar` for search + queue filters.
+   - Include a clear filters action and a visible refresh action.
+   - Controls must include accessible labels (`aria-label`) and active filters must not rely on color only.
+
+4. **Queue table**
+   - Use `DataTable` from `PlatformShared.jsx` with `compact` density for high-traffic queues.
+   - Prefer column order: Docket ID, Client, Category/Subcategory, Status, Owner/Queue, Due/Updated, Actions.
+   - Use `StatusBadge` for statuses and compact grouped row actions.
+
+5. **Empty / loading / error language**
+   - Use queue-specific copy for empty states.
+   - Distinguish unfiltered empty states from filtered empty states with `emptyLabel` + `emptyLabelFiltered`.
+   - Provide one clear retry path when table data fails.
+
+6. **Row action hierarchy**
+   - Keep row actions compact and execution-focused by queue type.
+   - My Worklist: execution actions (Send to QC, Pend, Resolve).
+   - QC Worklist: review actions (Pass, Send back/Correct, Fail).
+   - All Dockets: oversight/list-first actions (Open/detail), not pull-queue language.
+
 ## DataTable
 
 Use `<DataTable>` from `PlatformShared.jsx` for all tabular data.
