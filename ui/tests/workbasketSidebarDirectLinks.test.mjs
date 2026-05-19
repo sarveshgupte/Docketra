@@ -12,15 +12,17 @@ const shellSource = readSrc('src/components/platform/PlatformShell.jsx');
 const guardedRouteSource = readSrc('src/components/auth/ProtectedRoute.jsx');
 const protectedRoutesSource = readSrc('src/routes/ProtectedRoutes.jsx');
 
+assert.match(routesSource, /WORKLIST:\s*\(firmSlug\)\s*=>\s*`\/app\/firm\/\$\{firmSlug\}\/worklist`/, 'Routes should expose My Worklist route');
 assert.match(routesSource, /WORKBASKET_DETAIL:\s*\(firmSlug,\s*workbasketId\)\s*=>\s*`\/app\/firm\/\$\{firmSlug\}\/workbaskets\/\$\{workbasketId\}`/, 'Routes should expose direct workbasket detail route');
 assert.match(routesSource, /QC_WORKBASKET_DETAIL:\s*\(firmSlug,\s*workbasketId\)\s*=>\s*`\/app\/firm\/\$\{firmSlug\}\/qc-workbaskets\/\$\{workbasketId\}`/, 'Routes should expose direct QC workbasket detail route');
 
-assert.match(navSource, /assignedWorkbaskets\.slice\(0,\s*4\)/, 'Sidebar should cap direct workbasket links for minimal navigation');
-assert.match(navSource, /assignedQcWorkbaskets\.slice\(0,\s*4\)/, 'Sidebar should cap direct QC workbasket links for minimal navigation');
-assert.match(navSource, /showQcWorkbaskets\s*=\s*hasAtLeastRole\(normalizedRole,\s*'MANAGER'\)\s*\|\|\s*assignedQcWorkbaskets\.length\s*>\s*0/, 'QC link visibility should be manager+ or explicitly assigned');
+assert.doesNotMatch(navSource, /assignedWorkbaskets\.slice\(0,\s*4\)/, 'Sidebar should show all assigned workbasket links');
+assert.doesNotMatch(navSource, /assignedQcWorkbaskets\.slice\(0,\s*4\)/, 'Sidebar should show all assigned QC workbasket links');
+assert.match(navSource, /label:\s*'My Worklist'[\s\S]*to:\s*ROUTES\.WORKLIST\(firmSlug\)/, 'Daily Operations should always include My Worklist');
+assert.match(navSource, /showQcWorkbaskets\s*=\s*hasAtLeastRole\(normalizedRole,\s*'MANAGER'\)\s*\|\|\s*assignedQcWorkbaskets\.length\s*>\s*0/, 'QC worklist visibility should be manager+ or explicitly assigned');
+assert.match(navSource, /label:\s*'QC Worklist'[\s\S]*to:\s*ROUTES\.QC_QUEUE\(firmSlug\)/, 'Daily Operations should include QC Worklist entry when permitted');
 assert.match(navSource, /ROUTES\.WORKBASKET_DETAIL\(/, 'Sidebar should link directly to workbasket detail route');
 assert.match(navSource, /ROUTES\.QC_WORKBASKET_DETAIL\(/, 'Sidebar should link directly to QC workbasket detail route');
-assert.match(navSource, /section\.items\.find\(\(item\)\s*=>\s*item\.id\s*===\s*'docket-workbench'\),\s*\.\.\.directWorkbasketItems,\s*\.\.\.directQcWorkbasketItems/, 'Daily Operations sidebar should prioritize direct assigned queues under Work instead of generic/dashboard-first flow');
 
 assert.match(shellSource, /workbaskets:\s*user\?\.workbaskets,\s*qcWorkbaskets:\s*user\?\.qcWorkbaskets/, 'Platform shell should pass assigned workbasket/QC scope into navigation resolver');
 

@@ -1,6 +1,14 @@
 # What's New
 
 
+## May 2026: Clearer Daily Operations navigation
+
+- Added My Worklist as a dedicated sidebar queue.
+- Grouped assigned Workbaskets and QC Worklists more clearly.
+- Shows all linked workbaskets instead of hiding extras.
+- Improved queue navigation for users with multiple team or QC assignments.
+
+
 ## May 2026: Landing page navigation anchor mapping fix
 
 - Fixed landing page navigation anchors so Why, Product, Workflow, Pilot readiness, and Trust scroll to distinct sections.
