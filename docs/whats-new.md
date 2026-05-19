@@ -1,5 +1,11 @@
 # What's New
 
+## 2026-05-19 — Polished settings and admin pages
+- Improved Work Settings and AI Settings layout consistency.
+- Made settings forms and action areas easier to scan.
+- Clarified AI configuration messaging without exposing sensitive data.
+- Preserved existing permissions, route guards, and settings behavior.
+
 
 ## Polished queue workspaces
 - Reworked Workbaskets, My Worklist, and QC Worklist into clearer operational queue layouts
@@ -877,3 +883,4 @@
 - Made firm, work, team, storage, and AI settings easier to scan.
 - Improved card alignment, spacing, and action hierarchy.
 - Kept audit reports accessible from Settings.
+
