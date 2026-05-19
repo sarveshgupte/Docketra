@@ -31,6 +31,8 @@ const createCaseBody = z.object({
   assignedTo: xidString.optional(),
   employeeXID: xidString.optional(),
   slaDueDate: z.coerce.date().optional(),
+  dueDate: z.coerce.date().optional(),
+  eventDate: z.coerce.date().optional(),
   forceCreate: z.boolean().optional(),
   clientData: z.record(z.any()).optional(),
   payload: z.record(z.any()).optional(),

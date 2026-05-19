@@ -59,6 +59,19 @@ const subcategorySchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  deadlineRule: {
+    mode: {
+      type: String,
+      enum: ['NONE', 'TAT_DAYS', 'FIXED_DAY_NEXT_MONTH', 'MANUAL_DATE_REQUIRED', 'EVENT_DATE_OFFSET'],
+      default: 'NONE',
+    },
+    tatDays: { type: Number, min: 0 },
+    fixedDayOfMonth: { type: Number, min: 1, max: 31 },
+    eventOffsetDays: { type: Number },
+    label: { type: String, trim: true, default: '' },
+    note: { type: String, trim: true, default: '' },
+    allowManualOverride: { type: Boolean, default: true },
+  },
 }, {
   _id: false, // Disable automatic _id generation for subdocuments
 });
@@ -126,6 +139,21 @@ const categorySchema = new mongoose.Schema({
  */
 categorySchema.index({ isActive: 1 });
 categorySchema.index({ firmId: 1, name: 1 }, { unique: true });
+
+subcategorySchema.pre('validate', function validateDeadlineRule(next) {
+  const mode = this?.deadlineRule?.mode || 'NONE';
+  const rule = this?.deadlineRule || {};
+  if (mode === 'TAT_DAYS' && (!Number.isFinite(rule.tatDays) || Number(rule.tatDays) < 0)) {
+    return next(new Error('deadlineRule.tatDays must be >= 0 for TAT_DAYS'));
+  }
+  if (mode === 'FIXED_DAY_NEXT_MONTH' && (!Number.isInteger(rule.fixedDayOfMonth) || rule.fixedDayOfMonth < 1 || rule.fixedDayOfMonth > 31)) {
+    return next(new Error('deadlineRule.fixedDayOfMonth must be 1-31 for FIXED_DAY_NEXT_MONTH'));
+  }
+  if (mode === 'EVENT_DATE_OFFSET' && !Number.isFinite(rule.eventOffsetDays)) {
+    return next(new Error('deadlineRule.eventOffsetDays is required for EVENT_DATE_OFFSET'));
+  }
+  return next();
+});
 
 categorySchema.plugin(softDeletePlugin);
 
