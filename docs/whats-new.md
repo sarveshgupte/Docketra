@@ -845,3 +845,10 @@
 - Improved worklist loading and retry messaging
 - Empty assigned docket queues now show a clean empty state instead of an error
 - Added coverage for employee worklist loading behavior
+
+## May 2026: Cleaner workspace settings
+
+- Reworked Settings into a balanced 2x2 control hub.
+- Made firm, work, team, storage, and AI settings easier to scan.
+- Improved card alignment, spacing, and action hierarchy.
+- Kept audit reports accessible from Settings.
