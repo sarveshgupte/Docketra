@@ -24,6 +24,25 @@ const normalizeDeadlineRule = (input = {}) => {
   };
 };
 
+const normalizeSubcategorySop = (input = {}, { actorXID } = {}) => {
+  if (!input || typeof input !== 'object') {
+    return { title: '', body: '', format: 'plain_text', lastUpdatedAt: null, lastUpdatedByXID: null };
+  }
+
+  const title = typeof input.title === 'string' ? input.title.trim() : '';
+  const body = typeof input.body === 'string' ? input.body : '';
+  const format = input.format === 'markdown' ? 'markdown' : 'plain_text';
+  const hasContent = Boolean(title || body);
+
+  return {
+    title,
+    body,
+    format,
+    lastUpdatedAt: hasContent ? new Date() : null,
+    lastUpdatedByXID: hasContent && actorXID ? String(actorXID).trim() : null,
+  };
+};
+
 const normalizeChecklistTemplate = (items = []) => {
   if (!Array.isArray(items)) return [];
   return items.map((item, index) => ({
@@ -336,7 +355,7 @@ const toggleCategoryStatus = async (req, res) => {
 const addSubcategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, defaultSlaDays = 0, workbasketId, deadlineRule, checklistTemplate } = req.body;
+    const { name, defaultSlaDays = 0, workbasketId, deadlineRule, checklistTemplate, sop } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -397,6 +416,7 @@ const addSubcategory = async (req, res) => {
       defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
       ...(typeof deadlineRule !== 'undefined' ? { deadlineRule: normalizeDeadlineRule(deadlineRule) } : {}),
       checklistTemplate: normalizeChecklistTemplate(checklistTemplate || []),
+      ...(typeof sop !== 'undefined' ? { sop: normalizeSubcategorySop(sop, { actorXID: req.user?.xID }) } : {}),
     });
     
     await category.save();
@@ -433,7 +453,7 @@ const addSubcategory = async (req, res) => {
 const updateSubcategory = async (req, res) => {
   try {
     const { id, subcategoryId } = req.params;
-    const { name, defaultSlaDays, workbasketId, deadlineRule, checklistTemplate } = req.body;
+    const { name, defaultSlaDays, workbasketId, deadlineRule, checklistTemplate, sop } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -531,6 +551,9 @@ const updateSubcategory = async (req, res) => {
     }
     if (typeof checklistTemplate !== 'undefined') {
       subcategory.checklistTemplate = normalizeChecklistTemplate(checklistTemplate);
+    }
+    if (typeof sop !== 'undefined') {
+      subcategory.sop = normalizeSubcategorySop(sop, { actorXID: req.user?.xID });
     }
     await category.save();
     await safeLogCategoryMutation(req, {

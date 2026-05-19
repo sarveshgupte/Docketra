@@ -14,6 +14,15 @@ const softDeletePlugin = require('../utils/softDelete.plugin');
  * - Categories in use by cases cannot be deleted
  */
 
+
+const subcategorySopSchema = new mongoose.Schema({
+  title: { type: String, trim: true, maxlength: 200, default: '' },
+  body: { type: String, maxlength: 10000, default: '' },
+  format: { type: String, enum: ['plain_text', 'markdown'], default: 'plain_text' },
+  lastUpdatedAt: { type: Date, default: null },
+  lastUpdatedByXID: { type: String, trim: true, default: null },
+}, { _id: false });
+
 const subcategorySchema = new mongoose.Schema({
   /**
    * Subcategory ID (auto-generated)
@@ -71,6 +80,10 @@ const subcategorySchema = new mongoose.Schema({
     label: { type: String, trim: true, default: '' },
     note: { type: String, trim: true, default: '' },
     allowManualOverride: { type: Boolean, default: true },
+  },
+  sop: {
+    type: subcategorySopSchema,
+    default: () => ({}),
   },
   checklistTemplate: {
     type: [{
