@@ -21,6 +21,10 @@ export const CaseDetailSummaryHeader = ({
     const employeeLabel = caseInfo?.employeeSnapshot?.xID
       ? `${caseInfo.employeeSnapshot.xID} - ${caseInfo.employeeSnapshot.name || 'Employee'}`
       : (caseInfo?.employeeXID || null);
+    const relatedEmployeeUser = caseInfo?.relatedEmployeeUser || null;
+    const relatedEmployeeUserLabel = relatedEmployeeUser
+      ? (relatedEmployeeUser.name || relatedEmployeeUser.email || relatedEmployeeUser.xID || 'User')
+      : null;
     return (
   <section className="case-card" aria-label="Docket summary header">
     <div className="case-card__heading">
@@ -48,6 +52,7 @@ export const CaseDetailSummaryHeader = ({
         </span>
       </div>
       <div className="field-group min-w-0"><span className="field-label">Assignee / Owner</span><span className="field-value text-sm break-words">{assigneeLabel}</span></div>
+      {relatedEmployeeUserLabel ? <div className="field-group min-w-0"><span className="field-label">Related employee/user</span><span className="field-value text-sm break-words">{relatedEmployeeUserLabel}{relatedEmployeeUser?.xID || relatedEmployeeUser?.status ? ` · ${relatedEmployeeUser?.xID || '—'} · ${relatedEmployeeUser?.status || 'Unknown'}` : ''}</span></div> : null}
       {employeeLabel ? <div className="field-group min-w-0"><span className="field-label">Employee</span><span className="field-value text-sm break-words">{employeeLabel}</span></div> : null}
       <div className="field-group min-w-0"><span className="field-label">Queue / Workbasket</span><span className="field-value text-sm break-words">{queueLabel}</span></div>
       <div className="field-group min-w-0"><span className="field-label">SLA / TAT</span><span className="field-value text-sm">{slaDaysLabel && slaDaysLabel !== '-' ? `${slaDaysLabel} day(s)` : 'Not configured'}</span></div>

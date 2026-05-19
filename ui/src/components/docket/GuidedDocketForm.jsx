@@ -29,6 +29,7 @@ const defaultForm = {
   priority: 'medium',
   assignedTo: '',
   employeeXID: '',
+  relatedEmployeeUserId: '',
   idempotencyKey: '',
 };
 
@@ -72,6 +73,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
       || formData.subcategoryId
       || formData.assignedTo
       || formData.clientId
+      || formData.relatedEmployeeUserId
     );
   }, [formData]);
 
@@ -89,7 +91,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
       const [categoryResponse, workbasketResponse, usersResponse, clientResponse] = await Promise.allSettled([
           categoryService.getCategories(true),
           adminApi.listWorkbaskets({ activeOnly: true }),
-          adminApi.getUsers({ limit: 200, status: 'active' }),
+          adminApi.getUsers({ limit: 400 }),
           clientApi.getClients(true, true),
       ]);
       const nextErrors = {};
@@ -169,7 +171,9 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   const selectedSubcategory = subcategories.find((item) => item.id === formData.subcategoryId);
   const employeeContextEnabled = selectedSubcategory?.employeeContextEnabled === true;
   const activeUsers = users.filter((item) => item?.status === 'active' && item?.isActive !== false);
+  const relatedEmployeeUsers = users.filter((item) => String(item?.status || '').toLowerCase() !== 'deleted');
   const selectedEmployee = activeUsers.find((item) => item.xID === formData.employeeXID);
+  const selectedRelatedEmployeeUser = relatedEmployeeUsers.find((item) => String(item?._id || item?.id) === String(formData.relatedEmployeeUserId));
 
   useEffect(() => {
     if (employeeContextEnabled) return;
@@ -444,6 +448,20 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
             helpText="Leave empty to keep this docket in queue for assignment."
             options={[{ value: '', label: loading.users ? 'Loading users...' : 'Keep unassigned in workbasket' }, ...activeUsers.map((item) => ({ value: item.xID, label: `${item.xID} - ${item.name || item.email || 'User'}` }))]}
           />
+          <Select
+            label="Related employee/user"
+            value={formData.relatedEmployeeUserId}
+            onChange={(e) => updateField('relatedEmployeeUserId', e.target.value)}
+            disabled={loading.users}
+            helpText="Use this when the docket concerns a specific employee or user, such as payroll, HR, onboarding, offboarding, reimbursement, or employee-specific compliance. This does not change who is assigned to work on the docket."
+            options={[
+              { value: '', label: loading.users ? 'Loading users...' : 'Not applicable' },
+              ...relatedEmployeeUsers.map((item) => ({
+                value: item._id || item.id,
+                label: `${item.name || item.fullName || item.displayName || item.email || item.xID || 'User'} — ${String(item.status || 'active').replace(/^./, (c) => c.toUpperCase())}`,
+              })),
+            ]}
+          />
           {employeeContextEnabled ? (
             <Select
               label="Employee"
@@ -468,6 +486,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
           <p><strong>Workbasket:</strong> {(workbaskets.find((item) => item._id === formData.workbasketId)?.name) || '—'}</p>
           <p><strong>Priority:</strong> {formData.priority || 'medium'}</p>
           <p><strong>Assignee:</strong> {formData.assignedTo || 'Unassigned (workbasket queue)'}</p>
+          {formData.relatedEmployeeUserId ? <p><strong>Related employee/user:</strong> {selectedRelatedEmployeeUser ? `${selectedRelatedEmployeeUser.name || selectedRelatedEmployeeUser.fullName || selectedRelatedEmployeeUser.displayName || selectedRelatedEmployeeUser.email || selectedRelatedEmployeeUser.xID || 'User'} · ${selectedRelatedEmployeeUser.xID || 'No xID'} · ${selectedRelatedEmployeeUser.status || 'active'}` : 'Selected user'}</p> : null}
           {formData.employeeXID ? <p><strong>Employee:</strong> {selectedEmployee ? `${selectedEmployee.xID} - ${selectedEmployee.name || selectedEmployee.email || 'User'}` : formData.employeeXID}</p> : null}
         </div>
       )}
