@@ -1,5 +1,17 @@
 const { z, nonEmptyString, objectIdString, queryBoolean } = require('./common');
 
+const deadlineRuleSchema = z.object({
+  mode: z.enum(['NONE', 'TAT_DAYS', 'FIXED_DAY_NEXT_MONTH', 'MANUAL_DATE_REQUIRED', 'EVENT_DATE_OFFSET']).optional(),
+  tatDays: z.coerce.number().min(0).optional(),
+  fixedDayOfMonth: z.coerce.number().int().min(1).max(31).optional(),
+  eventOffsetDays: z.coerce.number().optional(),
+  label: z.string().trim().optional(),
+  note: z.string().trim().optional(),
+  allowManualOverride: z.boolean().optional(),
+}).optional();
+
+
+
 module.exports = {
   'GET /': {
     query: z.object({
@@ -44,6 +56,7 @@ module.exports = {
       workbasketId: objectIdString,
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
+      deadlineRule: deadlineRuleSchema,
     }).passthrough(),
   },
   'PUT /:id/subcategories/:subcategoryId': {
@@ -56,6 +69,7 @@ module.exports = {
       workbasketId: objectIdString.optional(),
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
+      deadlineRule: deadlineRuleSchema,
     }).passthrough(),
   },
   'PATCH /:id/subcategories/:subcategoryId/status': {

@@ -1,6 +1,7 @@
 const log = require('../utils/log');
 const { normalizeWorkMode } = require('../utils/workType');
 const { isClientActive } = require('../utils/clientStatus');
+const { calculateDeadlineFromRule } = require('../domain/deadlines/calculateDeadlineFromRule');
 
 module.exports = (deps) => {
   const {
@@ -157,6 +158,8 @@ module.exports = (deps) => {
         subWorkTypeId,
         isInternal,
         employeeXID,
+        dueDate,
+        eventDate,
       } = req.body;
       const guidedInput = normalizeCreateInput(req.body);
       const requestedInternal = guidedInput?.isInternal ?? isInternal;
@@ -548,6 +551,42 @@ module.exports = (deps) => {
 
         const initialStatus = resolvedAssignee ? CaseStatus.ASSIGNED : CaseStatus.UNASSIGNED;
 
+        const manualDueDate = dueDate ? new Date(dueDate) : null;
+        const hasManualDueDate = manualDueDate && !Number.isNaN(manualDueDate.getTime());
+        const subcategoryDeadlineRule = subcategoryDoc?.deadlineRule || { mode: 'NONE', allowManualOverride: true };
+        let resolvedDueDate = hasManualDueDate ? manualDueDate : null;
+        if (!hasManualDueDate || subcategoryDeadlineRule.allowManualOverride !== true) {
+          try {
+            const deadline = calculateDeadlineFromRule({
+              rule: subcategoryDeadlineRule,
+              createdAt,
+              manualDueDate,
+              eventDate,
+            });
+            resolvedDueDate = deadline?.dueDate || resolvedDueDate;
+            if (deadline?.source === 'TAT_DAYS' && Number.isFinite(subcategoryDeadlineRule.tatDays)) {
+              tatDaysSnapshot = Number(subcategoryDeadlineRule.tatDays);
+            }
+          } catch (error) {
+            if (error?.code === 'DEADLINE_VALIDATION_ERROR') {
+              return res.status(400).json({ success: false, message: error.message, ...responseMeta });
+            }
+            throw error;
+          }
+        }
+
+        if (!resolvedDueDate) {
+          resolvedDueDate = computeDeadlineFromTatDays(tatDaysSnapshot) || (defaultSlaDays > 0 ? (() => {
+            const due = new Date();
+            due.setUTCDate(due.getUTCDate() + defaultSlaDays);
+            return due;
+          })() : undefined);
+        }
+
+        if (!slaState.slaDueAt && resolvedDueDate) {
+          slaState.slaDueAt = resolvedDueDate;
+        }
+
         const newCase = new Case({
           title: normalizedTitle,
           description: normalizedDescription,
@@ -600,11 +639,7 @@ module.exports = (deps) => {
           subWorkTypeId: selectedSubWorkType?._id || null,
           tatDaysSnapshot,
           slaDays: Math.max(0, Number(tatDaysSnapshot || defaultSlaDays || 0)),
-          dueDate: computeDeadlineFromTatDays(tatDaysSnapshot) || (defaultSlaDays > 0 ? (() => {
-            const due = new Date();
-            due.setUTCDate(due.getUTCDate() + defaultSlaDays);
-            return due;
-          })() : undefined),
+          dueDate: resolvedDueDate,
         });
         
         step('before case create');
