@@ -1,5 +1,11 @@
 # What's New
 
+## Polished workspace shell
+- Improved topbar hierarchy and spacing
+- Made sidebar grouping and active states clearer
+- Refined command search, storage badge, and user menu alignment
+- Improved responsive shell behavior without changing route access
+
 ## Workspace UI foundation cleanup
 - Strengthened shared layout, card, table, and state primitives
 - Improved consistency for empty, loading, and error states

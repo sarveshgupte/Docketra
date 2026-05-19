@@ -92,16 +92,32 @@ Active highlighting uses `isNavItemActive()` from `src/utils/navActive.js`.
 
 ### Collapsed sidebar
 
-When collapsed (width: 56px), the sidebar shows only icons. Labels are hidden. Section titles are hidden. Collapse is toggled via the chevron button in the brand block.
+When collapsed (compact rail), the sidebar shows only icons and keeps route access unchanged. Labels and section titles are hidden, but links must keep accessible labels/tooltips. Collapse is toggled via the chevron button in the brand block. Keep focus-visible and aria-current behavior unchanged.
 
 ---
 
 ## Topbar
 
-The topbar is sticky at `top: 0`, `z-index: 30`, height `60px`. It contains:
+The topbar is sticky at `top: 0`, `z-index: 30`, and should stay compact but readable on 1366/1024 widths. It contains a strict hierarchy:
 
-1. Left: `moduleLabel` (tiny uppercase), `title` (page heading), `subtitle` (muted), breadcrumb
-2. Right: command palette trigger, page actions, user pill
+1. Left rail (context): `moduleLabel`, `title`, optional `subtitle`, and concise breadcrumbs when nested context is helpful.
+2. Right rail (actions): command/search trigger, page actions, storage badge, and user menu.
+
+### Breadcrumbs
+- Keep breadcrumbs quiet and contextual; avoid generic `Workspace / <Page>` on landing pages.
+- Show breadcrumbs when they add orientation value (detail/nested pages).
+- Preserve breadcrumb accessibility labeling.
+
+### Action rail
+- Keep action controls aligned to common control height and spacing rhythm.
+- Command trigger should read as search/command entry, not a generic button.
+- Page-specific actions should remain visually primary relative to status chrome.
+- Storage badge must remain visible but low-emphasis compared with page actions.
+
+### Responsive shell behavior
+- 1366px: no topbar overflow, title and command trigger remain readable.
+- 1024px: action rail may wrap, but command trigger and account menu must remain visible.
+- Mobile: keep essential actions reachable and preserve sidebar navigation usability without route/permission changes.
 
 ---
 
