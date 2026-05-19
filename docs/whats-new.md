@@ -1,5 +1,11 @@
 # What's New
 
+## 2026-05-19 — Simplified dashboard command center
+- Reworked the dashboard around next actions, operational health, and attention items.
+- Reduced generic module clutter and improved daily queue shortcuts.
+- Kept dashboard metrics grounded in existing data.
+- Preserved onboarding/setup guidance without adding fake activity.
+
 ## 2026-05-19 — Polished settings and admin pages
 - Improved Work Settings and AI Settings layout consistency.
 - Made settings forms and action areas easier to scan.

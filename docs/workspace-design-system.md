@@ -157,6 +157,14 @@ Use `<StatGrid>` for KPI strip panels. Each card shows a label (uppercase), a la
 - Do not hardcode fake numbers.
 - Keep labels short (≤ 3 words).
 
+### Dashboard command-center rules
+
+- The Dashboard must answer: **what needs attention now**, **current workload/health**, and **where to go next**.
+- Keep dashboard KPI cards compact with **4–6 max** and source them only from existing backend metrics.
+- Do not add fake metrics, fake counts, or synthetic activity feed items.
+- Keep quick actions focused on daily operations only (New Docket, My Worklist, Workbaskets, QC Worklist, All Dockets; include Clients/Settings only when role access applies).
+- Avoid generic module-launchpad sections that duplicate sidebar navigation.
+
 ---
 
 
