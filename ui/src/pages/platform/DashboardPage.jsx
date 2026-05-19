@@ -89,7 +89,7 @@ export const PlatformDashboardPage = () => {
       >
         {nextStep ? (
           <div className="panel">
-            <p className="section-title" style={{ marginBottom: 6 }}>Next recommended action: {nextStep.title}</p>
+            <p className="section-title dashboard-next-step-title">Next recommended action: {nextStep.title}</p>
             <p className="muted">{nextStep.description || nextStep.explanation}</p>
             {nextStep.route ? <Link to={nextStep.route}>{nextStep.actionLabel}</Link> : null}
           </div>
@@ -97,7 +97,7 @@ export const PlatformDashboardPage = () => {
           <p className="muted">Setup checklist is complete. Keep momentum by creating and assigning live dockets.</p>
         )}
         {pendingSteps.length > 1 ? (
-          <ul className="muted" style={{ marginTop: 10, paddingLeft: 18 }}>
+          <ul className="muted dashboard-next-step-list">
             {pendingSteps.slice(1, 4).map((step) => <li key={step.id}>{step.title}</li>)}
           </ul>
         ) : null}

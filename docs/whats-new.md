@@ -1,5 +1,11 @@
 # What's New
 
+## Workspace UI foundation cleanup
+- Strengthened shared layout, card, table, and state primitives
+- Improved consistency for empty, loading, and error states
+- Added reusable page and form layout patterns for future UI polish
+- Reduced page-specific styling drift across the workspace
+
 
 ## May 2026: Fixed firm settings access
 
