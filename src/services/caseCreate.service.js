@@ -583,6 +583,10 @@ module.exports = (deps) => {
           })() : undefined);
         }
 
+        if (!slaState.slaDueAt && resolvedDueDate) {
+          slaState.slaDueAt = resolvedDueDate;
+        }
+
         const newCase = new Case({
           title: normalizedTitle,
           description: normalizedDescription,

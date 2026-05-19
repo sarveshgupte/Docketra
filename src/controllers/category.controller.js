@@ -162,7 +162,6 @@ const createCategory = async (req, res) => {
       subcategories: [],
       isActive: true,
       defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
-      deadlineRule: normalizeDeadlineRule(deadlineRule),
     });
     
     await category.save();
@@ -383,7 +382,6 @@ const addSubcategory = async (req, res) => {
       workbasketId: workbasket._id,
       isActive: true,
       defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
-      deadlineRule: normalizeDeadlineRule(deadlineRule),
     });
     
     await category.save();
@@ -397,7 +395,6 @@ const addSubcategory = async (req, res) => {
         subcategoryName: name.trim(),
         workbasketId: String(workbasket._id),
         defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
-      deadlineRule: normalizeDeadlineRule(deadlineRule),
       },
     });
     
