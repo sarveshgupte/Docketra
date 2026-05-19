@@ -267,6 +267,17 @@ module.exports = (deps) => {
           ...responseMeta,
         });
       }
+      const requiresRelatedEmployeeUser = Boolean(
+        subcategoryDoc?.requiresRelatedEmployeeUser === true
+        || categoryDoc?.requiresRelatedEmployeeUser === true
+      );
+      if (requiresRelatedEmployeeUser && !relatedEmployeeUserId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Related employee/user is required for this category.',
+          ...responseMeta,
+        });
+      }
 
       let routedWorkbasketId = subcategoryDoc?.workbasketId ? String(subcategoryDoc.workbasketId) : null;
       if (resolvedSubcategoryId && !routedWorkbasketId) {

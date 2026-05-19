@@ -44,6 +44,7 @@ const FIELD_TO_STEP = {
   priority: 2,
   assignedTo: 3,
   employeeXID: 3,
+  relatedEmployeeUserId: 3,
 };
 
 export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) => {
@@ -170,6 +171,8 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   const hasRoutingPrerequisites = hasActiveSubcategory && workbaskets.length > 0;
   const selectedSubcategory = subcategories.find((item) => item.id === formData.subcategoryId);
   const employeeContextEnabled = selectedSubcategory?.employeeContextEnabled === true;
+  const relatedEmployeeUserRequired = selectedSubcategory?.requiresRelatedEmployeeUser === true
+    || categories.find((item) => item._id === formData.categoryId)?.requiresRelatedEmployeeUser === true;
   const activeUsers = users.filter((item) => item?.status === 'active' && item?.isActive !== false);
   const relatedEmployeeUsers = users.filter((item) => (item?._id || item?.id) && String(item?.status || '').toLowerCase() !== 'deleted');
   const selectedEmployee = activeUsers.find((item) => item.xID === formData.employeeXID);
@@ -231,6 +234,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
     if (stepIndex === 1) {
       if (!payload.categoryId) nextErrors.categoryId = 'Select a category to continue.';
       if (!payload.subcategoryId) nextErrors.subcategoryId = 'Select a subcategory to continue.';
+      if (relatedEmployeeUserRequired && !payload.relatedEmployeeUserId) nextErrors.relatedEmployeeUserId = 'Related employee/user is required for this category.';
     }
 
     if (stepIndex === 2 && !payload.workbasketId) nextErrors.workbasketId = 'Workbasket mapping is required before submit.';
@@ -450,10 +454,14 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
           />
           <Select
             label="Related employee/user"
+            required={relatedEmployeeUserRequired}
             value={formData.relatedEmployeeUserId}
             onChange={(e) => updateField('relatedEmployeeUserId', e.target.value)}
             disabled={loading.users}
-            helpText="Use this when the docket concerns a specific employee or user, such as payroll, HR, onboarding, offboarding, reimbursement, or employee-specific compliance. This does not change who is assigned to work on the docket."
+            error={errors.relatedEmployeeUserId}
+            helpText={relatedEmployeeUserRequired
+              ? 'Required for this selected category/subcategory. This does not change who is assigned to work on the docket.'
+              : 'Use this when the docket concerns a specific employee or user, such as payroll, HR, onboarding, offboarding, reimbursement, or employee-specific compliance. This does not change who is assigned to work on the docket.'}
             options={[
               { value: '', label: loading.users ? 'Loading users...' : 'Not applicable' },
               ...relatedEmployeeUsers.map((item) => ({
