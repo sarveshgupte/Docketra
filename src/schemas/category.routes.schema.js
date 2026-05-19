@@ -21,6 +21,12 @@ const checklistTemplateItemSchema = z.object({
 });
 
 const checklistTemplateSchema = z.array(checklistTemplateItemSchema).optional();
+const subcategorySopSchema = z.object({
+  title: z.string().max(200).optional(),
+  body: z.string().max(10000).optional(),
+  format: z.enum(['plain_text', 'markdown']).optional(),
+  lastUpdatedByXID: z.string().trim().optional(),
+}).strict().optional();
 
 
 module.exports = {
@@ -69,6 +75,7 @@ module.exports = {
       isActive: z.boolean().optional(),
       deadlineRule: deadlineRuleSchema,
       checklistTemplate: checklistTemplateSchema,
+      sop: subcategorySopSchema,
     }).passthrough(),
   },
   'PUT /:id/subcategories/:subcategoryId': {
@@ -83,6 +90,7 @@ module.exports = {
       isActive: z.boolean().optional(),
       deadlineRule: deadlineRuleSchema,
       checklistTemplate: checklistTemplateSchema,
+      sop: subcategorySopSchema,
     }).passthrough(),
   },
   'PATCH /:id/subcategories/:subcategoryId/status': {

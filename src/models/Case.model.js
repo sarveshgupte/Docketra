@@ -224,6 +224,14 @@ const caseSchema = new mongoose.Schema({
     required: [true, 'Subcategory is required'],
     trim: true,
   },
+  sopSnapshot: {
+    title: { type: String, default: '' },
+    body: { type: String, default: '' },
+    format: { type: String, enum: ['plain_text', 'markdown'], default: 'plain_text' },
+    sourceSubcategoryId: { type: String, trim: true, default: null },
+    capturedAt: { type: Date, default: null },
+  },
+
   checklist: {
     type: [{
       _id: false,
