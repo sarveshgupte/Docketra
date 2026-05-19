@@ -43,6 +43,7 @@ export const AuthProvider = ({ children }) => {
   const idleTimeoutRef = useRef(null);
   const keepaliveIntervalRef = useRef(null);
   const inactivityReasonRef = useRef(null);
+  const checkIdleAndScheduleNextRef = useRef(() => {});
 
   useEffect(() => {
     if (bootHydratedRef.current) return;
@@ -325,6 +326,7 @@ export const AuthProvider = ({ children }) => {
         checkIdleAndScheduleNext();
       }, remainingMs);
     };
+    checkIdleAndScheduleNextRef.current = checkIdleAndScheduleNext;
 
     const markActivity = ({ shouldPersist = true } = {}) => {
       const now = Date.now();
@@ -392,22 +394,7 @@ export const AuthProvider = ({ children }) => {
         const parsed = Number(event.newValue);
         if (Number.isFinite(parsed) && parsed > 0 && parsed > lastActivityAtRef.current) {
           lastActivityAtRef.current = parsed;
-          if (idleTimeoutRef.current) {
-            window.clearTimeout(idleTimeoutRef.current);
-          }
-          const idleDurationMs = Date.now() - lastActivityAtRef.current;
-          if (idleDurationMs >= SESSION_IDLE_TIMEOUT_MS) {
-            inactivityReasonRef.current = 'idle-timeout';
-            logout({ preserveFirmSlug: true });
-          } else {
-            idleTimeoutRef.current = window.setTimeout(() => {
-              const callbackIdleDurationMs = Date.now() - lastActivityAtRef.current;
-              if (callbackIdleDurationMs >= SESSION_IDLE_TIMEOUT_MS) {
-                inactivityReasonRef.current = 'idle-timeout';
-                logout({ preserveFirmSlug: true });
-              }
-            }, SESSION_IDLE_TIMEOUT_MS - idleDurationMs);
-          }
+          checkIdleAndScheduleNextRef.current();
         }
         return;
       }

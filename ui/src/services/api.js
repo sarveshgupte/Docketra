@@ -34,7 +34,6 @@ if (typeof window !== 'undefined' && !window.__docketraNavigationActivityPatched
     };
   };
   wrapHistoryMethod('pushState');
-  wrapHistoryMethod('replaceState');
   window.__docketraNavigationActivityPatched = true;
 }
 
