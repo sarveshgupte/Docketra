@@ -6,3 +6,4 @@
 - Deleted users are excluded.
 - Assignment/routing/workbasket/QC ownership behavior is unchanged.
 - `relatedEmployeeUser` is stored as a snapshot (`userId`, `xID`, `name`, `email`, `status`) for historical clarity.
+- Categories/subcategories can now opt in to `requiresRelatedEmployeeUser` so docket creation enforces this field when configured.
