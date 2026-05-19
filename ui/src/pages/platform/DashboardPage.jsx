@@ -59,7 +59,11 @@ export const PlatformDashboardPage = () => {
   const hasOnboardingSteps = Boolean(onboardingProgress && mappedSteps.length);
   const setupComplete = hasOnboardingSteps && pendingSteps.length === 0 && blockers.length === 0;
 
-  const metricValue = (value) => (isLoading ? '…' : Number(value || 0));
+  const metricValue = (value) => {
+    if (isLoading) return '…';
+    if (value === null || value === undefined) return '—';
+    return Number(value);
+  };
   const cards = [
     { label: 'Open dockets', value: metricValue(summary.totalDockets), helpText: 'All tracked dockets across the firm.' },
     { label: 'In progress', value: metricValue(summary.inProgress), helpText: 'Execution work currently active.' },
@@ -68,9 +72,9 @@ export const PlatformDashboardPage = () => {
     { label: 'Resolved', value: metricValue(summary.resolved), helpText: 'Dockets closed successfully.' },
   ];
   const quickActions = [
-    { label: 'New Docket', helpText: 'Create and route a new docket.', route: ROUTES.CREATE_DOCKET(firmSlug) },
-    { label: 'My Worklist', helpText: 'Review your assigned daily queue.', route: ROUTES.MY_WORKLIST(firmSlug) },
-    { label: 'Workbaskets', helpText: 'Check team workbasket backlog.', route: ROUTES.WORKLIST(firmSlug) },
+    { label: 'New Docket', helpText: 'Create and route a new docket.', route: ROUTES.CREATE_CASE(firmSlug) },
+    { label: 'My Worklist', helpText: 'Review your assigned daily queue.', route: ROUTES.WORKLIST(firmSlug) },
+    { label: 'Workbaskets', helpText: 'Check team workbasket backlog.', route: ROUTES.GLOBAL_WORKLIST(firmSlug) },
     { label: 'QC Worklist', helpText: 'Review dockets in quality checks.', route: ROUTES.QC_QUEUE(firmSlug) },
     { label: 'All Dockets', helpText: 'Search and open all firm dockets.', route: ROUTES.DOCKETS(firmSlug) },
     ...(isAdmin ? [{ label: 'Clients', helpText: 'Open client records and context.', route: ROUTES.CLIENTS(firmSlug) }] : []),
@@ -78,7 +82,7 @@ export const PlatformDashboardPage = () => {
   ];
   const recommendedAction = !setupComplete
     ? (nextStep?.route ? { label: nextStep.actionLabel, route: nextStep.route, note: nextStep.title } : null)
-    : { label: 'Review My Worklist', route: ROUTES.MY_WORKLIST(firmSlug), note: 'Prioritize today’s assigned work.' };
+    : { label: 'Review My Worklist', route: ROUTES.WORKLIST(firmSlug), note: 'Prioritize today’s assigned work.' };
   const attentionItems = [
     ...blockers.map((blocker) => ({
       key: `blocker-${blocker.code}`,
@@ -101,7 +105,7 @@ export const PlatformDashboardPage = () => {
       moduleLabel="Daily Operations"
       title="Dashboard"
       subtitle="Operations command center for daily priorities, workload health, and next actions."
-      actions={<Link to={ROUTES.CREATE_DOCKET(firmSlug)}>New Docket</Link>}
+      actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>New Docket</Link>}
     >
       <StatusMessageStack
         messages={[
@@ -124,8 +128,8 @@ export const PlatformDashboardPage = () => {
           <article className="panel dashboard-priority-card">
             <p className="section-title">Daily queues</p>
             <div className="action-row action-row--tight">
-              <Link to={ROUTES.MY_WORKLIST(firmSlug)}>My Worklist</Link>
-              <Link to={ROUTES.WORKLIST(firmSlug)}>Workbaskets</Link>
+              <Link to={ROUTES.WORKLIST(firmSlug)}>My Worklist</Link>
+              <Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>Workbaskets</Link>
               <Link to={ROUTES.QC_QUEUE(firmSlug)}>QC Worklist</Link>
             </div>
           </article>
@@ -177,9 +181,6 @@ export const PlatformDashboardPage = () => {
         </PageSection>
       </div>
 
-      <PageSection title="Recent work" description="Most recent docket updates in this workspace." className="dashboard-activity-list">
-        <EmptyState title="No recent docket activity yet." body="Work updates will appear here as your team progresses dockets." />
-      </PageSection>
     </PlatformShell>
   );
 };

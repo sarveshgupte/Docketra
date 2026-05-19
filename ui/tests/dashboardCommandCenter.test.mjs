@@ -15,9 +15,9 @@ assert.ok(dashboardSource.includes('Next best action'), 'Dashboard should includ
 assert.equal(dashboardSource.includes('title="Modules"'), false, 'Dashboard should remove old generic Modules launchpad framing.');
 
 for (const routeRef of [
-  'ROUTES.CREATE_DOCKET(firmSlug)',
-  'ROUTES.MY_WORKLIST(firmSlug)',
+  'ROUTES.CREATE_CASE(firmSlug)',
   'ROUTES.WORKLIST(firmSlug)',
+  'ROUTES.GLOBAL_WORKLIST(firmSlug)',
   'ROUTES.QC_QUEUE(firmSlug)',
   'ROUTES.DOCKETS(firmSlug)',
   'ROUTES.CLIENTS(firmSlug)',
@@ -27,6 +27,7 @@ for (const routeRef of [
 }
 
 assert.equal(dashboardSource.includes('productivityScore || 62'), false, 'Dashboard should not use hardcoded fake default productivity counts.');
+assert.equal(dashboardSource.includes('No recent docket activity yet.'), false, 'Dashboard should not render static recent activity copy without real data.');
 assert.equal(dashboardSource.includes('style={{ margin'), false, 'Dashboard should avoid inline margin layout styles.');
 assert.equal(dashboardSource.includes('style={{ padding'), false, 'Dashboard should avoid inline padding layout styles.');
 assert.ok(dashboardSource.includes('<StatusMessageStack'), 'Dashboard should keep StatusMessageStack.');
