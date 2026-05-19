@@ -8,6 +8,22 @@ const log = require('../utils/log');
 const { validateCategoryMappedWorkbasket } = require('../services/categoryWorkbasketValidation.service');
 const { suggestDocketCategory } = require('../services/docketCategorySuggestion.service');
 
+const normalizeDeadlineRule = (input = {}) => {
+  if (!input || typeof input !== 'object') return { mode: 'NONE', allowManualOverride: true };
+  const mode = ['NONE', 'TAT_DAYS', 'FIXED_DAY_NEXT_MONTH', 'MANUAL_DATE_REQUIRED', 'EVENT_DATE_OFFSET'].includes(input.mode)
+    ? input.mode
+    : 'NONE';
+  return {
+    mode,
+    ...(input.tatDays !== undefined ? { tatDays: Number(input.tatDays) } : {}),
+    ...(input.fixedDayOfMonth !== undefined ? { fixedDayOfMonth: Number(input.fixedDayOfMonth) } : {}),
+    ...(input.eventOffsetDays !== undefined ? { eventOffsetDays: Number(input.eventOffsetDays) } : {}),
+    label: typeof input.label === 'string' ? input.label.trim() : '',
+    note: typeof input.note === 'string' ? input.note.trim() : '',
+    allowManualOverride: input.allowManualOverride !== false,
+  };
+};
+
 /**
  * Category Controller for Admin-Managed Categories
  * 
@@ -146,6 +162,7 @@ const createCategory = async (req, res) => {
       subcategories: [],
       isActive: true,
       defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
+      deadlineRule: normalizeDeadlineRule(deadlineRule),
     });
     
     await category.save();
@@ -307,7 +324,7 @@ const toggleCategoryStatus = async (req, res) => {
 const addSubcategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, defaultSlaDays = 0, workbasketId } = req.body;
+    const { name, defaultSlaDays = 0, workbasketId, deadlineRule } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -366,6 +383,7 @@ const addSubcategory = async (req, res) => {
       workbasketId: workbasket._id,
       isActive: true,
       defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
+      deadlineRule: normalizeDeadlineRule(deadlineRule),
     });
     
     await category.save();
@@ -379,6 +397,7 @@ const addSubcategory = async (req, res) => {
         subcategoryName: name.trim(),
         workbasketId: String(workbasket._id),
         defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
+      deadlineRule: normalizeDeadlineRule(deadlineRule),
       },
     });
     
@@ -402,7 +421,7 @@ const addSubcategory = async (req, res) => {
 const updateSubcategory = async (req, res) => {
   try {
     const { id, subcategoryId } = req.params;
-    const { name, defaultSlaDays, workbasketId } = req.body;
+    const { name, defaultSlaDays, workbasketId, deadlineRule } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -494,6 +513,9 @@ const updateSubcategory = async (req, res) => {
     }
     if (typeof defaultSlaDays !== 'undefined') {
       subcategory.defaultSlaDays = Math.max(0, Number(defaultSlaDays) || 0);
+    }
+    if (typeof deadlineRule !== 'undefined') {
+      subcategory.deadlineRule = normalizeDeadlineRule(deadlineRule);
     }
     await category.save();
     await safeLogCategoryMutation(req, {

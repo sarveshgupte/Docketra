@@ -1,3 +1,13 @@
+const deadlineRuleSchema = z.object({
+  mode: z.enum(['NONE', 'TAT_DAYS', 'FIXED_DAY_NEXT_MONTH', 'MANUAL_DATE_REQUIRED', 'EVENT_DATE_OFFSET']).optional(),
+  tatDays: z.coerce.number().min(0).optional(),
+  fixedDayOfMonth: z.coerce.number().int().min(1).max(31).optional(),
+  eventOffsetDays: z.coerce.number().optional(),
+  label: z.string().trim().optional(),
+  note: z.string().trim().optional(),
+  allowManualOverride: z.boolean().optional(),
+}).optional();
+
 const { z, nonEmptyString, objectIdString, queryBoolean } = require('./common');
 
 module.exports = {
@@ -20,6 +30,8 @@ module.exports = {
       name: nonEmptyString,
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
+      deadlineRule: deadlineRuleSchema,
+      deadlineRule: deadlineRuleSchema,
     }).passthrough(),
   },
   'PUT /:id': {
@@ -28,6 +40,7 @@ module.exports = {
       name: nonEmptyString.optional(),
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
+      deadlineRule: deadlineRuleSchema,
     }).passthrough(),
   },
   'PATCH /:id/status': {
@@ -44,6 +57,7 @@ module.exports = {
       workbasketId: objectIdString,
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
+      deadlineRule: deadlineRuleSchema,
     }).passthrough(),
   },
   'PUT /:id/subcategories/:subcategoryId': {
@@ -56,6 +70,7 @@ module.exports = {
       workbasketId: objectIdString.optional(),
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
+      deadlineRule: deadlineRuleSchema,
     }).passthrough(),
   },
   'PATCH /:id/subcategories/:subcategoryId/status': {

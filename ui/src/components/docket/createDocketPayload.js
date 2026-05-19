@@ -12,6 +12,8 @@ export const buildCreateDocketPayload = (formData = {}) => {
   const priority = ensureCanonicalId(formData.priority || 'medium').toLowerCase();
   const idempotencyKey = ensureCanonicalId(formData.idempotencyKey);
   const employeeXID = ensureCanonicalId(formData.employeeXID).toUpperCase();
+  const dueDate = ensureCanonicalId(formData.dueDate);
+  const eventDate = ensureCanonicalId(formData.eventDate);
 
   return {
     title,
@@ -26,6 +28,8 @@ export const buildCreateDocketPayload = (formData = {}) => {
     assignedTo: assignedTo || undefined,
     employeeXID: employeeXID || undefined,
     idempotencyKey: idempotencyKey || undefined,
+    dueDate: dueDate || undefined,
+    eventDate: eventDate || undefined,
   };
 };
 
