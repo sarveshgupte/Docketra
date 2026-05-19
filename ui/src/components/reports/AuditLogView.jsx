@@ -36,21 +36,24 @@ export const AuditLogView = () => {
       <h3>Audit Logs</h3>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
         <input
+          aria-label="Filter by xID"
           value={filters.xID}
           onChange={(e) => setFilters((prev) => ({ ...prev, xID: e.target.value }))}
           placeholder="Filter by xID"
         />
         <input
+          aria-label="Filter by action"
           value={filters.action}
           onChange={(e) => setFilters((prev) => ({ ...prev, action: e.target.value }))}
           placeholder="Filter by action"
         />
         <input
+          aria-label="Filter by timestamp"
           type="datetime-local"
           value={filters.timestamp}
           onChange={(e) => setFilters((prev) => ({ ...prev, timestamp: e.target.value }))}
         />
-        <button className="neo-button" onClick={loadLogs} disabled={loading}>
+        <button type="button" className="neo-button" onClick={loadLogs} disabled={loading}>
           {loading ? 'Loading…' : 'Apply'}
         </button>
       </div>
