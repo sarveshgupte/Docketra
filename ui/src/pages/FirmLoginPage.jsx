@@ -30,6 +30,29 @@ const mapSafeLoginError = (error) => {
   return 'Sign-in failed. Please review the form and try again.';
 };
 
+const resolveCredentialErrorMessage = (error) => {
+  const status = error?.status || error?.response?.status;
+  const backendMessage = String(
+    error?.data?.message
+    || error?.response?.data?.message
+    || error?.message
+    || '',
+  ).trim().toLowerCase();
+
+  if (
+    status === 401
+    || status === 403
+    || backendMessage.includes('invalid xid or password')
+    || backendMessage.includes('invalid credentials')
+    || backendMessage.includes('wrong password')
+    || backendMessage.includes('incorrect password')
+  ) {
+    return 'Wrong password.';
+  }
+
+  return toUserFacingError(error, mapSafeLoginError(error));
+};
+
 const getWorkspaceStatusMessage = (status) => {
   const normalized = String(status || '').trim().toLowerCase();
   if (normalized === 'pending_setup') {
@@ -254,7 +277,7 @@ export const FirmLoginPage = () => {
         setError('Unexpected response. Please try again.');
       }
     } catch (err) {
-      const message = toUserFacingError(err, mapSafeLoginError(err));
+      const message = resolveCredentialErrorMessage(err);
       setError(message);
       showError(message);
     } finally {
