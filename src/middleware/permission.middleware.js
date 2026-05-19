@@ -117,7 +117,11 @@ const requireFirmContext = async (req, res, next) => {
  * for direct role checks. This guard continues to enforce firm capability checks.
  */
 const authorizeFirmPermission = (requiredPermission) => {
-  const deniedMessage = requiredPermission === 'CLIENT_MANAGE'
+  const requiredPermissions = Array.isArray(requiredPermission) ? requiredPermission : [requiredPermission];
+  const normalizedRequiredPermissions = requiredPermissions
+    .filter((permission) => typeof permission === 'string' && permission.trim())
+    .map((permission) => permission.trim().toUpperCase());
+  const deniedMessage = normalizedRequiredPermissions.includes('CLIENT_MANAGE')
     ? 'Client management requires Admin access.'
     : 'Insufficient firm permissions';
 
@@ -155,7 +159,19 @@ const authorizeFirmPermission = (requiredPermission) => {
         }
       }
 
-      if (requiredPermission && !membership.permissions.includes(requiredPermission)) {
+      if (
+        normalizedRequiredPermissions.length > 0
+        && !normalizedRequiredPermissions.some((permission) => membership.permissions.includes(permission))
+      ) {
+        log.warn('[PERMISSION] Access denied by firm permission guard', {
+          requestId: req.requestId || req.id || req.headers?.['x-request-id'] || null,
+          userXID: req.user?.xID || null,
+          role: req.user?.role || null,
+          requiredPermission: normalizedRequiredPermissions,
+          firmId: req.firm?.id || req.firmId || req.user?.firmId || null,
+          path: req.originalUrl || req.path,
+          method: req.method,
+        });
         return res.status(403).json({
           success: false,
           message: deniedMessage,
