@@ -7,6 +7,15 @@ import { formatDocketId } from '../../utils/formatters';
 import { ROUTES } from '../../constants/routes';
 import { getLifecycleMeta } from '../../../utils/lifecycleMap';
 
+const hasSopContent = (sop) => Boolean(sop?.title && sop?.body);
+
+const normalizeChecklist = (checklist) => (
+  Array.isArray(checklist)
+    ? [...checklist].sort((a, b) => Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0))
+    : []
+);
+
+
 export const CaseDetailOverviewPanel = ({
   caseInfo,
   firmSlug,
@@ -210,6 +219,39 @@ export const CaseDetailOverviewPanel = ({
         <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Description</span>
         <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent || 'No description provided for this docket.'}</span>
       </div>
+    </section>
+
+    <section className="case-card" aria-labelledby="sop-heading">
+      <div className="case-card__heading">
+        <h2 id="sop-heading">SOP / Work Instructions</h2>
+      </div>
+      {hasSopContent(caseInfo?.sop) ? (
+        <div className="space-y-2">
+          <p className="text-sm font-semibold text-gray-900">{caseInfo.sop.title}</p>
+          <p className="text-xs uppercase tracking-wider text-gray-500">Format: {caseInfo.sop.format || 'plain_text'}</p>
+          {caseInfo.sop.capturedAt ? <p className="text-xs text-gray-500">Captured: {formatDateTime(caseInfo.sop.capturedAt)}</p> : null}
+          <div className="case-detail__description-text whitespace-pre-wrap break-words text-sm text-gray-800">{caseInfo.sop.body}</div>
+        </div>
+      ) : <p className="case-detail__empty-note">No SOP attached to this docket.</p>}
+    </section>
+
+    <section className="case-card" aria-labelledby="checklist-heading">
+      <div className="case-card__heading">
+        <h2 id="checklist-heading">Checklist</h2>
+      </div>
+      {normalizeChecklist(caseInfo?.checklist).length ? (
+        <ul className="space-y-2">
+          {normalizeChecklist(caseInfo?.checklist).map((item, idx) => (
+            <li key={item?.id || `${item?.title || 'item'}-${idx}`} className="rounded-md border border-gray-200 bg-white p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-gray-900">{item?.title || 'Untitled item'}</span>
+                {item?.required ? <Badge variant="warning">Required</Badge> : <Badge variant="default">Optional</Badge>}
+                <Badge variant={item?.completed ? 'success' : 'neutral'}>{item?.completed ? 'Completed' : 'Incomplete'}</Badge>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="case-detail__empty-note">No checklist attached to this docket.</p>}
     </section>
   </>
 );

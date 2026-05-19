@@ -28,3 +28,8 @@ At docket creation time, each template item is copied with:
 - dueDate from `createdAt + dueOffsetDays` (if provided)
 
 This preserves historical integrity for already-created dockets.
+
+## Docket Detail read-only visibility
+
+Docket Detail now shows the docket checklist snapshot as a read-only checklist section (sorted by template sort order with required/completion labels). This is intentionally display-only in this phase (no checklist completion actions).
+
