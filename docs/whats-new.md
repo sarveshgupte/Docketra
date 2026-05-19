@@ -1,6 +1,12 @@
 # What's New
 
 
+## May 2026: Fixed firm settings access
+
+- Fixed admin configuration access for Primary Admin users.
+- Resolved false permission errors on SLA rules, categories, workbaskets, and audit activity.
+- Improved permission-denied messaging for firm settings.
+- Added regression coverage for admin settings endpoints.
 ## May 2026: Clearer Daily Operations navigation
 
 - Added My Worklist as a dedicated sidebar queue.

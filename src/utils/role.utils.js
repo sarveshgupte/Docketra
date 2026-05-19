@@ -3,7 +3,7 @@ const normalizeRole = (role) => {
 
   const normalized = String(role).trim().toUpperCase().replace(/[\s-]+/g, '_');
   if (normalized === 'SUPERADMIN' || normalized === 'SUPER_ADMIN') return 'SUPER_ADMIN';
-  if (normalized === 'PRIMARY_ADMIN') return 'PRIMARY_ADMIN';
+  if (normalized === 'PRIMARY_ADMIN' || normalized === 'PRIMARYADMIN') return 'PRIMARY_ADMIN';
   if (normalized === 'ADMIN') return 'ADMIN';
   if (normalized === 'MANAGER') return 'MANAGER';
   if (normalized === 'EMPLOYEE' || normalized === 'STAFF' || normalized === 'USER') return 'USER';
