@@ -24,6 +24,25 @@ const normalizeDeadlineRule = (input = {}) => {
   };
 };
 
+const normalizeSubcategorySop = (input = {}, { actorXID } = {}) => {
+  if (!input || typeof input !== 'object') {
+    return { title: '', body: '', format: 'plain_text', lastUpdatedAt: null, lastUpdatedByXID: null };
+  }
+
+  const title = typeof input.title === 'string' ? input.title.trim() : '';
+  const body = typeof input.body === 'string' ? input.body : '';
+  const format = input.format === 'markdown' ? 'markdown' : 'plain_text';
+  const hasContent = Boolean(title || body);
+
+  return {
+    title,
+    body,
+    format,
+    lastUpdatedAt: hasContent ? new Date() : null,
+    lastUpdatedByXID: hasContent && actorXID ? String(actorXID).trim() : null,
+  };
+};
+
 const normalizeChecklistTemplate = (items = []) => {
   if (!Array.isArray(items)) return [];
   return items.map((item, index) => ({
