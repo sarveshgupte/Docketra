@@ -117,14 +117,34 @@ module.exports = (deps) => {
     };
   };
 
+  const SOP_LINK_TYPES = new Set(['portal', 'reference', 'template', 'internal', 'other']);
+
   const buildSopSnapshot = ({ sop = {}, subcategoryId = null, createdAt = new Date() } = {}) => {
     const title = typeof sop?.title === 'string' ? sop.title.trim() : '';
     const body = typeof sop?.body === 'string' ? sop.body : '';
-    if (!title && !body) return undefined;
+    const links = Array.isArray(sop?.links)
+      ? sop.links
+        .map((link, index) => {
+          const linkTitle = typeof link?.title === 'string' ? link.title.trim() : '';
+          const linkUrl = typeof link?.url === 'string' ? link.url.trim() : '';
+          if (!linkTitle || !/^https?:\/\//i.test(linkUrl)) return null;
+          return {
+            id: String(link?.id || randomUUID()),
+            title: linkTitle,
+            url: linkUrl,
+            description: typeof link?.description === 'string' ? link.description.trim() : '',
+            type: SOP_LINK_TYPES.has(link?.type) ? link.type : 'reference',
+            sortOrder: Number.isFinite(Number(link?.sortOrder)) ? Number(link.sortOrder) : index,
+          };
+        })
+        .filter(Boolean)
+      : [];
+    if (!title && !body && links.length === 0) return undefined;
     return {
       title,
       body,
       format: sop?.format === 'markdown' ? 'markdown' : 'plain_text',
+      links,
       sourceSubcategoryId: subcategoryId ? String(subcategoryId) : null,
       capturedAt: createdAt,
     };
