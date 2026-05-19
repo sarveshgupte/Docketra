@@ -33,8 +33,8 @@ export const categoryService = {
   /**
    * Create a new category (Admin only)
    */
-  createCategory: async (name) => {
-    const response = await api.post('/admin/categories', { name });
+  createCategory: async (name, requiresRelatedEmployeeUser = false) => {
+    const response = await api.post('/admin/categories', { name, requiresRelatedEmployeeUser });
     return response.data;
   },
 
@@ -57,8 +57,8 @@ export const categoryService = {
   /**
    * Add subcategory to category (Admin only)
    */
-  addSubcategory: async (categoryId, name, workbasketId) => {
-    const response = await api.post(`/admin/categories/${categoryId}/subcategories`, { name, workbasketId });
+  addSubcategory: async (categoryId, name, workbasketId, requiresRelatedEmployeeUser = false) => {
+    const response = await api.post(`/admin/categories/${categoryId}/subcategories`, { name, workbasketId, requiresRelatedEmployeeUser });
     return response.data;
   },
 

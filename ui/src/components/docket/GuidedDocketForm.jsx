@@ -234,10 +234,10 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
     if (stepIndex === 1) {
       if (!payload.categoryId) nextErrors.categoryId = 'Select a category to continue.';
       if (!payload.subcategoryId) nextErrors.subcategoryId = 'Select a subcategory to continue.';
-      if (relatedEmployeeUserRequired && !payload.relatedEmployeeUserId) nextErrors.relatedEmployeeUserId = 'Related employee/user is required for this category.';
     }
 
     if (stepIndex === 2 && !payload.workbasketId) nextErrors.workbasketId = 'Workbasket mapping is required before submit.';
+    if (stepIndex === 3 && relatedEmployeeUserRequired && !payload.relatedEmployeeUserId) nextErrors.relatedEmployeeUserId = 'Related employee/user is required for this category.';
 
     if (payload.categoryId && payload.subcategoryId) {
       const isValidSub = subcategories.some((item) => item.id === payload.subcategoryId);

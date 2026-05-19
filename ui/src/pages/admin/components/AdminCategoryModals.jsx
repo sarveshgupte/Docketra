@@ -29,7 +29,7 @@ export const AdminCategoryModals = ({
       isOpen={showCategoryModal}
       onClose={() => {
         setShowCategoryModal(false);
-        setCategoryForm({ name: '' });
+        setCategoryForm({ name: '', requiresRelatedEmployeeUser: false });
       }}
       title="Create New Category"
     >
@@ -42,6 +42,18 @@ export const AdminCategoryModals = ({
           placeholder="Enter category name"
           required
         />
+        <label className="flex items-start gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            checked={categoryForm.requiresRelatedEmployeeUser === true}
+            onChange={(e) => setCategoryForm({ ...categoryForm, requiresRelatedEmployeeUser: e.target.checked })}
+          />
+          <span>
+            <strong>Require related employee/user during docket creation</strong>
+            <br />
+            Enable this for HR, payroll, onboarding, offboarding, reimbursement, or employee-specific work.
+          </span>
+        </label>
 
         <div className="admin__modal-actions">
           <Button
@@ -49,7 +61,7 @@ export const AdminCategoryModals = ({
             variant="default"
             onClick={() => {
               setShowCategoryModal(false);
-              setCategoryForm({ name: '' });
+              setCategoryForm({ name: '', requiresRelatedEmployeeUser: false });
             }}
           >
             Cancel
@@ -63,7 +75,7 @@ export const AdminCategoryModals = ({
       isOpen={showSubcategoryModal}
       onClose={() => {
         setShowSubcategoryModal(false);
-        setSubcategoryForm({ name: '', workbasketId: '' });
+        setSubcategoryForm({ name: '', workbasketId: '', requiresRelatedEmployeeUser: false });
         setSelectedCategory(null);
       }}
       title={`Add Subcategory to ${selectedCategory?.name || ''}`}
@@ -87,6 +99,18 @@ export const AdminCategoryModals = ({
           ]}
           required
         />
+        <label className="flex items-start gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            checked={subcategoryForm.requiresRelatedEmployeeUser === true}
+            onChange={(e) => setSubcategoryForm({ ...subcategoryForm, requiresRelatedEmployeeUser: e.target.checked })}
+          />
+          <span>
+            <strong>Require related employee/user during docket creation</strong>
+            <br />
+            Enable this for HR, payroll, onboarding, offboarding, reimbursement, or employee-specific work.
+          </span>
+        </label>
 
         <div className="admin__modal-actions">
           <Button
@@ -94,7 +118,7 @@ export const AdminCategoryModals = ({
             variant="default"
             onClick={() => {
               setShowSubcategoryModal(false);
-              setSubcategoryForm({ name: '', workbasketId: '' });
+              setSubcategoryForm({ name: '', workbasketId: '', requiresRelatedEmployeeUser: false });
               setSelectedCategory(null);
             }}
           >
