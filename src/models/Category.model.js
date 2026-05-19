@@ -72,6 +72,19 @@ const subcategorySchema = new mongoose.Schema({
     note: { type: String, trim: true, default: '' },
     allowManualOverride: { type: Boolean, default: true },
   },
+  checklistTemplate: {
+    type: [{
+      _id: false,
+      id: { type: String, required: true, trim: true },
+      title: { type: String, required: true, trim: true, maxlength: 200 },
+      description: { type: String, trim: true, maxlength: 1000, default: '' },
+      required: { type: Boolean, default: false },
+      sortOrder: { type: Number, min: 0 },
+      defaultAssigneeXID: { type: String, trim: true, default: null },
+      dueOffsetDays: { type: Number, min: 0 },
+    }],
+    default: [],
+  },
 }, {
   _id: false, // Disable automatic _id generation for subdocuments
 });
@@ -140,19 +153,25 @@ const categorySchema = new mongoose.Schema({
 categorySchema.index({ isActive: 1 });
 categorySchema.index({ firmId: 1, name: 1 }, { unique: true });
 
-subcategorySchema.pre('validate', function validateDeadlineRule(next) {
+subcategorySchema.pre('validate', function validateDeadlineRule() {
   const mode = this?.deadlineRule?.mode || 'NONE';
   const rule = this?.deadlineRule || {};
   if (mode === 'TAT_DAYS' && (!Number.isFinite(rule.tatDays) || Number(rule.tatDays) < 0)) {
-    return next(new Error('deadlineRule.tatDays must be >= 0 for TAT_DAYS'));
+    throw new Error('deadlineRule.tatDays must be >= 0 for TAT_DAYS');
   }
   if (mode === 'FIXED_DAY_NEXT_MONTH' && (!Number.isInteger(rule.fixedDayOfMonth) || rule.fixedDayOfMonth < 1 || rule.fixedDayOfMonth > 31)) {
-    return next(new Error('deadlineRule.fixedDayOfMonth must be 1-31 for FIXED_DAY_NEXT_MONTH'));
+    throw new Error('deadlineRule.fixedDayOfMonth must be 1-31 for FIXED_DAY_NEXT_MONTH');
   }
   if (mode === 'EVENT_DATE_OFFSET' && !Number.isFinite(rule.eventOffsetDays)) {
-    return next(new Error('deadlineRule.eventOffsetDays is required for EVENT_DATE_OFFSET'));
+    throw new Error('deadlineRule.eventOffsetDays is required for EVENT_DATE_OFFSET');
   }
-  return next();
+  if (Array.isArray(this.checklistTemplate)) {
+    this.checklistTemplate = this.checklistTemplate.map((item, index) => {
+      const nextItem = item && typeof item.toObject === 'function' ? item.toObject() : { ...item };
+      if (!Number.isFinite(nextItem.sortOrder)) nextItem.sortOrder = index;
+      return nextItem;
+    });
+  }
 });
 
 categorySchema.plugin(softDeletePlugin);
