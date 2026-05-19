@@ -440,13 +440,13 @@ const employeeWorklist = async (req, res) => {
       });
     }
     
-    const requestedAssignee = String(req.query?.assigneeXID || '').trim().toUpperCase();
+    const requestedAssignee = String(req.query?.assigneeXID || '').trim();
     const search = String(req.query?.search || '').trim();
     const categoryFilter = String(req.query?.category || '').trim();
     const subcategoryFilter = String(req.query?.subcategory || '').trim();
     const sortBy = String(req.query?.sortBy || 'createdAt').trim();
     const sortOrder = String(req.query?.sortOrder || 'desc').toLowerCase() === 'asc' ? 1 : -1;
-    const targetAssigneeXID = requestedAssignee || String(user.xID || '').trim().toUpperCase();
+    const targetAssigneeXID = requestedAssignee || String(user.xID || '').trim();
 
     if (!targetAssigneeXID) {
       return res.status(400).json({
@@ -471,7 +471,7 @@ const employeeWorklist = async (req, res) => {
     }
 
     const canAccessWorklist = canViewUserWorklist(user, targetUser, { targetFirmId: firmId });
-    const isViewingOwnWorklist = targetAssigneeXID === String(user.xID || '').trim().toUpperCase();
+    const isViewingOwnWorklist = targetAssigneeXID.toUpperCase() === String(user.xID || '').trim().toUpperCase();
     if (!canAccessWorklist) {
       return res.status(403).json({
         success: false,
