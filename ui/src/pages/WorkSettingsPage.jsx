@@ -136,11 +136,12 @@ export const WorkSettingsPage = () => {
                 <h2 className="text-lg font-semibold text-[var(--dt-text)]">Workbasket linkage & routing</h2>
                 <p className="mt-1 text-sm text-[var(--dt-text-secondary)]">Use primary workbaskets to control queue destinations for incoming dockets. Linked QC workbaskets are maintained automatically.</p>
               </div>
-              <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+              <div className="settings-form-split__controls space-y-2">
+                <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
                 <Input label="New workbasket" value={workbasketName} onChange={(event) => setWorkbasketName(event.target.value)} placeholder="e.g. Compliance WB" />
                 <Button type="button" variant="primary" onClick={handleCreateWorkbasket} disabled={workbasketSaving || !workbasketName.trim()}>Add Primary Workbasket</Button>
               </div>
-              <div className="space-y-2 settings-form-split__controls">
+              
                 {loadingWorkbaskets ? <p className="text-sm text-[var(--dt-text-muted)]">Loading workbaskets…</p> : null}
                 {!loadingWorkbaskets && primaryWorkbaskets.length === 0 ? (<div className="rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-bg)] p-3"><p className="text-sm text-[var(--dt-text-muted)]">No active workbasket is configured yet. Create one to start docket routing.</p><Button type="button" variant="primary" className="mt-2" onClick={() => void handleCreateDefaultRouting()} disabled={workbasketSaving}>Create default routing</Button></div>) : null}
                 {primaryWorkbaskets.map((workbasket) => (
@@ -158,10 +159,8 @@ export const WorkSettingsPage = () => {
           <Card className="settings-status-card">
             <div className="settings-form-split">
               <div className="settings-form-split__meta">
-              <div>
                 <h2 className="text-lg font-semibold text-[var(--dt-text)]">Category Management</h2>
                 <p className="mt-1 text-sm text-[var(--dt-text-secondary)]">Create categories and subcategories that define where dockets are created.</p>
-              </div>
               </div>
               <div className="settings-form-split__controls settings-action-bar">
                 <Button variant="primary" onClick={() => navigate(ROUTES.WORK_CATEGORY_MANAGEMENT(firmSlug))}>Open category and subcategory routing</Button>

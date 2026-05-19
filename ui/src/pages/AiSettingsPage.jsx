@@ -4,10 +4,8 @@ import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Select } from '../components/common/Select';
-import { PageHeader } from '../components/layout/PageHeader';
 import { ToastContext } from '../contexts/ToastContext';
 import { getAiConfiguration, testAiConfiguration, updateAiConfiguration } from '../services/aiService';
-import { spacingClasses } from '../theme/tokens';
 import { StatusMessageStack } from './platform/PlatformShared';
 import { buildAiConfigurationPayload, isProviderDisabled } from '../utils/aiConfiguration';
 
@@ -108,10 +106,14 @@ export function AiSettingsPage() {
 
   return (
     <PlatformShell moduleLabel="Settings" title="AI settings" subtitle="Configure optional AI assistance for your workspace.">
-      <div className="min-h-screen w-full flex-1 bg-[var(--dt-bg-warm)]"><div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 space-y-6">
-        <PageHeader title="AI Settings" subtitle="AI is optional. Configure provider access, safeguards, and usage controls for assisted workflows." />
+      <div className="min-h-screen w-full flex-1 bg-[var(--dt-bg-warm)]"><div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 space-y-6">
         <StatusMessageStack messages={statusMessages} />
-        <Card><div className={spacingClasses.sectionMargin}>
+        <Card className="settings-status-card"><div className="settings-form-split">
+          <div className="settings-form-split__meta">
+            <h2 className="text-lg font-semibold text-[var(--dt-text)]">Provider status and configuration</h2>
+            <p className="text-sm text-[var(--dt-text-secondary)]">AI is optional. Configure provider access, safeguards, and usage controls for assisted workflows.</p>
+          </div>
+          <div className="settings-form-split__controls">
           {loading ? <p className="text-sm text-[var(--dt-text-muted)]">Loading AI settings...</p> : (
             <>
               <p className="text-sm text-[var(--dt-text-secondary)]">AI is optional. Configure it only when your firm is ready to use assisted drafting and summaries.</p>
@@ -130,7 +132,7 @@ export function AiSettingsPage() {
                 <p className="text-xs text-[var(--dt-text-muted)]">Raw prompts/outputs are not retained by default. Enabling retention should require firm/legal approval.</p>
                 {RETENTION_KEYS.map((k) => <label key={k} className="flex gap-2 items-center"><input type="checkbox" checked={Boolean(formState.retention[k])} disabled={formState.retention.zeroRetention && (k === 'savePrompts' || k === 'saveOutputs')} onChange={(e) => setFormState((s) => ({ ...s, retention: { ...s.retention, [k]: e.target.checked, ...(k === 'zeroRetention' && e.target.checked ? { savePrompts: false, saveOutputs: false } : {}) } }))} />{k}</label>)}
                 {PRIVACY_KEYS.map((k) => <label key={k} className="flex gap-2 items-center"><input type="checkbox" checked={Boolean(formState.privacy[k])} onChange={(e) => setFormState((s) => ({ ...s, privacy: { ...s.privacy, [k]: e.target.checked } }))} />{k}</label>)}
-                <div className="flex gap-3">
+                <div className="settings-action-bar">
                   <Button type="button" variant="secondary" onClick={onTest} loading={testing}>Test connection</Button>
                   <Button type="button" variant="primary" onClick={onSave} loading={saving}>Save settings</Button>
                 </div>
@@ -138,6 +140,7 @@ export function AiSettingsPage() {
               </>}
             </>
           )}
+          </div>
         </div></Card>
       </div></div>
     </PlatformShell>
