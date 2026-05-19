@@ -7,6 +7,13 @@
 - Resolved false permission errors on SLA rules, categories, workbaskets, and audit activity.
 - Improved permission-denied messaging for firm settings.
 - Added regression coverage for admin settings endpoints.
+## May 2026: Clearer Daily Operations navigation
+
+- Added My Worklist as a dedicated sidebar queue.
+- Grouped assigned Workbaskets and QC Worklists more clearly.
+- Shows all linked workbaskets instead of hiding extras.
+- Improved queue navigation for users with multiple team or QC assignments.
+
 
 ## May 2026: Landing page navigation anchor mapping fix
 
@@ -844,3 +851,10 @@
 - Improved worklist loading and retry messaging
 - Empty assigned docket queues now show a clean empty state instead of an error
 - Added coverage for employee worklist loading behavior
+
+## May 2026: Cleaner workspace settings
+
+- Reworked Settings into a balanced 2x2 control hub.
+- Made firm, work, team, storage, and AI settings easier to scan.
+- Improved card alignment, spacing, and action hierarchy.
+- Kept audit reports accessible from Settings.
