@@ -1,11 +1,11 @@
 # PR 4 — Settings/Admin pages polish
 
 ## Summary
-Polished Settings and Admin surfaces to follow a consistent B2B control-center layout while preserving all current permissions, route guards, and existing settings behavior.
+Polished the settings surfaces updated in this PR (Work Settings and AI Settings) to follow a more consistent B2B control-center layout while preserving current permissions and behavior.
 
 ## Scope
 - Settings hub consistency validation.
-- Firm Settings, Work Settings, Team & Access, Storage Settings, and AI Settings UI polish.
+- Work Settings and AI Settings UI polish.
 - Shared settings layout helper classes for split-form sections and action bars.
 - Static UI hardening tests for settings/admin messaging, route references, and shell usage.
 
