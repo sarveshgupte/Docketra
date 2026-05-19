@@ -14,9 +14,12 @@ const Category = require('../src/models/Category.model');
     { id: 'a', title: 'Collect data', dueOffsetDays: 2 },
     { id: 'b', title: 'Review' },
   ];
+  category.subcategories[0].deadlineRule = { mode: 'TAT_DAYS', tatDays: 5, allowManualOverride: false };
 
   await category.validate();
   assert.strictEqual(category.subcategories[0].checklistTemplate[0].sortOrder, 0);
   assert.strictEqual(category.subcategories[0].checklistTemplate[1].sortOrder, 1);
+  assert.strictEqual(category.subcategories[0].deadlineRule.mode, 'TAT_DAYS');
+  assert.strictEqual(category.subcategories[0].deadlineRule.tatDays, 5);
   console.log('ok');
 })();

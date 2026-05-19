@@ -1,11 +1,13 @@
 # Subcategory Checklist Templates
 
 This feature adds lightweight checklist templates at **subcategory** level in Category Management.
+Current implementation scope is **backend + API validation + serializer response** (no full admin checklist editor UI yet).
 
 ## Scope
 - Templates are stored in `Category.subcategories[].checklistTemplate`.
 - New dockets get a **snapshot** copied into `Case.checklist` at create time.
 - Existing dockets are not mutated when templates change.
+- Existing subcategory `deadlineRule` support remains fully supported for add/update flows.
 
 ## Non-goals in this PR
 - No recurrence engine.

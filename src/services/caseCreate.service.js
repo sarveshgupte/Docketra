@@ -119,7 +119,9 @@ module.exports = (deps) => {
 
   const buildChecklistSnapshot = ({ checklistTemplate = [], createdAt = new Date() }) => {
     if (!Array.isArray(checklistTemplate) || checklistTemplate.length === 0) return [];
-    return checklistTemplate.map((item, index) => {
+    return checklistTemplate
+      .filter((item) => String(item?.title || '').trim().length > 0)
+      .map((item, index) => {
       const dueOffsetDays = item?.dueOffsetDays;
       const dueDate = Number.isFinite(Number(dueOffsetDays))
         ? new Date(new Date(createdAt).getTime() + (Number(dueOffsetDays) * 24 * 60 * 60 * 1000))
