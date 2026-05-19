@@ -107,8 +107,10 @@ api.interceptors.request.use(
     }
 
     const method = (config.method || '').toLowerCase();
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('app:api-activity'));
+    if (typeof window !== 'undefined' && config?.metadata?.userInitiatedActivity === true) {
+      window.dispatchEvent(new CustomEvent('app:api-activity', {
+        detail: { userInitiated: true }
+      }));
     }
     if (['post', 'put', 'patch', 'delete'].includes(method)) {
       const hasIdempotencyKey = typeof config.headers?.has === 'function'

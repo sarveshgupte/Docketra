@@ -303,16 +303,36 @@ export const AuthProvider = ({ children }) => {
       }
     };
 
-    const markActivity = () => {
-      persistLastActivityAt(Date.now());
+    const checkIdleAndScheduleNext = () => {
+      const idleDurationMs = Date.now() - lastActivityAtRef.current;
       if (idleTimeoutRef.current) {
         window.clearTimeout(idleTimeoutRef.current);
         idleTimeoutRef.current = null;
       }
-      idleTimeoutRef.current = window.setTimeout(() => {
+      if (idleDurationMs >= SESSION_IDLE_TIMEOUT_MS) {
         inactivityReasonRef.current = 'idle-timeout';
         logout({ preserveFirmSlug: true });
-      }, SESSION_IDLE_TIMEOUT_MS);
+        return;
+      }
+      const remainingMs = Math.max(0, SESSION_IDLE_TIMEOUT_MS - idleDurationMs);
+      idleTimeoutRef.current = window.setTimeout(() => {
+        const callbackIdleDurationMs = Date.now() - lastActivityAtRef.current;
+        if (callbackIdleDurationMs >= SESSION_IDLE_TIMEOUT_MS) {
+          inactivityReasonRef.current = 'idle-timeout';
+          logout({ preserveFirmSlug: true });
+          return;
+        }
+        checkIdleAndScheduleNext();
+      }, remainingMs);
+    };
+
+    const markActivity = ({ shouldPersist = true } = {}) => {
+      const now = Date.now();
+      lastActivityAtRef.current = now;
+      if (shouldPersist) {
+        persistLastActivityAt(now);
+      }
+      checkIdleAndScheduleNext();
     };
 
     markActivity();
@@ -330,19 +350,30 @@ export const AuthProvider = ({ children }) => {
     const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'focus'];
     events.forEach((eventName) => window.addEventListener(eventName, markActivity, { passive: true }));
     const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') markActivity();
+      if (document.visibilityState !== 'visible') return;
+      const idleDurationMs = Date.now() - lastActivityAtRef.current;
+      if (idleDurationMs >= SESSION_IDLE_TIMEOUT_MS) {
+        inactivityReasonRef.current = 'idle-timeout';
+        logout({ preserveFirmSlug: true });
+        return;
+      }
+      markActivity();
     };
     window.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('popstate', markActivity);
     window.addEventListener('app:navigation', markActivity);
-    window.addEventListener('app:api-activity', markActivity);
+    const onApiActivity = (event) => {
+      if (!event?.detail?.userInitiated) return;
+      markActivity();
+    };
+    window.addEventListener('app:api-activity', onApiActivity);
 
     return () => {
       events.forEach((eventName) => window.removeEventListener(eventName, markActivity));
       window.removeEventListener('popstate', markActivity);
       window.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('app:navigation', markActivity);
-      window.removeEventListener('app:api-activity', markActivity);
+      window.removeEventListener('app:api-activity', onApiActivity);
       if (idleTimeoutRef.current) {
         window.clearTimeout(idleTimeoutRef.current);
         idleTimeoutRef.current = null;
@@ -359,8 +390,24 @@ export const AuthProvider = ({ children }) => {
     const onStorageEvent = (event) => {
       if (event.key === STORAGE_KEYS.AUTH_LAST_ACTIVE_AT && event.newValue) {
         const parsed = Number(event.newValue);
-        if (Number.isFinite(parsed) && parsed > 0) {
+        if (Number.isFinite(parsed) && parsed > 0 && parsed > lastActivityAtRef.current) {
           lastActivityAtRef.current = parsed;
+          if (idleTimeoutRef.current) {
+            window.clearTimeout(idleTimeoutRef.current);
+          }
+          const idleDurationMs = Date.now() - lastActivityAtRef.current;
+          if (idleDurationMs >= SESSION_IDLE_TIMEOUT_MS) {
+            inactivityReasonRef.current = 'idle-timeout';
+            logout({ preserveFirmSlug: true });
+          } else {
+            idleTimeoutRef.current = window.setTimeout(() => {
+              const callbackIdleDurationMs = Date.now() - lastActivityAtRef.current;
+              if (callbackIdleDurationMs >= SESSION_IDLE_TIMEOUT_MS) {
+                inactivityReasonRef.current = 'idle-timeout';
+                logout({ preserveFirmSlug: true });
+              }
+            }, SESSION_IDLE_TIMEOUT_MS - idleDurationMs);
+          }
         }
         return;
       }
@@ -373,7 +420,7 @@ export const AuthProvider = ({ children }) => {
     };
     window.addEventListener('storage', onStorageEvent);
     return () => window.removeEventListener('storage', onStorageEvent);
-  }, [clearAuthStorage, clearPrivateClientState]);
+  }, [clearAuthStorage, clearPrivateClientState, logout]);
 
   const updateUser = useCallback((userData) => {
     setUser((prev) => {
