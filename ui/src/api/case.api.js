@@ -59,6 +59,8 @@ const shouldThrottleTracking = (action, caseId) => {
 };
 
 export const caseApi = {
+  getDocketEligibleUsers: () =>
+    request((http) => http.get('/dockets/eligible-users'), 'Failed to load eligible users'),
   getCases: (filters = {}) =>
     request((http) => http.get(`/dockets${buildQueryString(filters)}`), 'Failed to load dockets'),
 

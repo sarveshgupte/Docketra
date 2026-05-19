@@ -91,7 +91,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
       const [categoryResponse, workbasketResponse, usersResponse, clientResponse] = await Promise.allSettled([
           categoryService.getCategories(true),
           adminApi.listWorkbaskets({ activeOnly: true }),
-          adminApi.getUsers({ limit: 400 }),
+          caseApi.getDocketEligibleUsers(),
           clientApi.getClients(true, true),
       ]);
       const nextErrors = {};
@@ -171,7 +171,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   const selectedSubcategory = subcategories.find((item) => item.id === formData.subcategoryId);
   const employeeContextEnabled = selectedSubcategory?.employeeContextEnabled === true;
   const activeUsers = users.filter((item) => item?.status === 'active' && item?.isActive !== false);
-  const relatedEmployeeUsers = users.filter((item) => String(item?.status || '').toLowerCase() !== 'deleted');
+  const relatedEmployeeUsers = users.filter((item) => (item?._id || item?.id) && String(item?.status || '').toLowerCase() !== 'deleted');
   const selectedEmployee = activeUsers.find((item) => item.xID === formData.employeeXID);
   const selectedRelatedEmployeeUser = relatedEmployeeUsers.find((item) => String(item?._id || item?.id) === String(formData.relatedEmployeeUserId));
 
@@ -464,11 +464,11 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
           />
           {employeeContextEnabled ? (
             <Select
-              label="Employee"
+              label="Employee (subcategory context)"
               value={formData.employeeXID}
               onChange={(e) => updateField('employeeXID', e.target.value)}
               disabled={loading.users}
-              helpText="Use this only when the docket relates to a specific employee."
+              helpText="This is a subcategory-specific employee context field and is separate from Related employee/user."
               options={[{ value: '', label: loading.users ? 'Loading employees...' : 'Select employee, if applicable' }, ...activeUsers.map((item) => ({ value: item.xID, label: `${item.xID} - ${item.name || item.email || 'User'} - ${item.department || 'No Department'}` }))]}
             />
           ) : null}
