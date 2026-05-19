@@ -48,8 +48,12 @@ export const parseDelimitedLine = (line = '') => {
 };
 
 export const getApiErrorType = (error) => {
-  if (!error?.response) return 'network';
-  const status = error.response.status;
+  const status = error?.response?.status
+    ?? error?.status
+    ?? error?.originalError?.response?.status
+    ?? null;
+
+  if (status == null) return 'network';
   if (status === 404) return 'empty';
   if (status === 401) return 'unauthorized';
   if (status === 403) return 'forbidden';
