@@ -20,6 +20,7 @@ import { useUnsavedChangesPrompt } from '../hooks/useUnsavedChangesPrompt';
 import { useQueryState } from '../hooks/useQueryState';
 import { ROUTES } from '../constants/routes';
 import { canManageClients as canManageClientsByRoleOrPermission } from '../utils/permissions';
+import './ClientsPage.css';
 
 const toDisplayString = (value, fallback = '—') => {
   if (typeof value === 'string') {
@@ -241,7 +242,7 @@ export const ClientsPage = () => {
   };
 
   const openEditClientModal = (client) => {
-    const resolvedClientId = client?.clientId || client?.id || '';
+    const resolvedClientId = client?.clientId || client?.id || client?._id || '';
     setSelectedClient({ ...client, clientId: resolvedClientId });
     setSelectedClientId(resolvedClientId);
     setClientForm({
@@ -647,10 +648,10 @@ export const ClientsPage = () => {
         isOpen={showClientModal}
         onClose={closeClientModal}
         onRequestClose={requestCloseClientModal}
-        title={selectedClient ? `Edit Client • ${selectedClient.businessName || selectedClientId || 'Client'}` : 'Add New Client'}
+        title={selectedClient ? `Edit Client • ${selectedClient.businessName || selectedClient.legalName || selectedClient.name || selectedClientId || 'Client'}` : 'Add New Client'}
         maxWidth="2xl"
       >
-        <form onSubmit={handleSaveClient} style={{ display: 'grid', gap: '1rem' }}>
+        <form onSubmit={handleSaveClient} className="client-form-grid">
           {clientFormMessage.text ? (
             <p className={`rounded-md border px-3 py-2 text-sm ${clientFormMessage.type === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>{clientFormMessage.text}</p>
           ) : null}
@@ -700,7 +701,7 @@ export const ClientsPage = () => {
           <Input label="TAN (Optional)" value={clientForm.TAN} onChange={(event) => handleClientFieldChange('TAN', event.target.value)} error={clientFormErrors.TAN} />
           <Input label="GST (Optional)" value={clientForm.GST} onChange={(event) => handleClientFieldChange('GST', event.target.value)} error={clientFormErrors.GST} />
 
-          <div className="sticky bottom-0 -mx-1 flex justify-end gap-2 border-t border-gray-100 bg-white px-1 pb-1 pt-3">
+          <div className="client-modal-actions">
             <Button type="button" variant="outline" onClick={() => requestCloseClientModal() && closeClientModal()}>Cancel</Button>
             <Button type="submit" disabled={savingClient || !isClientFormDirty}>{savingClient ? 'Saving…' : 'Save Client'}</Button>
           </div>
