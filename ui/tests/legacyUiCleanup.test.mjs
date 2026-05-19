@@ -36,6 +36,13 @@ for (const removedClass of ['.dashboard-next-step-title', '.dashboard-next-step-
 }
 
 const whatsNew = read('../docs/whats-new.md');
+assert.equal(whatsNew.startsWith('# What\'s New\n'), true, 'docs/whats-new.md must keep "# What\'s New" as the first heading.');
 assert.ok(whatsNew.includes('## 2026-05-19 — Cleaned up legacy workspace UI'), 'What\'s New should include legacy workspace UI cleanup entry.');
+
+assert.equal(
+  /\.dashboard-quick-actions \.panel,\s*\n\.dashboard-attention-list \.panel,\s*\n\s*\.settings-form-split/m.test(platformCss),
+  false,
+  'platform.css should not contain a dangling selector comma before .settings-form-split.',
+);
 
 console.log('legacyUiCleanup.test.mjs passed');
