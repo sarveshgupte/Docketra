@@ -1,5 +1,12 @@
 # What's New
 
+## 2026-05-19 — Fixed workspace session timeout
+
+- Prevented active users from being logged out prematurely.
+- Session timeout now applies only after 3 hours of inactivity.
+- Avoided misleading timeout messages for permission, network, or server errors.
+- Added regression coverage for workspace session handling.
+
 ## 2026-05-19 — Cleaned up legacy workspace UI
 
 - Migrated remaining active pages away from older layout wrappers where safe.

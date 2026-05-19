@@ -35,8 +35,8 @@ assert(
   'AuthContext must register activity listeners while authenticated.'
 );
 assert(
-  authContextSource.includes('}, SESSION_IDLE_TIMEOUT_MS);'),
-  'Logout timer must use SESSION_IDLE_TIMEOUT_MS.'
+  authContextSource.includes('SESSION_IDLE_TIMEOUT_MS - idleDurationMs') || authContextSource.includes('}, SESSION_IDLE_TIMEOUT_MS);'),
+  'Logout timer scheduling must derive from SESSION_IDLE_TIMEOUT_MS.'
 );
 assert(
   authContextSource.includes('}, SESSION_KEEPALIVE_INTERVAL_MS);'),
