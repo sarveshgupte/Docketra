@@ -125,28 +125,28 @@ export const WorkSettingsPage = () => {
   };
 
   return (
-    <PlatformShell moduleLabel="Settings" title="Work settings" subtitle="Configure work routing and docket structuring rules for your firm.">
+    <PlatformShell moduleLabel="Settings" title="Work settings" subtitle="Use Work Settings to control how new dockets enter team queues.">
       <div className="min-h-screen w-full flex-1 bg-[var(--dt-bg-warm)]">
         <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 space-y-6">
-          <PageHeader title="Work Settings" subtitle="Configure work routing and docket structuring rules for your firm." />
+          <PageHeader title="Work Settings" subtitle="Use Work Settings to control how new dockets enter team queues." />
           <StatusMessageStack messages={statusMessages} />
-          <Card>
-            <div className={spacingClasses.sectionMargin}>
-              <div>
-                <h2 className="text-lg font-semibold text-[var(--dt-text)]">Workbasket Management</h2>
-                <p className="mt-1 text-sm text-[var(--dt-text-secondary)]">Add, rename, and activate or deactivate workbaskets for docket routing. A linked QC Workbasket will be created automatically.</p>
+          <Card className="settings-status-card">
+            <div className={`${spacingClasses.sectionMargin} settings-form-split`}>
+              <div className="settings-form-split__meta">
+                <h2 className="text-lg font-semibold text-[var(--dt-text)]">Workbasket linkage & routing</h2>
+                <p className="mt-1 text-sm text-[var(--dt-text-secondary)]">Use primary workbaskets to control queue destinations for incoming dockets. Linked QC workbaskets are maintained automatically.</p>
               </div>
               <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
                 <Input label="New workbasket" value={workbasketName} onChange={(event) => setWorkbasketName(event.target.value)} placeholder="e.g. Compliance WB" />
                 <Button type="button" variant="primary" onClick={handleCreateWorkbasket} disabled={workbasketSaving || !workbasketName.trim()}>Add Primary Workbasket</Button>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 settings-form-split__controls">
                 {loadingWorkbaskets ? <p className="text-sm text-[var(--dt-text-muted)]">Loading workbaskets…</p> : null}
                 {!loadingWorkbaskets && primaryWorkbaskets.length === 0 ? (<div className="rounded border border-[var(--dt-border-whisper)] bg-[var(--dt-bg)] p-3"><p className="text-sm text-[var(--dt-text-muted)]">No active workbasket is configured yet. Create one to start docket routing.</p><Button type="button" variant="primary" className="mt-2" onClick={() => void handleCreateDefaultRouting()} disabled={workbasketSaving}>Create default routing</Button></div>) : null}
                 {primaryWorkbaskets.map((workbasket) => (
                   <div key={workbasket._id} className="flex flex-wrap items-center justify-between gap-3 rounded border border-[var(--dt-border-whisper)] px-3 py-2">
                     <div className="text-sm font-medium text-[var(--dt-text)]">{workbasket.name} <span className="text-xs text-[var(--dt-text-muted)]">({workbasket.isActive ? 'Active' : 'Inactive'})</span>{String(workbasket.type || 'PRIMARY').toUpperCase()==='PRIMARY' && workbasket._id ? <span className="ml-2 text-xs text-[var(--dt-text-muted)]">Linked QC: {qcByPrimaryId.get(String(workbasket._id))?.name || 'Missing'}</span> : null}</div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 danger-action-row">
                       <Button type="button" variant="outline" onClick={() => handleRenameWorkbasket(workbasket)}>Rename</Button>
                       <Button type="button" variant={workbasket.isActive ? 'danger' : 'primary'} onClick={() => handleToggleWorkbasket(workbasket)}>{workbasket.isActive ? 'Deactivate' : 'Activate'}</Button>
                     </div>
@@ -155,13 +155,17 @@ export const WorkSettingsPage = () => {
               </div>
             </div>
           </Card>
-          <Card>
-            <div className="flex flex-wrap items-start justify-between gap-4">
+          <Card className="settings-status-card">
+            <div className="settings-form-split">
+              <div className="settings-form-split__meta">
               <div>
                 <h2 className="text-lg font-semibold text-[var(--dt-text)]">Category Management</h2>
                 <p className="mt-1 text-sm text-[var(--dt-text-secondary)]">Create categories and subcategories that define where dockets are created.</p>
               </div>
-              <Button variant="primary" onClick={() => navigate(ROUTES.WORK_CATEGORY_MANAGEMENT(firmSlug))}>Open Category Management</Button>
+              </div>
+              <div className="settings-form-split__controls settings-action-bar">
+                <Button variant="primary" onClick={() => navigate(ROUTES.WORK_CATEGORY_MANAGEMENT(firmSlug))}>Open category and subcategory routing</Button>
+              </div>
             </div>
           </Card>
         </div>

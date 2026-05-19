@@ -877,3 +877,9 @@
 - Made firm, work, team, storage, and AI settings easier to scan.
 - Improved card alignment, spacing, and action hierarchy.
 - Kept audit reports accessible from Settings.
+
+## 2026-05-19 — Polished settings and admin pages
+- Improved Firm Settings, Work Settings, Team & Access, Storage, and AI Settings layout consistency.
+- Made admin forms, tables, and action areas easier to scan.
+- Clarified storage and AI configuration messaging without exposing sensitive data.
+- Preserved existing permissions, route guards, and settings behavior.
