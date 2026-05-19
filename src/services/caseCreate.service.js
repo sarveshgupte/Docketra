@@ -117,6 +117,19 @@ module.exports = (deps) => {
     };
   };
 
+  const buildSopSnapshot = ({ sop = {}, subcategoryId = null, createdAt = new Date() } = {}) => {
+    const title = typeof sop?.title === 'string' ? sop.title.trim() : '';
+    const body = typeof sop?.body === 'string' ? sop.body : '';
+    if (!title && !body) return undefined;
+    return {
+      title,
+      body,
+      format: sop?.format === 'markdown' ? 'markdown' : 'plain_text',
+      sourceSubcategoryId: subcategoryId ? String(subcategoryId) : null,
+      capturedAt: createdAt,
+    };
+  };
+
   const buildChecklistSnapshot = ({ checklistTemplate = [], createdAt = new Date() }) => {
     if (!Array.isArray(checklistTemplate) || checklistTemplate.length === 0) return [];
     return checklistTemplate
@@ -665,6 +678,11 @@ module.exports = (deps) => {
           tatDaysSnapshot,
           slaDays: Math.max(0, Number(tatDaysSnapshot || defaultSlaDays || 0)),
           dueDate: resolvedDueDate,
+          sopSnapshot: buildSopSnapshot({
+            sop: subcategoryDoc?.sop || {},
+            subcategoryId: resolvedSubcategoryId,
+            createdAt,
+          }),
           checklist: buildChecklistSnapshot({
             checklistTemplate: subcategoryDoc?.checklistTemplate || [],
             createdAt,
