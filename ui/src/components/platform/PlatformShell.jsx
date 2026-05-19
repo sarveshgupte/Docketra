@@ -340,6 +340,14 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [closeCommandPalette, commandPaletteOpen, firmSlug, openRoute, resetCommandCenterState]);
 
+  const showBreadcrumbs = useMemo(() => {
+    if (!currentNavItem?.to || !title) return false;
+    const normalizedPath = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+    const normalizedNavTo = currentNavItem.to.endsWith('/') ? currentNavItem.to.slice(0, -1) : currentNavItem.to;
+    const isDescendant = normalizedPath.startsWith(`${normalizedNavTo}/`);
+    return isDescendant && currentNavItem.label !== title;
+  }, [currentNavItem, pathname, title]);
+
   const shortcutHint = 'Shortcuts: Ctrl/⌘+K open, / quick open, Alt+Shift+N new docket, Alt+Shift+D dashboard';
 
   const firmLabel = user?.firm?.name || firmSlug || 'Workspace';
@@ -407,15 +415,18 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
         <header className="platform__topbar">
           <div className="platform__title-block">
             {moduleLabel ? <span className="platform__module-label">{moduleLabel}</span> : null}
-            <h1>{title}</h1>
+            <h1>{title || currentNavItem?.label || "Workspace"}</h1>
             {subtitle ? <p>{subtitle}</p> : null}
-            <div className="platform__breadcrumbs" aria-label="Breadcrumb">
-              <span>Workspace</span>
-              <span aria-hidden="true">/</span>
-              <span>{currentNavItem?.label || title}</span>
-            </div>
+            {showBreadcrumbs ? (
+              <div className="platform__breadcrumbs" aria-label="Breadcrumb">
+                <span className="platform__breadcrumb-root">{currentNavItem.label}</span>
+                <span aria-hidden="true">/</span>
+                <span>{title}</span>
+              </div>
+            ) : null}
           </div>
           <div className="platform__actions" role="toolbar" aria-label="Page actions">
+            <div className="platform__action-search">
             <button
               type="button"
               className="platform__command-trigger"
@@ -425,8 +436,9 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
               <span className="platform__command-trigger-label">Search dockets, clients, modules…</span>
               <kbd>Ctrl/⌘ K</kbd>
             </button>
-            {actions}
-            <StorageStatusBadge />
+            </div>
+            {actions ? <div className="platform__action-primary">{actions}</div> : null}
+            <div className="platform__action-status"><StorageStatusBadge /></div>
             <div className="platform__account-menu" ref={menuRef}>
               <button
                 type="button"
