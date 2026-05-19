@@ -318,6 +318,21 @@ async function testEmployeeWorklist() {
   assert.strictEqual(queryCall.assignedToXID, 'X000123');
   assert.deepStrictEqual(queryCall.status.$in, ['OPEN', 'PENDING']); // CaseStatus injected mock
 
+
+  // 3b. No assigned dockets returns 200 with an empty array
+  const originalCaseFind = CaseMock.find;
+  CaseMock.find = (query) => {
+    mockCaseFind.push(query);
+    return mockQuery([]);
+  };
+  req = mockReq({ user: { _id: 'user-1', xID: 'X000123', firmId: 'firm-123', role: 'USER' } });
+  res = mockRes();
+  await searchController.employeeWorklist(req, res);
+  assert.strictEqual(res.statusCode || 200, 200);
+  assert.strictEqual(res.data.success, true);
+  assert.deepStrictEqual(res.data.data, []);
+  CaseMock.find = originalCaseFind;
+
   // 4. USER cannot view another user
   req = mockReq({ user: { _id: 'user-1', xID: 'X000123', firmId: 'firm-123', role: 'USER' }, query: { assigneeXID: 'X000234' } });
   res = mockRes();

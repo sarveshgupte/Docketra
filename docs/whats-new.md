@@ -830,3 +830,10 @@
 ## May 2026: Strict firm-owned storage auditability + route coverage
 - Added explicit strict-mode audit event logging for enable/disable, BYOS-required rejections, and blocked writes (client profile + upload intents).
 - Added controller-level strict-mode guard coverage for firm settings updates and kept storage/badge trust visibility aligned.
+
+
+## Improved My Worklist reliability
+- Fixed oversized filter checkbox on My Worklist
+- Improved worklist loading and retry messaging
+- Empty assigned docket queues now show a clean empty state instead of an error
+- Added coverage for employee worklist loading behavior
