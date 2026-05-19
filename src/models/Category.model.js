@@ -90,6 +90,10 @@ const subcategorySchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  requiresRelatedEmployeeUser: {
+    type: Boolean,
+    default: false,
+  },
   deadlineRule: {
     mode: {
       type: String,
@@ -171,6 +175,10 @@ const categorySchema = new mongoose.Schema({
     default: false,
   },
   employeeContextEnabled: {
+    type: Boolean,
+    default: false,
+  },
+  requiresRelatedEmployeeUser: {
     type: Boolean,
     default: false,
   },

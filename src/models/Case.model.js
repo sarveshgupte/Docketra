@@ -203,6 +203,13 @@ const caseSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  relatedEmployeeUser: {
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    xID: { type: String, trim: true, default: null },
+    name: { type: String, trim: true, default: null },
+    email: { type: String, trim: true, lowercase: true, default: null },
+    status: { type: String, trim: true, default: null },
+  },
   
   /**
    * Category ID - Reference to Category model

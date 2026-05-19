@@ -253,6 +253,8 @@ module.exports = (deps) => {
       const resolvedCategoryId = guidedInput.categoryId || categoryId;
       const resolvedSubcategoryId = guidedInput.subcategoryId || subcategoryId;
       const resolvedEmployeeXID = guidedInput.employeeXID || (typeof employeeXID === 'string' ? employeeXID.trim().toUpperCase() : null);
+      const relatedEmployeeUserIdRaw = req.body?.relatedEmployeeUserId || req.body?.relatedEmployeeUser?.userId || null;
+      const relatedEmployeeUserId = typeof relatedEmployeeUserIdRaw === 'string' ? relatedEmployeeUserIdRaw.trim() : String(relatedEmployeeUserIdRaw || '').trim();
 
       validateStructuredInput({
         title: resolvedTitle || 'Untitled Docket',
@@ -285,6 +287,17 @@ module.exports = (deps) => {
           ...responseMeta,
         });
       }
+      const requiresRelatedEmployeeUser = Boolean(
+        subcategoryDoc?.requiresRelatedEmployeeUser === true
+        || categoryDoc?.requiresRelatedEmployeeUser === true
+      );
+      if (requiresRelatedEmployeeUser && !relatedEmployeeUserId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Related employee/user is required for this category.',
+          ...responseMeta,
+        });
+      }
 
       let routedWorkbasketId = subcategoryDoc?.workbasketId ? String(subcategoryDoc.workbasketId) : null;
       if (resolvedSubcategoryId && !routedWorkbasketId) {
@@ -302,6 +315,8 @@ module.exports = (deps) => {
       const employeeContextEnabled = Boolean(subcategoryDoc?.employeeContextEnabled);
       let resolvedEmployeePromise = null;
       let resolvedEmployee = null;
+      let relatedEmployeeUserPromise = null;
+      let relatedEmployeeUser = null;
       if (resolvedEmployeeXID) {
         if (!employeeContextEnabled) {
           return res.status(400).json({
@@ -317,6 +332,20 @@ module.exports = (deps) => {
           status: 'active',
           isActive: { $ne: false },
         }).select('xID name email department status').lean();
+      }
+      if (relatedEmployeeUserId) {
+        if (!mongoose.Types.ObjectId.isValid(relatedEmployeeUserId)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid relatedEmployeeUserId',
+            ...responseMeta,
+          });
+        }
+        relatedEmployeeUserPromise = User.findOne({
+          _id: relatedEmployeeUserId,
+          firmId,
+          status: { $ne: 'deleted' },
+        }).select('_id xID name fullName displayName email status').lean();
       }
       let fallbackWorkbasketPromise = null;
       if (!routedWorkbasketId) {
@@ -363,18 +392,27 @@ module.exports = (deps) => {
       // ⚡ Bolt Performance Optimization:
       // Prepare independent validation queries (dealId, crmClientId, fallbackWorkbasket, resolvedEmployee)
       // and execute them concurrently via Promise.all to reduce endpoint latency.
-      const [fallbackWorkbasket, crmClient, deal, fetchedEmployee] = await Promise.all([
+      const [fallbackWorkbasket, crmClient, deal, fetchedEmployee, fetchedRelatedEmployeeUser] = await Promise.all([
         fallbackWorkbasketPromise,
         crmClientPromise,
         dealPromise,
-        resolvedEmployeePromise
+        resolvedEmployeePromise,
+        relatedEmployeeUserPromise,
       ]);
       resolvedEmployee = fetchedEmployee || null;
+      relatedEmployeeUser = fetchedRelatedEmployeeUser || null;
 
       if (resolvedEmployeeXID && !resolvedEmployee) {
         return res.status(400).json({
           success: false,
           message: 'Selected employee must be an active user in your firm.',
+          ...responseMeta,
+        });
+      }
+      if (relatedEmployeeUserId && !relatedEmployeeUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'Selected related employee/user is invalid for this firm.',
           ...responseMeta,
         });
       }
@@ -673,6 +711,13 @@ module.exports = (deps) => {
             email: resolvedEmployee.email || '',
             department: resolvedEmployee.department || '',
             statusAtTime: resolvedEmployee.status || 'active',
+          } : undefined,
+          relatedEmployeeUser: relatedEmployeeUser ? {
+            userId: relatedEmployeeUser._id,
+            xID: relatedEmployeeUser.xID || null,
+            name: relatedEmployeeUser.name || relatedEmployeeUser.fullName || relatedEmployeeUser.displayName || relatedEmployeeUser.email || relatedEmployeeUser.xID || 'Unknown user',
+            email: relatedEmployeeUser.email || null,
+            status: relatedEmployeeUser.status || null,
           } : undefined,
           assignedTo: null,
           assignedBy: null,

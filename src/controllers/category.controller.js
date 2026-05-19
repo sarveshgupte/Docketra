@@ -186,7 +186,7 @@ const getCategoryById = async (req, res) => {
  */
 const createCategory = async (req, res) => {
   try {
-    const { name, defaultSlaDays = 0 } = req.body;
+    const { name, defaultSlaDays = 0, requiresRelatedEmployeeUser = false } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -217,6 +217,7 @@ const createCategory = async (req, res) => {
       subcategories: [],
       isActive: true,
       defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
+      requiresRelatedEmployeeUser: requiresRelatedEmployeeUser === true,
     });
     
     await category.save();
@@ -250,7 +251,7 @@ const createCategory = async (req, res) => {
 const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, defaultSlaDays } = req.body;
+    const { name, defaultSlaDays, requiresRelatedEmployeeUser } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -288,6 +289,9 @@ const updateCategory = async (req, res) => {
     category.name = name.trim();
     if (typeof defaultSlaDays !== 'undefined') {
       category.defaultSlaDays = Math.max(0, Number(defaultSlaDays) || 0);
+    }
+    if (typeof requiresRelatedEmployeeUser !== 'undefined') {
+      category.requiresRelatedEmployeeUser = requiresRelatedEmployeeUser === true;
     }
     await category.save();
     await safeLogCategoryMutation(req, {
@@ -378,7 +382,7 @@ const toggleCategoryStatus = async (req, res) => {
 const addSubcategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, defaultSlaDays = 0, workbasketId, deadlineRule, checklistTemplate, sop } = req.body;
+    const { name, defaultSlaDays = 0, workbasketId, deadlineRule, checklistTemplate, sop, requiresRelatedEmployeeUser = false } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -437,6 +441,7 @@ const addSubcategory = async (req, res) => {
       workbasketId: workbasket._id,
       isActive: true,
       defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
+      requiresRelatedEmployeeUser: requiresRelatedEmployeeUser === true,
       ...(typeof deadlineRule !== 'undefined' ? { deadlineRule: normalizeDeadlineRule(deadlineRule) } : {}),
       checklistTemplate: normalizeChecklistTemplate(checklistTemplate || []),
       ...(typeof sop !== 'undefined' ? { sop: normalizeSubcategorySop(sop, { actorXID: req.user?.xID }) } : {}),
@@ -476,7 +481,7 @@ const addSubcategory = async (req, res) => {
 const updateSubcategory = async (req, res) => {
   try {
     const { id, subcategoryId } = req.params;
-    const { name, defaultSlaDays, workbasketId, deadlineRule, checklistTemplate, sop } = req.body;
+    const { name, defaultSlaDays, workbasketId, deadlineRule, checklistTemplate, sop, requiresRelatedEmployeeUser } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -568,6 +573,9 @@ const updateSubcategory = async (req, res) => {
     }
     if (typeof defaultSlaDays !== 'undefined') {
       subcategory.defaultSlaDays = Math.max(0, Number(defaultSlaDays) || 0);
+    }
+    if (typeof requiresRelatedEmployeeUser !== 'undefined') {
+      subcategory.requiresRelatedEmployeeUser = requiresRelatedEmployeeUser === true;
     }
     if (typeof deadlineRule !== 'undefined') {
       subcategory.deadlineRule = normalizeDeadlineRule(deadlineRule);

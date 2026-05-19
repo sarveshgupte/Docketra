@@ -60,6 +60,7 @@ module.exports = {
       name: nonEmptyString,
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
+      requiresRelatedEmployeeUser: z.boolean().optional(),
     }).passthrough(),
   },
   'PUT /:id': {
@@ -68,6 +69,7 @@ module.exports = {
       name: nonEmptyString.optional(),
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
+      requiresRelatedEmployeeUser: z.boolean().optional(),
     }).passthrough(),
   },
   'PATCH /:id/status': {
@@ -84,6 +86,7 @@ module.exports = {
       workbasketId: objectIdString,
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
+      requiresRelatedEmployeeUser: z.boolean().optional(),
       deadlineRule: deadlineRuleSchema,
       checklistTemplate: checklistTemplateSchema,
       sop: subcategorySopSchema,
@@ -99,6 +102,7 @@ module.exports = {
       workbasketId: objectIdString.optional(),
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
+      requiresRelatedEmployeeUser: z.boolean().optional(),
       deadlineRule: deadlineRuleSchema,
       checklistTemplate: checklistTemplateSchema,
       sop: subcategorySopSchema,

@@ -1,5 +1,13 @@
 # What's New
 
+## 2026-05-19 — Added related employee/user context for dockets
+
+- Dockets can now optionally reference the employee or user the work relates to.
+- Client remains the required primary docket anchor.
+- Active and deactivated users can be selected for HR, payroll, onboarding, and employee-specific matters.
+- Assignment and routing behavior remains unchanged.
+- Category/subcategory settings can enforce Related employee/user during docket creation where required.
+
 ## 2026-05-19 — Fixed workspace session timeout
 
 - Prevented active users from being logged out prematurely.

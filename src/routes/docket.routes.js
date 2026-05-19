@@ -23,6 +23,7 @@ const {
   updateCaseStatus,
   getCaseByCaseId,
   getDocketAudit,
+  getDocketEligibleUsers,
   getCaseComments,
   getCases,
   searchCases,
@@ -153,6 +154,7 @@ router.get('/my-unassigned-created', authorizeFirmPermission('CASE_VIEW'), userR
 // ── AI — must come before /:caseId to avoid param matching ────────────────────
 router.get('/ai-suggestions/:attachmentId', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, getDocketAiSuggestions);
 router.post('/from-attachment/:attachmentId', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, createDocketFromAttachment);
+router.get('/eligible-users', authorizeFirmPermission('CASE_CREATE'), userReadLimiter, getDocketEligibleUsers);
 
 // ── Single docket — tracking events ──────────────────────────────────────────
 router.post('/:caseId/track-open', authorizeFirmPermission('CASE_VIEW'), userWriteLimiter, checkCaseClientAccess, trackCaseOpen);

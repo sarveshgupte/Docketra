@@ -13,8 +13,10 @@ export const AdminCategoriesSection = ({
   onCreateCategory,
   onAddSubcategory,
   onToggleCategoryStatus,
+  onEditCategory,
   onDeleteCategory,
   onToggleSubcategoryStatus,
+  onEditSubcategory,
   onDeleteSubcategory,
   StatusBadge,
 }) => (
@@ -47,6 +49,7 @@ export const AdminCategoriesSection = ({
               </div>
               <div className="category-actions">
                 <Button size="small" variant="default" onClick={() => onAddSubcategory(category)}>+ Add Subcategory</Button>
+                <Button size="small" variant="outline" onClick={() => onEditCategory(category)}>Edit</Button>
                 <Button
                   size="small"
                   variant={category.isActive ? 'danger' : 'primary'}
@@ -79,6 +82,13 @@ export const AdminCategoriesSection = ({
                       align: 'right',
                       render: (sub) => (
                         <div className="flex gap-2 justify-end">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onEditSubcategory(category, sub)}
+                          >
+                            Edit
+                          </Button>
                           <Button
                             size="sm"
                             variant={sub.isActive ? 'outline' : 'primary'}
