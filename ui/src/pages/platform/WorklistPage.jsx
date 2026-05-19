@@ -45,6 +45,8 @@ export const PlatformWorklistPage = () => {
 
   const recovery = getRecoveryPayload(queryError, 'platform_queue');
   const isAccessDenied = isError && recovery.reasonCode === 'CASE_ACCESS_DENIED';
+  const worklistLoadMessage = 'We couldn’t load your assigned dockets. Refresh the page or contact your admin if this continues.';
+  const worklistSupportCode = recovery.supportContext?.requestId || recovery.reasonCode || '';
 
   const filteredRows = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -118,7 +120,7 @@ export const PlatformWorklistPage = () => {
     >
       <StatusMessageStack
         messages={[
-          { tone: 'error', message: error || (isError ? 'Unable to load My Worklist right now.' : '') },
+          { tone: 'error', message: error || (isError ? `${worklistLoadMessage}${worklistSupportCode ? ` (Ref: ${worklistSupportCode})` : ''}` : '') },
           { tone: 'success', message: success },
           { tone: 'info', message: isFetching && !isLoading ? 'Refreshing worklist without interrupting your current view…' : '' },
         ]}
@@ -156,7 +158,7 @@ export const PlatformWorklistPage = () => {
                 <option key={category} value={category}>{category}</option>
               ))}
             </select>
-            <label>
+            <label className="filter-bar__checkbox">
               <input
                 type="checkbox"
                 checked={activeOnly}
@@ -194,7 +196,7 @@ export const PlatformWorklistPage = () => {
             </tr>
           ))}
           loading={isLoading}
-          error={isError ? 'Unable to load My Worklist right now.' : ''}
+          error=""
           onRetry={() => void refetch()}
           hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL' || activeOnly}
           emptyLabel="No dockets are assigned to you yet. Pull from Workbaskets or request assignment from your manager/admin."
