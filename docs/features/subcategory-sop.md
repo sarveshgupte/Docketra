@@ -36,3 +36,8 @@ Docket detail serializer exposes SOP as read-only payload:
 - No AI SOP generation.
 - No reminders or recurrence.
 - No SOP version history.
+
+## Docket Detail read-only visibility
+
+Docket Detail now renders the captured SOP snapshot (title, body, format, and captured timestamp when available) as a read-only section so assignees can follow work instructions without editing category configuration.
+
