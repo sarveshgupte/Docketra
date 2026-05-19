@@ -396,3 +396,11 @@ Use `PageSection` variants to control section density:
 - `variant="flush"`: removes panel chrome for nested layouts.
 
 Avoid inline spacing/layout styles on platform pages when these primitives apply.
+
+## Admin and settings control-center layout rules (PR 4)
+- Keep the Settings hub as a 2x2 module grid with clear route ownership for Firm profile, Work settings, Team & controls, and Storage & AI.
+- For settings detail pages, prefer a form-split layout: left side for section purpose, policy notes, and scope; right side for controls, tables, and actions.
+- Use one status stack near the page header for save/load/background notices; avoid duplicate error banners for the same failure.
+- Keep save/action hierarchy consistent: primary save first, then secondary reset/cancel/test actions in a compact action bar.
+- Use compact admin tables and scannable labels for team/role/access surfaces; keep destructive actions visually secondary until confirmed.
+- Storage and AI messaging must stay trust-oriented and safe: do not expose raw credentials, tokens, drive IDs, or API key values in the UI.

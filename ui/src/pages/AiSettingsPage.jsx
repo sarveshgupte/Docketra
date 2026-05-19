@@ -4,10 +4,8 @@ import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Select } from '../components/common/Select';
-import { PageHeader } from '../components/layout/PageHeader';
 import { ToastContext } from '../contexts/ToastContext';
 import { getAiConfiguration, testAiConfiguration, updateAiConfiguration } from '../services/aiService';
-import { spacingClasses } from '../theme/tokens';
 import { StatusMessageStack } from './platform/PlatformShared';
 import { buildAiConfigurationPayload, isProviderDisabled } from '../utils/aiConfiguration';
 
@@ -107,20 +105,24 @@ export function AiSettingsPage() {
   };
 
   return (
-    <PlatformShell moduleLabel="Settings" title="AI settings" subtitle="Manage firm-level BYOAI configuration contract.">
-      <div className="min-h-screen w-full flex-1 bg-[var(--dt-bg-warm)]"><div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 space-y-6">
-        <PageHeader title="AI Settings" subtitle="Configuration-only BYOAI contract UI. Runtime provider validation is not implemented yet." />
+    <PlatformShell moduleLabel="Settings" title="AI settings" subtitle="Configure optional AI assistance for your workspace.">
+      <div className="min-h-screen w-full flex-1 bg-[var(--dt-bg-warm)]"><div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 space-y-6">
         <StatusMessageStack messages={statusMessages} />
-        <Card><div className={spacingClasses.sectionMargin}>
+        <Card className="settings-status-card"><div className="settings-form-split">
+          <div className="settings-form-split__meta">
+            <h2 className="text-lg font-semibold text-[var(--dt-text)]">Provider status and configuration</h2>
+            <p className="text-sm text-[var(--dt-text-secondary)]">AI is optional. Configure provider access, safeguards, and usage controls for assisted workflows.</p>
+          </div>
+          <div className="settings-form-split__controls">
           {loading ? <p className="text-sm text-[var(--dt-text-muted)]">Loading AI settings...</p> : (
             <>
-              <p className="text-sm text-[var(--dt-text-secondary)]">Recommend restricting AI access to Primary Admin/Admin until governance review is complete.</p>
+              <p className="text-sm text-[var(--dt-text-secondary)]">AI is optional. Configure it only when your firm is ready to use assisted drafting and summaries.</p>
               {forbidden ? null : <>
                 <Input label="Current AI mode" value={modeLabel(formState.provider, formState.enabled)} readOnly />
                 <Select label="Provider" value={formState.provider} onChange={(e) => setFormState((s) => ({ ...s, provider: e.target.value, enabled: !isProviderDisabled(e.target.value) }))} options={PROVIDER_OPTIONS} />
                 <Input label="Model" value={formState.model} onChange={(e) => setFormState((s) => ({ ...s, model: e.target.value }))} placeholder="e.g. gpt-4.1-mini" />
                 <Select label="Credential mode" value={formState.credentialMode} onChange={(e) => setFormState((s) => ({ ...s, credentialMode: e.target.value }))} options={CREDENTIAL_MODE_OPTIONS} />
-                <Input label="New secret/API key" type="password" value={formState.encryptedKey} onChange={(e) => setFormState((s) => ({ ...s, encryptedKey: e.target.value }))} placeholder={hasEncryptedKey ? 'Existing key is configured. Enter a new key only to rotate.' : 'Enter new key'} />
+                <Input label="New API key" type="password" value={formState.encryptedKey} onChange={(e) => setFormState((s) => ({ ...s, encryptedKey: e.target.value }))} placeholder={hasEncryptedKey ? 'Existing key is configured. Enter a new key only to rotate.' : 'Enter new key'} />
                 <Input label="New credential reference" value={formState.credentialRef} onChange={(e) => setFormState((s) => ({ ...s, credentialRef: e.target.value }))} placeholder={hasCredentialRef ? 'Existing reference is configured. Enter a new reference only to rotate.' : 'Enter credential reference'} />
                 <h3 className="text-base font-medium">Feature toggles</h3>
                 {FEATURE_KEYS.map((k) => <label key={k} className="flex gap-2 items-center"><input type="checkbox" checked={Boolean(formState.features[k])} onChange={(e) => setFormState((s) => ({ ...s, features: { ...s.features, [k]: e.target.checked } }))} />{k}</label>)}
@@ -130,14 +132,15 @@ export function AiSettingsPage() {
                 <p className="text-xs text-[var(--dt-text-muted)]">Raw prompts/outputs are not retained by default. Enabling retention should require firm/legal approval.</p>
                 {RETENTION_KEYS.map((k) => <label key={k} className="flex gap-2 items-center"><input type="checkbox" checked={Boolean(formState.retention[k])} disabled={formState.retention.zeroRetention && (k === 'savePrompts' || k === 'saveOutputs')} onChange={(e) => setFormState((s) => ({ ...s, retention: { ...s.retention, [k]: e.target.checked, ...(k === 'zeroRetention' && e.target.checked ? { savePrompts: false, saveOutputs: false } : {}) } }))} />{k}</label>)}
                 {PRIVACY_KEYS.map((k) => <label key={k} className="flex gap-2 items-center"><input type="checkbox" checked={Boolean(formState.privacy[k])} onChange={(e) => setFormState((s) => ({ ...s, privacy: { ...s.privacy, [k]: e.target.checked } }))} />{k}</label>)}
-                <div className="flex gap-3">
-                  <Button type="button" variant="secondary" onClick={onTest} loading={testing}>Test configuration</Button>
-                  <Button type="button" variant="primary" onClick={onSave} loading={saving}>Save AI settings</Button>
+                <div className="settings-action-bar">
+                  <Button type="button" variant="secondary" onClick={onTest} loading={testing}>Test connection</Button>
+                  <Button type="button" variant="primary" onClick={onSave} loading={saving}>Save settings</Button>
                 </div>
                 {testResult ? <div className="rounded border border-[var(--dt-border-whisper)] p-3 text-sm"><p><strong>Result:</strong> {testResult?.success ? 'success' : 'failure'}</p><p><strong>reasonCode:</strong> {testResult?.reasonCode || '-'}</p><p><strong>safeMessage:</strong> {testResult?.safeMessage || '-'}</p><p><strong>credentialStatus:</strong> {testResult?.credentialStatus || '-'}</p><p><strong>policyVersion:</strong> {testResult?.policyVersion || '-'}</p></div> : null}
               </>}
             </>
           )}
+          </div>
         </div></Card>
       </div></div>
     </PlatformShell>
