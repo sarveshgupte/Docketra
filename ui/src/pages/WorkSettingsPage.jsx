@@ -4,7 +4,6 @@ import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
-import { PageHeader } from '../components/layout/PageHeader';
 import { adminApi } from '../api/admin.api';
 import { ROUTES } from '../constants/routes';
 import { spacingClasses } from '../theme/tokens';
@@ -126,9 +125,7 @@ export const WorkSettingsPage = () => {
 
   return (
     <PlatformShell moduleLabel="Settings" title="Work settings" subtitle="Use Work Settings to control how new dockets enter team queues.">
-      <div className="min-h-screen w-full flex-1 bg-[var(--dt-bg-warm)]">
-        <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 space-y-6">
-          <PageHeader title="Work Settings" subtitle="Use Work Settings to control how new dockets enter team queues." />
+      <div className="platform-page section-group">
           <StatusMessageStack messages={statusMessages} />
           <Card className="settings-status-card">
             <div className={`${spacingClasses.sectionMargin} settings-form-split`}>
@@ -167,7 +164,6 @@ export const WorkSettingsPage = () => {
               </div>
             </div>
           </Card>
-        </div>
       </div>
     </PlatformShell>
   );

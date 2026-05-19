@@ -106,7 +106,7 @@ export function AiSettingsPage() {
 
   return (
     <PlatformShell moduleLabel="Settings" title="AI settings" subtitle="Configure optional AI assistance for your workspace.">
-      <div className="min-h-screen w-full flex-1 bg-[var(--dt-bg-warm)]"><div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 space-y-6">
+      <div className="platform-page section-group">
         <StatusMessageStack messages={statusMessages} />
         <Card className="settings-status-card"><div className="settings-form-split">
           <div className="settings-form-split__meta">
@@ -142,7 +142,7 @@ export function AiSettingsPage() {
           )}
           </div>
         </div></Card>
-      </div></div>
+      </div>
     </PlatformShell>
   );
 }
