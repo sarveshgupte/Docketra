@@ -4,6 +4,7 @@ import { worklistApi } from '../api/worklist.api';
 import { caseApi } from '../api/case.api';
 import { reportsService } from '../services/reports.service';
 import { toArray } from '../pages/platform/PlatformShared';
+import { CASE_STATUS } from '../utils/constants';
 import { trackAsync } from '../utils/performanceMonitor';
 
 const queueDefaults = {
@@ -41,7 +42,7 @@ export const usePlatformWorkbenchQuery = () => useQuery({
 
 export const usePlatformQcQueueQuery = () => useQuery({
   queryKey: ['platform', 'qc-workbench'],
-  queryFn: () => trackAsync('platform.qc.queue', 'platform:qc:queue', () => caseApi.getCases({ state: 'IN_QC', includeTerminated: false, limit: 50 })),
+  queryFn: () => trackAsync('platform.qc.queue', 'platform:qc:queue', () => caseApi.getCases({ status: CASE_STATUS.QC_PENDING, includeTerminated: false, limit: 50 })),
   select: (res) => toArray(res?.data?.data || res?.data?.items),
   ...queueDefaults,
 });
