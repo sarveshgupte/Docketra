@@ -22,7 +22,13 @@ export const usePlatformDashboardSummaryQuery = () => useQuery({
 export const usePlatformMyWorklistQuery = (options = {}) => useQuery({
   queryKey: ['platform', 'my-worklist', options.assigneeXID || 'self', options.status || 'ALL', options.category || 'ALL'],
   queryFn: () => trackAsync('platform.worklist.my', 'platform:worklist:my', () => worklistApi.getEmployeeWorklist({ limit: 50, ...options })),
-  select: (res) => toArray(res?.data?.data || res?.data?.items),
+  select: (res) => {
+    const payload = res?.data;
+    if (Array.isArray(payload?.data)) return payload.data;
+    if (Array.isArray(payload?.items)) return payload.items;
+    if (Array.isArray(payload)) return payload;
+    return [];
+  },
   ...queueDefaults,
 });
 
