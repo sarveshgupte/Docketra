@@ -1,5 +1,12 @@
 # What's New
 
+## 2026-05-20 — Polished Clients workspace page
+
+- Migrated Clients page layout closer to the workspace design system
+- Cleaned up Client Fact Sheet modal styling
+- Improved table action layout and state messaging
+- Preserved client creation, editing, upload, and docket creation flows
+
 ## 2026-05-20 — Polished Create Docket workflow
 
 - Cleaned up the Create Docket step layout and guidance
@@ -922,10 +929,3 @@
 - Docket Detail now displays read-only SOP/work-instruction and checklist snapshots when captured on the docket, with graceful empty states when not attached.
 - Knowledge Library remains available by direct route/feature access, and is not currently pinned as a dedicated sidebar item in the latest navigation IA.
 
-
-## Polished Clients workspace page
-
-- Migrated Clients page layout closer to the workspace design system
-- Cleaned up Client Fact Sheet modal styling
-- Improved table action layout and state messaging
-- Preserved client creation, editing, upload, and docket creation flows
