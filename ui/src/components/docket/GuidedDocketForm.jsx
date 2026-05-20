@@ -62,6 +62,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   const [loading, setLoading] = useState({ categories: true, workbaskets: true, users: true, clients: true, submit: false });
   const [clientLoadIssue, setClientLoadIssue] = useState('');
   const [dependencyErrors, setDependencyErrors] = useState({});
+  const [setupChecklistCollapsed, setSetupChecklistCollapsed] = useState(true);
   const [suggestion, setSuggestion] = useState(null);
   const [manualClassification, setManualClassification] = useState(false);
   const latestSuggestionRequestRef = useRef(0);
@@ -261,6 +262,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
     ? 'Complete setup before creating your first docket.'
     : '';
   const canSubmitFromSetup = !isClientsBlocked && !isCategoriesBlocked && !isWorkbasketsBlocked;
+  const shouldShowSetupChecklist = !setupChecklistCollapsed || !canSubmitFromSetup || Object.keys(dependencyErrors).length > 0 || Boolean(clientLoadIssue);
   const retryFailedDependencies = () => loadDeps();
   const firmSlug = window.location.pathname.split('/')[3] || '';
 
@@ -282,7 +284,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
     const submitPayload = { ...formData, idempotencyKey: formData.idempotencyKey || createSubmissionKey() };
     const payload = buildCreateDocketPayload(submitPayload);
     const payloadErrors = validateCreateDocketPayload(payload, { categories, subcategories });
-    if (!validateStep(0) || !validateStep(1) || !validateStep(2) || Object.keys(payloadErrors).length > 0) {
+    if (!validateStep(0) || !validateStep(1) || !validateStep(2) || !validateStep(3) || Object.keys(payloadErrors).length > 0) {
       setErrors((prev) => ({ ...prev, ...payloadErrors }));
       return;
     }
@@ -335,36 +337,49 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
         <p className="text-secondary">Step {step + 1} of {STEPS.length}: {STEPS[step]}</p>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+      <ol className="guided-docket-stepper" aria-label="Create docket progress">
         {STEPS.map((label, index) => (
-          <span key={label} className={`status-badge ${index === step ? 'status-open' : ''}`}>{index + 1}. {label}</span>
+          <li key={label}>
+            <span
+              className={`guided-docket-stepper__item ${index === step ? 'is-current' : ''} ${index < step ? 'is-complete' : 'is-pending'}`.trim()}
+              aria-current={index === step ? 'step' : undefined}
+            >
+              {index + 1}. {label}
+            </span>
+          </li>
         ))}
-      </div>
+      </ol>
 
-      {submitError ? <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{submitError}</p> : null}
-      {statusMessage ? <p className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">{statusMessage}</p> : null}
-      <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
-        <p className="font-semibold text-slate-900">Setup checklist</p>
-        <ul className="mt-2 list-disc pl-5 space-y-1">
+      {submitError ? <p className="guided-docket-notice guided-docket-notice--error">{submitError}</p> : null}
+      {statusMessage ? <p className="guided-docket-notice guided-docket-notice--info">{statusMessage}</p> : null}
+      <div className="guided-docket-panel">
+        <div className="guided-docket-panel__header">
+          <p className="guided-docket-panel__title">Setup checklist</p>
+          <Button type="button" variant="outline" onClick={() => setSetupChecklistCollapsed((prev) => !prev)}>
+            {shouldShowSetupChecklist ? 'Hide checklist' : 'Show checklist'}
+          </Button>
+        </div>
+        {shouldShowSetupChecklist ? (
+          <ul className="guided-docket-list">
           <li>Clients: {clientLoadIssue || dependencyErrors.clients ? (clientLoadIssue || dependencyErrors.clients) : (hasActiveClients ? 'Ready.' : 'Add a client first.')} <a href={ROUTES.CLIENTS(firmSlug)}>Open Clients</a></li>
           <li>Categories: {dependencyErrors.categories ? dependencyErrors.categories : (hasActiveSubcategory ? 'Ready.' : 'Create a category and subcategory first.')} <a href={ROUTES.WORK_CATEGORY_MANAGEMENT(firmSlug)}>Open Category Management</a></li>
           <li>Workbaskets: {dependencyErrors.workbaskets ? dependencyErrors.workbaskets : (workbaskets.length > 0 ? 'Ready.' : 'Create an active workbasket first.')} <a href={ROUTES.WORK_SETTINGS(firmSlug)}>Open Work Settings</a></li>
           <li>Users: {dependencyErrors.users ? 'Users could not be loaded.' : (users.length > 0 ? 'Ready.' : 'Add or activate a team member first if assignment is required.')} <a href={ROUTES.ADMIN(firmSlug)}>Open Team/Admin</a></li>
-        </ul>
-        {setupBlockingMessage ? <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800">{setupBlockingMessage}</p> : null}
+          </ul>
+        ) : null}
+        {setupBlockingMessage ? <p className="guided-docket-notice guided-docket-notice--warning">{setupBlockingMessage}</p> : null}
         {(Object.keys(dependencyErrors).length > 0 || clientLoadIssue) ? <Button type="button" variant="outline" onClick={retryFailedDependencies}>Retry failed loading</Button> : null}
       </div>
-      <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
-        <p className="font-semibold text-slate-900">First docket guidance</p>
-        <ul className="mt-2 list-disc pl-5 space-y-1">
+      <div className="guided-docket-panel">
+        <p className="guided-docket-panel__title">First docket guidance</p>
+        <ul className="guided-docket-list">
           <li>Client: {selectedClient ? `${selectedClient.clientId} - ${selectedClient.businessName || 'Unnamed client'}` : (defaultClient ? `${defaultClient.clientId} - ${defaultClient.businessName || 'Default firm client'}` : 'Will use your default firm client if available')}.</li>
-          <li>Category + subcategory are required because they determine routing and downstream queue visibility.</li>
+          <li>Category + subcategory determine routing and queue visibility.</li>
           <li>Workbasket is required and auto-selected from category/subcategory mapping.</li>
-          <li>After creation, the docket appears in All Dockets and enters the Workbasket or the selected assignee’s My Worklist.</li>
         </ul>
       </div>
       {!hasRoutingPrerequisites ? (
-        <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <p className="guided-docket-notice guided-docket-notice--warning">
           Docket creation may be blocked until categories/subcategories and at least one active workbasket are configured in Work Settings.
         </p>
       ) : null}
@@ -394,9 +409,9 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
       {step === 1 && (
         <>
           {suggestion ? (
-            <div className="mb-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm" role="status" aria-live="polite">
+            <div className="guided-docket-notice guided-docket-notice--info" role="status" aria-live="polite">
               <p><strong>Suggested category:</strong> {suggestion.categoryName} / {suggestion.subcategoryName} ({suggestion.confidence})</p>
-              <div className="mt-2" style={{ display: 'flex', gap: 8 }}>
+              <div className="guided-docket-inline-actions">
                 <Button type="button" onClick={applySuggestion} disabled={manualClassification}>Apply suggestion</Button>
                 <Button type="button" variant="outline" onClick={() => setSuggestion(null)}>Dismiss</Button>
               </div>
@@ -499,7 +514,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
         </div>
       )}
 
-      <div className="create-case__actions" style={{ marginTop: 16 }}>
+      <div className="create-case__actions guided-docket-actions">
         <Button type="button" variant="outline" onClick={handleCancel} disabled={loading.submit}>Cancel</Button>
         <Button type="button" variant="outline" onClick={() => setStep((prev) => Math.max(0, prev - 1))} disabled={step === 0 || loading.submit}>Back</Button>
         {step < STEPS.length - 1 ? (

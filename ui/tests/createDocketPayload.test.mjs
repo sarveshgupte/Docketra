@@ -28,6 +28,9 @@ assert.deepStrictEqual(payload, {
   assignedTo: 'X000001',
   employeeXID: 'X000123',
   idempotencyKey: 'abc-123',
+  dueDate: undefined,
+  eventDate: undefined,
+  relatedEmployeeUserId: undefined,
 });
 
 const noEmployeePayload = buildCreateDocketPayload({
