@@ -570,7 +570,7 @@ export const ClientsPage = () => {
       title="Clients"
       subtitle="View and manage registered client workspaces, compliance notes, and attachments."
       actions={canManageClients ? (
-          <div className="flex items-center gap-2">
+          <div className="clients-page-actions">
             <Button variant="default" onClick={() => setShowBulkUpload(true)}>Bulk Upload</Button>
             <Button variant="default" onClick={() => {
               const blob = new Blob([buildTemplateCsv('clients')], { type: 'text/csv;charset=utf-8;' });
@@ -623,11 +623,11 @@ export const ClientsPage = () => {
           </Card>
         )}
         {!loading && !loadError ? (
-          <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 text-sm text-gray-600">
-            <span>
+          <div className="clients-page-pagination">
+            <span className="clients-page-pagination__summary">
               Page {pagination.page} of {Math.max(pagination.pages || 1, 1)} · {pagination.total || 0} clients
             </span>
-            <div className="flex items-center gap-2">
+            <div className="clients-page-pagination__actions">
               <Button variant="outline" disabled={page <= 1} onClick={() => setPage((prev) => Math.max(1, prev - 1))}>
                 Previous
               </Button>
@@ -659,7 +659,7 @@ export const ClientsPage = () => {
       >
         <form onSubmit={handleSaveClient} className="client-form-grid">
           {clientFormMessage.text ? (
-            <p className={`rounded-md border px-3 py-2 text-sm ${clientFormMessage.type === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>{clientFormMessage.text}</p>
+            <p className={`client-form-message ${clientFormMessage.type === 'error' ? 'client-form-message--error' : 'client-form-message--success'}`}>{clientFormMessage.text}</p>
           ) : null}
           <h3 className="text-sm font-semibold text-gray-700">Basic Details</h3>
           <Input

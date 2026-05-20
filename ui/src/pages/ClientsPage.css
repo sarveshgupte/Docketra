@@ -3,6 +3,51 @@
   gap: 1rem;
 }
 
+.clients-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.clients-page-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #f3f4f6;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.clients-page-pagination__summary {
+  display: inline-block;
+}
+
+.clients-page-pagination__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.client-form-message {
+  border-radius: 0.375rem;
+  border: 1px solid;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.client-form-message--error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.client-form-message--success {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+  color: #047857;
+}
+
 .client-modal-actions {
   position: sticky;
   bottom: 0;
