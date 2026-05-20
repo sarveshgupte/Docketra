@@ -10,7 +10,6 @@ import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { TableSkeleton } from '../components/common/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
-import { PageHeader } from '../components/layout/PageHeader';
 import { AdminStatusBadge } from './admin/components/AdminStatusBadge';
 import { adminApi } from '../api/admin.api';
 import { categoryService } from '../services/categoryService';
@@ -1286,10 +1285,6 @@ export const AdminPage = () => {
     handleOpenAccessModal(user);
   };
 
-  const headerTitle = isWorkSettingsContext ? 'Category Management' : 'Team Management';
-  const headerDescription = isWorkSettingsContext
-    ? 'Create and manage docket categories and subcategories.'
-    : 'Manage users, access control, and security actions.';
   const handleRefreshAdminSurface = async () => {
     await Promise.allSettled([loadAdminStats(), loadAdminData()]);
   };
@@ -1307,18 +1302,9 @@ export const AdminPage = () => {
       moduleLabel={isWorkSettingsContext ? "Settings" : "Operations"}
       title={isWorkSettingsContext ? "Category Management" : "Team"}
       subtitle={isWorkSettingsContext ? "Create and manage docket categories and subcategories." : "Manage users, access control, and security actions."}
+      actions={(<Button variant="outline" onClick={() => void handleRefreshAdminSurface()}>Refresh</Button>)}
     >
       <div className="admin">
-        <PageHeader
-          title={headerTitle}
-          description={headerDescription}
-          actions={(
-            <div className="admin__header-actions">
-              <Button variant="outline" onClick={() => void handleRefreshAdminSurface()}>Refresh</Button>
-            </div>
-          )}
-        />
-
         <div className="admin__toolbar">
           <div className="admin__tabs" aria-label="Admin sections">
             {!isWorkSettingsContext && (

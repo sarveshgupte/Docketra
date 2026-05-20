@@ -18,6 +18,19 @@ assert.ok(adminPageSource.includes('pendingConfirmation'), 'AdminPage should kee
 assert.ok(adminPageSource.includes('if (creatingUser) return;'), 'Create user should protect against duplicate submits');
 assert.ok(adminPageSource.includes("role: ['EMPLOYEE', 'USER', 'STAFF'].includes(normalizedRole) ? 'USER' : normalizedRole"), 'Create user submit should normalize employee role aliases to USER API contract');
 
+assert.ok(adminPageSource.includes('actions={(<Button variant="outline" onClick={() => void handleRefreshAdminSurface()}>Refresh</Button>)}'), 'AdminPage should pass Refresh action through PlatformShell actions');
+assert.ok(!adminPageSource.includes('<PageHeader'), 'AdminPage should not render a duplicate PageHeader under PlatformShell');
+
+const categoryModalsSource = read('src/pages/admin/components/AdminCategoryModals.jsx');
+assert.ok(categoryModalsSource.includes('requiresRelatedEmployeeUser'), 'Category and subcategory modal flows should keep related employee/user setting wired');
+assert.ok(categoryModalsSource.includes('admin__checkbox-field'), 'Category modal checkbox layout should use shared CSS classes instead of utility-only layout');
+
+const categoriesSectionSource = read('src/pages/admin/components/AdminCategoriesSection.jsx');
+assert.ok(categoriesSectionSource.includes('admin__action-group--danger'), 'Category actions should visually separate destructive actions');
+assert.ok(categoriesSectionSource.includes('onDeleteCategory(category)'), 'Category delete action should remain wired');
+assert.ok(categoriesSectionSource.includes('onDeleteSubcategory(category, sub)'), 'Subcategory delete action should remain wired');
+
+
 const usersSectionSource = read('src/pages/admin/components/AdminUsersSection.jsx');
 assert.ok(usersSectionSource.includes('Team Members'), 'Users section should use clearer heading copy');
 assert.ok(usersSectionSource.includes('Reset Password'), 'Users section should expose reset-password action');

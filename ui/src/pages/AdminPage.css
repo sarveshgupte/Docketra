@@ -404,3 +404,37 @@
     width: 100%;
   }
 }
+
+.admin__actions--category {
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.admin__action-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.admin__action-group--danger {
+  padding-left: var(--spacing-xs);
+  border-left: 1px solid var(--dt-border-whisper);
+}
+
+.admin__subcategory-name {
+  font-weight: 600;
+  color: var(--dt-text);
+}
+
+.admin__checkbox-field {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  font-size: 0.875rem;
+  color: var(--dt-text-muted);
+}
+
+.admin__checkbox-field input[type='checkbox'] {
+  margin-top: 2px;
+}

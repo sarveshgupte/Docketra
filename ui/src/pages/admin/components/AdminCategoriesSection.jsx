@@ -47,17 +47,21 @@ export const AdminCategoriesSection = ({
                   {category.isActive ? 'Active' : 'Inactive'}
                 </Badge>
               </div>
-              <div className="category-actions">
-                <Button size="small" variant="default" onClick={() => onAddSubcategory(category)}>+ Add Subcategory</Button>
-                <Button size="small" variant="outline" onClick={() => onEditCategory(category)}>Edit</Button>
-                <Button
-                  size="small"
-                  variant={category.isActive ? 'danger' : 'primary'}
-                  onClick={() => onToggleCategoryStatus(category)}
-                >
-                  {category.isActive ? 'Disable' : 'Enable'}
-                </Button>
-                <Button size="small" variant="danger" onClick={() => onDeleteCategory(category)}>Delete</Button>
+              <div className="admin__actions admin__actions--category">
+                <div className="admin__action-group" role="group" aria-label={`${category.name} actions`}>
+                  <Button size="small" variant="default" onClick={() => onAddSubcategory(category)}>+ Add Subcategory</Button>
+                  <Button size="small" variant="outline" onClick={() => onEditCategory(category)}>Edit</Button>
+                  <Button
+                    size="small"
+                    variant={category.isActive ? 'outline' : 'primary'}
+                    onClick={() => onToggleCategoryStatus(category)}
+                  >
+                    {category.isActive ? 'Disable' : 'Enable'}
+                  </Button>
+                </div>
+                <div className="admin__action-group admin__action-group--danger" role="group" aria-label={`${category.name} destructive actions`}>
+                  <Button size="small" variant="danger" onClick={() => onDeleteCategory(category)}>Delete</Button>
+                </div>
               </div>
             </div>
 
@@ -66,7 +70,7 @@ export const AdminCategoriesSection = ({
                 <h4>Subcategories:</h4>
                 <DataTable
                   columns={[
-                    { key: 'name', label: 'Subcategory', render: (sub) => <div className="font-medium text-gray-900">{sub.name}</div> },
+                    { key: 'name', label: 'Subcategory', render: (sub) => <div className="admin__subcategory-name">{sub.name}</div> },
                     {
                       key: 'workbasketId',
                       label: 'Workbasket',
@@ -81,7 +85,7 @@ export const AdminCategoriesSection = ({
                       label: 'Action',
                       align: 'right',
                       render: (sub) => (
-                        <div className="flex gap-2 justify-end">
+                        <div className="admin__actions admin__actions--compact">
                           <Button
                             size="sm"
                             variant="outline"
