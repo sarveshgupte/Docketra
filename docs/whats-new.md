@@ -1,5 +1,12 @@
 # What's New
 
+## 2026-05-20 — Cleaned up Admin and Work Settings layout
+
+- Removed duplicate page header behavior under the workspace shell
+- Improved category and subcategory action layout
+- Preserved related employee/user requirement settings
+- Added guardrails for future admin layout drift
+
 ## 2026-05-20 — Polished Clients workspace page
 
 - Migrated Clients page layout closer to the workspace design system
@@ -930,8 +937,3 @@
 - Knowledge Library remains available by direct route/feature access, and is not currently pinned as a dedicated sidebar item in the latest navigation IA.
 
 
-## Cleaned up Admin and Work Settings layout
-- Removed duplicate page header behavior under the workspace shell
-- Improved category and subcategory action layout
-- Preserved related employee/user requirement settings
-- Added guardrails for future admin layout drift

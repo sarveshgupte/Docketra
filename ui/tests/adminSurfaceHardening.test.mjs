@@ -5,6 +5,11 @@ import path from 'node:path';
 const read = (relPath) => fs.readFileSync(path.resolve(process.cwd(), relPath), 'utf8');
 
 const adminPageSource = read('src/pages/AdminPage.jsx');
+
+const whatsNewSource = read('../docs/whats-new.md');
+const whatsNewTopSlice = whatsNewSource.split('\n').slice(0, 20).join('\n');
+assert.ok(whatsNewTopSlice.includes('## 2026-05-20 — Cleaned up Admin and Work Settings layout'), "What's New should list admin/work settings cleanup in the latest top section");
+
 assert.ok(adminPageSource.includes('AdminUsersSection'), 'AdminPage should delegate user rendering to AdminUsersSection');
 assert.ok(adminPageSource.includes('AdminClientsSection'), 'AdminPage should delegate client rendering to AdminClientsSection');
 assert.ok(adminPageSource.includes('AdminCategoriesSection'), 'AdminPage should delegate category rendering to AdminCategoriesSection');
@@ -29,6 +34,7 @@ const categoriesSectionSource = read('src/pages/admin/components/AdminCategories
 assert.ok(categoriesSectionSource.includes('admin__action-group--danger'), 'Category actions should visually separate destructive actions');
 assert.ok(categoriesSectionSource.includes('onDeleteCategory(category)'), 'Category delete action should remain wired');
 assert.ok(categoriesSectionSource.includes('onDeleteSubcategory(category, sub)'), 'Subcategory delete action should remain wired');
+assert.ok(categoriesSectionSource.includes('aria-label={`${sub.name} destructive actions`}'), 'Subcategory destructive action should render in a dedicated danger action group');
 
 
 const usersSectionSource = read('src/pages/admin/components/AdminUsersSection.jsx');
