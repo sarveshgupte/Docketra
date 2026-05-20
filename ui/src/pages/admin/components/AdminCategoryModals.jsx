@@ -52,7 +52,7 @@ export const AdminCategoryModals = ({
           placeholder="Enter category name"
           required
         />
-        <label className="flex items-start gap-2 text-sm text-gray-700">
+        <label className="admin__checkbox-field">
           <input
             type="checkbox"
             checked={categoryForm.requiresRelatedEmployeeUser === true}
@@ -90,7 +90,7 @@ export const AdminCategoryModals = ({
     >
       <form onSubmit={onUpdateCategory} className="admin__create-form">
         <Input label="Category Name" name="name" value={editCategoryForm.name} onChange={(e) => setEditCategoryForm({ ...editCategoryForm, name: e.target.value })} required />
-        <label className="flex items-start gap-2 text-sm text-gray-700">
+        <label className="admin__checkbox-field">
           <input type="checkbox" checked={editCategoryForm.requiresRelatedEmployeeUser === true} onChange={(e) => setEditCategoryForm({ ...editCategoryForm, requiresRelatedEmployeeUser: e.target.checked })} />
           <span><strong>Require related employee/user during docket creation</strong><br />Enable this for HR, payroll, onboarding, offboarding, reimbursement, or employee-specific work.</span>
         </label>
@@ -129,7 +129,7 @@ export const AdminCategoryModals = ({
           ]}
           required
         />
-        <label className="flex items-start gap-2 text-sm text-gray-700">
+        <label className="admin__checkbox-field">
           <input
             type="checkbox"
             checked={subcategoryForm.requiresRelatedEmployeeUser === true}
@@ -175,7 +175,7 @@ export const AdminCategoryModals = ({
           options={[{ value: '', label: 'Select workbasket', disabled: true }, ...selectableWorkbaskets.map((w) => ({ value: String(w._id), label: w.name }))]}
           required
         />
-        <label className="flex items-start gap-2 text-sm text-gray-700">
+        <label className="admin__checkbox-field">
           <input type="checkbox" checked={editSubcategoryForm.requiresRelatedEmployeeUser === true} onChange={(e) => setEditSubcategoryForm({ ...editSubcategoryForm, requiresRelatedEmployeeUser: e.target.checked })} />
           <span><strong>Require related employee/user during docket creation</strong><br />Enable this for HR, payroll, onboarding, offboarding, reimbursement, or employee-specific work.</span>
         </label>

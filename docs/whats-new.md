@@ -929,3 +929,9 @@
 - Docket Detail now displays read-only SOP/work-instruction and checklist snapshots when captured on the docket, with graceful empty states when not attached.
 - Knowledge Library remains available by direct route/feature access, and is not currently pinned as a dedicated sidebar item in the latest navigation IA.
 
+
+## Cleaned up Admin and Work Settings layout
+- Removed duplicate page header behavior under the workspace shell
+- Improved category and subcategory action layout
+- Preserved related employee/user requirement settings
+- Added guardrails for future admin layout drift
