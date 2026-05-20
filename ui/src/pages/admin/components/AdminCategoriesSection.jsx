@@ -86,27 +86,31 @@ export const AdminCategoriesSection = ({
                       align: 'right',
                       render: (sub) => (
                         <div className="admin__actions admin__actions--compact">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onEditSubcategory(category, sub)}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={sub.isActive ? 'outline' : 'primary'}
-                            onClick={() => onToggleSubcategoryStatus(category, sub)}
-                          >
-                            {sub.isActive ? 'Disable' : 'Enable'}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="danger"
-                            onClick={() => onDeleteSubcategory(category, sub)}
-                          >
-                            Delete
-                          </Button>
+                          <div className="admin__action-group" role="group" aria-label={`${sub.name} actions`}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onEditSubcategory(category, sub)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant={sub.isActive ? 'outline' : 'primary'}
+                              onClick={() => onToggleSubcategoryStatus(category, sub)}
+                            >
+                              {sub.isActive ? 'Disable' : 'Enable'}
+                            </Button>
+                          </div>
+                          <div className="admin__action-group admin__action-group--danger" role="group" aria-label={`${sub.name} destructive actions`}>
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              onClick={() => onDeleteSubcategory(category, sub)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
                         </div>
                       ),
                     },
