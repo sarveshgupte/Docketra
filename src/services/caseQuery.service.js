@@ -148,6 +148,9 @@ module.exports = (deps) => {
       const activityPage = Number(req.query.activityPage || 1);
       const activityLimit = Math.min(100, Number(req.query.activityLimit || 25));
       const activitySkip = (activityPage - 1) * activityLimit;
+      // ⚡ Bolt Performance Optimization:
+      // Replaced memory-intensive $facet aggregation with concurrent find() and countDocuments() via Promise.all().
+      // Expected improvement: Reduces database memory overhead and allows MongoDB to use fast index scans for counts instead of pulling all matching documents into memory.
       const runPaginatedFacet = async ({
         model,
         match,
@@ -156,23 +159,19 @@ module.exports = (deps) => {
         limit,
         project,
       }) => {
-        const facetResult = await model.aggregate([
-          { $match: match },
-          {
-            $facet: {
-              data: [
-                { $sort: sort },
-                { $skip: skip },
-                { $limit: limit + 1 },
-                { $project: project },
-              ],
-              totalCount: [{ $count: 'count' }],
-            },
-          },
-        ], { role: req.user.role, maxTimeMS: 8000 });
-        const first = Array.isArray(facetResult) ? facetResult[0] || {} : {};
-        const rows = Array.isArray(first.data) ? first.data : [];
-        const totalCount = first.totalCount?.[0]?.count || 0;
+        const queryOptions = { role: req.user.role, maxTimeMS: 8000 };
+        const [rows, totalCount] = await Promise.all([
+          model.find(match, null, queryOptions)
+            .sort(sort)
+            .skip(skip)
+            .limit(limit + 1)
+            .select(project)
+            .lean()
+            .exec(),
+          model.countDocuments(match, queryOptions)
+            .exec(),
+        ]);
+
         return {
           rows: rows.slice(0, limit),
           hasMore: rows.length > limit,
