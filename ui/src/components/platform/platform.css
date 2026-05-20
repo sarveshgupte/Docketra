@@ -1624,3 +1624,87 @@ select:focus-visible {
 .danger-action-row .btn-danger {
   order: 2;
 }
+
+/* Guided Create Docket */
+.guided-docket-stepper {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+}
+
+.guided-docket-stepper__item {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--dt-border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dt-text-secondary);
+  background: var(--dt-surface-subtle);
+}
+
+.guided-docket-stepper__item.is-current {
+  color: var(--dt-accent);
+  background: var(--dt-accent-subtle);
+  border-color: color-mix(in srgb, var(--dt-accent) 32%, white);
+}
+
+.guided-docket-stepper__item.is-complete {
+  color: var(--dt-success);
+  background: var(--dt-success-subtle);
+  border-color: color-mix(in srgb, var(--dt-success) 28%, white);
+}
+
+.guided-docket-panel {
+  margin-bottom: 16px;
+  border: 1px solid var(--dt-border-whisper);
+  border-radius: var(--dt-radius-card);
+  background: var(--dt-surface-subtle);
+  padding: 12px;
+  font-size: 14px;
+  color: var(--dt-text-secondary);
+}
+
+.guided-docket-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.guided-docket-panel__title {
+  margin: 0;
+  font-weight: 700;
+  color: var(--dt-text);
+}
+
+.guided-docket-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.guided-docket-list li + li { margin-top: 4px; }
+
+.guided-docket-notice {
+  margin: 0 0 16px;
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.guided-docket-notice--error { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
+.guided-docket-notice--info { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
+.guided-docket-notice--warning { border-color: #fde68a; background: #fffbeb; color: #92400e; }
+
+.guided-docket-inline-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.guided-docket-actions { margin-top: 16px; }

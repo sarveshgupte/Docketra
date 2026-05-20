@@ -1,5 +1,12 @@
 # What's New
 
+## 2026-05-20 — Polished Create Docket workflow
+
+- Cleaned up the Create Docket step layout and guidance
+- Improved required-field validation before submit
+- Kept assignee and related employee/user behavior separate
+- Reduced legacy inline styling in the docket creation flow
+
 ## 2026-05-19 — Added related employee/user context for dockets
 
 - Dockets can now optionally reference the employee or user the work relates to.
