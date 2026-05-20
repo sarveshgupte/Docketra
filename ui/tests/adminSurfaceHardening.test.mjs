@@ -5,6 +5,11 @@ import path from 'node:path';
 const read = (relPath) => fs.readFileSync(path.resolve(process.cwd(), relPath), 'utf8');
 
 const adminPageSource = read('src/pages/AdminPage.jsx');
+
+const whatsNewSource = read('../docs/whats-new.md');
+const whatsNewTopSlice = whatsNewSource.split('\n').slice(0, 20).join('\n');
+assert.ok(whatsNewTopSlice.includes('## 2026-05-20 — Cleaned up Admin and Work Settings layout'), "What's New should list admin/work settings cleanup in the latest top section");
+
 assert.ok(adminPageSource.includes('AdminUsersSection'), 'AdminPage should delegate user rendering to AdminUsersSection');
 assert.ok(adminPageSource.includes('AdminClientsSection'), 'AdminPage should delegate client rendering to AdminClientsSection');
 assert.ok(adminPageSource.includes('AdminCategoriesSection'), 'AdminPage should delegate category rendering to AdminCategoriesSection');
@@ -17,6 +22,20 @@ assert.ok(!adminPageSource.includes('window.confirm('), 'AdminPage should not us
 assert.ok(adminPageSource.includes('pendingConfirmation'), 'AdminPage should keep centralized confirmation state');
 assert.ok(adminPageSource.includes('if (creatingUser) return;'), 'Create user should protect against duplicate submits');
 assert.ok(adminPageSource.includes("role: ['EMPLOYEE', 'USER', 'STAFF'].includes(normalizedRole) ? 'USER' : normalizedRole"), 'Create user submit should normalize employee role aliases to USER API contract');
+
+assert.ok(adminPageSource.includes('actions={(<Button variant="outline" onClick={() => void handleRefreshAdminSurface()}>Refresh</Button>)}'), 'AdminPage should pass Refresh action through PlatformShell actions');
+assert.ok(!adminPageSource.includes('<PageHeader'), 'AdminPage should not render a duplicate PageHeader under PlatformShell');
+
+const categoryModalsSource = read('src/pages/admin/components/AdminCategoryModals.jsx');
+assert.ok(categoryModalsSource.includes('requiresRelatedEmployeeUser'), 'Category and subcategory modal flows should keep related employee/user setting wired');
+assert.ok(categoryModalsSource.includes('admin__checkbox-field'), 'Category modal checkbox layout should use shared CSS classes instead of utility-only layout');
+
+const categoriesSectionSource = read('src/pages/admin/components/AdminCategoriesSection.jsx');
+assert.ok(categoriesSectionSource.includes('admin__action-group--danger'), 'Category actions should visually separate destructive actions');
+assert.ok(categoriesSectionSource.includes('onDeleteCategory(category)'), 'Category delete action should remain wired');
+assert.ok(categoriesSectionSource.includes('onDeleteSubcategory(category, sub)'), 'Subcategory delete action should remain wired');
+assert.ok(categoriesSectionSource.includes('aria-label={`${sub.name} destructive actions`}'), 'Subcategory destructive action should render in a dedicated danger action group');
+
 
 const usersSectionSource = read('src/pages/admin/components/AdminUsersSection.jsx');
 assert.ok(usersSectionSource.includes('Team Members'), 'Users section should use clearer heading copy');
