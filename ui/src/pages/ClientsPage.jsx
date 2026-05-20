@@ -7,8 +7,15 @@ import { Modal } from '../components/common/Modal';
 import { Input } from '../components/common/Input';
 import { Textarea } from '../components/common/Textarea';
 import { DataTable } from '../components/common/DataTable';
-import { EmptyState } from '../components/ui/EmptyState';
 import { PlatformShell } from '../components/platform/PlatformShell';
+import {
+  ErrorState,
+  EmptyState,
+  FilterBar,
+  PageSection,
+  SectionToolbar,
+  StatusMessageStack,
+} from './platform/PlatformShared';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { clientApi } from '../api/client.api';
@@ -463,9 +470,9 @@ export const ClientsPage = () => {
       header: 'Actions',
       align: 'right',
       headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'min-w-[15rem]',
+      cellClassName: 'min-w-[10rem]',
       render: (client) => (
-        <div className="admin__actions justify-end">
+        <div className="admin__actions clients-table-actions">
           {canManageClients ? (
             <>
               <Button size="small" variant="secondary" onClick={() => openEditClientModal(client)}>Edit Client</Button>
@@ -563,7 +570,7 @@ export const ClientsPage = () => {
       title="Clients"
       subtitle="View and manage registered client workspaces, compliance notes, and attachments."
       actions={canManageClients ? (
-          <div className="flex items-center gap-2">
+          <div className="clients-page-actions">
             <Button variant="default" onClick={() => setShowBulkUpload(true)}>Bulk Upload</Button>
             <Button variant="default" onClick={() => {
               const blob = new Blob([buildTemplateCsv('clients')], { type: 'text/csv;charset=utf-8;' });
@@ -580,48 +587,47 @@ export const ClientsPage = () => {
           </div>
         ) : null}
     >
-      <Card>
-        <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
-          <Input
-            label="Search clients"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="Search by client name, ID, or email"
-          />
-        </div>
-        {loading ? <Loading message="Loading clients..." /> : loadError ? (
-          <div className="p-8">
-            <EmptyState
-              title="Could not load clients"
-              description={loadError}
-              actionLabel="Retry"
-              onAction={loadClients}
+      <PageSection>
+        <SectionToolbar>
+          <FilterBar>
+            <Input
+              label="Search clients"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="Search by client name, ID, or email"
             />
-          </div>
+          </FilterBar>
+        </SectionToolbar>
+        <StatusMessageStack
+          messages={[
+            isRefreshing ? { tone: 'info', message: 'Refreshing clients in the background…' } : null,
+          ]}
+        />
+        {loading ? <Loading message="Loading clients..." /> : loadError ? (
+          <ErrorState title="Could not load clients" body={loadError} actionLabel="Retry" onAction={loadClients} />
         ) : (
+          <Card>
           <DataTable
             columns={columns}
             rows={clients}
             rowKey="clientId"
             emptyMessage={(
-              <div className="p-8">
-                <EmptyState
-                  title="No clients available yet"
-                  description="Add your first client to start creating dockets."
-                  actionLabel={canManageClients ? 'Add Client' : undefined}
-                  onAction={canManageClients ? openCreateClientModal : undefined}
-                />
-              </div>
+              <EmptyState
+                title="No clients available yet"
+                body="Add your first client to start creating dockets."
+                actionLabel={canManageClients ? 'Add Client' : undefined}
+                onAction={canManageClients ? openCreateClientModal : undefined}
+              />
             )}
           />
+          </Card>
         )}
         {!loading && !loadError ? (
-          <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 text-sm text-gray-600">
-            <span>
+          <div className="clients-page-pagination">
+            <span className="clients-page-pagination__summary">
               Page {pagination.page} of {Math.max(pagination.pages || 1, 1)} · {pagination.total || 0} clients
-              {isRefreshing ? ' · Refreshing…' : ''}
             </span>
-            <div className="flex items-center gap-2">
+            <div className="clients-page-pagination__actions">
               <Button variant="outline" disabled={page <= 1} onClick={() => setPage((prev) => Math.max(1, prev - 1))}>
                 Previous
               </Button>
@@ -635,7 +641,7 @@ export const ClientsPage = () => {
             </div>
           </div>
         ) : null}
-      </Card>
+      </PageSection>
       <BulkUploadModal
         isOpen={showBulkUpload}
         onClose={() => setShowBulkUpload(false)}
@@ -653,7 +659,7 @@ export const ClientsPage = () => {
       >
         <form onSubmit={handleSaveClient} className="client-form-grid">
           {clientFormMessage.text ? (
-            <p className={`rounded-md border px-3 py-2 text-sm ${clientFormMessage.type === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>{clientFormMessage.text}</p>
+            <p className={`client-form-message ${clientFormMessage.type === 'error' ? 'client-form-message--error' : 'client-form-message--success'}`}>{clientFormMessage.text}</p>
           ) : null}
           <h3 className="text-sm font-semibold text-gray-700">Basic Details</h3>
           <Input
@@ -727,9 +733,9 @@ export const ClientsPage = () => {
           </>
         )}
       >
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          <section style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '1rem' }}>
-            <h3 style={{ marginBottom: '0.75rem' }}>Client Overview / Description</h3>
+        <div className="client-fact-sheet-grid">
+          <section className="client-fact-sheet-section">
+            <h3 className="client-fact-sheet-section__title">Client Overview / Description</h3>
             <Textarea
               value={descriptionDraft}
               onChange={(event) => setDescriptionDraft(event.target.value)}
@@ -742,20 +748,19 @@ export const ClientsPage = () => {
               rows={4}
               placeholder="Add internal notes"
             />
-            <div style={{ color: '#6b7280', fontSize: '0.9rem', marginTop: '0.5rem' }}>
+            <div className="client-fact-sheet-upload-status">
               Last updated: {selectedFactSheet?.updatedAt ? formatDateTime(selectedFactSheet.updatedAt) : 'Never'}
             </div>
           </section>
 
-          <section style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '1rem' }}>
-            <h3 style={{ marginBottom: '0.75rem' }}>Attachments / Documents</h3>
+          <section className="client-fact-sheet-section">
+            <h3 className="client-fact-sheet-section__title">Attachments / Documents</h3>
             <div
-              className="neo-dropzone"
+              className="neo-dropzone client-fact-sheet-dropzone"
               role="button"
               tabIndex={0}
               onClick={() => fileInputRef.current?.click()}
               onKeyDown={(event) => event.key === 'Enter' && fileInputRef.current?.click()}
-              style={{ marginBottom: '0.75rem' }}
             >
               <div className="neo-dropzone__icon" aria-hidden="true">📎</div>
               <div className="neo-dropzone__label">Click to upload a document</div>
@@ -765,17 +770,17 @@ export const ClientsPage = () => {
                 type="file"
                 onChange={handleUploadCfsFile}
                 disabled={uploadingFile}
-                style={{ display: 'none' }}
+                className="client-fact-sheet-file-input"
               />
             </div>
-            {uploadingFile ? <p style={{ color: '#6b7280' }}>Uploading…</p> : null}
+            {uploadingFile ? <p className="client-fact-sheet-upload-status">Uploading…</p> : null}
             <table className="neo-table">
               <thead>
                 <tr>
                   <th>File Name</th>
                   <th>Size</th>
                   <th>Attached On</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
+                  <th className="client-fact-sheet-actions">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -788,7 +793,7 @@ export const ClientsPage = () => {
                     <td>{file.fileName}</td>
                     <td>{formatFileSize(file.size)}</td>
                     <td>{file.uploadedAt ? formatDateTime(file.uploadedAt) : '—'}</td>
-                    <td style={{ textAlign: 'right' }}>
+                    <td className="client-fact-sheet-actions">
                       <Button
                         size="small"
                         variant="default"
