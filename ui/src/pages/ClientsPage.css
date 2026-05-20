@@ -15,3 +15,41 @@
   background: #ffffff;
   padding: 0.75rem 0.25rem 0.25rem;
 }
+
+.client-fact-sheet-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.client-fact-sheet-section {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.client-fact-sheet-section__title {
+  margin-bottom: 0.75rem;
+}
+
+.client-fact-sheet-dropzone {
+  margin-bottom: 0.75rem;
+}
+
+.client-fact-sheet-file-input {
+  display: none;
+}
+
+.client-fact-sheet-upload-status {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.client-fact-sheet-actions {
+  text-align: right;
+}
+
+.clients-table-actions {
+  flex-wrap: wrap;
+  row-gap: 0.375rem;
+}
