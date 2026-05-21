@@ -7,7 +7,9 @@ assert.strictEqual(isPrimaryAdminActor({ role: 'PRIMARY_ADMIN' }), true);
 assert.strictEqual(isPrimaryAdminActor({ role: 'Primary Admin' }), true);
 assert.strictEqual(isPrimaryAdminActor({ role: 'primary-admin' }), true);
 assert.strictEqual(isPrimaryAdminActor({ role: 'ADMIN', isPrimaryAdmin: true }), true);
-assert.strictEqual(isPrimaryAdminActor({ role: 'ADMIN', defaultClientId: 'F1', firmId: 'F1' }), true);
+assert.strictEqual(isPrimaryAdminActor({ role: 'ADMIN', isSystem: true }), false);
+assert.strictEqual(isPrimaryAdminActor({ role: 'ADMIN', defaultClientId: 'F1', firmId: 'F1' }), false);
+assert.strictEqual(isPrimaryAdminActor({ role: 'ADMIN' }), false);
 assert.strictEqual(isPrimaryAdminActor({ role: 'USER' }), false);
 assert.strictEqual(isPrimaryAdminActor({ role: 'MANAGER' }), false);
 
