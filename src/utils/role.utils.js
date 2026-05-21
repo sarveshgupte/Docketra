@@ -31,7 +31,19 @@ const getFirmRoleRank = (userOrRole) => {
 };
 
 const hasFirmRoleAtLeast = (userOrRole, minimumRole) => getFirmRoleRank(userOrRole) >= getFirmRoleRank(minimumRole);
-const isPrimaryAdmin = (user) => normalizeFirmRole(user?.role) === 'PRIMARY_ADMIN';
+const isPrimaryAdminActor = (user) => {
+  if (!user || typeof user !== 'object') return false;
+  if (user.isPrimaryAdmin === true) return true;
+  const normalizedRole = normalizeRole(user.role);
+  if (normalizedRole === 'PRIMARY_ADMIN') return true;
+
+  const primaryAdminId = user.primaryAdminId && String(user.primaryAdminId);
+  const userId = user._id || user.id;
+  if (primaryAdminId && userId && String(primaryAdminId) == String(userId)) return true;
+
+  return false;
+};
+const isPrimaryAdmin = (user) => isPrimaryAdminActor(user);
 const isFirmAdminOrAbove = (user) => hasFirmRoleAtLeast(user, 'ADMIN');
 const isFirmManagerOrAbove = (user) => hasFirmRoleAtLeast(user, 'MANAGER');
 
@@ -54,6 +66,7 @@ module.exports = {
   normalizeFirmRole,
   getFirmRoleRank,
   hasFirmRoleAtLeast,
+  isPrimaryAdminActor,
   isPrimaryAdmin,
   isFirmAdminOrAbove,
   isFirmManagerOrAbove,
