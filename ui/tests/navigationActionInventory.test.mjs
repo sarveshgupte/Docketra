@@ -22,9 +22,11 @@ for (const routeFactory of ['ROUTES.TASK_MANAGER', 'ROUTES.DASHBOARD', 'ROUTES.C
   assert.ok(platformNav.includes(routeFactory), `Platform nav item missing valid route factory: ${routeFactory}`);
 }
 
-for (const commandId of ['go-docket-workbench', 'go-dashboard', 'go-clients', 'go-reports', 'go-team', 'go-settings']) {
+for (const commandId of ['go-docket-workbench', 'go-dashboard', 'go-clients', 'go-reports', 'go-settings']) {
   assert.ok(platformNav.includes(`id: '${commandId}'`), `Navigation command missing metadata id: ${commandId}`);
 }
+assert.equal(platformNav.includes("id: 'team-access'"), false, 'Team & Access should not be reintroduced as a duplicate top-level sidebar item.');
+assert.equal(platformNav.includes("id: 'go-team'"), false, 'Team & Access should not be exposed as a top-level destination command.');
 
 assert.ok(platformNav.includes("label: 'Work'"), 'Task Manager navigation label should be Work.');
 assert.ok(platformNav.includes("section: 'Client Workspace'"), 'MVP client section should be present.');

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { ROUTES } from '../src/constants/routes.js';
-import { isNavItemActive } from '../src/utils/navActive.js';
+import { isNavItemActive, isNavItemActiveWithLocation } from '../src/utils/navActive.js';
 
 const firmSlug = 'acme-law';
 
@@ -37,3 +37,9 @@ assert.equal(isNavItemActive(`${ROUTES.CRM(firmSlug)}/clients/123`, crmItem), tr
 assert.equal(isNavItemActive(ROUTES.CMS(firmSlug), crmItem), false, 'CRM should not be active for CMS routes');
 
 console.log('sidebarActiveStateReliability.test.mjs passed');
+
+const scopedWorklistA = { to: `${ROUTES.WORKLIST(firmSlug)}?workbasketId=a`, activeMatch: 'exactWithQuery' };
+const scopedWorklistB = { to: `${ROUTES.WORKLIST(firmSlug)}?workbasketId=b`, activeMatch: 'exactWithQuery' };
+assert.equal(isNavItemActiveWithLocation(ROUTES.WORKLIST(firmSlug), '?workbasketId=a', scopedWorklistA), true, 'Worklist child A should be active when query matches');
+assert.equal(isNavItemActiveWithLocation(ROUTES.WORKLIST(firmSlug), '?workbasketId=b', scopedWorklistA), false, 'Worklist child A should be inactive when query differs');
+assert.equal(isNavItemActiveWithLocation(ROUTES.WORKLIST(firmSlug), '?workbasketId=b', scopedWorklistB), true, 'Worklist child B should be active when query matches');

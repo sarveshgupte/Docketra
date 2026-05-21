@@ -1,3 +1,12 @@
+# What's New
+
+## 2026-05-21 — Reworked Daily Operations navigation
+
+- Grouped Daily Operations into assigned Workbaskets, Worklists, and QC Worklists
+- Added workbasket-scoped Worklist entries for users with multiple assigned queues
+- Kept QC queues separate from normal execution worklists
+- Removed "In QC" from normal Worklist status filtering
+
 ## May 2026: Team & Access primary-admin authorization consistency
 - Team & Access is now accessed from Settings → Team & controls to avoid duplicate navigation.
 - Team & Access backend authorization now consistently recognizes Primary Admin actors across role-format variants (for example `PRIMARY_ADMIN`, `Primary Admin`, `primary-admin`) and canonical primary-admin identity flags.
@@ -6,7 +15,6 @@
 - Tightened Primary Admin detection to strong primary-admin-only signals (`isPrimaryAdmin`, canonical `PRIMARY_ADMIN` role normalization, and primary-admin self-reference marker) so generic `isSystem` or default-client heuristics do not over-grant Team & Access authorization.
 
 - Hardened My Worklist (`GET /api/worklists/employee/me`) contract across UI/API: full filter query forwarding, resilient response normalization, and stable empty-queue behavior (`200` + `data: []`) instead of load errors for valid users.
-# What's New
 
 ## 2026-05-21 — Polished workspace discovery page
 
@@ -950,4 +958,3 @@
 
 - Docket Detail now displays read-only SOP/work-instruction and checklist snapshots when captured on the docket, with graceful empty states when not attached.
 - Knowledge Library remains available by direct route/feature access, and is not currently pinned as a dedicated sidebar item in the latest navigation IA.
-

@@ -10,6 +10,8 @@ const qcQueue = read('src/pages/platform/QcQueuePage.jsx');
 const casesPage = read('src/pages/CasesPage.jsx');
 const css = read('src/components/platform/platform.css');
 const whatsNew = read('../docs/whats-new.md');
+const whatsNewHeadingCount = (whatsNew.match(/^# What's New$/gm) || []).length;
+const dailyOpsEntryCount = (whatsNew.match(/^## 2026-05-21 — Reworked Daily Operations navigation$/gm) || []).length;
 
 assert.ok(workbaskets.includes('title="Workbaskets"'), 'Workbaskets should render in PlatformShell context.');
 assert.ok(workbaskets.includes('No dockets are waiting in your workbaskets.'), 'Workbaskets should use queue-specific empty copy.');
@@ -18,10 +20,11 @@ assert.ok(workbaskets.includes('tableClassName="queue-table"'), 'Workbaskets sho
 assert.ok(workbaskets.includes("{ label: 'Assigned', value:"), 'Workbaskets metric label should not imply user-specific ownership when not identity-filtered.');
 assert.ok(workbaskets.includes('error=""'), 'Workbaskets should avoid duplicate top-level + table-level query errors.');
 
-assert.ok(worklist.includes('title="My Worklist"'), 'My Worklist should render in PlatformShell context.');
+assert.ok(worklist.includes("title={scopedWorkbasket ? `Worklist — ${scopedWorkbasket.name}` : 'My Worklist'}"), 'Worklist title should support scoped and fallback variants.');
 assert.ok(worklist.includes('className="filter-bar__checkbox"'), 'My Worklist should preserve compact checkbox styling.');
 assert.ok(worklist.includes('error=""'), 'My Worklist should suppress duplicate table-level errors.');
 assert.ok(worklist.includes('title="Personal execution queue"'), 'My Worklist should communicate personal queue ownership.');
+assert.equal(worklist.includes('<option value=\"IN_QC\">In QC</option>'), false, 'Normal worklist status filter should not include In QC.');
 
 assert.ok(qcQueue.includes('title="QC Workbaskets"'), 'QC queue should render in PlatformShell context.');
 assert.ok(qcQueue.includes('No dockets are waiting for QC review.'), 'QC queue should use QC-specific empty copy.');
@@ -36,5 +39,7 @@ assert.ok(css.includes('.queue-action-group'), 'Shared queue action grouping cla
 assert.ok(!css.includes('td:nth-child('), 'Queue table styles should avoid brittle nth-child selectors.');
 assert.ok(css.includes('.queue-table .queue-cell-wrap'), 'Queue table wrapping should use explicit class selectors.');
 assert.ok(!whatsNew.includes('Workbaskets, My Worklist, QC Worklist, and All Dockets'), 'Whats New scope should match actual queue pages polished in this PR.');
+assert.equal(whatsNewHeadingCount, 1, "What's New should contain exactly one top-level heading.");
+assert.equal(dailyOpsEntryCount, 1, 'Daily Operations What\'s New entry should appear exactly once.');
 
 console.log('queuePagesPolish.test.mjs passed');
