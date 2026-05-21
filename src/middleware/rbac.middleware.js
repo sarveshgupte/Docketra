@@ -1,4 +1,4 @@
-const { normalizeRole, hasFirmRoleAtLeast } = require('../utils/role.utils');
+const { normalizeRole, hasFirmRoleAtLeast, isPrimaryAdminActor } = require('../utils/role.utils');
 
 const requireAuth = (req, res, next) => {
   if (!req.user) {
@@ -24,8 +24,7 @@ const requireRole = (roles = []) => (req, res, next) => {
 };
 
 const requirePrimaryAdmin = (req, res, next) => {
-  const currentRole = normalizeRole(req.user?.role);
-  if (currentRole !== 'PRIMARY_ADMIN') {
+  if (!isPrimaryAdminActor(req.user)) {
     return res.status(403).json({ success: false, message: 'Primary admin access required' });
   }
   return next();

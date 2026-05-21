@@ -71,8 +71,10 @@ export const getUserStatusBadge = (user) => {
 
 export const getNormalizedUserStatus = (user) => String(user?.status || '').toLowerCase();
 
+export const normalizeAdminRole = (role) => String(role || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+
 export const isPrimaryAdminUser = (user) => {
-  const normalizedRole = String(user?.role || '').trim().toUpperCase();
+  const normalizedRole = normalizeAdminRole(user?.role);
   const isFirmDefaultAdmin = ['ADMIN', 'PRIMARY_ADMIN'].includes(normalizedRole)
     && user?.defaultClientId
     && user?.firmId

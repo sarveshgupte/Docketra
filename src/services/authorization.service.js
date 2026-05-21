@@ -1,5 +1,5 @@
 const User = require('../models/User.model');
-const { isSuperAdminRole, normalizeRole } = require('../utils/role.utils');
+const { isSuperAdminRole, normalizeRole, isPrimaryAdminActor } = require('../utils/role.utils');
 
 // Action-level permissions for API endpoint authorization checks.
 const ROLE_PERMISSIONS = {
@@ -39,12 +39,13 @@ const toIdString = (value) => {
   return String(value);
 };
 
-const buildRoleContext = (role) => {
+const buildRoleContext = (roleOrUser) => {
+  const role = roleOrUser && typeof roleOrUser === 'object' ? roleOrUser.role : roleOrUser;
   if (!role || isSuperAdminRole(role)) {
     return null;
   }
 
-  const normalizedRole = normalizeRole(role);
+  const normalizedRole = isPrimaryAdminActor(roleOrUser) ? 'PRIMARY_ADMIN' : normalizeRole(role);
   const permissions = ROLE_PERMISSIONS[normalizedRole];
   if (!permissions) {
     return null;
@@ -86,7 +87,7 @@ const resolveFirmRole = async (userId, firmId, identity = {}) => {
     return null;
   }
 
-  const roleContext = buildRoleContext(membership.role);
+  const roleContext = buildRoleContext(membership);
   if (!roleContext) return null;
 
   const explicitPermissions = normalizePermissions(membership.permissions || membership.firmPermissions);
@@ -100,7 +101,7 @@ const resolveRequestFirmRole = async (req, firmId) => {
   const requestedFirmId = toIdString(firmId);
   const cachedRole = req?.user?.role || req?.jwt?.role || null;
   const cachedFirmId = toIdString(req?.identity?.firmId || req?.user?.firmId || req?.jwt?.firmId || null);
-  const cachedRoleContext = buildRoleContext(cachedRole);
+  const cachedRoleContext = buildRoleContext(req?.user || cachedRole);
 
   if (cachedRoleContext && requestedFirmId && cachedFirmId && requestedFirmId === cachedFirmId) {
     const explicitPermissions = normalizePermissions(req?.user?.permissions || req?.jwt?.permissions);
