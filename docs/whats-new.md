@@ -1,5 +1,8 @@
 # What's New
 
+## 2026-05-20 — Cleaned up Admin and Work Settings layout
+- Cleaned up Admin and Work Settings layout.
+
 ## 2026-05-21 — Reworked Daily Operations navigation
 
 - Grouped Daily Operations into assigned Workbaskets, Worklists, and QC Worklists
