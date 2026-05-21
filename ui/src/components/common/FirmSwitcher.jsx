@@ -63,6 +63,8 @@ export const FirmSwitcher = ({ onFirmSwitch }) => {
         size="small"
         onClick={() => setShowDropdown(!showDropdown)}
         disabled={loading}
+        aria-expanded={showDropdown}
+        aria-controls="firm-switcher-dropdown"
       >
         {loading ? 'Loading...' : 'Switch to Firm'}
       </Button>
@@ -73,7 +75,7 @@ export const FirmSwitcher = ({ onFirmSwitch }) => {
             className="firm-switcher__backdrop" 
             onClick={() => setShowDropdown(false)}
           />
-          <div className="firm-switcher__dropdown">
+          <div id="firm-switcher-dropdown" className="firm-switcher__dropdown">
             <div className="firm-switcher__header">
               <h3>Select a Firm</h3>
               <button 
