@@ -1,20 +1,81 @@
 import assert from 'assert';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { getPostLoginWorkspaceDestination } from '../src/utils/postAuthNavigation.js';
+const firmSlug = 'acme';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'utils', 'postAuthNavigation.js'), 'utf8');
+const firmUser = {
+  role: 'USER',
+  firmSlug,
+  workbaskets: [],
+  qcWorkbaskets: [],
+};
 
-assert(source.includes('export const getPostLoginWorkspaceDestination = (user, firmSlug, intendedPath = \'\') => {'), 'Helper must be exported from postAuthNavigation.js');
-assert(source.includes('if (isSafeReturnToPath(normalizedIntendedPath)) return normalizedIntendedPath;'), 'Safe deep-link must take priority.');
-assert(source.includes('const assignedWorkbasketId = readFirstValidId(user?.workbaskets);'), 'Helper must read assigned firm workbaskets.');
-assert(source.includes('const candidate = String(record?._id || record?.id || record?.workbasketId || \'\').trim();'), 'Helper must support _id/id/workbasketId and trim blanks.');
-assert(source.includes('return `${ROUTES.WORKLIST(firmSlug)}?workbasketId=${encodeURIComponent(assignedWorkbasketId)}`;'), 'First assigned worklist destination must include encoded workbasketId query param.');
-assert(source.includes("const canViewOverview = hasFirmRoleAtLeast(user, 'MANAGER');"), 'Manager/admin overview fallback must be role-based.');
-assert(source.includes('return ROUTES.GLOBAL_WORKLIST(firmSlug);'), 'Overview fallback should use ROUTES constant.');
-assert(source.includes('const assignedQcWorkbasketId = readFirstValidId(user?.qcWorkbaskets);'), 'QC fallback must use qcWorkbaskets assignments.');
-assert(source.includes('return ROUTES.QC_WORKBASKET_DETAIL(firmSlug, assignedQcWorkbasketId);'), 'QC fallback should route to first assigned QC workbasket.');
-assert(source.includes('return ROUTES.DASHBOARD(firmSlug);'), 'Final fallback should route to dashboard/default route.');
+assert.equal(
+  getPostLoginWorkspaceDestination(firmUser, firmSlug, `/app/firm/${firmSlug}/dockets`),
+  `/app/firm/${firmSlug}/dockets`,
+  'safe firm deep-link should be preserved'
+);
+
+assert.equal(
+  getPostLoginWorkspaceDestination(firmUser, firmSlug, 'https://evil.com'),
+  `/app/firm/${firmSlug}/dashboard`,
+  'unsafe external path should be rejected'
+);
+
+assert.equal(
+  getPostLoginWorkspaceDestination({
+    ...firmUser,
+    workbaskets: [{ _id: 'wb-1' }, { id: 'wb-2' }],
+  }, firmSlug),
+  `/app/firm/${firmSlug}/worklist?workbasketId=wb-1`,
+  'first assigned workbasket should route to scoped worklist'
+);
+
+assert.equal(
+  getPostLoginWorkspaceDestination({
+    ...firmUser,
+    workbaskets: [{ _id: '' }, { id: '   ' }, { workbasketId: 'wb-3' }],
+  }, firmSlug),
+  `/app/firm/${firmSlug}/worklist?workbasketId=wb-3`,
+  'blank workbasket IDs should be skipped'
+);
+
+assert.equal(
+  getPostLoginWorkspaceDestination({
+    role: 'MANAGER',
+    firmSlug,
+    workbaskets: [],
+    qcWorkbaskets: [],
+  }, firmSlug),
+  `/app/firm/${firmSlug}/global-worklist`,
+  'manager/admin with no workbasket should route to overview'
+);
+
+assert.equal(
+  getPostLoginWorkspaceDestination({
+    ...firmUser,
+    workbaskets: [],
+    qcWorkbaskets: [{ id: 'qc-1' }],
+  }, firmSlug),
+  `/app/firm/${firmSlug}/qc-workbaskets/qc-1`,
+  'user with only qc workbasket should route to qc workbasket detail'
+);
+
+assert.equal(
+  getPostLoginWorkspaceDestination(firmUser, firmSlug),
+  `/app/firm/${firmSlug}/dashboard`,
+  'user with no queues should route to dashboard fallback'
+);
+
+assert.equal(
+  getPostLoginWorkspaceDestination({ role: 'SUPER_ADMIN', isSuperAdmin: true, firmSlug }, firmSlug, `/app/firm/${firmSlug}/dockets`),
+  '',
+  'superadmin should not get firm worklist routing'
+);
+
+assert.equal(
+  getPostLoginWorkspaceDestination({ role: 'USER' }, '', '/app/firm/acme/worklist'),
+  '',
+  'user without firmSlug should not get firm worklist routing'
+);
 
 console.log('postLoginFirstAssignedWorklist.test.mjs passed');
