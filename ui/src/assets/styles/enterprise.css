@@ -414,3 +414,106 @@
     border-color: theme(--color-border-strong);
   }
 }
+
+@layer components {
+  .find-workspace-page {
+    min-height: calc(100vh - 64px);
+    padding: clamp(1rem, 2vw, 1.75rem);
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  }
+
+  .find-workspace-page__shell {
+    max-width: 1040px;
+    margin: 0 auto;
+    display: grid;
+    gap: 1.25rem;
+    align-items: center;
+  }
+
+  .find-workspace-page__context {
+    color: #0f172a;
+  }
+
+  .find-workspace-page__eyebrow {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    color: #92400e;
+    margin-bottom: 0.5rem;
+  }
+
+  .find-workspace-page__heading {
+    font-size: clamp(1.75rem, 2.2vw, 2.25rem);
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0;
+  }
+
+  .find-workspace-page__intro {
+    margin-top: 0.75rem;
+    color: #334155;
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .find-workspace-page__benefits {
+    margin-top: 1rem;
+    padding-left: 1rem;
+    display: grid;
+    gap: 0.5rem;
+    color: #475569;
+    font-size: 0.95rem;
+  }
+
+  .find-workspace-page__card {
+    width: 100%;
+    max-width: 480px;
+    justify-self: center;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+    background: #ffffff;
+  }
+
+  .find-workspace-page__card-header h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    color: #0f172a;
+  }
+
+  .find-workspace-page__card-header p {
+    margin-top: 0.35rem;
+    color: #475569;
+    font-size: 0.92rem;
+  }
+
+  .find-workspace-page__form {
+    margin-top: 1rem;
+    display: grid;
+    gap: 0.9rem;
+  }
+
+  .find-workspace-page__security-note,
+  .find-workspace-page__notice {
+    color: #64748b;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .find-workspace-page__notice {
+    margin-top: 0.9rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  @media (min-width: 920px) {
+    .find-workspace-page__shell {
+      grid-template-columns: minmax(0, 1fr) minmax(420px, 480px);
+      gap: 2rem;
+      min-height: calc(100vh - 128px);
+    }
+  }
+}

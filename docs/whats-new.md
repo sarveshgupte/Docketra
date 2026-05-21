@@ -1,5 +1,12 @@
 # What's New
 
+## 2026-05-21 — Polished workspace discovery page
+
+- Improved the Find Workspace page layout and guidance
+- Clarified that users enter xID, not firm slug
+- Added safer user-facing lookup and error messages
+- Preserved secure redirect behavior to firm login
+
 ## 2026-05-20 — Cleaned up Admin and Work Settings layout
 
 - Removed duplicate page header behavior under the workspace shell
