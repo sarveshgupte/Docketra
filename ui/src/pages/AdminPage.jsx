@@ -29,6 +29,7 @@ import {
   getApiErrorType,
   getNormalizedUserStatus,
   isPrimaryAdminUser,
+  normalizeAdminRole,
 } from './admin/adminPageUtils';
 import { AdminUsersSection } from './admin/components/AdminUsersSection';
 import { CreateUserModal } from './admin/components/CreateUserModal';
@@ -62,10 +63,10 @@ export const AdminPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const isWorkSettingsContext = searchParams.get('context') === 'work-settings';
   const isPrimaryAdminActor = useMemo(() => {
-    const normalizedRole = String(loggedInUser?.role || '').trim().toUpperCase();
+    const normalizedRole = normalizeAdminRole(loggedInUser?.role);
     return normalizedRole === 'PRIMARY_ADMIN' || Boolean(loggedInUser?.isPrimaryAdmin);
   }, [loggedInUser]);
-  const isManagerActor = useMemo(() => String(loggedInUser?.role || '').trim().toUpperCase() === 'MANAGER', [loggedInUser]);
+  const isManagerActor = useMemo(() => normalizeAdminRole(loggedInUser?.role) === 'MANAGER', [loggedInUser]);
   
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(() => {
@@ -264,7 +265,7 @@ export const AdminPage = () => {
     if (errorType === 'unauthorized') {
       showGroupedLoadToast(`${groupKey}:401`, 'Session expired. Please log in again.');
     } else if (errorType === 'forbidden') {
-      showGroupedLoadToast(`${groupKey}:403`, 'You do not have permission to view this section.');
+      showGroupedLoadToast('admin-forbidden', 'You do not have permission to view this section.');
     } else if (errorType === 'server' || errorType === 'unknown') {
       showGroupedLoadToast(`${groupKey}:5xx`, 'Server error. Please try again.');
     } else if (errorType === 'network') {
