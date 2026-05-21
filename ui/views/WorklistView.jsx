@@ -96,10 +96,29 @@ export function WorklistView({
         category: categoryFilter || undefined,
         subcategory: subcategoryFilter || undefined,
       });
-      const payload = Array.isArray(response?.data) ? response.data : response?.data?.data;
+      const payload = response?.data;
+      const rows = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload?.records)
+            ? payload.records
+            : Array.isArray(payload?.items)
+              ? payload.items
+              : Array.isArray(response?.records)
+                ? response.records
+                : [];
+      const resolvedPagination = response?.pagination
+        || payload?.pagination
+        || { page, pages: 1, total: rows.length, limit: 25 };
       return {
-        records: normalizeRecords(payload),
-        pagination: response?.pagination || { page, pages: 1, total: payload?.length || 0, limit: 25 },
+        records: normalizeRecords(rows),
+        pagination: {
+          page: Number(resolvedPagination?.page) || page,
+          pages: Number(resolvedPagination?.pages) || 1,
+          total: Number(resolvedPagination?.total) || rows.length,
+          limit: Number(resolvedPagination?.limit) || 25,
+        },
       };
     },
     placeholderData: keepPreviousData,
