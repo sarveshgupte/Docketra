@@ -19,6 +19,7 @@ assert.ok(settingsPage.includes('className="panel settings-card"'), 'Settings pa
 assert.ok(settingsPage.includes('Firm profile'), 'Settings page should include Firm profile card');
 assert.ok(settingsPage.includes('Work settings'), 'Settings page should include Work settings card');
 assert.ok(settingsPage.includes('Team & controls'), 'Settings page should include Team & controls card');
+assert.ok(settingsPage.includes('Open team & access'), 'Settings page should keep Open team & access CTA.');
 assert.ok(settingsPage.includes('Storage & AI'), 'Settings page should include Storage & AI card');
 
 assert.ok(settingsPage.includes('ROUTES.FIRM_SETTINGS(firmSlug)'), 'Settings page should link firm settings route');
