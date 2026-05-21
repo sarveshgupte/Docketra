@@ -16,6 +16,14 @@
 
 - Hardened My Worklist (`GET /api/worklists/employee/me`) contract across UI/API: full filter query forwarding, resilient response normalization, and stable empty-queue behavior (`200` + `data: []`) instead of load errors for valid users.
 
+## 2026-05-21 — BYOS Google Drive root hardening
+
+- Added canonical BYOS root naming: `Docketra — {firmSlug or firmId}`.
+- Added root identity manifest (`.docketra-storage-root.json`) for Drive root validation.
+- Google reconnect now reuses existing valid root by ID and blocks silent duplicate-root creation.
+- Added recovery-required responses for missing/deleted root, missing manifest, or manifest mismatch.
+- Clarified backup posture docs: manual export available now; scheduled backup automation is planned.
+
 ## 2026-05-21 — Polished workspace discovery page
 
 - Improved the Find Workspace page layout and guidance
