@@ -17,18 +17,13 @@ const extractReturnTo = (locationSearch = '') => {
 export const resolvePostAuthNavigation = ({
   locationSearch = '',
   user,
-  resolvePostAuthRoute,
+  resolvePostAuthRoute: _resolvePostAuthRoute,
 }) => {
-  const fallbackRoute = resolvePostAuthRoute(user);
   const returnTo = extractReturnTo(locationSearch);
   const candidateRoute = getPostLoginWorkspaceDestination(user, user?.firmSlug, returnTo);
 
   if (candidateRoute && isRoleCompatibleRoute(candidateRoute, { isSuperAdminUser: isSuperAdmin(user), firmSlug: user?.firmSlug })) {
     return candidateRoute;
-  }
-
-  if (isRoleCompatibleRoute(fallbackRoute, { isSuperAdminUser: isSuperAdmin(user), firmSlug: user?.firmSlug })) {
-    return fallbackRoute;
   }
 
   if (!isSuperAdmin(user) && user?.firmSlug) {
@@ -52,11 +47,15 @@ const readFirstValidId = (records = []) => {
 };
 
 export const getPostLoginWorkspaceDestination = (user, firmSlug, intendedPath = '') => {
-  const normalizedIntendedPath = String(intendedPath || '').trim();
-  if (isSafeReturnToPath(normalizedIntendedPath)) return normalizedIntendedPath;
-
   if (!user || isSuperAdmin(user)) return '';
   if (!firmSlug) return '';
+  const normalizedIntendedPath = String(intendedPath || '').trim();
+  if (
+    isSafeReturnToPath(normalizedIntendedPath)
+    && isRoleCompatibleRoute(normalizedIntendedPath, { isSuperAdminUser: false, firmSlug })
+  ) {
+    return normalizedIntendedPath;
+  }
 
   const assignedWorkbasketId = readFirstValidId(user?.workbaskets);
   if (assignedWorkbasketId) {
