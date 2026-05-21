@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
 import { caseApi } from '../../api/case.api';
@@ -26,6 +27,7 @@ export const PlatformWorklistPage = () => {
   const { firmSlug } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { openDocket } = useActiveDocket();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -35,6 +37,10 @@ export const PlatformWorklistPage = () => {
   const [success, setSuccess] = useState('');
   const [pendingActionId, setPendingActionId] = useState('');
 
+  const scopedWorkbasketId = new URLSearchParams(location.search || '').get('workbasketId') || '';
+  const assignedWorkbaskets = Array.isArray(user?.workbaskets) ? user.workbaskets : [];
+  const scopedWorkbasket = assignedWorkbaskets.find((wb) => String(wb?._id || wb?.id || wb?.workbasketId || '') === scopedWorkbasketId);
+
   const {
     data: rows = [],
     isLoading,
@@ -42,7 +48,7 @@ export const PlatformWorklistPage = () => {
     isError,
     error: queryError,
     refetch,
-  } = usePlatformMyWorklistQuery();
+  } = usePlatformMyWorklistQuery({ workbasketId: scopedWorkbasketId || undefined });
 
 
   const recovery = getRecoveryPayload(queryError, 'platform_queue');
@@ -50,9 +56,15 @@ export const PlatformWorklistPage = () => {
   const worklistLoadMessage = 'We couldn’t load your assigned dockets. Refresh the page or contact your admin if this continues.';
   const worklistSupportCode = recovery.supportContext?.requestId || recovery.reasonCode || '';
 
+  const normalizedRows = useMemo(() => {
+    if (!scopedWorkbasketId) return rows;
+    const pickId = (item) => String(item?.workbasketId || item?.workbasket?._id || item?.workbasket?.id || item?.workbasket?.workbasketId || item?.workBasketId || item?.queueId || item?.assignedWorkbasketId || item?.assignment?.workbasketId || item?.meta?.workbasketId || '');
+    return rows.filter((item) => pickId(item) === scopedWorkbasketId);
+  }, [rows, scopedWorkbasketId]);
+
   const filteredRows = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    return rows.filter((item) => {
+    return normalizedRows.filter((item) => {
       const status = String(item.status || '').toUpperCase();
       const activeStatus = activeOnly && status === 'PENDING' ? false : true;
       const matchesStatus = (statusFilter === 'ALL' || status === statusFilter) && activeStatus;
@@ -67,20 +79,18 @@ export const PlatformWorklistPage = () => {
       ].some((value) => String(value || '').toLowerCase().includes(needle));
       return matchesStatus && matchesCategory && matchesQuery;
     });
-  }, [rows, search, statusFilter, categoryFilter, activeOnly]);
+  }, [normalizedRows, search, statusFilter, categoryFilter, activeOnly]);
 
-  const categories = useMemo(() => [...new Set(rows.map((item) => String(item.category || '').trim()).filter(Boolean))], [rows]);
+  const categories = useMemo(() => [...new Set(normalizedRows.map((item) => String(item.category || '').trim()).filter(Boolean))], [normalizedRows]);
   const metrics = useMemo(() => {
-    const active = rows.filter((item) => String(item.status || '').toUpperCase() !== 'PENDING').length;
-    const pended = rows.filter((item) => String(item.status || '').toUpperCase() === 'PENDING').length;
-    const inQc = rows.filter((item) => String(item.status || '').toUpperCase() === 'IN_QC').length;
+    const active = normalizedRows.filter((item) => String(item.status || '').toUpperCase() !== 'PENDING').length;
+    const pended = normalizedRows.filter((item) => String(item.status || '').toUpperCase() === 'PENDING').length;
     return [
       { label: 'Active', value: isLoading ? '…' : active },
       { label: 'Pended', value: isLoading ? '…' : pended },
-      { label: 'In QC', value: isLoading ? '…' : inQc },
       { label: 'Visible now', value: isLoading ? '…' : filteredRows.length },
     ];
-  }, [rows, filteredRows.length, isLoading]);
+  }, [normalizedRows, filteredRows.length, isLoading]);
 
   const clearFilters = () => {
     setSearch('');
@@ -127,7 +137,7 @@ export const PlatformWorklistPage = () => {
 
   return (
     <PlatformShell
-      title="My Worklist"
+      title={scopedWorkbasket ? `Worklist — ${scopedWorkbasket.name}` : 'My Worklist'}
       subtitle="Your personal docket workload for active execution and pended follow-up."
       actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>Create Docket</Link>}
     >
@@ -158,7 +168,6 @@ export const PlatformWorklistPage = () => {
               <option value="ALL">All statuses</option>
               <option value="IN_PROGRESS">In progress</option>
               <option value="PENDING">Pending</option>
-              <option value="IN_QC">In QC</option>
             </select>
             <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Filter by category">
               <option value="ALL">All categories</option>
@@ -209,7 +218,7 @@ export const PlatformWorklistPage = () => {
           error=""
           onRetry={() => void refetch()}
           hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL' || activeOnly}
-          emptyLabel="No dockets are assigned to you yet. Pull from Workbaskets or request assignment from your manager/admin."
+          emptyLabel={scopedWorkbasket ? `No dockets in your ${scopedWorkbasket.name} worklist.` : 'No dockets are assigned to you yet. Pull from Workbaskets or request assignment from your manager/admin.'}
           emptyLabelFiltered="No worklist dockets match your current search or filters."
         />
       </PageSection>

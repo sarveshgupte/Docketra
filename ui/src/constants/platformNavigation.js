@@ -126,6 +126,7 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
   const assignedWorkbaskets = Array.isArray(accessContext?.workbaskets) ? accessContext.workbaskets : [];
   const assignedQcWorkbaskets = Array.isArray(accessContext?.qcWorkbaskets) ? accessContext.qcWorkbaskets : [];
   const showQcWorkbaskets = hasAtLeastRole(normalizedRole, 'MANAGER') || assignedQcWorkbaskets.length > 0;
+  const canViewGlobalWorkbaskets = hasAtLeastRole(normalizedRole, 'MANAGER');
   const directWorkbasketItems = assignedWorkbaskets.map((wb) => ({
     id: `workbasket-${String(wb?._id || wb?.id || wb?.workbasketId || '').trim()}`,
     label: wb?.name || 'Workbasket',
@@ -143,35 +144,34 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
     })).filter((item) => !item.to.endsWith('/qc-workbaskets/'))
     : [];
 
-  const canViewGlobalWorkbaskets = hasAtLeastRole(normalizedRole, 'MANAGER');
-  const dailyOperationsItems = [];
-  if (canViewGlobalWorkbaskets) {
-    dailyOperationsItems.push({
-      id: 'workbaskets-overview',
-      label: 'Workbasket Overview',
-      icon: icons.work,
-      to: ROUTES.GLOBAL_WORKLIST(firmSlug),
-      activeMatch: 'exactOrDescendant',
-    });
-  }
-  dailyOperationsItems.push(...directWorkbasketItems);
-  dailyOperationsItems.push({
-    id: 'my-worklist',
-    label: 'My Worklist',
-    icon: icons.dashboard,
-    to: ROUTES.WORKLIST(firmSlug),
-    activeMatch: 'exactOrDescendant',
-  });
-  if (showQcWorkbaskets) {
-    dailyOperationsItems.push({
-      id: 'qc-worklist',
-      label: 'QC Worklist',
-      icon: icons.intake,
-      to: ROUTES.QC_QUEUE(firmSlug),
-      activeMatch: 'exactOrDescendant',
-    });
-  }
-  dailyOperationsItems.push(...directQcWorkbasketItems.map((item) => ({ ...item, label: `QC: ${item.label}` })));
+  const scopedWorklistItems = assignedWorkbaskets
+    .map((wb) => {
+      const id = String(wb?._id || wb?.id || wb?.workbasketId || '').trim();
+      if (!id) return null;
+      return {
+        id: `worklist-${id}`,
+        label: wb?.name || 'Workbasket',
+        icon: icons.dashboard,
+        to: `${ROUTES.WORKLIST(firmSlug)}?workbasketId=${encodeURIComponent(id)}`,
+        activeMatch: 'exactWithQuery',
+      };
+    })
+    .filter(Boolean);
+
+  const workbasketsGroupChildren = [
+    ...(canViewGlobalWorkbaskets ? [{ id: 'workbaskets-overview', label: 'Overview', icon: icons.work, to: ROUTES.GLOBAL_WORKLIST(firmSlug), activeMatch: 'exactOrDescendant' }] : []),
+    ...directWorkbasketItems,
+  ];
+  const qcGroupChildren = [
+    ...(showQcWorkbaskets ? [{ id: 'qc-worklist', label: 'Overview', icon: icons.intake, to: ROUTES.QC_QUEUE(firmSlug), activeMatch: 'exactOrDescendant' }] : []),
+    ...directQcWorkbasketItems,
+  ];
+
+  const dailyOperationsItems = [
+    { id: 'workbaskets-group', label: 'Workbaskets', type: 'group', children: workbasketsGroupChildren },
+    { id: 'worklists-group', label: 'Worklists', type: 'group', children: scopedWorklistItems.length ? scopedWorklistItems : [{ id: 'my-worklist', label: 'My Worklist', icon: icons.dashboard, to: ROUTES.WORKLIST(firmSlug), activeMatch: 'exactOrDescendant' }] },
+    ...(qcGroupChildren.length ? [{ id: 'qc-worklists-group', label: 'QC Worklists', type: 'group', children: qcGroupChildren }] : []),
+  ];
 
   return (
   NAV_BLUEPRINT
