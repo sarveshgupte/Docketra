@@ -1,3 +1,8 @@
+## May 2026: Team & Access primary-admin authorization consistency
+- Team & Access backend authorization now consistently recognizes Primary Admin actors across role-format variants (for example `PRIMARY_ADMIN`, `Primary Admin`, `primary-admin`) and canonical primary-admin identity flags.
+- Primary Admin access to Team & Access APIs (users/workbaskets and user-management actions) no longer fails due to role-format mismatch; non-primary users remain blocked by existing permission guards.
+- Team & Access UI now uses shared role normalization and deduplicates repeated forbidden toasts into a single grouped message.
+
 - Hardened My Worklist (`GET /api/worklists/employee/me`) contract across UI/API: full filter query forwarding, resilient response normalization, and stable empty-queue behavior (`200` + `data: []`) instead of load errors for valid users.
 # What's New
 
