@@ -389,15 +389,32 @@ module.exports = (deps) => {
         dealPromise = Deal.findOne({ _id: dealId, firmId }).select('_id').lean();
       }
 
+      let workTypePromise = null;
+      if (workTypeId) {
+        workTypePromise = WorkType.findOne({ _id: workTypeId, firmId, isActive: true }).lean();
+      }
+
+      let subWorkTypePromise = null;
+      if (subWorkTypeId && workTypeId) {
+        subWorkTypePromise = SubWorkType.findOne({
+          _id: subWorkTypeId,
+          firmId,
+          parentWorkTypeId: workTypeId,
+          isActive: true,
+        }).lean();
+      }
+
       // ⚡ Bolt Performance Optimization:
-      // Prepare independent validation queries (dealId, crmClientId, fallbackWorkbasket, resolvedEmployee)
+      // Prepare independent validation queries (dealId, crmClientId, fallbackWorkbasket, resolvedEmployee, workType, subWorkType)
       // and execute them concurrently via Promise.all to reduce endpoint latency.
-      const [fallbackWorkbasket, crmClient, deal, fetchedEmployee, fetchedRelatedEmployeeUser] = await Promise.all([
+      const [fallbackWorkbasket, crmClient, deal, fetchedEmployee, fetchedRelatedEmployeeUser, selectedWorkType, selectedSubWorkType] = await Promise.all([
         fallbackWorkbasketPromise,
         crmClientPromise,
         dealPromise,
         resolvedEmployeePromise,
         relatedEmployeeUserPromise,
+        workTypePromise,
+        subWorkTypePromise,
       ]);
       resolvedEmployee = fetchedEmployee || null;
       relatedEmployeeUser = fetchedRelatedEmployeeUser || null;
@@ -481,12 +498,9 @@ module.exports = (deps) => {
 
       // Optional: resolve firm-scoped work type and sub-work type.
       // This keeps case creation backward compatible while enabling deadline auto-calculation.
-      let selectedWorkType = null;
-      let selectedSubWorkType = null;
       let tatDaysSnapshot = 0;
 
       if (workTypeId) {
-        selectedWorkType = await WorkType.findOne({ _id: workTypeId, firmId, isActive: true });
         if (!selectedWorkType) {
           return res.status(404).json({
             success: false,
@@ -505,13 +519,6 @@ module.exports = (deps) => {
             ...responseMeta,
           });
         }
-
-        selectedSubWorkType = await SubWorkType.findOne({
-          _id: subWorkTypeId,
-          firmId,
-          parentWorkTypeId: selectedWorkType._id,
-          isActive: true,
-        });
 
         if (!selectedSubWorkType) {
           return res.status(404).json({
