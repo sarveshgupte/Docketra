@@ -18,7 +18,7 @@ assert.ok(workbaskets.includes('tableClassName="queue-table"'), 'Workbaskets sho
 assert.ok(workbaskets.includes("{ label: 'Assigned', value:"), 'Workbaskets metric label should not imply user-specific ownership when not identity-filtered.');
 assert.ok(workbaskets.includes('error=""'), 'Workbaskets should avoid duplicate top-level + table-level query errors.');
 
-assert.ok(worklist.includes('title="My Worklist"'), 'My Worklist should render in PlatformShell context.');
+assert.ok(worklist.includes('title={scopedLabel ? `Worklist — ${scopedLabel}` : "My Worklist"}'), 'Worklist should render in PlatformShell context with scoped heading support.');
 assert.ok(worklist.includes('className="filter-bar__checkbox"'), 'My Worklist should preserve compact checkbox styling.');
 assert.ok(worklist.includes('error=""'), 'My Worklist should suppress duplicate table-level errors.');
 assert.ok(worklist.includes('title="Personal execution queue"'), 'My Worklist should communicate personal queue ownership.');

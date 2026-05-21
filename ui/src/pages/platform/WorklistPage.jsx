@@ -62,6 +62,8 @@ export const PlatformWorklistPage = () => {
       const activeStatus = activeOnly && status === 'PENDING' ? false : true;
       const matchesStatus = (statusFilter === 'ALL' || status === statusFilter) && activeStatus;
       const matchesCategory = categoryFilter === 'ALL' || String(item.category || '') === categoryFilter;
+      const itemWorkbasketId = String(item.workbasketId || item.queueId || item.assignedWorkbasketId || "").trim();
+      const matchesWorkbasket = !workbasketId || itemWorkbasketId === workbasketId;
       const matchesQuery = !needle || [
         formatDocketLabel(item),
         item.clientName,
@@ -70,7 +72,7 @@ export const PlatformWorklistPage = () => {
         item.subcategory,
         item.assigneeName,
       ].some((value) => String(value || '').toLowerCase().includes(needle));
-      return matchesStatus && matchesCategory && matchesQuery;
+      return matchesStatus && matchesCategory && matchesWorkbasket && matchesQuery;
     });
   }, [rows, search, statusFilter, categoryFilter, activeOnly]);
 

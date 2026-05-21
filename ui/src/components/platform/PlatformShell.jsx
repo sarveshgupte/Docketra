@@ -123,7 +123,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   );
   const userName = user?.name || user?.xID || 'User';
   const currentNavItem = useMemo(
-    () => navSections.flatMap((section) => section.items).find((item) => isNavItemActive(`${pathname}${search || ""}`, item)),
+    () => navSections.flatMap((section) => section.items.flatMap((item) => (Array.isArray(item.children) ? item.children : [item]))).find((item) => isNavItemActive(`${pathname}${search || ""}`, item)),
     [navSections, pathname, search]
   );
 
@@ -390,7 +390,34 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
             <div key={section.section} className="platform__nav-section">
               {!collapsed && <span className="platform__section-title">{section.section}</span>}
               {section.items.map((item) => {
-                const isActive = isNavItemActive(`${pathname}${search || ""}`, item);
+                if (item?.type === 'group' && Array.isArray(item.children)) {
+                  const groupActive = item.children.some((child) => isNavItemActive(`${pathname}${search || ''}`, child));
+                  return (
+                    <div key={item.id} className={`platform__nav-group ${groupActive ? 'is-active' : ''}`}>
+                      {!collapsed && <span className="platform__nav-group-label">{item.label}</span>}
+                      {item.children.map((child) => {
+                        const isActive = isNavItemActive(`${pathname}${search || ''}`, child);
+                        return (
+                          <Link
+                            key={child.to}
+                            to={child.to}
+                            className={`platform__nav-link platform__nav-link--child ${isActive ? 'is-active' : ''}`}
+                            title={collapsed ? `${item.label}: ${child.label}` : undefined}
+                            aria-label={collapsed ? `${item.label}: ${child.label}` : undefined}
+                            aria-current={isActive ? 'page' : undefined}
+                          >
+                            <span className="platform__nav-link-icon" aria-hidden="true">
+                              {NAV_ICONS[child.id] || null}
+                            </span>
+                            {!collapsed && <span className="platform__nav-link-label">{child.label}</span>}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  );
+                }
+
+                const isActive = isNavItemActive(`${pathname}${search || ''}`, item);
                 return (
                   <Link
                     key={item.to}

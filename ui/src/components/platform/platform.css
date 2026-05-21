@@ -1708,3 +1708,8 @@ select:focus-visible {
 }
 
 .guided-docket-actions { margin-top: 16px; }
+
+.platform__nav-group { margin: 4px 0 8px; }
+.platform__nav-group-label { display:block; font-size:11px; color:var(--dt-text-muted); font-weight:600; margin:6px 9px; }
+.platform__nav-link--child { margin-left: 10px; }
+.platform__sidebar--collapsed .platform__nav-link--child { margin-left: 0; }
