@@ -14,6 +14,8 @@ MongoDB stores control-plane metadata such as:
 ## What firm cloud stores
 Firm cloud storage (for example connected Google Drive) is the canonical location for business documents and file payloads, including client files, CFS folders, docket attachments, and related uploaded artifacts.
 
+For Google Drive BYOS, Docketra verifies storage root identity using folder ID plus a manifest file (`.docketra-storage-root.json`) rather than folder name alone. Folder renames are tolerated when identity still matches; folder deletion/trash or manifest tamper/missing state requires explicit recovery by a Primary Admin.
+
 ## What Docketra never stores
 Docketra does not intentionally expose or return sensitive storage secrets in settings surfaces or API summary responses, including refresh/access tokens, `rootFolderId`, `driveId`, `privateKey`, or raw provider secret keys.
 
