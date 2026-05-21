@@ -14,6 +14,7 @@ export default function PublicMarketingHeader() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const isFindWorkspacePage = location.pathname === '/find-workspace';
 
   const handleSectionNavigation = (sectionId) => {
     if (location.pathname !== '/') {
@@ -55,7 +56,7 @@ export default function PublicMarketingHeader() {
           </ul>
 
           <div className="hidden md:flex items-center gap-3">
-            <Link to="/find-workspace" className="text-sm font-medium text-slate-600 hover:text-slate-900">Workspace login</Link>
+            {!isFindWorkspacePage ? <Link to="/find-workspace" className="text-sm font-medium text-slate-600 hover:text-slate-900">Workspace login</Link> : null}
             <Link
               to="/signup"
               className="inline-flex items-center justify-center h-9 px-5 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-700 transition-colors shadow-sm"
@@ -90,9 +91,11 @@ export default function PublicMarketingHeader() {
                   </button>
                 </li>
               ))}
-              <li className="mt-2 px-4">
-                <Link to="/find-workspace" className="block text-center h-9 leading-9 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors" onClick={() => setIsOpen(false)}>Workspace login</Link>
-              </li>
+              {!isFindWorkspacePage ? (
+                <li className="mt-2 px-4">
+                  <Link to="/find-workspace" className="block text-center h-9 leading-9 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors" onClick={() => setIsOpen(false)}>Workspace login</Link>
+                </li>
+              ) : null}
               <li className="mt-2 px-4">
                 <Link
                   to="/signup"
