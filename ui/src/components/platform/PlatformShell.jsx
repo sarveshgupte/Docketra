@@ -8,7 +8,7 @@ import StorageStatusBadge from './StorageStatusBadge';
 import api from '../../services/api';
 import { clientApi } from '../../api/client.api';
 import { isShortcutAllowedTarget } from '../../utils/keyboardShortcuts';
-import { isNavItemActive } from '../../utils/navActive';
+import { isNavItemActive, isNavItemActiveWithLocation } from '../../utils/navActive';
 import { trackAsync } from '../../utils/performanceMonitor';
 import './platform.css';
 
@@ -106,7 +106,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   const [searchError, setSearchError] = useState('');
   const [searchResults, setSearchResults] = useState({ dockets: [], clients: [] });
   const [clientDirectory, setClientDirectory] = useState([]);
-  const { pathname } = useLocation();
+  const { pathname, search: locationSearch } = useLocation();
   const navigate = useNavigate();
   const { firmSlug } = useParams();
   const { user, logout } = useAuth();
@@ -122,8 +122,10 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   );
   const userName = user?.name || user?.xID || 'User';
   const currentNavItem = useMemo(
-    () => navSections.flatMap((section) => section.items).find((item) => isNavItemActive(pathname, item)),
-    [navSections, pathname]
+    () => navSections
+      .flatMap((section) => section.items.flatMap((item) => (item.type === 'group' ? item.children || [] : [item])))
+      .find((item) => isNavItemActiveWithLocation(pathname, locationSearch, item)),
+    [navSections, pathname, locationSearch]
   );
 
   useEffect(() => {
@@ -389,7 +391,36 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
             <div key={section.section} className="platform__nav-section">
               {!collapsed && <span className="platform__section-title">{section.section}</span>}
               {section.items.map((item) => {
-                const isActive = isNavItemActive(pathname, item);
+                const groupChildren = Array.isArray(item.children) ? item.children : [];
+                const isGroup = item.type === 'group';
+                const isActive = isGroup
+                  ? groupChildren.some((child) => isNavItemActiveWithLocation(pathname, locationSearch, child))
+                  : isNavItemActiveWithLocation(pathname, locationSearch, item);
+                if (isGroup) {
+                  return (
+                    <div key={item.id} className={`platform__nav-group ${isActive ? 'is-active' : ''}`}>
+                      <span className="platform__nav-group-label" title={collapsed ? item.label : undefined} aria-label={collapsed ? item.label : undefined}>{item.label}</span>
+                      {groupChildren.map((child) => {
+                        const childActive = isNavItemActiveWithLocation(pathname, locationSearch, child);
+                        return (
+                          <Link
+                            key={child.to}
+                            to={child.to}
+                            className={`platform__nav-link platform__nav-link--child ${childActive ? 'is-active' : ''}`}
+                            title={collapsed ? child.label : undefined}
+                            aria-label={collapsed ? child.label : undefined}
+                            aria-current={childActive ? 'page' : undefined}
+                          >
+                            <span className="platform__nav-link-icon" aria-hidden="true">
+                              {NAV_ICONS[child.id] || child.icon || null}
+                            </span>
+                            {!collapsed && <span className="platform__nav-link-label">{child.label}</span>}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  );
+                }
                 return (
                   <Link
                     key={item.to}

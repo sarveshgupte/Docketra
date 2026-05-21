@@ -12,6 +12,7 @@ export const worklistApi = {
       search: filters.search,
       category: filters.category,
       subcategory: filters.subcategory,
+      workbasketId: filters.workbasketId,
     })}`), 'Failed to load employee worklist'),
 
   getGlobalWorklist: (filters = {}) =>
