@@ -66,7 +66,10 @@ If frontend and backend run on different origins, ensure auth cookie config supp
 - Default mode is Docketra-managed storage.
 - BYOS providers can be changed from Storage Settings (OTP verification required).
 - Folder layout after OAuth connect root provisioning:
-  - `Docketra-<firmId>` root folder (current default behavior in `saveUserDriveConnection()`).
+  - `Docketra — {firmSlug or firmId}` root folder (single canonical BYOS root).
+- Root identity is verified by immutable folder ID plus in-folder manifest `.docketra-storage-root.json`.
+- Root folder name is not used as the identity key; rename is tolerated when folder ID + manifest still match.
+- If root is deleted/trashed, or manifest is missing/mismatched, Docketra marks storage as recovery required and does not silently recreate a new BYOS root.
 - Folder layout for advanced/manual drive confirmation flow:
   - `/Docketra/{firmName}/Cases/{caseId}/Attachments/` (used when drive context is explicitly confirmed).
 - Folder layout for backups:
@@ -80,11 +83,10 @@ If frontend and backend run on different origins, ensure auth cookie config supp
 - Normal Google BYOS connect flow does not require this endpoint in standard UI flows.
 - Keep this endpoint out of normal user-facing setup unless advanced drive selection is explicitly needed.
 
-## 4) Nightly backup flow
-- Nightly scheduler runs for firms with `settings.storageBackup.enabled = true`.
-- Backup process creates a temporary archive, encrypts it (`.zip.enc`), uploads to configured firm storage, and deletes temp files immediately.
-- Backup success/failure is tracked in MongoDB via metadata-only `BackupJob` records.
-- Admin API returns backup history from metadata records (`GET /api/storage/exports`).
+## 4) Backup/export posture (current vs planned)
+- **Current:** Manual storage export is available from Storage Settings/API.
+- **Current:** Export/backup metadata records are tracked in MongoDB (no file binaries in MongoDB).
+- **Planned:** Scheduled backup automation (daily/weekly/monthly policy and recipient workflow) is roadmap work and should be presented as coming soon where not yet enabled in production.
 
 ## 5) Email delivery policy
 - Default delivery policy is `link_only` (no raw ZIP attachments).

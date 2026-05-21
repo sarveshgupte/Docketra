@@ -402,6 +402,13 @@ const googleCallback = async (req, res) => {
     return res.redirect(successUrl);
   } catch (error) {
     clearStateCookie();
+    if (['STORAGE_ROOT_MISSING', 'STORAGE_MANIFEST_MISSING', 'STORAGE_ROOT_MISMATCH'].includes(error?.code)) {
+      const firmSlug = await resolveFirmSlugForRedirect(req.firmId);
+      return res.redirect(buildFrontendStorageRedirect({
+        firmSlug,
+        params: { error: 'oauth_failed', reason: String(error.code).toLowerCase(), provider: 'google-drive' },
+      }));
+    }
     if (error instanceof StorageValidationError) {
       const firmSlug = await resolveFirmSlugForRedirect(req.firmId);
       return res.redirect(buildFrontendStorageRedirect({ firmSlug, params: { error: 'oauth_failed', reason: 'storage_configuration_invalid', provider: 'google-drive' } }));
@@ -612,6 +619,15 @@ const getStorageFolderLink = async (req, res) => {
     if (!folderId) {
       log.info('[STORAGE]', { event: 'storage_folder_link_requested', requestId: req.requestId || null, firmId: String(ownershipFirmId), provider: state.canonicalProvider || 'docketra_managed', stage: 'unavailable' });
       return res.status(404).json({ success: false, error: 'folder_link_unavailable' });
+    }
+    if (state.canonicalProvider === 'google_drive') {
+      const oauthClient = getStorageOAuthClient();
+      oauthClient.setCredentials({ refresh_token: state.credentials?.refreshToken || state.credentials?.googleRefreshToken });
+      const driveClient = new GoogleDriveProvider({ oauthClient, driveId: state.credentials?.driveId || null }).getClient();
+      const rootHealth = await googleDriveService.validateRootFolder({ drive: driveClient, firm, rootFolderId: folderId });
+      if (!rootHealth.valid) {
+        return res.status(409).json({ success: false, error: 'storage_recovery_required', code: rootHealth.code });
+      }
     }
     const folderUrl = `https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`;
     log.info('[STORAGE]', { event: 'storage_folder_link_requested', requestId: req.requestId || null, firmId: String(ownershipFirmId), provider: state.canonicalProvider || 'docketra_managed', stage: 'success' });

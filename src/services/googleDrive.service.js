@@ -7,8 +7,30 @@ const log = require('../utils/log');
 const PROVIDER_TYPES = {
   USER_GOOGLE_DRIVE: 'USER_GOOGLE_DRIVE',
 };
+const ROOT_MANIFEST_FILE = '.docketra-storage-root.json';
 
 class GoogleDriveService {
+  buildCanonicalRootName(firm) {
+    const slug = String(firm?.slug || firm?.firmSlug || '').trim();
+    const suffix = slug || String(firm?._id || firm?.firmId || '');
+    return `Docketra — ${suffix}`;
+  }
+
+  buildRootManifest({ firm, rootFolderId, createdAt = null }) {
+    const now = new Date().toISOString();
+    return {
+      schemaVersion: 1,
+      docketraStorageRoot: true,
+      firmId: String(firm?._id || ''),
+      firmSlug: String(firm?.slug || firm?.firmSlug || '') || null,
+      provider: 'google_drive',
+      rootFolderId: String(rootFolderId),
+      createdAt: createdAt || now,
+      updatedAt: now,
+      environment: process.env.NODE_ENV || 'development',
+    };
+  }
+
   validateOAuthEnvironment() {
     const required = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_OAUTH_REDIRECT_URI', 'FRONTEND_URL'];
     const missing = required.filter((key) => !process.env[key]);
@@ -171,6 +193,56 @@ class GoogleDriveService {
     return folder.data.id;
   }
 
+  async upsertRootManifest({ drive, rootFolderId, manifest }) {
+    const found = await drive.files.list({
+      q: `'${rootFolderId}' in parents and name = '${ROOT_MANIFEST_FILE}' and trashed = false`,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      fields: 'files(id)',
+    });
+    const body = JSON.stringify(manifest, null, 2);
+    const media = { mimeType: 'application/json', body: Readable.from(body) };
+    if (found.data.files?.[0]?.id) {
+      await drive.files.update({ fileId: found.data.files[0].id, media, supportsAllDrives: true });
+      return found.data.files[0].id;
+    }
+    const created = await drive.files.create({
+      requestBody: { name: ROOT_MANIFEST_FILE, parents: [rootFolderId] },
+      media,
+      supportsAllDrives: true,
+      fields: 'id',
+    });
+    return created.data.id;
+  }
+
+  async validateRootFolder({ drive, firm, rootFolderId }) {
+    if (!rootFolderId) return { valid: false, code: 'STORAGE_ROOT_MISSING' };
+    let folder = null;
+    try {
+      const folderRes = await drive.files.get({ fileId: rootFolderId, fields: 'id,name,trashed', supportsAllDrives: true });
+      folder = folderRes.data;
+    } catch {
+      return { valid: false, code: 'STORAGE_ROOT_MISSING' };
+    }
+    if (folder?.trashed) return { valid: false, code: 'STORAGE_ROOT_MISSING' };
+    const files = await drive.files.list({
+      q: `'${rootFolderId}' in parents and name = '${ROOT_MANIFEST_FILE}' and trashed = false`,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      fields: 'files(id)',
+    });
+    const manifestFileId = files.data.files?.[0]?.id;
+    if (!manifestFileId) return { valid: false, code: 'STORAGE_MANIFEST_MISSING' };
+    const manifestRaw = await drive.files.get({ fileId: manifestFileId, alt: 'media', supportsAllDrives: true }, { responseType: 'stream' });
+    const chunks = [];
+    for await (const chunk of manifestRaw.data) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    const manifest = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    if (!manifest?.docketraStorageRoot || String(manifest?.firmId || '') !== String(firm?._id || '') || String(manifest?.rootFolderId || '') !== String(rootFolderId)) {
+      return { valid: false, code: 'STORAGE_ROOT_MISMATCH' };
+    }
+    return { valid: true, folderName: folder?.name || null };
+  }
+
   async uploadFile(firmId, file) {
     try {
       const { drive, rootFolderId } = await this.getClient(firmId);
@@ -238,7 +310,25 @@ class GoogleDriveService {
     oauthClient.setCredentials(tokens);
     const drive = google.drive({ version: 'v3', auth: oauthClient });
 
-    const firmFolderId = await this.createFolder(`Docketra-${firmId}`, null, drive);
+    const firm = await Firm.findById(firmId).select('_id slug firmSlug storage storageConfig').lean();
+    const decoded = this.decodeStorageCredentials(firm);
+    let firmFolderId = decoded.rootFolderId || firm?.storage?.google?.rootFolderId || null;
+    if (firmFolderId) {
+      const existing = await this.validateRootFolder({ drive, firm, rootFolderId: firmFolderId });
+      if (!existing.valid) {
+        const error = new Error(existing.code);
+        error.code = existing.code;
+        error.status = 409;
+        throw error;
+      }
+    } else {
+      firmFolderId = await this.createFolder(this.buildCanonicalRootName(firm), null, drive);
+    }
+    await this.upsertRootManifest({
+      drive,
+      rootFolderId: firmFolderId,
+      manifest: this.buildRootManifest({ firm, rootFolderId: firmFolderId, createdAt: decoded.createdAt || null }),
+    });
     const about = await drive.about.get({ fields: 'user(emailAddress)' });
     const connectedEmail = about?.data?.user?.emailAddress || null;
 
