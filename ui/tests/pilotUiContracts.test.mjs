@@ -23,7 +23,7 @@ for (const routeFragment of [
 }
 
 const platformNavigation = read('src/constants/platformNavigation.js');
-for (const allowed of ["label: 'Work'", "label: 'Dashboard'", "label: 'Clients'", "label: 'Reports'", "label: 'Team & Access'", "label: 'Settings'"]) {
+for (const allowed of ["label: 'Work'", "label: 'Dashboard'", "label: 'Clients'", "label: 'Reports'", "label: 'Settings'"]) {
   assert.ok(platformNavigation.includes(allowed), `Navigation must include ${allowed}.`);
 }
 for (const blocked of ['Firm Memory', 'Knowledge Intake', 'Relationships', 'Company Brain', 'Knowledge Library']) {
@@ -47,3 +47,5 @@ const workbasketPage = read('src/pages/WorkbasketPage.jsx');
 assert.ok(workbasketPage.includes('Pull to My Worklist'), 'Workbasket page must expose Pull to My Worklist action/copy.');
 
 console.log('pilotUiContracts.test.mjs passed');
+
+assert.equal(platformNavigation.includes("label: 'Team & Access'"), false, 'Navigation must not include a dedicated Team & Access sidebar item.');

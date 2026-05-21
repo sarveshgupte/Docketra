@@ -88,20 +88,6 @@ const NAV_BLUEPRINT = [
     section: 'Administration',
     items: [
       {
-        id: 'team-access',
-        label: 'Team & Access',
-        icon: icons.team,
-        route: (firmSlug) => ROUTES.ADMIN(firmSlug),
-        minRole: 'ADMIN',
-        activeMatch: 'exactOrDescendant',
-        excludeActiveFor: (firmSlug) => [ROUTES.ADMIN_REPORTS(firmSlug)],
-        command: {
-          id: 'go-team',
-          label: 'Go to Team',
-          description: 'Open team management.',
-        },
-      },
-      {
         id: 'settings',
         label: 'Settings',
         icon: icons.settings,
