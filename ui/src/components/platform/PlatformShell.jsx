@@ -407,7 +407,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                             aria-current={isActive ? 'page' : undefined}
                           >
                             <span className="platform__nav-link-icon" aria-hidden="true">
-                              {NAV_ICONS[child.id] || null}
+                              {NAV_ICONS[child.id] || child.icon || null}
                             </span>
                             {!collapsed && <span className="platform__nav-link-label">{child.label}</span>}
                           </Link>

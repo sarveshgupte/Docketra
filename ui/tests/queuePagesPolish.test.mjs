@@ -22,6 +22,7 @@ assert.ok(worklist.includes('title={scopedLabel ? `Worklist — ${scopedLabel}` 
 assert.ok(worklist.includes('className="filter-bar__checkbox"'), 'My Worklist should preserve compact checkbox styling.');
 assert.ok(worklist.includes('error=""'), 'My Worklist should suppress duplicate table-level errors.');
 assert.ok(worklist.includes('title="Personal execution queue"'), 'My Worklist should communicate personal queue ownership.');
+assert.ok(!worklist.includes("{ label: 'In QC', value:"), 'Normal Worklist metrics should not include In QC.');
 
 assert.ok(qcQueue.includes('title="QC Workbaskets"'), 'QC queue should render in PlatformShell context.');
 assert.ok(qcQueue.includes('No dockets are waiting for QC review.'), 'QC queue should use QC-specific empty copy.');

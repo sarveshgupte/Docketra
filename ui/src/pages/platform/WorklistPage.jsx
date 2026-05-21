@@ -62,7 +62,7 @@ export const PlatformWorklistPage = () => {
       const activeStatus = activeOnly && status === 'PENDING' ? false : true;
       const matchesStatus = (statusFilter === 'ALL' || status === statusFilter) && activeStatus;
       const matchesCategory = categoryFilter === 'ALL' || String(item.category || '') === categoryFilter;
-      const itemWorkbasketId = String(item.workbasketId || item.queueId || item.assignedWorkbasketId || "").trim();
+      const itemWorkbasketId = String(item.workbasketId || item.workbasket?._id || item.workbasket?.id || item.workbasket?.workbasketId || item.workBasketId || item.queueId || item.assignedWorkbasketId || item.assignment?.workbasketId || item.meta?.workbasketId || "").trim();
       const matchesWorkbasket = !workbasketId || itemWorkbasketId === workbasketId;
       const matchesQuery = !needle || [
         formatDocketLabel(item),
@@ -80,11 +80,9 @@ export const PlatformWorklistPage = () => {
   const metrics = useMemo(() => {
     const active = rows.filter((item) => String(item.status || '').toUpperCase() !== 'PENDING').length;
     const pended = rows.filter((item) => String(item.status || '').toUpperCase() === 'PENDING').length;
-    const inQc = rows.filter((item) => String(item.status || '').toUpperCase() === 'IN_QC').length;
     return [
       { label: 'Active', value: isLoading ? '…' : active },
       { label: 'Pended', value: isLoading ? '…' : pended },
-      { label: 'In QC', value: isLoading ? '…' : inQc },
       { label: 'Visible now', value: isLoading ? '…' : filteredRows.length },
     ];
   }, [rows, filteredRows.length, isLoading]);
