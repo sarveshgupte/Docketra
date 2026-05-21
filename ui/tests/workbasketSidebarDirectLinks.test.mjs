@@ -18,9 +18,13 @@ assert.match(routesSource, /QC_WORKBASKET_DETAIL:\s*\(firmSlug,\s*workbasketId\)
 
 assert.doesNotMatch(navSource, /assignedWorkbaskets\.slice\(0,\s*4\)/, 'Sidebar should show all assigned workbasket links');
 assert.doesNotMatch(navSource, /assignedQcWorkbaskets\.slice\(0,\s*4\)/, 'Sidebar should show all assigned QC workbasket links');
-assert.match(navSource, /label:\s*'My Worklist'[\s\S]*to:\s*ROUTES\.WORKLIST\(firmSlug\)/, 'Daily Operations should always include My Worklist');
 assert.match(navSource, /showQcWorkbaskets\s*=\s*hasAtLeastRole\(normalizedRole,\s*'MANAGER'\)\s*\|\|\s*assignedQcWorkbaskets\.length\s*>\s*0/, 'QC worklist visibility should be manager+ or explicitly assigned');
-assert.match(navSource, /label:\s*'QC Worklist'[\s\S]*to:\s*ROUTES\.QC_QUEUE\(firmSlug\)/, 'Daily Operations should include QC Worklist entry when permitted');
+assert.match(navSource, /label:\s*'QC Worklists'/, 'Daily Operations should include QC Worklists group.');
+assert.match(navSource, /to:\s*`\$\{ROUTES\.WORKLIST\(firmSlug\)\}\?workbasketId=\$\{encodeURIComponent\(id\)\}`/, 'Worklists children should include scoped workbasket query params.');
+assert.match(navSource, /type:\s*'group'/, 'Daily Operations should use grouped navigation items.');
+assert.match(navSource, /canViewGlobalWorkbaskets \? \[\{ id: 'qc-worklist', label: 'Overview'/, 'QC Overview should be manager/admin-only.');
+assert.match(navSource, /\.filter\(\(item\)\s*=>\s*Array\.isArray\(item\.children\)\s*&&\s*item\.children\.length\s*>\s*0\)/, 'Daily Operations groups should filter out empty groups.');
+assert.match(navSource, /const directQcWorkbasketItems = showQcWorkbaskets[\s\S]*assignedQcWorkbaskets\.map/, 'Assigned QC users should still receive assigned QC children when eligible.');
 assert.match(navSource, /ROUTES\.WORKBASKET_DETAIL\(/, 'Sidebar should link directly to workbasket detail route');
 assert.match(navSource, /ROUTES\.QC_WORKBASKET_DETAIL\(/, 'Sidebar should link directly to QC workbasket detail route');
 

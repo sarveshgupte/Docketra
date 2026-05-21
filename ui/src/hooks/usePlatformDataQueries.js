@@ -21,7 +21,7 @@ export const usePlatformDashboardSummaryQuery = () => useQuery({
 });
 
 export const usePlatformMyWorklistQuery = (options = {}) => useQuery({
-  queryKey: ['platform', 'my-worklist', options.assigneeXID || 'self', options.status || 'ALL', options.category || 'ALL'],
+  queryKey: ['platform', 'my-worklist', options.assigneeXID || 'self', options.status || 'ALL', options.category || 'ALL', options.workbasketId || 'all-workbaskets'],
   queryFn: () => trackAsync('platform.worklist.my', 'platform:worklist:my', () => worklistApi.getEmployeeWorklist({ limit: 50, ...options })),
   select: (res) => {
     const payload = res?.data;

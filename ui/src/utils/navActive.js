@@ -28,3 +28,11 @@ export const isNavItemActive = (pathname, item) => {
   return !excluded.some((route) => isExactOrDescendantPath(pathname, route));
 };
 
+export const isNavItemActiveWithLocation = (pathname, search = '', item) => {
+  if (!item?.to) return false;
+  const current = `${pathname || ''}${search || ''}`;
+  if (item.activeMatch === 'exactWithQuery') {
+    return current === item.to;
+  }
+  return isNavItemActive(pathname, item);
+};
