@@ -88,6 +88,20 @@ const NAV_BLUEPRINT = [
     section: 'Administration',
     items: [
       {
+        id: 'team-access',
+        label: 'Team & Access',
+        icon: icons.team,
+        route: (firmSlug) => ROUTES.ADMIN(firmSlug),
+        minRole: 'ADMIN',
+        activeMatch: 'exactOrDescendant',
+        excludeActiveFor: (firmSlug) => [ROUTES.ADMIN_REPORTS(firmSlug)],
+        command: {
+          id: 'go-team',
+          label: 'Go to Team & Access',
+          description: 'Open team hierarchy, access controls, and role management.',
+        },
+      },
+      {
         id: 'settings',
         label: 'Settings',
         icon: icons.settings,
@@ -163,7 +177,7 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
     ...directWorkbasketItems,
   ];
   const qcGroupChildren = [
-    ...(showQcWorkbaskets ? [{ id: 'qc-worklist', label: 'Overview', icon: icons.intake, to: ROUTES.QC_QUEUE(firmSlug), activeMatch: 'exactOrDescendant' }] : []),
+    ...(canViewGlobalWorkbaskets ? [{ id: 'qc-worklist', label: 'Overview', icon: icons.intake, to: ROUTES.QC_QUEUE(firmSlug), activeMatch: 'exactOrDescendant' }] : []),
     ...directQcWorkbasketItems,
   ];
 
@@ -171,7 +185,7 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
     { id: 'workbaskets-group', label: 'Workbaskets', type: 'group', children: workbasketsGroupChildren },
     { id: 'worklists-group', label: 'Worklists', type: 'group', children: scopedWorklistItems.length ? scopedWorklistItems : [{ id: 'my-worklist', label: 'My Worklist', icon: icons.dashboard, to: ROUTES.WORKLIST(firmSlug), activeMatch: 'exactOrDescendant' }] },
     ...(qcGroupChildren.length ? [{ id: 'qc-worklists-group', label: 'QC Worklists', type: 'group', children: qcGroupChildren }] : []),
-  ];
+  ].filter((item) => Array.isArray(item.children) && item.children.length > 0);
 
   return (
   NAV_BLUEPRINT
