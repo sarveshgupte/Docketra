@@ -1,3 +1,4 @@
+- Hardened My Worklist (`GET /api/worklists/employee/me`) contract across UI/API: full filter query forwarding, resilient response normalization, and stable empty-queue behavior (`200` + `data: []`) instead of load errors for valid users.
 # What's New
 
 ## 2026-05-20 — Cleaned up Admin and Work Settings layout
