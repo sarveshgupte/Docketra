@@ -10,6 +10,8 @@ const qcQueue = read('src/pages/platform/QcQueuePage.jsx');
 const casesPage = read('src/pages/CasesPage.jsx');
 const css = read('src/components/platform/platform.css');
 const whatsNew = read('../docs/whats-new.md');
+const whatsNewHeadingCount = (whatsNew.match(/^# What's New$/gm) || []).length;
+const dailyOpsEntryCount = (whatsNew.match(/^## 2026-05-21 — Reworked Daily Operations navigation$/gm) || []).length;
 
 assert.ok(workbaskets.includes('title="Workbaskets"'), 'Workbaskets should render in PlatformShell context.');
 assert.ok(workbaskets.includes('No dockets are waiting in your workbaskets.'), 'Workbaskets should use queue-specific empty copy.');
@@ -37,5 +39,7 @@ assert.ok(css.includes('.queue-action-group'), 'Shared queue action grouping cla
 assert.ok(!css.includes('td:nth-child('), 'Queue table styles should avoid brittle nth-child selectors.');
 assert.ok(css.includes('.queue-table .queue-cell-wrap'), 'Queue table wrapping should use explicit class selectors.');
 assert.ok(!whatsNew.includes('Workbaskets, My Worklist, QC Worklist, and All Dockets'), 'Whats New scope should match actual queue pages polished in this PR.');
+assert.equal(whatsNewHeadingCount, 1, "What's New should contain exactly one top-level heading.");
+assert.equal(dailyOpsEntryCount, 1, 'Daily Operations What\'s New entry should appear exactly once.');
 
 console.log('queuePagesPolish.test.mjs passed');

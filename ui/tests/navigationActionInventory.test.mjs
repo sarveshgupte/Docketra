@@ -22,7 +22,7 @@ for (const routeFactory of ['ROUTES.TASK_MANAGER', 'ROUTES.DASHBOARD', 'ROUTES.C
   assert.ok(platformNav.includes(routeFactory), `Platform nav item missing valid route factory: ${routeFactory}`);
 }
 
-for (const commandId of ['go-docket-workbench', 'go-dashboard', 'go-clients', 'go-reports', 'go-settings']) {
+for (const commandId of ['go-docket-workbench', 'go-dashboard', 'go-clients', 'go-reports', 'go-team', 'go-settings']) {
   assert.ok(platformNav.includes(`id: '${commandId}'`), `Navigation command missing metadata id: ${commandId}`);
 }
 
