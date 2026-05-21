@@ -1,5 +1,6 @@
 import { isSuperAdmin } from './authUtils.js';
 import { ROUTES } from '../constants/routes.js';
+import { getFirstAssignedQcWorklistRoute, getFirstAssignedWorklistRoute } from '../constants/platformNavigation.js';
 
 import { isRoleCompatibleRoute, isSafeReturnToPath } from './returnToSafety.js';
 
@@ -31,6 +32,12 @@ export const resolvePostAuthNavigation = ({
   }
 
   if (!isSuperAdmin(user) && user?.firmSlug) {
+    const firstWorklistRoute = getFirstAssignedWorklistRoute(user.firmSlug, user);
+    if (firstWorklistRoute) return firstWorklistRoute;
+    const canViewGlobalWorkbaskets = ['MANAGER', 'ADMIN', 'PRIMARY_ADMIN'].includes(String(user?.role || '').toUpperCase());
+    if (canViewGlobalWorkbaskets) return ROUTES.GLOBAL_WORKLIST(user.firmSlug);
+    const firstQcRoute = getFirstAssignedQcWorklistRoute(user.firmSlug, user);
+    if (firstQcRoute) return firstQcRoute;
     return ROUTES.DASHBOARD(user.firmSlug);
   }
 

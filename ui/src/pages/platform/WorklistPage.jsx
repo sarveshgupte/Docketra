@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
 import { caseApi } from '../../api/case.api';
@@ -27,6 +28,7 @@ export const PlatformWorklistPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { openDocket } = useActiveDocket();
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
@@ -34,6 +36,9 @@ export const PlatformWorklistPage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [pendingActionId, setPendingActionId] = useState('');
+  const workbasketId = useMemo(() => new URLSearchParams(location.search || "").get('workbasketId') || '', [location.search]);
+  const scopedWorkbasket = useMemo(() => (Array.isArray(user?.workbaskets) ? user.workbaskets : []).find((wb) => String(wb?._id || wb?.id || wb?.workbasketId || "").trim() === workbasketId), [user?.workbaskets, workbasketId]);
+  const scopedLabel = scopedWorkbasket?.name || "";
 
   const {
     data: rows = [],
@@ -42,7 +47,7 @@ export const PlatformWorklistPage = () => {
     isError,
     error: queryError,
     refetch,
-  } = usePlatformMyWorklistQuery();
+  } = usePlatformMyWorklistQuery({ workbasketId });
 
 
   const recovery = getRecoveryPayload(queryError, 'platform_queue');
@@ -127,8 +132,8 @@ export const PlatformWorklistPage = () => {
 
   return (
     <PlatformShell
-      title="My Worklist"
-      subtitle="Your personal docket workload for active execution and pended follow-up."
+      title={scopedLabel ? `Worklist — ${scopedLabel}` : "My Worklist"}
+      subtitle={scopedLabel ? `Your personal docket workload for ${scopedLabel}.` : "Your personal docket workload for active execution and pended follow-up."}
       actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>Create Docket</Link>}
     >
       <StatusMessageStack
@@ -158,7 +163,7 @@ export const PlatformWorklistPage = () => {
               <option value="ALL">All statuses</option>
               <option value="IN_PROGRESS">In progress</option>
               <option value="PENDING">Pending</option>
-              <option value="IN_QC">In QC</option>
+              
             </select>
             <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Filter by category">
               <option value="ALL">All categories</option>
@@ -209,7 +214,7 @@ export const PlatformWorklistPage = () => {
           error=""
           onRetry={() => void refetch()}
           hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL' || activeOnly}
-          emptyLabel="No dockets are assigned to you yet. Pull from Workbaskets or request assignment from your manager/admin."
+          emptyLabel={scopedLabel ? `No dockets in your ${scopedLabel} worklist.` : "No dockets are assigned to you yet. Pull from Workbaskets or request assignment from your manager/admin."}
           emptyLabelFiltered="No worklist dockets match your current search or filters."
         />
       </PageSection>

@@ -106,7 +106,8 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   const [searchError, setSearchError] = useState('');
   const [searchResults, setSearchResults] = useState({ dockets: [], clients: [] });
   const [clientDirectory, setClientDirectory] = useState([]);
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname, search } = location;
   const navigate = useNavigate();
   const { firmSlug } = useParams();
   const { user, logout } = useAuth();
@@ -122,8 +123,8 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   );
   const userName = user?.name || user?.xID || 'User';
   const currentNavItem = useMemo(
-    () => navSections.flatMap((section) => section.items).find((item) => isNavItemActive(pathname, item)),
-    [navSections, pathname]
+    () => navSections.flatMap((section) => section.items).find((item) => isNavItemActive(`${pathname}${search || ""}`, item)),
+    [navSections, pathname, search]
   );
 
   useEffect(() => {
@@ -389,7 +390,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
             <div key={section.section} className="platform__nav-section">
               {!collapsed && <span className="platform__section-title">{section.section}</span>}
               {section.items.map((item) => {
-                const isActive = isNavItemActive(pathname, item);
+                const isActive = isNavItemActive(`${pathname}${search || ""}`, item);
                 return (
                   <Link
                     key={item.to}
