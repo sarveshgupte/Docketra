@@ -7,6 +7,11 @@ export const worklistApi = {
       page: filters.page,
       limit: filters.limit,
       assigneeXID: filters.assigneeXID,
+      sortBy: filters.sortBy,
+      sortOrder: filters.sortOrder,
+      search: filters.search,
+      category: filters.category,
+      subcategory: filters.subcategory,
     })}`), 'Failed to load employee worklist'),
 
   getGlobalWorklist: (filters = {}) =>
