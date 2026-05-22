@@ -1,5 +1,12 @@
 # What's New
 
+## 2026-05-21 — Improved post-login workspace routing
+
+- Users now land on their first assigned Worklist after firm login
+- Login routing respects assigned queue access
+- Deep-link redirects remain preserved
+- Safe fallbacks remain available when no assigned Worklist exists
+
 ## 2026-05-21 — Reworked Daily Operations navigation
 
 - Grouped Daily Operations into assigned Workbaskets, Worklists, and QC Worklists

@@ -21,6 +21,8 @@ import {
 } from '../utils/constants';
 import { isSuperAdmin } from '../utils/authUtils';
 import { queryClient } from '../queryClient';
+import { getPostLoginWorkspaceDestination } from '../utils/postAuthNavigation';
+import { ROUTES } from '../constants/routes';
 
 export const AuthContext = createContext(null);
 export const AUTH_STATES = {
@@ -448,7 +450,7 @@ export const AuthProvider = ({ children }) => {
     if (!candidateUser) return '/superadmin';
     if (isSuperAdmin(candidateUser)) return '/app/superadmin';
     if (!candidateUser?.firmSlug) return '/complete-profile';
-    return `/app/firm/${candidateUser.firmSlug}/worklist`;
+    return getPostLoginWorkspaceDestination(candidateUser, candidateUser.firmSlug) || ROUTES.DASHBOARD(candidateUser.firmSlug);
   }, [user]);
 
   const isAuthResolved = !loading && !isHydrating;
