@@ -136,3 +136,8 @@ If frontend and backend run on different origins, ensure auth cookie config supp
 
 - Primary Admins can now view firm-owned Google Drive storage capacity (used, total, available, usage percent, and last checked) in Storage Settings after BYOS connection.
 - When Docketra-managed fallback storage is active, Docketra global quota is intentionally not exposed to firms.
+
+## Google Drive root health and recovery
+- Storage Settings now includes a **Google Drive storage root health** card with healthy/renamed/recovery-required states.
+- Use **Recheck storage** after remediating Drive access, root folder location, or manifest issues.
+- In strict firm-owned mode, business-content writes remain blocked until root health returns healthy/renamed-valid.

@@ -16,6 +16,7 @@ for (const label of ['Firm-owned storage active', 'Docketra-managed storage', 'S
 }
 
 assert.ok(badge.includes('Business files are stored in your firm-owned Google Drive.') || hook.includes('Business files are stored in your firm-owned Google Drive.'), 'Safe trust copy should be present for BYOS mode');
+assert.ok(hook.includes('Google Drive root recovery required'), 'Badge mapping should mention root recovery in attention state');
 
 for (const secretField of ['rootFolderId', 'driveId', 'refreshToken', 'accessToken', 'privateKey', 'clientSecret', 'credentials']) {
   assert.equal(badge.includes(secretField), false, `Badge component must not render secret field: ${secretField}`);

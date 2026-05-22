@@ -638,6 +638,75 @@ const getStorageFolderLink = async (req, res) => {
   }
 };
 
+const getStorageRootHealth = async (req, res) => {
+  try {
+    if (!ensurePrimaryAdmin(req, res)) return;
+    const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
+    const firm = await Firm.findById(ownershipFirmId).select('_id name storage storageConfig settings').lean();
+    const state = resolveFirmStorageState(firm, { includeCredentials: true });
+    const checkedAt = new Date().toISOString();
+
+    const strictMode = Boolean(firm?.settings?.firm?.strictFirmOwnedStorage);
+    const baseMessage = strictMode
+      ? 'Strict mode is active. Business-content writes are blocked until Google Drive storage is recovered.'
+      : '';
+
+    if (state.canonicalProvider !== 'google_drive' || !state.rootFolderId) {
+      return res.json({
+        success: true,
+        provider: 'google-drive',
+        status: 'recovery_required',
+        code: 'STORAGE_ROOT_MISSING',
+        message: baseMessage || 'Docketra could not verify your firm-owned Google Drive root.',
+        checkedAt,
+        canOpenFolder: false,
+        canWrite: false,
+      });
+    }
+
+    const oauthClient = getStorageOAuthClient();
+    oauthClient.setCredentials({ refresh_token: state.credentials?.refreshToken || state.credentials?.googleRefreshToken });
+    const driveClient = new GoogleDriveProvider({ oauthClient, driveId: state.credentials?.driveId || null }).getClient();
+    const rootHealth = await googleDriveService.validateRootFolder({ drive: driveClient, firm, rootFolderId: state.rootFolderId });
+
+    if (!rootHealth.valid) {
+      const code = rootHealth.code || 'STORAGE_ROOT_MISSING';
+      const codeMessageMap = {
+        STORAGE_ROOT_MISSING: 'The connected Google Drive folder may have been deleted or moved to trash.',
+        STORAGE_MANIFEST_MISSING: 'The Docketra identity file is missing from the storage root.',
+        STORAGE_ROOT_MISMATCH: 'The connected folder does not match this workspace.',
+      };
+      return res.json({
+        success: true,
+        provider: 'google-drive',
+        status: 'recovery_required',
+        code,
+        message: baseMessage || codeMessageMap[code] || 'Docketra could not verify your firm-owned Google Drive root.',
+        checkedAt,
+        canOpenFolder: false,
+        canWrite: false,
+      });
+    }
+
+    const expectedName = googleDriveService.buildCanonicalFirmFolderName(firm);
+    const isRenamed = Boolean(rootHealth.folderName && rootHealth.folderName !== expectedName);
+    return res.json({
+      success: true,
+      provider: 'google-drive',
+      status: isRenamed ? 'renamed_valid' : 'healthy',
+      code: 'OK',
+      message: isRenamed
+        ? 'Folder name changed, but identity is verified by folder ID and manifest.'
+        : 'Your firm-owned Google Drive root is verified.',
+      checkedAt,
+      canOpenFolder: true,
+      canWrite: true,
+    });
+  } catch {
+    return res.status(500).json({ error: 'storage_root_health_failed' });
+  }
+};
+
 const testStorageConnection = async (req, res) => {
   try {
     const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
@@ -1230,6 +1299,7 @@ module.exports = {
   getStorageOwnershipSummary,
   getStorageDataMap,
   getStorageFolderLink,
+  getStorageRootHealth,
   __private: {
     resolveFirmSlugForRedirect,
     buildFrontendStorageRedirect,

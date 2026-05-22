@@ -39,3 +39,7 @@ Authenticated firm workspace users can now see a persistent storage indicator in
 - Added audit/log events: `STRICT_STORAGE_ENABLED`, `STRICT_STORAGE_DISABLED`, `STRICT_STORAGE_WRITE_BLOCKED`, `STRICT_STORAGE_BYOS_REQUIRED`.
 - Event payload is sanitized and includes only: `firmId`, actor xID/user id, `requestId`, provider mode, target write path category (`client_profile`/`cfs_upload`/`direct_upload`), and timestamp.
 - Secrets, credentials, provider tokens, and folder IDs are excluded from strict-mode audit visibility.
+
+
+### Root recovery visibility
+Primary Admins now get explicit storage root health status in Storage Settings and workspace badge warnings when Google Drive root verification fails (`STORAGE_ROOT_MISSING`, `STORAGE_MANIFEST_MISSING`, `STORAGE_ROOT_MISMATCH`).

@@ -31,6 +31,11 @@ export async function getStorageFolderLink() {
   return response.data;
 }
 
+export async function getStorageRootHealth() {
+  const response = await api.get('/storage/root-health');
+  return response.data;
+}
+
 export async function sendStorageChangeOtp(email) {
   // AUTH_CONTRACT_ALLOWLIST: legacy OTP endpoint retained for storage change step-up verification.
   const response = await api.post('/auth/send-otp', {
