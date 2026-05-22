@@ -14,6 +14,7 @@ const {
   getStorageConfiguration,
   getStorageOwnershipSummary,
   getStorageFolderLink,
+  getStorageRootHealth,
   testStorageConnection,
   exportFirmStorage,
   downloadFirmStorageExport,
@@ -36,6 +37,7 @@ router.post('/google/confirm-drive', oauthLimiter, requirePrimaryAdmin, googleCo
 router.get('/configuration', userReadLimiter, getStorageConfiguration);
 router.get('/ownership-summary', userReadLimiter, getStorageOwnershipSummary);
 router.get('/folder-link', userReadLimiter, requirePrimaryAdmin, getStorageFolderLink);
+router.get('/root-health', userReadLimiter, requirePrimaryAdmin, getStorageRootHealth);
 router.post('/test-connection', userReadLimiter, requirePrimaryAdmin, testStorageConnection);
 router.get('/health-check', userReadLimiter, storageHealthCheck);
 router.get('/usage', userReadLimiter, storageUsage);

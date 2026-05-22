@@ -21,7 +21,7 @@
 **Learning:** If an attacker can control the filename of an uploaded file, they could potentially inject CRLF characters or quotes to manipulate the HTTP response headers or perform directory traversal during download.
 **Prevention:** Always use `sanitizeFilename` from `src/utils/fileUtils.js` to strip potentially dangerous characters from filenames before setting them in the `Content-Disposition` header.
 
-## $(date +%Y-%m-%d) - Prevent ReDoS by Escaping Regex Variables
+## 2026-05-21 - Prevent ReDoS by Escaping Regex Variables
 **Vulnerability:** User-derived inputs (`originalSlug`) were passed unescaped into dynamic `new RegExp(...)` constructors in MongoDB queries.
 **Learning:** This pattern can lead to Regular Expression Denial of Service (ReDoS) or NoSQL injection attacks if the input contains regex special characters.
 **Prevention:** Always escape user-derived inputs or dynamically generated strings before using them in regular expressions. A centralized `escapeRegExp` utility was created in `src/utils/regexp.utils.js` for this purpose.
@@ -35,3 +35,8 @@
 **Vulnerability:** Found multiple usages of `Math.random()` in the frontend for generating ID strings like correlation IDs, idempotency keys, and submission keys.
 **Learning:** Even for non-cryptographic usages (like DOM IDs or tracking IDs), using `Math.random()` triggers SAST (Static Application Security Testing) warnings and provides weak randomness that could theoretically lead to ID collisions or predictability, compromising tracking workflows.
 **Prevention:** Use the centralized secure randomness utilities (e.g., `generateSecureRandomString`, `generateUUID` from `ui/src/utils/crypto.js`) that leverage the Web Crypto API (`window.crypto.getRandomValues`) to ensure robust, cryptographically secure IDs on the client side.
+
+## 2026-05-21 - Prevent Information Disclosure in API Responses
+**Vulnerability:** Raw error messages (`error.message`) were being directly exposed to clients in API error responses (e.g., in `src/controllers/user.controller.js`).
+**Learning:** Exposing raw internal error details to the client can leak sensitive system information, configuration details, or underlying infrastructure state, which can be leveraged by attackers.
+**Prevention:** Always log the full error details server-side using the internal logger (`log.error`) and return generic, safe error messages to the client (e.g., "Unable to load profile").

@@ -2,6 +2,12 @@
 
 ## 2026-05-20 — Cleaned up Admin and Work Settings layout
 - Cleaned up Admin and Work Settings layout.
+## 2026-05-21 — Improved post-login workspace routing
+
+- Users now land on their first assigned Worklist after firm login
+- Login routing respects assigned queue access
+- Deep-link redirects remain preserved
+- Safe fallbacks remain available when no assigned Worklist exists
 
 ## 2026-05-21 — Reworked Daily Operations navigation
 
@@ -969,3 +975,8 @@
 
 - Docket Detail now displays read-only SOP/work-instruction and checklist snapshots when captured on the docket, with graceful empty states when not attached.
 - Knowledge Library remains available by direct route/feature access, and is not currently pinned as a dedicated sidebar item in the latest navigation IA.
+
+## 2026-05-21 — BYOS Google Drive recovery UX
+- Added Storage Settings **Google Drive storage root health** card with recovery-required messaging and strict-mode blocked-write explanation.
+- Added sanitized `GET /api/storage/root-health` response for health/status/code/canWrite/canOpenFolder without exposing root IDs or credentials.
+- Updated storage badge attention state to show **Storage needs attention** with Google Drive root recovery guidance and link to Storage Settings.

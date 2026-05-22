@@ -50,6 +50,14 @@ Module._load = function(request, parent, isMain) {
   if (request === '../services/storage/providers/OneDriveProvider') return class {};
   if (request === '../services/storage/providers/S3Provider') return { S3Provider: class {} };
   if (request === '../services/storage/StorageProviderFactory') return { StorageProviderFactory: { getProvider: async () => ({ testConnection: async () => ({}), getFolderPath: async () => '/Docketra/root-folder-id', getStorageQuota: async () => ({ provider: 'google_drive', quotaAvailable: true, totalBytes: 15, usedBytes: 8.2, availableBytes: 6.8, usagePercent: 54.67, displayTotal: '15 GB', displayUsed: '8.2 GB', displayAvailable: '6.8 GB', lastCheckedAt: new Date().toISOString() }) }) } };
+  if (request === '../services/googleDrive.service') return {
+    googleDriveService: {
+      validateRootFolder: async () => ({ valid: true, folderName: 'Docketra — firm' }),
+      buildCanonicalFirmFolderName: () => 'Docketra — firm',
+      getOAuthClient: () => ({ setCredentials() {} }),
+    },
+    PROVIDER_TYPES: { USER_GOOGLE_DRIVE: 'google_drive' },
+  };
   if (request === '../services/storage/resolveFirmStorageState') {
     return {
       normalizeProvider: (provider) => provider,
@@ -176,6 +184,7 @@ async function testStorageUsageSanitizedQuota() {
   assert.ok(!serialized.includes('privateKey'));
   console.log('  ✓ storageUsage returns sanitized usage payload');
 }
+
 
 async function run() {
   console.log('Running storageController tests...');
