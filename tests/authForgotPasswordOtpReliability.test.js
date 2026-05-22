@@ -57,7 +57,8 @@ const createHarness = () => {
     },
   ];
 
-  const sentOtps = [];
+  const sentForgotPasswordOtps = [];
+  const sentLoginOtps = [];
   let tokenCounter = 0;
 
   const matchQuery = (record, query) => Object.entries(query).every(([key, value]) => {
@@ -88,7 +89,8 @@ const createHarness = () => {
     Firm,
     User,
     emailService: {
-      sendLoginOtpEmail: async (payload) => { sentOtps.push(payload); },
+      sendForgotPasswordOtpEmail: async (payload) => { sentForgotPasswordOtps.push(payload); },
+      sendLoginOtpEmail: async (payload) => { sentLoginOtps.push(payload); },
       generateSecureToken: () => 'legacy-token',
       hashToken: (value) => `legacy-hash:${value}`,
       sendForgotPasswordEmail: async () => ({ success: true }),
@@ -127,14 +129,14 @@ const createHarness = () => {
     bcrypt: { hash: async (value) => `bcrypt:${value}` },
   });
 
-  return { service, users, sentOtps };
+  return { service, users, sentForgotPasswordOtps, sentLoginOtps };
 };
 
 const reqFor = (body) => ({ body, ip: '127.0.0.1', get: () => 'test-agent' });
 
 async function run() {
   console.log('Running auth forgot-password OTP reliability tests...');
-  const { service, users } = createHarness();
+  const { service, users, sentForgotPasswordOtps, sentLoginOtps } = createHarness();
 
   const initXidRes = createMockRes();
   await service.forgotPasswordInit(reqFor({ identifier: 'X111111', firmSlug: 'firm-a' }), initXidRes);
@@ -148,6 +150,10 @@ async function run() {
   assert.strictEqual(initEmailRes.statusCode, 200);
   assert.strictEqual(initEmailRes.body.success, true);
   assert.strictEqual(initEmailRes.body.message, GENERIC_INIT_MESSAGE);
+  assert.strictEqual(sentForgotPasswordOtps.length, 2);
+  assert.strictEqual(sentLoginOtps.length, 0);
+  assert.match(sentForgotPasswordOtps[0].firmName, /Firm A/i);
+  assert.match(sentForgotPasswordOtps[0].firmSlug, /firm-a/i);
   console.log('  ✓ firm init succeeds with email and safe response');
 
   const initUnknownRes = createMockRes();

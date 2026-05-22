@@ -1080,3 +1080,5 @@
 - Added regression tests for limiter wiring, threshold behavior, and production fail-closed safety.
 
 - Added Docket cloud-first narrative storage: canonical docket JSON at firms/{firmId}/dockets/{docketId}/docket.json with Mongo retaining control metadata + docketRef/docketStorageMode, legacy Mongo read fallback when no docketRef, and safe warning docket_content_unavailable on cloud-read failure.
+
+- 2026-05-22: Corrected forgot-password OTP email copy so reset OTPs are no longer labeled as login OTPs.
