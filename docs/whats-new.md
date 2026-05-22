@@ -1030,4 +1030,4 @@
 - Enforced production fail-closed behavior for signup limiter if Redis is unavailable.
 - Added regression tests for limiter wiring, threshold behavior, and production fail-closed safety.
 
-\n- Added Docket cloud-first narrative storage: canonical docket JSON at firms/{firmId}/dockets/{docketId}/docket.json with Mongo retaining control metadata + docketRef/docketStorageMode, legacy Mongo read fallback when no docketRef, and safe warning docket_content_unavailable on cloud-read failure.
+- Added Docket cloud-first narrative storage: canonical docket JSON at firms/{firmId}/dockets/{docketId}/docket.json with Mongo retaining control metadata + docketRef/docketStorageMode, legacy Mongo read fallback when no docketRef, and safe warning docket_content_unavailable on cloud-read failure.

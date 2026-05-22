@@ -45,4 +45,4 @@ Current state is **partially compliant**. MongoDB still contains legacy firm bus
 Yes — firm business-content fields still exist in MongoDB today, and they are documented as temporary legacy exceptions with migration phases and removal targets in guardrail tests.
 
 - Update 2026-05-22: CFS is now cloud-first (`firms/{firmId}/clients/{clientId}/cfs/cfs.json`) with Mongo pointer-only metadata and temporary legacy read fallback.
-\n- Added Docket cloud-first narrative storage: canonical docket JSON at firms/{firmId}/dockets/{docketId}/docket.json with Mongo retaining control metadata + docketRef/docketStorageMode, legacy Mongo read fallback when no docketRef, and safe warning docket_content_unavailable on cloud-read failure.
+- Added Docket cloud-first narrative storage: canonical docket JSON at firms/{firmId}/dockets/{docketId}/docket.json with Mongo retaining control metadata + docketRef/docketStorageMode, legacy Mongo read fallback when no docketRef, and safe warning docket_content_unavailable on cloud-read failure.
