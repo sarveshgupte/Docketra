@@ -167,6 +167,13 @@ const authenticate = async (req, res, next) => {
         ...buildRequestContext(req),
       };
       applySupportHeadersToContext(req);
+      if (req.context?.impersonationDenied) {
+        return res.status(403).json({
+          success: false,
+          message: 'Invalid impersonation context.',
+          code: req.context.impersonationDeniedReason || 'IMPERSONATION_DENIED',
+        });
+      }
       req._authResolved = true;
       
       return next();
