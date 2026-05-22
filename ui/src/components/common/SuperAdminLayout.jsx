@@ -10,6 +10,7 @@ import { useToast } from '../../hooks/useToast';
 import { Loading } from './Loading';
 import { USER_ROLES } from '../../utils/constants';
 import { superadminService } from '../../services/superadminService';
+import { SUPERADMIN_PILOT_SURFACE, TASK_MANAGER_MVP_ENABLED } from '../../constants/pilotSurface';
 
 const navItemClass = (isActive) =>
   `rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
@@ -38,6 +39,7 @@ export const SuperAdminLayout = ({ children }) => {
   };
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(`${path}/`);
+  const showSuperadminNavItem = (path) => !TASK_MANAGER_MVP_ENABLED || SUPERADMIN_PILOT_SURFACE.visibleNavPaths.has(path);
   const runSearch = async (rawQuery = searchQuery) => {
     const q = String(rawQuery || '').trim();
     setSearchOpen(true);
@@ -102,27 +104,27 @@ export const SuperAdminLayout = ({ children }) => {
           <Link to="/app/superadmin/firms" className={navItemClass(isActive('/app/superadmin/firms'))} aria-current={isActive('/app/superadmin/firms') ? 'page' : undefined}>
             Firms
           </Link>
-          <Link to="/app/superadmin/onboarding-insights" className={navItemClass(isActive('/app/superadmin/onboarding-insights'))} aria-current={isActive('/app/superadmin/onboarding-insights') ? 'page' : undefined}>
+          {showSuperadminNavItem('/app/superadmin/onboarding-insights') ? <Link to="/app/superadmin/onboarding-insights" className={navItemClass(isActive('/app/superadmin/onboarding-insights'))} aria-current={isActive('/app/superadmin/onboarding-insights') ? 'page' : undefined}>
             Onboarding Insights
-          </Link>
-          <Link to="/app/superadmin/firm-health" className={navItemClass(isActive('/app/superadmin/firm-health'))} aria-current={isActive('/app/superadmin/firm-health') ? 'page' : undefined}>
+          </Link> : null}
+          {showSuperadminNavItem('/app/superadmin/firm-health') ? <Link to="/app/superadmin/firm-health" className={navItemClass(isActive('/app/superadmin/firm-health'))} aria-current={isActive('/app/superadmin/firm-health') ? 'page' : undefined}>
             Firm Health
-          </Link>
-          <Link to="/app/superadmin/feature-flags" className={navItemClass(isActive('/app/superadmin/feature-flags'))} aria-current={isActive('/app/superadmin/feature-flags') ? 'page' : undefined}>
+          </Link> : null}
+          {showSuperadminNavItem('/app/superadmin/feature-flags') ? <Link to="/app/superadmin/feature-flags" className={navItemClass(isActive('/app/superadmin/feature-flags'))} aria-current={isActive('/app/superadmin/feature-flags') ? 'page' : undefined}>
             Feature Flags
-          </Link>
+          </Link> : null}
           <Link to="/app/superadmin/pilot-readiness" className={navItemClass(isActive('/app/superadmin/pilot-readiness'))} aria-current={isActive('/app/superadmin/pilot-readiness') ? 'page' : undefined}>
             Pilot Readiness
           </Link>
-          <Link to="/app/superadmin/plans" className={navItemClass(isActive('/app/superadmin/plans'))} aria-current={isActive('/app/superadmin/plans') ? 'page' : undefined}>
+          {showSuperadminNavItem('/app/superadmin/plans') ? <Link to="/app/superadmin/plans" className={navItemClass(isActive('/app/superadmin/plans'))} aria-current={isActive('/app/superadmin/plans') ? 'page' : undefined}>
             Plans & Capacity
-          </Link>
+          </Link> : null}
           <Link to="/app/superadmin/diagnostics" className={navItemClass(isActive('/app/superadmin/diagnostics'))} aria-current={isActive('/app/superadmin/diagnostics') ? 'page' : undefined}>
             Support Diagnostics
           </Link>
-          <Link to="/app/superadmin/audit" className={navItemClass(isActive('/app/superadmin/audit'))} aria-current={isActive('/app/superadmin/audit') ? 'page' : undefined}>
+          {showSuperadminNavItem('/app/superadmin/audit') ? <Link to="/app/superadmin/audit" className={navItemClass(isActive('/app/superadmin/audit'))} aria-current={isActive('/app/superadmin/audit') ? 'page' : undefined}>
             Audit Logs
-          </Link>
+          </Link> : null}
         </nav>
         <div className="mt-6 rounded-xl border border-gray-200 bg-white p-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Global search</p>
