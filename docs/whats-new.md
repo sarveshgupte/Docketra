@@ -7,6 +7,13 @@
 - Clarified policy/trust docs to distinguish implemented behavior, legacy exceptions, and planned migrations (no overclaims).
 # What's New
 
+## 2026-05-22 — Improved notification read management
+
+- Added mark-all-read support for notification history
+- Kept notification updates scoped to the logged-in user
+- Preserved per-notification read actions
+- Added safe cleanup groundwork for old read notifications
+
 ## 2026-05-22 — Added due-date docket notifications
 
 - Added due soon and overdue notification types for active dockets
@@ -1015,3 +1022,11 @@
 - Updated storage badge attention state to show **Storage needs attention** with Google Drive root recovery guidance and link to Storage Settings.
 
 - 2026-05-22: Client Fact Sheet canonical payload moved to cloud JSON at `firms/{firmId}/clients/{clientId}/cfs/cfs.json`; Mongo now stores only CFS object reference metadata plus `cfsStorageMode` migration marker (`cloud_first`/`legacy_mongo`).
+## May 2026: Signup anti-abuse hardening (auth routes)
+
+- Switched `/api/auth/signup/init|verify|resend` to dedicated `signupLimiter` middleware instead of generic auth limiter.
+- Hardened signup limiter keying to combine IP + hashed normalized email + hashed normalized workspace identifier when present.
+- Kept OTP-specific `otpVerifyLimiter` and `otpResendLimiter` on signup verify/resend routes.
+- Enforced production fail-closed behavior for signup limiter if Redis is unavailable.
+- Added regression tests for limiter wiring, threshold behavior, and production fail-closed safety.
+
