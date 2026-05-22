@@ -1,5 +1,12 @@
 # What's New
 
+## 2026-05-22 — Added docket workflow notifications
+
+- Added notifications for key docket workflow events
+- Users are notified when work is assigned or returned from QC
+- Pended dockets can notify users when they reopen
+- Kept notification delivery quiet and non-blocking
+
 ## 2026-05-22 — Polished notification history page
 
 - Updated Notification History to match the workspace shell design

@@ -15,6 +15,9 @@ const NotificationTypes = Object.freeze({
   DOCKET_REASSIGNED: ServiceNotificationTypes.DOCKET_REASSIGNED,
   STATUS_CHANGED: ServiceNotificationTypes.STATUS_CHANGED,
   COMMENT_ADDED: ServiceNotificationTypes.COMMENT_ADDED,
+  DOCKET_ROUTED_TO_WORKBASKET: ServiceNotificationTypes.DOCKET_ROUTED_TO_WORKBASKET,
+  QC_RETURNED: ServiceNotificationTypes.QC_RETURNED,
+  PENDED_DOCKET_REOPENED: ServiceNotificationTypes.PENDED_DOCKET_REOPENED,
 });
 
 function assertNotificationType(type) {
@@ -45,6 +48,15 @@ function buildMessage({ type, docketId, actor }) {
       title: 'New comment',
       message: `${actorLabel} added a comment on docket ${docketId}.`,
     };
+  }
+  if (type === NotificationTypes.DOCKET_ROUTED_TO_WORKBASKET) {
+    return { title: 'Docket routed', message: `Docket ${docketId} was routed to ${String(actor?.workbasketName || 'a Workbasket')}.` };
+  }
+  if (type === NotificationTypes.QC_RETURNED) {
+    return { title: 'QC returned docket', message: `QC returned Docket ${docketId} for correction.` };
+  }
+  if (type === NotificationTypes.PENDED_DOCKET_REOPENED) {
+    return { title: 'Pended docket reopened', message: `Pended Docket ${docketId} is back in your Worklist.` };
   }
   if (type === NotificationTypes.CLIENT_UPLOAD) {
     return {
@@ -91,9 +103,15 @@ function createNotification(payload = {}) {
 
   const notificationPayload = {
     firmId: payload.firmId,
-    userId: payload.userId,
+    userId: payload.userId || payload.recipientXID,
     type: mappedType,
     docketId: payload.docketId,
+    recipientUserId: payload.recipientUserId,
+    recipientXID: payload.recipientXID || payload.userId,
+    docketInternalId: payload.docketInternalId,
+    workbasketId: payload.workbasketId,
+    priority: payload.priority,
+    metadata: payload.metadata,
     title: payload.title || content.title,
     message: payload.message || content.message,
     createdAt: payload.timestamp || payload.createdAt || new Date(),

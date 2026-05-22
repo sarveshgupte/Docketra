@@ -4,8 +4,25 @@ const { enqueueEmailJob } = require('../queues/email.queue');
 const { NotificationTypes } = require('../constants/notificationTypes');
 const { emitUserNotification } = require('./notificationSocket.service');
 const { resolveDeliveryChannels } = require('./notificationPreference.service');
+const log = require('../utils/log');
 
 const GROUPING_WINDOW_MS = 30 * 60 * 1000;
+
+async function resolveRecipientXid(payload = {}, firmId = '') {
+  const directXid = String(payload.recipientXID || payload.userId || '').toUpperCase().trim();
+  if (directXid) return directXid;
+
+  const recipientUserId = String(payload.recipientUserId || '').trim();
+  if (!recipientUserId) return '';
+
+  const recipient = await User.findOne({
+    _id: recipientUserId,
+    firmId,
+    status: { $ne: 'deleted' }
+  }).select('xID').lean();
+
+  return String(recipient?.xID || '').toUpperCase().trim();
+}
 
 function assertType(type) {
   if (!Object.values(NotificationTypes).includes(type)) {
@@ -17,13 +34,16 @@ function assertType(type) {
 }
 
 function normalizePayload(payload = {}) {
-  const userId = String(payload.userId || '').toUpperCase().trim();
+  const userId = String(payload.recipientXID || payload.userId || '').toUpperCase().trim();
   const firmId = String(payload.firmId || '').trim();
   const type = String(payload.type || '').trim().toUpperCase();
   const docketId = payload.docketId ? String(payload.docketId).trim() : null;
   const title = String(payload.title || '').trim();
   const message = String(payload.message || '').trim();
   const createdAt = payload.createdAt ? new Date(payload.createdAt) : new Date();
+  const docketInternalId = payload.docketInternalId ? String(payload.docketInternalId).trim() : null;
+  const workbasketId = payload.workbasketId ? String(payload.workbasketId).trim() : null;
+  const priority = String(payload.priority || 'NORMAL').toUpperCase();
 
   if (!userId || !firmId || !type || !title || !message) {
     const error = new Error('firmId, userId, type, title and message are required');
@@ -40,13 +60,27 @@ function normalizePayload(payload = {}) {
     title,
     message,
     docketId,
+    docketInternalId,
+    workbasketId,
+    priority,
+    metadata: payload.metadata || null,
     createdAt,
     emailEnabled: Boolean(payload.emailEnabled),
   };
 }
 
 async function createNotification(payload) {
-  const normalized = normalizePayload(payload);
+  try {
+    if (!payload?.recipientUserId && !payload?.recipientXID && !payload?.userId) return null;
+    const resolvedRecipientXid = await resolveRecipientXid(payload, String(payload?.firmId || '').trim());
+    if (!resolvedRecipientXid) return null;
+    const normalized = normalizePayload({ ...payload, recipientXID: resolvedRecipientXid });
+    const recipient = await User.findOne({
+      xID: normalized.userId,
+      firmId: normalized.firmId,
+      status: { $ne: 'deleted' }
+    }).select('xID').lean();
+    if (!recipient) return null;
   let deliveryChannels = { inApp: true, email: Boolean(payload?.emailEnabled) };
   try {
     deliveryChannels = await resolveDeliveryChannels({
@@ -104,6 +138,10 @@ async function createNotification(payload) {
   }
 
   return notificationDoc;
+  } catch (error) {
+    log.warn('NOTIFICATION_CREATE_FAILED', { error: error?.message, type: payload?.type, docketId: payload?.docketId });
+    return null;
+  }
 }
 
 function toTextValue(value) {
