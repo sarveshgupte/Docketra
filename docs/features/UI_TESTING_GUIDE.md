@@ -8,7 +8,7 @@ This guide covers testing and deploying the Docketra Neomorphic UI.
 
 ### Required Services
 1. **MongoDB** - Backend database
-2. **Node.js 14+** - For both backend and UI
+2. **Node.js 20.x (LTS)** - For both backend and UI
 3. **Backend API** - Running on port 3000
 
 ## Local Development Setup
@@ -287,7 +287,7 @@ app.get('*', (req, res) => {
 
 Create `ui/Dockerfile`:
 ```dockerfile
-FROM node:18-alpine as build
+FROM node:20-alpine as build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci

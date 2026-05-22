@@ -1,5 +1,11 @@
 # What's New
 
+## May 2026: Aligned Node runtime to Node 20
+
+- Standardized local, CI, and deployment runtime expectations on Node 20.
+- Updated engine metadata and setup/deployment docs.
+- Added runtime version file for local development alignment.
+
 ## May 2026: Hardened SuperAdmin impersonation boundaries
 
 - Added explicit impersonation boundary checks.
