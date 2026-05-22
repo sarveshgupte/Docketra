@@ -1,11 +1,10 @@
+# What's New
 
 ## May 2026: Hardened SuperAdmin impersonation boundaries
 
 - Added explicit impersonation boundary checks.
 - Added regression coverage for spoofing, expired/mismatched sessions, and read-only mode.
 - Documented impersonation security model and audit expectations.
-
-# What's New
 
 <!-- Compatibility anchor for admin surface regression checks -->
 ## 2026-05-20 — Cleaned up Admin and Work Settings layout
