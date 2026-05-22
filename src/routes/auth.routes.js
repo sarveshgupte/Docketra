@@ -10,6 +10,7 @@ const { authorizeFirmPermission } = require('../middleware/permission.middleware
 const { enforceSameOriginForCookieAuth } = require('../middleware/csrfOrigin.middleware');
 const {
   authLimiter,
+  signupLimiter,
   authBlockEnforcer,
   forgotPasswordLimiter,
   otpResendLimiter,
@@ -107,9 +108,9 @@ router.get('/debug-cookie-state', (req, res, next) => {
 }, authenticate, debugCookieState);
 router.post('/verify-totp', otpVerifyLimiter, verifyTotp);
 router.post('/complete-mfa-login', otpVerifyLimiter, completeMfaLogin);
-router.post('/signup/init', authBlockEnforcer, authLimiter, signupInit);
-router.post('/signup/verify', authBlockEnforcer, authLimiter, otpVerifyLimiter, signupVerify);
-router.post('/signup/resend', authBlockEnforcer, authLimiter, otpResendLimiter, signupResend);
+router.post('/signup/init', authBlockEnforcer, signupLimiter, signupInit);
+router.post('/signup/verify', authBlockEnforcer, signupLimiter, otpVerifyLimiter, signupVerify);
+router.post('/signup/resend', authBlockEnforcer, signupLimiter, otpResendLimiter, signupResend);
 router.post('/send-otp', authBlockEnforcer, authLimiter, otpResendLimiter, sendOtpEndpoint);
 router.post('/verify-otp', authBlockEnforcer, authLimiter, otpVerifyLimiter, verifyOtpEndpoint);
 router.post('/find-workspace', authBlockEnforcer, authLimiter, sensitiveLimiter, findWorkspaceByXid);
