@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, Route, useParams } from 'react-router-dom';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
+import { TASK_MANAGER_MVP_ENABLED, isPilotFirmRouteEnabled } from '../constants/pilotSurface';
 import { FirmLayout } from '../components/routing/FirmLayout';
 import { RouteErrorBoundary } from '../components/routing/RouteErrorBoundary';
 import {
@@ -60,6 +61,11 @@ import { DefaultRoute } from '../components/routing/DefaultRoute';
 const LegacyCaseDetailRedirect = () => {
   const { caseId } = useParams();
   return <Navigate to={`../dockets/${caseId}`} replace />;
+};
+
+const PilotRouteGate = ({ subPath, children }) => {
+  if (!TASK_MANAGER_MVP_ENABLED || isPilotFirmRouteEnabled(subPath)) return children;
+  return <Navigate to="../worklist" replace />;
 };
 
 export const ProtectedRoutes = () => (
@@ -317,57 +323,71 @@ export const ProtectedRoutes = () => (
         <Route
           path="crm"
           element={(
+            <PilotRouteGate subPath="crm">
             <ProtectedRoute requireAdmin>
               <PlatformCrmPage />
             </ProtectedRoute>
+            </PilotRouteGate>
           )}
         />
         <Route
           path="crm/clients"
           element={(
+            <PilotRouteGate subPath="crm/clients">
             <ProtectedRoute requireAdmin>
               <CrmClientsPage />
             </ProtectedRoute>
+            </PilotRouteGate>
           )}
         />
         <Route
           path="crm/clients/:crmClientId"
           element={(
+            <PilotRouteGate subPath="crm/clients/:crmClientId">
             <ProtectedRoute requireAdmin>
               <CrmClientDetailPage />
             </ProtectedRoute>
+            </PilotRouteGate>
           )}
         />
         <Route
           path="crm/leads"
           element={(
+            <PilotRouteGate subPath="crm/leads">
             <ProtectedRoute requireAdmin>
               <LeadsPage />
             </ProtectedRoute>
+            </PilotRouteGate>
           )}
         />
         <Route
           path="cms"
           element={(
+            <PilotRouteGate subPath="cms">
             <ProtectedRoute requireAdmin>
               <PlatformCmsPage />
             </ProtectedRoute>
+            </PilotRouteGate>
           )}
         />
         <Route
           path="company-brain"
           element={(
+            <PilotRouteGate subPath="company-brain">
             <ProtectedRoute requireAdmin>
               <CompanyBrainPage />
             </ProtectedRoute>
+            </PilotRouteGate>
           )}
         />
         <Route
           path="knowledge"
           element={(
+            <PilotRouteGate subPath="knowledge">
             <ProtectedRoute requireAdmin>
               <KnowledgeLibraryPage />
             </ProtectedRoute>
+            </PilotRouteGate>
           )}
         />
         <Route
@@ -427,9 +447,11 @@ export const ProtectedRoutes = () => (
         <Route
           path="updates"
           element={(
+            <PilotRouteGate subPath="updates">
             <ProtectedRoute>
               <ProductUpdatesHistoryPage />
             </ProtectedRoute>
+            </PilotRouteGate>
           )}
         />
         <Route
@@ -459,25 +481,31 @@ export const ProtectedRoutes = () => (
         <Route
           path="storage-settings"
           element={(
+            <PilotRouteGate subPath="storage-settings">
             <ProtectedRoute requireAdmin>
               <StorageSettingsPage />
             </ProtectedRoute>
+            </PilotRouteGate>
           )}
         />
         <Route
           path="data-storage-map"
           element={(
+            <PilotRouteGate subPath="data-storage-map">
             <ProtectedRoute requireAdmin>
               <DataStorageMapPage />
             </ProtectedRoute>
+            </PilotRouteGate>
           )}
         />
         <Route
           path="ai-settings"
           element={(
+            <PilotRouteGate subPath="ai-settings">
             <ProtectedRoute requireAdmin>
               <AiSettingsPage />
             </ProtectedRoute>
+            </PilotRouteGate>
           )}
         />
         <Route
@@ -508,17 +536,21 @@ export const ProtectedRoutes = () => (
         <Route
           path="admin/reports"
           element={(
+            <PilotRouteGate subPath="admin/reports">
             <ProtectedRoute requireAdmin>
               <PlatformReportsPage />
             </ProtectedRoute>
+            </PilotRouteGate>
           )}
         />
         <Route
           path="admin/reports/detailed"
           element={(
+            <PilotRouteGate subPath="admin/reports/detailed">
             <ProtectedRoute requireAdmin>
               <DetailedReports />
             </ProtectedRoute>
+            </PilotRouteGate>
           )}
         />
         <Route path="*" element={<NotFoundPage />} />
