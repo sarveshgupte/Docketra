@@ -90,6 +90,7 @@ For doc contribution standards, see [documentation-guidelines.md](documentation-
 |----------|---------|
 | [operations/pilot-readiness-checklist.md](operations/pilot-readiness-checklist.md) | Pilot readiness checklist |
 | [operations/pilot-support-readiness.md](operations/pilot-support-readiness.md) | Pilot support readiness |
+| [operations/pilot-launch-readiness-gate.md](operations/pilot-launch-readiness-gate.md) | Pilot launch readiness inventory gate |
 | [operations/superadmin-diagnostics.md](operations/superadmin-diagnostics.md) | Superadmin diagnostics guide |
 
 ---
