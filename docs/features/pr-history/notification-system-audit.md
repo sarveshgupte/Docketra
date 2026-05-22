@@ -59,3 +59,9 @@ No new notification types were added.
 ## Validation status update (2026-05-22)
 - `node tests/notificationMarkAllRead.test.js` was re-run independently and passed.
 - The intermittent DNS `EAI_AGAIN` issue was observed only during chained batch execution in this environment, not in the standalone `notificationMarkAllRead` run.
+
+## Final validation status (2026-05-22)
+- `node tests/notificationSystemAudit.test.js` passed independently.
+- `node tests/notificationCleanup.test.js` passed independently.
+- `cd ui && npm run build` passed.
+- Previous `EAI_AGAIN` DNS errors occurred during chained/batch execution in this environment and were environmental, not failures of the standalone audit/cleanup tests.
