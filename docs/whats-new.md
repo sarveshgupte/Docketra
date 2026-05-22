@@ -1021,6 +1021,7 @@
 - Added sanitized `GET /api/storage/root-health` response for health/status/code/canWrite/canOpenFolder without exposing root IDs or credentials.
 - Updated storage badge attention state to show **Storage needs attention** with Google Drive root recovery guidance and link to Storage Settings.
 
+- 2026-05-22: Client Fact Sheet canonical payload moved to cloud JSON at `firms/{firmId}/clients/{clientId}/cfs/cfs.json`; Mongo now stores only CFS object reference metadata plus `cfsStorageMode` migration marker (`cloud_first`/`legacy_mongo`).
 ## May 2026: Signup anti-abuse hardening (auth routes)
 
 - Switched `/api/auth/signup/init|verify|resend` to dedicated `signupLimiter` middleware instead of generic auth limiter.
