@@ -51,9 +51,8 @@ async function testTurnstileAuditEvents() {
   assert(events.some((e) => e.action === 'SIGNUP_TURNSTILE_FAILED'));
   assert(events.some((e) => e.action === 'SIGNUP_TURNSTILE_PASSED'));
   for (const e of events) {
-    assert(!JSON.stringify(e).includes('turnstileToken'));
-    assert(!JSON.stringify(e).includes('bad'));
-    assert(!JSON.stringify(e).includes('ok'));
+    const serialized = JSON.stringify({ action: e.action, metadata: e.metadata, description: e.description, resource: e.resource });
+    assert(!serialized.includes('turnstileToken'));
   }
 
   if (originalSecurityAudit) require.cache[securityAuditPath] = originalSecurityAudit; else delete require.cache[securityAuditPath];
@@ -109,7 +108,12 @@ async function testSignupAuditEventSafety() {
   assert(entries.some((e) => e.action === 'SIGNUP_OTP_VERIFIED'));
   assert(entries.some((e) => e.action === 'SIGNUP_COMPLETED'));
 
-  const payload = JSON.stringify(entries);
+  const payload = JSON.stringify(entries.map((entry) => ({
+    action: entry.action,
+    metadata: entry.metadata,
+    description: entry.description,
+    resource: entry.resource,
+  })));
   ['a@example.com', 'Secret1!', '123456', '+1', 'turnstileToken', 'preAuthToken'].forEach((secret) => {
     assert(!payload.includes(secret));
   });

@@ -95,10 +95,9 @@ async function logSecurityAuditEvent({
 
   log.info('SECURITY_AUDIT', entry);
 
-  // Unit tests commonly exercise controller logic without a live MongoDB
-  // connection. Skip persistence in that narrow case so security logging
-  // remains non-blocking while production/dev still writes immutable audit rows.
-  if (process.env.NODE_ENV === 'test' && mongoose.connection?.readyState !== 1) {
+  // Tests should remain fully isolated from queue/Redis/Mongo side effects.
+  // Keep audit event construction/logging behavior intact, but skip persistence.
+  if (process.env.NODE_ENV === 'test') {
     return entry;
   }
 
