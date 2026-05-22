@@ -248,9 +248,27 @@ async function markAsRead(notificationId, userId, firmId) {
   ).lean();
 }
 
+async function markAllAsRead(userId, firmId) {
+  const result = await Notification.updateMany(
+    {
+      userId: String(userId || '').toUpperCase(),
+      firmId: String(firmId || ''),
+      isRead: false,
+    },
+    {
+      $set: {
+        isRead: true,
+      },
+    },
+  );
+
+  return Number(result?.modifiedCount || 0);
+}
+
 module.exports = {
   NotificationTypes,
   createNotification,
   getUserNotifications,
   markAsRead,
+  markAllAsRead,
 };

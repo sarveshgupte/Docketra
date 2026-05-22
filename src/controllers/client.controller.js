@@ -309,7 +309,10 @@ const getClientById = async (req, res) => {
     const hydratedClient = await hydrateClientFromProfileIfAvailable(accessContext.firmId, client);
     const attachments = await AttachmentRepository.findByClientSource(accessContext.firmId, clientId, 'client_cfs');
     const payload = mapClientResponse(hydratedClient);
-    payload.clientFactSheet = payload.clientFactSheet || {};
+    const cfsState = await clientProfileStorageService.getClientFactSheet({ firmId: accessContext.firmId, client });
+    payload.clientFactSheet = cfsState.factSheet || payload.clientFactSheet || {};
+    payload.cfsStorageMode = cfsState.cfsStorageMode || 'legacy_mongo';
+    if (cfsState.cfsWarning) payload.cfsWarning = cfsState.cfsWarning;
     payload.clientFactSheet.attachments = attachments.map((attachment) => ({
       fileId: attachment._id,
       fileName: attachment.fileName,
@@ -834,8 +837,8 @@ const updateClientFactSheet = async (req, res) => {
       });
     }
     
-    const existingProfile = await clientProfileStorageService.getClientProfile({ firmId: userFirmId, client });
-    const existingFactSheet = existingProfile?.profile?.factSheet || {};
+    const cfsState = await clientProfileStorageService.getClientFactSheet({ firmId: userFirmId, client });
+    const existingFactSheet = cfsState?.factSheet || {};
     const isCreation = !existingFactSheet?._initialized;
 
     const nextFactSheet = {
@@ -860,14 +863,7 @@ const updateClientFactSheet = async (req, res) => {
       };
     }
 
-    await clientProfileStorageService.updateClientProfile({
-      firmId: userFirmId,
-      client,
-      actorXID: performedByXID,
-      partialProfileInput: {
-        clientFactSheet: nextFactSheet,
-      },
-    });
+    await clientProfileStorageService.updateClientFactSheet({ firmId: userFirmId, client, actorXID: performedByXID, factSheet: nextFactSheet });
     
     // Log audit event
     if (isCreation) {
@@ -905,6 +901,7 @@ const updateClientFactSheet = async (req, res) => {
     res.json({
       success: true,
       data: nextFactSheet,
+      cfsStorageMode: 'cloud_first',
       message: 'Client Fact Sheet updated successfully',
     });
     logWorkflowEvent('CLIENT_FACT_SHEET_MUTATION', buildWorkflowMeta({
