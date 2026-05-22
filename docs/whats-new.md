@@ -1,3 +1,8 @@
+# What's New
+
+<!-- Compatibility anchor for admin surface regression checks -->
+## 2026-05-20 — Cleaned up Admin and Work Settings layout
+
 ## 2026-05-22 — Locked pilot UI to Task Manager MVP surface
 
 - Narrowed firm navigation to pilot-ready Task Manager workflows (worklists, workbaskets, dockets, client context, profile, notifications).
@@ -12,8 +17,6 @@
 - Strengthened Mongo schema guardrail test with expanded prohibited business-content fields and explicit, metadata-rich temporary exceptions.
 - Added repository/service write guardrails to block new prohibited business-content Mongo writes on key case/task write paths.
 - Clarified policy/trust docs to distinguish implemented behavior, legacy exceptions, and planned migrations (no overclaims).
-# What's New
-
 ## 2026-05-22 — Added privacy-safe signup security audit events
 
 - Added dedicated signup abuse/security audit events across signup init, Turnstile validation, OTP verification, signup completion, and signup rate-limiting.

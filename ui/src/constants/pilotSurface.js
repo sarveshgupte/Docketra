@@ -15,6 +15,10 @@ export const FIRM_PILOT_SURFACE = {
     'settings',
     'updates',
   ]),
+  disabledRoutes: new Set([
+    '/settings',
+    '/settings/firm',
+  ]),
   disabledRoutePrefixes: [
     '/crm',
     '/cms',
@@ -40,6 +44,7 @@ export const SUPERADMIN_PILOT_SURFACE = {
 export const isPilotFirmRouteEnabled = (subPath = '') => {
   if (!TASK_MANAGER_MVP_ENABLED) return true;
   const normalized = `/${String(subPath || '').replace(/^\/+/, '')}`;
+  if (FIRM_PILOT_SURFACE.disabledRoutes.has(normalized)) return false;
   return !FIRM_PILOT_SURFACE.disabledRoutePrefixes.some((prefix) => normalized === prefix || normalized.startsWith(`${prefix}/`));
 };
 
