@@ -18,7 +18,7 @@ require.cache[securityAuditPath] = {
     logSecurityAuditEvent: async () => ({}),
   },
 };
-const { requireTurnstileForSignup } = require('../src/middleware/turnstile.middleware');
+const { requireTurnstileForSignup, requireTurnstileForForgotPassword } = require('../src/middleware/turnstile.middleware');
 const turnstileService = require('../src/services/turnstile.service');
 
 async function run() {
@@ -58,10 +58,43 @@ async function run() {
   }
   turnstileService.verifyTurnstileToken = originalVerify;
 
+  process.env.TURNSTILE_ENABLED = 'false';
+  {
+    const app = express();
+    app.use(express.json());
+    app.post('/forgot-password/init', requireTurnstileForForgotPassword, (_req, res) => res.status(200).json({ ok: true }));
+    await request(app).post('/forgot-password/init').send({ identifier: 'x123456' }).expect(200);
+  }
+
+  process.env.TURNSTILE_ENABLED = 'true';
+  {
+    const app = express();
+    app.use(express.json());
+    app.post('/forgot-password/init', requireTurnstileForForgotPassword, (_req, res) => res.status(200).json({ ok: true }));
+    await request(app).post('/forgot-password/init').send({ identifier: 'x123456' }).expect(400);
+  }
+
+  turnstileService.verifyTurnstileToken = async () => ({ success: true });
+  {
+    const app = express();
+    app.use(express.json());
+    app.post('/forgot-password/init', requireTurnstileForForgotPassword, (_req, res) => res.status(200).json({ ok: true }));
+    await request(app).post('/forgot-password/init').send({ identifier: 'x123456', turnstileToken: 'ok' }).expect(200);
+  }
+
+  turnstileService.verifyTurnstileToken = async () => ({ success: false });
+  {
+    const app = express();
+    app.use(express.json());
+    app.post('/forgot-password/init', requireTurnstileForForgotPassword, (_req, res) => res.status(200).json({ ok: true }));
+    await request(app).post('/forgot-password/init').send({ identifier: 'x123456', turnstileToken: 'bad' }).expect(403);
+  }
+  turnstileService.verifyTurnstileToken = originalVerify;
+
   const authRoutes = require('fs').readFileSync(require('path').join(__dirname, '..', 'src', 'routes', 'auth.routes.js'), 'utf8');
   assert(authRoutes.includes("router.post('/signup/init', authBlockEnforcer, signupLimiter, requireTurnstileForSignup, signupInit);"));
   assert(authRoutes.includes("router.post('/login/init', authBlockEnforcer, authLimiter, attachFirmFromSlug, loginInit);"));
-  assert(authRoutes.includes("router.post('/forgot-password/init', authBlockEnforcer, forgotPasswordLimiter, sensitiveLimiter, attachOptionalFirmFromSlug, forgotPasswordInit);"));
+  assert(authRoutes.includes("router.post('/forgot-password/init', authBlockEnforcer, forgotPasswordLimiter, sensitiveLimiter, requireTurnstileForForgotPassword, attachOptionalFirmFromSlug, forgotPasswordInit);"));
   assert(authRoutes.includes("router.post('/signup/verify', authBlockEnforcer, signupLimiter, otpVerifyLimiter, signupVerify);"));
   assert(authRoutes.includes("router.post('/signup/resend', authBlockEnforcer, signupLimiter, otpResendLimiter, signupResend);"));
 
