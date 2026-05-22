@@ -18,6 +18,12 @@ MongoDB must not be canonical storage for:
 - File/document payloads (raw bytes, parsed text, generated ZIP/export payloads).
 
 ## Canonical Data Location
+
+Implementation status as of 2026-05-22:
+- Implemented: client profile cloud-first pathways, storage reference-only attachment metadata, strict firm-owned storage mode controls.
+- Legacy exceptions remain: docket/task/comment/knowledge narrative content and some client/CFS legacy fields remain in Mongo pending migration phases.
+- Planned: phased migration documented in `docs/audits/DATA_RESIDENCY_FULL_AUDIT_2026-05.md`.
+
 Firm cloud storage (Google Drive BYOS preferred) is canonical for:
 - Client profiles and CFS JSON.
 - Docket/task/comment operational content.

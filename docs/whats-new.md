@@ -1,3 +1,10 @@
+
+## 2026-05-22 — Data residency full audit and guardrails hardening
+
+- Added full Mongo-vs-BYOS data residency audit: `docs/audits/DATA_RESIDENCY_FULL_AUDIT_2026-05.md`.
+- Strengthened Mongo schema guardrail test with expanded prohibited business-content fields and explicit, metadata-rich temporary exceptions.
+- Added repository/service write guardrails to block new prohibited business-content Mongo writes on key case/task write paths.
+- Clarified policy/trust docs to distinguish implemented behavior, legacy exceptions, and planned migrations (no overclaims).
 # What's New
 
 ## 2026-05-22 — Added due-date docket notifications

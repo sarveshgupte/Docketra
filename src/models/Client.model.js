@@ -779,6 +779,17 @@ clientSchema.index({ firmId: 1, isInternal: 1 }, {
   name: 'firm_internal_client_unique'
 });
 
+
+clientSchema.pre('validate', function() {
+  const blocked = ['PAN', 'TAN', 'GST', 'CIN'];
+  for (const field of blocked) {
+    const value = this.get(field);
+    if (value === null || value === undefined) continue;
+    if (typeof value === 'string' && value.trim() === '') continue;
+    throw _sensitivePersistenceError(field);
+  }
+});
+
 clientSchema.plugin(softDeletePlugin);
 
 // ============================================================
