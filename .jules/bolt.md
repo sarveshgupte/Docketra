@@ -48,3 +48,7 @@
 ## 2026-05-21 - Concurrent Document Fetch in Case Create Service Validation
 **Learning:** In the `caseCreate` service, `WorkType.findOne` and `SubWorkType.findOne` were awaited sequentially, which caused endpoint latency, despite being independent of the other model validation queries (like `Deal`, `CrmClient`, etc.).
 **Action:** Prepared the `WorkType` and `SubWorkType` queries as promises and merged them into the existing `Promise.all()` concurrently with the other independent lookups.
+
+## 2024-05-22 - Decomposing complex MongoDB aggregations
+**Learning:** When decomposing complex MongoDB aggregations (e.g., removing `$facet`) into concurrent Mongoose queries, database-level defaults like `$ifNull` are lost if the initial `$group` pipeline yields an empty array.
+**Action:** Manually apply default fallback values (e.g., `|| 0` or `|| {}`) in the JavaScript layer to handle empty result sets and replace the original database-level defaults, preventing functional regressions.

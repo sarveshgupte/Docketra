@@ -32,7 +32,8 @@ async function testAggregationIdempotencyAndAccuracy() {
   const originalUpdateOne = TenantCaseMetricsDaily.updateOne;
   const updates = [];
 
-  Case.aggregate = async () => ([{
+  Case.aggregate = () => ({
+    exec: async () => ([{
     totalCases: 10,
     openCases: 5,
     pendedCases: 2,
@@ -43,7 +44,13 @@ async function testAggregationIdempotencyAndAccuracy() {
     avgResolutionTimeSeconds: 3600,
     casesCreatedToday: 4,
     casesResolvedToday: 2,
-  }]);
+  }])
+  });
+
+  const originalCountDocuments = Case.countDocuments;
+  Case.countDocuments = () => ({
+    exec: async () => 2
+  });
 
   TenantCaseMetricsDaily.updateOne = async (query, update, options) => {
     updates.push({ query, update, options });
@@ -62,6 +69,7 @@ async function testAggregationIdempotencyAndAccuracy() {
     assert.deepStrictEqual(updates[0].update.$set, updates[1].update.$set);
   } finally {
     Case.aggregate = originalAggregate;
+    Case.countDocuments = originalCountDocuments;
     TenantCaseMetricsDaily.updateOne = originalUpdateOne;
   }
 }
