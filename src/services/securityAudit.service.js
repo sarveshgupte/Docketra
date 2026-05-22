@@ -18,6 +18,17 @@ const SECURITY_AUDIT_ACTIONS = Object.freeze({
   ADMIN_ACTION: 'ADMIN_ACTION',
   FILE_DOWNLOADED: 'FILE_DOWNLOADED',
   SECURITY_ALERT: 'SECURITY_ALERT',
+
+  SIGNUP_INIT_ATTEMPT: 'SIGNUP_INIT_ATTEMPT',
+  SIGNUP_TURNSTILE_MISSING: 'SIGNUP_TURNSTILE_MISSING',
+  SIGNUP_TURNSTILE_FAILED: 'SIGNUP_TURNSTILE_FAILED',
+  SIGNUP_TURNSTILE_PASSED: 'SIGNUP_TURNSTILE_PASSED',
+  SIGNUP_OTP_SENT: 'SIGNUP_OTP_SENT',
+  SIGNUP_OTP_VERIFY_ATTEMPT: 'SIGNUP_OTP_VERIFY_ATTEMPT',
+  SIGNUP_OTP_VERIFY_FAILED: 'SIGNUP_OTP_VERIFY_FAILED',
+  SIGNUP_OTP_VERIFIED: 'SIGNUP_OTP_VERIFIED',
+  SIGNUP_COMPLETED: 'SIGNUP_COMPLETED',
+  SIGNUP_RATE_LIMITED: 'SIGNUP_RATE_LIMITED',
 });
 
 function sanitizeMetadata(value) {
@@ -84,10 +95,9 @@ async function logSecurityAuditEvent({
 
   log.info('SECURITY_AUDIT', entry);
 
-  // Unit tests commonly exercise controller logic without a live MongoDB
-  // connection. Skip persistence in that narrow case so security logging
-  // remains non-blocking while production/dev still writes immutable audit rows.
-  if (process.env.NODE_ENV === 'test' && mongoose.connection?.readyState !== 1) {
+  // Tests should remain fully isolated from queue/Redis/Mongo side effects.
+  // Keep audit event construction/logging behavior intact, but skip persistence.
+  if (process.env.NODE_ENV === 'test') {
     return entry;
   }
 
