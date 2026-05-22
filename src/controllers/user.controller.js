@@ -89,10 +89,10 @@ const getUsers = async (req, res) => {
       },
     });
   } catch (error) {
+    log.error('Error fetching users:', error);
     res.status(500).json({
       success: false,
       error: 'Error fetching users',
-      message: error.message,
     });
   }
 };
@@ -118,10 +118,10 @@ const getUserById = async (req, res) => {
       data: user.toSafeObject(),
     });
   } catch (error) {
+    log.error('Error fetching user:', error);
     res.status(500).json({
       success: false,
       error: 'Error fetching user',
-      message: error.message,
     });
   }
 };
@@ -204,10 +204,10 @@ const createUser = async (req, res) => {
         ...responseMeta,
       });
     }
+    log.error('Error creating user:', error);
     res.status(400).json({
       success: false,
       error: 'Error creating user',
-      message: error.message,
       ...responseMeta,
     });
   }
@@ -269,10 +269,10 @@ const updateUser = async (req, res) => {
       message: 'User updated successfully',
     });
   } catch (error) {
+    log.error('Error updating user:', error);
     res.status(400).json({
       success: false,
       error: 'Error updating user',
-      message: error.message,
     });
   }
 };
@@ -329,10 +329,10 @@ const deleteUser = async (req, res) => {
       message: 'User deactivated successfully',
     });
   } catch (error) {
+    log.error('Error deactivating user:', error);
     res.status(500).json({
       success: false,
       error: 'Error deactivating user',
-      message: error.message,
     });
   }
 };
@@ -362,7 +362,8 @@ const getCurrentUser = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Unable to load profile' });
+    log.error('Unable to load profile:', error);
+    return res.status(500).json({ success: false, message: 'Unable to load profile' });
   }
 };
 
@@ -416,7 +417,8 @@ const completeTutorial = async (req, res) => {
 
     return res.json({ success: true });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message || 'Unable to complete tutorial' });
+    log.error('Unable to complete tutorial:', error);
+    return res.status(400).json({ success: false, message: 'Unable to complete tutorial' });
   }
 };
 
@@ -478,6 +480,10 @@ const completeProfile = async (req, res) => {
     const statusCode = error.message === 'USER_NOT_FOUND'
       ? 404
       : (error.message === 'USER_ALREADY_ONBOARDED' ? 409 : 400);
+    if (statusCode === 400) {
+      log.error('Error completing profile:', error);
+      return res.status(statusCode).json({ success: false, message: 'Unable to complete profile' });
+    }
     return res.status(statusCode).json({ success: false, message: error.message });
   } finally {
     await session.endSession();
@@ -606,7 +612,8 @@ const patchUserRole = async (req, res) => {
     });
     return res.json({ success: true, data: target.toSafeObject?.() || target });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message || 'Failed to update role' });
+    log.error('Failed to update role:', error);
+    return res.status(400).json({ success: false, message: 'Failed to update role' });
   }
 };
 
@@ -670,7 +677,8 @@ const patchUserReporting = async (req, res) => {
     });
     return res.json({ success: true, data: target.toSafeObject?.() || target });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message || 'Failed to update reporting' });
+    log.error('Failed to update reporting:', error);
+    return res.status(400).json({ success: false, message: 'Failed to update reporting' });
   }
 };
 
