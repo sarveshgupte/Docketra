@@ -55,3 +55,7 @@ No new notification types were added.
 - `cd ui && node tests/notificationHistoryPagePolish.test.mjs`
 - `cd ui && node tests/notificationHistoryActions.test.mjs`
 - `cd ui && npm run build`
+
+## Validation status update (2026-05-22)
+- `node tests/notificationMarkAllRead.test.js` was re-run independently and passed.
+- The intermittent DNS `EAI_AGAIN` issue was observed only during chained batch execution in this environment, not in the standalone `notificationMarkAllRead` run.
