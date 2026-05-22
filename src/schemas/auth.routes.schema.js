@@ -21,6 +21,8 @@ module.exports = {
       password: strongPassword,
       firmName: nonEmptyString,
       phone: z.string().trim().regex(/^\d{10}$/),
+      turnstileToken: z.string().trim().optional(),
+      'cf-turnstile-response': z.string().trim().optional(),
     }).strip(),
   },
   'POST /signup/verify': {
@@ -94,6 +96,8 @@ module.exports = {
       xid: xidString.optional(),
       xID: xidString.optional(),
       firmSlug: nonEmptyString.optional(),
+      turnstileToken: z.string().trim().optional(),
+      'cf-turnstile-response': z.string().trim().optional(),
     }).strip().refine((value) => Boolean(value.email || value.identifier || value.xid || value.xID), {
       message: 'email or xID is required',
       path: ['email'],
