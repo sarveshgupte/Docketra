@@ -31,3 +31,12 @@ This document covers anti-spam controls for auth signup endpoints:
 
 ## Future hardening hook
 - A CAPTCHA/Turnstile challenge hook can be layered onto signup init when risk signals are high (e.g., repeated limits by IP/email/workspace hash) while keeping the baseline flow friction-light for normal users.
+
+## Cloudflare Turnstile (signup init only)
+- Turnstile is scoped to `POST /api/auth/signup/init` only.
+- It is **not** applied to login, forgot-password, OTP generic endpoints, or signup OTP verify/resend routes.
+- Frontend uses `VITE_TURNSTILE_SITE_KEY` to render the widget and send `turnstileToken` (also supports `cf-turnstile-response` token key for compatibility).
+- Backend uses `TURNSTILE_ENABLED` and `TURNSTILE_SECRET_KEY`.
+- `TURNSTILE_SECRET_KEY` must never be sent to frontend code; backend validates token using Cloudflare Siteverify.
+- Backend Siteverify validation is mandatory when `TURNSTILE_ENABLED=true`.
+- In production, `TURNSTILE_ENABLED=true` without `TURNSTILE_SECRET_KEY` fails env validation and startup.

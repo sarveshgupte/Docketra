@@ -42,13 +42,14 @@ export const authService = {
   /**
    * Start signup flow (OTP send)
    */
-  signup: async ({ name, email, password, firmName, phone }) => {
+  signup: async ({ name, email, password, firmName, phone, turnstileToken }) => {
     const response = await authApi.signupInit({
       name,
       email,
       password,
       firmName,
       phone,
+      turnstileToken,
     });
     return response;
   },

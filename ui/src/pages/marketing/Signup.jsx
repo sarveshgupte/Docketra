@@ -21,6 +21,8 @@ const mapSafeError = (error, fallback) => {
 };
 
 export default function Signup() {
+  const turnstileSiteKey = String(import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim();
+  const isTurnstileConfigured = Boolean(turnstileSiteKey);
   const navigate = useNavigate();
   const { signup, verifySignup, resendSignupOtp, resendCredentials, isAuthenticated, user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -33,6 +35,9 @@ export default function Signup() {
   const [signupSuccessData, setSignupSuccessData] = useState(null);
   const [emailStatus, setEmailStatus] = useState('');
   const otpInputRef = useRef(null);
+  const turnstileContainerRef = useRef(null);
+  const turnstileWidgetIdRef = useRef(null);
+  const [turnstileToken, setTurnstileToken] = useState('');
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -81,6 +86,31 @@ export default function Signup() {
     }
   }, [form.email, step]);
 
+  useEffect(() => {
+    if (!isTurnstileConfigured || step !== 1) return undefined;
+    const existingScript = document.querySelector('script[data-turnstile-script="true"]');
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true;
+      script.defer = true;
+      script.dataset.turnstileScript = 'true';
+      document.body.appendChild(script);
+    }
+    const renderWidget = () => {
+      if (!window.turnstile || !turnstileContainerRef.current || turnstileWidgetIdRef.current) return;
+      turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
+        sitekey: turnstileSiteKey,
+        callback: (token) => setTurnstileToken(String(token || '')),
+        'expired-callback': () => setTurnstileToken(''),
+        'error-callback': () => setTurnstileToken(''),
+      });
+    };
+    const timer = window.setInterval(renderWidget, 200);
+    renderWidget();
+    return () => window.clearInterval(timer);
+  }, [isTurnstileConfigured, step, turnstileSiteKey]);
+
   const submitStepOne = async (event) => {
     event.preventDefault();
     if (loading) return;
@@ -100,6 +130,11 @@ export default function Signup() {
 
     setLoading(true);
     setApiError('');
+    if (isTurnstileConfigured && !turnstileToken) {
+      setLoading(false);
+      setApiError('We could not verify this signup attempt. Please try again.');
+      return;
+    }
     try {
       await signup({
         name: form.name.trim(),
@@ -107,12 +142,15 @@ export default function Signup() {
         password: form.password,
         firmName: form.firmName.trim(),
         phone: form.phone.trim(),
+        turnstileToken: isTurnstileConfigured ? turnstileToken : undefined,
       });
       setStep(2);
       setOtp('');
       setOtpInfo(`OTP sent to ${form.email.trim().toLowerCase()}`);
     } catch (error) {
-      setApiError(mapSafeError(error, 'Unable to start signup right now.'));
+      const status = error?.response?.status;
+      if (status === 400 || status === 403) setApiError('We could not verify this signup attempt. Please try again.');
+      else setApiError(mapSafeError(error, 'Unable to start signup right now.'));
     } finally {
       setLoading(false);
     }
@@ -258,6 +296,7 @@ export default function Signup() {
             <Input id="signup-password" type="password" name="password" label="Password" className="w-full" value={form.password} onChange={onFormChange} disabled={loading} error={errors.password} required autoComplete="current-password" />
             <Input id="signup-firm" type="text" name="firmName" label="Firm Name" className="w-full" value={form.firmName} onChange={onFormChange} disabled={loading} error={errors.firmName} required />
             <Input id="signup-phone" type="text" name="phone" label="Primary Admin Phone" className="w-full" value={form.phone} onChange={onFormChange} disabled={loading} error={errors.phone} required />
+            {isTurnstileConfigured ? <div ref={turnstileContainerRef} className="min-h-[65px]" /> : null}
             <p className="text-xs text-gray-500">{STRONG_PASSWORD_MESSAGE}</p>
             <p className="text-xs text-gray-500">Your workspace URL will look like: docketra.com/gupte-opc</p>
             <Button type="submit" variant="primary" fullWidth disabled={loading} loading={loading}>
