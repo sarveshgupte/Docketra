@@ -51,8 +51,8 @@ Web UI (ui/)  -->  API (src/server.js / routes/controllers/services)
 ## Local setup
 
 ### Prerequisites
-- Node.js 18.x
-- npm 9+
+- Node.js 20.x (LTS)
+- npm 10+
 - MongoDB (local or container)
 - Redis (optional locally; required in production)
 

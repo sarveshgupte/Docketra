@@ -6,7 +6,7 @@ How to run the Docketra test suites on a developer machine.
 
 ## Prerequisites
 
-- Node.js 18.x and npm 9+
+- Node.js 20.x (LTS) and npm 10+
 - Dependencies installed: `npm install && npm --prefix ui install`
 - Backend `.env` configured (see [../deployment/environment-variables.md](../deployment/environment-variables.md))
 - MongoDB running (for integration tests that hit a real DB)

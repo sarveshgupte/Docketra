@@ -4,6 +4,10 @@
   "description": "Enterprise UI for Docketra B2B SaaS Platform",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": "20.x",
+    "npm": ">=10.0.0"
+  },
   "dependencies": {
     "@tanstack/react-query": "^5.99.0",
     "axios": "^1.6.2",
