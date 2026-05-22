@@ -2,7 +2,7 @@
  * Forgot Password Page
  */
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
@@ -34,6 +34,11 @@ export const ForgotPasswordPage = () => {
   const [success, setSuccess] = useState('');
   const [fieldError, setFieldError] = useState('');
   const [loading, setLoading] = useState(false);
+  const turnstileSiteKey = String(import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim();
+  const isTurnstileConfigured = Boolean(turnstileSiteKey);
+  const turnstileContainerRef = useRef(null);
+  const turnstileWidgetIdRef = useRef(null);
+  const [turnstileToken, setTurnstileToken] = useState('');
   const navigate = useNavigate();
   const activeFirmSlug = resolvedFirmSlug || firmSlug || '';
   const loginPath = activeFirmSlug ? `/${activeFirmSlug}/login` : '/superadmin';
@@ -50,6 +55,40 @@ export const ForgotPasswordPage = () => {
     const timer = window.setInterval(() => setCooldown((prev) => (prev > 0 ? prev - 1 : 0)), 1000);
     return () => window.clearInterval(timer);
   }, [step, cooldown]);
+
+  React.useEffect(() => {
+    if (!isTurnstileConfigured || step !== 1) return undefined;
+    const existingScript = document.querySelector('script[data-turnstile-script="true"]');
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true;
+      script.defer = true;
+      script.dataset.turnstileScript = 'true';
+      document.body.appendChild(script);
+    }
+    const renderWidget = () => {
+      if (!window.turnstile || !turnstileContainerRef.current || turnstileWidgetIdRef.current) return;
+      turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
+        sitekey: turnstileSiteKey,
+        callback: (token) => setTurnstileToken(String(token || '')),
+        'expired-callback': () => setTurnstileToken(''),
+        'error-callback': () => setTurnstileToken(''),
+      });
+    };
+    renderWidget();
+    const timer = window.setInterval(renderWidget, 250);
+    return () => window.clearInterval(timer);
+  }, [isTurnstileConfigured, step, turnstileSiteKey]);
+
+  const getEffectiveTurnstileToken = () => {
+    const stateToken = String(turnstileToken || '').trim();
+    if (stateToken) return stateToken;
+    const widgetId = turnstileWidgetIdRef.current;
+    return widgetId != null && window.turnstile?.getResponse
+      ? String(window.turnstile.getResponse(widgetId) || '').trim()
+      : '';
+  };
 
   const handleInit = async (e) => {
     e.preventDefault();
@@ -68,10 +107,15 @@ export const ForgotPasswordPage = () => {
       return;
     }
 
+    const effectiveTurnstileToken = isTurnstileConfigured ? getEffectiveTurnstileToken() : '';
+    if (isTurnstileConfigured && !effectiveTurnstileToken) {
+      setError('Please complete Turnstile verification before continuing.');
+      return;
+    }
     setLoading(true);
 
     try {
-      const response = await authService.forgotPasswordInit(normalizedIdentifier.value, activeFirmSlug || undefined);
+      const response = await authService.forgotPasswordInit(normalizedIdentifier.value, activeFirmSlug || undefined, isTurnstileConfigured ? effectiveTurnstileToken : undefined);
       if (response.success) {
         if (response?.firmSlug) {
           setResolvedFirmSlug(response.firmSlug);
@@ -84,6 +128,13 @@ export const ForgotPasswordPage = () => {
       }
     } catch (err) {
       setError(getForgotPasswordErrorMessage(err.response?.data, 'An error occurred. Please try again.'));
+      const statusCode = Number(err?.response?.status || 0);
+      if (isTurnstileConfigured && (statusCode === 400 || statusCode === 403)) {
+        if (turnstileWidgetIdRef.current != null && window.turnstile?.reset) {
+          window.turnstile.reset(turnstileWidgetIdRef.current);
+        }
+        setTurnstileToken('');
+      }
     } finally {
       setLoading(false);
     }
@@ -191,6 +242,7 @@ export const ForgotPasswordPage = () => {
             autoFocus
             helpText={firmSlug ? 'Use the xID or email registered in this workspace.' : undefined}
           />}
+          {step === 1 && isTurnstileConfigured ? <div ref={turnstileContainerRef} className="min-h-[65px]" /> : null}
           {step === 2 && <Input
             label="OTP"
             type="text"
@@ -238,7 +290,7 @@ export const ForgotPasswordPage = () => {
             </div>
           )}
 
-          <Button type="submit" variant="primary" fullWidth loading={loading}>
+          <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || (step === 1 && isTurnstileConfigured && !getEffectiveTurnstileToken())}>
             {step === 1 ? 'Send verification code' : step === 2 ? 'Verify code' : 'Set new password'}
           </Button>
           {step === 2 && (

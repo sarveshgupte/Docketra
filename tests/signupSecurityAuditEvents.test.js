@@ -22,6 +22,9 @@ async function testTurnstileAuditEvents() {
         SIGNUP_TURNSTILE_MISSING: 'SIGNUP_TURNSTILE_MISSING',
         SIGNUP_TURNSTILE_FAILED: 'SIGNUP_TURNSTILE_FAILED',
         SIGNUP_TURNSTILE_PASSED: 'SIGNUP_TURNSTILE_PASSED',
+        FORGOT_PASSWORD_TURNSTILE_MISSING: 'FORGOT_PASSWORD_TURNSTILE_MISSING',
+        FORGOT_PASSWORD_TURNSTILE_FAILED: 'FORGOT_PASSWORD_TURNSTILE_FAILED',
+        FORGOT_PASSWORD_TURNSTILE_PASSED: 'FORGOT_PASSWORD_TURNSTILE_PASSED',
       },
       logSecurityAuditEvent: async (entry) => events.push(entry),
     },
@@ -38,7 +41,7 @@ async function testTurnstileAuditEvents() {
     },
   };
 
-  const { requireTurnstileForSignup } = require('../src/middleware/turnstile.middleware');
+  const { requireTurnstileForSignup, requireTurnstileForForgotPassword } = require('../src/middleware/turnstile.middleware');
   const app = express();
   app.use(express.json());
   app.post('/signup/init', requireTurnstileForSignup, (_req, res) => res.status(200).json({ ok: true }));
@@ -46,13 +49,20 @@ async function testTurnstileAuditEvents() {
   await request(app).post('/signup/init').send({}).expect(400);
   await request(app).post('/signup/init').send({ turnstileToken: 'bad' }).expect(403);
   await request(app).post('/signup/init').send({ turnstileToken: 'ok' }).expect(200);
+  app.post('/forgot-password/init', requireTurnstileForForgotPassword, (_req, res) => res.status(200).json({ ok: true }));
+  await request(app).post('/forgot-password/init').send({ identifier: 'x123456' }).expect(400);
+  await request(app).post('/forgot-password/init').send({ identifier: 'x123456', turnstileToken: 'bad' }).expect(403);
+  await request(app).post('/forgot-password/init').send({ identifier: 'x123456', turnstileToken: 'ok' }).expect(200);
 
   assert(events.some((e) => e.action === 'SIGNUP_TURNSTILE_MISSING'));
   assert(events.some((e) => e.action === 'SIGNUP_TURNSTILE_FAILED'));
   assert(events.some((e) => e.action === 'SIGNUP_TURNSTILE_PASSED'));
+  assert(events.some((e) => e.action === 'FORGOT_PASSWORD_TURNSTILE_MISSING'));
+  assert(events.some((e) => e.action === 'FORGOT_PASSWORD_TURNSTILE_FAILED'));
+  assert(events.some((e) => e.action === 'FORGOT_PASSWORD_TURNSTILE_PASSED'));
   for (const e of events) {
     const serialized = JSON.stringify({ action: e.action, metadata: e.metadata, description: e.description, resource: e.resource });
-    assert(!serialized.includes('turnstileToken'));
+    ['raw-token', 'Secret1!', '123456', 'a@example.com', 'turnstileToken', 'preAuthToken'].forEach((secret) => assert(!serialized.includes(secret)));
   }
 
   if (originalSecurityAudit) require.cache[securityAuditPath] = originalSecurityAudit; else delete require.cache[securityAuditPath];
