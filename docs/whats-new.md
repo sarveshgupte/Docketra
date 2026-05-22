@@ -1,5 +1,12 @@
 # What's New
 
+## 2026-05-21 — Added workspace notification bell
+
+- Added a notification bell to the workspace topbar
+- Shows unread notification count when available
+- Opens notification history from the workspace shell
+- Kept notification fetch failures non-blocking
+
 ## 2026-05-21 — Improved post-login workspace routing
 
 - Users now land on their first assigned Worklist after firm login
