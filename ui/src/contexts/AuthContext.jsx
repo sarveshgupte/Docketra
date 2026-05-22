@@ -217,13 +217,14 @@ export const AuthProvider = ({ children }) => {
     }
   }, [resetAuthState]);
 
-  const signup = useCallback(async ({ name, email, password, firmName, phone }) => {
+  const signup = useCallback(async ({ name, email, password, firmName, phone, turnstileToken }) => {
     return authService.signup({
       name,
       email,
       password,
       firmName,
       phone,
+      turnstileToken,
     });
   }, []);
 
