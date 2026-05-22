@@ -22,6 +22,25 @@ const findDocket = async ({ docketId, firmId }) => {
   return docket;
 };
 
+
+async function notifyWorkbasketUsers({ firmId, workbasketId, docketId, workbasketName, actor }) {
+  const users = await User.find({
+    firmId,
+    status: { $ne: 'deleted' },
+    isActive: true,
+    $or: [{ teamIds: workbasketId }, { teamId: workbasketId }],
+  }).select('xID').lean();
+  await Promise.all(users.map((user) => createNotification({
+    firmId,
+    recipientXID: user.xID,
+    type: NotificationTypes.DOCKET_ROUTED_TO_WORKBASKET,
+    docketId,
+    workbasketId: String(workbasketId),
+    actor: { ...(actor || {}), workbasketName },
+    message: `Docket ${docketId} was routed to ${workbasketName}.`,
+  })));
+}
+
 const isAdmin = (role) => ['ADMIN', 'PRIMARY_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN'].includes(String(role || '').toUpperCase());
 
 async function routeDocket({ docketId, actor, firmId, toTeamId, note }) {
@@ -70,13 +89,12 @@ async function routeDocket({ docketId, actor, firmId, toTeamId, note }) {
     firmId,
   });
 
-  await createNotification({
+  await notifyWorkbasketUsers({
     firmId,
-    userId: String(actor.xID || '').toUpperCase(),
-    type: NotificationTypes.LIFECYCLE_CHANGED,
+    workbasketId: targetTeam._id,
     docketId,
+    workbasketName: targetTeam.name,
     actor,
-    timestamp: new Date(),
   });
 
   return docket;
@@ -174,6 +192,7 @@ async function managerMoveDocket({ docketId, actor, firmId, to }) {
     if (!targetUser) throw makeError('Target user must be in manager team', 400);
     docket.assignedToXID = targetUserXid;
     docket.status = CaseStatus.IN_PROGRESS;
+    await createNotification({ firmId, recipientXID: targetUserXid, type: NotificationTypes.DOCKET_ASSIGNED, docketId, message: `Docket ${docketId} has been assigned to you.` });
   } else {
     docket.assignedToXID = null;
     docket.status = CaseStatus.UNASSIGNED || 'UNASSIGNED';

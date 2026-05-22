@@ -16,7 +16,7 @@ const notificationSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['DOCKET_ASSIGNED', 'STATUS_CHANGED', 'COMMENT_ADDED', 'DOCKET_REASSIGNED', 'CLIENT_UPLOAD', 'SLA_BREACHED'],
+    enum: ['DOCKET_ASSIGNED', 'STATUS_CHANGED', 'COMMENT_ADDED', 'DOCKET_REASSIGNED', 'DOCKET_ROUTED_TO_WORKBASKET', 'QC_RETURNED', 'PENDED_DOCKET_REOPENED', 'CLIENT_UPLOAD', 'SLA_BREACHED'],
     index: true,
   },
   title: {
@@ -35,6 +35,26 @@ const notificationSchema = new mongoose.Schema({
     required: false,
     trim: true,
     index: true,
+  },
+  docketInternalId: {
+    type: String,
+    required: false,
+    trim: true,
+  },
+  workbasketId: {
+    type: String,
+    required: false,
+    trim: true,
+    index: true,
+  },
+  priority: {
+    type: String,
+    enum: ['LOW', 'NORMAL', 'HIGH', 'CRITICAL'],
+    default: 'NORMAL',
+  },
+  metadata: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null,
   },
   isRead: {
     type: Boolean,

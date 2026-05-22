@@ -3,6 +3,7 @@ const { randomUUID } = require('crypto');
 const Case = require('../models/Case.model');
 const Category = require('../models/Category.model');
 const Team = require('../models/Team.model');
+const User = require('../models/User.model');
 const docketAuditService = require('./docketAudit.service');
 const { DocketStatus, toDocketState, toPersistenceState } = require('../domain/docket/docketStateMachine');
 const {
@@ -550,6 +551,14 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
       comment,
     };
     emitDocketEvent(EVENT_NAMES.QC_FAILURE, { docketId, firmId, requestedBy: docket.qc?.requestedBy, handledBy: actor.xID });
+    await createDocketNotification({
+      firmId,
+      userId: docket.assignedToXID,
+      type: NotificationTypes.QC_RETURNED,
+      docketId,
+      actor,
+      message: `QC returned Docket ${docketId} for correction.`,
+    });
   }
 
   if (normalizedDecision === QC_DECISIONS.APPROVED || normalizedDecision === QC_DECISIONS.PASSED) {
@@ -700,6 +709,16 @@ async function reopenDuePending() {
   // Safely emit events ONLY after persistence is complete
   for (const docket of dueCases) {
     emitDocketEvent(EVENT_NAMES.PENDING_REOPEN, { docketId: docket.caseId, firmId: docket.firmId });
+    if (docket.assignedToXID) {
+      await createDocketNotification({
+        firmId: docket.firmId,
+        userId: docket.assignedToXID,
+        type: NotificationTypes.PENDED_DOCKET_REOPENED,
+        docketId: docket.caseId,
+        actor: { xID: 'SYSTEM', role: 'SYSTEM' },
+        message: `Pended Docket ${docket.caseId} is back in your Worklist.`,
+      });
+    }
   }
 
   return { count: dueCases.length, docketIds };

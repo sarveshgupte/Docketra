@@ -20,8 +20,8 @@ const svc = require('../src/services/docketWorkflow.service');
   CaseMock.updateMany = async (_f, u) => { updatePayload = u; return { modifiedCount: 1 }; };
   await svc.reopenDuePending();
   assert.strictEqual(updatePayload.$set.status, 'IN_PROGRESS');
-  assert.strictEqual(updatePayload.$set.queueType, 'PERSONAL');
-  assert.strictEqual(updatePayload.$set.assignedToXID, undefined);
+  assert.strictEqual(updatePayload.$set.queueType, 'GLOBAL');
+  assert.strictEqual(updatePayload.$set.assignedToXID, null);
   assert.strictEqual(updatePayload.$set.qcSubmittedByXID, undefined);
 
   const docket = {
