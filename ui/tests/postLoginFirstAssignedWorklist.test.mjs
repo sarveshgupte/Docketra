@@ -1,6 +1,21 @@
 import assert from 'assert';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { getPostLoginWorkspaceDestination } from '../src/utils/postAuthNavigation.js';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const constantsSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'utils', 'constants.js'), 'utf8');
+const safeConsoleSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'utils', 'safeConsole.js'), 'utf8');
 const firmSlug = 'acme';
+
+assert(
+  constantsSource.includes("typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {}"),
+  'constants.js should use parser-safe import.meta guard for runtime env'
+);
+assert(
+  safeConsoleSource.includes("typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {}"),
+  'safeConsole.js should use parser-safe import.meta guard for runtime env'
+);
 
 const firmUser = {
   role: 'USER',
