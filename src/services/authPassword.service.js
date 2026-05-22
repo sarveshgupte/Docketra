@@ -220,7 +220,7 @@ const createAuthPasswordService = (deps) => {
     user.forgotPasswordResetTokenExpiresAt = null;
     await user.save();
 
-    await emailService.sendLoginOtpEmail({
+    await emailService.sendForgotPasswordOtpEmail({
       email: user.email,
       name: user.name,
       otp,

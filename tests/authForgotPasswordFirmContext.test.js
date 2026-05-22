@@ -46,6 +46,7 @@ async function shouldAllowGenericForgotPasswordInitWithUniqueFirmUser() {
       findOne: async ({ email }) => users.find((u) => u.email === email) || null,
     },
     emailService: {
+      sendForgotPasswordOtpEmail: async (payload) => { sentEmails.push(payload); },
       sendLoginOtpEmail: async (payload) => { sentEmails.push(payload); },
     },
     isActiveStatus: () => true,
@@ -104,6 +105,7 @@ async function shouldAllowForgotPasswordInitWithXidIdentifier() {
       findOne: async ({ xID }) => users.find((u) => u.xID === xID) || null,
     },
     emailService: {
+      sendForgotPasswordOtpEmail: async (payload) => { sentEmails.push(payload); },
       sendLoginOtpEmail: async (payload) => { sentEmails.push(payload); },
     },
     isActiveStatus: () => true,

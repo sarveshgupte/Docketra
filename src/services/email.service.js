@@ -987,6 +987,53 @@ const sendLoginOtpEmail = async ({
   });
 };
 
+const sendForgotPasswordOtpEmail = async ({
+  email,
+  name,
+  otp,
+  firmName,
+  firmSlug,
+  expiryMinutes = 10,
+  context = null,
+}) => {
+  const resolvedOtp = String(otp || '').trim();
+  if (!email || !resolvedOtp) {
+    throw new Error('Email and OTP are required to send forgot-password verification email');
+  }
+
+  const greetingName = String(name || '').trim() || 'there';
+  const resolvedFirmName = String(firmName || '').trim();
+  const resolvedFirmSlug = String(firmSlug || '').trim();
+  const firmContextLine = resolvedFirmName || resolvedFirmSlug
+    ? `<p><strong>Firm:</strong> ${resolvedFirmName || resolvedFirmSlug}${resolvedFirmSlug ? ` (${resolvedFirmSlug})` : ''}</p>`
+    : '';
+  const firmContextText = resolvedFirmName || resolvedFirmSlug
+    ? `Firm: ${resolvedFirmName || resolvedFirmSlug}${resolvedFirmSlug ? ` (${resolvedFirmSlug})` : ''}\n\n`
+    : '';
+  const subject = 'Your Docketra password reset OTP';
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
+      <h2>Hello ${greetingName},</h2>
+      <p>We received a forgot-password request for your Docketra account.</p>
+      <p>Your one-time password reset code is:</p>
+      <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #1976D2; margin: 20px 0;">${resolvedOtp}</p>
+      <p>This password reset OTP expires in ${expiryMinutes} minutes.</p>
+      ${firmContextLine}
+      <p>If you did not request a password reset, please ignore this email.</p>
+      <p>Best regards,<br/>Docketra Team</p>
+    </div>
+  `;
+  const text = `Hello ${greetingName},\n\nWe received a forgot-password request for your Docketra account.\n\nYour one-time password reset code is:\n\n${resolvedOtp}\n\nThis password reset OTP expires in ${expiryMinutes} minutes.\n\n${firmContextText}If you did not request a password reset, please ignore this email.\n\nBest regards,\nDocketra Team`;
+
+  return sendDirectAuthEmail({
+    to: email,
+    subject,
+    html,
+    text,
+    otp: true,
+  });
+};
+
 const sendSignupOtpEmail = async ({
   email,
   name,
@@ -1039,6 +1086,7 @@ module.exports = {
   sendAdminPasswordResetEmail,
   sendFirmSetupEmail,
   sendLoginOtpEmail,
+  sendForgotPasswordOtpEmail,
   sendSignupOtpEmail,
   sendEnterpriseInquiryNotification,
   sendTestEmail,
