@@ -43,3 +43,9 @@ Authenticated firm workspace users can now see a persistent storage indicator in
 
 ### Root recovery visibility
 Primary Admins now get explicit storage root health status in Storage Settings and workspace badge warnings when Google Drive root verification fails (`STORAGE_ROOT_MISSING`, `STORAGE_MANIFEST_MISSING`, `STORAGE_ROOT_MISMATCH`).
+
+
+## Implemented vs legacy vs roadmap
+- Implemented today (2026-05-22): BYOS-first storage routing, strict firm-owned mode, and cloud object reference metadata patterns.
+- Legacy exceptions: certain business narrative fields are still stored in Mongo in some collections for backward compatibility.
+- Roadmap: phased externalization of CFS, docket/task narrative, comments/history, and SOP/checklist/knowledge canonical content to BYOS JSON documents.
