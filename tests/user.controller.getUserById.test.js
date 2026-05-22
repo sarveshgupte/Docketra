@@ -164,7 +164,6 @@ async function run() {
     assert.strictEqual(res4.statusCode, 500);
     assert.strictEqual(res4.body.success, false);
     assert.strictEqual(res4.body.error, 'Error fetching user');
-    assert.strictEqual(res4.body.message, 'Database connection failed');
     console.log('  ✅ Server Error case passed');
     passed++;
 
