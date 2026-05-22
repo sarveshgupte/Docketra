@@ -3,6 +3,21 @@ const assert = require('assert');
 const express = require('express');
 const request = require('supertest');
 
+const securityAuditPath = require.resolve('../src/services/securityAudit.service');
+const originalSecurityAudit = require.cache[securityAuditPath];
+require.cache[securityAuditPath] = {
+  id: securityAuditPath,
+  filename: securityAuditPath,
+  loaded: true,
+  exports: {
+    SECURITY_AUDIT_ACTIONS: {
+      SIGNUP_TURNSTILE_MISSING: 'SIGNUP_TURNSTILE_MISSING',
+      SIGNUP_TURNSTILE_FAILED: 'SIGNUP_TURNSTILE_FAILED',
+      SIGNUP_TURNSTILE_PASSED: 'SIGNUP_TURNSTILE_PASSED',
+    },
+    logSecurityAuditEvent: async () => ({}),
+  },
+};
 const { requireTurnstileForSignup } = require('../src/middleware/turnstile.middleware');
 const turnstileService = require('../src/services/turnstile.service');
 
@@ -51,6 +66,8 @@ async function run() {
   assert(authRoutes.includes("router.post('/signup/resend', authBlockEnforcer, signupLimiter, otpResendLimiter, signupResend);"));
 
   process.env.TURNSTILE_ENABLED = originalEnabled;
+  if (originalSecurityAudit) require.cache[securityAuditPath] = originalSecurityAudit;
+  else delete require.cache[securityAuditPath];
   console.log('turnstileSignupProtection tests passed');
 }
 
