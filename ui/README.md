@@ -18,7 +18,7 @@ React + Vite frontend for the Docketra B2B firm operations SaaS platform.
 
 ### Prerequisites
 
-- Node.js **18.x** (Node 20 LTS also supported)
+- Node.js **20.x (LTS)**
 - Docketra backend running on `http://localhost:5000`
 
 ### Installation
