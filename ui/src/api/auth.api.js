@@ -16,8 +16,8 @@ export const authApi = {
   loginResendOtp: ({ firmSlug, loginToken }) =>
     request((http) => http.post('/auth/login/resend', { firmSlug, loginToken }), 'Unable to resend OTP.'),
 
-  signupInit: ({ name, email, password, firmName, phone }) =>
-    request((http) => http.post('/auth/signup/init', { name, email, password, firmName, phone }), 'Signup failed.'),
+  signupInit: ({ name, email, password, firmName, phone, turnstileToken }) =>
+    request((http) => http.post('/auth/signup/init', { name, email, password, firmName, phone, turnstileToken }), 'Signup failed.'),
 
   signupVerify: ({ email, otp }) =>
     request((http) => http.post('/auth/signup/verify', { email, otp }), 'OTP verification failed.'),

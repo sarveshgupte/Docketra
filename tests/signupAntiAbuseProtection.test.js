@@ -28,7 +28,7 @@ function testAuthRouteLimiterWiring() {
   const path = require('path');
   const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'routes', 'auth.routes.js'), 'utf8');
 
-  assert(source.includes("router.post('/signup/init', authBlockEnforcer, signupLimiter, signupInit);"));
+  assert(source.includes("router.post('/signup/init', authBlockEnforcer, signupLimiter, requireTurnstileForSignup, signupInit);"));
   assert(source.includes("router.post('/signup/verify', authBlockEnforcer, signupLimiter, otpVerifyLimiter, signupVerify);"));
   assert(source.includes("router.post('/signup/resend', authBlockEnforcer, signupLimiter, otpResendLimiter, signupResend);"));
 
