@@ -2,12 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { notificationsApi } from '../src/api/notifications.api';
 import { Button } from '../src/components/common/Button';
-import { Card } from '../src/components/common/Card';
-import { PageHeader } from '../src/components/layout/PageHeader';
-import { Stack } from '../src/components/layout/Stack';
-import { EmptyState } from '../src/components/ui/EmptyState';
-import { ErrorState } from '../src/components/feedback/ErrorState';
-import { SkeletonLoader } from '../src/components/ui/SkeletonLoader';
+import { PlatformShell } from '../src/components/platform/PlatformShell';
+import { EmptyState, ErrorState, LoadingState, PageSection } from '../src/pages/platform/PlatformShared';
 import { formatDate } from '../src/utils/formatters';
 import { ROUTES } from '../src/constants/routes';
 
@@ -50,8 +46,17 @@ export function NotificationHistoryView() {
 
   const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const sliceStart = (safePage - 1) * PAGE_SIZE;
-  const pageRows = useMemo(() => items.slice(sliceStart, sliceStart + PAGE_SIZE), [items, sliceStart]);
+
+  useEffect(() => {
+    if (page !== safePage) {
+      setPage(safePage);
+    }
+  }, [page, safePage]);
+
+  const pageRows = useMemo(() => {
+    const sliceStart = (safePage - 1) * PAGE_SIZE;
+    return items.slice(sliceStart, sliceStart + PAGE_SIZE);
+  }, [items, safePage]);
 
   const goToDocket = (docketId) => {
     if (!firmSlug || !docketId) return;
@@ -69,73 +74,89 @@ export function NotificationHistoryView() {
   };
 
   return (
-    <Stack space={16}>
-        <PageHeader
-          title="Notification history"
-          subtitle="All notifications, sorted by latest activity."
-          actions={(
-            <Button type="button" variant="outline" onClick={() => navigate(ROUTES.DASHBOARD(firmSlug))}>
-              Back to dashboard
-            </Button>
-          )}
-        />
-        <Card>
-          {loading ? <SkeletonLoader variant="text" /> : null}
+    <PlatformShell
+      title="Notification history"
+      subtitle="Review workspace updates, unread items, and docket-linked notifications."
+      actions={(
+        <Button type="button" variant="outline" onClick={() => navigate(ROUTES.DASHBOARD(firmSlug))}>
+          Back to dashboard
+        </Button>
+      )}
+    >
+      <div className="platform-page notification-history">
+        <PageSection>
+          {loading ? <LoadingState label="Loading notification history…" /> : null}
+
           {!loading && error ? (
             <ErrorState
               title="Unable to load history"
-              description="Please retry to load notification history."
-              onRetry={load}
+              body="Please retry to load notification history."
+              actionLabel="Retry"
+              onAction={load}
+              boxed
             />
           ) : null}
+
           {!loading && !error && items.length === 0 ? (
             <EmptyState
               title="No notification history"
-              description="Once activity occurs, updates will show here."
-              icon
+              body="Once activity occurs, updates will show here."
+              boxed
             />
           ) : null}
+
           {!loading && !error && items.length > 0 ? (
             <>
-              <ul className="space-y-3" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                {pageRows.map((item) => (
-                  <li key={item._id} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                      <p className="text-sm text-gray-900" style={{ margin: 0, fontWeight: (item.read || item.isRead) ? 500 : 700 }}>
-                        {item.message}
-                      </p>
-                      {!(item.read || item.isRead) ? (
-                        <Button type="button" variant="ghost" onClick={() => markNotificationRead(item._id)}>
-                          Mark as read
-                        </Button>
-                      ) : null}
-                    </div>
-                    <p className="mt-1 text-xs text-gray-500">
-                      {item.type ? `${item.type} · ` : ''}
-                      {(item.created_at || item.createdAt) ? formatDate(item.created_at || item.createdAt) : '—'}
-                      {' · '}
-                      {(item.read || item.isRead) ? 'Read' : 'Unread'}
-                      {(item.docket_id || item.docketId) ? (
-                        <>
-                          {' · '}
+              <ul className="notification-history__list" aria-label="Notification history list">
+                {pageRows.map((item) => {
+                  const isRead = item.read || item.isRead;
+                  const docketId = item.docket_id || item.docketId;
+                  const createdAt = item.created_at || item.createdAt;
+
+                  return (
+                    <li
+                      key={item._id}
+                      className={`notification-history__item ${isRead ? '' : 'notification-history__item--unread'}`.trim()}
+                    >
+                      <div className="notification-history__actions">
+                        <p className="notification-history__message">{item.message}</p>
+                        {!isRead ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => markNotificationRead(item._id)}
+                            aria-label={`Mark notification as read: ${item.message}`}
+                          >
+                            Mark as read
+                          </Button>
+                        ) : null}
+                      </div>
+
+                      <p className="notification-history__meta">
+                        <span>{item.type || 'Notification'}</span>
+                        <span>{createdAt ? formatDate(createdAt) : '—'}</span>
+                        <span>{isRead ? 'Read' : 'Unread'}</span>
+                        {docketId ? (
                           <button
                             type="button"
-                            className="text-primary underline-offset-2 hover:underline"
-                            onClick={() => goToDocket(item.docket_id || item.docketId)}
+                            className="notification-history__docket-link"
+                            onClick={() => goToDocket(docketId)}
+                            aria-label={`Open docket ${docketId}`}
                           >
-                            {item.docket_id || item.docketId}
+                            Docket {docketId}
                           </button>
-                        </>
-                      ) : null}
-                    </p>
-                  </li>
-                ))}
+                        ) : null}
+                      </p>
+                    </li>
+                  );
+                })}
               </ul>
-              <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-                <span className="text-sm text-gray-600">
+
+              <div className="notification-history__pagination" aria-label="Notification history pagination">
+                <span>
                   Page {safePage} of {totalPages} ({items.length} notifications)
                 </span>
-                <div className="flex gap-2">
+                <div className="notification-history__pagination-actions">
                   <Button
                     type="button"
                     variant="outline"
@@ -156,7 +177,8 @@ export function NotificationHistoryView() {
               </div>
             </>
           ) : null}
-        </Card>
-      </Stack>
+        </PageSection>
+      </div>
+    </PlatformShell>
   );
 }

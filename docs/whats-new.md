@@ -1,5 +1,12 @@
 # What's New
 
+## 2026-05-22 — Polished notification history page
+
+- Updated Notification History to match the workspace shell design
+- Improved unread/read notification scanning
+- Preserved mark-as-read and docket navigation behavior
+- Removed legacy layout drift from the notification page
+
 ## 2026-05-21 — Added workspace notification bell
 
 - Added a notification bell to the workspace topbar
@@ -7,8 +14,6 @@
 - Opens notification history from the workspace shell
 - Kept notification fetch failures non-blocking
 
-## 2026-05-20 — Cleaned up Admin and Work Settings layout
-- Cleaned up Admin and Work Settings layout.
 ## 2026-05-21 — Improved post-login workspace routing
 
 - Users now land on their first assigned Worklist after firm login
