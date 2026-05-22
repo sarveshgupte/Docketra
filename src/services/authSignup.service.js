@@ -1,4 +1,7 @@
 const log = require('../utils/log');
+const { hashIdentifier } = require('../utils/hashIdentifier');
+const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('./securityAudit.service');
+
 const createAuthSignupService = (deps) => {
   const {
     signupService,
@@ -6,6 +9,12 @@ const createAuthSignupService = (deps) => {
     mongoose,
     User,
   } = deps;
+
+  const buildSignupAuditMetadata = (req, email, firmName) => ({
+    requestId: req?.requestId || null,
+    emailHash: email ? hashIdentifier(String(email).trim().toLowerCase()) : null,
+    workspaceHash: firmName ? hashIdentifier(String(firmName).trim().toLowerCase()) : null,
+  });
 
   const signupInit = async (req, res) => {
     try {
@@ -18,6 +27,14 @@ const createAuthSignupService = (deps) => {
       if (!name || !email || !password || !firmName || !phone) {
         return res.status(400).json({ success: false, message: 'name, email, password, firmName and phone are required' });
       }
+
+      await logSecurityAuditEvent({
+        req,
+        action: SECURITY_AUDIT_ACTIONS.SIGNUP_INIT_ATTEMPT,
+        resource: 'auth/signup/init',
+        metadata: buildSignupAuditMetadata(req, email, firmName),
+        description: 'Signup init attempted',
+      });
 
       const result = await signupService.initiateSignup({
         name,
@@ -32,6 +49,14 @@ const createAuthSignupService = (deps) => {
       if (!result.success) {
         return res.status(result.status || 400).json({ success: false, message: result.message });
       }
+
+      await logSecurityAuditEvent({
+        req,
+        action: SECURITY_AUDIT_ACTIONS.SIGNUP_OTP_SENT,
+        resource: 'auth/signup/init',
+        metadata: buildSignupAuditMetadata(req, email, firmName),
+        description: 'Signup OTP sent',
+      });
 
       return res.status(201).json({
         success: true,
@@ -54,6 +79,14 @@ const createAuthSignupService = (deps) => {
         return res.status(400).json({ success: false, message: 'email and otp are required' });
       }
 
+      await logSecurityAuditEvent({
+        req,
+        action: SECURITY_AUDIT_ACTIONS.SIGNUP_OTP_VERIFY_ATTEMPT,
+        resource: 'auth/signup/verify',
+        metadata: buildSignupAuditMetadata(req, email, null),
+        description: 'Signup OTP verification attempted',
+      });
+
       let result = null;
       await session.withTransaction(async () => {
         const existingUser = await User.findOne({ email, status: { $ne: 'deleted' } }).session(session);
@@ -71,8 +104,31 @@ const createAuthSignupService = (deps) => {
       });
 
       if (!result?.success) {
+        await logSecurityAuditEvent({
+          req,
+          action: SECURITY_AUDIT_ACTIONS.SIGNUP_OTP_VERIFY_FAILED,
+          resource: 'auth/signup/verify',
+          metadata: buildSignupAuditMetadata(req, email, null),
+          description: 'Signup OTP verification failed',
+        });
         return res.status(result?.status || 400).json({ success: false, message: result?.message || 'Unable to verify signup OTP.' });
       }
+
+      await logSecurityAuditEvent({
+        req,
+        action: SECURITY_AUDIT_ACTIONS.SIGNUP_OTP_VERIFIED,
+        resource: 'auth/signup/verify',
+        metadata: buildSignupAuditMetadata(req, email, result?.firmSlug || null),
+        description: 'Signup OTP verified',
+      });
+
+      await logSecurityAuditEvent({
+        req,
+        action: SECURITY_AUDIT_ACTIONS.SIGNUP_COMPLETED,
+        resource: 'auth/signup/verify',
+        metadata: buildSignupAuditMetadata(req, email, result?.firmSlug || null),
+        description: 'Signup completed',
+      });
 
       return res.status(201).json({
         success: true,

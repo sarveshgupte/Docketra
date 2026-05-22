@@ -7,6 +7,7 @@ const metricsService = require('../services/metrics.service');
 const jwtService = require('../services/jwt.service');
 const { getCookieValue } = require('../utils/requestCookies');
 const { logSecurityEvent } = require('./securityAudit.middleware');
+const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('../services/securityAudit.service');
 const log = require('../utils/log');
 
 const DEFAULT_RATE_LIMIT_MESSAGE = 'Too many requests. Please wait a moment before trying again.';
@@ -77,6 +78,15 @@ const createRateLimitHandler = (name, windowMs) => async (req, res) => {
     action: 'RATE_LIMIT_EXCEEDED',
     metadata: { limiter: name, retryAfter, message },
   });
+  if (name === 'signupLimiter') {
+    await logSecurityAuditEvent({
+      req,
+      action: SECURITY_AUDIT_ACTIONS.SIGNUP_RATE_LIMITED,
+      resource: 'auth/signup',
+      metadata: { limiter: name, retryAfter },
+      description: 'Signup rate limit exceeded',
+    });
+  }
   res.status(429).json({
     success: false,
     error: 'RATE_LIMIT_EXCEEDED',
