@@ -6,6 +6,7 @@ const {
   getNotifications,
   getAllNotifications,
   markAsRead,
+  markAllAsRead,
   getPreferences,
   updatePreferences,
 } = require('../controllers/notifications.controller');
@@ -18,5 +19,6 @@ router.get('/preferences', userReadLimiter, getPreferences);
 router.patch('/preferences', userReadLimiter, updatePreferences);
 router.patch('/:id/read', userReadLimiter, markAsRead);
 router.post('/:id/read', userReadLimiter, markAsRead);
+router.post('/mark-all-read', userReadLimiter, markAllAsRead);
 
 module.exports = router;

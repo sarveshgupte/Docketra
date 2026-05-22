@@ -58,6 +58,11 @@ export function NotificationHistoryView() {
     return items.slice(sliceStart, sliceStart + PAGE_SIZE);
   }, [items, safePage]);
 
+  const unreadCount = useMemo(
+    () => items.reduce((count, item) => ((item?.read === false || item?.isRead === false) ? count + 1 : count), 0),
+    [items],
+  );
+
   const goToDocket = (docketId) => {
     if (!firmSlug || !docketId) return;
     navigate(ROUTES.CASE_DETAIL(firmSlug, docketId));
@@ -67,9 +72,19 @@ export function NotificationHistoryView() {
     if (!id) return;
     try {
       await notificationsApi.markAsRead(id);
-      setItems((prev) => prev.map((item) => (item._id === id ? { ...item, read: true } : item)));
+      setItems((prev) => prev.map((item) => (item._id === id ? { ...item, read: true, isRead: true } : item)));
     } catch {
       // no-op; optimistic UI isn't needed here
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    if (unreadCount <= 0) return;
+    try {
+      await notificationsApi.markAllAsRead();
+      setItems((prev) => prev.map((item) => ({ ...item, read: true, isRead: true })));
+    } catch {
+      // no-op
     }
   };
 
@@ -85,6 +100,14 @@ export function NotificationHistoryView() {
     >
       <div className="platform-page notification-history">
         <PageSection>
+          {!loading && !error && unreadCount > 0 ? (
+            <div className="notification-history__bulk-actions">
+              <Button type="button" variant="outline" onClick={markAllNotificationsRead}>
+                Mark all as read
+              </Button>
+            </div>
+          ) : null}
+
           {loading ? <LoadingState label="Loading notification history…" /> : null}
 
           {!loading && error ? (
