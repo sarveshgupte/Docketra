@@ -65,3 +65,4 @@ Client business/profile fields are no longer canonical in MongoDB. Client docume
 - Added **Strict firm-owned storage mode** (Primary Admin controlled). When enabled, business-content writes require active firm-owned Google Drive and Docketra-managed fallback is disabled for writes.
 
 - CFS storage status (2026-05-22): canonical CFS content is now cloud-first (`firms/{firmId}/clients/{clientId}/cfs/cfs.json`); Mongo retains only reference metadata and temporary legacy read compatibility.
+\n- Added Docket cloud-first narrative storage: canonical docket JSON at firms/{firmId}/dockets/{docketId}/docket.json with Mongo retaining control metadata + docketRef/docketStorageMode, legacy Mongo read fallback when no docketRef, and safe warning docket_content_unavailable on cloud-read failure.
