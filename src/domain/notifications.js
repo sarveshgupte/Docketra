@@ -18,6 +18,8 @@ const NotificationTypes = Object.freeze({
   DOCKET_ROUTED_TO_WORKBASKET: ServiceNotificationTypes.DOCKET_ROUTED_TO_WORKBASKET,
   QC_RETURNED: ServiceNotificationTypes.QC_RETURNED,
   PENDED_DOCKET_REOPENED: ServiceNotificationTypes.PENDED_DOCKET_REOPENED,
+  DOCKET_DUE_SOON: ServiceNotificationTypes.DOCKET_DUE_SOON,
+  DOCKET_OVERDUE: ServiceNotificationTypes.DOCKET_OVERDUE,
 });
 
 function assertNotificationType(type) {
@@ -57,6 +59,12 @@ function buildMessage({ type, docketId, actor }) {
   }
   if (type === NotificationTypes.PENDED_DOCKET_REOPENED) {
     return { title: 'Pended docket reopened', message: `Pended Docket ${docketId} is back in your Worklist.` };
+  }
+  if (type === NotificationTypes.DOCKET_DUE_SOON) {
+    return { title: 'Docket due soon', message: `Docket ${docketId} is due soon.` };
+  }
+  if (type === NotificationTypes.DOCKET_OVERDUE) {
+    return { title: 'Docket overdue', message: `Docket ${docketId} is overdue.` };
   }
   if (type === NotificationTypes.CLIENT_UPLOAD) {
     return {

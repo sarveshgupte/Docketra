@@ -1,5 +1,12 @@
 # What's New
 
+## 2026-05-22 — Added due-date docket notifications
+
+- Added due soon and overdue notification types for active dockets
+- Notifies assigned users when docket deadlines need attention
+- Added duplicate protection for repeated due-date alerts
+- Kept due-date notifications quiet and job-driven
+
 ## 2026-05-22 — Added docket workflow notifications
 
 - Added notifications for key docket workflow events
