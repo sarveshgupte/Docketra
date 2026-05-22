@@ -6,7 +6,11 @@ import assert from 'assert';
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const apiSource = fs.readFileSync(path.join(repoRoot, 'src', 'api', 'auth.api.js'), 'utf8');
 const pageSource = fs.readFileSync(path.join(repoRoot, 'src', 'pages', 'marketing', 'Signup.jsx'), 'utf8');
+const authContextSource = fs.readFileSync(path.join(repoRoot, 'src', 'contexts', 'AuthContext.jsx'), 'utf8');
 
+assert(authContextSource.includes('turnstileToken'), 'AuthContext signup wrapper should handle turnstileToken.');
+assert(authContextSource.includes('authService.signup({'), 'AuthContext should call authService.signup.');
+assert(authContextSource.includes('turnstileToken,'), 'AuthContext should forward turnstileToken to authService.signup.');
 assert(apiSource.includes('turnstileToken'), 'Signup init payload should include turnstileToken.');
 assert(pageSource.includes('VITE_TURNSTILE_SITE_KEY'), 'Signup should use VITE_TURNSTILE_SITE_KEY.');
 assert(pageSource.includes('window.turnstile.getResponse'), 'Signup should use turnstile getResponse fallback.');
