@@ -33,4 +33,7 @@ module.exports = {
     params: z.object({ id: nonEmptyString }),
     body: z.object({}).passthrough(),
   },
+  'POST /mark-all-read': {
+    body: z.object({}).passthrough(),
+  },
 };

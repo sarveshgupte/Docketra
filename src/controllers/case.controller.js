@@ -881,7 +881,8 @@ const getClientFactSheetForCase = async (req, res) => {
     }
     
     const profile = await clientProfileStorageService.getClientProfile({ firmId: req.user.firmId, client }).catch(() => null);
-    const clientFactSheet = profile?.profile?.factSheet || {};
+    const cfsState = await clientProfileStorageService.getClientFactSheet({ firmId: req.user.firmId, client });
+    const clientFactSheet = cfsState?.factSheet || {};
     const attachments = await AttachmentRepository.findByClientSource(req.user.firmId, client.clientId, 'client_cfs');
     const rawBasicInfo = clientFactSheet?.basicInfo || {};
     const normalizedBasicInfo = {
@@ -922,6 +923,7 @@ const getClientFactSheetForCase = async (req, res) => {
           attachments: [],
           documents: [],
         },
+        ...(cfsState?.cfsWarning ? { cfsWarning: cfsState.cfsWarning } : {}),
         message: 'No fact sheet available for this client',
       });
     }
@@ -969,6 +971,7 @@ const getClientFactSheetForCase = async (req, res) => {
     res.json({
       success: true,
       data: factSheetData,
+      ...(cfsState?.cfsWarning ? { cfsWarning: cfsState.cfsWarning } : {}),
     });
   } catch (error) {
     log.error('[getClientFactSheetForCase] Error:', error);

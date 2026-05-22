@@ -13,6 +13,12 @@
 - Kept Turnstile scope strict to signup init only; login, forgot-password, OTP verification, and signup OTP resend/verify flows are unchanged.
 - Added backend env/config validation and Siteverify enforcement when `TURNSTILE_ENABLED=true`.
 - Kept local/dev usability intact when Turnstile is not configured.
+## 2026-05-22 — Improved notification read management
+
+- Added mark-all-read support for notification history
+- Kept notification updates scoped to the logged-in user
+- Preserved per-notification read actions
+- Added safe cleanup groundwork for old read notifications
 
 ## 2026-05-22 — Added due-date docket notifications
 
@@ -1021,6 +1027,7 @@
 - Added sanitized `GET /api/storage/root-health` response for health/status/code/canWrite/canOpenFolder without exposing root IDs or credentials.
 - Updated storage badge attention state to show **Storage needs attention** with Google Drive root recovery guidance and link to Storage Settings.
 
+- 2026-05-22: Client Fact Sheet canonical payload moved to cloud JSON at `firms/{firmId}/clients/{clientId}/cfs/cfs.json`; Mongo now stores only CFS object reference metadata plus `cfsStorageMode` migration marker (`cloud_first`/`legacy_mongo`).
 ## May 2026: Signup anti-abuse hardening (auth routes)
 
 - Switched `/api/auth/signup/init|verify|resend` to dedicated `signupLimiter` middleware instead of generic auth limiter.

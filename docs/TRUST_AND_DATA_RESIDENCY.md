@@ -49,3 +49,5 @@ Primary Admins now get explicit storage root health status in Storage Settings a
 - Implemented today (2026-05-22): BYOS-first storage routing, strict firm-owned mode, and cloud object reference metadata patterns.
 - Legacy exceptions: certain business narrative fields are still stored in Mongo in some collections for backward compatibility.
 - Roadmap: phased externalization of CFS, docket/task narrative, comments/history, and SOP/checklist/knowledge canonical content to BYOS JSON documents.
+
+- CFS BYOS update (2026-05-22): Client Fact Sheet business content is persisted in BYOS/managed cloud JSON and hydrated on read; strict firm-owned mode blocks writes when BYOS is unavailable.

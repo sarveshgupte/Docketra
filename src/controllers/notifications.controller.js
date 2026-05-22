@@ -1,6 +1,7 @@
 const {
   getUserNotifications,
   markAsRead: markNotificationAsRead,
+  markAllAsRead: markAllNotificationsAsRead,
 } = require('../services/notification.service');
 const {
   getOrCreateNotificationPreferences,
@@ -94,6 +95,29 @@ async function markAsRead(req, res) {
   }
 }
 
+
+async function markAllAsRead(req, res) {
+  try {
+    const firmId = req.user?.firmId;
+    const userId = String(req.user?.xID || '').toUpperCase();
+    if (!firmId || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Firm and user context required',
+      });
+    }
+
+    const updatedCount = await markAllNotificationsAsRead(userId, firmId);
+
+    return res.json({ success: true, data: { updatedCount } });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to mark all notifications as read',
+    });
+  }
+}
+
 async function getPreferences(req, res) {
   try {
     const firmId = req.user?.firmId;
@@ -144,6 +168,7 @@ module.exports = {
   getNotifications,
   getAllNotifications,
   markAsRead,
+  markAllAsRead,
   getPreferences,
   updatePreferences,
 };
