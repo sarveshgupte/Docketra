@@ -4,8 +4,8 @@ Get Docketra running locally in under 10 minutes.
 
 ## Prerequisites
 
-- **Node.js 18.x** (Node 20 LTS also supported)
-- **npm 9+**
+- **Node.js 20.x (LTS)**
+- **npm 10+**
 - **MongoDB** — local instance or container
 - **Redis** — optional locally; required in production
 
