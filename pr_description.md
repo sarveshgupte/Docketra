@@ -1,7 +1,13 @@
-💡 What: Replaced sequential N+1 database queries in `handleUserDeactivation` with O(1) batched lookups.
+### Summary
+- Adds cloud-first docket narrative references and read hydration behavior.
+- Keeps backward compatibility for existing/legacy Mongo-based narrative fields.
 
-🎯 Why: When a user with many assigned dockets is deactivated, the workflow service iterates over every docket and performs sequential `Category.findOne` and `Team.findOne` queries to resolve the fallback workbasket. If a user has 500 dockets, this previously triggered 1,000 separate synchronous database queries, blocking the event loop and potentially timing out the deactivation endpoint.
+### Scope clarification
+This PR adds cloud-first docket narrative refs/hydration. It does not yet remove legacy Mongo narrative persistence on create.
 
-📊 Impact: Reduces database queries during user deactivation from O(2N) to O(2), significantly reducing latency and mitigating the risk of timeouts for users with large workbaskets.
-
-🔬 Measurement: Verifiable by monitoring database query volumes and endpoint latency for the user deactivation flow. The unit tests (`npm run test:pure`) remain green, confirming that the business logic and normalization behaves exactly the same.
+### Testing
+✅ node tests/dataResidency.mongoSchemaGuard.test.js
+✅ node tests/caseCreate.checklistSnapshot.test.js
+✅ node tests/caseCreate.deadlineRule.test.js
+✅ node tests/strictFirmOwnedStorage.enforcement.test.js
+✅ node tests/docketNarrative.cloudFirstStorage.test.js
