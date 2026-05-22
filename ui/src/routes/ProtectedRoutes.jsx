@@ -457,9 +457,11 @@ export const ProtectedRoutes = () => (
         <Route
           path="settings/firm"
           element={(
-            <ProtectedRoute requireAdmin>
-              <FirmSettingsPage />
-            </ProtectedRoute>
+            <PilotRouteGate subPath="settings/firm">
+              <ProtectedRoute requireAdmin>
+                <FirmSettingsPage />
+              </ProtectedRoute>
+            </PilotRouteGate>
           )}
         />
         <Route
@@ -473,9 +475,11 @@ export const ProtectedRoutes = () => (
         <Route
           path="settings"
           element={(
-            <ProtectedRoute requireAdmin>
-              <PlatformSettingsPage />
-            </ProtectedRoute>
+            <PilotRouteGate subPath="settings">
+              <ProtectedRoute requireAdmin>
+                <PlatformSettingsPage />
+              </ProtectedRoute>
+            </PilotRouteGate>
           )}
         />
         <Route
