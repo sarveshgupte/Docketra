@@ -194,6 +194,30 @@ const otpResendKeyGenerator = (req) => {
 
   return `ip:${ipKeyGenerator(req)}`;
 };
+
+const normalizeSignupIdentifier = (value) => String(value || '').trim().toLowerCase();
+
+const signupKeyGenerator = (req) => {
+  const ipPart = `ip:${ipKeyGenerator(req)}`;
+  const emailRaw = req.body?.email;
+  const emailPart = emailRaw
+    ? `email:${hashKeyPart(normalizeSignupIdentifier(emailRaw))}`
+    : null;
+
+  const workspaceRaw = req.body?.firmSlug
+    || req.body?.workspaceSlug
+    || req.body?.workspace
+    || req.body?.workspaceName
+    || req.body?.firmName
+    || req.body?.companyName
+    || req.body?.organizationName;
+  const workspacePart = workspaceRaw
+    ? `workspace:${hashKeyPart(normalizeSignupIdentifier(workspaceRaw))}`
+    : null;
+
+  return [ipPart, emailPart, workspacePart].filter(Boolean).join('|');
+};
+
 const refreshUserKeyGenerator = (req) => {
   const accessToken = getCookieValue(req.headers?.cookie, 'accessToken');
   if (accessToken) {
@@ -263,9 +287,10 @@ const publicUploadLimiter = createLimiter({
 
 const signupLimiter = createLimiter({
   name: 'signupLimiter',
+  failClosedWhenRedisUnavailable: true,
   windowMs: config.security.rateLimit.signupWindowSeconds * 1000,
   max: config.security.rateLimit.signupPerHour,
-  keyGenerator: ipKeyGenerator,
+  keyGenerator: signupKeyGenerator,
 });
 
 const authBlockEnforcer = async (req, res, next) => {
