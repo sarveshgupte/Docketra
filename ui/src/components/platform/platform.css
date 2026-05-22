@@ -1721,3 +1721,46 @@ select:focus-visible {
 .platform__nav-link--child {
   padding-left: 1.5rem;
 }
+
+.platform__notification-bell {
+  position: relative;
+  width: var(--control-height);
+  min-width: var(--control-height);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.platform__notification-bell-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dt-text-secondary);
+}
+
+.platform__notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--dt-accent);
+  color: var(--dt-text-inverse);
+  border: 2px solid var(--dt-surface);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .platform__notification-bell {
+    flex-shrink: 0;
+  }
+}

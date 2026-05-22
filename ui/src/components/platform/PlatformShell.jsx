@@ -5,6 +5,7 @@ import { ROUTES } from '../../constants/routes';
 import { getPlatformDestinationCommands, getPlatformNavigation, PLATFORM_SHORTCUT_ROUTES } from '../../constants/platformNavigation';
 import { CommandPalette } from '../common/CommandPalette';
 import StorageStatusBadge from './StorageStatusBadge';
+import { NotificationBell } from './NotificationBell';
 import api from '../../services/api';
 import { clientApi } from '../../api/client.api';
 import { isShortcutAllowedTarget } from '../../utils/keyboardShortcuts';
@@ -121,10 +122,13 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     [firmSlug, role, user?.permissions, user?.workbaskets, user?.qcWorkbaskets]
   );
   const userName = user?.name || user?.xID || 'User';
+
+  const isItemActive = useCallback((item) => isNavItemActive(pathname, item) || isNavItemActiveWithLocation(pathname, locationSearch, item), [pathname, locationSearch]);
+
   const currentNavItem = useMemo(
     () => navSections
       .flatMap((section) => section.items.flatMap((item) => (item.type === 'group' ? item.children || [] : [item])))
-      .find((item) => isNavItemActiveWithLocation(pathname, locationSearch, item)),
+      .find((item) => isItemActive(item)),
     [navSections, pathname, locationSearch]
   );
 
@@ -394,14 +398,14 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                 const groupChildren = Array.isArray(item.children) ? item.children : [];
                 const isGroup = item.type === 'group';
                 const isActive = isGroup
-                  ? groupChildren.some((child) => isNavItemActiveWithLocation(pathname, locationSearch, child))
-                  : isNavItemActiveWithLocation(pathname, locationSearch, item);
+                  ? groupChildren.some((child) => isItemActive(child))
+                  : isItemActive(item);
                 if (isGroup) {
                   return (
                     <div key={item.id} className={`platform__nav-group ${isActive ? 'is-active' : ''}`}>
                       <span className="platform__nav-group-label" title={collapsed ? item.label : undefined} aria-label={collapsed ? item.label : undefined}>{item.label}</span>
                       {groupChildren.map((child) => {
-                        const childActive = isNavItemActiveWithLocation(pathname, locationSearch, child);
+                        const childActive = isItemActive(child);
                         return (
                           <Link
                             key={child.to}
@@ -469,6 +473,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
             </button>
             </div>
             {actions ? <div className="platform__action-primary">{actions}</div> : null}
+            <NotificationBell />
             <div className="platform__action-status"><StorageStatusBadge /></div>
             <div className="platform__account-menu" ref={menuRef}>
               <button
