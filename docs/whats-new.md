@@ -1,5 +1,12 @@
 # What's New
 
+## 2026-05-22 — Polished notification history page
+
+- Updated Notification History to match the workspace shell design
+- Improved unread/read notification scanning
+- Preserved mark-as-read and docket navigation behavior
+- Removed legacy layout drift from the notification page
+
 ## 2026-05-21 — Added workspace notification bell
 
 - Added a notification bell to the workspace topbar
