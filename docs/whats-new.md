@@ -1013,3 +1013,12 @@
 - Added Storage Settings **Google Drive storage root health** card with recovery-required messaging and strict-mode blocked-write explanation.
 - Added sanitized `GET /api/storage/root-health` response for health/status/code/canWrite/canOpenFolder without exposing root IDs or credentials.
 - Updated storage badge attention state to show **Storage needs attention** with Google Drive root recovery guidance and link to Storage Settings.
+
+## May 2026: Signup anti-abuse hardening (auth routes)
+
+- Switched `/api/auth/signup/init|verify|resend` to dedicated `signupLimiter` middleware instead of generic auth limiter.
+- Hardened signup limiter keying to combine IP + hashed normalized email + hashed normalized workspace identifier when present.
+- Kept OTP-specific `otpVerifyLimiter` and `otpResendLimiter` on signup verify/resend routes.
+- Enforced production fail-closed behavior for signup limiter if Redis is unavailable.
+- Added regression tests for limiter wiring, threshold behavior, and production fail-closed safety.
+
