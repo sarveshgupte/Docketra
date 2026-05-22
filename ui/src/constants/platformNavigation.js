@@ -1,5 +1,6 @@
 import { ROUTES } from './routes.js';
 import { canManageClients } from '../utils/permissions.js';
+import { FIRM_PILOT_SURFACE, TASK_MANAGER_MVP_ENABLED } from './pilotSurface.js';
 
 const roleRank = { USER: 1, MANAGER: 2, ADMIN: 3, PRIMARY_ADMIN: 4 };
 
@@ -189,6 +190,10 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
         ? { ...section, items: dailyOperationsItems }
         : section
     ))
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !TASK_MANAGER_MVP_ENABLED || !FIRM_PILOT_SURFACE.hideFromNavigation.has(item.id)),
+    }))
     .filter((section) => section.items.length > 0)
   );
 };
@@ -204,6 +209,7 @@ export const getPlatformDestinationCommands = (firmSlug, roleOrUser = 'USER', pe
       if (item.id === 'clients') return canManageClients(accessContext);
       return !item.minRole || hasAtLeastRole(normalizedRole, item.minRole);
     })
+    .filter((item) => !TASK_MANAGER_MVP_ENABLED || !FIRM_PILOT_SURFACE.hideFromNavigation.has(item.id))
     .map((item) => ({
       id: item.command.id,
       label: item.command.label,

@@ -1,3 +1,10 @@
+## 2026-05-22 — Locked pilot UI to Task Manager MVP surface
+
+- Narrowed firm navigation to pilot-ready Task Manager workflows (worklists, workbaskets, dockets, client context, profile, notifications).
+- Hid and route-gated non-MVP modules (CRM, CMS, Company Brain, Knowledge Library, AI/Storage settings, reports, and related deferred surfaces).
+- Kept underlying non-MVP routes in code and redirected pilot users to Worklist for safe deep-link handling.
+- Reduced SuperAdmin navigation to pilot-essential management surfaces while preserving superadmin auth and dashboard access.
+
 
 ## 2026-05-22 — Data residency full audit and guardrails hardening
 

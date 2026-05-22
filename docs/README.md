@@ -37,6 +37,7 @@ For doc contribution standards, see [documentation-guidelines.md](documentation-
 | [product/current-product-overview.md](product/current-product-overview.md) | Current product truth — modules, concepts, terminology |
 | [product/PRD_DOCKETRA.md](product/PRD_DOCKETRA.md) | Product requirements document (MVP baseline) |
 | [product/MVP_SCOPE.md](product/MVP_SCOPE.md) | MVP scope and beta gate criteria |
+| [product/TASK_MANAGER_MVP_SURFACE.md](product/TASK_MANAGER_MVP_SURFACE.md) | Pilot-visible Task Manager MVP product surface |
 | [product/MODULE_REQUIREMENTS.md](product/MODULE_REQUIREMENTS.md) | Per-module functional requirements |
 | [product/MODULE_OPERATING_MODEL.md](product/MODULE_OPERATING_MODEL.md) | How each module operates end-to-end |
 | [product/NON_NEGOTIABLES.md](product/NON_NEGOTIABLES.md) | Hard product constraints |
