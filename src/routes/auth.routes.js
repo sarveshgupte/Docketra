@@ -8,7 +8,7 @@ const { attachFirmFromSlug, attachOptionalFirmFromSlug } = require('../middlewar
 const { attachFirmContext } = require('../middleware/firmContext.middleware');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const { enforceSameOriginForCookieAuth } = require('../middleware/csrfOrigin.middleware');
-const { requireTurnstileForSignup } = require('../middleware/turnstile.middleware');
+const { requireTurnstileForSignup, requireTurnstileForForgotPassword } = require('../middleware/turnstile.middleware');
 const {
   authLimiter,
   signupLimiter,
@@ -94,7 +94,7 @@ router.post('/resend-credentials', authBlockEnforcer, authLimiter, sensitiveLimi
 router.post('/resend-otp', authBlockEnforcer, authLimiter, otpResendLimiter, attachFirmFromSlug, loginResend);
 router.post('/reset-password-with-token', authBlockEnforcer, authLimiter, sensitiveLimiter, resetPasswordWithToken);
 router.post('/forgot-password', authBlockEnforcer, forgotPasswordLimiter, sensitiveLimiter, forgotPassword);
-router.post('/forgot-password/init', authBlockEnforcer, forgotPasswordLimiter, sensitiveLimiter, attachOptionalFirmFromSlug, forgotPasswordInit);
+router.post('/forgot-password/init', authBlockEnforcer, forgotPasswordLimiter, sensitiveLimiter, requireTurnstileForForgotPassword, attachOptionalFirmFromSlug, forgotPasswordInit);
 router.post('/forgot-password/verify', authBlockEnforcer, authLimiter, otpVerifyLimiter, attachOptionalFirmFromSlug, forgotPasswordVerify);
 router.post('/forgot-password/reset', authBlockEnforcer, authLimiter, sensitiveLimiter, attachOptionalFirmFromSlug, forgotPasswordResetWithOtp);
 router.post('/login/init', authBlockEnforcer, authLimiter, attachFirmFromSlug, loginInit);

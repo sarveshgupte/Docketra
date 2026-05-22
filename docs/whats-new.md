@@ -1,5 +1,12 @@
 # What's New
 
+## 2026-05-22 — Added Turnstile protection for forgot-password init
+
+- Added Cloudflare Turnstile gating to `POST /api/auth/forgot-password/init` to reduce automated reset-init abuse.
+- Kept login flows and forgot-password verify/reset flows unchanged.
+- Reused existing Turnstile env controls (`TURNSTILE_ENABLED`, `TURNSTILE_SECRET_KEY`) and frontend site-key model (`VITE_TURNSTILE_SITE_KEY`).
+- Added privacy-safe security audit events for forgot-password Turnstile missing/failed/passed outcomes.
+
 
 ## 2026-05-22 — Added pilot launch readiness gate
 

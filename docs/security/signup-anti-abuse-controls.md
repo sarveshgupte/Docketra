@@ -1,7 +1,7 @@
-# Signup Anti-Abuse Controls
+# Auth Anti-Abuse Controls
 
 ## Scope
-This document covers anti-spam controls for auth signup endpoints:
+This document covers anti-spam controls for auth signup and recovery endpoints:
 - `POST /api/auth/signup/init`
 - `POST /api/auth/signup/verify`
 - `POST /api/auth/signup/resend`
@@ -33,8 +33,10 @@ This document covers anti-spam controls for auth signup endpoints:
 - A CAPTCHA/Turnstile challenge hook can be layered onto signup init when risk signals are high (e.g., repeated limits by IP/email/workspace hash) while keeping the baseline flow friction-light for normal users.
 
 ## Cloudflare Turnstile (signup init only)
-- Turnstile is scoped to `POST /api/auth/signup/init` only.
-- It is **not** applied to login, forgot-password, OTP generic endpoints, or signup OTP verify/resend routes.
+- Turnstile is scoped to:
+  - `POST /api/auth/signup/init`
+  - `POST /api/auth/forgot-password/init`
+- It is **not** applied to login init/verify/resend, forgot-password verify/reset, OTP generic endpoints, or signup OTP verify/resend routes.
 - Frontend uses `VITE_TURNSTILE_SITE_KEY` to render the widget and send `turnstileToken` (also supports `cf-turnstile-response` token key for compatibility).
 - Backend uses `TURNSTILE_ENABLED` and `TURNSTILE_SECRET_KEY`.
 - `TURNSTILE_SECRET_KEY` must never be sent to frontend code; backend validates token using Cloudflare Siteverify.
@@ -57,3 +59,7 @@ This document covers anti-spam controls for auth signup endpoints:
 - Event metadata includes only safe fields (for example request id, IP range, route/method, and optional hashed normalized email/workspace identifiers).
 - Raw sensitive values are never logged in audit metadata: email, phone, OTP, password, Turnstile token, preAuthToken, or full request payloads.
 - Turnstile audit/error handling remains scoped only to `POST /api/auth/signup/init`, and user-facing failures remain generic.
+- Forgot-password init additionally emits:
+  - `FORGOT_PASSWORD_TURNSTILE_MISSING`
+  - `FORGOT_PASSWORD_TURNSTILE_FAILED`
+  - `FORGOT_PASSWORD_TURNSTILE_PASSED`
