@@ -44,21 +44,35 @@ const { applySupportHeadersToContext } = require('../src/middleware/supportHeade
     const req = { method: 'GET', headers: { 'x-impersonated-firm-id': 'f' }, context: {}, isSuperAdmin: true };
     applySupportHeadersToContext(req);
     assert.equal(req.context.impersonationDenied, true);
-    assert.equal(req.context.impersonationDeniedReason, 'missing_required_headers');
+    assert.equal(req.context.impersonationDeniedReason, 'impersonation_disabled_no_session_store');
   }
 
   {
-    const req = { method: 'GET', headers: { 'x-impersonated-firm-id': 'f', 'x-impersonation-session-id': 's', 'x-impersonation-mode': 'BAD' }, context: {}, isSuperAdmin: true };
+    const req = { method: 'GET', headers: { 'x-impersonated-firm-id': 'firm-a', 'x-impersonation-session-id': 'random-session-id', 'x-impersonation-mode': 'FULL_ACCESS' }, context: {}, isSuperAdmin: true };
     applySupportHeadersToContext(req);
     assert.equal(req.context.impersonationDenied, true);
-    assert.equal(req.context.impersonationDeniedReason, 'invalid_impersonation_mode');
+    assert.equal(req.context.impersonationDeniedReason, 'impersonation_disabled_no_session_store');
   }
 
   {
-    const req = { method: 'PATCH', headers: { 'x-impersonated-firm-id': 'f', 'x-impersonation-session-id': 's', 'x-impersonation-mode': 'READ_ONLY' }, context: {}, isSuperAdmin: true };
+    const req = { method: 'GET', headers: { 'x-impersonated-firm-id': 'firm-a', 'x-impersonation-session-id': 'session-for-firm-b', 'x-impersonation-mode': 'READ_ONLY' }, context: {}, isSuperAdmin: true };
     applySupportHeadersToContext(req);
     assert.equal(req.context.impersonationDenied, true);
-    assert.equal(req.context.impersonationDeniedReason, 'read_only_mutation_blocked');
+    assert.equal(req.context.impersonationDeniedReason, 'impersonation_disabled_no_session_store');
+  }
+
+  {
+    const req = { method: 'GET', headers: { 'x-impersonated-firm-id': 'firm-a', 'x-impersonation-session-id': 'revoked-or-expired-session', 'x-impersonation-mode': 'READ_ONLY' }, context: {}, isSuperAdmin: true };
+    applySupportHeadersToContext(req);
+    assert.equal(req.context.impersonationDenied, true);
+    assert.equal(req.context.impersonationDeniedReason, 'impersonation_disabled_no_session_store');
+  }
+
+  {
+    const req = { method: 'DELETE', headers: { 'x-impersonated-firm-id': 'firm-a', 'x-impersonation-session-id': 'would-be-valid-session', 'x-impersonation-mode': 'READ_ONLY' }, context: {}, isSuperAdmin: true };
+    applySupportHeadersToContext(req);
+    assert.equal(req.context.impersonationDenied, true);
+    assert.equal(req.context.impersonationDeniedReason, 'impersonation_disabled_no_session_store');
   }
   {
     const app = express();

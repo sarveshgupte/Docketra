@@ -3,10 +3,15 @@
 ## Current model
 - SuperAdmin authentication is identity-backed and independent from firm-scoped tenant identity.
 - Firm-scoped APIs resolve tenant context from authenticated tenant identity; SuperAdmin access to firm-scoped APIs is denied by boundary middleware.
-- Client-sent impersonation headers are treated as untrusted input and validated server-side before any context attachment.
+- Client-sent impersonation headers are treated as untrusted input.
+
+## Current enforcement status
+- Server-side impersonation session persistence/validation is not implemented in current runtime.
+- Therefore impersonation headers are fail-closed: when a SuperAdmin sends impersonation headers, backend rejects the request with `403` and does not attach impersonated firm/session context.
+- Normal firm users cannot activate impersonation behavior via headers.
 
 ## Allowed and blocked routes
-- Impersonation headers are suppressed by frontend API client for:
+- Frontend suppresses impersonation headers for:
   - `/superadmin`, `/api/superadmin`
   - `/auth`, `/api/auth`
   - login/logout/refresh endpoints
@@ -14,20 +19,21 @@
 - Firm-scoped backend routes reject SuperAdmin access (403) and do not allow tenant switching through client headers.
 
 ## Supported modes
-- Accepted modes: `READ_ONLY`, `FULL_ACCESS`.
-- Missing or invalid mode is fail-closed.
-- `READ_ONLY` blocks mutating HTTP methods (`POST`, `PUT`, `PATCH`, `DELETE`).
+- Header values may include `READ_ONLY` / `FULL_ACCESS`, but mode does not grant access while impersonation is globally fail-closed.
 
-## Expiry behavior
-- Session/context validation requires both impersonated firm id and impersonation session id.
-- Missing required fields fail closed.
-- Expired/missing sessions are expected to be forbidden and never downgraded into normal firm auth context.
+## Expiry and revocation behavior
+- Because session persistence is not active, requests are denied before session matching/expiry/revocation checks.
+- No request is downgraded into normal firm auth when impersonation headers are present.
 
 ## Audit logging guarantees
-- SuperAdmin impersonation lifecycle events are logged with safe metadata only.
-- Required metadata: superadmin identity, target firm id, session id, route/method, mode, and denial reason when blocked.
-- Sensitive payload content (docket content, attachments, OTPs, raw secrets, tokens, passwords) must not be included in audit metadata.
+- SuperAdmin impersonation lifecycle endpoints remain audit logged.
+- Denied requests should include only safe metadata (identity, firm/session identifiers, route/method, denial reason).
+- Sensitive payload content (docket content, attachments, OTPs, raw secrets, tokens, passwords) must not be logged.
 
-## Known limitations / deferred improvements
-- SuperAdmin firm impersonation remains hard-disabled for firm-scoped access in current runtime guardrails.
-- Session expiry persistence and server-side session store enforcement should remain validated in future enabling PRs before impersonation is reintroduced.
+## Deferred improvements
+- Implement server-side impersonation session store and enforce all of:
+  - session existence
+  - session owner (SuperAdmin)
+  - firm/session match
+  - expiry/revocation
+  - mode constraints for mutating methods
