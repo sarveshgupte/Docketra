@@ -1,6 +1,5 @@
 const Task = require('../models/Task');
 const { softDelete } = require('../services/softDelete.service');
-const { assertNoProhibitedMongoBusinessContent } = require('../services/mongoWriteResidencyGuard.service');
 
 const assertTenantId = (firmId) => {
   if (!firmId) {
@@ -37,7 +36,6 @@ const TaskRepository = {
 
   create(firmId, data) {
     assertTenantId(firmId);
-    assertNoProhibitedMongoBusinessContent(data, { context: 'TaskRepository.create' });
     return Task.create({ ...data, firmId });
   },
 
