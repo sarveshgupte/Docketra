@@ -7,6 +7,13 @@
 - Clarified policy/trust docs to distinguish implemented behavior, legacy exceptions, and planned migrations (no overclaims).
 # What's New
 
+## 2026-05-22 — Improved notification read management
+
+- Added mark-all-read support for notification history
+- Kept notification updates scoped to the logged-in user
+- Preserved per-notification read actions
+- Added safe cleanup groundwork for old read notifications
+
 ## 2026-05-22 — Added due-date docket notifications
 
 - Added due soon and overdue notification types for active dockets
