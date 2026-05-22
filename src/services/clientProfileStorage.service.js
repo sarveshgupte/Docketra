@@ -7,6 +7,7 @@ const { requireWritableBusinessStorage } = require('./strictStoragePolicy.servic
 
 const PROFILE_SCHEMA_VERSION = 1;
 const PROFILE_OBJECT_NAME = 'profile.json';
+const CFS_OBJECT_NAME = 'cfs/cfs.json';
 
 const SENSITIVE_TOP_LEVEL_FIELDS = [
   'businessAddress',
@@ -173,6 +174,70 @@ async function readProfileFromManagedFallback(backend, objectKey) {
 }
 
 class ClientProfileStorageService {
+  async updateClientFactSheet({ firmId, client, factSheet, actorXID }) {
+    await requireWritableBusinessStorage({ firmId, requestId: null, actorXid: actorXID || null, targetPathCategory: 'client_cfs_current' });
+    const payload = {
+      schemaVersion: 1,
+      firmId: String(firmId),
+      clientId: client.clientId,
+      updatedAt: new Date().toISOString(),
+      updatedBy: actorXID || 'SYSTEM',
+      cfsVersion: Number(client?.cfsRef?.version || 0) + 1,
+      factSheet: factSheet || {},
+    };
+    const backend = await resolveStorageBackend(firmId);
+    const body = JSON.stringify(payload);
+    const ref = backend.type === 'firm_connected'
+      ? await (async () => {
+          const rootId = await backend.provider.getOrCreateFolder(null, 'Docketra');
+          const firmFolder = await backend.provider.getOrCreateFolder(rootId, String(firmId));
+          const clientsFolder = await backend.provider.getOrCreateFolder(firmFolder, 'clients');
+          const clientFolder = await backend.provider.getOrCreateFolder(clientsFolder, String(client.clientId));
+          const cfsFolder = await backend.provider.getOrCreateFolder(clientFolder, 'cfs');
+          const uploaded = await backend.provider.uploadFile(cfsFolder, 'cfs.json', Readable.from(body), 'application/json');
+          return { storageProvider: backend.provider.providerName || 'google-drive', fileId: uploaded.fileId, objectKey: `firms/${firmId}/clients/${client.clientId}/${CFS_OBJECT_NAME}`, mode: 'firm_connected' };
+        })()
+      : await (async () => {
+          const objectKey = `${backend.prefix}/firms/${firmId}/clients/${client.clientId}/${CFS_OBJECT_NAME}`;
+          await backend.client.send(new PutObjectCommand({ Bucket: backend.bucket, Key: objectKey, Body: body, ContentType: 'application/json' }));
+          return { storageProvider: 'docketra_managed', fileId: null, objectKey, mode: 'managed_fallback' };
+        })();
+
+    client.cfsRef = {
+      provider: ref.storageProvider,
+      mode: ref.mode,
+      fileId: ref.fileId,
+      objectKey: ref.objectKey,
+      checksum: sha256(body),
+      version: payload.cfsVersion,
+      updatedAt: new Date(),
+      updatedBy: actorXID || 'SYSTEM',
+      migrationStatus: 'cloud_first',
+    };
+    client.cfsStorageMode = 'cloud_first';
+    await client.save();
+    return payload.factSheet;
+  }
+
+  async getClientFactSheet({ firmId, client }) {
+    try {
+      if (client?.cfsRef?.provider) {
+        if (client.cfsRef.mode === 'managed_fallback' || client.cfsRef.provider === 'docketra_managed') {
+          const backend = getManagedFallbackBackend();
+          if (!backend) throw new Error('Managed fallback unavailable');
+          const data = await readProfileFromManagedFallback(backend, client.cfsRef.objectKey);
+          return { factSheet: data?.factSheet || {}, cfsStorageMode: 'cloud_first' };
+        }
+        const backend = await resolveStorageBackend(firmId);
+        if (backend.type !== 'firm_connected') throw new Error('Firm storage unavailable');
+        const data = await readProfileFromGoogle(backend.provider, client.cfsRef.fileId);
+        return { factSheet: data?.factSheet || {}, cfsStorageMode: 'cloud_first' };
+      }
+    } catch (_error) {
+      return { factSheet: {}, cfsStorageMode: client?.cfsStorageMode || 'legacy_mongo', cfsWarning: 'client_cfs_unavailable' };
+    }
+    return { factSheet: client?.clientFactSheet || {}, cfsStorageMode: 'legacy_mongo' };
+  }
   async createClientProfile({ firmId, client, profileInput, actorXID }) {
     await requireWritableBusinessStorage({ firmId, requestId: null, actorXid: actorXID || null, targetPathCategory: 'client_profile' });
     const payload = buildProfilePayload({ client, profileInput, actorXID });

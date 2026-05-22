@@ -1013,3 +1013,5 @@
 - Added Storage Settings **Google Drive storage root health** card with recovery-required messaging and strict-mode blocked-write explanation.
 - Added sanitized `GET /api/storage/root-health` response for health/status/code/canWrite/canOpenFolder without exposing root IDs or credentials.
 - Updated storage badge attention state to show **Storage needs attention** with Google Drive root recovery guidance and link to Storage Settings.
+
+- 2026-05-22: Client Fact Sheet canonical payload moved to cloud JSON at `firms/{firmId}/clients/{clientId}/cfs/cfs.json`; Mongo now stores only CFS object reference metadata plus `cfsStorageMode` migration marker (`cloud_first`/`legacy_mongo`).
