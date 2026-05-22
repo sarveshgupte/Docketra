@@ -48,11 +48,15 @@ async function resolveRecipientsForDocket(docket) {
     .lean();
   if (!workbasket) return [];
 
+  const workbasketId = String(docket.workbasketId);
   const users = await User.find({
     firmId: docket.firmId,
     status: { $ne: 'deleted' },
     isActive: true,
-    teamIds: String(docket.workbasketId),
+    $or: [
+      { teamIds: workbasketId },
+      { teamId: workbasketId },
+    ],
   }).select('xID').lean();
 
   return users.map((u) => String(u.xID || '').toUpperCase().trim()).filter(Boolean);
@@ -98,7 +102,7 @@ async function processDocketDueNotifications({ now = new Date() } = {}) {
         });
         if (exists) continue;
 
-        await createNotification({
+        const createdNotification = await createNotification({
           firmId: docket.firmId,
           recipientXID: userId,
           type,
@@ -110,7 +114,7 @@ async function processDocketDueNotifications({ now = new Date() } = {}) {
             : `Docket ${docket.caseId} is overdue.`,
           group: false,
         });
-        created += 1;
+        if (createdNotification) created += 1;
       } catch (error) {
         log.warn('DOCKET_DUE_NOTIFICATION_CREATE_FAILED', { docketId: docket.caseId, userId, error: error?.message });
       }
