@@ -69,7 +69,8 @@
     "test:pilot-ui-contracts": "node tests/pilotUiContracts.test.mjs",
     "test:auth-ui-ux": "node tests/authUiUxHardening.test.mjs",
     "test:pilot-auth-routing": "node tests/pilotAuthRoutingSmoke.test.mjs",
-    "test:impersonation-headers": "node tests/impersonationHeaderSuppression.test.mjs"
+    "test:impersonation-headers": "node tests/impersonationHeaderSuppression.test.mjs",
+    "test:pilot-launch-readiness": "node tests/pilotLaunchReadinessInventory.test.mjs"
   },
   "browserslist": {
     "production": [

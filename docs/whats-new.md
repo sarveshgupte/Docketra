@@ -1,5 +1,12 @@
 # What's New
 
+
+## 2026-05-22 — Added pilot launch readiness gate
+
+- Added inventory checks for pilot-visible navigation, route gates, and core workflow destinations.
+- Guarded against accidental re-exposure of deferred modules.
+- Documented how to maintain the pilot readiness gate.
+
 ## May 2026: Aligned Node runtime to Node 20
 
 - Standardized local, CI, and deployment runtime expectations on Node 20.
