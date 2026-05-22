@@ -12,6 +12,7 @@ import {
   getStorageConfiguration,
   getStorageOwnershipSummary,
   getStorageFolderLink,
+  getStorageRootHealth,
   sendStorageChangeOtp,
   testStorageConnection,
   disconnectStorage,
@@ -78,6 +79,7 @@ export function StorageSettingsPage() {
   const [folderLinkAvailable, setFolderLinkAvailable] = useState(false);
   const [folderLinkUrl, setFolderLinkUrl] = useState('');
   const [strictModeSaving, setStrictModeSaving] = useState(false);
+  const [rootHealth, setRootHealth] = useState(null);
 
   const loadStorageUsage = async () => {
     setUsageLoading(true);
@@ -103,10 +105,11 @@ export function StorageSettingsPage() {
       const data = await getStorageConfiguration();
       setConfig(data);
 
-      const [summaryResult, exportsResult, folderResult] = await Promise.allSettled([
+      const [summaryResult, exportsResult, folderResult, rootHealthResult] = await Promise.allSettled([
         getStorageOwnershipSummary(),
         listStorageExports(10),
         getStorageFolderLink(),
+        getStorageRootHealth(),
       ]);
 
       if (summaryResult.status === 'fulfilled') {
@@ -123,6 +126,8 @@ export function StorageSettingsPage() {
         setFolderLinkAvailable(false);
         setFolderLinkUrl('');
       }
+      if (rootHealthResult.status === 'fulfilled') setRootHealth(rootHealthResult.value);
+      else setRootHealth(null);
 
       if (exportsResult.status !== 'fulfilled') {
         setExportWarning(getExportHistoryWarning(exportsResult.reason));
@@ -172,6 +177,8 @@ export function StorageSettingsPage() {
   const statusLabel = config?.status?.includes('ERROR') || config?.status?.includes('DISCONNECTED') ? 'Needs attention' : config?.isConfigured ? 'Active' : 'Not connected';
   const usagePercent = Number(usage?.usagePercent || 0);
   const strictFirmOwnedStorage = Boolean(config?.strictFirmOwnedStorage);
+  const rootHealthOk = rootHealth?.status === 'healthy' || rootHealth?.status === 'renamed_valid';
+  const rootHealthMessage = rootHealth?.message || (isGoogleConnected ? 'Docketra could not verify your firm-owned Google Drive root.' : 'Connect firm Google Drive to verify storage root health.');
 
 
 
@@ -341,7 +348,8 @@ export function StorageSettingsPage() {
           <PageHeader title="Storage Settings" subtitle={PAGE_SUBTITLE} />
           <StatusMessageStack messages={statusMessages} />
 
-          <Card><div className={spacingClasses.sectionMargin}><h2 className="text-lg font-medium">Storage overview</h2><p>Active mode: {currentModeLabel}</p><p>Status: {statusLabel}</p>{isGoogleConnected ? <p>Connected account: {config?.connectedEmail || 'N/A'}</p> : null}<p>Last checked: {formatDateTime(ownershipSummary?.lastHealthCheck?.checkedAt || config?.updatedAt)}</p><p className="text-sm text-[var(--dt-text-muted)]">Docketra stores business files in the active storage provider. MongoDB stores only control-plane metadata.</p><div className="flex flex-wrap gap-2 mt-3">{isGoogleConnected ? <><Button type="button" variant="outline" onClick={onOpenStorageFolder} disabled={openingFolder}>{openingFolder ? 'Opening folder…' : 'Open storage folder'}</Button><Button type="button" variant="outline" onClick={onTestConnection} disabled={testing}>{testing ? 'Testing…' : 'Test connection'}</Button><Button type="button" variant="primary" onClick={connectGoogleDrive}>Refresh Google Drive connection</Button><Button type="button" variant="outline" onClick={onDisconnectGoogle} disabled={disconnecting}>{disconnecting ? 'Disconnecting…' : 'Disconnect firm Google Drive'}</Button></> : <Button type="button" variant="primary" onClick={connectGoogleDrive}>Connect firm Google Drive</Button>}</div>{!folderLinkAvailable && isGoogleConnected ? <p className="text-sm text-[var(--dt-text-muted)] mt-2">Folder link unavailable.</p> : null}{summaryWarning ? <p className="text-sm text-[var(--dt-warning)] mt-2">{summaryWarning}</p> : null}</div></Card>
+          <Card><div className={spacingClasses.sectionMargin}><h2 className="text-lg font-medium">Storage overview</h2><p>Active mode: {currentModeLabel}</p><p>Status: {statusLabel}</p>{isGoogleConnected ? <p>Connected account: {config?.connectedEmail || 'N/A'}</p> : null}<p>Last checked: {formatDateTime(ownershipSummary?.lastHealthCheck?.checkedAt || config?.updatedAt)}</p><p className="text-sm text-[var(--dt-text-muted)]">Docketra stores business files in the active storage provider. MongoDB stores only control-plane metadata.</p><div className="flex flex-wrap gap-2 mt-3">{isGoogleConnected ? <><Button type="button" variant="outline" onClick={onOpenStorageFolder} disabled={openingFolder || !rootHealthOk}>{openingFolder ? 'Opening folder…' : 'Open storage folder'}</Button><Button type="button" variant="outline" onClick={loadConfiguration} disabled={loading}>Recheck storage</Button><Button type="button" variant="outline" onClick={onTestConnection} disabled={testing}>{testing ? 'Testing…' : 'Test connection'}</Button><Button type="button" variant="primary" onClick={connectGoogleDrive}>Reconnect Google Drive</Button><Button type="button" variant="outline" onClick={onDisconnectGoogle} disabled={disconnecting}>{disconnecting ? 'Disconnecting…' : 'Disconnect firm Google Drive'}</Button></> : <Button type="button" variant="primary" onClick={connectGoogleDrive}>Connect firm Google Drive</Button>}</div>{!folderLinkAvailable && isGoogleConnected ? <p className="text-sm text-[var(--dt-text-muted)] mt-2">Folder link unavailable.</p> : null}{summaryWarning ? <p className="text-sm text-[var(--dt-warning)] mt-2">{summaryWarning}</p> : null}</div></Card>
+          <Card><div className={spacingClasses.sectionMargin}><h2 className="text-lg font-medium">Google Drive storage root health</h2><p>{rootHealthMessage}</p>{strictFirmOwnedStorage && !rootHealthOk ? <p className="text-sm text-[var(--dt-warning)] mt-2">Strict mode is active. Business-content writes are blocked until Google Drive storage is recovered.</p> : null}</div></Card>
 
           <Card><div className={spacingClasses.sectionMargin}><h2 className="text-lg font-medium">Firm-owned Google Drive</h2>{!isGoogleConnected ? <><ul className="list-disc ml-6 text-sm space-y-1"><li>Your files stay in your firm’s Google Drive.</li><li>Docketra uses Drive only after Primary Admin approval.</li><li>You can disconnect anytime.</li></ul><Button type="button" variant="primary" onClick={connectGoogleDrive}>Connect firm Google Drive</Button></> : <><p>Connected email: {config?.connectedEmail || 'N/A'}</p><p>Status: {statusLabel}</p><p>Last checked: {formatDateTime(ownershipSummary?.lastHealthCheck?.checkedAt || config?.updatedAt)}</p><p className="text-sm text-[var(--dt-text-muted)]">Future uploads use firm-owned Google Drive.</p><div className="flex flex-wrap gap-2 mt-2"><Button type="button" variant="primary" onClick={connectGoogleDrive}>Refresh Google Drive connection</Button><Button type="button" variant="outline" onClick={onDisconnectGoogle} disabled={disconnecting}>{disconnecting ? 'Disconnecting…' : 'Disconnect firm Google Drive'}</Button></div></>}</div></Card>
 
@@ -351,7 +359,7 @@ export function StorageSettingsPage() {
 
           <Card><div className={spacingClasses.sectionMargin}><h2 className="text-lg font-medium">Data storage map</h2><p>Client profiles → firm cloud profile.json</p><p>CFS and attachments → firm cloud folders/files</p><p>MongoDB → control-plane metadata only</p><details className="mt-2"><summary className="cursor-pointer">View technical storage paths</summary><p className="font-medium mt-2">Google Drive folder paths</p><ul className="list-disc ml-6 text-sm">{(ownershipSummary?.dataStorageMap?.googleDriveFolderPaths || []).map((item) => <li key={item.key}>{item.key}: {item.path}</li>)}</ul><p className="font-medium mt-2">MongoDB control-plane metadata categories</p><ul className="list-disc ml-6 text-sm">{(ownershipSummary?.dataStorageMap?.mongoControlPlaneMetadata || []).map((item) => <li key={item}>{item}</li>)}</ul></details><Link className="text-sm underline text-[var(--dt-link)]" to={ROUTES.DATA_STORAGE_MAP(config?.firmSlug || user?.firmSlug || '')}>Open Data Storage Map</Link></div></Card>
 
-          <Card><div className={spacingClasses.sectionMargin}><h2 className="text-lg font-medium">Backup and export</h2><p className="text-sm">Generate an export of storage metadata, references, and supported files. Secrets and credentials are never included.</p><Button type="button" variant="primary" onClick={onGenerateExport} disabled={exporting}>{exporting ? 'Generating…' : 'Generate storage export'}</Button>{exportWarning ? <p className="text-sm text-[var(--dt-warning)]">{exportWarning}</p> : null}</div></Card>
+          <Card><div className={spacingClasses.sectionMargin}><h2 className="text-lg font-medium">Backup and export</h2><p className="text-sm">Generate an export of storage metadata, references, and supported files. Secrets and credentials are never included.</p><Button type="button" variant="primary" onClick={onGenerateExport} disabled={exporting}>{exporting ? 'Generating…' : 'Generate storage export'}</Button><Button type="button" variant="outline" disabled>Restore from backup/export (coming soon)</Button>{exportWarning ? <p className="text-sm text-[var(--dt-warning)]">{exportWarning}</p> : null}</div></Card>
 
           <Card><div className={spacingClasses.sectionMargin}><details><summary className="cursor-pointer font-medium">Advanced manual providers</summary><p className="text-sm mt-2">Most firms should not use this. Use Google Drive BYOS unless Docketra support instructs otherwise.</p><p className="text-sm text-[var(--dt-text-muted)] mt-1">Manual credentials are sensitive and should only be entered when instructed by support.</p><SupportContext context={supportContext} /><div className="mt-3"><Select label="Manual provider" value={provider} onChange={(event) => setProvider(event.target.value)} options={[{ value: 'onedrive', label: 'Microsoft OneDrive — manual setup only' }, { value: 's3', label: 'Amazon S3 — advanced setup' }]} />{provider === 'onedrive' ? <><Input label="OneDrive Refresh Token" value={oneDriveRefreshToken} onChange={(event) => setOneDriveRefreshToken(event.target.value)} /><Input label="OneDrive Drive ID (optional)" value={oneDriveDriveId} onChange={(event) => setOneDriveDriveId(event.target.value)} /></> : null}{provider === 's3' ? <><Input label="S3 Bucket" value={s3Bucket} onChange={(event) => setS3Bucket(event.target.value)} /><Input label="S3 Region" value={s3Region} onChange={(event) => setS3Region(event.target.value)} /><Input label="S3 Prefix (optional)" value={s3Prefix} onChange={(event) => setS3Prefix(event.target.value)} /><Input label="S3 Access Key ID (optional)" value={s3AccessKeyId} onChange={(event) => setS3AccessKeyId(event.target.value)} /><Input label="S3 Secret Access Key (optional)" value={s3SecretAccessKey} onChange={(event) => setS3SecretAccessKey(event.target.value)} /><Input label="S3 Session Token (optional)" value={s3SessionToken} onChange={(event) => setS3SessionToken(event.target.value)} /></> : null}<div className="grid grid-cols-1 gap-3 md:grid-cols-3 items-end"><Input label="OTP Code" value={otpCode} onChange={(event) => setOtpCode(event.target.value)} /><Button type="button" variant="outline" onClick={onSendOtp}>Send OTP</Button><Button type="button" variant="outline" onClick={onVerifyOtp}>Verify OTP</Button></div><Button type="button" variant="primary" onClick={onSaveStorageSettings} disabled={!verificationToken || savingProvider}>{savingProvider ? 'Saving…' : 'Save Provider'}</Button></div></details></div></Card>
         </div>

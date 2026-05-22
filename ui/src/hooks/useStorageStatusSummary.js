@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ROUTES } from '../constants/routes';
-import { getStorageConfiguration, getStorageOwnershipSummary } from '../services/storageService';
+import { getStorageConfiguration, getStorageOwnershipSummary, getStorageRootHealth } from '../services/storageService';
 
 const CACHE_TTL_MS = 60 * 1000;
 const statusCache = new Map();
@@ -24,7 +24,7 @@ const sanitizeEmail = (email) => {
   return SANITIZED_EMAIL_REGEX.test(trimmed) ? trimmed : null;
 };
 
-const buildSummary = (firmSlug, configuration = {}, ownershipSummary = {}, error = null) => {
+const buildSummary = (firmSlug, configuration = {}, ownershipSummary = {}, rootHealth = {}, error = null) => {
   const provider = normalizeProvider(configuration.provider || ownershipSummary.provider || ownershipSummary.activeProvider);
   const configurationStatus = normalizeStatus(configuration.status);
   const healthStatus = normalizeStatus(ownershipSummary?.lastHealthCheck?.status);
@@ -36,6 +36,7 @@ const buildSummary = (firmSlug, configuration = {}, ownershipSummary = {}, error
     ['ERROR', 'DISCONNECTED'].includes(configurationStatus)
     || ['ERROR', 'DISCONNECTED'].includes(healthStatus)
     || error
+    || rootHealth?.status === 'recovery_required'
   );
 
   const byosActive = byosProvider && byosConfigured && !needsAttention;
@@ -52,7 +53,7 @@ const buildSummary = (firmSlug, configuration = {}, ownershipSummary = {}, error
     badgeTone = 'warning';
     badgeLabel = 'Storage needs attention';
     providerLabel = byosProvider ? 'Firm-owned Google Drive' : 'Docketra-managed Google Drive';
-    helperText = 'Storage connection requires attention from a Primary Admin.';
+    helperText = rootHealth?.status === 'recovery_required' ? 'Google Drive root recovery required' : 'Storage connection requires attention from a Primary Admin.';
     statusLabel = 'Needs attention';
   } else if (strictMode && byosActive) {
     badgeTone = 'success';
@@ -108,17 +109,17 @@ export default function useStorageStatusSummary(firmSlug) {
     let active = true;
     setState((prev) => ({ ...prev, loading: true }));
 
-    Promise.all([getStorageConfiguration(), getStorageOwnershipSummary()])
-      .then(([configuration, ownershipSummary]) => {
+    Promise.all([getStorageConfiguration(), getStorageOwnershipSummary(), getStorageRootHealth()])
+      .then(([configuration, ownershipSummary, rootHealth]) => {
         if (!active) return;
-        const nextState = buildSummary(firmSlug, configuration, ownershipSummary, null);
+        const nextState = buildSummary(firmSlug, configuration, ownershipSummary, rootHealth, null);
         statusCache.set(firmSlug, { data: nextState, timestamp: Date.now() });
         setState(nextState);
       })
       .catch((err) => {
         if (!active) return;
         const nonBlockingError = err?.response?.status === 404 ? null : err;
-        const nextState = buildSummary(firmSlug, {}, {}, nonBlockingError);
+        const nextState = buildSummary(firmSlug, {}, {}, {}, nonBlockingError);
         setState(nextState);
       });
 

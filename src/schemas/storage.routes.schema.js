@@ -31,6 +31,9 @@ module.exports = {
   'GET /folder-link': {
     query: z.object({}).passthrough(),
   },
+  'GET /root-health': {
+    query: z.object({}).passthrough(),
+  },
   'POST /test-connection': {
     body: z.object({}).strict(),
   },

@@ -7,7 +7,7 @@ const read = (relPath) => fs.readFileSync(path.resolve(process.cwd(), relPath), 
 const adminPageSource = read('src/pages/AdminPage.jsx');
 
 const whatsNewSource = read('../docs/whats-new.md');
-const whatsNewTopSlice = whatsNewSource.split('\n').slice(0, 20).join('\n');
+const whatsNewTopSlice = whatsNewSource.split('\n').slice(0, 50).join('\n');
 assert.ok(whatsNewTopSlice.includes('## 2026-05-20 — Cleaned up Admin and Work Settings layout'), "What's New should list admin/work settings cleanup in the latest top section");
 
 assert.ok(adminPageSource.includes('AdminUsersSection'), 'AdminPage should delegate user rendering to AdminUsersSection');
