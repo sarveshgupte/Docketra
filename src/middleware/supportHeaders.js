@@ -20,9 +20,11 @@ const applySupportHeadersToContext = (req) => {
 
   req.context = {
     ...(req.context || {}),
-    impersonatedFirmId: impersonatedFirmId || req.context?.impersonatedFirmId || null,
-    impersonationSessionId: impersonationSessionId || req.context?.impersonationSessionId || null,
-    impersonationMode: impersonationMode || req.context?.impersonationMode || null,
+    impersonationDenied: true,
+    impersonationDeniedReason: 'impersonation_disabled_no_session_store',
+    requestedImpersonatedFirmId: impersonatedFirmId || null,
+    requestedImpersonationSessionId: impersonationSessionId || null,
+    requestedImpersonationMode: impersonationMode || null,
   };
 };
 
