@@ -80,6 +80,7 @@ For doc contribution standards, see [documentation-guidelines.md](documentation-
 | [security/production-security-hardening.md](security/production-security-hardening.md) | Production hardening checklist |
 | [security/redis-production-requirements.md](security/redis-production-requirements.md) | Redis requirements for production |
 | [security/production-env.md](security/production-env.md) | Production environment security requirements |
+| [security/superadmin-impersonation-boundary.md](security/superadmin-impersonation-boundary.md) | SuperAdmin impersonation boundary model and guardrails |
 
 ---
 
