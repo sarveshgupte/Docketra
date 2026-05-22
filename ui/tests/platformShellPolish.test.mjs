@@ -25,10 +25,12 @@ for (const section of ['Daily Operations', 'Client Workspace', 'Oversight', 'Adm
   assert.ok(navSource.includes(`section: '${section}'`), `Navigation should preserve ${section} grouping.`);
 }
 assert.ok(navSource.includes("id: 'workbaskets-overview'"), 'Daily Operations should preserve Workbasket Overview for manager+ users.');
-assert.ok(navSource.includes('dailyOperationsItems.push(...directWorkbasketItems);'), 'Direct assigned workbasket links should remain preserved.');
+assert.ok(navSource.includes('...directWorkbasketItems,'), 'Direct assigned workbasket links should remain preserved under grouped Workbaskets.');
+assert.ok(navSource.includes("id: 'workbaskets-group'"), 'Daily Operations should preserve grouped Workbaskets container.');
 assert.ok(navSource.includes("id: 'my-worklist'"), 'Daily Operations should preserve My Worklist.');
 assert.ok(navSource.includes("id: 'qc-worklist'"), 'Daily Operations should preserve QC Worklist when allowed.');
-assert.ok(navSource.includes('dailyOperationsItems.push(...directQcWorkbasketItems'), 'Direct assigned QC workbasket links should remain preserved.');
+assert.ok(navSource.includes('...directQcWorkbasketItems,'), 'Direct assigned QC workbasket links should remain preserved under grouped QC Worklists.');
+assert.ok(navSource.includes("id: 'qc-worklists-group'"), 'Daily Operations should preserve grouped QC Worklists container when applicable.');
 
 for (const cls of ['.platform__action-search', '.platform__action-primary', '.platform__action-status', '.platform__module-label', '.platform__nav-section']) {
   assert.ok(cssSource.includes(cls), `Shell CSS should include polished class ${cls}.`);
