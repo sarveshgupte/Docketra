@@ -38,6 +38,20 @@ export default function Signup() {
   const turnstileContainerRef = useRef(null);
   const turnstileWidgetIdRef = useRef(null);
   const [turnstileToken, setTurnstileToken] = useState('');
+  const getEffectiveTurnstileToken = () => {
+    const stateToken = String(turnstileToken || '').trim();
+    if (stateToken) return stateToken;
+    const widgetId = turnstileWidgetIdRef.current;
+    const tokenFromWidget = widgetId != null && window.turnstile?.getResponse
+      ? String(window.turnstile.getResponse(widgetId) || '').trim()
+      : '';
+    if (import.meta.env.MODE !== 'production' && isTurnstileConfigured) {
+      // safe debug: never log raw token values
+      // eslint-disable-next-line no-console
+      console.debug('Signup Turnstile token resolution', { hasStateToken: Boolean(stateToken), hasWidgetToken: Boolean(tokenFromWidget) });
+    }
+    return tokenFromWidget;
+  };
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -130,7 +144,8 @@ export default function Signup() {
 
     setLoading(true);
     setApiError('');
-    if (isTurnstileConfigured && !turnstileToken) {
+    const effectiveTurnstileToken = isTurnstileConfigured ? getEffectiveTurnstileToken() : '';
+    if (isTurnstileConfigured && !effectiveTurnstileToken) {
       setLoading(false);
       setApiError('We could not verify this signup attempt. Please try again.');
       return;
@@ -142,15 +157,20 @@ export default function Signup() {
         password: form.password,
         firmName: form.firmName.trim(),
         phone: form.phone.trim(),
-        turnstileToken: isTurnstileConfigured ? turnstileToken : undefined,
+        turnstileToken: isTurnstileConfigured ? effectiveTurnstileToken : undefined,
       });
       setStep(2);
       setOtp('');
       setOtpInfo(`OTP sent to ${form.email.trim().toLowerCase()}`);
     } catch (error) {
       const status = error?.response?.status;
-      if (status === 400 || status === 403) setApiError('We could not verify this signup attempt. Please try again.');
-      else setApiError(mapSafeError(error, 'Unable to start signup right now.'));
+      if (status === 400 || status === 403) {
+        setApiError('We could not verify this signup attempt. Please try again.');
+        if (isTurnstileConfigured && turnstileWidgetIdRef.current != null && window.turnstile?.reset) {
+          window.turnstile.reset(turnstileWidgetIdRef.current);
+        }
+        setTurnstileToken('');
+      } else setApiError(mapSafeError(error, 'Unable to start signup right now.'));
     } finally {
       setLoading(false);
     }
@@ -299,7 +319,13 @@ export default function Signup() {
             {isTurnstileConfigured ? <div ref={turnstileContainerRef} className="min-h-[65px]" /> : null}
             <p className="text-xs text-gray-500">{STRONG_PASSWORD_MESSAGE}</p>
             <p className="text-xs text-gray-500">Your workspace URL will look like: docketra.com/gupte-opc</p>
-            <Button type="submit" variant="primary" fullWidth disabled={loading} loading={loading}>
+            <Button
+              type="submit"
+              variant="primary"
+              fullWidth
+              disabled={loading || (isTurnstileConfigured && !getEffectiveTurnstileToken())}
+              loading={loading}
+            >
               {loading ? 'Sending verification code...' : 'Send verification code'}
             </Button>
           </form>
