@@ -20,7 +20,8 @@ const redact = (value) => {
 };
 
 const safeCall = (method, ...args) => {
-  if (import.meta?.env?.DEV) {
+  const runtimeEnv = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
+  if (runtimeEnv.DEV) {
     const fn = console[method] || console.info;
     fn(...args.map((arg) => redact(arg)));
   }
