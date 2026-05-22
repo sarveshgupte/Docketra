@@ -146,8 +146,8 @@ export const authService = {
     return response.data;
   },
 
-  forgotPasswordInit: async (identifier, firmSlug) => {
-    const response = await api.post('/auth/forgot-password/init', { identifier, firmSlug });
+  forgotPasswordInit: async (identifier, firmSlug, turnstileToken) => {
+    const response = await api.post('/auth/forgot-password/init', { identifier, firmSlug, turnstileToken });
     return response.data;
   },
 
