@@ -44,3 +44,7 @@
 ## 2026-05-19 - [Revert $facet for simple counts in caseQuery]
 **Learning:** While `$facet` groups multiple count operations into a single network roundtrip, it is an anti-pattern for simple paginated lists if the initial `$match` yields a large dataset. Individual `countDocuments` and `find` queries can be resolved using index scans concurrently, whereas `$facet` forces MongoDB to pull all matching documents into memory to evaluate the sub-pipelines.
 **Action:** Use concurrent `Promise.all([find(...), countDocuments(...)])` for standard pagination instead of `$facet` aggregation pipelines.
+
+## 2026-05-21 - Concurrent Document Fetch in Case Create Service Validation
+**Learning:** In the `caseCreate` service, `WorkType.findOne` and `SubWorkType.findOne` were awaited sequentially, which caused endpoint latency, despite being independent of the other model validation queries (like `Deal`, `CrmClient`, etc.).
+**Action:** Prepared the `WorkType` and `SubWorkType` queries as promises and merged them into the existing `Promise.all()` concurrently with the other independent lookups.

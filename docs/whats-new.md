@@ -1,5 +1,7 @@
 # What's New
 
+## 2026-05-20 — Cleaned up Admin and Work Settings layout
+- Cleaned up Admin and Work Settings layout.
 ## 2026-05-21 — Improved post-login workspace routing
 
 - Users now land on their first assigned Worklist after firm login
