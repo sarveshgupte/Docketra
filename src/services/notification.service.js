@@ -8,6 +8,23 @@ const log = require('../utils/log');
 
 const GROUPING_WINDOW_MS = 30 * 60 * 1000;
 
+async function resolveRecipientXid(payload = {}, firmId = '') {
+  const directXid = String(payload.recipientXID || payload.userId || '').toUpperCase().trim();
+  if (directXid) return directXid;
+
+  const recipientUserId = String(payload.recipientUserId || '').trim();
+  if (!recipientUserId) return '';
+
+  const recipient = await User.findOne({
+    _id: recipientUserId,
+    firmId,
+    status: { $ne: 'deleted' },
+    isActive: true,
+  }).select('xID').lean();
+
+  return String(recipient?.xID || '').toUpperCase().trim();
+}
+
 function assertType(type) {
   if (!Object.values(NotificationTypes).includes(type)) {
     const error = new Error(`Unsupported notification type: ${type}`);
@@ -56,11 +73,14 @@ function normalizePayload(payload = {}) {
 async function createNotification(payload) {
   try {
     if (!payload?.recipientUserId && !payload?.recipientXID && !payload?.userId) return null;
-    const normalized = normalizePayload(payload);
+    const resolvedRecipientXid = await resolveRecipientXid(payload, String(payload?.firmId || '').trim());
+    if (!resolvedRecipientXid) return null;
+    const normalized = normalizePayload({ ...payload, recipientXID: resolvedRecipientXid });
     const recipient = await User.findOne({
       xID: normalized.userId,
       firmId: normalized.firmId,
       status: { $ne: 'deleted' },
+      isActive: true,
     }).select('xID').lean();
     if (!recipient) return null;
   let deliveryChannels = { inApp: true, email: Boolean(payload?.emailEnabled) };

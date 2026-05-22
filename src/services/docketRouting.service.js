@@ -28,7 +28,7 @@ async function notifyWorkbasketUsers({ firmId, workbasketId, docketId, workbaske
     firmId,
     status: { $ne: 'deleted' },
     isActive: true,
-    teamIds: workbasketId,
+    $or: [{ teamIds: workbasketId }, { teamId: workbasketId }],
   }).select('xID').lean();
   await Promise.all(users.map((user) => createNotification({
     firmId,
