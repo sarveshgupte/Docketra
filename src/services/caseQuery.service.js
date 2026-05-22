@@ -4,6 +4,7 @@ const includeInternalErrorDetails = process.env.NODE_ENV !== 'production';
 const { buildWorkflowMeta, logWorkflowEvent } = require('../utils/workflowDiagnostics');
 const { applyWorkModeFilter, normalizeWorkMode } = require('../utils/workType');
 const { serializeDocketDetailDto } = require('../serializers/docketDetail.serializer');
+const docketNarrativeStorage = require('./docketNarrativeStorage.service');
 const CASE_LIST_PROJECTION = 'caseId caseNumber caseName title status category subcategory caseSubCategory priority clientId clientName assignedTo assignedToXID assignedToName employeeXID employeeSnapshot createdBy createdByXID createdAt updatedAt dueDate slaDueAt isInternal workType lifecycle state pendingUntil ownerTeamId routedToTeamId';
 module.exports = (deps) => {
   const {
@@ -336,6 +337,20 @@ module.exports = (deps) => {
           : caseData;
       enforceDocketLifecycleDefault(caseObject);
       caseObject.updatedAt = caseObject.updatedAt || new Date();
+      let docketWarning = null;
+      if (caseObject?.docketRef?.provider) {
+        try {
+          const hydrated = await docketNarrativeStorage.readNarrative({ firmId: scopedFirmId, docketRef: caseObject.docketRef });
+          const narrative = hydrated?.narrative || {};
+          if (Object.prototype.hasOwnProperty.call(narrative, 'description')) caseObject.description = narrative.description;
+          if (Object.prototype.hasOwnProperty.call(narrative, 'clientSnapshot')) caseObject.clientSnapshot = narrative.clientSnapshot;
+          if (Object.prototype.hasOwnProperty.call(narrative, 'sopSnapshot')) caseObject.sopSnapshot = narrative.sopSnapshot;
+          if (Object.prototype.hasOwnProperty.call(narrative, 'checklist')) caseObject.checklist = narrative.checklist;
+          caseObject.docketStorageMode = 'cloud_first';
+        } catch (_error) {
+          docketWarning = 'docket_content_unavailable';
+        }
+      }
 
       const lifecycle = normalizeLifecycle(caseObject.lifecycle);
 
@@ -442,6 +457,7 @@ module.exports = (deps) => {
             canAttach: true, // Always allowed
           },
           docketDetail,
+        ...(docketWarning ? { docketWarning } : {}),
           pagination: {
             comments: {
               page: commentsPage,
