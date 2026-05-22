@@ -165,6 +165,14 @@ async function shouldBypassQueueForDirectAuthEmailsInDevelopment() {
       expiryMinutes: 10,
       isResend: true,
     });
+    const forgotPasswordOtpResult = await devEmailService.sendForgotPasswordOtpEmail({
+      email: 'forgot-otp@example.com',
+      name: 'Forgot OTP User',
+      otp: '987654',
+      expiryMinutes: 10,
+      firmName: 'Firm A',
+      firmSlug: 'firm-a',
+    });
     const setupResult = await devEmailService.sendPasswordSetupEmail({
       email: 'setup@example.com',
       name: 'Setup User',
@@ -211,6 +219,8 @@ async function shouldBypassQueueForDirectAuthEmailsInDevelopment() {
     assert.strictEqual(signupOtpResendResult.success, true);
     assert.strictEqual(signupOtpResendResult.console, true, 'Development signup OTP resend email should send immediately via sendEmailNow');
     assert.strictEqual(setupResult.success, true);
+    assert.strictEqual(forgotPasswordOtpResult.success, true);
+    assert.strictEqual(forgotPasswordOtpResult.console, true, 'Development forgot-password OTP email should send immediately via sendEmailNow');
     assert.strictEqual(setupReminderResult.success, true);
     assert.strictEqual(passwordResetResult.success, true);
     assert.strictEqual(forgotPasswordResult.success, true);
@@ -227,7 +237,12 @@ async function shouldBypassQueueForDirectAuthEmailsInDevelopment() {
     assert.deepStrictEqual(otpDirectSendEmails, {
       'tenant@example.com': 1,
       'signup@example.com': 2,
+      'forgot-otp@example.com': 1,
     }, 'OTP emails should log direct delivery for login and signup flows');
+    const forgotPasswordOtpLogged = loggedEvents.find(({ event, meta }) => event === 'OTP_EMAIL_DIRECT_SEND' && meta.email === 'forgot-otp@example.com');
+    assert.ok(forgotPasswordOtpLogged, 'Forgot-password OTP direct send should be logged');
+    assert.match(forgotPasswordOtpLogged.meta.subject, /password reset otp/i);
+    assert.doesNotMatch(JSON.stringify(forgotPasswordOtpLogged.meta), /(987654|reset-token|secret)/i);
     assert.deepStrictEqual(
       loggedEvents.filter(({ event }) => event === 'AUTH_EMAIL_DIRECT_SEND').map(({ meta }) => meta.subject),
       [
