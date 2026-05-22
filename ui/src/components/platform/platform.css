@@ -1771,6 +1771,12 @@ select:focus-visible {
   gap: 12px;
 }
 
+.notification-history__bulk-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
 .notification-history__list {
   list-style: none;
   margin: 0;
