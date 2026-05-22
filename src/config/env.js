@@ -94,6 +94,8 @@ const envSchema = z
     MAIL_FROM: z.string().trim().optional(),
     SMTP_FROM: z.string().trim().optional(),
     SMTP_PASS: z.string().trim().optional(),
+    TURNSTILE_ENABLED: boolFromEnv,
+    TURNSTILE_SECRET_KEY: z.string().trim().optional(),
 
     ENABLE_AI_ANALYSIS: boolFromEnv,
     AI_PROVIDER: z.string().trim().optional(),
@@ -167,6 +169,9 @@ const envSchema = z
       }
       if (env.SMTP_FROM && !env.SMTP_PASS) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['SMTP_PASS'], message: 'required when SMTP_FROM is configured in production' });
+      }
+      if (env.TURNSTILE_ENABLED === true && !env.TURNSTILE_SECRET_KEY) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['TURNSTILE_SECRET_KEY'], message: 'required when TURNSTILE_ENABLED=true in production' });
       }
 
 

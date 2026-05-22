@@ -7,6 +7,13 @@
 - Clarified policy/trust docs to distinguish implemented behavior, legacy exceptions, and planned migrations (no overclaims).
 # What's New
 
+## 2026-05-22 — Added Cloudflare Turnstile on signup init
+
+- Added optional Cloudflare Turnstile challenge support for workspace signup init (`/api/auth/signup/init`) to reduce automated spam signups.
+- Kept Turnstile scope strict to signup init only; login, forgot-password, OTP verification, and signup OTP resend/verify flows are unchanged.
+- Added backend env/config validation and Siteverify enforcement when `TURNSTILE_ENABLED=true`.
+- Kept local/dev usability intact when Turnstile is not configured.
+
 ## 2026-05-22 — Added due-date docket notifications
 
 - Added due soon and overdue notification types for active dockets
@@ -1021,4 +1028,3 @@
 - Kept OTP-specific `otpVerifyLimiter` and `otpResendLimiter` on signup verify/resend routes.
 - Enforced production fail-closed behavior for signup limiter if Redis is unavailable.
 - Added regression tests for limiter wiring, threshold behavior, and production fail-closed safety.
-
