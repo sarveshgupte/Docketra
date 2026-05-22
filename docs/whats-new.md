@@ -7,6 +7,19 @@
 - Clarified policy/trust docs to distinguish implemented behavior, legacy exceptions, and planned migrations (no overclaims).
 # What's New
 
+## 2026-05-22 — Added privacy-safe signup security audit events
+
+- Added dedicated signup abuse/security audit events across signup init, Turnstile validation, OTP verification, signup completion, and signup rate-limiting.
+- Added safe metadata-only observability (request id, route/method, IP range, hashed normalized identifiers where needed).
+- Explicitly excluded raw email, phone, OTP, password, Turnstile token, preAuthToken, and full request payload values from signup audit events.
+- Preserved existing signup/login behavior and kept Turnstile scope limited to signup init.
+
+## 2026-05-22 — Added Cloudflare Turnstile on signup init
+
+- Added optional Cloudflare Turnstile challenge support for workspace signup init (`/api/auth/signup/init`) to reduce automated spam signups.
+- Kept Turnstile scope strict to signup init only; login, forgot-password, OTP verification, and signup OTP resend/verify flows are unchanged.
+- Added backend env/config validation and Siteverify enforcement when `TURNSTILE_ENABLED=true`.
+- Kept local/dev usability intact when Turnstile is not configured.
 ## 2026-05-22 — Improved notification read management
 
 - Added mark-all-read support for notification history
