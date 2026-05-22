@@ -39,6 +39,27 @@ const { applySupportHeadersToContext } = require('../src/middleware/supportHeade
     assert.equal(req.context.impersonatedFirmId, undefined);
   }
 
+
+  {
+    const req = { method: 'GET', headers: { 'x-impersonated-firm-id': 'f' }, context: {}, isSuperAdmin: true };
+    applySupportHeadersToContext(req);
+    assert.equal(req.context.impersonationDenied, true);
+    assert.equal(req.context.impersonationDeniedReason, 'missing_required_headers');
+  }
+
+  {
+    const req = { method: 'GET', headers: { 'x-impersonated-firm-id': 'f', 'x-impersonation-session-id': 's', 'x-impersonation-mode': 'BAD' }, context: {}, isSuperAdmin: true };
+    applySupportHeadersToContext(req);
+    assert.equal(req.context.impersonationDenied, true);
+    assert.equal(req.context.impersonationDeniedReason, 'invalid_impersonation_mode');
+  }
+
+  {
+    const req = { method: 'PATCH', headers: { 'x-impersonated-firm-id': 'f', 'x-impersonation-session-id': 's', 'x-impersonation-mode': 'READ_ONLY' }, context: {}, isSuperAdmin: true };
+    applySupportHeadersToContext(req);
+    assert.equal(req.context.impersonationDenied, true);
+    assert.equal(req.context.impersonationDeniedReason, 'read_only_mutation_blocked');
+  }
   {
     const app = express();
     app.get('/api/auth/debug-cookie-state', (req, res, next) => {

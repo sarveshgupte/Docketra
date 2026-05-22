@@ -75,6 +75,20 @@ const isRefreshRequest = (requestConfig) => /\/auth\/refresh$/.test(String(reque
 const isLoginLikePath = (pathname) => isPublicAuthPagePath(pathname) || pathname.includes('/auth/login');
 
 
+const isImpersonationSuppressedRoute = (requestUrl) => {
+  const url = String(requestUrl || '').toLowerCase();
+  if (!url) return true;
+  return url.startsWith('/superadmin')
+    || url.startsWith('/api/superadmin')
+    || url.startsWith('/auth')
+    || url.startsWith('/api/auth')
+    || /\/login(\/|$)/.test(url)
+    || /\/logout(\/|$)/.test(url)
+    || /\/refresh(\/|$)/.test(url)
+    || url.startsWith('/public')
+    || url.startsWith('/health');
+};
+
 function generateIdempotencyKey() {
   return generateUUID();
 }
@@ -127,9 +141,9 @@ api.interceptors.request.use(
 
     // Add impersonation header if SuperAdmin is impersonating a firm
     const requestUrl = String(config?.url || '');
-    const isSuperadminApiRequest = requestUrl.startsWith('/superadmin');
+    const suppressImpersonationHeaders = isImpersonationSuppressedRoute(requestUrl);
     const impersonatedFirm = localStorage.getItem(STORAGE_KEYS.IMPERSONATED_FIRM);
-    if (impersonatedFirm && !isSuperadminApiRequest) {
+    if (impersonatedFirm && !suppressImpersonationHeaders) {
       try {
         const firmData = JSON.parse(impersonatedFirm);
         if (firmData?.impersonatedFirmId) {
@@ -243,6 +257,7 @@ api.interceptors.response.use(
     const clearAuthStorage = () => {
       const currentPath = String(window.location.pathname || '');
       const inSuperadminNamespace = currentPath.startsWith('/app/superadmin') || currentPath.startsWith('/superadmin');
+      localStorage.removeItem(STORAGE_KEYS.IMPERSONATED_FIRM);
       if (inSuperadminNamespace) {
         clearSuperadminRoutingHints(localStorage);
       }
