@@ -6,6 +6,7 @@ const { looksEncrypted } = require('../security/encryption.utils');
 const { normalizeLifecycle } = require('../domain/docketLifecycle');
 const log = require('../utils/log');
 const { getCanonicalDocketState } = require('../utils/docketStateMapper');
+const { assertNoProhibitedMongoBusinessContent } = require('../services/mongoWriteResidencyGuard.service');
 /**
  * ⚠️ SECURITY: Case Repository - Firm-Scoped Data Access Layer ⚠️
  * 
@@ -503,6 +504,7 @@ const CaseRepository = {
       return null;
     }
     
+    assertNoProhibitedMongoBusinessContent(update, { context: 'CaseRepository.updateByInternalId' });
     return Case.updateOne({ firmId, caseInternalId: internalId }, update);
   },
 
@@ -519,6 +521,7 @@ const CaseRepository = {
     if (!caseId) {
       return null;
     }
+    assertNoProhibitedMongoBusinessContent(update, { context: 'CaseRepository.updateByCaseId' });
     return Case.updateOne({ firmId, caseId }, update);
   },
 
@@ -585,6 +588,7 @@ const CaseRepository = {
     if (!_id) {
       return null;
     }
+    assertNoProhibitedMongoBusinessContent(update, { context: 'CaseRepository.updateById' });
     return Case.updateOne({ firmId, _id }, update);
   },
 
@@ -696,6 +700,7 @@ const CaseRepository = {
     }
 
     try {
+      assertNoProhibitedMongoBusinessContent(caseData, { context: 'CaseRepository.create' });
       const doc = await Case.create(caseData);
       log.info('[CaseRepository.create] Case created with encrypted description', {
         tenantId,
