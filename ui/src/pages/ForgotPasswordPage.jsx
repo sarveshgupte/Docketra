@@ -38,6 +38,7 @@ export const ForgotPasswordPage = () => {
   const isTurnstileConfigured = Boolean(turnstileSiteKey);
   const turnstileContainerRef = useRef(null);
   const turnstileWidgetIdRef = useRef(null);
+  const turnstileTokenRef = useRef('');
   const [turnstileToken, setTurnstileToken] = useState('');
   const navigate = useNavigate();
   const activeFirmSlug = resolvedFirmSlug || firmSlug || '';
@@ -71,9 +72,19 @@ export const ForgotPasswordPage = () => {
       if (!window.turnstile || !turnstileContainerRef.current || turnstileWidgetIdRef.current) return;
       turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
         sitekey: turnstileSiteKey,
-        callback: (token) => setTurnstileToken(String(token || '')),
-        'expired-callback': () => setTurnstileToken(''),
-        'error-callback': () => setTurnstileToken(''),
+        callback: (token) => {
+          const nextToken = String(token || '');
+          setTurnstileToken(nextToken);
+          turnstileTokenRef.current = nextToken;
+        },
+        'expired-callback': () => {
+          setTurnstileToken('');
+          turnstileTokenRef.current = '';
+        },
+        'error-callback': () => {
+          setTurnstileToken('');
+          turnstileTokenRef.current = '';
+        },
       });
     };
     renderWidget();
@@ -82,6 +93,8 @@ export const ForgotPasswordPage = () => {
   }, [isTurnstileConfigured, step, turnstileSiteKey]);
 
   const getEffectiveTurnstileToken = () => {
+    const refToken = String(turnstileTokenRef.current || '').trim();
+    if (refToken) return refToken;
     const stateToken = String(turnstileToken || '').trim();
     if (stateToken) return stateToken;
     const widgetId = turnstileWidgetIdRef.current;
@@ -108,6 +121,19 @@ export const ForgotPasswordPage = () => {
     }
 
     const effectiveTurnstileToken = isTurnstileConfigured ? getEffectiveTurnstileToken() : '';
+    if (import.meta.env.DEV) {
+      const widgetId = turnstileWidgetIdRef.current;
+      const widgetResponse = widgetId != null && window.turnstile?.getResponse
+        ? String(window.turnstile.getResponse(widgetId) || '').trim()
+        : '';
+      // eslint-disable-next-line no-console
+      console.debug('[ForgotPassword] Turnstile token availability', {
+        isTurnstileConfigured,
+        hasTurnstileRefToken: Boolean(String(turnstileTokenRef.current || '').trim()),
+        hasTurnstileStateToken: Boolean(String(turnstileToken || '').trim()),
+        hasTurnstileWidgetResponse: Boolean(widgetResponse),
+      });
+    }
     if (isTurnstileConfigured && !effectiveTurnstileToken) {
       setError('Please complete Turnstile verification before continuing.');
       return;
@@ -134,6 +160,7 @@ export const ForgotPasswordPage = () => {
           window.turnstile.reset(turnstileWidgetIdRef.current);
         }
         setTurnstileToken('');
+        turnstileTokenRef.current = '';
       }
     } finally {
       setLoading(false);
