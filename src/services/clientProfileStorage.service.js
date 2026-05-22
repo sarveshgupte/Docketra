@@ -121,8 +121,9 @@ function redactSensitiveFields(clientDoc) {
 }
 
 async function uploadProfileToGoogle(provider, payload, { firmId, clientId }) {
-  const rootId = await provider.getOrCreateFolder(null, 'Docketra');
-  const firmFolder = await provider.getOrCreateFolder(rootId, String(firmId));
+  const storageRoot = provider.rootFolderId || null;
+  const firmsFolder = await provider.getOrCreateFolder(storageRoot, 'firms');
+  const firmFolder = await provider.getOrCreateFolder(firmsFolder, String(firmId));
   const clientsFolder = await provider.getOrCreateFolder(firmFolder, 'clients');
   const clientFolder = await provider.getOrCreateFolder(clientsFolder, String(clientId));
   const body = JSON.stringify(payload);
@@ -189,8 +190,9 @@ class ClientProfileStorageService {
     const body = JSON.stringify(payload);
     const ref = backend.type === 'firm_connected'
       ? await (async () => {
-          const rootId = await backend.provider.getOrCreateFolder(null, 'Docketra');
-          const firmFolder = await backend.provider.getOrCreateFolder(rootId, String(firmId));
+          const storageRoot = backend.provider.rootFolderId || null;
+          const firmsFolder = await backend.provider.getOrCreateFolder(storageRoot, 'firms');
+          const firmFolder = await backend.provider.getOrCreateFolder(firmsFolder, String(firmId));
           const clientsFolder = await backend.provider.getOrCreateFolder(firmFolder, 'clients');
           const clientFolder = await backend.provider.getOrCreateFolder(clientsFolder, String(client.clientId));
           const cfsFolder = await backend.provider.getOrCreateFolder(clientFolder, 'cfs');
