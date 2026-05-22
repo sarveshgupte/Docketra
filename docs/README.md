@@ -25,6 +25,7 @@ For doc contribution standards, see [documentation-guidelines.md](documentation-
 | Document | Purpose |
 |----------|---------|
 | [testing/local-testing.md](testing/local-testing.md) | How to run backend and frontend test suites locally |
+| [testing/pilot-auth-routing-smoke.md](testing/pilot-auth-routing-smoke.md) | Pilot auth/routing smoke coverage contract |
 | [operations/ci-release-gates.md](operations/ci-release-gates.md) | CI release gate checks |
 | [operations/release-gate.md](operations/release-gate.md) | Release gate detail |
 
