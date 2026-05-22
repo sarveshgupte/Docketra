@@ -2,6 +2,7 @@ const log = require('../utils/log');
 const { normalizeWorkMode } = require('../utils/workType');
 const { isClientActive } = require('../utils/clientStatus');
 const { calculateDeadlineFromRule } = require('../domain/deadlines/calculateDeadlineFromRule');
+const docketNarrativeStorage = require('./docketNarrativeStorage.service');
 
 module.exports = (deps) => {
   const {
@@ -764,6 +765,34 @@ module.exports = (deps) => {
         step('before case create');
         await newCase.saveWithRetry({ session });
         step('after case create');
+
+        const narrativePayload = {
+          schemaVersion: 1,
+          firmId: String(firmId),
+          docketId: String(newCase.caseId || newCase.caseNumber),
+          updatedAt: new Date().toISOString(),
+          updatedBy: createdByXID || 'SYSTEM',
+          narrativeVersion: Number(newCase?.docketRef?.version || 0) + 1,
+          narrative: {
+            description: normalizedDescription,
+            clientSnapshot: newCase.clientSnapshot || null,
+            sopSnapshot: newCase.sopSnapshot || null,
+            checklist: newCase.checklist || [],
+          },
+        };
+        const narrativeRef = await docketNarrativeStorage.uploadNarrative({ firmId, docketId: narrativePayload.docketId, payload: narrativePayload });
+        newCase.docketRef = {
+          provider: narrativeRef.provider,
+          mode: narrativeRef.mode,
+          fileId: narrativeRef.fileId,
+          objectKey: narrativeRef.objectKey,
+          checksum: narrativeRef.checksum,
+          version: narrativePayload.narrativeVersion,
+          updatedAt: new Date(),
+          updatedBy: createdByXID || 'SYSTEM',
+        };
+        newCase.docketStorageMode = 'cloud_first';
+        await newCase.save({ session });
 
         step('before counter increment');
         await incrementTenantMetric(firmId, 'cases', 1, { session });

@@ -944,6 +944,22 @@ const caseSchema = new mongoose.Schema({
    *   clientId: "C123457"
    * }
    */
+
+  docketRef: {
+    provider: { type: String, trim: true, default: null },
+    mode: { type: String, enum: ['firm_connected', 'managed_fallback'], default: null },
+    fileId: { type: String, trim: true, default: null },
+    objectKey: { type: String, trim: true, default: null },
+    checksum: { type: String, trim: true, default: null },
+    version: { type: Number, default: 0 },
+    updatedAt: { type: Date, default: null },
+    updatedBy: { type: String, trim: true, default: null },
+  },
+  docketStorageMode: {
+    type: String,
+    enum: ['cloud_first', 'legacy_mongo'],
+    default: 'legacy_mongo',
+  },
   payload: {
     type: mongoose.Schema.Types.Mixed,
     default: null,
