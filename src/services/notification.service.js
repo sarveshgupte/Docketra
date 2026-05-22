@@ -18,8 +18,7 @@ async function resolveRecipientXid(payload = {}, firmId = '') {
   const recipient = await User.findOne({
     _id: recipientUserId,
     firmId,
-    status: { $ne: 'deleted' },
-    isActive: true,
+    status: { $ne: 'deleted' }
   }).select('xID').lean();
 
   return String(recipient?.xID || '').toUpperCase().trim();
@@ -79,8 +78,7 @@ async function createNotification(payload) {
     const recipient = await User.findOne({
       xID: normalized.userId,
       firmId: normalized.firmId,
-      status: { $ne: 'deleted' },
-      isActive: true,
+      status: { $ne: 'deleted' }
     }).select('xID').lean();
     if (!recipient) return null;
   let deliveryChannels = { inApp: true, email: Boolean(payload?.emailEnabled) };
