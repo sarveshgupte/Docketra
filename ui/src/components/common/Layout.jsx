@@ -656,6 +656,7 @@ export const Layout = ({ children, title, subtitle }) => {
       </a>
       {/* Sidebar */}
       <aside
+        id="enterprise-sidebar"
         className={[
           'enterprise-sidebar',
           sidebarCollapsed ? 'enterprise-sidebar--collapsed' : '',
@@ -774,6 +775,7 @@ export const Layout = ({ children, title, subtitle }) => {
             onClick={handleSidebarToggle}
             aria-label={isMobileViewport ? 'Toggle sidebar' : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
             aria-expanded={isMobileViewport ? mobileSidebarOpen : !sidebarCollapsed}
+            aria-controls="enterprise-sidebar"
           >
             <IconMenu />
           </button>
@@ -831,13 +833,14 @@ export const Layout = ({ children, title, subtitle }) => {
                 title={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
                 aria-expanded={notificationOpen}
                 aria-haspopup="menu"
+                aria-controls="notification-menu"
                 onClick={() => setNotificationOpen((v) => !v)}
               >
                 <IconBell />
                 {unreadCount > 0 ? <span className="enterprise-header__notif-dot" aria-hidden="true">{unreadCount}</span> : null}
               </button>
               {notificationOpen ? (
-                <div className="dropdown-menu dropdown-menu-right enterprise-header__notification-menu" role="menu">
+                <div id="notification-menu" className="dropdown-menu dropdown-menu-right enterprise-header__notification-menu" role="menu">
                   <div className="enterprise-header__notification-header">
                     <span>Notifications</span>
                     <span className="enterprise-header__notification-count">{unreadCount} unread</span>
@@ -927,13 +930,14 @@ export const Layout = ({ children, title, subtitle }) => {
                 aria-expanded={profileDropdownOpen}
                 aria-haspopup="true"
                 aria-label="User profile menu"
+                aria-controls="profile-menu"
               >
                 <div className="enterprise-header__user-avatar" aria-hidden="true">{getUserInitials()}</div>
                 <span className="enterprise-header__user-name">{user?.name || user?.xID}</span>
                 <IconChevronDown />
               </button>
               {profileDropdownOpen && (
-                <div className="dropdown-menu dropdown-menu-right" role="menu">
+                <div id="profile-menu" className="dropdown-menu dropdown-menu-right" role="menu">
                   <Link
                     to={ROUTES.PROFILE(currentFirmSlug)}
                     className="dropdown-item"
