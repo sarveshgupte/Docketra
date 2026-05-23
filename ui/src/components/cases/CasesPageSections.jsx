@@ -64,7 +64,7 @@ export const CasesSlaSummaryBar = ({ isPartner, slaSummary, setStatusFilter, set
 export const CasesSavedViews = ({ savedViews, savedViewsOpen, setSavedViewsOpen, handleLoadSavedView, removeView, saveViewName, setSaveViewName, handleSaveCurrentView }) => (
   <div className="cases-page__saved-views">
     <div className="cases-page__saved-views-row">
-      <button type="button" className="cases-page__saved-views-toggle" onClick={() => setSavedViewsOpen((v) => !v)} aria-expanded={savedViewsOpen} aria-controls="saved-views-form">
+      <button type="button" className="cases-page__saved-views-toggle" onClick={() => setSavedViewsOpen((v) => !v)} aria-expanded={savedViewsOpen}>
         ⭐ Saved Views {savedViews.length > 0 && `(${savedViews.length})`}
       </button>
       {savedViews.map((sv) => (
@@ -79,7 +79,7 @@ export const CasesSavedViews = ({ savedViews, savedViewsOpen, setSavedViewsOpen,
       ))}
     </div>
     {savedViewsOpen && (
-      <div id="saved-views-form" className="cases-page__saved-views-form">
+      <div className="cases-page__saved-views-form">
         <input
           type="text"
           className="cases-page__saved-views-input"
