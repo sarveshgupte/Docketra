@@ -186,8 +186,11 @@ async function moveDocket(req, res) {
       destinationPolicyContext = { ...destinationPolicyContext, teamId: String(destinationTeam._id), team: destinationTeam };
     }
 
-    const managerOwnedTeams = await Team.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('_id').lean();
-    const managedUsers = await User.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('xID').lean();
+    // ⚡ Bolt: Fetch manager permissions concurrently to eliminate sequential waits and reduce endpoint latency
+    const [managerOwnedTeams, managedUsers] = await Promise.all([
+      Team.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('_id').lean(),
+      User.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('xID').lean(),
+    ]);
     const managerScope = {
       permittedTeamIds: [...new Set([
         ...(Array.isArray(req.user?.teamIds) ? req.user.teamIds : []).map((id) => String(id)),
