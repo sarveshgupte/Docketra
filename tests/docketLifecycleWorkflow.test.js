@@ -51,6 +51,8 @@ async function testAutoActivationOnOpen() {
   const originalFindOne = Case.findOne;
   const originalNotificationFindOne = Notification.findOne;
   const originalCreate = Notification.create;
+  const User = require('../src/models/User.model');
+  const originalUserFindOne = User.findOne;
   let saved = false;
   let notificationStored = false;
 
@@ -61,6 +63,12 @@ async function testAutoActivationOnOpen() {
       status: 'ASSIGNED',
       assignedToXID: 'X100',
       save: async () => { saved = true; },
+    });
+
+    User.findOne = () => ({
+      select: () => ({
+        lean: async () => ({ xID: 'X100' }),
+      }),
     });
 
     Notification.findOne = () => ({
@@ -85,15 +93,24 @@ async function testAutoActivationOnOpen() {
     Case.findOne = originalFindOne;
     Notification.findOne = originalNotificationFindOne;
     Notification.create = originalCreate;
+    User.findOne = originalUserFindOne;
   }
 }
 
 async function testNotificationCreation() {
   const originalFindOne = Notification.findOne;
   const originalCreate = Notification.create;
+  const User = require('../src/models/User.model');
+  const originalUserFindOne = User.findOne;
   let captured = null;
 
   try {
+    User.findOne = () => ({
+      select: () => ({
+        lean: async () => ({ xID: 'X100' }),
+      }),
+    });
+
     Notification.findOne = () => ({
       sort: async () => null,
     });
