@@ -5,6 +5,7 @@ const { buildWorkflowMeta, logWorkflowEvent } = require('../utils/workflowDiagno
 const { applyWorkModeFilter, normalizeWorkMode } = require('../utils/workType');
 const { serializeDocketDetailDto } = require('../serializers/docketDetail.serializer');
 const docketNarrativeStorage = require('./docketNarrativeStorage.service');
+const commentHistoryNarrativeStorage = require('./commentHistoryNarrativeStorage.service');
 const CASE_LIST_PROJECTION = 'caseId caseNumber caseName title status category subcategory caseSubCategory priority clientId clientName assignedTo assignedToXID assignedToName employeeXID employeeSnapshot createdBy createdByXID createdAt updatedAt dueDate slaDueAt isInternal workType lifecycle state pendingUntil ownerTeamId routedToTeamId';
 module.exports = (deps) => {
   const {
@@ -196,6 +197,8 @@ module.exports = (deps) => {
             createdByXID: 1,
             createdByName: 1,
             createdAt: 1,
+            commentRef: 1,
+            storageMode: 1,
           },
         }),
         Attachment.find(enforceTenantScope({ caseId: scopedCaseId }, req, { source: 'case.getCase.attachments' }))
@@ -216,6 +219,8 @@ module.exports = (deps) => {
             timestamp: 1,
             performedBy: 1,
             performedByXID: 1,
+            historyRef: 1,
+            storageMode: 1,
           },
         }),
         runPaginatedFacet({
@@ -230,6 +235,8 @@ module.exports = (deps) => {
             description: 1,
             timestamp: 1,
             performedByXID: 1,
+            historyRef: 1,
+            storageMode: 1,
             metadata: 1,
           },
         }),
@@ -246,16 +253,35 @@ module.exports = (deps) => {
       const commentsPayload = commentsResult.status === 'fulfilled' ? commentsResult.value : { rows: [], hasMore: false, totalCount: 0 };
       const historyPayload = historyResult.status === 'fulfilled' ? historyResult.value : { rows: [], hasMore: false, totalCount: 0 };
       const auditPayload = auditResult.status === 'fulfilled' ? auditResult.value : { rows: [], hasMore: false, totalCount: 0 };
-      const comments = (commentsPayload.rows || []).map((comment) => ({
-        ...comment,
-        text: sanitizeOutput(comment.text),
-        note: comment.note ? sanitizeOutput(comment.note) : comment.note,
+      const comments = await Promise.all((commentsPayload.rows || []).map(async (comment) => {
+        const mapped = { ...comment, text: sanitizeOutput(comment.text), note: comment.note ? sanitizeOutput(comment.note) : comment.note };
+        if (comment.commentRef?.provider) {
+          try {
+            const hydrated = await commentHistoryNarrativeStorage.readJsonByRef({ firmId: scopedFirmId, ref: comment.commentRef });
+            mapped.text = sanitizeOutput(hydrated?.text || mapped.text);
+            mapped.note = hydrated?.note ? sanitizeOutput(hydrated.note) : mapped.note;
+          } catch (_err) {
+            mapped.commentWarning = 'comment_content_unavailable';
+          }
+        }
+        return mapped;
       }));
       const attachments = (attachmentsResult.status === 'fulfilled' ? attachmentsResult.value : []).map((attachment) => ({
         ...attachment,
         description: attachment.description ? sanitizeOutput(attachment.description) : attachment.description,
       }));
-      const history = historyPayload.rows || [];
+      const history = await Promise.all((historyPayload.rows || []).map(async (entry) => {
+        const mapped = { ...entry };
+        if (entry.historyRef?.provider) {
+          try {
+            const hydrated = await commentHistoryNarrativeStorage.readJsonByRef({ firmId: scopedFirmId, ref: entry.historyRef });
+            if (hydrated?.description) mapped.description = hydrated.description;
+          } catch (_err) {
+            mapped.historyWarning = 'history_content_unavailable';
+          }
+        }
+        return mapped;
+      }));
       let auditLog = auditPayload.rows || [];
       if (auditLog.length > 0) {
         const auditXids = [...new Set(auditLog.map((entry) => entry.performedByXID).filter(Boolean))];

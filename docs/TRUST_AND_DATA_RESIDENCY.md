@@ -56,3 +56,5 @@ Primary Admins now get explicit storage root health status in Storage Settings a
 - Google Drive BYOS root binding is immutable by default: reconnect/refresh reuses existing bound rootFolderId and enters recovery-required state (not silent reprovision) when identity checks fail.
 
 - Task narrative BYOS update (2026-05-24): canonical task narrative payload now written to cloud JSON and hydrated on reads via `taskRef`; on cloud-read failure API returns safe `task_content_unavailable` warning. Transitional: legacy Mongo description compatibility remains.
+
+- Comments and docket history descriptions now follow cloud-first canonical storage with strict firm-owned enforcement; legacy Mongo narrative columns are transitional read fallback only for records without refs.
