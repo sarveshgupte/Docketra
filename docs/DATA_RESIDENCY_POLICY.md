@@ -1,7 +1,7 @@
 # Docketra Data Residency Policy (Control Plane Only)
 
 ## Policy Statement
-Docketra is a **control plane only** platform. Firm business and operational content must be stored in firm-owned cloud storage (BYOS-first, Google Drive preferred). MongoDB is restricted to minimum metadata required for identity, auth, routing, permissions, storage configuration, and technical operations.
+Docketra is a control-plane-first platform with a cloud-first transition in progress. Canonical new writes are cloud-first for selected domains, with legacy Mongo compatibility retained during transition. MongoDB is restricted to minimum metadata required for identity, auth, routing, permissions, storage configuration, and technical operations.
 
 ## Allowed Data in MongoDB
 1. Workspace/control metadata (firm/workspace IDs, slug, display name, status, billing/plan flags, timestamps).
@@ -70,3 +70,17 @@ Client business/profile fields are no longer canonical in MongoDB. Client docume
 - Added Task cloud-first narrative policy: task business narrative is persisted in BYOS/managed cloud JSON (`firms/{firmId}/tasks/{taskId}/task.json`) with `taskRef` metadata in Mongo; transition phase keeps legacy description compatibility until runtime write removal.
 
 - Comments/history are now cloud-first canonical narratives using `commentRef`/`historyRef` pointers; Mongo text fields remain transitional compatibility fields until hard cutover.
+
+
+## Current cloud-first transition status (2026-05-24)
+
+| Area | Cloud-first canonical write | Cloud read hydration | Mongo legacy fields retained | Strict mode enforced | Next action |
+|---|---|---|---|---|---|
+| Client profile | Yes | Yes | Yes (transitional compatibility) | Yes | Complete runtime write-removal of legacy business fields. |
+| CFS | Yes | Yes | Yes (transitional compatibility) | Yes | Retire remaining legacy compatibility reads after cutover. |
+| Docket narrative | Yes | Yes | Yes (legacy fallback when refs absent) | Yes | Backfill refs for older records and remove narrative fallback columns. |
+| Task narrative | Yes | Yes | Yes (transitional compatibility) | Yes | Remove legacy description writes after migration completion. |
+| Comments/history | Yes | Yes | Yes (transitional compatibility) | Yes | Backfill historical refs and remove legacy text/description dependencies. |
+| Attachments | Yes (object/file storage refs) | Yes | Minimal metadata only | Yes | Keep ref-only Mongo posture and continue schema guard enforcement. |
+| SOP/checklist/knowledge | Not fully yet | Partial/legacy | Yes | Partial | Implement cloud-first canonical docs and migration tooling. |
+| Billing/auth/control-plane | Not applicable (control-plane data) | Not applicable | Required canonical control-plane fields | Not applicable | Maintain metadata-minimal schemas and guardrail tests. |

@@ -4,7 +4,7 @@
 
 ## BYOS + Metadata-Minimal Design (April 2026)
 
-Docketra uses MongoDB as a control plane only. Firm business files are kept in firm-owned storage.
+Docketra uses MongoDB as a control plane with an active cloud-first migration. Canonical new writes are cloud-first for selected domains, with legacy Mongo compatibility retained during transition.
 
 ### What MongoDB stores
 - Firm/workspace identifiers and auth metadata.

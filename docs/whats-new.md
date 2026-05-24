@@ -1,5 +1,12 @@
 # What's New
 
+## 2026-05-24 — Data residency docs/status/QA normalization
+
+- Audited and normalized data-residency language across policy, trust, audit, and BYOS setup docs to reflect the transitional cloud-first reality without overclaiming full Mongo business-data elimination.
+- Added a shared current status table covering client profile, CFS, docket/task narrative, comments/history, attachments, SOP/checklist/knowledge, and billing/auth/control-plane.
+- Added live BYOS manual QA checklist: `docs/qa/BYOS_LIVE_QA_CHECKLIST.md`.
+- Added data residency test matrix index for PR validation: `docs/qa/DATA_RESIDENCY_TEST_MATRIX.md`.
+
 ## 2026-05-22 — Added Turnstile protection for forgot-password init
 
 - Added Cloudflare Turnstile gating to `POST /api/auth/forgot-password/init` to reduce automated reset-init abuse.
