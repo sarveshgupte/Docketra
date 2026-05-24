@@ -4,12 +4,13 @@ const StorageProvider = require('./StorageProvider');
 const { StorageAccessError } = require('../errors');
 
 class GoogleDriveProvider extends StorageProvider {
-  constructor({ oauthClient, driveId, driveClient } = {}) {
+  constructor({ oauthClient, driveId, driveClient, rootFolderId } = {}) {
     super();
     this.providerName = 'google-drive';
     this.oauthClient = oauthClient;
     this.driveId = driveId || null;
     this.driveClient = driveClient || null;
+    this.rootFolderId = rootFolderId || null;
   }
 
   async authenticate(credentials = {}) {

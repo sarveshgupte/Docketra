@@ -52,3 +52,5 @@ Primary Admins now get explicit storage root health status in Storage Settings a
 
 - CFS BYOS update (2026-05-22): Client Fact Sheet business content is persisted in BYOS/managed cloud JSON and hydrated on read; strict firm-owned mode blocks writes when BYOS is unavailable.
 - Added Docket cloud-first narrative storage: canonical docket JSON at firms/{firmId}/dockets/{docketId}/docket.json with Mongo retaining control metadata + docketRef/docketStorageMode, legacy Mongo read fallback when no docketRef, and safe warning docket_content_unavailable on cloud-read failure.
+
+- Google Drive BYOS root binding is immutable by default: reconnect/refresh reuses existing bound rootFolderId and enters recovery-required state (not silent reprovision) when identity checks fail.
