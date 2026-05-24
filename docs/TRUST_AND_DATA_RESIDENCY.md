@@ -1,7 +1,7 @@
 # Trust and Data Residency
 
 ## Docketra control-plane-only model
-Docketra operates as a control plane. The platform manages identity, routing, permissions, workflow metadata, and operational diagnostics. Core firm business documents should remain in firm-controlled storage via the active storage provider.
+Docketra operates as a control plane with a cloud-first migration in progress. Canonical new writes are cloud-first for selected domains, with legacy Mongo compatibility retained during transition. The platform manages identity, routing, permissions, workflow metadata, and operational diagnostics.
 
 ## What MongoDB stores
 MongoDB stores control-plane metadata such as:
@@ -58,3 +58,17 @@ Primary Admins now get explicit storage root health status in Storage Settings a
 - Task narrative BYOS update (2026-05-24): canonical task narrative payload now written to cloud JSON and hydrated on reads via `taskRef`; on cloud-read failure API returns safe `task_content_unavailable` warning. Transitional: legacy Mongo description compatibility remains.
 
 - Comments and docket history descriptions now follow cloud-first canonical storage with strict firm-owned enforcement; legacy Mongo narrative columns are transitional read fallback only for records without refs.
+
+
+## Current status table (2026-05-24)
+
+| Area | Cloud-first canonical write | Cloud read hydration | Mongo legacy fields retained | Strict mode enforced | Next action |
+|---|---|---|---|---|---|
+| Client profile | Yes | Yes | Yes (transitional compatibility) | Yes | Remove remaining legacy business-profile compatibility writes. |
+| CFS | Yes | Yes | Yes (transitional compatibility) | Yes | Complete compatibility read retirement after migration window. |
+| Docket narrative | Yes | Yes | Yes (legacy fallback for no-ref records) | Yes | Backfill cloud refs and remove fallback narrative dependence. |
+| Task narrative | Yes | Yes | Yes (transitional compatibility) | Yes | Remove transitional Mongo description compatibility path. |
+| Comments/history | Yes | Yes | Yes (transitional compatibility) | Yes | Finish history/comment ref backfill and remove legacy text reliance. |
+| Attachments | Yes (cloud object refs) | Yes | Minimal metadata only | Yes | Continue ref-only metadata posture and regression coverage. |
+| SOP/checklist/knowledge | Not fully yet | Partial/legacy | Yes | Partial | Implement canonical cloud-first write paths and migration. |
+| Billing/auth/control-plane | Not applicable | Not applicable | Required canonical control-plane fields | Not applicable | Keep strict metadata-only model and audit guardrails. |
