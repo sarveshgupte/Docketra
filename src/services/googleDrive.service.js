@@ -305,6 +305,10 @@ class GoogleDriveService {
     }
   }
 
+  buildCanonicalFirmFolderName(firm) {
+    return this.buildCanonicalRootName(firm);
+  }
+
   async saveUserDriveConnection({ firmId, tokens }) {
     const oauthClient = this.getOAuthClient();
     oauthClient.setCredentials(tokens);
@@ -313,6 +317,8 @@ class GoogleDriveService {
     const firm = await Firm.findById(firmId).select('_id slug firmSlug storage storageConfig').lean();
     const decoded = this.decodeStorageCredentials(firm);
     let firmFolderId = decoded.rootFolderId || firm?.storage?.google?.rootFolderId || null;
+    let verifiedFolderName = null;
+    let connectedAt = decoded.connectedAt || null;
     if (firmFolderId) {
       const existing = await this.validateRootFolder({ drive, firm, rootFolderId: firmFolderId });
       if (!existing.valid) {
@@ -321,14 +327,17 @@ class GoogleDriveService {
         error.status = 409;
         throw error;
       }
+      verifiedFolderName = existing.folderName || null;
     } else {
       firmFolderId = await this.createFolder(this.buildCanonicalRootName(firm), null, drive);
+      connectedAt = new Date().toISOString();
+      await this.upsertRootManifest({
+        drive,
+        rootFolderId: firmFolderId,
+        manifest: this.buildRootManifest({ firm, rootFolderId: firmFolderId, createdAt: connectedAt }),
+      });
+      verifiedFolderName = this.buildCanonicalRootName(firm);
     }
-    await this.upsertRootManifest({
-      drive,
-      rootFolderId: firmFolderId,
-      manifest: this.buildRootManifest({ firm, rootFolderId: firmFolderId, createdAt: decoded.createdAt || null }),
-    });
     const about = await drive.about.get({ fields: 'user(emailAddress)' });
     const connectedEmail = about?.data?.user?.emailAddress || null;
 
@@ -337,6 +346,9 @@ class GoogleDriveService {
       expiryDate: tokens.expiry_date || null,
       rootFolderId: firmFolderId,
       connectedEmail,
+      rootFolderName: verifiedFolderName,
+      connectedAt,
+      lastVerifiedAt: new Date().toISOString(),
       status: 'ACTIVE',
       lastError: null,
       lastCheckedAt: new Date().toISOString(),

@@ -1082,3 +1082,11 @@
 - Added Docket cloud-first narrative storage: canonical docket JSON at firms/{firmId}/dockets/{docketId}/docket.json with Mongo retaining control metadata + docketRef/docketStorageMode, legacy Mongo read fallback when no docketRef, and safe warning docket_content_unavailable on cloud-read failure.
 
 - 2026-05-22: Corrected forgot-password OTP email copy so reset OTPs are no longer labeled as login OTPs.
+
+## 2026-05-24 — Hardened Google Drive BYOS root binding and reconnect safety
+
+- Enforced one-firm/one-root behavior for Google Drive BYOS by reusing the previously bound `rootFolderId` on reconnect.
+- Prevented silent root recreation during reconnect/refresh/health checks when a root is already bound.
+- Added recovery-required behavior for missing root, missing manifest, or manifest mismatch (no silent auto-repair).
+- Preserved rename safety by validating folder identity via folder ID + manifest rather than folder name.
+- Kept provider-internal root IDs out of API success responses that are consumed by frontend flows.
