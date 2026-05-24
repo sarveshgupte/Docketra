@@ -1090,3 +1090,5 @@
 - Added recovery-required behavior for missing root, missing manifest, or manifest mismatch (no silent auto-repair).
 - Preserved rename safety by validating folder identity via folder ID + manifest rather than folder name.
 - Kept provider-internal root IDs out of API success responses that are consumed by frontend flows.
+
+- 2026-05-24: Added cloud-first Task narrative storage with canonical JSON path `firms/{firmId}/tasks/{taskId}/task.json`, strict BYOS enforcement compatibility, and read-time hydration with `task_content_unavailable` warning fallback. Transitional mode currently preserves legacy Mongo description compatibility.

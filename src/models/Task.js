@@ -86,6 +86,21 @@ const taskSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  taskRef: {
+    provider: { type: String, trim: true },
+    mode: { type: String, enum: ['firm_connected', 'managed_fallback'] },
+    fileId: { type: String, trim: true, default: null },
+    objectKey: { type: String, trim: true, default: null },
+    checksum: { type: String, trim: true },
+    version: { type: Number, min: 1 },
+    updatedAt: { type: Date },
+    updatedBy: { type: String, trim: true },
+  },
+  taskStorageMode: {
+    type: String,
+    enum: ['cloud_first', 'legacy_mongo'],
+    default: 'legacy_mongo',
+  },
   // Audit trail fields
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
