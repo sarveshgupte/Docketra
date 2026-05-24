@@ -48,3 +48,4 @@
 ## 2026-05-21 - Concurrent Document Fetch in Case Create Service Validation
 **Learning:** In the `caseCreate` service, `WorkType.findOne` and `SubWorkType.findOne` were awaited sequentially, which caused endpoint latency, despite being independent of the other model validation queries (like `Deal`, `CrmClient`, etc.).
 **Action:** Prepared the `WorkType` and `SubWorkType` queries as promises and merged them into the existing `Promise.all()` concurrently with the other independent lookups.
+## 2026-05-24 - Optimization of checking existence using exists() instead of findOne()\n**Learning:** When checking if a document exists but the full document properties are not needed, `findOne()` wastes overhead even when chained with `.select('_id')` because of document hydration overhead.\n**Action:** Use `Model.exists()` which returns early on a match and returns a lean object, avoiding full document hydration latency.
