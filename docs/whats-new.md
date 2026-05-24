@@ -1092,3 +1092,5 @@
 - Kept provider-internal root IDs out of API success responses that are consumed by frontend flows.
 
 - 2026-05-24: Added cloud-first Task narrative storage with canonical JSON path `firms/{firmId}/tasks/{taskId}/task.json`, strict BYOS enforcement compatibility, and read-time hydration with `task_content_unavailable` warning fallback. Transitional mode currently preserves legacy Mongo description compatibility.
+
+- Added cloud-first canonical storage for docket comments and history narrative descriptions, with safe hydration warnings (`comment_content_unavailable`, `history_content_unavailable`) and strict firm-owned enforcement.

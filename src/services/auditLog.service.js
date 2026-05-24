@@ -3,6 +3,7 @@ const CaseHistory = require('../models/CaseHistory.model');
 const { logDocketEvent } = require('./docketAudit.service');
 const { CASE_ACTION_TYPES } = require('../config/constants');
 const log = require('../utils/log');
+const commentHistoryNarrativeStorage = require('./commentHistoryNarrativeStorage.service');
 const { sanitizeForAudit, buildSafeFilterFlags } = require('../utils/redaction');
 
 /**
@@ -100,6 +101,14 @@ const logCaseHistory = async ({
       return null; // Don't throw - audit failures shouldn't block operations
     }
     
+    const historyCloudId = String(require('crypto').randomUUID());
+    const historyRef = await commentHistoryNarrativeStorage.uploadHistory({
+      firmId,
+      docketId: caseId,
+      historyId: historyCloudId,
+      payload: { description },
+    });
+
     // Build history entry
     const historyEntry = {
       caseId,
@@ -110,6 +119,17 @@ const logCaseHistory = async ({
       performedBy: performedBy ? performedBy.toLowerCase() : 'SYSTEM',
       performedByXID: performedByXID ? performedByXID.toUpperCase() : 'SYSTEM',
       actorRole: mapActorRole(actorRole),
+      historyRef: {
+        provider: historyRef.provider,
+        mode: historyRef.mode,
+        fileId: historyRef.fileId || null,
+        objectKey: historyRef.objectKey,
+        checksum: historyRef.checksum || null,
+        version: 1,
+        updatedAt: new Date(),
+        updatedBy: performedByXID ? performedByXID.toUpperCase() : (performedBy ? performedBy.toLowerCase() : 'SYSTEM'),
+      },
+      storageMode: 'cloud_first',
       metadata: sanitizeForAudit({
         ...metadata,
         impersonationMode: req?.context?.impersonationMode || null,
@@ -132,7 +152,18 @@ const logCaseHistory = async ({
         event: 'CASE_HISTORY',
         userId: performedByXID || performedBy || 'SYSTEM',
         userRole: mapActorRole(actorRole),
-        metadata: sanitizeForAudit({
+        historyRef: {
+        provider: historyRef.provider,
+        mode: historyRef.mode,
+        fileId: historyRef.fileId || null,
+        objectKey: historyRef.objectKey,
+        checksum: historyRef.checksum || null,
+        version: 1,
+        updatedAt: new Date(),
+        updatedBy: performedByXID ? performedByXID.toUpperCase() : (performedBy ? performedBy.toLowerCase() : 'SYSTEM'),
+      },
+      storageMode: 'cloud_first',
+      metadata: sanitizeForAudit({
           actionType: actionType || null,
           actionLabel: actionLabel || description,
           source: 'auditLog.service.logCaseHistory',
@@ -200,6 +231,17 @@ const logCaseAction = async ({ caseId, firmId, actionType, description, performe
       actionType,
       description,
       performedByXID: performedByXID.toUpperCase(),
+      historyRef: {
+        provider: historyRef.provider,
+        mode: historyRef.mode,
+        fileId: historyRef.fileId || null,
+        objectKey: historyRef.objectKey,
+        checksum: historyRef.checksum || null,
+        version: 1,
+        updatedAt: new Date(),
+        updatedBy: performedByXID ? performedByXID.toUpperCase() : (performedBy ? performedBy.toLowerCase() : 'SYSTEM'),
+      },
+      storageMode: 'cloud_first',
       metadata: sanitizeForAudit({
         ...metadata,
         impersonationMode,
@@ -314,6 +356,17 @@ const logAdminAction = async ({ adminXID, actionType, targetXID, targetFirmId, m
       actionType,
       description,
       performedByXID: adminXID.toUpperCase(),
+      historyRef: {
+        provider: historyRef.provider,
+        mode: historyRef.mode,
+        fileId: historyRef.fileId || null,
+        objectKey: historyRef.objectKey,
+        checksum: historyRef.checksum || null,
+        version: 1,
+        updatedAt: new Date(),
+        updatedBy: performedByXID ? performedByXID.toUpperCase() : (performedBy ? performedBy.toLowerCase() : 'SYSTEM'),
+      },
+      storageMode: 'cloud_first',
       metadata: sanitizeForAudit({
         ...metadata,
         targetXID,

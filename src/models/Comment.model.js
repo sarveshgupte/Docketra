@@ -89,6 +89,22 @@ const commentSchema = new mongoose.Schema({
     immutable: true,
   },
   
+
+  commentRef: {
+    provider: { type: String },
+    mode: { type: String, enum: ['firm_connected', 'managed_fallback'] },
+    fileId: { type: String },
+    objectKey: { type: String },
+    checksum: { type: String },
+    version: { type: Number, default: 1 },
+    updatedAt: { type: Date },
+    updatedBy: { type: String },
+  },
+  storageMode: {
+    type: String,
+    enum: ['cloud_first', 'legacy_mongo'],
+    default: 'legacy_mongo',
+  },
   /**
    * Optional note (e.g., "Cloned from Case ID: DCK-0042")
    */

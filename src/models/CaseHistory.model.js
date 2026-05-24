@@ -78,6 +78,22 @@ const caseHistorySchema = new mongoose.Schema({
     required: [true, 'Description is required'],
   },
   
+
+  historyRef: {
+    provider: { type: String },
+    mode: { type: String, enum: ['firm_connected', 'managed_fallback'] },
+    fileId: { type: String },
+    objectKey: { type: String },
+    checksum: { type: String },
+    version: { type: Number, default: 1 },
+    updatedAt: { type: Date },
+    updatedBy: { type: String },
+  },
+  storageMode: {
+    type: String,
+    enum: ['cloud_first', 'legacy_mongo'],
+    default: 'legacy_mongo',
+  },
   /**
    * xID of user who performed the action
    * 
