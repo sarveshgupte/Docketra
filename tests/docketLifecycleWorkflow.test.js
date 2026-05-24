@@ -8,6 +8,7 @@ const {
 } = require('../src/domain/docketLifecycle');
 const { activateOnOpen } = require('../src/services/docketWorkflow.service');
 const { createNotification, NotificationTypes } = require('../src/domain/notifications');
+const User = require('../src/models/User.model');
 const Case = require('../src/models/Case.model');
 const Notification = require('../src/models/Notification.model');
 
@@ -51,10 +52,16 @@ async function testAutoActivationOnOpen() {
   const originalFindOne = Case.findOne;
   const originalNotificationFindOne = Notification.findOne;
   const originalCreate = Notification.create;
+  const originalUserFindOne = User.findOne;
   let saved = false;
   let notificationStored = false;
 
   try {
+    User.findOne = () => ({
+      select: () => ({
+        lean: async () => ({ xID: 'X100' })
+      })
+    });
     Case.findOne = async () => ({
       caseId: 'CASE-1',
       lifecycle: DocketLifecycle.IN_WORKLIST,
@@ -85,15 +92,22 @@ async function testAutoActivationOnOpen() {
     Case.findOne = originalFindOne;
     Notification.findOne = originalNotificationFindOne;
     Notification.create = originalCreate;
+    User.findOne = originalUserFindOne;
   }
 }
 
 async function testNotificationCreation() {
   const originalFindOne = Notification.findOne;
   const originalCreate = Notification.create;
+  const originalUserFindOne = User.findOne;
   let captured = null;
 
   try {
+    User.findOne = () => ({
+      select: () => ({
+        lean: async () => ({ xID: 'X100' })
+      })
+    });
     Notification.findOne = () => ({
       sort: async () => null,
     });
@@ -126,6 +140,7 @@ async function testNotificationCreation() {
   } finally {
     Notification.findOne = originalFindOne;
     Notification.create = originalCreate;
+    User.findOne = originalUserFindOne;
   }
 }
 
