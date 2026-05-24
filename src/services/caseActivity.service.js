@@ -1,4 +1,5 @@
 const { buildWorkflowMeta, logWorkflowEvent } = require('../utils/workflowDiagnostics');
+const commentHistoryNarrativeStorage = require('./commentHistoryNarrativeStorage.service');
 
 module.exports = (deps) => {
   const {
@@ -124,6 +125,13 @@ module.exports = (deps) => {
       }
       
       // Create comment - use caseId from database (caseNumber for display)
+      const commentRef = await commentHistoryNarrativeStorage.uploadComment({
+        firmId: tenantFirmId,
+        docketId: caseData.caseId,
+        commentId: String(randomUUID()),
+        payload: { text, note: note || null },
+      });
+
       const comment = await Comment.create({
         caseId: caseData.caseId,
         firmId: tenantFirmId,
@@ -132,6 +140,17 @@ module.exports = (deps) => {
         createdByXID: req.user.xID,
         createdByName: req.user.name,
         note,
+        commentRef: {
+          provider: commentRef.provider,
+          mode: commentRef.mode,
+          fileId: commentRef.fileId || null,
+          objectKey: commentRef.objectKey,
+          checksum: commentRef.checksum || null,
+          version: 1,
+          updatedAt: new Date(),
+          updatedBy: req.user.xID,
+        },
+        storageMode: 'cloud_first',
       });
       
       // PR #45: Add CaseAudit entry with xID attribution
