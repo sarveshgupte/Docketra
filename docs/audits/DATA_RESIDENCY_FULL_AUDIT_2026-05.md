@@ -46,3 +46,5 @@ Yes — firm business-content fields still exist in MongoDB today, and they are 
 
 - Update 2026-05-22: CFS is now cloud-first (`firms/{firmId}/clients/{clientId}/cfs/cfs.json`) with Mongo pointer-only metadata and temporary legacy read fallback.
 - Added Docket cloud-first narrative storage: canonical docket JSON at firms/{firmId}/dockets/{docketId}/docket.json with Mongo retaining control metadata + docketRef/docketStorageMode, legacy Mongo read fallback when no docketRef, and safe warning docket_content_unavailable on cloud-read failure.
+
+- Added **Task narrative cloud-first (transitional)**: canonical task JSON at `firms/{firmId}/tasks/{taskId}/task.json`; Mongo retains control metadata and `taskRef`/`taskStorageMode`, with legacy Mongo description compatibility still present during transition.
