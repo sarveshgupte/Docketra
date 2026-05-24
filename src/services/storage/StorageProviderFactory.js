@@ -69,7 +69,7 @@ async function getProviderForTenant(firmId) {
         process.env.GOOGLE_OAUTH_REDIRECT_URI
       );
       oauthClient.setCredentials({ refresh_token: refreshToken });
-      return new GoogleDriveProvider({ oauthClient, driveId: config.credentials.driveId || null });
+      return new GoogleDriveProvider({ oauthClient, driveId: config.credentials.driveId || null, rootFolderId: config.credentials.rootFolderId || null });
     }
     case 'docketra_drive':
     case 'docketra_managed':

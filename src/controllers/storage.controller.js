@@ -435,31 +435,39 @@ const googleConfirmDrive = async (req, res) => {
       return res.status(404).json({ error: 'No active Google storage session found' });
     }
 
-    const firmName = firm?.name || `Firm-${ownershipFirmId}`;
     const refreshToken = existingStorageConfig.refreshToken;
+    const rootFolderId = existingStorageConfig.rootFolderId;
+    if (!rootFolderId) {
+      return res.status(409).json({ error: 'storage_recovery_required', code: 'STORAGE_ROOT_MISSING' });
+    }
 
     const oauthClient = getStorageOAuthClient();
     oauthClient.setCredentials({ refresh_token: refreshToken });
     const provider = new GoogleDriveProvider({ oauthClient, driveId });
-
-    const docketraFolderId = await provider.getOrCreateFolder(null, 'Docketra');
-    const firmFolderId = await provider.getOrCreateFolder(docketraFolderId, firmName);
+    const drive = provider.getClient();
+    const rootHealth = await googleDriveService.validateRootFolder({ drive, firm: { _id: ownershipFirmId }, rootFolderId });
+    if (!rootHealth.valid) {
+      return res.status(409).json({ error: 'storage_recovery_required', code: rootHealth.code || 'STORAGE_ROOT_MISSING' });
+    }
 
     await Firm.findByIdAndUpdate(ownershipFirmId, {
       $set: {
         storageConfig: {
           provider: 'google_drive',
           credentials: encrypt(JSON.stringify({
+            ...existingStorageConfig,
             refreshToken,
             connectedEmail: existingStorageConfig.connectedEmail || null,
             driveId,
-            rootFolderId: firmFolderId,
+            rootFolderId,
+            rootFolderName: rootHealth.folderName || existingStorageConfig.rootFolderName || null,
+            lastVerifiedAt: new Date().toISOString(),
           })),
         },
       },
     });
 
-    return res.json({ success: true, status: 'ACTIVE_BYOS', rootFolderId: firmFolderId });
+    return res.json({ success: true, status: 'ACTIVE_BYOS' });
   } catch (error) {
     const mappedStatus = mapProviderErrorToStatus(error);
     return res.status(500).json({ error: 'confirm_drive_failed', status: mappedStatus });
