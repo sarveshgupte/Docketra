@@ -50,3 +50,18 @@ Yes — firm business-content fields still exist in MongoDB today, and they are 
 - Added **Task narrative cloud-first (transitional)**: canonical task JSON at `firms/{firmId}/tasks/{taskId}/task.json`; Mongo retains control metadata and `taskRef`/`taskStorageMode`, with legacy Mongo description compatibility still present during transition.
 
 - Transitional update (2026-05-24): comment text and case history description writes now store canonical narrative in BYOS/cloud JSON (`firms/{firmId}/dockets/{docketId}/comments/{commentId}.json`, `firms/{firmId}/dockets/{docketId}/history/{historyId}.json`) with Mongo ref metadata + legacy fields retained for compatibility.
+
+
+## Transition status snapshot (2026-05-24)
+Canonical new writes are cloud-first for selected domains, with legacy Mongo compatibility retained during transition. This audit should not be interpreted as “Mongo stores no firm data” yet.
+
+| Area | Cloud-first canonical write | Cloud read hydration | Mongo legacy fields retained | Strict mode enforced | Next action |
+|---|---|---|---|---|---|
+| Client profile | Yes | Yes | Yes | Yes | Remove remaining profile legacy writes/reads after backfill validation. |
+| CFS | Yes | Yes | Yes | Yes | Retire transitional compatibility reads after migration cutover. |
+| Docket narrative | Yes | Yes | Yes | Yes | Complete old-record ref backfill and drop legacy narrative fallback. |
+| Task narrative | Yes | Yes | Yes | Yes | Drop transitional Mongo description compatibility path. |
+| Comments/history | Yes | Yes | Yes | Yes | Finalize cloud ref backfill and retire legacy comment/history text fallback. |
+| Attachments | Yes | Yes | Minimal | Yes | Preserve metadata-only Mongo pattern. |
+| SOP/checklist/knowledge | Not fully | Partial | Yes | Partial | Implement cloud-first canonical storage and migration. |
+| Billing/auth/control-plane | N/A | N/A | Required | N/A | Keep control-plane canonical in Mongo. |
