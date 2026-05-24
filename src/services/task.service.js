@@ -1,4 +1,5 @@
 const TaskRepository = require('../repositories/TaskRepository');
+const taskNarrativeStorage = require('./taskNarrativeStorage.service');
 
 const toInt = (value, fallback) => {
   const parsed = parseInt(value, 10);
@@ -14,32 +15,71 @@ const buildTaskQuery = ({ status, priority, assignedTo, case: caseId }) => {
   return query;
 };
 
+function buildNarrativePayload({ firmId, task, payload, updatedBy }) {
+  return {
+    schemaVersion: 1,
+    firmId: String(firmId),
+    taskId: String(task._id),
+    updatedAt: new Date().toISOString(),
+    updatedBy: updatedBy || 'SYSTEM',
+    narrativeVersion: Number(task?.taskRef?.version || 0) + 1,
+    narrative: {
+      description: payload?.description ?? task?.description ?? '',
+      notes: payload?.notes || '',
+      instructions: payload?.instructions || '',
+      checklist: Array.isArray(payload?.checklist) ? payload.checklist : [],
+      details: payload?.details || null,
+    },
+  };
+}
+
+async function persistTaskNarrative({ firmId, task, payload, updatedBy }) {
+  const narrativePayload = buildNarrativePayload({ firmId, task, payload, updatedBy });
+  const taskRef = await taskNarrativeStorage.uploadNarrative({ firmId, taskId: narrativePayload.taskId, payload: narrativePayload });
+  task.taskRef = {
+    provider: taskRef.provider,
+    mode: taskRef.mode,
+    fileId: taskRef.fileId,
+    objectKey: taskRef.objectKey,
+    checksum: taskRef.checksum,
+    version: narrativePayload.narrativeVersion,
+    updatedAt: new Date(),
+    updatedBy: narrativePayload.updatedBy,
+  };
+  task.taskStorageMode = 'cloud_first';
+}
+
 const getTasks = async (firmId, queryParams = {}) => {
   const page = toInt(queryParams.page, 1);
   const limit = toInt(queryParams.limit, 20);
   const query = buildTaskQuery(queryParams);
-
-  // ⚡ Bolt: Fetch tasks and total count concurrently to reduce database latency
-  const [tasks, total] = await Promise.all([
-    TaskRepository.find(firmId, query, { page, limit }),
-    TaskRepository.count(firmId, query),
-  ]);
-
-  return {
-    tasks,
-    pagination: {
-      page,
-      limit,
-      total,
-      pages: Math.ceil(total / limit),
-    },
-  };
+  const [tasks, total] = await Promise.all([TaskRepository.find(firmId, query, { page, limit }), TaskRepository.count(firmId, query)]);
+  return { tasks, pagination: { page, limit, total, pages: Math.ceil(total / limit) } };
 };
 
-const getTaskById = (firmId, taskId) => TaskRepository.findById(firmId, taskId);
+const getTaskById = async (firmId, taskId) => {
+  const task = await TaskRepository.findById(firmId, taskId);
+  if (!task) return null;
+  if (task?.taskRef?.provider) {
+    try {
+      const hydrated = await taskNarrativeStorage.readNarrative({ firmId, taskRef: task.taskRef });
+      const narrative = hydrated?.narrative || {};
+      if (Object.prototype.hasOwnProperty.call(narrative, 'description')) task.description = narrative.description;
+      if (Object.prototype.hasOwnProperty.call(narrative, 'notes')) task.notes = narrative.notes;
+      if (Object.prototype.hasOwnProperty.call(narrative, 'instructions')) task.instructions = narrative.instructions;
+      if (Object.prototype.hasOwnProperty.call(narrative, 'checklist')) task.checklist = narrative.checklist;
+      task.taskStorageMode = 'cloud_first';
+    } catch (_error) {
+      task.taskWarning = 'task_content_unavailable';
+    }
+  }
+  return task;
+};
 
 const createTask = async (firmId, payload) => {
   const task = await TaskRepository.create(firmId, payload);
+  await persistTaskNarrative({ firmId, task, payload, updatedBy: payload?.updatedBy || payload?.createdBy || 'SYSTEM' });
+  await task.save();
   await task.populate('assignedTo', 'name email');
   return task;
 };
@@ -47,20 +87,7 @@ const createTask = async (firmId, payload) => {
 const updateTask = async (firmId, taskId, payload) => {
   const task = await TaskRepository.findById(firmId, taskId);
   if (!task) return null;
-
-  const {
-    title,
-    description,
-    status,
-    priority,
-    assignedTo,
-    dueDate,
-    estimatedHours,
-    actualHours,
-    tags,
-    updatedBy,
-  } = payload;
-
+  const { title, description, status, priority, assignedTo, dueDate, estimatedHours, actualHours, tags, updatedBy } = payload;
   if (title) task.title = title;
   if (description !== undefined) task.description = description;
   if (status) task.status = status;
@@ -71,28 +98,16 @@ const updateTask = async (firmId, taskId, payload) => {
   if (actualHours !== undefined) task.actualHours = actualHours;
   if (tags) task.tags = tags;
   task.updatedBy = updatedBy;
-
+  await persistTaskNarrative({ firmId, task, payload, updatedBy: updatedBy || 'SYSTEM' });
   await task.save();
   await task.populate('assignedTo', 'name email');
   return task;
 };
 
 const deleteTask = (firmId, taskId, req, reason) => TaskRepository.softDeleteById(firmId, taskId, req, reason);
-
 const getTaskStats = async (firmId) => {
-  const [byStatus, byPriority] = await Promise.all([
-    TaskRepository.aggregateByStatus(firmId),
-    TaskRepository.aggregateByPriority(firmId),
-  ]);
-
+  const [byStatus, byPriority] = await Promise.all([TaskRepository.aggregateByStatus(firmId), TaskRepository.aggregateByPriority(firmId)]);
   return { byStatus, byPriority };
 };
 
-module.exports = {
-  getTasks,
-  getTaskById,
-  createTask,
-  updateTask,
-  deleteTask,
-  getTaskStats,
-};
+module.exports = { getTasks, getTaskById, createTask, updateTask, deleteTask, getTaskStats };
