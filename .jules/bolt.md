@@ -32,7 +32,9 @@
 ## 2024-05-01 - Avoid duplicate countDocuments using find limit
 **Learning:** Found several endpoints executing sequential `countDocuments()` and `find()` or concurrent `Promise.all([find(...), countDocuments(...)])`. This adds database load via index scans for counts and wastes network round-trips.
 **Action:** Replaced sequential or concurrent `countDocuments()` queries with `find().limit(MAX + 1)` wherever pagination or a fixed hard cap makes an exact total count unneeded beyond checking if a next page or limit breach exists. This bypasses the need for the `countDocuments` index scan entirely.
-## 2026-05-03 - Concurrent Document Fetch in Create Service\n**Learning:** When validating multiple optional or independent entity IDs from a request body (e.g., dealId, docketId), sequential database fetch causes high API response time.\n**Action:** Use Promise.all() for concurrent fetch instead of individual await statements.
+## 2026-05-03 - Concurrent Document Fetch in Create Service
+**Learning:** When validating multiple optional or independent entity IDs from a request body (e.g., dealId, docketId), sequential database fetch causes high API response time.
+**Action:** Use Promise.all() for concurrent fetch instead of individual await statements.
 
 ## 2026-05-08 - Prevent N+1 loops in user deactivation logic
 **Learning:** In user deactivation, iterating over a large array of dockets and waiting for sequential category and team lookups (with multiple `findOne` queries) incurs high database network latency when many cases are assigned to a single user.
@@ -48,4 +50,6 @@
 ## 2026-05-21 - Concurrent Document Fetch in Case Create Service Validation
 **Learning:** In the `caseCreate` service, `WorkType.findOne` and `SubWorkType.findOne` were awaited sequentially, which caused endpoint latency, despite being independent of the other model validation queries (like `Deal`, `CrmClient`, etc.).
 **Action:** Prepared the `WorkType` and `SubWorkType` queries as promises and merged them into the existing `Promise.all()` concurrently with the other independent lookups.
-## 2026-05-24 - Optimization of checking existence using exists() instead of findOne()\n**Learning:** When checking if a document exists but the full document properties are not needed, `findOne()` wastes overhead even when chained with `.select('_id')` because of document hydration overhead.\n**Action:** Use `Model.exists()` which returns early on a match and returns a lean object, avoiding full document hydration latency.
+## 2026-05-24 - Optimization of checking existence using exists() instead of findOne()
+**Learning:** When checking whether a document exists and the full document is not needed, `exists()` avoids unnecessary document hydration compared with `findOne().select('_id')`.
+**Action:** Use `Model.exists()` for existence checks where only truthiness is needed.

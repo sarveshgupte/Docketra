@@ -549,8 +549,7 @@ const patchUserRole = async (req, res) => {
 
     const targetCurrentRole = normalizeRole(target.role);
     if (targetRole === 'PRIMARY_ADMIN' && targetCurrentRole !== 'PRIMARY_ADMIN') {
-      // 💡 What: Replaced User.findOne().select('_id') with User.exists()
-      // 🎯 Why: findOne forces a full document retrieval (even with select) or index scan, whereas exists() provides an O(1) early return upon the first match.
+      // Use exists() because this branch only needs a truthy/falsy primary-admin check.
       const existingPrimary = await User.exists({
         firmId: req.user?.firmId,
         role: 'PRIMARY_ADMIN',
