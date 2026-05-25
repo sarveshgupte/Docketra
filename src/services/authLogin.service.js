@@ -64,6 +64,38 @@ const buildTenantScopedUserQuery = (userId, tenantCandidateIds = []) => ({
   ],
 });
 
+
+const invokeHelperWithNext = async (helper, args = [], { onNext = false } = {}) => {
+  if (typeof helper !== 'function') {
+    return false;
+  }
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    const fail = (error) => {
+      if (settled) return;
+      settled = true;
+      reject(error);
+    };
+
+    const next = (error) => {
+      if (error) return fail(error);
+      return finish(onNext);
+    };
+
+    try {
+      Promise.resolve(helper(...args, next)).then(finish).catch(fail);
+    } catch (error) {
+      fail(error);
+    }
+  });
+};
+
 const createAuthLoginService = (deps) => {
   const models = deps.models || {};
   const utils = deps.utils || {};
@@ -188,15 +220,15 @@ const createAuthLoginService = (deps) => {
         });
       }
 
-      if (await validateTenantUserPreconditions(req, res, user, requestedFirmSlug, normalizedXID)) {
+      if (await invokeHelperWithNext(validateTenantUserPreconditions, [req, res, user, requestedFirmSlug, normalizedXID], { onNext: false })) {
         return;
       }
 
-      if (!(await handlePasswordVerification(req, res, user, password))) {
+      if (!(await invokeHelperWithNext(handlePasswordVerification, [req, res, user, password], { onNext: true }))) {
         return;
       }
 
-      if (await handlePostPasswordChecks(req, res, user)) {
+      if (await invokeHelperWithNext(handlePostPasswordChecks, [req, res, user], { onNext: false })) {
         return;
       }
 
