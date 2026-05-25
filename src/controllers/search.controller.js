@@ -502,7 +502,24 @@ const employeeWorklist = async (req, res) => {
       : defaultStatuses;
 
 
-    if (workbasketIdFilter) {
+    let authorizedWorkbasket = null;
+    if (req.query?.workbasketId) {
+      if (!workbasketIdFilter) {
+        return res.status(400).json({ success: false, message: 'Invalid workbasketId' });
+      }
+
+      authorizedWorkbasket = await Team.findOne({
+        _id: workbasketIdFilter,
+        firmId,
+        isActive: true,
+      })
+        .select('_id type parentWorkbasketId')
+        .lean();
+
+      if (!authorizedWorkbasket) {
+        return res.status(404).json({ success: false, message: 'Workbasket not found' });
+      }
+
       const viewerRole = String(user?.role || '').trim().toUpperCase();
       const isAdminViewer = viewerRole === 'ADMIN' || viewerRole === 'PRIMARY_ADMIN';
       if (!isAdminViewer) {
@@ -513,7 +530,14 @@ const employeeWorklist = async (req, res) => {
         );
         const userTeamId = toObjectIdStringOrNull(user?.teamId);
         if (userTeamId) permittedTeamIds.add(userTeamId);
-        if (!permittedTeamIds.has(workbasketIdFilter)) {
+
+        const membershipTeamIds = new Set([String(authorizedWorkbasket._id)]);
+        if (authorizedWorkbasket.parentWorkbasketId) {
+          membershipTeamIds.add(String(authorizedWorkbasket.parentWorkbasketId));
+        }
+
+        const hasMembership = [...membershipTeamIds].some((id) => permittedTeamIds.has(id));
+        if (!hasMembership) {
           return res.status(403).json({
             success: false,
             message: 'You do not have access to this workbasket worklist',
@@ -522,25 +546,11 @@ const employeeWorklist = async (req, res) => {
       }
     }
 
-    const query = {
-      assignedToXID: targetAssigneeXID, // CANONICAL: Query by xID in assignedToXID field
-      // Assignment flow writes ASSIGNED; legacy/older records may still be OPEN/IN_PROGRESS.
-      // PENDING must be excluded because pending dockets are shown via /cases/my-pending.
-      status: { $in: filteredStatuses },
-    };
-    if (categoryFilter) {
-      query.category = categoryFilter;
-    }
-    if (subcategoryFilter) {
-      query.$or = [
-        { subcategory: subcategoryFilter },
-        { caseSubCategory: subcategoryFilter },
-      ];
-    }
-    if (workbasketIdFilter) {
+    if (authorizedWorkbasket) {
+      const scopedWorkbasketId = String(authorizedWorkbasket._id);
       query.$and = [
         ...(Array.isArray(query.$and) ? query.$and : []),
-        { $or: [{ workbasketId: workbasketIdFilter }, { ownerTeamId: workbasketIdFilter }, { routedToTeamId: workbasketIdFilter }] },
+        { $or: [{ workbasketId: scopedWorkbasketId }, { ownerTeamId: scopedWorkbasketId }, { routedToTeamId: scopedWorkbasketId }] },
       ];
     }
     if (search) {
