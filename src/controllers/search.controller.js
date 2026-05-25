@@ -444,6 +444,7 @@ const employeeWorklist = async (req, res) => {
     const search = String(req.query?.search || '').trim();
     const categoryFilter = String(req.query?.category || '').trim();
     const subcategoryFilter = String(req.query?.subcategory || '').trim();
+    const workbasketIdFilter = toObjectIdStringOrNull(req.query?.workbasketId);
     const sortBy = String(req.query?.sortBy || 'createdAt').trim();
     const sortOrder = String(req.query?.sortOrder || 'desc').toLowerCase() === 'asc' ? 1 : -1;
     const targetAssigneeXID = requestedAssignee || String(user.xID || '').trim();
@@ -500,6 +501,27 @@ const employeeWorklist = async (req, res) => {
       ? defaultStatuses.filter((statusValue) => normalizedRequestedStatuses.includes(statusValue))
       : defaultStatuses;
 
+
+    if (workbasketIdFilter) {
+      const viewerRole = String(user?.role || '').trim().toUpperCase();
+      const isAdminViewer = viewerRole === 'ADMIN' || viewerRole === 'PRIMARY_ADMIN';
+      if (!isAdminViewer) {
+        const permittedTeamIds = new Set(
+          (Array.isArray(user?.teamIds) ? user.teamIds : [])
+            .map((entry) => toObjectIdStringOrNull(entry))
+            .filter(Boolean),
+        );
+        const userTeamId = toObjectIdStringOrNull(user?.teamId);
+        if (userTeamId) permittedTeamIds.add(userTeamId);
+        if (!permittedTeamIds.has(workbasketIdFilter)) {
+          return res.status(403).json({
+            success: false,
+            message: 'You do not have access to this workbasket worklist',
+          });
+        }
+      }
+    }
+
     const query = {
       assignedToXID: targetAssigneeXID, // CANONICAL: Query by xID in assignedToXID field
       // Assignment flow writes ASSIGNED; legacy/older records may still be OPEN/IN_PROGRESS.
@@ -513,6 +535,12 @@ const employeeWorklist = async (req, res) => {
       query.$or = [
         { subcategory: subcategoryFilter },
         { caseSubCategory: subcategoryFilter },
+      ];
+    }
+    if (workbasketIdFilter) {
+      query.$and = [
+        ...(Array.isArray(query.$and) ? query.$and : []),
+        { $or: [{ workbasketId: workbasketIdFilter }, { ownerTeamId: workbasketIdFilter }, { routedToTeamId: workbasketIdFilter }] },
       ];
     }
     if (search) {

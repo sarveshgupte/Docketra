@@ -41,6 +41,7 @@ module.exports = {
       search: z.string().trim().min(1).max(200).optional(),
       category: nonEmptyString.optional(),
       subcategory: nonEmptyString.optional(),
+      workbasketId: nonEmptyString.optional(),
       sortBy: z.enum(['caseId', 'clientId', 'clientName', 'category', 'subcategory', 'dueDate', 'pendingUntil', 'updatedAt', 'createdAt']).optional(),
       sortOrder: z.enum(['asc', 'desc']).optional(),
     }).strict(),
