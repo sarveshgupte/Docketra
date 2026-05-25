@@ -49,7 +49,8 @@ function buildWarnings({ confidenceLevel, missingFields }) {
 }
 
 async function findAnalyzedAttachment({ attachmentId, req }) {
-  const attachment = await Attachment.findById(attachmentId);
+  const firmScope = req.firmId ? { firmId: req.firmId } : {};
+  const attachment = await Attachment.findOne({ _id: attachmentId, ...firmScope });
   if (!attachment) {
     return { error: { status: 404, body: { success: false, message: 'Attachment not found' } } };
   }
@@ -195,7 +196,8 @@ async function generateSuggestions({ attachment, firmId, requestId = null, userR
 
 async function getAttachmentAiInsights(req, res) {
   const { attachmentId } = req.params;
-  const attachment = await Attachment.findById(attachmentId).lean();
+  const firmScope = req.firmId ? { firmId: req.firmId } : {};
+  const attachment = await Attachment.findOne({ _id: attachmentId, ...firmScope }).lean();
 
   if (!attachment) {
     return res.status(404).json({ success: false, message: 'Attachment not found' });
