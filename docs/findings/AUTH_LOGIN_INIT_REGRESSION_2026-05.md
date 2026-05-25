@@ -10,19 +10,13 @@
 - UI impact: `/gupte-opc/login` shows *"Sign in failed — Server is unavailable right now."*
 
 ## Root cause
-`authLogin.service` called injected login helper functions assuming they are always pure service-style functions. In this regression path, at least one helper behaved like Express middleware and invoked `next()`. Since no callback was passed by the service, runtime threw `next is not a function`.
+`authLogin.service` called injected login helper functions assuming they are always pure service-style functions. In this regression path, the `validateTenantUserPreconditions` helper was invoked in a middleware-style variant that called `next()`. Since no callback was passed by the service, runtime threw `next is not a function`.
 
 This mismatch happened in the login init chain after user candidate lookup and before OTP success response.
 
 ## Fix
-- Added `invokeHelperWithNext(...)` in `src/services/authLogin.service.js`.
-- All helper calls in login init flow now execute through this bridge:
-  - `validateTenantUserPreconditions`
-  - `handlePasswordVerification`
-  - `handlePostPasswordChecks`
-- The bridge supports both patterns safely:
-  - pure async return values
-  - middleware-style `next()` callbacks
+- Added a focused precondition-runner in `authLogin.service` only for `validateTenantUserPreconditions`, so it can safely handle an optional middleware-style `next` callback without converting the rest of login-init helpers to a generic middleware bridge.
+- `handlePasswordVerification` and `handlePostPasswordChecks` remain direct pure-service calls.
 - Error propagation is preserved (errors are not swallowed).
 
 ## Regression coverage
@@ -34,7 +28,7 @@ This mismatch happened in the login init chain after user candidate lookup and b
 ## Tests run
 - `node tests/authLoginInitNextRegression.test.js`
 - `node tests/authLoginCookieFlow.test.js`
-- `npm run test:auth-pilot-smoke` *(fails in existing unrelated forgot-password pilot stub wiring)*
+- `npm run test:auth-pilot-smoke`
 - `npm run test:security:pure`
 - `npm run lint`
 
