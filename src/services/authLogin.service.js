@@ -65,35 +65,28 @@ const buildTenantScopedUserQuery = (userId, tenantCandidateIds = []) => ({
 });
 
 
-const invokeHelperWithNext = async (helper, args = [], { onNext = false } = {}) => {
-  if (typeof helper !== 'function') {
-    return false;
+
+const runTenantPreconditions = async (helper, args = [], res = null) => {
+  if (typeof helper !== 'function') return false;
+
+  let nextCalled = false;
+  let nextError = null;
+  const next = (error) => {
+    nextCalled = true;
+    if (error) nextError = error;
+  };
+
+  const result = await helper(...args, next);
+  if (nextError) {
+    throw nextError;
   }
-
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    const finish = (value) => {
-      if (settled) return;
-      settled = true;
-      resolve(value);
-    };
-    const fail = (error) => {
-      if (settled) return;
-      settled = true;
-      reject(error);
-    };
-
-    const next = (error) => {
-      if (error) return fail(error);
-      return finish(onNext);
-    };
-
-    try {
-      Promise.resolve(helper(...args, next)).then(finish).catch(fail);
-    } catch (error) {
-      fail(error);
-    }
-  });
+  if (res?.headersSent) {
+    return true;
+  }
+  if (typeof result === 'boolean') {
+    return result;
+  }
+  return nextCalled ? false : Boolean(result);
 };
 
 const createAuthLoginService = (deps) => {
@@ -220,15 +213,15 @@ const createAuthLoginService = (deps) => {
         });
       }
 
-      if (await invokeHelperWithNext(validateTenantUserPreconditions, [req, res, user, requestedFirmSlug, normalizedXID], { onNext: false })) {
+      if (await runTenantPreconditions(validateTenantUserPreconditions, [req, res, user, requestedFirmSlug, normalizedXID], res)) {
         return;
       }
 
-      if (!(await invokeHelperWithNext(handlePasswordVerification, [req, res, user, password], { onNext: true }))) {
+      if (!(await handlePasswordVerification(req, res, user, password))) {
         return;
       }
 
-      if (await invokeHelperWithNext(handlePostPasswordChecks, [req, res, user], { onNext: false })) {
+      if (await handlePostPasswordChecks(req, res, user)) {
         return;
       }
 
