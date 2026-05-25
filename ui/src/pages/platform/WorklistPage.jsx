@@ -48,7 +48,7 @@ export const PlatformWorklistPage = () => {
     isError,
     error: queryError,
     refetch,
-  } = usePlatformMyWorklistQuery({ workbasketId: scopedWorkbasketId || undefined });
+  } = usePlatformMyWorklistQuery();
 
 
   const recovery = getRecoveryPayload(queryError, 'platform_queue');

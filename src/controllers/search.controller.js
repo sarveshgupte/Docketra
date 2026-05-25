@@ -471,8 +471,10 @@ const employeeWorklist = async (req, res) => {
       });
     }
 
-    const canAccessWorklist = canViewUserWorklist(user, targetUser, { targetFirmId: firmId });
     const isViewingOwnWorklist = targetAssigneeXID.toUpperCase() === String(user.xID || '').trim().toUpperCase();
+    const canAccessWorklist = isViewingOwnWorklist
+      ? true
+      : canViewUserWorklist(user, targetUser, { targetFirmId: firmId });
     if (!canAccessWorklist) {
       return res.status(403).json({
         success: false,
@@ -539,10 +541,15 @@ const employeeWorklist = async (req, res) => {
 
       const viewerRole = String(user?.role || '').trim().toUpperCase();
       const isAdminViewer = viewerRole === 'ADMIN' || viewerRole === 'PRIMARY_ADMIN';
-      if (!isAdminViewer) {
+      if (!isAdminViewer && !isViewingOwnWorklist) {
         const permittedTeamIds = new Set(
           (Array.isArray(user?.teamIds) ? user.teamIds : [])
             .map((entry) => toObjectIdStringOrNull(entry))
+            .filter(Boolean),
+        );
+        const permittedWorkbasketIds = new Set(
+          (Array.isArray(user?.workbaskets) ? user.workbaskets : [])
+            .map((entry) => toObjectIdStringOrNull(entry?._id || entry?.id || entry?.workbasketId || entry))
             .filter(Boolean),
         );
         const userTeamId = toObjectIdStringOrNull(user?.teamId);
@@ -553,7 +560,7 @@ const employeeWorklist = async (req, res) => {
           membershipTeamIds.add(String(authorizedWorkbasket.parentWorkbasketId));
         }
 
-        const hasMembership = [...membershipTeamIds].some((id) => permittedTeamIds.has(id));
+        const hasMembership = [...membershipTeamIds].some((id) => permittedTeamIds.has(id) || permittedWorkbasketIds.has(id));
         if (!hasMembership) {
           return res.status(403).json({
             success: false,
@@ -610,7 +617,7 @@ const employeeWorklist = async (req, res) => {
     // Replaced concurrent countDocuments() and find() queries with a single find() using limit(limit + 1) to eliminate redundant database round-trips.
     // Notice that casesQuery already has .limit(normalizedLimit). We will change it.
     const casesWithExtra = await Case.find(enforceTenantScope(query, req, { source: 'search.employeeWorklist' }))
-      .select('caseId caseNumber caseName category subcategory caseSubCategory dueDate slaDueAt createdAt createdBy updatedAt status clientId clientName assignedToXID assignedToName')
+      .select('caseId caseNumber caseName category subcategory caseSubCategory dueDate slaDueAt createdAt createdBy updatedAt status clientId clientName assignedToXID assignedToName workbasketId ownerTeamId routedToTeamId')
       .sort({ [sortField]: sortOrder, _id: 1 })
       .skip((normalizedPage - 1) * normalizedLimit)
       .limit(normalizedLimit + 1)
@@ -677,6 +684,9 @@ const employeeWorklist = async (req, res) => {
         status: c.status,
         assignedToXID: c.assignedToXID || null,
         assignedToName: c.assignedToName || null,
+        workbasketId: c.workbasketId ? String(c.workbasketId) : null,
+        ownerTeamId: c.ownerTeamId ? String(c.ownerTeamId) : null,
+        routedToTeamId: c.routedToTeamId ? String(c.routedToTeamId) : null,
         clientId: c.clientId || null,
         clientName: c.clientName || clientNameByClientId.get(String(c.clientId || '').trim()) || null,
       })),

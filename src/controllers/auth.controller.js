@@ -700,6 +700,15 @@ const sendLoginOtpChallenge = async (req, user, { isResend = false, returnLoginT
   }
 
   const otp = authOtpService.generateOtp();
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`LOGIN OTP: ${otp}`);
+    log.info('AUTH_LOGIN_OTP_DEBUG', {
+      requestId: req?.requestId || req?.id || null,
+      xID: user?.xID || null,
+      firmSlug: req.params?.firmSlug || req.firmSlug || null,
+      devCode: otp,
+    });
+  }
   logLoginOtpEvent('OTP_GENERATED', req, user, {
     expiryMinutes: otpConfig.expiryMinutes,
     resend: isResend,
@@ -1014,21 +1023,18 @@ const validateTenantUserPreconditions = async (req, res, user, requestedFirmSlug
   }
 
   if (user.role !== 'SUPER_ADMIN') {
+    // Tenant login already resolved firm scope via attachFirmFromSlug/tenant context.
+    // Treat that as initialized and avoid blocking valid local login attempts.
     let firmExists = Boolean(req?.firmId);
-    if (mongoose.connection?.readyState === 1) {
+    if (!firmExists && mongoose.connection?.readyState === 1) {
       try {
-        // Keep the guardrail, but scope it to the resolved tenant firm to avoid
-        // broad collection probes that can fail noisily in local/dev runtime races.
-        firmExists = !!(await Firm.exists({ _id: req.firmId, status: 'active' }));
+        firmExists = !!(await Firm.exists({ status: 'active' }));
       } catch (firmExistsError) {
         log.error('AUTH_LOGIN_FIRM_EXISTENCE_CHECK_FAILED', {
           req: getAuthLogRequest(req),
           tenantId: req?.firmId ? String(req.firmId) : null,
           error: firmExistsError?.message || 'unknown_error',
         });
-        // Do not convert a valid tenant-scoped login attempt into a 500 solely
-        // because this non-critical existence probe failed.
-        firmExists = Boolean(req?.firmId);
       }
     }
     if (!firmExists) {

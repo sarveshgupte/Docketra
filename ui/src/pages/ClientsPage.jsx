@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
 import { Loading } from '../components/common/Loading';
@@ -25,7 +24,6 @@ import { BulkUploadModal } from '../components/bulk/BulkUploadModal';
 import { buildTemplateCsv } from '../constants/bulkUploadSchema';
 import { useUnsavedChangesPrompt } from '../hooks/useUnsavedChangesPrompt';
 import { useQueryState } from '../hooks/useQueryState';
-import { ROUTES } from '../constants/routes';
 import { canManageClients as canManageClientsByRoleOrPermission } from '../utils/permissions';
 import './ClientsPage.css';
 
@@ -422,55 +420,57 @@ export const ClientsPage = () => {
     {
       key: 'clientId',
       header: 'Client ID',
-      align: 'center',
       tabular: true,
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'whitespace-nowrap',
+      headerClassName: 'clients-col-id',
+      cellClassName: 'clients-col-id',
     },
     {
       key: 'businessName',
       header: 'Business Name',
-      headerClassName: 'min-w-[16rem]',
-      cellClassName: 'min-w-[16rem]',
-      contentClassName: 'truncate',
+      headerClassName: 'clients-col-name',
+      cellClassName: 'clients-col-name',
+      render: (client) => (
+        <div className="clients-table-primary">
+          <span>{toDisplayString(client.businessName, 'Unnamed client')}</span>
+          {client.isDefaultClient ? <span className="clients-table-chip">Default</span> : null}
+        </div>
+      ),
     },
     {
       key: 'businessEmail',
       header: 'Email',
-      headerClassName: 'min-w-[14rem]',
-      cellClassName: 'min-w-[14rem]',
-      contentClassName: 'truncate',
+      headerClassName: 'clients-col-email',
+      cellClassName: 'clients-col-email',
       render: (client) => toDisplayString(client.businessEmail),
     },
     {
       key: 'status',
       header: 'Status',
-      align: 'center',
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'whitespace-nowrap',
+      headerClassName: 'clients-col-status',
+      cellClassName: 'clients-col-status',
       render: (client) => <Badge status={client.status === 'ACTIVE' ? 'Approved' : 'Rejected'}>{client.status}</Badge>,
     },
     {
       key: 'primaryContactNumber',
       header: 'Phone',
-      headerClassName: 'min-w-[10rem]',
+      headerClassName: 'clients-col-phone',
+      cellClassName: 'clients-col-phone',
       render: (client) => toDisplayString(client.primaryContactNumber),
     },
     {
       key: 'createdAt',
       header: 'Created',
-      align: 'right',
       tabular: true,
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'whitespace-nowrap',
+      headerClassName: 'clients-col-created',
+      cellClassName: 'clients-col-created',
       render: (client) => formatDate(client.createdAt),
     },
     {
       key: 'actions',
       header: 'Actions',
       align: 'right',
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'min-w-[10rem]',
+      headerClassName: 'clients-col-actions',
+      cellClassName: 'clients-col-actions',
       render: (client) => (
         <div className="admin__actions clients-table-actions">
           {canManageClients ? (
@@ -486,9 +486,6 @@ export const ClientsPage = () => {
                 </Button>
               )}
               <Button size="small" variant="warning" onClick={() => openEditCfsModal(client)}>Edit CFS</Button>
-              <Button size="small" variant="outline" onClick={() => window.location.assign(`${ROUTES.CREATE_CASE(firmSlug)}?clientId=${encodeURIComponent(client.clientId)}`)}>
-                Create Docket
-              </Button>
             </>
           ) : null}
         </div>
@@ -606,11 +603,12 @@ export const ClientsPage = () => {
         {loading ? <Loading message="Loading clients..." /> : loadError ? (
           <ErrorState title="Could not load clients" body={loadError} actionLabel="Retry" onAction={loadClients} />
         ) : (
-          <Card>
+          <div className="clients-table-card">
           <DataTable
             columns={columns}
             rows={clients}
             rowKey="clientId"
+            dense
             emptyMessage={(
               <EmptyState
                 title="No clients available yet"
@@ -620,7 +618,7 @@ export const ClientsPage = () => {
               />
             )}
           />
-          </Card>
+          </div>
         )}
         {!loading && !loadError ? (
           <div className="clients-page-pagination">

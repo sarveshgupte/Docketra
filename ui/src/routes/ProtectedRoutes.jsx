@@ -485,21 +485,17 @@ export const ProtectedRoutes = () => (
         <Route
           path="storage-settings"
           element={(
-            <PilotRouteGate subPath="storage-settings">
             <ProtectedRoute requireAdmin>
               <StorageSettingsPage />
             </ProtectedRoute>
-            </PilotRouteGate>
           )}
         />
         <Route
           path="data-storage-map"
           element={(
-            <PilotRouteGate subPath="data-storage-map">
             <ProtectedRoute requireAdmin>
               <DataStorageMapPage />
             </ProtectedRoute>
-            </PilotRouteGate>
           )}
         />
         <Route

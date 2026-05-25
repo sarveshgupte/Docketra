@@ -16,6 +16,9 @@ export const isNavItemActive = (pathname, item) => {
   if (!item?.to) return false;
 
   const matchMode = item.activeMatch || 'exactOrDescendant';
+  if (matchMode === 'exactWithQuery') {
+    return false;
+  }
 
   if (matchMode === 'exact') {
     return normalizePath(pathname) === normalizePath(item.to);

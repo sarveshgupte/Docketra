@@ -127,9 +127,10 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
   const accessContext = resolveAccessContext(roleOrUser, permissions);
   const normalizedRole = String(accessContext?.role || 'USER').toUpperCase();
   const assignedWorkbaskets = Array.isArray(accessContext?.workbaskets) ? accessContext.workbaskets : [];
-  const assignedQcWorkbaskets = Array.isArray(accessContext?.qcWorkbaskets) ? accessContext.qcWorkbaskets : [];
+  const assignedQcWorkbasketsRaw = Array.isArray(accessContext?.qcWorkbaskets) ? accessContext.qcWorkbaskets : [];
+  const derivedQcWorkbaskets = assignedWorkbaskets.filter((wb) => String(wb?.type || '').toUpperCase() === 'QC' || wb?.isQC === true);
+  const assignedQcWorkbaskets = assignedQcWorkbasketsRaw.length > 0 ? assignedQcWorkbasketsRaw : derivedQcWorkbaskets;
   const showQcWorkbaskets = hasAtLeastRole(normalizedRole, 'MANAGER') || assignedQcWorkbaskets.length > 0;
-  const canViewGlobalWorkbaskets = hasAtLeastRole(normalizedRole, 'MANAGER');
   const directWorkbasketItems = assignedWorkbaskets.map((wb) => ({
     id: `workbasket-${String(wb?._id || wb?.id || wb?.workbasketId || '').trim()}`,
     label: wb?.name || 'Workbasket',
@@ -161,14 +162,8 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
     })
     .filter(Boolean);
 
-  const workbasketsGroupChildren = [
-    ...(canViewGlobalWorkbaskets ? [{ id: 'workbaskets-overview', label: 'Overview', icon: icons.work, to: ROUTES.GLOBAL_WORKLIST(firmSlug), activeMatch: 'exactOrDescendant' }] : []),
-    ...directWorkbasketItems,
-  ];
-  const qcGroupChildren = [
-    ...(canViewGlobalWorkbaskets ? [{ id: 'qc-worklist', label: 'Overview', icon: icons.intake, to: ROUTES.QC_QUEUE(firmSlug), activeMatch: 'exactOrDescendant' }] : []),
-    ...directQcWorkbasketItems,
-  ];
+  const workbasketsGroupChildren = directWorkbasketItems;
+  const qcGroupChildren = directQcWorkbasketItems;
 
   const dailyOperationsItems = [
     { id: 'workbaskets-group', label: 'Workbaskets', type: 'group', children: workbasketsGroupChildren },
