@@ -444,6 +444,7 @@ const employeeWorklist = async (req, res) => {
     const search = String(req.query?.search || '').trim();
     const categoryFilter = String(req.query?.category || '').trim();
     const subcategoryFilter = String(req.query?.subcategory || '').trim();
+    const workbasketIdFilter = toObjectIdStringOrNull(req.query?.workbasketId);
     const sortBy = String(req.query?.sortBy || 'createdAt').trim();
     const sortOrder = String(req.query?.sortOrder || 'desc').toLowerCase() === 'asc' ? 1 : -1;
     const targetAssigneeXID = requestedAssignee || String(user.xID || '').trim();
@@ -501,37 +502,90 @@ const employeeWorklist = async (req, res) => {
       : defaultStatuses;
 
     const query = {
-      assignedToXID: targetAssigneeXID, // CANONICAL: Query by xID in assignedToXID field
-      // Assignment flow writes ASSIGNED; legacy/older records may still be OPEN/IN_PROGRESS.
-      // PENDING must be excluded because pending dockets are shown via /cases/my-pending.
+      assignedToXID: targetAssigneeXID,
       status: { $in: filteredStatuses },
     };
     if (categoryFilter) {
       query.category = categoryFilter;
     }
+
+    const andFilters = [];
     if (subcategoryFilter) {
-      query.$or = [
-        { subcategory: subcategoryFilter },
-        { caseSubCategory: subcategoryFilter },
-      ];
+      andFilters.push({
+        $or: [
+          { subcategory: subcategoryFilter },
+          { caseSubCategory: subcategoryFilter },
+        ],
+      });
+    }
+
+    let authorizedWorkbasket = null;
+    if (req.query?.workbasketId) {
+      if (!workbasketIdFilter) {
+        return res.status(400).json({ success: false, message: 'Invalid workbasketId' });
+      }
+
+      authorizedWorkbasket = await Team.findOne({
+        _id: workbasketIdFilter,
+        firmId,
+        isActive: true,
+      })
+        .select('_id type parentWorkbasketId')
+        .lean();
+
+      if (!authorizedWorkbasket) {
+        return res.status(404).json({ success: false, message: 'Workbasket not found' });
+      }
+
+      const viewerRole = String(user?.role || '').trim().toUpperCase();
+      const isAdminViewer = viewerRole === 'ADMIN' || viewerRole === 'PRIMARY_ADMIN';
+      if (!isAdminViewer) {
+        const permittedTeamIds = new Set(
+          (Array.isArray(user?.teamIds) ? user.teamIds : [])
+            .map((entry) => toObjectIdStringOrNull(entry))
+            .filter(Boolean),
+        );
+        const userTeamId = toObjectIdStringOrNull(user?.teamId);
+        if (userTeamId) permittedTeamIds.add(userTeamId);
+
+        const membershipTeamIds = new Set([String(authorizedWorkbasket._id)]);
+        if (authorizedWorkbasket.parentWorkbasketId) {
+          membershipTeamIds.add(String(authorizedWorkbasket.parentWorkbasketId));
+        }
+
+        const hasMembership = [...membershipTeamIds].some((id) => permittedTeamIds.has(id));
+        if (!hasMembership) {
+          return res.status(403).json({
+            success: false,
+            message: 'You do not have access to this workbasket worklist',
+          });
+        }
+      }
+    }
+
+    if (authorizedWorkbasket) {
+      const scopedWorkbasketId = String(authorizedWorkbasket._id);
+      andFilters.push({
+        $or: [{ workbasketId: scopedWorkbasketId }, { ownerTeamId: scopedWorkbasketId }, { routedToTeamId: scopedWorkbasketId }],
+      });
     }
     if (search) {
       const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(escapedSearch, 'i');
-      query.$and = [
-        ...(Array.isArray(query.$and) ? query.$and : []),
-        {
-          $or: [
-            { caseId: regex },
-            { caseNumber: regex },
-            { clientId: regex },
-            { clientName: regex },
-            { category: regex },
-            { subcategory: regex },
-            { caseSubCategory: regex },
-          ],
-        },
-      ];
+      andFilters.push({
+        $or: [
+          { caseId: regex },
+          { caseNumber: regex },
+          { clientId: regex },
+          { clientName: regex },
+          { category: regex },
+          { subcategory: regex },
+          { caseSubCategory: regex },
+        ],
+      });
+    }
+    if (andFilters.length > 0) {
+      query.$and = andFilters;
     }
     const sortFieldMap = {
       caseId: 'caseId',
