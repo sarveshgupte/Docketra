@@ -238,7 +238,11 @@ const createAuthLoginService = (deps) => {
         });
       }
     } catch (error) {
-      log.error('AUTH_LOGIN_SERVICE_FAILED', { req: getAuthLogRequest(req), error: error?.message });
+      log.error('AUTH_LOGIN_SERVICE_FAILED', {
+        req: getAuthLogRequest(req),
+        error: error?.message,
+        stack: error?.stack || null,
+      });
       return sendErrorResponse(res, {
         statusCode: 500,
         code: 'AUTH_LOGIN_FAILED',

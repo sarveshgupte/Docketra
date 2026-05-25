@@ -1014,11 +1014,23 @@ const validateTenantUserPreconditions = async (req, res, user, requestedFirmSlug
   }
 
   if (user.role !== 'SUPER_ADMIN') {
-    // ⚡ Bolt Performance Optimization:
-    // 💡 What: Replaced Firm.countDocuments() with Firm.exists()
-    // 🎯 Why: countDocuments forces a full index scan when we only need to know if at least one document exists. exists() provides an O(1) early return upon the first match.
-    // 📊 Impact: ~50% faster query execution for system initialization checks.
-    const firmExists = await Firm.exists({});
+    let firmExists = Boolean(req?.firmId);
+    if (mongoose.connection?.readyState === 1) {
+      try {
+        // Keep the guardrail, but scope it to the resolved tenant firm to avoid
+        // broad collection probes that can fail noisily in local/dev runtime races.
+        firmExists = !!(await Firm.exists({ _id: req.firmId, status: 'active' }));
+      } catch (firmExistsError) {
+        log.error('AUTH_LOGIN_FIRM_EXISTENCE_CHECK_FAILED', {
+          req: getAuthLogRequest(req),
+          tenantId: req?.firmId ? String(req.firmId) : null,
+          error: firmExistsError?.message || 'unknown_error',
+        });
+        // Do not convert a valid tenant-scoped login attempt into a 500 solely
+        // because this non-critical existence probe failed.
+        firmExists = Boolean(req?.firmId);
+      }
+    }
     if (!firmExists) {
       log.warn(`[AUTH] Login blocked for ${user.xID} - system not initialized (no firms exist)`);
       res.status(403).json({
