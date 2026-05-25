@@ -501,6 +501,23 @@ const employeeWorklist = async (req, res) => {
       ? defaultStatuses.filter((statusValue) => normalizedRequestedStatuses.includes(statusValue))
       : defaultStatuses;
 
+    const query = {
+      assignedToXID: targetAssigneeXID,
+      status: { $in: filteredStatuses },
+    };
+    if (categoryFilter) {
+      query.category = categoryFilter;
+    }
+
+    const andFilters = [];
+    if (subcategoryFilter) {
+      andFilters.push({
+        $or: [
+          { subcategory: subcategoryFilter },
+          { caseSubCategory: subcategoryFilter },
+        ],
+      });
+    }
 
     let authorizedWorkbasket = null;
     if (req.query?.workbasketId) {
@@ -548,28 +565,27 @@ const employeeWorklist = async (req, res) => {
 
     if (authorizedWorkbasket) {
       const scopedWorkbasketId = String(authorizedWorkbasket._id);
-      query.$and = [
-        ...(Array.isArray(query.$and) ? query.$and : []),
-        { $or: [{ workbasketId: scopedWorkbasketId }, { ownerTeamId: scopedWorkbasketId }, { routedToTeamId: scopedWorkbasketId }] },
-      ];
+      andFilters.push({
+        $or: [{ workbasketId: scopedWorkbasketId }, { ownerTeamId: scopedWorkbasketId }, { routedToTeamId: scopedWorkbasketId }],
+      });
     }
     if (search) {
       const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(escapedSearch, 'i');
-      query.$and = [
-        ...(Array.isArray(query.$and) ? query.$and : []),
-        {
-          $or: [
-            { caseId: regex },
-            { caseNumber: regex },
-            { clientId: regex },
-            { clientName: regex },
-            { category: regex },
-            { subcategory: regex },
-            { caseSubCategory: regex },
-          ],
-        },
-      ];
+      andFilters.push({
+        $or: [
+          { caseId: regex },
+          { caseNumber: regex },
+          { clientId: regex },
+          { clientName: regex },
+          { category: regex },
+          { subcategory: regex },
+          { caseSubCategory: regex },
+        ],
+      });
+    }
+    if (andFilters.length > 0) {
+      query.$and = andFilters;
     }
     const sortFieldMap = {
       caseId: 'caseId',
