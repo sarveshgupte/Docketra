@@ -61,6 +61,7 @@ const fileSchema = new mongoose.Schema(
 );
 
 fileSchema.index({ tenantId: 1, caseId: 1, createdAt: -1 });
+fileSchema.index({ tenantId: 1, status: 1, createdAt: -1 });
 
 fileSchema.pre('save', function(next) {
   for (const value of Object.values(this.toObject({ depopulate: true }))) {
