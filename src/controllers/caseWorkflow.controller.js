@@ -5,6 +5,7 @@ const { CaseRepository } = require('../repositories');
 const CaseStatus = require('../domain/case/caseStatus');
 const CaseService = require('../services/case.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
+const log = require('../utils/log');
 
 /**
  * Case Workflow Controller
@@ -90,10 +91,11 @@ const submitCase = async (req, res) => {
       message: 'Case submitted successfully',
     });
   } catch (error) {
+    log.error('[CaseWorkflow] Error submitCase:', error);
     res.status(500).json({
       success: false,
       message: 'Error submitting case',
-      error: error.message,
+      error: 'Internal server error',
     });
   }
 };
@@ -161,10 +163,11 @@ const moveToUnderReview = async (req, res) => {
       message: 'Case moved to under review',
     });
   } catch (error) {
+    log.error('[CaseWorkflow] Error moveToUnderReview:', error);
     res.status(500).json({
       success: false,
       message: 'Error moving case to review',
-      error: error.message,
+      error: 'Internal server error',
     });
   }
 };
@@ -245,10 +248,11 @@ const closeCase = async (req, res) => {
       message: 'Case closed successfully',
     });
   } catch (error) {
+    log.error('[CaseWorkflow] Error closeCase:', error);
     res.status(500).json({
       success: false,
       message: 'Error closing case',
-      error: error.message,
+      error: 'Internal server error',
     });
   }
 };
@@ -330,10 +334,11 @@ const reopenCase = async (req, res) => {
       message: 'Case reopened successfully',
     });
   } catch (error) {
+    log.error('[CaseWorkflow] Error reopenCase:', error);
     res.status(500).json({
       success: false,
       message: 'Error reopening case',
-      error: error.message,
+      error: 'Internal server error',
     });
   }
 };
