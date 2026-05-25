@@ -90,6 +90,7 @@ const refreshTokenSchema = new mongoose.Schema({
 refreshTokenSchema.index({ userId: 1, isRevoked: 1, expiresAt: 1 });
 refreshTokenSchema.index({ firmId: 1, userId: 1 });
 refreshTokenSchema.index({ scope: 1, isRevoked: 1, expiresAt: 1 });
+refreshTokenSchema.index({ tokenHash: 1, isRevoked: 1, expiresAt: 1 });
 
 // TTL index to auto-delete expired tokens (cleanup after 30 days)
 refreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
