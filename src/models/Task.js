@@ -137,7 +137,10 @@ taskSchema.index({ case: 1 });
 taskSchema.index({ dueDate: 1 });
 // REMOVED: { firmId: 1 } - redundant with compound index (firmId, status) below
 taskSchema.index({ firmId: 1, status: 1 }); // Firm-scoped status queries
+taskSchema.index({ firmId: 1, assignedTo: 1, status: 1 }); // Firm-scoped assignment queues
 taskSchema.index({ firmId: 1, createdAt: -1 });
+taskSchema.index({ firmId: 1, dueDate: 1, status: 1 }); // Firm-scoped due-date ordering/reporting
+taskSchema.index({ firmId: 1, clientId: 1, status: 1 }); // Firm-scoped client worklist/report filters
 
 // Pre-save middleware to track status changes
 taskSchema.pre('save', async function() {

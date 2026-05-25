@@ -90,7 +90,7 @@ const assignUserToTeam = async (req, res) => {
     const team = await Team.findOne({ _id: req.params.id, firmId: actor.firmId });
     if (!team) return res.status(404).json({ success: false, message: 'Team not found' });
 
-    const user = await User.findOne({ _id: req.body?.userId, status: { $ne: 'deleted' } });
+    const user = await User.findOne({ _id: req.body?.userId, firmId: actor.firmId, status: { $ne: 'deleted' } });
     if (!user || !ensureSameFirm(user, actor.firmId)) {
       return res.status(404).json({ success: false, message: 'User not found in firm' });
     }
