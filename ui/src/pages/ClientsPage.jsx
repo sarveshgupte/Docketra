@@ -425,22 +425,23 @@ export const ClientsPage = () => {
       align: 'center',
       tabular: true,
       headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'whitespace-nowrap',
+      cellClassName: 'whitespace-nowrap font-medium',
     },
     {
       key: 'businessName',
       header: 'Business Name',
-      headerClassName: 'min-w-[16rem]',
-      cellClassName: 'min-w-[16rem]',
-      contentClassName: 'truncate',
+      headerClassName: 'min-w-[14rem]',
+      cellClassName: 'min-w-[14rem] whitespace-normal break-words',
+      render: (client) => (
+        <span className="clients-table-cell-multiline">{toDisplayString(client.businessName)}</span>
+      ),
     },
     {
       key: 'businessEmail',
       header: 'Email',
       headerClassName: 'min-w-[14rem]',
-      cellClassName: 'min-w-[14rem]',
-      contentClassName: 'truncate',
-      render: (client) => toDisplayString(client.businessEmail),
+      cellClassName: 'min-w-[14rem] whitespace-normal break-all',
+      render: (client) => <span className="clients-table-cell-multiline">{toDisplayString(client.businessEmail)}</span>,
     },
     {
       key: 'status',
@@ -454,7 +455,8 @@ export const ClientsPage = () => {
       key: 'primaryContactNumber',
       header: 'Phone',
       headerClassName: 'min-w-[10rem]',
-      render: (client) => toDisplayString(client.primaryContactNumber),
+      cellClassName: 'whitespace-normal',
+      render: (client) => <span className="clients-table-cell-multiline">{toDisplayString(client.primaryContactNumber)}</span>,
     },
     {
       key: 'createdAt',
