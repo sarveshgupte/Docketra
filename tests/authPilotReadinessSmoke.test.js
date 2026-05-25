@@ -57,7 +57,7 @@ async function forgotPasswordSmoke() {
     normalizeFirmSlug: (v) => v, SALT_ROUNDS: 10, DEFAULT_XID: 'X123456', DEFAULT_FIRM_ID: 'firm-1', PASSWORD_POLICY_MESSAGE: 'weak', validatePasswordStrength: () => true,
     Firm: { findOne: () => ({ select: () => ({ lean: async () => ({ _id: 'firm-1', firmSlug: 'pilot', status: 'active' }) }) }), findById: () => ({ select: () => ({ lean: async () => ({ _id: 'firm-1', firmSlug: 'pilot', status: 'active' }) }) }) },
     User: { findOne: async (q) => (q.firmId === 'firm-1' ? user : null), find: () => ({ limit: async () => [user] }) },
-    emailService: { sendLoginOtpEmail: async () => {}, generateSecureToken: () => 'legacy', hashToken: (v) => `h:${v}`, sendForgotPasswordEmail: async () => ({}), maskEmail: (v) => v },
+    emailService: { sendLoginOtpEmail: async () => {}, generateSecureToken: () => 'legacy', hashToken: (v) => `h:${v}`, sendForgotPasswordEmail: async () => ({}), sendForgotPasswordOtpEmail: async () => ({}), maskEmail: (v) => v },
     isActiveStatus: (s) => s === 'active', FORGOT_PASSWORD_TOKEN_EXPIRY_MINUTES: 30, logAuthAudit: async () => {}, FORGOT_PASSWORD_OTP_RESEND_COOLDOWN_SECONDS: 0,
     FORGOT_PASSWORD_OTP_EXPIRY_MINUTES: 10, FORGOT_PASSWORD_OTP_LOCK_MINUTES: 10,
     authOtpService: { generateOtp: () => '123456', hashOtp: async () => 'hash:123456', verifyOtp: async (otp) => otp === '123456', incrementAttempts: (a, m) => ({ attempts: a + 1, exhausted: a + 1 >= m }) },

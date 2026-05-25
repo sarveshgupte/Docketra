@@ -64,6 +64,31 @@ const buildTenantScopedUserQuery = (userId, tenantCandidateIds = []) => ({
   ],
 });
 
+
+
+const runTenantPreconditions = async (helper, args = [], res = null) => {
+  if (typeof helper !== 'function') return false;
+
+  let nextCalled = false;
+  let nextError = null;
+  const next = (error) => {
+    nextCalled = true;
+    if (error) nextError = error;
+  };
+
+  const result = await helper(...args, next);
+  if (nextError) {
+    throw nextError;
+  }
+  if (res?.headersSent) {
+    return true;
+  }
+  if (typeof result === 'boolean') {
+    return result;
+  }
+  return nextCalled ? false : Boolean(result);
+};
+
 const createAuthLoginService = (deps) => {
   const models = deps.models || {};
   const utils = deps.utils || {};
@@ -188,7 +213,7 @@ const createAuthLoginService = (deps) => {
         });
       }
 
-      if (await validateTenantUserPreconditions(req, res, user, requestedFirmSlug, normalizedXID)) {
+      if (await runTenantPreconditions(validateTenantUserPreconditions, [req, res, user, requestedFirmSlug, normalizedXID], res)) {
         return;
       }
 
