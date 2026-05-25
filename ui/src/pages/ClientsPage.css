@@ -98,3 +98,10 @@
   flex-wrap: wrap;
   row-gap: 0.375rem;
 }
+
+.clients-table-cell-multiline {
+  display: inline-block;
+  white-space: normal;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
