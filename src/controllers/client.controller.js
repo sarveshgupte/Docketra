@@ -235,7 +235,11 @@ const getClients = async (req, res) => {
     }
     if (normalizedSearch) {
       const escapedSearch = normalizedSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      filter.clientId = { $regex: escapedSearch, $options: 'i' };
+      filter.$or = [
+        { clientId: { $regex: escapedSearch, $options: 'i' } },
+        { businessName: { $regex: escapedSearch, $options: 'i' } },
+        { businessEmail: { $regex: escapedSearch, $options: 'i' } },
+      ];
     }
 
     const [clients, total] = await Promise.all([
@@ -244,7 +248,7 @@ const getClients = async (req, res) => {
         filter,
         accessContext.role,
         {
-          select: 'clientId status isActive isSystemClient isInternal isDefaultClient createdAt profileRef',
+          select: 'clientId businessName businessEmail primaryContactNumber status isActive isSystemClient isInternal isDefaultClient createdAt profileRef',
           sort: { clientId: 1 },
           limit,
           skip,
