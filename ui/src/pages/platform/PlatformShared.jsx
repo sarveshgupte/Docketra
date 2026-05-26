@@ -180,7 +180,16 @@ export const LoadingState = ({ label = 'Loading…', compact = false }) => (
   </div>
 );
 
-export const ErrorState = ({ title = 'Something went wrong', body, actionLabel, onAction, tone = 'error', boxed = false }) => (
+export const ErrorState = ({
+  title = 'Something went wrong',
+  body,
+  actionLabel,
+  onAction,
+  secondaryActionLabel,
+  onSecondaryAction,
+  tone = 'error',
+  boxed = false,
+}) => (
   <div className={`empty-state empty-state--${tone} ${boxed ? 'empty-state--boxed' : ''}`.trim()} role="alert">
     <svg className="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
       <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
@@ -189,6 +198,9 @@ export const ErrorState = ({ title = 'Something went wrong', body, actionLabel, 
     {body ? <p className="empty-state__body">{body}</p> : null}
     {actionLabel && onAction ? (
       <button type="button" className="empty-state__action" onClick={onAction}>{actionLabel}</button>
+    ) : null}
+    {secondaryActionLabel && onSecondaryAction ? (
+      <button type="button" className="empty-state__action" onClick={onSecondaryAction}>{secondaryActionLabel}</button>
     ) : null}
   </div>
 );
