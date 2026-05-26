@@ -18,12 +18,18 @@ This mismatch happened in the login init chain after user candidate lookup and b
 - Added a focused precondition-runner in `authLogin.service` only for `validateTenantUserPreconditions`, so it can safely handle an optional middleware-style `next` callback without converting the rest of login-init helpers to a generic middleware bridge.
 - `handlePasswordVerification` and `handlePostPasswordChecks` remain direct pure-service calls.
 - Error propagation is preserved (errors are not swallowed).
+- Added temporary production-safe diagnostics on `AUTH_LOGIN_SERVICE_FAILED` to log:
+  - `checkpoint` (which helper was executing),
+  - `error.message`,
+  - `error.stack`.
+  This logging intentionally excludes password, OTP, passwordHash, cookies, tokens, and secrets.
 
 ## Regression coverage
 - Added `tests/authLoginInitNextRegression.test.js`:
   - exercises `createAuthLoginService` with middleware-style helper stubs that call `next()`
-  - validates login init completes without `next is not a function`
-  - validates success response path remains intact
+  - validates login init success path reaches OTP challenge without `next is not a function`
+  - validates invalid credentials path returns controlled `401` (not `500`)
+  - validates `next(error)` path is propagated safely as controlled service failure (`500` with `AUTH_LOGIN_FAILED`)
 
 ## Tests run
 - `node tests/authLoginInitNextRegression.test.js`

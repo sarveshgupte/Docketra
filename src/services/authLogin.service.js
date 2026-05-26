@@ -126,6 +126,7 @@ const createAuthLoginService = (deps) => {
   } = services;
 
   const loginHandler = async (req, res) => {
+    let checkpoint = 'init';
     try {
       const loginScope = req.loginScope || 'tenant';
       const requestedFirmSlug = req.params?.firmSlug || req.firmSlug || null;
@@ -213,19 +214,23 @@ const createAuthLoginService = (deps) => {
         });
       }
 
+      checkpoint = 'validateTenantUserPreconditions';
       if (await runTenantPreconditions(validateTenantUserPreconditions, [req, res, user, requestedFirmSlug, normalizedXID], res)) {
         return;
       }
 
+      checkpoint = 'handlePasswordVerification';
       if (!(await handlePasswordVerification(req, res, user, password))) {
         return;
       }
 
+      checkpoint = 'handlePostPasswordChecks';
       if (await handlePostPasswordChecks(req, res, user)) {
         return;
       }
 
       try {
+        checkpoint = 'sendLoginOtpChallenge';
         const loginToken = await sendLoginOtpChallenge(req, user);
         const otpConfig = getLoginOtpConfig();
         log.info('AUTH_LOGIN_CHALLENGE_SENT', {
@@ -263,7 +268,12 @@ const createAuthLoginService = (deps) => {
         });
       }
     } catch (error) {
-      log.error('AUTH_LOGIN_SERVICE_FAILED', { req: getAuthLogRequest(req), error: error?.message });
+      log.error('AUTH_LOGIN_SERVICE_FAILED', {
+        req: getAuthLogRequest(req),
+        checkpoint,
+        error: error?.message,
+        stack: error?.stack,
+      });
       return sendErrorResponse(res, {
         statusCode: 500,
         code: 'AUTH_LOGIN_FAILED',
