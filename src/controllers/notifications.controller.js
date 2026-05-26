@@ -7,6 +7,7 @@ const {
   getOrCreateNotificationPreferences,
   updateNotificationPreferences,
 } = require('../services/notificationPreference.service');
+const log = require('../utils/log');
 
 function normalizeNotification(notification) {
   return {
@@ -44,9 +45,10 @@ async function getNotifications(req, res) {
       data: notifications.map(normalizeNotification),
     });
   } catch (error) {
+    log.error('[NOTIFICATIONS] Failed to load notifications', error);
     return res.status(500).json({
       success: false,
-      message: error.message || 'Failed to load notifications',
+      message: 'Failed to load notifications',
     });
   }
 }
@@ -71,9 +73,10 @@ async function getAllNotifications(req, res) {
       data: notifications.map(normalizeNotification),
     });
   } catch (error) {
+    log.error('[NOTIFICATIONS] Failed to load all notifications', error);
     return res.status(500).json({
       success: false,
-      message: error.message || 'Failed to load notifications',
+      message: 'Failed to load notifications',
     });
   }
 }
@@ -88,9 +91,10 @@ async function markAsRead(req, res) {
 
     return res.json({ success: true });
   } catch (error) {
+    log.error('[NOTIFICATIONS] Failed to mark notification as read', error);
     return res.status(500).json({
       success: false,
-      message: error.message || 'Failed to mark notification as read',
+      message: 'Failed to mark notification as read',
     });
   }
 }
@@ -111,9 +115,10 @@ async function markAllAsRead(req, res) {
 
     return res.json({ success: true, data: { updatedCount } });
   } catch (error) {
+    log.error('[NOTIFICATIONS] Failed to mark all notifications as read', error);
     return res.status(500).json({
       success: false,
-      message: error.message || 'Failed to mark all notifications as read',
+      message: 'Failed to mark all notifications as read',
     });
   }
 }
@@ -134,9 +139,10 @@ async function getPreferences(req, res) {
       data: preferences,
     });
   } catch (error) {
+    log.error('[NOTIFICATIONS] Failed to load notification preferences', error);
     return res.status(500).json({
       success: false,
-      message: error.message || 'Failed to load notification preferences',
+      message: 'Failed to load notification preferences',
     });
   }
 }
@@ -157,9 +163,10 @@ async function updatePreferences(req, res) {
       data: preferences,
     });
   } catch (error) {
+    log.error('[NOTIFICATIONS] Failed to update notification preferences', error);
     return res.status(500).json({
       success: false,
-      message: error.message || 'Failed to update notification preferences',
+      message: 'Failed to update notification preferences',
     });
   }
 }

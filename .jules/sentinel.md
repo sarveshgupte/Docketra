@@ -40,3 +40,7 @@
 **Vulnerability:** Raw error messages (`error.message`) were being directly exposed to clients in API error responses (e.g., in `src/controllers/user.controller.js`).
 **Learning:** Exposing raw internal error details to the client can leak sensitive system information, configuration details, or underlying infrastructure state, which can be leveraged by attackers.
 **Prevention:** Always log the full error details server-side using the internal logger (`log.error`) and return generic, safe error messages to the client (e.g., "Unable to load profile").
+## 2026-05-26 - Prevent Information Disclosure in Notification Controller
+**Vulnerability:** Raw error messages (`error.message`) were being directly exposed to clients in API error responses in `src/controllers/notifications.controller.js`.
+**Learning:** Exposing raw internal error details to the client can leak sensitive system information, configuration details, or underlying infrastructure state, which can be leveraged by attackers. This is a recurring pattern that needs to be systematically addressed.
+**Prevention:** Always log the full error details server-side using the internal logger (`log.error`) and return generic, safe error messages to the client (e.g., "Failed to load notifications").
