@@ -69,6 +69,7 @@ export const FirmLoginPage = () => {
 
   const successMessage = location.state?.message;
   const messageType = location.state?.messageType;
+  const isPasswordResetSuccess = successMessage === 'Password reset successfully. Please sign in with your new password.';
 
   const [xid, setXid] = useState('');
   const [password, setPassword] = useState('');
@@ -189,6 +190,24 @@ export const FirmLoginPage = () => {
 
     loadFirmData();
   }, [firmSlug]);
+
+  const clearRecoveryAndOtpState = React.useCallback(() => {
+    clearPendingLoginState();
+    setLoginToken('');
+    setOtp('');
+    setOtpHint('');
+    setCooldown(0);
+    setFieldErrors({});
+    setError('');
+    setStep('credentials');
+  }, []);
+
+  useEffect(() => {
+    if (isPasswordResetSuccess) {
+      clearRecoveryAndOtpState();
+      navigate(location.pathname + location.search, { replace: true, state: null });
+    }
+  }, [clearRecoveryAndOtpState, isPasswordResetSuccess, location.pathname, location.search, navigate]);
 
   useEffect(() => {
     if (step === 'otp') {
@@ -375,7 +394,7 @@ export const FirmLoginPage = () => {
           <p className="text-xs text-gray-500 text-center">{`Firm login URL: /${firmSlug}/login`}</p>
         </Stack>
 
-        {successMessage && (
+        {successMessage && step === 'credentials' && (
           <div
             className={`rounded-md px-3 py-2 text-sm ${
               messageType === 'warning'
@@ -435,7 +454,7 @@ export const FirmLoginPage = () => {
               onClick={() => {
                 clearPendingLoginState();
                 setLoginToken('');
-                setStep('credentials');
+                clearRecoveryAndOtpState();
               }}
             >
               Back
