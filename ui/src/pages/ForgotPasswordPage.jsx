@@ -43,6 +43,19 @@ export const ForgotPasswordPage = () => {
   const navigate = useNavigate();
   const activeFirmSlug = resolvedFirmSlug || firmSlug || '';
   const loginPath = activeFirmSlug ? `/${activeFirmSlug}/login` : '/superadmin';
+
+  const resetRecoveryState = () => {
+    setStep(1);
+    setOtp('');
+    setResetToken('');
+    setPassword('');
+    setConfirmPassword('');
+    setCooldown(0);
+    setSuccess('');
+    setError('');
+    setFieldError('');
+  };
+
   const normalizeLoginIdentifier = (value) => {
     const trimmed = String(value || '').trim();
     if (!trimmed) return { value: '', type: 'empty' };
@@ -214,7 +227,8 @@ export const ForgotPasswordPage = () => {
           setResolvedFirmSlug(response.firmSlug);
         }
         const nextLoginPath = nextFirmSlug ? `/${nextFirmSlug}/login` : '/superadmin';
-        navigate(nextLoginPath, { state: { message: 'Password reset successfully. Please login.', messageType: 'success' } });
+        resetRecoveryState();
+        navigate(nextLoginPath, { state: { message: 'Password reset successfully. Please sign in with your new password.', messageType: 'success' } });
       }
     } catch (err) {
       setError(getForgotPasswordErrorMessage(err.response?.data, 'Unable to reset password'));
@@ -327,7 +341,7 @@ export const ForgotPasswordPage = () => {
           )}
 
           <div className="forgot-password-footer">
-            <Link to={loginPath} className="forgot-password-link">
+            <Link to={loginPath} className="forgot-password-link" onClick={resetRecoveryState}>
               Back to Login
             </Link>
           </div>
