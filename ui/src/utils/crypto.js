@@ -29,11 +29,8 @@ export const generateUUID = () => {
     return segments.join('-');
   }
 
-  // Last resort fallback (should never happen in modern browsers)
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = (Date.now() + Math.random() * 16) % 16 | 0;
-    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-  });
+  // No insecure fallback permitted
+  throw new Error('Web Crypto API is not supported in this environment');
 };
 
 /**
@@ -50,6 +47,6 @@ export const generateSecureRandomString = (length = 8) => {
     return Array.from(buffer).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, length);
   }
 
-  // Fallback (should rarely hit this in modern browsers)
-  return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  // No insecure fallback permitted
+  throw new Error('Web Crypto API is not supported in this environment');
 };
