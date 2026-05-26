@@ -29,6 +29,7 @@ const {
   listClientCfsComments,
   addClientCfsComment,
   listClientActivity,
+  repairClientEncryptionKey,
 } = require('../controllers/client.controller');
 
 
@@ -51,6 +52,7 @@ const {
 
 // Public/authenticated endpoints
 router.get('/', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, getClients);
+router.post('/encryption/repair', authorizeFirmPermission('CLIENT_MANAGE'), sensitiveLimiter, repairClientEncryptionKey);
 router.get('/:clientId/dockets', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, listClientDockets);
 router.get('/:clientId', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, getClientById);
 router.get('/:clientId/activity', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, listClientActivity);

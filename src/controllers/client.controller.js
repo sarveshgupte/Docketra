@@ -28,6 +28,7 @@ const { persistClientProfileOrRollback } = require('../services/clientProfileWri
 const directUploadService = require('../services/directUpload.service');
 const { buildWorkflowMeta, logWorkflowEvent } = require('../utils/workflowDiagnostics');
 const { resolveFirmMemoryScope } = require('../services/firmMemoryScope.service');
+const { ensureTenantKey, resolveTenantKeyTenantId } = require('../security/encryption.service');
 
 const getClientAccessContext = (req, res, message) => {
   const firmId = req.user?.firmId;
@@ -276,16 +277,51 @@ const getClients = async (req, res) => {
       operational: Boolean(error?.operational),
     });
     if (error?.code === 'TENANT_KEY_MISSING') {
+      log.warn('CLIENT_ENCRYPTION_KEY_REPAIR_REQUIRED', buildClientLogContext(req, {
+        action: 'read_only_mode',
+      }));
       return res.status(503).json({
         success: false,
         code: 'TENANT_KEY_MISSING',
         message: 'Client data encryption key is missing for this firm. Run tenant key repair before loading clients.',
+        action: 'read_only_mode',
       });
     }
     return res.status(500).json({
       success: false,
       message: 'Error fetching clients',
     });
+  }
+};
+
+const repairClientEncryptionKey = async (req, res) => {
+  const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to repair client encryption');
+  if (!accessContext) return;
+  const role = String(accessContext.role || '').toUpperCase();
+  if (!['PRIMARY_ADMIN', 'ADMIN'].includes(role)) {
+    return res.status(403).json({ success: false, message: 'Only admins can repair client encryption setup.' });
+  }
+  try {
+    const keyId = await resolveTenantKeyTenantId(accessContext.firmId, {
+      logContext: buildClientLogContext(req, { role }),
+    });
+    if (keyId) {
+      log.info('CLIENT_ENCRYPTION_KEY_REPAIR_AVAILABLE', buildClientLogContext(req, { keyTenantId: String(keyId) }));
+      return res.json({ success: true, repaired: false, message: 'Client encryption key already configured.' });
+    }
+    const count = await ClientRepository.count(accessContext.firmId, {
+      $or: [{ businessEmail: { $regex: '^enc:v1:' } }, { primaryContactNumber: { $regex: '^enc:v1:' } }],
+    });
+    if (count > 0) {
+      log.warn('CLIENT_ENCRYPTION_KEY_REPAIR_FAILED', buildClientLogContext(req, { reason: 'encrypted_client_data_exists' }));
+      return res.status(409).json({ success: false, code: 'TENANT_KEY_REPAIR_BLOCKED', message: 'Encrypted client data exists. Manual recovery is required.' });
+    }
+    await ensureTenantKey(String(accessContext.firmId));
+    log.info('CLIENT_ENCRYPTION_KEY_REPAIR_SUCCEEDED', buildClientLogContext(req, { repairedTenantId: String(accessContext.firmId) }));
+    return res.json({ success: true, repaired: true, message: 'Client encryption key bootstrap completed.' });
+  } catch (error) {
+    log.error('CLIENT_ENCRYPTION_KEY_REPAIR_FAILED', buildClientLogContext(req, { message: error.message }));
+    return res.status(500).json({ success: false, message: 'Client encryption repair failed.' });
   }
 };
 
@@ -1494,6 +1530,7 @@ module.exports = {
   addClientCfsComment: wrapWriteHandler(addClientCfsComment),
   listClientActivity,
   listClientDockets,
+  repairClientEncryptionKey: wrapWriteHandler(repairClientEncryptionKey),
   __testables: {
     persistClientProfileOrRollback,
   },
