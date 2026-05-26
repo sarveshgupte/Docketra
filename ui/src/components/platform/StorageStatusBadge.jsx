@@ -14,6 +14,7 @@ export default function StorageStatusBadge() {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
   const summary = useStorageStatusSummary(firmSlug);
+  const { storageSettingsPath, dataStorageMapPath } = summary;
 
   useEffect(() => {
     const onClick = (event) => {
@@ -54,8 +55,8 @@ export default function StorageStatusBadge() {
             <div><dt>Control-plane metadata</dt><dd>MongoDB stores control-plane metadata.</dd></div>
           </dl>
           <div className="platform__storage-links">
-            <Link className="platform__storage-link platform__storage-link--primary" to={summary.storageSettingsPath} onClick={() => setOpen(false)}>Storage Settings</Link>
-            <Link className="platform__storage-link" to={summary.dataStorageMapPath} onClick={() => setOpen(false)}>Data Storage Map</Link>
+            <Link className="platform__storage-link platform__storage-link--primary" to={storageSettingsPath} onClick={() => setOpen(false)}>Storage Settings</Link>
+            <Link className="platform__storage-link" to={dataStorageMapPath} onClick={() => setOpen(false)}>Data Storage Map</Link>
           </div>
         </div>
       ) : null}

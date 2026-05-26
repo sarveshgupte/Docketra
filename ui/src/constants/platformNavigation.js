@@ -92,7 +92,7 @@ const NAV_BLUEPRINT = [
     items: [
       {
         id: 'settings',
-        label: 'Workspace Settings',
+        label: 'Settings',
         icon: icons.settings,
         route: (firmSlug) => ROUTES.SETTINGS(firmSlug),
         minRole: 'ADMIN',
@@ -129,7 +129,7 @@ const NAV_BLUEPRINT = [
       },
       {
         id: 'storage-settings',
-        label: 'Storage Settings',
+        label: 'Storage Configuration',
         icon: icons.settings,
         route: (firmSlug) => ROUTES.STORAGE_SETTINGS(firmSlug),
         minRole: 'ADMIN',
@@ -137,17 +137,9 @@ const NAV_BLUEPRINT = [
       },
       {
         id: 'data-storage-map',
-        label: 'Data Storage Map',
+        label: 'Storage Boundary Map',
         icon: icons.reports,
         route: (firmSlug) => ROUTES.DATA_STORAGE_MAP(firmSlug),
-        minRole: 'ADMIN',
-        activeMatch: 'exactOrDescendant',
-      },
-      {
-        id: 'security-setup',
-        label: 'Client Encryption / Security',
-        icon: icons.settings,
-        route: (firmSlug) => ROUTES.AI_SETTINGS(firmSlug),
         minRole: 'ADMIN',
         activeMatch: 'exactOrDescendant',
       },
