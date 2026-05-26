@@ -65,6 +65,15 @@ const createAuthPasswordService = (deps) => {
     return { user, firm: resolvedFirm, ambiguous: false, invalidFirm: false };
   };
 
+  const buildForgotPasswordDiagnosticContext = (req, user = null, firm = null) => ({
+    requestId: req?.requestId || req?.id || req?.headers?.['x-request-id'] || null,
+    firmId: (firm?._id || user?.firmId || null),
+    tenantId: (firm?._id || user?.firmId || null),
+    userId: user?._id || null,
+    userXID: user?.xID || null,
+    firmSlug: firm?.firmSlug || req?.firmSlug || null,
+  });
+
   const forgotPassword = async (req, res) => {
     try {
       const { email, firmSlug } = req.body;
@@ -209,6 +218,7 @@ const createAuthPasswordService = (deps) => {
       });
     }
 
+    const diagnostics = buildForgotPasswordDiagnosticContext(req, user, firm);
     const otp = authOtpService.generateOtp();
     user.forgotPasswordOtpHash = await authOtpService.hashOtp(otp, SALT_ROUNDS);
     user.forgotPasswordOtpExpiresAt = new Date(Date.now() + FORGOT_PASSWORD_OTP_EXPIRY_MINUTES * 60 * 1000);
@@ -219,15 +229,24 @@ const createAuthPasswordService = (deps) => {
     user.forgotPasswordResetTokenHash = null;
     user.forgotPasswordResetTokenExpiresAt = null;
     await user.save();
-
-    await emailService.sendForgotPasswordOtpEmail({
-      email: user.email,
-      name: user.name,
-      otp,
-      firmName: firm.name,
-      firmSlug: firm.firmSlug,
-      expiryMinutes: FORGOT_PASSWORD_OTP_EXPIRY_MINUTES,
-    });
+    log.info('FORGOT_PASSWORD_OTP_SEND_ATTEMPTED', diagnostics);
+    try {
+      await emailService.sendForgotPasswordOtpEmail({
+        email: user.email,
+        name: user.name,
+        otp,
+        firmName: firm.name,
+        firmSlug: firm.firmSlug,
+        expiryMinutes: FORGOT_PASSWORD_OTP_EXPIRY_MINUTES,
+      });
+      log.info('FORGOT_PASSWORD_OTP_SEND_SUCCEEDED', diagnostics);
+    } catch (error) {
+      log.error('FORGOT_PASSWORD_OTP_SEND_FAILED', {
+        ...diagnostics,
+        checkpoint: 'email_service_send',
+        error: error?.message || 'UNKNOWN_ERROR',
+      });
+    }
     await logAuthAudit({
       xID: user.xID || DEFAULT_XID,
       firmId: user.firmId || DEFAULT_FIRM_ID,
@@ -251,38 +270,43 @@ const createAuthPasswordService = (deps) => {
   };
 
   const forgotPasswordVerify = async (req, res) => {
-    const identifier = String(req.body?.identifier || req.body?.xID || req.body?.xid || req.body?.email || '').trim();
-    const otp = String(req.body?.otp || '').trim();
+    try {
+      const identifier = String(req.body?.identifier || req.body?.xID || req.body?.xid || req.body?.email || '').trim();
+      const otp = String(req.body?.otp || '').trim();
+      if (!identifier || !/^\d{6}$/.test(otp)) {
+        return res.status(400).json({ success: false, message: 'email/xID and valid OTP are required' });
+      }
+      const context = await resolveForgotPasswordContext({ req, identifier });
+      if (context.invalidFirm) {
+        return res.status(401).json({ success: false, message: 'Invalid or expired OTP' });
+      }
+      const firm = context.firm;
+      const user = context.user;
+      const diagnostics = buildForgotPasswordDiagnosticContext(req, user, firm);
+      log.info('FORGOT_PASSWORD_VERIFY_ATTEMPTED', diagnostics);
+      if (!user || !user.forgotPasswordOtpHash || !user.forgotPasswordOtpExpiresAt || user.forgotPasswordOtpExpiresAt.getTime() < Date.now()) {
+        log.warn('FORGOT_PASSWORD_VERIFY_FAILED', { ...diagnostics, checkpoint: 'otp_missing_or_expired' });
+        return res.status(401).json({ success: false, message: 'Invalid or expired OTP' });
+      }
 
-    if (!identifier || !/^\d{6}$/.test(otp)) {
-      return res.status(400).json({ success: false, message: 'email/xID and valid OTP are required' });
-    }
-    const context = await resolveForgotPasswordContext({ req, identifier });
-    if (context.invalidFirm) {
-      return res.status(401).json({ success: false, message: 'Invalid or expired OTP' });
-    }
-    const firm = context.firm;
-    const user = context.user;
-    if (!user || !user.forgotPasswordOtpHash || !user.forgotPasswordOtpExpiresAt || user.forgotPasswordOtpExpiresAt.getTime() < Date.now()) {
-      return res.status(401).json({ success: false, message: 'Invalid or expired OTP' });
-    }
-
-    const activeLockSeconds = user.forgotPasswordOtpLockedUntil
+      const activeLockSeconds = user.forgotPasswordOtpLockedUntil
       ? Math.max(0, Math.ceil((new Date(user.forgotPasswordOtpLockedUntil).getTime() - Date.now()) / 1000))
       : 0;
-    if (activeLockSeconds > 0) {
-      return res.status(429).json({ success: false, message: 'Too many attempts', retryAfter: activeLockSeconds });
-    }
+      if (activeLockSeconds > 0) {
+        log.warn('FORGOT_PASSWORD_VERIFY_FAILED', { ...diagnostics, checkpoint: 'otp_lock_active' });
+        return res.status(429).json({ success: false, message: 'Too many attempts', retryAfter: activeLockSeconds });
+      }
 
-    const attempts = Number(user.forgotPasswordOtpAttempts || 0);
-    if (attempts >= 5) {
+      const attempts = Number(user.forgotPasswordOtpAttempts || 0);
+      if (attempts >= 5) {
       user.forgotPasswordOtpLockedUntil = new Date(Date.now() + (FORGOT_PASSWORD_OTP_LOCK_MINUTES * 60 * 1000));
       await user.save();
+      log.warn('FORGOT_PASSWORD_VERIFY_FAILED', { ...diagnostics, checkpoint: 'otp_max_attempts' });
       return res.status(429).json({ success: false, message: 'Too many attempts' });
-    }
+      }
 
-    const ok = await authOtpService.verifyOtp(otp, user.forgotPasswordOtpHash);
-    if (!ok) {
+      const ok = await authOtpService.verifyOtp(otp, user.forgotPasswordOtpHash);
+      if (!ok) {
       const attemptState = authOtpService.incrementAttempts(attempts, 5);
       user.forgotPasswordOtpAttempts = attemptState.attempts;
       if (attemptState.exhausted) {
@@ -303,17 +327,18 @@ const createAuthPasswordService = (deps) => {
           attempts: user.forgotPasswordOtpAttempts,
         },
       }, req);
-      return res.status(attemptState.exhausted ? 429 : 401).json({
+        log.warn('FORGOT_PASSWORD_VERIFY_FAILED', { ...diagnostics, checkpoint: attemptState.exhausted ? 'otp_attempts_exhausted' : 'otp_invalid' });
+        return res.status(attemptState.exhausted ? 429 : 401).json({
         success: false,
         message: attemptState.exhausted ? 'Too many attempts' : 'Invalid or expired OTP',
       });
-    }
+      }
 
-    clearForgotPasswordOtpState(user);
-    const resetToken = generateLoginSessionToken();
-    user.forgotPasswordResetTokenHash = hashLoginSessionToken(resetToken);
-    user.forgotPasswordResetTokenExpiresAt = new Date(Date.now() + FORGOT_PASSWORD_OTP_EXPIRY_MINUTES * 60 * 1000);
-    await user.save();
+      clearForgotPasswordOtpState(user);
+      const resetToken = generateLoginSessionToken();
+      user.forgotPasswordResetTokenHash = hashLoginSessionToken(resetToken);
+      user.forgotPasswordResetTokenExpiresAt = new Date(Date.now() + FORGOT_PASSWORD_OTP_EXPIRY_MINUTES * 60 * 1000);
+      await user.save();
     await logAuthAudit({
       xID: user.xID || DEFAULT_XID,
       firmId: user.firmId || DEFAULT_FIRM_ID,
@@ -327,7 +352,15 @@ const createAuthPasswordService = (deps) => {
         eventType: 'FORGOT_PASSWORD_OTP_VERIFIED',
       },
     }, req);
-    return res.json({ success: true, message: 'OTP verified', resetToken, firmSlug: firm?.firmSlug || null });
+      return res.json({ success: true, message: 'OTP verified', resetToken, firmSlug: firm?.firmSlug || null });
+    } catch (error) {
+      log.error('FORGOT_PASSWORD_VERIFY_FAILED', {
+        requestId: req?.requestId || req?.id || req?.headers?.['x-request-id'] || null,
+        checkpoint: 'unexpected_error',
+        error: error?.message || 'UNKNOWN_ERROR',
+      });
+      return res.status(401).json({ success: false, message: 'Invalid or expired OTP' });
+    }
   };
 
   const forgotPasswordResetWithOtp = async (req, res) => {
