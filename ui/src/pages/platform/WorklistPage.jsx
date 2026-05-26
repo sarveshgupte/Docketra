@@ -40,6 +40,7 @@ export const PlatformWorklistPage = () => {
   const scopedWorkbasketId = new URLSearchParams(location.search || '').get('workbasketId') || '';
   const assignedWorkbaskets = Array.isArray(user?.workbaskets) ? user.workbaskets : [];
   const scopedWorkbasket = assignedWorkbaskets.find((wb) => String(wb?._id || wb?.id || wb?.workbasketId || '') === scopedWorkbasketId);
+  const effectiveWorkbasketId = scopedWorkbasket ? scopedWorkbasketId : '';
 
   const {
     data: rows = [],
@@ -48,7 +49,7 @@ export const PlatformWorklistPage = () => {
     isError,
     error: queryError,
     refetch,
-  } = usePlatformMyWorklistQuery({ workbasketId: scopedWorkbasketId || undefined });
+  } = usePlatformMyWorklistQuery({ workbasketId: effectiveWorkbasketId || undefined });
 
 
   const recovery = getRecoveryPayload(queryError, 'platform_queue');
@@ -57,10 +58,10 @@ export const PlatformWorklistPage = () => {
   const worklistSupportCode = recovery.supportContext?.requestId || recovery.reasonCode || '';
 
   const normalizedRows = useMemo(() => {
-    if (!scopedWorkbasketId) return rows;
+    if (!effectiveWorkbasketId) return rows;
     const pickId = (item) => String(item?.workbasketId || item?.workbasket?._id || item?.workbasket?.id || item?.workbasket?.workbasketId || item?.workBasketId || item?.queueId || item?.assignedWorkbasketId || item?.assignment?.workbasketId || item?.meta?.workbasketId || '');
-    return rows.filter((item) => pickId(item) === scopedWorkbasketId);
-  }, [rows, scopedWorkbasketId]);
+    return rows.filter((item) => pickId(item) === effectiveWorkbasketId);
+  }, [rows, effectiveWorkbasketId]);
 
   const filteredRows = useMemo(() => {
     const needle = search.trim().toLowerCase();
