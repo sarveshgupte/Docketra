@@ -545,6 +545,10 @@ const employeeWorklist = async (req, res) => {
             .map((entry) => toObjectIdStringOrNull(entry))
             .filter(Boolean),
         );
+        const linkedWorkbasketIds = (Array.isArray(user?.workbaskets) ? user.workbaskets : [])
+          .map((entry) => toObjectIdStringOrNull(entry?._id || entry?.id || entry?.workbasketId || entry))
+          .filter(Boolean);
+        linkedWorkbasketIds.forEach((id) => permittedTeamIds.add(id));
         const userTeamId = toObjectIdStringOrNull(user?.teamId);
         if (userTeamId) permittedTeamIds.add(userTeamId);
 
