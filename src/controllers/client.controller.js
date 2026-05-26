@@ -28,7 +28,7 @@ const { persistClientProfileOrRollback } = require('../services/clientProfileWri
 const directUploadService = require('../services/directUpload.service');
 const { buildWorkflowMeta, logWorkflowEvent } = require('../utils/workflowDiagnostics');
 const { resolveFirmMemoryScope } = require('../services/firmMemoryScope.service');
-const { ensureTenantKey, resolveTenantKeyTenantId } = require('../security/encryption.service');
+const { ensureTenantKey, resolveTenantKeyTenantId, resolveTenantKeyCandidates } = require('../security/encryption.service');
 
 const getClientAccessContext = (req, res, message) => {
   const firmId = req.user?.firmId;
@@ -309,15 +309,24 @@ const repairClientEncryptionKey = async (req, res) => {
       log.info('CLIENT_ENCRYPTION_KEY_REPAIR_AVAILABLE', buildClientLogContext(req, { keyTenantId: String(keyId) }));
       return res.json({ success: true, repaired: false, message: 'Client encryption key already configured.' });
     }
-    const count = await ClientRepository.count(accessContext.firmId, {
-      $or: [{ businessEmail: { $regex: '^enc:v1:' } }, { primaryContactNumber: { $regex: '^enc:v1:' } }],
-    });
-    if (count > 0) {
+    const candidateTenantIds = await resolveTenantKeyCandidates(accessContext.firmId);
+    const hasEncryptedDataChecks = await Promise.all(candidateTenantIds.map(async (candidateTenantId) => {
+      const encryptedCount = await ClientRepository.count(candidateTenantId, {
+        $or: [{ businessEmail: { $regex: '^enc:v1:' } }, { primaryContactNumber: { $regex: '^enc:v1:' } }],
+      });
+      return encryptedCount > 0;
+    }));
+    const encryptedDataExistsAcrossCandidates = hasEncryptedDataChecks.some(Boolean);
+    if (encryptedDataExistsAcrossCandidates) {
       log.warn('CLIENT_ENCRYPTION_KEY_REPAIR_FAILED', buildClientLogContext(req, { reason: 'encrypted_client_data_exists' }));
       return res.status(409).json({ success: false, code: 'TENANT_KEY_REPAIR_BLOCKED', message: 'Encrypted client data exists. Manual recovery is required.' });
     }
-    await ensureTenantKey(String(accessContext.firmId));
-    log.info('CLIENT_ENCRYPTION_KEY_REPAIR_SUCCEEDED', buildClientLogContext(req, { repairedTenantId: String(accessContext.firmId) }));
+    const canonicalTenantId = String(candidateTenantIds[0] || accessContext.firmId);
+    await ensureTenantKey(canonicalTenantId);
+    log.info('CLIENT_ENCRYPTION_KEY_REPAIR_SUCCEEDED', buildClientLogContext(req, {
+      repairedTenantId: canonicalTenantId,
+      canonicalTenantId,
+    }));
     return res.json({ success: true, repaired: true, message: 'Client encryption key bootstrap completed.' });
   } catch (error) {
     log.error('CLIENT_ENCRYPTION_KEY_REPAIR_FAILED', buildClientLogContext(req, { message: error.message }));
