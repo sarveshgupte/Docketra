@@ -1,5 +1,5 @@
 const Client = require('../models/Client.model');
-const { decrypt, ensureTenantKey, tenantKeyExists, ForbiddenError } = require('../security/encryption.service');
+const { decrypt, ensureTenantKey, resolveTenantKeyTenantId, ForbiddenError } = require('../security/encryption.service');
 const { looksEncrypted } = require('../security/encryption.utils');
 const { resolveClientOwnershipFirmId } = require('../services/tenantIdentity.service');
 
@@ -37,8 +37,8 @@ const CLIENT_ENCRYPTED_FIELDS = ['primaryContactNumber', 'businessEmail'];
 
 async function _assertTenantKeyPresentForDecryption(tenantId, logContext) {
   if (!tenantId || !process.env.MASTER_ENCRYPTION_KEY) return false;
-  const exists = await tenantKeyExists(String(tenantId));
-  if (exists) return true;
+  const resolvedTenantKeyId = await resolveTenantKeyTenantId(String(tenantId), { logContext });
+  if (resolvedTenantKeyId) return resolvedTenantKeyId;
   const err = new Error(`Tenant encryption key is missing for tenant ${tenantId}. Repair is required before decrypting client data.`);
   err.code = 'TENANT_KEY_MISSING';
   err.statusCode = 503;
@@ -109,10 +109,10 @@ async function _decryptClientDoc(doc, firmId, { logContext, decryptFields } = {}
 
   const fieldsToDecrypt = resolveDecryptFields(decryptFields);
   if (!hasEncryptedValues(doc, fieldsToDecrypt)) return doc;
-  await _assertTenantKeyPresentForDecryption(tenantId, logContext);
+  const tenantKeyTenantId = await _assertTenantKeyPresentForDecryption(tenantId, logContext);
   for (const field of fieldsToDecrypt) {
     if (doc[field] != null && looksEncrypted(doc[field])) {
-      const decrypted = await decrypt(doc[field], String(tenantId), undefined, {
+      const decrypted = await decrypt(doc[field], String(tenantKeyTenantId || tenantId), undefined, {
         logContext: {
           ...logContext,
           field,
@@ -143,10 +143,10 @@ async function _decryptClientDocs(docs, firmId, { logContext, decryptFields } = 
     if (!tenantId) return;
 
     if (!hasEncryptedValues(doc, fieldsToDecrypt)) return;
-    await _assertTenantKeyPresentForDecryption(tenantId, logContext);
+    const tenantKeyTenantId = await _assertTenantKeyPresentForDecryption(tenantId, logContext);
     for (const field of fieldsToDecrypt) {
       if (doc[field] != null && looksEncrypted(doc[field])) {
-        const decrypted = await decrypt(doc[field], String(tenantId), undefined, {
+        const decrypted = await decrypt(doc[field], String(tenantKeyTenantId || tenantId), undefined, {
           logContext: {
             ...logContext,
             field,

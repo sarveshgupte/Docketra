@@ -41,6 +41,7 @@ const toDisplayString = (value, fallback = '—') => {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PINCODE_REGEX = /^[1-9][0-9]{5}$/;
 const TENANT_KEY_MISSING_COPY = 'Client encryption setup needs repair before clients can be loaded.';
+const TENANT_KEY_MISSING_ADMIN_COPY = 'Client encryption setup needs repair. Contact admin or run encryption repair.';
 const FORBIDDEN_COPY = 'Client management requires Admin access.';
 const DUPLICATE_COPY = 'A client with this name or identifier already exists.';
 const DEFAULT_LOAD_ERROR = 'Failed to load clients';
@@ -101,6 +102,7 @@ export const ClientsPage = () => {
   const fileInputRef = useRef(null);
   const searchDebounceRef = useRef(null);
   const canManageClients = canManageClientsByRoleOrPermission(user);
+  const [repairingEncryption, setRepairingEncryption] = useState(false);
 
   const initialClientSnapshot = useMemo(() => ({
     businessName: selectedClient?.businessName || selectedClient?.legalName || selectedClient?.name || '',
@@ -142,7 +144,7 @@ export const ClientsPage = () => {
 
   const getClientErrorMessage = (error, fallback = DEFAULT_LOAD_ERROR) => {
     const code = getClientErrorCode(error);
-    if (code === 'TENANT_KEY_MISSING') return TENANT_KEY_MISSING_COPY;
+    if (code === 'TENANT_KEY_MISSING') return canManageClients ? TENANT_KEY_MISSING_ADMIN_COPY : TENANT_KEY_MISSING_COPY;
     if (code === 'FORBIDDEN') return FORBIDDEN_COPY;
     if (code === 'DUPLICATE') return DUPLICATE_COPY;
     return error?.response?.data?.message || error?.message || fallback;
@@ -185,6 +187,19 @@ export const ClientsPage = () => {
       setIsRefreshing(false);
     }
   }, [clients.length, showError, page, searchQuery]);
+
+  const handleRepairEncryption = useCallback(async () => {
+    try {
+      setRepairingEncryption(true);
+      await clientApi.repairEncryptionKey();
+      showSuccess('Client encryption repair completed. Reloading clients.');
+      await loadClients();
+    } catch (error) {
+      showError(getClientErrorMessage(error, 'Failed to repair client encryption setup'));
+    } finally {
+      setRepairingEncryption(false);
+    }
+  }, [loadClients, showError, showSuccess]);
 
   useEffect(() => {
     loadClients();
@@ -606,7 +621,14 @@ export const ClientsPage = () => {
           ]}
         />
         {loading ? <Loading message="Loading clients..." /> : loadError ? (
-          <ErrorState title="Could not load clients" body={loadError} actionLabel="Retry" onAction={loadClients} />
+          <ErrorState
+            title="Could not load clients"
+            body={loadError}
+            actionLabel="Retry"
+            onAction={loadClients}
+            secondaryActionLabel={canManageClients && loadError.includes('encryption') ? (repairingEncryption ? 'Repairing…' : 'Run encryption repair') : undefined}
+            onSecondaryAction={canManageClients && loadError.includes('encryption') ? handleRepairEncryption : undefined}
+          />
         ) : (
           <Card>
           <DataTable
