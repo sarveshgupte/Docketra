@@ -8,26 +8,35 @@ const { ensureDefaultRoutingForFirm } = require('../services/defaultRouting.serv
 
 const buildWorkbasketWarnings = async (firmId, workbasketIds = []) => {
   if (!firmId || workbasketIds.length === 0) return {};
-
-  // ⚡ Bolt: Optimize workbasket user counts
-  // 💡 What: Replaced Promise.all(workbasketIds.map(...countDocuments)) with a single aggregate pipeline.
-  // 🎯 Why: Reduces DB network round-trips from N (one per workbasket) to 1 and improves database concurrency limits.
-  // 📊 Impact: O(1) query time instead of O(N) when a firm has many workbaskets.
-  const aggResult = await User.aggregate([
-    {
-      $match: {
-        firmId,
-        status: { $ne: 'deleted' },
-        isActive: true,
-        teamIds: { $in: workbasketIds },
+  let countMap = {};
+  try {
+    // Keep warning enrichment best-effort so malformed legacy user membership data
+    // never blocks workbasket listing in admin surfaces.
+    const aggResult = await User.aggregate([
+      {
+        $match: {
+          firmId,
+          status: { $ne: 'deleted' },
+          isActive: true,
+          teamIds: { $exists: true },
+        },
       },
-    },
-    { $unwind: '$teamIds' },
-    { $match: { teamIds: { $in: workbasketIds } } },
-    { $group: { _id: '$teamIds', count: { $sum: 1 } } },
-  ]);
+      {
+        $project: {
+          normalizedTeamIds: {
+            $cond: [{ $isArray: '$teamIds' }, '$teamIds', []],
+          },
+        },
+      },
+      { $unwind: '$normalizedTeamIds' },
+      { $match: { normalizedTeamIds: { $in: workbasketIds } } },
+      { $group: { _id: '$normalizedTeamIds', count: { $sum: 1 } } },
+    ]);
 
-  const countMap = Object.fromEntries(aggResult.map((r) => [String(r._id), r.count]));
+    countMap = Object.fromEntries(aggResult.map((r) => [String(r._id), r.count]));
+  } catch (error) {
+    countMap = {};
+  }
 
   return Object.fromEntries(
     workbasketIds.map((id) => [
