@@ -108,7 +108,8 @@ async function resolveTenantKeyTenantId(tenantId, { session, logContext } = {}) 
   const candidates = await resolveTenantKeyCandidates(tenantId, { session });
   log.info('CLIENT_ENCRYPTION_KEY_LOOKUP_ATTEMPTED', {
     ...(logContext || {}),
-    lookupCandidates: candidates,
+    lookupCandidateCount: candidates.length,
+    lookupCandidatesSample: candidates.slice(0, 4),
   });
   for (const candidate of candidates) {
     if (await tenantKeyExists(candidate, { session })) {
@@ -117,7 +118,8 @@ async function resolveTenantKeyTenantId(tenantId, { session, logContext } = {}) 
   }
   log.warn('CLIENT_ENCRYPTION_KEY_LOOKUP_FAILED', {
     ...(logContext || {}),
-    lookupCandidates: candidates,
+    lookupCandidateCount: candidates.length,
+    lookupCandidatesSample: candidates.slice(0, 4),
   });
   return null;
 }
@@ -235,6 +237,7 @@ module.exports = {
   decrypt,
   ensureTenantKey,
   tenantKeyExists,
+  resolveTenantKeyCandidates,
   resolveTenantKeyTenantId,
   generateEncryptedDek,
   ForbiddenError,

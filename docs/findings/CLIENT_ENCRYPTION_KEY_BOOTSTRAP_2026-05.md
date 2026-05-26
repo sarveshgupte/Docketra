@@ -12,6 +12,7 @@ Client records can remain ownership-scoped under legacy/root firm ids while runt
 - Added admin-only repair endpoint (`POST /clients/encryption/repair`) that is idempotent and safe:
   - no overwrite if key exists
   - blocked when encrypted client data already exists and key is absent
+  - key bootstrap target is canonical runtime tenant id (workspace/default-client id; first lookup candidate), while safety checks scan all candidate ownership scopes
 - Added diagnostics events for lookup/repair lifecycle.
 - Updated clients UI with explicit repair messaging and admin repair action.
 
