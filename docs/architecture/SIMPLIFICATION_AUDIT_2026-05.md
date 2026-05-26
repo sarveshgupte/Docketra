@@ -10,6 +10,8 @@ Guardrails respected:
 
 ---
 
+Security-specific findings are tracked separately in `docs/security/SECURITY_AUDIT_2026-05.md`.
+
 ## Top 10 complexity hotspots
 
 1. **Auth flow branching across multiple entry points + storage of transient login state**  
