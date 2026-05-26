@@ -89,6 +89,23 @@ const runTenantPreconditions = async (helper, args = [], res = null) => {
   return nextCalled ? false : Boolean(result);
 };
 
+const runLoginStepWithOptionalNext = async (helper, args = [], res = null, { nextResult = false } = {}) => {
+  if (typeof helper !== 'function') return false;
+
+  let nextCalled = false;
+  let nextError = null;
+  const next = (error) => {
+    nextCalled = true;
+    if (error) nextError = error;
+  };
+
+  const result = await helper(...args, next);
+  if (nextError) throw nextError;
+  if (res?.headersSent) return true;
+  if (typeof result === 'boolean') return result;
+  return nextCalled ? nextResult : Boolean(result);
+};
+
 const createAuthLoginService = (deps) => {
   const models = deps.models || {};
   const utils = deps.utils || {};
@@ -220,12 +237,12 @@ const createAuthLoginService = (deps) => {
       }
 
       checkpoint = 'handlePasswordVerification';
-      if (!(await handlePasswordVerification(req, res, user, password))) {
+      if (!(await runLoginStepWithOptionalNext(handlePasswordVerification, [req, res, user, password], res, { nextResult: true }))) {
         return;
       }
 
       checkpoint = 'handlePostPasswordChecks';
-      if (await handlePostPasswordChecks(req, res, user)) {
+      if (await runLoginStepWithOptionalNext(handlePostPasswordChecks, [req, res, user], res)) {
         return;
       }
 
