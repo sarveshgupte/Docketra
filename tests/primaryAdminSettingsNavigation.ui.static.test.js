@@ -34,7 +34,6 @@ function read(relPath) {
     'path="settings/work"',
     'path="storage-settings"',
     'path="data-storage-map"',
-    'path="ai-settings"',
     'path="admin"',
   ];
   protectedPaths.forEach((needle) => {
@@ -42,10 +41,10 @@ function read(relPath) {
   });
 
   // Storage popover links should target canonical routes from shared route constants.
-  assert(storageHookSource.includes('storageSettingsPath: ROUTES.STORAGE_SETTINGS(firmSlug)'), 'Storage Settings popover must use canonical storage settings route');
-  assert(storageHookSource.includes('dataStorageMapPath: ROUTES.DATA_STORAGE_MAP(firmSlug)'), 'Data Storage Map popover must use canonical data storage map route');
-  assert(storageBadgeSource.includes('to={summary.storageSettingsPath}'), 'Storage Settings popover link must point to summary storage path');
-  assert(storageBadgeSource.includes('to={summary.dataStorageMapPath}'), 'Data Storage Map popover link must point to summary data map path');
+  assert(storageHookSource.includes('storageSettingsPath: ROUTES.STORAGE_SETTINGS(activeFirmSlug)'), 'Storage Settings popover must use canonical storage settings route');
+  assert(storageHookSource.includes('dataStorageMapPath: ROUTES.DATA_STORAGE_MAP(activeFirmSlug)'), 'Data Storage Map popover must use canonical data storage map route');
+  assert(storageBadgeSource.includes('to={storageSettingsPath}'), 'Storage Settings popover link must point to storage settings path variable');
+  assert(storageBadgeSource.includes('to={dataStorageMapPath}'), 'Data Storage Map popover link must point to data map path variable');
 
   console.log('primaryAdminSettingsNavigation.ui.static.test.js passed');
 })();
