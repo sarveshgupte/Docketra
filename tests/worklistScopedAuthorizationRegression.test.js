@@ -129,6 +129,16 @@ const hasOrGroup = (query, expectedKeys) => Array.isArray(query?.$and) && query.
   await employeeWorklist({ query: { workbasketId: '507f1f77bcf86cd799439012' }, user: { ...baseReqUser, teamId: '507f1f77bcf86cd799439013', teamIds: ['507f1f77bcf86cd799439013'] } }, res403);
   assert.equal(res403.statusCode, 403);
 
+  // non-admin linked via workbaskets[] -> 200
+  calls.caseFindQueries = [];
+  const resLinked = mkRes();
+  await employeeWorklist({
+    query: { workbasketId: '507f1f77bcf86cd799439012' },
+    user: { ...baseReqUser, teamId: '507f1f77bcf86cd799439013', teamIds: ['507f1f77bcf86cd799439013'], workbaskets: [{ _id: '507f1f77bcf86cd799439012' }] },
+  }, resLinked);
+  assert.equal(resLinked.statusCode, 200);
+  assert.ok(calls.caseFindQueries.length > 0, 'linked workbasket membership should permit scoped query');
+
   // admin bypass -> 200
   calls.caseFindQueries = [];
   const resAdmin = mkRes();
@@ -140,6 +150,7 @@ const hasOrGroup = (query, expectedKeys) => Array.isArray(query?.$and) && query.
   const schema = routeSchemas['GET /employee/me'].query;
   const parsed = schema.parse({ workbasketId: '507f1f77bcf86cd799439012', limit: 10 });
   assert.equal(parsed.workbasketId, '507f1f77bcf86cd799439012');
+  assert.equal(Array.isArray(res.body?.data), true, 'authorized empty workbasket should return a controlled empty data array');
 
   console.log('worklistScopedAuthorizationRegression.test.js passed');
 })().catch((error) => {
