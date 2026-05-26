@@ -41,7 +41,7 @@
    - Category Settings
    - Storage Settings
    - Data Storage Map
- 3. Click each visible admin link; confirm route loads and no 404.
+3. Click each visible admin link; confirm route loads and no 404.
 4. Open storage status popover; click **Storage Settings** and **Data Storage Map**; confirm both routes load.
 5. Log in as `ADMIN`; confirm same Administration section appears.
 6. Log in as `USER`; confirm Administration section is hidden and direct admin route access is blocked by route guard.
