@@ -65,5 +65,37 @@ const createAuthLoginService = require('../src/services/authLogin.service');
   assert.strictEqual(nextErrorResult.body.code, 'AUTH_LOGIN_FAILED');
   assert.strictEqual(JSON.stringify(nextErrorResult.body).includes('next is not a function'), false);
 
+  const middlewarePasswordService = createAuthLoginService({
+    models: { User: { find: async () => [user] }, LoginSession: { deleteMany: async () => {}, create: async () => {} } },
+    utils: {
+      getSuperadminEnv: () => ({}),
+      handleSuperadminLogin: async () => { throw new Error('should not be called'); },
+      validateTenantUserPreconditions: async () => false,
+      handlePasswordVerification: async (_req, _res, _user, _password, next) => next(),
+      handlePostPasswordChecks: async () => false,
+      sendLoginOtpChallenge: async () => 'token-2',
+      getLoginOtpConfig: () => ({ resendCooldownSeconds: 60 }),
+    },
+  });
+  const middlewarePasswordResult = await middlewarePasswordService.login({ req });
+  assert.strictEqual(middlewarePasswordResult.statusCode, 200);
+  assert.strictEqual(middlewarePasswordResult.body.success, true);
+
+  const middlewarePostChecksService = createAuthLoginService({
+    models: { User: { find: async () => [user] }, LoginSession: { deleteMany: async () => {}, create: async () => {} } },
+    utils: {
+      getSuperadminEnv: () => ({}),
+      handleSuperadminLogin: async () => { throw new Error('should not be called'); },
+      validateTenantUserPreconditions: async () => false,
+      handlePasswordVerification: async () => true,
+      handlePostPasswordChecks: async (_req, _res, _user, next) => next(),
+      sendLoginOtpChallenge: async () => 'token-3',
+      getLoginOtpConfig: () => ({ resendCooldownSeconds: 60 }),
+    },
+  });
+  const middlewarePostChecksResult = await middlewarePostChecksService.login({ req });
+  assert.strictEqual(middlewarePostChecksResult.statusCode, 200);
+  assert.strictEqual(middlewarePostChecksResult.body.success, true);
+
   console.log('authLoginInitNextRegression.test.js passed');
 })();
