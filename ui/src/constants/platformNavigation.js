@@ -103,6 +103,46 @@ const NAV_BLUEPRINT = [
           description: 'Open workspace settings.',
         },
       },
+      {
+        id: 'team-management',
+        label: 'Users & Team',
+        icon: icons.clients,
+        route: (firmSlug) => ROUTES.ADMIN(firmSlug),
+        minRole: 'ADMIN',
+        activeMatch: 'exactOrDescendant',
+      },
+      {
+        id: 'workbasket-settings',
+        label: 'Workbasket Settings',
+        icon: icons.work,
+        route: (firmSlug) => ROUTES.WORK_SETTINGS(firmSlug),
+        minRole: 'ADMIN',
+        activeMatch: 'exactOrDescendant',
+      },
+      {
+        id: 'category-settings',
+        label: 'Category Settings',
+        icon: icons.intake,
+        route: (firmSlug) => ROUTES.WORK_CATEGORY_MANAGEMENT(firmSlug),
+        minRole: 'ADMIN',
+        activeMatch: 'exactOrDescendant',
+      },
+      {
+        id: 'storage-settings',
+        label: 'Storage Configuration',
+        icon: icons.settings,
+        route: (firmSlug) => ROUTES.STORAGE_SETTINGS(firmSlug),
+        minRole: 'ADMIN',
+        activeMatch: 'exactOrDescendant',
+      },
+      {
+        id: 'data-storage-map',
+        label: 'Storage Boundary Map',
+        icon: icons.reports,
+        route: (firmSlug) => ROUTES.DATA_STORAGE_MAP(firmSlug),
+        minRole: 'ADMIN',
+        activeMatch: 'exactOrDescendant',
+      },
     ],
   },
 ];
@@ -125,7 +165,7 @@ const resolveAccessContext = (roleOrUser = 'USER', permissions = []) => {
 
 export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions = []) => {
   const accessContext = resolveAccessContext(roleOrUser, permissions);
-  const normalizedRole = String(accessContext?.role || 'USER').toUpperCase();
+  const normalizedRole = String(accessContext?.role || 'USER').trim().toUpperCase().replace(/[\s-]+/g, '_');
   const assignedWorkbaskets = Array.isArray(accessContext?.workbaskets) ? accessContext.workbaskets : [];
   const assignedQcWorkbaskets = Array.isArray(accessContext?.qcWorkbaskets) ? accessContext.qcWorkbaskets : [];
   const showQcWorkbaskets = hasAtLeastRole(normalizedRole, 'MANAGER') || assignedQcWorkbaskets.length > 0;
@@ -202,7 +242,7 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
 
 export const getPlatformDestinationCommands = (firmSlug, roleOrUser = 'USER', permissions = []) => {
   const accessContext = resolveAccessContext(roleOrUser, permissions);
-  const normalizedRole = String(accessContext?.role || 'USER').toUpperCase();
+  const normalizedRole = String(accessContext?.role || 'USER').trim().toUpperCase().replace(/[\s-]+/g, '_');
   return (
   NAV_BLUEPRINT
     .flatMap((section) => section.items)

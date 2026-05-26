@@ -22,6 +22,7 @@ assert.ok(protectedRoutes.includes('path="data-storage-map"'), 'Data Storage Map
 const css = read('ui/src/components/platform/platform.css');
 
 assert.ok(badge.includes('className="platform__storage-link platform__storage-link--primary"'), 'Storage Settings link should use primary storage link class');
+assert.ok(badge.includes('className="platform__storage-link" to={dataStorageMapPath}'), 'Data Storage Map link should use storage link class');
 assert.ok(badge.includes('className="platform__storage-link" to={summary.dataStorageMapPath}'), 'Data Storage Map link should use storage link class');
 assert.ok(css.includes('max-width: calc(100vw - 20px);'), 'Storage popover should use viewport-safe max-width.');
 assert.ok(css.includes('overflow-wrap: anywhere;'), 'Storage content should wrap long text safely.');

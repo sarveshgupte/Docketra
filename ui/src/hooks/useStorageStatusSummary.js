@@ -69,6 +69,8 @@ const buildSummary = (firmSlug, configuration = {}, ownershipSummary = {}, rootH
     helperText = 'Business files are stored in your firm-owned Google Drive.';
   }
 
+  const activeFirmSlug = String(firmSlug || '');
+
   return {
     loading: false,
     error,
@@ -82,8 +84,8 @@ const buildSummary = (firmSlug, configuration = {}, ownershipSummary = {}, rootH
     businessDataLocation,
     helperText,
     statusLabel,
-    storageSettingsPath: ROUTES.STORAGE_SETTINGS(firmSlug),
-    dataStorageMapPath: ROUTES.DATA_STORAGE_MAP(firmSlug),
+    storageSettingsPath: ROUTES.STORAGE_SETTINGS(activeFirmSlug),
+    dataStorageMapPath: ROUTES.DATA_STORAGE_MAP(activeFirmSlug),
     isByosActive: byosActive,
     isManagedFallback: managedFallback,
     needsAttention,

@@ -11,6 +11,7 @@ const formatDateTime = (value) => {
 };
 
 export default function StorageStatusBadge() {
+  const { pathname } = useLocation();
   const { firmSlug } = useParams();
   const location = useLocation();
   const [open, setOpen] = useState(false);
