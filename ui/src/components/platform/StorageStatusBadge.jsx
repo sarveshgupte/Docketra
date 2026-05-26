@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import useStorageStatusSummary from '../../hooks/useStorageStatusSummary';
 import { ROUTES, hasValidFirmSlug } from '../../constants/routes';
@@ -13,18 +13,25 @@ const formatDateTime = (value) => {
 export default function StorageStatusBadge() {
   const { pathname } = useLocation();
   const { firmSlug } = useParams();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
-  const pathMatch = pathname.match(/^\/app\/firm\/([^/]+)/);
-  const routeFirmSlug = pathMatch?.[1] ? decodeURIComponent(pathMatch[1]) : '';
-  const activeFirmSlug = hasValidFirmSlug(firmSlug) ? firmSlug : (hasValidFirmSlug(routeFirmSlug) ? routeFirmSlug : '');
+  const inferredFirmSlug = useMemo(() => {
+    const match = String(location.pathname || '').match(/^\/app\/firm\/([^/]+)/i);
+    return match?.[1] ? decodeURIComponent(match[1]) : '';
+  }, [location.pathname]);
+  const activeFirmSlug = hasValidFirmSlug(firmSlug) ? firmSlug : inferredFirmSlug;
   const summary = useStorageStatusSummary(activeFirmSlug);
-  const storageSettingsPath = hasValidFirmSlug(activeFirmSlug) && String(summary?.storageSettingsPath || '').includes('/storage-settings')
-    ? summary.storageSettingsPath
-    : ROUTES.STORAGE_SETTINGS(activeFirmSlug);
-  const dataStorageMapPath = hasValidFirmSlug(activeFirmSlug) && String(summary?.dataStorageMapPath || '').includes('/data-storage-map')
-    ? summary.dataStorageMapPath
-    : ROUTES.DATA_STORAGE_MAP(activeFirmSlug);
+
+  const storageSettingsPath = useMemo(() => {
+    const path = String(summary.storageSettingsPath || '').trim();
+    return path.startsWith('/app/firm/') ? path : ROUTES.STORAGE_SETTINGS(activeFirmSlug);
+  }, [summary.storageSettingsPath, activeFirmSlug]);
+
+  const dataStorageMapPath = useMemo(() => {
+    const path = String(summary.dataStorageMapPath || '').trim();
+    return path.startsWith('/app/firm/') ? path : ROUTES.DATA_STORAGE_MAP(activeFirmSlug);
+  }, [summary.dataStorageMapPath, activeFirmSlug]);
 
   useEffect(() => {
     const onClick = (event) => {

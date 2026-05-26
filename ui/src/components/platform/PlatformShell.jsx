@@ -9,7 +9,7 @@ import { NotificationBell } from './NotificationBell';
 import api from '../../services/api';
 import { clientApi } from '../../api/client.api';
 import { isShortcutAllowedTarget } from '../../utils/keyboardShortcuts';
-import { isNavItemActive, isNavItemActiveWithLocation } from '../../utils/navActive';
+import { isNavItemActiveWithLocation } from '../../utils/navActive';
 import { trackAsync } from '../../utils/performanceMonitor';
 import './platform.css';
 
@@ -123,7 +123,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   );
   const userName = user?.name || user?.xID || 'User';
 
-  const isItemActive = useCallback((item) => isNavItemActive(pathname, item) || isNavItemActiveWithLocation(pathname, locationSearch, item), [pathname, locationSearch]);
+  const isItemActive = useCallback((item) => isNavItemActiveWithLocation(pathname, locationSearch, item), [pathname, locationSearch]);
 
   const currentNavItem = useMemo(
     () => navSections

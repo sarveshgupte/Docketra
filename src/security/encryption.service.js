@@ -26,6 +26,7 @@
 const LocalEncryptionProvider = require('./encryption.local.provider');
 const TenantKey = require('./tenantKey.model');
 const { looksEncrypted } = require('./encryption.utils');
+const { resolveCanonicalTenantFromFirmId } = require('../services/tenantIdentity.service');
 const log = require('../utils/log');
 
 /** Lazy-initialised singleton provider instance. */
@@ -82,6 +83,45 @@ async function tenantKeyExists(tenantId, { session } = {}) {
   if (session) query.session(session);
   const exists = await query;
   return Boolean(exists);
+}
+
+async function resolveTenantKeyCandidates(tenantId, { session } = {}) {
+  const normalized = tenantId ? String(tenantId) : null;
+  if (!normalized) return [];
+  const candidates = [normalized];
+  const context = await resolveCanonicalTenantFromFirmId(normalized, { session });
+  const contextCandidates = [
+    context?.tenantId,
+    context?.ownershipFirmId,
+    context?.legacyFirmId,
+    context?.defaultClientId,
+  ]
+    .filter(Boolean)
+    .map(String);
+  for (const id of contextCandidates) {
+    if (!candidates.includes(id)) candidates.push(id);
+  }
+  return candidates;
+}
+
+async function resolveTenantKeyTenantId(tenantId, { session, logContext } = {}) {
+  const candidates = await resolveTenantKeyCandidates(tenantId, { session });
+  log.info('CLIENT_ENCRYPTION_KEY_LOOKUP_ATTEMPTED', {
+    ...(logContext || {}),
+    lookupCandidateCount: candidates.length,
+    lookupCandidatesSample: candidates.slice(0, 4),
+  });
+  for (const candidate of candidates) {
+    if (await tenantKeyExists(candidate, { session })) {
+      return candidate;
+    }
+  }
+  log.warn('CLIENT_ENCRYPTION_KEY_LOOKUP_FAILED', {
+    ...(logContext || {}),
+    lookupCandidateCount: candidates.length,
+    lookupCandidatesSample: candidates.slice(0, 4),
+  });
+  return null;
 }
 
 /**
@@ -197,6 +237,8 @@ module.exports = {
   decrypt,
   ensureTenantKey,
   tenantKeyExists,
+  resolveTenantKeyCandidates,
+  resolveTenantKeyTenantId,
   generateEncryptedDek,
   ForbiddenError,
   looksEncrypted,

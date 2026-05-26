@@ -20,6 +20,7 @@ export const clientApi = {
     if (options.search) params.search = options.search;
     return request((http) => http.get('/clients', { params }), 'Failed to load clients');
   },
+  repairEncryptionKey: () => request((http) => http.post('/clients/encryption/repair', {}), 'Failed to repair client encryption setup'),
 
   getClientById: (clientId) => request((http) => http.get(`/clients/${clientId}`), 'Failed to load client details'),
   createClient: (clientData) => request((http) => http.post('/clients', clientData), 'Failed to create client'),
