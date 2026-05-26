@@ -22,6 +22,37 @@ const createAuthPasswordService = (deps) => {
     PASSWORD_POLICY_MESSAGE,
     bcrypt,
   } = deps;
+  const normalizeIdentifierValue = (value) => {
+    if (value == null) return null;
+    if (typeof value === 'string' || typeof value === 'number') return String(value);
+    if (typeof value === 'bigint') return value.toString();
+    if (typeof value?.toHexString === 'function') return String(value.toHexString());
+    if (typeof value === 'object' && value?._id != null) return normalizeIdentifierValue(value._id);
+    const serialized = String(value);
+    return serialized && serialized !== '[object Object]' ? serialized : null;
+  };
+
+  const uniqueTruthy = (values = []) => {
+    const seen = new Set();
+    return values
+      .map((value) => normalizeIdentifierValue(value))
+      .filter((value) => {
+        if (!value || seen.has(value)) return false;
+        seen.add(value);
+        return true;
+      });
+  };
+
+  const buildTenantCandidateIds = (req, firm = null) => uniqueTruthy([
+    req?.firmId,
+    req?.firm?.id,
+    req?.firm?.defaultClientId,
+    req?.firm?.legacyFirmId,
+    firm?._id,
+    firm?.defaultClientId,
+    firm?.legacyFirmId,
+  ]);
+
   const resolveForgotPasswordContext = async ({ req, identifier }) => {
     const rawIdentifier = String(identifier || '').trim();
     const isEmailIdentifier = rawIdentifier.includes('@');
@@ -31,19 +62,30 @@ const createAuthPasswordService = (deps) => {
     let firm = req?.firm || null;
 
     if (!firm && providedFirmSlug) {
-      firm = await Firm.findOne({ firmSlug: providedFirmSlug, status: 'active' }).select('_id name firmSlug').lean();
+      firm = await Firm.findOne({ firmSlug: providedFirmSlug, status: 'active' }).select('_id name firmSlug defaultClientId legacyFirmId').lean();
       if (!firm?._id) {
         return { user: null, firm: null, ambiguous: false, invalidFirm: true };
       }
     }
 
     if (firm?._id) {
-      const user = await User.findOne({
-        firmId: firm._id,
+      const tenantCandidateIds = buildTenantCandidateIds(req, firm);
+      const userQuery = {
         ...(isEmailIdentifier ? { email: normalizedEmail } : { xID: normalizedXID }),
         status: 'active',
         isActive: true,
-      });
+      };
+      if (tenantCandidateIds.length > 0) {
+        userQuery.$or = [
+          { firmId: { $in: tenantCandidateIds } },
+          { defaultClientId: { $in: tenantCandidateIds } },
+        ];
+      }
+      const candidates = await User.find(userQuery).limit(2);
+      if (candidates.length !== 1) {
+        return { user: null, firm, ambiguous: candidates.length > 1, invalidFirm: false };
+      }
+      const user = candidates[0];
       return { user, firm, ambiguous: false, invalidFirm: false };
     }
 
