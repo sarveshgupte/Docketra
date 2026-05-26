@@ -47,6 +47,15 @@ const createAuthLoginService = require('../src/services/authLogin.service');
   assert.strictEqual(invalidResult.body.success, false);
   assert.strictEqual(JSON.stringify(invalidResult.body).includes('next is not a function'), false);
 
+
+  const modelSource = require('fs').readFileSync(require('path').resolve(__dirname, '../src/models/User.model.js'), 'utf8');
+  const findOneHookMatch = modelSource.match(/userSchema\.pre\('findOneAndUpdate',\s*function\(([^)]*)\)/);
+  const updateManyHookMatch = modelSource.match(/userSchema\.pre\('updateMany',\s*function\(([^)]*)\)/);
+  assert(findOneHookMatch, 'findOneAndUpdate hierarchy hook should exist');
+  assert(updateManyHookMatch, 'updateMany hierarchy hook should exist');
+  assert.strictEqual(findOneHookMatch[1].trim().length, 0, 'findOneAndUpdate pre hook must be promise/sync style (length 0)');
+  assert.strictEqual(updateManyHookMatch[1].trim().length, 0, 'updateMany pre hook must be promise/sync style (length 0)');
+
   const nextErrorService = createAuthLoginService({
     models: { User: { find: async () => [user] }, LoginSession: { deleteMany: async () => {}, create: async () => {} } },
     utils: {

@@ -10,14 +10,13 @@
 - UI impact: `/gupte-opc/login` shows *"Sign in failed — Server is unavailable right now."*
 
 ## Root cause status
-Not yet fully confirmed for every production permutation. Current evidence confirms callback-style helper invocation can occur after `AUTH_LOGIN_USER_CANDIDATES`, and diagnostics are in place to identify the exact helper/checkpoint in any subsequent production failure.
+Confirmed from production Render stack trace: `User.model.js` query middleware for hierarchy update validation used callback-style `next` in `pre('findOneAndUpdate')` / `pre('updateMany')`. During login-init failed-password accounting (`handlePasswordVerification` path), Mongoose executed the hook without a callback and the hook's `next()` call threw `TypeError: next is not a function`.
 
 ## Fix
-- Added callback-safe helper execution for all helper steps between user-candidate lookup and OTP challenge:
-  - `validateTenantUserPreconditions`
-  - `handlePasswordVerification`
-  - `handlePostPasswordChecks`
-- Error propagation is preserved (errors are not swallowed), including `next(error)` flows.
+- Converted User query pre-hooks used by hierarchy update validation to promise/sync style (no `next` parameter):
+  - `pre('findOneAndUpdate')`
+  - `pre('updateMany')`
+  Each hook now calls `assertHierarchyUpdatePayload(this.getUpdate() || {})` directly so thrown validation errors propagate naturally without callback assumptions.
 - Added temporary production-safe diagnostics on `AUTH_LOGIN_SERVICE_FAILED` to log:
   - `checkpoint` (which helper was executing),
   - `error.message`,
