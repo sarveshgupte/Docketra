@@ -45,6 +45,10 @@ function read(relPath) {
   assert(storageHookSource.includes('dataStorageMapPath: ROUTES.DATA_STORAGE_MAP(activeFirmSlug)'), 'Data Storage Map popover must use canonical data storage map route');
   assert(storageBadgeSource.includes('to={storageSettingsPath}'), 'Storage Settings popover link must point to storage settings path variable');
   assert(storageBadgeSource.includes('to={dataStorageMapPath}'), 'Data Storage Map popover link must point to data map path variable');
+  assert(storageBadgeSource.includes('useLocation'), 'Storage badge should use location fallback for firm slug resolution');
+  assert(storageBadgeSource.includes('const activeFirmSlug ='), 'Storage badge should compute activeFirmSlug fallback');
+  assert(storageBadgeSource.includes('ROUTES.STORAGE_SETTINGS(activeFirmSlug)'), 'Storage badge should fallback to canonical Storage Settings route');
+  assert(storageBadgeSource.includes('ROUTES.DATA_STORAGE_MAP(activeFirmSlug)'), 'Storage badge should fallback to canonical Data Storage Map route');
 
   console.log('primaryAdminSettingsNavigation.ui.static.test.js passed');
 })();

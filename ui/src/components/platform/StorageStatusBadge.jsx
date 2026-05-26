@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import useStorageStatusSummary from '../../hooks/useStorageStatusSummary';
+import { ROUTES, hasValidFirmSlug } from '../../constants/routes';
 
 const formatDateTime = (value) => {
   if (!value) return 'Not available';
@@ -10,11 +11,20 @@ const formatDateTime = (value) => {
 };
 
 export default function StorageStatusBadge() {
+  const { pathname } = useLocation();
   const { firmSlug } = useParams();
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
-  const summary = useStorageStatusSummary(firmSlug);
-  const { storageSettingsPath, dataStorageMapPath } = summary;
+  const pathMatch = pathname.match(/^\/app\/firm\/([^/]+)/);
+  const routeFirmSlug = pathMatch?.[1] ? decodeURIComponent(pathMatch[1]) : '';
+  const activeFirmSlug = hasValidFirmSlug(firmSlug) ? firmSlug : (hasValidFirmSlug(routeFirmSlug) ? routeFirmSlug : '');
+  const summary = useStorageStatusSummary(activeFirmSlug);
+  const storageSettingsPath = hasValidFirmSlug(activeFirmSlug) && String(summary?.storageSettingsPath || '').includes('/storage-settings')
+    ? summary.storageSettingsPath
+    : ROUTES.STORAGE_SETTINGS(activeFirmSlug);
+  const dataStorageMapPath = hasValidFirmSlug(activeFirmSlug) && String(summary?.dataStorageMapPath || '').includes('/data-storage-map')
+    ? summary.dataStorageMapPath
+    : ROUTES.DATA_STORAGE_MAP(activeFirmSlug);
 
   useEffect(() => {
     const onClick = (event) => {
@@ -26,7 +36,7 @@ export default function StorageStatusBadge() {
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
-  if (!firmSlug) return null;
+  if (!activeFirmSlug) return null;
 
   return (
     <div className="platform__storage-badge" ref={containerRef}>
