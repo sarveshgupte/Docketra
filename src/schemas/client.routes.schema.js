@@ -2,6 +2,10 @@ const { z, nonEmptyString, clientIdString } = require('./common');
 
 module.exports = {
   'GET /': { query: z.object({}).passthrough() },
+  'POST /encryption/repair': {
+    query: z.object({}).strict(),
+    body: z.object({}).strict(),
+  },
   'GET /:clientId': { params: z.object({ clientId: clientIdString }), query: z.object({}).passthrough() },
   'POST /': {
     body: z.object({
