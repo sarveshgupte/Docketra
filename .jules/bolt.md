@@ -48,3 +48,6 @@
 ## 2026-05-21 - Concurrent Document Fetch in Case Create Service Validation
 **Learning:** In the `caseCreate` service, `WorkType.findOne` and `SubWorkType.findOne` were awaited sequentially, which caused endpoint latency, despite being independent of the other model validation queries (like `Deal`, `CrmClient`, etc.).
 **Action:** Prepared the `WorkType` and `SubWorkType` queries as promises and merged them into the existing `Promise.all()` concurrently with the other independent lookups.
+## 2026-05-26 - [Avoid sequential database queries for bulk creation idempotency checks]
+**Learning:** Found an N+1 query loop for bulk creating docket objects. It was sequentially running `Case.findOne` per docket to check for duplicates by `idempotencyKey` before inserting it.
+**Action:** Implemented caching strategy where we pull all potentially existing keys up front with an `$in` query and put them in a Set. Then iterate through clients avoiding duplicate creation by looking up in the Set. Eliminates N+1 database roundtrips.
