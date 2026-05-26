@@ -18,6 +18,7 @@ export const SidebarSection = ({
   const canToggle = collapsible && !sticky;
   const sectionId = useId();
   const visibleItems = useMemo(() => items.filter((item) => !item.hidden), [items]);
+  const sectionItemsId = `${sectionId}-items`;
 
   const handleGroupToggle = (groupId) => {
     if (!onGroupToggle) return;
@@ -31,6 +32,7 @@ export const SidebarSection = ({
         className="enterprise-sidebar__section-header text-xs font-semibold uppercase tracking-[0.08em] text-gray-500"
         onClick={() => canToggle && setIsOpen((value) => !value)}
         aria-expanded={isOpen}
+        aria-controls={sectionItemsId}
         disabled={!canToggle || collapsed}
       >
         <span className="enterprise-sidebar__section-title">{title}</span>
@@ -40,7 +42,7 @@ export const SidebarSection = ({
       </button>
 
       {isOpen && (
-        <div className="enterprise-sidebar__section-items">
+        <div id={sectionItemsId} className="enterprise-sidebar__section-items">
           {visibleItems.map((item) => {
             if (item.type === 'group') {
               const isGroupOpen = expandedGroupId === item.id;
