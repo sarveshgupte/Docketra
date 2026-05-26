@@ -851,22 +851,12 @@ const assertHierarchyUpdatePayload = (update = {}) => {
   }
 };
 
-userSchema.pre('findOneAndUpdate', function(next) {
-  try {
-    assertHierarchyUpdatePayload(this.getUpdate() || {});
-    next();
-  } catch (error) {
-    next(error);
-  }
+userSchema.pre('findOneAndUpdate', function() {
+  assertHierarchyUpdatePayload(this.getUpdate() || {});
 });
 
-userSchema.pre('updateMany', function(next) {
-  try {
-    assertHierarchyUpdatePayload(this.getUpdate() || {});
-    next();
-  } catch (error) {
-    next(error);
-  }
+userSchema.pre('updateMany', function() {
+  assertHierarchyUpdatePayload(this.getUpdate() || {});
 });
 
 
