@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import useStorageStatusSummary from '../../hooks/useStorageStatusSummary';
+import { ROUTES, hasValidFirmSlug } from '../../constants/routes';
 
 const formatDateTime = (value) => {
   if (!value) return 'Not available';
@@ -11,9 +12,25 @@ const formatDateTime = (value) => {
 
 export default function StorageStatusBadge() {
   const { firmSlug } = useParams();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
-  const summary = useStorageStatusSummary(firmSlug);
+  const inferredFirmSlug = useMemo(() => {
+    const match = String(location.pathname || '').match(/^\/app\/firm\/([^/]+)/i);
+    return match?.[1] ? decodeURIComponent(match[1]) : '';
+  }, [location.pathname]);
+  const activeFirmSlug = hasValidFirmSlug(firmSlug) ? firmSlug : inferredFirmSlug;
+  const summary = useStorageStatusSummary(activeFirmSlug);
+
+  const storageSettingsPath = useMemo(() => {
+    const path = String(summary.storageSettingsPath || '').trim();
+    return path.startsWith('/app/firm/') ? path : ROUTES.STORAGE_SETTINGS(activeFirmSlug);
+  }, [summary.storageSettingsPath, activeFirmSlug]);
+
+  const dataStorageMapPath = useMemo(() => {
+    const path = String(summary.dataStorageMapPath || '').trim();
+    return path.startsWith('/app/firm/') ? path : ROUTES.DATA_STORAGE_MAP(activeFirmSlug);
+  }, [summary.dataStorageMapPath, activeFirmSlug]);
 
   useEffect(() => {
     const onClick = (event) => {
@@ -25,7 +42,7 @@ export default function StorageStatusBadge() {
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
-  if (!firmSlug) return null;
+  if (!activeFirmSlug) return null;
 
   return (
     <div className="platform__storage-badge" ref={containerRef}>
@@ -54,8 +71,8 @@ export default function StorageStatusBadge() {
             <div><dt>Control-plane metadata</dt><dd>MongoDB stores control-plane metadata.</dd></div>
           </dl>
           <div className="platform__storage-links">
-            <Link className="platform__storage-link platform__storage-link--primary" to={summary.storageSettingsPath} onClick={() => setOpen(false)}>Storage Settings</Link>
-            <Link className="platform__storage-link" to={summary.dataStorageMapPath} onClick={() => setOpen(false)}>Data Storage Map</Link>
+            <Link className="platform__storage-link platform__storage-link--primary" to={storageSettingsPath} onClick={() => setOpen(false)}>Storage Settings</Link>
+            <Link className="platform__storage-link" to={dataStorageMapPath} onClick={() => setOpen(false)}>Data Storage Map</Link>
           </div>
         </div>
       ) : null}
