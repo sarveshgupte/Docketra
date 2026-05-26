@@ -9,21 +9,28 @@
   - HTTP status: `500`
 - UI impact: `/gupte-opc/login` shows *"Sign in failed — Server is unavailable right now."*
 
-## Root cause
-`authLogin.service` called injected login helper functions assuming they are always pure service-style functions. In this regression path, the `validateTenantUserPreconditions` helper was invoked in a middleware-style variant that called `next()`. Since no callback was passed by the service, runtime threw `next is not a function`.
-
-This mismatch happened in the login init chain after user candidate lookup and before OTP success response.
+## Root cause status
+Not yet fully confirmed for every production permutation. Current evidence confirms callback-style helper invocation can occur after `AUTH_LOGIN_USER_CANDIDATES`, and diagnostics are in place to identify the exact helper/checkpoint in any subsequent production failure.
 
 ## Fix
-- Added a focused precondition-runner in `authLogin.service` only for `validateTenantUserPreconditions`, so it can safely handle an optional middleware-style `next` callback without converting the rest of login-init helpers to a generic middleware bridge.
-- `handlePasswordVerification` and `handlePostPasswordChecks` remain direct pure-service calls.
-- Error propagation is preserved (errors are not swallowed).
+- Added callback-safe helper execution for all helper steps between user-candidate lookup and OTP challenge:
+  - `validateTenantUserPreconditions`
+  - `handlePasswordVerification`
+  - `handlePostPasswordChecks`
+- Error propagation is preserved (errors are not swallowed), including `next(error)` flows.
+- Added temporary production-safe diagnostics on `AUTH_LOGIN_SERVICE_FAILED` to log:
+  - `checkpoint` (which helper was executing),
+  - `error.message`,
+  - `error.stack`.
+  This logging intentionally excludes password, OTP, passwordHash, cookies, tokens, and secrets.
 
 ## Regression coverage
 - Added `tests/authLoginInitNextRegression.test.js`:
-  - exercises `createAuthLoginService` with middleware-style helper stubs that call `next()`
-  - validates login init completes without `next is not a function`
-  - validates success response path remains intact
+  - exercises `createAuthLoginService` login-init chain with middleware-style helper stubs that call `next()`
+  - validates login init success path reaches OTP challenge without `next is not a function`
+  - validates invalid credentials path returns controlled `401` (not `500`)
+  - validates `next(error)` path is propagated safely as controlled service failure (`500` with `AUTH_LOGIN_FAILED`)
+  - validates middleware-style `handlePasswordVerification` and `handlePostPasswordChecks` do not crash and still reach OTP challenge
 
 ## Tests run
 - `node tests/authLoginInitNextRegression.test.js`

@@ -89,6 +89,23 @@ const runTenantPreconditions = async (helper, args = [], res = null) => {
   return nextCalled ? false : Boolean(result);
 };
 
+const runLoginStepWithOptionalNext = async (helper, args = [], res = null, { nextResult = false } = {}) => {
+  if (typeof helper !== 'function') return false;
+
+  let nextCalled = false;
+  let nextError = null;
+  const next = (error) => {
+    nextCalled = true;
+    if (error) nextError = error;
+  };
+
+  const result = await helper(...args, next);
+  if (nextError) throw nextError;
+  if (res?.headersSent) return true;
+  if (typeof result === 'boolean') return result;
+  return nextCalled ? nextResult : Boolean(result);
+};
+
 const createAuthLoginService = (deps) => {
   const models = deps.models || {};
   const utils = deps.utils || {};
@@ -126,6 +143,7 @@ const createAuthLoginService = (deps) => {
   } = services;
 
   const loginHandler = async (req, res) => {
+    let checkpoint = 'init';
     try {
       const loginScope = req.loginScope || 'tenant';
       const requestedFirmSlug = req.params?.firmSlug || req.firmSlug || null;
@@ -213,19 +231,23 @@ const createAuthLoginService = (deps) => {
         });
       }
 
+      checkpoint = 'validateTenantUserPreconditions';
       if (await runTenantPreconditions(validateTenantUserPreconditions, [req, res, user, requestedFirmSlug, normalizedXID], res)) {
         return;
       }
 
-      if (!(await handlePasswordVerification(req, res, user, password))) {
+      checkpoint = 'handlePasswordVerification';
+      if (!(await runLoginStepWithOptionalNext(handlePasswordVerification, [req, res, user, password], res, { nextResult: true }))) {
         return;
       }
 
-      if (await handlePostPasswordChecks(req, res, user)) {
+      checkpoint = 'handlePostPasswordChecks';
+      if (await runLoginStepWithOptionalNext(handlePostPasswordChecks, [req, res, user], res)) {
         return;
       }
 
       try {
+        checkpoint = 'sendLoginOtpChallenge';
         const loginToken = await sendLoginOtpChallenge(req, user);
         const otpConfig = getLoginOtpConfig();
         log.info('AUTH_LOGIN_CHALLENGE_SENT', {
@@ -263,7 +285,12 @@ const createAuthLoginService = (deps) => {
         });
       }
     } catch (error) {
-      log.error('AUTH_LOGIN_SERVICE_FAILED', { req: getAuthLogRequest(req), error: error?.message });
+      log.error('AUTH_LOGIN_SERVICE_FAILED', {
+        req: getAuthLogRequest(req),
+        checkpoint,
+        error: error?.message,
+        stack: error?.stack,
+      });
       return sendErrorResponse(res, {
         statusCode: 500,
         code: 'AUTH_LOGIN_FAILED',
