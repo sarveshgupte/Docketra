@@ -5,8 +5,9 @@
 - `POST /api/auth/forgot-password/verify` could surface generic server failures instead of controlled invalid/expired OTP responses.
 
 ## Confirmed root cause
-- Forgot-password OTP send path had no explicit attempted/succeeded/failed diagnostics, making delivery failures opaque in production logs.
-- OTP send errors were not checkpointed with safe metadata for quick triage.
+- Forgot-password tenant lookup did not mirror login-init tenant candidate resolution.
+- In production-shaped records, workspace firm slug resolved to canonical/workspace tenant while user auth record was anchored to legacy/root `firmId`; forgot-password lookup only scoped to one firm id, so the real user was missed and OTP state was never persisted.
+- Missing send diagnostics made OTP delivery failures opaque during incident triage.
 - Verify path did not harden unexpected verification exceptions into controlled invalid/expired OTP response semantics.
 
 ## Fix
@@ -20,6 +21,7 @@
 - Diagnostics include requestId + safe tenant/user context (firmId/tenantId, userId/userXID), and exclude OTP/password/token/secret fields.
 - Kept enumeration-safe init behavior (`200` generic response) even if email provider fails.
 - Wrapped verify flow with controlled fallback so normal/expected invalid conditions return invalid/expired semantics instead of generic server errors.
+- Added tenant-candidate user resolution parity with login-init for forgot-password (`firmId` OR `defaultClientId` membership across candidate ids including legacy/root and canonical/workspace ids).
 
 ## Tests
 - Forgot-password OTP reliability tests cover:
