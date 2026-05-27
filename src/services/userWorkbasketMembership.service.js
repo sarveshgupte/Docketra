@@ -56,9 +56,10 @@ function normalizeMembership({ role, teams, qcExplicitTeamIds = [], requirePrima
     qcExplicitTeamIds: explicitQc,
   };
 }
+const { normalizeRole } = require('../utils/role.utils');
 
 function buildWorkbasketVisibilityQuery({ user }) {
-  const role = String(user?.role || '').toUpperCase();
+  const role = normalizeRole(user?.role);
   if (role === 'SUPER_ADMIN') return { denyAll: true };
   if (ADMIN_LIKE_ROLES.has(role)) return { firmWide: true };
 

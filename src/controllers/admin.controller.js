@@ -611,35 +611,22 @@ const updateRestrictedClients = async (req, res) => {
   try {
     const { xID } = req.params;
     const { accessMode, clientIds = [] } = req.body;
-    
+
     if (!xID) {
-      return res.status(400).json({
-        success: false,
-        message: 'xID is required',
-      });
+      return res.status(400).json({ success: false, message: 'xID is required' });
     }
-    
+
     if (!['ALL', 'SELECTED'].includes(accessMode)) {
-      return res.status(400).json({
-        success: false,
-        message: 'accessMode must be ALL or SELECTED',
-      });
+      return res.status(400).json({ success: false, message: 'accessMode must be ALL or SELECTED' });
     }
-    
-    // Get admin from authenticated request
+
     const admin = req.user;
-    
-    // Find target user by xID (same-firm only)
-    const user = await User.findOne({ 
-      xID: xID.toUpperCase(),
-      firmId: admin.firmId,
-    });
-    
+
+    // Find target user by xID (same-firm only) — lean() to avoid session conflicts with user.save()
+    const user = await User.findOne({ xID: xID.toUpperCase(), firmId: admin.firmId }).lean();
+
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found in your firm',
-      });
+      return res.status(404).json({ success: false, message: 'User not found in your firm' });
     }
 
     if (String(user.role || '').toUpperCase() === 'PRIMARY_ADMIN') {
@@ -649,10 +636,11 @@ const updateRestrictedClients = async (req, res) => {
       });
     }
 
-    const normalizedClientIds = Array.isArray(clientIds) ? [...new Set(clientIds.map((id) => String(id).trim().toUpperCase()).filter(Boolean))] : [];
+    const normalizedClientIds = Array.isArray(clientIds)
+      ? [...new Set(clientIds.map((id) => String(id).trim().toUpperCase()).filter(Boolean))]
+      : [];
 
-    // Validate all client IDs are in correct format
-    const invalidIds = normalizedClientIds.filter(id => !/^C\d{6}$/.test(id));
+    const invalidIds = normalizedClientIds.filter((id) => !/^C\d{6}$/.test(id));
     if (invalidIds.length > 0) {
       return res.status(400).json({
         success: false,
@@ -680,44 +668,55 @@ const updateRestrictedClients = async (req, res) => {
       }
     }
 
-    // Capture previous values before update for accurate audit (after validation)
-    const previousClientAccess = Array.isArray(user.clientAccess) ? user.clientAccess.map((id) => String(id)) : [];
-
-    if (accessMode === 'ALL') {
-      user.clientAccess = [];
-    } else {
-      const clientDocs = await Client.find({ firmId: admin.firmId, clientId: { $in: normalizedClientIds } }).select('_id').lean();
-      user.clientAccess = clientDocs.map((doc) => doc._id);
+    // Resolve the new clientAccess array
+    let newClientAccess = [];
+    if (accessMode === 'SELECTED') {
+      const clientDocs = await Client
+        .find({ firmId: admin.firmId, clientId: { $in: normalizedClientIds } })
+        .select('_id')
+        .lean();
+      newClientAccess = clientDocs.map((doc) => doc._id);
     }
-    await user.save();
-    
-    // Log admin action for audit
-    await logAdminAction({
-      adminXID: admin.xID,
-      actionType: 'USER_CLIENT_ACCESS_UPDATED',
+
+    // Use findOneAndUpdate to avoid Mongoose session-association conflicts
+    // (user.save() on a lean-fetched or session-mismatched doc throws
+    // "Cannot set a document's session to null after initialization")
+    await User.findOneAndUpdate(
+      { xID: xID.toUpperCase(), firmId: admin.firmId },
+      { $set: { clientAccess: newClientAccess } },
+      { new: false },
+    );
+
+    // Non-blocking audit log — never let this fail the request
+    try {
+      const previousClientAccess = Array.isArray(user.clientAccess)
+        ? user.clientAccess.map((id) => String(id))
+        : [];
+      await logAdminAction({
+        adminXID: admin.xID,
+        actionType: 'USER_CLIENT_ACCESS_UPDATED',
         targetXID: user.xID,
         metadata: {
-        accessMode,
-        previousClientAccess,
-        clientIds: normalizedClientIds,
-        previousCount: previousClientAccess.length,
-        newCount: normalizedClientIds.length,
-      },
-      req,
-    });
-    
-    res.json({
+          accessMode,
+          previousClientAccess,
+          clientIds: normalizedClientIds,
+          previousCount: previousClientAccess.length,
+          newCount: normalizedClientIds.length,
+        },
+        req,
+      });
+    } catch (auditErr) {
+      log.warn('[ADMIN] Non-fatal: audit log failed for updateRestrictedClients', { error: auditErr.message });
+    }
+
+    return res.json({
       success: true,
       message: 'User client access restrictions updated successfully',
-      data: {
-        xID: user.xID,
-        accessMode,
-        clientIds: normalizedClientIds,
-      },
+      data: { xID: user.xID, accessMode, clientIds: normalizedClientIds },
     });
   } catch (error) {
     log.error('[ADMIN] Error updating restricted clients:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Error updating client access restrictions',
     });

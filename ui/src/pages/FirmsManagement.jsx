@@ -298,6 +298,7 @@ export const FirmsManagement = () => {
       const response = await superadminService.forceResetFirmAdmin(targetFirm._id, adminId);
       if (response.success) {
         toast.success(`Password reset forced for ${response.emailMasked}`);
+        await loadFirms(); // Reload firms to sync main grid
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to force password reset');
@@ -340,6 +341,7 @@ export const FirmsManagement = () => {
       const response = await superadminService.updateFirmAdminStatus(firm._id, nextStatus);
       if (response.success) {
         toast.success(`Admin ${nextStatus === 'ACTIVE' ? 'enabled' : 'disabled'} successfully`);
+        await loadFirms(); // Reload firms to sync main grid
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to update admin status');

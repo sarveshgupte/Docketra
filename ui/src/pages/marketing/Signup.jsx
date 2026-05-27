@@ -125,6 +125,7 @@ export default function Signup() {
     return () => window.clearInterval(timer);
   }, [isTurnstileConfigured, step, turnstileSiteKey]);
 
+
   const submitStepOne = async (event) => {
     event.preventDefault();
     if (loading) return;
@@ -275,39 +276,59 @@ export default function Signup() {
 
   if (signupSuccessData) {
     return (
-      <div className="auth-wrapper">
-        <div className="auth-card max-w-form">
-          <div className="auth-header">
-            <p className="auth-kicker">Docketra · Built for professional firms</p>
-            <h1 className="text-xl font-semibold text-center">🎉 Workspace created successfully</h1>
+      <div className="find-workspace-page auth-public-page">
+        <div className="find-workspace-page__shell">
+          <section className="find-workspace-page__context" aria-label="Workspace signup success">
+            <p className="find-workspace-page__eyebrow">Workspace created</p>
+            <h1 className="find-workspace-page__heading">Welcome to Docketra</h1>
+            <p className="find-workspace-page__intro">
+              Your workspace is ready. Continue to login and start onboarding your team.
+            </p>
+          </section>
+          <div className="find-workspace-page__card auth-public-page__card">
+            <div className="find-workspace-page__card-header">
+              <h2>Workspace created successfully</h2>
+              <p>Save these details for your first login.</p>
+            </div>
+            <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 space-y-2">
+              <p><span className="font-medium">Firm URL:</span> {signupSuccessData.firmUrl || buildFallbackFirmLoginUrl(signupSuccessData.firmSlug)}</p>
+              <p><span className="font-medium">Your XID:</span> {signupSuccessData.xid}</p>
+            </div>
+            <Button type="button" variant="primary" fullWidth onClick={handleLoginRedirect}>
+              Go to Login
+            </Button>
+            <Button type="button" variant="outline" fullWidth onClick={handleResendWelcomeEmail} disabled={loading}>
+              {loading ? 'Sending...' : 'Resend welcome email'}
+            </Button>
+            {emailStatus ? <p className="find-workspace-page__security-note">{emailStatus}</p> : null}
           </div>
-          <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 space-y-2">
-            <p><span className="font-medium">Firm URL:</span> {signupSuccessData.firmUrl || buildFallbackFirmLoginUrl(signupSuccessData.firmSlug)}</p>
-            <p><span className="font-medium">Your XID:</span> {signupSuccessData.xid}</p>
-          </div>
-          <Button type="button" variant="primary" fullWidth onClick={handleLoginRedirect}>
-            Go to Login
-          </Button>
-          <Button type="button" variant="outline" fullWidth onClick={handleResendWelcomeEmail} disabled={loading}>
-            {loading ? 'Sending...' : 'Resend welcome email'}
-          </Button>
-          {emailStatus ? <p className="mt-2 text-xs text-gray-500">{emailStatus}</p> : null}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="auth-wrapper">
-      <div className="auth-card max-w-form">
-        <div className="auth-header">
-          <p className="auth-kicker">Docketra · Built for professional firms</p>
-          <h1 className="text-xl font-semibold text-center">Create your workspace</h1>
-        </div>
-        <p className="mt-2 text-sm text-gray-500 text-center">Step {step} of 2</p>
-        <p className="mt-2 text-sm text-gray-500 text-center">{step === 1 ? 'Takes less than 1 minute' : 'Enter the 6-digit code sent to your email'}</p>
+    <div className="find-workspace-page auth-public-page">
+      <div className="find-workspace-page__shell">
+        <section className="find-workspace-page__context" aria-label="Workspace signup context">
+          <p className="find-workspace-page__eyebrow">Workspace signup</p>
+          <h1 className="find-workspace-page__heading">Create your workspace</h1>
+          <p className="find-workspace-page__intro">
+            Set up your firm workspace in under a minute with secure verification.
+          </p>
+          <ul className="find-workspace-page__benefits">
+            <li>Step {step} of 2</li>
+            <li>OTP verification keeps signups secure</li>
+            <li>Firm URL is generated automatically</li>
+          </ul>
+        </section>
+        <div className="find-workspace-page__card auth-public-page__card">
+          <div className="find-workspace-page__card-header">
+            <h2>{step === 1 ? 'Enter workspace details' : 'Verify your email OTP'}</h2>
+            <p>{step === 1 ? 'Takes less than 1 minute.' : 'Enter the 6-digit code sent to your email.'}</p>
+          </div>
 
-        {apiError && <div role="alert" className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{apiError}</div>}
+        {apiError && <div role="alert" className="auth-public-page__error">{apiError}</div>}
 
         {step === 1 ? (
           <form className={`mt-6 ${spacingClasses.formFieldSpacing} w-full`} onSubmit={submitStepOne} noValidate>
@@ -317,8 +338,8 @@ export default function Signup() {
             <Input id="signup-firm" type="text" name="firmName" label="Firm Name" className="w-full" value={form.firmName} onChange={onFormChange} disabled={loading} error={errors.firmName} required />
             <Input id="signup-phone" type="text" name="phone" label="Primary Admin Phone" className="w-full" value={form.phone} onChange={onFormChange} disabled={loading} error={errors.phone} required />
             {isTurnstileConfigured ? <div ref={turnstileContainerRef} className="min-h-[65px]" /> : null}
-            <p className="text-xs text-gray-500">{STRONG_PASSWORD_MESSAGE}</p>
-            <p className="text-xs text-gray-500">Your workspace URL will look like: docketra.com/gupte-opc</p>
+            <p className="find-workspace-page__security-note">{STRONG_PASSWORD_MESSAGE}</p>
+            <p className="find-workspace-page__security-note">Your workspace URL will look like: docketra.com/gupte-opc</p>
             <Button
               type="submit"
               variant="primary"
@@ -331,7 +352,7 @@ export default function Signup() {
           </form>
         ) : (
           <form className={`mt-6 ${spacingClasses.formFieldSpacing} w-full`} onSubmit={submitOtp} noValidate>
-            {otpInfo && <p className="text-xs text-gray-500">{otpInfo}</p>}
+            {otpInfo && <p className="find-workspace-page__security-note">{otpInfo}</p>}
             <Input
               ref={otpInputRef}
               id="signup-otp"
@@ -379,9 +400,10 @@ export default function Signup() {
           </form>
         )}
 
-        <p className="mt-4 text-center text-[12px] text-gray-500 sm:text-[13px]">
-          By signing up, you agree to our <Link to="/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">Terms &amp; Conditions</Link> and <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">Privacy Policy</Link>.
+        <p className="find-workspace-page__notice">
+          By signing up, you agree to our <Link to="/terms" target="_blank" rel="noopener noreferrer" className="auth-public-page__inline-link">Terms &amp; Conditions</Link> and <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="auth-public-page__inline-link">Privacy Policy</Link>.
         </p>
+        </div>
       </div>
     </div>
   );

@@ -5,11 +5,32 @@ const normalizePath = (value = '') => {
   return trimTrailingSlash(pathOnly || '/');
 };
 
+const parseRoute = (value = '') => {
+  const [pathPart = '', queryString = ''] = String(value || '').split('?');
+  return {
+    path: normalizePath(pathPart || '/'),
+    query: new URLSearchParams(queryString || ''),
+  };
+};
+
 const isExactOrDescendantPath = (pathname, route) => {
   const normalizedPathname = normalizePath(pathname);
   const normalizedRoute = normalizePath(route);
 
   return normalizedPathname === normalizedRoute || normalizedPathname.startsWith(`${normalizedRoute}/`);
+};
+
+const matchesExcludedRoute = (pathname, search = '', excludedRoute = '') => {
+  const current = parseRoute(`${pathname || ''}${search || ''}`);
+  const target = parseRoute(excludedRoute);
+  const hasQueryConstraint = [...target.query.keys()].length > 0;
+
+  if (hasQueryConstraint) {
+    if (current.path !== target.path) return false;
+    return [...target.query.entries()].every(([key, value]) => current.query.get(key) === value);
+  }
+
+  return isExactOrDescendantPath(pathname, excludedRoute);
 };
 
 export const isNavItemActive = (pathname, item) => {
@@ -28,7 +49,7 @@ export const isNavItemActive = (pathname, item) => {
   if (!isMatch) return false;
 
   const excluded = Array.isArray(item.excludeActiveFor) ? item.excludeActiveFor : [];
-  return !excluded.some((route) => isExactOrDescendantPath(pathname, route));
+  return !excluded.some((route) => matchesExcludedRoute(pathname, '', route));
 };
 
 export const isNavItemActiveWithLocation = (pathname, search = '', item) => {
@@ -37,5 +58,10 @@ export const isNavItemActiveWithLocation = (pathname, search = '', item) => {
   if (item.activeMatch === 'exactWithQuery') {
     return current === item.to;
   }
-  return isNavItemActive(pathname, item);
+
+  const baseMatch = isNavItemActive(pathname, item);
+  if (!baseMatch) return false;
+
+  const excluded = Array.isArray(item.excludeActiveFor) ? item.excludeActiveFor : [];
+  return !excluded.some((route) => matchesExcludedRoute(pathname, search, route));
 };

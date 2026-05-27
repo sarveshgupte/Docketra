@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 import { PlatformShell } from '../../components/platform/PlatformShell';
 import { caseApi } from '../../api/case.api';
 import { ROUTES } from '../../constants/routes';
@@ -29,6 +30,7 @@ export const PlatformQcQueuePage = () => {
   const { firmSlug, workbasketId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { openDocket } = useActiveDocket();
   const [search, setSearch] = useState('');
   const [assigneeFilter, setAssigneeFilter] = useState('ALL');
@@ -50,6 +52,8 @@ export const PlatformQcQueuePage = () => {
 
   const recovery = getRecoveryPayload(queryError, 'platform_queue');
   const isAccessDenied = isError && recovery.reasonCode === 'CASE_ACCESS_DENIED';
+  const assignedQcWorkbaskets = Array.isArray(user?.qcWorkbaskets) ? user.qcWorkbaskets : [];
+  const selectedQcWorkbasket = assignedQcWorkbaskets.find((wb) => String(wb?._id || wb?.id || wb?.workbasketId || '').trim() === String(workbasketId || '').trim());
 
   const filteredRows = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -144,7 +148,7 @@ export const PlatformQcQueuePage = () => {
 
   return (
     <PlatformShell
-      title="QC Workbaskets"
+      title={selectedQcWorkbasket ? `QC Workbaskets — ${selectedQcWorkbasket.name}` : 'QC Workbaskets'}
       subtitle="Quality-control queue for pass, return-for-correction, and fail review decisions."
       actions={<Link to={ROUTES.ADMIN_REPORTS(firmSlug)}>QC Reports</Link>}
     >

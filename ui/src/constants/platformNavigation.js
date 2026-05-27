@@ -110,6 +110,7 @@ const NAV_BLUEPRINT = [
         route: (firmSlug) => ROUTES.ADMIN(firmSlug),
         minRole: 'ADMIN',
         activeMatch: 'exactOrDescendant',
+        excludeActiveFor: (firmSlug) => [ROUTES.WORK_CATEGORY_MANAGEMENT(firmSlug)],
       },
       {
         id: 'workbasket-settings',
@@ -125,7 +126,7 @@ const NAV_BLUEPRINT = [
         icon: icons.intake,
         route: (firmSlug) => ROUTES.WORK_CATEGORY_MANAGEMENT(firmSlug),
         minRole: 'ADMIN',
-        activeMatch: 'exactOrDescendant',
+        activeMatch: 'exactWithQuery',
       },
       {
         id: 'storage-settings',
@@ -169,7 +170,6 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
   const assignedWorkbaskets = Array.isArray(accessContext?.workbaskets) ? accessContext.workbaskets : [];
   const assignedQcWorkbaskets = Array.isArray(accessContext?.qcWorkbaskets) ? accessContext.qcWorkbaskets : [];
   const showQcWorkbaskets = hasAtLeastRole(normalizedRole, 'MANAGER') || assignedQcWorkbaskets.length > 0;
-  const canViewGlobalWorkbaskets = hasAtLeastRole(normalizedRole, 'MANAGER');
   const directWorkbasketItems = assignedWorkbaskets.map((wb) => ({
     id: `workbasket-${String(wb?._id || wb?.id || wb?.workbasketId || '').trim()}`,
     label: wb?.name || 'Workbasket',
@@ -202,11 +202,9 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
     .filter(Boolean);
 
   const workbasketsGroupChildren = [
-    ...(canViewGlobalWorkbaskets ? [{ id: 'workbaskets-overview', label: 'Overview', icon: icons.work, to: ROUTES.GLOBAL_WORKLIST(firmSlug), activeMatch: 'exactOrDescendant' }] : []),
     ...directWorkbasketItems,
   ];
   const qcGroupChildren = [
-    ...(canViewGlobalWorkbaskets ? [{ id: 'qc-worklist', label: 'Overview', icon: icons.intake, to: ROUTES.QC_QUEUE(firmSlug), activeMatch: 'exactOrDescendant' }] : []),
     ...directQcWorkbasketItems,
   ];
 
@@ -215,6 +213,11 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
     { id: 'worklists-group', label: 'Worklists', type: 'group', children: scopedWorklistItems.length ? scopedWorklistItems : [{ id: 'my-worklist', label: 'My Worklist', icon: icons.dashboard, to: ROUTES.WORKLIST(firmSlug), activeMatch: 'exactOrDescendant' }] },
     ...(qcGroupChildren.length ? [{ id: 'qc-worklists-group', label: 'QC Worklists', type: 'group', children: qcGroupChildren }] : []),
   ].filter((item) => Array.isArray(item.children) && item.children.length > 0);
+
+  const isNavHidden = (id) => TASK_MANAGER_MVP_ENABLED && FIRM_PILOT_SURFACE.hideFromNavigation.has(id);
+  const administrationItems = (!isNavHidden('settings') && hasAtLeastRole(normalizedRole, 'MANAGER'))
+    ? [{ id: 'settings', label: 'Settings', icon: icons.settings, to: ROUTES.SETTINGS(firmSlug), activeMatch: 'exactOrDescendant' }]
+    : [];
 
   return (
   NAV_BLUEPRINT
@@ -227,11 +230,15 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
         })
         .map((item) => toResolvedNavItem(item, firmSlug)),
     }))
-    .map((section) => (
-      section.section === 'Daily Operations'
-        ? { ...section, items: dailyOperationsItems }
-        : section
-    ))
+    .map((section) => {
+      if (section.section === 'Daily Operations') {
+        return { ...section, items: dailyOperationsItems };
+      }
+      if (section.section === 'Administration') {
+        return { ...section, items: administrationItems };
+      }
+      return section;
+    })
     .map((section) => ({
       ...section,
       items: section.items.filter((item) => !TASK_MANAGER_MVP_ENABLED || !FIRM_PILOT_SURFACE.hideFromNavigation.has(item.id)),

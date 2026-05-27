@@ -10,11 +10,8 @@ import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { validateXID, validatePassword } from '../utils/validators';
 import { useToast } from '../hooks/useToast';
-import { spacingClasses } from '../theme/tokens';
-import { ErrorState } from '../components/feedback/ErrorState';
 import { resolvePostAuthNavigation } from '../utils/postAuthNavigation';
 import { SESSION_KEYS, STORAGE_KEYS } from '../utils/constants';
-import './LoginPage.css';
 
 export const LoginPage = () => {
   const [identifier, setIdentifier] = useState('');
@@ -126,37 +123,46 @@ export const LoginPage = () => {
 
 
   return (
-    <div className="auth-wrapper">
-      <Card className="auth-card max-w-form">
-        <div className="auth-header">
-          <p className="auth-kicker">Docketra · Built for professional firms</p>
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Sign in to Docketra</h1>
-        </div>
+    <div className="find-workspace-page auth-public-page">
+      <div className="find-workspace-page__shell">
+        <section className="find-workspace-page__context" aria-label="Superadmin login context">
+          <p className="find-workspace-page__eyebrow">Platform access</p>
+          <h1 className="find-workspace-page__heading">Sign in to Docketra</h1>
+          <p className="find-workspace-page__intro">
+            Secure access for superadmin operations and platform oversight.
+          </p>
+          <ul className="find-workspace-page__benefits">
+            <li>Use your assigned xID and password</li>
+            <li>Protected access with role-based controls</li>
+            <li>No sensitive data shown before authentication</li>
+          </ul>
+        </section>
 
-        <p className="mt-6 text-sm text-gray-500 text-center">
-          Secure cloud workspace access for Indian professional firms.
-        </p>
-
-        {successMessage && (
-          <div
-            className={`rounded-md px-3 py-2 text-sm ${
-              messageType === 'warning'
-                ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                : messageType === 'info'
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-            }`}
-            role={messageType === 'warning' ? 'alert' : 'status'}
-            aria-live="polite"
-          >
-            {successMessage}
+        <Card className="find-workspace-page__card auth-public-page__card">
+          <div className="find-workspace-page__card-header">
+            <h2>Enter your credentials</h2>
+            <p>Fields marked with * are required.</p>
           </div>
-        )}
 
-        {error && (<ErrorState title="Sign-in failed" description={error} />)}
+          {successMessage && (
+            <div
+              className={`auth-public-page__status ${
+                messageType === 'warning'
+                  ? 'auth-public-page__status--warning'
+                  : messageType === 'info'
+                    ? 'auth-public-page__status--info'
+                    : 'auth-public-page__status--success'
+              }`}
+              role={messageType === 'warning' ? 'alert' : 'status'}
+              aria-live="polite"
+            >
+              {successMessage}
+            </div>
+          )}
 
-        <form onSubmit={handleLogin} noValidate className={`mt-4 ${spacingClasses.formFieldSpacing}`}>
-          <p className="text-sm text-gray-500">Fields marked with * are required.</p>
+          {error && <div className="auth-public-page__error" role="alert">{error}</div>}
+
+          <form onSubmit={handleLogin} noValidate className="find-workspace-page__form">
           <Input
             label="xID"
             type="text"
@@ -193,16 +199,17 @@ export const LoginPage = () => {
             {loading ? 'Signing in' : 'Submit & Sign in'}
           </Button>
 
-          <div className="auth-footer-links">
+          <div className="auth-public-page__links">
             <Link
               to="/forgot-password"
-              className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+              className="auth-public-page__link"
             >
               Forgot Password?
             </Link>
           </div>
-        </form>
-      </Card>
+          </form>
+        </Card>
+      </div>
     </div>
   );
 };

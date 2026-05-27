@@ -12,26 +12,25 @@ const read = (relFromUi) => fs.readFileSync(path.resolve(uiRoot, relFromUi), 'ut
 const settingsPage = read('src/pages/platform/SettingsPage.jsx');
 const platformCss = read('src/components/platform/platform.css');
 
-assert.ok(settingsPage.includes('title="Workspace settings"'), 'Settings page should use Workspace settings section title');
-assert.ok(settingsPage.includes('className="settings-grid"'), 'Settings page should render settings-grid layout');
-assert.ok(settingsPage.includes('className="panel settings-card"'), 'Settings page cards should use settings-card class');
+assert.ok(settingsPage.includes('title="Settings menu"'), 'Settings page should use concise Settings menu section title');
+assert.ok(settingsPage.includes('className="panel settings-menu"'), 'Settings page should render one compact settings menu');
+assert.ok(settingsPage.includes('className="settings-menu__item"'), 'Settings page rows should use settings-menu item class');
 
-assert.ok(settingsPage.includes('Firm profile'), 'Settings page should include Firm profile card');
-assert.ok(settingsPage.includes('Work settings'), 'Settings page should include Work settings card');
-assert.ok(settingsPage.includes('Team & controls'), 'Settings page should include Team & controls card');
-assert.ok(settingsPage.includes('Open team & access'), 'Settings page should keep Open team & access CTA.');
-assert.ok(settingsPage.includes('Storage & AI'), 'Settings page should include Storage & AI card');
+for (const label of ['General', 'Users & Team', 'Workbaskets', 'Categories', 'Storage', 'Storage Map']) {
+  assert.ok(settingsPage.includes(`title: '${label}'`), `Settings page should include ${label} menu row`);
+}
 
 assert.ok(settingsPage.includes('ROUTES.FIRM_SETTINGS(firmSlug)'), 'Settings page should link firm settings route');
 assert.ok(settingsPage.includes('ROUTES.WORK_SETTINGS(firmSlug)'), 'Settings page should link work settings route');
 assert.ok(settingsPage.includes('ROUTES.ADMIN(firmSlug)'), 'Settings page should link admin/team route');
+assert.ok(settingsPage.includes('ROUTES.WORK_CATEGORY_MANAGEMENT(firmSlug)'), 'Settings page should link category settings route');
 assert.ok(settingsPage.includes('ROUTES.STORAGE_SETTINGS(firmSlug)'), 'Settings page should link storage settings route');
-assert.ok(settingsPage.includes('ROUTES.AI_SETTINGS(firmSlug)'), 'Settings page should link AI settings route');
-assert.ok(settingsPage.includes('ROUTES.ADMIN_REPORTS(firmSlug)'), 'Settings page should link audit reports route');
+assert.ok(settingsPage.includes('ROUTES.DATA_STORAGE_MAP(firmSlug)'), 'Settings page should link storage map route');
+assert.equal(settingsPage.includes('ROUTES.AI_SETTINGS(firmSlug)'), false, 'Settings page should not surface hidden AI settings in the concise menu');
+assert.equal(settingsPage.includes('ROUTES.ADMIN_REPORTS(firmSlug)'), false, 'Settings page should not mix audit reports into the settings menu');
 
-assert.ok(platformCss.includes('.settings-grid'), 'Platform CSS should define settings-grid');
-assert.ok(platformCss.includes('.settings-card'), 'Platform CSS should define settings-card');
-assert.ok(platformCss.includes('.settings-card__primary-action'), 'Platform CSS should pin primary action row');
-assert.ok(platformCss.includes('.settings-card__related-links'), 'Platform CSS should define lighter secondary links');
+assert.ok(platformCss.includes('.settings-menu'), 'Platform CSS should define settings-menu');
+assert.ok(platformCss.includes('.settings-menu__item'), 'Platform CSS should define settings-menu item rows');
+assert.ok(platformCss.includes('.settings-menu__action'), 'Platform CSS should define row action affordance');
 
 console.log('settingsPageLayout.test.mjs passed');

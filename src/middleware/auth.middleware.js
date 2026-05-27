@@ -347,7 +347,7 @@ const authenticate = async (req, res, next) => {
       xID: user.xID,
       email: user.email,
       role: effectiveRole,
-      firmId: runtimeTenantId || decoded.firmId || null,
+      firmId: tenantContext?.ownershipFirmId || runtimeTenantId || decoded.firmId || null,
       defaultClientId: runtimeDefaultClientId || decoded.defaultClientId || null,
     };
 

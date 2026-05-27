@@ -476,7 +476,7 @@ export const ProtectedRoutes = () => (
           path="settings"
           element={(
             <PilotRouteGate subPath="settings">
-              <ProtectedRoute requireAdmin>
+              <ProtectedRoute requireManagerOrAbove>
                 <PlatformSettingsPage />
               </ProtectedRoute>
             </PilotRouteGate>

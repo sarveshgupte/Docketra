@@ -320,14 +320,27 @@ class GoogleDriveService {
     let verifiedFolderName = null;
     let connectedAt = decoded.connectedAt || null;
     if (firmFolderId) {
+      // Validate the existing root folder — if it's missing/invalid (e.g. deleted or from
+      // a previous broken connection) we create a fresh one instead of blocking reconnection.
       const existing = await this.validateRootFolder({ drive, firm, rootFolderId: firmFolderId });
-      if (!existing.valid) {
-        const error = new Error(existing.code);
-        error.code = existing.code;
-        error.status = 409;
-        throw error;
+      if (existing.valid) {
+        verifiedFolderName = existing.folderName || null;
+      } else {
+        log.warn('[GoogleDriveService] Existing root folder invalid during reconnect, creating new one', {
+          firmId,
+          reason: existing.code,
+          oldFolderId: firmFolderId,
+        });
+        // Create a fresh root folder
+        firmFolderId = await this.createFolder(this.buildCanonicalRootName(firm), null, drive);
+        connectedAt = new Date().toISOString();
+        await this.upsertRootManifest({
+          drive,
+          rootFolderId: firmFolderId,
+          manifest: this.buildRootManifest({ firm, rootFolderId: firmFolderId, createdAt: connectedAt }),
+        });
+        verifiedFolderName = this.buildCanonicalRootName(firm);
       }
-      verifiedFolderName = existing.folderName || null;
     } else {
       firmFolderId = await this.createFolder(this.buildCanonicalRootName(firm), null, drive);
       connectedAt = new Date().toISOString();
