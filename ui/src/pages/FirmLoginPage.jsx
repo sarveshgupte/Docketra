@@ -6,7 +6,7 @@ import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
 import { validatePassword, validateXID } from '../utils/validators';
-import { SESSION_KEYS, STORAGE_KEYS } from '../utils/constants';
+import { SESSION_KEYS, STORAGE_KEYS, API_BASE_URL } from '../utils/constants';
 import { authService } from '../services/authService';
 import { useToast } from '../hooks/useToast';
 import { authApi } from '../api/auth.api';
@@ -252,6 +252,16 @@ export const FirmLoginPage = () => {
     navigate(nextRoute, { replace: true });
   };
 
+  const handleGoogleLogin = () => {
+    const params = new URLSearchParams({
+      intent: 'login',
+      firmSlug: firmSlug || '',
+    });
+
+    const targetUrl = new URL(`${API_BASE_URL}/auth/google/start?${params.toString()}`, window.location.origin).toString();
+    window.location.assign(targetUrl);
+  };
+
   const credentialFormValid = validateXID(xid.trim().toUpperCase()) && validatePassword(password);
   const otpFormValid = /^\d{6}$/.test(otp.trim());
 
@@ -419,11 +429,40 @@ export const FirmLoginPage = () => {
           {error && <div className="auth-public-page__error" role="alert">{error}</div>}
 
           {step === 'credentials' ? (
-            <form onSubmit={handleCredentialSubmit} noValidate className={`find-workspace-page__form ${spacingClasses.formFieldSpacing}`}>
-              <Input label="xID" type="text" value={xid} onChange={(e) => { const value = e.target.value.toUpperCase(); setXid(value); setFieldErrors((prev) => ({ ...prev, xid: value.trim() === '' || validateXID(value.trim()) ? '' : 'Enter a valid xID (example: X123456).' })); }} error={fieldErrors.xid} required placeholder="X123456" autoComplete="username" disabled={loading} autoFocus />
-              <Input label="Password" type="password" value={password} onChange={(e) => { const value = e.target.value; setPassword(value); setFieldErrors((prev) => ({ ...prev, password: value.length === 0 || validatePassword(value) ? '' : 'Password must be at least 8 characters.' })); }} error={fieldErrors.password} required placeholder="Enter your password" autoComplete="current-password" disabled={loading} />
-              <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || !credentialFormValid}>{loading ? 'Sending OTP...' : 'Next: Verify OTP'}</Button>
-            </form>
+            <>
+              <div className="google-container mt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  fullWidth
+                  disabled={loading}
+                  onClick={handleGoogleLogin}
+                  className="flex items-center justify-center gap-2 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-sm"
+                >
+                  <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="matrix(1, 0, 0, 1, 0, 0)">
+                      <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.6h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.4c0,-0.74 -0.07,-1.4 -0.33,-2z" fill="#4285F4" />
+                      <path d="M12,20.6c2.43,0 4.47,-0.8 5.96,-2.2l-3.3,-2.6c-0.9,0.6 -2.07,0.98 -3.3,0.98 -2.34,0 -4.33,-1.58 -5.04,-3.7H3v2.6c1.5,3 4.5,4.92 8,4.92z" fill="#34A853" />
+                      <path d="M6.96,13.08a5.1,5.1 0 0,1 0,-2.16V8.32H3a8.6,8.6 0 0,0 0,7.36l3.96,-2.6z" fill="#FBBC05" />
+                      <path d="M12,7.2c1.32,0 2.5,0.45 3.44,1.35l2.58,-2.58C16.46,4.4 14.43,3.6 12,3.6c-3.5,0 -6.5,1.92 -8,4.92l3.96,3.08c0.71,-2.12 2.7,-3.7 5.04,-3.7z" fill="#EA4335" />
+                    </g>
+                  </svg>
+                  Continue with Google
+                </Button>
+              </div>
+              
+              <div className="flex items-center gap-3 my-4">
+                <div className="h-px flex-1 bg-slate-200" />
+                <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase">or</span>
+                <div className="h-px flex-1 bg-slate-200" />
+              </div>
+
+              <form onSubmit={handleCredentialSubmit} noValidate className={`find-workspace-page__form ${spacingClasses.formFieldSpacing}`}>
+                <Input label="xID" type="text" value={xid} onChange={(e) => { const value = e.target.value.toUpperCase(); setXid(value); setFieldErrors((prev) => ({ ...prev, xid: value.trim() === '' || validateXID(value.trim()) ? '' : 'Enter a valid xID (example: X123456).' })); }} error={fieldErrors.xid} required placeholder="X123456" autoComplete="username" disabled={loading} autoFocus />
+                <Input label="Password" type="password" value={password} onChange={(e) => { const value = e.target.value; setPassword(value); setFieldErrors((prev) => ({ ...prev, password: value.length === 0 || validatePassword(value) ? '' : 'Password must be at least 8 characters.' })); }} error={fieldErrors.password} required placeholder="Enter your password" autoComplete="current-password" disabled={loading} />
+                <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || !credentialFormValid}>{loading ? 'Sending OTP...' : 'Next: Verify OTP'}</Button>
+              </form>
+            </>
           ) : (
             <form onSubmit={handleOtpSubmit} noValidate className={`find-workspace-page__form ${spacingClasses.formFieldSpacing}`}>
             <Input

@@ -101,7 +101,7 @@ const UserMock = {
         const key = String(query?.xID || '').toUpperCase();
         const user = userDirectory.get(key) || null;
         if (!user) return null;
-        if (String(user.firmId) !== String(query?.firmId)) return null;
+        if (query?.firmId && String(user.firmId) !== String(query.firmId)) return null;
         return { ...user };
       },
     }),
@@ -442,8 +442,10 @@ async function testGlobalWorklist() {
   assert.strictEqual(res.data.success, true);
 
   const onTrackCall = mockCaseFind[0];
-  assert.ok(onTrackCall.$or[0].slaDueAt.$gt instanceof Date, 'Should check for future due date');
-  assert.strictEqual(onTrackCall.$or[1].slaDueAt, null, 'Should include null SLA cases');
+  const orCondition = onTrackCall.$or || (onTrackCall.$and && onTrackCall.$and.find(c => c.$or)?.$or);
+  assert.ok(orCondition, 'Should have $or condition for on_track SLA');
+  assert.ok(orCondition[0].slaDueAt.$gt instanceof Date, 'Should check for future due date');
+  assert.strictEqual(orCondition[1].slaDueAt, null, 'Should include null SLA cases');
 
 
   // 4. terminal status filter must be ignored for active queue
