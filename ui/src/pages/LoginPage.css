@@ -1,7 +1,284 @@
 /**
- * Login Page Styles
+ * Premium Glassmorphic Login Page Styles
  */
 
+/* Import Outfit font from Google Fonts for modern typography */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+/* Apply modern typography and background */
+.auth-wrapper {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+  padding: 1.5rem;
+  z-index: 1;
+}
+
+/* Stunning Mesh Background Gradient overlay */
+.auth-bg-gradient {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(at 0% 0%, rgba(224, 231, 255, 0.6) 0, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(243, 232, 255, 0.6) 0, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(219, 234, 254, 0.4) 0, transparent 50%);
+  z-index: -2;
+}
+
+/* Floating glowing ambient blobs */
+.auth-bg-blobs {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  overflow: hidden;
+  filter: blur(80px);
+}
+
+.auth-bg-blob {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.55;
+  mix-blend-mode: multiply;
+  animation: floatBlob 20s infinite alternate ease-in-out;
+}
+
+.auth-bg-blob-1 {
+  top: 10%;
+  left: 15%;
+  width: clamp(250px, 25vw, 400px);
+  height: clamp(250px, 25vw, 400px);
+  background: radial-gradient(circle, #c7d2fe 0%, #818cf8 100%);
+  animation-duration: 25s;
+}
+
+.auth-bg-blob-2 {
+  bottom: 15%;
+  right: 15%;
+  width: clamp(300px, 30vw, 450px);
+  height: clamp(300px, 30vw, 450px);
+  background: radial-gradient(circle, #f3e8ff 0%, #c084fc 100%);
+  animation-duration: 30s;
+  animation-delay: -5s;
+}
+
+.auth-bg-blob-3 {
+  top: 40%;
+  left: 55%;
+  width: clamp(200px, 20vw, 350px);
+  height: clamp(200px, 20vw, 350px);
+  background: radial-gradient(circle, #dbeafe 0%, #60a5fa 100%);
+  animation-duration: 22s;
+  animation-delay: -10s;
+}
+
+@keyframes floatBlob {
+  0% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1) rotate(120deg);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.95) rotate(240deg);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1) rotate(360deg);
+  }
+}
+
+/* Glassmorphic Card Styling */
+.auth-card.glassmorphic-card {
+  background: rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 
+    0 4px 30px rgba(0, 0, 0, 0.03),
+    0 30px 60px -15px rgba(31, 41, 55, 0.09) !important;
+  border-radius: 24px !important;
+  padding: 3rem 2.5rem !important;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.auth-card.glassmorphic-card:hover {
+  box-shadow: 
+    0 4px 35px rgba(0, 0, 0, 0.04),
+    0 35px 70px -15px rgba(31, 41, 55, 0.12) !important;
+}
+
+/* Modern Headers & Kicker */
+.auth-header {
+  font-family: 'Outfit', sans-serif;
+  margin-bottom: 2rem !important;
+}
+
+.auth-kicker {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.75rem !important;
+  letter-spacing: 0.12em !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+  margin-bottom: 0.5rem !important;
+}
+
+.auth-header h1 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.85rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+  color: #0f172a !important;
+  margin-top: 0.25rem !important;
+}
+
+.auth-header p.text-sm {
+  color: #475569 !important;
+  font-size: 0.92rem !important;
+  line-height: 1.5 !important;
+  margin-top: 0.5rem !important;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.auth-header p.text-xs {
+  font-family: monospace;
+  background: rgba(15, 23, 42, 0.04);
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  display: inline-block;
+  margin-top: 0.75rem !important;
+  color: #64748b !important;
+}
+
+/* Custom stepper dots */
+.auth-header span.rounded-full {
+  width: 24px !important;
+  height: 6px !important;
+  border-radius: 9999px !important;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.auth-header span.bg-blue-600 {
+  background: linear-gradient(90deg, #4f46e5 0%, #2563eb 100%) !important;
+  box-shadow: 0 2px 10px rgba(79, 70, 229, 0.4) !important;
+  width: 32px !important;
+}
+
+.auth-header span.bg-blue-200 {
+  background: rgba(15, 23, 42, 0.1) !important;
+}
+
+/* Beautiful custom input overrides */
+.auth-wrapper input {
+  background: rgba(255, 255, 255, 0.7) !important;
+  border: 1.5px solid rgba(15, 23, 42, 0.08) !important;
+  border-radius: 12px !important;
+  padding: 0.85rem 1rem !important;
+  font-size: 0.95rem !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  color: #0f172a !important;
+}
+
+.auth-wrapper input:focus {
+  background: #ffffff !important;
+  border-color: #4f46e5 !important;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15) !important;
+}
+
+.auth-wrapper label {
+  font-weight: 600 !important;
+  color: #334155 !important;
+  font-size: 0.85rem !important;
+  margin-bottom: 0.4rem !important;
+}
+
+/* Buttons upgrade: gradients + dynamic glow */
+.auth-wrapper button[type="submit"],
+.auth-wrapper button.bg-\[var\(--dt-accent\)\] {
+  background: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 0.95rem 1.5rem !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+  letter-spacing: -0.01em !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  margin-top: 1rem !important;
+  cursor: pointer;
+}
+
+.auth-wrapper button[type="submit"]:hover,
+.auth-wrapper button.bg-\[var\(--dt-accent\)\]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.45) !important;
+  filter: brightness(1.05);
+}
+
+.auth-wrapper button[type="submit"]:active,
+.auth-wrapper button.bg-\[var\(--dt-accent\)\]:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3) !important;
+}
+
+/* Outline Buttons styling */
+.auth-wrapper button.bg-transparent,
+.auth-wrapper button.bg-\[var\(--dt-surface\)\] {
+  border: 1.5px solid rgba(15, 23, 42, 0.08) !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+  border-radius: 12px !important;
+  padding: 0.85rem 1.5rem !important;
+  font-weight: 600 !important;
+  color: #475569 !important;
+  transition: all 0.2s ease !important;
+  margin-top: 0.5rem !important;
+  cursor: pointer;
+}
+
+.auth-wrapper button.bg-transparent:hover,
+.auth-wrapper button.bg-\[var\(--dt-surface\)\]:hover {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.15) !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03) !important;
+}
+
+/* Forgot password and signup link styles */
+.auth-footer-links {
+  margin-top: 2rem !important;
+  gap: 0.85rem !important;
+}
+
+.auth-footer-links a {
+  font-weight: 600 !important;
+  font-size: 0.88rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.auth-footer-links a:hover {
+  color: #4f46e5 !important;
+}
+
+/* Toast/Alert modifications */
 .auth-alert {
-  margin-top: 0;
+  border-radius: 12px !important;
+  font-weight: 500 !important;
+  padding: 0.85rem 1rem !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
 }

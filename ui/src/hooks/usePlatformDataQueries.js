@@ -13,44 +13,47 @@ const queueDefaults = {
   gcTime: 15 * 60 * 1000,
 };
 
+const extractListPayload = (res) => {
+  if (Array.isArray(res?.data)) return res.data;
+  if (Array.isArray(res?.items)) return res.items;
+  if (Array.isArray(res?.data?.data)) return res.data.data;
+  if (Array.isArray(res?.data?.items)) return res.data.items;
+  if (Array.isArray(res)) return res;
+  return [];
+};
+
 export const usePlatformDashboardSummaryQuery = () => useQuery({
   queryKey: ['platform', 'dashboard-summary'],
   queryFn: () => trackAsync('platform.dashboard.summary', 'platform:dashboard:summary', () => dashboardApi.getSummary({ filter: 'ALL' })),
-  select: (res) => res?.data?.data || {},
+  select: (res) => res?.data || res?.data?.data || {},
   ...queueDefaults,
 });
 
 export const usePlatformMyWorklistQuery = (options = {}) => useQuery({
   queryKey: ['platform', 'my-worklist', options.assigneeXID || 'self', options.status || 'ALL', options.category || 'ALL', options.workbasketId || 'all-workbaskets'],
   queryFn: () => trackAsync('platform.worklist.my', 'platform:worklist:my', () => worklistApi.getEmployeeWorklist({ limit: 50, ...options })),
-  select: (res) => {
-    const payload = res?.data;
-    if (Array.isArray(payload?.data)) return payload.data;
-    if (Array.isArray(payload?.items)) return payload.items;
-    if (Array.isArray(payload)) return payload;
-    return [];
-  },
+  select: (res) => extractListPayload(res),
   ...queueDefaults,
 });
 
-export const usePlatformWorkbenchQuery = () => useQuery({
-  queryKey: ['platform', 'workbench'],
-  queryFn: () => trackAsync('platform.worklist.global', 'platform:worklist:global', () => worklistApi.getGlobalWorklist({ limit: 50 })),
-  select: (res) => toArray(res?.data?.data || res?.data?.items),
+export const usePlatformWorkbenchQuery = (options = {}) => useQuery({
+  queryKey: ['platform', 'workbench', options.workbasketId || 'all-workbaskets'],
+  queryFn: () => trackAsync('platform.worklist.global', 'platform:worklist:global', () => worklistApi.getGlobalWorklist({ limit: 50, ...options })),
+  select: (res) => toArray(extractListPayload(res)),
   ...queueDefaults,
 });
 
 export const usePlatformQcQueueQuery = () => useQuery({
   queryKey: ['platform', 'qc-workbench'],
-  queryFn: () => trackAsync('platform.qc.queue', 'platform:qc:queue', () => caseApi.getCases({ status: CASE_STATUS.QC_PENDING, includeTerminated: false, limit: 50 })),
-  select: (res) => toArray(res?.data?.data || res?.data?.items),
+  queryFn: () => trackAsync('platform.qc.queue', 'platform:qc:queue', () => caseApi.getCases({ status: CASE_STATUS.QC_PENDING, limit: 50 })),
+  select: (res) => toArray(extractListPayload(res)),
   ...queueDefaults,
 });
 
 export const usePlatformReportsMetricsQuery = () => useQuery({
   queryKey: ['platform', 'reports-metrics'],
   queryFn: () => trackAsync('platform.reports.metrics', 'platform:reports:metrics', () => reportsService.getCaseMetrics()),
-  select: (res) => toArray(res?.data?.data),
+  select: (res) => toArray(extractListPayload(res)),
   staleTime: 2 * 60 * 1000,
   gcTime: 20 * 60 * 1000,
   placeholderData: keepPreviousData,

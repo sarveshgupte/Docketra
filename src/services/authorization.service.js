@@ -1,5 +1,7 @@
+const mongoose = require('mongoose');
 const User = require('../models/User.model');
 const { isSuperAdminRole, normalizeRole, isPrimaryAdminActor } = require('../utils/role.utils');
+const { resolveCanonicalTenantForUser, resolveCanonicalTenantFromFirmId } = require('./tenantIdentity.service');
 
 // Action-level permissions for API endpoint authorization checks.
 const ROLE_PERMISSIONS = {
@@ -70,7 +72,15 @@ const resolveFirmRole = async (userId, firmId, identity = {}) => {
 
   const normalizedUserId = toIdString(userId);
   const normalizedXid = typeof identity?.xID === 'string' ? identity.xID.trim() : null;
-  const query = { firmId, isActive: true };
+
+  // Resolve canonical/legacy context to find the physical firmId used in the DB (only for valid ObjectIds to avoid CastError in mock tests)
+  let queryFirmId = toIdString(firmId);
+  if (mongoose.Types.ObjectId.isValid(queryFirmId)) {
+    const tenantContext = await resolveCanonicalTenantFromFirmId(firmId);
+    queryFirmId = tenantContext?.legacyFirmId || tenantContext?.tenantId || queryFirmId;
+  }
+
+  const query = { firmId: queryFirmId, isActive: true };
 
   if (normalizedUserId) query._id = normalizedUserId;
   else if (normalizedXid) query.xID = normalizedXid;
@@ -103,12 +113,25 @@ const resolveRequestFirmRole = async (req, firmId) => {
   const cachedFirmId = toIdString(req?.identity?.firmId || req?.user?.firmId || req?.jwt?.firmId || null);
   const cachedRoleContext = buildRoleContext(req?.user || cachedRole);
 
-  if (cachedRoleContext && requestedFirmId && cachedFirmId && requestedFirmId === cachedFirmId) {
-    const explicitPermissions = normalizePermissions(req?.user?.permissions || req?.jwt?.permissions);
-    return {
-      ...cachedRoleContext,
-      permissions: normalizePermissions([...cachedRoleContext.permissions, ...explicitPermissions]),
-    }; 
+  if (cachedRoleContext && requestedFirmId && cachedFirmId) {
+    // Only resolve canonical contexts if they are valid ObjectIds
+    let cachedCanonical = cachedFirmId;
+    let requestedCanonical = requestedFirmId;
+    
+    if (mongoose.Types.ObjectId.isValid(cachedFirmId) && mongoose.Types.ObjectId.isValid(requestedFirmId)) {
+      const cachedContext = await resolveCanonicalTenantFromFirmId(cachedFirmId);
+      const requestedContext = await resolveCanonicalTenantFromFirmId(requestedFirmId);
+      cachedCanonical = cachedContext?.tenantId || cachedFirmId;
+      requestedCanonical = requestedContext?.tenantId || requestedFirmId;
+    }
+
+    if (cachedCanonical === requestedCanonical) {
+      const explicitPermissions = normalizePermissions(req?.user?.permissions || req?.jwt?.permissions);
+      return {
+        ...cachedRoleContext,
+        permissions: normalizePermissions([...cachedRoleContext.permissions, ...explicitPermissions]),
+      }; 
+    }
   }
 
   const userId = toIdString(req?.userId || req?.user?._id || req?.user?.id || req?.jwt?.userId || null);

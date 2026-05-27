@@ -521,19 +521,24 @@ export const AdminPage = () => {
 
   const handleSaveUserAccess = async () => {
     if (!selectedUserForAccess) return;
-    if (clientAccessModeDraft === 'SELECTED' && restrictedClientDraft.length === 0) {
+    const canManageClientAccess = isPrimaryAdminActor || String(loggedInUser?.role || '').trim().toUpperCase() === 'ADMIN';
+    const isPrimaryAdminTarget = String(selectedUserForAccess?.role || '').trim().toUpperCase() === 'PRIMARY_ADMIN';
+
+    if (canManageClientAccess && !isPrimaryAdminTarget && clientAccessModeDraft === 'SELECTED' && restrictedClientDraft.length === 0) {
       showToast('Select at least one client for Selected clients only mode.', 'error');
       return;
     }
     setSavingUserAccess(true);
     try {
-      const response = await adminApi.updateRestrictedClients(
-        selectedUserForAccess.xID,
-        clientAccessModeDraft === 'ALL' ? { accessMode: 'ALL' } : { accessMode: 'SELECTED', clientIds: restrictedClientDraft },
-      );
-      if (!response?.success) {
-        showToast(response?.message || 'Failed to update client access', 'error');
-        return;
+      if (canManageClientAccess && !isPrimaryAdminTarget) {
+        const response = await adminApi.updateRestrictedClients(
+          selectedUserForAccess.xID,
+          clientAccessModeDraft === 'ALL' ? { accessMode: 'ALL' } : { accessMode: 'SELECTED', clientIds: restrictedClientDraft },
+        );
+        if (!response?.success) {
+          showToast(response?.message || 'Failed to update client access', 'error');
+          return;
+        }
       }
 
       try {
@@ -557,8 +562,8 @@ export const AdminPage = () => {
       setSelectedWorkbasketDraft([]);
       setClientAccessModeDraft('ALL');
       await loadAdminData();
-    } catch (clientAccessError) {
-      showToast(clientAccessError.response?.data?.message || 'Failed to update client access', 'error');
+    } catch (saveAccessError) {
+      showToast(saveAccessError.response?.data?.message || 'Failed to update user access', 'error');
     } finally {
       setSavingUserAccess(false);
     }

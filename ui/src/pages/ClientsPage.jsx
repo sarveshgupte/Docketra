@@ -25,7 +25,6 @@ import { BulkUploadModal } from '../components/bulk/BulkUploadModal';
 import { buildTemplateCsv } from '../constants/bulkUploadSchema';
 import { useUnsavedChangesPrompt } from '../hooks/useUnsavedChangesPrompt';
 import { useQueryState } from '../hooks/useQueryState';
-import { ROUTES } from '../constants/routes';
 import { canManageClients as canManageClientsByRoleOrPermission } from '../utils/permissions';
 import './ClientsPage.css';
 
@@ -59,7 +58,6 @@ const resolveCfsNotes = (factSheet = {}) => (
 
 export const ClientsPage = () => {
   const { user } = useAuth();
-  const firmSlug = user?.firmSlug || window.location.pathname.split('/')[3] || '';
   const { showError, showSuccess } = useToast();
   const { query, setQuery } = useQueryState({ page: '1', q: '' });
   const [loading, setLoading] = useState(true);
@@ -503,15 +501,12 @@ export const ClientsPage = () => {
                 </Button>
               )}
               <Button size="small" variant="warning" onClick={() => openEditCfsModal(client)}>Edit CFS</Button>
-              <Button size="small" variant="outline" onClick={() => window.location.assign(`${ROUTES.CREATE_CASE(firmSlug)}?clientId=${encodeURIComponent(client.clientId)}`)}>
-                Create Docket
-              </Button>
             </>
           ) : null}
         </div>
       ),
     },
-  ], [canManageClients, openEditClientModal, handleToggleClientStatus, openEditCfsModal, firmSlug]);
+  ], [canManageClients, openEditClientModal, handleToggleClientStatus, openEditCfsModal]);
 
   const refreshSelectedClient = async () => {
     if (!editCfsClient?.clientId) return;

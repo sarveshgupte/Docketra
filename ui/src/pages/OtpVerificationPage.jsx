@@ -129,21 +129,22 @@ export const OtpVerificationPage = () => {
   };
 
   return (
-    <div className="auth-wrapper">
-      <Card className="auth-card max-w-form">
+    <div className="auth-wrapper enterprise-dark">
+      <Card className="auth-card glass-panel max-w-form">
         <Stack space={8} className="items-center auth-header">
-          <p className="auth-kicker">Docketra · Secure access</p>
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Verify OTP</h1>
+          <p className="auth-kicker text-indigo-400">Docketra · Secure access</p>
+          <h1 className="text-2xl font-bold tracking-tight text-center auth-title-glow">Verify OTP</h1>
           <Row justify="center" gap={8}>
-            <span className="h-2.5 w-2.5 rounded-full bg-blue-200" aria-hidden="true" />
-            <span className="h-2.5 w-2.5 rounded-full bg-blue-600" aria-hidden="true" />
+            <span className="h-2.5 w-2.5 rounded-full bg-indigo-950/50 border border-indigo-500/20" aria-hidden="true" />
+            <span className="h-2.5 w-2.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]" aria-hidden="true" />
           </Row>
-          <p className="text-sm text-gray-500 text-center">Step 2 of 2 · Enter the 6-digit code sent to {email || 'your email'}.</p>
+          <p className="text-sm text-center auth-text-muted">Step 2 of 2 · Enter the 6-digit code sent to {email || 'your email'}.</p>
         </Stack>
 
         <form onSubmit={onSubmit} className={`mt-6 ${spacingClasses.formFieldSpacing}`} noValidate>
+          {firmSlug ? <p className="text-xs text-center font-mono px-2 py-1 rounded-md bg-white/5 border border-white/10 auth-text-muted">{`Firm login URL: /${firmSlug}/login`}</p> : null}
           <div className="space-y-2">
-            <p className="text-sm font-medium text-gray-800">Email OTP <span className="text-red-500">*</span></p>
+            <p className="text-sm font-medium text-slate-200">Email OTP <span className="text-red-400">*</span></p>
             <div className="grid grid-cols-6 gap-2 sm:gap-3" onPaste={handleOtpPaste}>
               {otpDigits.map((digit, index) => (
                 <Input
@@ -167,17 +168,20 @@ export const OtpVerificationPage = () => {
                 />
               ))}
             </div>
-            <p className="text-xs text-gray-500">Tip: You can paste the full OTP directly.</p>
+            <p className="text-xs auth-text-muted">Tip: You can paste the full OTP directly.</p>
           </div>
 
           {error && (<ErrorState title="OTP verification failed" description={error} />)}
-          {info ? <p className="text-sm text-emerald-600">{info}</p> : null}
+          {info ? <p className="text-sm text-emerald-400">{info}</p> : null}
 
           <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || !isOtpValid}>
             {loading ? 'Verifying...' : 'Verify OTP'}
           </Button>
-          <Button type="button" variant="outline" fullWidth disabled={loading || cooldown > 0} onClick={handleResend}>
+          <Button type="button" variant="outline" fullWidth disabled={loading || cooldown > 0} onClick={handleResend} className="mt-2">
             {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
+          </Button>
+          <Button type="button" variant="outline" fullWidth disabled={loading} onClick={() => navigate(loginRestartPath, { replace: true })} className="mt-2">
+            Back to sign in
           </Button>
         </form>
       </Card>

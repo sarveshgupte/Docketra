@@ -462,6 +462,19 @@ const FORGOT_PASSWORD_OTP_RESEND_COOLDOWN_SECONDS = 30;
 const LOGIN_OTP_COOLDOWN_SECONDS = 30;
 const loginOtpCacheFallback = new Map();
 
+/**
+ * Bug Fix: Evict expired keys from in-memory OTP fallback cache
+ * to prevent creeping memory leaks on persistent staged/dev environments.
+ */
+const cleanupExpiredCache = () => {
+  const now = Date.now();
+  for (const [key, value] of loginOtpCacheFallback.entries()) {
+    if (value && value.expiresAt <= now) {
+      loginOtpCacheFallback.delete(key);
+    }
+  }
+};
+
 const getAuthRedisClient = () => {
   const redis = getRedisClient();
   if (!redis) return null;
@@ -573,6 +586,8 @@ const acquireLoginOtpCooldownLock = async (user) => {
     };
   }
 
+  cleanupExpiredCache(); // Evict expired entries to prevent memory leaks
+
   const now = Date.now();
   const current = loginOtpCacheFallback.get(lockKey);
   if (current && current.expiresAt > now) {
@@ -604,6 +619,8 @@ const cacheLoginOtpState = async (user, { otpHash, otpExpiresAt }) => {
     await redis.set(otpKey, payload, 'EX', otpTtlSeconds);
     return;
   }
+
+  cleanupExpiredCache(); // Evict expired entries to prevent memory leaks
 
   loginOtpCacheFallback.set(otpKey, {
     value: payload,
@@ -3675,6 +3692,7 @@ const signupResend = async (req, res) => authSignupService.signupResend(req, res
 const sendOtpEndpoint = async (req, res) => authOtpServiceFacade.sendOtpEndpoint(req, res);
 
 const verifyOtpEndpoint = async (req, res) => authOtpServiceFacade.verifyOtpEndpoint(req, res);
+
 
 
 const findWorkspaceByXid = async (req, res) => {

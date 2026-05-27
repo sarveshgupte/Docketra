@@ -53,14 +53,13 @@ teamSchema.index(
   },
 );
 
-teamSchema.pre('validate', function enforceWorkbasketGuardrails(next) {
+teamSchema.pre('validate', function enforceWorkbasketGuardrails() {
   if (this.type === 'QC' && !this.parentWorkbasketId) {
-    return next(new Error('QC workbasket must reference a parent PRIMARY workbasket'));
+    throw new Error('QC workbasket must reference a parent PRIMARY workbasket');
   }
   if (this.type === 'PRIMARY') {
     this.parentWorkbasketId = null;
   }
-  return next();
 });
 
 module.exports = mongoose.model('Team', teamSchema);

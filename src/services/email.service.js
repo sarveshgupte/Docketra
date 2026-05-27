@@ -199,9 +199,11 @@ const sendEmailNow = async (mailOptions) => {
   log.info('\n========================================');
   log.info('📧 EMAIL (Development Mode - Console Only)');
   log.info('========================================');
-  log.info(`To: ${maskedEmail}`);
+  log.info(`To: ${mailOptions.to} (masked: ${maskedEmail})`);
   log.info(`Subject: ${mailOptions.subject}`);
-  log.info('');
+  log.info('----------------------------------------');
+  log.info(mailOptions.text || mailOptions.html);
+  log.info('----------------------------------------');
   log.info('Note: Development mode active. Emails are logged to console only.');
   log.info('Set NODE_ENV=production and configure Brevo API to enable email delivery.');
   log.info('========================================\n');

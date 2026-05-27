@@ -12,13 +12,9 @@ import { useToast } from '../hooks/useToast';
 import { authApi } from '../api/auth.api';
 import { toUserFacingError } from '../utils/errorHandling';
 import { spacingClasses } from '../theme/tokens';
-import { Stack } from '../components/layout/Stack';
-import { Row } from '../components/layout/Row';
-import { ErrorState } from '../components/feedback/ErrorState';
 import { resolvePostAuthNavigation } from '../utils/postAuthNavigation';
 import { sanitizeFirmSlug } from '../utils/tenantRouting';
 import { isWorkspaceActive } from '../utils/workspaceStatus';
-import './LoginPage.css';
 
 const mapSafeLoginError = (error) => {
   const status = error?.status || error?.response?.status;
@@ -232,6 +228,7 @@ export const FirmLoginPage = () => {
     }
   }, [step, loginToken]);
 
+
   const completeLogin = async (responseData) => {
     authService.setSessionTokens(responseData);
 
@@ -361,65 +358,74 @@ export const FirmLoginPage = () => {
     }
   };
 
-  if (firmLoading) return <div className="auth-wrapper"><Card className="auth-card max-w-form"><Loading message="Loading firm information..." /></Card></div>;
+  if (firmLoading) return <div className="find-workspace-page auth-public-page"><div className="find-workspace-page__shell"><Card className="find-workspace-page__card auth-public-page__card"><Loading message="Loading firm information..." /></Card></div></div>;
 
   if (!firmData) {
     return (
-      <div className="auth-wrapper">
-        <Card className="auth-card max-w-form">
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
-          <div className="mt-4 space-y-3">
-            <Button type="button" variant="primary" fullWidth onClick={() => window.location.reload()}>
-              Retry Workspace Lookup
-            </Button>
-            <Link to="/" className="block text-center text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline">Back to home</Link>
-          </div>
-        </Card>
+      <div className="find-workspace-page auth-public-page">
+        <div className="find-workspace-page__shell">
+          <Card className="find-workspace-page__card auth-public-page__card">
+            <div className="auth-public-page__error">{error}</div>
+            <div className="mt-4 space-y-3">
+              <Button type="button" variant="primary" fullWidth onClick={() => window.location.reload()}>
+                Retry Workspace Lookup
+              </Button>
+              <Link to="/" className="auth-public-page__link auth-public-page__link--center">Back to home</Link>
+            </div>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="auth-wrapper">
-      <Card className="auth-card max-w-form">
-        <Stack space={12} className="text-center auth-header">
-          <p className="auth-kicker">Docketra · Built for professional firms</p>
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">{firmData.name}</h1>
-          <Row justify="center" gap={8}>
-            <span className={`h-2.5 w-2.5 rounded-full ${step === 'credentials' ? 'bg-blue-600' : 'bg-blue-200'}`} aria-hidden="true" />
-            <span className={`h-2.5 w-2.5 rounded-full ${step === 'otp' ? 'bg-blue-600' : 'bg-blue-200'}`} aria-hidden="true" />
-          </Row>
-          <p className="text-sm text-gray-500 text-center">Step {step === 'credentials' ? '1' : '2'} of 2</p>
-          <p className="text-sm text-gray-500 text-center">{step === 'credentials' ? 'Secure cloud workspace sign in.' : 'Enter the 6-digit verification code sent to your email.'}</p>
-          <p className="text-xs text-gray-500 text-center">{`Firm login URL: /${firmSlug}/login`}</p>
-        </Stack>
+    <div className="find-workspace-page auth-public-page">
+      <div className="find-workspace-page__shell">
+        <section className="find-workspace-page__context" aria-label="Firm login context">
+          <p className="find-workspace-page__eyebrow">Workspace login</p>
+          <h1 className="find-workspace-page__heading">{firmData.name}</h1>
+          <p className="find-workspace-page__intro">
+            {step === 'credentials' ? 'Secure cloud workspace sign in.' : 'Enter the 6-digit verification code sent to your email.'}
+          </p>
+          <ul className="find-workspace-page__benefits">
+            <li>Step {step === 'credentials' ? '1' : '2'} of 2</li>
+            <li>Firm URL: /{firmSlug}/login</li>
+            <li>Only authenticated users can access workspace data</li>
+          </ul>
+        </section>
 
-        {successMessage && step === 'credentials' && (
-          <div
-            className={`rounded-md px-3 py-2 text-sm ${
-              messageType === 'warning'
-                ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                : messageType === 'info'
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-            }`}
-            role={messageType === 'warning' ? 'alert' : 'status'}
-            aria-live="polite"
-          >
-            {successMessage}
+        <Card className="find-workspace-page__card auth-public-page__card">
+          <div className="find-workspace-page__card-header">
+            <h2>{step === 'credentials' ? 'Enter your credentials' : 'Verify your email OTP'}</h2>
+            <p>{step === 'credentials' ? 'Use your xID and password.' : 'Use the latest code from your email.'}</p>
           </div>
-        )}
 
-        {error && <ErrorState title="Sign in failed" description={error} />}
+          {successMessage && step === 'credentials' && (
+            <div
+              className={`auth-public-page__status ${
+                messageType === 'warning'
+                  ? 'auth-public-page__status--warning'
+                  : messageType === 'info'
+                    ? 'auth-public-page__status--info'
+                    : 'auth-public-page__status--success'
+              }`}
+              role={messageType === 'warning' ? 'alert' : 'status'}
+              aria-live="polite"
+            >
+              {successMessage}
+            </div>
+          )}
 
-        {step === 'credentials' ? (
-          <form onSubmit={handleCredentialSubmit} noValidate className={`mt-4 ${spacingClasses.formFieldSpacing}`}>
-            <Input label="xID" type="text" value={xid} onChange={(e) => { const value = e.target.value.toUpperCase(); setXid(value); setFieldErrors((prev) => ({ ...prev, xid: value.trim() === '' || validateXID(value.trim()) ? '' : 'Enter a valid xID (example: X123456).' })); }} error={fieldErrors.xid} required placeholder="X123456" autoComplete="username" disabled={loading} autoFocus />
-            <Input label="Password" type="password" value={password} onChange={(e) => { const value = e.target.value; setPassword(value); setFieldErrors((prev) => ({ ...prev, password: value.length === 0 || validatePassword(value) ? '' : 'Password must be at least 8 characters.' })); }} error={fieldErrors.password} required placeholder="Enter your password" autoComplete="current-password" disabled={loading} />
-            <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || !credentialFormValid}>{loading ? 'Sending OTP...' : 'Next: Verify OTP'}</Button>
-          </form>
-        ) : (
-          <form onSubmit={handleOtpSubmit} noValidate className={`mt-4 ${spacingClasses.formFieldSpacing}`}>
+          {error && <div className="auth-public-page__error" role="alert">{error}</div>}
+
+          {step === 'credentials' ? (
+            <form onSubmit={handleCredentialSubmit} noValidate className={`find-workspace-page__form ${spacingClasses.formFieldSpacing}`}>
+              <Input label="xID" type="text" value={xid} onChange={(e) => { const value = e.target.value.toUpperCase(); setXid(value); setFieldErrors((prev) => ({ ...prev, xid: value.trim() === '' || validateXID(value.trim()) ? '' : 'Enter a valid xID (example: X123456).' })); }} error={fieldErrors.xid} required placeholder="X123456" autoComplete="username" disabled={loading} autoFocus />
+              <Input label="Password" type="password" value={password} onChange={(e) => { const value = e.target.value; setPassword(value); setFieldErrors((prev) => ({ ...prev, password: value.length === 0 || validatePassword(value) ? '' : 'Password must be at least 8 characters.' })); }} error={fieldErrors.password} required placeholder="Enter your password" autoComplete="current-password" disabled={loading} />
+              <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || !credentialFormValid}>{loading ? 'Sending OTP...' : 'Next: Verify OTP'}</Button>
+            </form>
+          ) : (
+            <form onSubmit={handleOtpSubmit} noValidate className={`find-workspace-page__form ${spacingClasses.formFieldSpacing}`}>
             <Input
               ref={otpInputRef}
               label="Email OTP"
@@ -441,7 +447,8 @@ export const FirmLoginPage = () => {
               inputMode="numeric"
               pattern="[0-9]*"
             />
-            {otpHint && <p className="text-xs text-gray-500">{otpHint}</p>}
+            {otpHint && <p className="find-workspace-page__security-note">{otpHint}</p>}
+            <p className="find-workspace-page__security-note">Tip: You can paste the full OTP directly.</p>
             <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || !otpFormValid}>{loading ? 'Verifying...' : 'Submit & Sign in'}</Button>
             <Button type="button" variant="outline" fullWidth disabled={loading || cooldown > 0} onClick={handleResendOtp}>
               {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
@@ -459,14 +466,15 @@ export const FirmLoginPage = () => {
             >
               Back
             </Button>
-          </form>
-        )}
+            </form>
+          )}
 
-        <div className={`auth-footer-links ${spacingClasses.formFieldSpacing}`}>
-          <Link to={`/app/${firmSlug}/forgot-password`} className="block text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline">Forgot Password?</Link>
-          <Link to="/signup" className="block text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline">Need a workspace? Create one here.</Link>
-        </div>
-      </Card>
+          <div className={`auth-public-page__links ${spacingClasses.formFieldSpacing}`}>
+            <Link to={`/app/${firmSlug}/forgot-password`} className="auth-public-page__link">Forgot Password?</Link>
+            <Link to="/signup" className="auth-public-page__link">Need a workspace? Create one here.</Link>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 };

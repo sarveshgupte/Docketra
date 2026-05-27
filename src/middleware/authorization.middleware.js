@@ -33,12 +33,21 @@ async function requireAdmin(req, res, next) {
       });
     }
 
-    const tenantId = resolveTenantId(req) || req.user?.firmId?.toString?.() || req.user?.firmId || null;
+    let tenantId = resolveTenantId(req) || req.user?.firmId?.toString?.() || req.user?.firmId || null;
     if (!tenantId) {
       return res.status(403).json({
         success: false,
         message: 'Admin access required',
       });
+    }
+
+    // Resolve legacy firmId mapping to look up user physical records in DB correctly
+    if (tenantId && mongoose.Types.ObjectId.isValid(String(tenantId))) {
+      const { resolveCanonicalTenantFromFirmId } = require('../services/tenantIdentity.service');
+      const tenantContext = await resolveCanonicalTenantFromFirmId(tenantId);
+      if (tenantContext?.ownershipFirmId) {
+        tenantId = tenantContext.ownershipFirmId;
+      }
     }
 
     const userId = req.user?._id || req.user?.id || req.userId || null;

@@ -5,7 +5,9 @@ import path from 'node:path';
 const read = (relPath) => fs.readFileSync(path.resolve(process.cwd(), relPath), 'utf8');
 
 const settingsHub = read('src/pages/platform/SettingsPage.jsx');
-assert.equal((settingsHub.match(/className="panel settings-card"/g) || []).length, 4, 'Settings hub should keep 4 settings cards');
+assert.ok(settingsHub.includes('className="panel settings-menu"'), 'Settings hub should use one concise settings menu');
+assert.equal((settingsHub.match(/title: '/g) || []).length, 6, 'Settings hub should expose 6 clear settings destinations');
+assert.equal(settingsHub.includes('Storage & AI'), false, 'Settings hub should not bundle unrelated settings areas together');
 
 const workSettings = read('src/pages/WorkSettingsPage.jsx');
 assert.ok(workSettings.includes('Use Work Settings to control how new dockets enter team queues.'), 'Work settings should include queue-routing helper copy');

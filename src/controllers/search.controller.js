@@ -48,6 +48,11 @@ const toObjectIdStringOrNull = (value) => {
   return normalizedValue;
 };
 
+const toObjectIdOrNull = (value) => {
+  const normalizedValue = toObjectIdStringOrNull(value);
+  return normalizedValue ? new mongoose.Types.ObjectId(normalizedValue) : null;
+};
+
 const logSlowWorklistQuery = ({ req = null, queryName, durationMs, firmId, userXID, page, limit }) => {
   logSlowEndpoint({
     marker: '[WORKLIST_QUERY_SLOW]',
@@ -458,10 +463,9 @@ const employeeWorklist = async (req, res) => {
 
     const targetUser = await User.findOne({
       xID: targetAssigneeXID,
-      firmId,
       status: { $ne: 'deleted' },
     })
-      .select('_id xID role firmId managerId reportsToUserId teamId teamIds')
+      .select('_id xID role firmId managerId reportsToUserId teamId teamIds defaultClientId')
       .lean();
 
     if (!targetUser) {
@@ -471,7 +475,34 @@ const employeeWorklist = async (req, res) => {
       });
     }
 
-    const canAccessWorklist = canViewUserWorklist(user, targetUser, { targetFirmId: firmId });
+    const { resolveCanonicalTenantForUser } = require('../services/tenantIdentity.service');
+    let targetTenantContext = null;
+    try {
+      targetTenantContext = await resolveCanonicalTenantForUser(targetUser);
+    } catch (e) {
+      log.warn('[WORKLIST] Failed to resolve canonical tenant for targetUser:', e.message);
+    }
+    const targetTenantId = targetTenantContext?.tenantId || (targetUser.firmId ? targetUser.firmId.toString() : null);
+    const userTenantId = req.authTenantContext?.tenantId || firmId.toString();
+
+    if (String(targetTenantId) !== String(userTenantId)) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have access to this worklist',
+      });
+    }
+
+    const targetUserWithCanonicalFirm = {
+      ...targetUser,
+      firmId: targetTenantId,
+    };
+
+    const viewerWithCanonicalFirm = {
+      ...user,
+      firmId: userTenantId,
+    };
+
+    const canAccessWorklist = canViewUserWorklist(viewerWithCanonicalFirm, targetUserWithCanonicalFirm, { targetFirmId: userTenantId });
     const isViewingOwnWorklist = targetAssigneeXID.toUpperCase() === String(user.xID || '').trim().toUpperCase();
     if (!canAccessWorklist) {
       return res.status(403).json({
@@ -527,13 +558,26 @@ const employeeWorklist = async (req, res) => {
 
       authorizedWorkbasket = await Team.findOne({
         _id: workbasketIdFilter,
-        firmId,
         isActive: true,
       })
-        .select('_id type parentWorkbasketId')
+        .select('_id name type parentWorkbasketId firmId')
         .lean();
 
       if (!authorizedWorkbasket) {
+        return res.status(404).json({ success: false, message: 'Workbasket not found' });
+      }
+
+      const { resolveCanonicalTenantFromFirmId } = require('../services/tenantIdentity.service');
+      let teamTenantContext = null;
+      try {
+        teamTenantContext = await resolveCanonicalTenantFromFirmId(authorizedWorkbasket.firmId);
+      } catch (e) {
+        log.warn('[WORKLIST] Failed to resolve canonical tenant for team:', e.message);
+      }
+      const teamTenantId = teamTenantContext?.tenantId
+        || (authorizedWorkbasket.firmId ? authorizedWorkbasket.firmId.toString() : userTenantId);
+
+      if (String(teamTenantId) !== String(userTenantId)) {
         return res.status(404).json({ success: false, message: 'Workbasket not found' });
       }
 
@@ -568,7 +612,7 @@ const employeeWorklist = async (req, res) => {
     }
 
     if (authorizedWorkbasket) {
-      const scopedWorkbasketId = String(authorizedWorkbasket._id);
+      const scopedWorkbasketId = toObjectIdOrNull(authorizedWorkbasket._id);
       andFilters.push({
         $or: [{ workbasketId: scopedWorkbasketId }, { ownerTeamId: scopedWorkbasketId }, { routedToTeamId: scopedWorkbasketId }],
       });
@@ -761,11 +805,17 @@ const globalWorklist = async (req, res) => {
         .map((entry) => toObjectIdStringOrNull(entry))
         .filter(Boolean),
     );
+    (Array.isArray(req.user?.workbaskets) ? req.user.workbaskets : [])
+      .map((entry) => toObjectIdStringOrNull(entry?._id || entry?.id || entry?.workbasketId || entry))
+      .filter(Boolean)
+      .forEach((id) => permittedTeamIds.add(id));
     if (userTeamId) permittedTeamIds.add(userTeamId);
-    if (requestedWorkbasketId && !permittedTeamIds.has(requestedWorkbasketId)) {
+    const viewerRole = String(req.user?.role || '').trim().toUpperCase();
+    const isAdminViewer = viewerRole === 'ADMIN' || viewerRole === 'PRIMARY_ADMIN';
+    if (requestedWorkbasketId && !isAdminViewer && !permittedTeamIds.has(requestedWorkbasketId)) {
       return res.status(403).json({ success: false, message: 'Not allowed to view this workbasket' });
     }
-    const selectedTeamId = requestedWorkbasketId || userTeamId;
+    const selectedTeamId = toObjectIdOrNull(requestedWorkbasketId || userTeamId);
     const normalizedTab = String(tab || 'own').toLowerCase();
     const parsedPage = Math.max(1, Number.parseInt(page, 10) || 1);
     const parsedLimit = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 20));
@@ -774,15 +824,22 @@ const globalWorklist = async (req, res) => {
       state: 'IN_WB',
       status: { $nin: [CaseStatus.RESOLVED, CaseStatus.FILED] },
     };
+    const andClauses = [];
 
     if (normalizedTab === 'routed' && selectedTeamId) {
-      query.routedToTeamId = selectedTeamId;
-      query.status = { $nin: [CaseStatus.RESOLVED, CaseStatus.FILED] };
+      andClauses.push({ routedToTeamId: selectedTeamId });
     } else {
       if (selectedTeamId) {
-        query.ownerTeamId = selectedTeamId;
+        // Some dockets carry queue linkage on workbasketId, some on ownerTeamId/routedToTeamId.
+        // Use a scoped OR so newly created dockets are visible in the selected workbasket queue.
+        andClauses.push({
+          $or: [
+            { workbasketId: selectedTeamId },
+            { ownerTeamId: selectedTeamId },
+            { routedToTeamId: selectedTeamId },
+          ],
+        });
       }
-      query.status = { $nin: [CaseStatus.RESOLVED, CaseStatus.FILED] };
     }
     
     // Apply filters
@@ -834,11 +891,17 @@ const globalWorklist = async (req, res) => {
         query.slaDueAt = { $gte: now, $lte: twoDaysFromNow };
       } else if (slaStatus === 'on_track') {
         // Cases where slaDueAt > 2 days from now OR no slaDueAt
-        query.$or = [
+        andClauses.push({
+          $or: [
           { slaDueAt: { $gt: twoDaysFromNow } },
           { slaDueAt: null },
-        ];
+          ],
+        });
       }
+    }
+
+    if (andClauses.length > 0) {
+      query.$and = [...(Array.isArray(query.$and) ? query.$and : []), ...andClauses];
     }
     
     // Build sort object
@@ -865,6 +928,7 @@ const globalWorklist = async (req, res) => {
       slaDueAt: 1,
       createdAt: 1,
       createdBy: 1,
+      workbasketId: 1,
       ownerTeamId: 1,
       routedToTeamId: 1,
       routingNote: 1,
@@ -935,8 +999,12 @@ const globalWorklist = async (req, res) => {
         slaDaysRemaining,
         createdAt: c.createdAt,
         createdBy: c.createdBy,
+        workbasketId: c.workbasketId || c.ownerTeamId || null,
+        queueId: c.workbasketId || c.ownerTeamId || null,
         ownerTeamId: c.ownerTeamId || null,
         ownerTeamName: c.ownerTeamId ? (teamNameMap.get(String(c.ownerTeamId)) || null) : null,
+        workbasketName: c.ownerTeamId ? (teamNameMap.get(String(c.ownerTeamId)) || null) : null,
+        queueName: c.ownerTeamId ? (teamNameMap.get(String(c.ownerTeamId)) || null) : null,
         routedToTeamId: c.routedToTeamId || null,
         routedToTeamName: c.routedToTeamId ? (teamNameMap.get(String(c.routedToTeamId)) || null) : null,
         routingNote: c.routingNote || null,
