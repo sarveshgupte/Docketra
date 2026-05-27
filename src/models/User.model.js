@@ -232,6 +232,12 @@ const userSchema = new mongoose.Schema({
     default: null,
   },
 
+  // Manual lock by admin
+  lockedByAdmin: {
+    type: Boolean,
+    default: false,
+  },
+
   // Last successful login details for suspicious activity monitoring
   lastLoginAt: {
     type: Date,

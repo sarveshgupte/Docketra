@@ -161,6 +161,9 @@ async function moveDocket(req, res) {
         assignedTo: assignee._id,
         assignedToName: assignee.name || assignee.xID,
         queueType: 'PERSONAL',
+        status: 'ASSIGNED',
+        state: 'IN_PROGRESS',
+        lifecycle: 'WL',
       };
       destinationMeta = { ...destinationMeta, assigneeXID: assignee.xID };
       destinationPolicyContext = { ...destinationPolicyContext, assigneeXID: assignee.xID, user: assignee };

@@ -99,6 +99,8 @@ export const ClientsPage = () => {
   const [clientFormMessage, setClientFormMessage] = useState({ type: '', text: '' });
   const fileInputRef = useRef(null);
   const searchDebounceRef = useRef(null);
+  const hasRowsRef = useRef(false);
+  const retryTimerRef = useRef(null);
   const canManageClients = canManageClientsByRoleOrPermission(user);
   const [repairingEncryption, setRepairingEncryption] = useState(false);
 
@@ -148,10 +150,14 @@ export const ClientsPage = () => {
     return error?.response?.data?.message || error?.message || fallback;
   };
 
-  const loadClients = useCallback(async () => {
-    const hasRows = clients.length > 0;
-    setLoading(!hasRows);
-    setIsRefreshing(hasRows);
+  const loadClients = useCallback(async ({ isRetry = false } = {}) => {
+    // Use ref for has-rows check to avoid including `clients` in the dep array
+    // (which would create a circular: clients change → new loadClients → useEffect → fetch → clients change)
+    const hasRows = hasRowsRef.current;
+    if (!isRetry) {
+      setLoading(!hasRows);
+      setIsRefreshing(hasRows);
+    }
     setLoadError('');
     try {
       const response = await clientApi.getClients(false, false, { page, limit: 25, search: searchQuery || undefined });
@@ -174,9 +180,17 @@ export const ClientsPage = () => {
           contactPersonEmailAddress: toDisplayString(client.contactPersonEmailAddress, ''),
         }));
 
+      hasRowsRef.current = normalizedClients.length > 0;
       setClients(normalizedClients);
       setPagination(response?.pagination || { page, pages: 1, total: normalizedClients.length, limit: 25 });
     } catch (error) {
+      const status = error?.response?.status;
+      // Auto-retry once on 500/network errors (covers server cold-start race conditions)
+      // so the user never has to manually refresh after a transient boot failure.
+      if (!isRetry && (!status || status >= 500)) {
+        retryTimerRef.current = setTimeout(() => loadClients({ isRetry: true }), 2000);
+        return;
+      }
       const message = getClientErrorMessage(error, DEFAULT_LOAD_ERROR);
       setLoadError(message);
       showError(message);
@@ -184,7 +198,7 @@ export const ClientsPage = () => {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [clients.length, showError, page, searchQuery]);
+  }, [showError, page, searchQuery]);
 
   const handleRepairEncryption = useCallback(async () => {
     try {
@@ -198,6 +212,11 @@ export const ClientsPage = () => {
       setRepairingEncryption(false);
     }
   }, [loadClients, showError, showSuccess]);
+
+  // Cleanup retry timer on unmount to avoid state updates on unmounted component
+  useEffect(() => () => {
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+  }, []);
 
   useEffect(() => {
     loadClients();

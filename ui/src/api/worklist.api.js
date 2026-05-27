@@ -25,6 +25,23 @@ export const worklistApi = {
     return request((http) => http.post('/cases/pull', payload), 'Failed to pull selected dockets');
   },
 
+  /**
+   * Move a single docket to a user's worklist or a workbasket.
+   * Used by managers/admins to reassign dockets across queues.
+   * @param {string} caseId - The docket ID
+   * @param {{ destinationType: 'USER_WORKLIST'|'WORKBASKET', assigneeXID?: string, destinationId?: string, note?: string }} params
+   */
+  moveDocket: (caseId, { destinationType, assigneeXID, destinationId, note } = {}) =>
+    request(
+      (http) => http.post(`/worklists/employee/${encodeURIComponent(caseId)}/move`, {
+        destinationType,
+        assigneeXID,
+        destinationId,
+        note,
+      }),
+      'Failed to move docket',
+    ),
+
   getCategoryWorklist: (categoryId) =>
     request((http) => http.get(`/worklists/category/${categoryId}`), 'Failed to load category worklist'),
 

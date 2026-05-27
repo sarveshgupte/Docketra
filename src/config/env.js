@@ -72,6 +72,7 @@ const envSchema = z
     GOOGLE_CLIENT_ID: z.string().trim().optional(),
     GOOGLE_CLIENT_SECRET: z.string().trim().optional(),
     GOOGLE_OAUTH_REDIRECT_URI: z.string().trim().optional(),
+    GOOGLE_AUTH_REDIRECT_URI: z.string().trim().optional(),
     DISABLE_GOOGLE_AUTH: boolFromEnv,
     ENABLE_EXTERNAL_STORAGE: boolFromEnv,
 

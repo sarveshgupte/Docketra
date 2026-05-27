@@ -34,7 +34,9 @@ export const adminApi = {
   createWorkbasket: (name) => request((http) => http.post('/admin/workbaskets', { name }), 'Failed to create workbasket'),
   renameWorkbasket: (workbasketId, name) => request((http) => http.put(`/admin/workbaskets/${workbasketId}`, { name }), 'Failed to rename workbasket'),
   toggleWorkbasketStatus: (workbasketId, isActive) => request((http) => http.patch(`/admin/workbaskets/${workbasketId}/status`, { isActive }), 'Failed to update workbasket status'),
-  unlockAccount: (xID) => request((http) => http.post('/auth/unlock-account', { xID }), 'Failed to unlock account'),
+  unlockAccount: (xID, otp) => request((http) => http.post('/auth/unlock-account', { xID, otp }), 'Failed to unlock account'),
+  lockAccount: (xID) => request((http) => http.post('/auth/lock-account', { xID }), 'Failed to lock account'),
+  sendUnlockOtp: () => request((http) => http.post('/auth/send-unlock-otp', {}), 'Failed to send unlock OTP'),
 
   getPendingApprovals: () => request((http) => http.get('/cases?status=UNDER_REVIEW,Reviewed,Pending'), 'Failed to load pending approvals'),
   approveNewClient: (caseId, comment = '') => request((http) => http.post(`/client-approval/${caseId}/approve-new`, { comment }), 'Failed to approve new client docket'),

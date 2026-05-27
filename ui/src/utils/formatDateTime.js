@@ -3,7 +3,7 @@ export const BUSINESS_TIMEZONE = 'Asia/Kolkata';
 const DATE_TIME_FORMATTER = new Intl.DateTimeFormat('en-IN', {
   timeZone: BUSINESS_TIMEZONE,
   day: '2-digit',
-  month: 'short',
+  month: '2-digit',
   year: 'numeric',
   hour: '2-digit',
   minute: '2-digit',

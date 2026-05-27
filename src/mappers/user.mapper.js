@@ -23,6 +23,7 @@ const mapUserResponse = (user) => {
     isSystem: Boolean(user.isSystem),
     isPrimaryAdmin: Boolean(user.isPrimaryAdmin),
     lockUntil: user.lockUntil ?? null,
+    lockedByAdmin: Boolean(user.lockedByAdmin),
     mustSetPassword: Boolean(user.mustSetPassword),
     passwordSet: Boolean(user.passwordSet),
     passwordSetAt: user.passwordSetAt ?? null,

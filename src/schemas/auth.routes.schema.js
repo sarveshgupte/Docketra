@@ -232,7 +232,16 @@ module.exports = {
     body: z.object({ xID: xidString }).strip(),
   },
   'POST /unlock-account': {
+    body: z.object({
+      xID: xidString,
+      otp: z.string().length(6, { message: 'OTP must be 6 digits' }),
+    }).strip(),
+  },
+  'POST /lock-account': {
     body: z.object({ xID: xidString }).strip(),
+  },
+  'POST /send-unlock-otp': {
+    body: z.object({}).strip(),
   },
   'GET /admin/users': {
     query: z.object({}).strip(),

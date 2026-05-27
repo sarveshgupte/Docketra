@@ -40,6 +40,9 @@ const resolveCredentialErrorMessage = (error) => {
   if (backendMessage.includes('invalid xid or password') || backendMessage.includes('invalid credentials')) {
     return 'Invalid xID or password.';
   }
+  if (backendMessage.includes('locked by primary admin') || error?.response?.data?.code === 'ACCOUNT_LOCKED_BY_ADMIN') {
+    return error?.response?.data?.message || 'This user has been locked by primary admin. Please contact your primary admin.';
+  }
 
   return toUserFacingError(error, mapSafeLoginError(error));
 };

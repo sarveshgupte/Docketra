@@ -1928,3 +1928,11 @@ select:focus-visible {
   display: flex;
   gap: 8px;
 }
+
+.platform-table-select-col {
+  width: 48px !important;
+  min-width: 48px !important;
+  max-width: 48px !important;
+  text-align: center !important;
+  padding: 9px 8px !important;
+}

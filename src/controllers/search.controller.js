@@ -649,7 +649,7 @@ const employeeWorklist = async (req, res) => {
     const sortField = sortFieldMap[sortBy] || 'createdAt';
     
     const casesQuery = Case.find(enforceTenantScope(query, req, { source: 'search.employeeWorklist' }))
-      .select('caseId caseNumber caseName category subcategory caseSubCategory dueDate slaDueAt createdAt createdBy updatedAt status clientId clientName assignedToXID assignedToName')
+      .select('caseId caseNumber caseName category subcategory caseSubCategory dueDate slaDueAt createdAt createdBy updatedAt status clientId clientName assignedToXID assignedToName workbasketId ownerTeamId')
       .sort({ [sortField]: sortOrder, _id: 1 })
       .skip((normalizedPage - 1) * normalizedLimit)
       .limit(normalizedLimit);
@@ -658,7 +658,7 @@ const employeeWorklist = async (req, res) => {
     // Replaced concurrent countDocuments() and find() queries with a single find() using limit(limit + 1) to eliminate redundant database round-trips.
     // Notice that casesQuery already has .limit(normalizedLimit). We will change it.
     const casesWithExtra = await Case.find(enforceTenantScope(query, req, { source: 'search.employeeWorklist' }))
-      .select('caseId caseNumber caseName category subcategory caseSubCategory dueDate slaDueAt createdAt createdBy updatedAt status clientId clientName assignedToXID assignedToName')
+      .select('caseId caseNumber caseName category subcategory caseSubCategory dueDate slaDueAt createdAt createdBy updatedAt status clientId clientName assignedToXID assignedToName workbasketId ownerTeamId')
       .sort({ [sortField]: sortOrder, _id: 1 })
       .skip((normalizedPage - 1) * normalizedLimit)
       .limit(normalizedLimit + 1)
@@ -725,6 +725,7 @@ const employeeWorklist = async (req, res) => {
         status: c.status,
         assignedToXID: c.assignedToXID || null,
         assignedToName: c.assignedToName || null,
+        workbasketId: c.workbasketId ? String(c.workbasketId) : (c.ownerTeamId ? String(c.ownerTeamId) : null),
         clientId: c.clientId || null,
         clientName: c.clientName || clientNameByClientId.get(String(c.clientId || '').trim()) || null,
       })),

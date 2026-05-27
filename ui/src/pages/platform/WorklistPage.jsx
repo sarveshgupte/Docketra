@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
-import { caseApi } from '../../api/case.api';
+import { adminApi } from '../../api/admin.api';
+import { worklistApi } from '../../api/worklist.api';
 import { ROUTES } from '../../constants/routes';
 import { useActiveDocket } from '../../hooks/useActiveDocket';
 import {
@@ -34,11 +35,84 @@ export const PlatformWorklistPage = () => {
   const [activeOnly, setActiveOnly] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [pendingActionId, setPendingActionId] = useState('');
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [assignableUsers, setAssignableUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [bulkAssigneeXid, setBulkAssigneeXid] = useState('');
+  const [bulkMoving, setBulkMoving] = useState(false);
 
   const scopedWorkbasketId = new URLSearchParams(location.search || '').get('workbasketId') || '';
   const assignedWorkbaskets = Array.isArray(user?.workbaskets) ? user.workbaskets : [];
   const scopedWorkbasket = assignedWorkbaskets.find((wb) => String(wb?._id || wb?.id || wb?.workbasketId || '') === scopedWorkbasketId);
+
+  const isSupervisor = useMemo(() => {
+    const role = String(user?.role || '').trim().toUpperCase();
+    return ['PRIMARY_ADMIN', 'ADMIN', 'MANAGER'].includes(role) || user?.isPrimaryAdmin;
+  }, [user]);
+
+  useEffect(() => {
+    if (!isSupervisor) return;
+    const fetchUsers = async () => {
+      setUsersLoading(true);
+      try {
+        const response = await adminApi.getUsers();
+        if (response.success && Array.isArray(response.data)) {
+          const role = String(user?.role || '').trim().toUpperCase();
+          if (role === 'MANAGER') {
+            // Filter users who report to this manager
+            setAssignableUsers(response.data.filter(u => u.isActive && (String(u.managerId) === String(user.id || user._id) || String(u.reportsToUserId) === String(user.id || user._id) || u.xID === user.xID)));
+          } else {
+            // Admin / Primary Admin can assign to any active user
+            setAssignableUsers(response.data.filter(u => u.isActive));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load assignable users', err);
+      } finally {
+        setUsersLoading(false);
+      }
+    };
+    void fetchUsers();
+  }, [isSupervisor, user]);
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredRows.map(r => getDocketRouteId(r)).filter(Boolean));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectRow = (id) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkMove = async () => {
+    if (!bulkAssigneeXid || selectedIds.length === 0 || bulkMoving) return;
+    setBulkMoving(true);
+    setSuccess('');
+    setError('');
+    try {
+      await Promise.all(
+        selectedIds.map(caseId =>
+          worklistApi.moveDocket(caseId, {
+            destinationType: 'USER_WORKLIST',
+            assigneeXID: bulkAssigneeXid,
+          })
+        )
+      );
+      setSuccess(`Successfully reassigned ${selectedIds.length} docket(s).`);
+      setSelectedIds([]);
+      setBulkAssigneeXid('');
+      await refetch();
+    } catch (err) {
+      setError('Failed to reassign some or all selected dockets. Please try again.');
+    } finally {
+      setBulkMoving(false);
+    }
+  };
 
   const {
     data: rows = [],
@@ -109,22 +183,6 @@ export const PlatformWorklistPage = () => {
     });
   };
 
-  const transition = async (caseInternalId, action) => {
-    setSuccess('');
-    setError('');
-    setPendingActionId(caseInternalId);
-    try {
-      if (action === 'SEND_TO_QC') await caseApi.transitionDocket(caseInternalId, { action: 'SEND_TO_QC' });
-      if (action === 'PEND') await caseApi.pendCase(caseInternalId, 'Pending via worklist action');
-      if (action === 'RESOLVE') await caseApi.resolveCase(caseInternalId, 'Resolved via worklist action');
-      setSuccess('Docket updated successfully.');
-      await refetch();
-    } catch {
-      setError('Action failed. Refresh and retry.');
-    } finally {
-      setPendingActionId('');
-    }
-  };
 
   if (isAccessDenied) {
     return (
@@ -251,64 +309,99 @@ export const PlatformWorklistPage = () => {
           </div>
         </SectionToolbar>
 
+        {isSupervisor && selectedIds.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl mb-6 shadow-sm animate-fade-in">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-indigo-700">
+                Selected {selectedIds.length} docket{selectedIds.length > 1 ? 's' : ''}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 flex-1 justify-start sm:justify-end">
+              <select
+                value={bulkAssigneeXid}
+                onChange={(e) => setBulkAssigneeXid(e.target.value)}
+                className="px-3.5 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+              >
+                <option value="">Select Assignee...</option>
+                {assignableUsers.map((u) => (
+                  <option key={u.xID} value={u.xID}>{u.name || u.xID} ({u.xID})</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={handleBulkMove}
+                disabled={!bulkAssigneeXid || bulkMoving}
+                className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 transition-colors duration-200 rounded-xl shadow disabled:opacity-50"
+              >
+                {bulkMoving ? 'Moving...' : 'Move to Worklist'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedIds([])}
+                className="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors ml-2"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Clean, professional data table wrapper */}
         <div className="border border-gray-100 rounded-2xl overflow-hidden bg-white shadow-sm">
           <DataTable
-            columns={['Docket ID', 'Client', 'Category / Subcategory', 'Status', 'Assignee', 'Updated', 'Actions']}
+            columns={isSupervisor ? [
+              {
+                key: 'select',
+                label: (
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.length === filteredRows.length && filteredRows.length > 0}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500/20 cursor-pointer"
+                  />
+                ),
+                widthClass: 'platform-table-select-col'
+              },
+              'Docket ID', 'Client', 'Category / Subcategory', 'Updated'
+            ] : ['Docket ID', 'Client', 'Category / Subcategory', 'Updated']}
             compact
             tableClassName="w-full text-left border-collapse"
-            rows={filteredRows.map((r) => (
-              <tr key={r.caseInternalId || r._id || formatDocketLabel(r)} className="hover:bg-gray-50/70 border-b border-gray-50 last:border-b-0 transition-colors duration-150">
-                <td className="px-6 py-4 font-semibold text-gray-900">
-                  <button
-                    className="text-indigo-600 hover:text-indigo-800 hover:underline transition-colors duration-150"
-                    type="button"
-                    onClick={() => openFromQueue(r)}
-                  >
-                    {formatDocketLabel(r)}
-                  </button>
-                </td>
-                <td className="px-6 py-4 text-gray-600 font-medium">{r.clientName || r.clientId || '-'}</td>
-                <td className="px-6 py-4 text-gray-500 text-sm">{[r.category || '-', r.subcategory || '-'].join(' / ')}</td>
-                <td className="px-6 py-4"><StatusBadge status={r.status || 'IN_PROGRESS'} label={formatStatusLabel(r.status || 'IN_PROGRESS')} /></td>
-                <td className="px-6 py-4 text-gray-600 font-medium text-sm">{r.assigneeName || r.assignedTo || '-'}</td>
-                <td className="px-6 py-4 text-gray-400 text-sm tabular-nums">{formatDateLabel(r.updatedAt || r.createdAt)}</td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2" role="group" aria-label="Docket actions">
-                    {!r.caseInternalId ? (
-                      <span className="text-xs text-gray-400">Action unavailable</span>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => void transition(r.caseInternalId, 'SEND_TO_QC')}
-                          disabled={pendingActionId === r.caseInternalId}
-                          className="px-2.5 py-1 border border-indigo-100 rounded bg-indigo-50 hover:bg-indigo-100 text-xs font-semibold text-indigo-700 transition-all disabled:opacity-50"
-                        >
-                          Send to QC
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void transition(r.caseInternalId, 'PEND')}
-                          disabled={pendingActionId === r.caseInternalId}
-                          className="px-2.5 py-1 border border-amber-100 rounded bg-amber-50 hover:bg-amber-100 text-xs font-semibold text-amber-700 transition-all disabled:opacity-50"
-                        >
-                          Pend
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void transition(r.caseInternalId, 'RESOLVE')}
-                          disabled={pendingActionId === r.caseInternalId}
-                          className="px-2.5 py-1 border border-emerald-100 rounded bg-emerald-50 hover:bg-emerald-100 text-xs font-semibold text-emerald-700 transition-all disabled:opacity-50"
-                        >
-                          {pendingActionId === r.caseInternalId ? 'Updating…' : 'Resolve'}
-                        </button>
-                      </>
+            rows={filteredRows.map((r) => {
+              const rId = getDocketRouteId(r);
+              return (
+                <tr key={r.caseInternalId || r._id || r.id || formatDocketLabel(r)} className="hover:bg-gray-50/70 border-b border-gray-50 last:border-b-0 transition-colors duration-150">
+                  {isSupervisor && (
+                    <td className="platform-table-select-col">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(rId)}
+                        onChange={() => handleSelectRow(rId)}
+                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500/20 cursor-pointer"
+                      />
+                    </td>
+                  )}
+                  <td className="px-6 py-4 font-semibold text-gray-900">
+                    <button
+                      className="text-indigo-600 hover:text-indigo-800 hover:underline transition-colors duration-150"
+                      type="button"
+                      onClick={() => openFromQueue(r)}
+                    >
+                      {formatDocketLabel(r)}
+                    </button>
+                  </td>
+                  <td className="px-6 py-4 text-gray-600 font-medium">{r.clientName || r.clientId || '-'}</td>
+                  <td className="px-6 py-4 text-gray-500 text-sm">
+                    <span className="text-gray-900 font-medium">{r.category || '—'}</span>
+                    {r.subcategory && r.subcategory !== '-' && (
+                      <span className="text-gray-400 text-xs ml-1.5 px-1.5 py-0.5 bg-gray-100 rounded">
+                        {r.subcategory}
+                      </span>
                     )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-6 py-4 text-gray-400 text-sm tabular-nums">{formatDateLabel(r.updatedAt || r.createdAt)}</td>
+                </tr>
+              );
+            })}
             loading={isLoading}
             error=""
             onRetry={() => void refetch()}
@@ -323,4 +416,5 @@ export const PlatformWorklistPage = () => {
 };
 
 export default PlatformWorklistPage;
+
 

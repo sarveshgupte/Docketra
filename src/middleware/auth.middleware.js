@@ -194,6 +194,16 @@ const authenticate = async (req, res, next) => {
       });
     }
     
+    // Check if user is locked by admin
+    if (user.lockedByAdmin) {
+      noteAuthFailure();
+      return res.status(403).json({
+        success: false,
+        code: 'ACCOUNT_LOCKED_BY_ADMIN',
+        message: 'This user account is locked. Please contact your primary admin.',
+      });
+    }
+
     // Check if user is active
     if (!isActiveStatus(user.status)) {
       noteAuthFailure();
