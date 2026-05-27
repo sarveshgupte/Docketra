@@ -33,6 +33,8 @@ const {
   resetPasswordWithToken,
   updateUserStatus,
    unlockAccount,
+   lockAccount,
+   sendUnlockOtp,
    forgotPassword,
    getAllUsers,
   refreshAccessToken, // NEW: JWT token refresh
@@ -134,6 +136,8 @@ router.post('/reset-password', sensitiveLimiter, authenticate, attachFirmContext
 // NOTE: resend-setup-email has been moved to /api/admin/users/:xID/resend-invite (PR #48)
 // This ensures admin actions bypass password enforcement middleware
 router.post('/unlock-account', sensitiveLimiter, authenticate, attachFirmContext, authorizeFirmPermission('USER_MANAGE'), unlockAccount);
+router.post('/lock-account', sensitiveLimiter, authenticate, attachFirmContext, authorizeFirmPermission('USER_MANAGE'), lockAccount);
+router.post('/send-unlock-otp', sensitiveLimiter, authenticate, attachFirmContext, authorizeFirmPermission('USER_MANAGE'), sendUnlockOtp);
 router.get('/admin/users', profileLimiter, authenticate, attachFirmContext, authorizeFirmPermission('USER_VIEW'), getAllUsers);
 router.post('/admin/users', sensitiveLimiter, authenticate, attachFirmContext, authorizeFirmPermission('USER_MANAGE'), createUser);
 router.put('/admin/users/:xID/activate', sensitiveLimiter, authenticate, attachFirmContext, authorizeFirmPermission('USER_MANAGE'), activateUser);

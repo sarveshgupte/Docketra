@@ -25,9 +25,9 @@ export const CreateCasePage = () => {
         <GuidedDocketForm
           initialClientId={initialClientId}
           onCancel={() => navigate(ROUTES.DOCKETS(firmSlug))}
-          onCreated={(response) => {
+          onCreated={(response, wbName) => {
             const docketId = response?.data?.docketId || response?.data?.caseId;
-            showSuccess(`✅ Docket ${docketId || 'created'} created successfully.`);
+            showSuccess(`✅ Docket ${docketId || 'created'} created successfully. This docket has been moved to ${wbName || 'general'} wb.`);
           }}
         />
       </div>

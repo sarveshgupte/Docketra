@@ -1204,25 +1204,91 @@ export const CaseDetailPage = () => {
             </Button>
           </div>
         )}
-        <DocketDetails
-          docketId={caseId}
-          prefetchedCase={caseInfo}
-        >
-          {caseInfo?.qc?.status || caseInfo?.qcStatus ? (
-            <Badge variant={String(caseInfo?.qc?.status || caseInfo?.qcStatus).toUpperCase() === 'FAILED' ? 'danger' : 'info'}>
-              QC: {caseInfo?.qc?.status || caseInfo?.qcStatus}
-            </Badge>
-          ) : null}
-          {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
-          {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
-          {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
-          <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('cfs'), 'Unable to open CFS panel right now.')} title="Open Client Fact Sheet" className="h-10 w-10 rounded-full p-0" aria-label="Open client fact sheet">ⓘ</Button>
-          <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('attachments'), 'Unable to open attachments panel right now.')} title="Attachments" className="h-10 w-10 rounded-full p-0" aria-label="Open attachments sidebar">📎</Button>
-          <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('history'), 'Unable to open history panel right now.')} title="History" className="h-10 w-10 rounded-full p-0" aria-label="Open history sidebar">🕒</Button>
-          {canCloneDocket ? (
-            <Button variant="ghost" onClick={() => runGuardedAction(() => setCloneModalOpen(true), 'Unable to open clone docket right now.')} title="Clone Docket" className="h-10 w-10 rounded-full p-0" aria-label="Clone docket">⧉</Button>
-          ) : null}
-        </DocketDetails>
+        {/* Beautiful Notion-style Custom Top Header */}
+        <div className="docket-dashboard-header border border-gray-100 bg-white rounded-2xl p-6 mb-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6" style={{ margin: '16px 24px' }}>
+          <div className="docket-dashboard-header-left min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full">
+                {formatDocketId(caseInfo?.caseId || caseId)}
+              </span>
+              {locationBadges.map((badge) => (
+                <Badge key={badge} variant="secondary">{badge}</Badge>
+              ))}
+              {caseInfo?.qc?.status || caseInfo?.qcStatus ? (
+                <Badge variant={String(caseInfo?.qc?.status || caseInfo?.qcStatus).toUpperCase() === 'FAILED' ? 'danger' : 'info'}>
+                  QC: {caseInfo?.qc?.status || caseInfo?.qcStatus}
+                </Badge>
+              ) : null}
+              {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
+              {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight mt-2 flex items-center gap-2 break-words">
+              {clientIdLabel} - {clientName}
+            </h1>
+            <div className="text-sm font-semibold text-gray-500 mt-1 flex items-center gap-1.5">
+              <span>{categoryLabel}</span>
+              <span className="text-gray-300">/</span>
+              <span className="text-gray-700">{subcategoryLabel}</span>
+            </div>
+          </div>
+
+          <div className="docket-dashboard-header-right flex flex-col items-end gap-3 shrink-0">
+            <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-xl border border-gray-100">
+              <button
+                type="button"
+                onClick={() => runGuardedAction(() => openSidebar('cfs'), 'Unable to open CFS panel right now.')}
+                title="Open Client Fact Sheet"
+                className="h-10 w-10 rounded-lg flex items-center justify-center text-lg hover:bg-white text-gray-700 hover:text-indigo-600 transition-all shadow-sm hover:shadow border-0 bg-transparent cursor-pointer"
+                aria-label="Open client fact sheet"
+              >
+                ⓘ
+              </button>
+              <button
+                type="button"
+                onClick={() => runGuardedAction(() => openSidebar('history'), 'Unable to open history panel right now.')}
+                title="History"
+                className="h-10 w-10 rounded-lg flex items-center justify-center text-lg hover:bg-white text-gray-700 hover:text-indigo-600 transition-all shadow-sm hover:shadow border-0 bg-transparent cursor-pointer"
+                aria-label="Open history sidebar"
+              >
+                🕒
+              </button>
+              {canCloneDocket ? (
+                <button
+                  type="button"
+                  onClick={() => runGuardedAction(() => setCloneModalOpen(true), 'Unable to open clone docket right now.')}
+                  title="Clone Docket"
+                  className="h-10 w-10 rounded-lg flex items-center justify-center text-lg hover:bg-white text-gray-700 hover:text-indigo-600 transition-all shadow-sm hover:shadow border-0 bg-transparent cursor-pointer"
+                  aria-label="Clone docket"
+                >
+                  ⧉
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => runGuardedAction(() => openSidebar('attachments'), 'Unable to open attachments panel right now.')}
+                title="Attachments"
+                className="h-10 w-10 rounded-lg flex items-center justify-center text-lg hover:bg-white text-gray-700 hover:text-indigo-600 transition-all shadow-sm hover:shadow border-0 bg-transparent cursor-pointer"
+                aria-label="Open attachments sidebar"
+              >
+                📎
+              </button>
+            </div>
+
+            {/* SLA details below icons */}
+            <div className="flex items-center gap-3 text-sm text-gray-500 font-medium bg-gray-50/50 px-3 py-1.5 rounded-lg border border-gray-100/50">
+              <span className="flex items-center gap-1">
+                📅 Due: {dueDateLabel ? formatDateTime(dueDateLabel) : `SLA ${slaDaysLabel} day(s)`}
+              </span>
+              <span className="text-gray-300">|</span>
+              <span>⏱️ TAT: {slaDaysLabel && slaDaysLabel !== '-' ? `${slaDaysLabel} day(s)` : 'Not configured'}</span>
+              <span className="text-gray-300">|</span>
+              <span className={`status-badge status-badge--${docketSlaStatus || 'neutral'}`}>
+                {docketSlaStatus === 'overdue' ? 'Overdue' : docketSlaStatus === 'due_soon' ? 'Due Soon' : 'On Track'}
+              </span>
+            </div>
+          </div>
+        </div>
+
         {actionConfirmation ? <div className="case-detail__confirmation">{actionConfirmation}</div> : null}
         <div className="case-detail__realtime-status" role="status" aria-live="polite">
           {realtimeStatus === 'live' ? '● Real-time updates active' : '● Reconnecting to real-time updates...'}
@@ -1244,136 +1310,173 @@ export const CaseDetailPage = () => {
           isInactiveWarning={isInactiveWarning}
           docketSlaStatus={docketSlaStatus}
         />
-        <CaseDetailSummaryHeader
-          caseInfo={caseInfo}
-          caseId={caseId}
-          docketStatusLabel={docketStatusLabel}
-          categoryLabel={categoryLabel}
-          subcategoryLabel={subcategoryLabel}
-          linkedClientRoute={linkedClientRoute}
-          clientName={clientName}
-          isInternalWork={isInternalWork}
-          assigneeLabel={assigneeLabel}
-          queueLabel={queueLabel}
-          locationBadges={locationBadges}
-          slaDaysLabel={slaDaysLabel}
-        />
-        <StickyTabs tabs={docketTabs} defaultTab={CASE_DETAIL_TABS.OVERVIEW} />
 
-        <div className="case-detail-layout-grid flex w-full flex-col gap-6">
-          <main className="case-detail-main min-w-0">
-            {activeTab === CASE_DETAIL_TABS.OVERVIEW ? (
-              <CaseDetailOverviewPanel
-                caseInfo={caseInfo}
-                firmSlug={firmSlug}
-                linkedClientRoute={linkedClientRoute}
-                isInternalWork={isInternalWork}
-                clientName={clientName}
-                clientIdLabel={clientIdLabel}
-                categoryLabel={categoryLabel}
-                subcategoryLabel={subcategoryLabel}
-                slaDaysLabel={slaDaysLabel}
-                dueDateLabel={dueDateLabel}
-                linkedClientEmail={linkedClientEmail}
-                linkedClientContact={linkedClientContact}
-                linkedClientId={linkedClientId}
-                fromClientRoute={fromClientRoute}
+        {/* Clean Dashboard Layout Container */}
+        <div className="case-detail-layout-grid flex w-full flex-col gap-6" style={{ padding: '0 24px 24px' }}>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full">
+            {/* Middle Left: Comments thread & Composer & Actions */}
+            <div className="lg:col-span-8 flex flex-col gap-6 w-full">
+              <section className="case-card border border-gray-100 bg-white rounded-2xl p-6 shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  💬 Docket Comments
+                </h2>
+                
+                <div className="case-detail__comments overflow-y-auto max-h-[400px] pr-2 mb-4" ref={commentsListRef}>
+                  {sectionLoading.comments ? (
+                    <div className="case-detail__section-skeleton" aria-hidden="true">
+                      {Array.from({ length: 3 }).map((_, idx) => <div key={`comment-skeleton-${idx}`} className="case-detail__skeleton-row" />)}
+                    </div>
+                  ) : visibleComments.length === 0 ? (
+                    <p className="text-sm text-gray-500 italic p-4 bg-gray-50 rounded-xl text-center">No comments added yet.</p>
+                  ) : (
+                    <DocketComments comments={visibleComments} />
+                  )}
+                </div>
+
+                {comments.length > visibleComments.length ? (
+                  <div className="case-detail__virtual-actions mb-4">
+                    <Button variant="outline" size="small" onClick={() => setCommentWindowSize((size) => size + INITIAL_VIRTUAL_WINDOW)}>
+                      Load older comments ({comments.length - visibleComments.length} remaining)
+                    </Button>
+                  </div>
+                ) : null}
+
+                {(accessMode.canComment || permissions.canAddComment(caseData)) && (
+                  <div className="case-detail__add-comment flex flex-col gap-3 mt-4 border-t pt-4">
+                    <Textarea
+                      label="Add Comment"
+                      id={commentComposerId}
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="Enter your comment…"
+                      rows={3}
+                      className="case-detail__comment-input"
+                    />
+                    <div className="case-detail__composer-actions flex justify-end">
+                      <Button variant="primary" onClick={handleAddComment} disabled={!newComment.trim() || submitting}>
+                        {submitting ? 'Adding…' : 'Add Comment'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Inline Action Buttons below composer */}
+                {shouldShowActions ? (
+                  <div className="border-t pt-6 mt-6">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">
+                      Queue & Workflow Actions
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-3">
+                      {/* Resolve / Submit */}
+                      {canPerformLifecycleActions && lifecycleQuickActions.some((action) => ['resolve', 'submit'].includes(action.key)) && (
+                        <Button
+                          variant="primary"
+                          onClick={() => openActionModal('resolve')}
+                          disabled={actionInFlight}
+                          className="shadow-sm hover:shadow"
+                        >
+                          {routedTeamCannotResolve ? 'Submit' : 'Resolve'}
+                        </Button>
+                      )}
+
+                      {/* Pend */}
+                      {canPerformLifecycleActions && lifecycleQuickActions.some((action) => action.key === 'pend') && (
+                        <Button
+                          variant="secondary"
+                          onClick={() => openActionModal('pend')}
+                          disabled={actionInFlight}
+                          className="shadow-sm hover:shadow"
+                        >
+                          Pend
+                        </Button>
+                      )}
+
+                      {/* Resume / Unpend */}
+                      {canPerformLifecycleActions && lifecycleQuickActions.some((action) => action.key === 'unpend') && (
+                        <Button
+                          variant="primary"
+                          onClick={() => setShowUnpendModal(true)}
+                          disabled={actionInFlight}
+                        >
+                          Resume
+                        </Button>
+                      )}
+
+                      {/* Route */}
+                      {canRouteDocket && (
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowRouteModal(true)}
+                          disabled={actionInFlight}
+                          className="shadow-sm hover:shadow"
+                        >
+                          Route
+                        </Button>
+                      )}
+
+                      {/* File */}
+                      {!isViewOnlyMode && !routedTeamCannotResolve && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus) && (
+                        <Button
+                          variant="secondary"
+                          onClick={() => { setFileComment(''); setShowFileModal(true); }}
+                          disabled={actionInFlight}
+                          className="shadow-sm hover:shadow"
+                        >
+                          File
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500 italic mt-6 border-t pt-4">This docket is in a terminal state. Operational actions are locked.</p>
+                )}
+              </section>
+            </div>
+
+            {/* Middle Right: Details, Checklist, SOP instructions - HubSpot sidebar style */}
+            <div className="lg:col-span-4 flex flex-col gap-6 w-full">
+              <section className="case-card border border-gray-100 bg-white rounded-2xl p-6 shadow-sm">
+                <h2 className="text-md font-semibold text-gray-900 mb-4 border-b pb-2 border-gray-50">
+                  📋 Docket Overview
+                </h2>
+                <div className="flex flex-col gap-3">
+                  <div className="flex justify-between border-b pb-2 border-gray-50">
+                    <span className="text-xs text-gray-500 font-medium">Assignee</span>
+                    <span className="text-sm text-gray-900 font-semibold">{assigneeLabel}</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2 border-gray-50">
+                    <span className="text-xs text-gray-500 font-medium">Workbasket</span>
+                    <span className="text-sm text-gray-900 font-semibold">{queueLabel}</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2 border-gray-50">
+                    <span className="text-xs text-gray-500 font-medium">Created</span>
+                    <span className="text-sm text-gray-900 font-semibold">{formatDateTime(caseInfo?.createdAt)}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-gray-500 font-medium">Description</span>
+                    <span className="text-sm text-gray-800 whitespace-pre-wrap break-words">{descriptionContent || '—'}</span>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+
+          {/* Bottom Section: Client history */}
+          <div className="w-full mt-4">
+            <Suspense fallback={<CaseDetailPanelSkeleton title="Loading history…" rows={6} />}>
+              <CaseDetailHistoryPanel
+                sortedTimelineEvents={sortedTimelineEvents}
                 loadingClientDockets={loadingClientDockets}
                 clientDockets={clientDockets}
-                returnTo={returnTo}
-                navigate={navigate}
-                descriptionContent={descriptionContent}
-                lifecycleStatus={lifecycleStatus}
-                shouldShowActions={shouldShowActions}
-                canPerformLifecycleActions={canPerformLifecycleActions}
-                lifecycleQuickActions={lifecycleQuickActions}
-                actionInFlight={actionInFlight}
-                isViewOnlyMode={isViewOnlyMode}
-                onOpenFileModal={() => { setFileComment(''); setShowFileModal(true); }}
-                showFileAction={!routedTeamCannotResolve && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)}
-                canRouteDocket={canRouteDocket}
-                onOpenRouteModal={() => setShowRouteModal(true)}
-                forceQcReview={forceQcReview}
-                onForceQcReviewChange={setForceQcReview}
-                isQcContext={isQcContext}
-                isUnassignedWorkbasket={isUnassignedWorkbasket}
-                isTerminal={isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)}
-              />
-            ) : null}
-
-            {activeTab === CASE_DETAIL_TABS.ATTACHMENTS ? (
-              <Suspense fallback={<CaseDetailPanelSkeleton title="Loading attachments…" />}>
-                <CaseDetailAttachmentsPanel
-                  attachments={attachments}
-                  sectionLoading={sectionLoading.attachments}
-                  selectedFile={selectedFile}
-                  uploadingFile={uploadingFile}
-                  uploadProgress={uploadProgress}
-                  fileDescription={fileDescription}
-                  onUploadFile={handleUploadFile}
-                  onFileSelect={handleFileSelect}
-                  onFileDescriptionChange={setFileDescription}
-                />
-              </Suspense>
-            ) : null}
-
-            {activeTab === CASE_DETAIL_TABS.ACTIVITY ? (
-              <Suspense fallback={<CaseDetailPanelSkeleton title="Loading activity…" />}>
-                <CaseDetailActivityPanel
-                  timelineFilter={timelineFilter}
-                  onTimelineFilterChange={(value) => {
-                    setTimelineFilter(value);
-                    setTimelinePage(1);
-                  }}
-                  timelineLoading={timelineLoading}
-                  mergedTimelineEvents={mergedTimelineEvents}
-                  timelinePage={timelinePage}
-                  timelineHasNextPage={timelineHasNextPage}
-                  onPrevTimelinePage={() => setTimelinePage((value) => Math.max(1, value - 1))}
-                  onNextTimelinePage={() => setTimelinePage((value) => value + 1)}
-                  sectionLoading={sectionLoading.comments}
-                  commentsListRef={commentsListRef}
-                  visibleComments={visibleComments}
-                  comments={comments}
-                  onLoadOlderComments={() => setCommentWindowSize((size) => size + INITIAL_VIRTUAL_WINDOW)}
-                  initialVirtualWindow={INITIAL_VIRTUAL_WINDOW}
-                  accessMode={accessMode}
-                  permissions={permissions}
-                  caseData={caseData}
-                  commentComposerId={commentComposerId}
-                  newComment={newComment}
-                  onNewCommentChange={setNewComment}
-                  onAddComment={handleAddComment}
-                  submitting={submitting}
-                />
-              </Suspense>
-            ) : null}
-            {activeTab === CASE_DETAIL_TABS.HISTORY ? (
-              <Suspense fallback={<CaseDetailPanelSkeleton title="Loading history…" rows={6} />}>
-                <CaseDetailHistoryPanel
-                  sortedTimelineEvents={sortedTimelineEvents}
-                  loadingClientDockets={loadingClientDockets}
-                  clientDockets={clientDockets}
-                  clientDocketsError={clientDocketsError}
-                  firmSlug={firmSlug}
-                  linkedClientRoute={linkedClientRoute}
-                  returnTo={returnTo}
-                  fromClientRoute={fromClientRoute}
-                  navigate={navigate}
-                />
-              </Suspense>
-            ) : null}
-            {activeTab === CASE_DETAIL_TABS.KNOWLEDGE ? (
-              <LinkedKnowledgeSection
-                caseId={caseId}
-                categoryLabel={categoryLabel !== '—' ? categoryLabel : ''}
-                clientMongoId={clientMongoId}
+                clientDocketsError={clientDocketsError}
                 firmSlug={firmSlug}
-                isAdmin={permissions?.isAdmin || permissions?.role === 'ADMIN' || permissions?.role === 'PRIMARY_ADMIN'}
+                linkedClientRoute={linkedClientRoute}
+                returnTo={returnTo}
+                fromClientRoute={fromClientRoute}
+                navigate={navigate}
               />
-            ) : null}
-          </main>
-
+            </Suspense>
+          </div>
         </div>
 
         <DocketSidebar

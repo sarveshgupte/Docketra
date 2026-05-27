@@ -6,6 +6,8 @@ import { ROUTES, safeRoute } from '../../constants/routes';
 import { resolveCrmErrorMessage } from '../crm/crmUiUtils';
 import { DataTable, PageSection, StatGrid, StatusMessageStack, toArray } from './PlatformShared';
 
+import { formatDateOnly } from '../../utils/formatDateTime';
+
 const leadNeedsFollowUp = (lead) => {
   if (!lead?.nextFollowUpAt) return false;
   return new Date(lead.nextFollowUpAt).getTime() <= Date.now();
@@ -13,7 +15,9 @@ const leadNeedsFollowUp = (lead) => {
 
 const formatDate = (value) => {
   if (!value) return '-';
-  return new Date(value).toLocaleDateString();
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return formatDateOnly(date);
 };
 
 export const PlatformCrmPage = () => {

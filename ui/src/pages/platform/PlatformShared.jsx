@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { formatDateOnly } from '../../utils/formatDateTime';
 
 export const toArray = (value) => (Array.isArray(value) ? value : []);
 
@@ -21,7 +22,7 @@ export const formatDateLabel = (value) => {
   if (!value) return '—';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleDateString();
+  return formatDateOnly(date);
 };
 
 export const buildQueueContext = ({ rows = [], rowId, location, origin }) => {

@@ -17,6 +17,7 @@ export const AdminUsersSection = ({
   onResendInvite,
   onToggleUserStatus,
   onUnlock,
+  onLock,
   onResetPassword,
   actionLoadingByUser = {},
   sectionMessage,
@@ -65,7 +66,13 @@ export const AdminUsersSection = ({
                     {status === 'invited' ? (
                       <Button size="sm" variant="default" onClick={() => onResendInvite(u.xID)} disabled={isActionLoading}>Resend Invite</Button>
                     ) : null}
-                    <Button size="sm" variant="outline" onClick={() => onUnlock(u.xID)} disabled={isActionLoading}>Unlock</Button>
+                    {(!isPrimaryAdminUser(u) && u.role !== 'PRIMARY_ADMIN') ? (
+                      u.lockedByAdmin ? (
+                        <Button size="sm" variant="outline" onClick={() => onUnlock(u)} disabled={isActionLoading}>Unlock</Button>
+                      ) : (
+                        <Button size="sm" variant="danger" onClick={() => onLock(u.xID)} disabled={isActionLoading}>Lock</Button>
+                      )
+                    ) : null}
                     <Button size="sm" variant="outline" onClick={() => onResetPassword(u)} disabled={isActionLoading}>Reset Password</Button>
                     {canCreateUsers ? (
                       <Button

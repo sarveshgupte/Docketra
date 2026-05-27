@@ -18,6 +18,8 @@ import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
 import { BulkUploadModal } from '../components/bulk/BulkUploadModal';
 import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
+import { Modal } from '../components/common/Modal';
+import { Input } from '../components/common/Input';
 import { buildTemplateCsv } from '../constants/bulkUploadSchema';
 import {
   EMPTY_ADMIN_STATS,
@@ -98,6 +100,10 @@ export const AdminPage = () => {
   const [actionLoadingByUser, setActionLoadingByUser] = useState({});
   const [pendingConfirmation, setPendingConfirmation] = useState(null);
   const [userSectionMessage, setUserSectionMessage] = useState('');
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpInput, setOtpInput] = useState('');
+  const [unlockTargetUser, setUnlockTargetUser] = useState(null);
+  const [otpLoading, setOtpLoading] = useState(false);
   const [userLoadWarning, setUserLoadWarning] = useState('');
   const [workbasketLoadWarning, setWorkbasketLoadWarning] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -434,27 +440,72 @@ export const AdminPage = () => {
     }
   };
 
-  const handleUnlockAccount = async (xID) => {
+  const handleUnlockAccount = async (user) => {
+    setUnlockTargetUser(user);
+    setOtpInput('');
+    setOtpLoading(true);
+    try {
+      const response = await adminApi.sendUnlockOtp();
+      if (response.success) {
+        showToast('Verification code sent to your registered email.', 'success');
+        setShowOtpModal(true);
+      } else {
+        showToast(response.message || 'Failed to send verification code.', 'error');
+      }
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to send verification code.', 'error');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleVerifyAndUnlock = async (e) => {
+    e?.preventDefault();
+    if (!otpInput || otpInput.trim().length !== 6) {
+      showToast('Please enter a valid 6-digit OTP.', 'error');
+      return;
+    }
+    setOtpLoading(true);
+    try {
+      const response = await adminApi.unlockAccount(unlockTargetUser.xID, otpInput.trim());
+      if (response.success) {
+        showToast('Account unlocked successfully!', 'success');
+        setUserSectionMessage('Account unlocked successfully.');
+        setShowOtpModal(false);
+        setUnlockTargetUser(null);
+        setOtpInput('');
+        await loadAdminData();
+      } else {
+        showToast(response.message || 'Failed to unlock account', 'error');
+      }
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to unlock account', 'error');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleLockAccount = async (xID) => {
     openActionConfirmation({
-      title: 'Unlock Account',
-      description: 'Unlock this account now?',
-      confirmText: 'Unlock',
+      title: 'Lock Account',
+      description: 'Locking this user account will immediately log them out and prevent them from signing in. Are you sure you want to lock this account?',
+      confirmText: 'Lock',
+      danger: true,
       loadingKey: xID,
       onConfirm: async () => {
         try {
           setUserActionLoading(xID, true);
-          const response = await adminApi.unlockAccount(xID);
-          
+          const response = await adminApi.lockAccount(xID);
           if (response.success) {
-            showToast('Account unlocked successfully', 'success');
-            setUserSectionMessage('Account unlocked successfully.');
+            showToast('Account locked successfully!', 'success');
+            setUserSectionMessage('Account locked successfully.');
             await loadAdminData();
             closePendingConfirmation();
           } else {
-            showToast(response.message || 'Failed to unlock account', 'error');
+            showToast(response.message || 'Failed to lock account', 'error');
           }
         } catch (error) {
-          showToast(error.response?.data?.message || 'Failed to unlock account', 'error');
+          showToast(error.response?.data?.message || 'Failed to lock account', 'error');
         } finally {
           setUserActionLoading(xID, false);
         }
@@ -1354,6 +1405,7 @@ export const AdminPage = () => {
             onResendInvite={handleResendSetupEmail}
             onToggleUserStatus={handleToggleUserStatus}
             onUnlock={handleUnlockAccount}
+            onLock={handleLockAccount}
             onResetPassword={handleSendPasswordReset}
             actionLoadingByUser={actionLoadingByUser}
             sectionMessage={[userSectionMessage, userLoadWarning, workbasketLoadWarning].filter(Boolean).join(' ')}
@@ -1528,6 +1580,60 @@ export const AdminPage = () => {
         changeNameForm={changeNameForm}
         setChangeNameForm={setChangeNameForm}
       />
+
+      <Modal
+        isOpen={showOtpModal}
+        onClose={() => {
+          setShowOtpModal(false);
+          setUnlockTargetUser(null);
+          setOtpInput('');
+        }}
+        title="Unlock User Account"
+        maxWidth="sm"
+        actions={(
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowOtpModal(false);
+                setUnlockTargetUser(null);
+                setOtpInput('');
+              }}
+              disabled={otpLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleVerifyAndUnlock}
+              loading={otpLoading}
+              disabled={otpLoading || otpInput.trim().length !== 6}
+              data-modal-primary="true"
+            >
+              Verify & Unlock
+            </Button>
+          </>
+        )}
+      >
+        <form onSubmit={handleVerifyAndUnlock} className="flex flex-col gap-4">
+          <p className="text-sm text-[var(--dt-text-secondary)] leading-relaxed mb-4">
+            Unlocking user account <strong>{unlockTargetUser?.name || unlockTargetUser?.xID}</strong> requires authorization. A 6-digit OTP has been sent to your registered email: <strong>{loggedInUser?.email}</strong>.
+          </p>
+          <div className="flex flex-col gap-2">
+            <Input
+              label="Enter 6-digit OTP"
+              placeholder="000000"
+              value={otpInput}
+              onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              disabled={otpLoading}
+              maxLength={6}
+              required
+              autoFocus
+              className="text-center font-mono text-2xl tracking-widest"
+            />
+          </div>
+        </form>
+      </Modal>
     </PlatformShell>
   );
 };

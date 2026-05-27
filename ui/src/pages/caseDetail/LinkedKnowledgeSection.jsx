@@ -5,13 +5,15 @@ import { ROUTES } from '../../constants/routes';
 import { normalizeWorkType } from '../../utils/workTypeOptions';
 import { toArray } from '../platform/PlatformShared';
 
+import { formatDateOnly } from '../../utils/formatDateTime';
+
 const formatLabel = (value) => String(value || '').replace(/_/g, ' ');
 
 const formatDate = (value) => {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleDateString();
+  return formatDateOnly(date);
 };
 
 const getItemKey = (item) => String(item._id || item.id || '');

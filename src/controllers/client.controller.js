@@ -1500,7 +1500,7 @@ const listClientDockets = async (req, res) => {
     const { limit = 20, order = 'desc' } = req.query;
     const Case = require('../models/Case.model');
 
-    const rows = await Case.find({ firmId: req.user.firmId, clientId })
+    let queryChain = Case.find({ firmId: req.user.firmId, clientId })
       .sort({ createdAt: String(order).toLowerCase() === 'asc' ? 1 : -1 })
       .limit(parseInt(limit, 10))
       .select([
@@ -1509,10 +1509,31 @@ const listClientDockets = async (req, res) => {
         'status', 'lifecycle', 'state', 'createdAt', 'updatedAt', 'resolvedAt', 'filedAt', 'closedAt', 'completedAt',
         'assignedToName', 'assignedTo', 'assignedToXID', 'ownerName', 'ownerXID',
         'workbasketName', 'queueName', 'ownerTeamName', 'ownerTeamId', 'workbasket',
-      ].join(' '))
-      .lean();
+        'workbasketId'
+      ].join(' '));
 
-    return res.status(200).json({ success: true, data: rows });
+    if (typeof queryChain.populate === 'function') {
+      queryChain = queryChain
+        .populate('assignedTo', 'name xID')
+        .populate('workbasketId', 'name')
+        .populate('ownerTeamId', 'name');
+    }
+
+    const rows = await queryChain.lean();
+
+    const mappedRows = rows.map((c) => {
+      const mapped = { ...c };
+      if (c.assignedTo) {
+        mapped.assignedToName = c.assignedTo?.name || c.assignedToName || c.assignedToXID || null;
+        mapped.assignedToXID = c.assignedTo?.xID || c.assignedToXID || null;
+      }
+      if (c.workbasketId || c.ownerTeamId) {
+        mapped.workbasketName = c.workbasketId?.name || c.ownerTeamId?.name || c.workbasketName || null;
+      }
+      return mapped;
+    });
+
+    return res.status(200).json({ success: true, data: mappedRows });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Error fetching client dockets' });
   }

@@ -15,13 +15,15 @@ import {
 const ITEM_TYPES = ['sop', 'checklist', 'template', 'note', 'client_instruction', 'process'];
 const ITEM_STATUSES = ['draft', 'active'];
 
+import { formatDateOnly } from '../utils/formatDateTime';
+
 const formatLabel = (value) => String(value || '').replace(/_/g, ' ');
 
 const formatDate = (value) => {
   if (!value) return '—';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleDateString();
+  return formatDateOnly(date);
 };
 
 const normalizeTagInput = (raw) =>

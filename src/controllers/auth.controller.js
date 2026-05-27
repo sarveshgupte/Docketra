@@ -1084,6 +1084,16 @@ const validateTenantUserPreconditions = async (req, res, user, requestedFirmSlug
     return true;
   }
 
+  if (user.lockedByAdmin) {
+    const primaryAdmin = await User.findOne({ firmId: user.firmId, isPrimaryAdmin: true, status: { $ne: 'deleted' } }).select('email');
+    res.status(403).json({
+      success: false,
+      code: 'ACCOUNT_LOCKED_BY_ADMIN',
+      message: `This user has been locked by primary admin. Please contact your primary admin at ${primaryAdmin?.email || 'their email'}.`,
+    });
+    return true;
+  }
+
   if (user.isLocked) {
     await noteLockedAccountAttempt({
       req,
@@ -3356,7 +3366,7 @@ const updateUserStatus = async (req, res) => {
  */
 const unlockAccount = async (req, res) => {
   try {
-    const { xID } = req.body;
+    const { xID, otp } = req.body;
     
     if (!xID) {
       return res.status(400).json({
@@ -3364,9 +3374,34 @@ const unlockAccount = async (req, res) => {
         message: 'xID is required',
       });
     }
+
+    if (!otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'OTP verification code is required to unlock user accounts.',
+      });
+    }
     
     // Get admin from authenticated request
     const admin = req.user;
+
+    // Verify OTP first
+    try {
+      await verifyCentralOtp({
+        identifier: admin.email,
+        code: otp,
+        purpose: 'unlock_user',
+      });
+    } catch (otpError) {
+      return res.status(400).json({
+        success: false,
+        message: otpError.message === 'OTP_INVALID'
+          ? 'Invalid OTP code. Please try again.'
+          : otpError.message === 'OTP_EXPIRED'
+            ? 'OTP has expired. Please request a new code.'
+            : 'OTP verification failed. Please try again.',
+      });
+    }
     
     // Find user
     const lookupQuery = { xID: xID.toUpperCase() };
@@ -3385,6 +3420,7 @@ const unlockAccount = async (req, res) => {
     // Unlock account
     user.failedLoginAttempts = 0;
     user.lockUntil = null;
+    user.lockedByAdmin = false;
     await user.save();
     
     // Log unlock
@@ -3393,7 +3429,7 @@ const unlockAccount = async (req, res) => {
       firmId: user.firmId,
       userId: user._id,
       actionType: 'AccountUnlocked',
-      description: `Account unlocked by admin`,
+      description: `Account unlocked by admin with OTP verification`,
       performedBy: admin.xID,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
@@ -3407,6 +3443,104 @@ const unlockAccount = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error unlocking account',
+    });
+  }
+};
+
+/**
+ * Lock user account (Admin only)
+ * POST /api/auth/lock-account
+ */
+const lockAccount = async (req, res) => {
+  try {
+    const { xID } = req.body;
+    if (!xID) {
+      return res.status(400).json({
+        success: false,
+        message: 'xID is required',
+      });
+    }
+
+    const admin = req.user;
+    const user = await User.findOne({ xID: xID.toUpperCase(), firmId: admin.firmId });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    if (user.isPrimaryAdmin || user.role === 'PRIMARY_ADMIN') {
+      return res.status(403).json({
+        success: false,
+        message: 'Primary admin account cannot be locked',
+      });
+    }
+
+    user.lockedByAdmin = true;
+    await user.save();
+
+    // Log out active sessions for the locked user
+    await LoginSession.deleteMany({ userId: user._id });
+
+    // Log lock event
+    await logAuthAudit({
+      xID: user.xID,
+      firmId: user.firmId,
+      userId: user._id,
+      actionType: 'AccountLockedByAdmin',
+      description: `Account explicitly locked by primary admin`,
+      performedBy: admin.xID,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+
+    res.json({
+      success: true,
+      message: 'Account locked successfully',
+    });
+  } catch (error) {
+    log.error('Error locking account', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error locking account',
+    });
+  }
+};
+
+/**
+ * Send OTP for unlocking account (Admin only)
+ * POST /api/auth/send-unlock-otp
+ */
+const sendUnlockOtp = async (req, res) => {
+  try {
+    const admin = req.user;
+    if (!admin.isPrimaryAdmin && admin.role !== 'PRIMARY_ADMIN') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the primary admin can authorize unlocking accounts.',
+      });
+    }
+
+    const result = await sendCentralOtp({
+      email: admin.email,
+      purpose: 'unlock_user',
+    });
+
+    res.json({
+      success: true,
+      message: 'OTP sent successfully to your registered email.',
+      data: {
+        identifier: result.identifier,
+        expiresAt: result.expiresAt,
+        retryAfterSeconds: result.retryAfterSeconds,
+      },
+    });
+  } catch (error) {
+    log.error('Error sending unlock OTP', error);
+    res.status(error.message === 'OTP_RATE_LIMITED' ? 429 : 500).json({
+      success: false,
+      message: error.message === 'OTP_RATE_LIMITED' ? 'Please wait before requesting another OTP.' : 'Error sending OTP.',
     });
   }
 };
@@ -3772,7 +3906,7 @@ const startGoogleAuth = async (req, res) => {
       return res.status(400).json({ success: false, message: 'setupToken is required for signup flow.' });
     }
 
-    const oauthClient = getGoogleOAuthClient();
+    const oauthClient = getGoogleOAuthClient(env);
     const state = signGoogleState({
       nonce: crypto.randomUUID(),
       intent,
@@ -3818,7 +3952,7 @@ const googleAuthCallback = async (req, res) => {
       return redirectGoogleResult(res, { error: 'INVALID_REQUEST' });
     }
 
-    const oauthClient = getGoogleOAuthClient();
+    const oauthClient = getGoogleOAuthClient(env);
     const { tokens } = await oauthClient.getToken(code);
     oauthClient.setCredentials(tokens);
 
@@ -3896,6 +4030,15 @@ const googleAuthCallback = async (req, res) => {
 
       if (!user || !isActiveStatus(user.status) || !user.isActive) {
         return redirectGoogleResult(res, { error: 'ACCOUNT_NOT_FOUND', firmSlug: resolvedFirmSlug });
+      }
+
+      if (user.lockedByAdmin) {
+        const primaryAdmin = await User.findOne({ firmId: firm._id, isPrimaryAdmin: true, status: { $ne: 'deleted' } }).select('email');
+        return redirectGoogleResult(res, {
+          error: 'ACCOUNT_LOCKED_BY_ADMIN',
+          primaryAdminEmail: primaryAdmin?.email || '',
+          firmSlug: resolvedFirmSlug
+        });
       }
 
       const existingGoogleId = String(user?.authProviders?.google?.googleId || '').trim();
@@ -3976,6 +4119,16 @@ const exchangeGoogleAuth = async (req, res) => {
       resource: 'auth/google/exchange',
       mfaRequired: false,
     });
+
+    // CRITICAL FIX: Set HTTP-only session cookies so the browser is authenticated.
+    // Without this, the accessToken/refreshToken only exist in the JSON response body
+    // and the immediately-following fetchProfile() call gets 401 (no cookie present).
+    // This mirrors the pattern used by all other login endpoints (e.g. line 969).
+    authSessionService.setAuthCookies(res, {
+      accessToken: response.accessToken,
+      refreshToken: response.refreshToken,
+    });
+
     return res.json(response);
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Google sign-in failed.' });
@@ -4004,6 +4157,8 @@ module.exports = {
   // resendSetupEmail - REMOVED: Deprecated in PR #48, use admin.controller.resendInviteEmail instead
   updateUserStatus: wrapWriteHandler(updateUserStatus),
   unlockAccount: wrapWriteHandler(unlockAccount),
+  lockAccount: wrapWriteHandler(lockAccount),
+  sendUnlockOtp: wrapWriteHandler(sendUnlockOtp),
   forgotPassword: wrapWriteHandler(forgotPassword),
   forgotPasswordInit: wrapWriteHandler(forgotPasswordInit),
   forgotPasswordVerify: wrapWriteHandler(forgotPasswordVerify),
