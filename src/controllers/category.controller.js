@@ -199,12 +199,20 @@ const createCategory = async (req, res) => {
     
     // Check for duplicate name (case-insensitive)
     const escapedName = name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+<<<<<<< Updated upstream
 
+=======
+
+>>>>>>> Stashed changes
     // ⚡ Bolt Performance Optimization:
     // 💡 What: Replaced Category.findOne() with Category.exists() for duplicate name validation
     // 🎯 Why: findOne() retrieves and hydrates the entire document, whereas exists() does a lightweight existence check and returns a lean object {_id}, saving memory and DB transfer overhead.
     // 📊 Impact: Faster endpoint execution when creating categories.
+<<<<<<< Updated upstream
     const existing = await Category.exists({
+=======
+    const existing = await Category.exists({
+>>>>>>> Stashed changes
       ...firmScope,
       name: { $regex: new RegExp(`^${escapedName}$`, 'i') }
     });
@@ -278,12 +286,20 @@ const updateCategory = async (req, res) => {
     
     // Check for duplicate name (case-insensitive), excluding current category
     const escapedName = name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+<<<<<<< Updated upstream
 
+=======
+
+>>>>>>> Stashed changes
     // ⚡ Bolt Performance Optimization:
     // 💡 What: Replaced Category.findOne() with Category.exists() for duplicate name validation
     // 🎯 Why: findOne() retrieves and hydrates the entire document, whereas exists() does a lightweight existence check and returns a lean object {_id}, saving memory and DB transfer overhead.
     // 📊 Impact: Faster endpoint execution when updating categories.
+<<<<<<< Updated upstream
     const existing = await Category.exists({
+=======
+    const existing = await Category.exists({
+>>>>>>> Stashed changes
       _id: { $ne: id },
       ...firmScope,
       name: { $regex: new RegExp(`^${escapedName}$`, 'i') }
