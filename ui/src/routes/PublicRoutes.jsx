@@ -19,6 +19,7 @@ import {
   MarketingSignupPage,
   MarketingTermsPage,
   OtpVerificationPage,
+  OAuthPostAuthPage,
   ResetPasswordPage,
   SetPasswordPage,
   UploadPage,
@@ -83,6 +84,7 @@ export const PublicRoutes = () => (
       <Route path="/complete-profile" element={<CompleteProfile />} />
       <Route path="/onboarding" element={<CompleteProfile />} />
       <Route path="/dashboard" element={<DefaultRoute />} />
+      <Route path="/oauth/post-auth" element={<OAuthPostAuthPage />} />
       <Route path="/auth/setup-account" element={<SetPasswordPage />} />
       <Route path="/setup-password" element={<SetPasswordPage />} />
       <Route path="/superadmin/*" element={<LegacySuperadminRedirect />} />

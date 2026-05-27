@@ -11,7 +11,7 @@ import { Button } from '../components/common/Button';
 import { Loading } from '../components/common/Loading';
 import { authService } from '../services/authService';
 import api from '../services/api';
-import { APP_NAME, STORAGE_KEYS } from '../utils/constants';
+import { APP_NAME, STORAGE_KEYS, API_BASE_URL } from '../utils/constants';
 import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../utils/validators';
 import './SetPasswordPage.css';
 
@@ -134,6 +134,19 @@ export const SetPasswordPage = () => {
     }
   };
 
+  const handleGoogleSignup = () => {
+    if (!token || !firmSlug) return;
+
+    const params = new URLSearchParams({
+      intent: 'signup',
+      firmSlug,
+      setupToken: token,
+    });
+
+    const targetUrl = new URL(`${API_BASE_URL}/auth/google/start?${params.toString()}`, window.location.origin).toString();
+    window.location.assign(targetUrl);
+  };
+
   if (firmLoading) {
     return (
       <div className="set-password-page">
@@ -243,6 +256,29 @@ export const SetPasswordPage = () => {
           >
             Set Password
           </Button>
+
+          {firmSlug && token && (
+            <div className="mt-3">
+              <Button
+                type="button"
+                variant="outline"
+                fullWidth
+                disabled={loading}
+                onClick={handleGoogleSignup}
+                className="flex items-center justify-center gap-2 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-sm"
+              >
+                <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+                  <g transform="matrix(1, 0, 0, 1, 0, 0)">
+                    <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.6h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.4c0,-0.74 -0.07,-1.4 -0.33,-2z" fill="#4285F4" />
+                    <path d="M12,20.6c2.43,0 4.47,-0.8 5.96,-2.2l-3.3,-2.6c-0.9,0.6 -2.07,0.98 -3.3,0.98 -2.34,0 -4.33,-1.58 -5.04,-3.7H3v2.6c1.5,3 4.5,4.92 8,4.92z" fill="#34A853" />
+                    <path d="M6.96,13.08a5.1,5.1 0 0,1 0,-2.16V8.32H3a8.6,8.6 0 0,0 0,7.36l3.96,-2.6z" fill="#FBBC05" />
+                    <path d="M12,7.2c1.32,0 2.5,0.45 3.44,1.35l2.58,-2.58C16.46,4.4 14.43,3.6 12,3.6c-3.5,0 -6.5,1.92 -8,4.92l3.96,3.08c0.71,-2.12 2.7,-3.7 5.04,-3.7z" fill="#EA4335" />
+                  </g>
+                </svg>
+                Continue with Google instead
+              </Button>
+            </div>
+          )}
 
         </form>
       </Card>
