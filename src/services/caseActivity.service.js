@@ -1,5 +1,6 @@
 const { buildWorkflowMeta, logWorkflowEvent } = require('../utils/workflowDiagnostics');
 const commentHistoryNarrativeStorage = require('./commentHistoryNarrativeStorage.service');
+const { logCaseHistory } = require('./auditLog.service');
 
 module.exports = (deps) => {
   const {
@@ -168,14 +169,21 @@ module.exports = (deps) => {
         },
       });
       
-      // Also add to CaseHistory for backward compatibility
-      await CaseHistory.create({
+      // Also add to CaseHistory via unified logger
+      await logCaseHistory({
         caseId: caseData.caseId,
         firmId: tenantFirmId,
         actionType: 'CASE_COMMENT_ADDED',
+        actionLabel: `Comment added by ${req.user.email}`,
         description: `Comment added by ${req.user.email}: ${text.substring(0, COMMENT_PREVIEW_LENGTH)}${text.length > COMMENT_PREVIEW_LENGTH ? '...' : ''}`,
         performedBy: req.user.email.toLowerCase(),
-        performedByXID: req.user.xID.toUpperCase(), // Canonical identifier (uppercase)
+        performedByXID: req.user.xID.toUpperCase(),
+        actorRole: req.user.role || 'USER',
+        metadata: {
+          commentLength: text.length,
+          hasNote: !!note,
+        },
+        req
       });
 
       logActivitySafe({

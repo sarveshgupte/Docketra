@@ -13,6 +13,7 @@ import {
   FilterBar,
   PageSection,
   SectionToolbar,
+  StatRow,
   StatusBadge,
   StatusMessageStack,
   formatDateLabel,
@@ -23,6 +24,27 @@ import {
 import { AccessDeniedState } from '../../components/feedback/AccessDeniedState';
 import { getRecoveryPayload } from '../../utils/errorRecovery';
 import { usePlatformWorkbenchQuery } from '../../hooks/usePlatformDataQueries';
+
+const formatSlaDays = (slaDueAt) => {
+  if (!slaDueAt) return '—';
+  const due = new Date(slaDueAt);
+  const now = new Date();
+  
+  // Set times to midnight to calculate purely calendar days
+  due.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+  
+  const diffTime = due.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 0) {
+    return <span className="text-rose-600 font-semibold">{Math.abs(diffDays)} day(s) overdue</span>;
+  }
+  if (diffDays === 0) {
+    return <span className="text-orange-500 font-semibold">Due today</span>;
+  }
+  return <span className="text-gray-700">{diffDays} day(s) left</span>;
+};
 
 export const PlatformWorkbasketsPage = () => {
   const { firmSlug, workbasketId } = useParams();
@@ -70,6 +92,12 @@ export const PlatformWorkbasketsPage = () => {
     };
     void fetchUsers();
   }, [isSupervisor, user]);
+
+  useEffect(() => {
+    setSelectedIds([]);
+    setSuccess('');
+    setBulkAssigneeXid('');
+  }, [workbasketId]);
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
@@ -191,11 +219,11 @@ export const PlatformWorkbasketsPage = () => {
 
   return (
     <PlatformShell
-      title={selectedWorkbasket ? `Workbaskets — ${selectedWorkbasket.name}` : 'Workbaskets'}
-      subtitle="Shared docket queue for work that can be pulled into individual execution."
+      title={selectedWorkbasket ? `📥 Workbaskets — ${selectedWorkbasket.name}` : '📥 Workbaskets'}
+      subtitle="Shared docket queue — pull work into your personal execution list."
       actions={
         <Link to={ROUTES.CREATE_CASE(firmSlug)} className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 rounded-lg shadow-sm hover:shadow">
-          Create Docket
+          ✚ Create Docket
         </Link>
       }
     >
@@ -207,32 +235,19 @@ export const PlatformWorkbasketsPage = () => {
         ]}
       />
 
-      {/* Premium KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {metrics.map((item) => (
-          <div
-            key={item.label}
-            className="relative overflow-hidden bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 group"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">{item.label}</p>
-                <p className="text-3xl font-extrabold text-gray-900 mt-2 tracking-tight group-hover:scale-105 transition-transform duration-200 origin-left">
-                  {item.value}
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center text-2xl shadow-inner group-hover:bg-indigo-50 transition-colors duration-300">
-                {item.icon}
-              </div>
-            </div>
-            <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${item.color} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300`} />
-          </div>
-        ))}
-      </div>
+      {/* Flat stat row — Notion/HubSpot style KPI strip */}
+      <StatRow
+        items={[
+          { label: '📥 Available', value: isLoading ? '…' : metrics[0]?.value, note: 'dockets in queue' },
+          { label: '👤 Assigned',  value: isLoading ? '…' : metrics[1]?.value, note: 'to team members' },
+          { label: '⏳ Pending',   value: isLoading ? '…' : metrics[2]?.value, note: 'awaiting review' },
+          { label: '⚠️ Escalated', value: isLoading ? '…' : metrics[3]?.value, note: 'need attention' },
+        ]}
+      />
 
       <PageSection
-        title="Shared Intake Queue"
-        description={`${filteredRows.length} dockets currently waiting in team intake workbaskets.`}
+        title="🗂️ Shared Intake Queue"
+        description={`${filteredRows.length} dockets waiting to be picked up`}
         actions={
           <button
             type="button"
@@ -248,7 +263,7 @@ export const PlatformWorkbasketsPage = () => {
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5" />
             </svg>
-            {isFetching ? 'Refreshing…' : 'Refresh Queue'}
+            {isFetching ? '⟳ Refreshing…' : '↺ Refresh'}
           </button>
         }
       >
@@ -301,19 +316,17 @@ export const PlatformWorkbasketsPage = () => {
 
         {/* Clean, professional data table wrapper */}
         {selectedIds.length > 0 && (
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl mb-6 shadow-sm animate-fade-in">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-indigo-700">
-                Selected {selectedIds.length} docket{selectedIds.length > 1 ? 's' : ''}
-              </span>
-            </div>
-            <div className="flex items-center gap-3 flex-1 justify-start sm:justify-end">
+          <div className="wb-bulk-bar">
+            <span className="wb-bulk-bar__count">
+              {selectedIds.length} docket{selectedIds.length > 1 ? 's' : ''} selected
+            </span>
+            <div className="wb-bulk-bar__actions">
               {isSupervisor ? (
                 <>
                   <select
                     value={bulkAssigneeXid}
                     onChange={(e) => setBulkAssigneeXid(e.target.value)}
-                    className="px-3.5 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    className="filter-bar__select"
                   >
                     <option value="">Select Assignee...</option>
                     {assignableUsers.map((u) => (
@@ -324,9 +337,9 @@ export const PlatformWorkbasketsPage = () => {
                     type="button"
                     onClick={handleBulkMove}
                     disabled={!bulkAssigneeXid || bulkMoving}
-                    className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 transition-colors duration-200 rounded-xl shadow disabled:opacity-50"
+                    className="action-primary wb-bulk-bar__btn"
                   >
-                    {bulkMoving ? 'Moving...' : 'Move to Worklist'}
+                    {bulkMoving ? 'Moving…' : 'Move to Worklist'}
                   </button>
                 </>
               ) : (
@@ -334,15 +347,15 @@ export const PlatformWorkbasketsPage = () => {
                   type="button"
                   onClick={handleBulkMove}
                   disabled={bulkMoving}
-                  className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 transition-colors duration-200 rounded-xl shadow disabled:opacity-50"
+                  className="action-primary wb-bulk-bar__btn"
                 >
-                  {bulkMoving ? 'Pulling...' : 'Pull to My Worklist'}
+                  {bulkMoving ? 'Pulling…' : 'Pull to My Worklist'}
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => setSelectedIds([])}
-                className="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors ml-2"
+                className="wb-bulk-bar__cancel"
               >
                 Cancel
               </button>
@@ -350,7 +363,7 @@ export const PlatformWorkbasketsPage = () => {
           </div>
         )}
 
-        <div className="border border-gray-100 rounded-2xl overflow-hidden bg-white shadow-sm">
+        <div className="table-wrap">
           <DataTable
             columns={[
               {
@@ -365,7 +378,7 @@ export const PlatformWorkbasketsPage = () => {
                 ),
                 widthClass: 'platform-table-select-col'
               },
-              'Docket ID', 'Client', 'Category / Subcategory', 'Status', 'Queue', 'Updated'
+              'Docket ID', 'Client ID', 'Client Name', 'Category / Subcategory', 'SLA Due', 'SLA Days', 'Updated'
             ]}
             compact
             tableClassName="w-full text-left border-collapse"
@@ -390,7 +403,8 @@ export const PlatformWorkbasketsPage = () => {
                       {formatDocketLabel(r)}
                     </button>
                   </td>
-                  <td className="px-6 py-4 text-gray-600 font-medium">{r.clientName || r.clientId || '-'}</td>
+                  <td className="px-6 py-4 text-gray-500 font-semibold text-sm">{r.clientId || '—'}</td>
+                  <td className="px-6 py-4 text-gray-900 font-semibold text-sm">{r.clientName || '—'}</td>
                   <td className="px-6 py-4 text-gray-500 text-sm">
                     <span className="text-gray-900 font-medium">{r.category || '—'}</span>
                     {r.subcategory && r.subcategory !== '-' && (
@@ -399,8 +413,8 @@ export const PlatformWorkbasketsPage = () => {
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-4"><StatusBadge status={r.status} label={formatStatusLabel(r.status)} /></td>
-                  <td className="px-6 py-4 text-gray-500 font-medium text-sm">{r.workbasketName || r.queueName || 'Workbasket'}</td>
+                  <td className="px-6 py-4 text-gray-500 text-sm font-medium">{r.slaDueAt ? formatDateLabel(r.slaDueAt) : '—'}</td>
+                  <td className="px-6 py-4 text-sm font-medium">{formatSlaDays(r.slaDueAt)}</td>
                   <td className="px-6 py-4 text-gray-400 text-sm tabular-nums">{formatDateLabel(r.updatedAt || r.createdAt)}</td>
                 </tr>
               );

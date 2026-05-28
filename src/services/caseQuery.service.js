@@ -6,6 +6,7 @@ const { applyWorkModeFilter, normalizeWorkMode } = require('../utils/workType');
 const { serializeDocketDetailDto } = require('../serializers/docketDetail.serializer');
 const docketNarrativeStorage = require('./docketNarrativeStorage.service');
 const commentHistoryNarrativeStorage = require('./commentHistoryNarrativeStorage.service');
+const { logCaseHistory } = require('./auditLog.service');
 const CASE_LIST_PROJECTION = 'caseId caseNumber caseName title status category subcategory caseSubCategory priority clientId clientName assignedTo assignedToXID assignedToName employeeXID employeeSnapshot createdBy createdByXID createdAt updatedAt dueDate slaDueAt isInternal workType lifecycle state pendingUntil ownerTeamId routedToTeamId';
 module.exports = (deps) => {
   const {
@@ -334,28 +335,23 @@ module.exports = (deps) => {
       const isViewOnlyMode = caseData.assignedToXID !== req.user.xID;
       const isOwner = caseData.createdByXID === req.user.xID;
       
-      // PR #45: Add CaseAudit and CaseHistory entries with xID attribution
-      await Promise.allSettled([
-        CaseAudit.create({
-          caseId: displayCaseId,
-          actionType: 'CASE_VIEWED',
-          description: `Case viewed by ${req.user.xID}${isViewOnlyMode ? ' (view-only mode)' : ' (assigned mode)'}`,
-          performedByXID: req.user.xID,
-          metadata: {
-            isViewOnlyMode,
-            isOwner,
-            isAssigned: !isViewOnlyMode,
-          },
-        }),
-
-        CaseHistory.create({
-          caseId: displayCaseId,
-          actionType: 'CASE_VIEWED',
-          description: `Case viewed by ${req.user.email}`,
-          performedBy: req.user.email.toLowerCase(),
-          performedByXID: req.user.xID.toUpperCase(), // Canonical identifier (uppercase)
-        }),
-      ]);
+      // PR #45: Add CaseAudit and CaseHistory entries with xID attribution via unified logger
+      await logCaseHistory({
+        caseId: displayCaseId,
+        firmId: scopedFirmId,
+        actionType: 'DOCKET_VIEWED',
+        actionLabel: `Docket viewed by ${req.user.email}`,
+        description: `Case viewed by ${req.user.email}${isViewOnlyMode ? ' (view-only mode)' : ' (assigned mode)'}`,
+        performedBy: req.user.email.toLowerCase(),
+        performedByXID: req.user.xID.toUpperCase(),
+        actorRole: req.user.role,
+        metadata: {
+          isViewOnlyMode,
+          isOwner,
+          isAssigned: !isViewOnlyMode,
+        },
+        req
+      });
 
       const caseObject =
         typeof caseData.toObject === 'function'

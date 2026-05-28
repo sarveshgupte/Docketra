@@ -226,7 +226,24 @@ module.exports = {
   'POST /:caseId/comment': { params: caseIdParams, body: z.object({ text: z.string().trim().min(1).max(2000), note: z.string().trim().min(1).max(500).optional() }).strict() },
   'POST /:caseId/assign': { params: caseIdParams, body: z.object({ assignTo: xidString.optional(), assignedTo: xidString.optional() }).passthrough() },
   'PATCH /:caseId/assign': { params: caseIdParams, body: z.object({ assignTo: xidString.optional(), assignedTo: xidString.optional() }).passthrough() },
-  'POST /:caseId/transition': { params: caseIdParams, body: z.object({ status: nonEmptyString }).passthrough() },
+  'POST /:caseId/transition': {
+    params: caseIdParams,
+    body: z.object({
+      toState: nonEmptyString.optional(),
+      status: nonEmptyString.optional(),
+      comment: z.string().trim().optional(),
+      reopenAt: z.string().trim().optional(),
+      sendToQC: z.boolean().optional(),
+      duplicateOf: z.string().trim().optional(),
+    }).passthrough().superRefine((body, ctx) => {
+      if (!body.toState && !body.status) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Either toState or status is required",
+        });
+      }
+    }),
+  },
   'POST /:caseId/reopen-pending': { params: caseIdParams, body: z.object({}).passthrough() },
   'POST /:caseId/qc-action': { params: caseIdParams, body: z.object({ action: nonEmptyString }).passthrough() },
   'POST /:caseId/reassign': { params: caseIdParams, body: z.object({ assignTo: xidString }).passthrough() },

@@ -68,13 +68,13 @@ async function assignDocket(req, res) {
 async function transitionDocket(req, res) {
   try {
     const { caseId } = req.params;
-    const { toState, comment, reopenAt, sendToQC, duplicateOf } = req.body || {};
+    const { toState, status, comment, reopenAt, sendToQC, duplicateOf } = req.body || {};
 
     const updated = await transition({
       docketId: caseId,
       firmId: req.user.firmId,
       actor: req.user,
-      toState,
+      toState: toState || status,
       comment,
       reopenAt,
       sendToQC,

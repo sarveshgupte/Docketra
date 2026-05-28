@@ -38,7 +38,7 @@ export const buildQueueContext = ({ rows = [], rowId, location, origin }) => {
 };
 
 export const PageSection = ({ id, title, description, actions, children, variant = 'default', className = '' }) => (
-  <section className={`panel section-panel section-panel--${variant} ${className}`.trim()} id={id}>
+  <section className={`section-panel section-panel--${variant} ${className}`.trim()} id={id}>
     {(title || description || actions) && (
       <header className="section-header">
         <div>
@@ -50,6 +50,22 @@ export const PageSection = ({ id, title, description, actions, children, variant
     )}
     {children}
   </section>
+);
+
+/**
+ * StatRow — flat horizontal KPI strip (replaces gradient/emoji metric cards).
+ * Usage: <StatRow items={[{ label: 'Available', value: 12, note: 'in queue' }]} />
+ */
+export const StatRow = ({ items = [] }) => (
+  <div className="stat-row" aria-label="Key metrics">
+    {items.map((item) => (
+      <div key={item.label} className="stat-row__item">
+        <span className="stat-row__label">{item.label}</span>
+        <span className="stat-row__value">{item.value ?? '—'}</span>
+        {item.note ? <span className="stat-row__note">{item.note}</span> : null}
+      </div>
+    ))}
+  </div>
 );
 
 export const FilterBar = ({ children, onClear, clearLabel = 'Clear filters', clearDisabled = false, compact = false }) => (

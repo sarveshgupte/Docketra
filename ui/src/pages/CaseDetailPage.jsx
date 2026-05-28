@@ -413,10 +413,18 @@ export const CaseDetailPage = () => {
     const queueHint = String(caseInfo?.queueContext || caseInfo?.queueName || caseInfo?.workbasketName || '').toUpperCase();
     if (routedTeamCannotResolve) badges.push('Routed');
     if (String(caseInfo?.returnedFromRoute || caseInfo?.routeReturnStatus || '').toLowerCase() === 'true') badges.push('Returned from route');
-    if (queueHint.includes('QC')) badges.push('QC Workbasket');
-    else if (caseInfo?.assignedToXID && normalizedAssignedXid === normalizedUserXid) badges.push('My Worklist');
-    else if (caseInfo?.assignedToXID) badges.push('Assigned Worklist');
-    else if (caseInfo?.workbasketName || caseInfo?.ownerTeamId || caseInfo?.queueName) badges.push('Workbasket');
+    
+    const isPended = lifecycleStatus === 'WAITING' || String(caseInfo?.status || '').toUpperCase() === 'PENDING' || String(caseInfo?.state || '').toUpperCase() === 'PENDED';
+    
+    if (isPended) {
+      badges.push('Pending');
+    } else {
+      if (queueHint.includes('QC')) badges.push('QC Workbasket');
+      else if (caseInfo?.assignedToXID && normalizedAssignedXid === normalizedUserXid) badges.push('My Worklist');
+      else if (caseInfo?.assignedToXID) badges.push('Assigned Worklist');
+      else if (caseInfo?.workbasketName || caseInfo?.ownerTeamId || caseInfo?.queueName) badges.push('Workbasket');
+    }
+    
     if (isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)) {
       badges.push(String(caseInfo?.lifecycle || lifecycleStatus || 'Terminal'));
     }
@@ -794,7 +802,7 @@ export const CaseDetailPage = () => {
     setFilingCase, setRouteSubmitting, setSubmittingRouted, setShowPendModal, setPendComment, setPendingUntil, setShowResolveModal,
     setResolveComment, setShowUnpendModal, setUnpendComment, setShowRouteModal, setRouteTeamId, setRoutingNote, setShowFileModal,
     setFileComment, setActionConfirmation, setActionError, showSuccess, showWarning, showError, loadCase, setCaseData, caseData,
-    appendTimelineEvent, user, queueFailedAction,
+    appendTimelineEvent, user, queueFailedAction, firmSlug, navigate, returnTo,
   });
 
   const handleFileSelect = (event) => {
@@ -1063,7 +1071,8 @@ export const CaseDetailPage = () => {
   const lifecycleQuickActions = useMemo(() => {
     if (isViewOnlyMode) return [];
     if (isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)) return [];
-    if (isQcContext || isUnassignedWorkbasket) return [];
+    if (isQcContext) return [];
+    if (isUnassignedWorkbasket && !routedTeamCannotResolve) return [];
     const actions = lifecycleActionMap[lifecycleStatus] || [];
     if (routedTeamCannotResolve) {
       return actions.map((action) => action.key === 'resolve' ? { ...action, key: 'submit', label: 'Submit', onClick: () => openActionModal('resolve') } : action);
@@ -1465,7 +1474,6 @@ export const CaseDetailPage = () => {
           <div className="w-full mt-4">
             <Suspense fallback={<CaseDetailPanelSkeleton title="Loading history…" rows={6} />}>
               <CaseDetailHistoryPanel
-                sortedTimelineEvents={sortedTimelineEvents}
                 loadingClientDockets={loadingClientDockets}
                 clientDockets={clientDockets}
                 clientDocketsError={clientDocketsError}
@@ -1488,7 +1496,7 @@ export const CaseDetailPage = () => {
           }}
           caseInfo={caseInfo}
           attachments={attachments}
-          timelineEvents={timelineEvents}
+          timelineEvents={sortedTimelineEvents}
           cfsData={clientFactSheet}
           cfsLoading={loadingClientFactSheet}
           cfsError={clientFactSheetError}

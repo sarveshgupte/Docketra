@@ -27,7 +27,6 @@ const getNormalizedHistoryRow = (row) => {
 };
 
 export const CaseDetailHistoryPanel = ({
-  sortedTimelineEvents,
   loadingClientDockets,
   clientDockets,
   clientDocketsError,
@@ -38,36 +37,7 @@ export const CaseDetailHistoryPanel = ({
   navigate,
 }) => (
   <>
-    <section className="case-card" id="panel-history" role="tabpanel" aria-labelledby="tab-history">
-      <div className="case-card__heading">
-        <h2>Change History</h2>
-      </div>
-      <p className="mb-3 text-xs text-gray-500">Audit-style change record using available timeline/audit data.</p>
-      {!sortedTimelineEvents.length ? <p className="case-detail__empty-note">No audit history available yet.</p> : null}
-      {sortedTimelineEvents.length ? (
-        <ul className="space-y-3">
-          {sortedTimelineEvents.map((event, index) => {
-            const changeSet = event?.changes || event?.diff || event?.fieldsChanged || null;
-            const actor = event?.performedByName || event?.performedByXID || event?.performedBy || event?.actorXID || 'System';
-            return (
-              <li key={`${event._id || event.id || index}`} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                <div className="text-sm font-medium text-gray-900">{event?.actionLabel || event?.description || event?.actionType || event?.action || 'Updated'}</div>
-                <div className="mt-1 text-xs text-gray-500">{actor} • {formatDateTime(event?.timestamp || event?.createdAt || event?.updatedAt)}</div>
-                {Array.isArray(changeSet) && changeSet.length ? (
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-gray-600">
-                    {changeSet.map((change, changeIndex) => (
-                      <li key={`${index}-change-${changeIndex}`}>
-                        {change?.field || change?.key || 'Field'}: {String(change?.from ?? change?.before ?? '—')} → {String(change?.to ?? change?.after ?? '—')}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-    </section>
+
     <section className="case-card" aria-labelledby="past-dockets-heading">
       <div className="case-card__heading">
         <h2 id="past-dockets-heading">Client Docket History</h2>

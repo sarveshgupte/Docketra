@@ -1,6 +1,7 @@
 const { randomUUID } = require('crypto');
 const CaseFile = require('../models/CaseFile.model');
 const Attachment = require('../models/Attachment.model');
+const { logCaseHistory } = require('./auditLog.service');
 const { CaseRepository, ClientRepository } = require('../repositories');
 const cfsDriveService = require('./cfsDrive.service');
 const { StorageProviderFactory } = require('./storage/StorageProviderFactory');
@@ -488,6 +489,23 @@ const finalizeIntent = async ({ uploadId, firmId, user, completion = {}, checksu
     version,
     source: uploadRecord.source,
     checksum: clientChecksum?.raw || null,
+  });
+
+  await logCaseHistory({
+    caseId: uploadRecord.caseId,
+    firmId,
+    actionType: 'CASE_FILE_ATTACHED',
+    actionLabel: 'File attached to docket',
+    description: `File attached: "${uploadRecord.originalName}" (${uploadRecord.description || 'no description'})`,
+    performedBy: actor.createdBy,
+    performedByXID: actor.createdByXID,
+    actorRole: user?.role || 'USER',
+    metadata: {
+      fileName: uploadRecord.originalName,
+      size: uploadRecord.size,
+      mimeType: uploadRecord.mimeType,
+      version,
+    }
   });
 
   await markUploadSessionStatus(uploadRecord, 'verified', {
