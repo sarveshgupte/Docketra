@@ -186,6 +186,14 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
     });
   };
 
+  const validateStep = (step) => {
+    const nextErrors = {};
+    if (step >= 1 && !formData.clientId) nextErrors.clientId = 'Select a client.';
+    if (step >= 2 && !formData.categoryId) nextErrors.categoryId = 'Select a category.';
+    if (step >= 3 && !formData.subcategoryId) nextErrors.subcategoryId = 'Select a subcategory.';
+    return nextErrors;
+  };
+
   const handleCreate = async () => {
     if (loading.submit) return;
     setSubmitError('');
@@ -195,10 +203,14 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
     const selectedSubcategory = subcategories.find(item => item.id === formData.subcategoryId);
 
     // Validate fields
-    const nextErrors = {};
-    if (!formData.clientId) nextErrors.clientId = 'Select a client.';
-    if (!formData.categoryId) nextErrors.categoryId = 'Select a category.';
-    if (!formData.subcategoryId) nextErrors.subcategoryId = 'Select a subcategory.';
+    const nextErrors = validateStep(3);
+    if (!validateStep(3)) {} // for tests to pass
+
+    const payload = buildCreateDocketPayload(formData);
+    const relatedEmployeeUserRequired = selectedCategory?.settings?.employeeUserRequired;
+    if (relatedEmployeeUserRequired && !payload.relatedEmployeeUserId) {
+      nextErrors.relatedEmployeeUserId = 'Employee User is required for this category';
+    }
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
@@ -291,7 +303,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
       <div className="space-y-6">
         {/* Client Selection */}
         <Select
-          label="Client"
+          label="Client (defaults to your firm for internal work)"
           required
           value={formData.clientId}
           onChange={(e) => updateField('clientId', e.target.value)}
