@@ -22,6 +22,9 @@ const toLegacyCaseShape = (detail = {}, legacy = {}) => ({
     businessEmail: detail.client.email || legacy?.client?.businessEmail,
     primaryContactNumber: detail.client.contact || legacy?.client?.primaryContactNumber,
   } : legacy.client,
+  assignedToXID: detail.assignee?.xID || legacy.assignedToXID,
+  assignedToName: detail.assignee?.name || legacy.assignedToName,
+  workbasketName: detail.workbasket?.name || legacy.workbasketName || legacy.queueName || legacy.ownerTeamName,
 });
 
 export const normalizeCase = (data) => {

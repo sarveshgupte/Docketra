@@ -36,24 +36,26 @@ const isValidObjectId = (id) => {
  */
 const isValidCaseNumberFormat = (id) => {
   if (!id) return false;
-  const normalized = String(id).trim();
-  return /^CASE-\d{8}-\d{5}$/i.test(normalized) || /^\d{8}-\d{5}$/.test(normalized);
+  const normalized = String(id).trim().replace(/[_\s]+/g, '-');
+  return /^(CASE|DOCKET)-\d{8}-\d{5}$/i.test(normalized) || /^\d{8}-\d{5}$/.test(normalized);
 };
 
 const getCaseNumberCandidates = (id) => {
-  const normalized = String(id || '').trim();
+  const normalized = String(id || '').trim().replace(/[_\s]+/g, '-');
   if (!normalized) return [];
 
   const bareMatch = normalized.match(/^(\d{8}-\d{5})$/);
   if (bareMatch) {
     const bare = bareMatch[1];
-    return [bare, `CASE-${bare}`];
+    return [bare, `CASE-${bare}`, `DOCKET-${bare}`];
   }
 
-  const prefixedMatch = normalized.match(/^CASE-(\d{8}-\d{5})$/i);
+  const prefixedMatch = normalized.match(/^(CASE|DOCKET)-(\d{8}-\d{5})$/i);
   if (prefixedMatch) {
-    const bare = prefixedMatch[1];
-    return [`CASE-${bare}`, bare];
+    const prefix = prefixedMatch[1].toUpperCase();
+    const bare = prefixedMatch[2];
+    const otherPrefix = prefix === 'CASE' ? 'DOCKET' : 'CASE';
+    return [`${prefix}-${bare}`, `${otherPrefix}-${bare}`, bare];
   }
 
   return [normalized];

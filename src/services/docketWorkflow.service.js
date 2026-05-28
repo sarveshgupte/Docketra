@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const { randomUUID } = require('crypto');
 const Case = require('../models/Case.model');
+const { logCaseHistory } = require('./auditLog.service');
 const Category = require('../models/Category.model');
 const Team = require('../models/Team.model');
 const User = require('../models/User.model');
@@ -261,6 +262,80 @@ async function writeAudit({
     reasonCode: canonicalReasonCode,
     firmId,
     session,
+  });
+
+  let actionType = 'CASE_UPDATED';
+  let actionLabel = `Docket updated`;
+  let description = `Docket transitioned from ${fromState} to ${toState}`;
+
+  if (action === 'ASSIGNMENT') {
+    actionType = 'CASE_ASSIGNED';
+    actionLabel = `Docket assigned`;
+    description = `Docket pulled from Global Workbasket by ${userId}`;
+  } else if (action === 'REASSIGNED') {
+    actionType = 'CASE_ASSIGNED';
+    actionLabel = `Docket reassigned`;
+    const toUser = changes.find(c => c.field === 'assignedToXID')?.to || '';
+    description = `Docket reassigned to ${toUser} by ${userId}`;
+  } else {
+    const lowerTo = String(toState || '').toLowerCase();
+    const lowerFrom = String(fromState || '').toLowerCase();
+    
+    if (lowerTo.includes('pend') && !lowerFrom.includes('pend')) {
+      actionType = 'CASE_PENDED';
+      actionLabel = `Docket pended`;
+      description = `Docket status set to PENDED by ${userId}`;
+    } else if (lowerFrom.includes('pend') && !lowerTo.includes('pend')) {
+      actionType = 'CASE_UNPENDED';
+      actionLabel = `Docket unpended`;
+      description = `Docket status set to UNPENDED/REOPENED by ${userId}`;
+    } else if (lowerTo.includes('resolve')) {
+      actionType = 'CASE_RESOLVED';
+      actionLabel = `Docket resolved`;
+      description = `Docket status set to RESOLVED by ${userId}`;
+    } else if (lowerTo.includes('file')) {
+      actionType = 'CASE_FILED';
+      actionLabel = `Docket filed`;
+      description = `Docket status set to FILED by ${userId}`;
+    } else if (lowerTo.includes('qc') || action?.startsWith('QC_')) {
+      actionType = 'CASE_STATUS_CHANGED';
+      actionLabel = `QC Action: ${action}`;
+      description = `QC workflow action taken by ${userId}: ${action}`;
+    }
+  }
+
+  if (comment) {
+    description += ` with comment: "${comment}"`;
+  }
+
+  // Load performedBy email asynchronously or fallback to system
+  let userEmail = 'system@local';
+  try {
+    const userRecord = await User.findOne({ xID: String(userId || '').toUpperCase(), firmId }).lean();
+    if (userRecord?.email) {
+      userEmail = userRecord.email;
+    }
+  } catch (_e) {
+    // best effort user lookup
+  }
+
+  await logCaseHistory({
+    caseId: docketId,
+    firmId,
+    actionType,
+    actionLabel,
+    description,
+    performedBy: userEmail.toLowerCase(),
+    performedByXID: String(userId || '').toUpperCase(),
+    actorRole: performedByRole || 'USER',
+    metadata: {
+      fromState,
+      toState,
+      changes,
+      action,
+      ...metadata,
+    },
+    session
   });
 }
 

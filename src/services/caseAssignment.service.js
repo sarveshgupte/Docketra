@@ -1,6 +1,7 @@
 const Case = require('../models/Case.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const CaseAudit = require('../models/CaseAudit.model');
+const { logCaseHistory } = require('./auditLog.service');
 const mongoose = require('mongoose');
 const { CaseRepository } = require('../repositories');
 const CaseStatus = require('../domain/case/caseStatus');
@@ -87,6 +88,24 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
       },
     }).catch((error) => {
       log.error('[pullCaseFromWorkbasket] Non-blocking audit write failed:', error?.message || error);
+    });
+
+    logCaseHistory({
+      caseId,
+      firmId: tenantId,
+      actionType: 'CASE_ASSIGNED',
+      actionLabel: 'Docket assigned via pull',
+      description: `Case assigned to ${normalizedUserId} via workbasket pull`,
+      performedBy: `${normalizedUserId.toLowerCase()}@local`,
+      performedByXID: normalizedUserId,
+      actorRole: 'USER',
+      metadata: {
+        fromStatus: CaseStatus.UNASSIGNED,
+        toStatus: CaseStatus.ASSIGNED,
+        timestamp: assignedAt,
+      }
+    }).catch((error) => {
+      log.error('[pullCaseFromWorkbasket] Non-blocking CaseHistory write failed:', error?.message || error);
     });
   });
 
@@ -253,19 +272,22 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
     }, null, { session });
 
     await Promise.all(updatedCases.map((caseData) =>
-      CaseHistory.create([{
+      logCaseHistory({
         caseId: caseData.caseId,
-        actionType: 'CASE_PULLED',
-        description: `Case pulled from Global Workbasket by ${user.xID.toUpperCase()}`,
-        performedBy: user.email?.toLowerCase() || 'system@local',
-        performedByXID: user.xID.toUpperCase(),
         firmId,
+        actionType: 'CASE_ASSIGNED',
+        actionLabel: `Case pulled from Global Workbasket`,
+        description: `Case pulled from Global Workbasket by ${user.xID.toUpperCase()}`,
+        performedBy: user.email?.toLowerCase() || `${user.xID.toLowerCase()}@local`,
+        performedByXID: user.xID.toUpperCase(),
+        actorRole: user.role || 'USER',
         metadata: {
           fromStatus: CaseStatus.UNASSIGNED,
           toStatus: CaseStatus.ASSIGNED,
           timestamp: assignedAt,
         },
-      }], { session })
+        session
+      })
     ));
 
     const transitionedCases = await Case.find({
@@ -390,12 +412,19 @@ const reassignCase = async (firmId, caseId, newUserXID, performedBy) => {
   });
   
   // Create history entry
-  await CaseHistory.create({
+  await logCaseHistory({
     caseId,
-    actionType: 'CASE_REASSIGNED',
-    description: `Case reassigned from ${previousAssignee || 'unassigned'} to ${newUserXID}`,
+    firmId,
+    actionType: 'CASE_ASSIGNED',
+    actionLabel: 'Docket reassigned',
+    description: `Case reassigned from ${previousAssignee || 'unassigned'} to ${newUserXID} by ${performedBy.xID}`,
     performedBy: performedBy.email.toLowerCase(),
-    performedByXID: performedBy.xID.toUpperCase(), // Canonical identifier (uppercase)
+    performedByXID: performedBy.xID.toUpperCase(),
+    actorRole: performedBy.role || 'USER',
+    metadata: {
+      previousAssignee,
+      newAssignee: newUserXID,
+    }
   });
 
   await docketAuditService.logAssignment({

@@ -62,6 +62,46 @@ export const DocketSidebar = ({
 
   const resolveActorXid = (event) => event?.performedByXID || event?.actorXID || event?.createdByXID || event?.xID || 'SYSTEM';
 
+  const resolveEventIconAndClass = (event) => {
+    const actionType = String(event?.actionType || event?.action || event?.event || '').toUpperCase();
+    const particulars = String(event?.description || event?.actionLabel || '').toLowerCase();
+    
+    // Default
+    let icon = '📝';
+    let typeClass = 'docket-sidebar__timeline-icon--default';
+    
+    if (actionType.includes('VIEW') || actionType.includes('OPEN') || actionType.includes('EXIT')) {
+      icon = '👁️';
+      typeClass = 'docket-sidebar__timeline-icon--view';
+    } else if (actionType.includes('COMMENT')) {
+      icon = '💬';
+      typeClass = 'docket-sidebar__timeline-icon--comment';
+    } else if (actionType.includes('FILE') || actionType.includes('ATTACHMENT')) {
+      icon = '📎';
+      typeClass = 'docket-sidebar__timeline-icon--attachment';
+    } else if (actionType.includes('PENDED') || actionType.includes('PEND')) {
+      icon = '📅';
+      typeClass = 'docket-sidebar__timeline-icon--lifecycle';
+    } else if (actionType.includes('RESOLVED')) {
+      icon = '✅';
+      typeClass = 'docket-sidebar__timeline-icon--lifecycle';
+    } else if (actionType.includes('FILED')) {
+      icon = '📁';
+      typeClass = 'docket-sidebar__timeline-icon--lifecycle';
+    } else if (actionType.includes('ASSIGNED') || actionType.includes('PULLED') || actionType.includes('UNASSIGNED')) {
+      icon = '👤';
+      typeClass = 'docket-sidebar__timeline-icon--routing';
+    } else if (actionType.includes('ROUTE') || actionType.includes('MOVE')) {
+      icon = '➡️';
+      typeClass = 'docket-sidebar__timeline-icon--routing';
+    } else if (actionType.includes('CREATED') || actionType.includes('CLONED')) {
+      icon = '✨';
+      typeClass = 'docket-sidebar__timeline-icon--lifecycle';
+    }
+    
+    return { icon, typeClass };
+  };
+
   useEffect(() => {
     return () => {
       if (copyFeedbackTimeoutRef.current) {
@@ -380,32 +420,42 @@ export const DocketSidebar = ({
 
       return (
         <div className="docket-sidebar__history-wrap">
-        <p className="docket-sidebar__history-note">Complete lifecycle log from docket creation/cloning through resolution/filing, including opens/views/closes and WB ↔ WL movements.</p>
-        <div className="docket-sidebar__history-table-wrap">
-          <table className="docket-sidebar__history-table">
-            <thead>
-              <tr>
-                <th scope="col">Particulars</th>
-                <th scope="col">xID</th>
-                <th scope="col">Time</th>
-                <th scope="col">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {timelineEvents.map((event, index) => {
-                const eventTimestamp = event?.timestamp || event?.createdAt || event?.date || event?.updatedAt;
-                return (
-                  <tr key={event.id || event._id || `${resolveParticulars(event)}-${eventTimestamp}-${index}`}>
-                    <td>{resolveParticulars(event)}</td>
-                    <td>{resolveActorXid(event)}</td>
-                    <td>{formatTimePart(eventTimestamp)}</td>
-                    <td>{formatDatePart(eventTimestamp)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+          <p className="docket-sidebar__history-note">Complete lifecycle log from docket creation/cloning through resolution/filing, including opens/views/closes and WB ↔ WL movements.</p>
+          <div className="docket-sidebar__timeline">
+            {timelineEvents.map((event, index) => {
+              const eventTimestamp = event?.timestamp || event?.createdAt || event?.date || event?.updatedAt;
+              const { icon, typeClass } = resolveEventIconAndClass(event);
+              const particulars = resolveParticulars(event);
+              const actorXid = resolveActorXid(event);
+              const dateText = formatDatePart(eventTimestamp);
+              const timeText = formatTimePart(eventTimestamp);
+              
+              // Extract role if available
+              const actorRole = event?.actorRole || (event?.performedBy === 'SYSTEM' || actorXid === 'SYSTEM' ? 'SYSTEM' : 'USER');
+              
+              return (
+                <div key={event.id || event._id || `${particulars}-${eventTimestamp}-${index}`} className="docket-sidebar__timeline-item">
+                  <div className={`docket-sidebar__timeline-icon ${typeClass}`} aria-hidden="true">
+                    {icon}
+                  </div>
+                  <div className="docket-sidebar__timeline-content">
+                    <div className="docket-sidebar__timeline-title">
+                      {particulars}
+                    </div>
+                    <div className="docket-sidebar__timeline-meta">
+                      <span className="docket-sidebar__timeline-actor">{actorXid}</span>
+                      {actorRole && actorRole !== 'USER' && (
+                        <span className="docket-sidebar__timeline-badge">{actorRole}</span>
+                      )}
+                      <span className="docket-sidebar__timeline-dot">•</span>
+                      <span className="docket-sidebar__timeline-time">{timeText}</span>
+                      <span className="docket-sidebar__timeline-date">{dateText}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       );
     } catch (error) {

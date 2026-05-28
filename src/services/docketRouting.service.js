@@ -2,6 +2,10 @@ const Case = require('../models/Case.model');
 const Team = require('../models/Team.model');
 const User = require('../models/User.model');
 const DocketRoute = require('../models/DocketRoute.model');
+const Comment = require('../models/Comment.model');
+const { logCaseHistory } = require('./auditLog.service');
+const commentHistoryNarrativeStorage = require('./commentHistoryNarrativeStorage.service');
+const { randomUUID } = require('crypto');
 const { getCanonicalDocketState } = require('../utils/docketStateMapper');
 const CaseStatus = require('../domain/case/caseStatus');
 const { NotificationTypes, createNotification } = require('../domain/notifications');
@@ -78,6 +82,52 @@ async function routeDocket({ docketId, actor, firmId, toTeamId, note }) {
   docket.routeOriginatorTeamId = previousOwnerTeamId;
   docket.routeOriginatorWorkbasketId = previousWorkbasketId;
   await docket.save();
+
+  // Create comment - using commentHistoryNarrativeStorage for cloud-first narrative compliance
+  const commentId = String(randomUUID());
+  const commentRef = await commentHistoryNarrativeStorage.uploadComment({
+    firmId,
+    docketId: docket.caseId,
+    commentId,
+    payload: { text: note, note: null },
+  });
+
+  await Comment.create({
+    caseId: docket.caseId,
+    firmId,
+    text: note,
+    createdBy: actor.email ? actor.email.toLowerCase() : 'system',
+    createdByXID: actor.xID,
+    createdByName: actor.name || actor.xID,
+    commentRef: {
+      provider: commentRef.provider,
+      mode: commentRef.mode,
+      fileId: commentRef.fileId || null,
+      objectKey: commentRef.objectKey,
+      checksum: commentRef.checksum || null,
+      version: 1,
+      updatedAt: new Date(),
+      updatedBy: actor.xID,
+    },
+    storageMode: 'cloud_first',
+  });
+
+  // Log to CaseHistory & CaseAudit via centralized logging helper
+  await logCaseHistory({
+    caseId: docket.caseId,
+    firmId,
+    actionType: 'CASE_MOVED_TO_WORKBASKET',
+    actionLabel: 'Docket routed',
+    description: `Docket routed from ${previousOwnerTeamId || 'unassigned'} to ${targetTeam._id} with comment: ${note}`,
+    performedBy: actor.email,
+    performedByXID: actor.xID,
+    actorRole: actor.role,
+    metadata: {
+      fromTeamId: previousOwnerTeamId,
+      toTeamId: targetTeam._id,
+      note,
+    },
+  });
 
   await DocketRoute.create({
     docketId,
@@ -190,12 +240,43 @@ async function managerMoveDocket({ docketId, actor, firmId, to }) {
     const targetUserXid = String(to.userXID || '').toUpperCase();
     const targetUser = await User.findOne({ xID: targetUserXid, firmId, teamId: actor.teamId, status: { $ne: 'deleted' } });
     if (!targetUser) throw makeError('Target user must be in manager team', 400);
+    const prevAssignee = docket.assignedToXID;
     docket.assignedToXID = targetUserXid;
     docket.status = CaseStatus.IN_PROGRESS;
     await createNotification({ firmId, recipientXID: targetUserXid, type: NotificationTypes.DOCKET_ASSIGNED, docketId, message: `Docket ${docketId} has been assigned to you.` });
+
+    await logCaseHistory({
+      caseId: docketId,
+      firmId,
+      actionType: 'CASE_ASSIGNED',
+      actionLabel: `Docket reassigned by manager`,
+      description: `Docket reassigned from ${prevAssignee || 'unassigned'} to ${targetUserXid} by manager ${actor.xID}`,
+      performedBy: actor.email,
+      performedByXID: actor.xID,
+      actorRole: actor.role,
+      metadata: {
+        previousAssignee: prevAssignee,
+        newAssignee: targetUserXid,
+      }
+    });
   } else {
+    const prevAssignee = docket.assignedToXID;
     docket.assignedToXID = null;
     docket.status = CaseStatus.UNASSIGNED || 'UNASSIGNED';
+
+    await logCaseHistory({
+      caseId: docketId,
+      firmId,
+      actionType: 'CASE_UNASSIGNED',
+      actionLabel: `Docket unassigned by manager`,
+      description: `Docket moved back to workbasket from ${prevAssignee || 'unassigned'} by manager ${actor.xID}`,
+      performedBy: actor.email,
+      performedByXID: actor.xID,
+      actorRole: actor.role,
+      metadata: {
+        previousAssignee: prevAssignee,
+      }
+    });
   }
 
   docket.routedToTeamId = actor.teamId;
