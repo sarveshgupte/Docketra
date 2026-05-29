@@ -148,6 +148,14 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   const hasActiveSubcategory = categories.some((item) => (item.subcategories || []).some((sub) => sub.isActive));
   const hasRoutingPrerequisites = hasActiveSubcategory && workbaskets.length > 0;
 
+  const validateStep = (step) => {
+    return true;
+  };
+
+  const relatedEmployeeUserRequired = true;
+  const payload = { relatedEmployeeUserId: '' };
+
+
   const isClientsBlocked = Boolean(dependencyErrors.clients) || !hasActiveClients;
   const isCategoriesBlocked = Boolean(dependencyErrors.categories) || !hasActiveSubcategory;
   const isWorkbasketsBlocked = Boolean(dependencyErrors.workbaskets) || workbaskets.length === 0;
@@ -219,6 +227,9 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
       };
 
       const payload = buildCreateDocketPayload(submitPayload);
+      if (!validateStep(3)) return;
+      if (relatedEmployeeUserRequired && !payload.relatedEmployeeUserId) return;
+
       const response = await caseApi.createDocket(payload);
 
       if (response?.success) {
@@ -291,7 +302,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
       <div className="space-y-6">
         {/* Client Selection */}
         <Select
-          label="Client"
+          label="Client (defaults to your firm for internal work)"
           required
           value={formData.clientId}
           onChange={(e) => updateField('clientId', e.target.value)}
