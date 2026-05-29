@@ -13,7 +13,7 @@ import { superadminService } from '../../services/superadminService';
 import { SUPERADMIN_PILOT_SURFACE, TASK_MANAGER_MVP_ENABLED } from '../../constants/pilotSurface';
 
 const navItemClass = (isActive) =>
-  `rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+  `rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 ${
     isActive ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
   }`;
 
@@ -141,9 +141,9 @@ export const SuperAdminLayout = ({ children }) => {
                 }
               }}
               placeholder="Search firms, admins, audit refs"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
             />
-            <button type="button" onClick={() => void runSearch()} className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white">Search</button>
+            <button type="button" onClick={() => void runSearch()} className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2">Search</button>
           </div>
           <p className="mt-2 text-xs text-gray-500">Search returns platform lifecycle/support metadata only. It does not search client records, dockets, tasks, attachments, or private client content.</p>
           {searchOpen ? (
@@ -161,7 +161,7 @@ export const SuperAdminLayout = ({ children }) => {
                         <button
                           key={`${row.type}-${row.id}`}
                           type="button"
-                          className="mt-1 w-full rounded px-2 py-1.5 text-left hover:bg-white"
+                          className="mt-1 w-full rounded px-2 py-1.5 text-left hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
                           onClick={() => {
                             setSearchOpen(false);
                             navigate(row.href);
