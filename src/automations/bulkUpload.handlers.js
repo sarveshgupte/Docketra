@@ -128,52 +128,72 @@ const handleClientPostCreate = async ({ type, user, createdClients = [] }) => {
 
   const { category, subcategory } = categoryBundle;
 
+  // 💡 What: Replaced N+1 findOne() calls inside the loop with a single $in query.
+  // 🎯 Why: Bulk operations iterating over large datasets should fetch existence checks in O(1) batched lookups to avoid severe DB latency.
+  const idempotencyKeys = createdClients.map((client) => `automation:bulk-upload:default-docket:${user.firmId}:${client.clientId}`);
+
+  const existingCases = await Case.find({
+    firmId: user.firmId,
+    idempotencyKey: { $in: idempotencyKeys },
+  }).select('idempotencyKey').lean();
+
+  const existingKeys = new Set(existingCases.map((c) => c.idempotencyKey));
+
+  const createdAt = new Date();
+
+  // 💡 What: Hoisted SLA date computation outside of the client iteration loop.
+  // 🎯 Why: The due date relies entirely on category/subcategory properties that are the same for all clients in this batch. No need to repeatedly await it.
+  const fallbackDueDate = slaService.calculateFallbackDueDateFromDays(
+    createdAt,
+    Math.max(0, Number(subcategory.defaultSlaDays || category.defaultSlaDays || 3)),
+  );
+
+  const dueDate = await slaService.calculateSlaDueDate({
+    firmId: user.firmId,
+    category: category.name,
+    subcategory: subcategory.name,
+    workbasketId: subcategory.workbasketId || null,
+    createdAt,
+  }) || fallbackDueDate;
+
+  const casesToCreate = [];
+
   for (const createdClient of createdClients) {
+    const idempotencyKey = `automation:bulk-upload:default-docket:${user.firmId}:${createdClient.clientId}`;
+    if (existingKeys.has(idempotencyKey)) continue;
+
+    casesToCreate.push({
+      title: 'Initial Setup',
+      description: 'Auto-created by bulk upload automation',
+      categoryId: category._id,
+      subcategoryId: String(subcategory.id),
+      category: category.name,
+      caseCategory: category.name,
+      caseSubCategory: subcategory.name,
+      subcategory: subcategory.name,
+      clientId: createdClient.clientId,
+      firmId: user.firmId,
+      createdByXID: user.xID || 'SYSTEM',
+      createdBy: user.email || user.xID || 'system',
+      priority: 'medium',
+      status: 'UNASSIGNED',
+      lifecycle: 'CREATED',
+      queueType: 'GLOBAL',
+      slaDueAt: dueDate,
+      dueDate,
+      idempotencyKey,
+    });
+  }
+
+  // 💡 What: Replaced individual await Case.create() with batched insertMany().
+  // 🎯 Why: Replaces O(N) database write calls with a single network round-trip, significantly speeding up bulk uploads.
+  if (casesToCreate.length > 0) {
     try {
-      const idempotencyKey = `automation:bulk-upload:default-docket:${user.firmId}:${createdClient.clientId}`;
-      const existingCase = await Case.findOne({ firmId: user.firmId, idempotencyKey }).select('_id').lean();
-      if (existingCase) continue;
-
-      const createdAt = new Date();
-      const fallbackDueDate = slaService.calculateFallbackDueDateFromDays(
-        createdAt,
-        Math.max(0, Number(subcategory.defaultSlaDays || category.defaultSlaDays || 3)),
-      );
-
-      const dueDate = await slaService.calculateSlaDueDate({
-        firmId: user.firmId,
-        category: category.name,
-        subcategory: subcategory.name,
-        workbasketId: subcategory.workbasketId || null,
-        createdAt,
-      }) || fallbackDueDate;
-
-      await Case.create({
-        title: 'Initial Setup',
-        description: 'Auto-created by bulk upload automation',
-        categoryId: category._id,
-        subcategoryId: String(subcategory.id),
-        category: category.name,
-        caseCategory: category.name,
-        caseSubCategory: subcategory.name,
-        subcategory: subcategory.name,
-        clientId: createdClient.clientId,
-        firmId: user.firmId,
-        createdByXID: user.xID || 'SYSTEM',
-        createdBy: user.email || user.xID || 'system',
-        priority: 'medium',
-        status: 'UNASSIGNED',
-        lifecycle: 'CREATED',
-        queueType: 'GLOBAL',
-        slaDueAt: dueDate,
-        dueDate,
-        idempotencyKey,
-      });
+      await Case.insertMany(casesToCreate, { ordered: false });
     } catch (error) {
-      if (error?.code === 11000) continue;
-      log.error('[AUTOMATION] Failed to create default docket for imported client', {
+      log.error('[AUTOMATION] Failed to create default dockets for imported clients', {
         firmId: user.firmId,
-        clientId: createdClient.clientId,
+        count: casesToCreate.length,
         error: error.message,
       });
     }

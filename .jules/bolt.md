@@ -48,3 +48,7 @@
 ## 2026-05-21 - Concurrent Document Fetch in Case Create Service Validation
 **Learning:** In the `caseCreate` service, `WorkType.findOne` and `SubWorkType.findOne` were awaited sequentially, which caused endpoint latency, despite being independent of the other model validation queries (like `Deal`, `CrmClient`, etc.).
 **Action:** Prepared the `WorkType` and `SubWorkType` queries as promises and merged them into the existing `Promise.all()` concurrently with the other independent lookups.
+
+## 2026-05-29 - Batched Operations in Bulk Upload Handlers
+**Learning:** In automation handlers (e.g. `handleClientPostCreate`), iterating over a dynamically generated array of inputs (`createdClients`) and running asynchronous DB checks (`findOne`), date calculations, and single inserts (`create`) inside the loop creates extreme N+1 latency.
+**Action:** Lift the loop-invariant computations out of the loop (e.g. `calculateSlaDueDate`), pre-fetch all necessary checks via an `$in` query and map them into a `Set` for O(1) existence checks, and accumulate writes into an array to execute via a single `insertMany({ ordered: false })`.
