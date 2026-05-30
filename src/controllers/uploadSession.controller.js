@@ -270,6 +270,20 @@ async function uploadDocument(req, res) {
       throw new Error('Case not found');
     }
 
+    // Ensure the Case CFS folder structure is fully initialized under BYOS rules
+    const isValidStructure = await cfsDriveService.validateCFSMetadata(caseData.drive);
+    if (!isValidStructure) {
+      const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
+      const provider = await StorageProviderFactory.getProvider(session.firmId);
+      const folderIds = await cfsDriveService.createCFSFolderStructure(
+        String(session.firmId),
+        caseData.caseId,
+        provider
+      );
+      caseData.drive = folderIds;
+      await CaseRepository.updateByCaseId(session.firmId, caseData.caseId, { $set: { drive: folderIds } });
+    }
+
     const targetFolderId = cfsDriveService.getFolderIdForFileType(caseData.drive, 'attachment');
     if (!targetFolderId) {
       throw new Error('Case Drive folder structure not initialized');
