@@ -64,7 +64,7 @@ async function generateUploadLink(req, res) {
     const reqHost = req.get('host');
     const reqProtocol = req.protocol || 'http';
     const fallbackBaseUrl = reqHost ? `${reqProtocol}://${reqHost}` : 'http://localhost:5173';
-    const baseUrl = (process.env.APP_URL || fallbackBaseUrl).replace(/\/+$/, '');
+    const baseUrl = (process.env.FRONTEND_URL || process.env.APP_URL || fallbackBaseUrl).replace(/\/+$/, '');
     const uploadLink = `${baseUrl}/upload/${result.token}`;
     const clientEmail = await resolveClientEmail(caseData, req.user.firmId);
 
