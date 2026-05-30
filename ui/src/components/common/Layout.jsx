@@ -831,13 +831,14 @@ export const Layout = ({ children, title, subtitle }) => {
                 title={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
                 aria-expanded={notificationOpen}
                 aria-haspopup="menu"
+                aria-controls="notification-menu"
                 onClick={() => setNotificationOpen((v) => !v)}
               >
                 <IconBell />
                 {unreadCount > 0 ? <span className="enterprise-header__notif-dot" aria-hidden="true">{unreadCount}</span> : null}
               </button>
               {notificationOpen ? (
-                <div className="dropdown-menu dropdown-menu-right enterprise-header__notification-menu" role="menu">
+                <div id="notification-menu" className="dropdown-menu dropdown-menu-right enterprise-header__notification-menu" role="menu">
                   <div className="enterprise-header__notification-header">
                     <span>Notifications</span>
                     <span className="enterprise-header__notification-count">{unreadCount} unread</span>
@@ -926,6 +927,7 @@ export const Layout = ({ children, title, subtitle }) => {
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                 aria-expanded={profileDropdownOpen}
                 aria-haspopup="true"
+                aria-controls="profile-menu"
                 aria-label="User profile menu"
               >
                 <div className="enterprise-header__user-avatar" aria-hidden="true">{getUserInitials()}</div>
@@ -933,7 +935,7 @@ export const Layout = ({ children, title, subtitle }) => {
                 <IconChevronDown />
               </button>
               {profileDropdownOpen && (
-                <div className="dropdown-menu dropdown-menu-right" role="menu">
+                <div id="profile-menu" className="dropdown-menu dropdown-menu-right" role="menu">
                   <Link
                     to={ROUTES.PROFILE(currentFirmSlug)}
                     className="dropdown-item"
