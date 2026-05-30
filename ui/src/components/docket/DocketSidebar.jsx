@@ -456,7 +456,7 @@ export const DocketSidebar = ({
                       </button>
                     </div>
 
-                    {uploadLinkResult.pin && (
+                    {uploadLinkResult.pin ? (
                       <div className="flex items-center justify-between bg-white/60 rounded px-2 py-1 border border-gray-100">
                         <span className="text-[10px] font-medium text-gray-500">Verification PIN:</span>
                         <div className="flex items-center gap-2">
@@ -472,7 +472,12 @@ export const DocketSidebar = ({
                           </button>
                         </div>
                       </div>
-                    )}
+                    ) : uploadLinkResult.requiresPin ? (
+                      <div className="flex items-center justify-between bg-white/60 rounded px-2 py-1 border border-gray-100">
+                        <span className="text-[10px] font-medium text-gray-500">Verification PIN:</span>
+                        <span className="text-[10px] font-semibold text-gray-500 italic">Protected (Active)</span>
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
