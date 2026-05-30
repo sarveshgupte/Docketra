@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { caseApi } from '../../api/case.api';
 import { extractErrorMessage } from '../../services/apiResponse';
 import { getRecoveryPayload } from '../../utils/errorRecovery';
@@ -11,6 +11,33 @@ export const useDocketAttachments = ({ caseId, user, showSuccess, showError, sho
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadLinkGenerating, setUploadLinkGenerating] = useState(false);
   const [uploadLinkResult, setUploadLinkResult] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!caseId) {
+      setUploadLinkResult(null);
+      return;
+    }
+
+    const fetchActiveLink = async () => {
+      try {
+        const response = await caseApi.getUploadLinkStatus(caseId);
+        if (!isMounted) return;
+        if (response?.data && response.data.status === 'ACTIVE') {
+          setUploadLinkResult(response.data);
+        } else {
+          setUploadLinkResult(null);
+        }
+      } catch (err) {
+        console.warn('Failed to load active upload link status:', err);
+      }
+    };
+
+    fetchActiveLink();
+    return () => {
+      isMounted = false;
+    };
+  }, [caseId]);
 
   const handleUploadFile = useCallback(async (e) => {
     if (e && e.preventDefault) e.preventDefault();

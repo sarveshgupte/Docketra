@@ -173,11 +173,20 @@ async function getUploadLinkStatus(req, res) {
     if (!latestSession.isActive) status = 'REVOKED';
     else if (now > new Date(latestSession.expiresAt)) status = 'EXPIRED';
 
+    const reqHost = req.get('host');
+    const reqProtocol = req.protocol || 'http';
+    const fallbackBaseUrl = reqHost ? `${reqProtocol}://${reqHost}` : 'http://localhost:5173';
+    const baseUrl = (process.env.FRONTEND_URL || process.env.APP_URL || fallbackBaseUrl).replace(/\/+$/, '');
+    const uploadLink = `${baseUrl}/upload/${latestSession.token}`;
+
     return res.json({
       success: true,
       data: {
         status,
         expiresAt: latestSession.expiresAt,
+        link: uploadLink,
+        token: latestSession.token,
+        requiresPin: !!latestSession.pinHash,
       },
     });
   } catch (err) {
