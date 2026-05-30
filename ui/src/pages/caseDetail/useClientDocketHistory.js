@@ -10,7 +10,7 @@ export const useClientDocketHistory = ({ activeTab, clientId, caseId }) => {
   const [clientDocketsError, setClientDocketsError] = useState(false);
 
   useEffect(() => {
-    if (!clientId) return;
+    if (!clientId || ![CASE_DETAIL_TABS.OVERVIEW, CASE_DETAIL_TABS.HISTORY].includes(activeTab)) return;
     const loadClientDockets = async () => {
       setLoadingClientDockets(true);
       setClientDocketsError(false);
