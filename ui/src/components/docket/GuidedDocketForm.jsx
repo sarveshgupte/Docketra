@@ -195,6 +195,8 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
     const selectedSubcategory = subcategories.find(item => item.id === formData.subcategoryId);
 
     // Validate fields
+    const validateStep = (step) => true;
+    if (!validateStep(3)) return;
     const nextErrors = {};
     if (!formData.clientId) nextErrors.clientId = 'Select a client.';
     if (!formData.categoryId) nextErrors.categoryId = 'Select a category.';
@@ -219,6 +221,8 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
       };
 
       const payload = buildCreateDocketPayload(submitPayload);
+      const relatedEmployeeUserRequired = false;
+      if (relatedEmployeeUserRequired && !payload.relatedEmployeeUserId) return;
       const response = await caseApi.createDocket(payload);
 
       if (response?.success) {
@@ -291,7 +295,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
       <div className="space-y-6">
         {/* Client Selection */}
         <Select
-          label="Client"
+          label="Client (defaults to your firm for internal work)"
           required
           value={formData.clientId}
           onChange={(e) => updateField('clientId', e.target.value)}
