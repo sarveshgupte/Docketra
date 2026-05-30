@@ -126,13 +126,12 @@ caseFileSchema.index(
   { expireAfterSeconds: 0, partialFilterExpression: { cleanupAt: { $type: 'date' } } }
 );
 
-caseFileSchema.pre('save', function(next) {
+caseFileSchema.pre('save', function() {
   for (const value of Object.values(this.toObject({ depopulate: true }))) {
     if (Buffer.isBuffer(value)) {
-      return next(new Error('CaseFile cannot persist binary payloads to MongoDB'));
+      throw new Error('CaseFile cannot persist binary payloads to MongoDB');
     }
   }
-  return next();
 });
 
 module.exports = mongoose.model('CaseFile', caseFileSchema);

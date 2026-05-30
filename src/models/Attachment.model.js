@@ -334,28 +334,26 @@ const attachmentSchema = new mongoose.Schema({
  * - Regular attachments SHOULD have caseId (but can be client-only)
  * - All attachments must have at least one of clientId or caseId
  */
-attachmentSchema.pre('save', function(next) {
+attachmentSchema.pre('save', function() {
   for (const value of Object.values(this.toObject({ depopulate: true }))) {
     if (Buffer.isBuffer(value)) {
-      return next(new Error('Attachment metadata cannot store binary payloads'));
+      throw new Error('Attachment metadata cannot store binary payloads');
     }
   }
 
   // Validate client_cfs attachments must have clientId
   if (this.source === 'client_cfs' && !this.clientId) {
-    return next(new Error('Client CFS attachments must have a clientId'));
+    throw new Error('Client CFS attachments must have a clientId');
   }
   
   // Validate at least one of clientId or caseId is present
   if (!this.clientId && !this.caseId) {
-    return next(new Error('Attachment must belong to either a client or a case'));
+    throw new Error('Attachment must belong to either a client or a case');
   }
 
   if (!this.storageFileId && !this.driveFileId && !this.filePath) {
-    return next(new Error('Invalid attachment: no storage reference'));
+    throw new Error('Invalid attachment: no storage reference');
   }
-  
-  next();
 });
 
 /**
@@ -364,16 +362,16 @@ attachmentSchema.pre('save', function(next) {
  * These hooks block any attempt to update existing attachments.
  * Attachments must be immutable for audit integrity.
  */
-attachmentSchema.pre('updateOne', function(next) {
-  next(new Error('Attachments cannot be updated. Attachments are immutable.'));
+attachmentSchema.pre('updateOne', function() {
+  throw new Error('Attachments cannot be updated. Attachments are immutable.');
 });
 
-attachmentSchema.pre('findOneAndUpdate', function(next) {
-  next(new Error('Attachments cannot be updated. Attachments are immutable.'));
+attachmentSchema.pre('findOneAndUpdate', function() {
+  throw new Error('Attachments cannot be updated. Attachments are immutable.');
 });
 
-attachmentSchema.pre('updateMany', function(next) {
-  next(new Error('Attachments cannot be updated. Attachments are immutable.'));
+attachmentSchema.pre('updateMany', function() {
+  throw new Error('Attachments cannot be updated. Attachments are immutable.');
 });
 
 /**
@@ -381,16 +379,8 @@ attachmentSchema.pre('updateMany', function(next) {
  * 
  * These hooks block any attempt to delete attachments.
  */
-attachmentSchema.pre('deleteOne', function(next) {
-  next(new Error('Attachments cannot be deleted. Attachments are immutable.'));
-});
-
-attachmentSchema.pre('deleteMany', function(next) {
-  next(new Error('Attachments cannot be deleted. Attachments are immutable.'));
-});
-
-attachmentSchema.pre('findOneAndDelete', function(next) {
-  next(new Error('Attachments cannot be deleted. Attachments are immutable.'));
+attachmentSchema.pre('findOneAndDelete', function() {
+  throw new Error('Attachments cannot be deleted. Attachments are immutable.');
 });
 
 /**
