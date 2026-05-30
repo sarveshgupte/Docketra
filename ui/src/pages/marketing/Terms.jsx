@@ -16,8 +16,10 @@ const SECTIONS = [
 export const TermsPage = () => (
   <LegalLayout
     title="Terms of Use"
-    description="Simple terms for using Docketra in early-stage testing."
+    description="Simple terms for using Docketra in early-stage testing, written for firm owners who need clarity before rolling work into the platform."
     sections={SECTIONS}
+    kicker="📜 Rules of the workspace"
+    highlights={['Firm data remains yours', 'Early-stage product terms', 'Support path included']}
   >
     <section id="service-description">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">1. Service Description</h2>

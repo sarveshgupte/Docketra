@@ -65,20 +65,20 @@ export const PlatformDashboardPage = () => {
     return Number(value);
   };
   const cards = [
-    { label: 'Open dockets', value: metricValue(summary.totalDockets), helpText: 'All tracked dockets across the firm.' },
-    { label: 'In progress', value: metricValue(summary.inProgress), helpText: 'Execution work currently active.' },
-    { label: 'Pending', value: metricValue(summary.pending), helpText: 'Waiting on review or decision.' },
-    { label: 'QC passed', value: metricValue(summary.qcPassed), helpText: 'Quality-approved docket outcomes.' },
-    { label: 'Resolved', value: metricValue(summary.resolved), helpText: 'Dockets closed successfully.' },
+    { label: '📂 Open dockets', value: metricValue(summary.totalDockets), helpText: 'All tracked dockets across the firm.' },
+    { label: '⚙️ In progress', value: metricValue(summary.inProgress), helpText: 'Execution work currently active.' },
+    { label: '⏳ Pending', value: metricValue(summary.pending), helpText: 'Waiting on review or decision.' },
+    { label: '✅ QC passed', value: metricValue(summary.qcPassed), helpText: 'Quality-approved docket outcomes.' },
+    { label: '🏁 Resolved', value: metricValue(summary.resolved), helpText: 'Dockets closed successfully.' },
   ];
   const quickActions = [
-    { label: 'New Docket', helpText: 'Create and route a new docket.', route: ROUTES.CREATE_CASE(firmSlug) },
-    { label: 'My Worklist', helpText: 'Review your assigned daily queue.', route: ROUTES.WORKLIST(firmSlug) },
-    { label: 'Workbaskets', helpText: 'Check team workbasket backlog.', route: ROUTES.GLOBAL_WORKLIST(firmSlug) },
-    { label: 'QC Worklist', helpText: 'Review dockets in quality checks.', route: ROUTES.QC_QUEUE(firmSlug) },
-    { label: 'All Dockets', helpText: 'Search and open all firm dockets.', route: ROUTES.DOCKETS(firmSlug) },
-    ...(isAdmin ? [{ label: 'Clients', helpText: 'Open client records and context.', route: ROUTES.CLIENTS(firmSlug) }] : []),
-    ...(isAdmin ? [{ label: 'Settings', helpText: 'Manage firm and workspace settings.', route: ROUTES.SETTINGS(firmSlug) }] : []),
+    { label: 'New Docket', icon: '➕', helpText: 'Create and route a new docket.', route: ROUTES.CREATE_CASE(firmSlug) },
+    { label: 'My Worklist', icon: '✅', helpText: 'Review your assigned daily queue.', route: ROUTES.WORKLIST(firmSlug) },
+    { label: 'Workbaskets', icon: '📥', helpText: 'Check team workbasket backlog.', route: ROUTES.GLOBAL_WORKLIST(firmSlug) },
+    { label: 'QC Worklist', icon: '🔍', helpText: 'Review dockets in quality checks.', route: ROUTES.QC_QUEUE(firmSlug) },
+    { label: 'All Dockets', icon: '📚', helpText: 'Search and open all firm dockets.', route: ROUTES.DOCKETS(firmSlug) },
+    ...(isAdmin ? [{ label: 'Clients', icon: '🧠', helpText: 'Open client records and context.', route: ROUTES.CLIENTS(firmSlug) }] : []),
+    ...(isAdmin ? [{ label: 'Settings', icon: '🔧', helpText: 'Manage firm and workspace settings.', route: ROUTES.SETTINGS(firmSlug) }] : []),
   ];
   const recommendedAction = !setupComplete
     ? (nextStep?.route ? { label: nextStep.actionLabel, route: nextStep.route, note: nextStep.title } : null)
@@ -99,6 +99,11 @@ export const PlatformDashboardPage = () => {
       route: nextStep.route,
     }] : []),
   ];
+  const healthSummary = [
+    { label: 'Active execution', value: metricValue(summary.inProgress), note: 'currently moving' },
+    { label: 'Waiting zones', value: metricValue(summary.pending), note: 'needs review' },
+    { label: 'Closed loop', value: metricValue(summary.resolved), note: 'resolved' },
+  ];
 
   return (
     <PlatformShell
@@ -118,20 +123,37 @@ export const PlatformDashboardPage = () => {
         title="Today’s command center"
         description="Next best action and queue direction for today."
         actions={recommendedAction?.route ? <Link to={recommendedAction.route}>{recommendedAction.label}</Link> : null}
+        variant="highlight"
       >
-        <div className="dashboard-command-panel layout-two-col">
-          <article className="panel dashboard-priority-card">
-            <p className="section-title">Next best action</p>
-            <p>{recommendedAction?.note || 'Review daily queues and continue execution.'}</p>
+        <div className="dashboard-command-panel">
+          <article className="panel dashboard-priority-card dashboard-priority-card--primary">
+            <span className="dashboard-card-icon" aria-hidden="true">🎯</span>
+            <div>
+              <p className="section-title">Next best action</p>
+              <p>{recommendedAction?.note || 'Review daily queues and continue execution.'}</p>
+            </div>
             {recommendedAction?.route ? <Link to={recommendedAction.route}>{recommendedAction.label}</Link> : null}
           </article>
-          <article className="panel dashboard-priority-card">
-            <p className="section-title">Daily queues</p>
-            <div className="action-row action-row--tight">
-              <Link to={ROUTES.WORKLIST(firmSlug)}>My Worklist</Link>
-              <Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>Workbaskets</Link>
-              <Link to={ROUTES.QC_QUEUE(firmSlug)}>QC Worklist</Link>
+          <article className="panel dashboard-priority-card dashboard-priority-card--queues">
+            <span className="dashboard-card-icon" aria-hidden="true">🧭</span>
+            <div>
+              <p className="section-title">Daily queues</p>
+              <p className="muted">Jump directly into the queue that matches today’s work.</p>
             </div>
+            <div className="action-row action-row--tight dashboard-queue-actions">
+              <Link to={ROUTES.WORKLIST(firmSlug)}>✅ My Worklist</Link>
+              <Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>📥 Workbaskets</Link>
+              <Link to={ROUTES.QC_QUEUE(firmSlug)}>🔍 QC Worklist</Link>
+            </div>
+          </article>
+          <article className="panel dashboard-health-mini">
+            {healthSummary.map((item) => (
+              <div key={item.label}>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <small>{item.note}</small>
+              </div>
+            ))}
           </article>
         </div>
       </PageSection>
@@ -149,7 +171,7 @@ export const PlatformDashboardPage = () => {
             <ul className="dashboard-attention-list-items">
               {attentionItems.map((item) => (
                 <li key={item.key} className="panel">
-                  <p className="section-title">{item.title}</p>
+                  <p className="section-title">⚠️ {item.title}</p>
                   <p className="muted">{item.reason}</p>
                   {item.route ? <Link to={item.route}>{item.actionLabel || 'Open'}</Link> : null}
                 </li>
@@ -172,6 +194,7 @@ export const PlatformDashboardPage = () => {
           <div className="dashboard-quick-actions-grid">
             {quickActions.map((action) => (
               <article className="panel" key={action.label}>
+                <p className="dashboard-action-icon" aria-hidden="true">{action.icon}</p>
                 <p className="section-title">{action.label}</p>
                 <p className="muted">{action.helpText}</p>
                 <Link to={action.route}>Open</Link>

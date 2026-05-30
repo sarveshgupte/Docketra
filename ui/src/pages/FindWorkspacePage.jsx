@@ -10,6 +10,12 @@ const INVALID_XID_MESSAGE = 'Enter a valid xID, for example X000001.';
 const NOT_FOUND_MESSAGE = 'We could not find a workspace for that xID. Check the xID or contact your firm admin.';
 const LOOKUP_UNAVAILABLE_MESSAGE = 'Workspace lookup is temporarily unavailable. Please try again.';
 
+const WORKSPACE_PROMISES = [
+  '🔎 Finds the right firm URL for you',
+  '🔐 Keeps private workspace data hidden',
+  '⚡ Gets teams back to case work faster',
+];
+
 export const FindWorkspacePage = () => {
   const [xid, setXid] = useState('');
   const [loading, setLoading] = useState(false);
@@ -48,23 +54,31 @@ export const FindWorkspacePage = () => {
   };
 
   return (
-    <div className="find-workspace-page">
+    <div className="auth-wrapper find-workspace-page">
       <div className="find-workspace-page__shell">
         <section className="find-workspace-page__context" aria-label="Workspace discovery context">
-          <p className="find-workspace-page__eyebrow">Workspace discovery</p>
+          <p className="find-workspace-page__eyebrow">Workspace discovery ✨</p>
           <h1 className="find-workspace-page__heading">Find your Docketra workspace</h1>
           <p className="find-workspace-page__intro">
-            Enter your xID and we&apos;ll route you to your firm&apos;s secure login page.
+            Enter your xID and we&apos;ll route you to your firm&apos;s secure login page without exposing private user details.
           </p>
           <ul className="find-workspace-page__benefits">
-            <li>You do not need to remember your firm URL</li>
-            <li>Your xID is used only to locate your workspace</li>
-            <li>We never show private user details here</li>
+            {WORKSPACE_PROMISES.map((promise) => (
+              <li key={promise}>{promise}</li>
+            ))}
           </ul>
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {['xID only', 'Secure handoff', 'No guessing'].map((label) => (
+              <div key={label} className="rounded-2xl border border-white/70 bg-white/70 px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
+                {label}
+              </div>
+            ))}
+          </div>
         </section>
 
-        <Card className="find-workspace-page__card">
-          <div className="find-workspace-page__card-header">
+        <Card className="auth-card find-workspace-page__card">
+          <div className="auth-header find-workspace-page__card-header">
+            <p className="auth-kicker">Workspace lookup</p>
             <h2>Enter your xID</h2>
             <p>Your xID usually looks like X000001.</p>
           </div>
@@ -88,7 +102,7 @@ export const FindWorkspacePage = () => {
           </form>
 
           <p className="find-workspace-page__notice" aria-live="polite">
-            We never show private user details on this screen.
+            🛡️ We never show private user details here.
           </p>
         </Card>
       </div>

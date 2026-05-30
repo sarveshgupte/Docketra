@@ -11,8 +11,10 @@ const SECTIONS = [
 export const AcceptableUsePage = () => (
   <LegalLayout
     title="Acceptable Use Policy"
-    description="Simple rules for safe and lawful use of Docketra."
+    description="Simple rules that keep Docketra safe, lawful, and reliable for firms using it to run real operations."
     sections={SECTIONS}
+    kicker="✅ Keep the workspace healthy"
+    highlights={['No illegal activity', 'No harmful files', 'Report suspicious use']}
   >
     <section id="prohibited-activity">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">1. Prohibited Activity</h2>

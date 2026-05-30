@@ -205,4 +205,10 @@ export const superadminService = {
     const response = await api.delete(`/superadmin/firms/${firmId}/admins/${adminId}`);
     return response.data;
   },
+
+  sendChatMessage: async (payload) => {
+    const response = await api.post('/superadmin/ai-assistant/chat', payload);
+    return response.data;
+  },
 };
+

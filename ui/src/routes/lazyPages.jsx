@@ -57,7 +57,7 @@ export const StorageSettingsPage = lazyPage(() => import('../pages/StorageSettin
 export const DataStorageMapPage = lazyPage(() => import('../pages/DataStorageMapPage'), 'DataStorageMapPage');
 export const StorageOAuthSuccessPage = lazyPage(() => import('../pages/StorageOAuthSuccessPage'), 'StorageOAuthSuccessPage');
 export const AiSettingsPage = lazyPage(() => import('../pages/AiSettingsPage'), 'AiSettingsPage');
-export const PlatformDashboard = lazyPage(() => import('../pages/PlatformDashboard'), 'PlatformDashboard');
+export const PlatformDashboard = lazyPage(() => import('../pages/SuperadminDashboard'), 'SuperadminDashboard');
 export const FirmsManagement = lazyPage(() => import('../pages/FirmsManagement'), 'FirmsManagement');
 export const SuperadminOnboardingInsightsPage = lazyPage(() => import('../pages/SuperadminOnboardingInsightsPage'), 'SuperadminOnboardingInsightsPage');
 export const SuperadminFirmOnboardingDetailPage = lazyPage(() => import('../pages/SuperadminFirmOnboardingDetailPage'), 'SuperadminFirmOnboardingDetailPage');
@@ -68,6 +68,7 @@ export const SuperadminFirmHealthPage = lazyPage(() => import('../pages/Superadm
 export const SuperadminPlansPage = lazyPage(() => import('../pages/SuperadminPlansPage'), 'SuperadminPlansPage');
 export const SuperadminPilotReadinessPage = lazyPage(() => import('../pages/SuperadminPilotReadinessPage'), 'SuperadminPilotReadinessPage');
 export const SuperadminFeatureFlagsPage = lazyPage(() => import('../pages/SuperadminFeatureFlagsPage'), 'SuperadminFeatureFlagsPage');
+export const SuperadminAiAssistantPage = lazyPage(() => import('../pages/SuperadminAiAssistantPage'), 'SuperadminAiAssistantPage');
 export const ReportsDashboard = lazyPage(() => import('../pages/reports/ReportsDashboard'), 'ReportsDashboard');
 export const DetailedReports = lazyPage(() => import('../pages/reports/DetailedReports'), 'DetailedReports');
 export const CasesPage = lazyPage(() => import('../pages/CasesPage'), 'CasesPage');

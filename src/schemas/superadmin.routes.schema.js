@@ -145,4 +145,12 @@ module.exports = {
   'POST /exit-firm': {
     body: z.object({}).strict(),
   },
+  'POST /ai-assistant/chat': {
+    body: z.object({
+      mode: z.enum(['Product Advisor', 'Developer Advisor', 'Marketing Advisor']),
+      message: z.string().trim().min(1).max(4000),
+      conversationId: z.string().trim().optional(),
+    }).strict(),
+  },
 };
+

@@ -264,9 +264,12 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
         shortcut: item.shortcut,
         action: () => openRoute(item.to),
       })),
+      { id: 'go-workbench', label: 'Go to Workbench', shortcut: 'Alt+Shift+T', action: () => openRoute(ROUTES.TASK_MANAGER(firmSlug)), description: 'Open the daily workbench for worklists, workbaskets, and QC queues.' },
       ...(hasAdminAccess ? [{ id: 'go-workbasket', label: 'Go to Workbaskets', shortcut: 'Alt+Shift+B', action: () => openRoute(ROUTES.GLOBAL_WORKLIST(firmSlug)), description: 'Open linked team workbasket queues available to pull.' }] : []),
       { id: 'go-worklist', label: 'Go to My Worklist', shortcut: 'Alt+Shift+W', action: () => openRoute(ROUTES.WORKLIST(firmSlug)), description: 'Open your active and pended docket workload.' },
-      ...(hasQcQueueAccess ? [{ id: 'go-qc', label: 'Go to QC Workbaskets', shortcut: 'Alt+Shift+Q', action: () => openRoute(ROUTES.QC_QUEUE(firmSlug)), description: 'Open QC workbasket queues waiting for quality review decisions.' }] : []),
+      ...(hasQcQueueAccess ? [{ id: 'go-qc', label: 'Go to QC Workbench', shortcut: 'Alt+Shift+Q', action: () => openRoute(ROUTES.QC_QUEUE(firmSlug)), description: 'Open QC workbasket queues waiting for quality review decisions.' }] : []),
+      ...(hasAdminAccess ? [{ id: 'go-relationships', label: 'Go to Relationships', action: () => openRoute(ROUTES.CLIENTS(firmSlug)), description: 'Open client and relationship records.' }] : []),
+      ...(hasAdminAccess ? [{ id: 'go-knowledge-intake', label: 'Go to Knowledge Intake', action: () => openRoute(ROUTES.KNOWLEDGE_LIBRARY(firmSlug)), description: 'Open knowledge intake and firm memory records.' }] : []),
     ];
 
     const actionsItems = [

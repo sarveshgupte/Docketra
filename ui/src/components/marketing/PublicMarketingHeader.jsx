@@ -34,20 +34,21 @@ export default function PublicMarketingHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 w-full border-b border-slate-200/70 bg-white/85 shadow-sm shadow-slate-900/[0.03] backdrop-blur-xl">
       <Container>
         <nav className="flex h-16 items-center justify-between" aria-label="Main navigation">
-          <Link to="/" className="flex items-center gap-2 font-bold text-slate-900 text-lg tracking-tight">
-            Docketra
+          <Link to="/" className="flex items-center gap-2 text-lg font-extrabold tracking-tight text-slate-950">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-950 text-sm text-white" aria-hidden="true">✨</span>
+            <span>Docketra</span>
           </Link>
 
-          <ul className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+          <ul className="hidden items-center gap-7 text-sm font-bold text-slate-600 md:flex">
             {NAV_LINKS.map(({ label, id }) => (
               <li key={id}>
                 <button
                   type="button"
                   onClick={() => handleSectionNavigation(id)}
-                  className="hover:text-slate-900 transition-colors"
+                  className="transition-colors hover:text-slate-950"
                 >
                   {label}
                 </button>
@@ -55,11 +56,11 @@ export default function PublicMarketingHeader() {
             ))}
           </ul>
 
-          <div className="hidden md:flex items-center gap-3">
-            {!isFindWorkspacePage ? <Link to="/find-workspace" className="text-sm font-medium text-slate-600 hover:text-slate-900">Workspace login</Link> : null}
+          <div className="hidden items-center gap-3 md:flex">
+            {!isFindWorkspacePage ? <Link to="/find-workspace" className="text-sm font-bold text-slate-600 hover:text-slate-950">Workspace login</Link> : null}
             <Link
               to="/signup"
-              className="inline-flex items-center justify-center h-9 px-5 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-700 transition-colors shadow-sm"
+              className="inline-flex h-9 items-center justify-center rounded-xl bg-slate-950 px-5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-slate-800"
             >
               Start managing work
             </Link>
@@ -68,7 +69,7 @@ export default function PublicMarketingHeader() {
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden inline-flex items-center justify-center p-2 rounded-lg border border-slate-200 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate900/30 transition-colors"
+            className="inline-flex items-center justify-center rounded-xl border border-slate-200 p-2 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate900/30 md:hidden"
             aria-expanded={isOpen}
             aria-controls="mobile-menu"
             aria-label={isOpen ? 'Close main menu' : 'Open main menu'}
@@ -78,14 +79,14 @@ export default function PublicMarketingHeader() {
         </nav>
 
         {isOpen && (
-          <div id="mobile-menu" className="md:hidden border-t border-slate-100 pb-4 pt-2">
+          <div id="mobile-menu" className="border-t border-slate-100 pb-4 pt-2 md:hidden">
             <ul className="flex flex-col gap-1">
               {NAV_LINKS.map(({ label, id }) => (
                 <li key={id}>
                   <button
                     type="button"
                     onClick={() => { handleSectionNavigation(id); setIsOpen(false); }}
-                    className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-md"
+                    className="w-full rounded-xl px-4 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
                   >
                     {label}
                   </button>
@@ -93,13 +94,13 @@ export default function PublicMarketingHeader() {
               ))}
               {!isFindWorkspacePage ? (
                 <li className="mt-2 px-4">
-                  <Link to="/find-workspace" className="block text-center h-9 leading-9 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors" onClick={() => setIsOpen(false)}>Workspace login</Link>
+                  <Link to="/find-workspace" className="block h-10 rounded-xl border border-slate-300 text-center text-sm font-bold leading-10 text-slate-700 transition-colors hover:bg-slate-50" onClick={() => setIsOpen(false)}>Workspace login</Link>
                 </li>
               ) : null}
               <li className="mt-2 px-4">
                 <Link
                   to="/signup"
-                  className="block text-center h-9 leading-9 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-700 transition-colors"
+                  className="block h-10 rounded-xl bg-slate-950 text-center text-sm font-bold leading-10 text-white transition-colors hover:bg-slate-800"
                   onClick={() => setIsOpen(false)}
                 >
                   Start managing work

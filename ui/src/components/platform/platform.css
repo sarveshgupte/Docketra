@@ -1813,8 +1813,91 @@
 
 /* ── Dashboard ───────────────────────────────────────────────────────────── */
 
-.dashboard-command-panel { gap: 12px; }
-.dashboard-priority-card { display: grid; gap: 8px; }
+.dashboard-command-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  gap: 12px;
+}
+.dashboard-priority-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  min-height: 100%;
+}
+.dashboard-priority-card--primary {
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.94));
+  color: #fff;
+  border-color: rgba(15, 23, 42, 0.2);
+  box-shadow: 0 24px 60px -42px rgba(15, 23, 42, 0.75);
+}
+.dashboard-priority-card--primary .section-title,
+.dashboard-priority-card--primary p,
+.dashboard-priority-card--primary .muted { color: #fff; }
+.dashboard-priority-card--primary a {
+  color: #0f172a;
+  background: #fff;
+  border-color: #fff;
+  width: fit-content;
+}
+.dashboard-priority-card--queues {
+  background: linear-gradient(135deg, #f8fafc, #ffffff);
+  border-color: #dbeafe;
+}
+.dashboard-card-icon,
+.dashboard-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  font-size: 18px;
+  margin: 0;
+}
+.dashboard-priority-card--primary .dashboard-card-icon {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.dashboard-queue-actions {
+  align-items: stretch;
+}
+.dashboard-queue-actions a {
+  border-radius: 14px;
+  background: #ffffff;
+  border-color: #dbeafe;
+}
+.dashboard-health-mini {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.78);
+}
+.dashboard-health-mini div {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 12px;
+  background: #f8fafc;
+  display: grid;
+  gap: 2px;
+}
+.dashboard-health-mini span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+.dashboard-health-mini strong {
+  color: #0f172a;
+  font-size: 24px;
+  line-height: 1;
+}
+.dashboard-health-mini small {
+  color: #64748b;
+  font-size: 12px;
+}
 .dashboard-attention-list-items {
   list-style: none;
   margin: 0;
@@ -1830,6 +1913,24 @@
 .dashboard-quick-actions .panel,
 .dashboard-attention-list .panel {
   height: 100%;
+}
+.dashboard-quick-actions .panel {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+.dashboard-quick-actions .panel:hover {
+  transform: translateY(-1px);
+  border-color: #bfdbfe;
+  box-shadow: 0 18px 40px -32px rgba(15, 23, 42, 0.45);
+}
+
+@media (max-width: 860px) {
+  .dashboard-command-panel,
+  .dashboard-health-mini {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ── Guided docket ───────────────────────────────────────────────────────── */

@@ -13,6 +13,12 @@ import { useToast } from '../hooks/useToast';
 import { resolvePostAuthNavigation } from '../utils/postAuthNavigation';
 import { SESSION_KEYS, STORAGE_KEYS } from '../utils/constants';
 
+const PLATFORM_PROMISES = [
+  '🧭 Platform oversight without clutter',
+  '🔐 Role-aware access for admins',
+  '✅ No sensitive workspace data before login',
+];
+
 export const LoginPage = () => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -123,23 +129,30 @@ export const LoginPage = () => {
 
 
   return (
-    <div className="find-workspace-page auth-public-page">
+    <div className="auth-wrapper find-workspace-page auth-public-page">
       <div className="find-workspace-page__shell">
         <section className="find-workspace-page__context" aria-label="Superadmin login context">
-          <p className="find-workspace-page__eyebrow">Platform access</p>
+          <p className="find-workspace-page__eyebrow">Platform access 🧠</p>
           <h1 className="find-workspace-page__heading">Sign in to Docketra</h1>
           <p className="find-workspace-page__intro">
-            Secure access for superadmin operations and platform oversight.
+            Secure access for platform oversight, firm setup, and the operational controls that keep Docketra tidy.
           </p>
           <ul className="find-workspace-page__benefits">
-            <li>Use your assigned xID and password</li>
-            <li>Protected access with role-based controls</li>
-            <li>No sensitive data shown before authentication</li>
+            {PLATFORM_PROMISES.map((promise) => (
+              <li key={promise}>{promise}</li>
+            ))}
           </ul>
+          <div className="mt-6 rounded-3xl border border-white/70 bg-white/70 p-4 shadow-sm">
+            <p className="text-sm font-semibold text-slate-900">Admin command center</p>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              Built for crisp handoffs from login to dashboards, reports, and workspace controls.
+            </p>
+          </div>
         </section>
 
-        <Card className="find-workspace-page__card auth-public-page__card">
-          <div className="find-workspace-page__card-header">
+        <Card className="auth-card find-workspace-page__card auth-public-page__card">
+          <div className="auth-header find-workspace-page__card-header">
+            <p className="auth-kicker">Superadmin login</p>
             <h2>Enter your credentials</h2>
             <p>Fields marked with * are required.</p>
           </div>
@@ -199,12 +212,15 @@ export const LoginPage = () => {
             {loading ? 'Signing in' : 'Submit & Sign in'}
           </Button>
 
-          <div className="auth-public-page__links">
+          <div className="auth-footer-links">
             <Link
               to="/forgot-password"
               className="auth-public-page__link"
             >
-              Forgot Password?
+              Forgot password?
+            </Link>
+            <Link to="/find-workspace" className="auth-public-page__link">
+              Find a firm workspace
             </Link>
           </div>
           </form>

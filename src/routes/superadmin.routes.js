@@ -3,6 +3,7 @@ const { applyRouteValidation } = require('../middleware/requestValidation.middle
 const routeSchemas = require('../schemas/superadmin.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { requireSuperadmin } = require('../middleware/permission.middleware');
+const { getSuperadminAiAssistantChat } = require('../controllers/superadminAiAssistant.controller');
 const { authorize } = require('../middleware/authorize');
 const SuperAdminPolicy = require('../policies/superadmin.policy');
 const FirmPolicy = require('../policies/firm.policy');
@@ -102,5 +103,8 @@ router.delete('/firms/:firmId/admins/:adminId', authorize(FirmPolicy.canResendAd
 // Firm context switching (impersonation)
 router.post('/switch-firm', switchFirm);
 router.post('/exit-firm', exitFirm);
+
+// SuperAdmin-only AI Assistant Chat
+router.post('/ai-assistant/chat', getSuperadminAiAssistantChat);
 
 module.exports = router;

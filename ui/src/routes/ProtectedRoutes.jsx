@@ -33,6 +33,7 @@ import {
   SuperadminPlansPage,
   SuperadminPilotReadinessPage,
   SuperadminFeatureFlagsPage,
+  SuperadminAiAssistantPage,
   ProfilePage,
   ProductUpdatesHistoryPage,
   ReportsDashboard,
@@ -167,6 +168,20 @@ export const ProtectedRoutes = () => (
         element={(
           <ProtectedRoute requireSuperadmin>
             <SuperadminFirmOnboardingDetailPage />
+          </ProtectedRoute>
+        )}
+      />
+
+      <Route
+        path="/superadmin/ai-assistant"
+        element={<Navigate to="/app/superadmin/ai-assistant" replace />}
+      />
+
+      <Route
+        path="/app/superadmin/ai-assistant"
+        element={(
+          <ProtectedRoute requireSuperadmin>
+            <SuperadminAiAssistantPage />
           </ProtectedRoute>
         )}
       />

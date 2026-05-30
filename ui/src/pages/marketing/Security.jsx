@@ -16,8 +16,10 @@ const SECTIONS = [
 export const SecurityPage = () => (
   <LegalLayout
     title="Data & Security Overview"
-    description="Practical overview of how data flows and how security is handled in Docketra."
+    description="A practical overview of how Docketra thinks about firm-owned data, storage direction, AI controls, and authenticated access."
     sections={SECTIONS}
+    kicker="🔐 Trust architecture"
+    highlights={['Firm-owned data model', 'BYOS and BYOAI direction', 'Role-based access controls']}
   >
     <section id="about-this-page">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">1. About This Page</h2>

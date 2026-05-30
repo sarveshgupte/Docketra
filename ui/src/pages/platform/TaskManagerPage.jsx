@@ -35,7 +35,7 @@ export const PlatformTaskManagerPage = () => {
 
       <PageSection title="Quick actions" description="Go straight to the queue or record view that matches your next workflow step.">
         <div className="action-row">
-          <Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>Go to Workbaskets</Link>
+          <Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>Go to Workbench</Link>
           <Link to={ROUTES.WORKLIST(firmSlug)}>Go to My Worklist</Link>
           <Link to={ROUTES.DOCKETS(firmSlug)}>Open All Dockets</Link>
         </div>

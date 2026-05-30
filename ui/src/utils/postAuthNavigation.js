@@ -20,14 +20,18 @@ export const resolvePostAuthNavigation = ({
   resolvePostAuthRoute: _resolvePostAuthRoute,
 }) => {
   const returnTo = extractReturnTo(locationSearch);
-  const candidateRoute = getPostLoginWorkspaceDestination(user, user?.firmSlug, returnTo);
+  const safeReturnTo = isSafeReturnToPath(returnTo) ? returnTo : '';
+  const candidateRoute = getPostLoginWorkspaceDestination(user, user?.firmSlug, safeReturnTo);
 
   if (candidateRoute && isRoleCompatibleRoute(candidateRoute, { isSuperAdminUser: isSuperAdmin(user), firmSlug: user?.firmSlug })) {
     return candidateRoute;
   }
 
   if (!isSuperAdmin(user) && user?.firmSlug) {
-    return ROUTES.DASHBOARD(user.firmSlug);
+    const fallbackRoute = ROUTES.DASHBOARD(user.firmSlug);
+    if (isRoleCompatibleRoute(fallbackRoute, { isSuperAdminUser: false, firmSlug: user.firmSlug })) {
+      return fallbackRoute;
+    }
   }
 
   if (isSuperAdmin(user)) {

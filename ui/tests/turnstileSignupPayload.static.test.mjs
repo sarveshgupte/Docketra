@@ -2,8 +2,9 @@
 import fs from 'fs';
 import path from 'path';
 import assert from 'assert';
+import { fileURLToPath } from 'url';
 
-const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const apiSource = fs.readFileSync(path.join(repoRoot, 'src', 'api', 'auth.api.js'), 'utf8');
 const pageSource = fs.readFileSync(path.join(repoRoot, 'src', 'pages', 'marketing', 'Signup.jsx'), 'utf8');
 const authContextSource = fs.readFileSync(path.join(repoRoot, 'src', 'contexts', 'AuthContext.jsx'), 'utf8');

@@ -119,7 +119,7 @@ assert.equal(
   'Firm login should not persist stale POST_LOGIN_RETURN_TO state.'
 );
 assert(
-  firmLoginSource.includes('clearPendingLoginState();\n                setLoginToken(\'\');'),
+  /clearPendingLoginState\(\);\r?\n\s+setLoginToken\(''\);/.test(firmLoginSource),
   'Backing out of OTP step should clear pending OTP session keys.'
 );
 

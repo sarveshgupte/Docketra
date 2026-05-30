@@ -17,8 +17,10 @@ const SECTIONS = [
 export const PrivacyPage = () => (
   <LegalLayout
     title="Privacy Policy"
-    description="How Docketra handles data in early-stage testing."
+    description="How Docketra handles account, workspace, and operational data while the product is in early-stage testing."
     sections={SECTIONS}
+    kicker="🛡️ Privacy with practical edges"
+    highlights={['No data selling', 'Firm-controlled workspace data', 'Essential cookies only']}
   >
     <section id="data-collected">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">1. What We Collect</h2>

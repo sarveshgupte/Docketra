@@ -7,8 +7,6 @@ import api from '../services/api';
 import { authService } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
 import { spacingClasses } from '../theme/tokens';
-import { Stack } from '../components/layout/Stack';
-import { Row } from '../components/layout/Row';
 import { ErrorState } from '../components/feedback/ErrorState';
 import { authApi } from '../api/auth.api';
 import { resolvePostAuthNavigation } from '../utils/postAuthNavigation';
@@ -129,62 +127,83 @@ export const OtpVerificationPage = () => {
   };
 
   return (
-    <div className="auth-wrapper enterprise-dark">
-      <Card className="auth-card glass-panel max-w-form">
-        <Stack space={8} className="items-center auth-header">
-          <p className="auth-kicker text-indigo-400">Docketra · Secure access</p>
-          <h1 className="text-2xl font-bold tracking-tight text-center auth-title-glow">Verify OTP</h1>
-          <Row justify="center" gap={8}>
-            <span className="h-2.5 w-2.5 rounded-full bg-indigo-950/50 border border-indigo-500/20" aria-hidden="true" />
-            <span className="h-2.5 w-2.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]" aria-hidden="true" />
-          </Row>
-          <p className="text-sm text-center auth-text-muted">Step 2 of 2 · Enter the 6-digit code sent to {email || 'your email'}.</p>
-        </Stack>
+    <div className="auth-wrapper min-h-screen bg-[linear-gradient(135deg,#fff8eb_0%,#ffffff_44%,#e0f2fe_100%)] px-4 py-8">
+      <div className="grid w-full max-w-6xl items-center gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+        <section className="hidden lg:block" aria-label="OTP verification context">
+          <p className="text-sm font-bold uppercase text-amber-700">📬 Email verification</p>
+          <h1 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
+            One code before the workspace opens.
+          </h1>
+          <p className="mt-4 max-w-lg text-base leading-7 text-slate-600">
+            OTP keeps login and signup handoffs explicit without exposing workspace data before authentication.
+          </p>
+          <div className="mt-8 grid gap-3">
+            {['🔐 Login token checked', '📬 Latest 6-digit code only', '↩️ Restart path stays available'].map((item) => (
+              <div key={item} className="rounded-2xl border border-white/80 bg-white/75 px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
+                {item}
+              </div>
+            ))}
+          </div>
+        </section>
 
-        <form onSubmit={onSubmit} className={`mt-6 ${spacingClasses.formFieldSpacing}`} noValidate>
-          {firmSlug ? <p className="text-xs text-center font-mono px-2 py-1 rounded-md bg-white/5 border border-white/10 auth-text-muted">{`Firm login URL: /${firmSlug}/login`}</p> : null}
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-slate-200">Email OTP <span className="text-red-400">*</span></p>
-            <div className="grid grid-cols-6 gap-2 sm:gap-3" onPaste={handleOtpPaste}>
-              {otpDigits.map((digit, index) => (
-                <Input
-                  key={`otp-${index + 1}`}
-                  ref={(element) => { inputRefs.current[index] = element; }}
-                  label=""
-                  type="text"
-                  value={digit}
-                  onChange={(event) => handleOtpDigit(index, event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Backspace' && !digit && index > 0) {
-                      inputRefs.current[index - 1]?.focus();
-                    }
-                  }}
-                  required
-                  disabled={loading}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={1}
-                  className="text-center"
-                />
-              ))}
+        <Card className="auth-card w-full max-w-none rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.45)] backdrop-blur md:p-8">
+          <div className="auth-header text-center">
+            <p className="auth-kicker">Docketra · Secure access</p>
+            <h1 className="text-3xl font-black text-slate-950 md:text-4xl">Verify OTP</h1>
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
+              Step 2 of 2 · Enter the 6-digit code sent to {email || 'your email'}.
+            </p>
+            <div className="mt-5 flex justify-center gap-2" aria-hidden="true">
+              <span className="h-2 w-8 rounded-full bg-slate-300" />
+              <span className="h-2 w-10 rounded-full bg-slate-950" />
             </div>
-            <p className="text-xs auth-text-muted">Tip: You can paste the full OTP directly.</p>
           </div>
 
-          {error && (<ErrorState title="OTP verification failed" description={error} />)}
-          {info ? <p className="text-sm text-emerald-400">{info}</p> : null}
+          <form onSubmit={onSubmit} className={`mt-6 ${spacingClasses.formFieldSpacing}`} noValidate>
+            {firmSlug ? <p className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-center text-xs font-bold text-sky-900">{`Firm login URL: /${firmSlug}/login`}</p> : null}
+            <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
+              <p className="text-sm font-black text-slate-950">📬 Email OTP <span className="text-red-500">*</span></p>
+              <div className="mt-3 grid grid-cols-6 gap-2 sm:gap-3" onPaste={handleOtpPaste}>
+                {otpDigits.map((digit, index) => (
+                  <Input
+                    key={`otp-${index + 1}`}
+                    ref={(element) => { inputRefs.current[index] = element; }}
+                    label=""
+                    type="text"
+                    value={digit}
+                    onChange={(event) => handleOtpDigit(index, event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Backspace' && !digit && index > 0) {
+                        inputRefs.current[index - 1]?.focus();
+                      }
+                    }}
+                    required
+                    disabled={loading}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={1}
+                    className="text-center"
+                  />
+                ))}
+              </div>
+              <p className="mt-3 text-xs leading-5 text-slate-500">Tip: You can paste the full OTP directly.</p>
+            </div>
 
-          <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || !isOtpValid}>
-            {loading ? 'Verifying...' : 'Verify OTP'}
-          </Button>
-          <Button type="button" variant="outline" fullWidth disabled={loading || cooldown > 0} onClick={handleResend} className="mt-2">
-            {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
-          </Button>
-          <Button type="button" variant="outline" fullWidth disabled={loading} onClick={() => navigate(loginRestartPath, { replace: true })} className="mt-2">
-            Back to sign in
-          </Button>
-        </form>
-      </Card>
+            {error && (<ErrorState title="OTP verification failed" description={error} />)}
+            {info ? <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">✅ {info}</p> : null}
+
+            <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || !isOtpValid}>
+              {loading ? 'Verifying...' : 'Verify OTP'}
+            </Button>
+            <Button type="button" variant="outline" fullWidth disabled={loading || cooldown > 0} onClick={handleResend} className="mt-2">
+              {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
+            </Button>
+            <Button type="button" variant="outline" fullWidth disabled={loading} onClick={() => navigate(loginRestartPath, { replace: true })} className="mt-2">
+              Back to sign in
+            </Button>
+          </form>
+        </Card>
+      </div>
     </div>
   );
 };

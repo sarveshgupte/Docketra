@@ -2,8 +2,9 @@
 import fs from 'fs';
 import path from 'path';
 import assert from 'assert';
+import { fileURLToPath } from 'url';
 
-const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const serviceSource = fs.readFileSync(path.join(repoRoot, 'src', 'services', 'authService.js'), 'utf8');
 const pageSource = fs.readFileSync(path.join(repoRoot, 'src', 'pages', 'ForgotPasswordPage.jsx'), 'utf8');
 

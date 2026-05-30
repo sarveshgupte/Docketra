@@ -418,67 +418,80 @@
 @layer components {
   .find-workspace-page {
     min-height: calc(100vh - 64px);
-    padding: clamp(1rem, 2vw, 1.75rem);
-    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    padding: clamp(1rem, 2.4vw, 2rem);
+    background:
+      linear-gradient(135deg, rgba(255, 248, 235, 0.98) 0%, rgba(255, 255, 255, 0.96) 48%, rgba(224, 242, 254, 0.98) 100%);
   }
 
   .find-workspace-page__shell {
-    max-width: 1040px;
+    width: 100%;
+    max-width: 1120px;
     margin: 0 auto;
     display: grid;
-    gap: 1.25rem;
+    gap: clamp(1.25rem, 3vw, 2.5rem);
     align-items: center;
   }
 
   .find-workspace-page__context {
     color: #0f172a;
+    max-width: 600px;
   }
 
   .find-workspace-page__eyebrow {
     font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0;
     font-weight: 700;
-    color: #92400e;
+    color: #0f766e;
     margin-bottom: 0.5rem;
   }
 
   .find-workspace-page__heading {
-    font-size: clamp(1.75rem, 2.2vw, 2.25rem);
-    font-weight: 700;
-    line-height: 1.2;
+    font-size: clamp(2rem, 4vw, 4.5rem);
+    font-weight: 800;
+    line-height: 0.98;
     margin: 0;
+    letter-spacing: 0;
   }
 
   .find-workspace-page__intro {
-    margin-top: 0.75rem;
+    margin-top: 1rem;
     color: #334155;
-    font-size: 1rem;
-    line-height: 1.6;
+    font-size: clamp(1rem, 1.3vw, 1.15rem);
+    line-height: 1.7;
   }
 
   .find-workspace-page__benefits {
-    margin-top: 1rem;
-    padding-left: 1rem;
+    margin-top: 1.25rem;
+    padding-left: 0;
     display: grid;
-    gap: 0.5rem;
-    color: #475569;
+    gap: 0.65rem;
+    color: #334155;
     font-size: 0.95rem;
+    list-style: none;
+  }
+
+  .find-workspace-page__benefits li {
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.72);
+    padding: 0.7rem 0.85rem;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
   }
 
   .find-workspace-page__card {
     width: 100%;
-    max-width: 480px;
+    max-width: 500px;
     justify-self: center;
-    border-radius: 16px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
-    background: #ffffff;
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.82);
+    box-shadow: 0 30px 90px -45px rgba(15, 23, 42, 0.45);
+    background: rgba(255, 255, 255, 0.86);
+    backdrop-filter: blur(16px);
   }
 
   .find-workspace-page__card-header h2 {
-    font-size: 1.25rem;
-    font-weight: 600;
+    font-size: 1.35rem;
+    font-weight: 800;
     margin: 0;
     color: #0f172a;
   }

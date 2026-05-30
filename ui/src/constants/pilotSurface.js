@@ -31,6 +31,7 @@ export const SUPERADMIN_PILOT_SURFACE = {
     '/app/superadmin/firms',
     '/app/superadmin/diagnostics',
     '/app/superadmin/pilot-readiness',
+    '/app/superadmin/ai-assistant',
   ]),
 };
 

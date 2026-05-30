@@ -611,32 +611,66 @@ export const WorkbasketPage = () => {
             </Button>
           )}
         />
-        <div className="workbasket-tabs">
+        <div className="mb-6 space-y-4">
+          {/* Accessible Workbasket pills picker (if more than 1) */}
           {accessibleWorkbaskets.length === 0 ? (
             <p className="text-sm text-[var(--dt-text-muted)]">You are not linked to any workbasket yet. Ask your admin to assign you to a workbasket.</p>
           ) : null}
           {accessibleWorkbaskets.length === 1 ? (
-            <p className="text-sm font-medium text-[var(--dt-text)]">Workbasket: {accessibleWorkbaskets[0].name}</p>
+            <p className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
+              <span className="inline-block h-2 w-2 rounded-full bg-indigo-500" />
+              Workbasket Context: <span className="text-indigo-600 font-bold">{accessibleWorkbaskets[0].name}</span>
+            </p>
           ) : null}
-          {accessibleWorkbaskets.length > 1 && accessibleWorkbaskets.map((workbasket) => (
-            <Button
-              key={workbasket.id}
-              variant={activeWorkbasketId === workbasket.id ? 'primary' : 'secondary'}
-              onClick={() => { setActiveWorkbasketId(workbasket.id); setFilters((prev) => ({ ...prev, page: 1 })); }}
-            >
-              {workbasket.name}
-            </Button>
-          ))}
-          {accessibleWorkbaskets.length > 0 ? (
-            <>
-              <Button variant={activeTab === 'own' ? 'primary' : 'secondary'} onClick={() => setActiveTab('own')}>
-                My Team WB
-              </Button>
-              <Button variant={activeTab === 'routed' ? 'primary' : 'secondary'} onClick={() => setActiveTab('routed')}>
-                Routed to My Team
-              </Button>
-            </>
-          ) : null}
+          {accessibleWorkbaskets.length > 1 && (
+            <div className="flex flex-wrap items-center gap-2 border-b border-slate-200/80 pb-3.5">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2">Available Workbaskets:</span>
+              {accessibleWorkbaskets.map((workbasket) => (
+                <button
+                  type="button"
+                  key={workbasket.id}
+                  onClick={() => { setActiveWorkbasketId(workbasket.id); setFilters((prev) => ({ ...prev, page: 1 })); }}
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-bold border transition-all ${
+                    activeWorkbasketId === workbasket.id
+                      ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-black shadow-sm'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800'
+                  }`}
+                >
+                  {workbasket.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Sleek Segmented Control Tabs for "My Team WB" vs "Routed to My Team" */}
+          {accessibleWorkbaskets.length > 0 && (
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex bg-slate-100/80 p-1 rounded-xl w-fit border border-slate-200/40">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('own')}
+                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+                    activeTab === 'own'
+                      ? 'bg-white text-indigo-600 shadow-sm font-black'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  My Team WB
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('routed')}
+                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+                    activeTab === 'routed'
+                      ? 'bg-white text-indigo-600 shadow-sm font-black'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Routed to My Team
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         {loadError ? (
           <Card className="mb-4 border-red-200 bg-red-50">
@@ -645,8 +679,8 @@ export const WorkbasketPage = () => {
         ) : null}
         <Card>
           <QueueFilterBar className="mb-6" onClear={handleResetFilters} clearDisabled={activeFilters.length === 0}>
-            <div className="filter-group">
-              <label htmlFor={filterIds.category}>Category</label>
+            <div className="filter-group w-full sm:w-[200px] shrink-0">
+              <label htmlFor={filterIds.category} className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Category</label>
               <select
                 id={filterIds.category}
                 value={filters.category}
@@ -659,8 +693,8 @@ export const WorkbasketPage = () => {
                 ))}
               </select>
             </div>
-            <div className="filter-group">
-              <label htmlFor={filterIds.status}>Status</label>
+            <div className="filter-group w-full sm:w-[180px] shrink-0">
+              <label htmlFor={filterIds.status} className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Status</label>
               <select id={filterIds.status} value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)} className={formClasses.inputBase}>
                 <option value="">All statuses</option>
                 <option value="UNASSIGNED">Unassigned</option>
@@ -672,8 +706,8 @@ export const WorkbasketPage = () => {
                 <option value="FILED">Filed</option>
               </select>
             </div>
-            <div className="filter-group">
-              <label htmlFor={filterIds.slaStatus}>SLA Status</label>
+            <div className="filter-group w-full sm:w-[180px] shrink-0">
+              <label htmlFor={filterIds.slaStatus} className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">SLA Status</label>
               <select
                 id={filterIds.slaStatus}
                 value={filters.slaStatus}
@@ -686,8 +720,8 @@ export const WorkbasketPage = () => {
                 <option value="on_track">On Track</option>
               </select>
             </div>
-            <div className="filter-group">
-              <label htmlFor={filterIds.recency}>Created</label>
+            <div className="filter-group w-full sm:w-[180px] shrink-0">
+              <label htmlFor={filterIds.recency} className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Created</label>
               <select id={filterIds.recency} value={filters.recency} onChange={(e) => handleRecencyChange(e.target.value)} className={formClasses.inputBase}>
                 <option value="">All time</option>
                 <option value="today">Today</option>
@@ -703,27 +737,37 @@ export const WorkbasketPage = () => {
 
           {/* Bulk Actions Toolbar — only shown when rows are selected */}
           {selectedCases.length > 0 && (
-            <div className="global-worklist__bulk-bar">
-              <Button
-                variant="outline"
-                onClick={handleBulkPull}
-                disabled={bulkPulling}
-              >
-                {bulkPulling ? 'Assigning...' : `Assign ${selectedCases.length} docket${selectedCases.length === 1 ? '' : 's'}`}
-              </Button>
-              <span className="text-secondary">
-                {selectedCases.length} of {cases.length} selected
-              </span>
+            <div className="bg-indigo-50/80 backdrop-blur border border-indigo-100 rounded-xl p-3 flex flex-wrap items-center justify-between gap-4 mb-4 shadow-sm transition-all duration-200 animate-[fadeIn_0.2s_ease-out]">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="small"
+                  onClick={handleBulkPull}
+                  disabled={bulkPulling}
+                  allowUnsafeClassName={true}
+                  className="!min-h-9 text-xs font-bold border-indigo-200 text-indigo-700 bg-white hover:bg-indigo-50"
+                >
+                  {bulkPulling ? 'Assigning...' : `Assign ${selectedCases.length} docket${selectedCases.length === 1 ? '' : 's'}`}
+                </Button>
+                <span className="text-xs font-bold text-indigo-900/60">
+                  {selectedCases.length} of {cases.length} selected
+                </span>
+              </div>
               {isAdmin && (
-                <>
-                  <label htmlFor={filterIds.assignTo}>Assign to:</label>
-                  <select id={filterIds.assignTo} value={assignTo} onChange={(e) => setAssignTo(e.target.value)} className={formClasses.inputBase}>
+                <div className="flex items-center gap-2">
+                  <label htmlFor={filterIds.assignTo} className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Assign to:</label>
+                  <select 
+                    id={filterIds.assignTo} 
+                    value={assignTo} 
+                    onChange={(e) => setAssignTo(e.target.value)} 
+                    className={`${formClasses.inputBase} !py-1 !px-2.5 !min-h-9 text-xs bg-white`}
+                  >
                     <option value="">My Worklist</option>
                     {assignableUsers.map((member) => (
                       <option key={member._id} value={member._id}>{member.name || member.xID}</option>
                     ))}
                   </select>
-                </>
+                </div>
               )}
             </div>
           )}

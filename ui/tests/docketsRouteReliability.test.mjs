@@ -15,7 +15,7 @@ assert.ok(
   'Protected route map must include canonical dockets route.'
 );
 assert.ok(
-  protectedRoutesSource.includes('<ProtectedRoute>\n              <CasesPage />\n            </ProtectedRoute>'),
+  /<ProtectedRoute>\r?\n\s+<CasesPage \/>\r?\n\s+<\/ProtectedRoute>/.test(protectedRoutesSource),
   'Dockets route should render CasesPage directly so page-level inline errors stay inside shell.'
 );
 assert.ok(

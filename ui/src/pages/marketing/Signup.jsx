@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Input } from '../../components/common/Input';
+import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../../utils/validators';
@@ -11,6 +12,51 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^\d{10}$/;
 const getOrigin = () => (typeof window !== 'undefined' ? window.location.origin : '');
 const buildFallbackFirmLoginUrl = (firmSlug) => (firmSlug ? `${getOrigin()}/${firmSlug}/login` : '');
+
+const SETUP_PROMISES = [
+  '🧠 Company Brain starts with clean firm identity',
+  '✅ OTP verification before workspace activation',
+  '🔐 Admin access, firm URL, and xID stay explicit',
+];
+
+const TRUST_BADGES = ['No card required', 'Role-safe setup', 'Email verified'];
+
+const SETUP_STEPS = [
+  { step: '01', title: 'Firm identity', copy: 'Name the workspace and primary admin.' },
+  { step: '02', title: 'Email OTP', copy: 'Confirm the admin inbox before activation.' },
+  { step: '03', title: 'First login', copy: 'Use the firm URL and xID we generate.' },
+];
+
+const getWorkspaceSlugPreview = (firmName) => {
+  const slug = String(firmName || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 32);
+  return slug || 'your-firm';
+};
+
+const SignupStepDots = ({ step }) => (
+  <div className="mt-5 flex items-center justify-center gap-2" aria-label={`Signup step ${step} of 2`}>
+    {[1, 2].map((item) => (
+      <span
+        key={item}
+        className={`h-2 rounded-full transition-all ${
+          item === step ? 'w-9 bg-slate-950' : 'w-5 bg-slate-200'
+        }`}
+      />
+    ))}
+  </div>
+);
+
+const SignupShell = ({ children, mode = 'default' }) => (
+  <div className="auth-wrapper min-h-screen bg-[linear-gradient(135deg,#fff8eb_0%,#ffffff_42%,#e0f2fe_100%)] px-4 py-6 md:px-6 md:py-8">
+    <div className={`grid w-full max-w-7xl items-center gap-6 ${mode === 'success' ? 'lg:grid-cols-[0.85fr_1.15fr]' : 'lg:grid-cols-[0.92fr_1.08fr]'}`}>
+      {children}
+    </div>
+  </div>
+);
 
 const mapSafeError = (error, fallback) => {
   const status = error?.response?.status;
@@ -276,70 +322,153 @@ export default function Signup() {
 
   if (signupSuccessData) {
     return (
-      <div className="find-workspace-page auth-public-page">
-        <div className="find-workspace-page__shell">
-          <section className="find-workspace-page__context" aria-label="Workspace signup success">
-            <p className="find-workspace-page__eyebrow">Workspace created</p>
-            <h1 className="find-workspace-page__heading">Welcome to Docketra</h1>
-            <p className="find-workspace-page__intro">
-              Your workspace is ready. Continue to login and start onboarding your team.
+      <SignupShell mode="success">
+          <section className="hidden lg:block" aria-label="Workspace signup success">
+            <Link to="/" className="inline-flex items-center gap-2 text-lg font-extrabold text-slate-950">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-white" aria-hidden="true">✨</span>
+              Docketra
+            </Link>
+            <p className="mt-10 text-sm font-bold uppercase text-amber-700">🎉 Workspace created</p>
+            <h1 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
+              Welcome to your firm&apos;s new command center.
+            </h1>
+            <p className="mt-4 max-w-lg text-base leading-7 text-slate-600">
+              Your workspace is ready. Save the first-login details and continue to onboarding when you are ready.
             </p>
+            <div className="mt-8 grid gap-3">
+              {['✅ Firm workspace is active', '🔐 Primary admin identity verified', '📬 Welcome credentials can be resent anytime'].map((item) => (
+                <div key={item} className="rounded-2xl border border-white/80 bg-white/75 px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
+                  {item}
+                </div>
+              ))}
+            </div>
           </section>
-          <div className="find-workspace-page__card auth-public-page__card">
-            <div className="find-workspace-page__card-header">
-              <h2>Workspace created successfully</h2>
-              <p>Save these details for your first login.</p>
+
+          <Card className="auth-card w-full max-w-none rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.45)] backdrop-blur md:p-8">
+            <div className="auth-header text-center">
+              <p className="auth-kicker">Docketra · Workspace ready</p>
+              <h1 className="text-3xl font-black text-slate-950">Workspace created successfully</h1>
+              <p className="mt-2 text-sm text-slate-600">Save these details for your first login.</p>
             </div>
-            <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 space-y-2">
-              <p><span className="font-medium">Firm URL:</span> {signupSuccessData.firmUrl || buildFallbackFirmLoginUrl(signupSuccessData.firmSlug)}</p>
-              <p><span className="font-medium">Your XID:</span> {signupSuccessData.xid}</p>
+            <div className="mt-6 grid gap-3 md:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                <p className="text-xs font-bold uppercase text-slate-500">Firm URL</p>
+                <p className="mt-2 break-words font-semibold text-slate-950">{signupSuccessData.firmUrl || buildFallbackFirmLoginUrl(signupSuccessData.firmSlug)}</p>
+              </div>
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                <p className="text-xs font-bold uppercase text-emerald-700">Your xID</p>
+                <p className="mt-2 text-xl font-black text-emerald-950">{signupSuccessData.xid}</p>
+              </div>
             </div>
-            <Button type="button" variant="primary" fullWidth onClick={handleLoginRedirect}>
-              Go to Login
-            </Button>
-            <Button type="button" variant="outline" fullWidth onClick={handleResendWelcomeEmail} disabled={loading}>
-              {loading ? 'Sending...' : 'Resend welcome email'}
-            </Button>
-            {emailStatus ? <p className="find-workspace-page__security-note">{emailStatus}</p> : null}
-          </div>
-        </div>
-      </div>
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              💡 Keep this URL and xID with your onboarding notes. Your team will use the firm URL for future logins.
+            </div>
+            <div className={`mt-6 ${spacingClasses.formFieldSpacing}`}>
+              <Button type="button" variant="primary" fullWidth onClick={handleLoginRedirect}>
+                Go to login
+              </Button>
+              <Button type="button" variant="outline" fullWidth onClick={handleResendWelcomeEmail} disabled={loading}>
+                {loading ? 'Sending...' : 'Resend welcome email'}
+              </Button>
+              {emailStatus ? <p className="text-center text-sm text-slate-600">{emailStatus}</p> : null}
+            </div>
+          </Card>
+      </SignupShell>
     );
   }
 
+  const workspaceSlugPreview = getWorkspaceSlugPreview(form.firmName);
+
   return (
-    <div className="find-workspace-page auth-public-page">
-      <div className="find-workspace-page__shell">
-        <section className="find-workspace-page__context" aria-label="Workspace signup context">
-          <p className="find-workspace-page__eyebrow">Workspace signup</p>
-          <h1 className="find-workspace-page__heading">Create your workspace</h1>
-          <p className="find-workspace-page__intro">
-            Set up your firm workspace in under a minute with secure verification.
+    <SignupShell>
+        <section className="hidden lg:block" aria-label="Workspace signup context">
+          <Link to="/" className="inline-flex items-center gap-2 text-lg font-extrabold text-slate-950">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-white" aria-hidden="true">✨</span>
+            Docketra
+          </Link>
+          <p className="mt-10 text-sm font-bold uppercase text-amber-700">🚀 Workspace signup</p>
+          <h1 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
+            Create the command center your firm will grow into.
+          </h1>
+          <p className="mt-4 max-w-lg text-base leading-7 text-slate-600">
+            Start with secure firm identity, primary admin verification, and a workspace URL your team can remember.
           </p>
-          <ul className="find-workspace-page__benefits">
-            <li>Step {step} of 2</li>
-            <li>OTP verification keeps signups secure</li>
-            <li>Firm URL is generated automatically</li>
+          <ul className="mt-8 grid gap-3">
+            {SETUP_PROMISES.map((item) => (
+              <li key={item} className="rounded-2xl border border-white/80 bg-white/75 px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
+                {item}
+              </li>
+            ))}
           </ul>
+          <div className="mt-6 flex flex-wrap gap-2">
+            {TRUST_BADGES.map((badge) => (
+              <span key={badge} className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-bold text-slate-600">
+                {badge}
+              </span>
+            ))}
+          </div>
+          <div className="mt-8 rounded-[1.75rem] border border-slate-200 bg-slate-950 p-5 text-white shadow-2xl">
+            <p className="text-sm font-semibold text-sky-200">Setup path</p>
+            <div className="mt-4 grid gap-3">
+              {SETUP_STEPS.map((item) => (
+                <div key={item.step} className="grid grid-cols-[44px_1fr] gap-3 rounded-2xl border border-white/10 bg-white/10 p-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-sm font-black text-slate-950">{item.step}</span>
+                  <span>
+                    <span className="block text-sm font-bold">{item.title}</span>
+                    <span className="mt-1 block text-xs leading-5 text-slate-300">{item.copy}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </section>
-        <div className="find-workspace-page__card auth-public-page__card">
-          <div className="find-workspace-page__card-header">
-            <h2>{step === 1 ? 'Enter workspace details' : 'Verify your email OTP'}</h2>
-            <p>{step === 1 ? 'Takes less than 1 minute.' : 'Enter the 6-digit code sent to your email.'}</p>
+
+        <Card className="auth-card w-full max-w-none rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.45)] backdrop-blur md:p-7">
+          <Link to="/" className="mb-5 inline-flex items-center gap-2 text-base font-extrabold text-slate-950 lg:hidden">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-950 text-white" aria-hidden="true">✨</span>
+            Docketra
+          </Link>
+          <div className="auth-header text-center">
+            <p className="auth-kicker">Docketra · Secure workspace setup</p>
+            <h1 className="text-3xl font-black text-slate-950 md:text-4xl">{step === 1 ? 'Create your workspace' : 'Verify your email OTP'}</h1>
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
+              {step === 1 ? 'Set up your firm identity, primary admin, and secure workspace handoff in one flow.' : 'Enter the 6-digit code sent to your email so we can activate the workspace.'}
+            </p>
+            <SignupStepDots step={step} />
           </div>
 
-        {apiError && <div role="alert" className="auth-public-page__error">{apiError}</div>}
+        {apiError && <div role="alert" className="auth-public-page__error auth-alert">{apiError}</div>}
 
         {step === 1 ? (
           <form className={`mt-6 ${spacingClasses.formFieldSpacing} w-full`} onSubmit={submitStepOne} noValidate>
-            <Input id="signup-name" type="text" name="name" label="Primary Admin Name" className="w-full" value={form.name} onChange={onFormChange} disabled={loading} error={errors.name} required />
-            <Input id="signup-email" type="email" name="email" label="Primary Admin Email" className="w-full" value={form.email} onChange={onFormChange} disabled={loading} error={errors.email} required autoComplete="username" />
-            <Input id="signup-password" type="password" name="password" label="Password" className="w-full" value={form.password} onChange={onFormChange} disabled={loading} error={errors.password} required autoComplete="current-password" />
-            <Input id="signup-firm" type="text" name="firmName" label="Firm Name" className="w-full" value={form.firmName} onChange={onFormChange} disabled={loading} error={errors.firmName} required />
-            <Input id="signup-phone" type="text" name="phone" label="Primary Admin Phone" className="w-full" value={form.phone} onChange={onFormChange} disabled={loading} error={errors.phone} required />
+            <div className="grid gap-4 rounded-3xl border border-slate-200 bg-slate-50/80 p-4 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <p className="text-sm font-black text-slate-950">👤 Primary admin</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">This person receives OTP, xID, and first-login instructions.</p>
+              </div>
+              <Input id="signup-name" type="text" name="name" label="Primary Admin Name" className="w-full" value={form.name} onChange={onFormChange} disabled={loading} error={errors.name} required />
+              <Input id="signup-email" type="email" name="email" label="Primary Admin Email" className="w-full" value={form.email} onChange={onFormChange} disabled={loading} error={errors.email} required autoComplete="username" />
+              <Input id="signup-phone" type="text" name="phone" label="Primary Admin Phone" className="w-full" value={form.phone} onChange={onFormChange} disabled={loading} error={errors.phone} required />
+              <Input id="signup-password" type="password" name="password" label="Password" className="w-full" value={form.password} onChange={onFormChange} disabled={loading} error={errors.password} required autoComplete="new-password" />
+            </div>
+            <div className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-4 md:grid-cols-[1fr_220px]">
+              <div>
+                <p className="text-sm font-black text-slate-950">🏢 Firm workspace</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">Your firm name becomes the memorable workspace URL.</p>
+                <div className="mt-4">
+                  <Input id="signup-firm" type="text" name="firmName" label="Firm Name" className="w-full" value={form.firmName} onChange={onFormChange} disabled={loading} error={errors.firmName} required />
+                </div>
+              </div>
+              <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+                <p className="text-xs font-bold uppercase text-sky-700">URL preview</p>
+                <p className="mt-2 break-words font-black">docketra.com/{workspaceSlugPreview}</p>
+                <p className="mt-3 text-xs leading-5 text-sky-700">Final URL is confirmed after verification.</p>
+              </div>
+            </div>
             {isTurnstileConfigured ? <div ref={turnstileContainerRef} className="min-h-[65px]" /> : null}
-            <p className="find-workspace-page__security-note">{STRONG_PASSWORD_MESSAGE}</p>
-            <p className="find-workspace-page__security-note">Your workspace URL will look like: docketra.com/gupte-opc</p>
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              🔑 {STRONG_PASSWORD_MESSAGE}
+            </div>
             <Button
               type="submit"
               variant="primary"
@@ -352,30 +481,35 @@ export default function Signup() {
           </form>
         ) : (
           <form className={`mt-6 ${spacingClasses.formFieldSpacing} w-full`} onSubmit={submitOtp} noValidate>
-            {otpInfo && <p className="find-workspace-page__security-note">{otpInfo}</p>}
-            <Input
-              ref={otpInputRef}
-              id="signup-otp"
-              type="text"
-              name="otp"
-              label="Email OTP"
-              className="w-full"
-              value={otp}
-              onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setErrors((prev) => ({ ...prev, otp: '' })); }}
-              onPaste={(e) => {
-                const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-                if (pasted.length === 6) {
-                  e.preventDefault();
-                  setOtp(pasted);
-                }
-              }}
-              disabled={loading}
-              error={errors.otp}
-              required
-              autoComplete="one-time-code"
-              inputMode="numeric"
-              pattern="[0-9]*"
-            />
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+              {otpInfo && <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">📬 {otpInfo}</p>}
+              <div className="mt-4">
+                <Input
+                  ref={otpInputRef}
+                  id="signup-otp"
+                  type="text"
+                  name="otp"
+                  label="Email OTP"
+                  className="w-full"
+                  value={otp}
+                  onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setErrors((prev) => ({ ...prev, otp: '' })); }}
+                  onPaste={(e) => {
+                    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+                    if (pasted.length === 6) {
+                      e.preventDefault();
+                      setOtp(pasted);
+                    }
+                  }}
+                  disabled={loading}
+                  error={errors.otp}
+                  required
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                />
+              </div>
+              <p className="mt-3 text-xs leading-5 text-slate-500">Tip: paste the full code. We keep only the latest six digits.</p>
+            </div>
             <Button type="submit" variant="primary" fullWidth disabled={loading} loading={loading}>
               {loading ? 'Verifying...' : 'Verify & create workspace'}
             </Button>
@@ -400,11 +534,10 @@ export default function Signup() {
           </form>
         )}
 
-        <p className="find-workspace-page__notice">
-          By signing up, you agree to our <Link to="/terms" target="_blank" rel="noopener noreferrer" className="auth-public-page__inline-link">Terms &amp; Conditions</Link> and <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="auth-public-page__inline-link">Privacy Policy</Link>.
+        <p className="find-workspace-page__notice rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+          🛡️ By signing up, you agree to our <Link to="/terms" target="_blank" rel="noopener noreferrer" className="auth-public-page__inline-link">Terms &amp; Conditions</Link> and <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="auth-public-page__inline-link">Privacy Policy</Link>.
         </p>
-        </div>
-      </div>
-    </div>
+        </Card>
+    </SignupShell>
   );
 }

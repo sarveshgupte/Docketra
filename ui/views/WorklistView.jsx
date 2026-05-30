@@ -343,18 +343,18 @@ export function WorklistView({
   return (
     <Card>
       <QueueFilterBar onClear={resetFilters} clearDisabled={!searchQuery.trim() && !categoryFilter && !subcategoryFilter && (!showActiveOnly || isPendingView)}>
-        <div className="worklist-toolbar__field worklist-toolbar__field--search">
-          <label htmlFor="worklist-search">Search</label>
+        <div className="worklist-toolbar__field worklist-toolbar__field--search flex-1 min-w-[280px]">
+          <label htmlFor="worklist-search" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Search</label>
           <input
             id="worklist-search"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Search by client, category, sub category, docket#"
+            placeholder="Search by client, category, subcategory, docket#"
             className={formClasses.inputBase}
           />
         </div>
-        <div className="worklist-toolbar__field">
-          <label htmlFor="worklist-category">Category</label>
+        <div className="worklist-toolbar__field w-full sm:w-[200px] shrink-0">
+          <label htmlFor="worklist-category" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Category</label>
           <select
             id="worklist-category"
             value={categoryFilter}
@@ -371,8 +371,8 @@ export function WorklistView({
             ))}
           </select>
         </div>
-        <div className="worklist-toolbar__field">
-          <label htmlFor="worklist-subcategory">Sub category</label>
+        <div className="worklist-toolbar__field w-full sm:w-[200px] shrink-0">
+          <label htmlFor="worklist-subcategory" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Subcategory</label>
           <select
             id="worklist-subcategory"
             value={subcategoryFilter}
@@ -386,12 +386,13 @@ export function WorklistView({
           </select>
         </div>
         {!isPendingView && (
-          <label className="worklist-toolbar__checkbox" htmlFor="worklist-active-only">
+          <label className="flex items-center gap-2 text-xs font-bold text-slate-700 min-h-11 pb-1.5 cursor-pointer whitespace-nowrap" htmlFor="worklist-active-only">
             <input
               id="worklist-active-only"
               type="checkbox"
               checked={showActiveOnly}
               onChange={(event) => setShowActiveOnly(event.target.checked)}
+              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
             />
             <span>Show active dockets only</span>
           </label>
