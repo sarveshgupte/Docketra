@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { API_BASE_URL } from '../utils/constants';
 import { generateUUID } from '../utils/crypto';
@@ -35,6 +35,13 @@ export const UploadPage = () => {
   const [progress, setProgress] = useState(0);
   const [requestingPin, setRequestingPin] = useState(false);
   const [pinHelpMessage, setPinHelpMessage] = useState('');
+
+  const turnstileSiteKey = String(import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim();
+  const isTurnstileConfigured = Boolean(turnstileSiteKey);
+  const turnstileContainerRef = useRef(null);
+  const turnstileWidgetIdRef = useRef(null);
+  const turnstileTokenRef = useRef('');
+  const [turnstileToken, setTurnstileToken] = useState('');
 
   const uploadEndpoint = useMemo(() => `${API_BASE_URL}/public/upload/${token}`, [token]);
 
@@ -84,6 +91,51 @@ export const UploadPage = () => {
     };
   }, [token, uploadEndpoint]);
 
+  useEffect(() => {
+    if (!isTurnstileConfigured || pageStatus !== 'ready') return undefined;
+
+    const existingScript = document.querySelector('script[data-turnstile-script="true"]');
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true;
+      script.defer = true;
+      script.dataset.turnstileScript = 'true';
+      document.body.appendChild(script);
+    }
+
+    const renderWidget = () => {
+      if (!window.turnstile || !turnstileContainerRef.current || turnstileWidgetIdRef.current) return;
+      turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
+        sitekey: turnstileSiteKey,
+        callback: (nextToken) => {
+          setTurnstileToken(nextToken);
+          turnstileTokenRef.current = nextToken;
+        },
+        'expired-callback': () => {
+          setTurnstileToken('');
+          turnstileTokenRef.current = '';
+        },
+        'error-callback': () => {
+          setTurnstileToken('');
+          turnstileTokenRef.current = '';
+        },
+      });
+    };
+
+    if (window.turnstile) {
+      renderWidget();
+    } else {
+      const checkInterval = setInterval(() => {
+        if (window.turnstile) {
+          renderWidget();
+          clearInterval(checkInterval);
+        }
+      }, 100);
+      return () => clearInterval(checkInterval);
+    }
+  }, [isTurnstileConfigured, pageStatus, turnstileSiteKey]);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!files.length) {
@@ -98,6 +150,13 @@ export const UploadPage = () => {
       return;
     }
 
+    const effectiveTurnstileToken = isTurnstileConfigured ? (turnstileTokenRef.current || turnstileToken) : '';
+    if (isTurnstileConfigured && !effectiveTurnstileToken) {
+      setStatus('error');
+      setErrorMessage('Please complete Turnstile verification before continuing.');
+      return;
+    }
+
     setStatus('idle');
     setErrorMessage('');
     setUploading(true);
@@ -109,6 +168,7 @@ export const UploadPage = () => {
         formData.append('file', file);
         if (requiresPin) formData.append('pin', pin);
         if (clientComment.trim()) formData.append('comment', clientComment.trim());
+        if (isTurnstileConfigured) formData.append('turnstileToken', effectiveTurnstileToken);
 
         const response = await fetch(uploadEndpoint, {
           method: 'POST',
@@ -129,10 +189,20 @@ export const UploadPage = () => {
       setUploading(false);
       setStatus('success');
       setClientComment('');
+      if (isTurnstileConfigured && turnstileWidgetIdRef.current != null && window.turnstile?.reset) {
+        window.turnstile.reset(turnstileWidgetIdRef.current);
+        setTurnstileToken('');
+        turnstileTokenRef.current = '';
+      }
     } catch (error) {
       setUploading(false);
       setStatus('error');
       setErrorMessage(error?.message || 'Upload failed. Please try again.');
+      if (isTurnstileConfigured && turnstileWidgetIdRef.current != null && window.turnstile?.reset) {
+        window.turnstile.reset(turnstileWidgetIdRef.current);
+        setTurnstileToken('');
+        turnstileTokenRef.current = '';
+      }
     }
   };
 
@@ -274,6 +344,10 @@ export const UploadPage = () => {
                 disabled={uploading}
               />
             </div>
+
+            {isTurnstileConfigured ? (
+              <div ref={turnstileContainerRef} className="min-h-[65px]" style={{ marginBottom: '16px' }} />
+            ) : null}
 
             <button
               type="submit"

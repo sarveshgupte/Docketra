@@ -69,9 +69,20 @@ const requireTurnstileForForgotPassword = createTurnstileMiddleware({
   passedDescription: 'Forgot-password init Turnstile verification passed',
 });
 
+const requireTurnstileForUpload = createTurnstileMiddleware({
+  missingAction: SECURITY_AUDIT_ACTIONS.UPLOAD_TURNSTILE_MISSING,
+  failedAction: SECURITY_AUDIT_ACTIONS.UPLOAD_TURNSTILE_FAILED,
+  passedAction: SECURITY_AUDIT_ACTIONS.UPLOAD_TURNSTILE_PASSED,
+  resource: 'public/upload',
+  missingDescription: 'Upload Turnstile token missing',
+  failedDescription: 'Upload Turnstile verification failed',
+  passedDescription: 'Upload Turnstile verification passed',
+});
+
 module.exports = {
   GENERIC_TURNSTILE_FAILURE_MESSAGE,
   createTurnstileMiddleware,
   requireTurnstileForForgotPassword,
   requireTurnstileForSignup,
+  requireTurnstileForUpload,
 };

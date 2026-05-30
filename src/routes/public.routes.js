@@ -12,6 +12,7 @@ const { getPublicLandingPage } = require('../controllers/landingPage.controller'
 const EarlyAccessRequest = require('../models/EarlyAccessRequest.model');
 const { executeWrite } = require('../utils/executeWrite');
 const { createSecureUpload, enforceUploadSecurity } = require('../middleware/uploadProtection.middleware');
+const { requireTurnstileForUpload } = require('../middleware/turnstile.middleware');
 const { uploadDocument, getUploadMeta, requestUploadPin } = require('../controllers/uploadSession.controller');
 
 const LOG_LENGTHS = {
@@ -99,7 +100,7 @@ router.post('/signup', signupLimiter, async (req, res, next) => {
 router.post('/contact', submitEnterpriseInquiry);
 
 router.get('/upload/:token/meta', getUploadMeta);
-router.post('/upload/:token', publicUploadLimiter, upload.single('file'), enforceUploadSecurity, uploadDocument);
+router.post('/upload/:token', publicUploadLimiter, upload.single('file'), requireTurnstileForUpload, enforceUploadSecurity, uploadDocument);
 router.post('/upload/:token/request-pin', publicUploadLimiter, requestUploadPin);
 
 module.exports = router;
