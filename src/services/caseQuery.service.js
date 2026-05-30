@@ -419,6 +419,9 @@ module.exports = (deps) => {
       log.info('STEP 2 after assignedUser');
 
       const canonicalAssignmentXID = caseObject.assignedToXID || assignedUser?.xID || null;
+      const isOwner = canonicalAssignmentXID === req.user.xID;
+      const isAdmin = req.user.role === 'Admin' || req.user.role === 'SUPER_ADMIN';
+      const isViewOnlyMode = !isAdmin && !isOwner;
 
       log.info('DOCKET_STATE_DEBUG', {
         caseId: displayCaseId,
