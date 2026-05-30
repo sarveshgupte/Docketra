@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { API_BASE_URL } from '../utils/constants';
+import { generateUUID } from '../utils/crypto';
 
 const pageStyle = {
   minHeight: '100vh',
@@ -111,6 +112,9 @@ export const UploadPage = () => {
 
         const response = await fetch(uploadEndpoint, {
           method: 'POST',
+          headers: {
+            'Idempotency-Key': generateUUID(),
+          },
           body: formData,
         });
         const payload = await response.json();
@@ -137,7 +141,12 @@ export const UploadPage = () => {
     setPinHelpMessage('');
     setErrorMessage('');
     try {
-      const response = await fetch(`${uploadEndpoint}/request-pin`, { method: 'POST' });
+      const response = await fetch(`${uploadEndpoint}/request-pin`, {
+        method: 'POST',
+        headers: {
+          'Idempotency-Key': generateUUID(),
+        },
+      });
       const payload = await response.json();
       if (!response.ok || !payload?.success) {
         throw new Error(payload?.message || 'Unable to send PIN. Please contact your advisor.');
