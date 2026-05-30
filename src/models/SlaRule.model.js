@@ -24,7 +24,10 @@ const slaRuleSchema = new mongoose.Schema({
   },
   slaHours: {
     type: Number,
-    required: true,
+    min: 1,
+  },
+  slaWorkingDays: {
+    type: Number,
     min: 1,
   },
   isActive: {

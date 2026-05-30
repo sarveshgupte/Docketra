@@ -5,6 +5,21 @@ const { CASE_ACTION_TYPES } = require('../config/constants');
 const log = require('../utils/log');
 const commentHistoryNarrativeStorage = require('./commentHistoryNarrativeStorage.service');
 const { sanitizeForAudit, buildSafeFilterFlags } = require('../utils/redaction');
+const CLOUD_NARRATIVE_TIMEOUT_MS = 1800;
+const normalizeAuditTerminology = (value) => {
+  const text = String(value || '');
+  return text
+    .replace(/\bCase\b/g, 'Docket')
+    .replace(/\bcases\b/g, 'dockets')
+    .replace(/\bcase\b/g, 'docket');
+};
+
+const withTimeout = (promise, timeoutMs, label) => Promise.race([
+  promise,
+  new Promise((_, reject) => {
+    setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+  }),
+]);
 
 /**
  * Audit Logging Service
@@ -21,10 +36,11 @@ const { sanitizeForAudit, buildSafeFilterFlags } = require('../utils/redaction')
  * Handles proxies and load balancers
  */
 const getIpAddress = (req) => {
-  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
-         req.headers['x-real-ip'] || 
-         req.connection?.remoteAddress || 
-         req.socket?.remoteAddress ||
+  const headers = req?.headers || {};
+  return headers['x-forwarded-for']?.split(',')[0]?.trim() || 
+         headers['x-real-ip'] || 
+         req?.connection?.remoteAddress || 
+         req?.socket?.remoteAddress ||
          'unknown';
 };
 
@@ -32,7 +48,7 @@ const getIpAddress = (req) => {
  * Extract user agent from request object
  */
 const getUserAgent = (req) => {
-  return req.headers['user-agent'] || 'unknown';
+  return req?.headers?.['user-agent'] || 'unknown';
 };
 
 /**
@@ -101,25 +117,46 @@ const logCaseHistory = async ({
       return null; // Don't throw - audit failures shouldn't block operations
     }
     
+    const normalizedDescription = normalizeAuditTerminology(description);
+    const normalizedActionLabel = normalizeAuditTerminology(actionLabel || description);
     const historyCloudId = String(require('crypto').randomUUID());
-    const historyRef = await commentHistoryNarrativeStorage.uploadHistory({
-      firmId,
-      docketId: caseId,
-      historyId: historyCloudId,
-      payload: { description },
-    });
+    let historyRef = null;
+    let storageMode = 'local_fallback';
+    try {
+      historyRef = await withTimeout(
+        commentHistoryNarrativeStorage.uploadHistory({
+          firmId,
+          docketId: caseId,
+          historyId: historyCloudId,
+          payload: { description: normalizedDescription },
+        }),
+        CLOUD_NARRATIVE_TIMEOUT_MS,
+        'history narrative upload'
+      );
+      storageMode = 'cloud_first';
+    } catch (uploadError) {
+      log.warn(`[AUDIT] Cloud-first narrative storage upload failed: ${uploadError.message}. Falling back to local MongoDB storage.`);
+    }
 
     // Build history entry
     const historyEntry = {
       caseId,
       firmId,
       actionType,
-      actionLabel: actionLabel || description,
-      description,
+      actionLabel: normalizedActionLabel,
+      description: normalizedDescription,
       performedBy: performedBy ? performedBy.toLowerCase() : 'SYSTEM',
       performedByXID: performedByXID ? performedByXID.toUpperCase() : 'SYSTEM',
       actorRole: mapActorRole(actorRole),
-      historyRef: {
+      storageMode,
+      metadata: sanitizeForAudit({
+        ...metadata,
+        impersonationMode: req?.context?.impersonationMode || null,
+      }),
+    };
+
+    if (historyRef) {
+      historyEntry.historyRef = {
         provider: historyRef.provider,
         mode: historyRef.mode,
         fileId: historyRef.fileId || null,
@@ -128,13 +165,8 @@ const logCaseHistory = async ({
         version: 1,
         updatedAt: new Date(),
         updatedBy: performedByXID ? performedByXID.toUpperCase() : (performedBy ? performedBy.toLowerCase() : 'SYSTEM'),
-      },
-      storageMode: 'cloud_first',
-      metadata: sanitizeForAudit({
-        ...metadata,
-        impersonationMode: req?.context?.impersonationMode || null,
-      }),
-    };
+      };
+    }
     
     // Add IP and user agent if request object provided
     if (req) {
@@ -154,7 +186,7 @@ const logCaseHistory = async ({
         userRole: mapActorRole(actorRole),
       metadata: sanitizeForAudit({
           actionType: actionType || null,
-          actionLabel: actionLabel || description,
+          actionLabel: normalizedActionLabel,
           source: 'auditLog.service.logCaseHistory',
           ...(metadata || {}),
         }),
@@ -254,7 +286,7 @@ const logCaseListViewed = async ({ viewerXID, firmId, filters = {}, listType, re
     }
 
     const safeFilterFlags = buildSafeFilterFlags(filters);
-    const description = `Case list viewed (${listType}) - ${resultCount} result(s)`;
+    const description = `Docket list viewed (${listType}) - ${resultCount} result(s)`;
 
     // Extract impersonation context if available
     const impersonationActive = req?.context?.isSuperAdmin && req?.context?.impersonationSessionId ? true : false;

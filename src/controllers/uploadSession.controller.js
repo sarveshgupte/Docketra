@@ -61,7 +61,11 @@ async function generateUploadLink(req, res) {
       expiryHours,
     });
 
-    const uploadLink = `${process.env.APP_URL}/upload/${result.token}`;
+    const reqHost = req.get('host');
+    const reqProtocol = req.protocol || 'http';
+    const fallbackBaseUrl = reqHost ? `${reqProtocol}://${reqHost}` : 'http://localhost:5173';
+    const baseUrl = (process.env.APP_URL || fallbackBaseUrl).replace(/\/+$/, '');
+    const uploadLink = `${baseUrl}/upload/${result.token}`;
     const clientEmail = await resolveClientEmail(caseData, req.user.firmId);
 
     if (shouldSendEmail && clientEmail) {
@@ -230,7 +234,7 @@ async function getUploadMeta(req, res) {
 async function uploadDocument(req, res) {
   try {
     const { token } = req.params;
-    const { pin } = req.body;
+    const { pin, comment } = req.body;
 
     if (!req.file) throw new Error('No file uploaded');
 
@@ -270,7 +274,7 @@ async function uploadDocument(req, res) {
       mimeType: req.file.mimetype,
       size: req.file.size,
       uploadStatus: 'pending',
-      description: 'Uploaded via client upload link',
+      description: comment || 'Uploaded via client upload link',
       createdBy: 'client-upload@external.local',
       createdByName: 'Client Upload Link',
       source: 'CLIENT_UPLOAD',

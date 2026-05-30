@@ -2,11 +2,14 @@ const Case = require('../models/Case.model');
 const Team = require('../models/Team.model');
 const User = require('../models/User.model');
 const Notification = require('../models/Notification.model');
+const Firm = require('../models/Firm.model');
 const { createNotification, NotificationTypes } = require('./notification.service');
+const { normalizeFirmSettings } = require('./adminController.service');
 const log = require('../utils/log');
 
 const DUE_SOON_WINDOW_HOURS = Number(process.env.DUE_SOON_WINDOW_HOURS || 24);
 const TERMINAL_STATUSES = new Set(['RESOLVED', 'FILED', 'CANCELLED', 'TERMINATED', 'CLOSED', 'ARCHIVED']);
+const CALENDAR_TAG = 'compliance-calendar';
 
 function toDueDateKey(dueDate) {
   if (!dueDate) return '';
@@ -124,4 +127,79 @@ async function processDocketDueNotifications({ now = new Date() } = {}) {
   return { scanned, created };
 }
 
-module.exports = { processDocketDueNotifications, DUE_SOON_WINDOW_HOURS };
+function addDays(date, days) {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + Number(days || 0));
+  return next;
+}
+
+async function processFirmCalendarReminders({ now = new Date() } = {}) {
+  const start = new Date(now);
+  start.setUTCHours(0, 0, 0, 0);
+  const maxEnd = addDays(start, 30);
+  maxEnd.setUTCHours(23, 59, 59, 999);
+
+  const entries = await Task.find({
+    tags: CALENDAR_TAG,
+    dueDate: { $gte: start, $lte: maxEnd },
+    isDeleted: { $ne: true },
+    status: { $ne: 'cancelled' },
+  }).select('_id firmId title description dueDate calendarEntryType reminderDaysBefore').lean();
+
+  let scanned = 0;
+  let created = 0;
+
+  for (const entry of entries) {
+    scanned += 1;
+    const firm = await Firm.findById(entry.firmId).select('settings.firm').lean();
+    const firmSettings = normalizeFirmSettings(firm?.settings?.firm || {});
+    const leadDays = Number.isFinite(Number(entry.reminderDaysBefore))
+      ? Number(entry.reminderDaysBefore)
+      : Number(firmSettings.calendarReminderLeadDays || 0);
+    const reminderDate = addDays(new Date(entry.dueDate), -leadDays);
+    reminderDate.setUTCHours(0, 0, 0, 0);
+    if (reminderDate.getTime() !== start.getTime()) continue;
+
+    const users = await User.find({
+      firmId: entry.firmId,
+      status: { $ne: 'deleted' },
+      isActive: true,
+    }).select('xID').lean();
+    const dueDateKey = toDueDateKey(entry.dueDate);
+    const calendarEntryId = String(entry._id);
+
+    for (const user of users) {
+      const recipientXID = String(user.xID || '').toUpperCase().trim();
+      if (!recipientXID) continue;
+      const existing = await Notification.findOne({
+        firmId: entry.firmId,
+        userId: recipientXID,
+        type: NotificationTypes.FIRM_CALENDAR_REMINDER,
+        'metadata.calendarEntryId': calendarEntryId,
+        'metadata.dueDateKey': dueDateKey,
+      }).select('_id').lean();
+      if (existing) continue;
+
+      const notification = await createNotification({
+        firmId: entry.firmId,
+        recipientXID,
+        type: NotificationTypes.FIRM_CALENDAR_REMINDER,
+        title: entry.calendarEntryType === 'birthday' ? 'Birthday reminder' : 'Important date reminder',
+        message: `${entry.title} is on ${dueDateKey.slice(0, 10)}.`,
+        metadata: {
+          calendarEntryId,
+          calendarEntryType: entry.calendarEntryType || 'important_date',
+          dueDate: entry.dueDate,
+          dueDateKey,
+          reminderDaysBefore: leadDays,
+        },
+        group: false,
+      });
+      if (notification) created += 1;
+    }
+  }
+
+  return { scanned, created };
+}
+
+module.exports = { processDocketDueNotifications, processFirmCalendarReminders, DUE_SOON_WINDOW_HOURS };

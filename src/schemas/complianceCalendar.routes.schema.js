@@ -14,6 +14,8 @@ module.exports = {
       categoryId: z.string().trim().optional(),
       categoryName: z.string().trim().optional(),
       linkedCaseId: z.string().trim().optional(),
+      calendarEntryType: z.enum(['important_date', 'holiday', 'birthday', 'working_day', 'off_day']).optional(),
+      reminderDaysBefore: z.coerce.number().int().min(0).max(30).optional(),
     }).passthrough(),
   },
   'PUT /:id': {
@@ -28,6 +30,8 @@ module.exports = {
       categoryId: z.string().trim().optional(),
       categoryName: z.string().trim().optional(),
       linkedCaseId: z.string().trim().optional(),
+      calendarEntryType: z.enum(['important_date', 'holiday', 'birthday', 'working_day', 'off_day']).optional(),
+      reminderDaysBefore: z.coerce.number().int().min(0).max(30).optional(),
     }).passthrough(),
   },
   'DELETE /:id': {

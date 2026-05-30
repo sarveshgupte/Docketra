@@ -15,7 +15,7 @@ const addCalendarDays = (source, days) => {
   return date;
 };
 
-function calculateDeadlineFromRule({ rule = {}, createdAt = new Date(), manualDueDate, eventDate } = {}) {
+function calculateDeadlineFromRule({ rule = {}, createdAt = new Date(), manualDueDate, eventDate, calendarConfig } = {}) {
   const normalizedRule = rule || {};
   const mode = normalizedRule.mode || 'NONE';
   const warnings = [];
@@ -30,7 +30,12 @@ function calculateDeadlineFromRule({ rule = {}, createdAt = new Date(), manualDu
       error.code = 'DEADLINE_VALIDATION_ERROR';
       throw error;
     }
-    return { dueDate: addCalendarDays(createdAtDate, normalizedRule.tatDays), source: 'TAT_DAYS', warnings };
+    return {
+      dueDate: calculateFallbackDueDateFromDays(createdAtDate, normalizedRule.tatDays, { calendarConfig })
+        || addCalendarDays(createdAtDate, normalizedRule.tatDays),
+      source: 'TAT_DAYS',
+      warnings,
+    };
   }
 
   if (mode === 'FIXED_DAY_NEXT_MONTH') {
@@ -80,3 +85,4 @@ function calculateDeadlineFromRule({ rule = {}, createdAt = new Date(), manualDu
 }
 
 module.exports = { calculateDeadlineFromRule };
+const { calculateFallbackDueDateFromDays } = require('../../services/sla.service');

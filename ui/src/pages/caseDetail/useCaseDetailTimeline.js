@@ -23,6 +23,11 @@ const normalizeTimelineRows = (rows = []) => {
         WORKBASKET_CHANGED: 'Routed to workbasket',
         ROUTED: 'Routed to workbasket',
         COMMENT_ADDED: 'Comment added',
+        DOCKET_OPENED: 'User was active in a docket',
+        DOCKET_EXITED: 'User exited the docket',
+        DOCKET_VIEWED: 'Viewed docket',
+        DOCKET_SESSION_STARTED: 'User was active in a docket',
+        DOCKET_SESSION_ENDED: 'User exited the docket',
         UPDATED: 'Docket updated',
       }[type] || null);
       const stableKey = entry?._id
@@ -51,6 +56,11 @@ const normalizeTimelineRows = (rows = []) => {
           ROUTED: '🗂️',
           PRIORITY_CHANGED: '⚡',
           COMMENT_ADDED: '💬',
+          DOCKET_OPENED: '🟢',
+          DOCKET_SESSION_STARTED: '🟢',
+          DOCKET_EXITED: '🚪',
+          DOCKET_SESSION_ENDED: '🚪',
+          DOCKET_VIEWED: '👁️',
           UPDATED: '✏️',
         }[type] || '•'),
       };
@@ -122,4 +132,3 @@ export const useCaseDetailTimeline = ({
     mergedTimelineEvents,
   };
 };
-

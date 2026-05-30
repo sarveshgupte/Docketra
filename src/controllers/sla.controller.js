@@ -11,7 +11,8 @@ const parseRulePayload = (payload = {}) => ({
   category: normalizeOptionalString(payload.category),
   subcategory: normalizeOptionalString(payload.subcategory),
   workbasketId: normalizeOptionalString(payload.workbasketId),
-  slaHours: Number(payload.slaHours),
+  slaWorkingDays: payload.slaWorkingDays !== undefined ? Number(payload.slaWorkingDays) : undefined,
+  slaHours: payload.slaHours !== undefined ? Number(payload.slaHours) : undefined,
   isActive: typeof payload.isActive === 'boolean' ? payload.isActive : true,
 });
 
@@ -46,9 +47,13 @@ async function listRules(req, res) {
 async function saveRule(req, res) {
   try {
     const payload = parseRulePayload(req.body || {});
-    if (!Number.isFinite(payload.slaHours) || payload.slaHours <= 0) {
-      return res.status(400).json({ success: false, message: 'slaHours must be a positive number' });
+    if (!Number.isFinite(payload.slaWorkingDays) || payload.slaWorkingDays <= 0) {
+      if (!Number.isFinite(payload.slaHours) || payload.slaHours <= 0) {
+        return res.status(400).json({ success: false, message: 'slaWorkingDays must be a positive number' });
+      }
+      payload.slaWorkingDays = Math.max(1, payload.slaHours / 8);
     }
+    payload.slaHours = Math.max(1, Math.round(payload.slaWorkingDays * 8));
 
     if (!payload.category && !payload.subcategory && !payload.workbasketId) {
       payload.category = null;

@@ -6,7 +6,7 @@ import { getAuditActionLabel, normalizeAuditAction } from '../../constants/audit
 import './AuditTimelineDrawer.css';
 
 // Keep drawer compact while surfacing recent immutable audit activity.
-const MAX_TIMELINE_EVENTS = 10;
+const MAX_TIMELINE_EVENTS = 100;
 
 // Actions that represent lifecycle stage transitions (not comments/attachments)
 const LIFECYCLE_ACTIONS = new Set([
@@ -37,20 +37,46 @@ const isLifecycleEvent = (action = '') => LIFECYCLE_ACTIONS.has(normalizeAuditAc
 const isIrreversible = (action = '') => IRREVERSIBLE_ACTIONS.has(normalizeAuditAction({ action }));
 
 const normalizeEvents = (data = {}) => {
-  const source = data.auditLog?.length ? data.auditLog : data.history || [];
-  return source
+  const history = data.history || [];
+  const auditLog = data.auditLog || [];
+  
+  // Combine both sources to ensure we capture EVERYTHING
+  const combined = [...history, ...auditLog];
+  
+  // Sort combined descending by timestamp
+  const sorted = combined.sort((a, b) => {
+    const timeA = new Date(a.timestamp || a.createdAt || 0).getTime();
+    const timeB = new Date(b.timestamp || b.createdAt || 0).getTime();
+    return timeB - timeA;
+  });
+
+  const seen = new Set();
+  const deduped = [];
+
+  for (const event of sorted) {
+    const timestamp = event.timestamp || event.createdAt;
+    const action = event.actionType || event.action || 'Updated';
+    const desc = event.description || event.comment || '';
+    const key = `${timestamp}-${action}-${desc}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      deduped.push(event);
+    }
+  }
+
+  return deduped
     .map((event) => ({
-      id: event._id || event.id || `${event.timestamp}-${event.actionType}`,
+      id: event._id || event.id || `${event.timestamp || event.createdAt}-${event.actionType || event.action || 'Updated'}`,
       action: event.actionType || event.action || 'Updated',
       actionLabel: getAuditActionLabel(event),
       actor:
         event.performedByName ||
+        event.performedBy ||
         event.actorXID ||
         event.performedByXID ||
         event.createdByName ||
         'System',
       timestamp: event.timestamp || event.createdAt,
-      // description: auditLog entries provide `description`; legacy history entries may provide `comment`
       description: event.description || event.comment || '',
     }))
     .slice(0, MAX_TIMELINE_EVENTS);

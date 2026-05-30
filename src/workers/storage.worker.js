@@ -349,8 +349,10 @@ const storageWorker = new Worker(
             try {
               const isClientUpload = String(caseFile.source || '').toUpperCase() === 'CLIENT_UPLOAD';
               const actorXID = caseFile.createdByXID || (isClientUpload ? 'CLIENT' : 'SYSTEM');
+              const clientComment = isClientUpload && caseFile.description && caseFile.description !== 'Uploaded via client upload link' ? caseFile.description : '';
+
               const commentText = isClientUpload
-                ? `📎 Attachment received from client: ${caseFile.originalName}`
+                ? `Client has sent documents: ${caseFile.originalName}${clientComment ? ` (Comment: ${clientComment})` : ''}`
                 : `📎 Attachment added by ${actorXID}: ${caseFile.originalName}`;
 
               await Comment.create({
@@ -366,7 +368,9 @@ const storageWorker = new Worker(
               await CaseAudit.create({
                 caseId: caseFile.caseId,
                 actionType: 'CASE_FILE_ATTACHED',
-                description: `File attached by ${actorXID}: ${caseFile.originalName}`,
+                description: isClientUpload
+                  ? `Client uploaded document: ${caseFile.originalName}${clientComment ? ` (Comment: ${clientComment})` : ''}`
+                  : `File attached by ${actorXID}: ${caseFile.originalName}`,
                 performedByXID: actorXID,
                 metadata: {
                   fileName: caseFile.originalName,
@@ -379,7 +383,7 @@ const storageWorker = new Worker(
                 caseId: caseFile.caseId,
                 actionType: 'CASE_ATTACHMENT_ADDED',
                 description: isClientUpload
-                  ? `Attachment received from client: ${caseFile.originalName}`
+                  ? `Client uploaded documents: ${caseFile.originalName}${clientComment ? ` (Comment: ${clientComment})` : ''}`
                   : `Attachment uploaded by ${caseFile.createdBy}: ${caseFile.originalName}`,
                 performedBy: caseFile.createdBy,
                 performedByXID: actorXID?.toUpperCase(),

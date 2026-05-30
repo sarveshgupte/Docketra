@@ -43,6 +43,32 @@ function testWeekendRollover() {
   assert.strictEqual(due.toISOString(), '2026-03-09T11:00:00.000Z'); // Monday
 }
 
+function testFirmCalendarHolidayRollover() {
+  const config = {
+    tatDurationMinutes: 16 * 60,
+    businessStartTime: '10:00',
+    businessEndTime: '18:00',
+    workingDays: [1, 2, 3, 4, 5],
+    holidayDates: ['2026-03-09'],
+  };
+  const start = new Date('2026-03-06T10:00:00.000Z'); // Friday
+  const due = caseSlaService.calculateDueDate(start, config.tatDurationMinutes, config);
+  assert.strictEqual(due.toISOString(), '2026-03-10T18:00:00.000Z');
+}
+
+function testFirmCalendarWorkingDateOverride() {
+  const config = {
+    tatDurationMinutes: 2 * 60,
+    businessStartTime: '10:00',
+    businessEndTime: '18:00',
+    workingDays: [1, 2, 3, 4, 5],
+    workingDateOverrides: ['2026-03-07'],
+  };
+  const start = new Date('2026-03-06T17:00:00.000Z'); // Friday
+  const due = caseSlaService.calculateDueDate(start, config.tatDurationMinutes, config);
+  assert.strictEqual(due.toISOString(), '2026-03-07T11:00:00.000Z');
+}
+
 function testTenantTimezoneCalendar() {
   const config = {
     tatDurationMinutes: 120,
@@ -210,6 +236,8 @@ async function run() {
     testCreationInsideBusinessHours();
     testCreationOutsideBusinessHours();
     testWeekendRollover();
+    testFirmCalendarHolidayRollover();
+    testFirmCalendarWorkingDateOverride();
     testTenantTimezoneCalendar();
     testMultiPauseScenario();
     testBreachDetection();

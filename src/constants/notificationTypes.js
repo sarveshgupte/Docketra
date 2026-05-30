@@ -10,6 +10,7 @@ const NotificationTypes = Object.freeze({
   SLA_BREACHED: 'SLA_BREACHED',
   DOCKET_DUE_SOON: 'DOCKET_DUE_SOON',
   DOCKET_OVERDUE: 'DOCKET_OVERDUE',
+  FIRM_CALENDAR_REMINDER: 'FIRM_CALENDAR_REMINDER',
 });
 
 module.exports = {

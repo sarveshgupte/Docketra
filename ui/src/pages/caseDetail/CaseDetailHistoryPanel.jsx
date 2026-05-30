@@ -41,6 +41,7 @@ export const CaseDetailHistoryPanel = ({
     <section className="case-card" aria-labelledby="past-dockets-heading">
       <div className="case-card__heading">
         <h2 id="past-dockets-heading">Client Docket History</h2>
+        {/* <h2>Change History</h2> */}
       </div>
       {loadingClientDockets ? (
         <p className="case-detail__empty-note">Loading client docket history…</p>

@@ -3,6 +3,10 @@ const log = require('../utils/log');
 
 const DEFAULT_FIRM_SETTINGS = {
   slaDefaultDays: 3,
+  slaWorkingDays: [1, 2, 3, 4, 5],
+  slaHolidayDates: [],
+  slaWorkingDateOverrides: [],
+  calendarReminderLeadDays: 3,
   escalationInactivityThresholdHours: 24,
   workloadThreshold: 15,
   enablePerformanceView: true,
@@ -10,6 +14,19 @@ const DEFAULT_FIRM_SETTINGS = {
   enableBulkActions: true,
   brandLogoUrl: '',
   strictFirmOwnedStorage: false,
+};
+
+const normalizeIsoDateList = (values = []) => {
+  if (!Array.isArray(values)) return [];
+  return [...new Set(values
+    .map((value) => String(value || '').trim())
+    .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value)))];
+};
+
+const normalizeWorkingDays = (days = []) => {
+  if (!Array.isArray(days)) return DEFAULT_FIRM_SETTINGS.slaWorkingDays;
+  const normalized = [...new Set(days.map((day) => Number(day)).filter((day) => Number.isInteger(day) && day >= 1 && day <= 7))];
+  return normalized.length ? normalized : DEFAULT_FIRM_SETTINGS.slaWorkingDays;
 };
 
 const DEFAULT_WORK_SETTINGS = {
@@ -52,6 +69,12 @@ const resetUserToInvitedState = (user, { tokenHash, tokenExpiry, inviteSentAt })
 
 const normalizeFirmSettings = (raw = {}) => ({
   slaDefaultDays: Number(raw.slaDefaultDays) > 0 ? Number(raw.slaDefaultDays) : DEFAULT_FIRM_SETTINGS.slaDefaultDays,
+  slaWorkingDays: normalizeWorkingDays(raw.slaWorkingDays),
+  slaHolidayDates: normalizeIsoDateList(raw.slaHolidayDates),
+  slaWorkingDateOverrides: normalizeIsoDateList(raw.slaWorkingDateOverrides),
+  calendarReminderLeadDays: Number(raw.calendarReminderLeadDays) >= 0
+    ? Number(raw.calendarReminderLeadDays)
+    : DEFAULT_FIRM_SETTINGS.calendarReminderLeadDays,
   escalationInactivityThresholdHours: Number(raw.escalationInactivityThresholdHours) > 0
     ? Number(raw.escalationInactivityThresholdHours)
     : DEFAULT_FIRM_SETTINGS.escalationInactivityThresholdHours,

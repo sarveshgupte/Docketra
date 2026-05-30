@@ -137,6 +137,7 @@ export const AdminPage = () => {
   // Category form state
   const [categoryForm, setCategoryForm] = useState({
     name: '',
+    defaultSlaDays: '',
     requiresRelatedEmployeeUser: false,
   });
   
@@ -144,10 +145,11 @@ export const AdminPage = () => {
   const [subcategoryForm, setSubcategoryForm] = useState({
     name: '',
     workbasketId: '',
+    defaultSlaDays: '',
     requiresRelatedEmployeeUser: false,
   });
-  const [editCategoryForm, setEditCategoryForm] = useState({ id: '', name: '', requiresRelatedEmployeeUser: false });
-  const [editSubcategoryForm, setEditSubcategoryForm] = useState({ categoryId: '', subcategoryId: '', name: '', workbasketId: '', requiresRelatedEmployeeUser: false });
+  const [editCategoryForm, setEditCategoryForm] = useState({ id: '', name: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
+  const [editSubcategoryForm, setEditSubcategoryForm] = useState({ categoryId: '', subcategoryId: '', name: '', workbasketId: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
 
   // Client form state
   const [clientForm, setClientForm] = useState({
@@ -635,12 +637,13 @@ export const AdminPage = () => {
       const response = await categoryService.createCategory(
         categoryForm.name.trim(),
         categoryForm.requiresRelatedEmployeeUser === true,
+        Number(categoryForm.defaultSlaDays) || 0,
       );
       
       if (response.success) {
         showToast('Category created successfully', 'success');
         setShowCategoryModal(false);
-        setCategoryForm({ name: '', requiresRelatedEmployeeUser: false });
+        setCategoryForm({ name: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
         loadAdminData();
       } else {
         showToast(response.message || 'Failed to create category', 'error');
@@ -695,12 +698,13 @@ export const AdminPage = () => {
         subcategoryForm.name.trim(),
         subcategoryForm.workbasketId,
         subcategoryForm.requiresRelatedEmployeeUser === true,
+        Number(subcategoryForm.defaultSlaDays) || 0,
       );
       
       if (response.success) {
         showToast('Subcategory added successfully', 'success');
         setShowSubcategoryModal(false);
-        setSubcategoryForm({ name: '', workbasketId: '', requiresRelatedEmployeeUser: false });
+        setSubcategoryForm({ name: '', workbasketId: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
         setSelectedCategory(null);
         loadAdminData();
       } else {
@@ -739,6 +743,7 @@ export const AdminPage = () => {
     setEditCategoryForm({
       id: category._id,
       name: category.name || '',
+      defaultSlaDays: String(category.defaultSlaDays || ''),
       requiresRelatedEmployeeUser: category.requiresRelatedEmployeeUser === true,
     });
     setShowEditCategoryModal(true);
@@ -750,6 +755,7 @@ export const AdminPage = () => {
       subcategoryId: subcategory.id,
       name: subcategory.name || '',
       workbasketId: String(subcategory.workbasketId || ''),
+      defaultSlaDays: String(subcategory.defaultSlaDays || ''),
       requiresRelatedEmployeeUser: subcategory.requiresRelatedEmployeeUser === true,
     });
     setShowEditSubcategoryModal(true);
@@ -763,10 +769,11 @@ export const AdminPage = () => {
         editCategoryForm.id,
         editCategoryForm.name.trim(),
         editCategoryForm.requiresRelatedEmployeeUser === true,
+        Number(editCategoryForm.defaultSlaDays) || 0,
       );
       if (response.success) {
         setShowEditCategoryModal(false);
-        setEditCategoryForm({ id: '', name: '', requiresRelatedEmployeeUser: false });
+        setEditCategoryForm({ id: '', name: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
         showToast('Category updated successfully', 'success');
         loadAdminData();
       } else showToast(response.message || 'Failed to update category', 'error');
@@ -785,10 +792,11 @@ export const AdminPage = () => {
         editSubcategoryForm.name.trim(),
         editSubcategoryForm.workbasketId,
         editSubcategoryForm.requiresRelatedEmployeeUser === true,
+        Number(editSubcategoryForm.defaultSlaDays) || 0,
       );
       if (response.success) {
         setShowEditSubcategoryModal(false);
-        setEditSubcategoryForm({ categoryId: '', subcategoryId: '', name: '', workbasketId: '', requiresRelatedEmployeeUser: false });
+        setEditSubcategoryForm({ categoryId: '', subcategoryId: '', name: '', workbasketId: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
         showToast('Subcategory updated successfully', 'success');
         loadAdminData();
       } else showToast(response.message || 'Failed to update subcategory', 'error');

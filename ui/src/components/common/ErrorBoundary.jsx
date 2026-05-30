@@ -23,6 +23,11 @@ export class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       if (this.props.fallback !== undefined) {
+        if (React.isValidElement(this.props.fallback)) {
+          return React.cloneElement(this.props.fallback, {
+            errorMessage: this.state.error?.message || '',
+          });
+        }
         return this.props.fallback;
       }
 
