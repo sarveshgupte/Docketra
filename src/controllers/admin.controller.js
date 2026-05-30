@@ -1011,7 +1011,7 @@ const updateCmsIntakeSettings = async (req, res) => {
     }
 
     if (nextCmsConfig.defaultWorkbasketId) {
-      const workbasket = await Team.findOne({ _id: nextCmsConfig.defaultWorkbasketId, firmId: tenantId, isActive: true }).select('_id').lean();
+      const workbasket = await Team.exists({ _id: nextCmsConfig.defaultWorkbasketId, firmId: tenantId, isActive: true });
       if (!workbasket) {
         return res.status(400).json({
           success: false,
@@ -1021,12 +1021,12 @@ const updateCmsIntakeSettings = async (req, res) => {
     }
 
     if (nextCmsConfig.defaultAssignee) {
-      const assignee = await User.findOne({
+      const assignee = await User.exists({
         firmId: tenantId,
         xID: nextCmsConfig.defaultAssignee,
         status: { $ne: 'deleted' },
         isActive: true,
-      }).select('_id');
+      });
       if (!assignee) {
         return res.status(400).json({
           success: false,

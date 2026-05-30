@@ -384,12 +384,12 @@ module.exports = (deps) => {
 
       let crmClientPromise = null;
       if (crmClientId) {
-        crmClientPromise = CrmClient.findOne({ _id: crmClientId, firmId }).select('_id').lean();
+        crmClientPromise = CrmClient.exists({ _id: crmClientId, firmId });
       }
 
       let dealPromise = null;
       if (dealId) {
-        dealPromise = Deal.findOne({ _id: dealId, firmId }).select('_id').lean();
+        dealPromise = Deal.exists({ _id: dealId, firmId });
       }
 
       let workTypePromise = null;
