@@ -65,7 +65,7 @@ async function saveRule(req, res) {
       if (!mongoose.Types.ObjectId.isValid(payload.workbasketId)) {
         return res.status(400).json({ success: false, message: 'workbasketId must be a valid workbasket id' });
       }
-      const workbasket = await Team.findOne({ _id: payload.workbasketId, firmId: req.user.firmId }).select('_id').lean();
+      const workbasket = await Team.exists({ _id: payload.workbasketId, firmId: req.user.firmId });
       if (!workbasket) {
         return res.status(404).json({ success: false, message: 'Workbasket not found' });
       }

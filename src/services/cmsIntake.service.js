@@ -360,7 +360,7 @@ async function resolveRouting({ firmId, config, metadata }) {
         validationMessage: 'Docket skipped because no active workbench mapping exists for the selected routing rule.',
       };
     }
-    const workbench = await Team.findOne({ firmId, _id: routing.workbasketId, isActive: true }).select('_id').lean();
+    const workbench = await Team.exists({ firmId, _id: routing.workbasketId, isActive: true });
     if (!workbench) {
       return {
         ...routing,
