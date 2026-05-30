@@ -268,6 +268,7 @@ export const FirmSettingsPage = () => {
       setConfig(saved);
       setHasUnsavedChanges(false);
       setSaveMessage({ type: 'success', text: 'Firm settings saved successfully.' });
+      void loadActivity();
     } catch {
       setSaveMessage({ type: 'error', text: 'Could not save settings. Please retry.' });
     }
@@ -503,11 +504,14 @@ export const FirmSettingsPage = () => {
               </div>
 
               <div className="mt-6 pt-5 border-t border-[var(--dt-border-whisper)] flex flex-wrap justify-end gap-3">
-                <Button type="button" variant="outline" onClick={() => navigate(`/app/firm/${firmSlug}/admin`)}>
-                  Back to Admin
-                </Button>
-                <Button type="button" variant="primary" onClick={handleSave} disabled={loadingConfig}>
-                  {loadingConfig ? 'Loading…' : (hasUnsavedChanges ? 'Save Changes' : 'Saved')}
+                <Button 
+                  type="button" 
+                  variant="primary" 
+                  onClick={handleSave} 
+                  disabled={loadingConfig}
+                  className="shadow-sm hover:shadow"
+                >
+                  {loadingConfig ? 'Saving Settings…' : 'Save Settings'}
                 </Button>
               </div>
             </Card>
