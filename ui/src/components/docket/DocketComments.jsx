@@ -4,12 +4,13 @@ import { formatDateTime, formatRelativeTime } from '../../utils/formatDateTime';
 const mentionPattern = /(@[a-zA-Z0-9._-]+)/g;
 
 const renderCommentText = (text = '') => {
-  if (!mentionPattern.test(text)) {
-    return text;
+  const normalizedText = typeof text === 'string' ? text : String(text ?? '');
+  if (!mentionPattern.test(normalizedText)) {
+    return normalizedText;
   }
 
   mentionPattern.lastIndex = 0;
-  const parts = text.split(mentionPattern);
+  const parts = normalizedText.split(mentionPattern);
   return parts.map((part, index) => {
     if (part.startsWith('@')) {
       return <mark key={`${part}-${index}`} className="docket-comments__mention">{part}</mark>;

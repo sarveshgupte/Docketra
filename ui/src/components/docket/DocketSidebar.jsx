@@ -38,6 +38,7 @@ export const DocketSidebar = ({
   const lastFocusedElementRef = useRef(null);
   const attachmentFileInputRef = useRef(null);
   const [requestPanelOpen, setRequestPanelOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('upload');
   const [requestExpiry, setRequestExpiry] = useState('24h');
   const [requestRequirePin, setRequestRequirePin] = useState(false);
   const [requestSendEmail, setRequestSendEmail] = useState(true);
@@ -267,151 +268,261 @@ export const DocketSidebar = ({
         };
 
         return (
-          <div className="space-y-4">
-          <div className="rounded-xl border border-gray-200 bg-white p-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Attach file</p>
-            <p className="mb-3 text-xs text-gray-500">
-              Comment is compulsory for every attachment.
-            </p>
-            <input
-              ref={attachmentFileInputRef}
-              type="file"
-              className="hidden"
-              onChange={(event) => onAttachmentFileChange?.(event.target.files?.[0] || null)}
-            />
-            <button
-              type="button"
-              className="mb-3 inline-flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              onClick={() => attachmentFileInputRef.current?.click()}
-              disabled={uploadingAttachment}
-            >
-              Attach File
-            </button>
-            <p className="mb-3 truncate text-xs text-gray-500">{selectedAttachmentFile?.name || 'No file selected'}</p>
-            <textarea
-              className="mb-3 w-full rounded-md border border-gray-300 p-2 text-sm"
-              rows={3}
-              value={attachmentComment}
-              onChange={(event) => onAttachmentCommentChange?.(event.target.value)}
-              placeholder="Add compulsory comment for this attachment"
-              disabled={uploadingAttachment}
-            />
-            <button
-              type="button"
-              className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={onUploadAttachment}
-              disabled={uploadingAttachment}
-            >
-              {uploadingAttachment ? `Uploading${uploadProgress ? ` ${uploadProgress}%` : '...'}` : 'Upload Attachment'}
-            </button>
-          </div>
+          <div className="space-y-4 flex flex-col h-full">
+            {/* Premium Segmented Pill Selector */}
+            <div className="flex p-1 bg-gray-100 rounded-lg">
+              <button
+                type="button"
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                  activeTab === 'upload'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('upload')}
+              >
+                Attach File
+              </button>
+              <button
+                type="button"
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                  activeTab === 'link'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('link')}
+              >
+                Secure Request Link
+              </button>
+            </div>
 
-          <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Upload via secure link</p>
-            <p className="mt-1 text-xs text-gray-500">Share a client upload link from this docket to collect documents securely.</p>
-            <button
-              type="button"
-              className="mt-3 inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
-              onClick={() => setRequestPanelOpen((open) => !open)}
-              aria-expanded={requestPanelOpen}
-              aria-controls={requestPanelOpen ? "request-options-panel" : undefined}
-            >
-              {requestPanelOpen ? 'Hide request options' : 'Request Documents'}
-            </button>
-            {requestPanelOpen ? (
-              <div id="request-options-panel" className="mt-3 rounded-lg border border-blue-100 bg-white p-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Request details</p>
-                <p className="mb-2 text-xs text-gray-500">Expiry</p>
-                <label className="mb-1 flex items-center gap-2 text-sm text-gray-700">
-                  <input type="radio" checked={requestExpiry === '24h'} onChange={() => setRequestExpiry('24h')} />
-                  <span>24 hours</span>
-                </label>
-                <label className="mb-2 flex items-center gap-2 text-sm text-gray-700">
-                  <input type="radio" checked={requestExpiry === '7d'} onChange={() => setRequestExpiry('7d')} />
-                  <span>7 days</span>
-                </label>
-
-                <label className="mb-2 flex items-center gap-2 text-sm text-gray-700">
-                  <input type="checkbox" checked={requestRequirePin} onChange={(event) => setRequestRequirePin(event.target.checked)} />
-                  <span>Require PIN</span>
-                </label>
-                <label className="mb-1 flex items-center gap-2 text-sm text-gray-700">
-                  <input type="checkbox" checked={requestSendEmail} onChange={(event) => setRequestSendEmail(event.target.checked)} />
-                  <span>Send email to client</span>
-                </label>
-                <p className="mb-3 text-xs text-gray-500">To: {clientEmail || 'No client email available'}</p>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                    onClick={() => onGenerateUploadLink?.({ requirePin: requestRequirePin, expiry: requestExpiry, sendEmail: requestSendEmail })}
-                    disabled={uploadLinkGenerating}
-                  >
-                    {uploadLinkGenerating ? 'Generating…' : 'Generate Link'}
-                  </button>
-                  <span className="text-xs text-gray-500">Expires in {expiryLabel}</span>
+            {/* Tab contents */}
+            {activeTab === 'upload' ? (
+              <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3">
+                <input
+                  ref={attachmentFileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={(event) => onAttachmentFileChange?.(event.target.files?.[0] || null)}
+                  disabled={uploadingAttachment}
+                />
+                
+                {/* Clean Clickable Upload Dropzone Box */}
+                <div
+                  onClick={() => !uploadingAttachment && attachmentFileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all ${
+                    selectedAttachmentFile
+                      ? 'border-blue-500 bg-blue-50/20'
+                      : 'border-gray-300 hover:border-blue-400 bg-gray-50/50 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex flex-col items-center justify-center">
+                    <svg
+                      className={`w-6 h-6 mb-1.5 ${
+                        selectedAttachmentFile ? 'text-blue-500 animate-pulse' : 'text-gray-400'
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                      />
+                    </svg>
+                    <p className="text-xs font-semibold text-gray-700 max-w-[200px] truncate">
+                      {selectedAttachmentFile ? selectedAttachmentFile.name : 'Click to select or drag a file'}
+                    </p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">
+                      {selectedAttachmentFile ? 'File attached successfully' : 'Compulsory comment required'}
+                    </p>
+                  </div>
                 </div>
 
+                <textarea
+                  className="w-full rounded-md border border-gray-300 p-2 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  rows={2}
+                  value={attachmentComment}
+                  onChange={(event) => onAttachmentCommentChange?.(event.target.value)}
+                  placeholder="Add compulsory comment for this attachment"
+                  disabled={uploadingAttachment}
+                />
+
+                <button
+                  type="button"
+                  className="w-full inline-flex items-center justify-center rounded-md bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={onUploadAttachment}
+                  disabled={uploadingAttachment || !selectedAttachmentFile || !attachmentComment?.trim()}
+                >
+                  {uploadingAttachment
+                    ? `Uploading${uploadProgress ? ` ${uploadProgress}%` : '...'}`
+                    : 'Upload Attachment'}
+                </button>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Link Expiry</span>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={requestExpiry === '24h'}
+                        onChange={() => setRequestExpiry('24h')}
+                        className="text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>24h</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={requestExpiry === '7d'}
+                        onChange={() => setRequestExpiry('7d')}
+                        className="text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>7d</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-gray-100 pt-2">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={requestRequirePin}
+                      onChange={(event) => setRequestRequirePin(event.target.checked)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>Require 4-digit PIN verification</span>
+                  </label>
+                </div>
+
+                <div className="border-t border-gray-100 pt-2">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={requestSendEmail}
+                      onChange={(event) => setRequestSendEmail(event.target.checked)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>Send link via email to client</span>
+                  </label>
+                  {requestSendEmail && (
+                    <p className="mt-1 text-[10px] text-gray-500 ml-6 truncate font-medium">
+                      To: {clientEmail || 'No client email available'}
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  className="w-full inline-flex items-center justify-center rounded-md bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() =>
+                    onGenerateUploadLink?.({
+                      requirePin: requestRequirePin,
+                      expiry: requestExpiry,
+                      sendEmail: requestSendEmail,
+                    })
+                  }
+                  disabled={uploadLinkGenerating}
+                >
+                  {uploadLinkGenerating ? 'Generating…' : 'Generate Link'}
+                </button>
+
                 {uploadLinkResult?.link ? (
-                  <div className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-2">
-                    <p className="text-xs font-semibold text-gray-700">Upload link ready</p>
-                    <p className="mt-1 break-all font-mono text-xs text-gray-600">{uploadLinkResult.link}</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
-                        onClick={handleCopyLink}
-                      >
-                        {copyStatus === 'success' ? (
-                          <><span aria-hidden="true">✓ </span>Copied!</>
-                        ) : copyStatus === 'error' ? (
-                          'Copy failed'
-                        ) : (
-                          'Copy link'
-                        )}
-                      </button>
-                      {uploadLinkResult.pin ? (
-                        <button
-                          type="button"
-                          className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
-                          onClick={() => setShowGeneratedPin((visible) => !visible)}
-                          aria-pressed={showGeneratedPin}
-                        >
-                          {showGeneratedPin ? 'Hide PIN' : 'Show PIN'}
-                        </button>
+                  <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50/20 p-2.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-blue-800">Secure link ready</p>
+                      {uploadLinkResult.expiresAt ? (
+                        <p className="text-[9px] text-gray-500">
+                          Exp: {new Date(uploadLinkResult.expiresAt).toLocaleDateString()}
+                        </p>
                       ) : null}
                     </div>
-                    <p className="sr-only" role="status" aria-live="polite">
-                      {copyStatus === 'success' ? 'Upload link copied to clipboard.' : copyStatus === 'error' ? 'Unable to copy upload link.' : ''}
-                    </p>
-                    {uploadLinkResult.pin ? (
-                      <p className="mt-1 text-xs text-gray-500">
-                        <span>PIN: </span>
-                        {showGeneratedPin ? <span>{uploadLinkResult.pin}</span> : <span aria-hidden="true">••••</span>}
-                      </p>
-                    ) : null}
-                    {uploadLinkResult.expiresAt ? <p className="mt-1 text-xs text-gray-500">Expires at: {new Date(uploadLinkResult.expiresAt).toLocaleString()}</p> : null}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={uploadLinkResult.link}
+                        className="flex-1 rounded-md border border-gray-200 bg-white p-1 text-[10px] font-mono text-gray-600 select-all"
+                      />
+                      <button
+                        type="button"
+                        className="rounded-md border border-gray-300 bg-white px-2 py-1 text-[10px] font-semibold text-gray-700 hover:bg-gray-50 whitespace-nowrap active:bg-gray-100 transition-colors"
+                        onClick={handleCopyLink}
+                      >
+                        {copyStatus === 'success' ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+
+                    {uploadLinkResult.pin && (
+                      <div className="flex items-center justify-between bg-white/60 rounded px-2 py-1 border border-gray-100">
+                        <span className="text-[10px] font-medium text-gray-500">Verification PIN:</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-gray-800">
+                            {showGeneratedPin ? uploadLinkResult.pin : '••••'}
+                          </span>
+                          <button
+                            type="button"
+                            className="text-[10px] font-semibold text-blue-600 hover:text-blue-800"
+                            onClick={() => setShowGeneratedPin((visible) => !visible)}
+                          >
+                            {showGeneratedPin ? 'Hide' : 'Show'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : null}
               </div>
-            ) : null}
-          </div>
+            )}
 
-          {!attachments.length ? <p className="docket-sidebar__empty">{EMPTY_STATES.attachments}</p> : null}
-          <ul className="space-y-3">
-            {attachments.map((attachment, index) => (
-              <li key={attachment.id || attachment._id || index} className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-                <p className="text-sm font-medium text-gray-900">{attachment.fileName || attachment.filename || 'Attachment'}</p>
-                <p className="mt-1 text-xs text-gray-500">Attached on {formatDateTime(attachment.createdAt || attachment.uploadedAt)}</p>
-                <p className="mt-1 text-xs text-gray-500">Attached by {uploaderLabel(attachment)}</p>
-                {String(attachment.source || '').toUpperCase() === 'CLIENT_UPLOAD' ? (
-                  <p className="mt-1 text-xs font-semibold text-blue-700">Uploaded via client link</p>
-                ) : null}
-                {attachment.description ? <p className="mt-1 text-xs text-gray-500">Comment: {attachment.description}</p> : null}
-              </li>
-            ))}
-          </ul>
+            {/* Scrollable attachments list at the bottom */}
+            <div className="border-t border-gray-200 pt-3 flex flex-col flex-1 min-h-[160px]">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 flex items-center justify-between">
+                <span>Attached Files</span>
+                <span className="bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full text-[10px] font-bold">
+                  {attachments.length}
+                </span>
+              </p>
+              {!attachments.length ? (
+                <p className="docket-sidebar__empty py-8 text-center text-xs text-gray-400">
+                  {EMPTY_STATES.attachments}
+                </p>
+              ) : (
+                <div className="overflow-y-auto max-h-[180px] space-y-2 pr-1 custom-scrollbar">
+                  {attachments.map((attachment, index) => (
+                    <div
+                      key={attachment.id || attachment._id || index}
+                      className="rounded-lg border border-gray-150 bg-gray-50/50 p-2.5 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p
+                          className="text-xs font-semibold text-gray-800 truncate"
+                          title={attachment.fileName || attachment.filename}
+                        >
+                          {attachment.fileName || attachment.filename || 'Attachment'}
+                        </p>
+                        {String(attachment.source || '').toUpperCase() === 'CLIENT_UPLOAD' && (
+                          <span className="bg-blue-100 text-blue-700 px-1.5 py-0.2 rounded text-[9px] font-bold whitespace-nowrap">
+                            Client
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-gray-500 mt-0.5">
+                        {formatDateTime(attachment.createdAt || attachment.uploadedAt)} • {uploaderLabel(attachment)}
+                      </p>
+                      {attachment.description && (
+                        <p className="text-[10px] text-gray-600 mt-1 bg-white border border-gray-100 rounded p-1.5 italic font-serif">
+                          Comment: {attachment.description}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         );
       }

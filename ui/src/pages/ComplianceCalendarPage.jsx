@@ -63,6 +63,8 @@ const defaultForm = {
   createDocket: false,
   categoryId: '',
   categoryMode: 'existing',
+  calendarEntryType: 'important_date',
+  reminderDaysBefore: '',
 };
 
 export const ComplianceCalendarPage = () => {
@@ -97,6 +99,8 @@ export const ComplianceCalendarPage = () => {
           categoryId: task.categoryId || '',
           categoryName: task.categoryName || '',
           linkedCaseId: task.linkedCaseId || '',
+          calendarEntryType: task.calendarEntryType || 'important_date',
+          reminderDaysBefore: Number.isFinite(Number(task.reminderDaysBefore)) ? String(task.reminderDaysBefore) : '',
         }));
       setEvents(calendarEvents);
     } catch (apiError) {
@@ -226,6 +230,8 @@ export const ComplianceCalendarPage = () => {
         categoryId: categoryForEvent?._id || form.categoryId || '',
         categoryName: categoryForEvent?.name || '',
         linkedCaseId,
+        calendarEntryType: form.calendarEntryType || 'important_date',
+        reminderDaysBefore: form.reminderDaysBefore === '' ? undefined : Number(form.reminderDaysBefore),
       };
 
       if (editId) {
@@ -254,6 +260,8 @@ export const ComplianceCalendarPage = () => {
       createDocket: false,
       categoryId: entry.categoryId || '',
       categoryMode: 'existing',
+      calendarEntryType: entry.calendarEntryType || 'important_date',
+      reminderDaysBefore: entry.reminderDaysBefore || '',
     });
   };
 
@@ -336,6 +344,8 @@ export const ComplianceCalendarPage = () => {
                 {item.clientName ? <p><strong>Client:</strong> {item.clientName}</p> : null}
                 {item.categoryName ? <p><strong>Category:</strong> {item.categoryName}</p> : null}
                 {item.linkedCaseId ? <p><strong>Docket:</strong> {item.linkedCaseId} (routed to Workbasket)</p> : null}
+                <p><strong>Type:</strong> {String(item.calendarEntryType || 'important_date').replaceAll('_', ' ')}</p>
+                {item.reminderDaysBefore !== '' ? <p><strong>Reminder:</strong> {item.reminderDaysBefore} day(s) before</p> : null}
               </div>
               {isAdmin ? (
                 <div className="compliance-calendar-page__event-actions">
@@ -365,6 +375,28 @@ export const ComplianceCalendarPage = () => {
               onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
               placeholder="Optional instructions for the team"
               rows={3}
+            />
+            <label htmlFor="calendar-entry-type">Entry type</label>
+            <select
+              id="calendar-entry-type"
+              value={form.calendarEntryType}
+              onChange={(event) => setForm((prev) => ({ ...prev, calendarEntryType: event.target.value }))}
+            >
+              <option value="important_date">Important date</option>
+              <option value="holiday">Holiday / off day</option>
+              <option value="birthday">Birthday</option>
+              <option value="working_day">Working-day exception</option>
+              <option value="off_day">Off-day exception</option>
+            </select>
+            <label htmlFor="calendar-reminder-days">Reminder days before</label>
+            <input
+              id="calendar-reminder-days"
+              type="number"
+              min="0"
+              max="30"
+              value={form.reminderDaysBefore}
+              onChange={(event) => setForm((prev) => ({ ...prev, reminderDaysBefore: event.target.value }))}
+              placeholder="Firm default"
             />
             <label htmlFor="calendar-client">Tag to client (optional)</label>
             <select

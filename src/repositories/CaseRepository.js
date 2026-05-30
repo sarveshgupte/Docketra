@@ -6,6 +6,28 @@ const { looksEncrypted } = require('../security/encryption.utils');
 const { normalizeLifecycle } = require('../domain/docketLifecycle');
 const log = require('../utils/log');
 const { getCanonicalDocketState } = require('../utils/docketStateMapper');
+
+const escapeRegExp = (value = '') => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const getIdentifierCandidates = (value = '') => {
+  const normalized = String(value || '').trim().replace(/[_\s]+/g, '-');
+  if (!normalized) return [];
+
+  const bareMatch = normalized.match(/^(\d{8}-\d{5})$/);
+  if (bareMatch) {
+    const bare = bareMatch[1];
+    return [bare, `CASE-${bare}`, `DOCKET-${bare}`];
+  }
+
+  const prefixedMatch = normalized.match(/^(CASE|DOCKET)-(\d{8}-\d{5})$/i);
+  if (prefixedMatch) {
+    const prefix = prefixedMatch[1].toUpperCase();
+    const bare = prefixedMatch[2];
+    const otherPrefix = prefix === 'CASE' ? 'DOCKET' : 'CASE';
+    return [`${prefix}-${bare}`, `${otherPrefix}-${bare}`, bare];
+  }
+
+  return [normalized];
+};
 /**
  * ⚠️ SECURITY: Case Repository - Firm-Scoped Data Access Layer ⚠️
  * 
@@ -401,7 +423,15 @@ const CaseRepository = {
       return null;
     }
     _guardSuperadmin(role);
-    const doc = await Case.findOne({ firmId, caseNumber });
+    const candidates = getIdentifierCandidates(caseNumber);
+    const identifierMatcher = candidates.map((candidate) => new RegExp(`^${escapeRegExp(candidate)}$`, 'i'));
+    const doc = await Case.findOne({
+      firmId,
+      $or: [
+        { caseNumber: { $in: identifierMatcher } },
+        { caseId: { $in: identifierMatcher } },
+      ],
+    });
     return _decryptCaseDoc(doc, firmId);
   },
 
@@ -419,13 +449,22 @@ const CaseRepository = {
       return null;
     }
     _guardSuperadmin(role);
+    const candidates = getIdentifierCandidates(caseId);
+    const identifierMatcher = candidates.map((candidate) => new RegExp(`^${escapeRegExp(candidate)}$`, 'i'));
+    const query = {
+      firmId,
+      $or: [
+        { caseId: { $in: identifierMatcher } },
+        { caseNumber: { $in: identifierMatcher } },
+      ],
+    };
 
     if (options.includeClient) {
-      return this._findWithClient({ firmId, caseId: String(caseId) }, firmId, role);
+      return this._findWithClient(query, firmId, role);
     }
 
     // During transition, caseId = caseNumber
-    const doc = await Case.findOne({ firmId, caseId });
+    const doc = await Case.findOne(query);
     return _decryptCaseDoc(doc, firmId);
   },
 

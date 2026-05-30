@@ -4,16 +4,33 @@ const serviceModulePath = require.resolve('../src/services/caseQuery.service');
 const narrativeModulePath = require.resolve('../src/services/commentHistoryNarrativeStorage.service');
 const docketNarrativeModulePath = require.resolve('../src/services/docketNarrativeStorage.service');
 
+const auditLogModulePath = require.resolve('../src/services/auditLog.service');
+
 delete require.cache[serviceModulePath];
 delete require.cache[narrativeModulePath];
 delete require.cache[docketNarrativeModulePath];
+delete require.cache[auditLogModulePath];
+
+require.cache[auditLogModulePath] = {
+  id: auditLogModulePath,
+  filename: auditLogModulePath,
+  loaded: true,
+  exports: {
+    logCaseHistory: async () => null,
+    logCaseAction: async () => null,
+  }
+};
 
 let failComment = false;
 let failHistory = false;
-require.cache[narrativeModulePath] = { id: narrativeModulePath, filename: narrativeModulePath, loaded: true, exports: { readJsonByRef: async ({ ref }) => {
-  if (ref?.objectKey?.includes('/comments/')) { if (failComment) throw new Error('comment fail'); return { text: 'cloud comment text', note: 'cloud note' }; }
-  if (failHistory) throw new Error('history fail'); return { description: 'cloud history description' };
-} } };
+require.cache[narrativeModulePath] = { id: narrativeModulePath, filename: narrativeModulePath, loaded: true, exports: {
+  readJsonByRef: async ({ ref }) => {
+    if (ref?.objectKey?.includes('/comments/')) { if (failComment) throw new Error('comment fail'); return { text: 'cloud comment text', note: 'cloud note' }; }
+    if (failHistory) throw new Error('history fail'); return { description: 'cloud history description' };
+  },
+  uploadHistory: async () => ({ provider: 'google-drive', mode: 'firm_connected', fileId: 'h1', objectKey: 'dummy-history' }),
+  uploadComment: async () => ({ provider: 'google-drive', mode: 'firm_connected', fileId: 'c1', objectKey: 'dummy-comment' })
+} };
 require.cache[docketNarrativeModulePath] = { id: docketNarrativeModulePath, filename: docketNarrativeModulePath, loaded: true, exports: { readNarrative: async () => null } };
 
 const buildSvc = require('../src/services/caseQuery.service');

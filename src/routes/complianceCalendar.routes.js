@@ -49,6 +49,8 @@ router.post('/', authorizeFirmPermission('TASK_MANAGE'), requireAdmin, userWrite
     categoryId,
     categoryName,
     linkedCaseId,
+    calendarEntryType,
+    reminderDaysBefore,
   } = req.body || {};
 
   if (!title || !dueDate) {
@@ -68,6 +70,8 @@ router.post('/', authorizeFirmPermission('TASK_MANAGE'), requireAdmin, userWrite
     categoryId: String(categoryId || '').trim() || undefined,
     categoryName: String(categoryName || '').trim() || undefined,
     linkedCaseId: String(linkedCaseId || '').trim() || undefined,
+    calendarEntryType: calendarEntryType || 'important_date',
+    reminderDaysBefore: Number.isFinite(Number(reminderDaysBefore)) ? Number(reminderDaysBefore) : undefined,
     createdBy: userId,
     updatedBy: userId,
   });
@@ -99,6 +103,8 @@ router.put('/:id', authorizeFirmPermission('TASK_MANAGE'), requireAdmin, userWri
     categoryId,
     categoryName,
     linkedCaseId,
+    calendarEntryType,
+    reminderDaysBefore,
   } = req.body || {};
   if (title !== undefined) entry.title = String(title).trim();
   if (description !== undefined) entry.description = String(description).trim();
@@ -109,6 +115,8 @@ router.put('/:id', authorizeFirmPermission('TASK_MANAGE'), requireAdmin, userWri
   if (categoryId !== undefined) entry.categoryId = String(categoryId || '').trim() || undefined;
   if (categoryName !== undefined) entry.categoryName = String(categoryName || '').trim() || undefined;
   if (linkedCaseId !== undefined) entry.linkedCaseId = String(linkedCaseId || '').trim() || undefined;
+  if (calendarEntryType !== undefined) entry.calendarEntryType = calendarEntryType;
+  if (reminderDaysBefore !== undefined) entry.reminderDaysBefore = Number(reminderDaysBefore);
   entry.updatedBy = userId;
 
   await entry.save();

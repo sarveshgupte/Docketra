@@ -1,6 +1,16 @@
 const { buildWorkflowMeta, logWorkflowEvent } = require('../utils/workflowDiagnostics');
 const commentHistoryNarrativeStorage = require('./commentHistoryNarrativeStorage.service');
 const { logCaseHistory } = require('./auditLog.service');
+const log = require('../utils/log');
+const CLOUD_NARRATIVE_TIMEOUT_MS = 1800;
+const DEFAULT_RUNTIME_TENANT = 'default-client-runtime-tenant';
+
+const withTimeout = (promise, timeoutMs, label) => Promise.race([
+  promise,
+  new Promise((_, reject) => {
+    setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+  }),
+]);
 
 module.exports = (deps) => {
   const {
@@ -77,11 +87,24 @@ module.exports = (deps) => {
     findScopedCaseAttachment,
     checkCaseAccess,
   } = deps;
+  const resolveTenantFirmId = (req) => {
+    const routeFirmId = req?.firmId;
+    if (routeFirmId && routeFirmId !== DEFAULT_RUNTIME_TENANT) return routeFirmId;
+    return req?.user?.firmId || routeFirmId;
+  };
+  const resolveTenantFirmCandidates = (req) => {
+    const routeFirmId = req?.firmId ? String(req.firmId) : null;
+    const userFirmId = req?.user?.firmId ? String(req.user.firmId) : null;
+    const candidates = [routeFirmId, userFirmId].filter(Boolean);
+    const filtered = candidates.filter((value) => value !== DEFAULT_RUNTIME_TENANT);
+    return [...new Set(filtered.length ? filtered : candidates)];
+  };
 
   const addComment = async (req, res) => {
     const startedAt = Date.now();
     const { caseId } = req.params;
-    const tenantFirmId = req.firmId || req.user?.firmId;
+    const tenantFirmId = resolveTenantFirmId(req);
+    const tenantFirmCandidates = resolveTenantFirmCandidates(req);
     let caseData = null;
 
     try {
@@ -95,7 +118,7 @@ module.exports = (deps) => {
         });
       }
 
-      if (!tenantFirmId) {
+      if (!tenantFirmId || tenantFirmCandidates.length === 0) {
         return res.status(400).json({
           success: false,
           message: 'Firm context is required',
@@ -104,19 +127,29 @@ module.exports = (deps) => {
       
       // PR: Case Identifier Semantics - Resolve identifier to internal ID
       // This handles both ObjectId and CASE-YYYYMMDD-XXXXX formats
-      try {
-        const internalId = await resolveCaseIdentifier(tenantFirmId, caseId, req.user.role);
-        caseData = await CaseRepository.findByInternalId(tenantFirmId, internalId, req.user.role);
-      } catch (error) {
-        if (!error.message) {
-          error.message = 'Case not found during identifier resolution';
+      let resolvedFirmId = tenantFirmId;
+      let lastResolutionError = null;
+      for (const candidateFirmId of tenantFirmCandidates) {
+        try {
+          const internalId = await resolveCaseIdentifier(candidateFirmId, caseId, req.user.role);
+          caseData = await CaseRepository.findByInternalId(candidateFirmId, internalId, req.user.role);
+          if (caseData) {
+            resolvedFirmId = candidateFirmId;
+            break;
+          }
+        } catch (error) {
+          lastResolutionError = error;
         }
-        throw error;
+      }
+      if (!caseData && lastResolutionError && !lastResolutionError.message) {
+        lastResolutionError.message = 'Case not found during identifier resolution';
       }
       
       if (!caseData) {
         throw new Error('Case not found');
       }
+      const effectiveFirmId = String(caseData.firmId || resolvedFirmId);
+      req.firmId = effectiveFirmId;
       
       // PR #45: Allow comments in view mode - no assignment/ownership check
       // Only check if case is locked by someone else - use authenticated user for security
@@ -126,22 +159,37 @@ module.exports = (deps) => {
       }
       
       // Create comment - use caseId from database (caseNumber for display)
-      const commentRef = await commentHistoryNarrativeStorage.uploadComment({
-        firmId: tenantFirmId,
-        docketId: caseData.caseId,
-        commentId: String(randomUUID()),
-        payload: { text, note: note || null },
-      });
+      let commentRef = null;
+      let storageMode = 'local_fallback';
+      try {
+        commentRef = await withTimeout(
+          commentHistoryNarrativeStorage.uploadComment({
+            firmId: effectiveFirmId,
+            docketId: caseData.caseId,
+            commentId: String(randomUUID()),
+            payload: { text, note: note || null },
+          }),
+          CLOUD_NARRATIVE_TIMEOUT_MS,
+          'comment narrative upload'
+        );
+        storageMode = 'cloud_first';
+      } catch (uploadError) {
+        log.warn(`[ADD_COMMENT] Cloud-first comment narrative storage failed to upload: ${uploadError.message}. Falling back to local MongoDB storage.`);
+      }
 
-      const comment = await Comment.create({
+      const commentPayload = {
         caseId: caseData.caseId,
-        firmId: tenantFirmId,
+        firmId: effectiveFirmId,
         text,
         createdBy: req.user.email.toLowerCase(),
         createdByXID: req.user.xID,
         createdByName: req.user.name,
         note,
-        commentRef: {
+        storageMode,
+      };
+
+      if (commentRef) {
+        commentPayload.commentRef = {
           provider: commentRef.provider,
           mode: commentRef.mode,
           fileId: commentRef.fileId || null,
@@ -150,16 +198,17 @@ module.exports = (deps) => {
           version: 1,
           updatedAt: new Date(),
           updatedBy: req.user.xID,
-        },
-        storageMode: 'cloud_first',
-      });
+        };
+      }
+
+      const comment = await Comment.create(commentPayload);
       
       // PR #45: Add CaseAudit entry with xID attribution
       // Sanitize comment text for logging to prevent log injection
       const sanitizedText = sanitizeForLog(text, COMMENT_PREVIEW_LENGTH);
       await CaseAudit.create({
         caseId: caseData.caseId,
-        firmId: tenantFirmId,
+        firmId: effectiveFirmId,
         actionType: 'CASE_COMMENT_ADDED',
         description: `Comment added by ${req.user.xID}: ${sanitizedText}${text.length > COMMENT_PREVIEW_LENGTH ? '...' : ''}`,
         performedByXID: req.user.xID,
@@ -172,7 +221,7 @@ module.exports = (deps) => {
       // Also add to CaseHistory via unified logger
       await logCaseHistory({
         caseId: caseData.caseId,
-        firmId: tenantFirmId,
+        firmId: effectiveFirmId,
         actionType: 'CASE_COMMENT_ADDED',
         actionLabel: `Comment added by ${req.user.email}`,
         description: `Comment added by ${req.user.email}: ${text.substring(0, COMMENT_PREVIEW_LENGTH)}${text.length > COMMENT_PREVIEW_LENGTH ? '...' : ''}`,
@@ -188,7 +237,7 @@ module.exports = (deps) => {
 
       logActivitySafe({
         docketId: caseData.caseInternalId,
-        firmId: tenantFirmId,
+        firmId: effectiveFirmId,
         type: 'COMMENT_ADDED',
         description: `Comment added`,
         performedByXID: req.user?.xID,
@@ -199,7 +248,7 @@ module.exports = (deps) => {
       if (caseData.createdByXID) participantXIDs.add(String(caseData.createdByXID).toUpperCase());
       const commenterXIDs = await Comment.distinct('createdByXID', {
         caseId: caseData.caseId,
-        firmId: tenantFirmId,
+        firmId: effectiveFirmId,
       });
       commenterXIDs.forEach((xid) => {
         if (xid) participantXIDs.add(String(xid).toUpperCase());
@@ -208,7 +257,7 @@ module.exports = (deps) => {
 
       await Promise.all(
         [...participantXIDs].map((participantXID) => createNotification({
-          firmId: tenantFirmId,
+          firmId: effectiveFirmId,
           userId: participantXID,
           type: NotificationTypes.COMMENT_ADDED,
           docketId: caseData.caseId,

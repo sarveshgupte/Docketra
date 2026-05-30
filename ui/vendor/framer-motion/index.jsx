@@ -33,7 +33,9 @@ const MotionElement = ({
 
 
   useEffect(() => {
-    if (!whileInView || !elementRef.current || typeof IntersectionObserver === 'undefined') {
+    const target = elementRef.current;
+    const isDomNode = Boolean(target) && typeof target === 'object' && typeof target.nodeType === 'number';
+    if (!whileInView || !isDomNode || typeof IntersectionObserver === 'undefined') {
       setInView(true);
       return undefined;
     }
@@ -50,7 +52,7 @@ const MotionElement = ({
       { threshold: viewport?.amount ?? 0.1 }
     );
 
-    observer.observe(elementRef.current);
+    observer.observe(target);
     return () => observer.disconnect();
   }, [once, viewport?.amount, whileInView]);
 

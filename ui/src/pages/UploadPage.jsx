@@ -26,6 +26,7 @@ export const UploadPage = () => {
   const [requiresPin, setRequiresPin] = useState(false);
   const [pin, setPin] = useState('');
   const [files, setFiles] = useState([]);
+  const [clientComment, setClientComment] = useState('');
   const [pageStatus, setPageStatus] = useState('loading');
   const [status, setStatus] = useState('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -44,6 +45,7 @@ export const UploadPage = () => {
       setStatus('idle');
       setErrorMessage('');
       setPinHelpMessage('');
+      setClientComment('');
       try {
         const response = await fetch(`${uploadEndpoint}/meta`);
         const payload = await response.json();
@@ -105,6 +107,7 @@ export const UploadPage = () => {
         const formData = new FormData();
         formData.append('file', file);
         if (requiresPin) formData.append('pin', pin);
+        if (clientComment.trim()) formData.append('comment', clientComment.trim());
 
         const response = await fetch(uploadEndpoint, {
           method: 'POST',
@@ -121,6 +124,7 @@ export const UploadPage = () => {
 
       setUploading(false);
       setStatus('success');
+      setClientComment('');
     } catch (error) {
       setUploading(false);
       setStatus('error');
@@ -235,6 +239,31 @@ export const UploadPage = () => {
                   ? files.map((file, index) => <div key={`${file.name}-${index}`}>{file.name}</div>)
                   : 'No files selected'}
               </div>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label htmlFor="client-comment" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: 'var(--dt-text-secondary)', fontSize: '14px' }}>
+                Comments or notes (optional)
+              </label>
+              <textarea
+                id="client-comment"
+                placeholder="Write any comments or notes about these documents..."
+                value={clientComment}
+                onChange={(event) => setClientComment(event.target.value)}
+                style={{
+                  width: '100%',
+                  minHeight: '80px',
+                  padding: '10px',
+                  border: '1px solid var(--dt-border)',
+                  borderRadius: '8px',
+                  fontFamily: 'inherit',
+                  fontSize: '14px',
+                  resize: 'vertical',
+                  boxSizing: 'border-box',
+                  outline: 'none',
+                }}
+                disabled={uploading}
+              />
             </div>
 
             <button

@@ -7,6 +7,7 @@ export const RouteErrorFallback = ({
   message = 'An unexpected error occurred.',
   backTo,
   onRetry,
+  errorMessage = '',
 }) => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
@@ -18,6 +19,9 @@ export const RouteErrorFallback = ({
       <div className="max-w-lg w-full rounded-xl border border-red-200 bg-white p-6">
         <h2 className="text-xl font-semibold text-red-700">{title}</h2>
         <p className="mt-2 text-sm text-gray-700">{message}</p>
+        {import.meta.env.DEV && errorMessage ? (
+          <p className="mt-2 text-xs text-red-700 break-all">{errorMessage}</p>
+        ) : null}
         <div className="mt-4 flex flex-wrap gap-2">
           <button type="button" className="btn btn-primary" onClick={onRetry || (() => window.location.reload())}>Retry</button>
           <button type="button" className="btn btn-ghost" onClick={() => navigate(backTo || fallbackRoute)}>

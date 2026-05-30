@@ -4,6 +4,10 @@ const FIRM_CONFIG_STORAGE_KEY = 'firmConfig';
 
 const DEFAULT_FIRM_CONFIG = {
   slaDefaultDays: 3,
+  slaWorkingDays: [1, 2, 3, 4, 5],
+  slaHolidayDates: [],
+  slaWorkingDateOverrides: [],
+  calendarReminderLeadDays: 3,
   escalationInactivityThresholdHours: 24,
   workloadThreshold: 15,
   enablePerformanceView: true,

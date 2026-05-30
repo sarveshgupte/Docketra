@@ -102,7 +102,7 @@ const commentSchema = new mongoose.Schema({
   },
   storageMode: {
     type: String,
-    enum: ['cloud_first', 'legacy_mongo'],
+    enum: ['cloud_first', 'legacy_mongo', 'local_fallback'],
     default: 'legacy_mongo',
   },
   /**

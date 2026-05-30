@@ -26,6 +26,7 @@ import { formatDateTime, getISODateInTimezone } from '../utils/formatDateTime';
 import { formatDocketId } from '../utils/formatters';
 import { CASE_DETAIL_TABS, VALID_CASE_DETAIL_TAB_NAMES } from '../utils/constants';
 import { DocketSidebar } from '../components/docket/DocketSidebar';
+import { DocketComments } from '../components/docket/DocketComments';
 import { StickyTabs } from '../components/common/StickyTabs';
 import './CaseDetailPage.css';
 import { ROUTES } from '../constants/routes';
@@ -43,7 +44,6 @@ import { CaseDetailAlerts } from './caseDetail/CaseDetailAlerts';
 import { CaseDetailSummaryHeader } from './caseDetail/CaseDetailSummaryHeader';
 import { CaseDetailOverviewPanel } from './caseDetail/CaseDetailOverviewPanel';
 import { useCaseDetailTimeline } from './caseDetail/useCaseDetailTimeline';
-import { useClientDocketHistory } from './caseDetail/useClientDocketHistory';
 import { useDocketLifecycleActions } from './caseDetail/useDocketLifecycleActions';
 import { useDocketAttachments } from './caseDetail/useDocketAttachments';
 import { useDocketClone } from './caseDetail/useDocketClone';
@@ -59,6 +59,8 @@ import {
 const CaseDetailAttachmentsPanel = lazy(() => import('./caseDetail/CaseDetailAttachmentsPanel').then((module) => ({ default: module.CaseDetailAttachmentsPanel })));
 const CaseDetailActivityPanel = lazy(() => import('./caseDetail/CaseDetailActivityPanel').then((module) => ({ default: module.CaseDetailActivityPanel })));
 const CaseDetailHistoryPanel = lazy(() => import('./caseDetail/CaseDetailHistoryPanel').then((module) => ({ default: module.CaseDetailHistoryPanel })));
+import { useClientDocketHistory } from './caseDetail/useClientDocketHistory';
+// showFileAction={!routedTeamCannotResolve && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)}
 import {
   ACTION_RETRY_KEY,
   INITIAL_VIRTUAL_WINDOW,
@@ -276,18 +278,8 @@ export const CaseDetailPage = () => {
     { name: CASE_DETAIL_TABS.OVERVIEW, label: 'Overview' },
     { name: CASE_DETAIL_TABS.ATTACHMENTS, label: 'Attachments', badge: attachments.length || null },
     { name: CASE_DETAIL_TABS.ACTIVITY, label: 'Activity', badge: mergedTimelineEvents.length || null },
-    { name: CASE_DETAIL_TABS.HISTORY, label: 'History' },
     { name: CASE_DETAIL_TABS.KNOWLEDGE, label: 'Linked Knowledge' },
   ]), [attachments.length, mergedTimelineEvents.length]);
-  const {
-    loadingClientDockets,
-    clientDockets,
-    clientDocketsError,
-  } = useClientDocketHistory({
-    activeTab,
-    clientId: caseData?.clientId,
-    caseId,
-  });
 
   const visibleComments = useMemo(() => comments.slice(-commentWindowSize), [comments, commentWindowSize]);
   const commentDraftKey = `docketra_case_comment_draft_${firmSlug || 'firm'}_${caseId}`;
@@ -324,6 +316,15 @@ export const CaseDetailPage = () => {
   const linkedClientRoute = linkedClientId ? ROUTES.CLIENT_WORKSPACE(firmSlug, linkedClientId) : '';
   const isInternalWork = Boolean(caseInfo?.isInternal || caseInfo?.workType === 'internal');
   const fromClientRoute = location.state?.fromClientRoute || '';
+  const {
+    loadingClientDockets,
+    clientDockets,
+    clientDocketsError,
+  } = useClientDocketHistory({
+    activeTab,
+    clientId: clientMongoId || linkedClientId || caseInfo?.clientId || caseData?.clientId,
+    caseId,
+  });
   const docketStatusLabel = caseInfo?.status || caseInfo?.lifecycle || '—';
   const assigneeLabel = caseInfo?.assignedToName
     || caseInfo?.assignedTo
@@ -1324,7 +1325,7 @@ export const CaseDetailPage = () => {
         <div className="case-detail-layout-grid flex w-full flex-col gap-6" style={{ padding: '0 24px 24px' }}>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full">
             {/* Middle Left: Comments thread & Composer & Actions */}
-            <div className="lg:col-span-8 flex flex-col gap-6 w-full">
+            <div className="lg:col-span-12 flex flex-col gap-6 w-full">
               <section className="case-card border border-gray-100 bg-white rounded-2xl p-6 shadow-sm">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   💬 Docket Comments
@@ -1441,49 +1442,24 @@ export const CaseDetailPage = () => {
                 )}
               </section>
             </div>
-
-            {/* Middle Right: Details, Checklist, SOP instructions - HubSpot sidebar style */}
-            <div className="lg:col-span-4 flex flex-col gap-6 w-full">
-              <section className="case-card border border-gray-100 bg-white rounded-2xl p-6 shadow-sm">
-                <h2 className="text-md font-semibold text-gray-900 mb-4 border-b pb-2 border-gray-50">
-                  📋 Docket Overview
-                </h2>
-                <div className="flex flex-col gap-3">
-                  <div className="flex justify-between border-b pb-2 border-gray-50">
-                    <span className="text-xs text-gray-500 font-medium">Assignee</span>
-                    <span className="text-sm text-gray-900 font-semibold">{assigneeLabel}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2 border-gray-50">
-                    <span className="text-xs text-gray-500 font-medium">Workbasket</span>
-                    <span className="text-sm text-gray-900 font-semibold">{queueLabel}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2 border-gray-50">
-                    <span className="text-xs text-gray-500 font-medium">Created</span>
-                    <span className="text-sm text-gray-900 font-semibold">{formatDateTime(caseInfo?.createdAt)}</span>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-gray-500 font-medium">Description</span>
-                    <span className="text-sm text-gray-800 whitespace-pre-wrap break-words">{descriptionContent || '—'}</span>
-                  </div>
-                </div>
-              </section>
-            </div>
           </div>
 
           {/* Bottom Section: Client history */}
-          <div className="w-full mt-4">
-            <Suspense fallback={<CaseDetailPanelSkeleton title="Loading history…" rows={6} />}>
-              <CaseDetailHistoryPanel
-                loadingClientDockets={loadingClientDockets}
-                clientDockets={clientDockets}
-                clientDocketsError={clientDocketsError}
-                firmSlug={firmSlug}
-                linkedClientRoute={linkedClientRoute}
-                returnTo={returnTo}
-                fromClientRoute={fromClientRoute}
-                navigate={navigate}
-              />
-            </Suspense>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full mt-6">
+            <div className="lg:col-span-12 flex flex-col gap-6 w-full">
+              <Suspense fallback={<CaseDetailPanelSkeleton />}>
+                <CaseDetailHistoryPanel
+                  loadingClientDockets={loadingClientDockets}
+                  clientDockets={clientDockets}
+                  clientDocketsError={clientDocketsError}
+                  firmSlug={firmSlug}
+                  linkedClientRoute={linkedClientRoute}
+                  returnTo={returnTo}
+                  fromClientRoute={fromClientRoute}
+                  navigate={navigate}
+                />
+              </Suspense>
+            </div>
           </div>
         </div>
 

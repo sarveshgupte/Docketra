@@ -86,6 +86,17 @@ const taskSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  calendarEntryType: {
+    type: String,
+    enum: ['important_date', 'holiday', 'birthday', 'working_day', 'off_day', null],
+    default: null,
+  },
+  reminderDaysBefore: {
+    type: Number,
+    min: 0,
+    max: 30,
+    default: null,
+  },
   taskRef: {
     provider: { type: String, trim: true },
     mode: { type: String, enum: ['firm_connected', 'managed_fallback'] },

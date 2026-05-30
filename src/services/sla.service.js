@@ -71,6 +71,12 @@ const normalizeSlaHours = (value) => {
   return parsed;
 };
 
+const normalizeSlaWorkingDays = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return parsed;
+};
+
 async function resolveSlaRule(docket = {}, options = {}) {
   const firmId = normalizeIdentifier(docket.firmId || options.firmId);
   if (!firmId) return null;
@@ -88,10 +94,14 @@ async function resolveSlaRule(docket = {}, options = {}) {
 async function calculateSlaDueDate(docket = {}, options = {}) {
   const startAt = docket.createdAt || docket.updatedAt || options.now || new Date();
   const rule = options.rule || await resolveSlaRule(docket, options);
+  const slaWorkingDays = normalizeSlaWorkingDays(rule?.slaWorkingDays);
   const slaHours = normalizeSlaHours(rule?.slaHours);
-  if (!slaHours) return null;
+  if (!slaWorkingDays && !slaHours) return null;
 
-  return calculateDueDate(startAt, Math.round(slaHours * 60), options.calendarConfig || DEFAULT_SLA_CONFIG);
+  const durationMinutes = slaWorkingDays
+    ? Math.round(slaWorkingDays * DEFAULT_WORKDAY_HOURS * 60)
+    : Math.round(slaHours * 60);
+  return calculateDueDate(startAt, durationMinutes, options.calendarConfig || DEFAULT_SLA_CONFIG);
 }
 
 function calculateFallbackDueDateFromDays(startAt, days, options = {}) {

@@ -19,6 +19,16 @@ const enabledDisabledOptions = [
   { value: 'false', label: 'Disabled' },
 ];
 
+const weekdayOptions = [
+  { value: 1, label: 'Mon' },
+  { value: 2, label: 'Tue' },
+  { value: 3, label: 'Wed' },
+  { value: 4, label: 'Thu' },
+  { value: 5, label: 'Fri' },
+  { value: 6, label: 'Sat' },
+  { value: 7, label: 'Sun' },
+];
+
 const defaultSlaForm = {
   id: '',
   category: '',
@@ -56,6 +66,8 @@ export const FirmSettingsPage = () => {
   const [deletingRuleId, setDeletingRuleId] = useState('');
   const [slaMessage, setSlaMessage] = useState({ type: '', text: '' });
   const [slaForm, setSlaForm] = useState(defaultSlaForm);
+  const [holidayDateDraft, setHolidayDateDraft] = useState('');
+  const [workingDateDraft, setWorkingDateDraft] = useState('');
 
   const categoryOptions = useMemo(() => ([
     { value: '', label: 'All categories' },
@@ -205,9 +217,44 @@ export const FirmSettingsPage = () => {
     setHasUnsavedChanges(true);
   };
 
+  const toggleWorkingDay = (day) => {
+    setSaveMessage({ type: '', text: '' });
+    setConfig((prev) => {
+      const current = Array.isArray(prev.slaWorkingDays) ? prev.slaWorkingDays : [1, 2, 3, 4, 5];
+      const next = current.includes(day)
+        ? current.filter((entry) => entry !== day)
+        : [...current, day].sort((a, b) => a - b);
+      return { ...prev, slaWorkingDays: next.length ? next : current };
+    });
+    setHasUnsavedChanges(true);
+  };
+
+  const addCalendarDate = (fieldName, value, reset) => {
+    const normalized = String(value || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return;
+    setConfig((prev) => ({
+      ...prev,
+      [fieldName]: [...new Set([...(Array.isArray(prev[fieldName]) ? prev[fieldName] : []), normalized])].sort(),
+    }));
+    reset('');
+    setHasUnsavedChanges(true);
+  };
+
+  const removeCalendarDate = (fieldName, value) => {
+    setConfig((prev) => ({
+      ...prev,
+      [fieldName]: (Array.isArray(prev[fieldName]) ? prev[fieldName] : []).filter((entry) => entry !== value),
+    }));
+    setHasUnsavedChanges(true);
+  };
+
   const handleSave = async () => {
     const firmPayload = {
       slaDefaultDays: Number(config.slaDefaultDays) || 0,
+      slaWorkingDays: Array.isArray(config.slaWorkingDays) && config.slaWorkingDays.length ? config.slaWorkingDays : [1, 2, 3, 4, 5],
+      slaHolidayDates: Array.isArray(config.slaHolidayDates) ? config.slaHolidayDates : [],
+      slaWorkingDateOverrides: Array.isArray(config.slaWorkingDateOverrides) ? config.slaWorkingDateOverrides : [],
+      calendarReminderLeadDays: Number(config.calendarReminderLeadDays) || 0,
       escalationInactivityThresholdHours: Number(config.escalationInactivityThresholdHours) || 0,
       workloadThreshold: Number(config.workloadThreshold) || 15,
       enablePerformanceView: Boolean(config.enablePerformanceView),
@@ -247,7 +294,7 @@ export const FirmSettingsPage = () => {
       category: rule.category || '',
       subcategory: rule.subcategory || '',
       workbasketId: rule.workbasketId || '',
-      slaHours: String(rule.slaHours || ''),
+      slaHours: String(rule.slaWorkingDays || (rule.slaHours ? Number(rule.slaHours) / 8 : '') || ''),
       isActive: rule.isActive !== false,
     });
     setSlaMessage({ type: '', text: '' });
@@ -255,7 +302,7 @@ export const FirmSettingsPage = () => {
 
   const handleSaveRule = async () => {
     if (!slaForm.slaHours || Number(slaForm.slaHours) <= 0) {
-      setSlaMessage({ type: 'error', text: 'Enter a valid SLA hour value.' });
+      setSlaMessage({ type: 'error', text: 'Enter a valid SLA working-day value.' });
       return;
     }
 
@@ -266,7 +313,7 @@ export const FirmSettingsPage = () => {
         category: slaForm.category || null,
         subcategory: slaForm.subcategory || null,
         workbasketId: slaForm.workbasketId || null,
-        slaHours: Number(slaForm.slaHours),
+        slaWorkingDays: Number(slaForm.slaHours),
         isActive: Boolean(slaForm.isActive),
       });
       await loadSlaData();
@@ -331,6 +378,33 @@ export const FirmSettingsPage = () => {
                   min="1"
                   value={config.slaDefaultDays}
                   onChange={handleNumberChange}
+                  helpText="Used as working days when no category or subcategory SLA is configured."
+                />
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-[var(--dt-text)]">Firm working days</label>
+                  <div className="flex flex-wrap gap-2">
+                    {weekdayOptions.map((day) => (
+                      <Button
+                        key={day.value}
+                        type="button"
+                        variant={(config.slaWorkingDays || []).includes(day.value) ? 'primary' : 'outline'}
+                        size="small"
+                        onClick={() => toggleWorkingDay(day.value)}
+                      >
+                        {day.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <Input
+                  label="Important date reminder lead days"
+                  name="calendarReminderLeadDays"
+                  type="number"
+                  min="0"
+                  max="30"
+                  value={config.calendarReminderLeadDays}
+                  onChange={handleNumberChange}
+                  helpText="Calendar entries notify users this many days before the date."
                 />
                 <Input
                   label="Escalation inactivity threshold (hours)"
@@ -357,6 +431,39 @@ export const FirmSettingsPage = () => {
                   onChange={handleTextChange}
                   helpText="Optional. This image replaces the initials badge in the sidebar."
                 />
+              </div>
+            </Card>
+          </section>
+
+          <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
+            <div className="space-y-2 lg:col-span-1">
+              <h2 className="text-lg font-medium text-[var(--dt-text)]">Firm Calendar</h2>
+              <p className="text-sm text-[var(--dt-text-muted)]">Set date-specific holidays and working-day exceptions used by SLA calculations.</p>
+            </div>
+            <Card className="lg:col-span-2 lg:max-w-4xl">
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <div className="space-y-3">
+                  <Input label="Holiday / off day" type="date" value={holidayDateDraft} onChange={(event) => setHolidayDateDraft(event.target.value)} />
+                  <Button type="button" variant="outline" onClick={() => addCalendarDate('slaHolidayDates', holidayDateDraft, setHolidayDateDraft)}>Add Off Day</Button>
+                  <div className="flex flex-wrap gap-2">
+                    {(config.slaHolidayDates || []).map((date) => (
+                      <button key={date} type="button" className="rounded border border-[var(--dt-border-whisper)] px-3 py-1 text-sm text-[var(--dt-text-secondary)]" onClick={() => removeCalendarDate('slaHolidayDates', date)}>
+                        {date} ×
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <Input label="Working-day exception" type="date" value={workingDateDraft} onChange={(event) => setWorkingDateDraft(event.target.value)} />
+                  <Button type="button" variant="outline" onClick={() => addCalendarDate('slaWorkingDateOverrides', workingDateDraft, setWorkingDateDraft)}>Add Working Day</Button>
+                  <div className="flex flex-wrap gap-2">
+                    {(config.slaWorkingDateOverrides || []).map((date) => (
+                      <button key={date} type="button" className="rounded border border-[var(--dt-border-whisper)] px-3 py-1 text-sm text-[var(--dt-text-secondary)]" onClick={() => removeCalendarDate('slaWorkingDateOverrides', date)}>
+                        {date} ×
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </Card>
           </section>
@@ -435,7 +542,7 @@ export const FirmSettingsPage = () => {
                   options={workbasketOptions}
                 />
                 <Input
-                  label="SLA hours"
+                  label="SLA working days"
                   name="slaHours"
                   type="number"
                   min="1"
@@ -470,7 +577,7 @@ export const FirmSettingsPage = () => {
                     <thead className="bg-[var(--dt-bg-warm)] text-left text-xs uppercase tracking-wider text-[var(--dt-text-muted)]">
                       <tr>
                         <th className="px-4 py-3">Category / Workbasket</th>
-                        <th className="px-4 py-3">SLA hours</th>
+                        <th className="px-4 py-3">SLA working days</th>
                         <th className="px-4 py-3">Status</th>
                         <th className="px-4 py-3 text-right">Actions</th>
                       </tr>
@@ -479,7 +586,7 @@ export const FirmSettingsPage = () => {
                       {slaRules.map((rule) => (
                         <tr key={rule._id || rule.id}>
                           <td className="px-4 py-3 font-medium text-[var(--dt-text)]">{getRuleScopeLabel(rule)}</td>
-                          <td className="px-4 py-3">{rule.slaHours}</td>
+                          <td className="px-4 py-3">{rule.slaWorkingDays || (rule.slaHours ? Number(rule.slaHours) / 8 : '—')}</td>
                           <td className="px-4 py-3">{rule.isActive === false ? 'Disabled' : 'Active'}</td>
                           <td className="px-4 py-3">
                             <div className="flex justify-end gap-2">
@@ -505,7 +612,7 @@ export const FirmSettingsPage = () => {
                   <div className="px-4 py-6">
                     <EmptyState
                       title="No SLA rules configured"
-                      description="Add a default rule first, then layer category, subcategory, or workbasket overrides."
+                      description="Add a default working-day rule first, then layer category, subcategory, or workbasket overrides."
                     />
                   </div>
                 )}

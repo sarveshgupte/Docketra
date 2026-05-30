@@ -79,6 +79,7 @@ export const AdminCategoriesSection = ({
                         return linkedWorkbasketName || '—';
                       },
                     },
+                    { key: 'defaultSlaDays', label: 'SLA', render: (sub) => Number(sub.defaultSlaDays || 0) > 0 ? `${sub.defaultSlaDays} working day${Number(sub.defaultSlaDays) === 1 ? '' : 's'}` : '—' },
                     { key: 'status', label: 'Status', render: (sub) => <StatusBadge status={sub.isActive ? 'ACTIVE' : 'INACTIVE'} /> },
                     {
                       key: 'actions',

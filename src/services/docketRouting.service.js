@@ -9,6 +9,15 @@ const { randomUUID } = require('crypto');
 const { getCanonicalDocketState } = require('../utils/docketStateMapper');
 const CaseStatus = require('../domain/case/caseStatus');
 const { NotificationTypes, createNotification } = require('../domain/notifications');
+const log = require('../utils/log');
+const CLOUD_NARRATIVE_TIMEOUT_MS = 1800;
+
+const withTimeout = (promise, timeoutMs, label) => Promise.race([
+  promise,
+  new Promise((_, reject) => {
+    setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+  }),
+]);
 
 const makeError = (message, statusCode = 400) => {
   const error = new Error(message);
@@ -85,21 +94,36 @@ async function routeDocket({ docketId, actor, firmId, toTeamId, note }) {
 
   // Create comment - using commentHistoryNarrativeStorage for cloud-first narrative compliance
   const commentId = String(randomUUID());
-  const commentRef = await commentHistoryNarrativeStorage.uploadComment({
-    firmId,
-    docketId: docket.caseId,
-    commentId,
-    payload: { text: note, note: null },
-  });
+  let commentRef = null;
+  let storageMode = 'local_fallback';
+  try {
+    commentRef = await withTimeout(
+      commentHistoryNarrativeStorage.uploadComment({
+        firmId,
+        docketId: docket.caseId,
+        commentId,
+        payload: { text: note, note: null },
+      }),
+      CLOUD_NARRATIVE_TIMEOUT_MS,
+      'routing comment narrative upload'
+    );
+    storageMode = 'cloud_first';
+  } catch (uploadError) {
+    log.warn(`[ROUTING_COMMENT] Cloud-first comment narrative storage failed to upload: ${uploadError.message}. Falling back to local MongoDB storage.`);
+  }
 
-  await Comment.create({
+  const commentPayload = {
     caseId: docket.caseId,
     firmId,
     text: note,
     createdBy: actor.email ? actor.email.toLowerCase() : 'system',
     createdByXID: actor.xID,
     createdByName: actor.name || actor.xID,
-    commentRef: {
+    storageMode,
+  };
+
+  if (commentRef) {
+    commentPayload.commentRef = {
       provider: commentRef.provider,
       mode: commentRef.mode,
       fileId: commentRef.fileId || null,
@@ -108,9 +132,10 @@ async function routeDocket({ docketId, actor, firmId, toTeamId, note }) {
       version: 1,
       updatedAt: new Date(),
       updatedBy: actor.xID,
-    },
-    storageMode: 'cloud_first',
-  });
+    };
+  }
+
+  await Comment.create(commentPayload);
 
   // Log to CaseHistory & CaseAudit via centralized logging helper
   await logCaseHistory({

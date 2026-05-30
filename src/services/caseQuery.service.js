@@ -6,8 +6,16 @@ const { applyWorkModeFilter, normalizeWorkMode } = require('../utils/workType');
 const { serializeDocketDetailDto } = require('../serializers/docketDetail.serializer');
 const docketNarrativeStorage = require('./docketNarrativeStorage.service');
 const commentHistoryNarrativeStorage = require('./commentHistoryNarrativeStorage.service');
-const { logCaseHistory } = require('./auditLog.service');
 const CASE_LIST_PROJECTION = 'caseId caseNumber caseName title status category subcategory caseSubCategory priority clientId clientName assignedTo assignedToXID assignedToName employeeXID employeeSnapshot createdBy createdByXID createdAt updatedAt dueDate slaDueAt isInternal workType lifecycle state pendingUntil ownerTeamId routedToTeamId';
+const CLOUD_NARRATIVE_READ_TIMEOUT_MS = 1200;
+const DEFAULT_RUNTIME_TENANT = 'default-client-runtime-tenant';
+
+const withTimeout = (promise, timeoutMs, label) => Promise.race([
+  promise,
+  new Promise((_, reject) => {
+    setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+  }),
+]);
 module.exports = (deps) => {
   const {
     mongoose,
@@ -83,40 +91,63 @@ module.exports = (deps) => {
     findScopedCaseAttachment,
     checkCaseAccess,
   } = deps;
+  const resolveTenantFirmId = (req) => {
+    const routeFirmId = req?.firmId;
+    if (routeFirmId && routeFirmId !== DEFAULT_RUNTIME_TENANT) return routeFirmId;
+    return req?.user?.firmId || routeFirmId;
+  };
+  const resolveTenantFirmCandidates = (req) => {
+    const routeFirmId = req?.firmId ? String(req.firmId) : null;
+    const userFirmId = req?.user?.firmId ? String(req.user.firmId) : null;
+    const candidates = [routeFirmId, userFirmId].filter(Boolean);
+    const filtered = candidates.filter((value) => value !== DEFAULT_RUNTIME_TENANT);
+    return [...new Set(filtered.length ? filtered : candidates)];
+  };
 
   const getCaseByCaseId = async (req, res) => {
     const requestId = req.id || req.requestId || randomUUID().slice(0, 8);
     const getCaseTimerLabel = `[GET_CASE:${requestId}]`;
     const startedAt = Date.now();
+    const tenantFirmId = resolveTenantFirmId(req);
+    const tenantFirmCandidates = resolveTenantFirmCandidates(req);
     try {
       console.time(getCaseTimerLabel);
       log.info('STEP 1 start');
       const { caseId } = req.params;
+      if (!tenantFirmId || tenantFirmCandidates.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Firm context is required',
+        });
+      }
       
       // PR: Fix Case Visibility - Enhanced logging for debugging
-      log.info(`[GET_CASE] Attempting to fetch case: caseId=${caseId}, firmId=${req.user.firmId}, userXID=${req.user.xID}`);
+      log.info(`[GET_CASE] Attempting to fetch case: caseId=${caseId}, firmId=${tenantFirmId}, userXID=${req.user.xID}`);
       
       // Prefer repository-backed lookup for docket deep-links so encrypted fields
       // are decrypted before reaching the UI. Fallback to identifier resolution
       // for backward compatibility with internal IDs.
       // Refactor: Use MongoDB aggregation with $lookup to join client data in a single query
       let caseData = null;
-      try {
-        caseData = await loadCaseRecordCoalesced({
-          firmId: req.user.firmId,
-          caseId,
-          role: req.user.role,
-        });
-      } catch (error) {
-        log.error(`[GET_CASE] Case not found or identifier resolution failed: caseId=${caseId}, error=${error.message}`);
-        return res.status(404).json({
-          success: false,
-          message: 'Case not found',
-        });
+      let resolvedFirmId = tenantFirmId;
+      for (const candidateFirmId of tenantFirmCandidates) {
+        try {
+          caseData = await loadCaseRecordCoalesced({
+            firmId: candidateFirmId,
+            caseId,
+            role: req.user.role,
+          });
+          if (caseData) {
+            resolvedFirmId = candidateFirmId;
+            break;
+          }
+        } catch (_error) {
+          continue;
+        }
       }
       
       if (!caseData) {
-        log.error(`[GET_CASE] Case not found in database: caseId=${caseId}, firmId=${req.user.firmId}`);
+        log.error(`[GET_CASE] Case not found in database: caseId=${caseId}, firmCandidates=${tenantFirmCandidates.join(',')}`);
         return res.status(404).json({
           success: false,
           message: 'Case not found',
@@ -144,7 +175,7 @@ module.exports = (deps) => {
       // Get related data - use caseId from database (display number)
       const displayCaseId = caseData.caseId;
       const scopedCaseId = caseData.caseId;
-      const scopedFirmId = String(caseData.firmId || req.user.firmId);
+      const scopedFirmId = String(caseData.firmId || resolvedFirmId);
       const commentsPage = Number(req.query.commentsPage || 1);
       const commentsLimit = Math.min(100, Number(req.query.commentsLimit || 25));
       const commentsSkip = (commentsPage - 1) * commentsLimit;
@@ -258,7 +289,11 @@ module.exports = (deps) => {
         const mapped = { ...comment, text: sanitizeOutput(comment.text), note: comment.note ? sanitizeOutput(comment.note) : comment.note };
         if (comment.commentRef?.provider) {
           try {
-            const hydrated = await commentHistoryNarrativeStorage.readJsonByRef({ firmId: scopedFirmId, ref: comment.commentRef });
+            const hydrated = await withTimeout(
+              commentHistoryNarrativeStorage.readJsonByRef({ firmId: scopedFirmId, ref: comment.commentRef }),
+              CLOUD_NARRATIVE_READ_TIMEOUT_MS,
+              'comment narrative read'
+            );
             mapped.text = sanitizeOutput(hydrated?.text || mapped.text);
             mapped.note = hydrated?.note ? sanitizeOutput(hydrated.note) : mapped.note;
           } catch (_err) {
@@ -275,7 +310,11 @@ module.exports = (deps) => {
         const mapped = { ...entry };
         if (entry.historyRef?.provider) {
           try {
-            const hydrated = await commentHistoryNarrativeStorage.readJsonByRef({ firmId: scopedFirmId, ref: entry.historyRef });
+            const hydrated = await withTimeout(
+              commentHistoryNarrativeStorage.readJsonByRef({ firmId: scopedFirmId, ref: entry.historyRef }),
+              CLOUD_NARRATIVE_READ_TIMEOUT_MS,
+              'history narrative read'
+            );
             if (hydrated?.description) mapped.description = hydrated.description;
           } catch (_err) {
             mapped.historyWarning = 'history_content_unavailable';
@@ -330,28 +369,8 @@ module.exports = (deps) => {
         log.warn(`[xID Guardrail] This should not happen - auth middleware should always provide xID`);
       }
       
-      // PR #45: Determine if user is viewing in view-only mode
-      // View-only mode: case is not assigned to the current user
-      const isViewOnlyMode = caseData.assignedToXID !== req.user.xID;
-      const isOwner = caseData.createdByXID === req.user.xID;
-      
-      // PR #45: Add CaseAudit and CaseHistory entries with xID attribution via unified logger
-      await logCaseHistory({
-        caseId: displayCaseId,
-        firmId: scopedFirmId,
-        actionType: 'DOCKET_VIEWED',
-        actionLabel: `Docket viewed by ${req.user.email}`,
-        description: `Case viewed by ${req.user.email}${isViewOnlyMode ? ' (view-only mode)' : ' (assigned mode)'}`,
-        performedBy: req.user.email.toLowerCase(),
-        performedByXID: req.user.xID.toUpperCase(),
-        actorRole: req.user.role,
-        metadata: {
-          isViewOnlyMode,
-          isOwner,
-          isAssigned: !isViewOnlyMode,
-        },
-        req
-      });
+      // Docket open/view/exit audit is tracked by explicit tracking endpoints.
+      // Avoid duplicating timeline noise from every detail fetch/refetch.
 
       const caseObject =
         typeof caseData.toObject === 'function'

@@ -8,6 +8,8 @@ const DEFAULT_SLA_CONFIG = Object.freeze({
   businessStartTime: '10:00',
   businessEndTime: '18:00',
   workingDays: [1, 2, 3, 4, 5],
+  holidayDates: [],
+  workingDateOverrides: [],
   timezone: 'UTC',
 });
 
@@ -40,6 +42,22 @@ const normalizeWorkingDays = (days) => {
   return normalized.length ? normalized : DEFAULT_SLA_CONFIG.workingDays;
 };
 
+const toDateKey = (value, timezone = DEFAULT_SLA_CONFIG.timezone) => {
+  if (!value) return '';
+  const dateTime = DateTime.isDateTime(value)
+    ? value.setZone(timezone)
+    : DateTime.fromJSDate(new Date(value), { zone: timezone });
+  return dateTime.isValid ? dateTime.toISODate() : '';
+};
+
+const normalizeDateKeyList = (dates, timezone) => {
+  if (!Array.isArray(dates)) return [];
+  return [...new Set(dates.map((date) => {
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date.trim())) return date.trim();
+    return toDateKey(date, timezone);
+  }).filter(Boolean))];
+};
+
 const normalizeConfig = (config = {}) => {
   const start = parseTime(config.businessStartTime, DEFAULT_SLA_CONFIG.businessStartTime);
   const end = parseTime(config.businessEndTime, DEFAULT_SLA_CONFIG.businessEndTime);
@@ -51,6 +69,9 @@ const normalizeConfig = (config = {}) => {
     ? config.timezone
     : DEFAULT_SLA_CONFIG.timezone;
 
+  const holidayDates = normalizeDateKeyList(config.holidayDates || config.nonWorkingDates, timezone);
+  const workingDateOverrides = normalizeDateKeyList(config.workingDateOverrides, timezone);
+
   return {
     tatDurationMinutes: clampMinutes(config.tatDurationMinutes || DEFAULT_SLA_CONFIG.tatDurationMinutes),
     businessStartTime: `${String(start.hour).padStart(2, '0')}:${String(start.minute).padStart(2, '0')}`,
@@ -58,8 +79,17 @@ const normalizeConfig = (config = {}) => {
     businessStart: start,
     businessEnd: safeEnd,
     workingDays: normalizeWorkingDays(config.workingDays),
+    holidayDates,
+    workingDateOverrides,
     timezone,
   };
+};
+
+const isWorkingDateTime = (dateTime, config) => {
+  const dateKey = toDateKey(dateTime, config.timezone);
+  if (config.workingDateOverrides.includes(dateKey)) return true;
+  if (config.holidayDates.includes(dateKey)) return false;
+  return config.workingDays.includes(dateTime.weekday);
 };
 
 const atBusinessStart = (dateTime, config) => dateTime
@@ -81,7 +111,7 @@ const atBusinessEnd = (dateTime, config) => dateTime
 const moveToNextWorkingDayStart = (dateTime, config) => {
   let next = atBusinessStart(dateTime.plus({ days: 1 }).startOf('day'), config);
   let attempts = 0;
-  while (!config.workingDays.includes(next.weekday) && attempts < 14) {
+  while (!isWorkingDateTime(next, config) && attempts < 370) {
     next = atBusinessStart(next.plus({ days: 1 }).startOf('day'), config);
     attempts += 1;
   }
@@ -92,7 +122,7 @@ const alignToBusinessTime = (jsDate, config) => {
   let current = DateTime.fromJSDate(new Date(jsDate), { zone: config.timezone });
   let attempts = 0;
   while (attempts < MAX_CALENDAR_DAYS_LOOKAHEAD) {
-    if (!config.workingDays.includes(current.weekday)) {
+    if (!isWorkingDateTime(current, config)) {
       current = moveToNextWorkingDayStart(current, config);
       attempts += 1;
       continue;

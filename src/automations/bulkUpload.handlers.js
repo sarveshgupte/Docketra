@@ -7,6 +7,7 @@ const { eventBus } = require('../events/eventBus');
 const { AUTOMATION_RULES } = require('./rules');
 const emailService = require('../services/email.service');
 const log = require('../utils/log');
+const { getFirmSlaCalendarConfig } = require('../services/firmCalendar.service');
 
 const AUTOMATION_EMAIL_RATE_LIMIT_MS = Number(process.env.AUTOMATION_EMAIL_RATE_LIMIT_MS || 250);
 
@@ -135,9 +136,11 @@ const handleClientPostCreate = async ({ type, user, createdClients = [] }) => {
       if (existingCase) continue;
 
       const createdAt = new Date();
+      const calendarConfig = await getFirmSlaCalendarConfig(user.firmId);
       const fallbackDueDate = slaService.calculateFallbackDueDateFromDays(
         createdAt,
         Math.max(0, Number(subcategory.defaultSlaDays || category.defaultSlaDays || 3)),
+        { calendarConfig },
       );
 
       const dueDate = await slaService.calculateSlaDueDate({
@@ -146,7 +149,7 @@ const handleClientPostCreate = async ({ type, user, createdClients = [] }) => {
         subcategory: subcategory.name,
         workbasketId: subcategory.workbasketId || null,
         createdAt,
-      }) || fallbackDueDate;
+      }, { calendarConfig }) || fallbackDueDate;
 
       await Case.create({
         title: 'Initial Setup',

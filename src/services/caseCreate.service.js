@@ -2,6 +2,7 @@ const log = require('../utils/log');
 const { normalizeWorkMode } = require('../utils/workType');
 const { isClientActive } = require('../utils/clientStatus');
 const { calculateDeadlineFromRule } = require('../domain/deadlines/calculateDeadlineFromRule');
+const { getFirmSlaCalendarConfig: loadFirmSlaCalendarConfig } = require('./firmCalendar.service');
 const docketNarrativeStorage = require('./docketNarrativeStorage.service');
 
 module.exports = (deps) => {
@@ -80,6 +81,7 @@ module.exports = (deps) => {
     checkCaseAccess,
     writeDocketAudit,
     docketAuditService,
+    getFirmSlaCalendarConfig = loadFirmSlaCalendarConfig,
   } = deps;
 
   const sanitizeCreatePayloadForLog = (body = {}) => ({
@@ -611,6 +613,7 @@ module.exports = (deps) => {
         const requestedSlaDueDate = isAdminUser && slaDueDate ? new Date(slaDueDate) : null;
         const hasValidRequestedSla = requestedSlaDueDate && !Number.isNaN(requestedSlaDueDate.getTime());
         const createdAt = new Date();
+        const firmCalendarConfig = await getFirmSlaCalendarConfig(firmId, { session });
 
         step('before SLA initialization');
         const slaState = await caseSlaService.initializeCaseSla({
@@ -627,14 +630,14 @@ module.exports = (deps) => {
           subcategory: subcategoryDoc?.name || caseSubCategory || '',
           workbasketId: routedWorkbasketId,
           createdAt,
-        });
+        }, { calendarConfig: firmCalendarConfig });
 
         if (resolvedSlaDueAt && !hasValidRequestedSla) {
           slaState.slaDueAt = resolvedSlaDueAt;
         }
 
         if (!resolvedSlaDueAt && defaultSlaDays > 0 && !hasValidRequestedSla) {
-          slaState.slaDueAt = slaService.calculateFallbackDueDateFromDays(createdAt, defaultSlaDays);
+          slaState.slaDueAt = slaService.calculateFallbackDueDateFromDays(createdAt, defaultSlaDays, { calendarConfig: firmCalendarConfig });
         }
 
         if (hasValidRequestedSla) {
@@ -666,6 +669,7 @@ module.exports = (deps) => {
               createdAt,
               manualDueDate,
               eventDate,
+              calendarConfig: firmCalendarConfig,
             });
             resolvedDueDate = deadline?.dueDate || resolvedDueDate;
             if (deadline?.source === 'TAT_DAYS' && Number.isFinite(subcategoryDeadlineRule.tatDays)) {
@@ -680,11 +684,8 @@ module.exports = (deps) => {
         }
 
         if (!resolvedDueDate) {
-          resolvedDueDate = computeDeadlineFromTatDays(tatDaysSnapshot) || (defaultSlaDays > 0 ? (() => {
-            const due = new Date();
-            due.setUTCDate(due.getUTCDate() + defaultSlaDays);
-            return due;
-          })() : undefined);
+          resolvedDueDate = computeDeadlineFromTatDays(tatDaysSnapshot)
+            || (defaultSlaDays > 0 ? slaService.calculateFallbackDueDateFromDays(createdAt, defaultSlaDays, { calendarConfig: firmCalendarConfig }) : undefined);
         }
 
         if (!slaState.slaDueAt && resolvedDueDate) {
@@ -1094,6 +1095,7 @@ module.exports = (deps) => {
         const normalizedPriority = typeof originalCase.priority === 'string'
           ? originalCase.priority.toLowerCase()
           : 'medium';
+        const firmCalendarConfig = await getFirmSlaCalendarConfig(req.user.firmId, { session });
 
         const clonedSlaDueAt = await slaService.calculateSlaDueDate({
           firmId: req.user.firmId,
@@ -1101,7 +1103,7 @@ module.exports = (deps) => {
           subcategory: subcategoryDoc?.name || originalCase.subcategory || '',
           workbasketId: originalCase.ownerTeamId || req.user.teamId || null,
           createdAt: now,
-        });
+        }, { calendarConfig: firmCalendarConfig });
 
         clonedCase = new Case({
           title: originalCase.title,

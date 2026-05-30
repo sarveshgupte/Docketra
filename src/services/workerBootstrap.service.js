@@ -57,11 +57,14 @@ const startBackgroundSchedules = () => {
   }, 6 * 60 * 60 * 1000);
 
   storageBackupService.scheduleNightlyBackups();
-  const { processDocketDueNotifications } = require('./docketDueNotification.service');
+  const { processDocketDueNotifications, processFirmCalendarReminders } = require('./docketDueNotification.service');
   const dueNotificationsIntervalMs = Math.max(5 * 60 * 1000, Number(process.env.DOCKET_DUE_NOTIFICATION_INTERVAL_MS || 60 * 60 * 1000));
   setInterval(() => {
     processDocketDueNotifications().catch((err) =>
       log.error('[docketDueNotificationSchedule] failed', { message: err.message })
+    );
+    processFirmCalendarReminders().catch((err) =>
+      log.error('[firmCalendarReminderSchedule] failed', { message: err.message })
     );
   }, dueNotificationsIntervalMs);
 

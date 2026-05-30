@@ -81,6 +81,7 @@ const trackCaseOpen = async (req, res) => {
       });
     }
     
+    const isAssignedUser = String(caseData.assignedToXID || '').toUpperCase() === String(user.xID || '').toUpperCase();
     // Log to CaseHistory (async, non-blocking)
     const actorRole = user.role === 'Admin' ? 'ADMIN' : 
                       user.role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : 'USER';
@@ -89,14 +90,15 @@ const trackCaseOpen = async (req, res) => {
     logCaseHistory({
       caseId,
       firmId: caseData.firmId || user.firmId,
-      actionType: CASE_ACTION_TYPES.CASE_OPENED,
-      actionLabel: `${user.xID} opened the docket in active mode`,
-      description: `${user.xID} opened the docket in active mode`,
+      actionType: isAssignedUser ? CASE_ACTION_TYPES.CASE_OPENED : CASE_ACTION_TYPES.CASE_VIEWED,
+      actionLabel: isAssignedUser ? 'User was active in a docket' : 'Viewed docket',
+      description: isAssignedUser ? 'User was active in a docket' : 'Viewed docket',
       performedBy: user.email,
       performedByXID: user.xID,
       actorRole,
       metadata: {
         userName: user.name,
+        isAssignedUser,
         timestamp: new Date().toISOString(),
       },
       req,
@@ -107,14 +109,14 @@ const trackCaseOpen = async (req, res) => {
     // Return immediately - don't wait for logging
     return res.status(200).json({
       success: true,
-      message: 'Case open tracked',
+      message: 'Docket open tracked',
     });
   } catch (error) {
     log.error('[TRACKING] Error in trackCaseOpen:', error);
     // Never block the UI for tracking failures
     return res.status(200).json({
       success: true,
-      message: 'Case open tracking attempted',
+      message: 'Docket open tracking attempted',
     });
   }
 };
@@ -169,8 +171,8 @@ const trackCaseView = async (req, res) => {
       caseId,
       firmId: caseData.firmId || user.firmId,
       actionType: CASE_ACTION_TYPES.CASE_VIEWED,
-      actionLabel: `${user.name || user.xID} viewed case`,
-      description: `Case viewed by ${user.xID} (${user.name || 'Unknown'})`,
+      actionLabel: 'Viewed docket',
+      description: 'Viewed docket',
       performedBy: user.email,
       performedByXID: user.xID,
       actorRole,
@@ -186,14 +188,14 @@ const trackCaseView = async (req, res) => {
     // Return immediately - don't wait for logging
     return res.status(200).json({
       success: true,
-      message: 'Case view tracked',
+      message: 'Docket view tracked',
     });
   } catch (error) {
     log.error('[TRACKING] Error in trackCaseView:', error);
     // Never block the UI for tracking failures
     return res.status(200).json({
       success: true,
-      message: 'Case view tracking attempted',
+      message: 'Docket view tracking attempted',
     });
   }
 };
@@ -238,6 +240,7 @@ const trackCaseExit = async (req, res) => {
       }
     }
     
+    const isAssignedUser = String(caseData?.assignedToXID || '').toUpperCase() === String(user.xID || '').toUpperCase();
     // Log to CaseHistory (async, non-blocking)
     const actorRole = user.role === 'Admin' ? 'ADMIN' : 
                       user.role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : 'USER';
@@ -247,13 +250,14 @@ const trackCaseExit = async (req, res) => {
       caseId,
       firmId: caseData?.firmId || user.firmId,
       actionType: CASE_ACTION_TYPES.CASE_EXITED,
-      actionLabel: `${user.xID} exited the docket`,
-      description: `${user.xID} exited the docket`,
+      actionLabel: isAssignedUser ? 'User exited the docket' : 'Exited docket view',
+      description: isAssignedUser ? 'User exited the docket' : 'Exited docket view',
       performedBy: user.email,
       performedByXID: user.xID,
       actorRole,
       metadata: {
         userName: user.name,
+        isAssignedUser,
         timestamp: new Date().toISOString(),
       },
       req,
@@ -264,14 +268,14 @@ const trackCaseExit = async (req, res) => {
     // Return immediately - don't wait for logging
     return res.status(200).json({
       success: true,
-      message: 'Case exit tracked',
+      message: 'Docket exit tracked',
     });
   } catch (error) {
     log.error('[TRACKING] Error in trackCaseExit:', error);
     // Never block the UI for tracking failures
     return res.status(200).json({
       success: true,
-      message: 'Case exit tracking attempted',
+      message: 'Docket exit tracking attempted',
     });
   }
 };

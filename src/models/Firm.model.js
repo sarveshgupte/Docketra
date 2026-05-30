@@ -339,6 +339,24 @@ const firmSchema = new mongoose.Schema({
         min: 1,
         default: 3,
       },
+      slaWorkingDays: {
+        type: [Number],
+        default: [1, 2, 3, 4, 5],
+      },
+      slaHolidayDates: {
+        type: [String],
+        default: [],
+      },
+      slaWorkingDateOverrides: {
+        type: [String],
+        default: [],
+      },
+      calendarReminderLeadDays: {
+        type: Number,
+        min: 0,
+        max: 30,
+        default: 3,
+      },
       escalationInactivityThresholdHours: {
         type: Number,
         min: 1,
