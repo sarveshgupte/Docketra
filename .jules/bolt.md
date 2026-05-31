@@ -48,3 +48,6 @@
 ## 2026-05-21 - Concurrent Document Fetch in Case Create Service Validation
 **Learning:** In the `caseCreate` service, `WorkType.findOne` and `SubWorkType.findOne` were awaited sequentially, which caused endpoint latency, despite being independent of the other model validation queries (like `Deal`, `CrmClient`, etc.).
 **Action:** Prepared the `WorkType` and `SubWorkType` queries as promises and merged them into the existing `Promise.all()` concurrently with the other independent lookups.
+## 2026-05-31 - [MongoDB Aggregation Optimization]
+**Learning:** While using the `$facet` aggregation pipeline groups multiple operations into a single network roundtrip, it is an anti-pattern for large datasets. `$facet` forces MongoDB to hold all matching documents in memory, bypassing fast index scans for count operations and risking the 100MB aggregation memory limit.
+**Action:** When decomposing complex `$facet` aggregations, replace them with concurrent `Promise.all` executions containing simple `$group` mappings and multiple `countDocuments` queries. Ensure to manually apply fallback values (e.g., `|| 0`) in the JS layer to replace DB-level defaults like `$ifNull`.
