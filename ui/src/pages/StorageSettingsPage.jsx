@@ -917,10 +917,23 @@ export function StorageSettingsPage() {
             </div>
 
             <div className="flex flex-wrap gap-3 pt-2 relative">
-              <Button type="button" variant="primary" className="!bg-indigo-600 hover:!bg-indigo-700 border-none text-white font-bold" onClick={onGenerateExport} disabled={exporting}>
+              <Button 
+                type="button" 
+                variant="primary" 
+                allowUnsafeClassName={true}
+                className="!bg-indigo-600 hover:!bg-indigo-700 !border-none !text-white font-bold" 
+                onClick={onGenerateExport} 
+                disabled={exporting}
+              >
                 {exporting ? 'Generating Vault Backup…' : 'Backup Storage Now'}
               </Button>
-              <Button type="button" variant="outline" className="border-slate-700 text-slate-200 hover:bg-slate-800" onClick={() => setShowRestoreModal(true)}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                allowUnsafeClassName={true}
+                className="!border-slate-700 !text-slate-200 hover:!bg-slate-800 hover:!text-white font-semibold transition-all duration-200" 
+                onClick={() => setShowRestoreModal(true)}
+              >
                 Open Restore Wizard
               </Button>
             </div>
