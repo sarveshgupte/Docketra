@@ -40,3 +40,7 @@
 **Vulnerability:** Raw error messages (`error.message`) were being directly exposed to clients in API error responses (e.g., in `src/controllers/user.controller.js`).
 **Learning:** Exposing raw internal error details to the client can leak sensitive system information, configuration details, or underlying infrastructure state, which can be leveraged by attackers.
 **Prevention:** Always log the full error details server-side using the internal logger (`log.error`) and return generic, safe error messages to the client (e.g., "Unable to load profile").
+## 2024-06-01 - Replaced Insecure Math.random() in AI Assistant Message IDs
+**Vulnerability:** Weak PRNG (`Math.random()`) was being used to generate message IDs in the Superadmin AI Assistant chat interface (`ui/src/pages/SuperadminAiAssistantPage.jsx`).
+**Learning:** Even for non-cryptographic usages (like UI message IDs), using `Math.random()` triggers SAST warnings and provides weak randomness that could theoretically lead to ID collisions. It's best practice to use cryptographically secure RNGs consistently across the codebase to maintain defense in depth and avoid setting a bad precedent.
+**Prevention:** Replaced `Math.random()` with `generateUUID()` from the centralized secure randomness utilities (`ui/src/utils/crypto.js`) which leverages the Web Crypto API. Always default to secure ID generation.

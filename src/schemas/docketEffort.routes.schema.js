@@ -42,10 +42,6 @@ module.exports = {
   'POST /': {
     body: createEffortBody,
   },
-  'PATCH /:id': {
-    params: effortIdParams,
-    body: updateEffortBody,
-  },
   'DELETE /:id': {
     params: effortIdParams,
   },
