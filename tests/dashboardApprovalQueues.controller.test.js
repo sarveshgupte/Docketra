@@ -40,40 +40,66 @@ const run = async () => {
     delete require.cache[require.resolve('../src/controllers/dashboard.controller')];
     const controller = require('../src/controllers/dashboard.controller');
 
-    const allowedReq = {
-      user: { firmId: '67e95f7642adf77d7f4e1834', role: 'MANAGER', xID: 'X100001' },
-      query: { view: 'awaiting_partner' },
-      params: {},
-      body: {},
-    };
-    const allowedRes = createMockRes();
-    await controller.getApprovalQueues(allowedReq, allowedRes);
-    assert.strictEqual(allowedRes.statusCode, 200);
-    assert.strictEqual(allowedRes.payload.success, true);
-    assert.strictEqual(allowedRes.payload.data.summary.awaitingPartner, 1);
-    assert.strictEqual(allowedRes.payload.data.view, 'awaiting_partner');
+    // 1. Verify ADMIN and PRIMARY_ADMIN can fetch approval queues
+    const allowedRoles = ['ADMIN', 'PRIMARY_ADMIN'];
+    for (const role of allowedRoles) {
+      const allowedReq = {
+        user: { firmId: '67e95f7642adf77d7f4e1834', role, xID: 'X100001' },
+        query: { view: 'awaiting_partner' },
+        params: {},
+        body: {},
+      };
+      const allowedRes = createMockRes();
+      await controller.getApprovalQueues(allowedReq, allowedRes);
+      assert.strictEqual(allowedRes.statusCode, 200, `Role ${role} should be allowed to view approval queues`);
+      assert.strictEqual(allowedRes.payload.success, true);
+      assert.strictEqual(allowedRes.payload.data.summary.awaitingPartner, 1);
+      assert.strictEqual(allowedRes.payload.data.view, 'awaiting_partner');
+    }
 
-    const deniedReq = {
-      user: { firmId: '67e95f7642adf77d7f4e1834', role: 'USER', xID: 'X100002' },
-      query: {},
-      params: {},
-      body: {},
-    };
-    const deniedRes = createMockRes();
-    await controller.getApprovalQueues(deniedReq, deniedRes);
-    assert.strictEqual(deniedRes.statusCode, 403);
+    // 2. Verify USER and MANAGER are blocked from fetching approval queues
+    const deniedRoles = ['USER', 'MANAGER'];
+    for (const role of deniedRoles) {
+      const deniedReq = {
+        user: { firmId: '67e95f7642adf77d7f4e1834', role, xID: 'X100002' },
+        query: {},
+        params: {},
+        body: {},
+      };
+      const deniedRes = createMockRes();
+      await controller.getApprovalQueues(deniedReq, deniedRes);
+      assert.strictEqual(deniedRes.statusCode, 403, `Role ${role} should be blocked from approval queues`);
+      assert.strictEqual(deniedRes.payload.success, false);
+    }
 
-    const remindReq = {
-      user: { firmId: '67e95f7642adf77d7f4e1834', role: 'ADMIN', xID: 'X100003' },
-      params: { caseId: 'CASE-APQ-001' },
-      body: { escalate: true },
-      query: {},
-    };
-    const remindRes = createMockRes();
-    await controller.remindApproval(remindReq, remindRes);
-    assert.strictEqual(remindRes.statusCode, 200);
-    assert.strictEqual(remindRes.payload.success, true);
-    assert.strictEqual(remindRes.payload.data.escalated, true);
+    // 3. Verify ADMIN and PRIMARY_ADMIN can trigger reminders
+    for (const role of allowedRoles) {
+      const remindReq = {
+        user: { firmId: '67e95f7642adf77d7f4e1834', role, xID: 'X100003' },
+        params: { caseId: 'CASE-APQ-001' },
+        body: { escalate: true },
+        query: {},
+      };
+      const remindRes = createMockRes();
+      await controller.remindApproval(remindReq, remindRes);
+      assert.strictEqual(remindRes.statusCode, 200, `Role ${role} should be allowed to trigger reminders`);
+      assert.strictEqual(remindRes.payload.success, true);
+      assert.strictEqual(remindRes.payload.data.escalated, true);
+    }
+
+    // 4. Verify USER and MANAGER are blocked from triggering reminders
+    for (const role of deniedRoles) {
+      const remindReq = {
+        user: { firmId: '67e95f7642adf77d7f4e1834', role, xID: 'X100004' },
+        params: { caseId: 'CASE-APQ-001' },
+        body: { escalate: true },
+        query: {},
+      };
+      const remindRes = createMockRes();
+      await controller.remindApproval(remindReq, remindRes);
+      assert.strictEqual(remindRes.statusCode, 403, `Role ${role} should be blocked from triggering reminders`);
+      assert.strictEqual(remindRes.payload.success, false);
+    }
 
     console.log('dashboardApprovalQueues.controller.test.js passed');
   } finally {

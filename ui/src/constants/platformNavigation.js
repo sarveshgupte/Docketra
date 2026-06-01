@@ -215,17 +215,17 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
   ];
 
   const dailyOperationsItems = [
-    ...(hasAtLeastRole(normalizedRole, 'MANAGER') ? [{
+    {
       id: 'compliance-control-room',
       label: 'Compliance Control',
       icon: icons.compliance,
       to: ROUTES.COMPLIANCE_CALENDAR(firmSlug),
       activeMatch: 'exactOrDescendant',
-    }] : []),
+    },
     { id: 'workbaskets-group', label: 'Workbaskets', type: 'group', children: workbasketsGroupChildren },
     { id: 'worklists-group', label: 'Worklists', type: 'group', children: scopedWorklistItems.length ? scopedWorklistItems : [{ id: 'my-worklist', label: 'My Worklist', icon: icons.dashboard, to: ROUTES.WORKLIST(firmSlug), activeMatch: 'exactOrDescendant' }] },
     ...(qcGroupChildren.length ? [{ id: 'qc-worklists-group', label: 'QC Worklists', type: 'group', children: qcGroupChildren }] : []),
-  ].filter((item) => Array.isArray(item.children) && item.children.length > 0);
+  ].filter((item) => item.id === 'compliance-control-room' || (Array.isArray(item.children) && item.children.length > 0));
 
   const isNavHidden = (id) => TASK_MANAGER_MVP_ENABLED && FIRM_PILOT_SURFACE.hideFromNavigation.has(id);
   const administrationItems = (!isNavHidden('settings') && hasAtLeastRole(normalizedRole, 'MANAGER'))

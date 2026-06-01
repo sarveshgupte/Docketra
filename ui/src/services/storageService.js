@@ -79,3 +79,24 @@ export async function getStorageDataMap() {
   const response = await api.get('/storage/data-map');
   return response.data;
 }
+
+export async function initiateStorageRestore(payload) {
+  const formData = new FormData();
+  formData.append('verificationToken', payload.verificationToken);
+  if (payload.exportId) {
+    formData.append('exportId', payload.exportId);
+  }
+  if (payload.file) {
+    formData.append('file', payload.file);
+  }
+  const response = await api.post('/storage/restore/initiate', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+}
+
+export async function getStorageRestoreStatus(jobId) {
+  const response = await api.get(`/storage/restore/status/${encodeURIComponent(jobId)}`);
+  return response.data;
+}
+

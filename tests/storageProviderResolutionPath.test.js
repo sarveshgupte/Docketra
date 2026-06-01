@@ -5,6 +5,7 @@ const assert = require('assert');
 const Module = require('module');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { Readable } = require('stream');
 
 const originalLoad = Module._load;
@@ -53,8 +54,10 @@ Module._load = function(request, parent, isMain) {
     const { storageBackupService: backupService } = require('../src/services/storageBackup.service');
     const originalCreateBackupArchiveOnTempDisk = backupService.createBackupArchiveOnTempDisk.bind(backupService);
     const originalUploadBackupToProvider = backupService.uploadBackupToProvider.bind(backupService);
-    fs.writeFileSync('/tmp/a.zip', 'backup-bytes');
-    backupService.createBackupArchiveOnTempDisk = async () => ({ zipPath: '/tmp/a.zip', fileCount: 0, exportDir: '/tmp/a' });
+    const testZipPath = path.join(os.tmpdir(), 'docketra-resolution-test-a.zip');
+    const testExportDir = path.join(os.tmpdir(), 'docketra-resolution-test-a');
+    fs.writeFileSync(testZipPath, 'backup-bytes');
+    backupService.createBackupArchiveOnTempDisk = async () => ({ zipPath: testZipPath, fileCount: 0, exportDir: testExportDir });
     backupService.uploadBackupToProvider = async () => ({ archiveObjectKey: 'backups/nightly/a.zip.enc', providerFileId: 'file-1' });
     await backupService.runBackupForFirm('firm-1', {});
     assert.strictEqual(providerResolutionCalls, 2);
@@ -122,8 +125,10 @@ Module._load = function(request, parent, isMain) {
   } finally {
     if (archiveProbe?.zipPath) fs.rmSync(archiveProbe.zipPath, { force: true });
     if (archiveProbe?.exportDir) fs.rmSync(archiveProbe.exportDir, { recursive: true, force: true });
-    fs.rmSync('/tmp/a.zip', { force: true });
-    fs.rmSync('/tmp/a', { recursive: true, force: true });
+    const testZipPath = path.join(os.tmpdir(), 'docketra-resolution-test-a.zip');
+    const testExportDir = path.join(os.tmpdir(), 'docketra-resolution-test-a');
+    fs.rmSync(testZipPath, { force: true });
+    fs.rmSync(testExportDir, { recursive: true, force: true });
     Module._load = originalLoad;
   }
 })();

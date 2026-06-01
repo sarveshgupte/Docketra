@@ -1172,8 +1172,11 @@ const storageUsage = async (req, res) => {
     if (!supportsListFiles(provider)) throw new Error('Storage provider does not support usage lookup');
     const files = await provider.listFiles(null);
     const usedBytes = files.reduce((acc, file) => acc + Number(file.size || 0), 0);
-    return res.json({ provider: state.canonicalProvider, providerMode: state.mode, quotaAvailable: false, usedBytes, totalFiles: files.length });
+    return res.json({ provider: state.canonicalProvider, providerMode: state.mode, quotaAvailable: false, usedBytes, totalSizeBytes: usedBytes, totalFiles: files.length });
   } catch (error) {
+    if (error.message && error.message.includes('does not support usage lookup')) {
+      return res.status(400).json({ code: 'STORAGE_PROVIDER_UNSUPPORTED_OPERATION', error: 'STORAGE_PROVIDER_UNSUPPORTED_OPERATION', message: error.message });
+    }
     try {
       const ownershipFirmId = await resolveOwnershipFirmIdForRead(req);
       if (ownershipFirmId) {
@@ -1308,6 +1311,7 @@ module.exports = {
   getStorageDataMap,
   getStorageFolderLink,
   getStorageRootHealth,
+  ensureStorageOtpVerification,
   __private: {
     resolveFirmSlugForRedirect,
     buildFrontendStorageRedirect,

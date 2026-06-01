@@ -10,14 +10,14 @@ const ROLE_RANK = {
   PRIMARY_ADMIN: 4,
 };
 
-const isManagerOrAbove = (role) => (ROLE_RANK[String(role || '').toUpperCase()] || 0) >= ROLE_RANK.MANAGER;
+const isAdminOrAbove = (role) => (ROLE_RANK[String(role || '').toUpperCase()] || 0) >= ROLE_RANK.ADMIN;
 
-const ensureManagerAccess = (req, res) => {
+const ensureAdminAccess = (req, res) => {
   const role = String(req.user?.role || '').toUpperCase();
-  if (!isManagerOrAbove(role)) {
+  if (!isAdminOrAbove(role)) {
     res.status(403).json({
       success: false,
-      message: 'Compliance template workflows are available for manager and above roles only',
+      message: 'Compliance template workflows are available for admin and above roles only',
     });
     return false;
   }
@@ -27,7 +27,7 @@ const ensureManagerAccess = (req, res) => {
 const listComplianceTemplates = async (req, res) => {
   try {
     assertFirmContext(req);
-    if (!ensureManagerAccess(req, res)) return;
+    if (!ensureAdminAccess(req, res)) return;
     const templates = await complianceTemplateGenerationService.loadTemplates({
       firmId: req.user.firmId,
       includeInactive: String(req.query?.includeInactive || '').toLowerCase() === 'true',
@@ -41,7 +41,7 @@ const listComplianceTemplates = async (req, res) => {
 const createComplianceTemplate = async (req, res) => {
   try {
     assertFirmContext(req);
-    if (!ensureManagerAccess(req, res)) return;
+    if (!ensureAdminAccess(req, res)) return;
     const payload = {
       ...req.body,
       firmId: String(req.user.firmId),
@@ -58,7 +58,7 @@ const createComplianceTemplate = async (req, res) => {
 const updateComplianceTemplate = async (req, res) => {
   try {
     assertFirmContext(req);
-    if (!ensureManagerAccess(req, res)) return;
+    if (!ensureAdminAccess(req, res)) return;
     const updated = await ComplianceObligationTemplate.findOneAndUpdate(
       { _id: req.params.templateId, firmId: String(req.user.firmId) },
       {
@@ -81,7 +81,7 @@ const updateComplianceTemplate = async (req, res) => {
 const seedSampleComplianceTemplates = async (req, res) => {
   try {
     assertFirmContext(req);
-    if (!ensureManagerAccess(req, res)) return;
+    if (!ensureAdminAccess(req, res)) return;
     const result = await complianceTemplateGenerationService.seedSampleTemplates({
       firmId: req.user.firmId,
       actorXID: req.user?.xID || req.user?.xid || null,
@@ -95,7 +95,7 @@ const seedSampleComplianceTemplates = async (req, res) => {
 const previewComplianceGeneration = async (req, res) => {
   try {
     assertFirmContext(req);
-    if (!ensureManagerAccess(req, res)) return;
+    if (!ensureAdminAccess(req, res)) return;
     const data = await complianceTemplateGenerationService.previewOrGenerate({
       firmId: req.user.firmId,
       actor: req.user,
@@ -114,7 +114,7 @@ const previewComplianceGeneration = async (req, res) => {
 const runComplianceGeneration = async (req, res) => {
   try {
     assertFirmContext(req);
-    if (!ensureManagerAccess(req, res)) return;
+    if (!ensureAdminAccess(req, res)) return;
     const data = await complianceTemplateGenerationService.previewOrGenerate({
       firmId: req.user.firmId,
       actor: req.user,

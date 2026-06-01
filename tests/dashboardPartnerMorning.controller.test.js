@@ -41,28 +41,37 @@ const run = async () => {
     delete require.cache[require.resolve('../src/controllers/dashboard.controller')];
     const controller = require('../src/controllers/dashboard.controller');
 
-    const allowedReq = {
-      user: { firmId: '67e95f7642adf77d7f4e1834', role: 'MANAGER', xID: 'X100001' },
-      query: { assigneeXID: 'X100001', exceptionType: 'portal_issue' },
-      params: {},
-      body: {},
-    };
-    const allowedRes = createMockRes();
-    await controller.getPartnerMorningDashboard(allowedReq, allowedRes);
-    assert.strictEqual(allowedRes.statusCode, 200);
-    assert.strictEqual(allowedRes.payload.success, true);
-    assert.strictEqual(allowedRes.payload.data.summary.atRiskEntities, 3);
-    assert.strictEqual(allowedRes.payload.data.filtersApplied.exceptionType, 'portal_issue');
+    // 1. Verify ADMIN and PRIMARY_ADMIN are allowed
+    const allowedRoles = ['ADMIN', 'PRIMARY_ADMIN'];
+    for (const role of allowedRoles) {
+      const allowedReq = {
+        user: { firmId: '67e95f7642adf77d7f4e1834', role, xID: 'X100001' },
+        query: { assigneeXID: 'X100001', exceptionType: 'portal_issue' },
+        params: {},
+        body: {},
+      };
+      const allowedRes = createMockRes();
+      await controller.getPartnerMorningDashboard(allowedReq, allowedRes);
+      assert.strictEqual(allowedRes.statusCode, 200, `Role ${role} should be allowed to view morning dashboard`);
+      assert.strictEqual(allowedRes.payload.success, true);
+      assert.strictEqual(allowedRes.payload.data.summary.atRiskEntities, 3);
+      assert.strictEqual(allowedRes.payload.data.filtersApplied.exceptionType, 'portal_issue');
+    }
 
-    const deniedReq = {
-      user: { firmId: '67e95f7642adf77d7f4e1834', role: 'USER', xID: 'X100002' },
-      query: {},
-      params: {},
-      body: {},
-    };
-    const deniedRes = createMockRes();
-    await controller.getPartnerMorningDashboard(deniedReq, deniedRes);
-    assert.strictEqual(deniedRes.statusCode, 403);
+    // 2. Verify USER and MANAGER are blocked
+    const deniedRoles = ['USER', 'MANAGER'];
+    for (const role of deniedRoles) {
+      const deniedReq = {
+        user: { firmId: '67e95f7642adf77d7f4e1834', role, xID: 'X100002' },
+        query: {},
+        params: {},
+        body: {},
+      };
+      const deniedRes = createMockRes();
+      await controller.getPartnerMorningDashboard(deniedReq, deniedRes);
+      assert.strictEqual(deniedRes.statusCode, 403, `Role ${role} should be blocked from morning dashboard`);
+      assert.strictEqual(deniedRes.payload.success, false);
+    }
 
     console.log('dashboardPartnerMorning.controller.test.js passed');
   } finally {

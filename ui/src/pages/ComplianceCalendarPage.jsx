@@ -114,7 +114,7 @@ export const ComplianceCalendarPage = () => {
     teamLoad: [],
     exceptions: [],
   });
-  const canManageState = hasFirmRoleAtLeast(user, 'MANAGER');
+  const canManageState = hasFirmRoleAtLeast(user, 'ADMIN');
 
   const loadControlRoom = useCallback(async () => {
     setLoading(true);

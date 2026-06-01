@@ -4,6 +4,10 @@ const { decrypt } = require('../src/services/storage/services/TokenEncryption.se
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'a'.repeat(64);
 process.env.STORAGE_TOKEN_SECRET = process.env.STORAGE_TOKEN_SECRET || 'test-storage-secret';
+process.env.GOOGLE_CLIENT_ID = 'test-client-id';
+process.env.GOOGLE_CLIENT_SECRET = 'test-client-secret';
+process.env.GOOGLE_OAUTH_REDIRECT_URI = 'http://localhost/api/storage/google/callback';
+process.env.FRONTEND_URL = 'http://localhost';
 
 const originalLoad = Module._load;
 

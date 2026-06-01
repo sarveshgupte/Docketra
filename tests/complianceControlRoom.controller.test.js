@@ -36,39 +36,52 @@ const run = async () => {
     delete require.cache[require.resolve('../src/controllers/dashboard.controller')];
     const controller = require('../src/controllers/dashboard.controller');
 
-    const allowedReq = {
-      user: { firmId: '67e95f7642adf77d7f4e1834', role: 'MANAGER', xID: 'X100001' },
-      query: { obligationType: 'GST' },
-      params: {},
-      body: {},
-    };
-    const allowedRes = createMockRes();
-    await controller.getComplianceControlRoom(allowedReq, allowedRes);
-    assert.strictEqual(allowedRes.statusCode, 200);
-    assert.strictEqual(allowedRes.payload.success, true);
-    assert.strictEqual(allowedRes.payload.data.summary.overdue, 1);
-    assert.strictEqual(allowedRes.payload.data.items[0].obligationType, 'GST');
+    // 1. Verify all roles can view the Control Room calendar
+    const rolesToTestRead = ['USER', 'MANAGER', 'ADMIN', 'PRIMARY_ADMIN'];
+    for (const role of rolesToTestRead) {
+      const readReq = {
+        user: { firmId: '67e95f7642adf77d7f4e1834', role, xID: 'X100001' },
+        query: { obligationType: 'GST' },
+        params: {},
+        body: {},
+      };
+      const readRes = createMockRes();
+      await controller.getComplianceControlRoom(readReq, readRes);
+      assert.strictEqual(readRes.statusCode, 200, `Role ${role} should be allowed to read control room`);
+      assert.strictEqual(readRes.payload.success, true);
+      assert.strictEqual(readRes.payload.data.summary.overdue, 1);
+      assert.strictEqual(readRes.payload.data.items[0].obligationType, 'GST');
+    }
 
-    const deniedReq = {
-      user: { firmId: '67e95f7642adf77d7f4e1834', role: 'USER', xID: 'X100002' },
-      query: {},
-      params: {},
-      body: {},
-    };
-    const deniedRes = createMockRes();
-    await controller.getComplianceControlRoom(deniedReq, deniedRes);
-    assert.strictEqual(deniedRes.statusCode, 403);
+    // 2. Verify only ADMIN and PRIMARY_ADMIN can edit state transitions
+    const deniedRoles = ['USER', 'MANAGER'];
+    for (const role of deniedRoles) {
+      const editReq = {
+        user: { firmId: '67e95f7642adf77d7f4e1834', role, xID: 'X100002' },
+        params: { caseId: 'CASE-20260531-00001' },
+        body: { nextState: 'ready_to_file' },
+        query: {},
+      };
+      const editRes = createMockRes();
+      await controller.updateComplianceState(editReq, editRes);
+      assert.strictEqual(editRes.statusCode, 403, `Role ${role} should be blocked from making state edits`);
+      assert.strictEqual(editRes.payload.success, false);
+    }
 
-    const updateReq = {
-      user: { firmId: '67e95f7642adf77d7f4e1834', role: 'ADMIN', xID: 'X100003' },
-      params: { caseId: 'CASE-20260531-00001' },
-      body: { nextState: 'ready_to_file' },
-      query: {},
-    };
-    const updateRes = createMockRes();
-    await controller.updateComplianceState(updateReq, updateRes);
-    assert.strictEqual(updateRes.statusCode, 200);
-    assert.strictEqual(updateRes.payload.data.complianceState, 'ready_to_file');
+    // 3. Verify ADMIN and PRIMARY_ADMIN can successfully edit state transitions
+    const allowedRoles = ['ADMIN', 'PRIMARY_ADMIN'];
+    for (const role of allowedRoles) {
+      const editReq = {
+        user: { firmId: '67e95f7642adf77d7f4e1834', role, xID: 'X100003' },
+        params: { caseId: 'CASE-20260531-00001' },
+        body: { nextState: 'ready_to_file' },
+        query: {},
+      };
+      const editRes = createMockRes();
+      await controller.updateComplianceState(editReq, editRes);
+      assert.strictEqual(editRes.statusCode, 200, `Role ${role} should be allowed to make state edits`);
+      assert.strictEqual(editRes.payload.data.complianceState, 'ready_to_file');
+    }
 
     console.log('complianceControlRoom.controller.test.js passed');
   } finally {
@@ -81,4 +94,3 @@ run().catch((error) => {
   console.error('complianceControlRoom.controller.test.js failed', error);
   process.exit(1);
 });
-

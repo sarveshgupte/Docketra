@@ -3,6 +3,9 @@
 
 const assert = require('assert');
 const Module = require('module');
+const os = require('os');
+const path = require('path');
+const fs = require('fs');
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'a'.repeat(64);
 process.env.STORAGE_TOKEN_SECRET = process.env.STORAGE_TOKEN_SECRET || 'test-storage-secret';
@@ -87,10 +90,11 @@ const originalLoad = Module._load;
     assert.ok(state.attachmentCreatePayload.storageFileId);
     assert.strictEqual(state.attachmentCreatePayload.mimeType, 'application/pdf');
 
-    storageBackupService.createBackupArchiveOnTempDisk = async () => ({ zipPath: '/tmp/byos-reg.zip', exportDir: '/tmp/byos-reg', fileCount: 0 });
+    const testZipPath = path.join(os.tmpdir(), 'docketra-byos-reg.zip');
+    const testExportDir = path.join(os.tmpdir(), 'docketra-byos-reg');
+    storageBackupService.createBackupArchiveOnTempDisk = async () => ({ zipPath: testZipPath, exportDir: testExportDir, fileCount: 0 });
     storageBackupService.uploadBackupToProvider = async () => ({ archiveObjectKey: 'backups/nightly/x.zip.enc', providerFileId: 'prov-1' });
-    const fs = require('fs');
-    fs.writeFileSync('/tmp/byos-reg.zip', 'zip');
+    fs.writeFileSync(testZipPath, 'zip');
     await storageBackupService.runBackupForFirm('F1', {});
 
     forbiddenBinaryKeys.forEach((key) => assert.ok(!Object.prototype.hasOwnProperty.call(state.backupCreatePayload, key), `backup create unexpectedly includes ${key}`));
@@ -126,6 +130,10 @@ const originalLoad = Module._load;
     console.error(error);
     process.exit(1);
   } finally {
+    const testZipPath = path.join(os.tmpdir(), 'docketra-byos-reg.zip');
+    const testExportDir = path.join(os.tmpdir(), 'docketra-byos-reg');
+    fs.rmSync(testZipPath, { force: true });
+    fs.rmSync(testExportDir, { recursive: true, force: true });
     Module._load = originalLoad;
   }
 })();

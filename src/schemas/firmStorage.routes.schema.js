@@ -11,4 +11,15 @@ module.exports = {
       credentials: z.record(z.string(), z.any()).optional(),
     }).strip(),
   },
+  'POST /storage/restore/initiate': {
+    body: z.object({
+      verificationToken: nonEmptyString,
+      exportId: z.string().trim().optional(),
+    }).passthrough(),
+  },
+  'GET /storage/restore/status/:jobId': {
+    params: z.object({
+      jobId: nonEmptyString,
+    }),
+  },
 };

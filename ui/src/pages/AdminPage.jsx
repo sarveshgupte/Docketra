@@ -543,15 +543,23 @@ export const AdminPage = () => {
   };
 
   const handleOpenAccessModal = async (user) => {
+    let loadedClients = clients;
     try {
-      await Promise.all([fetchClients(), fetchWorkbaskets()]);
+      const [clientsResp] = await Promise.all([fetchClients(), fetchWorkbaskets()]);
+      if (clientsResp?.success && Array.isArray(clientsResp.data)) {
+        loadedClients = clientsResp.data;
+      }
     } catch (error) {
       showToast(error.response?.data?.message || 'Failed to load clients', 'error');
       return;
     }
 
     setSelectedUserForAccess(user);
-    const selectedClientIds = Array.isArray(user.clientAccessClientIds) ? user.clientAccessClientIds : [];
+    const userClientAccess = Array.isArray(user.clientAccess) ? user.clientAccess.map((id) => String(id)) : [];
+    const selectedClientIds = loadedClients
+      .filter((client) => userClientAccess.includes(String(client._id)))
+      .map((client) => client.clientId);
+
     setRestrictedClientDraft(selectedClientIds);
     setClientAccessModeDraft(selectedClientIds.length > 0 ? 'SELECTED' : 'ALL');
     setSelectedWorkbasketDraft(
@@ -1405,7 +1413,7 @@ export const AdminPage = () => {
         {activeTab === 'users' && (
           <AdminUsersSection
             users={filteredUsers}
-            canCreateUsers={isPrimaryAdminActor}
+            canCreateUsers={isPrimaryAdminActor || normalizeAdminRole(loggedInUser?.role) === 'ADMIN'}
             onBulkUpload={() => handleOpenBulkUpload('team')}
             onDownloadTemplate={() => downloadBulkTemplate('team')}
             onCreateUser={() => setShowCreateModal(true)}

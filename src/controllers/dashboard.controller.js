@@ -15,6 +15,7 @@ const parsePagination = (value, fallback) => {
 };
 
 const isManagerOrAbove = (user) => hasFirmRoleAtLeast(user, 'MANAGER');
+const isAdminOrAbove = (user) => hasFirmRoleAtLeast(user, 'ADMIN');
 
 const getDashboardSummary = async (req, res) => {
   try {
@@ -154,10 +155,10 @@ const getRiskBrief = async (req, res) => {
 const getPartnerMorningDashboard = async (req, res) => {
   try {
     assertFirmContext(req);
-    if (!isManagerOrAbove(req.user)) {
+    if (!isAdminOrAbove(req.user)) {
       return res.status(403).json({
         success: false,
-        message: 'Partner morning dashboard is available for manager and above roles only',
+        message: 'Partner morning dashboard is available for admin and above roles only',
         data: {},
       });
     }
@@ -185,12 +186,6 @@ const getPartnerMorningDashboard = async (req, res) => {
 const getComplianceControlRoom = async (req, res) => {
   try {
     assertFirmContext(req);
-    if (!isManagerOrAbove(req.user)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Compliance control room is available for manager and above roles only',
-      });
-    }
     const payload = await dashboardService.getComplianceControlRoom(req.user.firmId, {
       assigneeXID: req.query.assigneeXID,
       clientId: req.query.clientId,
@@ -214,10 +209,10 @@ const getComplianceControlRoom = async (req, res) => {
 const updateComplianceState = async (req, res) => {
   try {
     assertFirmContext(req);
-    if (!isManagerOrAbove(req.user)) {
+    if (!isAdminOrAbove(req.user)) {
       return res.status(403).json({
         success: false,
-        message: 'Compliance state transitions are available for manager and above roles only',
+        message: 'Compliance state transitions are available for admin and above roles only',
       });
     }
     const updated = await dashboardService.updateComplianceState({
@@ -251,10 +246,10 @@ const updateComplianceState = async (req, res) => {
 const getApprovalQueues = async (req, res) => {
   try {
     assertFirmContext(req);
-    if (!isManagerOrAbove(req.user)) {
+    if (!isAdminOrAbove(req.user)) {
       return res.status(403).json({
         success: false,
-        message: 'Approval queues are available for manager and above roles only',
+        message: 'Approval queues are available for admin and above roles only',
       });
     }
     const payload = await dashboardService.getApprovalQueues(req.user.firmId, {
@@ -277,10 +272,10 @@ const getApprovalQueues = async (req, res) => {
 const remindApproval = async (req, res) => {
   try {
     assertFirmContext(req);
-    if (!isManagerOrAbove(req.user)) {
+    if (!isAdminOrAbove(req.user)) {
       return res.status(403).json({
         success: false,
-        message: 'Approval reminders are available for manager and above roles only',
+        message: 'Approval reminders are available for admin and above roles only',
       });
     }
     const data = await dashboardService.remindApproval({

@@ -57,6 +57,10 @@ test_atomic_counters.js
 test_counter_service.js
 test_firm_onboarding.js
 test_firm_slug.js
+test_*.js
+test-*.js
+*.test.js.local
+
 
 # wrangler files
 .wrangler
