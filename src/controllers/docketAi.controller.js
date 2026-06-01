@@ -34,6 +34,10 @@ function parsePreviewFlag(value) {
   return String(value || '').toLowerCase() === 'true';
 }
 
+function getDocketIdentifierFromParams(params = {}) {
+  return params.caseId || params.docketId || null;
+}
+
 function buildWarnings({ confidenceLevel, missingFields }) {
   const warnings = [];
 
@@ -398,7 +402,7 @@ async function ensureAiRoutingSuggestion(docket, req) {
 
 async function getAiRoutingSuggestion(req, res) {
   try {
-    let docket = await resolveDocketByIdentifier(req, req.params.docketId);
+    let docket = await resolveDocketByIdentifier(req, getDocketIdentifierFromParams(req.params));
     if (!docket) {
       return res.status(404).json({ success: false, message: 'Docket not found' });
     }
@@ -422,7 +426,7 @@ async function getAiRoutingSuggestion(req, res) {
 
 async function applyAiRouting(req, res) {
   try {
-    let docket = await resolveDocketByIdentifier(req, req.params.docketId);
+    let docket = await resolveDocketByIdentifier(req, getDocketIdentifierFromParams(req.params));
     if (!docket) {
       return res.status(404).json({ success: false, message: 'Docket not found' });
     }
@@ -444,6 +448,7 @@ async function applyAiRouting(req, res) {
       return res.status(409).json({ success: false, message: 'Suggested workbasket is no longer available' });
     }
 
+    docket.ownerTeamId = workbasket._id;
     docket.workbasketId = workbasket._id;
     docket.routedToTeamId = workbasket._id;
     docket.aiRouting.status = 'APPLIED';
@@ -470,7 +475,7 @@ async function applyAiRouting(req, res) {
 
 async function rejectAiRouting(req, res) {
   try {
-    let docket = await resolveDocketByIdentifier(req, req.params.docketId);
+    let docket = await resolveDocketByIdentifier(req, getDocketIdentifierFromParams(req.params));
     if (!docket) {
       return res.status(404).json({ success: false, message: 'Docket not found' });
     }

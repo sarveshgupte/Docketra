@@ -15,7 +15,7 @@ const { tenantScopeGuardPlugin } = require('./plugins/tenantScopeGuard.plugin');
  * - Do not add AI processing, vector embeddings, or document extraction to this model.
  */
 
-const KNOWLEDGE_ITEM_TYPES = ['sop', 'checklist', 'template', 'note', 'client_instruction', 'process'];
+const KNOWLEDGE_ITEM_TYPES = ['sop', 'checklist', 'template', 'note', 'client_instruction', 'process', 'last_good_example', 'review_note'];
 const KNOWLEDGE_ITEM_STATUSES = ['draft', 'active', 'archived'];
 const CHECKLIST_STEP_LABEL_MAX = 300;
 const CHECKLIST_STEP_DESCRIPTION_MAX = 2000;
@@ -80,6 +80,30 @@ const knowledgeItemSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: null,
+    },
+    linkedObligationTemplateId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ComplianceObligationTemplate',
+      default: null,
+      index: true,
+    },
+    linkedDocketType: {
+      type: String,
+      trim: true,
+      default: null,
+      index: true,
+    },
+    linkedServiceLine: {
+      type: String,
+      trim: true,
+      default: null,
+      index: true,
+    },
+    linkedStage: {
+      type: String,
+      trim: true,
+      default: null,
+      index: true,
     },
     checklistSteps: {
       type: [{

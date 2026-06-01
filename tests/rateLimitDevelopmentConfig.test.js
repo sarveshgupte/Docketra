@@ -60,6 +60,7 @@ function testRouteLimiterWiring() {
   assert.ok(workTypeRoutes.includes("router.post('/', authorizeFirmPermission('WORKTYPE_MANAGE'), userWriteLimiter, createWorkType);"));
   assert.ok(securityRoutes.includes("router.get('/alerts', requireSuperadmin, superadminLimiter, listSecurityAlerts);"));
   assert.ok(dashboardRoutes.includes("router.get('/summary', userReadLimiter, getDashboardSummary);"));
+  assert.ok(dashboardRoutes.includes("router.get('/risk-brief', userReadLimiter, getRiskBrief);"));
   assert.ok(routeGroups.includes('const firmReadAccess = [authenticate, userReadLimiter, attachFirmContext, requireTenant, buildFirmInvariantGuard()];'));
   assert.ok(routeGroups.includes('const adminTenantScopedApiAccess = [...tenantScopedApiAccess, requireAdmin];'));
   assert.ok(categoryRoutes.includes("router.get('/', ...firmReadAccess, authorizeFirmPermission('CATEGORY_VIEW'), getCategories);"));

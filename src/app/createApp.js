@@ -103,6 +103,11 @@ const knowledgeItemRoutes = require('../routes/knowledgeItem.routes');
 const docketRoutes = require('../routes/docket.routes');
 const attachmentRoutes = require('../routes/attachment.routes');
 const docketSessionRoutes = require('../routes/docketSession.routes');
+const emailCaptureRoutes = require('../routes/emailCapture.routes');
+const documentItemRoutes = require('../routes/documentItem.routes');
+const clientPortalRoutes = require('../routes/clientPortal.routes');
+const docketExceptionRoutes = require('../routes/docketException.routes');
+const docketEffortRoutes = require('../routes/docketEffort.routes');
 const tenantResolver = require('../middleware/tenantResolver');
 const { RESERVED_FIRM_SLUGS, firmSlugGuard } = require('../middleware/firmSlugGuard.middleware');
 const { login } = require('../controllers/auth.controller');
@@ -405,6 +410,11 @@ const createApp = () => {
     productUpdateRoutes,
     settingsRoutes,
     knowledgeItemRoutes,
+    emailCaptureRoutes,
+    documentItemRoutes,
+    clientPortalRoutes,
+    docketExceptionRoutes,
+    docketEffortRoutes,
   });
 
 

@@ -227,6 +227,25 @@ module.exports = {
     params: z.object({ workbasketId: objectIdOrString }),
     body: z.object({ userId: objectIdOrString }).strict(),
   },
+  'GET /workbaskets/:workbasketId/capacity': {
+    params: z.object({ workbasketId: objectIdOrString }),
+    query: passthroughQuery,
+  },
+  'GET /workbaskets/:workbasketId/dockets': {
+    params: z.object({ workbasketId: objectIdOrString }),
+    query: z.object({
+      category: nonEmptyString.optional(),
+      priority: nonEmptyString.optional(),
+      status: nonEmptyString.optional(),
+      assignedToXID: nonEmptyString.optional(),
+    }).passthrough(),
+  },
+  'POST /workbaskets/reassign': {
+    body: z.object({
+      caseIds: z.array(nonEmptyString).min(1),
+      assignedToXID: xidString,
+    }).strict(),
+  },
   'POST /users/:id/restore': {
     params: z.object({ id: objectIdOrString }),
     body: z.object({}).strict(),

@@ -94,6 +94,7 @@ export const CaseDetailActivityPanel = ({
           placeholder="Enter your comment…"
           rows={3}
           className="case-detail__comment-input"
+          enableMentions={true}
         />
         <div className="case-detail__composer-actions">
           <Button variant="primary" onClick={onAddComment} disabled={!newComment.trim() || submitting}>

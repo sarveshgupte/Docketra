@@ -35,6 +35,8 @@ export const UploadPage = () => {
   const [progress, setProgress] = useState(0);
   const [requestingPin, setRequestingPin] = useState(false);
   const [pinHelpMessage, setPinHelpMessage] = useState('');
+  const [requestChecklist, setRequestChecklist] = useState([]);
+  const [selectedChecklistItemId, setSelectedChecklistItemId] = useState('');
 
   const turnstileSiteKey = String(import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim();
   const isTurnstileConfigured = Boolean(turnstileSiteKey);
@@ -71,6 +73,10 @@ export const UploadPage = () => {
 
         if (!isMounted) return;
         setRequiresPin(Boolean(payload?.data?.requiresPin));
+        const checklist = Array.isArray(payload?.data?.checklist) ? payload.data.checklist : [];
+        setRequestChecklist(checklist);
+        const firstPending = checklist.find((item) => ['requested', 'rejected'].includes(String(item?.status || '').toLowerCase()));
+        setSelectedChecklistItemId(firstPending?.id || checklist[0]?.id || '');
         setPageStatus('ready');
       } catch (error) {
         if (!isMounted) return;
@@ -168,6 +174,7 @@ export const UploadPage = () => {
         formData.append('file', file);
         if (requiresPin) formData.append('pin', pin);
         if (clientComment.trim()) formData.append('comment', clientComment.trim());
+        if (selectedChecklistItemId) formData.append('checklistItemId', selectedChecklistItemId);
         if (isTurnstileConfigured) formData.append('turnstileToken', effectiveTurnstileToken);
 
         const response = await fetch(uploadEndpoint, {
@@ -283,6 +290,32 @@ export const UploadPage = () => {
             ) : null}
 
             <div style={{ marginBottom: '16px' }}>
+              {requestChecklist.length ? (
+                <div style={{ marginBottom: '12px' }}>
+                  <label htmlFor="request-item" style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>
+                    Requested item
+                  </label>
+                  <select
+                    id="request-item"
+                    value={selectedChecklistItemId}
+                    onChange={(event) => setSelectedChecklistItemId(event.target.value)}
+                    style={{ width: '100%', padding: '10px', border: '1px solid var(--dt-border)', borderRadius: '8px' }}
+                  >
+                    {requestChecklist.map((item) => (
+                      <option key={item.id || item.title} value={item.id || ''}>
+                        {item.title} {item.required ? '(Required)' : '(Optional)'} - {item.status}
+                      </option>
+                    ))}
+                  </select>
+                  <div style={{ marginTop: '8px', color: 'var(--dt-text-muted)', fontSize: '13px' }}>
+                    {requestChecklist.map((item) => (
+                      <div key={`status-${item.id || item.title}`}>
+                        {item.title}: {item.status}{item.dueDate ? ` • Due ${new Date(item.dueDate).toLocaleDateString()}` : ''}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               <h1 style={{ fontSize: '20px', marginBottom: '10px' }}>Upload documents</h1>
               <p style={{ marginBottom: '10px', color: 'var(--dt-text-secondary)', fontSize: '14px', fontWeight: 600 }}>
                 Secure upload • No login required

@@ -1,5 +1,8 @@
 const mongoose = require('mongoose');
 const KnowledgeItem = require('../models/KnowledgeItem.model');
+const Case = require('../models/Case.model');
+const Client = require('../models/Client.model');
+const ComplianceObligationTemplate = require('../models/ComplianceObligationTemplate.model');
 const { resolveFirmMemoryScope } = require('../services/firmMemoryScope.service');
 
 const { KNOWLEDGE_ITEM_TYPES, KNOWLEDGE_ITEM_STATUSES } = KnowledgeItem;
@@ -105,6 +108,10 @@ const createKnowledgeItem = async (req, res) => {
       linkedWorkType: req.body?.linkedWorkType
         ? String(req.body.linkedWorkType).trim() || null
         : null,
+      linkedObligationTemplateId: req.body?.linkedObligationTemplateId || null,
+      linkedDocketType: req.body?.linkedDocketType ? String(req.body.linkedDocketType).trim() || null : null,
+      linkedServiceLine: req.body?.linkedServiceLine ? String(req.body.linkedServiceLine).trim() || null : null,
+      linkedStage: req.body?.linkedStage ? String(req.body.linkedStage).trim() || null : null,
       checklistSteps,
       reviewDueAt: parseDateOrNull(req.body?.reviewDueAt),
       lastReviewedAt: parseDateOrNull(req.body?.lastReviewedAt),
@@ -163,6 +170,28 @@ const listKnowledgeItems = async (req, res) => {
     if (req.query.linkedWorkType) {
       const linkedWorkType = String(req.query.linkedWorkType).trim();
       if (linkedWorkType) filter.linkedWorkType = linkedWorkType;
+    }
+
+    if (req.query.linkedObligationTemplateId) {
+      const linkedObligationTemplateId = String(req.query.linkedObligationTemplateId).trim();
+      if (linkedObligationTemplateId && mongoose.Types.ObjectId.isValid(linkedObligationTemplateId)) {
+        filter.linkedObligationTemplateId = new mongoose.Types.ObjectId(linkedObligationTemplateId);
+      }
+    }
+
+    if (req.query.linkedDocketType) {
+      const linkedDocketType = String(req.query.linkedDocketType).trim();
+      if (linkedDocketType) filter.linkedDocketType = linkedDocketType;
+    }
+
+    if (req.query.linkedServiceLine) {
+      const linkedServiceLine = String(req.query.linkedServiceLine).trim();
+      if (linkedServiceLine) filter.linkedServiceLine = linkedServiceLine;
+    }
+
+    if (req.query.linkedStage) {
+      const linkedStage = String(req.query.linkedStage).trim();
+      if (linkedStage) filter.linkedStage = linkedStage;
     }
 
     if (req.query.q) {
@@ -291,6 +320,22 @@ const updateKnowledgeItem = async (req, res) => {
       item.linkedWorkType = body.linkedWorkType ? String(body.linkedWorkType).trim() || null : null;
     }
 
+    if (Object.prototype.hasOwnProperty.call(body, 'linkedObligationTemplateId')) {
+      item.linkedObligationTemplateId = body.linkedObligationTemplateId || null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'linkedDocketType')) {
+      item.linkedDocketType = body.linkedDocketType ? String(body.linkedDocketType).trim() || null : null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'linkedServiceLine')) {
+      item.linkedServiceLine = body.linkedServiceLine ? String(body.linkedServiceLine).trim() || null : null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'linkedStage')) {
+      item.linkedStage = body.linkedStage ? String(body.linkedStage).trim() || null : null;
+    }
+
     if (Object.prototype.hasOwnProperty.call(body, 'reviewDueAt')) {
       item.reviewDueAt = parseDateOrNull(body.reviewDueAt);
     }
@@ -342,10 +387,159 @@ const archiveKnowledgeItem = async (req, res) => {
   }
 };
 
+const getWorkspaceAssets = async (req, res) => {
+  try {
+    const firmId = req.user?.firmId;
+    const { caseId } = req.params;
+
+    // Retrieve Case
+    const targetCase = await Case.findOne({
+      firmId,
+      $or: [{ caseId }, { caseNumber: caseId }],
+    }).lean();
+
+    if (!targetCase) {
+      return res.status(404).json({ success: false, message: 'Docket not found' });
+    }
+
+    // Resolve client ObjectId reference
+    let resolvedClientId = null;
+    if (targetCase.clientId) {
+      const clientObj = await Client.findOne({ clientId: targetCase.clientId, firmId }).lean();
+      if (clientObj) {
+        resolvedClientId = clientObj._id;
+      }
+    }
+
+    // Build workspace relevance matching query:
+    const queryConditions = [
+      // 1. Matched Client ID
+      ...(resolvedClientId ? [{ linkedClientId: resolvedClientId }] : []),
+      // 2. Matched Service Line (obligation_type)
+      ...(targetCase.obligation_type ? [
+        { linkedServiceLine: { $regex: new RegExp(`^${targetCase.obligation_type}$`, 'i') } }
+      ] : []),
+      // 3. Matched Docket Type (category / subcategory / categoryId / subcategoryId)
+      ...(targetCase.categoryId ? [{ linkedDocketType: String(targetCase.categoryId) }] : []),
+      ...(targetCase.category ? [
+        { linkedDocketType: { $regex: new RegExp(`^${targetCase.category}$`, 'i') } }
+      ] : []),
+      ...(targetCase.subcategory ? [
+        { linkedDocketType: { $regex: new RegExp(`^${targetCase.subcategory}$`, 'i') } }
+      ] : []),
+      // 4. Matched Stage / Status
+      ...(targetCase.status ? [
+        { linkedStage: { $regex: new RegExp(`^${targetCase.status}$`, 'i') } }
+      ] : []),
+    ];
+
+    // If there is a ComplianceObligationTemplate linked, we also include it:
+    if (targetCase.obligation_type) {
+      const temp = await ComplianceObligationTemplate.findOne({
+        firmId,
+        obligationType: targetCase.obligation_type,
+        isActive: true,
+      }).lean();
+      if (temp) {
+        queryConditions.push({ linkedObligationTemplateId: temp._id });
+      }
+    }
+
+    if (queryConditions.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const query = {
+      firmId,
+      status: 'active',
+      $or: queryConditions,
+    };
+
+    const assets = await KnowledgeItem.find(query).sort({ updatedAt: -1 }).lean();
+
+    return res.json({ success: true, data: assets });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || 'Failed to retrieve workspace assets' });
+  }
+};
+
+const getFirmMemoryReports = async (req, res) => {
+  try {
+    const firmId = req.user?.firmId;
+
+    // 1. Repeated Review Comments by Docket Type
+    // Retrieve all cases for the firm
+    const cases = await Case.find({ firmId })
+      .select('category subcategory checklist')
+      .lean();
+
+    const commentCounts = {};
+    cases.forEach((c) => {
+      const docketType = c.subcategory || c.category || 'Unknown Docket Type';
+      if (Array.isArray(c.checklist)) {
+        c.checklist.forEach((item) => {
+          if (item.reviewerNotes && item.reviewerNotes.trim()) {
+            const comment = item.reviewerNotes.trim();
+            const key = `${docketType}::${comment}`;
+            commentCounts[key] = (commentCounts[key] || 0) + 1;
+          }
+        });
+      }
+    });
+
+    const repeatedReviewComments = Object.entries(commentCounts)
+      .map(([key, count]) => {
+        const [docketType, comment] = key.split('::');
+        return { docketType, comment, count };
+      })
+      .sort((a, b) => b.count - a.count);
+
+    // 2. Missing SOPs / Templates by Service Line
+    const serviceLines = ['GST', 'TDS', 'ROC', 'ANNUAL_FILING', 'OTHER'];
+    const activeAssets = await KnowledgeItem.find({
+      firmId,
+      status: 'active',
+      type: { $in: ['sop', 'template'] },
+    }).lean();
+
+    const missingSopsAndTemplates = [];
+    serviceLines.forEach((sl) => {
+      const slAssets = activeAssets.filter(
+        (asset) =>
+          asset.linkedServiceLine &&
+          asset.linkedServiceLine.trim().toUpperCase() === sl
+      );
+
+      const hasSop = slAssets.some((a) => a.type === 'sop');
+      const hasTemplate = slAssets.some((a) => a.type === 'template');
+
+      if (!hasSop || !hasTemplate) {
+        missingSopsAndTemplates.push({
+          serviceLine: sl,
+          missingSop: !hasSop,
+          missingTemplate: !hasTemplate,
+        });
+      }
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        repeatedReviewComments,
+        missingSopsAndTemplates,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || 'Failed to generate firm memory reports' });
+  }
+};
+
 module.exports = {
   createKnowledgeItem,
   listKnowledgeItems,
   getKnowledgeItem,
   updateKnowledgeItem,
   archiveKnowledgeItem,
+  getWorkspaceAssets,
+  getFirmMemoryReports,
 };

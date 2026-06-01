@@ -65,3 +65,7 @@ test_firm_slug.js
 
 # Production environment secrets
 env.yaml
+
+# Caches and Scratch files
+.firebase/
+scratch/

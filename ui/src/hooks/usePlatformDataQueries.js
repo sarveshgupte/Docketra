@@ -29,6 +29,13 @@ export const usePlatformDashboardSummaryQuery = () => useQuery({
   ...queueDefaults,
 });
 
+export const usePlatformRiskBriefQuery = () => useQuery({
+  queryKey: ['platform', 'risk-brief'],
+  queryFn: () => trackAsync('platform.dashboard.risk-brief', 'platform:dashboard:risk-brief', () => dashboardApi.getRiskBrief()),
+  select: (res) => res?.data || res?.data?.data || {},
+  ...queueDefaults,
+});
+
 export const usePlatformMyWorklistQuery = (options = {}) => useQuery({
   queryKey: ['platform', 'my-worklist', options.assigneeXID || 'self', options.status || 'ALL', options.category || 'ALL', options.workbasketId || 'all-workbaskets'],
   queryFn: () => trackAsync('platform.worklist.my', 'platform:worklist:my', () => worklistApi.getEmployeeWorklist({ limit: 50, ...options })),

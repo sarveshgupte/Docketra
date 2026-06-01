@@ -3,7 +3,7 @@ const { getDocketTimeline } = require('../services/docketActivity.service');
 
 const getTimeline = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.caseId || req.params.id;
     const { type, page = 1, limit = 20 } = req.query;
 
     const internalId = await resolveCaseIdentifier(req.user.firmId, id, req.user.role);

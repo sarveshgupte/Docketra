@@ -6,6 +6,7 @@ const softDeletePlugin = require('../utils/softDelete.plugin');
 const { tenantScopeGuardPlugin } = require('./plugins/tenantScopeGuard.plugin');
 const { getCanonicalDocketState } = require('../utils/docketStateMapper');
 const { normalizeWorkMode } = require('../utils/workType');
+const { COMPLIANCE_STATES } = require('../domain/compliance/complianceStateMachine');
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
@@ -265,6 +266,18 @@ const caseSchema = new mongoose.Schema({
       assignedToXID: { type: String, trim: true, default: null },
       dueDate: { type: Date, default: null },
       sortOrder: { type: Number, min: 0, default: 0 },
+      status: {
+        type: String,
+        enum: ['requested', 'submitted', 'accepted', 'rejected', 'waived'],
+        default: 'requested',
+      },
+      uploadedAttachmentId: { type: String, trim: true, default: null },
+      uploadedFileName: { type: String, trim: true, maxlength: 300, default: null },
+      reviewerNotes: { type: String, trim: true, maxlength: 1200, default: '' },
+      submittedAt: { type: Date, default: null },
+      submittedBy: { type: String, trim: true, default: null },
+      reviewedAt: { type: Date, default: null },
+      reviewedByXID: { type: String, trim: true, uppercase: true, default: null },
     }],
     default: [],
   },
@@ -421,6 +434,16 @@ const caseSchema = new mongoose.Schema({
     min: 0,
     default: 0,
   },
+  expectedMinutes: {
+    type: Number,
+    min: 0,
+    default: 0,
+  },
+  actualMinutes: {
+    type: Number,
+    min: 0,
+    default: 0,
+  },
   
   /**
    * Date when a Pending case should be reviewed
@@ -511,6 +534,166 @@ const caseSchema = new mongoose.Schema({
     type: String,
     enum: ['waiting_client', 'waiting_internal', 'blocked', 'other'],
   },
+  compliance_state: {
+    type: String,
+    enum: Object.values(COMPLIANCE_STATES),
+    default: COMPLIANCE_STATES.NOT_STARTED,
+    index: true,
+  },
+  statutory_due_date: {
+    type: Date,
+    default: null,
+  },
+  internal_due_date: {
+    type: Date,
+    default: null,
+  },
+  pend_until: {
+    type: Date,
+    default: null,
+  },
+  filed_at: {
+    type: Date,
+    default: null,
+  },
+  obligation_type: {
+    type: String,
+    trim: true,
+    default: null,
+    index: true,
+  },
+  obligation_period: {
+    type: String,
+    trim: true,
+    default: null,
+  },
+  reviewer_xid: {
+    type: String,
+    trim: true,
+    uppercase: true,
+    default: null,
+  },
+  approver_xid: {
+    type: String,
+    trim: true,
+    uppercase: true,
+    default: null,
+  },
+  approval_stage: {
+    approval_type: {
+      type: String,
+      enum: ['internal_partner', 'client', 'authorised_signatory', 'other', null],
+      default: null,
+    },
+    requested_by: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
+    approver: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
+    requested_at: {
+      type: Date,
+      default: null,
+    },
+    due_at: {
+      type: Date,
+      default: null,
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected', 'cancelled', null],
+      default: null,
+      index: true,
+    },
+    comments: {
+      type: String,
+      trim: true,
+      maxlength: 1200,
+      default: '',
+    },
+    evidence_attachment_id: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    resume_to_state: {
+      type: String,
+      enum: ['ready_to_file', 'in_progress', null],
+      default: 'ready_to_file',
+    },
+    decided_at: {
+      type: Date,
+      default: null,
+    },
+    decided_by: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
+    decision_comment: {
+      type: String,
+      trim: true,
+      maxlength: 1200,
+      default: '',
+    },
+  },
+  approval_history: {
+    type: [{
+      _id: false,
+      approval_type: { type: String, trim: true, default: null },
+      requested_by: { type: String, trim: true, uppercase: true, default: null },
+      approver: { type: String, trim: true, uppercase: true, default: null },
+      requested_at: { type: Date, default: null },
+      due_at: { type: Date, default: null },
+      status: { type: String, trim: true, default: null },
+      comments: { type: String, trim: true, default: '' },
+      evidence_attachment_id: { type: String, trim: true, default: null },
+      resume_to_state: { type: String, trim: true, default: null },
+      decided_at: { type: Date, default: null },
+      decided_by: { type: String, trim: true, uppercase: true, default: null },
+      decision_comment: { type: String, trim: true, default: '' },
+      snapshot_at: { type: Date, default: Date.now },
+    }],
+    default: [],
+  },
+  risk_level: {
+    type: String,
+    enum: ['low', 'medium', 'high', 'critical', null],
+    default: 'medium',
+    index: true,
+  },
+  blocked_reason: {
+    type: String,
+    trim: true,
+    maxlength: 600,
+    default: null,
+  },
+  blockerType: {
+    type: String,
+    enum: ['client_documents', 'portal_error', 'dsc', 'signatory', 'internal_dependency', 'other'],
+    default: null,
+  },
+  blockerNote: {
+    type: String,
+    trim: true,
+    maxlength: 600,
+    default: null,
+  },
+  blockedAt: {
+    type: Date,
+    default: null,
+  },
+  unblockedAt: {
+    type: Date,
+    default: null,
+  },
   completionType: {
     type: String,
     enum: ['resolved', 'filed'],
@@ -576,7 +759,6 @@ const caseSchema = new mongoose.Schema({
     ref: 'Team',
     default: null,
     index: true,
-    immutable: true,
   },
   routedToTeamId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -1353,6 +1535,11 @@ caseSchema.index({ firmId: 1, routedToTeamId: 1, status: 1 });
 caseSchema.index({ firmId: 1, dueDate: 1, status: 1 }); // Firm-scoped overdue metrics queries
 caseSchema.index({ firmId: 1, status: 1, dueDate: 1 }); // Firm-scoped status-filtered due-date ordering queries
 caseSchema.index({ firmId: 1, status: 1, pendingUntil: 1 }); // Pending report filter + chronological pending queue sort
+caseSchema.index({ firmId: 1, pendingReason: 1, blockerType: 1, status: 1 }); // Risk brief blocker classification
+caseSchema.index({ firmId: 1, compliance_state: 1, statutory_due_date: 1, internal_due_date: 1 });
+caseSchema.index({ firmId: 1, obligation_type: 1, risk_level: 1, compliance_state: 1 });
+caseSchema.index({ firmId: 1, 'approval_stage.status': 1, 'approval_stage.approver': 1, 'approval_stage.due_at': 1 });
+caseSchema.index({ firmId: 1, 'approval_stage.status': 1, 'approval_stage.approval_type': 1, 'approval_stage.due_at': 1 });
 caseSchema.index({ firmId: 1, resolvedAt: 1 }); // Firm-scoped resolution metrics queries
 caseSchema.index({ firmId: 1, createdAt: 1 }); // Firm-scoped daily creation metrics queries
 caseSchema.index({ firmId: 1, status: 1, createdAt: -1 }); // Firm-scoped status dashboards sorted by recency

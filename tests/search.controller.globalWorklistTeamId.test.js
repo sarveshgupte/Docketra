@@ -30,8 +30,12 @@ const mockQuery = (mockData = []) => {
   return q;
 };
 
+const capturedCaseQueries = [];
+
 const CaseMock = {
-  find: () => mockQuery([
+  find: (query) => {
+    capturedCaseQueries.push(query);
+    return mockQuery([
     {
       caseId: 'CASE-001',
       caseName: 'Sample case',
@@ -45,7 +49,8 @@ const CaseMock = {
       routedToTeamId: null,
       routingNote: null,
     },
-  ]),
+  ]);
+  },
   countDocuments: async () => 1,
 };
 
@@ -81,6 +86,30 @@ const searchController = require('../src/controllers/search.controller');
   assert.strictEqual(res.data.success, true);
   assert.strictEqual(Array.isArray(res.data.data), true);
   assert.strictEqual(res.data.data.length, 1);
+
+  const scopedWorkbasketId = '69cfb3f9e4f2388b9b889579';
+  capturedCaseQueries.length = 0;
+  const scopedReq = mockReq({ query: { limit: '1', workbasketId: scopedWorkbasketId } });
+  const scopedRes = mockRes();
+  await searchController.globalWorklist(scopedReq, scopedRes);
+  assert.strictEqual(scopedRes.data.success, true);
+  assert.ok(capturedCaseQueries.length > 0, 'expected global worklist to execute a Case.find query');
+
+  const scopedQuery = capturedCaseQueries[0];
+  const queueScopeGroup = (Array.isArray(scopedQuery?.$and) ? scopedQuery.$and : []).find(
+    (group) => Array.isArray(group?.$or) && group.$or.some((entry) => Object.prototype.hasOwnProperty.call(entry || {}, 'routedToTeamId')),
+  );
+  assert.ok(queueScopeGroup, 'global worklist should include queue scoping group');
+
+  const routedBranch = queueScopeGroup.$or.find((entry) => entry?.routedToTeamId && !entry?.$or);
+  assert.ok(routedBranch, 'queue scope should include direct routedToTeamId branch');
+  assert.strictEqual(String(routedBranch.routedToTeamId), scopedWorkbasketId, 'routed branch must target selected team');
+
+  const fallbackBranch = queueScopeGroup.$or.find((entry) => entry?.routedToTeamId === null && Array.isArray(entry?.$or));
+  assert.ok(fallbackBranch, 'queue scope should include owner/workbasket fallback branch when routedToTeamId is null');
+  const fallbackKeys = new Set(fallbackBranch.$or.flatMap((entry) => Object.keys(entry || {})));
+  assert.ok(fallbackKeys.has('ownerTeamId'), 'fallback branch must include ownerTeamId');
+  assert.ok(fallbackKeys.has('workbasketId'), 'fallback branch must include workbasketId');
 
   console.log('globalWorklist handles non-ObjectId user.teamId without throwing');
 })();

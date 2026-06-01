@@ -1,6 +1,6 @@
 import { ROUTES } from './routes.js';
 
-export const TASK_MANAGER_MVP_ENABLED = true;
+export const TASK_MANAGER_MVP_ENABLED = false;
 
 export const FIRM_PILOT_SURFACE = {
   hideFromNavigation: new Set([

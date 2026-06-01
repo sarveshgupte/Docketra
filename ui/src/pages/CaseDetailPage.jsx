@@ -59,6 +59,10 @@ import {
 const CaseDetailAttachmentsPanel = lazy(() => import('./caseDetail/CaseDetailAttachmentsPanel').then((module) => ({ default: module.CaseDetailAttachmentsPanel })));
 const CaseDetailActivityPanel = lazy(() => import('./caseDetail/CaseDetailActivityPanel').then((module) => ({ default: module.CaseDetailActivityPanel })));
 const CaseDetailHistoryPanel = lazy(() => import('./caseDetail/CaseDetailHistoryPanel').then((module) => ({ default: module.CaseDetailHistoryPanel })));
+const CaseDetailDocumentPacksPanel = lazy(() => import('./caseDetail/CaseDetailDocumentPacksPanel').then((module) => ({ default: module.CaseDetailDocumentPacksPanel })));
+const CaseDetailExceptionsPanel = lazy(() => import('./caseDetail/CaseDetailExceptionsPanel').then((module) => ({ default: module.CaseDetailExceptionsPanel })));
+const CaseDetailEffortPanel = lazy(() => import('./caseDetail/CaseDetailEffortPanel').then((module) => ({ default: module.CaseDetailEffortPanel })));
+const CaseDetailEmailsPanel = lazy(() => import('./caseDetail/CaseDetailEmailsPanel').then((module) => ({ default: module.CaseDetailEmailsPanel })));
 import { useClientDocketHistory } from './caseDetail/useClientDocketHistory';
 // showFileAction={!routedTeamCannotResolve && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)}
 import {
@@ -279,6 +283,10 @@ export const CaseDetailPage = () => {
     { name: CASE_DETAIL_TABS.ATTACHMENTS, label: 'Attachments', badge: attachments.length || null },
     { name: CASE_DETAIL_TABS.ACTIVITY, label: 'Activity', badge: mergedTimelineEvents.length || null },
     { name: CASE_DETAIL_TABS.KNOWLEDGE, label: 'Linked Knowledge' },
+    { name: CASE_DETAIL_TABS.DOCUMENT_PACKS, label: 'Document Packs' },
+    { name: CASE_DETAIL_TABS.EXCEPTIONS, label: 'Blockers' },
+    { name: CASE_DETAIL_TABS.EFFORT, label: 'Effort & Budget' },
+    { name: CASE_DETAIL_TABS.EMAIL_LOGS, label: 'Email Logs' },
   ]), [attachments.length, mergedTimelineEvents.length]);
 
   const visibleComments = useMemo(() => comments.slice(-commentWindowSize), [comments, commentWindowSize]);
@@ -1321,127 +1329,254 @@ export const CaseDetailPage = () => {
           docketSlaStatus={docketSlaStatus}
         />
 
+        {/* Tab Selection Navigation */}
+        <StickyTabs tabs={docketTabs} defaultTab={CASE_DETAIL_TABS.OVERVIEW} />
+
         {/* Clean Dashboard Layout Container */}
         <div className="case-detail-layout-grid flex w-full flex-col gap-6" style={{ padding: '0 24px 24px' }}>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full">
-            {/* Middle Left: Comments thread & Composer & Actions */}
             <div className="lg:col-span-12 flex flex-col gap-6 w-full">
-              <section className="case-card border border-gray-100 bg-white rounded-2xl p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  💬 Docket Comments
-                </h2>
-                
-                <div className="case-detail__comments overflow-y-auto max-h-[400px] pr-2 mb-4" ref={commentsListRef}>
-                  {sectionLoading.comments ? (
-                    <div className="case-detail__section-skeleton" aria-hidden="true">
-                      {Array.from({ length: 3 }).map((_, idx) => <div key={`comment-skeleton-${idx}`} className="case-detail__skeleton-row" />)}
-                    </div>
-                  ) : visibleComments.length === 0 ? (
-                    <p className="text-sm text-gray-500 italic p-4 bg-gray-50 rounded-xl text-center">No comments added yet.</p>
-                  ) : (
-                    <DocketComments comments={visibleComments} />
-                  )}
-                </div>
+              {/* Conditional Active Tab Panel Rendering */}
+              <Suspense fallback={<CaseDetailPanelSkeleton />}>
+                {activeTab === CASE_DETAIL_TABS.OVERVIEW && (
+                  <CaseDetailOverviewPanel
+                    caseInfo={caseInfo}
+                    firmSlug={firmSlug}
+                    linkedClientRoute={linkedClientRoute}
+                    isInternalWork={isInternalWork}
+                    clientName={clientName}
+                    clientIdLabel={clientIdLabel}
+                    slaDaysLabel={slaDaysLabel}
+                    dueDateLabel={dueDateLabel}
+                    linkedClientEmail={linkedClientEmail}
+                    linkedClientContact={linkedClientContact}
+                    linkedClientId={linkedClientId}
+                    fromClientRoute={fromClientRoute}
+                    loadingClientDockets={loadingClientDockets}
+                    clientDockets={clientDockets}
+                    returnTo={returnTo}
+                    navigate={navigate}
+                    descriptionContent={caseInfo?.description}
+                    lifecycleStatus={lifecycleStatus}
+                    shouldShowActions={shouldShowActions}
+                    canPerformLifecycleActions={canPerformLifecycleActions}
+                    lifecycleQuickActions={lifecycleQuickActions}
+                    actionInFlight={actionInFlight}
+                    isViewOnlyMode={isViewOnlyMode}
+                    onOpenFileModal={() => { setFileComment(''); setShowFileModal(true); }}
+                    canRouteDocket={canRouteDocket}
+                    onOpenRouteModal={() => setShowRouteModal(true)}
+                    forceQcReview={forceQcReview}
+                    onForceQcReviewChange={setForceQcReview}
+                    isQcContext={isQcContext}
+                    isUnassignedWorkbasket={isUnassignedWorkbasket}
+                    isTerminal={isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)}
+                  />
+                )}
+                {activeTab === CASE_DETAIL_TABS.ATTACHMENTS && (
+                  <CaseDetailAttachmentsPanel
+                    caseId={caseId}
+                    attachments={attachments}
+                    accessMode={accessMode}
+                    permissions={permissions}
+                    caseData={caseData}
+                    lifecycleStatus={lifecycleStatus}
+                    actionInFlight={actionInFlight}
+                    isViewOnlyMode={isViewOnlyMode}
+                    routedTeamCannotResolve={routedTeamCannotResolve}
+                    isQcContext={isQcContext}
+                    isUnassignedWorkbasket={isUnassignedWorkbasket}
+                    onOpenFileModal={() => { setFileComment(''); setShowFileModal(true); }}
+                    onRefreshCase={loadCase}
+                  />
+                )}
+                {activeTab === CASE_DETAIL_TABS.ACTIVITY && (
+                  <CaseDetailActivityPanel
+                    timelineFilter={timelineFilter}
+                    onTimelineFilterChange={setTimelineFilter}
+                    timelineLoading={timelineLoading}
+                    mergedTimelineEvents={mergedTimelineEvents}
+                    timelinePage={timelinePage}
+                    timelineHasNextPage={timelineHasNextPage}
+                    onPrevTimelinePage={() => setTimelinePage((p) => Math.max(1, p - 1))}
+                    onNextTimelinePage={() => setTimelinePage((p) => p + 1)}
+                    sectionLoading={sectionLoading.comments}
+                    commentsListRef={commentsListRef}
+                    visibleComments={visibleComments}
+                    comments={comments}
+                    onLoadOlderComments={() => setCommentWindowSize((size) => size + INITIAL_VIRTUAL_WINDOW)}
+                    initialVirtualWindow={INITIAL_VIRTUAL_WINDOW}
+                    accessMode={accessMode}
+                    permissions={permissions}
+                    caseData={caseData}
+                    commentComposerId={commentComposerId}
+                    newComment={newComment}
+                    onNewCommentChange={setNewComment}
+                    onAddComment={handleAddComment}
+                    submitting={submitting}
+                  />
+                )}
+                {activeTab === CASE_DETAIL_TABS.KNOWLEDGE && (
+                  <LinkedKnowledgeSection
+                    caseId={caseId}
+                    categoryLabel={categoryLabel}
+                    clientMongoId={clientMongoId}
+                    firmSlug={firmSlug}
+                    isAdmin={user?.role === 'admin' || user?.role === 'owner' || permissions.isAdmin}
+                  />
+                )}
+                {activeTab === CASE_DETAIL_TABS.DOCUMENT_PACKS && (
+                  <CaseDetailDocumentPacksPanel
+                    caseId={caseId}
+                    caseInternalId={caseInfo?.caseInternalId || caseData?.case?.caseInternalId || caseData?.caseInternalId || ''}
+                    attachments={attachments}
+                    onRefreshCase={loadCase}
+                  />
+                )}
+                {activeTab === CASE_DETAIL_TABS.EXCEPTIONS && (
+                  <CaseDetailExceptionsPanel
+                    caseInternalId={caseInfo?.caseInternalId || caseData?.case?.caseInternalId || caseData?.caseInternalId || ''}
+                    onRefreshCase={loadCase}
+                  />
+                )}
+                {activeTab === CASE_DETAIL_TABS.EFFORT && (
+                  <CaseDetailEffortPanel
+                    caseId={caseId}
+                    caseInternalId={caseInfo?.caseInternalId || caseData?.case?.caseInternalId || caseData?.caseInternalId || ''}
+                    caseInfo={caseInfo}
+                    user={user}
+                    onRefreshCase={loadCase}
+                  />
+                )}
+                {activeTab === CASE_DETAIL_TABS.EMAIL_LOGS && (
+                  <CaseDetailEmailsPanel
+                    caseId={caseId}
+                  />
+                )}
+              </Suspense>
+            </div>
 
-                {comments.length > visibleComments.length ? (
-                  <div className="case-detail__virtual-actions mb-4">
-                    <Button variant="outline" size="small" onClick={() => setCommentWindowSize((size) => size + INITIAL_VIRTUAL_WINDOW)}>
-                      Load older comments ({comments.length - visibleComments.length} remaining)
-                    </Button>
+            {/* Middle Left: Comments thread & Composer & Actions */}
+            {activeTab !== CASE_DETAIL_TABS.ACTIVITY && (
+              <div className="lg:col-span-12 flex flex-col gap-6 w-full">
+                <section className="case-card border border-gray-100 bg-white rounded-2xl p-6 shadow-sm">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    💬 Docket Comments
+                  </h2>
+                  
+                  <div className="case-detail__comments overflow-y-auto max-h-[400px] pr-2 mb-4" ref={commentsListRef}>
+                    {sectionLoading.comments ? (
+                      <div className="case-detail__section-skeleton" aria-hidden="true">
+                        {Array.from({ length: 3 }).map((_, idx) => <div key={`comment-skeleton-${idx}`} className="case-detail__skeleton-row" />)}
+                      </div>
+                    ) : visibleComments.length === 0 ? (
+                      <p className="text-sm text-gray-500 italic p-4 bg-gray-50 rounded-xl text-center">No comments added yet.</p>
+                    ) : (
+                      <DocketComments comments={visibleComments} />
+                    )}
                   </div>
-                ) : null}
 
-                {(accessMode.canComment || permissions.canAddComment(caseData)) && (
-                  <div className="case-detail__add-comment flex flex-col gap-3 mt-4 border-t pt-4">
-                    <Textarea
-                      label="Add Comment"
-                      id={commentComposerId}
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      placeholder="Enter your comment…"
-                      rows={3}
-                      className="case-detail__comment-input"
-                    />
-                    <div className="case-detail__composer-actions flex justify-end">
-                      <Button variant="primary" onClick={handleAddComment} disabled={!newComment.trim() || submitting}>
-                        {submitting ? 'Adding…' : 'Add Comment'}
+                  {comments.length > visibleComments.length ? (
+                    <div className="case-detail__virtual-actions mb-4">
+                      <Button variant="outline" size="small" onClick={() => setCommentWindowSize((size) => size + INITIAL_VIRTUAL_WINDOW)}>
+                        Load older comments ({comments.length - visibleComments.length} remaining)
                       </Button>
                     </div>
-                  </div>
-                )}
+                  ) : null}
 
-                {/* Inline Action Buttons below composer */}
-                {shouldShowActions ? (
-                  <div className="border-t pt-6 mt-6">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">
-                      Queue & Workflow Actions
-                    </h3>
-                    <div className="flex flex-wrap items-center gap-3">
-                      {/* Resolve / Submit */}
-                      {canPerformLifecycleActions && lifecycleQuickActions.some((action) => ['resolve', 'submit'].includes(action.key)) && (
-                        <Button
-                          variant="primary"
-                          onClick={() => openActionModal('resolve')}
-                          disabled={actionInFlight}
-                          className="shadow-sm hover:shadow"
-                        >
-                          {routedTeamCannotResolve ? 'Submit' : 'Resolve'}
+                  {(accessMode.canComment || permissions.canAddComment(caseData)) && (
+                    <div className="case-detail__add-comment flex flex-col gap-3 mt-4 border-t pt-4">
+                      <Textarea
+                        label="Add Comment"
+                        id={commentComposerId}
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder="Enter your comment…"
+                        rows={3}
+                        className="case-detail__comment-input"
+                        enableMentions={true}
+                      />
+                      <div className="case-detail__composer-actions flex justify-end">
+                        <Button variant="primary" onClick={handleAddComment} disabled={!newComment.trim() || submitting}>
+                          {submitting ? 'Adding…' : 'Add Comment'}
                         </Button>
-                      )}
-
-                      {/* Pend */}
-                      {canPerformLifecycleActions && lifecycleQuickActions.some((action) => action.key === 'pend') && (
-                        <Button
-                          variant="secondary"
-                          onClick={() => openActionModal('pend')}
-                          disabled={actionInFlight}
-                          className="shadow-sm hover:shadow"
-                        >
-                          Pend
-                        </Button>
-                      )}
-
-                      {/* Resume / Unpend */}
-                      {canPerformLifecycleActions && lifecycleQuickActions.some((action) => action.key === 'unpend') && (
-                        <Button
-                          variant="primary"
-                          onClick={() => setShowUnpendModal(true)}
-                          disabled={actionInFlight}
-                        >
-                          Resume
-                        </Button>
-                      )}
-
-                      {/* Route */}
-                      {canRouteDocket && (
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowRouteModal(true)}
-                          disabled={actionInFlight}
-                          className="shadow-sm hover:shadow"
-                        >
-                          Route
-                        </Button>
-                      )}
-
-                      {/* File */}
-                      {!isViewOnlyMode && !routedTeamCannotResolve && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus) && (
-                        <Button
-                          variant="secondary"
-                          onClick={() => { setFileComment(''); setShowFileModal(true); }}
-                          disabled={actionInFlight}
-                          className="shadow-sm hover:shadow"
-                        >
-                          File
-                        </Button>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-500 italic mt-6 border-t pt-4">This docket is in a terminal state. Operational actions are locked.</p>
-                )}
-              </section>
-            </div>
+                  )}
+
+                  {/* Inline Action Buttons below composer */}
+                  {shouldShowActions ? (
+                    <div className="border-t pt-6 mt-6">
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">
+                        Queue & Workflow Actions
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-3">
+                        {/* Resolve / Submit */}
+                        {canPerformLifecycleActions && lifecycleQuickActions.some((action) => ['resolve', 'submit'].includes(action.key)) && (
+                          <Button
+                            variant="primary"
+                            onClick={() => openActionModal('resolve')}
+                            disabled={actionInFlight}
+                            className="shadow-sm hover:shadow"
+                          >
+                            {routedTeamCannotResolve ? 'Submit' : 'Resolve'}
+                          </Button>
+                        )}
+
+                        {/* Pend */}
+                        {canPerformLifecycleActions && lifecycleQuickActions.some((action) => action.key === 'pend') && (
+                          <Button
+                            variant="secondary"
+                            onClick={() => openActionModal('pend')}
+                            disabled={actionInFlight}
+                            className="shadow-sm hover:shadow"
+                          >
+                            Pend
+                          </Button>
+                        )}
+
+                        {/* Resume / Unpend */}
+                        {canPerformLifecycleActions && lifecycleQuickActions.some((action) => action.key === 'unpend') && (
+                          <Button
+                            variant="primary"
+                            onClick={() => setShowUnpendModal(true)}
+                            disabled={actionInFlight}
+                          >
+                            Resume
+                          </Button>
+                        )}
+
+                        {/* Route */}
+                        {canRouteDocket && (
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowRouteModal(true)}
+                            disabled={actionInFlight}
+                            className="shadow-sm hover:shadow"
+                          >
+                            Route
+                          </Button>
+                        )}
+
+                        {/* File */}
+                        {!isViewOnlyMode && !routedTeamCannotResolve && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus) && (
+                          <Button
+                            variant="secondary"
+                            onClick={() => { setFileComment(''); setShowFileModal(true); }}
+                            disabled={actionInFlight}
+                            className="shadow-sm hover:shadow"
+                          >
+                            File
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-500 italic mt-6 border-t pt-4">This docket is in a terminal state. Operational actions are locked.</p>
+                  )}
+                </section>
+              </div>
+            )}
           </div>
 
           {/* Bottom Section: Client history */}

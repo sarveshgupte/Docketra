@@ -4,6 +4,7 @@ const { isClientActive } = require('../utils/clientStatus');
 const { calculateDeadlineFromRule } = require('../domain/deadlines/calculateDeadlineFromRule');
 const { getFirmSlaCalendarConfig: loadFirmSlaCalendarConfig } = require('./firmCalendar.service');
 const docketNarrativeStorage = require('./docketNarrativeStorage.service');
+const { COMPLIANCE_STATES, normalizeComplianceState } = require('../domain/compliance/complianceStateMachine');
 
 module.exports = (deps) => {
   const {
@@ -221,6 +222,17 @@ module.exports = (deps) => {
         employeeXID,
         dueDate,
         eventDate,
+        compliance_state,
+        statutory_due_date,
+        internal_due_date,
+        pend_until,
+        filed_at,
+        obligation_type,
+        obligation_period,
+        reviewer_xid,
+        approver_xid,
+        risk_level,
+        blocked_reason,
       } = req.body;
       const guidedInput = normalizeCreateInput(req.body);
       const requestedInternal = guidedInput?.isInternal ?? isInternal;
@@ -650,6 +662,7 @@ module.exports = (deps) => {
         const normalizedPriority = guidedInput.priority || (typeof priority === 'string' && priority.trim().length > 0
           ? priority.trim().toLowerCase()
           : 'medium');
+        const normalizedComplianceState = normalizeComplianceState(compliance_state) || COMPLIANCE_STATES.NOT_STARTED;
         const resolvedAssignee = await resolveAssigneeFromWorkbasketRules({
           firmId,
           workbasketId: routedWorkbasketId,
@@ -761,6 +774,19 @@ module.exports = (deps) => {
             checklistTemplate: subcategoryDoc?.checklistTemplate || [],
             createdAt,
           }),
+          compliance_state: normalizedComplianceState,
+          statutory_due_date: statutory_due_date ? new Date(statutory_due_date) : null,
+          internal_due_date: internal_due_date ? new Date(internal_due_date) : null,
+          pend_until: pend_until ? new Date(pend_until) : null,
+          filed_at: filed_at ? new Date(filed_at) : null,
+          obligation_type: typeof obligation_type === 'string' ? obligation_type.trim() : null,
+          obligation_period: typeof obligation_period === 'string' ? obligation_period.trim() : null,
+          reviewer_xid: typeof reviewer_xid === 'string' ? reviewer_xid.trim().toUpperCase() : null,
+          approver_xid: typeof approver_xid === 'string' ? approver_xid.trim().toUpperCase() : null,
+          risk_level: ['low', 'medium', 'high', 'critical'].includes(String(risk_level || '').toLowerCase())
+            ? String(risk_level).toLowerCase()
+            : 'medium',
+          blocked_reason: typeof blocked_reason === 'string' ? blocked_reason.trim() : null,
         });
         
         step('before case create');

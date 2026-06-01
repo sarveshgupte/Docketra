@@ -21,6 +21,7 @@ const run = async () => {
     getOverdueDockets: dashboardService.getOverdueDockets,
     getRecentDockets: dashboardService.getRecentDockets,
     getWorkbasketLoad: dashboardService.getWorkbasketLoad,
+    getRiskBrief: dashboardService.getRiskBrief,
   };
 
   try {
@@ -28,6 +29,14 @@ const run = async () => {
     dashboardService.getOverdueDockets = async () => ({ items: [], page: 1, limit: 10, total: 0, hasNextPage: false });
     dashboardService.getRecentDockets = async () => ({ items: [], page: 1, limit: 10, total: 0, hasNextPage: false });
     dashboardService.getWorkbasketLoad = async () => ([]);
+    dashboardService.getRiskBrief = async () => ({
+      atRiskEntities: 3,
+      waitingClient: 2,
+      stalePending: 1,
+      awaitingApproval: 4,
+      overloadedAssignees: [{ assigneeXID: 'X000201', docketCount: 12 }],
+      blockedByType: { portal_error: 2, client_documents: 1 },
+    });
 
     delete require.cache[require.resolve('../src/controllers/dashboard.controller')];
     const dashboardController = require('../src/controllers/dashboard.controller');
@@ -53,11 +62,28 @@ const run = async () => {
     assert.strictEqual(missingFirmRes.payload.success, false);
     assert.deepStrictEqual(missingFirmRes.payload.data, {});
     console.log('✓ dashboard summary enforces tenant guard');
+
+    const riskReq = { user: { firmId: '67e95f7642adf77d7f4e1834', xID: 'X0001', role: 'Admin' }, query: {} };
+    const riskRes = createMockRes();
+    await dashboardController.getRiskBrief(riskReq, riskRes);
+    assert.strictEqual(riskRes.statusCode, 200);
+    assert.strictEqual(riskRes.payload.success, true);
+    assert.strictEqual(riskRes.payload.data.atRiskEntities, 3);
+    assert.ok(Array.isArray(riskRes.payload.data.overloadedAssignees));
+    console.log('✓ dashboard risk brief returns manager-plus risk summary');
+
+    const riskDeniedReq = { user: { firmId: '67e95f7642adf77d7f4e1834', xID: 'X0042', role: 'USER' }, query: {} };
+    const riskDeniedRes = createMockRes();
+    await dashboardController.getRiskBrief(riskDeniedReq, riskDeniedRes);
+    assert.strictEqual(riskDeniedRes.statusCode, 403);
+    assert.strictEqual(riskDeniedRes.payload.success, false);
+    console.log('✓ dashboard risk brief is restricted to manager and above');
   } finally {
     dashboardService.getMyDockets = original.getMyDockets;
     dashboardService.getOverdueDockets = original.getOverdueDockets;
     dashboardService.getRecentDockets = original.getRecentDockets;
     dashboardService.getWorkbasketLoad = original.getWorkbasketLoad;
+    dashboardService.getRiskBrief = original.getRiskBrief;
   }
 };
 

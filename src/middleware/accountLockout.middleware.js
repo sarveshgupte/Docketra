@@ -21,6 +21,23 @@ end
 return 1
 `;
 
+const failedAttemptsMap = new Map();
+const lockoutsMap = new Map();
+
+const pruneExpiredEntries = () => {
+  const now = Date.now();
+  for (const [key, value] of failedAttemptsMap.entries()) {
+    if (value.expiresAt <= now) {
+      failedAttemptsMap.delete(key);
+    }
+  }
+  for (const [key, value] of lockoutsMap.entries()) {
+    if (value.lockedUntil <= now) {
+      lockoutsMap.delete(key);
+    }
+  }
+};
+
 const getAccountKey = (identifier) => `docketra:ratelimit:login:attempts:${hashIdentifier(identifier)}`;
 const getAccountLockKey = (identifier) => `docketra:ratelimit:login:block:${hashIdentifier(identifier)}`;
 
@@ -41,7 +58,22 @@ const enforceAccountLockout = async (req, res, next) => {
   const identifier = getAuthIdentifier(req);
   if (!identifier) return next();
   const redis = getAccountLockoutRedis();
-  if (!redis) return next();
+  
+  if (!redis) {
+    pruneExpiredEntries();
+    const hashed = hashIdentifier(identifier);
+    const lock = lockoutsMap.get(hashed);
+    if (lock && lock.lockedUntil > Date.now()) {
+      const ttl = Math.ceil((lock.lockedUntil - Date.now()) / 1000);
+      res.setHeader('Retry-After', String(ttl));
+      return res.status(429).json({
+        success: false,
+        error: 'ACCOUNT_TEMP_LOCKED',
+        retryAfter: ttl,
+      });
+    }
+    return next();
+  }
 
   const ttl = await redis.ttl(getAccountLockKey(identifier));
   if (ttl > 0) {
@@ -59,7 +91,32 @@ const recordFailedLoginAttempt = async (req) => {
   const identifier = getAuthIdentifier(req);
   if (!identifier) return;
   const redis = getAccountLockoutRedis();
-  if (!redis) return;
+  
+  if (!redis) {
+    pruneExpiredEntries();
+    const hashed = hashIdentifier(identifier);
+    const now = Date.now();
+    const windowMs = config.security.rateLimit.authWindowSeconds * 1000;
+    const lockSeconds = config.security.rateLimit.accountLockSeconds;
+    const maxAttempts = config.security.rateLimit.accountLockAttempts;
+    
+    let entry = failedAttemptsMap.get(hashed);
+    if (!entry || entry.expiresAt <= now) {
+      entry = { count: 0, expiresAt: now + windowMs };
+    }
+    
+    entry.count += 1;
+    failedAttemptsMap.set(hashed, entry);
+    
+    if (entry.count > maxAttempts) {
+      lockoutsMap.set(hashed, { lockedUntil: now + (lockSeconds * 1000) });
+      await logSecurityEvent(req, {
+        action: 'ACCOUNT_TEMP_LOCKED',
+        metadata: { identifier },
+      });
+    }
+    return;
+  }
 
   const accountKey = getAccountKey(identifier);
   const lockKey = getAccountLockKey(identifier);
@@ -84,7 +141,13 @@ const clearFailedLoginAttempts = async (req) => {
   const identifier = getAuthIdentifier(req);
   if (!identifier) return;
   const redis = getAccountLockoutRedis();
-  if (!redis) return;
+  
+  if (!redis) {
+    const hashed = hashIdentifier(identifier);
+    failedAttemptsMap.delete(hashed);
+    lockoutsMap.delete(hashed);
+    return;
+  }
 
   await redis.del(getAccountKey(identifier));
   await redis.del(getAccountLockKey(identifier));
@@ -94,4 +157,9 @@ module.exports = {
   enforceAccountLockout,
   recordFailedLoginAttempt,
   clearFailedLoginAttempts,
+  __private: {
+    failedAttemptsMap,
+    lockoutsMap,
+    pruneExpiredEntries,
+  },
 };

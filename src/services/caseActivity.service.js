@@ -243,6 +243,35 @@ module.exports = (deps) => {
         performedByXID: req.user?.xID,
       });
 
+      // Parse mentions from the comment text
+      const mentionedXIDs = new Set();
+      if (text) {
+        // 1. Match `@Name (xID)` pattern (e.g. `@John Doe (JOHN_DOE)`)
+        const parenthesizedRegex = /@(?:[^(]+?)\s*\(([^)]+)\)/g;
+        let match;
+        while ((match = parenthesizedRegex.exec(text)) !== null) {
+          if (match[1]) mentionedXIDs.add(match[1].trim().toUpperCase());
+        }
+        
+        // 2. Match simple `@xID` pattern (e.g. `@JOHN_DOE`)
+        const simpleRegex = /@([a-zA-Z0-9_-]+)/g;
+        while ((match = simpleRegex.exec(text)) !== null) {
+          if (match[1]) mentionedXIDs.add(match[1].trim().toUpperCase());
+        }
+      }
+
+      // Query database to ensure mentioned xIDs correspond to real active users in the firm
+      const validatedMentions = mentionedXIDs.size > 0
+        ? await User.find({
+            firmId: effectiveFirmId,
+            xID: { $in: [...mentionedXIDs] },
+            status: { $ne: 'deleted' },
+          }).select('xID name').lean()
+        : [];
+      
+      const validatedMentionedXIDs = new Set(validatedMentions.map(u => String(u.xID).toUpperCase()));
+
+      // Construct distinct lists to avoid duplicate spamming
       const participantXIDs = new Set();
       if (caseData.assignedToXID) participantXIDs.add(String(caseData.assignedToXID).toUpperCase());
       if (caseData.createdByXID) participantXIDs.add(String(caseData.createdByXID).toUpperCase());
@@ -253,10 +282,25 @@ module.exports = (deps) => {
       commenterXIDs.forEach((xid) => {
         if (xid) participantXIDs.add(String(xid).toUpperCase());
       });
-      participantXIDs.delete(String(req.user.xID || '').toUpperCase());
 
-      await Promise.all(
-        [...participantXIDs].map((participantXID) => createNotification({
+      // Remove self and mentioned users from generic comment notification
+      participantXIDs.delete(String(req.user.xID || '').toUpperCase());
+      validatedMentionedXIDs.forEach((xid) => participantXIDs.delete(xid));
+
+      // Trigger notifications
+      await Promise.all([
+        // 1. Mentions Notifications (Targeted message)
+        ...[...validatedMentionedXIDs].map((mentionXID) => createNotification({
+          firmId: effectiveFirmId,
+          userId: mentionXID,
+          type: NotificationTypes.COMMENT_ADDED,
+          docketId: caseData.caseId,
+          actor: { xID: req.user.xID, role: req.user.role },
+          title: 'Mentioned in comment',
+          message: `${req.user.name || req.user.xID} tagged you in a comment on docket ${caseData.caseId}.`,
+        })),
+        // 2. Generic Comments Notifications (Rest of active participants)
+        ...[...participantXIDs].map((participantXID) => createNotification({
           firmId: effectiveFirmId,
           userId: participantXID,
           type: NotificationTypes.COMMENT_ADDED,
@@ -265,7 +309,7 @@ module.exports = (deps) => {
           title: 'Comment added',
           message: `${req.user.name || req.user.xID} commented on docket ${caseData.caseId}.`,
         })),
-      );
+      ]);
       
       const comments = await Comment.find(
         enforceTenantScope({ caseId: caseData.caseId }, req, { source: 'case.addComment.comments' })

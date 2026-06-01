@@ -34,6 +34,8 @@ import './WorkbasketPage.css';
 const WORKBASKET_FILTER_DEFAULTS = {
   category: '',
   status: '',
+  priority: '',
+  assignedToXID: '',
   recency: '',
   createdAtFrom: '',
   createdAtTo: '',
@@ -47,6 +49,8 @@ const WORKBASKET_FILTER_DEFAULTS = {
 const FILTER_KEY_BY_LABEL = {
   Category: 'category',
   Status: 'status',
+  Priority: 'priority',
+  Assignee: 'assignedToXID',
   Recency: 'recency',
   'Created From': 'createdAtFrom',
   'Created To': 'createdAtTo',
@@ -79,6 +83,96 @@ export const WorkbasketPage = () => {
   const { firmSlug } = useParams();
   const { openDocket } = useActiveDocket();
   const { showSuccess, showError, showInfo } = useToast();
+
+  const isManagerOrAdmin = ['PRIMARY_ADMIN', 'ADMIN', 'MANAGER'].includes(String(user?.role || '').trim().toUpperCase());
+
+  const [capacityData, setCapacityData] = useState([]);
+  const [loadingCapacity, setLoadingCapacity] = useState(false);
+  const [rebalanceDockets, setRebalanceDockets] = useState([]);
+  const [loadingRebalanceDockets, setLoadingRebalanceDockets] = useState(false);
+  const [reassignToXID, setReassignToXID] = useState('');
+  const [reassigning, setReassigning] = useState(false);
+
+  const loadCapacity = async () => {
+    if (!activeWorkbasketId) return;
+    setLoadingCapacity(true);
+    try {
+      const res = await api.get(`/admin/workbaskets/${activeWorkbasketId}/capacity`);
+      if (res.data?.success) {
+        setCapacityData(res.data.data || []);
+      }
+    } catch (e) {
+      console.error('Failed to load capacity:', e);
+      showError('Failed to load teammate capacity details.');
+    } finally {
+      setLoadingCapacity(false);
+    }
+  };
+
+  const loadRebalanceDockets = async () => {
+    if (!activeWorkbasketId) return;
+    setLoadingRebalanceDockets(true);
+    try {
+      const res = await api.get(`/admin/workbaskets/${activeWorkbasketId}/dockets`, {
+        params: {
+          category: filters.category,
+          priority: filters.priority,
+          status: filters.status,
+          assignedToXID: filters.assignedToXID,
+        }
+      });
+      if (res.data?.success) {
+        setRebalanceDockets(res.data.data || []);
+      }
+    } catch (e) {
+      console.error('Failed to load rebalance dockets:', e);
+      showError('Failed to load dockets for rebalancing.');
+    } finally {
+      setLoadingRebalanceDockets(false);
+    }
+  };
+
+  const executeBulkReassign = async () => {
+    if (selectedCases.length === 0) {
+      showInfo('Please select at least one docket.');
+      return;
+    }
+    if (!reassignToXID) {
+      showInfo('Please select a teammate to reassign to.');
+      return;
+    }
+
+    setReassigning(true);
+    try {
+      const res = await api.post('/admin/workbaskets/reassign', {
+        caseIds: selectedCases,
+        assignedToXID: reassignToXID,
+      });
+
+      if (res.data?.success) {
+        showSuccess(res.data.message || 'Dockets successfully reassigned.');
+        setSelectedCases([]);
+        setReassignToXID('');
+        await Promise.all([loadCapacity(), loadRebalanceDockets()]);
+      }
+    } catch (e) {
+      showError(e.response?.data?.message || 'Failed to reassign dockets.');
+    } finally {
+      setReassigning(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'capacity') {
+      loadCapacity();
+    }
+  }, [activeTab, activeWorkbasketId]);
+
+  useEffect(() => {
+    if (activeTab === 'capacity') {
+      loadRebalanceDockets();
+    }
+  }, [activeTab, activeWorkbasketId, filters.category, filters.priority, filters.status, filters.assignedToXID]);
   
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -207,6 +301,7 @@ export const WorkbasketPage = () => {
   }, []);
 
   const loadGlobalWorklist = async () => {
+    if (activeTab === 'capacity') return;
     if (initialLoadComplete) {
       setIsRefreshing(true);
     } else {
@@ -642,7 +737,7 @@ export const WorkbasketPage = () => {
             </div>
           )}
 
-          {/* Sleek Segmented Control Tabs for "My Team WB" vs "Routed to My Team" */}
+          {/* Sleek Segmented Control Tabs for "My Team WB" vs "Routed to My Team" vs "Capacity & Rebalancing" */}
           {accessibleWorkbaskets.length > 0 && (
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex bg-slate-100/80 p-1 rounded-xl w-fit border border-slate-200/40">
@@ -668,6 +763,19 @@ export const WorkbasketPage = () => {
                 >
                   Routed to My Team
                 </button>
+                {isManagerOrAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab('capacity'); setSelectedCases([]); }}
+                    className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+                      activeTab === 'capacity'
+                        ? 'bg-white text-indigo-600 shadow-sm font-black'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    Capacity & Rebalancing
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -677,66 +785,249 @@ export const WorkbasketPage = () => {
             <p className="text-sm text-red-700">{loadError}</p>
           </Card>
         ) : null}
-        <Card>
-          <QueueFilterBar className="mb-6" onClear={handleResetFilters} clearDisabled={activeFilters.length === 0}>
-            <div className="filter-group w-full sm:w-[200px] shrink-0">
-              <label htmlFor={filterIds.category} className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Category</label>
-              <select
-                id={filterIds.category}
-                value={filters.category}
-                onChange={(e) => handleFilterChange('category', e.target.value)}
-                className={formClasses.inputBase}
-              >
-                <option value="">All categories</option>
-                {categories.map((category) => (
-                  <option key={category} value={category}>{category}</option>
+        {activeTab === 'capacity' && (
+          <div className="mb-8 animate-[fadeIn_0.2s_ease-out]">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Teammate Active Capacity</h3>
+              <span className="text-xs text-slate-500 italic">Scores exclude pended/blocked work.</span>
+            </div>
+            {loadingCapacity ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="animate-pulse bg-slate-50 border border-slate-200/60 rounded-2xl h-44" />
                 ))}
-              </select>
-            </div>
-            <div className="filter-group w-full sm:w-[180px] shrink-0">
-              <label htmlFor={filterIds.status} className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Status</label>
-              <select id={filterIds.status} value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)} className={formClasses.inputBase}>
-                <option value="">All statuses</option>
-                <option value="UNASSIGNED">Unassigned</option>
-                <option value="OPEN">Open</option>
-                <option value="ROUTED">Routed</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="PENDING">Pending</option>
-                <option value="RETURNED">Returned</option>
-                <option value="FILED">Filed</option>
-              </select>
-            </div>
-            <div className="filter-group w-full sm:w-[180px] shrink-0">
-              <label htmlFor={filterIds.slaStatus} className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">SLA Status</label>
-              <select
-                id={filterIds.slaStatus}
-                value={filters.slaStatus}
-                onChange={(e) => handleFilterChange('slaStatus', e.target.value)}
-                className={formClasses.inputBase}
-              >
-                <option value="">All</option>
-                <option value="overdue">Overdue</option>
-                <option value="due_soon">Due Soon (2 days)</option>
-                <option value="on_track">On Track</option>
-              </select>
-            </div>
-            <div className="filter-group w-full sm:w-[180px] shrink-0">
-              <label htmlFor={filterIds.recency} className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Created</label>
-              <select id={filterIds.recency} value={filters.recency} onChange={(e) => handleRecencyChange(e.target.value)} className={formClasses.inputBase}>
-                <option value="">All time</option>
-                <option value="today">Today</option>
-                <option value="7d">Last 7 days</option>
-                <option value="30d">Last 30 days</option>
-              </select>
-            </div>
-          </QueueFilterBar>
+              </div>
+            ) : capacityData.length === 0 ? (
+              <p className="text-sm text-slate-500 italic">No teammates assigned to this workbasket.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {capacityData.map((member) => {
+                  let scoreColor = 'bg-emerald-50 border-emerald-200 text-emerald-700';
+                  let scoreLabel = 'Light Load';
+                  if (member.loadScore > 30) {
+                    scoreColor = 'bg-rose-50 border-rose-200 text-rose-700 font-black animate-pulse';
+                    scoreLabel = 'Overloaded';
+                  } else if (member.loadScore > 15) {
+                    scoreColor = 'bg-amber-50 border-amber-200 text-amber-700 font-bold';
+                    scoreLabel = 'Heavy Load';
+                  } else if (member.loadScore > 5) {
+                    scoreColor = 'bg-blue-50 border-blue-200 text-blue-700';
+                    scoreLabel = 'Moderate';
+                  }
+                  
+                  const isFiltered = filters.assignedToXID === member.xID;
+
+                  return (
+                    <div 
+                      key={member.xID} 
+                      className={`rounded-2xl border p-4.5 transition-all shadow-sm flex flex-col justify-between ${
+                        isFiltered 
+                          ? 'bg-indigo-50/40 border-indigo-300 ring-1 ring-indigo-300' 
+                          : 'bg-white border-slate-200/80 hover:border-slate-300 hover:shadow'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-3 mb-3.5">
+                          <div>
+                            <h4 className="font-black text-slate-800 text-sm">{member.name}</h4>
+                            <p className="text-xs text-slate-500 font-bold flex items-center gap-1">
+                              <span className="uppercase">{member.role}</span> · {member.xID}
+                            </p>
+                          </div>
+                          <div className={`rounded-xl px-2.5 py-1 text-2xs font-extrabold border uppercase tracking-wider flex flex-col items-center shrink-0 ${scoreColor}`}>
+                            <span className="text-xs font-black tracking-tight">{member.loadScore}</span>
+                            <span>{scoreLabel}</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200/30 text-center mb-4">
+                          <div>
+                            <p className="text-2xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Active</p>
+                            <p className="text-sm font-black text-slate-700">{member.loadSummary.totalActiveDockets}</p>
+                          </div>
+                          <div>
+                            <p className="text-2xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Overdue</p>
+                            <p className={`text-sm font-black ${member.loadSummary.overdue > 0 ? 'text-rose-600 font-black' : 'text-slate-700'}`}>
+                              {member.loadSummary.overdue}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-2xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Blocked</p>
+                            <p className={`text-sm font-black ${member.loadSummary.blocked > 0 ? 'text-amber-600 font-black' : 'text-slate-700'}`}>
+                              {member.loadSummary.blocked}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 items-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleFilterChange('assignedToXID', isFiltered ? '' : member.xID);
+                          }}
+                          className={`w-full py-1.5 px-3 rounded-lg text-xs font-bold transition-all border ${
+                            isFiltered
+                              ? 'bg-indigo-600 border-indigo-600 text-white font-extrabold shadow-sm'
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          {isFiltered ? 'Showing Caseload' : 'Filter Caseload'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        <Card>
+          {activeTab === 'capacity' ? (
+            <QueueFilterBar className="mb-6" onClear={handleResetFilters} clearDisabled={activeFilters.length === 0}>
+              <div className="filter-group w-full sm:w-[200px] shrink-0">
+                <label htmlFor="rebalance-category" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Category</label>
+                <select
+                  id="rebalance-category"
+                  value={filters.category}
+                  onChange={(e) => handleFilterChange('category', e.target.value)}
+                  className={formClasses.inputBase}
+                >
+                  <option value="">All categories</option>
+                  {categories.map((category) => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="filter-group w-full sm:w-[180px] shrink-0">
+                <label htmlFor="rebalance-status" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Status</label>
+                <select id="rebalance-status" value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)} className={formClasses.inputBase}>
+                  <option value="">All statuses</option>
+                  <option value="UNASSIGNED">Unassigned</option>
+                  <option value="ASSIGNED">Assigned</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="QC_PENDING">Ready for Review</option>
+                </select>
+              </div>
+              <div className="filter-group w-full sm:w-[150px] shrink-0">
+                <label htmlFor="rebalance-priority" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Urgency</label>
+                <select id="rebalance-priority" value={filters.priority} onChange={(e) => handleFilterChange('priority', e.target.value)} className={formClasses.inputBase}>
+                  <option value="">All urgencies</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+              <div className="filter-group w-full sm:w-[200px] shrink-0">
+                <label htmlFor="rebalance-assignee" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Owner</label>
+                <select id="rebalance-assignee" value={filters.assignedToXID} onChange={(e) => handleFilterChange('assignedToXID', e.target.value)} className={formClasses.inputBase}>
+                  <option value="">All owners</option>
+                  <option value="unassigned">Unassigned</option>
+                  {capacityData.map((member) => (
+                    <option key={member.xID} value={member.xID}>{member.name} ({member.xID})</option>
+                  ))}
+                </select>
+              </div>
+            </QueueFilterBar>
+          ) : (
+            <QueueFilterBar className="mb-6" onClear={handleResetFilters} clearDisabled={activeFilters.length === 0}>
+              <div className="filter-group w-full sm:w-[200px] shrink-0">
+                <label htmlFor={filterIds.category} className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Category</label>
+                <select
+                  id={filterIds.category}
+                  value={filters.category}
+                  onChange={(e) => handleFilterChange('category', e.target.value)}
+                  className={formClasses.inputBase}
+                >
+                  <option value="">All categories</option>
+                  {categories.map((category) => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="filter-group w-full sm:w-[180px] shrink-0">
+                <label htmlFor={filterIds.status} className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Status</label>
+                <select id={filterIds.status} value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)} className={formClasses.inputBase}>
+                  <option value="">All statuses</option>
+                  <option value="UNASSIGNED">Unassigned</option>
+                  <option value="OPEN">Open</option>
+                  <option value="ROUTED">Routed</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="RETURNED">Returned</option>
+                  <option value="FILED">Filed</option>
+                </select>
+              </div>
+              <div className="filter-group w-full sm:w-[180px] shrink-0">
+                <label htmlFor={filterIds.slaStatus} className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">SLA Status</label>
+                <select
+                  id={filterIds.slaStatus}
+                  value={filters.slaStatus}
+                  onChange={(e) => handleFilterChange('slaStatus', e.target.value)}
+                  className={formClasses.inputBase}
+                >
+                  <option value="">All</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="due_soon">Due Soon (2 days)</option>
+                  <option value="on_track">On Track</option>
+                </select>
+              </div>
+              <div className="filter-group w-full sm:w-[180px] shrink-0">
+                <label htmlFor={filterIds.recency} className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Created</label>
+                <select id={filterIds.recency} value={filters.recency} onChange={(e) => handleRecencyChange(e.target.value)} className={formClasses.inputBase}>
+                  <option value="">All time</option>
+                  <option value="today">Today</option>
+                  <option value="7d">Last 7 days</option>
+                  <option value="30d">Last 30 days</option>
+                </select>
+              </div>
+            </QueueFilterBar>
+          )}
 
           <div className="sr-only" role="status" aria-live="polite">
             {resultSummary}
           </div>
 
-          {/* Bulk Actions Toolbar — only shown when rows are selected */}
-          {selectedCases.length > 0 && (
+          {/* Reassign Actions Bar — only shown in capacity tab when dockets are selected */}
+          {selectedCases.length > 0 && activeTab === 'capacity' && (
+            <div className="bg-indigo-50/80 backdrop-blur border border-indigo-100 rounded-xl p-3 flex flex-wrap items-center justify-between gap-4 mb-4 shadow-sm transition-all duration-200 animate-[fadeIn_0.2s_ease-out]">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="primary"
+                  size="small"
+                  onClick={executeBulkReassign}
+                  disabled={reassigning || !reassignToXID}
+                  allowUnsafeClassName={true}
+                  className="!min-h-9 text-xs font-bold"
+                >
+                  {reassigning ? 'Reassigning...' : `Reassign ${selectedCases.length} Selected`}
+                </Button>
+                <span className="text-xs font-bold text-indigo-900/60">
+                  {selectedCases.length} selected
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <label htmlFor="bulk-reassign-target" className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Transfer to Teammate:</label>
+                <select 
+                  id="bulk-reassign-target" 
+                  value={reassignToXID} 
+                  onChange={(e) => setReassignToXID(e.target.value)} 
+                  className={`${formClasses.inputBase} !py-1 !px-2.5 !min-h-9 text-xs bg-white w-[200px]`}
+                >
+                  <option value="">Select Teammate</option>
+                  {capacityData.map((member) => (
+                    <option key={member.xID} value={member.xID}>{member.name} ({member.xID})</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Bulk Actions Toolbar — only shown in unassigned view when rows are selected */}
+          {selectedCases.length > 0 && activeTab !== 'capacity' && (
             <div className="bg-indigo-50/80 backdrop-blur border border-indigo-100 rounded-xl p-3 flex flex-wrap items-center justify-between gap-4 mb-4 shadow-sm transition-all duration-200 animate-[fadeIn_0.2s_ease-out]">
               <div className="flex items-center gap-3">
                 <Button
@@ -772,44 +1063,72 @@ export const WorkbasketPage = () => {
             </div>
           )}
 
-          <DataTable
-            columns={columns}
-            rows={cases}
-            rowKey="caseId"
-            onRowHover={handleRowHover}
-            sortState={{ key: filters.sortBy, direction: filters.sortOrder }}
-            onSortChange={handleSortChange}
-            activeFilters={activeFilters}
-            onRemoveFilter={handleRemoveFilter}
-            onResetFilters={handleResetFilters}
-            loading={loading}
-            loadingMessage={accessibleWorkbaskets.length === 0 ? 'Loading linked workbaskets…' : 'Loading selected workbasket…'}
-            refreshing={isRefreshing && !loading}
-            refreshingMessage="Refreshing workbasket in the background…"
-            emptyMessage={(
-              <EmptyState
-                title={accessibleWorkbaskets.length === 0 ? 'No linked workbasket' : 'No dockets in selected workbasket'}
-                description={accessibleWorkbaskets.length === 0 ? 'You are not linked to any workbasket yet. Ask your admin to assign you to a workbasket.' : 'New unassigned dockets will appear here as soon as they enter the selected shared queue.'}
-                actionLabel={isAdmin ? 'Create Docket' : undefined}
-                onAction={isAdmin ? () => navigate(ROUTES.CREATE_CASE(firmSlug)) : undefined}
-              />
-            )}
-            emptyFilteredMessage={
-              <EmptyState
-                title="No dockets match these filters"
-                description="Adjust filters or clear all to view available dockets in this workbasket."
-              />
-            }
-            pagination={pagination && pagination.pages > 1 ? {
-              page: pagination.page,
-              pages: pagination.pages,
-              total: pagination.total,
-              onPageChange: (nextPage) => {
-                setFilters((prev) => ({ ...prev, page: nextPage }));
-                setQuery({ page: String(nextPage) });
-              },
-            } : null}
-          />
+          {activeTab === 'capacity' ? (
+            <DataTable
+              columns={columns.filter(c => c.key !== 'actions')}
+              rows={rebalanceDockets}
+              rowKey="caseId"
+              onRowHover={handleRowHover}
+              sortState={{ key: filters.sortBy, direction: filters.sortOrder }}
+              onSortChange={handleSortChange}
+              activeFilters={activeFilters}
+              onRemoveFilter={handleRemoveFilter}
+              onResetFilters={handleResetFilters}
+              loading={loadingRebalanceDockets}
+              loadingMessage="Loading workbasket caseload details for rebalancing…"
+              emptyMessage={(
+                <EmptyState
+                  title="No dockets found"
+                  description="No assigned or active dockets exist in this workbasket queue right now."
+                />
+              )}
+              emptyFilteredMessage={
+                <EmptyState
+                  title="No caseload matching filters"
+                  description="Adjust rebalancing filters or clear all to view workbasket dockets."
+                />
+              }
+            />
+          ) : (
+            <DataTable
+              columns={columns}
+              rows={cases}
+              rowKey="caseId"
+              onRowHover={handleRowHover}
+              sortState={{ key: filters.sortBy, direction: filters.sortOrder }}
+              onSortChange={handleSortChange}
+              activeFilters={activeFilters}
+              onRemoveFilter={handleRemoveFilter}
+              onResetFilters={handleResetFilters}
+              loading={loading}
+              loadingMessage={accessibleWorkbaskets.length === 0 ? 'Loading linked workbaskets…' : 'Loading selected workbasket…'}
+              refreshing={isRefreshing && !loading}
+              refreshingMessage="Refreshing workbasket in the background…"
+              emptyMessage={(
+                <EmptyState
+                  title={accessibleWorkbaskets.length === 0 ? 'No linked workbasket' : 'No dockets in selected workbasket'}
+                  description={accessibleWorkbaskets.length === 0 ? 'You are not linked to any workbasket yet. Ask your admin to assign you to a workbasket.' : 'New unassigned dockets will appear here as soon as they enter the selected shared queue.'}
+                  actionLabel={isAdmin ? 'Create Docket' : undefined}
+                  onAction={isAdmin ? () => navigate(ROUTES.CREATE_CASE(firmSlug)) : undefined}
+                />
+              )}
+              emptyFilteredMessage={
+                <EmptyState
+                  title="No dockets match these filters"
+                  description="Adjust filters or clear all to view available dockets in this workbasket."
+                />
+              }
+              pagination={pagination && pagination.pages > 1 ? {
+                page: pagination.page,
+                pages: pagination.pages,
+                total: pagination.total,
+                onPageChange: (nextPage) => {
+                  setFilters((prev) => ({ ...prev, page: nextPage }));
+                  setQuery({ page: String(nextPage) });
+                },
+              } : null}
+            />
+          )}
         </Card>
       </div>
       <ActionConfirmModal

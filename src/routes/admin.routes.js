@@ -68,6 +68,11 @@ const {
   updateUserWorkbaskets,
   addQcMember,
 } = require('../controllers/workbasket.controller');
+const {
+  getWorkbasketCapacity,
+  getWorkbasketDockets,
+  bulkReassignDockets,
+} = require('../controllers/capacity.controller');
 
 
 /**
@@ -124,6 +129,9 @@ router.post('/workbaskets', ...adminBaseAccess, requireManagerOrPrimaryAdmin, au
 router.put('/workbaskets/:workbasketId', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, renameWorkbasket);
 router.patch('/workbaskets/:workbasketId/status', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, toggleWorkbasketStatus);
 router.post('/workbaskets/:workbasketId/qc-members', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, addQcMember);
+router.get('/workbaskets/:workbasketId/capacity', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('CASE_VIEW'), userReadLimiter, getWorkbasketCapacity);
+router.get('/workbaskets/:workbasketId/dockets', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('CASE_VIEW'), userReadLimiter, getWorkbasketDockets);
+router.post('/workbaskets/reassign', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('CASE_ASSIGN'), userWriteLimiter, bulkReassignDockets);
 
 router.post('/users/:id/restore', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, restoreUser);
 

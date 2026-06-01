@@ -65,6 +65,8 @@ module.exports = {
     params: z.object({ token: z.string().trim().min(8).max(128) }).strict(),
     body: z.object({
       pin: z.string().trim().regex(/^\d{4}$/).optional(),
+      checklistItemId: z.string().trim().min(1).max(128).optional(),
+      comment: z.string().trim().max(1000).optional(),
     }).passthrough(),
   },
   'POST /upload/:token/request-pin': {

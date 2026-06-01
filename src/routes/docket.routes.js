@@ -45,6 +45,16 @@ const {
   getUploadLinkStatus,
   revokeUploadLink,
 } = require('../controllers/uploadSession.controller');
+const {
+  getRequestChecklist,
+  saveRequestChecklist,
+  reviewChecklistItem,
+} = require('../controllers/clientRequestChecklist.controller');
+const {
+  getDocketApprovalStage,
+  requestDocketApproval,
+  decideDocketApproval,
+} = require('../controllers/docketApproval.controller');
 
 const {
   validateCaseCreation,
@@ -178,6 +188,12 @@ router.get('/:caseId/comments', authorizeFirmPermission('CASE_VIEW'), userReadLi
 router.post('/:caseId/upload-link', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, generateUploadLink);
 router.get('/:caseId/upload-link', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getUploadLinkStatus);
 router.post('/:caseId/upload-link/revoke', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, revokeUploadLink);
+router.get('/:caseId/request-checklist', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getRequestChecklist);
+router.put('/:caseId/request-checklist', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, saveRequestChecklist);
+router.patch('/:caseId/request-checklist/:itemId/review', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, reviewChecklistItem);
+router.get('/:caseId/approval-stage', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getDocketApprovalStage);
+router.post('/:caseId/approval-stage/request', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, requestDocketApproval);
+router.post('/:caseId/approval-stage/decision', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, decideDocketApproval);
 
 // ── Single docket — attachments ───────────────────────────────────────────────
 router.post('/:caseId/attachments/upload-intent', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, fileUploadLimiter, checkCaseClientAccess, createAttachmentUploadIntent);

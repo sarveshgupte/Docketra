@@ -10,6 +10,7 @@ const UploadSession = require('../models/UploadSession.model');
 const { sendEmail } = require('../services/email.service');
 const { createNotification, NotificationTypes } = require('../domain/notifications');
 const Client = require('../models/Client.model');
+const { ITEM_STATUSES, toClientFacingChecklist, normalizeChecklistItem, getChecklistSummary, computeComplianceStateFromChecklist } = require('../services/clientRequestChecklist.service');
 
 async function resolveClientEmail(caseData, firmId) {
   const candidates = [
@@ -228,11 +229,24 @@ async function getUploadMeta(req, res) {
 
     const expired = new Date() > session.expiresAt;
 
+    let checklist = [];
+    let summary = null;
+    if (!expired) {
+      const caseData = await CaseRepository.findByCaseId(session.firmId, session.docketId, 'admin');
+      const normalized = Array.isArray(caseData?.checklist)
+        ? caseData.checklist.map((item, idx) => normalizeChecklistItem(item, idx))
+        : [];
+      checklist = toClientFacingChecklist(normalized);
+      summary = getChecklistSummary(normalized);
+    }
+
     return res.json({
       success: true,
       data: {
         requiresPin: !!session.pinHash,
         expired,
+        checklist,
+        summary,
       },
     });
   } catch (err) {
@@ -243,7 +257,7 @@ async function getUploadMeta(req, res) {
 async function uploadDocument(req, res) {
   try {
     const { token } = req.params;
-    const { pin, comment } = req.body;
+    const { pin, comment, checklistItemId } = req.body;
 
     if (!req.file) throw new Error('No file uploaded');
 
@@ -302,6 +316,31 @@ async function uploadDocument(req, res) {
       createdByName: 'Client Upload Link',
       source: 'CLIENT_UPLOAD',
     });
+
+    if (checklistItemId && Array.isArray(caseData?.checklist)) {
+      const normalizedChecklist = caseData.checklist.map((item, idx) => normalizeChecklistItem(item, idx));
+      const idx = normalizedChecklist.findIndex((item) => String(item?.id || '') === String(checklistItemId));
+      if (idx >= 0) {
+        normalizedChecklist[idx] = normalizeChecklistItem({
+          ...normalizedChecklist[idx],
+          status: ITEM_STATUSES.SUBMITTED,
+          uploadedAttachmentId: String(caseFile._id),
+          uploadedFileName: req.file.originalname,
+          submittedAt: new Date(),
+          submittedBy: 'client_upload_link',
+        }, idx);
+        const nextComplianceState = computeComplianceStateFromChecklist({
+          checklist: normalizedChecklist,
+          currentState: caseData.compliance_state,
+        });
+        await CaseRepository.updateByCaseId(session.firmId, caseData.caseId, {
+          $set: {
+            checklist: normalizedChecklist,
+            compliance_state: nextComplianceState,
+          },
+        });
+      }
+    }
 
     await enqueueStorageJob(JOB_TYPES.UPLOAD_FILE, {
       firmId: String(caseData.firmId),

@@ -4,6 +4,7 @@ const { getRedisClient } = require('../config/redis');
 const log = require('../utils/log');
 const onboardingProgressService = require('../services/onboardingProgress.service');
 const onboardingAnalyticsService = require('../services/onboardingAnalytics.service');
+const { hasFirmRoleAtLeast } = require('../utils/role.utils');
 
 const DASHBOARD_TTL_SECONDS = 30;
 
@@ -12,6 +13,8 @@ const parsePagination = (value, fallback) => {
   if (!Number.isFinite(parsed) || parsed < 1) return fallback;
   return parsed;
 };
+
+const isManagerOrAbove = (user) => hasFirmRoleAtLeast(user, 'MANAGER');
 
 const getDashboardSummary = async (req, res) => {
   try {
@@ -117,6 +120,184 @@ const getOnboardingProgress = async (req, res) => {
   }
 };
 
+const getRiskBrief = async (req, res) => {
+  try {
+    assertFirmContext(req);
+    if (!isManagerOrAbove(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Risk brief is available for manager and above roles only',
+        data: {},
+      });
+    }
+    const brief = await dashboardService.getRiskBrief(req.user.firmId);
+    return res.json({ success: true, data: brief });
+  } catch (error) {
+    if (error.statusCode === 403) {
+      return res.status(403).json({ success: false, message: error.message || 'Error fetching risk brief', data: {} });
+    }
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to load risk brief',
+      data: {
+        atRiskEntities: 0,
+        waitingClient: 0,
+        stalePending: 0,
+        awaitingApproval: 0,
+        overloadedAssignees: [],
+        blockedByType: {},
+      },
+    });
+  }
+};
+
+const getPartnerMorningDashboard = async (req, res) => {
+  try {
+    assertFirmContext(req);
+    if (!isManagerOrAbove(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Partner morning dashboard is available for manager and above roles only',
+        data: {},
+      });
+    }
+    const payload = await dashboardService.getPartnerMorningDashboard(req.user.firmId, {
+      assigneeXID: req.query.assigneeXID,
+      clientId: req.query.clientId,
+      obligationType: req.query.obligationType,
+      state: req.query.state,
+      dueFrom: req.query.dueFrom,
+      dueTo: req.query.dueTo,
+      riskLevel: req.query.riskLevel,
+      approverXID: req.query.approverXID,
+      exceptionType: req.query.exceptionType,
+    });
+    return res.json({ success: true, data: payload });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error?.message || 'Failed to load partner morning dashboard',
+      data: { summary: {}, filtersApplied: {}, sections: {} },
+    });
+  }
+};
+
+const getComplianceControlRoom = async (req, res) => {
+  try {
+    assertFirmContext(req);
+    if (!isManagerOrAbove(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Compliance control room is available for manager and above roles only',
+      });
+    }
+    const payload = await dashboardService.getComplianceControlRoom(req.user.firmId, {
+      assigneeXID: req.query.assigneeXID,
+      clientId: req.query.clientId,
+      obligationType: req.query.obligationType,
+      state: req.query.state,
+      dueFrom: req.query.dueFrom,
+      dueTo: req.query.dueTo,
+      riskLevel: req.query.riskLevel,
+      useDemo: String(req.query.useDemo || '').toLowerCase() === 'true',
+    });
+    return res.json({ success: true, data: payload });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error?.message || 'Failed to load compliance control room',
+      data: { summary: {}, items: [] },
+    });
+  }
+};
+
+const updateComplianceState = async (req, res) => {
+  try {
+    assertFirmContext(req);
+    if (!isManagerOrAbove(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Compliance state transitions are available for manager and above roles only',
+      });
+    }
+    const updated = await dashboardService.updateComplianceState({
+      firmId: req.user.firmId,
+      caseId: req.params.caseId,
+      nextState: req.body?.nextState,
+      actorXID: req.user.xID || req.user.xid || null,
+      blockedReason: req.body?.blockedReason,
+      pendUntil: req.body?.pendUntil,
+      filedAt: req.body?.filedAt,
+    });
+    return res.json({
+      success: true,
+      data: {
+        caseId: updated.caseId,
+        complianceState: updated.compliance_state,
+        blockedReason: updated.blocked_reason || null,
+        pendUntil: updated.pend_until || null,
+        filedAt: updated.filed_at || null,
+      },
+    });
+  } catch (error) {
+    const statusCode = Number(error?.statusCode || 500);
+    return res.status(statusCode).json({
+      success: false,
+      message: error?.message || 'Failed to update compliance state',
+    });
+  }
+};
+
+const getApprovalQueues = async (req, res) => {
+  try {
+    assertFirmContext(req);
+    if (!isManagerOrAbove(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Approval queues are available for manager and above roles only',
+      });
+    }
+    const payload = await dashboardService.getApprovalQueues(req.user.firmId, {
+      viewerXID: req.user.xID || req.user.xid || null,
+      view: req.query.view,
+      assigneeXID: req.query.assigneeXID,
+      clientId: req.query.clientId,
+      approvalType: req.query.approvalType,
+    });
+    return res.json({ success: true, data: payload });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error?.message || 'Failed to load approval queues',
+      data: { summary: {}, items: [] },
+    });
+  }
+};
+
+const remindApproval = async (req, res) => {
+  try {
+    assertFirmContext(req);
+    if (!isManagerOrAbove(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Approval reminders are available for manager and above roles only',
+      });
+    }
+    const data = await dashboardService.remindApproval({
+      firmId: req.user.firmId,
+      caseId: req.params.caseId,
+      actorXID: req.user.xID || req.user.xid || null,
+      escalate: Boolean(req.body?.escalate),
+    });
+    return res.json({ success: true, data, message: 'Reminder event queued' });
+  } catch (error) {
+    return res.status(Number(error?.statusCode || 400)).json({
+      success: false,
+      message: error?.message || 'Failed to queue reminder event',
+    });
+  }
+};
+
 const trackOnboardingEvent = async (req, res) => {
   try {
     assertFirmContext(req);
@@ -141,4 +322,14 @@ const trackOnboardingEvent = async (req, res) => {
   }
 };
 
-module.exports = { getDashboardSummary, getOnboardingProgress, trackOnboardingEvent };
+module.exports = {
+  getDashboardSummary,
+  getOnboardingProgress,
+  getRiskBrief,
+  getPartnerMorningDashboard,
+  getComplianceControlRoom,
+  updateComplianceState,
+  getApprovalQueues,
+  remindApproval,
+  trackOnboardingEvent,
+};

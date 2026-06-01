@@ -266,6 +266,24 @@ export const caseApi = {
     caseId,
     () => request((http) => http.post(`/dockets/${caseId}/upload-link/revoke`, {}), 'Failed to revoke upload link'),
   ),
+  getRequestChecklist: (caseId) => request((http) => http.get(`/dockets/${caseId}/request-checklist`), 'Failed to load request checklist'),
+  saveRequestChecklist: (caseId, items) => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.put(`/dockets/${caseId}/request-checklist`, { items }), 'Failed to save request checklist'),
+  ),
+  reviewRequestChecklistItem: (caseId, itemId, payload) => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.patch(`/dockets/${caseId}/request-checklist/${itemId}/review`, payload), 'Failed to review request item'),
+  ),
+  getApprovalStage: (caseId) => request((http) => http.get(`/dockets/${caseId}/approval-stage`), 'Failed to load approval stage'),
+  requestApprovalStage: (caseId, payload) => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.post(`/dockets/${caseId}/approval-stage/request`, payload), 'Failed to request approval'),
+  ),
+  decideApprovalStage: (caseId, payload) => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.post(`/dockets/${caseId}/approval-stage/decision`, payload), 'Failed to update approval decision'),
+  ),
 
   viewAttachment: (caseId, attachmentId) => {
     window.open(`${window.location.origin}/api/dockets/${caseId}/attachments/${attachmentId}/view`, '_blank');

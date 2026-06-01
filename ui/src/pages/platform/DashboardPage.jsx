@@ -4,15 +4,22 @@ import { PlatformShell } from '../../components/platform/PlatformShell';
 import { ROUTES } from '../../constants/routes';
 import { EmptyState, PageSection, StatGrid, StatusMessageStack } from './PlatformShared';
 import { usePermissions } from '../../hooks/usePermissions';
-import { usePlatformDashboardSummaryQuery } from '../../hooks/usePlatformDataQueries';
+import { useAuth } from '../../hooks/useAuth';
+import { usePlatformDashboardSummaryQuery, usePlatformRiskBriefQuery } from '../../hooks/usePlatformDataQueries';
 import { dashboardApi } from '../../api/dashboard.api';
+import { docketExceptionApi } from '../../api/docketException.api';
 import { mapOnboardingBlocker, mapOnboardingStepsWithCopy } from '../../components/onboarding/firstRunGuidance';
+
+const roleRank = { USER: 1, MANAGER: 2, ADMIN: 3, PRIMARY_ADMIN: 4 };
 
 export const PlatformDashboardPage = () => {
   const { firmSlug } = useParams();
   const { isAdmin } = usePermissions();
+  const { user } = useAuth();
   const [onboardingProgress, setOnboardingProgress] = useState(null);
   const [onboardingError, setOnboardingError] = useState('');
+  const [exceptionDashboard, setExceptionDashboard] = useState(null);
+  const [exceptionDashboardLoading, setExceptionDashboardLoading] = useState(false);
   const {
     data: summary = {},
     isLoading,
@@ -20,6 +27,9 @@ export const PlatformDashboardPage = () => {
     isError,
     refetch,
   } = usePlatformDashboardSummaryQuery();
+  const { data: riskBrief = {}, isLoading: riskLoading } = usePlatformRiskBriefQuery();
+  const currentRole = String(user?.role || '').toUpperCase();
+  const canViewRiskBrief = (roleRank[currentRole] || 0) >= roleRank.MANAGER;
   
   useEffect(() => {
     let isCancelled = false;
@@ -42,6 +52,26 @@ export const PlatformDashboardPage = () => {
       isCancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!canViewRiskBrief) return;
+    let isCancelled = false;
+    const fetchExceptionDashboard = async () => {
+      setExceptionDashboardLoading(true);
+      try {
+        const res = await docketExceptionApi.getExceptionDashboard();
+        if (!isCancelled && res.success) {
+          setExceptionDashboard(res.data);
+        }
+      } catch (err) {
+        console.error('Failed to load exceptions dashboard:', err);
+      } finally {
+        if (!isCancelled) setExceptionDashboardLoading(false);
+      }
+    };
+    fetchExceptionDashboard();
+    return () => { isCancelled = true; };
+  }, [canViewRiskBrief]);
 
   const onboardingMode = onboardingProgress?.role === 'PRIMARY_ADMIN' ? 'primary-admin' : 'admin';
   const mappedSteps = useMemo(() => mapOnboardingStepsWithCopy({
@@ -104,6 +134,15 @@ export const PlatformDashboardPage = () => {
     { label: 'Waiting zones', value: metricValue(summary.pending), note: 'needs review' },
     { label: 'Closed loop', value: metricValue(summary.resolved), note: 'resolved' },
   ];
+  const riskCards = [
+    { label: '🚨 At-risk entities', value: riskLoading ? '…' : Number(riskBrief.atRiskEntities || 0), helpText: 'Open dockets already overdue on due date/SLA.' },
+    { label: '📨 Waiting on clients', value: riskLoading ? '…' : Number(riskBrief.waitingClient || 0), helpText: 'Pended dockets blocked on client-side response.' },
+    { label: '🧾 Awaiting approval', value: riskLoading ? '…' : Number(riskBrief.awaitingApproval || 0), helpText: 'Submitted/review queues pending approver sign-off.' },
+    { label: '🕒 Stale pending', value: riskLoading ? '…' : Number(riskBrief.stalePending || 0), helpText: 'Pended dockets untouched for more than 10 days.' },
+  ];
+  const blockerRows = Object.entries(riskBrief.blockedByType || {})
+    .sort((a, b) => Number(b[1]) - Number(a[1]))
+    .slice(0, 5);
 
   return (
     <PlatformShell
@@ -164,6 +203,132 @@ export const PlatformDashboardPage = () => {
       >
         <StatGrid items={cards} />
       </PageSection>
+
+      {canViewRiskBrief ? (
+        <PageSection
+          title="Morning risk brief"
+          description="Quick manager/admin view: risk, blockers, approvals, and capacity hotspots."
+        >
+          <StatGrid items={riskCards} />
+          <div className="layout-two-col" style={{ marginTop: 12 }}>
+            <article className="panel">
+              <p className="section-title">Top blocked reasons</p>
+              {blockerRows.length ? (
+                <ul className="dashboard-attention-list-items">
+                  {blockerRows.map(([type, count]) => (
+                    <li key={type} className="panel">
+                      <p className="section-title">{type.replaceAll('_', ' ')}</p>
+                      <p className="muted">{count} active dockets</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="muted">No blocker reasons logged right now.</p>
+              )}
+            </article>
+            <article className="panel">
+              <p className="section-title">Overloaded teammates</p>
+              {(riskBrief.overloadedAssignees || []).length ? (
+                <ul className="dashboard-attention-list-items">
+                  {riskBrief.overloadedAssignees.map((row) => (
+                    <li key={row.assigneeXID} className="panel">
+                      <p className="section-title">{row.assigneeXID}</p>
+                      <p className="muted">{row.docketCount} active dockets</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="muted">No overloaded teammates right now.</p>
+              )}
+            </article>
+          </div>
+
+          {exceptionDashboard && (
+            <div className="panel w-full" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p className="section-title" style={{ fontSize: '0.9rem', fontWeight: '700', margin: 0 }}>🛡️ Active Exceptions & Blocker Analytics</p>
+                <span className="text-xs text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full font-bold">
+                  {exceptionDashboard.dueDateRisk?.atRisk || 0} Blocked Dockets At Risk
+                </span>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                {/* Card 1: Blockers by Type */}
+                <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                  <p style={{ fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', marginBottom: '8px' }}>Blockers by Category</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {Object.entries(exceptionDashboard.byType || {}).map(([type, count]) => {
+                      if (count === 0) return null;
+                      return (
+                        <div key={type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
+                          <span style={{ textTransform: 'capitalize', color: '#374151' }}>{type.replace(/_/g, ' ')}</span>
+                          <span style={{ fontWeight: '700', backgroundColor: '#e0e7ff', color: '#4338ca', padding: '1px 6px', borderRadius: '4px', fontSize: '0.7rem' }}>{count}</span>
+                        </div>
+                      );
+                    })}
+                    {Object.values(exceptionDashboard.byType || {}).every(v => v === 0) && (
+                      <p style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>No active blockers logged.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Card 2: Blockers by Age Risk */}
+                <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                  <p style={{ fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', marginBottom: '8px' }}>Blocker Age Risk</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
+                      <span style={{ color: '#4b5563' }}>🟢 &lt; 3 Days (Fresh)</span>
+                      <span style={{ fontWeight: '700', color: '#059669' }}>{exceptionDashboard.byAge?.under_3_days || 0}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
+                      <span style={{ color: '#4b5563' }}>🟡 3 to 7 Days (Monitoring)</span>
+                      <span style={{ fontWeight: '700', color: '#d97706' }}>{exceptionDashboard.byAge?.between_3_and_7_days || 0}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
+                      <span style={{ color: '#4b5563' }}>🔴 &gt; 7 Days (Critical Delay)</span>
+                      <span style={{ fontWeight: '700', color: '#dc2626' }}>{exceptionDashboard.byAge?.over_7_days || 0}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 3: Due Date Risk */}
+                <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                  <p style={{ fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', marginBottom: '8px' }}>Due Date Jeopardy</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
+                      <span style={{ color: '#4b5563' }}>⚠️ Overdue Statutory Date</span>
+                      <span style={{ fontWeight: '700', color: '#dc2626' }}>{exceptionDashboard.dueDateRisk?.overdue || 0}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
+                      <span style={{ color: '#4b5563' }}>🚨 Reaching Due Date (≤ 2 Days)</span>
+                      <span style={{ fontWeight: '700', color: '#d97706' }}>{exceptionDashboard.dueDateRisk?.closeDue || 0}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 4: Top Blocked Clients */}
+                <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                  <p style={{ fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', marginBottom: '8px' }}>Top Blocked Entities</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {Object.entries(exceptionDashboard.byClient || {})
+                      .sort((a, b) => b[1] - a[1])
+                      .slice(0, 3)
+                      .map(([clientKey, count]) => (
+                        <div key={clientKey} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
+                          <span style={{ color: '#374151', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '170px' }} title={clientKey}>{clientKey}</span>
+                          <span style={{ fontWeight: '700', color: '#1e3a8a' }}>{count}</span>
+                        </div>
+                      ))}
+                    {Object.keys(exceptionDashboard.byClient || {}).length === 0 && (
+                      <p style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>No blocked clients.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </PageSection>
+      ) : null}
 
       <div className="layout-two-col">
         <PageSection title="Needs attention" description="Items that require action before smooth daily flow." className="dashboard-attention-list">

@@ -9,12 +9,18 @@ const {
   getKnowledgeItem,
   updateKnowledgeItem,
   archiveKnowledgeItem,
+  getWorkspaceAssets,
+  getFirmMemoryReports,
 } = require('../controllers/knowledgeItem.controller');
 
 const router = applyRouteValidation(express.Router(), routeSchemas);
 
+// Analytical reporting
+router.get('/reports/analysis', userReadLimiter, requireAdmin, getFirmMemoryReports);
+
 // Read operations: all firm users
 router.get('/', userReadLimiter, listKnowledgeItems);
+router.get('/docket/:caseId', userReadLimiter, getWorkspaceAssets);
 router.get('/:id', userReadLimiter, getKnowledgeItem);
 
 // Write operations: admin only

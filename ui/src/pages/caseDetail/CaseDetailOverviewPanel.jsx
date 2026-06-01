@@ -15,6 +15,7 @@ const normalizeChecklist = (checklist) => (
     ? [...checklist].sort((a, b) => Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0))
     : []
 );
+const formatApprovalLabel = (value) => String(value || '').split('_').map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
 
 
 export const CaseDetailOverviewPanel = ({
@@ -263,11 +264,39 @@ export const CaseDetailOverviewPanel = ({
                 <span className="text-sm font-medium text-gray-900">{item?.title || 'Untitled item'}</span>
                 {item?.required ? <Badge variant="warning">Required</Badge> : <Badge variant="default">Optional</Badge>}
                 <Badge variant={item?.completed ? 'success' : 'neutral'}>{item?.completed ? 'Completed' : 'Incomplete'}</Badge>
+                <Badge variant={item?.status === 'accepted' ? 'success' : item?.status === 'rejected' ? 'danger' : item?.status === 'submitted' ? 'info' : 'neutral'}>
+                  {item?.status || 'requested'}
+                </Badge>
+                {item?.dueDate ? <span className="text-xs text-gray-500">Due {formatDateTime(item.dueDate)}</span> : null}
               </div>
+              {item?.reviewerNotes ? <p className="mt-2 text-xs text-gray-600">Reviewer note: {item.reviewerNotes}</p> : null}
             </li>
           ))}
         </ul>
       ) : <p className="case-detail__empty-note">No checklist attached to this docket.</p>}
+    </section>
+
+    <section className="case-card" aria-labelledby="approval-stage-heading">
+      <div className="case-card__heading">
+        <h2 id="approval-stage-heading">Approval Stage</h2>
+      </div>
+      {caseInfo?.approvalStage ? (
+        <div className="space-y-2 text-sm text-gray-800">
+          <div className="flex flex-wrap gap-2">
+            <Badge variant={caseInfo.approvalStage.status === 'pending' ? 'warning' : caseInfo.approvalStage.status === 'approved' ? 'success' : 'neutral'}>
+              {formatApprovalLabel(caseInfo.approvalStage.status)}
+            </Badge>
+            <Badge variant="default">{formatApprovalLabel(caseInfo.approvalStage.approvalType)}</Badge>
+          </div>
+          <p>Requested by: <strong>{caseInfo.approvalStage.requestedBy || '—'}</strong></p>
+          <p>Approver: <strong>{caseInfo.approvalStage.approver || '—'}</strong></p>
+          <p>Requested at: <strong>{formatDateTime(caseInfo.approvalStage.requestedAt)}</strong></p>
+          <p>Due at: <strong>{formatDateTime(caseInfo.approvalStage.dueAt)}</strong></p>
+          {caseInfo.approvalStage.comments ? <p>Comments: {caseInfo.approvalStage.comments}</p> : null}
+          {caseInfo.approvalStage.evidenceAttachmentId ? <p>Evidence reference: {caseInfo.approvalStage.evidenceAttachmentId}</p> : null}
+          {caseInfo.approvalStage.decisionComment ? <p>Decision note: {caseInfo.approvalStage.decisionComment}</p> : null}
+        </div>
+      ) : <p className="case-detail__empty-note">No active approval stage on this docket.</p>}
     </section>
   </>
   );

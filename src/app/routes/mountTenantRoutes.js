@@ -43,6 +43,11 @@ const mountTenantRoutes = (app, deps) => {
     productUpdateRoutes,
     settingsRoutes,
     knowledgeItemRoutes,
+    emailCaptureRoutes,
+    documentItemRoutes,
+    clientPortalRoutes,
+    docketExceptionRoutes,
+    docketEffortRoutes,
   } = deps;
 
   app.use('/api/users', ...tenantScopedApiAccess, writeGuardChain, userRoutes);
@@ -75,6 +80,11 @@ const mountTenantRoutes = (app, deps) => {
   app.use('/api/product-updates', authenticate, writeGuardChain, productUpdateRoutes);
   app.use('/api/settings', ...tenantScopedApiAccess, writeGuardChain, settingsRoutes);
   app.use('/api/knowledge-items', ...tenantScopedApiAccess, writeGuardChain, knowledgeItemRoutes);
+  app.use('/api/email-captures', ...tenantScopedApiAccess, writeGuardChain, emailCaptureRoutes);
+  app.use('/api/document-items', ...tenantScopedApiAccess, writeGuardChain, documentItemRoutes);
+  app.use('/api/client-portal', ...tenantScopedApiAccess, writeGuardChain, clientPortalRoutes);
+  app.use('/api/docket-exceptions', ...tenantScopedApiAccess, writeGuardChain, docketExceptionRoutes);
+  app.use('/api/docket-efforts', ...tenantScopedApiAccess, writeGuardChain, docketEffortRoutes);
   app.use('/api', authLimiter, ...tenantScopedApiAccess, writeGuardChain, docketFileStorageRoutes);
 };
 

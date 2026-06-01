@@ -36,6 +36,17 @@ const createCaseBody = z.object({
   }).strict().optional(),
   slaDueDate: z.coerce.date().optional(),
   dueDate: z.coerce.date().optional(),
+  compliance_state: z.enum(['not_started', 'in_progress', 'awaiting_client', 'awaiting_partner', 'ready_to_file', 'filed', 'blocked', 'closed']).optional(),
+  statutory_due_date: z.coerce.date().optional(),
+  internal_due_date: z.coerce.date().optional(),
+  pend_until: z.coerce.date().optional(),
+  filed_at: z.coerce.date().optional(),
+  obligation_type: z.string().trim().min(1).max(120).optional(),
+  obligation_period: z.string().trim().min(1).max(120).optional(),
+  reviewer_xid: xidString.optional(),
+  approver_xid: xidString.optional(),
+  risk_level: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+  blocked_reason: z.string().trim().max(600).optional(),
   eventDate: z.coerce.date().optional(),
   forceCreate: z.boolean().optional(),
   clientData: z.record(z.any()).optional(),
@@ -44,6 +55,8 @@ const createCaseBody = z.object({
   subWorkTypeId: objectIdString.optional(),
   workbasketId: objectIdString.optional(),
   idempotencyKey: z.string().trim().min(1).optional(),
+  expectedMinutes: z.number().int().min(0).optional(),
+  estimatedBudget: z.number().min(0).optional(),
 }).strict();
 
 const cloneCaseBody = z.object({
@@ -151,6 +164,53 @@ module.exports = {
   'POST /:caseId/upload-link/revoke': {
     params: caseIdParams,
     body: strictEmpty,
+  },
+  'GET /:caseId/request-checklist': {
+    params: caseIdParams,
+    query: strictEmpty,
+  },
+  'PUT /:caseId/request-checklist': {
+    params: caseIdParams,
+    body: z.object({
+      items: z.array(z.object({
+        id: z.string().trim().optional(),
+        title: z.string().trim().min(1).max(200),
+        description: z.string().trim().max(1000).optional(),
+        required: z.boolean().optional(),
+        dueDate: z.coerce.date().optional().nullable(),
+        status: z.enum(['requested', 'submitted', 'accepted', 'rejected', 'waived']).optional(),
+        reviewerNotes: z.string().trim().max(1200).optional(),
+      }).strict()).max(100),
+    }).strict(),
+  },
+  'PATCH /:caseId/request-checklist/:itemId/review': {
+    params: z.object({ caseId: caseIdString, itemId: nonEmptyString }).strict(),
+    body: z.object({
+      status: z.enum(['requested', 'accepted', 'rejected', 'waived']),
+      reviewerNotes: z.string().trim().max(1200).optional(),
+    }).strict(),
+  },
+  'GET /:caseId/approval-stage': {
+    params: caseIdParams,
+    query: strictEmpty,
+  },
+  'POST /:caseId/approval-stage/request': {
+    params: caseIdParams,
+    body: z.object({
+      approvalType: z.enum(['internal_partner', 'client', 'authorised_signatory', 'other']),
+      approver: xidString,
+      dueAt: z.string().trim().optional(),
+      comments: z.string().trim().max(1200).optional(),
+      evidenceAttachmentId: z.string().trim().max(120).optional(),
+      resumeToState: z.enum(['ready_to_file', 'in_progress']).optional(),
+    }).strict(),
+  },
+  'POST /:caseId/approval-stage/decision': {
+    params: caseIdParams,
+    body: z.object({
+      decision: z.enum(['approved', 'rejected', 'cancelled']),
+      comment: z.string().trim().max(1200).optional(),
+    }).strict(),
   },
   'POST /:caseId/attachments': {
     params: caseIdParams,

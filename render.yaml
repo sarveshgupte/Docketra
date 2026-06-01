@@ -1,0 +1,90 @@
+services:
+  # 1. API Web Service (Handles Express API, Sockets, and HTTP traffic)
+  - type: web
+    name: docketra-api
+    env: node
+    buildCommand: npm ci && npm --prefix ui ci && npm run build
+    startCommand: npm start
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false # Set this to your MongoDB connection string in the Render Dashboard
+      - key: JWT_SECRET
+        generateValue: true # Generates a secure, random 256-bit secret key automatically
+      - key: JWT_PASSWORD_SETUP_SECRET
+        generateValue: true
+      - key: SUPERADMIN_XID
+        value: X123456
+      - key: SUPERADMIN_EMAIL
+        sync: false # Set to your platform superadmin email address
+      - key: SUPERADMIN_PASSWORD_HASH
+        sync: false # Set to your platform superadmin password bcrypt hash
+      - key: SUPERADMIN_OBJECT_ID
+        value: 000000000000000000000001
+      - key: METRICS_TOKEN
+        generateValue: true
+      - key: BREVO_API_KEY
+        sync: false # Set your Brevo API key for transactional emails
+      - key: MAIL_FROM
+        sync: false # Set sender email address (e.g. "Docketra <no-reply@example.com>")
+      - key: FRONTEND_URL
+        sync: false # Set to your deployed static site frontend URL
+      - key: FRONTEND_ORIGINS
+        sync: false # Comma-separated list of allowed origins (e.g., https://docketra.onrender.com)
+      - key: REDIS_URL
+        sync: false # Redis instance connection string for rate limits and background queues
+      - key: ALLOW_REDIS_FALLBACK
+        value: "true"
+
+  # 2. Worker Service (Handles BullMQ background job queues and schedulers)
+  - type: worker
+    name: docketra-worker
+    env: node
+    buildCommand: npm ci
+    startCommand: npm run start:worker
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        fromService:
+          type: web
+          name: docketra-api
+          envVarKey: MONGO_URI
+      - key: REDIS_URL
+        fromService:
+          type: web
+          name: docketra-api
+          envVarKey: REDIS_URL
+      - key: JWT_SECRET
+        fromService:
+          type: web
+          name: docketra-api
+          envVarKey: JWT_SECRET
+      - key: MASTER_ENCRYPTION_KEY
+        fromService:
+          type: web
+          name: docketra-api
+          envVarKey: MASTER_ENCRYPTION_KEY
+
+  # 3. Static Site (Hosts the React/Vite Frontend)
+  - type: static
+    name: docketra-ui
+    env: static
+    buildCommand: npm --prefix ui ci && npm --prefix ui run build
+    publishPath: ui/dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: max-age=31536000, public
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false # Set this to your deployed API Web Service URL + "/api" (e.g., https://docketra-api.onrender.com/api)
+      - key: VITE_SUPPORT_EMAIL
+        sync: false # Set your support email address

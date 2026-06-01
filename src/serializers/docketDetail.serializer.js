@@ -69,10 +69,32 @@ function serializeDocketDetailDto({ caseObject = {}, client = null, ownerTeam = 
     checklist: Array.isArray(caseObject.checklist) ? caseObject.checklist.map((item) => ({
       id: toStringOrNull(item?.id),
       title: toStringOrNull(item?.title),
+      description: toStringOrNull(item?.description) || '',
       required: Boolean(item?.required),
       completed: Boolean(item?.completed),
+      dueDate: item?.dueDate || null,
+      status: toStringOrNull(item?.status) || 'requested',
+      uploadedAttachmentId: toStringOrNull(item?.uploadedAttachmentId),
+      uploadedFileName: toStringOrNull(item?.uploadedFileName),
+      reviewerNotes: toStringOrNull(item?.reviewerNotes) || '',
+      submittedAt: item?.submittedAt || null,
+      reviewedAt: item?.reviewedAt || null,
       sortOrder: Number.isFinite(Number(item?.sortOrder)) ? Number(item.sortOrder) : 0,
     })) : [],
+    approvalStage: caseObject.approval_stage ? {
+      approvalType: toStringOrNull(caseObject.approval_stage.approval_type),
+      requestedBy: toStringOrNull(caseObject.approval_stage.requested_by),
+      approver: toStringOrNull(caseObject.approval_stage.approver),
+      requestedAt: caseObject.approval_stage.requested_at || null,
+      dueAt: caseObject.approval_stage.due_at || null,
+      status: toStringOrNull(caseObject.approval_stage.status),
+      comments: toStringOrNull(caseObject.approval_stage.comments) || '',
+      evidenceAttachmentId: toStringOrNull(caseObject.approval_stage.evidence_attachment_id),
+      resumeToState: toStringOrNull(caseObject.approval_stage.resume_to_state),
+      decidedAt: caseObject.approval_stage.decided_at || null,
+      decidedBy: toStringOrNull(caseObject.approval_stage.decided_by),
+      decisionComment: toStringOrNull(caseObject.approval_stage.decision_comment) || '',
+    } : null,
   };
 }
 

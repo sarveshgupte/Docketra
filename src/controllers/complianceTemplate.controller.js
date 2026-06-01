@@ -1,0 +1,140 @@
+const ComplianceObligationTemplate = require('../models/ComplianceObligationTemplate.model');
+const complianceTemplateGenerationService = require('../services/complianceTemplateGeneration.service');
+const { assertFirmContext } = require('../utils/tenantGuard');
+
+const ROLE_RANK = {
+  EMPLOYEE: 1,
+  USER: 1,
+  MANAGER: 2,
+  ADMIN: 3,
+  PRIMARY_ADMIN: 4,
+};
+
+const isManagerOrAbove = (role) => (ROLE_RANK[String(role || '').toUpperCase()] || 0) >= ROLE_RANK.MANAGER;
+
+const ensureManagerAccess = (req, res) => {
+  const role = String(req.user?.role || '').toUpperCase();
+  if (!isManagerOrAbove(role)) {
+    res.status(403).json({
+      success: false,
+      message: 'Compliance template workflows are available for manager and above roles only',
+    });
+    return false;
+  }
+  return true;
+};
+
+const listComplianceTemplates = async (req, res) => {
+  try {
+    assertFirmContext(req);
+    if (!ensureManagerAccess(req, res)) return;
+    const templates = await complianceTemplateGenerationService.loadTemplates({
+      firmId: req.user.firmId,
+      includeInactive: String(req.query?.includeInactive || '').toLowerCase() === 'true',
+    });
+    return res.json({ success: true, data: templates });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error?.message || 'Failed to load compliance templates' });
+  }
+};
+
+const createComplianceTemplate = async (req, res) => {
+  try {
+    assertFirmContext(req);
+    if (!ensureManagerAccess(req, res)) return;
+    const payload = {
+      ...req.body,
+      firmId: String(req.user.firmId),
+      createdByXID: req.user?.xID || req.user?.xid || null,
+      updatedByXID: req.user?.xID || req.user?.xid || null,
+    };
+    const created = await ComplianceObligationTemplate.create(payload);
+    return res.status(201).json({ success: true, data: created });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error?.message || 'Failed to create compliance template' });
+  }
+};
+
+const updateComplianceTemplate = async (req, res) => {
+  try {
+    assertFirmContext(req);
+    if (!ensureManagerAccess(req, res)) return;
+    const updated = await ComplianceObligationTemplate.findOneAndUpdate(
+      { _id: req.params.templateId, firmId: String(req.user.firmId) },
+      {
+        $set: {
+          ...req.body,
+          updatedByXID: req.user?.xID || req.user?.xid || null,
+        },
+      },
+      { new: true },
+    );
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Compliance template not found' });
+    }
+    return res.json({ success: true, data: updated });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error?.message || 'Failed to update compliance template' });
+  }
+};
+
+const seedSampleComplianceTemplates = async (req, res) => {
+  try {
+    assertFirmContext(req);
+    if (!ensureManagerAccess(req, res)) return;
+    const result = await complianceTemplateGenerationService.seedSampleTemplates({
+      firmId: req.user.firmId,
+      actorXID: req.user?.xID || req.user?.xid || null,
+    });
+    return res.json({ success: true, data: result });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error?.message || 'Failed to seed sample compliance templates' });
+  }
+};
+
+const previewComplianceGeneration = async (req, res) => {
+  try {
+    assertFirmContext(req);
+    if (!ensureManagerAccess(req, res)) return;
+    const data = await complianceTemplateGenerationService.previewOrGenerate({
+      firmId: req.user.firmId,
+      actor: req.user,
+      rangeStart: req.body?.rangeStart,
+      rangeEnd: req.body?.rangeEnd,
+      templateIds: req.body?.templateIds || [],
+      clientIds: req.body?.clientIds || [],
+      execute: false,
+    });
+    return res.json({ success: true, data });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error?.message || 'Failed to preview compliance generation' });
+  }
+};
+
+const runComplianceGeneration = async (req, res) => {
+  try {
+    assertFirmContext(req);
+    if (!ensureManagerAccess(req, res)) return;
+    const data = await complianceTemplateGenerationService.previewOrGenerate({
+      firmId: req.user.firmId,
+      actor: req.user,
+      rangeStart: req.body?.rangeStart,
+      rangeEnd: req.body?.rangeEnd,
+      templateIds: req.body?.templateIds || [],
+      clientIds: req.body?.clientIds || [],
+      execute: true,
+    });
+    return res.json({ success: true, data });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error?.message || 'Failed to run compliance generation' });
+  }
+};
+
+module.exports = {
+  listComplianceTemplates,
+  createComplianceTemplate,
+  updateComplianceTemplate,
+  seedSampleComplianceTemplates,
+  previewComplianceGeneration,
+  runComplianceGeneration,
+};

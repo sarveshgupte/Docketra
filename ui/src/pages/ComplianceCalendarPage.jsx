@@ -1,479 +1,823 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { PlatformShell } from '../components/platform/PlatformShell';
-import { Button } from '../components/common/Button';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
-import { usePermissions } from '../hooks/usePermissions';
-import { caseApi } from '../api/case.api';
-import { clientApi } from '../api/client.api';
-import { categoryService } from '../services/categoryService';
-import { formatClientDisplay } from '../utils/formatters';
-import api from '../services/api';
+import { Button } from '../components/common/Button';
+import { dashboardApi } from '../api/dashboard.api';
+import { useAuth } from '../hooks/useAuth';
+import { formatDate } from '../utils/formatters';
+import { ROUTES } from '../constants/routes';
+import { hasFirmRoleAtLeast } from '../utils/roleHierarchy';
 import './ComplianceCalendarPage.css';
 
-const IST_TIMEZONE = 'Asia/Kolkata';
+const COMPLIANCE_STATES = [
+  'not_started',
+  'in_progress',
+  'awaiting_client',
+  'awaiting_partner',
+  'ready_to_file',
+  'filed',
+  'blocked',
+  'closed',
+];
 
-const monthTitle = (date) => date.toLocaleString('en-IN', { month: 'long', year: 'numeric', timeZone: IST_TIMEZONE });
+const riskOptions = ['low', 'medium', 'high', 'critical'];
+const APPROVAL_VIEWS = [
+  { key: 'my_approvals', label: 'My approvals' },
+  { key: 'awaiting_partner', label: 'Awaiting partner' },
+  { key: 'awaiting_client_signatory', label: 'Awaiting client/signatory' },
+  { key: 'overdue', label: 'Overdue approvals' },
+];
+const EXCEPTION_TYPE_OPTIONS = [
+  { key: 'portal_issue', label: 'Portal issue' },
+  { key: 'DSC_authorisation_pending', label: 'DSC/signatory pending' },
+  { key: 'client_delay', label: 'Client delay' },
+  { key: 'query_raised', label: 'Query raised' },
+  { key: 'other', label: 'Other' },
+];
 
-const toISODate = (value, timezone = IST_TIMEZONE) => {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(date);
+const toLabel = (value) => String(value || '')
+  .split('_')
+  .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+  .join(' ');
 
-  const year = parts.find((part) => part.type === 'year')?.value;
-  const month = parts.find((part) => part.type === 'month')?.value;
-  const day = parts.find((part) => part.type === 'day')?.value;
-
-  if (!year || !month || !day) return '';
-  return `${year}-${month}-${day}`;
+const normalizeDueRisk = (dueRisk) => {
+  if (dueRisk === 'overdue') return 'overdue';
+  if (dueRisk === 'due_soon') return 'due-soon';
+  return 'on-track';
 };
 
-const getTodayInTimezone = (timezone = IST_TIMEZONE) => {
-  const todayIso = toISODate(new Date(), timezone);
-  const [year, month] = todayIso.split('-').map((part) => Number(part));
-  if (!year || !month) {
-    const fallback = new Date();
-    return new Date(fallback.getFullYear(), fallback.getMonth(), 1);
-  }
-  return new Date(year, month - 1, 1);
-};
+const riskChipClass = (riskLevel) => `compliance-chip compliance-chip--risk-${String(riskLevel || 'medium').toLowerCase()}`;
+const statusChipClass = (state) => `compliance-chip compliance-chip--state-${String(state || '').toLowerCase().replaceAll('_', '-')}`;
+const dueChipClass = (dueRisk) => `compliance-chip compliance-chip--due-${normalizeDueRisk(dueRisk)}`;
 
-const createMonthGrid = (currentMonth) => {
-  const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-  const start = new Date(firstDay);
-  start.setDate(firstDay.getDate() - firstDay.getDay());
-
-  return Array.from({ length: 42 }, (_, index) => {
-    const day = new Date(start);
-    day.setDate(start.getDate() + index);
-    return day;
-  });
-};
-
-const defaultForm = {
-  title: '',
-  description: '',
+const defaultFilters = {
+  assigneeXID: '',
   clientId: '',
-  createDocket: false,
-  categoryId: '',
-  categoryMode: 'existing',
-  calendarEntryType: 'important_date',
-  reminderDaysBefore: '',
+  obligationType: '',
+  state: '',
+  dueFrom: '',
+  dueTo: '',
+  riskLevel: '',
+  approverXID: '',
+  exceptionType: '',
+  useDemo: 'false',
 };
 
 export const ComplianceCalendarPage = () => {
-  const { isAdmin } = usePermissions();
-  const [currentMonth, setCurrentMonth] = useState(() => getTodayInTimezone());
-  const [events, setEvents] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [clients, setClients] = useState([]);
+  const { user } = useAuth();
+  const { firmSlug } = useParams();
+  const [filters, setFilters] = useState(defaultFilters);
+  const [summary, setSummary] = useState({
+    dueThisWeek: 0,
+    overdue: 0,
+    awaitingClient: 0,
+    awaitingPartner: 0,
+    readyToFile: 0,
+    blocked: 0,
+    filedRecently: 0,
+  });
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(toISODate(new Date(), IST_TIMEZONE));
-  const [editId, setEditId] = useState('');
-  const [form, setForm] = useState(defaultForm);
+  const [savingCaseId, setSavingCaseId] = useState('');
+  const [templates, setTemplates] = useState([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState([]);
+  const [generationRangeStart, setGenerationRangeStart] = useState('');
+  const [generationRangeEnd, setGenerationRangeEnd] = useState('');
+  const [generationLoading, setGenerationLoading] = useState(false);
+  const [generationSummary, setGenerationSummary] = useState({ generated: 0, skippedDuplicate: 0, failed: 0, totalCandidates: 0 });
+  const [generationRows, setGenerationRows] = useState([]);
+  const [approvalView, setApprovalView] = useState('my_approvals');
+  const [approvalLoading, setApprovalLoading] = useState(false);
+  const [approvalSummary, setApprovalSummary] = useState({
+    myApprovals: 0,
+    awaitingPartner: 0,
+    awaitingClientSignatory: 0,
+    overdueApprovals: 0,
+  });
+  const [approvalRows, setApprovalRows] = useState([]);
+  const [morningLoading, setMorningLoading] = useState(false);
+  const [morningSummary, setMorningSummary] = useState({
+    atRiskEntities: 0,
+    clientsBlocking: 0,
+    filingsAwaitingApproval: 0,
+    overloadedTeamMembers: 0,
+    exceptionBlockedFilings: 0,
+  });
+  const [morningSections, setMorningSections] = useState({
+    atRiskEntities: [],
+    clientBlockers: [],
+    approvalBlockers: [],
+    teamLoad: [],
+    exceptions: [],
+  });
+  const canManageState = hasFirmRoleAtLeast(user, 'MANAGER');
 
-  const loadEvents = useCallback(async () => {
+  const loadControlRoom = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const response = await api.get('/compliance-calendar');
-      const records = response?.data?.data || [];
-      const calendarEvents = records
-        .filter((task) => task.dueDate)
-        .map((task) => ({
-          id: task._id,
-          title: task.title,
-          description: task.description || '',
-          dueDate: toISODate(task.dueDate),
-          status: task.status,
-          clientId: task.clientId || '',
-          clientName: task.clientName || '',
-          categoryId: task.categoryId || '',
-          categoryName: task.categoryName || '',
-          linkedCaseId: task.linkedCaseId || '',
-          calendarEntryType: task.calendarEntryType || 'important_date',
-          reminderDaysBefore: Number.isFinite(Number(task.reminderDaysBefore)) ? String(task.reminderDaysBefore) : '',
-        }));
-      setEvents(calendarEvents);
+      const response = await dashboardApi.getComplianceControlRoom(filters);
+      const payload = response?.data || {};
+      setSummary(payload.summary || {});
+      setRows(Array.isArray(payload.items) ? payload.items : []);
     } catch (apiError) {
-      setError('Could not load compliance calendar. Please retry.');
+      setError(apiError?.message || 'Failed to load compliance control room');
+      setRows([]);
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  const loadDependencies = useCallback(async () => {
-    if (!isAdmin) return;
-    try {
-      const [clientResponse, categoryResponse] = await Promise.all([
-        clientApi.getClients(false, true),
-        categoryService.getCategories(true),
-      ]);
-      setClients(clientResponse?.data || []);
-      setCategories(categoryResponse?.data || []);
-    } catch {
-      setError('Could not load clients/categories for docket creation.');
-    }
-  }, [isAdmin]);
+  }, [filters]);
 
   useEffect(() => {
-    loadEvents();
-    loadDependencies();
-  }, [loadDependencies, loadEvents]);
+    loadControlRoom();
+  }, [loadControlRoom]);
 
-  const eventsByDate = useMemo(() => {
-    return events.reduce((acc, item) => {
-      if (!acc[item.dueDate]) acc[item.dueDate] = [];
-      acc[item.dueDate].push(item);
-      return acc;
-    }, {});
-  }, [events]);
-
-  const visibleDays = useMemo(() => createMonthGrid(currentMonth), [currentMonth]);
-
-  const selectedDayEvents = useMemo(() => {
-    return eventsByDate[selectedDate] || [];
-  }, [eventsByDate, selectedDate]);
-
-  const resetForm = () => {
-    setEditId('');
-    setForm(defaultForm);
-  };
-
-  const changeMonth = (offset) => {
-    setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
-  };
-
-  const resolveCategoryForDocket = async () => {
-    if (form.categoryMode === 'event') {
-      const categoryName = form.title.trim();
-      if (!categoryName) {
-        throw new Error('Title is required to create category from event name.');
+  const loadTemplates = useCallback(async () => {
+    if (!canManageState) return;
+    setLoadingTemplates(true);
+    try {
+      const response = await dashboardApi.listComplianceTemplates();
+      const rows = Array.isArray(response?.data) ? response.data : [];
+      setTemplates(rows);
+      if (!selectedTemplateIds.length) {
+        setSelectedTemplateIds(rows.filter((item) => item?.isActive !== false).map((item) => item._id));
       }
-      try {
-        const created = await categoryService.createCategory(categoryName);
-        return created?.data;
-      } catch (apiError) {
-        const code = apiError?.response?.status;
-        if (code !== 409) {
-          throw new Error(apiError?.response?.data?.message || 'Failed to create category from event name.');
-        }
-
-        const latestCategoriesResponse = await categoryService.getCategories(false);
-        const existing = (latestCategoriesResponse?.data || []).find(
-          (item) => String(item?.name || '').trim().toLowerCase() === categoryName.toLowerCase(),
-        );
-        if (!existing) {
-          throw new Error('Category already exists but could not be resolved. Please choose it manually.');
-        }
-        return existing;
-      }
+    } catch (apiError) {
+      setError(apiError?.message || 'Failed to load compliance templates');
+    } finally {
+      setLoadingTemplates(false);
     }
+  }, [canManageState, selectedTemplateIds.length]);
 
-    if (!form.categoryId) {
-      throw new Error('Category is required when creating a docket.');
+  useEffect(() => {
+    const now = new Date();
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 2, 1));
+    setGenerationRangeStart(start.toISOString().slice(0, 10));
+    setGenerationRangeEnd(end.toISOString().slice(0, 10));
+  }, []);
+
+  useEffect(() => {
+    loadTemplates();
+  }, [loadTemplates]);
+
+  const loadPartnerMorning = useCallback(async () => {
+    if (!canManageState) return;
+    setMorningLoading(true);
+    try {
+      const response = await dashboardApi.getPartnerMorningDashboard({
+        assigneeXID: filters.assigneeXID,
+        clientId: filters.clientId,
+        obligationType: filters.obligationType,
+        state: filters.state,
+        dueFrom: filters.dueFrom,
+        dueTo: filters.dueTo,
+        riskLevel: filters.riskLevel,
+        approverXID: filters.approverXID,
+        exceptionType: filters.exceptionType,
+      });
+      const payload = response?.data || {};
+      setMorningSummary(payload.summary || {
+        atRiskEntities: 0,
+        clientsBlocking: 0,
+        filingsAwaitingApproval: 0,
+        overloadedTeamMembers: 0,
+        exceptionBlockedFilings: 0,
+      });
+      setMorningSections(payload.sections || {
+        atRiskEntities: [],
+        clientBlockers: [],
+        approvalBlockers: [],
+        teamLoad: [],
+        exceptions: [],
+      });
+    } catch (apiError) {
+      setError(apiError?.message || 'Failed to load partner morning dashboard');
+      setMorningSections({
+        atRiskEntities: [],
+        clientBlockers: [],
+        approvalBlockers: [],
+        teamLoad: [],
+        exceptions: [],
+      });
+    } finally {
+      setMorningLoading(false);
     }
+  }, [canManageState, filters]);
 
-    const selected = categories.find((item) => item._id === form.categoryId);
-    if (!selected) {
-      throw new Error('Selected category is invalid. Please refresh and try again.');
+  useEffect(() => {
+    loadPartnerMorning();
+  }, [loadPartnerMorning]);
+
+  const loadApprovalQueues = useCallback(async (selectedView = approvalView) => {
+    if (!canManageState) return;
+    setApprovalLoading(true);
+    try {
+      const response = await dashboardApi.getApprovalQueues({ view: selectedView });
+      const payload = response?.data || {};
+      setApprovalSummary(payload.summary || {});
+      setApprovalRows(Array.isArray(payload.items) ? payload.items : []);
+    } catch (apiError) {
+      setError(apiError?.message || 'Failed to load approval queues');
+      setApprovalRows([]);
+    } finally {
+      setApprovalLoading(false);
     }
+  }, [approvalView, canManageState]);
 
-    return selected;
-  };
+  useEffect(() => {
+    loadApprovalQueues(approvalView);
+  }, [approvalView, loadApprovalQueues]);
 
-  const handleSaveEvent = async (event) => {
-    event.preventDefault();
-    if (!isAdmin || !selectedDate || !form.title.trim()) return;
+  const statCards = useMemo(() => ([
+    { label: 'Due This Week', value: Number(summary.dueThisWeek || 0) },
+    { label: 'Overdue', value: Number(summary.overdue || 0) },
+    { label: 'Awaiting Client', value: Number(summary.awaitingClient || 0) },
+    { label: 'Awaiting Partner', value: Number(summary.awaitingPartner || 0) },
+    { label: 'Ready To File', value: Number(summary.readyToFile || 0) },
+    { label: 'Blocked', value: Number(summary.blocked || 0) },
+    { label: 'Filed Recently', value: Number(summary.filedRecently || 0) },
+  ]), [summary]);
 
-    setSaving(true);
+  const handleStateChange = async (caseId, nextState) => {
+    if (!canManageState || !nextState) return;
+    setSavingCaseId(caseId);
     setError('');
-
     try {
-      const selectedClient = clients.find((item) => item.clientId === form.clientId) || null;
-      let categoryForEvent = categories.find((item) => item._id === form.categoryId) || null;
-      let linkedCaseId = '';
+      await dashboardApi.updateComplianceState(caseId, { nextState });
+      await loadControlRoom();
+    } catch (apiError) {
+      setError(apiError?.message || 'Failed to update compliance state');
+    } finally {
+      setSavingCaseId('');
+    }
+  };
 
-      if (form.createDocket) {
-        if (!form.clientId) {
-          throw new Error('Client is required when creating a docket.');
-        }
+  const updateFilter = (key, value) => setFilters((prev) => ({ ...prev, [key]: value }));
 
-        categoryForEvent = await resolveCategoryForDocket();
-
-        const docketPayload = {
-          title: form.title.trim(),
-          description: form.description.trim() || form.title.trim(),
-          clientId: form.clientId,
-          categoryId: categoryForEvent._id,
-          slaDueDate: `${selectedDate}T18:00`,
-        };
-
-        const docketResponse = await caseApi.createCase(docketPayload);
-        linkedCaseId = docketResponse?.data?.caseId || '';
-      }
-
+  const runGeneration = async (mode) => {
+    if (!canManageState) return;
+    setGenerationLoading(true);
+    setError('');
+    try {
       const payload = {
-        title: form.title.trim(),
-        description: form.description.trim(),
-        dueDate: selectedDate,
-        clientId: form.clientId || '',
-        clientName: selectedClient ? formatClientDisplay(selectedClient, true) : '',
-        categoryId: categoryForEvent?._id || form.categoryId || '',
-        categoryName: categoryForEvent?.name || '',
-        linkedCaseId,
-        calendarEntryType: form.calendarEntryType || 'important_date',
-        reminderDaysBefore: form.reminderDaysBefore === '' ? undefined : Number(form.reminderDaysBefore),
+        rangeStart: generationRangeStart,
+        rangeEnd: generationRangeEnd,
+        templateIds: selectedTemplateIds,
       };
-
-      if (editId) {
-        await api.put(`/compliance-calendar/${editId}`, payload);
-      } else {
-        await api.post('/compliance-calendar', payload);
+      const response = mode === 'preview'
+        ? await dashboardApi.previewComplianceGeneration(payload)
+        : await dashboardApi.runComplianceGeneration(payload);
+      const data = response?.data || {};
+      setGenerationSummary(data.summary || { generated: 0, skippedDuplicate: 0, failed: 0, totalCandidates: 0 });
+      setGenerationRows(Array.isArray(data.items) ? data.items : []);
+      if (mode === 'run') {
+        await loadControlRoom();
       }
-
-      resetForm();
-      await Promise.all([loadEvents(), loadDependencies()]);
     } catch (apiError) {
-      setError(apiError?.message || apiError?.response?.data?.message || 'Failed to save entry.');
+      setError(apiError?.message || `Failed to ${mode} compliance generation`);
     } finally {
-      setSaving(false);
+      setGenerationLoading(false);
     }
   };
 
-  const handleEditEvent = (entry) => {
-    if (!isAdmin) return;
-    setEditId(entry.id);
-    setSelectedDate(entry.dueDate);
-    setForm({
-      title: entry.title,
-      description: entry.description || '',
-      clientId: entry.clientId || '',
-      createDocket: false,
-      categoryId: entry.categoryId || '',
-      categoryMode: 'existing',
-      calendarEntryType: entry.calendarEntryType || 'important_date',
-      reminderDaysBefore: entry.reminderDaysBefore || '',
-    });
-  };
-
-  const handleDeleteEvent = async (eventId) => {
-    if (!isAdmin) return;
-
-    setSaving(true);
+  const handleSeedSamples = async () => {
+    if (!canManageState) return;
+    setGenerationLoading(true);
+    setError('');
     try {
-      await api.delete(`/compliance-calendar/${eventId}`);
-      if (editId === eventId) resetForm();
-      await loadEvents();
+      await dashboardApi.seedSampleComplianceTemplates();
+      await loadTemplates();
     } catch (apiError) {
-      setError(apiError?.response?.data?.message || 'Failed to delete event.');
+      setError(apiError?.message || 'Failed to seed sample templates');
     } finally {
-      setSaving(false);
+      setGenerationLoading(false);
     }
+  };
+
+  const handleReminder = async (caseId, escalate = false) => {
+    try {
+      await dashboardApi.remindApproval(caseId, { escalate });
+      loadApprovalQueues(approvalView);
+      loadPartnerMorning();
+    } catch (apiError) {
+      setError(apiError?.message || 'Failed to queue reminder');
+    }
+  };
+
+  const applyAllFilters = async () => {
+    await Promise.all([loadControlRoom(), loadPartnerMorning(), loadApprovalQueues(approvalView)]);
+  };
+
+  const renderDocketLink = (caseId, label = null) => {
+    if (!caseId || !firmSlug) return label || caseId || '—';
+    return <Link to={ROUTES.CASE_DETAIL(firmSlug, caseId)} className="compliance-inline-link">{label || caseId}</Link>;
+  };
+
+  const renderClientLink = (clientId, label = null) => {
+    if (!clientId || !firmSlug) return label || clientId || '—';
+    return <Link to={ROUTES.CLIENT_WORKSPACE(firmSlug, clientId)} className="compliance-inline-link">{label || clientId}</Link>;
   };
 
   return (
-    <PlatformShell moduleLabel="Operations" title="Compliance calendar" subtitle="Shared timeline for due dates, reminders, and docket-triggering events.">
+    <PlatformShell
+      moduleLabel="Daily Operations"
+      title="Compliance Control Room"
+      subtitle="Operational control center for filing status, due dates, blockers, and partner approvals."
+    >
       <div className="compliance-calendar-page">
         <PageHeader
-          title="Compliance Calendar"
-          description="Shared compliance timeline for firm-wide due dates, reminders, and tasks."
+          title="Compliance Control Room"
+          description="One screen to monitor due, overdue, blocked, awaiting client/partner, ready-to-file, filed, and closed entities."
         />
-
-        <div className="compliance-calendar-page__toolbar">
-          <div>
-            <h2>{monthTitle(currentMonth)}</h2>
-            <p>{isAdmin ? 'Admins can add/edit/delete entries. Team members have view-only access.' : 'View-only calendar. Contact your admin to add or edit entries.'}</p>
-          </div>
-          <div className="compliance-calendar-page__month-controls">
-            <Button variant="outline" onClick={() => changeMonth(-1)}>Previous</Button>
-            <Button variant="outline" onClick={() => changeMonth(1)}>Next</Button>
-          </div>
-        </div>
 
         {error ? <p className="compliance-calendar-page__error">{error}</p> : null}
 
-        <div className="compliance-calendar-page__grid-wrap">
-          <div className="compliance-calendar-page__weekdays">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <span key={day}>{day}</span>)}
-          </div>
-          <div className="compliance-calendar-page__grid">
-            {visibleDays.map((day) => {
-              const iso = toISODate(day);
-              const inCurrentMonth = day.getMonth() === currentMonth.getMonth();
-              const dayEvents = eventsByDate[iso] || [];
-              return (
-                <button
-                  key={iso}
-                  type="button"
-                  onClick={() => setSelectedDate(iso)}
-                  className={[
-                    'compliance-calendar-page__day',
-                    selectedDate === iso ? 'is-selected' : '',
-                    inCurrentMonth ? '' : 'is-muted',
-                  ].filter(Boolean).join(' ')}
-                >
-                  <span>{day.getDate()}</span>
-                  {dayEvents.slice(0, 2).map((item) => <small key={item.id}>{item.title}</small>)}
-                  {dayEvents.length > 2 ? <small>+{dayEvents.length - 2} more</small> : null}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        {canManageState ? (
+          <section className="compliance-generation-panel">
+            <div className="compliance-generation-panel__header">
+              <h2>Partner Morning Dashboard</h2>
+              <p>Daily command table for risk entities, client blockers, approval blockers, team overload, and exceptions.</p>
+            </div>
+            <div className="compliance-generation-badges">
+              <article className="compliance-control-summary-card">
+                <p className="compliance-control-summary-card__label">At-risk entities</p>
+                <p className="compliance-control-summary-card__value">{morningLoading ? '…' : Number(morningSummary.atRiskEntities || 0)}</p>
+              </article>
+              <article className="compliance-control-summary-card">
+                <p className="compliance-control-summary-card__label">Client blockers</p>
+                <p className="compliance-control-summary-card__value">{morningLoading ? '…' : Number(morningSummary.clientsBlocking || 0)}</p>
+              </article>
+              <article className="compliance-control-summary-card">
+                <p className="compliance-control-summary-card__label">Awaiting approval</p>
+                <p className="compliance-control-summary-card__value">{morningLoading ? '…' : Number(morningSummary.filingsAwaitingApproval || 0)}</p>
+              </article>
+              <article className="compliance-control-summary-card">
+                <p className="compliance-control-summary-card__label">Overloaded team</p>
+                <p className="compliance-control-summary-card__value">{morningLoading ? '…' : Number(morningSummary.overloadedTeamMembers || 0)}</p>
+              </article>
+              <article className="compliance-control-summary-card">
+                <p className="compliance-control-summary-card__label">Exceptions</p>
+                <p className="compliance-control-summary-card__value">{morningLoading ? '…' : Number(morningSummary.exceptionBlockedFilings || 0)}</p>
+              </article>
+            </div>
 
-        <div className="compliance-calendar-page__details">
-          <h3>{selectedDate}</h3>
-          {loading ? <p>Loading events…</p> : null}
-          {!loading && selectedDayEvents.length === 0 ? (
-            <EmptyState title="No events" description="No compliance reminders for this day." />
-          ) : null}
-          {selectedDayEvents.map((item) => (
-            <article key={item.id} className="compliance-calendar-page__event">
-              <div>
-                <h4>{item.title}</h4>
-                <p>{item.description || 'No details provided.'}</p>
-                {item.clientName ? <p><strong>Client:</strong> {item.clientName}</p> : null}
-                {item.categoryName ? <p><strong>Category:</strong> {item.categoryName}</p> : null}
-                {item.linkedCaseId ? <p><strong>Docket:</strong> {item.linkedCaseId} (routed to Workbasket)</p> : null}
-                <p><strong>Type:</strong> {String(item.calendarEntryType || 'important_date').replaceAll('_', ' ')}</p>
-                {item.reminderDaysBefore !== '' ? <p><strong>Reminder:</strong> {item.reminderDaysBefore} day(s) before</p> : null}
-              </div>
-              {isAdmin ? (
-                <div className="compliance-calendar-page__event-actions">
-                  <Button variant="ghost" onClick={() => handleEditEvent(item)} disabled={saving}>Edit</Button>
-                  <Button variant="ghost" onClick={() => handleDeleteEvent(item.id)} disabled={saving}>Delete</Button>
-                </div>
-              ) : null}
+            <div className="compliance-control-table-wrap">
+              <table className="compliance-control-table compliance-control-table--morning">
+                <thead>
+                  <tr>
+                    <th colSpan={9}>At-risk entities (overdue/due soon + high risk/priority)</th>
+                  </tr>
+                  <tr>
+                    <th>Docket</th>
+                    <th>Client/Entity</th>
+                    <th>Obligation</th>
+                    <th>Owner</th>
+                    <th>State</th>
+                    <th>Due</th>
+                    <th>Due Risk</th>
+                    <th>Risk</th>
+                    <th>Priority</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!morningSections.atRiskEntities?.length ? (
+                    <tr><td colSpan={9}>No at-risk entities for current filters.</td></tr>
+                  ) : morningSections.atRiskEntities.map((row) => (
+                    <tr key={`risk-${row.caseId}`}>
+                      <td>{renderDocketLink(row.caseId)}</td>
+                      <td>{renderClientLink(row.clientId, row.clientName || row.entityName || row.clientId)}</td>
+                      <td>{row.obligationType || '—'} {row.obligationPeriod ? `(${row.obligationPeriod})` : ''}</td>
+                      <td>{row.assignedToXID || 'UNASSIGNED'}</td>
+                      <td><span className={statusChipClass(row.complianceState)}>{toLabel(row.complianceState)}</span></td>
+                      <td>{formatDate(row.dueDate)}</td>
+                      <td><span className={dueChipClass(row.dueRisk)}>{toLabel(row.dueRisk)}</span></td>
+                      <td><span className={riskChipClass(row.riskLevel)}>{toLabel(row.riskLevel)}</span></td>
+                      <td>{toLabel(row.priority)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="compliance-control-table-wrap">
+              <table className="compliance-control-table compliance-control-table--morning">
+                <thead>
+                  <tr>
+                    <th colSpan={6}>Client blockers (awaiting client, grouped by client/entity and ageing)</th>
+                  </tr>
+                  <tr>
+                    <th>Client/Entity</th>
+                    <th>Awaiting</th>
+                    <th>Overdue</th>
+                    <th>Max Age (days)</th>
+                    <th>Sample Dockets</th>
+                    <th>Drill-down</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!morningSections.clientBlockers?.length ? (
+                    <tr><td colSpan={6}>No client blockers for current filters.</td></tr>
+                  ) : morningSections.clientBlockers.map((group) => (
+                    <tr key={`client-blocker-${group.clientId || group.entityName}`}>
+                      <td>{renderClientLink(group.clientId, group.clientName || group.entityName || group.clientId || 'Unknown')}</td>
+                      <td>{group.docketCount || 0}</td>
+                      <td>{group.overdueCount || 0}</td>
+                      <td>{group.maxAgeDays || 0}</td>
+                      <td>
+                        <div className="compliance-mini-list">
+                          {(group.dockets || []).map((item) => (
+                            <div key={`${group.clientId}-${item.caseId}`}>{renderDocketLink(item.caseId, item.caseId)} · {item.obligationType || 'Obligation'} · <span className={dueChipClass(item.dueRisk)}>{toLabel(item.dueRisk)}</span></div>
+                          ))}
+                        </div>
+                      </td>
+                      <td>{group.clientId ? renderClientLink(group.clientId, 'Open client workspace') : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="compliance-control-table-wrap">
+              <table className="compliance-control-table compliance-control-table--morning">
+                <thead>
+                  <tr>
+                    <th colSpan={7}>Approval blockers (awaiting partner/client/signatory grouped by approver and ageing)</th>
+                  </tr>
+                  <tr>
+                    <th>Approver</th>
+                    <th>Pending</th>
+                    <th>Overdue</th>
+                    <th>Max Age (days)</th>
+                    <th>Awaiting Partner</th>
+                    <th>Awaiting Client/Signatory</th>
+                    <th>Sample Dockets</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!morningSections.approvalBlockers?.length ? (
+                    <tr><td colSpan={7}>No approval blockers for current filters.</td></tr>
+                  ) : morningSections.approvalBlockers.map((group) => (
+                    <tr key={`approval-blocker-${group.approver}`}>
+                      <td>{group.approver || 'UNASSIGNED_APPROVER'}</td>
+                      <td>{group.docketCount || 0}</td>
+                      <td>{group.overdueCount || 0}</td>
+                      <td>{group.maxAgeDays || 0}</td>
+                      <td>{group.awaitingPartnerCount || 0}</td>
+                      <td>{group.awaitingClientSignatoryCount || 0}</td>
+                      <td>
+                        <div className="compliance-mini-list">
+                          {(group.dockets || []).map((item) => (
+                            <div key={`${group.approver}-${item.caseId}`}>{renderDocketLink(item.caseId, item.caseId)} · {toLabel(item.approvalType)} · {item.ageDays || 0}d</div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="compliance-control-table-wrap">
+              <table className="compliance-control-table compliance-control-table--morning">
+                <thead>
+                  <tr>
+                    <th colSpan={8}>Team load (open, due this week, overdue, blocked, awaiting external input)</th>
+                  </tr>
+                  <tr>
+                    <th>Assignee</th>
+                    <th>Open</th>
+                    <th>Due This Week</th>
+                    <th>Overdue</th>
+                    <th>Blocked</th>
+                    <th>Awaiting External Input</th>
+                    <th>High Risk Open</th>
+                    <th>Load</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!morningSections.teamLoad?.length ? (
+                    <tr><td colSpan={8}>No team load rows for current filters.</td></tr>
+                  ) : morningSections.teamLoad.map((row) => (
+                    <tr key={`team-load-${row.assigneeXID}`}>
+                      <td>{row.assigneeXID || 'UNASSIGNED'}</td>
+                      <td>{row.openDockets || 0}</td>
+                      <td>{row.dueThisWeek || 0}</td>
+                      <td>{row.overdue || 0}</td>
+                      <td>{row.blocked || 0}</td>
+                      <td>{row.awaitingExternalInput || 0}</td>
+                      <td>{row.highRiskOpen || 0}</td>
+                      <td><span className={`compliance-chip ${row.overloaded ? 'compliance-chip--load-overloaded' : 'compliance-chip--load-balanced'}`}>{row.overloaded ? 'Overloaded' : 'Balanced'}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="compliance-control-table-wrap">
+              <table className="compliance-control-table compliance-control-table--morning">
+                <thead>
+                  <tr>
+                    <th colSpan={6}>Exceptions (portal/client/DSC/signatory/query taxonomy)</th>
+                  </tr>
+                  <tr>
+                    <th>Reason</th>
+                    <th>Blocked Filings</th>
+                    <th>Overdue</th>
+                    <th>Max Age (days)</th>
+                    <th>Sample Dockets</th>
+                    <th>Drill-down</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!morningSections.exceptions?.length ? (
+                    <tr><td colSpan={6}>No exceptions for current filters.</td></tr>
+                  ) : morningSections.exceptions.map((group) => (
+                    <tr key={`exception-${group.reason}`}>
+                      <td><span className="compliance-chip compliance-chip--exception">{toLabel(group.reason)}</span></td>
+                      <td>{group.docketCount || 0}</td>
+                      <td>{group.overdueCount || 0}</td>
+                      <td>{group.maxAgeDays || 0}</td>
+                      <td>
+                        <div className="compliance-mini-list">
+                          {(group.dockets || []).map((item) => (
+                            <div key={`${group.reason}-${item.caseId}`}>{renderDocketLink(item.caseId, item.caseId)} · {item.blockedReason || toLabel(item.blockerType || 'other')}</div>
+                          ))}
+                        </div>
+                      </td>
+                      <td>
+                        {(group.dockets || []).length ? renderDocketLink(group.dockets[0].caseId, 'Open first docket') : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : null}
+
+        <section className="compliance-control-summary-grid">
+          {statCards.map((card) => (
+            <article className="compliance-control-summary-card" key={card.label}>
+              <p className="compliance-control-summary-card__label">{card.label}</p>
+              <p className="compliance-control-summary-card__value">{loading ? '…' : card.value}</p>
             </article>
           ))}
-        </div>
+        </section>
 
-        {isAdmin ? (
-          <form className="compliance-calendar-page__form" onSubmit={handleSaveEvent}>
-            <h3>{editId ? 'Edit reminder/task' : 'Add reminder/task'}</h3>
-            <label htmlFor="calendar-title">Title</label>
+        <section className="compliance-control-filters">
+          <div className="compliance-control-filter-row">
             <input
-              id="calendar-title"
-              value={form.title}
-              onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-              placeholder="e.g. GST filing due"
-              required
+              value={filters.assigneeXID}
+              onChange={(event) => updateFilter('assigneeXID', event.target.value)}
+              placeholder="Assignee XID (e.g. X000123)"
             />
-            <label htmlFor="calendar-description">Description</label>
-            <textarea
-              id="calendar-description"
-              value={form.description}
-              onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-              placeholder="Optional instructions for the team"
-              rows={3}
+            <input
+              value={filters.clientId}
+              onChange={(event) => updateFilter('clientId', event.target.value)}
+              placeholder="Client / Entity ID"
             />
-            <label htmlFor="calendar-entry-type">Entry type</label>
-            <select
-              id="calendar-entry-type"
-              value={form.calendarEntryType}
-              onChange={(event) => setForm((prev) => ({ ...prev, calendarEntryType: event.target.value }))}
-            >
-              <option value="important_date">Important date</option>
-              <option value="holiday">Holiday / off day</option>
-              <option value="birthday">Birthday</option>
-              <option value="working_day">Working-day exception</option>
-              <option value="off_day">Off-day exception</option>
+            <input
+              value={filters.obligationType}
+              onChange={(event) => updateFilter('obligationType', event.target.value)}
+              placeholder="Obligation type (GST / ROC / TDS)"
+            />
+            <select value={filters.state} onChange={(event) => updateFilter('state', event.target.value)}>
+              <option value="">All states</option>
+              {COMPLIANCE_STATES.map((state) => <option key={state} value={state}>{toLabel(state)}</option>)}
             </select>
-            <label htmlFor="calendar-reminder-days">Reminder days before</label>
-            <input
-              id="calendar-reminder-days"
-              type="number"
-              min="0"
-              max="30"
-              value={form.reminderDaysBefore}
-              onChange={(event) => setForm((prev) => ({ ...prev, reminderDaysBefore: event.target.value }))}
-              placeholder="Firm default"
-            />
-            <label htmlFor="calendar-client">Tag to client (optional)</label>
-            <select
-              id="calendar-client"
-              value={form.clientId}
-              onChange={(event) => setForm((prev) => ({ ...prev, clientId: event.target.value }))}
-            >
-              <option value="">No client tag</option>
-              {clients.map((client) => (
-                <option key={client.clientId} value={client.clientId}>{formatClientDisplay(client)}</option>
-              ))}
+          </div>
+          <div className="compliance-control-filter-row">
+            <input type="date" value={filters.dueFrom} onChange={(event) => updateFilter('dueFrom', event.target.value)} />
+            <input type="date" value={filters.dueTo} onChange={(event) => updateFilter('dueTo', event.target.value)} />
+            <select value={filters.riskLevel} onChange={(event) => updateFilter('riskLevel', event.target.value)}>
+              <option value="">All risk levels</option>
+              {riskOptions.map((risk) => <option key={risk} value={risk}>{toLabel(risk)}</option>)}
             </select>
-
-            <label className="compliance-calendar-page__checkbox">
-              <input
-                type="checkbox"
-                checked={form.createDocket}
-                onChange={(event) => setForm((prev) => ({ ...prev, createDocket: event.target.checked }))}
-                disabled={Boolean(editId)}
-              />
-              Create docket for this event (auto-routes to Workbasket)
-            </label>
-
-            {form.createDocket ? (
-              <>
-                <label className="compliance-calendar-page__checkbox">
-                  <input
-                    type="radio"
-                    name="calendar-category-mode"
-                    value="existing"
-                    checked={form.categoryMode === 'existing'}
-                    onChange={(event) => setForm((prev) => ({ ...prev, categoryMode: event.target.value }))}
-                  />
-                  Use an existing category
-                </label>
-                <label className="compliance-calendar-page__checkbox">
-                  <input
-                    type="radio"
-                    name="calendar-category-mode"
-                    value="event"
-                    checked={form.categoryMode === 'event'}
-                    onChange={(event) => setForm((prev) => ({ ...prev, categoryMode: event.target.value }))}
-                  />
-                  Create new category from event title
-                </label>
-
-                {form.categoryMode === 'existing' ? (
-                  <>
-                    <label htmlFor="calendar-category">Category</label>
-                    <select
-                      id="calendar-category"
-                      value={form.categoryId}
-                      onChange={(event) => setForm((prev) => ({ ...prev, categoryId: event.target.value }))}
-                    >
-                      <option value="">Select category</option>
-                      {categories.map((category) => (
-                        <option key={category._id} value={category._id}>{category.name}</option>
-                      ))}
-                    </select>
-                  </>
-                ) : null}
-              </>
-            ) : null}
-
-            <label htmlFor="calendar-date">Date</label>
             <input
-              id="calendar-date"
-              type="date"
-              value={selectedDate}
-              onChange={(event) => setSelectedDate(event.target.value)}
-              required
+              value={filters.approverXID}
+              onChange={(event) => updateFilter('approverXID', event.target.value)}
+              placeholder="Approver XID"
             />
-            <div className="compliance-calendar-page__form-actions">
-              {editId ? <Button variant="outline" type="button" onClick={resetForm}>Cancel edit</Button> : null}
-              <Button type="submit" disabled={saving}>{saving ? 'Saving…' : editId ? 'Save changes' : 'Add to calendar'}</Button>
+            <select value={filters.exceptionType} onChange={(event) => updateFilter('exceptionType', event.target.value)}>
+              <option value="">All exception reasons</option>
+              {EXCEPTION_TYPE_OPTIONS.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
+            </select>
+            <select value={filters.useDemo} onChange={(event) => updateFilter('useDemo', event.target.value)}>
+              <option value="false">Live data</option>
+              <option value="true">Demo data (if empty)</option>
+            </select>
+            <Button variant="outline" onClick={() => setFilters(defaultFilters)}>Reset filters</Button>
+            <Button onClick={applyAllFilters}>Apply filters</Button>
+          </div>
+        </section>
+
+        {canManageState ? (
+          <section className="compliance-generation-panel">
+            <div className="compliance-generation-panel__header">
+              <h2>Recurring Generation</h2>
+              <p>Generate compliance dockets from obligation templates. Sample templates are configurable examples.</p>
             </div>
-          </form>
+            <div className="compliance-control-filter-row">
+              <select
+                multiple
+                value={selectedTemplateIds}
+                onChange={(event) => {
+                  const values = Array.from(event.target.selectedOptions).map((option) => option.value);
+                  setSelectedTemplateIds(values);
+                }}
+                disabled={loadingTemplates}
+              >
+                {templates.map((template) => (
+                  <option key={template._id} value={template._id}>
+                    {template.name} ({template.obligationType})
+                  </option>
+                ))}
+              </select>
+              <input type="date" value={generationRangeStart} onChange={(event) => setGenerationRangeStart(event.target.value)} />
+              <input type="date" value={generationRangeEnd} onChange={(event) => setGenerationRangeEnd(event.target.value)} />
+              <Button variant="outline" onClick={handleSeedSamples} disabled={generationLoading}>Seed sample templates</Button>
+              <Button variant="outline" onClick={() => runGeneration('preview')} disabled={generationLoading || !selectedTemplateIds.length}>Preview</Button>
+              <Button onClick={() => runGeneration('run')} disabled={generationLoading || !selectedTemplateIds.length}>Generate</Button>
+            </div>
+            <div className="compliance-generation-badges">
+              <article className="compliance-control-summary-card">
+                <p className="compliance-control-summary-card__label">Generated</p>
+                <p className="compliance-control-summary-card__value">{generationSummary.generated || 0}</p>
+              </article>
+              <article className="compliance-control-summary-card">
+                <p className="compliance-control-summary-card__label">Skipped Duplicate</p>
+                <p className="compliance-control-summary-card__value">{generationSummary.skippedDuplicate || 0}</p>
+              </article>
+              <article className="compliance-control-summary-card">
+                <p className="compliance-control-summary-card__label">Failed</p>
+                <p className="compliance-control-summary-card__value">{generationSummary.failed || 0}</p>
+              </article>
+              <article className="compliance-control-summary-card">
+                <p className="compliance-control-summary-card__label">Total Candidates</p>
+                <p className="compliance-control-summary-card__value">{generationSummary.totalCandidates || 0}</p>
+              </article>
+            </div>
+            {generationRows.length ? (
+              <div className="compliance-generation-preview-list">
+                {generationRows.slice(0, 20).map((row, idx) => (
+                  <div key={`${row.templateId || 'template'}-${row.clientId || 'client'}-${row.period || idx}`} className="compliance-generation-preview-item">
+                    <strong>{row.templateName}</strong> · {row.clientName || row.clientId} · {row.period} · <span>{row.status}</span>
+                    {row.reason ? <span> · {row.reason}</span> : null}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
+        {canManageState ? (
+          <section className="compliance-generation-panel">
+            <div className="compliance-generation-panel__header">
+              <h2>Approval Queues</h2>
+              <p>Track partner/client/signatory bottlenecks with ageing and reminder placeholders.</p>
+            </div>
+            <div className="compliance-control-filter-row">
+              {APPROVAL_VIEWS.map((option) => (
+                <Button
+                  key={option.key}
+                  variant={approvalView === option.key ? 'primary' : 'outline'}
+                  onClick={() => setApprovalView(option.key)}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+            <div className="compliance-generation-badges">
+              <article className="compliance-control-summary-card">
+                <p className="compliance-control-summary-card__label">My approvals</p>
+                <p className="compliance-control-summary-card__value">{approvalSummary.myApprovals || 0}</p>
+              </article>
+              <article className="compliance-control-summary-card">
+                <p className="compliance-control-summary-card__label">Awaiting partner</p>
+                <p className="compliance-control-summary-card__value">{approvalSummary.awaitingPartner || 0}</p>
+              </article>
+              <article className="compliance-control-summary-card">
+                <p className="compliance-control-summary-card__label">Awaiting client/signatory</p>
+                <p className="compliance-control-summary-card__value">{approvalSummary.awaitingClientSignatory || 0}</p>
+              </article>
+              <article className="compliance-control-summary-card">
+                <p className="compliance-control-summary-card__label">Overdue approvals</p>
+                <p className="compliance-control-summary-card__value">{approvalSummary.overdueApprovals || 0}</p>
+              </article>
+            </div>
+            <div className="compliance-control-table-wrap">
+              <table className="compliance-control-table">
+                <thead>
+                  <tr>
+                    <th>Docket</th>
+                    <th>Client</th>
+                    <th>Approval Type</th>
+                    <th>Approver</th>
+                    <th>Requested At</th>
+                    <th>Due At</th>
+                    <th>Age (days)</th>
+                    <th>Status</th>
+                    <th>Reminder</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {approvalLoading ? (
+                    <tr><td colSpan={9}>Loading approvals…</td></tr>
+                  ) : approvalRows.length === 0 ? (
+                    <tr><td colSpan={9}>No approvals found for this view.</td></tr>
+                  ) : approvalRows.map((row) => (
+                    <tr key={`approval-${row.caseId}`}>
+                      <td>{renderDocketLink(row.caseId)}</td>
+                      <td>{renderClientLink(row.clientId, row.clientName || row.clientId || '—')}</td>
+                      <td>{toLabel(row.approvalType)}</td>
+                      <td>{row.approver || '—'}</td>
+                      <td>{formatDate(row.requestedAt)}</td>
+                      <td>{formatDate(row.dueAt)}</td>
+                      <td>{row.ageDays ?? '—'}</td>
+                      <td>{row.overdue ? 'Overdue' : 'Pending'}</td>
+                      <td>
+                        <div className="compliance-approval-actions">
+                          <Button variant="outline" onClick={() => handleReminder(row.caseId, false)}>Remind</Button>
+                          <Button variant="outline" onClick={() => handleReminder(row.caseId, true)}>Escalate</Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : null}
+
+        {!loading && rows.length === 0 ? (
+          <EmptyState
+            title="No compliance dockets found for current filters."
+            body="Create or update dockets with compliance metadata to start tracking this control room."
+          />
+        ) : null}
+
+        {rows.length ? (
+          <div className="compliance-control-table-wrap">
+            <table className="compliance-control-table">
+              <thead>
+                <tr>
+                  <th>Docket</th>
+                  <th>Client/Entity</th>
+                  <th>Obligation</th>
+                  <th>Period</th>
+                  <th>Owner</th>
+                  <th>Reviewer</th>
+                  <th>Approver</th>
+                  <th>State</th>
+                  <th>Statutory Due</th>
+                  <th>Internal Due</th>
+                  <th>Pend Until</th>
+                  <th>Filed At</th>
+                  <th>Risk</th>
+                  <th>Blocked Reason</th>
+                  {canManageState ? <th>Transition</th> : null}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.caseId}>
+                    <td>{renderDocketLink(row.caseId)}</td>
+                    <td>{renderClientLink(row.clientId, row.clientName || row.clientId || '—')}</td>
+                    <td>{row.obligationType || '—'}</td>
+                    <td>{row.obligationPeriod || '—'}</td>
+                    <td>{row.assignedToXID || '—'}</td>
+                    <td>{row.reviewerXID || '—'}</td>
+                    <td>{row.approverXID || '—'}</td>
+                    <td><span className={statusChipClass(row.complianceState)}>{toLabel(row.complianceState)}</span></td>
+                    <td>{formatDate(row.statutoryDueDate)}</td>
+                    <td>{formatDate(row.internalDueDate)}</td>
+                    <td>{formatDate(row.pendUntil)}</td>
+                    <td>{formatDate(row.filedAt)}</td>
+                    <td><span className={riskChipClass(row.riskLevel)}>{toLabel(row.riskLevel)}</span></td>
+                    <td>{row.blockedReason || '—'}</td>
+                    {canManageState ? (
+                      <td>
+                        <select
+                          value={row.complianceState}
+                          disabled={savingCaseId === row.caseId}
+                          onChange={(event) => handleStateChange(row.caseId, event.target.value)}
+                        >
+                          {COMPLIANCE_STATES.map((state) => (
+                            <option key={state} value={state}>{toLabel(state)}</option>
+                          ))}
+                        </select>
+                      </td>
+                    ) : null}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : null}
       </div>
     </PlatformShell>

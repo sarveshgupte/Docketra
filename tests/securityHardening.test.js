@@ -114,6 +114,7 @@ async function testSecurityHeaders() {
 async function testAccountLockout() {
   const fakeRedis = new FakeRedis();
   redisModule.getRedisClient = () => fakeRedis;
+  redisModule.isRedisReady = () => true;
   const { enforceAccountLockout, recordFailedLoginAttempt } = require('../src/middleware/accountLockout.middleware');
   const app = express();
   app.use(express.json());

@@ -1644,7 +1644,8 @@ const getProfile = async (req, res) => {
     // Always fetch a fresh DB user for profile hydration and consistency.
     // Never mutate/populate req.user (middleware snapshot).
     const dbUser = await User.findById(requestUser?._id)
-      .populate('firmId', 'firmId name firmSlug');
+      .populate('firmId', 'firmId name firmSlug')
+      .populate('reportsToUserId', 'name email xID role');
 
     if (!dbUser) {
       return res.status(401).json({
@@ -1806,6 +1807,13 @@ const getProfile = async (req, res) => {
         teamNames: orderedAll.map((workbasket) => String(workbasket.name || '').trim()),
         workbaskets: orderedWorkbaskets,
         qcWorkbaskets: orderedQcWorkbaskets,
+        reportsTo: dbUser.reportsToUserId ? {
+          id: dbUser.reportsToUserId._id.toString(),
+          xID: dbUser.reportsToUserId.xID,
+          name: dbUser.reportsToUserId.name,
+          email: dbUser.reportsToUserId.email,
+          role: dbUser.reportsToUserId.role,
+        } : null,
         // OBJECTIVE 2: Include firm context (JWT-first approach)
         // Use JWT claims as primary source, DB as fallback for display
         // Firm metadata (read-only, admin-controlled)

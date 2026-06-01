@@ -3,92 +3,105 @@
   gap: 1rem;
 }
 
-.compliance-calendar-page__toolbar {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: center;
-}
-
-.compliance-calendar-page__month-controls {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.compliance-calendar-page__weekdays,
-.compliance-calendar-page__grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-.compliance-calendar-page__weekdays span {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  color: var(--dt-text-muted);
-  font-weight: 600;
-}
-
-.compliance-calendar-page__day {
-  min-height: 108px;
-  border: 1px solid var(--dt-border-whisper);
-  border-radius: 0.75rem;
-  padding: 0.5rem;
-  background: var(--dt-surface);
-  display: flex;
-  flex-direction: column;
-  text-align: left;
-  gap: 0.25rem;
-}
-
-.compliance-calendar-page__day.is-muted {
-  opacity: 0.45;
-}
-
-.compliance-calendar-page__day.is-selected {
-  border-color: var(--dt-focus);
-  box-shadow: 0 0 0 1px var(--dt-focus);
-}
-
-.compliance-calendar-page__day small {
-  font-size: 0.72rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--dt-info);
-}
-
-.compliance-calendar-page__details,
-.compliance-calendar-page__form {
-  border: 1px solid var(--dt-border-whisper);
-  border-radius: 1rem;
-  padding: 1rem;
-  background: var(--dt-surface);
-}
-
-.compliance-calendar-page__event {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  border: 1px solid var(--dt-border-whisper);
-  border-radius: 0.75rem;
-  padding: 0.75rem;
-  margin-top: 0.5rem;
-}
-
 .compliance-calendar-page__error {
   color: var(--dt-error);
   font-size: 0.9rem;
 }
 
-.compliance-calendar-page__form {
+.compliance-control-summary-grid {
   display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.compliance-control-summary-card {
+  border: 1px solid var(--dt-border-whisper);
+  border-radius: 0.9rem;
+  background: var(--dt-surface);
+  padding: 0.75rem;
+}
+
+.compliance-control-summary-card__label {
+  margin: 0;
+  color: var(--dt-text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.compliance-control-summary-card__value {
+  margin: 0.3rem 0 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--dt-text);
+}
+
+.compliance-control-filters {
+  border: 1px solid var(--dt-border-whisper);
+  border-radius: 0.9rem;
+  background: var(--dt-surface);
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.compliance-generation-panel {
+  border: 1px solid var(--dt-border-whisper);
+  border-radius: 0.9rem;
+  background: var(--dt-surface);
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.compliance-generation-panel__header h2 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.compliance-generation-panel__header p {
+  margin: 0.2rem 0 0;
+  color: var(--dt-text-muted);
+  font-size: 0.8rem;
+}
+
+.compliance-generation-badges {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 0.5rem;
 }
 
-.compliance-calendar-page__form input,
-.compliance-calendar-page__form textarea,
-.compliance-calendar-page__form select {
+.compliance-generation-preview-list {
+  border: 1px solid var(--dt-border-whisper);
+  border-radius: 0.5rem;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.compliance-generation-preview-item {
+  border-bottom: 1px solid var(--dt-border-whisper);
+  padding: 0.45rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+.compliance-generation-preview-item:last-child {
+  border-bottom: 0;
+}
+
+.compliance-approval-actions {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.compliance-control-filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.5rem;
+}
+
+.compliance-control-filter-row input,
+.compliance-control-filter-row select {
   border: 1px solid var(--dt-border);
   border-radius: 0.5rem;
   padding: 0.5rem;
@@ -96,25 +109,165 @@
   color: var(--dt-text);
 }
 
-.compliance-calendar-page__checkbox {
-  display: flex;
+.compliance-control-filter-row select[multiple] {
+  min-height: 90px;
+}
+
+.compliance-control-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--dt-border-whisper);
+  border-radius: 0.9rem;
+  background: var(--dt-surface);
+}
+
+.compliance-control-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1500px;
+}
+
+.compliance-control-table--morning {
+  min-width: 1100px;
+}
+
+.compliance-control-table th,
+.compliance-control-table td {
+  border-bottom: 1px solid var(--dt-border-whisper);
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+  font-size: 0.82rem;
+  vertical-align: top;
+}
+
+.compliance-control-table th {
+  position: sticky;
+  top: 0;
+  background: var(--dt-surface-elevated, var(--dt-surface));
+  color: var(--dt-text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.compliance-control-table td select {
+  width: 100%;
+  border: 1px solid var(--dt-border);
+  border-radius: 0.45rem;
+  padding: 0.25rem 0.35rem;
+  background: var(--dt-surface);
+  color: var(--dt-text);
+}
+
+.compliance-inline-link {
+  color: var(--dt-link, #2251cc);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.compliance-inline-link:hover {
+  text-decoration: underline;
+}
+
+.compliance-mini-list {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 240px;
+}
+
+.compliance-chip {
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.95rem;
+  border-radius: 999px;
+  padding: 0.12rem 0.48rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: 1px solid var(--dt-border-whisper);
+  white-space: nowrap;
 }
 
-.compliance-calendar-page__event-actions,
-.compliance-calendar-page__form-actions {
-  display: flex;
-  gap: 0.5rem;
+.compliance-chip--state-awaiting-client,
+.compliance-chip--state-awaiting-partner {
+  background: #fff8e8;
+  color: #7c5d00;
+  border-color: #e7d6a0;
 }
 
+.compliance-chip--state-blocked {
+  background: #fdeaea;
+  color: #982020;
+  border-color: #f3c3c3;
+}
 
-.compliance-calendar-page__form input:focus-visible,
-.compliance-calendar-page__form textarea:focus-visible,
-.compliance-calendar-page__form select:focus-visible,
-.compliance-calendar-page__day:focus-visible {
-  outline: 2px solid var(--dt-focus);
-  outline-offset: 2px;
-  box-shadow: var(--dt-focus-ring);
+.compliance-chip--state-ready-to-file,
+.compliance-chip--state-in-progress {
+  background: #eaf5ff;
+  color: #1153a8;
+  border-color: #bfdaf6;
+}
+
+.compliance-chip--state-filed,
+.compliance-chip--state-closed {
+  background: #eaf8ee;
+  color: #1f7a3c;
+  border-color: #bfe4ca;
+}
+
+.compliance-chip--risk-critical {
+  background: #fde7eb;
+  color: #a3243f;
+  border-color: #f4bec9;
+}
+
+.compliance-chip--risk-high {
+  background: #fff0e1;
+  color: #9c4f00;
+  border-color: #f0d3b2;
+}
+
+.compliance-chip--risk-medium {
+  background: #edf5ff;
+  color: #235aa6;
+  border-color: #c6d9f6;
+}
+
+.compliance-chip--risk-low {
+  background: #edf8ef;
+  color: #1f7a3c;
+  border-color: #c7e6cf;
+}
+
+.compliance-chip--due-overdue {
+  background: #fdeaea;
+  color: #982020;
+  border-color: #f3c3c3;
+}
+
+.compliance-chip--due-due-soon {
+  background: #fff6df;
+  color: #845d00;
+  border-color: #efd8a1;
+}
+
+.compliance-chip--due-on-track {
+  background: #ecf7f0;
+  color: #1f7a3c;
+  border-color: #c6e5cf;
+}
+
+.compliance-chip--load-overloaded {
+  background: #fdeaea;
+  color: #982020;
+  border-color: #f3c3c3;
+}
+
+.compliance-chip--load-balanced {
+  background: #ecf7f0;
+  color: #1f7a3c;
+  border-color: #c6e5cf;
+}
+
+.compliance-chip--exception {
+  background: #f0f2ff;
+  color: #314c92;
+  border-color: #ced6f8;
 }

@@ -1,6 +1,6 @@
 const { z, nonEmptyString, objectIdString, paginationQuery } = require('./common');
 
-const KNOWLEDGE_ITEM_TYPES = ['sop', 'checklist', 'template', 'note', 'client_instruction', 'process'];
+const KNOWLEDGE_ITEM_TYPES = ['sop', 'checklist', 'template', 'note', 'client_instruction', 'process', 'last_good_example', 'review_note'];
 const KNOWLEDGE_ITEM_STATUSES = ['draft', 'active', 'archived'];
 
 module.exports = {
@@ -16,6 +16,10 @@ module.exports = {
       linkedClientId: objectIdString.optional(),
       linkedDocketId: z.string().trim().optional(),
       linkedWorkType: z.string().trim().optional(),
+      linkedObligationTemplateId: objectIdString.optional(),
+      linkedDocketType: z.string().trim().optional(),
+      linkedServiceLine: z.string().trim().optional(),
+      linkedStage: z.string().trim().optional(),
       reviewDueAt: z.string().datetime({ offset: true }).optional(),
       lastReviewedAt: z.string().datetime({ offset: true }).optional(),
     }).passthrough(),
@@ -28,6 +32,10 @@ module.exports = {
       clientId: objectIdString.optional(),
       linkedDocketId: z.string().trim().max(200).optional(),
       linkedWorkType: z.string().trim().max(200).optional(),
+      linkedObligationTemplateId: objectIdString.optional(),
+      linkedDocketType: z.string().trim().max(200).optional(),
+      linkedServiceLine: z.string().trim().max(200).optional(),
+      linkedStage: z.string().trim().max(200).optional(),
       q: z.string().trim().max(200).optional(),
     })),
   },
@@ -47,6 +55,10 @@ module.exports = {
       linkedClientId: objectIdString.nullable().optional(),
       linkedDocketId: z.string().trim().nullable().optional(),
       linkedWorkType: z.string().trim().nullable().optional(),
+      linkedObligationTemplateId: objectIdString.nullable().optional(),
+      linkedDocketType: z.string().trim().nullable().optional(),
+      linkedServiceLine: z.string().trim().nullable().optional(),
+      linkedStage: z.string().trim().nullable().optional(),
       reviewDueAt: z.string().datetime({ offset: true }).nullable().optional(),
       lastReviewedAt: z.string().datetime({ offset: true }).nullable().optional(),
     }).passthrough(),
@@ -55,4 +67,11 @@ module.exports = {
     params: z.object({ id: objectIdString }),
     body: z.object({}).passthrough(),
   },
+  'GET /docket/:caseId': {
+    params: z.object({ caseId: z.string().trim() }),
+  },
+  'GET /reports/analysis': {
+    query: z.object({}).passthrough(),
+  },
 };
+

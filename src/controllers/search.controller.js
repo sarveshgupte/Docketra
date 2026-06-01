@@ -831,13 +831,19 @@ const globalWorklist = async (req, res) => {
       andClauses.push({ routedToTeamId: selectedTeamId });
     } else {
       if (selectedTeamId) {
-        // Some dockets carry queue linkage on workbasketId, some on ownerTeamId/routedToTeamId.
-        // Use a scoped OR so newly created dockets are visible in the selected workbasket queue.
+        // Active queue precedence:
+        // 1) If routedToTeamId is set, that routed queue is the active workbasket queue.
+        // 2) Otherwise fall back to owner/workbasket linkage for legacy records.
         andClauses.push({
           $or: [
-            { workbasketId: selectedTeamId },
-            { ownerTeamId: selectedTeamId },
             { routedToTeamId: selectedTeamId },
+            {
+              routedToTeamId: null,
+              $or: [
+                { workbasketId: selectedTeamId },
+                { ownerTeamId: selectedTeamId },
+              ],
+            },
           ],
         });
       }
@@ -924,6 +930,7 @@ const globalWorklist = async (req, res) => {
       caseId: 1,
       caseName: 1,
       clientId: 1,
+      clientName: 1,
       category: 1,
       status: 1,
       slaDueAt: 1,
@@ -979,6 +986,28 @@ const globalWorklist = async (req, res) => {
       ? await Team.find({ _id: { $in: teamIds }, firmId }).select('_id name').lean()
       : [];
     const teamNameMap = new Map(teams.map((team) => [String(team._id), team.name]));
+
+    const missingClientNameIds = [...new Set(
+      (allCases || [])
+        .filter((c) => !c?.clientName && c?.clientId)
+        .map((c) => String(c.clientId).trim())
+        .filter(Boolean),
+    )];
+
+    let clientNameByClientId = new Map();
+    if (missingClientNameIds.length > 0) {
+      const clientDocs = await Client.find(
+        enforceTenantScope({ clientId: { $in: missingClientNameIds } }, req, { source: 'search.globalWorklist.clientLookup' }),
+      )
+        .select('clientId businessName')
+        .lean();
+
+      clientNameByClientId = new Map(
+        (clientDocs || [])
+          .filter((client) => client?.clientId)
+          .map((client) => [String(client.clientId).trim(), client.businessName || null]),
+      );
+    }
     
     // Calculate SLA days remaining for each case
     const now = new Date();
@@ -994,6 +1023,7 @@ const globalWorklist = async (req, res) => {
         caseId: c.caseId,
         caseName: c.caseName,
         clientId: c.clientId,
+        clientName: c.clientName || clientNameByClientId.get(String(c.clientId || '').trim()) || null,
         status: c.status,
         category: c.category,
         slaDueAt: c.slaDueAt,
