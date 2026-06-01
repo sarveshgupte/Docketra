@@ -3,6 +3,7 @@ import { SuperAdminLayout } from '../components/common/SuperAdminLayout';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { superadminService } from '../services/superadminService';
+import { generateUUID } from '../utils/crypto';
 
 const ADVISOR_MODES = [
   {
@@ -64,7 +65,7 @@ export const SuperadminAiAssistantPage = () => {
 
     setError('');
     const userMsg = {
-      id: `msg-${Date.now()}-${Math.random()}`,
+      id: `msg-${Date.now()}-${generateUUID()}`,
       role: 'user',
       content: text.trim()
     };
@@ -81,7 +82,7 @@ export const SuperadminAiAssistantPage = () => {
 
       if (response?.success && response?.data?.text) {
         setMessages(prev => [...prev, {
-          id: `msg-${Date.now()}-${Math.random()}`,
+          id: `msg-${Date.now()}-${generateUUID()}`,
           role: 'assistant',
           content: response.data.text
         }]);
