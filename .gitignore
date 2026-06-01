@@ -62,3 +62,6 @@ test_firm_slug.js
 .wrangler
 .dev.vars*
 !.dev.vars.example
+
+# Production environment secrets
+env.yaml
