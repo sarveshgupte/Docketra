@@ -228,13 +228,21 @@ const getDocumentItems = async (req, res) => {
     }
 
     const skip = (Number(page) - 1) * Number(limit);
-    const total = await DocumentItem.countDocuments(query);
-    const items = await DocumentItem.find(query)
-      .populate('versions.fileReference', 'fileName size fileUrl uploadedBy createdAt')
-      .sort({ updatedAt: -1 })
-      .skip(skip)
-      .limit(Number(limit))
-      .lean();
+
+    // ⚡ Bolt Performance Optimization:
+    // 💡 What: Replaced sequential countDocuments() and find() queries with concurrent execution using Promise.all().
+    // 🎯 Why: They are independent operations; awaiting them sequentially causes unnecessary latency.
+    // 📊 Impact: Reduces total DB wait time by executing both network requests in parallel.
+    const [total, items] = await Promise.all([
+      DocumentItem.countDocuments(query).exec(),
+      DocumentItem.find(query)
+        .populate('versions.fileReference', 'fileName size fileUrl uploadedBy createdAt')
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .lean()
+        .exec()
+    ]);
 
     return res.json({
       success: true,
