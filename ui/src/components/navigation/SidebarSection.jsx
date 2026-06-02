@@ -31,6 +31,7 @@ export const SidebarSection = ({
         className="enterprise-sidebar__section-header text-xs font-semibold uppercase tracking-[0.08em] text-gray-500"
         onClick={() => canToggle && setIsOpen((value) => !value)}
         aria-expanded={isOpen}
+        aria-controls={`${sectionId}-content`}
         disabled={!canToggle || collapsed}
       >
         <span className="enterprise-sidebar__section-title">{title}</span>
@@ -40,7 +41,7 @@ export const SidebarSection = ({
       </button>
 
       {isOpen && (
-        <div className="enterprise-sidebar__section-items">
+        <div id={`${sectionId}-content`} className="enterprise-sidebar__section-items">
           {visibleItems.map((item) => {
             if (item.type === 'group') {
               const isGroupOpen = expandedGroupId === item.id;
