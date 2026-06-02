@@ -10,9 +10,21 @@ import { formatDate } from '../src/utils/formatters';
 import { ROUTES } from '../src/constants/routes';
 
 const MEANINGFUL_TYPES = new Set([
+  'DOCKET_ASSIGNED',
+  'STATUS_CHANGED',
+  'COMMENT_ADDED',
+  'DOCKET_REASSIGNED',
+  'DOCKET_ROUTED_TO_WORKBASKET',
+  'QC_RETURNED',
+  'PENDED_DOCKET_REOPENED',
+  'CLIENT_UPLOAD',
+  'SLA_BREACHED',
+  'DOCKET_DUE_SOON',
+  'DOCKET_OVERDUE',
+  'FIRM_CALENDAR_REMINDER',
+  // Backward compatibility legacy types
   'ASSIGNED',
   'LIFECYCLE_CHANGED',
-  'COMMENT_ADDED',
   'MENTION',
   'BLOCKED',
   'COMPLETED',
