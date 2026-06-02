@@ -15,7 +15,7 @@ async function run() {
     practiceType: 'CA',
     teamMembers: 12,
     currentWorkflowSystem: 'Spreadsheets and email',
-    compliancePainPoint: 'Partner visibility for overdue filings',
+    compliancePainPoint: 'Manager visibility for overdue filings',
     goLiveTimeline: 'Q2 2026',
   };
 

@@ -13,12 +13,17 @@ const log = require('../utils/log');
 const { getSession } = require('../utils/getSession');
 const { enqueueOutbox } = require('./outbox.service');
 
-// Detect production mode
-const isProduction = process.env.NODE_ENV === 'production';
-
 // Constants
 const BREVO_MESSAGE_ID_FALLBACK = 'brevo-email-sent';
 const { normalizeFirmSlug } = require('../utils/slugify');
+
+const resolveMailFrom = () => process.env.MAIL_FROM || process.env.SMTP_FROM || process.env.EMAIL_FROM;
+
+const shouldUseTransactionalEmail = () => {
+  if (process.env.NODE_ENV === 'test') return false;
+  if (String(process.env.EMAIL_DELIVERY_MODE || '').trim().toLowerCase() === 'console') return false;
+  return process.env.NODE_ENV === 'production' || Boolean(process.env.BREVO_API_KEY);
+};
 
 /**
  * Parse MAIL_FROM format "Name <email@domain>" into structured sender object
@@ -87,14 +92,14 @@ const maskEmail = (email) => {
  */
 const sendTransactionalEmail = async ({ to, subject, html, text }) => {
   const apiKey = process.env.BREVO_API_KEY;
-  const mailFrom = process.env.MAIL_FROM || process.env.SMTP_FROM;
+  const mailFrom = resolveMailFrom();
   
   if (!apiKey) {
     throw new Error('BREVO_API_KEY is not configured');
   }
   
   if (!mailFrom) {
-    throw new Error('MAIL_FROM or SMTP_FROM is not configured');
+    throw new Error('MAIL_FROM, SMTP_FROM, or EMAIL_FROM is not configured');
   }
   
   // Parse sender from MAIL_FROM format
@@ -177,7 +182,7 @@ const sendEmailNow = async (mailOptions) => {
     throw new Error('SMTP_CIRCUIT_OPEN');
   }
 
-  if (isProduction) {
+  if (shouldUseTransactionalEmail()) {
     try {
       log.info(`[EMAIL] Sending email via Brevo API to ${maskedEmail}`);
       const result = await sendTransactionalEmail({
@@ -205,7 +210,7 @@ const sendEmailNow = async (mailOptions) => {
   log.info(mailOptions.text || mailOptions.html);
   log.info('----------------------------------------');
   log.info('Note: Development mode active. Emails are logged to console only.');
-  log.info('Set NODE_ENV=production and configure Brevo API to enable email delivery.');
+  log.info('Set BREVO_API_KEY plus MAIL_FROM, SMTP_FROM, or EMAIL_FROM to enable email delivery.');
   log.info('========================================\n');
   recordSuccess('smtp');
   return { success: true, console: true };
@@ -288,8 +293,10 @@ const hashToken = (token) => {
  */
 const resolveInviteRoleLabel = (role) => {
   const normalized = String(role || '').trim().toUpperCase();
-  if (normalized === 'USER') return 'User';
+  if (normalized === 'USER') return 'Employee';
   if (normalized === 'ADMIN') return 'Admin';
+  if (normalized === 'MANAGER') return 'Manager';
+  if (normalized === 'PRIMARY_ADMIN') return 'Primary Admin';
   if (normalized === 'EMPLOYEE') return 'Employee';
   if (normalized === 'STAFF') return 'Staff';
   return normalized ? normalized.replace(/_/g, ' ') : 'Staff';
@@ -502,6 +509,7 @@ Docketra Team
  */
 const sendTestEmail = async (email) => {
   const isProduction = process.env.NODE_ENV === 'production';
+  const fromAddress = resolveMailFrom() || 'Not configured';
   const subject = 'Docketra Email Service Test';
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -512,7 +520,7 @@ const sendTestEmail = async (email) => {
       <ul>
         <li>Service: ${isProduction ? 'Brevo Transactional Email API' : 'Console (Development Mode)'}</li>
         <li>API Key: ${process.env.BREVO_API_KEY ? 'Configured' : 'Not configured'}</li>
-        <li>From Address: ${process.env.MAIL_FROM || process.env.SMTP_FROM || 'Not configured'}</li>
+        <li>From Address: ${fromAddress}</li>
       </ul>
       <p>Timestamp: ${new Date().toISOString()}</p>
       <p>Best regards,<br>Docketra Team</p>
@@ -528,7 +536,7 @@ If you received this email, your email service is working correctly!
 Configuration Details:
 - Service: ${isProduction ? 'Brevo Transactional Email API' : 'Console (Development Mode)'}
 - API Key: ${process.env.BREVO_API_KEY ? 'Configured' : 'Not configured'}
-- From Address: ${process.env.MAIL_FROM || process.env.SMTP_FROM || 'Not configured'}
+- From Address: ${fromAddress}
 
 Timestamp: ${new Date().toISOString()}
 

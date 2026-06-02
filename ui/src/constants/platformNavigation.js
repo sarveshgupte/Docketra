@@ -227,7 +227,6 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
       to: ROUTES.COMPLIANCE_CALENDAR(firmSlug),
       activeMatch: 'exactOrDescendant',
     },
-    { id: 'workbaskets-group', label: 'Workbaskets', type: 'group', children: workbasketsGroupChildren },
     ...(hasAtLeastRole(normalizedRole, 'MANAGER') ? [{
       id: 'docketra-intelligence',
       label: 'Docketra Intelligence',
@@ -235,6 +234,7 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
       to: ROUTES.DOCKETRA_INTELLIGENCE(firmSlug),
       activeMatch: 'exactOrDescendant',
     }] : []),
+    { id: 'workbaskets-group', label: 'Workbaskets', type: 'group', children: workbasketsGroupChildren },
     { id: 'worklists-group', label: 'Worklists', type: 'group', children: scopedWorklistItems.length ? scopedWorklistItems : [{ id: 'my-worklist', label: 'My Worklist', icon: icons.dashboard, to: ROUTES.WORKLIST(firmSlug), activeMatch: 'exactOrDescendant' }] },
     ...(qcGroupChildren.length ? [{ id: 'qc-worklists-group', label: 'QC Worklists', type: 'group', children: qcGroupChildren }] : []),
   ].filter((item) => item.id === 'compliance-control-room' || item.id === 'docketra-intelligence' || (Array.isArray(item.children) && item.children.length > 0));

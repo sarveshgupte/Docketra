@@ -5,7 +5,6 @@ export const CasesHeaderActions = ({
   isHighWorkload,
   openAssignedCount,
   onExportCsv,
-  isPartner,
   enablePerformanceView,
   showPerformance,
   onTogglePerformance,
@@ -21,7 +20,7 @@ export const CasesHeaderActions = ({
       </span>
     )}
     <Button variant="outline" onClick={onExportCsv}>{exportLabel}</Button>
-    {!isPartner && enablePerformanceView && (
+    {enablePerformanceView && (
       <Button variant="outline" onClick={onTogglePerformance}>
         {showPerformance ? 'Hide Performance View' : 'Show Performance View'}
       </Button>
@@ -31,8 +30,7 @@ export const CasesHeaderActions = ({
   </div>
 );
 
-export const CasesSlaSummaryBar = ({ isPartner, slaSummary, setStatusFilter, setActiveView, enableEscalationView }) => {
-  if (isPartner) return null;
+export const CasesSlaSummaryBar = ({ slaSummary, setStatusFilter, setActiveView, enableEscalationView }) => {
   return (
     <div className="cases-page__sla-bar" role="region" aria-label="SLA Summary">
       <button type="button" className="cases-page__sla-tile" onClick={() => { setStatusFilter('ALL'); setActiveView('MY_OPEN'); }} aria-label={`Total open dockets: ${slaSummary.totalOpen}`}>
@@ -149,8 +147,8 @@ export const CasesFiltersCard = ({ statusFilter, setStatusFilter, workTypeFilter
   );
 };
 
-export const CasesPerformancePanel = ({ isPartner, enablePerformanceView, showPerformance, performanceMetrics }) => {
-  if (isPartner || !enablePerformanceView || !showPerformance) return null;
+export const CasesPerformancePanel = ({ enablePerformanceView, showPerformance, performanceMetrics }) => {
+  if (!enablePerformanceView || !showPerformance) return null;
 
   return (
     <div className="cases-page__perf-panel" role="region" aria-label="Performance metrics">

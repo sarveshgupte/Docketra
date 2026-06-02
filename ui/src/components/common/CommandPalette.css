@@ -1,0 +1,224 @@
+.command-palette__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  border: 0;
+  background: rgba(17, 24, 39, 0.28);
+  backdrop-filter: blur(2px);
+}
+
+.command-palette {
+  position: fixed;
+  top: clamp(72px, 11vh, 120px);
+  left: 50%;
+  z-index: 901;
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(720px, calc(100vh - 120px));
+  transform: translateX(-50%);
+  overflow: hidden;
+  border: 1px solid #d9d7d0;
+  border-radius: 8px;
+  background: #fffdf8;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22), 0 4px 18px rgba(15, 23, 42, 0.08);
+}
+
+.command-palette__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid #ebe8df;
+  background: #ffffff;
+}
+
+.command-palette__input-shell {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 44px;
+  border: 1px solid #d9d7d0;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #6b7280;
+}
+
+.command-palette__search-icon {
+  margin-left: 13px;
+}
+
+.command-palette__input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 500;
+  padding: 0 12px;
+}
+
+.command-palette__input::placeholder {
+  color: #8a887f;
+}
+
+.command-palette__clear,
+.command-palette__close {
+  min-height: 30px;
+  border: 1px solid #d9d7d0;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.command-palette__clear {
+  margin-right: 7px;
+  padding: 0 10px;
+}
+
+.command-palette__close {
+  padding: 0 12px;
+}
+
+.command-palette__clear:hover,
+.command-palette__close:hover {
+  border-color: #b8b5aa;
+  color: #111827;
+}
+
+.command-palette__helper {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0;
+  padding: 8px 14px;
+  border-bottom: 1px solid #ebe8df;
+  background: #fbfaf7;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.command-palette__results {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  max-height: min(560px, calc(100vh - 230px));
+  overflow-y: auto;
+}
+
+.command-palette__section {
+  list-style: none;
+}
+
+.command-palette__section + .command-palette__section {
+  margin-top: 8px;
+}
+
+.command-palette__section-label {
+  margin: 8px 8px 4px;
+  color: #8a887f;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.command-palette__section-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.command-palette__item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #111827;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.command-palette__item:hover,
+.command-palette__item:focus-visible,
+.command-palette__item--active {
+  outline: none;
+  border-color: #b9d0ff;
+  background: #edf4ff;
+}
+
+.command-palette__item-content {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.command-palette__item-label {
+  overflow: hidden;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-palette__item-description {
+  overflow: hidden;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-palette__item-shortcut {
+  border: 1px solid #d9d7d0;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 7px;
+  white-space: nowrap;
+}
+
+.command-palette__empty {
+  list-style: none;
+  margin: 8px;
+  border: 1px dashed #d9d7d0;
+  border-radius: 7px;
+  background: #fbfaf7;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 18px;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .command-palette {
+    top: 58px;
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 76px);
+  }
+
+  .command-palette__header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .command-palette__close {
+    display: none;
+  }
+
+  .command-palette__helper {
+    flex-direction: column;
+    gap: 3px;
+  }
+}

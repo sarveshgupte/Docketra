@@ -13,13 +13,13 @@ const REVEAL = {
 
 const HERO_METRICS = [
   { label: 'Active dockets', value: '124', note: '42 due this week', color: 'border-amber-200' },
-  { label: 'QC review queue', value: '09', note: '3 need partner sign-off', color: 'border-indigo-200' },
+  { label: 'QC review queue', value: '09', note: '3 need internal sign-off', color: 'border-indigo-200' },
   { label: 'Client memory facts', value: '2.4k', note: 'CFS, docs, audit trails', color: 'border-emerald-200' },
 ];
 
 const PAIN_POINTS = [
   { emoji: '📲', title: 'Work is scattered', body: 'WhatsApp, Excel, email, and loose folders carry completely different versions of the truth.' },
-  { emoji: '🧠', title: 'Context sits in heads', body: 'Client facts, filing exceptions, and partner preferences disappear when a team member is out.' },
+  { emoji: '🧠', title: 'Context sits in heads', body: 'Client facts, filing exceptions, and reviewer preferences disappear when a team member is out.' },
   { emoji: '⏳', title: 'Deadlines surprise teams', body: 'Primary Admins, Admins, and Managers only see risk after filings are already late, stuck in QC, or missing client signatures.' },
   { emoji: '🔁', title: 'Repeat work restarts', body: 'Teams exhaustively rebuild context for recurring monthly/annual filings instead of reusing firm memory.' },
   { emoji: '🎯', title: 'Ownership gets fuzzy', body: 'Managers constantly chase status updates because execution and accountability are not linked at the docket level.' },
@@ -42,7 +42,7 @@ const PILLARS = [
   {
     emoji: '🎛️',
     title: 'Firm Control & AI',
-    body: 'Role hierarchy, team access, reports, and secure BYOAI keys give partners a calm, intelligent command layer.',
+    body: 'Role hierarchy, team access, reports, and secure BYOAI keys give Primary Admins, Admins, and Managers a calm, intelligent command layer.',
     tag: 'Command Layer'
   },
   {
@@ -56,7 +56,7 @@ const PILLARS = [
 const WORKFLOW_STEPS = [
   { emoji: '🏢', title: 'Initialize Workspace', body: 'Set up your firm boundaries, configure custom roles (Manager, Admin, Primary Admin), and secure team access.' },
   { emoji: '👥', title: 'Build Client & Team Memory', body: 'Import clients and map team accountability. Establish default Client scopes for absolute isolation.' },
-  { emoji: '🧺', title: 'Route Workbaskets & QC Queues', body: 'Configure functional queues (HR, Finance, Accounts, Operations) with strict partner QC sign-off steps.' },
+  { emoji: '🧺', title: 'Route Workbaskets & QC Queues', body: 'Configure functional queues (HR, Finance, Accounts, Operations) with strict internal QC sign-off steps.' },
   { emoji: '📝', title: 'Trigger Smart Dockets', body: 'Launch trackable compliance worklists, recurring filings, and ad-hoc client requests in one click.' },
   { emoji: '📊', title: 'Trace, Audit, & Report', body: 'Track real-time metrics, QC review bottlenecks, and comprehensive tamper-proof audit trails on one safety dashboard.' },
 ];
@@ -240,7 +240,7 @@ const HeroSection = ({ onExplore }) => (
             Docketra brings client memory, dockets, worklists, workbaskets, QC, reports, and audit trails into one secure workspace built for CS, CA, law, and compliance teams.
           </p>
           <p className="mt-3 max-w-xl text-sm font-semibold leading-relaxed text-slate-500">
-            Give partners one centralized command center for deadline visibility, employee accountability, and secure client memory that grows with the firm.
+            Give Primary Admins, Admins, and Managers one centralized command center for deadline visibility, employee accountability, and secure client memory that grows with the firm.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -256,7 +256,7 @@ const HeroSection = ({ onExplore }) => (
           </div>
 
           <div className="mt-8 grid gap-3 text-xs text-slate-700 sm:grid-cols-3">
-            {['🔐 Atomic multitenancy', '🤖 Secure BYOAI integration', '✅ Structured partner QC'].map((item) => (
+            {['🔐 Atomic multitenancy', '🤖 Secure BYOAI integration', '✅ Structured internal QC'].map((item) => (
               <div key={item} className="flex items-center gap-2 rounded-2xl border border-slate-200/50 bg-white/70 backdrop-blur-md px-4 py-3.5 shadow-sm font-semibold">
                 <span>{item}</span>
               </div>
@@ -490,7 +490,7 @@ const FinalCtaSection = () => (
         <p className="text-xs font-extrabold uppercase tracking-widest text-amber-700">🚀 Set Up Your Operating Layers</p>
         <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-950 md:text-5xl">Establish your firm’s Company Brain.</h2>
         <p className="mx-auto mt-4 max-w-2xl text-xs sm:text-sm leading-relaxed text-slate-600">
-          Begin with client memory, robust role isolation, and structured workbaskets. Serious compliance software designed for partners who require calm accountability.
+          Begin with client memory, robust role isolation, and structured workbaskets. Serious compliance software designed for firm leaders who require calm accountability.
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <Link to="/signup" className="inline-flex h-12 items-center justify-center rounded-xl bg-slate-950 px-8 text-xs font-bold text-white shadow-lg shadow-slate-900/20 hover:bg-slate-900 transition-all hover:scale-[1.02]">

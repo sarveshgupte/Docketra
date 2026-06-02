@@ -18,7 +18,7 @@ import { useSavedViews } from '../hooks/useSavedViews';
 import { caseApi } from '../api/case.api';
 import { useCasesListQuery, useCategoryCountQuery } from '../hooks/useCasesListQuery';
 import { CASE_QUERY_PARAMS, getCaseQueryKey } from '../hooks/useCaseQuery';
-import { CASE_STATUS, USER_ROLES } from '../utils/constants';
+import { CASE_STATUS } from '../utils/constants';
 import { getFirmConfig } from '../utils/firmConfig';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { formatDateTime, getISODateInTimezone } from '../utils/formatDateTime';
@@ -61,7 +61,6 @@ export const CasesPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { firmSlug, isValidFirm } = useFirm();
-  const isPartner = user?.role === USER_ROLES.PARTNER;
 
   const firmConfig = getFirmConfig();
   const enableBulkActions = useFeatureFlag('BULK_ACTIONS');
@@ -98,7 +97,6 @@ export const CasesPage = () => {
   const [searchInput, setSearchInput] = useState(query.q || '');
   const [searchQuery, setSearchQuery] = useState((query.q || '').trim().toLowerCase());
   const searchDebounceRef = useRef(null);
-  // Task 7: Performance Insight toggle (hidden for Partner role)
   const [showPerformance, setShowPerformance] = useState(false);
   // Task 6: Bulk selection state
   const [selectedCaseIds, setSelectedCaseIds] = useState(new Set());
@@ -710,7 +708,6 @@ export const CasesPage = () => {
               isHighWorkload={isHighWorkload}
               openAssignedCount={openAssignedCount}
               onExportCsv={handleExportCsv}
-              isPartner={isPartner}
               enablePerformanceView={enablePerformanceView}
               showPerformance={showPerformance}
               onTogglePerformance={() => setShowPerformance((v) => !v)}
@@ -723,7 +720,6 @@ export const CasesPage = () => {
         />
 
         <CasesSlaSummaryBar
-          isPartner={isPartner}
           slaSummary={slaSummary}
           setStatusFilter={setStatusFilter}
           setActiveView={setActiveView}
@@ -801,9 +797,7 @@ export const CasesPage = () => {
           )}
         </div>
 
-        {/* Task 7: Performance Insight — hidden for Partner (Task 8) */}
         <CasesPerformancePanel
-          isPartner={isPartner}
           enablePerformanceView={enablePerformanceView}
           showPerformance={showPerformance}
           performanceMetrics={performanceMetrics}

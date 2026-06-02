@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import './CommandPalette.css';
 
 const getCommandsFromSections = (sections = []) => sections.flatMap((section) => section.items || []);
 
@@ -128,21 +129,38 @@ export const CommandPalette = ({
       <button type="button" className="command-palette__overlay" onClick={onClose} aria-label="Close command palette" />
       <div className="command-palette" role="dialog" aria-modal="true" aria-label="Command center" onKeyDown={handleInputKeyDown}>
         <div className="command-palette__header">
-          <input
-            ref={inputRef}
-            className="command-palette__input"
-            type="search"
-            role="combobox"
-            aria-expanded="true"
-            aria-controls="command-palette-results"
-            aria-activedescendant={visibleItems[activeIndex] ? `command-option-${visibleItems[activeIndex].id}` : undefined}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={queryPlaceholder}
-            aria-label="Search commands"
-          />
+          <div className="command-palette__input-shell">
+            <svg className="command-palette__search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <path d="M20 20l-3.5-3.5" />
+            </svg>
+            <input
+              ref={inputRef}
+              className="command-palette__input"
+              type="search"
+              role="combobox"
+              aria-expanded="true"
+              aria-controls="command-palette-results"
+              aria-activedescendant={visibleItems[activeIndex] ? `command-option-${visibleItems[activeIndex].id}` : undefined}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={queryPlaceholder}
+              aria-label="Search commands"
+            />
+            {query ? (
+              <button type="button" className="command-palette__clear" onClick={() => setQuery('')} aria-label="Clear command search">
+                Clear
+              </button>
+            ) : null}
+          </div>
+          <button type="button" className="command-palette__close" onClick={onClose} aria-label="Close command center">
+            Esc
+          </button>
         </div>
-        <p className="command-palette__helper">{helperText}</p>
+        <div className="command-palette__helper">
+          <span>{helperText}</span>
+          <span>{visibleItems.length ? `${visibleItems.length} matches` : 'Type to search'}</span>
+        </div>
         <ul id="command-palette-results" className="command-palette__results" role="listbox" aria-label="Command results">
           {visibleSections.map((section) => {
             const sectionStart = itemOffset;

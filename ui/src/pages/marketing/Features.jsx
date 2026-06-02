@@ -9,7 +9,7 @@ const FEATURES = [
   },
   {
     title: 'Granular Access Controls',
-    description: 'Data privacy is built-in. Assign specific roles to partners, managers, and trainees so everyone only accesses the information they are authorized to see.',
+    description: 'Data privacy is built-in. Assign Primary Admin, Admin, Manager, and Employee access so everyone only sees the information they are authorized to handle.',
   },
   {
     title: 'Standardized Workflows',

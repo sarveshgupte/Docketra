@@ -296,19 +296,24 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
       id: `client-${client.routeId}`,
       label: client.label,
       description: client.description,
-      action: () => openRoute(ROUTES.CLIENTS(firmSlug)),
+      action: () => openRoute(ROUTES.CLIENT_WORKSPACE(firmSlug, client.routeId)),
     }));
 
-    const sections = [
-      { id: 'actions', label: 'Quick actions', items: actionsItems },
-      { id: 'destinations', label: 'Module destinations', items: navigationItems },
-    ];
+    const hasRecordQuery = commandQuery.trim().length >= 2;
+    const sections = [];
 
-    if (docketItems.length) sections.push({ id: 'dockets', label: 'Docket results', items: docketItems });
-    if (clientItems.length) sections.push({ id: 'clients', label: 'Client results', items: clientItems });
+    if (hasRecordQuery) {
+      if (docketItems.length) sections.push({ id: 'dockets', label: 'Dockets', items: docketItems });
+      if (clientItems.length) sections.push({ id: 'clients', label: 'Clients', items: clientItems });
+      sections.push({ id: 'destinations', label: 'Modules and commands', items: navigationItems });
+      sections.push({ id: 'actions', label: 'Quick actions', items: actionsItems });
+    } else {
+      sections.push({ id: 'actions', label: 'Quick actions', items: actionsItems });
+      sections.push({ id: 'destinations', label: 'Modules', items: navigationItems });
+    }
 
     return sections;
-  }, [firmSlug, role, openRoute, searchResults, hasAdminAccess, hasQcQueueAccess]);
+  }, [firmSlug, role, openRoute, searchResults, hasAdminAccess, hasQcQueueAccess, commandQuery]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -472,15 +477,15 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
           </div>
           <div className="platform__actions" role="toolbar" aria-label="Page actions">
             <div className="platform__action-search">
-            <button
-              type="button"
-              className="platform__command-trigger"
-              onClick={() => setCommandPaletteOpen(true)}
-              aria-label="Open command center"
-            >
-              <span className="platform__command-trigger-label">Search dockets, clients, modules…</span>
-              <kbd>Ctrl/⌘ K</kbd>
-            </button>
+              <button
+                type="button"
+                className="platform__command-trigger"
+                onClick={() => setCommandPaletteOpen(true)}
+                aria-label="Open command center"
+              >
+                <span className="platform__command-trigger-label">Search dockets, clients, modules…</span>
+                <kbd>Ctrl/⌘ K</kbd>
+              </button>
             </div>
             {actions ? <div className="platform__action-primary">{actions}</div> : null}
             <NotificationBell />

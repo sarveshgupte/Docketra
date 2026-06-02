@@ -8,8 +8,8 @@ const hooksSource = read('src/hooks/usePlatformDataQueries.js');
 assert.ok(hooksSource.includes('useQuery({'), 'Platform data hooks should use React Query.');
 for (const queryKey of [
   "['platform', 'dashboard-summary']",
-  "['platform', 'my-worklist']",
-  "['platform', 'workbench']",
+  "['platform', 'my-worklist',",
+  "['platform', 'workbench',",
   "['platform', 'qc-workbench']",
   "['platform', 'reports-metrics']",
 ]) {
