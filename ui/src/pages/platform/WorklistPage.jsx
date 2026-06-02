@@ -17,6 +17,7 @@ import {
   formatDateLabel,
   formatDocketLabel,
   getDocketRouteId,
+  toArray,
 } from './PlatformShared';
 import { AccessDeniedState } from '../../components/feedback/AccessDeniedState';
 import { getRecoveryPayload } from '../../utils/errorRecovery';
@@ -167,9 +168,10 @@ export const PlatformWorklistPage = () => {
   const worklistSupportCode = recovery.supportContext?.requestId || recovery.reasonCode || '';
 
   const normalizedRows = useMemo(() => {
-    if (!scopedWorkbasketId) return rows;
+    const safeRows = toArray(rows);
+    if (!scopedWorkbasketId) return safeRows;
     const pickId = (item) => String(item?.workbasketId || item?.workbasket?._id || item?.workbasket?.id || item?.workbasket?.workbasketId || item?.workBasketId || item?.queueId || item?.assignedWorkbasketId || item?.assignment?.workbasketId || item?.meta?.workbasketId || '');
-    return rows.filter((item) => pickId(item) === scopedWorkbasketId);
+    return safeRows.filter((item) => pickId(item) === scopedWorkbasketId);
   }, [rows, scopedWorkbasketId]);
 
   const filteredRows = useMemo(() => {
@@ -346,7 +348,7 @@ export const PlatformWorklistPage = () => {
                       onChange={(event) => setActiveOnly(event.target.checked)}
                       className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500/20 cursor-pointer"
                     />
-                    Active only
+                    Show active dockets only
                   </label>
                 </div>
               </div>

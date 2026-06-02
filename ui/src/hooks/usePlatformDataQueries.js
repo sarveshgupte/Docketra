@@ -15,11 +15,17 @@ const queueDefaults = {
 };
 
 const extractListPayload = (res) => {
+  const payload = res?.data || res;
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.records)) return payload.records;
   if (Array.isArray(res?.data)) return res.data;
   if (Array.isArray(res?.items)) return res.items;
+  if (Array.isArray(res?.records)) return res.records;
   if (Array.isArray(res?.data?.data)) return res.data.data;
   if (Array.isArray(res?.data?.items)) return res.data.items;
-  if (Array.isArray(res)) return res;
+  if (Array.isArray(res?.data?.records)) return res.data.records;
   return [];
 };
 

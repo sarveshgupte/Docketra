@@ -8,7 +8,8 @@ const worklistPage = read('ui/src/pages/platform/WorklistPage.jsx');
 const platformCss = read('ui/src/components/platform/platform.css');
 const queryHook = read('ui/src/hooks/usePlatformDataQueries.js');
 
-assert.ok(worklistPage.includes('className="filter-bar__checkbox"'), 'My Worklist checkbox should use compact filter checkbox class.');
+assert.ok(worklistPage.includes('toArray,'), 'My Worklist should import the shared array normalizer.');
+assert.ok(worklistPage.includes('const safeRows = toArray(rows);'), 'My Worklist should normalize query rows before filtering.');
 assert.ok(platformCss.includes('.filter-bar__checkbox input[type="checkbox"]'), 'Platform filter bar should define checkbox-specific sizing.');
 assert.ok(platformCss.includes('.filter-bar input:not([type="checkbox"]):not([type="radio"])'), 'Filter bar text input styles should not apply to checkbox/radio inputs.');
 
