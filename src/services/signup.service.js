@@ -565,7 +565,7 @@ const createFirmAndAdmin = async ({
         firmSlug,
         source: 'SELF_SERVE',
         plan: 'pilot',
-        maxUsers: 25,
+        maxUsers: 10,
         status: 'active',
         bootstrapStatus: 'PENDING',
       }], { session });

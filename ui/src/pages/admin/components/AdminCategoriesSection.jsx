@@ -179,14 +179,16 @@ export const AdminCategoriesSection = ({
                     {category.isActive ? 'Disable' : 'Enable'}
                   </button>
                   <span className="w-px h-5 bg-slate-200 mx-1" />
-                  <button
-                    type="button"
-                    onClick={() => onDeleteCategory(category)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 rounded-lg transition duration-200"
-                  >
-                    <TrashIcon />
-                    Delete
-                  </button>
+                  <div className="admin__action-group--danger">
+                    <button
+                      type="button"
+                      onClick={() => onDeleteCategory(category)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 rounded-lg transition duration-200"
+                    >
+                      <TrashIcon />
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -284,14 +286,16 @@ export const AdminCategoriesSection = ({
                                     >
                                       <ToggleIcon />
                                     </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => onDeleteSubcategory(category, sub)}
-                                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition duration-150"
-                                      title="Delete Subcategory"
-                                    >
-                                      <TrashIcon />
-                                    </button>
+                                    <div className="admin__action-group--danger" aria-label={`${sub.name} destructive actions`}>
+                                      <button
+                                        type="button"
+                                        onClick={() => onDeleteSubcategory(category, sub)}
+                                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition duration-150"
+                                        title="Delete Subcategory"
+                                      >
+                                        <TrashIcon />
+                                      </button>
+                                    </div>
                                   </div>
                                 </td>
                               </tr>

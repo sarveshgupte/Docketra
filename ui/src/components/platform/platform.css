@@ -1146,6 +1146,185 @@
   font-size: 12px;
 }
 
+/* ── Docketra Intelligence ─────────────────────────────────────────────── */
+
+.intelligence-recommendation-card {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 220px) auto;
+  align-items: center;
+  gap: 16px;
+}
+
+.intelligence-recommendation-card__name {
+  margin: 3px 0;
+  color: #1a1916;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.intelligence-score {
+  display: grid;
+  gap: 5px;
+  min-inline-size: 120px;
+}
+
+.intelligence-score__value {
+  color: #1a1916;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.intelligence-score__track {
+  display: block;
+  block-size: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8e6e0;
+}
+
+.intelligence-score__track span {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2563eb, #16a34a);
+}
+
+.intelligence-guidance-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.intelligence-workbasket-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.intelligence-workbasket-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-block-size: 132px;
+}
+
+.intelligence-workbasket-card__capacity {
+  margin: 8px 0 4px;
+  color: #1a1916;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.intelligence-deadline-card {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.9fr) minmax(220px, 1.1fr) minmax(180px, 0.9fr) auto;
+  align-items: center;
+  gap: 16px;
+  border-color: rgba(148, 163, 184, 0.28);
+}
+
+.intelligence-deadline-card--error {
+  border-color: rgba(244, 63, 94, 0.34);
+  background: linear-gradient(135deg, #fffafa, #fff7ed);
+}
+
+.intelligence-deadline-card--warning {
+  border-color: rgba(245, 158, 11, 0.34);
+  background: linear-gradient(135deg, #fffdf5, #fff7ed);
+}
+
+.intelligence-deadline-card--review {
+  border-color: rgba(37, 99, 235, 0.24);
+  background: linear-gradient(135deg, #fbfdff, #eff6ff);
+}
+
+.intelligence-deadline-card__level {
+  margin: 5px 0 8px;
+  color: #1a1916;
+  font-size: 26px;
+  font-weight: 850;
+  letter-spacing: -0.03em;
+}
+
+.intelligence-deadline-card__radar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.intelligence-deadline-card__radar span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.74);
+  color: #3d3c38;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.intelligence-deadline-card__radar strong {
+  color: #1a1916;
+}
+
+.intelligence-deadline-card__action {
+  display: grid;
+  gap: 5px;
+}
+
+.intelligence-deadline-card__action strong {
+  color: #1a1916;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.intelligence-rank-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.intelligence-rank-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+}
+
+.intelligence-rank-card--avoid {
+  background: #fffafa;
+  border-color: #f4d8d8;
+}
+
+.intelligence-rank-card__rank {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 24px;
+  block-size: 24px;
+  border-radius: 999px;
+  background: #f3f2ef;
+  color: #3d3c38;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.intelligence-rank-card__body {
+  min-inline-size: 0;
+}
+
+.intelligence-table th,
+.intelligence-table td {
+  min-inline-size: 108px;
+}
+
 /* ── Badges ────────────────────────────────────────────────────────────── */
 
 .status-badge,
@@ -2236,6 +2415,24 @@ select:focus-visible {
   .stat-row__item:last-child {
     border-bottom: none;
   }
+
+  .intelligence-recommendation-card,
+  .intelligence-guidance-grid,
+  .intelligence-deadline-card,
+  .intelligence-workbasket-card {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .intelligence-rank-card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .intelligence-rank-card .status-badge,
+  .intelligence-rank-card > strong {
+    grid-column: 2;
+    justify-self: start;
+  }
 }
 
 @media (max-width: 720px) {
@@ -2316,6 +2513,158 @@ select:focus-visible {
 
 .filter-bar__select:hover {
   border-color: var(--color-accent, #2563eb);
+}
+
+.assignee-intelligence {
+  width: min(100%, 540px);
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(239, 245, 255, 0.86));
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.assignee-intelligence--compact {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.assignee-intelligence--loading,
+.assignee-intelligence--warning,
+.assignee-intelligence--empty {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-ink-secondary, #3d3c38);
+}
+
+.assignee-intelligence--warning {
+  border-color: rgba(245, 158, 11, 0.32);
+  background: rgba(255, 251, 235, 0.95);
+}
+
+.assignee-intelligence__header,
+.assignee-intelligence__name,
+.assignee-intelligence__meta {
+  display: flex;
+  align-items: center;
+}
+
+.assignee-intelligence__header {
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted, #7a7870);
+}
+
+.assignee-intelligence__tooltip {
+  cursor: help;
+  color: var(--color-accent, #2563eb);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.assignee-intelligence__list {
+  display: grid;
+  gap: 8px;
+}
+
+.assignee-intelligence__card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.assignee-intelligence__card--recommended {
+  border-color: rgba(16, 185, 129, 0.42);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.12);
+}
+
+.assignee-intelligence__card--selected {
+  outline: 2px solid rgba(37, 99, 235, 0.28);
+}
+
+.assignee-intelligence__name {
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-ink, #1a1916);
+}
+
+.assignee-intelligence__recommended {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.14);
+  color: #047857;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.assignee-intelligence__meta {
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--color-ink-muted, #7a7870);
+}
+
+.assignee-intelligence__label {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.assignee-intelligence__label--available {
+  color: #047857;
+  background: rgba(16, 185, 129, 0.14);
+}
+
+.assignee-intelligence__label--moderate {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.12);
+}
+
+.assignee-intelligence__label--busy {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.18);
+}
+
+.assignee-intelligence__label--overloaded {
+  color: #be123c;
+  background: rgba(244, 63, 94, 0.14);
+}
+
+.assignee-intelligence__label--unknown {
+  color: var(--color-ink-muted, #7a7870);
+  background: rgba(148, 163, 184, 0.16);
+}
+
+@media (max-width: 720px) {
+  .wb-bulk-bar__actions,
+  .assignee-intelligence__card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .wb-bulk-bar__actions,
+  .filter-bar__select,
+  .assignee-intelligence,
+  .wb-bulk-bar__btn {
+    width: 100%;
+  }
 }
 
 @keyframes slideDown {

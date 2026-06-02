@@ -10,6 +10,7 @@ const mountPlatformRoutes = (app, deps) => {
     workTypeRoutes,
     adminRoutes,
     dashboardRoutes,
+    docketraIntelligenceRoutes,
     slaRoutes,
     superadminRoutes,
     firmRoutes,
@@ -67,6 +68,7 @@ const mountPlatformRoutes = (app, deps) => {
   app.use('/api/work-types', ...tenantScopedApiAccess, writeGuardChain, workTypeRoutes);
   app.use('/api/admin', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), adminRoutes);
   app.use('/api/dashboard', ...tenantScopedApiAccess, writeGuardChain, dashboardRoutes);
+  app.use('/api/docketra-intelligence', ...tenantScopedApiAccess, writeGuardChain, docketraIntelligenceRoutes);
   app.use('/api/sla', ...tenantScopedApiAccess, writeGuardChain, slaRoutes);
 
   ['/api/sa', '/api/superadmin', '/superadmin'].forEach((basePath) => app.use(basePath, superadminLimiter, authenticate, writeGuardChain, adminAuditTrail('superadmin'), superadminRoutes));

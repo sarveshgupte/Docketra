@@ -20,7 +20,12 @@ import {
 } from './PlatformShared';
 import { AccessDeniedState } from '../../components/feedback/AccessDeniedState';
 import { getRecoveryPayload } from '../../utils/errorRecovery';
-import { usePlatformMyWorklistQuery } from '../../hooks/usePlatformDataQueries';
+import { usePlatformMyWorklistQuery, usePlatformWorkloadIntelligenceQuery } from '../../hooks/usePlatformDataQueries';
+import {
+  AssigneeIntelligencePanel,
+  enrichAssignableUsersWithIntelligence,
+  getAssigneeOptionLabel,
+} from '../../components/docket/AssigneeIntelligence';
 
 const formatSlaDays = (slaDueAt) => {
   if (!slaDueAt) return '—';
@@ -150,6 +155,12 @@ export const PlatformWorklistPage = () => {
     refetch,
   } = usePlatformMyWorklistQuery({ workbasketId: scopedWorkbasketId || undefined });
 
+  const {
+    data: workloadData = {},
+    isLoading: workloadLoading,
+    isError: workloadError,
+  } = usePlatformWorkloadIntelligenceQuery({}, { enabled: isSupervisor });
+
   const recovery = getRecoveryPayload(queryError, 'platform_queue');
   const isAccessDenied = isError && recovery.reasonCode === 'CASE_ACCESS_DENIED';
   const worklistLoadMessage = 'We couldn’t load your assigned dockets. Refresh the page or contact your admin if this continues.';
@@ -181,6 +192,11 @@ export const PlatformWorklistPage = () => {
   }, [normalizedRows, search, statusFilter, categoryFilter, activeOnly]);
 
   const categories = useMemo(() => [...new Set(normalizedRows.map((item) => String(item.category || '').trim()).filter(Boolean))], [normalizedRows]);
+
+  const intelligenceAssignees = useMemo(
+    () => enrichAssignableUsersWithIntelligence(assignableUsers, workloadData),
+    [assignableUsers, workloadData]
+  );
   
   const metrics = useMemo(() => {
     const active = normalizedRows.filter((item) => String(item.status || '').toUpperCase() !== 'PENDING').length;
@@ -350,10 +366,16 @@ export const PlatformWorklistPage = () => {
                 className="filter-bar__select"
               >
                 <option value="">Select Assignee...</option>
-                {assignableUsers.map((u) => (
-                  <option key={u.xID} value={u.xID}>{u.name || u.xID} ({u.xID})</option>
+                {intelligenceAssignees.map((u) => (
+                  <option key={u.xID} value={u.xID}>{getAssigneeOptionLabel(u)}</option>
                 ))}
               </select>
+              <AssigneeIntelligencePanel
+                assignees={intelligenceAssignees}
+                selectedXid={bulkAssigneeXid}
+                loading={usersLoading || workloadLoading}
+                error={workloadError}
+              />
               <button
                 type="button"
                 onClick={handleBulkMove}

@@ -54,6 +54,7 @@ import {
   CompanyBrainPage,
   KnowledgeLibraryPage,
   PlatformSettingsPage,
+  DocketraIntelligencePage,
 } from './lazyPages';
 import { RouteSuspenseOutlet } from './RouteSuspenseOutlet';
 import { NotificationHistoryView } from '../../views/NotificationHistoryView';
@@ -252,6 +253,14 @@ export const ProtectedRoutes = () => (
           element={(
             <ProtectedRoute requireAssignedWorkbasket>
               <PlatformWorkbasketsPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="docketra-intelligence"
+          element={(
+            <ProtectedRoute requireManagerOrAbove>
+              <DocketraIntelligencePage />
             </ProtectedRoute>
           )}
         />

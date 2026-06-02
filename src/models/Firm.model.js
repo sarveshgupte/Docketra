@@ -147,7 +147,7 @@ const firmSchema = new mongoose.Schema({
 
   maxUsers: {
     type: Number,
-    default: 25,
+    default: 10,
   },
 
   billingStatus: {

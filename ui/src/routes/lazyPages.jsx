@@ -103,5 +103,6 @@ export const PlatformCrmPage = lazyPage(() => import('../pages/platform/CrmPage'
 export const PlatformCmsPage = lazyPage(() => import('../pages/platform/CmsPage'), 'default');
 export const PlatformTaskManagerPage = lazyPage(() => import('../pages/platform/TaskManagerPage'), 'default');
 export const PlatformSettingsPage = lazyPage(() => import('../pages/platform/SettingsPage'), 'default');
+export const DocketraIntelligencePage = lazyPage(() => import('../pages/platform/DocketraIntelligencePage'), 'default');
 
 export const FindWorkspacePage = lazyPage(() => import('../pages/FindWorkspacePage'), 'FindWorkspacePage');

@@ -2,6 +2,7 @@ import { Modal } from '../../components/common/Modal';
 import { Button } from '../../components/common/Button';
 import { Textarea } from '../../components/common/Textarea';
 import { ActionModal } from '../../components/docket/ActionModal';
+import { AssigneeIntelligencePanel } from '../../components/docket/AssigneeIntelligence';
 
 export const CaseWorkflowModals = ({
   showPendModal,
@@ -37,6 +38,8 @@ export const CaseWorkflowModals = ({
   assignUser,
   setAssignUser,
   availableAssignees,
+  assigneeIntelligenceLoading = false,
+  assigneeIntelligenceError = false,
   showRouteModal,
   setShowRouteModal,
   routeTeamId,
@@ -118,6 +121,13 @@ export const CaseWorkflowModals = ({
           <option value="">Select user</option>
           {availableAssignees.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
+        <AssigneeIntelligencePanel
+          assignees={availableAssignees}
+          selectedXid={assignUser}
+          loading={assigneeIntelligenceLoading}
+          error={assigneeIntelligenceError}
+          compact
+        />
       </div>
     </ActionModal>
 

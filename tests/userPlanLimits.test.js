@@ -35,18 +35,18 @@ async function run() {
     }
     assert(adminLimitError instanceof PlanAdminLimitExceededError, 'Expected starter admin limit error');
 
-    Firm.findById = async () => ({ _id: 'firm-2', plan: 'pilot', maxUsers: 25 });
-    User.countDocuments = async () => 24;
+    Firm.findById = async () => ({ _id: 'firm-2', plan: 'pilot', maxUsers: 10 });
+    User.countDocuments = async () => 9;
     await assertFirmPlanCapacity({ firmId: 'firm-2', role: 'Employee' });
 
-    User.countDocuments = async () => 25;
+    User.countDocuments = async () => 10;
     let pilotLimitError = null;
     try {
       await assertFirmPlanCapacity({ firmId: 'firm-2', role: 'Employee' });
     } catch (error) {
       pilotLimitError = error;
     }
-    assert(pilotLimitError instanceof PlanLimitExceededError, 'Expected pilot user limit error at 25 users');
+    assert(pilotLimitError instanceof PlanLimitExceededError, 'Expected pilot user limit error at 10 users');
 
     console.log('User plan limits test passed.');
   } catch (error) {

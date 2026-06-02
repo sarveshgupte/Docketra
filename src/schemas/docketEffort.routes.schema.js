@@ -10,13 +10,6 @@ const createEffortBody = z.object({
   note: z.string().trim().max(1000).optional(),
 }).strict();
 
-const updateEffortBody = z.object({
-  minutes: z.number().int().min(1, 'Minutes must be at least 1').optional(),
-  activityType: z.enum(['filing', 'review', 'communication', 'data_entry', 'reconciliation', 'other']).optional(),
-  date: z.coerce.date().optional(),
-  note: z.string().trim().max(1000).optional(),
-}).strict();
-
 const updateBudgetBody = z.object({
   expectedMinutes: z.number().int().min(0, 'Expected minutes must be >= 0').optional(),
   estimatedBudget: z.number().min(0, 'Estimated budget must be >= 0').optional(),
@@ -41,10 +34,6 @@ const listEffortQuery = z.object({
 module.exports = {
   'POST /': {
     body: createEffortBody,
-  },
-  'PATCH /:id': {
-    params: effortIdParams,
-    body: updateEffortBody,
   },
   'DELETE /:id': {
     params: effortIdParams,

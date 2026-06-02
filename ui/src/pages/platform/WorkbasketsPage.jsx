@@ -23,7 +23,12 @@ import {
 } from './PlatformShared';
 import { AccessDeniedState } from '../../components/feedback/AccessDeniedState';
 import { getRecoveryPayload } from '../../utils/errorRecovery';
-import { usePlatformWorkbenchQuery } from '../../hooks/usePlatformDataQueries';
+import { usePlatformWorkbenchQuery, usePlatformWorkloadIntelligenceQuery } from '../../hooks/usePlatformDataQueries';
+import {
+  AssigneeIntelligencePanel,
+  enrichAssignableUsersWithIntelligence,
+  getAssigneeOptionLabel,
+} from '../../components/docket/AssigneeIntelligence';
 
 const formatSlaDays = (slaDueAt) => {
   if (!slaDueAt) return '—';
@@ -147,6 +152,12 @@ export const PlatformWorkbasketsPage = () => {
     refetch,
   } = usePlatformWorkbenchQuery({ workbasketId: workbasketId || undefined });
 
+  const {
+    data: workloadData = {},
+    isLoading: workloadLoading,
+    isError: workloadError,
+  } = usePlatformWorkloadIntelligenceQuery({}, { enabled: isSupervisor });
+
   const recovery = getRecoveryPayload(queryError, 'platform_queue');
   const isAccessDenied = isError && recovery.reasonCode === 'CASE_ACCESS_DENIED';
   const assignedWorkbaskets = Array.isArray(user?.workbaskets) ? user.workbaskets : [];
@@ -178,6 +189,11 @@ export const PlatformWorkbasketsPage = () => {
   }, [rows, search, statusFilter, categoryFilter, workbasketId]);
 
   const categories = useMemo(() => [...new Set(rows.map((item) => String(item.category || '').trim()).filter(Boolean))], [rows]);
+
+  const intelligenceAssignees = useMemo(
+    () => enrichAssignableUsersWithIntelligence(assignableUsers, workloadData),
+    [assignableUsers, workloadData]
+  );
   
   const metrics = useMemo(() => {
     const available = rows.length;
@@ -345,10 +361,16 @@ export const PlatformWorkbasketsPage = () => {
                     className="filter-bar__select"
                   >
                     <option value="">Select Assignee...</option>
-                    {assignableUsers.map((u) => (
-                      <option key={u.xID} value={u.xID}>{u.name || u.xID} ({u.xID})</option>
+                    {intelligenceAssignees.map((u) => (
+                      <option key={u.xID} value={u.xID}>{getAssigneeOptionLabel(u)}</option>
                     ))}
                   </select>
+                  <AssigneeIntelligencePanel
+                    assignees={intelligenceAssignees}
+                    selectedXid={bulkAssigneeXid}
+                    loading={usersLoading || workloadLoading}
+                    error={workloadError}
+                  />
                   <button
                     type="button"
                     onClick={handleBulkMove}

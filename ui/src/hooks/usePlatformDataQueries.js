@@ -3,6 +3,7 @@ import { dashboardApi } from '../api/dashboard.api';
 import { worklistApi } from '../api/worklist.api';
 import { caseApi } from '../api/case.api';
 import { reportsService } from '../services/reports.service';
+import { docketraIntelligenceApi } from '../api/docketraIntelligence.api';
 import { toArray } from '../pages/platform/PlatformShared';
 import { CASE_STATUS } from '../utils/constants';
 import { trackAsync } from '../utils/performanceMonitor';
@@ -89,3 +90,33 @@ export const usePlatformTaskManagerStatsQuery = () => {
     },
   };
 };
+
+export const usePlatformWorkloadIntelligenceQuery = (options = {}, queryOptions = {}) => useQuery({
+  queryKey: ['platform', 'docketra-intelligence', 'workload', options.workbasketId || 'all-workbaskets', options.assigneeXID || 'all-assignees'],
+  queryFn: () => trackAsync('platform.docketra-intelligence.workload', 'platform:docketra-intelligence:workload', () => docketraIntelligenceApi.getWorkload(options)),
+  select: (res) => res?.data || {},
+  staleTime: 90 * 1000,
+  gcTime: 15 * 60 * 1000,
+  placeholderData: keepPreviousData,
+  ...queryOptions,
+});
+
+export const usePlatformWorkbasketCapacityQuery = (options = {}, queryOptions = {}) => useQuery({
+  queryKey: ['platform', 'docketra-intelligence', 'workbasket-capacity', options.busyThreshold || 'default-busy', options.overloadedThreshold || 'default-overloaded', options.includeQc ? 'include-qc' : 'primary-only'],
+  queryFn: () => trackAsync('platform.docketra-intelligence.workbasket-capacity', 'platform:docketra-intelligence:workbasket-capacity', () => docketraIntelligenceApi.getWorkbasketCapacity(options)),
+  select: (res) => res?.data || {},
+  staleTime: 90 * 1000,
+  gcTime: 15 * 60 * 1000,
+  placeholderData: keepPreviousData,
+  ...queryOptions,
+});
+
+export const usePlatformDeadlineRiskQuery = (queryOptions = {}) => useQuery({
+  queryKey: ['platform', 'docketra-intelligence', 'deadline-risk'],
+  queryFn: () => trackAsync('platform.docketra-intelligence.deadline-risk', 'platform:docketra-intelligence:deadline-risk', () => docketraIntelligenceApi.getDeadlineRisk()),
+  select: (res) => res?.data || {},
+  staleTime: 60 * 1000,
+  gcTime: 15 * 60 * 1000,
+  placeholderData: keepPreviousData,
+  ...queryOptions,
+});

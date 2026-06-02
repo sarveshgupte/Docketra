@@ -76,6 +76,7 @@ const insightsRoutes = require('../routes/insights.routes');
 const categoryRoutes = require('../routes/category.routes');  // Category routes
 const workTypeRoutes = require('../routes/workType.routes');
 const dashboardRoutes = require('../routes/dashboard.routes');
+const docketraIntelligenceRoutes = require('../routes/docketraIntelligence.routes');
 const slaRoutes = require('../routes/sla.routes');
 const firmMetricsRoutes = require('../routes/firmMetrics.routes');
 const adminRoutes = require('../routes/admin.routes');  // Admin routes (PR #41)
@@ -331,6 +332,7 @@ const createApp = () => {
     workTypeRoutes,
     adminRoutes,
     dashboardRoutes,
+    docketraIntelligenceRoutes,
     slaRoutes,
     superadminRoutes,
     firmRoutes,

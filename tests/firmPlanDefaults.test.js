@@ -14,7 +14,7 @@ function run() {
 
   const firm = new Firm({ name: 'Pilot Firm', firmId: 'FIRM123', firmSlug: 'pilot-firm' });
   assert.strictEqual(firm.plan, 'pilot', 'Expected default plan to be pilot');
-  assert.strictEqual(maxUsersPath.defaultValue, 25, 'Expected default maxUsers to be 25');
+  assert.strictEqual(maxUsersPath.defaultValue, 10, 'Expected default maxUsers to be 10');
 
   const legacy = new Firm({ name: 'Legacy Firm', firmId: 'FIRM124', firmSlug: 'legacy-firm', plan: 'STARTER' });
   const validationErr = legacy.validateSync();

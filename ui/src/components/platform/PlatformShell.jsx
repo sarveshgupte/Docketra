@@ -74,6 +74,13 @@ const NAV_ICONS = {
       <path d="M4 19.5A2.5 2.5 0 016.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
     </svg>
   ),
+  'docketra-intelligence': (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9.5 3a3 3 0 00-3 3v1.5A3.5 3.5 0 003 11v1a3.5 3.5 0 003.5 3.5V17a3 3 0 006 0V6a3 3 0 00-3-3z" />
+      <path d="M14.5 3a3 3 0 013 3v1.5A3.5 3.5 0 0121 11v1a3.5 3.5 0 01-3.5 3.5V17a3 3 0 01-6 0V6a3 3 0 013-3z" />
+      <path d="M8 9h2M14 9h2M8.5 14H10M14 14h1.5" />
+    </svg>
+  ),
   clients: (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" />
@@ -438,7 +445,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                     aria-current={isActive ? 'page' : undefined}
                   >
                     <span className="platform__nav-link-icon" aria-hidden="true">
-                      {NAV_ICONS[item.id] || null}
+                      {NAV_ICONS[item.id] || item.icon || null}
                     </span>
                     {!collapsed && <span className="platform__nav-link-label">{item.label}</span>}
                   </Link>

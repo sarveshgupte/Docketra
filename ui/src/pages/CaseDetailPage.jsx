@@ -36,9 +36,15 @@ import { useCaseQuery } from '../hooks/useCaseQuery';
 import { useDocketQueueNavigation } from '../hooks/useDocketQueueNavigation';
 import { invalidateCaseCache } from '../utils/caseCache';
 import { getDocketSlaBadgeStatus } from '../utils/docketSla';
+import { isFirmManagerOrAbove } from '../utils/roleHierarchy';
 import api from '../services/api';
 import { DocketDetails } from '../../components/DocketDetails';
 import { CaseWorkflowModals } from './caseDetail/CaseWorkflowModals';
+import {
+  enrichAssignableUsersWithIntelligence,
+  getAssigneeOptionLabel,
+} from '../components/docket/AssigneeIntelligence';
+import { usePlatformWorkloadIntelligenceQuery } from '../hooks/usePlatformDataQueries';
 import { CaseDetailPanelSkeleton } from './caseDetail/CaseDetailPanelSkeleton';
 import { CaseDetailAlerts } from './caseDetail/CaseDetailAlerts';
 import { CaseDetailSummaryHeader } from './caseDetail/CaseDetailSummaryHeader';
@@ -82,6 +88,15 @@ export const CaseDetailPage = () => {
   const permissions = usePermissions();
   const { showSuccess, showError, showWarning } = useToast();
   const { activeDocketId, activeDocketData, isDocketLoading, beginDocketOpen, setActiveDocketData } = useActiveDocket();
+  const canUseAssignmentIntelligence = useMemo(
+    () => isFirmManagerOrAbove(user) || Boolean(user?.isPrimaryAdmin) || Boolean(permissions.isAdmin),
+    [user, permissions.isAdmin]
+  );
+  const {
+    data: workloadData = {},
+    isLoading: workloadLoading,
+    isError: workloadError,
+  } = usePlatformWorkloadIntelligenceQuery({}, { enabled: canUseAssignmentIntelligence });
 
   const {
     sourceList,
@@ -296,14 +311,20 @@ export const CaseDetailPage = () => {
     const mapped = fromCase
       .map((entry) => ({
         value: entry.xID || entry.userId || entry.email,
+        xID: entry.xID || entry.userId || entry.email,
+        name: entry.name || entry.fullName || entry.xID || entry.email,
         label: entry.name || entry.fullName || entry.xID || entry.email,
+        email: entry.email,
       }))
       .filter((entry) => entry.value);
-    if (!mapped.length && user?.xID) {
-      return [{ value: user.xID, label: user.name || user.xID }];
-    }
-    return mapped;
-  }, [caseData?.assignableUsers, caseData?.users, user?.xID, user?.name]);
+    const candidates = mapped.length ? mapped : (user?.xID ? [{ value: user.xID, xID: user.xID, name: user.name || user.xID, label: user.name || user.xID, email: user.email }] : []);
+    const enriched = enrichAssignableUsersWithIntelligence(candidates, workloadData);
+    return enriched.map((entry) => ({
+      ...entry,
+      displayLabel: entry.name || entry.xID || entry.value,
+      label: getAssigneeOptionLabel(entry),
+    }));
+  }, [caseData?.assignableUsers, caseData?.users, user?.xID, user?.name, user?.email, workloadData]);
 
   const clientName = caseData?.client?.businessName || caseInfo?.clientName || caseInfo?.businessName || '—';
   const clientIdLabel = caseData?.client?.clientId || caseInfo?.clientId || caseData?.clientId || '—';
@@ -939,14 +960,15 @@ export const CaseDetailPage = () => {
     if (assigningCase) return;
     setAssigningCase(true);
     const selectedAssignee = availableAssignees.find((option) => option.value === assignUser);
+    const selectedAssigneeLabel = selectedAssignee?.displayLabel || selectedAssignee?.name || selectedAssignee?.label || assignUser;
 
     try {
       await caseApi.reassignDocket(caseId, assignUser);
       setShowAssignModal(false);
       setAssignComment('');
       setActionError(null);
-      setActionConfirmation(`Docket moved to ${selectedAssignee?.label || assignUser}.`);
-      showSuccess(`Docket owner updated to ${selectedAssignee?.label || assignUser}`);
+      setActionConfirmation(`Docket moved to ${selectedAssigneeLabel}.`);
+      showSuccess(`Docket owner updated to ${selectedAssigneeLabel}`);
       loadCase({ background: true });
     } catch (error) {
       const message = extractErrorMessage(error, 'Failed to move docket. Please try again.');
@@ -1733,6 +1755,8 @@ export const CaseDetailPage = () => {
           assignUser={assignUser}
           setAssignUser={setAssignUser}
           availableAssignees={availableAssignees}
+          assigneeIntelligenceLoading={workloadLoading && canUseAssignmentIntelligence}
+          assigneeIntelligenceError={workloadError && canUseAssignmentIntelligence}
           showRouteModal={showRouteModal}
           setShowRouteModal={setShowRouteModal}
           routeTeamId={routeTeamId}

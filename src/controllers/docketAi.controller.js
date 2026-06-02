@@ -6,9 +6,11 @@ const Category = require('../models/Category.model');
 const Case = require('../models/Case.model');
 const Team = require('../models/Team.model');
 const aiService = require('../services/ai/ai.service');
+const docketraIntelligenceService = require('../services/docketraIntelligence.service');
 const { resolveCaseIdentifier } = require('../utils/caseIdentifier');
 const log = require('../utils/log');
 const { buildClientStatusQuery } = require('../utils/clientStatus');
+const { hasFirmRoleAtLeast } = require('../utils/role.utils');
 
 function normalizeConfidence(value) {
   const numeric = Number(value);
@@ -410,14 +412,33 @@ async function getAiRoutingSuggestion(req, res) {
 
     const confidence = normalizeConfidence(docket?.aiRouting?.confidence);
     const confidenceLevel = getRoutingConfidenceLevel(confidence);
+    let assigneeRecommendations = null;
+    const workbasketId = docket?.aiRouting?.suggestedWorkbasketId ? String(docket.aiRouting.suggestedWorkbasketId) : null;
+
+    if (workbasketId && hasFirmRoleAtLeast(req.user, 'MANAGER')) {
+      try {
+        const workload = await docketraIntelligenceService.getWorkloadIntelligence({
+          firmId: req.user?.firmId,
+          workbasketId,
+        });
+        assigneeRecommendations = workload.recommendations;
+      } catch (workloadError) {
+        log.warn('[AI] workload_recommendation_unavailable', {
+          docketId: docket.caseId || docket.caseNumber,
+          firmId: req.user?.firmId,
+          message: workloadError?.message,
+        });
+      }
+    }
 
     return res.json({
       suggestedTeam: docket?.aiRouting?.suggestedTeam || null,
-      workbasketId: docket?.aiRouting?.suggestedWorkbasketId ? String(docket.aiRouting.suggestedWorkbasketId) : null,
+      workbasketId,
       confidence,
       confidenceLevel,
       status: docket?.aiRouting?.status || 'PENDING',
       requiresManualRouting: confidence < 0.5,
+      assigneeRecommendations,
     });
   } catch (error) {
     return res.status(400).json({ success: false, message: error?.message || 'Unable to load AI routing suggestion' });

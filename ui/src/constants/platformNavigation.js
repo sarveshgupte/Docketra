@@ -26,6 +26,11 @@ const icons = {
     React.createElement('line', { x1: 16, y1: 2, x2: 16, y2: 6 }),
     React.createElement('line', { x1: 3, y1: 10, x2: 21, y2: 10 }),
   ),
+  intelligence: createIcon(
+    React.createElement('path', { d: 'M9.5 3a3 3 0 00-3 3v1.5A3.5 3.5 0 003 11v1a3.5 3.5 0 003.5 3.5V17a3 3 0 006 0V6a3 3 0 00-3-3z' }),
+    React.createElement('path', { d: 'M14.5 3a3 3 0 013 3v1.5A3.5 3.5 0 0121 11v1a3.5 3.5 0 01-3.5 3.5V17a3 3 0 01-6 0V6a3 3 0 013-3z' }),
+    React.createElement('path', { d: 'M8 9h2M14 9h2M8.5 14H10M14 14h1.5' }),
+  ),
 };
 
 const NAV_BLUEPRINT = [
@@ -223,9 +228,16 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
       activeMatch: 'exactOrDescendant',
     },
     { id: 'workbaskets-group', label: 'Workbaskets', type: 'group', children: workbasketsGroupChildren },
+    ...(hasAtLeastRole(normalizedRole, 'MANAGER') ? [{
+      id: 'docketra-intelligence',
+      label: 'Docketra Intelligence',
+      icon: icons.intelligence,
+      to: ROUTES.DOCKETRA_INTELLIGENCE(firmSlug),
+      activeMatch: 'exactOrDescendant',
+    }] : []),
     { id: 'worklists-group', label: 'Worklists', type: 'group', children: scopedWorklistItems.length ? scopedWorklistItems : [{ id: 'my-worklist', label: 'My Worklist', icon: icons.dashboard, to: ROUTES.WORKLIST(firmSlug), activeMatch: 'exactOrDescendant' }] },
     ...(qcGroupChildren.length ? [{ id: 'qc-worklists-group', label: 'QC Worklists', type: 'group', children: qcGroupChildren }] : []),
-  ].filter((item) => item.id === 'compliance-control-room' || (Array.isArray(item.children) && item.children.length > 0));
+  ].filter((item) => item.id === 'compliance-control-room' || item.id === 'docketra-intelligence' || (Array.isArray(item.children) && item.children.length > 0));
 
   const isNavHidden = (id) => TASK_MANAGER_MVP_ENABLED && FIRM_PILOT_SURFACE.hideFromNavigation.has(id);
   const administrationItems = (!isNavHidden('settings') && hasAtLeastRole(normalizedRole, 'MANAGER'))
