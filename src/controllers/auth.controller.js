@@ -31,6 +31,7 @@ const { validatePasswordStrength, PASSWORD_POLICY_MESSAGE } = require('../utils/
 const { applyServiceResponse } = require('../utils/response.util');
 const { getSession } = require('../utils/getSession');
 const { handleUserDeactivation } = require('../services/docketWorkflow.service');
+const { resetUserToInvitedState } = require('../services/adminController.service');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
 const { getLatestPublishedUpdate } = require('../services/productUpdate.service');
@@ -1512,13 +1513,12 @@ const resetPassword = async (req, res) => {
     // Reset password state (put user back into invite-like state)
     user.passwordHash = null;
     user.passwordSet = false;
-    user.passwordSetupTokenHash = tokenHash;
-    user.passwordSetupExpires = tokenExpiry;
-    user.mustChangePassword = true;
-    user.mustSetPassword = false;
+    resetUserToInvitedState(user, {
+      tokenHash,
+      tokenExpiry,
+      inviteSentAt: new Date(),
+    });
     user.passwordExpiresAt = null; // Clear expiry until password is set
-    user.status = 'invited'; // User must set password to become active again
-    user.isActive = false;
     user.failedLoginAttempts = 0;
     user.lockUntil = null;
     user.passwordSetAt = null;
@@ -1527,10 +1527,12 @@ const resetPassword = async (req, res) => {
     
     // Fetch firmSlug for email
     let firmSlug = null;
+    let firmName = null;
     if (user.firmId) {
       const firm = await Firm.findById(user.firmId);
       if (firm) {
         firmSlug = firm.firmSlug;
+        firmName = firm.name;
       }
     }
     
@@ -1543,11 +1545,13 @@ const resetPassword = async (req, res) => {
         xID: user.xID,
         firmSlug: firmSlug, // Pass firmSlug for firm-specific URL in email
         role: user.role,
+        firmName: firmName || undefined,
+        invitedBy: admin.name || admin.xID,
         req,
       });
 
       if (!emailResult.success) {
-        log.warn('[AUTH] Password setup email not sent:', emailResult.error);
+        throw new Error(emailResult.error || 'Email provider did not confirm delivery');
       }
       
       // Log password setup email sent
@@ -1565,7 +1569,20 @@ const resetPassword = async (req, res) => {
       });
     } catch (emailError) {
       log.warn('[AUTH] Failed to send password setup email:', emailError.message);
-      // Continue even if email fails
+      await logAuthAudit({
+        xID: user.xID,
+        firmId: user.firmId,
+        userId: user._id,
+        actionType: 'PasswordSetupEmailFailed',
+        description: `Password reset email failed to send to ${emailService.maskEmail(user.email)}: ${emailError.message}`,
+        performedBy: admin.xID,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send password reset link. Please check email service configuration.',
+      });
     }
     
     // Log password reset
@@ -2534,6 +2551,14 @@ const activateUser = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'User not found',
+      });
+    }
+
+    if (user.mustSetPassword || !user.passwordSetAt) {
+      return res.status(400).json({
+        success: false,
+        code: 'PASSWORD_SETUP_REQUIRED',
+        message: 'This user has not completed password setup. Send a setup link instead of activating the account.',
       });
     }
     

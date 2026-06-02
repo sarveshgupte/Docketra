@@ -176,6 +176,10 @@ module.exports = {
     params: z.object({ xID: xidString }),
     body: z.object({}).strict(),
   },
+  'POST /users/:xID/reset-password': {
+    params: z.object({ xID: xidString }),
+    body: z.object({}).strict(),
+  },
   'PATCH /users/:xID/restrict-clients': {
     params: z.object({ xID: xidString }),
     body: z.union([

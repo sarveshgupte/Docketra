@@ -34,6 +34,8 @@ const makeInviteRequest = () => ({
   user: {
     xID: 'X000001',
     firmId: 'firm-1',
+    role: 'PRIMARY_ADMIN',
+    isPrimaryAdmin: true,
   },
   requestId: 'req-invite-1',
   ip: '127.0.0.1',
@@ -66,7 +68,12 @@ async function testExistingInvitedUserReuseSkipsEmail() {
       function MockUser(doc) {
         Object.assign(this, doc);
       }
-      MockUser.findOne = async () => existingUser;
+      MockUser.findOne = (query = {}) => {
+        if (query.role === 'PRIMARY_ADMIN') {
+          return { select: async () => ({ _id: 'primary-admin' }) };
+        }
+        return existingUser;
+      };
       MockUser.prototype.save = async function save() {
         saveCalls += 1;
         return this;
@@ -169,7 +176,10 @@ async function testDuplicateKeyFallsBackToExistingInvitedUser() {
       function MockUser(doc) {
         Object.assign(this, doc);
       }
-      MockUser.findOne = async () => {
+      MockUser.findOne = (query = {}) => {
+        if (query.role === 'PRIMARY_ADMIN') {
+          return { select: async () => ({ _id: 'primary-admin' }) };
+        }
         findOneCalls += 1;
         return findOneCalls === 1 ? null : existingUser;
       };
@@ -244,7 +254,7 @@ async function testDuplicateKeyFallsBackToExistingInvitedUser() {
   assert.strictEqual(emailCalls, 0, 'email should not be queued again after duplicate-key recovery');
 }
 
-async function testResendInviteRequiresInvitedStatus() {
+async function testResendInviteAllowsSetupPendingActiveUser() {
   let saveCalls = 0;
   let emailCalls = 0;
 
@@ -302,17 +312,77 @@ async function testResendInviteRequiresInvitedStatus() {
 
   await resendInviteEmail(req, res);
 
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.body.success, true);
+  assert.strictEqual(emailCalls, 1, 'resend should send setup email when an active-looking user still needs password setup');
+  assert.strictEqual(saveCalls, 1, 'resend should normalize setup-pending users back to invited state');
+}
+
+async function testResendInviteRejectsFullyActiveUser() {
+  let saveCalls = 0;
+  let emailCalls = 0;
+
+  Module._load = function(request, parent, isMain) {
+    if (request === '../models/User.model') {
+      return {
+        findOne: async () => ({
+          _id: 'user-4',
+          xID: 'X000555',
+          name: 'Active User',
+          email: 'active@acme.com',
+          firmId: 'firm-1',
+          status: 'active',
+          mustSetPassword: false,
+          passwordSetAt: new Date('2026-01-01T00:00:00.000Z'),
+          save: async () => {
+            saveCalls += 1;
+          },
+        }),
+      };
+    }
+    if (request === '../services/email.service') {
+      return {
+        generateSecureToken: () => 'setup-token',
+        hashToken: () => 'token-hash',
+        maskEmail: (email) => email,
+        sendPasswordSetupReminderEmail: async () => {
+          emailCalls += 1;
+          return { success: true };
+        },
+      };
+    }
+    if (request === '../middleware/wrapWriteHandler') {
+      return (fn) => fn;
+    }
+    return originalLoad.apply(this, arguments);
+  };
+
+  clearModule('../src/controllers/admin.controller');
+  const { resendInviteEmail } = require('../src/controllers/admin.controller');
+
+  const req = {
+    params: { xID: 'X000555' },
+    user: { xID: 'X000001', firmId: 'firm-1' },
+    requestId: 'req-resend-2',
+    ip: '127.0.0.1',
+    get: () => 'agent',
+  };
+  const res = createMockRes();
+
+  await resendInviteEmail(req, res);
+
   assert.strictEqual(res.statusCode, 400);
   assert.strictEqual(res.body.success, false);
-  assert.strictEqual(emailCalls, 0, 'resend should not send email when status is not invited');
-  assert.strictEqual(saveCalls, 0, 'resend should not update the user when status is not invited');
+  assert.strictEqual(emailCalls, 0, 'resend should not send setup email to fully active users');
+  assert.strictEqual(saveCalls, 0, 'resend should not update fully active users');
 }
 
 async function run() {
   try {
     await testExistingInvitedUserReuseSkipsEmail();
     await testDuplicateKeyFallsBackToExistingInvitedUser();
-    await testResendInviteRequiresInvitedStatus();
+    await testResendInviteAllowsSetupPendingActiveUser();
+    await testResendInviteRejectsFullyActiveUser();
     console.log('✓ admin invite flow is idempotent for existing invites and duplicate-key races');
   } finally {
     Module._load = originalLoad;

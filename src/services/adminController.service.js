@@ -61,8 +61,14 @@ const safeAuditLog = async (auditData) => {
 const resetUserToInvitedState = (user, { tokenHash, tokenExpiry, inviteSentAt }) => {
   user.inviteTokenHash = tokenHash;
   user.inviteTokenExpiry = tokenExpiry;
+  user.setupTokenHash = tokenHash;
+  user.setupTokenExpiresAt = tokenExpiry;
+  user.setupTokenUsedAt = null;
+  user.passwordSetupTokenHash = tokenHash;
+  user.passwordSetupExpires = tokenExpiry;
   user.inviteSentAt = inviteSentAt || new Date();
   user.mustSetPassword = true;
+  user.mustChangePassword = true;
   user.status = 'invited';
   user.isActive = false;
 };

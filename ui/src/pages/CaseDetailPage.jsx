@@ -1259,7 +1259,7 @@ export const CaseDetailPage = () => {
                   QC: {caseInfo?.qc?.status || caseInfo?.qcStatus}
                 </Badge>
               ) : null}
-              {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
+              {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Internal Approval</Badge>}
               {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
             </div>
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight mt-2 flex items-center gap-2 break-words">

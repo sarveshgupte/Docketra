@@ -31,6 +31,7 @@ import {
   parseDelimitedLine,
   getApiErrorType,
   getNormalizedUserStatus,
+  requiresPasswordSetup,
   isPrimaryAdminUser,
   normalizeAdminRole,
 } from './admin/adminPageUtils';
@@ -389,7 +390,7 @@ export const AdminPage = () => {
       return;
     }
     const normalizedStatus = getNormalizedUserStatus(user);
-    const isInvited = normalizedStatus === 'invited';
+    const isInvited = normalizedStatus === 'invited' || requiresPasswordSetup(user);
     const shouldActivate = isInvited ? false : normalizedStatus !== 'active';
     const action = isInvited ? 'cancel invite for' : (shouldActivate ? 'activate' : 'deactivate');
     const confirmationMessage = isInvited
@@ -430,14 +431,14 @@ export const AdminPage = () => {
       const response = await adminApi.resendSetupEmail(xID);
       
       if (response.success) {
-        showToast('Invite email sent successfully', 'success');
-        setUserSectionMessage('Invite email sent successfully.');
+        showToast(response.message || 'Setup link sent successfully', 'success');
+        setUserSectionMessage(response.message || 'Setup link sent successfully.');
         await loadAdminData();
       } else {
-        showToast(response.message || 'Failed to send email', 'error');
+        showToast(response.message || 'Failed to send setup link', 'error');
       }
     } catch (error) {
-      showToast(error.response?.data?.message || 'Failed to send email', 'error');
+      showToast(error.message || error.response?.data?.message || 'Failed to send setup link', 'error');
     } finally {
       setUserActionLoading(xID, false);
     }
@@ -535,7 +536,7 @@ export const AdminPage = () => {
             showToast(response.message || 'Failed to send password reset link', 'error');
           }
         } catch (error) {
-          showToast(error.response?.data?.message || 'Failed to send password reset link', 'error');
+          showToast(error.message || error.response?.data?.message || 'Failed to send password reset link', 'error');
         } finally {
           setUserActionLoading(user?.xID, false);
         }

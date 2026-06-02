@@ -44,6 +44,7 @@ const { EVENTS: STRICT_STORAGE_EVENTS, logStrictStorageEvent } = require('../ser
  */
 
 const INVITE_TOKEN_EXPIRY_HOURS = 48; // 48 hours for invite tokens
+const PASSWORD_RESET_TOKEN_EXPIRY_HOURS = 48;
 const DEFAULT_STORAGE_MODE = 'docketra_managed';
 const INTAKE_API_KEY_MASK = '••••••••••••••••';
 
@@ -213,10 +214,11 @@ const resendInviteEmail = async (req, res) => {
       });
     }
     
-    if (user.status !== 'invited') {
+    const needsSetupLink = user.status === 'invited' || user.mustSetPassword || !user.passwordSetAt;
+    if (!needsSetupLink) {
       return res.status(400).json({
         success: false,
-        message: 'User already activated. Cannot resend invite email for activated users.',
+        message: 'This user has already set a password. Use Reset Password instead.',
       });
     }
     
@@ -288,7 +290,7 @@ const resendInviteEmail = async (req, res) => {
         
         return res.status(500).json({
           success: false,
-          message: 'Failed to send email. Please check email service configuration.',
+          message: 'Failed to send setup link. Please check email service configuration.',
         });
       }
 
@@ -311,7 +313,7 @@ const resendInviteEmail = async (req, res) => {
       
       res.json({
         success: true,
-        message: 'Invite email sent successfully',
+        message: 'Setup link sent successfully',
       });
     } catch (emailError) {
       log.error('ADMIN_INVITE_EMAIL_FAILED', {
@@ -334,7 +336,7 @@ const resendInviteEmail = async (req, res) => {
       
       return res.status(500).json({
         success: false,
-        message: 'Failed to send email. Please check email service configuration.',
+        message: 'Failed to send setup link. Please check email service configuration.',
       });
     }
   } catch (error) {
@@ -342,6 +344,123 @@ const resendInviteEmail = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error resending invite email',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Send a password reset/setup link for a firm user.
+ * POST /api/admin/users/:xID/reset-password
+ */
+const sendUserPasswordReset = async (req, res) => {
+  try {
+    const { xID } = req.params;
+    if (!xID) {
+      return res.status(400).json({
+        success: false,
+        message: 'xID is required',
+      });
+    }
+
+    const admin = req.user;
+    const user = await User.findOne({
+      xID: xID.toUpperCase(),
+      firmId: admin.firmId,
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found in your firm',
+      });
+    }
+
+    const token = emailService.generateSecureToken();
+    const tokenHash = emailService.hashToken(token);
+    const tokenExpiry = new Date(Date.now() + PASSWORD_RESET_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
+
+    resetUserToInvitedState(user, {
+      tokenHash,
+      tokenExpiry,
+      inviteSentAt: new Date(),
+    });
+    user.passwordHash = null;
+    user.passwordSet = false;
+    user.passwordSetAt = null;
+    user.passwordExpiresAt = null;
+    user.passwordResetTokenHash = null;
+    user.passwordResetExpires = null;
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+
+    await user.save();
+
+    const firm = user.firmId
+      ? await Firm.findById(user.firmId).select('firmSlug name').lean()
+      : null;
+
+    try {
+      const emailResult = await emailService.sendPasswordSetupEmail({
+        email: user.email,
+        name: user.name,
+        token,
+        xID: user.xID,
+        firmSlug: firm?.firmSlug || null,
+        role: user.role,
+        firmName: firm?.name || undefined,
+        invitedBy: admin.name || admin.xID,
+        req,
+      });
+
+      if (!emailResult.success) {
+        throw new Error(emailResult.error || 'Email provider did not confirm delivery');
+      }
+    } catch (emailError) {
+      log.error('ADMIN_PASSWORD_RESET_EMAIL_FAILED', {
+        req,
+        firmId: admin.firmId,
+        userXID: admin.xID,
+        targetXID: user.xID,
+        targetEmail: emailService.maskEmail(user.email),
+        error: emailError.message,
+      });
+      await safeAuditLog({
+        xID: user.xID,
+        firmId: user.firmId,
+        userId: user._id,
+        actionType: 'PasswordResetEmailFailed',
+        description: 'Admin attempted to send password reset setup link but delivery failed',
+        performedBy: admin.xID,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send password reset link. Please check email service configuration.',
+      });
+    }
+
+    await safeAuditLog({
+      xID: user.xID,
+      firmId: user.firmId,
+      userId: user._id,
+      actionType: 'PasswordResetEmailSent',
+      description: `Admin sent password reset setup link to ${emailService.maskEmail(user.email)}`,
+      performedBy: admin.xID,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+
+    return res.json({
+      success: true,
+      message: 'Password reset link sent successfully',
+    });
+  } catch (error) {
+    log.error('[ADMIN] Error sending password reset link:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error sending password reset link',
       error: error.message,
     });
   }
@@ -1851,6 +1970,7 @@ const getRetentionPreview = async (req, res) => {
 module.exports = {
   getAdminStats,
   resendInviteEmail: wrapWriteHandler(resendInviteEmail),
+  sendUserPasswordReset: wrapWriteHandler(sendUserPasswordReset),
   getAllOpenCases,
   getAllPendingCases,
   getAllFiledCases,

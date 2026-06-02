@@ -9,6 +9,7 @@ const { adminBaseAccess } = require('./routeGroups');
 const {
   getAdminStats,
   resendInviteEmail,
+  sendUserPasswordReset,
   getAllOpenCases,
   getAllPendingCases,
   getAllFiledCases,
@@ -112,6 +113,7 @@ router.post('/users', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE')
 router.put('/users/:xID/activate', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), sensitiveLimiter, activateUser);
 router.put('/users/:xID/deactivate', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), sensitiveLimiter, deactivateUser);
 router.post('/users/:xID/resend-invite', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, resendInviteEmail);
+router.post('/users/:xID/reset-password', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), sensitiveLimiter, sendUserPasswordReset);
 
 router.patch('/users/:xID/restrict-clients', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateRestrictedClients);
 router.patch('/users/:xID/workbaskets', ...adminBaseAccess, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, updateUserWorkbaskets);

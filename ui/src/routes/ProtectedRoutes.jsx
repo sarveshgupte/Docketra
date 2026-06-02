@@ -283,7 +283,7 @@ export const ProtectedRoutes = () => (
         <Route
           path="compliance-calendar"
           element={(
-            <ProtectedRoute>
+            <ProtectedRoute requireManagerOrAbove>
               <ComplianceCalendarPage />
             </ProtectedRoute>
           )}

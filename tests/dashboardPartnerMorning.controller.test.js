@@ -41,8 +41,8 @@ const run = async () => {
     delete require.cache[require.resolve('../src/controllers/dashboard.controller')];
     const controller = require('../src/controllers/dashboard.controller');
 
-    // 1. Verify ADMIN and PRIMARY_ADMIN are allowed
-    const allowedRoles = ['ADMIN', 'PRIMARY_ADMIN'];
+    // 1. Verify MANAGER, ADMIN, and PRIMARY_ADMIN are allowed
+    const allowedRoles = ['MANAGER', 'ADMIN', 'PRIMARY_ADMIN'];
     for (const role of allowedRoles) {
       const allowedReq = {
         user: { firmId: '67e95f7642adf77d7f4e1834', role, xID: 'X100001' },
@@ -52,14 +52,14 @@ const run = async () => {
       };
       const allowedRes = createMockRes();
       await controller.getPartnerMorningDashboard(allowedReq, allowedRes);
-      assert.strictEqual(allowedRes.statusCode, 200, `Role ${role} should be allowed to view morning dashboard`);
+      assert.strictEqual(allowedRes.statusCode, 200, `Role ${role} should be allowed to view operations command dashboard`);
       assert.strictEqual(allowedRes.payload.success, true);
       assert.strictEqual(allowedRes.payload.data.summary.atRiskEntities, 3);
       assert.strictEqual(allowedRes.payload.data.filtersApplied.exceptionType, 'portal_issue');
     }
 
-    // 2. Verify USER and MANAGER are blocked
-    const deniedRoles = ['USER', 'MANAGER'];
+    // 2. Verify USER/Employee-tier roles are blocked
+    const deniedRoles = ['USER', 'EMPLOYEE'];
     for (const role of deniedRoles) {
       const deniedReq = {
         user: { firmId: '67e95f7642adf77d7f4e1834', role, xID: 'X100002' },
@@ -69,7 +69,7 @@ const run = async () => {
       };
       const deniedRes = createMockRes();
       await controller.getPartnerMorningDashboard(deniedReq, deniedRes);
-      assert.strictEqual(deniedRes.statusCode, 403, `Role ${role} should be blocked from morning dashboard`);
+      assert.strictEqual(deniedRes.statusCode, 403, `Role ${role} should be blocked from operations command dashboard`);
       assert.strictEqual(deniedRes.payload.success, false);
     }
 

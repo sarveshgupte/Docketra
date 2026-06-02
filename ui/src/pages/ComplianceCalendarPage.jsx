@@ -25,7 +25,7 @@ const COMPLIANCE_STATES = [
 const riskOptions = ['low', 'medium', 'high', 'critical'];
 const APPROVAL_VIEWS = [
   { key: 'my_approvals', label: 'My approvals' },
-  { key: 'awaiting_partner', label: 'Awaiting partner' },
+  { key: 'awaiting_partner', label: 'Awaiting internal approval' },
   { key: 'awaiting_client_signatory', label: 'Awaiting client/signatory' },
   { key: 'overdue', label: 'Overdue approvals' },
 ];
@@ -37,10 +37,19 @@ const EXCEPTION_TYPE_OPTIONS = [
   { key: 'other', label: 'Other' },
 ];
 
-const toLabel = (value) => String(value || '')
-  .split('_')
-  .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-  .join(' ');
+const DISPLAY_LABELS = {
+  awaiting_partner: 'Awaiting Internal Approval',
+  internal_partner: 'Internal Approval',
+};
+
+const toLabel = (value) => {
+  const key = String(value || '').trim().toLowerCase();
+  if (DISPLAY_LABELS[key]) return DISPLAY_LABELS[key];
+  return key
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+};
 
 const normalizeDueRisk = (dueRisk) => {
   if (dueRisk === 'overdue') return 'overdue';
@@ -114,6 +123,7 @@ export const ComplianceCalendarPage = () => {
     teamLoad: [],
     exceptions: [],
   });
+  const canViewControlRoom = hasFirmRoleAtLeast(user, 'MANAGER');
   const canManageState = hasFirmRoleAtLeast(user, 'ADMIN');
 
   const loadControlRoom = useCallback(async () => {
@@ -165,11 +175,11 @@ export const ComplianceCalendarPage = () => {
     loadTemplates();
   }, [loadTemplates]);
 
-  const loadPartnerMorning = useCallback(async () => {
-    if (!canManageState) return;
+  const loadOperationsCommand = useCallback(async () => {
+    if (!canViewControlRoom) return;
     setMorningLoading(true);
     try {
-      const response = await dashboardApi.getPartnerMorningDashboard({
+      const response = await dashboardApi.getOperationsCommandDashboard({
         assigneeXID: filters.assigneeXID,
         clientId: filters.clientId,
         obligationType: filters.obligationType,
@@ -196,7 +206,7 @@ export const ComplianceCalendarPage = () => {
         exceptions: [],
       });
     } catch (apiError) {
-      setError(apiError?.message || 'Failed to load partner morning dashboard');
+      setError(apiError?.message || 'Failed to load operations command dashboard');
       setMorningSections({
         atRiskEntities: [],
         clientBlockers: [],
@@ -207,14 +217,14 @@ export const ComplianceCalendarPage = () => {
     } finally {
       setMorningLoading(false);
     }
-  }, [canManageState, filters]);
+  }, [canViewControlRoom, filters]);
 
   useEffect(() => {
-    loadPartnerMorning();
-  }, [loadPartnerMorning]);
+    loadOperationsCommand();
+  }, [loadOperationsCommand]);
 
   const loadApprovalQueues = useCallback(async (selectedView = approvalView) => {
-    if (!canManageState) return;
+    if (!canViewControlRoom) return;
     setApprovalLoading(true);
     try {
       const response = await dashboardApi.getApprovalQueues({ view: selectedView });
@@ -227,7 +237,7 @@ export const ComplianceCalendarPage = () => {
     } finally {
       setApprovalLoading(false);
     }
-  }, [approvalView, canManageState]);
+  }, [approvalView, canViewControlRoom]);
 
   useEffect(() => {
     loadApprovalQueues(approvalView);
@@ -237,7 +247,7 @@ export const ComplianceCalendarPage = () => {
     { label: 'Due This Week', value: Number(summary.dueThisWeek || 0) },
     { label: 'Overdue', value: Number(summary.overdue || 0) },
     { label: 'Awaiting Client', value: Number(summary.awaitingClient || 0) },
-    { label: 'Awaiting Partner', value: Number(summary.awaitingPartner || 0) },
+    { label: 'Awaiting Internal Approval', value: Number(summary.awaitingPartner || 0) },
     { label: 'Ready To File', value: Number(summary.readyToFile || 0) },
     { label: 'Blocked', value: Number(summary.blocked || 0) },
     { label: 'Filed Recently', value: Number(summary.filedRecently || 0) },
@@ -303,14 +313,14 @@ export const ComplianceCalendarPage = () => {
     try {
       await dashboardApi.remindApproval(caseId, { escalate });
       loadApprovalQueues(approvalView);
-      loadPartnerMorning();
+      loadOperationsCommand();
     } catch (apiError) {
       setError(apiError?.message || 'Failed to queue reminder');
     }
   };
 
   const applyAllFilters = async () => {
-    await Promise.all([loadControlRoom(), loadPartnerMorning(), loadApprovalQueues(approvalView)]);
+    await Promise.all([loadControlRoom(), loadOperationsCommand(), loadApprovalQueues(approvalView)]);
   };
 
   const renderDocketLink = (caseId, label = null) => {
@@ -327,20 +337,20 @@ export const ComplianceCalendarPage = () => {
     <PlatformShell
       moduleLabel="Daily Operations"
       title="Compliance Control Room"
-      subtitle="Operational control center for filing status, due dates, blockers, and partner approvals."
+      subtitle="Operational control center for filing status, due dates, blockers, and internal approvals."
     >
       <div className="compliance-calendar-page">
         <PageHeader
           title="Compliance Control Room"
-          description="One screen to monitor due, overdue, blocked, awaiting client/partner, ready-to-file, filed, and closed entities."
+          description="One screen to monitor due, overdue, blocked, awaiting client/internal approval, ready-to-file, filed, and closed entities."
         />
 
         {error ? <p className="compliance-calendar-page__error">{error}</p> : null}
 
-        {canManageState ? (
+        {canViewControlRoom ? (
           <section className="compliance-generation-panel">
             <div className="compliance-generation-panel__header">
-              <h2>Partner Morning Dashboard</h2>
+              <h2>Operations Command Dashboard</h2>
               <p>Daily command table for risk entities, client blockers, approval blockers, team overload, and exceptions.</p>
             </div>
             <div className="compliance-generation-badges">
@@ -446,14 +456,14 @@ export const ComplianceCalendarPage = () => {
               <table className="compliance-control-table compliance-control-table--morning">
                 <thead>
                   <tr>
-                    <th colSpan={7}>Approval blockers (awaiting partner/client/signatory grouped by approver and ageing)</th>
+                    <th colSpan={7}>Approval blockers (awaiting internal/client/signatory approval grouped by approver and ageing)</th>
                   </tr>
                   <tr>
                     <th>Approver</th>
                     <th>Pending</th>
                     <th>Overdue</th>
                     <th>Max Age (days)</th>
-                    <th>Awaiting Partner</th>
+                    <th>Awaiting Internal</th>
                     <th>Awaiting Client/Signatory</th>
                     <th>Sample Dockets</th>
                   </tr>
@@ -675,11 +685,11 @@ export const ComplianceCalendarPage = () => {
           </section>
         ) : null}
 
-        {canManageState ? (
+        {canViewControlRoom ? (
           <section className="compliance-generation-panel">
             <div className="compliance-generation-panel__header">
               <h2>Approval Queues</h2>
-              <p>Track partner/client/signatory bottlenecks with ageing and reminder placeholders.</p>
+              <p>Track internal/client/signatory bottlenecks with ageing and reminder placeholders.</p>
             </div>
             <div className="compliance-control-filter-row">
               {APPROVAL_VIEWS.map((option) => (
@@ -698,7 +708,7 @@ export const ComplianceCalendarPage = () => {
                 <p className="compliance-control-summary-card__value">{approvalSummary.myApprovals || 0}</p>
               </article>
               <article className="compliance-control-summary-card">
-                <p className="compliance-control-summary-card__label">Awaiting partner</p>
+                <p className="compliance-control-summary-card__label">Awaiting internal approval</p>
                 <p className="compliance-control-summary-card__value">{approvalSummary.awaitingPartner || 0}</p>
               </article>
               <article className="compliance-control-summary-card">

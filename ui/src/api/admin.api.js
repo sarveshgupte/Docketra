@@ -12,7 +12,7 @@ export const adminApi = {
   deactivateUser: (xID) => request((http) => http.put(`/admin/users/${xID}/deactivate`), 'Failed to deactivate user'),
   updateUserStatus: (xID, active) => (active ? adminApi.activateUser(xID) : adminApi.deactivateUser(xID)),
 
-  resetPassword: (xID) => request((http) => http.post('/auth/reset-password', { xID }), 'Failed to reset password'),
+  resetPassword: (xID) => request((http) => http.post(`/admin/users/${xID}/reset-password`), 'Failed to reset password'),
   resendSetupEmail: (xID) => request((http) => http.post(`/admin/users/${xID}/resend-invite`), 'Failed to resend setup email'),
   updateRestrictedClients: (xID, payload = { accessMode: 'ALL' }) => request(
     (http) => http.patch(`/admin/users/${xID}/restrict-clients`, payload),

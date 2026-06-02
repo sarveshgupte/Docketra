@@ -20,7 +20,7 @@ const HERO_METRICS = [
 const PAIN_POINTS = [
   { emoji: '📲', title: 'Work is scattered', body: 'WhatsApp, Excel, email, and loose folders carry completely different versions of the truth.' },
   { emoji: '🧠', title: 'Context sits in heads', body: 'Client facts, filing exceptions, and partner preferences disappear when a team member is out.' },
-  { emoji: '⏳', title: 'Deadlines surprise teams', body: 'Partners only see risk after filings are already late, stuck in QC, or missing client signatures.' },
+  { emoji: '⏳', title: 'Deadlines surprise teams', body: 'Primary Admins, Admins, and Managers only see risk after filings are already late, stuck in QC, or missing client signatures.' },
   { emoji: '🔁', title: 'Repeat work restarts', body: 'Teams exhaustively rebuild context for recurring monthly/annual filings instead of reusing firm memory.' },
   { emoji: '🎯', title: 'Ownership gets fuzzy', body: 'Managers constantly chase status updates because execution and accountability are not linked at the docket level.' },
   { emoji: '✅', title: 'QC is informal', body: 'Review handoffs, corrections, and final filing confidence lack a clear, traceable audit trail.' },

@@ -32,7 +32,7 @@ export const CaseDetailAlerts = ({
     ) : null}
     {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && (
       <div className="neo-alert neo-alert--info case-detail__alert">
-        <strong>Role Restricted Action</strong> — Action restricted: Only Partners can approve this lifecycle stage.
+        <strong>Role Restricted Action</strong> — Action restricted: approval for this lifecycle stage requires Manager, Admin, or Primary Admin access.
       </div>
     )}
     {canAdminMoveAssignedDocket && (
@@ -83,4 +83,3 @@ export const CaseDetailAlerts = ({
     ) : null}
   </>
 );
-

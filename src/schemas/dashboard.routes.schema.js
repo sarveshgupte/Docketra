@@ -57,6 +57,13 @@ const generationBodySchema = z.object({
   clientIds: z.array(z.string().trim().min(1)).max(1000).optional(),
 }).strict();
 
+const emptyToUndefined = (value) => (value === '' ? undefined : value);
+const optionalEnum = (values) => z.preprocess(emptyToUndefined, z.enum(values).optional());
+
+const complianceStateQuery = optionalEnum(['not_started', 'in_progress', 'awaiting_client', 'awaiting_partner', 'ready_to_file', 'filed', 'blocked', 'closed']);
+const riskLevelQuery = optionalEnum(['low', 'medium', 'high', 'critical']);
+const exceptionTypeQuery = optionalEnum(['portal_issue', 'DSC_authorisation_pending', 'client_delay', 'query_raised', 'other']);
+
 module.exports = {
   'GET /summary': {
     query: z.object({}).passthrough(),
@@ -69,12 +76,12 @@ module.exports = {
       assigneeXID: z.string().trim().optional(),
       clientId: z.string().trim().optional(),
       obligationType: z.string().trim().optional(),
-      state: z.enum(['not_started', 'in_progress', 'awaiting_client', 'awaiting_partner', 'ready_to_file', 'filed', 'blocked', 'closed']).optional(),
+      state: complianceStateQuery,
       dueFrom: z.string().trim().optional(),
       dueTo: z.string().trim().optional(),
-      riskLevel: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+      riskLevel: riskLevelQuery,
       approverXID: z.string().trim().optional(),
-      exceptionType: z.enum(['portal_issue', 'DSC_authorisation_pending', 'client_delay', 'query_raised', 'other']).optional(),
+      exceptionType: exceptionTypeQuery,
     }).strict(),
   },
   'GET /compliance-control-room': {
@@ -82,10 +89,10 @@ module.exports = {
       assigneeXID: z.string().trim().optional(),
       clientId: z.string().trim().optional(),
       obligationType: z.string().trim().optional(),
-      state: z.enum(['not_started', 'in_progress', 'awaiting_client', 'awaiting_partner', 'ready_to_file', 'filed', 'blocked', 'closed']).optional(),
+      state: complianceStateQuery,
       dueFrom: z.string().trim().optional(),
       dueTo: z.string().trim().optional(),
-      riskLevel: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+      riskLevel: riskLevelQuery,
       useDemo: z.enum(['true', 'false']).optional(),
     }).strict(),
   },
@@ -103,7 +110,7 @@ module.exports = {
       view: z.enum(['my_approvals', 'awaiting_partner', 'awaiting_client_signatory', 'overdue']).optional(),
       assigneeXID: z.string().trim().optional(),
       clientId: z.string().trim().optional(),
-      approvalType: z.enum(['internal_partner', 'client', 'authorised_signatory', 'other']).optional(),
+      approvalType: optionalEnum(['internal_partner', 'client', 'authorised_signatory', 'other']),
     }).strict(),
   },
   'POST /approval-queues/:caseId/remind': {

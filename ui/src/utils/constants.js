@@ -120,8 +120,8 @@ export const USER_ROLES = {
   SUPER_ADMIN: 'SuperAdmin',
   PRIMARY_ADMIN: 'PRIMARY_ADMIN',
   ADMIN: 'Admin',
+  MANAGER: 'Manager',
   EMPLOYEE: 'Employee',
-  PARTNER: 'Partner',
 };
 
 export const STORAGE_KEYS = {

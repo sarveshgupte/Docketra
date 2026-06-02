@@ -10,6 +10,11 @@ assert.ok(adminPage.includes('Admin access is required to manage team members.')
 
 const usersSection = read('ui/src/pages/admin/components/AdminUsersSection.jsx');
 assert.ok(usersSection.includes('No team members added yet'), 'Users empty state should use team members copy.');
+assert.ok(usersSection.includes('requiresPasswordSetup'), 'Users table should derive setup-pending actions from onboarding flags.');
+assert.ok(usersSection.includes('Send Setup Link'), 'Users table should expose setup-link action for invited/setup-pending users.');
+
+const adminApi = read('ui/src/api/admin.api.js');
+assert.ok(adminApi.includes('/admin/users/${xID}/reset-password'), 'Admin reset-password action should use the firm-scoped admin endpoint.');
 
 const createModal = read('ui/src/pages/admin/components/CreateUserModal.jsx');
 for (const role of ['Admin', 'Manager', 'Employee']) {
@@ -25,6 +30,7 @@ assert.ok(!roleMgmtDoc.includes('including client-management access where manage
 
 const routeSchemas = read('src/schemas/admin.routes.schema.js');
 assert.ok(routeSchemas.includes("'POST /users': { body: z.object({ name: nonEmptyString, email: z.string().trim().email(), role: z.enum(['ADMIN','MANAGER','USER'])"), 'Create user schema should restrict assignable roles.');
+assert.ok(routeSchemas.includes("'POST /users/:xID/reset-password':"), 'Admin reset-password schema should exist.');
 assert.ok(routeSchemas.includes("'PATCH /users/:xID/workbaskets':"), 'Workbasket mutation schema should exist.');
 assert.ok(routeSchemas.includes('.strict()'), 'Team mutation schemas should use strict payload handling.');
 

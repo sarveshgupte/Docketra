@@ -19,4 +19,11 @@ const adminRoleCopy = read('ui/src/pages/admin/adminRoleCopy.js');
 assert.ok(adminRoleCopy.includes('Manager'), 'role guidance copy should include Manager');
 assert.ok(!adminRoleCopy.includes('Partner'), 'role guidance copy should not advertise non-assignable Partner role');
 
+const roleVocabulary = read('docs/product/role-vocabulary.md');
+assert.ok(roleVocabulary.includes('Primary Admin'), 'role vocabulary doc should include Primary Admin');
+assert.ok(roleVocabulary.includes('Admin'), 'role vocabulary doc should include Admin');
+assert.ok(roleVocabulary.includes('Manager'), 'role vocabulary doc should include Manager');
+assert.ok(roleVocabulary.includes('Employee'), 'role vocabulary doc should include Employee');
+assert.ok(roleVocabulary.includes('Do not introduce `Partner` as a firm role'), 'role vocabulary doc should explicitly ban Partner as a firm role');
+
 console.log('teamManagementRoleOptions.test.js passed');

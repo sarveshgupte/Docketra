@@ -61,17 +61,24 @@ export const getApiErrorType = (error) => {
   return 'unknown';
 };
 
+export const getNormalizedUserStatus = (user) => String(user?.status || '').toLowerCase();
+
+export const normalizeAdminRole = (role) => String(role || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+
+export const requiresPasswordSetup = (user) => {
+  const status = getNormalizedUserStatus(user);
+  if (status === 'invited') return true;
+  if (user?.mustSetPassword) return true;
+  return Boolean(!user?.passwordSetAt && normalizeAdminRole(user?.role) !== 'PRIMARY_ADMIN');
+};
+
 export const getUserStatusBadge = (user) => {
-  const status = String(user?.status || '').toLowerCase();
-  if (status === 'invited') return { tone: 'Pending', label: 'Invited' };
+  const status = getNormalizedUserStatus(user);
+  if (requiresPasswordSetup(user)) return { tone: 'Pending', label: 'Setup pending' };
   if (status === 'active' || user?.isActive) return { tone: 'Approved', label: 'Active' };
   if (status === 'disabled') return { tone: 'Rejected', label: 'Cancelled' };
   return { tone: 'Rejected', label: status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Inactive' };
 };
-
-export const getNormalizedUserStatus = (user) => String(user?.status || '').toLowerCase();
-
-export const normalizeAdminRole = (role) => String(role || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
 
 export const isPrimaryAdminUser = (user) => {
   const normalizedRole = normalizeAdminRole(user?.role);
@@ -104,11 +111,7 @@ export const getRoleBadgePresentation = (user) => {
     return { tone: 'Pending', label: 'Manager' };
   }
 
-  if (normalizedRole === 'PARTNER') {
-    return { tone: 'Pending', label: 'Partner' };
-  }
-
-  if (['STAFF', 'EMPLOYEE', 'USER'].includes(normalizedRole)) {
+  if (['PARTNER', 'STAFF', 'EMPLOYEE', 'USER'].includes(normalizedRole)) {
     return { tone: 'Pending', label: 'Employee' };
   }
 

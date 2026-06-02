@@ -25,7 +25,7 @@ const FEATURES = [
   },
   {
     title: 'Real-Time Operational Metrics',
-    description: 'Partners get a bird\'s-eye view of firm performance. Identify bottlenecks, track overdue items, and monitor team workload instantly.',
+    description: 'Primary Admins, Admins, and Managers get a bird\'s-eye view of firm performance. Identify bottlenecks, track overdue items, and monitor team workload instantly.',
   },
 ];
 

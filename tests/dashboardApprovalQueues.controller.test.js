@@ -40,8 +40,8 @@ const run = async () => {
     delete require.cache[require.resolve('../src/controllers/dashboard.controller')];
     const controller = require('../src/controllers/dashboard.controller');
 
-    // 1. Verify ADMIN and PRIMARY_ADMIN can fetch approval queues
-    const allowedRoles = ['ADMIN', 'PRIMARY_ADMIN'];
+    // 1. Verify MANAGER, ADMIN, and PRIMARY_ADMIN can fetch approval queues
+    const allowedRoles = ['MANAGER', 'ADMIN', 'PRIMARY_ADMIN'];
     for (const role of allowedRoles) {
       const allowedReq = {
         user: { firmId: '67e95f7642adf77d7f4e1834', role, xID: 'X100001' },
@@ -57,8 +57,8 @@ const run = async () => {
       assert.strictEqual(allowedRes.payload.data.view, 'awaiting_partner');
     }
 
-    // 2. Verify USER and MANAGER are blocked from fetching approval queues
-    const deniedRoles = ['USER', 'MANAGER'];
+    // 2. Verify USER/Employee-tier roles are blocked from fetching approval queues
+    const deniedRoles = ['USER', 'EMPLOYEE'];
     for (const role of deniedRoles) {
       const deniedReq = {
         user: { firmId: '67e95f7642adf77d7f4e1834', role, xID: 'X100002' },
@@ -72,7 +72,7 @@ const run = async () => {
       assert.strictEqual(deniedRes.payload.success, false);
     }
 
-    // 3. Verify ADMIN and PRIMARY_ADMIN can trigger reminders
+    // 3. Verify MANAGER, ADMIN, and PRIMARY_ADMIN can trigger reminders
     for (const role of allowedRoles) {
       const remindReq = {
         user: { firmId: '67e95f7642adf77d7f4e1834', role, xID: 'X100003' },
@@ -87,7 +87,7 @@ const run = async () => {
       assert.strictEqual(remindRes.payload.data.escalated, true);
     }
 
-    // 4. Verify USER and MANAGER are blocked from triggering reminders
+    // 4. Verify USER/Employee-tier roles are blocked from triggering reminders
     for (const role of deniedRoles) {
       const remindReq = {
         user: { firmId: '67e95f7642adf77d7f4e1834', role, xID: 'X100004' },

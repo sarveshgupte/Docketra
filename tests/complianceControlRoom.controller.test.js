@@ -36,8 +36,8 @@ const run = async () => {
     delete require.cache[require.resolve('../src/controllers/dashboard.controller')];
     const controller = require('../src/controllers/dashboard.controller');
 
-    // 1. Verify all roles can view the Control Room calendar
-    const rolesToTestRead = ['USER', 'MANAGER', 'ADMIN', 'PRIMARY_ADMIN'];
+    // 1. Verify Manager and above can view the Control Room calendar
+    const rolesToTestRead = ['MANAGER', 'ADMIN', 'PRIMARY_ADMIN'];
     for (const role of rolesToTestRead) {
       const readReq = {
         user: { firmId: '67e95f7642adf77d7f4e1834', role, xID: 'X100001' },
@@ -53,7 +53,22 @@ const run = async () => {
       assert.strictEqual(readRes.payload.data.items[0].obligationType, 'GST');
     }
 
-    // 2. Verify only ADMIN and PRIMARY_ADMIN can edit state transitions
+    // 2. Verify USER/Employee-tier roles cannot view the Control Room calendar
+    const deniedReadRoles = ['USER', 'EMPLOYEE'];
+    for (const role of deniedReadRoles) {
+      const readReq = {
+        user: { firmId: '67e95f7642adf77d7f4e1834', role, xID: 'X100004' },
+        query: { obligationType: 'GST' },
+        params: {},
+        body: {},
+      };
+      const readRes = createMockRes();
+      await controller.getComplianceControlRoom(readReq, readRes);
+      assert.strictEqual(readRes.statusCode, 403, `Role ${role} should be blocked from reading control room`);
+      assert.strictEqual(readRes.payload.success, false);
+    }
+
+    // 3. Verify only ADMIN and PRIMARY_ADMIN can edit state transitions
     const deniedRoles = ['USER', 'MANAGER'];
     for (const role of deniedRoles) {
       const editReq = {
@@ -68,7 +83,7 @@ const run = async () => {
       assert.strictEqual(editRes.payload.success, false);
     }
 
-    // 3. Verify ADMIN and PRIMARY_ADMIN can successfully edit state transitions
+    // 4. Verify ADMIN and PRIMARY_ADMIN can successfully edit state transitions
     const allowedRoles = ['ADMIN', 'PRIMARY_ADMIN'];
     for (const role of allowedRoles) {
       const editReq = {

@@ -23,10 +23,9 @@
 - **Admin**: Firm-level administrator who manages day-to-day user access and setup tasks.
 - **Manager**: Team lead role with operational oversight and limited admin scope.
 - **Employee**: Standard firm user role for assigned docket execution.
-- **Partner**: Optional firm collaboration role used when enabled by firm policy.
 - **Role hierarchy (firm context)**: Primary Admin > Admin > Manager > Employee.
 - **Platform boundary**: SuperAdmin is platform-only and should not appear as a firm team-management role.
-- **Canonical firm role labels (admin-facing copy)**: Primary Admin, Admin, Manager, Employee, Partner.
+- **Canonical firm role labels (admin-facing copy)**: Primary Admin, Admin, Manager, Employee.
 - **Role storage compatibility note**: Backend may continue storing employee-tier users as `USER`; UI/admin copy must render that as `Employee`.
 
 ## Deprecated terms to avoid in UI
@@ -35,3 +34,4 @@
 - **Workbasket** (shared queue label) → use **Workbench**
 - **QC Workbasket** → use **QC Workbench**
 - **CRM client** (generic label) → use **Client** (within CRM context)
+- **Partner** → do not use as a Docketra firm role label; use Primary Admin, Admin, Manager, or Employee as appropriate.

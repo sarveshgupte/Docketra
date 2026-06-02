@@ -577,7 +577,7 @@ export const DashboardPage = () => {
       onClick: () => navigate(`${safeRoute(ROUTES.CASES(firmSlug))}?approvalStatus=PENDING`),
     },
     {
-      title: isAdmin ? 'Awaiting Partner Review' : 'Awaiting My Review',
+      title: isAdmin ? 'Awaiting Internal Review' : 'Awaiting My Review',
       value: awaitingPartnerReview,
       subtitle: 'Approval queue',
       onClick: () => navigate(`${safeRoute(ROUTES.MY_WORKLIST(firmSlug))}?status=PENDING`),
@@ -625,7 +625,7 @@ export const DashboardPage = () => {
       <div className="min-h-screen bg-gray-50">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
           <PageHeader
-            title={isAdmin ? 'Partner Control Dashboard' : 'User Work Dashboard'}
+            title={isAdmin ? 'Firm Control Dashboard' : 'User Work Dashboard'}
             description={
               isAdmin
                 ? 'Where is the compliance risk in my firm today?'

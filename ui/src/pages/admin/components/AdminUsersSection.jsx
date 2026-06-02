@@ -2,7 +2,7 @@ import { Card } from '../../../components/common/Card';
 import { Button } from '../../../components/common/Button';
 import { DataTable } from '../../../components/common/DataTable';
 import { EmptyState } from '../../../components/ui/EmptyState';
-import { getNormalizedUserStatus, isPrimaryAdminUser, getRoleBadgePresentation } from '../adminPageUtils';
+import { getNormalizedUserStatus, isPrimaryAdminUser, getRoleBadgePresentation, requiresPasswordSetup } from '../adminPageUtils';
 import { AdminSectionHeader } from './AdminSectionHeader';
 import { AdminStatusBadge } from './AdminStatusBadge';
 
@@ -57,14 +57,15 @@ export const AdminUsersSection = ({
               align: 'right',
               render: (u) => {
                 const status = getNormalizedUserStatus(u);
+                const setupPending = requiresPasswordSetup(u);
                 const isActionLoading = Boolean(actionLoadingByUser[u.xID]);
                 return (
                   <div className="flex justify-end gap-2" style={{ flexWrap: 'wrap' }}>
                     {canCreateUsers ? (
                       <Button size="sm" variant="outline" onClick={() => onEditUser(u)} disabled={isActionLoading}>Edit Access</Button>
                     ) : null}
-                    {status === 'invited' ? (
-                      <Button size="sm" variant="default" onClick={() => onResendInvite(u.xID)} disabled={isActionLoading}>Resend Invite</Button>
+                    {setupPending ? (
+                      <Button size="sm" variant="default" onClick={() => onResendInvite(u.xID)} disabled={isActionLoading}>Send Setup Link</Button>
                     ) : null}
                     {(!isPrimaryAdminUser(u) && u.role !== 'PRIMARY_ADMIN') ? (
                       u.lockedByAdmin ? (
@@ -73,7 +74,9 @@ export const AdminUsersSection = ({
                         <Button size="sm" variant="danger" onClick={() => onLock(u.xID)} disabled={isActionLoading}>Lock</Button>
                       )
                     ) : null}
-                    <Button size="sm" variant="outline" onClick={() => onResetPassword(u)} disabled={isActionLoading}>Reset Password</Button>
+                    {!setupPending ? (
+                      <Button size="sm" variant="outline" onClick={() => onResetPassword(u)} disabled={isActionLoading}>Reset Password</Button>
+                    ) : null}
                     {canCreateUsers ? (
                       <Button
                         size="sm"
@@ -81,7 +84,7 @@ export const AdminUsersSection = ({
                         disabled={isPrimaryAdminUser(u) || isActionLoading}
                         onClick={() => onToggleUserStatus(u)}
                       >
-                        {status === 'invited' ? 'Cancel Invite' : (status === 'active' ? 'Deactivate' : 'Activate')}
+                        {setupPending ? 'Cancel Invite' : (status === 'active' ? 'Deactivate' : 'Activate')}
                       </Button>
                     ) : null}
                   </div>

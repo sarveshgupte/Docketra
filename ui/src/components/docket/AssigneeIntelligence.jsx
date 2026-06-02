@@ -16,24 +16,32 @@ const toNumber = (value, fallback = 0) => {
   return Number.isFinite(number) ? number : fallback;
 };
 
-const getCandidateKeys = (user = {}) => [
-  user.xID,
-  user.xid,
-  user.userId,
-  user.value,
-  user._id,
-  user.id,
-  user.email,
-].map(normalizeXid).filter(Boolean);
+const isRecord = (value) => Boolean(value && typeof value === 'object');
 
-const getWorkloadKeys = (member = {}) => [
-  member.xID,
-  member.xid,
-  member.userId,
-  member._id,
-  member.id,
-  member.email,
-].map(normalizeXid).filter(Boolean);
+const getCandidateKeys = (user = {}) => {
+  if (!isRecord(user)) return [];
+  return [
+    user.xID,
+    user.xid,
+    user.userId,
+    user.value,
+    user._id,
+    user.id,
+    user.email,
+  ].map(normalizeXid).filter(Boolean);
+};
+
+const getWorkloadKeys = (member = {}) => {
+  if (!isRecord(member)) return [];
+  return [
+    member.xID,
+    member.xid,
+    member.userId,
+    member._id,
+    member.id,
+    member.email,
+  ].map(normalizeXid).filter(Boolean);
+};
 
 export const getAssigneeAvailabilityStatus = (label) => LABEL_STATUS[String(label || '').trim()] || 'unknown';
 
@@ -48,7 +56,11 @@ export const enrichAssignableUsersWithIntelligence = (assignableUsers = [], work
   const recommended = workloadData?.recommendations?.recommendedAssignee || workloadData?.recommendedAssignee || null;
   const recommendedKeys = new Set(getWorkloadKeys(recommended));
 
-  return assignableUsers
+  const assignableUserRows = Array.isArray(assignableUsers)
+    ? assignableUsers.filter(isRecord)
+    : [];
+
+  return assignableUserRows
     .map((user) => {
       const candidateKeys = getCandidateKeys(user);
       const workload = candidateKeys.map((key) => workloadByKey.get(key)).find(Boolean) || null;

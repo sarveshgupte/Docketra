@@ -1,14 +1,20 @@
 import { request } from './apiClient';
 
+const compactParams = (params = {}) => Object.fromEntries(
+  Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
+);
+
 export const dashboardApi = {
   getSummary: async ({ filter = 'MY', page = 1, limit = 10, sort = 'NEWEST', workbasketId, only } = {}) =>
-    request((api) => api.get('/dashboard/summary', { params: { filter, page, limit, sort, workbasketId, only } }), 'Failed to load dashboard summary'),
+    request((api) => api.get('/dashboard/summary', { params: compactParams({ filter, page, limit, sort, workbasketId, only }) }), 'Failed to load dashboard summary'),
   getRiskBrief: async () =>
     request((api) => api.get('/dashboard/risk-brief'), 'Failed to load morning risk brief'),
+  getOperationsCommandDashboard: async (filters = {}) =>
+    request((api) => api.get('/dashboard/partner-morning', { params: compactParams(filters) }), 'Failed to load operations command dashboard'),
   getPartnerMorningDashboard: async (filters = {}) =>
-    request((api) => api.get('/dashboard/partner-morning', { params: filters }), 'Failed to load partner morning dashboard'),
+    dashboardApi.getOperationsCommandDashboard(filters),
   getComplianceControlRoom: async (filters = {}) =>
-    request((api) => api.get('/dashboard/compliance-control-room', { params: filters }), 'Failed to load compliance control room'),
+    request((api) => api.get('/dashboard/compliance-control-room', { params: compactParams(filters) }), 'Failed to load compliance control room'),
   updateComplianceState: async (caseId, payload) =>
     request((api) => api.patch(`/dashboard/compliance-control-room/${caseId}/state`, payload), 'Failed to update compliance state'),
   listComplianceTemplates: async (params = {}) =>
@@ -24,7 +30,7 @@ export const dashboardApi = {
   runComplianceGeneration: async (payload) =>
     request((api) => api.post('/dashboard/compliance-generation/run', payload), 'Failed to run compliance generation'),
   getApprovalQueues: async (filters = {}) =>
-    request((api) => api.get('/dashboard/approval-queues', { params: filters }), 'Failed to load approval queues'),
+    request((api) => api.get('/dashboard/approval-queues', { params: compactParams(filters) }), 'Failed to load approval queues'),
   remindApproval: async (caseId, payload = {}) =>
     request((api) => api.post(`/dashboard/approval-queues/${caseId}/remind`, payload), 'Failed to queue approval reminder'),
   getSetupStatus: async () =>

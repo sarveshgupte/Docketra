@@ -32,6 +32,11 @@ assert.match(
   'Assignees should sort by Availability Score DESC, Overdue ASC, and Review Queue ASC.'
 );
 
+assert.ok(
+  helperSource.includes('if (!isRecord(member)) return [];') && helperSource.includes('assignableUsers.filter(isRecord)'),
+  'Assignee intelligence should ignore null workload/user rows instead of crashing Worklist renders.'
+);
+
 for (const label of ['Available', 'Moderate', 'Busy', 'Overloaded']) {
   assert.ok(helperSource.includes(label), `Assignee intelligence should support ${label} label.`);
 }

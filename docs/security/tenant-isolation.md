@@ -3,7 +3,7 @@
 ## 0) Scope shipped in this hardening pass
 - Admin polish fixes:
   - high-risk admin user actions now use app-consistent confirmation modal UX,
-  - canonical admin-facing role labels are standardized (`Primary Admin`, `Admin`, `Manager`, `Employee`, `Partner`),
+  - canonical admin-facing role labels are standardized (`Primary Admin`, `Admin`, `Manager`, `Employee`),
   - `SuperAdmin` remains platform-only and outside firm admin flows.
 - Tenant-boundary hardening:
   - firm-scoped report routes now fail closed without tenant context,

@@ -173,6 +173,7 @@ const swapModule = (modulePath, exportsValue) => {
     getRetentionPreview: ok,
     getSystemDiagnostics: ok,
     resendInviteEmail: ok,
+    sendUserPasswordReset: ok,
     getAllOpenCases: ok,
     getAllPendingCases: ok,
     getAllFiledCases: ok,
