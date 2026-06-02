@@ -830,6 +830,7 @@ export const Layout = ({ children, title, subtitle }) => {
                 aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : 'Notifications'}
                 title={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
                 aria-expanded={notificationOpen}
+                aria-controls="notification-dropdown-menu"
                 aria-haspopup="menu"
                 onClick={() => setNotificationOpen((v) => !v)}
               >
@@ -837,7 +838,7 @@ export const Layout = ({ children, title, subtitle }) => {
                 {unreadCount > 0 ? <span className="enterprise-header__notif-dot" aria-hidden="true">{unreadCount}</span> : null}
               </button>
               {notificationOpen ? (
-                <div className="dropdown-menu dropdown-menu-right enterprise-header__notification-menu" role="menu">
+                <div id="notification-dropdown-menu" className="dropdown-menu dropdown-menu-right enterprise-header__notification-menu" role="menu">
                   <div className="enterprise-header__notification-header">
                     <span>Notifications</span>
                     <span className="enterprise-header__notification-count">{unreadCount} unread</span>
@@ -925,6 +926,7 @@ export const Layout = ({ children, title, subtitle }) => {
                 type="button"
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                 aria-expanded={profileDropdownOpen}
+                aria-controls="profile-dropdown-menu"
                 aria-haspopup="true"
                 aria-label="User profile menu"
               >
@@ -933,7 +935,7 @@ export const Layout = ({ children, title, subtitle }) => {
                 <IconChevronDown />
               </button>
               {profileDropdownOpen && (
-                <div className="dropdown-menu dropdown-menu-right" role="menu">
+                <div id="profile-dropdown-menu" className="dropdown-menu dropdown-menu-right" role="menu">
                   <Link
                     to={ROUTES.PROFILE(currentFirmSlug)}
                     className="dropdown-item"
