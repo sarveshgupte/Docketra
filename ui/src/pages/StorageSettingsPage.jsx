@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -90,6 +90,8 @@ function getExportHistoryWarning(error) {
 }
 
 export function StorageSettingsPage() {
+  const navigate = useNavigate();
+  const { firmSlug } = useParams();
   const toast = useContext(ToastContext);
   const { user } = useAuth();
   const location = useLocation();
@@ -474,6 +476,18 @@ export function StorageSettingsPage() {
     <PlatformShell moduleLabel="Settings" title="Storage settings" subtitle={PAGE_SUBTITLE}>
       <div className="min-h-screen bg-slate-50/50 pb-16 font-sans">
         <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 space-y-8">
+          
+          {/* Go Back to Settings Link */}
+          <div className="flex items-center">
+            <button
+              type="button"
+              onClick={() => navigate(ROUTES.SETTINGS(firmSlug))}
+              className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-indigo-600 transition"
+            >
+              ← Go back to settings
+            </button>
+          </div>
+
           <PageHeader title="Storage Settings" subtitle={PAGE_SUBTITLE} />
           
           <StatusMessageStack messages={statusMessages} />

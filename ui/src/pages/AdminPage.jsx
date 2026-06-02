@@ -5,6 +5,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { PlatformShell } from '../components/platform/PlatformShell';
+import { ROUTES } from '../constants/routes';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
@@ -1378,6 +1379,18 @@ export const AdminPage = () => {
       actions={(<Button variant="outline" onClick={() => void handleRefreshAdminSurface()}>Refresh</Button>)}
     >
       <div className="admin">
+        {/* Go Back to Settings Link */}
+        {isWorkSettingsContext && (
+          <div className="flex items-center mb-6">
+            <button
+              type="button"
+              onClick={() => navigate(ROUTES.SETTINGS(firmSlug))}
+              className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-indigo-600 transition"
+            >
+              ← Go back to settings
+            </button>
+          </div>
+        )}
         <div className="admin__toolbar">
           <div className="admin__tabs" aria-label="Admin sections">
             {!isWorkSettingsContext && (

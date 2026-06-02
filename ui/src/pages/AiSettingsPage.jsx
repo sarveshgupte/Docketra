@@ -1,5 +1,7 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { PlatformShell } from '../components/platform/PlatformShell';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ROUTES } from '../constants/routes';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
@@ -34,6 +36,8 @@ const modeLabel = (provider, enabled) => {
 };
 
 export function AiSettingsPage() {
+  const navigate = useNavigate();
+  const { firmSlug } = useParams();
   const toast = useContext(ToastContext);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -107,6 +111,18 @@ export function AiSettingsPage() {
   return (
     <PlatformShell moduleLabel="Settings" title="AI settings" subtitle="Configure optional AI assistance for your workspace.">
       <div className="platform-page section-group">
+        
+        {/* Go Back to Settings Link */}
+        <div className="flex items-center mb-6">
+          <button
+            type="button"
+            onClick={() => navigate(ROUTES.SETTINGS(firmSlug))}
+            className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-indigo-600 transition"
+          >
+            ← Go back to settings
+          </button>
+        </div>
+
         <StatusMessageStack messages={statusMessages} />
         <Card className="settings-status-card"><div className="settings-form-split">
           <div className="settings-form-split__meta">

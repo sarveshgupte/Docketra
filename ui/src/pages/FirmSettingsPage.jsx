@@ -13,6 +13,7 @@ import { categoryService } from '../services/categoryService';
 import { getFirmConfig, setFirmConfig } from '../utils/firmConfig';
 import { formatDateTime } from '../utils/formatDateTime';
 import { StatusMessageStack } from './platform/PlatformShared';
+import { ROUTES } from '../constants/routes';
 
 const enabledDisabledOptions = [
   { value: 'true', label: 'Enabled' },
@@ -360,6 +361,18 @@ export const FirmSettingsPage = () => {
     <PlatformShell moduleLabel="Settings" title="Firm settings" subtitle="Configure operational defaults, SLA policy, and feature visibility for this firm.">
       <div className="min-h-screen w-full flex-1 bg-[var(--dt-bg-warm)]">
         <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 space-y-8">
+          
+          {/* Go Back to Settings Link */}
+          <div className="flex items-center">
+            <button
+              type="button"
+              onClick={() => navigate(ROUTES.SETTINGS(firmSlug))}
+              className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-indigo-600 transition"
+            >
+              ← Go back to settings
+            </button>
+          </div>
+
           <PageHeader
             title="Firm Settings"
             description="Configure operational defaults and feature visibility for this firm."
