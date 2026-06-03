@@ -129,27 +129,31 @@ const handleClientPostCreate = async ({ type, user, createdClients = [] }) => {
 
   const { category, subcategory } = categoryBundle;
 
+  // ⚡ Bolt Performance Optimization:
+  // Hoist static calculations (SLA dates, config, etc.) outside the loop
+  // so we don't redundantly query or calculate them per createdClient.
+  const createdAt = new Date();
+  const calendarConfig = await getFirmSlaCalendarConfig(user.firmId);
+  const fallbackDueDate = slaService.calculateFallbackDueDateFromDays(
+    createdAt,
+    Math.max(0, Number(subcategory.defaultSlaDays || category.defaultSlaDays || 3)),
+    { calendarConfig },
+  );
+
+  const dueDate = await slaService.calculateSlaDueDate({
+    firmId: user.firmId,
+    category: category.name,
+    subcategory: subcategory.name,
+    workbasketId: subcategory.workbasketId || null,
+    createdAt,
+  }, { calendarConfig }) || fallbackDueDate;
+
   for (const createdClient of createdClients) {
     try {
       const idempotencyKey = `automation:bulk-upload:default-docket:${user.firmId}:${createdClient.clientId}`;
-      const existingCase = await Case.findOne({ firmId: user.firmId, idempotencyKey }).select('_id').lean();
+      // ⚡ Bolt Performance Optimization: Replace findOne with exists to bypass document hydration
+      const existingCase = await Case.exists({ firmId: user.firmId, idempotencyKey });
       if (existingCase) continue;
-
-      const createdAt = new Date();
-      const calendarConfig = await getFirmSlaCalendarConfig(user.firmId);
-      const fallbackDueDate = slaService.calculateFallbackDueDateFromDays(
-        createdAt,
-        Math.max(0, Number(subcategory.defaultSlaDays || category.defaultSlaDays || 3)),
-        { calendarConfig },
-      );
-
-      const dueDate = await slaService.calculateSlaDueDate({
-        firmId: user.firmId,
-        category: category.name,
-        subcategory: subcategory.name,
-        workbasketId: subcategory.workbasketId || null,
-        createdAt,
-      }, { calendarConfig }) || fallbackDueDate;
 
       await Case.create({
         title: 'Initial Setup',
