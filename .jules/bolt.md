@@ -48,3 +48,6 @@
 ## 2026-05-21 - Concurrent Document Fetch in Case Create Service Validation
 **Learning:** In the `caseCreate` service, `WorkType.findOne` and `SubWorkType.findOne` were awaited sequentially, which caused endpoint latency, despite being independent of the other model validation queries (like `Deal`, `CrmClient`, etc.).
 **Action:** Prepared the `WorkType` and `SubWorkType` queries as promises and merged them into the existing `Promise.all()` concurrently with the other independent lookups.
+## 2024-05-25 - Prevent redundant SLA calculations in bulk operations
+**Learning:** Found an N+1 performance bottleneck during bulk upload case creation where `getFirmSlaCalendarConfig` and `slaService.calculateSlaDueDate` were executed per client loop even though the inputs (`firmId`, `category`, `subcategory`, `createdAt`) were identical.
+**Action:** Always inspect loops in bulk operations. Hoist static calculations and database queries (like config fetches and dates) outside the loop to prevent redundant function executions and DB queries.
