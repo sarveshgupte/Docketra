@@ -40,3 +40,7 @@
 **Vulnerability:** Raw error messages (`error.message`) were being directly exposed to clients in API error responses (e.g., in `src/controllers/user.controller.js`).
 **Learning:** Exposing raw internal error details to the client can leak sensitive system information, configuration details, or underlying infrastructure state, which can be leveraged by attackers.
 **Prevention:** Always log the full error details server-side using the internal logger (`log.error`) and return generic, safe error messages to the client (e.g., "Unable to load profile").
+## 2026-06-03 - Prevent Mass Assignment on Audit Fields
+**Vulnerability:** Mass Assignment (CWE-915) allowed attackers to supply arbitrary `createdBy`, `updatedBy`, `performedBy`, or `clonedBy` identifiers via `req.body` (e.g., in `src/controllers/user.controller.js` and `src/middleware/caseLock.middleware.js`). This allowed spoofing audit logs and framing other users for actions.
+**Learning:** Destructuring or reading audit-related identity fields directly from `req.body` implicitly trusts the client, bypassing server-side authentication guarantees.
+**Prevention:** Always extract identity identifiers strictly from the server-validated `req.user` context (e.g., `req.user?._id`, `req.user?.email`, `req.user?.xID`) rather than from the request payload.
