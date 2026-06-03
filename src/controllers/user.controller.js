@@ -183,7 +183,8 @@ const createUser = async (req, res) => {
       name,
       email: normalizedEmail,
       role,
-      createdBy: req.body.createdBy, // In real app, this comes from auth
+      // 🛡️ Sentinel: Prevent Mass Assignment / IDOR by deriving audit field securely from server-side authenticated context instead of req.body
+      createdBy: req.user?._id,
     });
     
     await user.save();
@@ -234,7 +235,8 @@ const updateUser = async (req, res) => {
     if (name) user.name = name;
     if (role) user.role = role;
     if (isActive !== undefined) user.isActive = isActive;
-    user.updatedBy = req.body.updatedBy; // In real app, this comes from auth
+    // 🛡️ Sentinel: Prevent Mass Assignment / IDOR by deriving audit field securely from server-side authenticated context instead of req.body
+    user.updatedBy = req.user?._id;
     
     await user.save();
     if (role && role !== previousRole) {
@@ -307,7 +309,8 @@ const deleteUser = async (req, res) => {
     }
     
     user.isActive = false;
-    user.updatedBy = req.body.updatedBy; // In real app, this comes from auth
+    // 🛡️ Sentinel: Prevent Mass Assignment / IDOR by deriving audit field securely from server-side authenticated context instead of req.body
+    user.updatedBy = req.user?._id;
     await user.save();
     await logSecurityAuditEvent({
       req,
