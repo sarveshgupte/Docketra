@@ -48,3 +48,6 @@
 ## 2026-05-21 - Concurrent Document Fetch in Case Create Service Validation
 **Learning:** In the `caseCreate` service, `WorkType.findOne` and `SubWorkType.findOne` were awaited sequentially, which caused endpoint latency, despite being independent of the other model validation queries (like `Deal`, `CrmClient`, etc.).
 **Action:** Prepared the `WorkType` and `SubWorkType` queries as promises and merged them into the existing `Promise.all()` concurrently with the other independent lookups.
+## 2026-06-03 - Execute paginated find and countDocuments queries concurrently
+**Learning:** Found multiple endpoints performing sequential Mongoose \`countDocuments()\` and \`find()\` queries. This adds the latency of the two independent database network round-trips.
+**Action:** Always prepare independent \`countDocuments\` and \`find\` operations as promises and execute them concurrently via \`Promise.all()\` for paginated listing routes to minimize backend latency.

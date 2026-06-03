@@ -228,13 +228,16 @@ const getDocumentItems = async (req, res) => {
     }
 
     const skip = (Number(page) - 1) * Number(limit);
-    const total = await DocumentItem.countDocuments(query);
-    const items = await DocumentItem.find(query)
-      .populate('versions.fileReference', 'fileName size fileUrl uploadedBy createdAt')
-      .sort({ updatedAt: -1 })
-      .skip(skip)
-      .limit(Number(limit))
-      .lean();
+    // ⚡ Bolt: Execute independent queries concurrently
+    const [total, items] = await Promise.all([
+      DocumentItem.countDocuments(query),
+      DocumentItem.find(query)
+        .populate('versions.fileReference', 'fileName size fileUrl uploadedBy createdAt')
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+    ]);
 
     return res.json({
       success: true,

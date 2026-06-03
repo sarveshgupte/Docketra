@@ -135,12 +135,15 @@ const getDocketEfforts = async (req, res) => {
     }
 
     const skip = (Number(page) - 1) * Number(limit);
-    const total = await DocketEffort.countDocuments(query);
-    const items = await DocketEffort.find(query)
-      .sort({ date: -1, createdAt: -1 })
-      .skip(skip)
-      .limit(Number(limit))
-      .lean();
+    // ⚡ Bolt: Execute independent queries concurrently
+    const [total, items] = await Promise.all([
+      DocketEffort.countDocuments(query),
+      DocketEffort.find(query)
+        .sort({ date: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+    ]);
 
     return res.json({
       success: true,
