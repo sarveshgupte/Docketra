@@ -83,6 +83,7 @@ const restoreSwaps = () => {
     listClientCfsComments: noOp,
     addClientCfsComment: noOp,
     listClientActivity: noOp,
+    repairClientEncryptionKey: noOp,
   });
 
   delete require.cache[createAppModulePath];

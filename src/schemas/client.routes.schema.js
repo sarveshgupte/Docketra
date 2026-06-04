@@ -23,6 +23,8 @@ module.exports = {
       contactPersonName: z.string().trim().min(1),
       contactPersonEmail: z.string().trim().email(),
       contactPersonPhone: z.string().trim().min(1),
+      contactPersonEmailAddress: z.string().trim().email().optional(),
+      contactPersonPhoneNumber: z.string().trim().min(1).optional(),
     }).strict(),
   },
   'PUT /:clientId': {
@@ -43,6 +45,8 @@ module.exports = {
       contactPersonName: z.string().trim().min(1, 'Contact person name cannot be empty').optional(),
       contactPersonEmail: z.string().trim().email('Contact person email must be valid').optional(),
       contactPersonPhone: z.string().trim().min(1, 'Contact person phone cannot be empty').optional(),
+      contactPersonEmailAddress: z.string().trim().email('Contact person email address must be valid').optional(),
+      contactPersonPhoneNumber: z.string().trim().min(1, 'Contact person phone number cannot be empty').optional(),
       latitude: z.never({ invalid_type_error: 'Latitude is deprecated and cannot be modified.' }).optional(),
       longitude: z.never({ invalid_type_error: 'Longitude is deprecated and cannot be modified.' }).optional(),
     }).strict(),

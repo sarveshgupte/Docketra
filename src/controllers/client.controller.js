@@ -453,10 +453,15 @@ const createClient = async (req, res) => {
       'TAN',
       'GST',
       'CIN',
+      'city',
+      'state',
+      'pincode',
       'contactPersonName',
       'contactPersonDesignation',
       'contactPersonPhoneNumber',
-      'contactPersonEmailAddress'
+      'contactPersonEmailAddress',
+      'contactPersonEmail',
+      'contactPersonPhone'
     ];
     
     let sanitizedBody;
