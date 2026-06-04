@@ -110,13 +110,12 @@ const emailCaptureSchema = new mongoose.Schema(
 );
 
 // Keep firmId and tenantId in sync before validation
-emailCaptureSchema.pre('validate', function(next) {
+emailCaptureSchema.pre('validate', function() {
   if (this.firmId && !this.tenantId) {
     this.tenantId = String(this.firmId);
   } else if (this.tenantId && !this.firmId) {
     this.firmId = new mongoose.Types.ObjectId(this.tenantId);
   }
-  next();
 });
 
 // Indices for operational performance and tenant boundary isolation

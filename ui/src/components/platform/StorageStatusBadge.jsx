@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import useStorageStatusSummary from '../../hooks/useStorageStatusSummary';
 import { ROUTES, hasValidFirmSlug } from '../../constants/routes';
+import { useAuth } from '../../hooks/useAuth';
+import { hasFirmRoleAtLeast, isFirmAdminOrAbove, isPrimaryAdmin } from '../../utils/roleHierarchy';
 
 const formatDateTime = (value) => {
   if (!value) return 'Not available';
@@ -11,17 +13,24 @@ const formatDateTime = (value) => {
 };
 
 export default function StorageStatusBadge() {
-  const { pathname } = useLocation();
   const { firmSlug } = useParams();
   const location = useLocation();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
+  const canViewStorageStatus = hasFirmRoleAtLeast(user, 'MANAGER');
+  const canReadOwnershipSummary = isFirmAdminOrAbove(user);
+  const canReadRootHealth = isPrimaryAdmin(user) || Boolean(user?.isPrimaryAdmin);
   const inferredFirmSlug = useMemo(() => {
     const match = String(location.pathname || '').match(/^\/app\/firm\/([^/]+)/i);
     return match?.[1] ? decodeURIComponent(match[1]) : '';
   }, [location.pathname]);
   const activeFirmSlug = hasValidFirmSlug(firmSlug) ? firmSlug : inferredFirmSlug;
-  const summary = useStorageStatusSummary(activeFirmSlug);
+  const statusFirmSlug = canViewStorageStatus ? activeFirmSlug : '';
+  const summary = useStorageStatusSummary(statusFirmSlug, {
+    includeOwnershipSummary: canReadOwnershipSummary,
+    includeRootHealth: canReadRootHealth,
+  });
 
   const storageSettingsPath = useMemo(() => {
     const path = String(summary.storageSettingsPath || '').trim();
@@ -43,7 +52,7 @@ export default function StorageStatusBadge() {
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
-  if (!activeFirmSlug) return null;
+  if (!activeFirmSlug || !canViewStorageStatus) return null;
 
   return (
     <div className="platform__storage-badge" ref={containerRef}>

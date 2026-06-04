@@ -167,10 +167,9 @@ const leadSchema = new mongoose.Schema({
   },
 }, { timestamps: { createdAt: true, updatedAt: false } });
 
-leadSchema.pre('validate', function syncStatusAndStage(next) {
+leadSchema.pre('validate', function syncStatusAndStage() {
   if (!this.stage && this.status) this.stage = this.status;
   if (!this.status && this.stage) this.status = this.stage;
-  next();
 });
 
 leadSchema.index({ firmId: 1, status: 1, createdAt: -1 });

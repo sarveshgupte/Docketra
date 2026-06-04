@@ -61,6 +61,7 @@ export const PlatformWorkbasketsPage = () => {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [success, setSuccess] = useState('');
+  const [actionError, setActionError] = useState('');
   const [pendingPullId, setPendingPullId] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
   const [assignableUsers, setAssignableUsers] = useState([]);
@@ -101,6 +102,7 @@ export const PlatformWorkbasketsPage = () => {
   useEffect(() => {
     setSelectedIds([]);
     setSuccess('');
+    setActionError('');
     setBulkAssigneeXid('');
   }, [workbasketId]);
 
@@ -123,21 +125,28 @@ export const PlatformWorkbasketsPage = () => {
     if (!targetXid || selectedIds.length === 0 || bulkMoving) return;
     setBulkMoving(true);
     setSuccess('');
+    setActionError('');
     try {
-      await Promise.all(
-        selectedIds.map(caseId =>
-          worklistApi.moveDocket(caseId, {
-            destinationType: 'USER_WORKLIST',
-            assigneeXID: targetXid,
-          })
-        )
-      );
-      setSuccess(isSupervisor ? `Successfully moved ${selectedIds.length} docket(s) to assignee's worklist.` : `Successfully pulled ${selectedIds.length} docket(s) to your worklist.`);
+      if (isSupervisor) {
+        await Promise.all(
+          selectedIds.map((caseId) =>
+            worklistApi.moveDocket(caseId, {
+              destinationType: 'USER_WORKLIST',
+              assigneeXID: targetXid,
+            })
+          )
+        );
+        setSuccess(`Successfully moved ${selectedIds.length} docket(s) to assignee's worklist.`);
+      } else {
+        const result = await worklistApi.pullCases(selectedIds);
+        const pulledCount = Number(result?.pulledCount || result?.assigned || selectedIds.length);
+        setSuccess(`Successfully pulled ${pulledCount} docket(s) to your worklist.`);
+      }
       setSelectedIds([]);
       setBulkAssigneeXid('');
       await refetch();
     } catch (err) {
-      // keep message on screen
+      setActionError(err?.message || 'Unable to pull the selected docket(s) right now.');
     } finally {
       setBulkMoving(false);
     }
@@ -246,6 +255,7 @@ export const PlatformWorkbasketsPage = () => {
       <StatusMessageStack
         messages={[
           { tone: 'error', message: isError ? 'Unable to load workbaskets right now.' : '' },
+          { tone: 'error', message: actionError },
           { tone: 'success', message: success },
           { tone: 'info', message: isFetching && !isLoading ? 'Refreshing the workbaskets queue in the background…' : '' },
         ]}

@@ -77,8 +77,10 @@ const getTaskById = async (firmId, taskId) => {
 };
 
 const createTask = async (firmId, payload) => {
-  const task = await TaskRepository.create(firmId, payload);
-  await persistTaskNarrative({ firmId, task, payload, updatedBy: payload?.updatedBy || payload?.createdBy || 'SYSTEM' });
+  const { description, ...restPayload } = payload || {};
+  const task = await TaskRepository.create(firmId, restPayload);
+  await persistTaskNarrative({ firmId, task, payload: { ...payload, description }, updatedBy: payload?.updatedBy || payload?.createdBy || 'SYSTEM' });
+  task.description = undefined;
   await task.save();
   await task.populate('assignedTo', 'name email');
   return task;
@@ -89,7 +91,6 @@ const updateTask = async (firmId, taskId, payload) => {
   if (!task) return null;
   const { title, description, status, priority, assignedTo, dueDate, estimatedHours, actualHours, tags, updatedBy } = payload;
   if (title) task.title = title;
-  if (description !== undefined) task.description = description;
   if (status) task.status = status;
   if (priority) task.priority = priority;
   if (assignedTo !== undefined) task.assignedTo = assignedTo;
@@ -99,6 +100,7 @@ const updateTask = async (firmId, taskId, payload) => {
   if (tags) task.tags = tags;
   task.updatedBy = updatedBy;
   await persistTaskNarrative({ firmId, task, payload, updatedBy: updatedBy || 'SYSTEM' });
+  task.description = undefined;
   await task.save();
   await task.populate('assignedTo', 'name email');
   return task;
@@ -110,4 +112,4 @@ const getTaskStats = async (firmId) => {
   return { byStatus, byPriority };
 };
 
-module.exports = { getTasks, getTaskById, createTask, updateTask, deleteTask, getTaskStats };
+module.exports = { getTasks, getTaskById, createTask, updateTask, deleteTask, getTaskStats, persistTaskNarrative };

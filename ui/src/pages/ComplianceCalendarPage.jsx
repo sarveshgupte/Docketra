@@ -1,834 +1,697 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import dayjs from 'dayjs';
+import { Calendar as BigCalendar, dayjsLocalizer } from 'react-big-calendar';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { PlatformShell } from '../components/platform/PlatformShell';
-import { PageHeader } from '../components/layout/PageHeader';
-import { EmptyState } from '../components/ui/EmptyState';
+import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
-import { dashboardApi } from '../api/dashboard.api';
-import { useAuth } from '../hooks/useAuth';
-import { formatDate } from '../utils/formatters';
-import { ROUTES } from '../constants/routes';
+import { Input } from '../components/common/Input';
+import { Select } from '../components/common/Select';
+import { Textarea } from '../components/common/Textarea';
+import { EmptyState, LoadingState, PageSection, StatGrid, StatusMessageStack } from './platform/PlatformShared';
+import { calendarApi } from '../api/calendar.api';
+import { formatDateOnly } from '../utils/formatDateTime';
 import { hasFirmRoleAtLeast } from '../utils/roleHierarchy';
+import { useAuth } from '../hooks/useAuth';
 import './ComplianceCalendarPage.css';
 
-const COMPLIANCE_STATES = [
-  'not_started',
-  'in_progress',
-  'awaiting_client',
-  'awaiting_partner',
-  'ready_to_file',
-  'filed',
-  'blocked',
-  'closed',
+const localizer = dayjsLocalizer(dayjs);
+
+const calendarEntryTypeOptions = [
+  { value: 'important_date', label: 'Important date' },
+  { value: 'holiday', label: 'Holiday' },
+  { value: 'birthday', label: 'Birthday' },
+  { value: 'working_day', label: 'Working day' },
+  { value: 'off_day', label: 'Off day' },
 ];
 
-const riskOptions = ['low', 'medium', 'high', 'critical'];
-const APPROVAL_VIEWS = [
-  { key: 'my_approvals', label: 'My approvals' },
-  { key: 'awaiting_partner', label: 'Awaiting internal approval' },
-  { key: 'awaiting_client_signatory', label: 'Awaiting client/signatory' },
-  { key: 'overdue', label: 'Overdue approvals' },
-];
-const EXCEPTION_TYPE_OPTIONS = [
-  { key: 'portal_issue', label: 'Portal issue' },
-  { key: 'DSC_authorisation_pending', label: 'DSC/signatory pending' },
-  { key: 'client_delay', label: 'Client delay' },
-  { key: 'query_raised', label: 'Query raised' },
-  { key: 'other', label: 'Other' },
+const recurrenceFrequencyOptions = [
+  { value: 'none', label: 'Does not repeat' },
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'quarterly', label: 'Quarterly' },
+  { value: 'yearly', label: 'Yearly' },
 ];
 
-const DISPLAY_LABELS = {
-  awaiting_partner: 'Awaiting Internal Approval',
-  internal_partner: 'Internal Approval',
+const addDays = (date, days) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
 };
 
-const toLabel = (value) => {
-  const key = String(value || '').trim().toLowerCase();
-  if (DISPLAY_LABELS[key]) return DISPLAY_LABELS[key];
-  return key
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
+const addMonthsClamped = (date, months) => {
+  const source = new Date(date);
+  const dayOfMonth = source.getDate();
+  source.setDate(1);
+  source.setMonth(source.getMonth() + months);
+  const lastDay = new Date(source.getFullYear(), source.getMonth() + 1, 0).getDate();
+  source.setDate(Math.min(dayOfMonth, lastDay));
+  return source;
 };
 
-const normalizeDueRisk = (dueRisk) => {
-  if (dueRisk === 'overdue') return 'overdue';
-  if (dueRisk === 'due_soon') return 'due-soon';
-  return 'on-track';
+const addYearsClamped = (date, years) => addMonthsClamped(date, years * 12);
+
+const startOfDay = (value) => {
+  const date = new Date(value);
+  date.setHours(0, 0, 0, 0);
+  return date;
 };
 
-const riskChipClass = (riskLevel) => `compliance-chip compliance-chip--risk-${String(riskLevel || 'medium').toLowerCase()}`;
-const statusChipClass = (state) => `compliance-chip compliance-chip--state-${String(state || '').toLowerCase().replaceAll('_', '-')}`;
-const dueChipClass = (dueRisk) => `compliance-chip compliance-chip--due-${normalizeDueRisk(dueRisk)}`;
+const endOfDay = (value) => {
+  const date = new Date(value);
+  date.setHours(23, 59, 59, 999);
+  return date;
+};
 
-const defaultFilters = {
-  assigneeXID: '',
-  clientId: '',
-  obligationType: '',
-  state: '',
-  dueFrom: '',
-  dueTo: '',
-  riskLevel: '',
-  approverXID: '',
-  exceptionType: '',
-  useDemo: 'false',
+const toInputDate = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return dayjs(date).format('YYYY-MM-DD');
+};
+
+const safeText = (value) => String(value || '').trim();
+
+const normalizeCalendarEntry = (entry) => {
+  const recurrencePattern = entry?.recurrencePattern && typeof entry.recurrencePattern === 'object'
+    ? entry.recurrencePattern
+    : null;
+
+  return {
+    id: String(entry?._id || entry?.id || ''),
+    title: safeText(entry?.title) || 'Untitled calendar entry',
+    description: safeText(entry?.description),
+    dueDate: entry?.dueDate ? new Date(entry.dueDate) : null,
+    status: entry?.status || 'pending',
+    clientName: safeText(entry?.clientName),
+    clientId: safeText(entry?.clientId),
+    categoryName: safeText(entry?.categoryName),
+    linkedCaseId: safeText(entry?.linkedCaseId),
+    calendarEntryType: entry?.calendarEntryType || 'important_date',
+    reminderDaysBefore: Number.isFinite(Number(entry?.reminderDaysBefore)) ? Number(entry.reminderDaysBefore) : '',
+    recurrencePattern: recurrencePattern ? {
+      frequency: recurrencePattern.frequency || 'none',
+      interval: Number.isFinite(Number(recurrencePattern.interval)) ? Number(recurrencePattern.interval) : 1,
+      untilDate: recurrencePattern.untilDate ? new Date(recurrencePattern.untilDate) : null,
+    } : null,
+  };
+};
+
+const getInitialFormState = (selectedDate = new Date()) => ({
+  id: '',
+  title: '',
+  dueDate: toInputDate(selectedDate),
+  description: '',
+  calendarEntryType: 'important_date',
+  reminderDaysBefore: '',
+  clientName: '',
+  linkedCaseId: '',
+  recurrenceFrequency: 'none',
+  recurrenceInterval: '1',
+  recurrenceUntil: '',
+});
+
+const createPayload = (form) => {
+  const title = safeText(form.title);
+  const dueDate = form.dueDate ? new Date(`${form.dueDate}T00:00:00`) : null;
+  const recurrenceFrequency = String(form.recurrenceFrequency || 'none').trim().toLowerCase();
+  const recurrencePattern = recurrenceFrequency && recurrenceFrequency !== 'none'
+    ? {
+      frequency: recurrenceFrequency,
+      interval: Math.max(1, Number(form.recurrenceInterval) || 1),
+      untilDate: form.recurrenceUntil ? new Date(`${form.recurrenceUntil}T00:00:00`) : null,
+    }
+    : null;
+
+  return {
+    title,
+    dueDate: dueDate ? dueDate.toISOString() : null,
+    description: safeText(form.description),
+    calendarEntryType: form.calendarEntryType || 'important_date',
+    reminderDaysBefore: form.reminderDaysBefore === '' ? undefined : Number(form.reminderDaysBefore),
+    clientName: safeText(form.clientName),
+    linkedCaseId: safeText(form.linkedCaseId),
+    recurrencePattern,
+  };
+};
+
+const matchesSearch = (entry, needle) => {
+  if (!needle) return true;
+  const haystack = [
+    entry.title,
+    entry.description,
+    entry.clientName,
+    entry.clientId,
+    entry.linkedCaseId,
+    entry.calendarEntryType,
+  ].join(' ').toLowerCase();
+  return haystack.includes(needle);
+};
+
+const addInterval = (date, pattern) => {
+  const frequency = String(pattern?.frequency || 'none').toLowerCase();
+  const interval = Math.max(1, Number(pattern?.interval) || 1);
+  if (frequency === 'daily') return addDays(date, interval);
+  if (frequency === 'weekly') return addDays(date, interval * 7);
+  if (frequency === 'monthly') return addMonthsClamped(date, interval);
+  if (frequency === 'quarterly') return addMonthsClamped(date, interval * 3);
+  if (frequency === 'yearly') return addYearsClamped(date, interval);
+  return null;
+};
+
+const expandEntryOccurrences = (entries, rangeStart, rangeEnd) => {
+  const expanded = [];
+  const hardLimit = 1200;
+
+  entries.forEach((entry) => {
+    if (!entry.dueDate) return;
+    const recurrence = entry.recurrencePattern?.frequency && entry.recurrencePattern.frequency !== 'none'
+      ? entry.recurrencePattern
+      : null;
+    const baseStart = startOfDay(entry.dueDate);
+    const limit = recurrence?.untilDate ? endOfDay(recurrence.untilDate) : rangeEnd;
+
+    if (!recurrence) {
+      if (baseStart >= rangeStart && baseStart <= rangeEnd) {
+        expanded.push({
+          id: `${entry.id}-${baseStart.toISOString()}`,
+          title: entry.title,
+          start: baseStart,
+          end: addDays(baseStart, 1),
+          allDay: true,
+          entry,
+        });
+      }
+      return;
+    }
+
+    let occurrence = baseStart;
+    let iterations = 0;
+    while (occurrence <= rangeEnd && iterations < hardLimit) {
+      if (occurrence >= rangeStart && occurrence <= limit) {
+        expanded.push({
+          id: `${entry.id}-${occurrence.toISOString()}`,
+          title: entry.title,
+          start: occurrence,
+          end: addDays(occurrence, 1),
+          allDay: true,
+          entry,
+        });
+      }
+
+      const nextOccurrence = addInterval(occurrence, recurrence);
+      if (!nextOccurrence || nextOccurrence.getTime() === occurrence.getTime()) break;
+      occurrence = nextOccurrence;
+      iterations += 1;
+      if (occurrence > limit) break;
+    }
+  });
+
+  return expanded;
+};
+
+const recurrenceSummary = (entry) => {
+  const recurrence = entry.recurrencePattern;
+  if (!recurrence || !recurrence.frequency || recurrence.frequency === 'none') return 'Does not repeat';
+  const frequencyLabel = recurrence.frequency.charAt(0).toUpperCase() + recurrence.frequency.slice(1);
+  const interval = Math.max(1, Number(recurrence.interval) || 1);
+  const every = interval === 1 ? frequencyLabel.toLowerCase() : `${interval} ${frequencyLabel.toLowerCase()}s`;
+  const until = recurrence.untilDate ? ` until ${formatDateOnly(recurrence.untilDate)}` : '';
+  return `Repeats every ${every}${until}`;
+};
+
+const eventTypeLabel = (value) => {
+  const match = calendarEntryTypeOptions.find((option) => option.value === value);
+  return match?.label || 'Important date';
+};
+
+const eventColor = (type) => {
+  switch (type) {
+    case 'holiday':
+      return '#2563eb';
+    case 'birthday':
+      return '#db2777';
+    case 'working_day':
+      return '#059669';
+    case 'off_day':
+      return '#7c3aed';
+    default:
+      return '#0f766e';
+  }
 };
 
 export const ComplianceCalendarPage = () => {
   const { user } = useAuth();
-  const { firmSlug } = useParams();
-  const [filters, setFilters] = useState(defaultFilters);
-  const [summary, setSummary] = useState({
-    dueThisWeek: 0,
-    overdue: 0,
-    awaitingClient: 0,
-    awaitingPartner: 0,
-    readyToFile: 0,
-    blocked: 0,
-    filedRecently: 0,
-  });
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const canEditCalendar = hasFirmRoleAtLeast(user, 'ADMIN');
+  const [calendarEntries, setCalendarEntries] = useState([]);
+  const [loadingEntries, setLoadingEntries] = useState(true);
+  const [savingEntry, setSavingEntry] = useState(false);
+  const [deletingEntryId, setDeletingEntryId] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [editingEntryId, setEditingEntryId] = useState('');
+  const [form, setForm] = useState(() => getInitialFormState(new Date()));
+  const [message, setMessage] = useState({ tone: '', message: '' });
   const [error, setError] = useState('');
-  const [savingCaseId, setSavingCaseId] = useState('');
-  const [templates, setTemplates] = useState([]);
-  const [loadingTemplates, setLoadingTemplates] = useState(false);
-  const [selectedTemplateIds, setSelectedTemplateIds] = useState([]);
-  const [generationRangeStart, setGenerationRangeStart] = useState('');
-  const [generationRangeEnd, setGenerationRangeEnd] = useState('');
-  const [generationLoading, setGenerationLoading] = useState(false);
-  const [generationSummary, setGenerationSummary] = useState({ generated: 0, skippedDuplicate: 0, failed: 0, totalCandidates: 0 });
-  const [generationRows, setGenerationRows] = useState([]);
-  const [approvalView, setApprovalView] = useState('my_approvals');
-  const [approvalLoading, setApprovalLoading] = useState(false);
-  const [approvalSummary, setApprovalSummary] = useState({
-    myApprovals: 0,
-    awaitingPartner: 0,
-    awaitingClientSignatory: 0,
-    overdueApprovals: 0,
-  });
-  const [approvalRows, setApprovalRows] = useState([]);
-  const [morningLoading, setMorningLoading] = useState(false);
-  const [morningSummary, setMorningSummary] = useState({
-    atRiskEntities: 0,
-    clientsBlocking: 0,
-    filingsAwaitingApproval: 0,
-    overloadedTeamMembers: 0,
-    exceptionBlockedFilings: 0,
-  });
-  const [morningSections, setMorningSections] = useState({
-    atRiskEntities: [],
-    clientBlockers: [],
-    approvalBlockers: [],
-    teamLoad: [],
-    exceptions: [],
-  });
-  const canViewControlRoom = hasFirmRoleAtLeast(user, 'MANAGER');
-  const canManageState = hasFirmRoleAtLeast(user, 'ADMIN');
 
-  const loadControlRoom = useCallback(async () => {
-    setLoading(true);
+  const loadEntries = async () => {
+    setLoadingEntries(true);
     setError('');
     try {
-      const response = await dashboardApi.getComplianceControlRoom(filters);
-      const payload = response?.data || {};
-      setSummary(payload.summary || {});
-      setRows(Array.isArray(payload.items) ? payload.items : []);
-    } catch (apiError) {
-      setError(apiError?.message || 'Failed to load compliance control room');
-      setRows([]);
+      const response = await calendarApi.listEntries();
+      const records = response?.data?.data || [];
+      setCalendarEntries(records.map(normalizeCalendarEntry).filter((entry) => entry.id));
+    } catch (loadError) {
+      setError(loadError?.message || 'Failed to load calendar entries.');
+      setCalendarEntries([]);
     } finally {
-      setLoading(false);
+      setLoadingEntries(false);
     }
-  }, [filters]);
+  };
 
   useEffect(() => {
-    loadControlRoom();
-  }, [loadControlRoom]);
-
-  const loadTemplates = useCallback(async () => {
-    if (!canManageState) return;
-    setLoadingTemplates(true);
-    try {
-      const response = await dashboardApi.listComplianceTemplates();
-      const rows = Array.isArray(response?.data) ? response.data : [];
-      setTemplates(rows);
-      if (!selectedTemplateIds.length) {
-        setSelectedTemplateIds(rows.filter((item) => item?.isActive !== false).map((item) => item._id));
-      }
-    } catch (apiError) {
-      setError(apiError?.message || 'Failed to load compliance templates');
-    } finally {
-      setLoadingTemplates(false);
-    }
-  }, [canManageState, selectedTemplateIds.length]);
-
-  useEffect(() => {
-    const now = new Date();
-    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 2, 1));
-    setGenerationRangeStart(start.toISOString().slice(0, 10));
-    setGenerationRangeEnd(end.toISOString().slice(0, 10));
+    void loadEntries();
   }, []);
 
-  useEffect(() => {
-    loadTemplates();
-  }, [loadTemplates]);
-
-  const loadOperationsCommand = useCallback(async () => {
-    if (!canViewControlRoom) return;
-    setMorningLoading(true);
-    try {
-      const response = await dashboardApi.getOperationsCommandDashboard({
-        assigneeXID: filters.assigneeXID,
-        clientId: filters.clientId,
-        obligationType: filters.obligationType,
-        state: filters.state,
-        dueFrom: filters.dueFrom,
-        dueTo: filters.dueTo,
-        riskLevel: filters.riskLevel,
-        approverXID: filters.approverXID,
-        exceptionType: filters.exceptionType,
+  const filteredEntries = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return calendarEntries
+      .filter((entry) => matchesSearch(entry, needle))
+      .filter((entry) => typeFilter === 'ALL' || entry.calendarEntryType === typeFilter)
+      .filter((entry) => statusFilter === 'ALL' || entry.status === statusFilter)
+      .sort((a, b) => {
+        const left = a.dueDate ? a.dueDate.getTime() : 0;
+        const right = b.dueDate ? b.dueDate.getTime() : 0;
+        return left - right;
       });
-      const payload = response?.data || {};
-      setMorningSummary(payload.summary || {
-        atRiskEntities: 0,
-        clientsBlocking: 0,
-        filingsAwaitingApproval: 0,
-        overloadedTeamMembers: 0,
-        exceptionBlockedFilings: 0,
-      });
-      setMorningSections(payload.sections || {
-        atRiskEntities: [],
-        clientBlockers: [],
-        approvalBlockers: [],
-        teamLoad: [],
-        exceptions: [],
-      });
-    } catch (apiError) {
-      setError(apiError?.message || 'Failed to load operations command dashboard');
-      setMorningSections({
-        atRiskEntities: [],
-        clientBlockers: [],
-        approvalBlockers: [],
-        teamLoad: [],
-        exceptions: [],
-      });
-    } finally {
-      setMorningLoading(false);
-    }
-  }, [canViewControlRoom, filters]);
+  }, [calendarEntries, search, typeFilter, statusFilter]);
 
-  useEffect(() => {
-    loadOperationsCommand();
-  }, [loadOperationsCommand]);
+  const monthStart = useMemo(() => {
+    const date = new Date(calendarDate);
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+  }, [calendarDate]);
 
-  const loadApprovalQueues = useCallback(async (selectedView = approvalView) => {
-    if (!canViewControlRoom) return;
-    setApprovalLoading(true);
-    try {
-      const response = await dashboardApi.getApprovalQueues({ view: selectedView });
-      const payload = response?.data || {};
-      setApprovalSummary(payload.summary || {});
-      setApprovalRows(Array.isArray(payload.items) ? payload.items : []);
-    } catch (apiError) {
-      setError(apiError?.message || 'Failed to load approval queues');
-      setApprovalRows([]);
-    } finally {
-      setApprovalLoading(false);
-    }
-  }, [approvalView, canViewControlRoom]);
+  const monthEnd = useMemo(() => {
+    const date = new Date(calendarDate);
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+  }, [calendarDate]);
 
-  useEffect(() => {
-    loadApprovalQueues(approvalView);
-  }, [approvalView, loadApprovalQueues]);
+  const visibleRangeStart = useMemo(() => addDays(monthStart, -7), [monthStart]);
+  const visibleRangeEnd = useMemo(() => addDays(monthEnd, 7), [monthEnd]);
 
-  const statCards = useMemo(() => ([
-    { label: 'Due This Week', value: Number(summary.dueThisWeek || 0) },
-    { label: 'Overdue', value: Number(summary.overdue || 0) },
-    { label: 'Awaiting Client', value: Number(summary.awaitingClient || 0) },
-    { label: 'Awaiting Internal Approval', value: Number(summary.awaitingPartner || 0) },
-    { label: 'Ready To File', value: Number(summary.readyToFile || 0) },
-    { label: 'Blocked', value: Number(summary.blocked || 0) },
-    { label: 'Filed Recently', value: Number(summary.filedRecently || 0) },
-  ]), [summary]);
+  const monthEvents = useMemo(
+    () => expandEntryOccurrences(filteredEntries, startOfDay(visibleRangeStart), endOfDay(visibleRangeEnd)),
+    [filteredEntries, visibleRangeStart, visibleRangeEnd],
+  );
 
-  const handleStateChange = async (caseId, nextState) => {
-    if (!canManageState || !nextState) return;
-    setSavingCaseId(caseId);
-    setError('');
-    try {
-      await dashboardApi.updateComplianceState(caseId, { nextState });
-      await loadControlRoom();
-    } catch (apiError) {
-      setError(apiError?.message || 'Failed to update compliance state');
-    } finally {
-      setSavingCaseId('');
+  const dueSoonCount = useMemo(() => {
+    const today = startOfDay(new Date());
+    const dueWindow = endOfDay(addDays(today, 30));
+    return expandEntryOccurrences(calendarEntries, today, dueWindow).length;
+  }, [calendarEntries]);
+
+  const overdueCount = useMemo(() => calendarEntries.filter((entry) => {
+    if (!entry.dueDate) return false;
+    return startOfDay(entry.dueDate) < startOfDay(new Date()) && String(entry.status || '').toLowerCase() !== 'completed';
+  }).length, [calendarEntries]);
+
+  const reminderCount = useMemo(() => calendarEntries.filter((entry) => Number.isFinite(Number(entry.reminderDaysBefore))).length, [calendarEntries]);
+  const recurringCount = useMemo(() => calendarEntries.filter((entry) => entry.recurrencePattern?.frequency && entry.recurrencePattern.frequency !== 'none').length, [calendarEntries]);
+
+  const summaryItems = useMemo(() => ([
+    { label: 'Entries', value: calendarEntries.length, helpText: 'Shared firm events and reminders.' },
+    { label: 'Due soon', value: dueSoonCount, helpText: 'Occurrences in the next 30 days.' },
+    { label: 'Overdue', value: overdueCount, helpText: 'Past-due one-off entries.' },
+    { label: 'With reminders', value: reminderCount, helpText: 'Entries that trigger reminders.' },
+    { label: 'Recurring', value: recurringCount, helpText: 'Entries with repeat schedules.' },
+  ]), [calendarEntries.length, dueSoonCount, overdueCount, reminderCount, recurringCount]);
+
+  const resetForm = () => {
+    setEditingEntryId('');
+    setForm(getInitialFormState(selectedDate));
+    setMessage({ tone: '', message: '' });
+  };
+
+  const handleEdit = (entry) => {
+    if (!canEditCalendar || !entry) return;
+    setEditingEntryId(entry.id);
+    setSelectedDate(entry.dueDate || new Date());
+    setForm({
+      id: entry.id,
+      title: entry.title,
+      dueDate: toInputDate(entry.dueDate || new Date()),
+      description: entry.description || '',
+      calendarEntryType: entry.calendarEntryType || 'important_date',
+      reminderDaysBefore: entry.reminderDaysBefore === '' || entry.reminderDaysBefore === null || entry.reminderDaysBefore === undefined ? '' : String(entry.reminderDaysBefore),
+      clientName: entry.clientName || '',
+      linkedCaseId: entry.linkedCaseId || '',
+      recurrenceFrequency: entry.recurrencePattern?.frequency || 'none',
+      recurrenceInterval: String(entry.recurrencePattern?.interval || 1),
+      recurrenceUntil: toInputDate(entry.recurrencePattern?.untilDate || ''),
+    });
+  };
+
+  const handleEventSelect = (event) => {
+    handleEdit(event.entry);
+  };
+
+  const handleSelectSlot = ({ start }) => {
+    setSelectedDate(start);
+    if (canEditCalendar && !editingEntryId) {
+      setForm((current) => ({
+        ...current,
+        dueDate: toInputDate(start),
+      }));
     }
   };
 
-  const updateFilter = (key, value) => setFilters((prev) => ({ ...prev, [key]: value }));
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!canEditCalendar) return;
 
-  const runGeneration = async (mode) => {
-    if (!canManageState) return;
-    setGenerationLoading(true);
-    setError('');
+    const payload = createPayload(form);
+    if (!payload.title || !payload.dueDate) {
+      setMessage({ tone: 'error', message: 'Title and date are required.' });
+      return;
+    }
+
+    setSavingEntry(true);
+    setMessage({ tone: '', message: '' });
     try {
-      const payload = {
-        rangeStart: generationRangeStart,
-        rangeEnd: generationRangeEnd,
-        templateIds: selectedTemplateIds,
-      };
-      const response = mode === 'preview'
-        ? await dashboardApi.previewComplianceGeneration(payload)
-        : await dashboardApi.runComplianceGeneration(payload);
-      const data = response?.data || {};
-      setGenerationSummary(data.summary || { generated: 0, skippedDuplicate: 0, failed: 0, totalCandidates: 0 });
-      setGenerationRows(Array.isArray(data.items) ? data.items : []);
-      if (mode === 'run') {
-        await loadControlRoom();
+      if (editingEntryId) {
+        await calendarApi.updateEntry(editingEntryId, payload);
+        setMessage({ tone: 'success', message: 'Calendar entry updated.' });
+      } else {
+        await calendarApi.createEntry(payload);
+        setMessage({ tone: 'success', message: 'Calendar entry added.' });
       }
-    } catch (apiError) {
-      setError(apiError?.message || `Failed to ${mode} compliance generation`);
+      await loadEntries();
+      resetForm();
+    } catch (saveError) {
+      setMessage({ tone: 'error', message: saveError?.message || 'Unable to save the calendar entry.' });
     } finally {
-      setGenerationLoading(false);
+      setSavingEntry(false);
     }
   };
 
-  const handleSeedSamples = async () => {
-    if (!canManageState) return;
-    setGenerationLoading(true);
-    setError('');
+  const handleDelete = async (entryId) => {
+    if (!canEditCalendar || !entryId) return;
+    setDeletingEntryId(entryId);
+    setMessage({ tone: '', message: '' });
     try {
-      await dashboardApi.seedSampleComplianceTemplates();
-      await loadTemplates();
-    } catch (apiError) {
-      setError(apiError?.message || 'Failed to seed sample templates');
+      await calendarApi.deleteEntry(entryId);
+      setMessage({ tone: 'success', message: 'Calendar entry deleted.' });
+      await loadEntries();
+      if (editingEntryId === entryId) resetForm();
+    } catch (deleteError) {
+      setMessage({ tone: 'error', message: deleteError?.message || 'Unable to delete the calendar entry.' });
     } finally {
-      setGenerationLoading(false);
+      setDeletingEntryId('');
     }
   };
 
-  const handleReminder = async (caseId, escalate = false) => {
-    try {
-      await dashboardApi.remindApproval(caseId, { escalate });
-      loadApprovalQueues(approvalView);
-      loadOperationsCommand();
-    } catch (apiError) {
-      setError(apiError?.message || 'Failed to queue reminder');
-    }
-  };
+  const eventStyleGetter = (event) => ({
+    style: {
+      backgroundColor: eventColor(event.entry.calendarEntryType),
+      color: '#ffffff',
+    },
+  });
 
-  const applyAllFilters = async () => {
-    await Promise.all([loadControlRoom(), loadOperationsCommand(), loadApprovalQueues(approvalView)]);
-  };
-
-  const renderDocketLink = (caseId, label = null) => {
-    if (!caseId || !firmSlug) return label || caseId || '—';
-    return <Link to={ROUTES.CASE_DETAIL(firmSlug, caseId)} className="compliance-inline-link">{label || caseId}</Link>;
-  };
-
-  const renderClientLink = (clientId, label = null) => {
-    if (!clientId || !firmSlug) return label || clientId || '—';
-    return <Link to={ROUTES.CLIENT_WORKSPACE(firmSlug, clientId)} className="compliance-inline-link">{label || clientId}</Link>;
-  };
+  const statusMessages = [
+    error ? { tone: 'error', message: error } : null,
+    message.message ? message : null,
+  ].filter(Boolean);
 
   return (
     <PlatformShell
-      moduleLabel="Daily Operations"
-      title="Compliance Control Room"
-      subtitle="Operational control center for filing status, due dates, blockers, and internal approvals."
+      title="Calendar"
+      subtitle="Shared firm events and reminders."
     >
       <div className="compliance-calendar-page">
-        <PageHeader
-          title="Compliance Control Room"
-          description="One screen to monitor due, overdue, blocked, awaiting client/internal approval, ready-to-file, filed, and closed entities."
-        />
+        <StatusMessageStack messages={statusMessages} />
 
-        {error ? <p className="compliance-calendar-page__error">{error}</p> : null}
+        <StatGrid items={summaryItems} columns={5} />
 
-        {canViewControlRoom ? (
-          <section className="compliance-generation-panel">
-            <div className="compliance-generation-panel__header">
-              <h2>Operations Command Dashboard</h2>
-              <p>Daily command table for risk entities, client blockers, approval blockers, team overload, and exceptions.</p>
-            </div>
-            <div className="compliance-generation-badges">
-              <article className="compliance-control-summary-card">
-                <p className="compliance-control-summary-card__label">At-risk entities</p>
-                <p className="compliance-control-summary-card__value">{morningLoading ? '…' : Number(morningSummary.atRiskEntities || 0)}</p>
-              </article>
-              <article className="compliance-control-summary-card">
-                <p className="compliance-control-summary-card__label">Client blockers</p>
-                <p className="compliance-control-summary-card__value">{morningLoading ? '…' : Number(morningSummary.clientsBlocking || 0)}</p>
-              </article>
-              <article className="compliance-control-summary-card">
-                <p className="compliance-control-summary-card__label">Awaiting approval</p>
-                <p className="compliance-control-summary-card__value">{morningLoading ? '…' : Number(morningSummary.filingsAwaitingApproval || 0)}</p>
-              </article>
-              <article className="compliance-control-summary-card">
-                <p className="compliance-control-summary-card__label">Overloaded team</p>
-                <p className="compliance-control-summary-card__value">{morningLoading ? '…' : Number(morningSummary.overloadedTeamMembers || 0)}</p>
-              </article>
-              <article className="compliance-control-summary-card">
-                <p className="compliance-control-summary-card__label">Exceptions</p>
-                <p className="compliance-control-summary-card__value">{morningLoading ? '…' : Number(morningSummary.exceptionBlockedFilings || 0)}</p>
-              </article>
-            </div>
-
-            <div className="compliance-control-table-wrap">
-              <table className="compliance-control-table compliance-control-table--morning">
-                <thead>
-                  <tr>
-                    <th colSpan={9}>At-risk entities (overdue/due soon + high risk/priority)</th>
-                  </tr>
-                  <tr>
-                    <th>Docket</th>
-                    <th>Client/Entity</th>
-                    <th>Obligation</th>
-                    <th>Owner</th>
-                    <th>State</th>
-                    <th>Due</th>
-                    <th>Due Risk</th>
-                    <th>Risk</th>
-                    <th>Priority</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!morningSections.atRiskEntities?.length ? (
-                    <tr><td colSpan={9}>No at-risk entities for current filters.</td></tr>
-                  ) : morningSections.atRiskEntities.map((row) => (
-                    <tr key={`risk-${row.caseId}`}>
-                      <td>{renderDocketLink(row.caseId)}</td>
-                      <td>{renderClientLink(row.clientId, row.clientName || row.entityName || row.clientId)}</td>
-                      <td>{row.obligationType || '—'} {row.obligationPeriod ? `(${row.obligationPeriod})` : ''}</td>
-                      <td>{row.assignedToXID || 'UNASSIGNED'}</td>
-                      <td><span className={statusChipClass(row.complianceState)}>{toLabel(row.complianceState)}</span></td>
-                      <td>{formatDate(row.dueDate)}</td>
-                      <td><span className={dueChipClass(row.dueRisk)}>{toLabel(row.dueRisk)}</span></td>
-                      <td><span className={riskChipClass(row.riskLevel)}>{toLabel(row.riskLevel)}</span></td>
-                      <td>{toLabel(row.priority)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="compliance-control-table-wrap">
-              <table className="compliance-control-table compliance-control-table--morning">
-                <thead>
-                  <tr>
-                    <th colSpan={6}>Client blockers (awaiting client, grouped by client/entity and ageing)</th>
-                  </tr>
-                  <tr>
-                    <th>Client/Entity</th>
-                    <th>Awaiting</th>
-                    <th>Overdue</th>
-                    <th>Max Age (days)</th>
-                    <th>Sample Dockets</th>
-                    <th>Drill-down</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!morningSections.clientBlockers?.length ? (
-                    <tr><td colSpan={6}>No client blockers for current filters.</td></tr>
-                  ) : morningSections.clientBlockers.map((group) => (
-                    <tr key={`client-blocker-${group.clientId || group.entityName}`}>
-                      <td>{renderClientLink(group.clientId, group.clientName || group.entityName || group.clientId || 'Unknown')}</td>
-                      <td>{group.docketCount || 0}</td>
-                      <td>{group.overdueCount || 0}</td>
-                      <td>{group.maxAgeDays || 0}</td>
-                      <td>
-                        <div className="compliance-mini-list">
-                          {(group.dockets || []).map((item) => (
-                            <div key={`${group.clientId}-${item.caseId}`}>{renderDocketLink(item.caseId, item.caseId)} · {item.obligationType || 'Obligation'} · <span className={dueChipClass(item.dueRisk)}>{toLabel(item.dueRisk)}</span></div>
-                          ))}
-                        </div>
-                      </td>
-                      <td>{group.clientId ? renderClientLink(group.clientId, 'Open client workspace') : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="compliance-control-table-wrap">
-              <table className="compliance-control-table compliance-control-table--morning">
-                <thead>
-                  <tr>
-                    <th colSpan={7}>Approval blockers (awaiting internal/client/signatory approval grouped by approver and ageing)</th>
-                  </tr>
-                  <tr>
-                    <th>Approver</th>
-                    <th>Pending</th>
-                    <th>Overdue</th>
-                    <th>Max Age (days)</th>
-                    <th>Awaiting Internal</th>
-                    <th>Awaiting Client/Signatory</th>
-                    <th>Sample Dockets</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!morningSections.approvalBlockers?.length ? (
-                    <tr><td colSpan={7}>No approval blockers for current filters.</td></tr>
-                  ) : morningSections.approvalBlockers.map((group) => (
-                    <tr key={`approval-blocker-${group.approver}`}>
-                      <td>{group.approver || 'UNASSIGNED_APPROVER'}</td>
-                      <td>{group.docketCount || 0}</td>
-                      <td>{group.overdueCount || 0}</td>
-                      <td>{group.maxAgeDays || 0}</td>
-                      <td>{group.awaitingPartnerCount || 0}</td>
-                      <td>{group.awaitingClientSignatoryCount || 0}</td>
-                      <td>
-                        <div className="compliance-mini-list">
-                          {(group.dockets || []).map((item) => (
-                            <div key={`${group.approver}-${item.caseId}`}>{renderDocketLink(item.caseId, item.caseId)} · {toLabel(item.approvalType)} · {item.ageDays || 0}d</div>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="compliance-control-table-wrap">
-              <table className="compliance-control-table compliance-control-table--morning">
-                <thead>
-                  <tr>
-                    <th colSpan={8}>Team load (open, due this week, overdue, blocked, awaiting external input)</th>
-                  </tr>
-                  <tr>
-                    <th>Assignee</th>
-                    <th>Open</th>
-                    <th>Due This Week</th>
-                    <th>Overdue</th>
-                    <th>Blocked</th>
-                    <th>Awaiting External Input</th>
-                    <th>High Risk Open</th>
-                    <th>Load</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!morningSections.teamLoad?.length ? (
-                    <tr><td colSpan={8}>No team load rows for current filters.</td></tr>
-                  ) : morningSections.teamLoad.map((row) => (
-                    <tr key={`team-load-${row.assigneeXID}`}>
-                      <td>{row.assigneeXID || 'UNASSIGNED'}</td>
-                      <td>{row.openDockets || 0}</td>
-                      <td>{row.dueThisWeek || 0}</td>
-                      <td>{row.overdue || 0}</td>
-                      <td>{row.blocked || 0}</td>
-                      <td>{row.awaitingExternalInput || 0}</td>
-                      <td>{row.highRiskOpen || 0}</td>
-                      <td><span className={`compliance-chip ${row.overloaded ? 'compliance-chip--load-overloaded' : 'compliance-chip--load-balanced'}`}>{row.overloaded ? 'Overloaded' : 'Balanced'}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="compliance-control-table-wrap">
-              <table className="compliance-control-table compliance-control-table--morning">
-                <thead>
-                  <tr>
-                    <th colSpan={6}>Exceptions (portal/client/DSC/signatory/query taxonomy)</th>
-                  </tr>
-                  <tr>
-                    <th>Reason</th>
-                    <th>Blocked Filings</th>
-                    <th>Overdue</th>
-                    <th>Max Age (days)</th>
-                    <th>Sample Dockets</th>
-                    <th>Drill-down</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!morningSections.exceptions?.length ? (
-                    <tr><td colSpan={6}>No exceptions for current filters.</td></tr>
-                  ) : morningSections.exceptions.map((group) => (
-                    <tr key={`exception-${group.reason}`}>
-                      <td><span className="compliance-chip compliance-chip--exception">{toLabel(group.reason)}</span></td>
-                      <td>{group.docketCount || 0}</td>
-                      <td>{group.overdueCount || 0}</td>
-                      <td>{group.maxAgeDays || 0}</td>
-                      <td>
-                        <div className="compliance-mini-list">
-                          {(group.dockets || []).map((item) => (
-                            <div key={`${group.reason}-${item.caseId}`}>{renderDocketLink(item.caseId, item.caseId)} · {item.blockedReason || toLabel(item.blockerType || 'other')}</div>
-                          ))}
-                        </div>
-                      </td>
-                      <td>
-                        {(group.dockets || []).length ? renderDocketLink(group.dockets[0].caseId, 'Open first docket') : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        ) : null}
-
-        <section className="compliance-control-summary-grid">
-          {statCards.map((card) => (
-            <article className="compliance-control-summary-card" key={card.label}>
-              <p className="compliance-control-summary-card__label">{card.label}</p>
-              <p className="compliance-control-summary-card__value">{loading ? '…' : card.value}</p>
-            </article>
-          ))}
-        </section>
-
-        <section className="compliance-control-filters">
-          <div className="compliance-control-filter-row">
-            <input
-              value={filters.assigneeXID}
-              onChange={(event) => updateFilter('assigneeXID', event.target.value)}
-              placeholder="Assignee XID (e.g. X000123)"
-            />
-            <input
-              value={filters.clientId}
-              onChange={(event) => updateFilter('clientId', event.target.value)}
-              placeholder="Client / Entity ID"
-            />
-            <input
-              value={filters.obligationType}
-              onChange={(event) => updateFilter('obligationType', event.target.value)}
-              placeholder="Obligation type (GST / ROC / TDS)"
-            />
-            <select value={filters.state} onChange={(event) => updateFilter('state', event.target.value)}>
-              <option value="">All states</option>
-              {COMPLIANCE_STATES.map((state) => <option key={state} value={state}>{toLabel(state)}</option>)}
-            </select>
-          </div>
-          <div className="compliance-control-filter-row">
-            <input type="date" value={filters.dueFrom} onChange={(event) => updateFilter('dueFrom', event.target.value)} />
-            <input type="date" value={filters.dueTo} onChange={(event) => updateFilter('dueTo', event.target.value)} />
-            <select value={filters.riskLevel} onChange={(event) => updateFilter('riskLevel', event.target.value)}>
-              <option value="">All risk levels</option>
-              {riskOptions.map((risk) => <option key={risk} value={risk}>{toLabel(risk)}</option>)}
-            </select>
-            <input
-              value={filters.approverXID}
-              onChange={(event) => updateFilter('approverXID', event.target.value)}
-              placeholder="Approver XID"
-            />
-            <select value={filters.exceptionType} onChange={(event) => updateFilter('exceptionType', event.target.value)}>
-              <option value="">All exception reasons</option>
-              {EXCEPTION_TYPE_OPTIONS.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
-            </select>
-            <select value={filters.useDemo} onChange={(event) => updateFilter('useDemo', event.target.value)}>
-              <option value="false">Live data</option>
-              <option value="true">Demo data (if empty)</option>
-            </select>
-            <Button variant="outline" onClick={() => setFilters(defaultFilters)}>Reset filters</Button>
-            <Button onClick={applyAllFilters}>Apply filters</Button>
-          </div>
-        </section>
-
-        {canManageState ? (
-          <section className="compliance-generation-panel">
-            <div className="compliance-generation-panel__header">
-              <h2>Recurring Generation</h2>
-              <p>Generate compliance dockets from obligation templates. Sample templates are configurable examples.</p>
-            </div>
-            <div className="compliance-control-filter-row">
-              <select
-                multiple
-                value={selectedTemplateIds}
-                onChange={(event) => {
-                  const values = Array.from(event.target.selectedOptions).map((option) => option.value);
-                  setSelectedTemplateIds(values);
-                }}
-                disabled={loadingTemplates}
-              >
-                {templates.map((template) => (
-                  <option key={template._id} value={template._id}>
-                    {template.name} ({template.obligationType})
-                  </option>
-                ))}
-              </select>
-              <input type="date" value={generationRangeStart} onChange={(event) => setGenerationRangeStart(event.target.value)} />
-              <input type="date" value={generationRangeEnd} onChange={(event) => setGenerationRangeEnd(event.target.value)} />
-              <Button variant="outline" onClick={handleSeedSamples} disabled={generationLoading}>Seed sample templates</Button>
-              <Button variant="outline" onClick={() => runGeneration('preview')} disabled={generationLoading || !selectedTemplateIds.length}>Preview</Button>
-              <Button onClick={() => runGeneration('run')} disabled={generationLoading || !selectedTemplateIds.length}>Generate</Button>
-            </div>
-            <div className="compliance-generation-badges">
-              <article className="compliance-control-summary-card">
-                <p className="compliance-control-summary-card__label">Generated</p>
-                <p className="compliance-control-summary-card__value">{generationSummary.generated || 0}</p>
-              </article>
-              <article className="compliance-control-summary-card">
-                <p className="compliance-control-summary-card__label">Skipped Duplicate</p>
-                <p className="compliance-control-summary-card__value">{generationSummary.skippedDuplicate || 0}</p>
-              </article>
-              <article className="compliance-control-summary-card">
-                <p className="compliance-control-summary-card__label">Failed</p>
-                <p className="compliance-control-summary-card__value">{generationSummary.failed || 0}</p>
-              </article>
-              <article className="compliance-control-summary-card">
-                <p className="compliance-control-summary-card__label">Total Candidates</p>
-                <p className="compliance-control-summary-card__value">{generationSummary.totalCandidates || 0}</p>
-              </article>
-            </div>
-            {generationRows.length ? (
-              <div className="compliance-generation-preview-list">
-                {generationRows.slice(0, 20).map((row, idx) => (
-                  <div key={`${row.templateId || 'template'}-${row.clientId || 'client'}-${row.period || idx}`} className="compliance-generation-preview-item">
-                    <strong>{row.templateName}</strong> · {row.clientName || row.clientId} · {row.period} · <span>{row.status}</span>
-                    {row.reason ? <span> · {row.reason}</span> : null}
-                  </div>
-                ))}
+        <div className="compliance-calendar-grid">
+          <PageSection
+            title="Month view"
+            description="Click an entry to edit it. Primary admins and admins can create and update entries; managers and users can only view."
+            className="compliance-calendar-panel"
+          >
+            <div className="compliance-calendar-panel__body">
+              <div className="compliance-calendar-toolbar">
+                <p className="compliance-calendar-note">
+                  {canEditCalendar
+                    ? 'Select a day to start a new entry, or pick an existing event to edit it.'
+                    : 'Read-only view for your role. Admins manage the schedule.'}
+                </p>
+                <div className="compliance-calendar-toolbar__summary">
+                  <span>{monthEvents.length} visible entries</span>
+                  <span>{formatDateOnly(monthStart)} - {formatDateOnly(monthEnd)}</span>
+                </div>
               </div>
-            ) : null}
-          </section>
-        ) : null}
 
-        {canViewControlRoom ? (
-          <section className="compliance-generation-panel">
-            <div className="compliance-generation-panel__header">
-              <h2>Approval Queues</h2>
-              <p>Track internal/client/signatory bottlenecks with ageing and reminder placeholders.</p>
+              <div className="compliance-calendar-month">
+                {loadingEntries ? (
+                  <LoadingState label="Loading calendar…" compact />
+                ) : monthEvents.length === 0 ? (
+                  <EmptyState
+                    title="No entries for this month"
+                    body="Add the first event below, or clear filters to widen the list."
+                    boxed
+                  />
+                ) : (
+                  <BigCalendar
+                    localizer={localizer}
+                    events={monthEvents}
+                    startAccessor="start"
+                    endAccessor="end"
+                    titleAccessor="title"
+                    defaultView="month"
+                    views={['month']}
+                    date={calendarDate}
+                    onNavigate={(nextDate) => setCalendarDate(nextDate)}
+                    onSelectEvent={handleEventSelect}
+                    onSelectSlot={handleSelectSlot}
+                    selectable={canEditCalendar}
+                    popup
+                    components={{
+                      event: ({ event }) => (
+                        <span className="truncate">
+                          {event.title}
+                        </span>
+                      ),
+                    }}
+                    eventPropGetter={eventStyleGetter}
+                  />
+                )}
+              </div>
             </div>
-            <div className="compliance-control-filter-row">
-              {APPROVAL_VIEWS.map((option) => (
-                <Button
-                  key={option.key}
-                  variant={approvalView === option.key ? 'primary' : 'outline'}
-                  onClick={() => setApprovalView(option.key)}
-                >
-                  {option.label}
-                </Button>
-              ))}
+          </PageSection>
+
+          <PageSection
+            title="Add entry"
+            description="Keep the shared calendar simple: title, date, reminder, and repeat settings."
+            className="compliance-calendar-panel"
+          >
+            {canEditCalendar ? (
+              <form onSubmit={handleSubmit} className="compliance-calendar-panel__body">
+                <div className="compliance-calendar-form-grid">
+                  <Input
+                    label="Title"
+                    value={form.title}
+                    onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+                    required
+                  />
+                  <Input
+                    label="Date"
+                    type="date"
+                    value={form.dueDate}
+                    onChange={(event) => setForm((current) => ({ ...current, dueDate: event.target.value }))}
+                    required
+                  />
+                </div>
+
+                <div className="compliance-calendar-form-grid">
+                  <Select
+                    label="Type"
+                    value={form.calendarEntryType}
+                    onChange={(event) => setForm((current) => ({ ...current, calendarEntryType: event.target.value }))}
+                    options={calendarEntryTypeOptions}
+                  />
+                  <Input
+                    label="Reminder days"
+                    type="number"
+                    min="0"
+                    max="30"
+                    value={form.reminderDaysBefore}
+                    onChange={(event) => setForm((current) => ({ ...current, reminderDaysBefore: event.target.value }))}
+                    helpText="Leave blank for no reminder."
+                  />
+                </div>
+
+                <div className="compliance-calendar-form-grid">
+                  <Input
+                    label="Client name"
+                    value={form.clientName}
+                    onChange={(event) => setForm((current) => ({ ...current, clientName: event.target.value }))}
+                  />
+                  <Input
+                    label="Linked docket ID"
+                    value={form.linkedCaseId}
+                    onChange={(event) => setForm((current) => ({ ...current, linkedCaseId: event.target.value }))}
+                  />
+                </div>
+
+                <Textarea
+                  label="Notes"
+                  rows={4}
+                  value={form.description}
+                  onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+                  helpText="Keep the note short. It appears with the entry details."
+                />
+
+                <div className="compliance-calendar-form-grid compliance-calendar-form-grid--three">
+                  <Select
+                    label="Repeat"
+                    value={form.recurrenceFrequency}
+                    onChange={(event) => setForm((current) => ({ ...current, recurrenceFrequency: event.target.value }))}
+                    options={recurrenceFrequencyOptions}
+                  />
+                  <Input
+                    label="Repeat every"
+                    type="number"
+                    min="1"
+                    max="52"
+                    value={form.recurrenceInterval}
+                    onChange={(event) => setForm((current) => ({ ...current, recurrenceInterval: event.target.value }))}
+                    disabled={form.recurrenceFrequency === 'none'}
+                    helpText="Used for recurring events."
+                  />
+                  <Input
+                    label="Repeat until"
+                    type="date"
+                    value={form.recurrenceUntil}
+                    onChange={(event) => setForm((current) => ({ ...current, recurrenceUntil: event.target.value }))}
+                    disabled={form.recurrenceFrequency === 'none'}
+                    helpText="Repetition ends on this date."
+                  />
+                </div>
+
+                <div className="compliance-calendar-form-actions">
+                  {editingEntryId ? (
+                    <Button type="button" variant="outline" onClick={resetForm}>Cancel</Button>
+                  ) : null}
+                  <Button type="submit" loading={savingEntry} variant="primary">
+                    {editingEntryId ? 'Edit' : 'Add entry'}
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="compliance-calendar-readonly">
+                This calendar is read-only for your role. Admins and primary admins manage entries and repeat schedules.
+              </div>
+            )}
+          </PageSection>
+        </div>
+
+        <PageSection
+          title="Entries"
+          description="Search, filter, and review shared events below the calendar."
+        >
+          <div className="compliance-calendar-panel__body">
+            <div className="compliance-calendar-filter-grid">
+              <Input
+                label="Search"
+                placeholder="Search title, note, client, or docket"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+              <Select
+                label="Type"
+                value={typeFilter}
+                onChange={(event) => setTypeFilter(event.target.value)}
+                options={[{ value: 'ALL', label: 'All types' }, ...calendarEntryTypeOptions]}
+              />
+              <Select
+                label="Status"
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+                options={[
+                  { value: 'ALL', label: 'All statuses' },
+                  { value: 'pending', label: 'Pending' },
+                  { value: 'in_progress', label: 'In progress' },
+                  { value: 'review', label: 'Review' },
+                  { value: 'completed', label: 'Completed' },
+                  { value: 'cancelled', label: 'Cancelled' },
+                ]}
+              />
             </div>
-            <div className="compliance-generation-badges">
-              <article className="compliance-control-summary-card">
-                <p className="compliance-control-summary-card__label">My approvals</p>
-                <p className="compliance-control-summary-card__value">{approvalSummary.myApprovals || 0}</p>
-              </article>
-              <article className="compliance-control-summary-card">
-                <p className="compliance-control-summary-card__label">Awaiting internal approval</p>
-                <p className="compliance-control-summary-card__value">{approvalSummary.awaitingPartner || 0}</p>
-              </article>
-              <article className="compliance-control-summary-card">
-                <p className="compliance-control-summary-card__label">Awaiting client/signatory</p>
-                <p className="compliance-control-summary-card__value">{approvalSummary.awaitingClientSignatory || 0}</p>
-              </article>
-              <article className="compliance-control-summary-card">
-                <p className="compliance-control-summary-card__label">Overdue approvals</p>
-                <p className="compliance-control-summary-card__value">{approvalSummary.overdueApprovals || 0}</p>
-              </article>
-            </div>
-            <div className="compliance-control-table-wrap">
-              <table className="compliance-control-table">
-                <thead>
-                  <tr>
-                    <th>Docket</th>
-                    <th>Client</th>
-                    <th>Approval Type</th>
-                    <th>Approver</th>
-                    <th>Requested At</th>
-                    <th>Due At</th>
-                    <th>Age (days)</th>
-                    <th>Status</th>
-                    <th>Reminder</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {approvalLoading ? (
-                    <tr><td colSpan={9}>Loading approvals…</td></tr>
-                  ) : approvalRows.length === 0 ? (
-                    <tr><td colSpan={9}>No approvals found for this view.</td></tr>
-                  ) : approvalRows.map((row) => (
-                    <tr key={`approval-${row.caseId}`}>
-                      <td>{renderDocketLink(row.caseId)}</td>
-                      <td>{renderClientLink(row.clientId, row.clientName || row.clientId || '—')}</td>
-                      <td>{toLabel(row.approvalType)}</td>
-                      <td>{row.approver || '—'}</td>
-                      <td>{formatDate(row.requestedAt)}</td>
-                      <td>{formatDate(row.dueAt)}</td>
-                      <td>{row.ageDays ?? '—'}</td>
-                      <td>{row.overdue ? 'Overdue' : 'Pending'}</td>
-                      <td>
-                        <div className="compliance-approval-actions">
-                          <Button variant="outline" onClick={() => handleReminder(row.caseId, false)}>Remind</Button>
-                          <Button variant="outline" onClick={() => handleReminder(row.caseId, true)}>Escalate</Button>
-                        </div>
-                      </td>
+
+            {filteredEntries.length === 0 ? (
+              <EmptyState
+                title="No calendar entries found"
+                body="Try a wider filter or add the first event."
+                boxed
+              />
+            ) : (
+              <Card className="compliance-calendar-table-wrap">
+                <table className="compliance-calendar-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Title</th>
+                      <th>Type</th>
+                      <th>Reminder</th>
+                      <th>Repeat</th>
+                      <th>Notes</th>
+                      <th>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        ) : null}
-
-        {!loading && rows.length === 0 ? (
-          <EmptyState
-            title="No compliance dockets found for current filters."
-            body="Create or update dockets with compliance metadata to start tracking this control room."
-          />
-        ) : null}
-
-        {rows.length ? (
-          <div className="compliance-control-table-wrap">
-            <table className="compliance-control-table">
-              <thead>
-                <tr>
-                  <th>Docket</th>
-                  <th>Client/Entity</th>
-                  <th>Obligation</th>
-                  <th>Period</th>
-                  <th>Owner</th>
-                  <th>Reviewer</th>
-                  <th>Approver</th>
-                  <th>State</th>
-                  <th>Statutory Due</th>
-                  <th>Internal Due</th>
-                  <th>Pend Until</th>
-                  <th>Filed At</th>
-                  <th>Risk</th>
-                  <th>Blocked Reason</th>
-                  {canManageState ? <th>Transition</th> : null}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.caseId}>
-                    <td>{renderDocketLink(row.caseId)}</td>
-                    <td>{renderClientLink(row.clientId, row.clientName || row.clientId || '—')}</td>
-                    <td>{row.obligationType || '—'}</td>
-                    <td>{row.obligationPeriod || '—'}</td>
-                    <td>{row.assignedToXID || '—'}</td>
-                    <td>{row.reviewerXID || '—'}</td>
-                    <td>{row.approverXID || '—'}</td>
-                    <td><span className={statusChipClass(row.complianceState)}>{toLabel(row.complianceState)}</span></td>
-                    <td>{formatDate(row.statutoryDueDate)}</td>
-                    <td>{formatDate(row.internalDueDate)}</td>
-                    <td>{formatDate(row.pendUntil)}</td>
-                    <td>{formatDate(row.filedAt)}</td>
-                    <td><span className={riskChipClass(row.riskLevel)}>{toLabel(row.riskLevel)}</span></td>
-                    <td>{row.blockedReason || '—'}</td>
-                    {canManageState ? (
-                      <td>
-                        <select
-                          value={row.complianceState}
-                          disabled={savingCaseId === row.caseId}
-                          onChange={(event) => handleStateChange(row.caseId, event.target.value)}
-                        >
-                          {COMPLIANCE_STATES.map((state) => (
-                            <option key={state} value={state}>{toLabel(state)}</option>
-                          ))}
-                        </select>
-                      </td>
-                    ) : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {filteredEntries.map((entry) => (
+                      <tr key={entry.id}>
+                        <td>{entry.dueDate ? formatDateOnly(entry.dueDate) : '—'}</td>
+                        <td>
+                          <div>{entry.title}</div>
+                          <div className="compliance-calendar-table__muted">
+                            {entry.clientName || entry.linkedCaseId ? [entry.clientName, entry.linkedCaseId].filter(Boolean).join(' • ') : 'No linked client or docket'}
+                          </div>
+                        </td>
+                        <td>{eventTypeLabel(entry.calendarEntryType)}</td>
+                        <td>{Number.isFinite(Number(entry.reminderDaysBefore)) ? `${entry.reminderDaysBefore} day(s)` : '—'}</td>
+                        <td>{recurrenceSummary(entry)}</td>
+                        <td className="compliance-calendar-table__muted">{entry.description || '—'}</td>
+                        <td>
+                          {canEditCalendar ? (
+                            <div className="compliance-calendar-table__actions">
+                              <Button type="button" size="sm" variant="outline" onClick={() => handleEdit(entry)}>Edit</Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="danger"
+                                onClick={() => handleDelete(entry.id)}
+                                loading={deletingEntryId === entry.id}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="compliance-calendar-table__muted">View only</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+            )}
           </div>
-        ) : null}
+        </PageSection>
       </div>
     </PlatformShell>
   );

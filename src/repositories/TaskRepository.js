@@ -8,6 +8,22 @@ const assertTenantId = (firmId) => {
 };
 
 const TaskRepository = {
+  _assertNoSensitivePersistence(payload = {}) {
+    const blockedFields = ['description'];
+    for (const field of blockedFields) {
+      if (!Object.prototype.hasOwnProperty.call(payload, field)) continue;
+      const value = payload[field];
+      const hasValue = value !== null
+        && value !== undefined
+        && !(typeof value === 'string' && value.trim().length === 0);
+      if (hasValue) {
+        const err = new Error(`BYOS_SENSITIVE_FIELD_PERSISTENCE_BLOCKED:${field}`);
+        err.code = 'BYOS_SENSITIVE_FIELD_PERSISTENCE_BLOCKED';
+        throw err;
+      }
+    }
+  },
+
   find(firmId, query = {}, { page = 1, limit = 20 } = {}) {
     assertTenantId(firmId);
     return Task.find({ firmId, ...query })
@@ -36,6 +52,7 @@ const TaskRepository = {
 
   create(firmId, data) {
     assertTenantId(firmId);
+    this._assertNoSensitivePersistence(data || {});
     return Task.create({ ...data, firmId });
   },
 

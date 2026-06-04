@@ -7,9 +7,13 @@ const read = (relativePath) => fs.readFileSync(path.resolve(process.cwd(), relat
 const guidedForm = read('src/components/docket/GuidedDocketForm.jsx');
 assert.ok(guidedForm.includes('Promise.allSettled(['), 'Create Docket should load dependencies independently via Promise.allSettled.');
 assert.ok(!guidedForm.includes('Failed to load form options. Please refresh and retry.'), 'Generic form options failure message should not remain primary UX.');
-assert.ok(guidedForm.includes('Add a client first.'), 'Setup guidance should include Add a client first.');
-assert.ok(guidedForm.includes('Create a category and subcategory first.'), 'Setup guidance should include category/subcategory prerequisite.');
-assert.ok(guidedForm.includes('Create an active workbasket first.'), 'Setup guidance should include workbasket prerequisite.');
+assert.ok(guidedForm.includes('workbasketApi.listVisibleWorkbaskets()'), 'Create Docket should load user-visible workbaskets, not admin settings workbaskets.');
+assert.ok(!guidedForm.includes('adminApi.listWorkbaskets'), 'Create Docket must not call admin-only workbasket APIs for regular users.');
+assert.ok(guidedForm.includes('No client is available to your role yet.'), 'Setup guidance should use role-aware client copy.');
+assert.ok(guidedForm.includes('No active category/subcategory is available yet.'), 'Setup guidance should include category/subcategory prerequisite.');
+assert.ok(guidedForm.includes('No active category/subcategory is mapped to a workbasket yet.'), 'Setup guidance should include routing/workbasket prerequisite.');
+assert.ok(guidedForm.includes('Ready from category routing.'), 'Workbasket setup should be considered ready when active subcategories already route to workbaskets.');
+assert.ok(guidedForm.includes('isFirmAdminOrAbove(user)'), 'Admin setup links should be gated by firm role.');
 assert.ok(guidedForm.includes('Retry failed loading'), 'Setup guidance should include retry action.');
 assert.ok(guidedForm.includes('Hide checklist'), 'Setup checklist should be collapsible to reduce noise.');
 assert.ok(!guidedForm.includes('style={{ display: \'flex\', gap: 8, marginBottom: 16, flexWrap: \'wrap\' }}'), 'Stepper wrapper should not use inline layout styles.');

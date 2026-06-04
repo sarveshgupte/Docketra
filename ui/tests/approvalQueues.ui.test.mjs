@@ -3,17 +3,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const pageSource = fs.readFileSync(path.resolve('ui/src/pages/ComplianceCalendarPage.jsx'), 'utf8');
-const apiSource = fs.readFileSync(path.resolve('ui/src/api/dashboard.api.js'), 'utf8');
 
-assert.ok(pageSource.includes('Approval Queues'), 'Compliance control room should show approval queues section.');
-assert.ok(pageSource.includes('My approvals'), 'Approval queues should include My approvals view.');
-assert.ok(pageSource.includes('Awaiting internal approval'), 'Approval queues should include Awaiting internal approval view.');
-assert.ok(!pageSource.includes('Awaiting partner'), 'Approval queues should not use Partner role language.');
-assert.ok(pageSource.includes('Awaiting client/signatory'), 'Approval queues should include Awaiting client/signatory view.');
-assert.ok(pageSource.includes('Overdue approvals'), 'Approval queues should include Overdue approvals view.');
-assert.ok(pageSource.includes('handleReminder'), 'Approval queues should support reminder placeholders.');
+assert.ok(pageSource.includes('react-big-calendar'), 'Calendar page should use react-big-calendar for the month view.');
+assert.ok(pageSource.includes('defaultView="month"'), 'Calendar page should default to the month grid.');
+assert.ok(pageSource.includes('views={['), 'Calendar page should restrict the visible calendar views.');
+assert.ok(pageSource.includes('onSelectEvent'), 'Calendar page should support event selection for editing.');
+assert.ok(pageSource.includes('onSelectSlot'), 'Calendar page should support slot selection for creating entries.');
+assert.ok(pageSource.includes('selectable={canEditCalendar}'), 'Calendar page should only enable calendar selection for editors.');
 
-assert.ok(apiSource.includes('/dashboard/approval-queues'), 'Dashboard API should include approval queues endpoint.');
-assert.ok(apiSource.includes('/dashboard/approval-queues/${caseId}/remind'), 'Dashboard API should include approval reminder endpoint.');
-
-console.log('approval queues UI contract passed');
+console.log('calendar month-view contract passed');

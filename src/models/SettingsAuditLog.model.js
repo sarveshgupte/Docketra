@@ -85,7 +85,7 @@ const settingsAuditLogSchema = new mongoose.Schema({
   versionKey: false,
 });
 
-settingsAuditLogSchema.pre('validate', function normalizeAuditFields(next) {
+settingsAuditLogSchema.pre('validate', function normalizeAuditFields() {
   if (!this.tenantId && this.firmId) this.tenantId = this.firmId;
   if (!this.firmId && this.tenantId) this.firmId = this.tenantId;
 
@@ -99,8 +99,6 @@ settingsAuditLogSchema.pre('validate', function normalizeAuditFields(next) {
   }
 
   if (!this.settingsKey) this.settingsKey = this.category || 'configs';
-
-  next();
 });
 
 settingsAuditLogSchema.index({ firmId: 1, category: 1, timestamp: -1 });

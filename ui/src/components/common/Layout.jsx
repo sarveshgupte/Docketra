@@ -40,6 +40,15 @@ const IconWorkbasket = () => (
   </svg>
 );
 
+const IconCalendar = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="17" rx="2" />
+    <line x1="8" y1="2.5" x2="8" y2="6" />
+    <line x1="16" y1="2.5" x2="16" y2="6" />
+    <line x1="3" y1="9" x2="21" y2="9" />
+  </svg>
+);
+
 const IconWorklist = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
@@ -531,6 +540,13 @@ export const Layout = ({ children, title, subtitle }) => {
       collapsible: false,
       items: [
         {
+          id: 'calendar',
+          to: ROUTES.COMPLIANCE_CONTROL(currentFirmSlug),
+          label: 'Calendar',
+          icon: <IconCalendar />,
+          active: isActivePrefix(ROUTES.COMPLIANCE_CONTROL(currentFirmSlug)) || isActivePrefix(ROUTES.COMPLIANCE_CALENDAR(currentFirmSlug)),
+        },
+        {
           id: 'task-manager',
           type: 'group',
           to: ROUTES.TASK_MANAGER(currentFirmSlug),
@@ -632,6 +648,7 @@ export const Layout = ({ children, title, subtitle }) => {
 
   const commandPaletteCommands = [
     { id: 'new-docket', label: 'New Docket', shortcut: '⌘N', action: () => navigate(ROUTES.CREATE_CASE(currentFirmSlug)) },
+    { id: 'calendar', label: 'Open Calendar', action: () => navigate(ROUTES.COMPLIANCE_CONTROL(currentFirmSlug)) },
     { id: 'workbasket', label: 'Go to Workbasket', shortcut: '⌘1', action: () => navigate(ROUTES.GLOBAL_WORKLIST(currentFirmSlug)) },
     { id: 'worklist', label: 'Go to My Worklist', shortcut: '⌘2', action: () => navigate(ROUTES.WORKLIST(currentFirmSlug)) },
     { id: 'dashboard', label: 'Go to Dashboard', shortcut: '⌘D', action: () => navigate(ROUTES.DASHBOARD(currentFirmSlug)) },

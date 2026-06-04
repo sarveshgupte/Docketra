@@ -94,13 +94,12 @@ const docketExceptionSchema = new mongoose.Schema(
 );
 
 // Keep firmId and tenantId in sync before validation
-docketExceptionSchema.pre('validate', function(next) {
+docketExceptionSchema.pre('validate', function() {
   if (this.firmId && !this.tenantId) {
     this.tenantId = String(this.firmId);
   } else if (this.tenantId && !this.firmId) {
     this.firmId = new mongoose.Types.ObjectId(this.tenantId);
   }
-  next();
 });
 
 // Indexes for robust querying

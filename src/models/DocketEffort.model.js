@@ -78,13 +78,12 @@ const docketEffortSchema = new mongoose.Schema(
 );
 
 // Keep firmId and tenantId in sync before validation
-docketEffortSchema.pre('validate', function (next) {
+docketEffortSchema.pre('validate', function () {
   if (this.firmId && !this.tenantId) {
     this.tenantId = String(this.firmId);
   } else if (this.tenantId && !this.firmId) {
     this.firmId = new mongoose.Types.ObjectId(this.tenantId);
   }
-  next();
 });
 
 // Indexes for analytical groupings

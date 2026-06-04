@@ -79,10 +79,21 @@ const requireTurnstileForUpload = createTurnstileMiddleware({
   passedDescription: 'Upload Turnstile verification passed',
 });
 
+const requireTurnstileForLoginVerify = createTurnstileMiddleware({
+  missingAction: SECURITY_AUDIT_ACTIONS.LOGIN_VERIFY_TURNSTILE_MISSING,
+  failedAction: SECURITY_AUDIT_ACTIONS.LOGIN_VERIFY_TURNSTILE_FAILED,
+  passedAction: SECURITY_AUDIT_ACTIONS.LOGIN_VERIFY_TURNSTILE_PASSED,
+  resource: 'auth/login/verify',
+  missingDescription: 'Login verify Turnstile token missing',
+  failedDescription: 'Login verify Turnstile verification failed',
+  passedDescription: 'Login verify Turnstile verification passed',
+});
+
 module.exports = {
   GENERIC_TURNSTILE_FAILURE_MESSAGE,
   createTurnstileMiddleware,
   requireTurnstileForForgotPassword,
   requireTurnstileForSignup,
   requireTurnstileForUpload,
+  requireTurnstileForLoginVerify,
 };

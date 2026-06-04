@@ -89,6 +89,12 @@ export const FirmLoginPage = () => {
   const [firmData, setFirmData] = useState(null);
   const [cooldown, setCooldown] = useState(30);
   const otpInputRef = useRef(null);
+  const turnstileSiteKey = String(import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim();
+  const isTurnstileConfigured = Boolean(turnstileSiteKey);
+  const turnstileContainerRef = useRef(null);
+  const turnstileWidgetIdRef = useRef(null);
+  const turnstileTokenRef = useRef('');
+  const [turnstileToken, setTurnstileToken] = useState('');
   const clearPendingLoginState = () => {
     sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_TOKEN);
     sessionStorage.removeItem(SESSION_KEYS.PENDING_LOGIN_FIRM);
@@ -237,6 +243,52 @@ export const FirmLoginPage = () => {
     }
   }, [step, loginToken]);
 
+  useEffect(() => {
+    if (!isTurnstileConfigured || step !== 'otp') return undefined;
+    const existingScript = document.querySelector('script[data-turnstile-script="true"]');
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true;
+      script.defer = true;
+      script.dataset.turnstileScript = 'true';
+      document.body.appendChild(script);
+    }
+    const renderWidget = () => {
+      if (!window.turnstile || !turnstileContainerRef.current || turnstileWidgetIdRef.current) return;
+      turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
+        sitekey: turnstileSiteKey,
+        callback: (token) => {
+          const nextToken = String(token || '');
+          setTurnstileToken(nextToken);
+          turnstileTokenRef.current = nextToken;
+        },
+        'expired-callback': () => {
+          setTurnstileToken('');
+          turnstileTokenRef.current = '';
+        },
+        'error-callback': () => {
+          setTurnstileToken('');
+          turnstileTokenRef.current = '';
+        },
+      });
+    };
+    renderWidget();
+    const timer = window.setInterval(renderWidget, 250);
+    return () => window.clearInterval(timer);
+  }, [isTurnstileConfigured, step, turnstileSiteKey]);
+
+  const getEffectiveTurnstileToken = React.useCallback(() => {
+    const refToken = String(turnstileTokenRef.current || '').trim();
+    if (refToken) return refToken;
+    const stateToken = String(turnstileToken || '').trim();
+    if (stateToken) return stateToken;
+    const widgetId = turnstileWidgetIdRef.current;
+    return widgetId != null && window.turnstile?.getResponse
+      ? String(window.turnstile.getResponse(widgetId) || '').trim()
+      : '';
+  }, [turnstileToken]);
+
 
   const completeLogin = async (responseData) => {
     authService.setSessionTokens(responseData);
@@ -325,6 +377,12 @@ export const FirmLoginPage = () => {
       return;
     }
 
+    const effectiveTurnstileToken = isTurnstileConfigured ? getEffectiveTurnstileToken() : '';
+    if (isTurnstileConfigured && !effectiveTurnstileToken) {
+      setError('Please complete Turnstile verification before continuing.');
+      return;
+    }
+
     setLoading(true);
     try {
       const pendingFirm = sanitizeFirmSlug(sessionStorage.getItem(SESSION_KEYS.PENDING_LOGIN_FIRM));
@@ -342,7 +400,12 @@ export const FirmLoginPage = () => {
         setError('Workspace changed during verification. Please sign in again.');
         return;
       }
-      const response = await authApi.loginVerify({ firmSlug, loginToken: tokenForVerification, otp: otp.trim() });
+      const response = await authApi.loginVerify({ 
+        firmSlug, 
+        loginToken: tokenForVerification, 
+        otp: otp.trim(),
+        turnstileToken: isTurnstileConfigured ? effectiveTurnstileToken : undefined
+      });
       await completeLogin(response);
     } catch (err) {
       const status = err?.status;
@@ -351,6 +414,13 @@ export const FirmLoginPage = () => {
       if (status === 401) {
         clearPendingLoginState();
         setStep('credentials');
+      }
+      if (isTurnstileConfigured) {
+        if (turnstileWidgetIdRef.current != null && window.turnstile?.reset) {
+          window.turnstile.reset(turnstileWidgetIdRef.current);
+        }
+        setTurnstileToken('');
+        turnstileTokenRef.current = '';
       }
       showError(message);
     } finally {
@@ -510,7 +580,8 @@ export const FirmLoginPage = () => {
             />
             {otpHint && <p className="find-workspace-page__security-note">{otpHint}</p>}
             <p className="find-workspace-page__security-note">Tip: You can paste the full OTP directly.</p>
-            <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || !otpFormValid}>{loading ? 'Verifying...' : 'Submit & Sign in'}</Button>
+            {isTurnstileConfigured && <div ref={turnstileContainerRef} className="min-h-[65px] my-2" />}
+            <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || !otpFormValid || (isTurnstileConfigured && !getEffectiveTurnstileToken())}>{loading ? 'Verifying...' : 'Submit & Sign in'}</Button>
             <Button type="button" variant="outline" fullWidth disabled={loading || cooldown > 0} onClick={handleResendOtp}>
               {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
             </Button>

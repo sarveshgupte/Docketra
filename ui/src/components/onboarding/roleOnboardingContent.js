@@ -40,7 +40,7 @@ export const ROLE_ONBOARDING_CONTENT = {
     canDo: [
       'Configure firm foundation: clients, categories, sub-categories, workbaskets, and team hierarchy.',
       'Enable BYOS and BYOAI controls when your firm requires external storage/AI integrations.',
-      'Define docket routing and QC workbasket flow, then monitor compliance calendar and audits.',
+      'Define docket routing and QC workbasket flow, then monitor Calendar and audits.',
     ],
     startHere: [
       'Complete firm setup and defaults in Settings before scaling usage.',
@@ -52,7 +52,7 @@ export const ROLE_ONBOARDING_CONTENT = {
       'Invite your first admin/manager/user.',
       'Add first client and service category tree.',
       'Map sub-categories to workbaskets + QC workbaskets.',
-      'Review compliance calendar and audit logs.',
+      'Review Calendar and audit logs.',
       'Connect BYOS/BYOAI if your policy requires it.',
     ],
   },
@@ -156,7 +156,7 @@ export const buildRoleTourSteps = (role, firmSlug) => {
     ],
     admin: [
       { id: 'global-worklist', title: 'Firm work queues', description: 'Use global queues to route intake, clear bottlenecks, and maintain turnaround.', actionLabel: 'Open global worklist', route: safeRoute(ROUTES.GLOBAL_WORKLIST(firmSlug)) },
-      { id: 'compliance', title: 'Compliance calendar', description: 'Track near-term deadlines and plan docket execution before risk accumulates.', actionLabel: 'Open compliance calendar', route: safeRoute(ROUTES.COMPLIANCE_CALENDAR(firmSlug)) },
+      { id: 'compliance', title: 'Calendar', description: 'Track near-term deadlines and plan docket execution before risk accumulates.', actionLabel: 'Open Calendar', route: safeRoute(ROUTES.COMPLIANCE_CONTROL(firmSlug)) },
     ],
     manager: [
       { id: 'worklist', title: 'Operational queue control', description: 'Monitor assigned queue volume and rebalance work before SLA slippage.', actionLabel: 'Open worklist', route: safeRoute(ROUTES.WORKLIST(firmSlug)) },
@@ -164,7 +164,7 @@ export const buildRoleTourSteps = (role, firmSlug) => {
     ],
     user: [
       { id: 'my-worklist', title: 'My assigned work', description: 'My Worklist is your command center for daily execution and status updates.', actionLabel: 'Open My Worklist', route: safeRoute(ROUTES.MY_WORKLIST(firmSlug)) },
-      { id: 'compliance', title: 'Compliance timeline', description: 'Use compliance calendar to understand upcoming deadlines impacting your workload.', actionLabel: 'Open compliance calendar', route: safeRoute(ROUTES.COMPLIANCE_CALENDAR(firmSlug)) },
+      { id: 'compliance', title: 'Calendar', description: 'Use Calendar to understand upcoming deadlines impacting your workload.', actionLabel: 'Open Calendar', route: safeRoute(ROUTES.COMPLIANCE_CONTROL(firmSlug)) },
     ],
     super_admin: [
       { id: 'platform', title: 'Platform oversight', description: 'Use platform views for firm-level diagnostics and support, not day-to-day firm operations.', actionLabel: 'Open superadmin dashboard', route: safeRoute(ROUTES.SUPERADMIN_DASHBOARD) },

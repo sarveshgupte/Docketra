@@ -8,7 +8,7 @@ const { attachFirmFromSlug, attachOptionalFirmFromSlug } = require('../middlewar
 const { attachFirmContext } = require('../middleware/firmContext.middleware');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const { enforceSameOriginForCookieAuth } = require('../middleware/csrfOrigin.middleware');
-const { requireTurnstileForSignup, requireTurnstileForForgotPassword } = require('../middleware/turnstile.middleware');
+const { requireTurnstileForSignup, requireTurnstileForForgotPassword, requireTurnstileForLoginVerify } = require('../middleware/turnstile.middleware');
 const {
   authLimiter,
   signupLimiter,
@@ -103,7 +103,7 @@ router.post('/forgot-password/init', authBlockEnforcer, forgotPasswordLimiter, s
 router.post('/forgot-password/verify', authBlockEnforcer, authLimiter, otpVerifyLimiter, attachOptionalFirmFromSlug, forgotPasswordVerify);
 router.post('/forgot-password/reset', authBlockEnforcer, authLimiter, sensitiveLimiter, attachOptionalFirmFromSlug, forgotPasswordResetWithOtp);
 router.post('/login/init', authBlockEnforcer, authLimiter, attachFirmFromSlug, loginInit);
-router.post('/login/verify', authBlockEnforcer, authLimiter, otpVerifyLimiter, attachFirmFromSlug, loginVerify);
+router.post('/login/verify', authBlockEnforcer, authLimiter, otpVerifyLimiter, requireTurnstileForLoginVerify, attachFirmFromSlug, loginVerify);
 router.post('/login/resend', authBlockEnforcer, authLimiter, otpResendLimiter, attachFirmFromSlug, loginResend);
 router.post('/refresh', refreshIpLimiter, refreshUserLimiter, refreshAccessToken); // NEW: JWT token refresh
 router.get('/debug-cookie-state', (req, res, next) => {

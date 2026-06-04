@@ -1,108 +1,31 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ROUTES } from '../constants/routes';
 import { getStorageConfiguration, getStorageOwnershipSummary, getStorageRootHealth } from '../services/storageService';
+import { buildStorageStatusSummary } from './storageStatusSummaryLogic';
 
 const CACHE_TTL_MS = 60 * 1000;
 const statusCache = new Map();
 
-const SANITIZED_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const normalizeProvider = (provider) => String(provider || '').toLowerCase().replace(/-/g, '_');
-const normalizeStatus = (status) => String(status || '').toUpperCase();
-const isStrictMode = (configuration, summary) => Boolean(
-  configuration?.strictFirmOwnedStorage
-  || configuration?.strictFirmOwnedStorageMode
-  || summary?.strictFirmOwnedStorage
-  || summary?.strictFirmOwnedStorageMode
-  || configuration?.storagePolicy?.mode === 'strict_firm_owned'
-  || summary?.storagePolicy?.mode === 'strict_firm_owned'
+const resolveSettledValue = (result, fallback) => (
+  result?.status === 'fulfilled' ? (result.value || fallback) : fallback
 );
 
-const sanitizeEmail = (email) => {
-  if (!email || typeof email !== 'string') return null;
-  const trimmed = email.trim();
-  return SANITIZED_EMAIL_REGEX.test(trimmed) ? trimmed : null;
-};
+const isAccessDenied = (result) => [401, 403].includes(Number(result?.reason?.response?.status));
 
-const buildSummary = (firmSlug, configuration = {}, ownershipSummary = {}, rootHealth = {}, error = null) => {
-  const provider = normalizeProvider(configuration.provider || ownershipSummary.provider || ownershipSummary.activeProvider);
-  const configurationStatus = normalizeStatus(configuration.status);
-  const healthStatus = normalizeStatus(ownershipSummary?.lastHealthCheck?.status);
-  const strictMode = isStrictMode(configuration, ownershipSummary);
-
-  const byosConfigured = Boolean(configuration?.isConfigured);
-  const byosProvider = provider === 'google_drive';
-  const needsAttention = Boolean(
-    ['ERROR', 'DISCONNECTED'].includes(configurationStatus)
-    || ['ERROR', 'DISCONNECTED'].includes(healthStatus)
-    || error
-    || rootHealth?.status === 'recovery_required'
-  );
-
-  const byosActive = byosProvider && byosConfigured && !needsAttention;
-  const managedFallback = !byosActive && !needsAttention;
-
-  let badgeTone = 'neutral';
-  let badgeLabel = 'Docketra-managed storage';
-  let providerLabel = 'Docketra-managed Google Drive';
-  let businessDataLocation = 'Docketra-managed storage';
-  let helperText = 'Business files currently use Docketra-managed storage.';
-  let statusLabel = 'Active';
-
-  if (needsAttention) {
-    badgeTone = 'warning';
-    badgeLabel = 'Storage needs attention';
-    providerLabel = byosProvider ? 'Firm-owned Google Drive' : 'Docketra-managed Google Drive';
-    helperText = rootHealth?.status === 'recovery_required' ? 'Google Drive root recovery required' : 'Storage connection requires attention from a Primary Admin.';
-    statusLabel = 'Needs attention';
-  } else if (strictMode && byosActive) {
-    badgeTone = 'success';
-    badgeLabel = 'Strict firm-owned storage';
-    providerLabel = 'Firm-owned Google Drive';
-    businessDataLocation = 'Firm-owned cloud storage';
-    helperText = 'Docketra-managed fallback storage is disabled for this workspace.';
-  } else if (byosActive) {
-    badgeTone = 'success';
-    badgeLabel = 'Firm-owned storage active';
-    providerLabel = 'Firm-owned Google Drive';
-    businessDataLocation = 'Firm-owned cloud storage';
-    helperText = 'Business files are stored in your firm-owned Google Drive.';
-  }
-
-  const activeFirmSlug = String(firmSlug || '');
-
-  return {
-    loading: false,
-    error,
-    mode: configuration.mode || ownershipSummary.mode || (byosActive ? 'firm_owned' : 'docketra_managed'),
-    provider,
-    badgeTone,
-    badgeLabel,
-    providerLabel,
-    connectedEmail: sanitizeEmail(configuration.connectedEmail || ownershipSummary.connectedEmail),
-    lastCheckedAt: ownershipSummary?.lastHealthCheck?.checkedAt || configuration.updatedAt || null,
-    businessDataLocation,
-    helperText,
-    statusLabel,
-    storageSettingsPath: ROUTES.STORAGE_SETTINGS(activeFirmSlug),
-    dataStorageMapPath: ROUTES.DATA_STORAGE_MAP(activeFirmSlug),
-    isByosActive: byosActive,
-    isManagedFallback: managedFallback,
-    needsAttention,
-    isStrictMode: strictMode,
-  };
-};
-
-export default function useStorageStatusSummary(firmSlug) {
-  const [state, setState] = useState(() => ({ loading: Boolean(firmSlug), ...buildSummary(firmSlug || '', {}, {}, null) }));
+export default function useStorageStatusSummary(firmSlug, options = {}) {
+  const {
+    includeOwnershipSummary = true,
+    includeRootHealth = true,
+  } = options;
+  const cacheKey = `${firmSlug || ''}:${includeOwnershipSummary ? 'ownership' : 'no-ownership'}:${includeRootHealth ? 'root' : 'no-root'}`;
+  const [state, setState] = useState(() => ({ loading: Boolean(firmSlug), ...buildStorageStatusSummary(firmSlug || '', {}, {}, null) }));
 
   useEffect(() => {
     if (!firmSlug) {
-      setState({ loading: false, ...buildSummary('', {}, {}, null) });
+      setState({ loading: false, ...buildStorageStatusSummary('', {}, {}, null) });
       return;
     }
 
-    const cached = statusCache.get(firmSlug);
+    const cached = statusCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
       setState({ ...cached.data, loading: false });
       return;
@@ -111,22 +34,46 @@ export default function useStorageStatusSummary(firmSlug) {
     let active = true;
     setState((prev) => ({ ...prev, loading: true }));
 
-    Promise.all([getStorageConfiguration(), getStorageOwnershipSummary(), getStorageRootHealth()])
-      .then(([configuration, ownershipSummary, rootHealth]) => {
+    Promise.allSettled([
+      getStorageConfiguration(),
+      includeOwnershipSummary ? getStorageOwnershipSummary() : Promise.resolve({}),
+      includeRootHealth ? getStorageRootHealth() : Promise.resolve({}),
+    ])
+      .then(([configurationResult, ownershipResult, rootHealthResult]) => {
         if (!active) return;
-        const nextState = buildSummary(firmSlug, configuration, ownershipSummary, rootHealth, null);
-        statusCache.set(firmSlug, { data: nextState, timestamp: Date.now() });
+        const configuration = resolveSettledValue(configurationResult, {});
+        const ownershipResponse = resolveSettledValue(ownershipResult, {});
+        const ownershipSummary = ownershipResponse?.data && typeof ownershipResponse.data === 'object'
+          ? ownershipResponse.data
+          : ownershipResponse;
+        const activeStorage = ownershipSummary?.activeStorage && typeof ownershipSummary.activeStorage === 'object'
+          ? ownershipSummary.activeStorage
+          : null;
+        const rootHealth = resolveSettledValue(rootHealthResult, {});
+        const configurationError = configurationResult.status === 'rejected'
+          && configurationResult.reason?.response?.status !== 404
+          ? configurationResult.reason
+          : null;
+        const nonBlockingAccessError = isAccessDenied(ownershipResult) || isAccessDenied(rootHealthResult);
+        const nextState = buildStorageStatusSummary(
+          firmSlug,
+          configuration,
+          activeStorage ? { ...ownershipSummary, activeStorage } : ownershipSummary,
+          rootHealth,
+          nonBlockingAccessError ? null : configurationError,
+        );
+        statusCache.set(cacheKey, { data: nextState, timestamp: Date.now() });
         setState(nextState);
       })
       .catch((err) => {
         if (!active) return;
         const nonBlockingError = err?.response?.status === 404 ? null : err;
-        const nextState = buildSummary(firmSlug, {}, {}, {}, nonBlockingError);
+        const nextState = buildStorageStatusSummary(firmSlug, {}, {}, {}, nonBlockingError);
         setState(nextState);
       });
 
     return () => { active = false; };
-  }, [firmSlug]);
+  }, [firmSlug, cacheKey, includeOwnershipSummary, includeRootHealth]);
 
   return useMemo(() => state, [state]);
 }

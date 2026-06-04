@@ -22,7 +22,10 @@ assert.match(navSource, /showQcWorkbaskets\s*=\s*hasAtLeastRole\(normalizedRole,
 assert.match(navSource, /label:\s*'QC Worklists'/, 'Daily Operations should include QC Worklists group.');
 assert.match(navSource, /to:\s*`\$\{ROUTES\.WORKLIST\(firmSlug\)\}\?workbasketId=\$\{encodeURIComponent\(id\)\}`/, 'Worklists children should include scoped workbasket query params.');
 assert.match(navSource, /type:\s*'group'/, 'Daily Operations should use grouped navigation items.');
-assert.match(navSource, /hasAtLeastRole\(normalizedRole,\s*'MANAGER'\)[\s\S]*id:\s*'docketra-intelligence'/, 'Docketra Intelligence should be manager/admin-only.');
+assert.match(navSource, /label:\s*'Calendar'/, 'Calendar should appear in Daily Operations for all firm roles.');
+assert.doesNotMatch(navSource, /showOperationsControls\s*\?\s*\[\{\s*id:\s*'compliance-control-room'/, 'Calendar should not be manager/admin-only.');
+assert.match(navSource, /showOperationsControls[\s\S]*id:\s*'docketra-intelligence'/, 'Docketra Intelligence should be manager/admin-only.');
+assert.match(navSource, /hideTitle:\s*!showOperationsControls/, 'Daily Operations title should be hidden for regular users while groups remain visible.');
 assert.match(navSource, /item\.id === 'compliance-control-room' \|\| item\.id === 'docketra-intelligence' \|\| \(Array\.isArray\(item\.children\) && item\.children\.length > 0\)/, 'Daily Operations should keep direct items and filter empty groups.');
 assert.match(navSource, /const directQcWorkbasketItems = showQcWorkbaskets[\s\S]*assignedQcWorkbaskets\.map/, 'Assigned QC users should still receive assigned QC children when eligible.');
 assert.match(navSource, /ROUTES\.WORKBASKET_DETAIL\(/, 'Sidebar should link directly to workbasket detail route');

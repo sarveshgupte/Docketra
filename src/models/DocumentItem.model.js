@@ -114,13 +114,12 @@ const documentItemSchema = new mongoose.Schema(
 );
 
 // Keep firmId and tenantId in sync before validation
-documentItemSchema.pre('validate', function(next) {
+documentItemSchema.pre('validate', function() {
   if (this.firmId && !this.tenantId) {
     this.tenantId = String(this.firmId);
   } else if (this.tenantId && !this.firmId) {
     this.firmId = new mongoose.Types.ObjectId(this.tenantId);
   }
-  next();
 });
 
 // Enforce unique naming constraint within a single case to prevent confusion

@@ -65,7 +65,7 @@ function testAuthRouteLimiterWiring() {
   assert(source.includes("router.post('/signup/resend', authBlockEnforcer, signupLimiter, otpResendLimiter, signupResend);"));
 
   assert(source.includes("router.post('/login/init', authBlockEnforcer, authLimiter, attachFirmFromSlug, loginInit);"));
-  assert(source.includes("router.post('/login/verify', authBlockEnforcer, authLimiter, otpVerifyLimiter, attachFirmFromSlug, loginVerify);"));
+  assert(source.includes("router.post('/login/verify', authBlockEnforcer, authLimiter, otpVerifyLimiter, requireTurnstileForLoginVerify, attachFirmFromSlug, loginVerify);"));
   assert(source.includes("router.post('/login/resend', authBlockEnforcer, authLimiter, otpResendLimiter, attachFirmFromSlug, loginResend);"));
 }
 

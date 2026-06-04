@@ -125,9 +125,8 @@ const emailMetadataSchema = new mongoose.Schema({
 /**
  * Pre-update Hooks: Prevent Updates
  */
-emailMetadataSchema.pre('validate', function(next) {
+emailMetadataSchema.pre('validate', function() {
   stripEmailContent(this);
-  next();
 });
 
 emailMetadataSchema.pre('updateOne', function(next) {

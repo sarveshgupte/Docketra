@@ -42,9 +42,10 @@ const restoreSwaps = () => {
   delete require.cache[controllerPath];
   const { getClients } = require('../src/controllers/client.controller');
 
+  let testUser = { firmId: '507f1f77bcf86cd799439011', role: 'PRIMARY_ADMIN', _id: 'user-1' };
   const app = express();
   app.use((req, _res, next) => {
-    req.user = { firmId: '507f1f77bcf86cd799439011', role: 'PRIMARY_ADMIN', _id: 'user-1' };
+    req.user = testUser;
     req.ownershipFirmId = '507f1f77bcf86cd799439011';
     next();
   });
@@ -63,6 +64,12 @@ const restoreSwaps = () => {
   assert.strictEqual(forCreateRes.status, 200, 'GET /api/clients?forCreateCase=true should return 200');
   assert.ok(Array.isArray(forCreateRes.body.data), 'forCreateCase data must be array');
   assert.strictEqual(forCreateRes.body.data[0].isDefaultClient, true, 'forCreateCase should include default client');
+
+  testUser = { firmId: '507f1f77bcf86cd799439011', role: 'USER', _id: 'user-2', clientAccess: [], restrictedClientIds: [] };
+  const userForCreateRes = await request(app).get('/api/clients?forCreateCase=true');
+  assert.strictEqual(userForCreateRes.status, 200, 'GET /api/clients?forCreateCase=true should return 200 for regular users');
+  assert.ok(Array.isArray(userForCreateRes.body.data), 'regular user forCreateCase data must be array');
+  assert.strictEqual(userForCreateRes.body.data[0].isDefaultClient, true, 'regular user forCreateCase should include the firm default client');
 
   console.log('clientsEndpoint.primaryAdmin.test.js passed');
   restoreSwaps();

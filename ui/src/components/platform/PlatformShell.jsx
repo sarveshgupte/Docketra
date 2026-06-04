@@ -10,11 +10,9 @@ import api from '../../services/api';
 import { clientApi } from '../../api/client.api';
 import { isShortcutAllowedTarget } from '../../utils/keyboardShortcuts';
 import { isNavItemActiveWithLocation } from '../../utils/navActive';
+import { hasFirmRoleAtLeast, normalizeFirmRole } from '../../utils/roleHierarchy';
 import { trackAsync } from '../../utils/performanceMonitor';
 import './platform.css';
-
-const roleRank = { USER: 1, MANAGER: 2, ADMIN: 3, PRIMARY_ADMIN: 4 };
-const hasAtLeastRole = (current, minimum) => (roleRank[current] || 0) >= (roleRank[minimum] || 0);
 
 const normalizeClientRows = (payload) => {
   const rows = Array.isArray(payload?.data?.data)
@@ -121,8 +119,10 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   const menuRef = useRef(null);
   const searchRequestIdRef = useRef(0);
   const searchCacheRef = useRef(new Map());
-  const role = String(user?.role || 'USER').toUpperCase();
-  const hasAdminAccess = hasAtLeastRole(role, 'ADMIN');
+  const role = normalizeFirmRole(user?.role);
+  const hasAdminAccess = hasFirmRoleAtLeast(role, 'ADMIN');
+  const hasOperationsControlAccess = hasFirmRoleAtLeast(role, 'MANAGER');
+  const canViewStorageStatus = hasOperationsControlAccess;
   const hasQcQueueAccess = hasAdminAccess || (Array.isArray(user?.qcWorkbaskets) && user.qcWorkbaskets.length > 0);
   const navSections = useMemo(
     () => getPlatformNavigation(firmSlug, { role, permissions: user?.permissions, workbaskets: user?.workbaskets, qcWorkbaskets: user?.qcWorkbaskets }),
@@ -271,6 +271,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
         shortcut: item.shortcut,
         action: () => openRoute(item.to),
       })),
+      { id: 'go-calendar', label: 'Calendar', action: () => openRoute(ROUTES.COMPLIANCE_CONTROL(firmSlug)), description: 'Open the shared calendar.' },
       { id: 'go-workbench', label: 'Go to Workbench', shortcut: 'Alt+Shift+T', action: () => openRoute(ROUTES.TASK_MANAGER(firmSlug)), description: 'Open the daily workbench for worklists, workbaskets, and QC queues.' },
       ...(hasAdminAccess ? [{ id: 'go-workbasket', label: 'Go to Workbaskets', shortcut: 'Alt+Shift+B', action: () => openRoute(ROUTES.GLOBAL_WORKLIST(firmSlug)), description: 'Open linked team workbasket queues available to pull.' }] : []),
       { id: 'go-worklist', label: 'Go to My Worklist', shortcut: 'Alt+Shift+W', action: () => openRoute(ROUTES.WORKLIST(firmSlug)), description: 'Open your active and pended docket workload.' },
@@ -313,7 +314,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     }
 
     return sections;
-  }, [firmSlug, role, openRoute, searchResults, hasAdminAccess, hasQcQueueAccess, commandQuery]);
+  }, [firmSlug, role, openRoute, searchResults, hasAdminAccess, hasOperationsControlAccess, hasQcQueueAccess, commandQuery]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -406,9 +407,9 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
         </div>
 
         <nav className="platform__nav">
-          {navSections.map((section) => (
-            <div key={section.section} className="platform__nav-section">
-              {!collapsed && <span className="platform__section-title">{section.section}</span>}
+          {navSections.map((section, sectionIndex) => (
+            <div key={section.section || `workspace-section-${sectionIndex}`} className="platform__nav-section">
+              {!collapsed && !section.hideTitle && <span className="platform__section-title">{section.section}</span>}
               {section.items.map((item) => {
                 const groupChildren = Array.isArray(item.children) ? item.children : [];
                 const isGroup = item.type === 'group';
@@ -418,7 +419,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                 if (isGroup) {
                   return (
                     <div key={item.id} className={`platform__nav-group ${isActive ? 'is-active' : ''}`}>
-                      <span className="platform__nav-group-label" title={collapsed ? item.label : undefined} aria-label={collapsed ? item.label : undefined}>{item.label}</span>
+                      {!collapsed && <span className="platform__nav-group-label">{item.label}</span>}
                       {groupChildren.map((child) => {
                         const childActive = isItemActive(child);
                         return (
@@ -489,7 +490,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
             </div>
             {actions ? <div className="platform__action-primary">{actions}</div> : null}
             <NotificationBell />
-            <div className="platform__action-status"><StorageStatusBadge /></div>
+            {canViewStorageStatus ? <div className="platform__action-status"><StorageStatusBadge /></div> : null}
             <div className="platform__account-menu" ref={menuRef}>
               <button
                 type="button"

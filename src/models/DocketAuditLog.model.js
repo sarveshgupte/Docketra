@@ -82,7 +82,7 @@ const docketAuditLogSchema = new mongoose.Schema({
   versionKey: false,
 });
 
-docketAuditLogSchema.pre('validate', function normalizeAuditFields(next) {
+docketAuditLogSchema.pre('validate', function normalizeAuditFields() {
   if (!this.tenantId && this.firmId) this.tenantId = this.firmId;
   if (!this.firmId && this.tenantId) this.firmId = this.tenantId;
 
@@ -94,8 +94,6 @@ docketAuditLogSchema.pre('validate', function normalizeAuditFields(next) {
   } else {
     this.performedBy = String(this.performedBy || 'SYSTEM').toUpperCase();
   }
-
-  next();
 });
 
 docketAuditLogSchema.index({ firmId: 1, docketId: 1, timestamp: -1 });

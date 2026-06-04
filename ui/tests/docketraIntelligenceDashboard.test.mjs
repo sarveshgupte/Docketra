@@ -25,7 +25,7 @@ assert.match(
 assert.match(
   navSource,
   /id: 'compliance-control-room'[\s\S]*id: 'docketra-intelligence'[\s\S]*id: 'workbaskets-group'/,
-  'Docketra Intelligence nav item should appear directly under Compliance Control before Workbaskets.'
+  'Docketra Intelligence nav item should appear directly under Calendar before Workbaskets.'
 );
 assert.ok(navSource.includes("hasAtLeastRole(normalizedRole, 'MANAGER')"), 'Navigation should restrict Docketra Intelligence to manager and above.');
 assert.ok(navSource.includes('icons.intelligence'), 'Navigation should use a brain/insights style icon.');

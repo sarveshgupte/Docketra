@@ -281,9 +281,17 @@ export const ProtectedRoutes = () => (
           )}
         />
         <Route
+          path="compliance-control"
+          element={(
+            <ProtectedRoute>
+              <Navigate to="../compliance-calendar" replace />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
           path="compliance-calendar"
           element={(
-            <ProtectedRoute requireManagerOrAbove>
+            <ProtectedRoute>
               <ComplianceCalendarPage />
             </ProtectedRoute>
           )}

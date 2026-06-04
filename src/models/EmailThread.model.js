@@ -74,9 +74,8 @@ const emailThreadSchema = new mongoose.Schema(
   }
 );
 
-emailThreadSchema.pre('validate', function(next) {
+emailThreadSchema.pre('validate', function() {
   stripThreadContent(this);
-  next();
 });
 
 emailThreadSchema.index({ tenantId: 1, caseId: 1, createdAt: -1 });

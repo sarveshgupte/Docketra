@@ -20,6 +20,7 @@ export const ROUTES = {
   GLOBAL_WORKLIST: (firmSlug) => `/app/firm/${firmSlug}/global-worklist`,
   WORKBASKET_DETAIL: (firmSlug, workbasketId) => `/app/firm/${firmSlug}/workbaskets/${workbasketId}`,
   DOCKETRA_INTELLIGENCE: (firmSlug) => `/app/firm/${firmSlug}/docketra-intelligence`,
+  COMPLIANCE_CONTROL: (firmSlug) => `/app/firm/${firmSlug}/compliance-calendar`,
   COMPLIANCE_CALENDAR: (firmSlug) => `/app/firm/${firmSlug}/compliance-calendar`,
   CLIENTS: (firmSlug) => `/app/firm/${firmSlug}/clients`,
   CLIENT_WORKSPACE: (firmSlug, clientId) => `/app/firm/${firmSlug}/clients/${clientId}`,

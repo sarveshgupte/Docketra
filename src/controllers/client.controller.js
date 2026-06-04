@@ -220,7 +220,7 @@ const getClients = async (req, res) => {
       return res.status(memoryScope.errorStatus).json({ success: false, message: memoryScope.errorMessage });
     }
 
-    if (!memoryScope.hasFirmWideAccess && memoryScope.scopedClientIds.length === 0) {
+    if (!memoryScope.hasFirmWideAccess && memoryScope.scopedClientIds.length === 0 && !shouldLoadForCreateCase) {
       return res.json({
         ...buildClientListResponse([]),
         pagination: { page, limit, total: 0, pages: 0 },
@@ -232,15 +232,36 @@ const getClients = async (req, res) => {
       : {};
 
     if (!memoryScope.hasFirmWideAccess) {
-      filter._id = { $in: memoryScope.scopedClientIds };
+      if (shouldLoadForCreateCase) {
+        const scopedClientClause = memoryScope.scopedClientIds.length > 0
+          ? [{ _id: { $in: memoryScope.scopedClientIds } }]
+          : [];
+        filter.$or = [
+          ...scopedClientClause,
+          { isDefaultClient: true },
+          { isSystemClient: true },
+          { isInternal: true },
+          { clientId: 'C000001' },
+        ];
+      } else {
+        filter._id = { $in: memoryScope.scopedClientIds };
+      }
     }
     if (normalizedSearch) {
       const escapedSearch = normalizedSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      filter.$or = [
+      const searchClause = {
+        $or: [
         { clientId: { $regex: escapedSearch, $options: 'i' } },
         { businessName: { $regex: escapedSearch, $options: 'i' } },
         { businessEmail: { $regex: escapedSearch, $options: 'i' } },
-      ];
+        ],
+      };
+      if (Array.isArray(filter.$or)) {
+        filter.$and = [{ $or: filter.$or }, searchClause];
+        delete filter.$or;
+      } else {
+        Object.assign(filter, searchClause);
+      }
     }
 
     const [clients, total] = await Promise.all([

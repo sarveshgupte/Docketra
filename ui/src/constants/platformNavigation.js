@@ -219,15 +219,16 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
     ...directQcWorkbasketItems,
   ];
 
+  const showOperationsControls = hasAtLeastRole(normalizedRole, 'MANAGER');
   const dailyOperationsItems = [
     {
       id: 'compliance-control-room',
-      label: 'Compliance Control',
+      label: 'Calendar',
       icon: icons.compliance,
-      to: ROUTES.COMPLIANCE_CALENDAR(firmSlug),
+      to: ROUTES.COMPLIANCE_CONTROL(firmSlug),
       activeMatch: 'exactOrDescendant',
     },
-    ...(hasAtLeastRole(normalizedRole, 'MANAGER') ? [{
+    ...(showOperationsControls ? [{
       id: 'docketra-intelligence',
       label: 'Docketra Intelligence',
       icon: icons.intelligence,
@@ -257,7 +258,7 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
     }))
     .map((section) => {
       if (section.section === 'Daily Operations') {
-        return { ...section, items: dailyOperationsItems };
+        return { ...section, hideTitle: !showOperationsControls, items: dailyOperationsItems };
       }
       if (section.section === 'Administration') {
         return { ...section, items: administrationItems };

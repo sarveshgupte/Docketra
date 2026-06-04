@@ -21,6 +21,11 @@ assert.ok(
   'Workbasket detail filtering should match ownerTeamId as a workbasket queue id.',
 );
 assert.ok(
+  workbasketsPage.includes('worklistApi.pullCases(selectedIds)')
+    && workbasketsPage.includes('worklistApi.moveDocket(caseId, {'),
+  'Workbasket pull actions should use the canonical pull endpoint for regular users and moveDocket for supervisors.',
+);
+assert.ok(
   platformQueries.includes("queryKey: ['platform', 'workbench', options.workbasketId || 'all-workbaskets']"),
   'Workbench query cache should be scoped by selected workbasket.',
 );

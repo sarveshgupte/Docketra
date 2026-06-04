@@ -12,7 +12,7 @@ const sidebarRoutes = [
   ROUTES.GLOBAL_WORKLIST(firmSlug),
   ROUTES.QC_QUEUE(firmSlug),
   ROUTES.CLIENTS(firmSlug),
-  ROUTES.COMPLIANCE_CALENDAR(firmSlug),
+  ROUTES.COMPLIANCE_CONTROL(firmSlug),
   ROUTES.CRM_CLIENTS(firmSlug),
   ROUTES.CRM_LEADS(firmSlug),
   ROUTES.CMS(firmSlug),
@@ -59,7 +59,10 @@ for (const route of sidebarRoutes) {
 const uniqueRoutes = new Set(sidebarRoutes);
 assert.equal(uniqueRoutes.size, sidebarRoutes.length, 'Sidebar route list should not contain duplicates');
 
-const protectedRoutesPath = path.resolve(process.cwd(), 'src/routes/ProtectedRoutes.jsx');
+const workspaceRoot = fs.existsSync(path.resolve(process.cwd(), 'ui', 'src'))
+  ? path.resolve(process.cwd(), 'ui')
+  : process.cwd();
+const protectedRoutesPath = path.resolve(workspaceRoot, 'src/routes/ProtectedRoutes.jsx');
 const protectedRoutesSource = fs.readFileSync(protectedRoutesPath, 'utf8');
 assert.ok(
   protectedRoutesSource.includes('<Route path="/app/firm/:firmSlug" element={<FirmLayout />}>'),

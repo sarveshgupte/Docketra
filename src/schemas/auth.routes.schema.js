@@ -171,6 +171,8 @@ module.exports = {
       firmSlug: nonEmptyString,
       otp: z.string().trim().regex(/^\d{6}$/),
       loginToken: nonEmptyString,
+      turnstileToken: z.string().trim().optional(),
+      'cf-turnstile-response': z.string().trim().optional(),
     }).strip(),
   },
   'POST /login/resend': {

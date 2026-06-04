@@ -97,6 +97,23 @@ const taskSchema = new mongoose.Schema({
     max: 30,
     default: null,
   },
+  recurrencePattern: {
+    frequency: {
+      type: String,
+      enum: ['none', 'daily', 'weekly', 'monthly', 'quarterly', 'yearly', null],
+      default: null,
+    },
+    interval: {
+      type: Number,
+      min: 1,
+      max: 52,
+      default: null,
+    },
+    untilDate: {
+      type: Date,
+      default: null,
+    },
+  },
   taskRef: {
     provider: { type: String, trim: true },
     mode: { type: String, enum: ['firm_connected', 'managed_fallback'] },
@@ -167,6 +184,19 @@ taskSchema.pre('save', async function() {
   // Set completedAt when task is completed
   if (this.status === 'completed' && !this.completedAt) {
     this.completedAt = new Date();
+  }
+});
+
+function _sensitivePersistenceError(field) {
+  const error = new Error(`BYOS_SENSITIVE_FIELD_PERSISTENCE_BLOCKED:${field}`);
+  error.code = 'BYOS_SENSITIVE_FIELD_PERSISTENCE_BLOCKED';
+  return error;
+}
+
+taskSchema.pre('validate', function() {
+  const value = this.get('description');
+  if (value !== null && value !== undefined && typeof value === 'string' && value.trim() !== '') {
+    throw _sensitivePersistenceError('description');
   }
 });
 

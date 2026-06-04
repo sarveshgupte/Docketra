@@ -8,7 +8,7 @@
 
 :root {
   --sidebar-width: 220px;
-  --sidebar-collapsed-width: 48px;
+  --sidebar-collapsed-width: 56px;
   --topbar-height: 52px;
   --panel-radius: 8px;
   --panel-border: #e8e6e0;
@@ -45,7 +45,7 @@
   --panel-padding: 14px 16px;
   --control-height: 30px;
   --sidebar-width: 220px;
-  --sidebar-collapsed-width: 48px;
+  --sidebar-collapsed-width: 56px;
 }
 
 .platform__skip-link {
@@ -160,12 +160,22 @@
 }
 
 .platform__sidebar--collapsed .platform__brand {
+  flex-direction: column;
   justify-content: center;
-  padding: 12px 8px 10px;
+  gap: 8px;
+  min-height: 84px;
+  padding: 12px 0 10px;
+}
+
+.platform__sidebar--collapsed .platform__firm-badge {
+  width: 30px;
+  height: 30px;
 }
 
 .platform__sidebar--collapsed .platform__collapse {
   margin-left: 0;
+  width: 24px;
+  height: 24px;
 }
 
 /* Navigation */
@@ -176,8 +186,16 @@
   overflow-x: hidden;
 }
 
+.platform__sidebar--collapsed .platform__nav {
+  padding: 8px 6px 12px;
+}
+
 .platform__nav-section {
   margin-bottom: 4px;
+}
+
+.platform__sidebar--collapsed .platform__nav-section {
+  margin-bottom: 8px;
 }
 
 .platform__section-title {
@@ -211,9 +229,13 @@
 }
 
 .platform__sidebar--collapsed .platform__nav-link {
+  width: 36px;
+  height: 36px;
   justify-content: center;
-  padding: 5px;
+  padding: 0;
+  margin: 0 auto 4px;
   gap: 0;
+  border-radius: 8px;
 }
 
 .platform__nav-link-icon {
@@ -231,6 +253,12 @@
   display: block;
   width: 14px;
   height: 14px;
+}
+
+.platform__sidebar--collapsed .platform__nav-link-icon,
+.platform__sidebar--collapsed .platform__nav-link-icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 .platform__nav-link-label {
@@ -274,8 +302,26 @@
   color: #b0aea8;
 }
 
+.platform__sidebar--collapsed .platform__nav-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 8px;
+}
+
+.platform__sidebar--collapsed .platform__nav-group-label,
+.platform__sidebar--collapsed .platform__nav-link-label,
+.platform__sidebar--collapsed .platform__section-title {
+  display: none;
+}
+
 .platform__nav-link--child {
   padding-left: 24px;
+}
+
+.platform__sidebar--collapsed .platform__nav-link--child {
+  padding-left: 0;
 }
 
 /* ── Main area ─────────────────────────────────────────────────────────── */

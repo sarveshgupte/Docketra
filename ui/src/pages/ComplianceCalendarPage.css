@@ -1,273 +1,246 @@
 .compliance-calendar-page {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
 }
 
-.compliance-calendar-page__error {
-  color: var(--dt-error);
-  font-size: 0.9rem;
-}
-
-.compliance-control-summary-grid {
+.compliance-calendar-grid {
   display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 1fr);
+  gap: 1rem;
+  align-items: start;
 }
 
-.compliance-control-summary-card {
-  border: 1px solid var(--dt-border-whisper);
-  border-radius: 0.9rem;
-  background: var(--dt-surface);
-  padding: 0.75rem;
-}
-
-.compliance-control-summary-card__label {
-  margin: 0;
-  color: var(--dt-text-muted);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.compliance-control-summary-card__value {
-  margin: 0.3rem 0 0;
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--dt-text);
-}
-
-.compliance-control-filters {
-  border: 1px solid var(--dt-border-whisper);
-  border-radius: 0.9rem;
-  background: var(--dt-surface);
-  padding: 0.75rem;
-  display: grid;
-  gap: 0.6rem;
-}
-
-.compliance-generation-panel {
-  border: 1px solid var(--dt-border-whisper);
-  border-radius: 0.9rem;
-  background: var(--dt-surface);
-  padding: 0.75rem;
-  display: grid;
-  gap: 0.6rem;
-}
-
-.compliance-generation-panel__header h2 {
-  margin: 0;
-  font-size: 0.95rem;
-}
-
-.compliance-generation-panel__header p {
-  margin: 0.2rem 0 0;
-  color: var(--dt-text-muted);
-  font-size: 0.8rem;
-}
-
-.compliance-generation-badges {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 0.5rem;
-}
-
-.compliance-generation-preview-list {
-  border: 1px solid var(--dt-border-whisper);
-  border-radius: 0.5rem;
-  max-height: 220px;
-  overflow: auto;
-}
-
-.compliance-generation-preview-item {
-  border-bottom: 1px solid var(--dt-border-whisper);
-  padding: 0.45rem 0.55rem;
-  font-size: 0.78rem;
-}
-
-.compliance-generation-preview-item:last-child {
-  border-bottom: 0;
-}
-
-.compliance-approval-actions {
+.compliance-calendar-panel {
   display: flex;
-  gap: 0.3rem;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.compliance-calendar-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.compliance-calendar-toolbar {
+  display: flex;
   flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.compliance-control-filter-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+.compliance-calendar-toolbar__summary {
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
+  color: var(--dt-text-secondary);
+  font-size: 0.875rem;
 }
 
-.compliance-control-filter-row input,
-.compliance-control-filter-row select {
-  border: 1px solid var(--dt-border);
-  border-radius: 0.5rem;
-  padding: 0.5rem;
-  background: var(--dt-surface);
-  color: var(--dt-text);
+.compliance-calendar-note {
+  margin: 0;
+  color: var(--dt-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 
-.compliance-control-filter-row select[multiple] {
-  min-height: 90px;
-}
-
-.compliance-control-table-wrap {
-  overflow: auto;
+.compliance-calendar-readonly {
+  padding: 0.875rem 1rem;
   border: 1px solid var(--dt-border-whisper);
-  border-radius: 0.9rem;
-  background: var(--dt-surface);
+  border-radius: var(--dt-radius-card);
+  background: var(--dt-surface-subtle);
+  color: var(--dt-text-secondary);
+  font-size: 0.875rem;
 }
 
-.compliance-control-table {
+.compliance-calendar-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.875rem;
+}
+
+.compliance-calendar-form-grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.compliance-calendar-form-grid--single {
+  grid-template-columns: 1fr;
+}
+
+.compliance-calendar-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 0.25rem;
+}
+
+.compliance-calendar-filter-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(160px, 1fr));
+  gap: 0.875rem;
+}
+
+.compliance-calendar-table-wrap {
+  overflow-x: auto;
+}
+
+.compliance-calendar-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1500px;
 }
 
-.compliance-control-table--morning {
-  min-width: 1100px;
-}
-
-.compliance-control-table th,
-.compliance-control-table td {
+.compliance-calendar-table th,
+.compliance-calendar-table td {
+  padding: 0.8rem 0.9rem;
   border-bottom: 1px solid var(--dt-border-whisper);
-  padding: 0.55rem 0.65rem;
   text-align: left;
-  font-size: 0.82rem;
   vertical-align: top;
+  font-size: 0.875rem;
 }
 
-.compliance-control-table th {
-  position: sticky;
-  top: 0;
-  background: var(--dt-surface-elevated, var(--dt-surface));
-  color: var(--dt-text-muted);
-  font-weight: 700;
+.compliance-calendar-table th {
+  color: var(--dt-text-secondary);
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
 
-.compliance-control-table td select {
-  width: 100%;
-  border: 1px solid var(--dt-border);
-  border-radius: 0.45rem;
-  padding: 0.25rem 0.35rem;
-  background: var(--dt-surface);
-  color: var(--dt-text);
-}
-
-.compliance-inline-link {
-  color: var(--dt-link, #2251cc);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.compliance-inline-link:hover {
-  text-decoration: underline;
-}
-
-.compliance-mini-list {
-  display: grid;
-  gap: 0.28rem;
-  min-width: 240px;
-}
-
-.compliance-chip {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  padding: 0.12rem 0.48rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  border: 1px solid var(--dt-border-whisper);
+.compliance-calendar-table td:last-child,
+.compliance-calendar-table th:last-child {
   white-space: nowrap;
 }
 
-.compliance-chip--state-awaiting-client,
-.compliance-chip--state-awaiting-partner {
-  background: #fff8e8;
-  color: #7c5d00;
-  border-color: #e7d6a0;
+.compliance-calendar-table__muted {
+  color: var(--dt-text-secondary);
 }
 
-.compliance-chip--state-blocked {
-  background: #fdeaea;
-  color: #982020;
-  border-color: #f3c3c3;
+.compliance-calendar-table__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
-.compliance-chip--state-ready-to-file,
-.compliance-chip--state-in-progress {
-  background: #eaf5ff;
-  color: #1153a8;
-  border-color: #bfdaf6;
+.compliance-calendar-month {
+  min-height: 42rem;
 }
 
-.compliance-chip--state-filed,
-.compliance-chip--state-closed {
-  background: #eaf8ee;
-  color: #1f7a3c;
-  border-color: #bfe4ca;
+.compliance-calendar-month .rbc-calendar {
+  font-family: inherit;
+  color: var(--dt-text);
 }
 
-.compliance-chip--risk-critical {
-  background: #fde7eb;
-  color: #a3243f;
-  border-color: #f4bec9;
+.compliance-calendar-month .rbc-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
 }
 
-.compliance-chip--risk-high {
-  background: #fff0e1;
-  color: #9c4f00;
-  border-color: #f0d3b2;
+.compliance-calendar-month .rbc-toolbar button {
+  border: 1px solid var(--dt-border);
+  background: var(--dt-surface);
+  color: var(--dt-text);
+  border-radius: var(--dt-radius-control);
+  padding: 0.45rem 0.8rem;
+  box-shadow: var(--dt-shadow-control);
 }
 
-.compliance-chip--risk-medium {
-  background: #edf5ff;
-  color: #235aa6;
-  border-color: #c6d9f6;
+.compliance-calendar-month .rbc-toolbar button:hover {
+  background: var(--dt-surface-subtle);
 }
 
-.compliance-chip--risk-low {
-  background: #edf8ef;
-  color: #1f7a3c;
-  border-color: #c7e6cf;
+.compliance-calendar-month .rbc-toolbar button.rbc-active {
+  background: var(--dt-accent);
+  color: var(--dt-text-inverse);
+  border-color: var(--dt-accent);
 }
 
-.compliance-chip--due-overdue {
-  background: #fdeaea;
-  color: #982020;
-  border-color: #f3c3c3;
+.compliance-calendar-month .rbc-month-view,
+.compliance-calendar-month .rbc-time-view,
+.compliance-calendar-month .rbc-agenda-view {
+  border-color: var(--dt-border-whisper);
+  border-radius: var(--dt-radius-card);
+  overflow: hidden;
 }
 
-.compliance-chip--due-due-soon {
-  background: #fff6df;
-  color: #845d00;
-  border-color: #efd8a1;
+.compliance-calendar-month .rbc-header {
+  padding: 0.55rem 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--dt-text-secondary);
+  border-bottom: 1px solid var(--dt-border-whisper);
+  background: var(--dt-surface);
 }
 
-.compliance-chip--due-on-track {
-  background: #ecf7f0;
-  color: #1f7a3c;
-  border-color: #c6e5cf;
+.compliance-calendar-month .rbc-month-row + .rbc-month-row {
+  border-top: 1px solid var(--dt-border-whisper);
 }
 
-.compliance-chip--load-overloaded {
-  background: #fdeaea;
-  color: #982020;
-  border-color: #f3c3c3;
+.compliance-calendar-month .rbc-day-bg + .rbc-day-bg {
+  border-left: 1px solid var(--dt-border-whisper);
 }
 
-.compliance-chip--load-balanced {
-  background: #ecf7f0;
-  color: #1f7a3c;
-  border-color: #c6e5cf;
+.compliance-calendar-month .rbc-date-cell {
+  padding: 0.35rem 0.45rem;
+  font-size: 0.75rem;
+  color: var(--dt-text-secondary);
 }
 
-.compliance-chip--exception {
-  background: #f0f2ff;
-  color: #314c92;
-  border-color: #ced6f8;
+.compliance-calendar-month .rbc-off-range-bg {
+  background: var(--dt-surface-subtle);
+}
+
+.compliance-calendar-month .rbc-today {
+  background: color-mix(in srgb, var(--dt-accent-subtle) 42%, transparent);
+}
+
+.compliance-calendar-month .rbc-event {
+  border: 0;
+  border-radius: 6px;
+  padding: 0.18rem 0.35rem;
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.compliance-calendar-month .rbc-event:focus {
+  outline: 2px solid var(--dt-focus);
+  outline-offset: 1px;
+}
+
+.compliance-calendar-month .rbc-show-more {
+  color: var(--dt-accent);
+  font-weight: 600;
+}
+
+.compliance-calendar-month .rbc-month-view .rbc-row-content {
+  min-height: 6.25rem;
+}
+
+@media (max-width: 1100px) {
+  .compliance-calendar-grid,
+  .compliance-calendar-filter-grid,
+  .compliance-calendar-form-grid,
+  .compliance-calendar-form-grid--three {
+    grid-template-columns: 1fr;
+  }
+
+  .compliance-calendar-month {
+    min-height: 34rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .compliance-calendar-month .rbc-toolbar {
+    align-items: flex-start;
+  }
+
+  .compliance-calendar-month .rbc-toolbar-label {
+    width: 100%;
+    text-align: left;
+  }
 }

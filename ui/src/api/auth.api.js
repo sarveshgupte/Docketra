@@ -10,8 +10,8 @@ export const authApi = {
   loginInit: ({ firmSlug, xid, password }) =>
     request((http) => http.post('/auth/login/init', { firmSlug, xid, password }), 'Sign-in failed. Please try again.'),
 
-  loginVerify: ({ firmSlug, loginToken, otp }) =>
-    request((http) => http.post('/auth/login/verify', { firmSlug, loginToken, otp }), 'Sign-in failed. Please try again.'),
+  loginVerify: ({ firmSlug, loginToken, otp, turnstileToken }) =>
+    request((http) => http.post('/auth/login/verify', { firmSlug, loginToken, otp, turnstileToken }), 'Sign-in failed. Please try again.'),
 
   loginResendOtp: ({ firmSlug, loginToken }) =>
     request((http) => http.post('/auth/login/resend', { firmSlug, loginToken }), 'Unable to resend OTP.'),

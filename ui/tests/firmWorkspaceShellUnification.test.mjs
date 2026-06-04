@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const read = (relativePath) => fs.readFileSync(path.resolve(process.cwd(), relativePath), 'utf8');
+const workspaceRoot = fs.existsSync(path.resolve(process.cwd(), 'ui', 'src'))
+  ? path.resolve(process.cwd(), 'ui')
+  : process.cwd();
+const read = (relativePath) => fs.readFileSync(path.resolve(workspaceRoot, relativePath), 'utf8');
 
 const migratedPages = [
   { file: 'src/pages/CasesPage.jsx', expectedTitle: 'title="Dockets"' },
@@ -12,7 +15,7 @@ const migratedPages = [
   { file: 'src/pages/AdminPage.jsx', expectedTitle: 'title={isWorkSettingsContext ? "Category Management" : "Team"}' },
   { file: 'src/pages/HierarchyPage.jsx', expectedTitle: 'title="Hierarchy management"' },
   { file: 'src/pages/ProfilePage.jsx', expectedTitle: 'title="Profile"' },
-  { file: 'src/pages/ComplianceCalendarPage.jsx', expectedTitle: 'title="Compliance calendar"' },
+  { file: 'src/pages/ComplianceCalendarPage.jsx', expectedTitle: 'title="Calendar"' },
   { file: 'src/pages/crm/LeadsPage.jsx', expectedTitle: 'title="Prospective Clients"' },
   { file: 'src/pages/crm/CrmClientDetailPage.jsx', expectedTitle: 'title={clientName}' },
   { file: 'src/pages/FirmSettingsPage.jsx', expectedTitle: 'title="Firm settings"' },
@@ -35,7 +38,7 @@ assert.ok(clientsSource.includes('title="Could not load clients"'), 'Clients pag
 assert.ok(clientsSource.includes('actionLabel="Retry"'), 'Clients page should provide retry guidance for error recovery');
 
 const routesSource = read('src/routes/ProtectedRoutes.jsx');
-for (const route of ['path="clients"', 'path="dockets"', 'path="dockets/:caseId"', 'path="profile"', 'path="compliance-calendar"', 'path="crm/leads"', 'path="crm/clients/:crmClientId"', 'path="admin/hierarchy"', 'path="admin"', 'path="settings/firm"', 'path="settings/work"', 'path="storage-settings"', 'path="ai-settings"']) {
+for (const route of ['path="clients"', 'path="dockets"', 'path="dockets/:caseId"', 'path="profile"', 'path="compliance-control"', 'path="compliance-calendar"', 'path="crm/leads"', 'path="crm/clients/:crmClientId"', 'path="admin/hierarchy"', 'path="admin"', 'path="settings/firm"', 'path="settings/work"', 'path="storage-settings"', 'path="ai-settings"']) {
   assert.ok(routesSource.includes(route), `Protected routes should keep migrated route registered: ${route}`);
 }
 

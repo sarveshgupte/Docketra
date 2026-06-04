@@ -5,14 +5,16 @@ import { Textarea } from '../common/Textarea';
 import { Button } from '../common/Button';
 import { Card } from '../common/Card';
 import { categoryService } from '../../services/categoryService';
-import { adminApi } from '../../api/admin.api';
+import { workbasketApi } from '../../api/workbasket.api';
 import { caseApi } from '../../api/case.api';
 import { clientApi } from '../../api/client.api';
+import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { useUnsavedChangesPrompt } from '../../hooks/useUnsavedChangesPrompt';
 import { buildCreateDocketPayload, validateCreateDocketPayload, resolveEarliestErrorStep } from './createDocketPayload';
 import { ROUTES } from '../../constants/routes';
 import { generateSecureRandomString } from '../../utils/crypto';
+import { isFirmAdminOrAbove } from '../../utils/roleHierarchy';
 
 const STEPS = ['Basic Info', 'Classification', 'Routing', 'Assignment', 'Review & Create'];
 const createSubmissionKey = () => {
@@ -34,6 +36,20 @@ const defaultForm = {
 };
 
 const isEmailLikeError = (message) => typeof message === 'string' && message.toLowerCase().includes('validation');
+const getActiveSubcategories = (category = {}) => (category.subcategories || []).filter((item) => item?.isActive);
+const hasRoutableSubcategory = (categories = []) => categories.some(
+  (category) => getActiveSubcategories(category).some((subcategory) => Boolean(subcategory?.workbasketId))
+);
+const normalizeWorkbasketRows = (rows = []) => rows
+  .map((item) => ({
+    ...item,
+    _id: String(item?._id || item?.id || item?.workbasketId || '').trim(),
+    name: item?.name || 'Workbasket',
+    isActive: item?.isActive !== false,
+    type: String(item?.type || 'PRIMARY').toUpperCase(),
+  }))
+  .filter((item) => item._id && item.isActive && item.type !== 'QC');
+
 const FIELD_TO_STEP = {
   title: 0,
   workType: 0,
@@ -48,6 +64,7 @@ const FIELD_TO_STEP = {
 };
 
 export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) => {
+  const { user } = useAuth();
   const { showError } = useToast();
   const [step, setStep] = useState(0);
   const [submitError, setSubmitError] = useState('');
@@ -92,21 +109,21 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
       setClientLoadIssue('');
       const [categoryResponse, workbasketResponse, usersResponse, clientResponse] = await Promise.allSettled([
           categoryService.getCategories(true),
-          adminApi.listWorkbaskets({ activeOnly: true }),
+          workbasketApi.listVisibleWorkbaskets(),
           caseApi.getDocketEligibleUsers(),
           clientApi.getClients(true, true),
       ]);
       const nextErrors = {};
 
       const nextCategories = categoryResponse.status === 'fulfilled' ? (categoryResponse.value?.data || []) : [];
-      const nextWorkbaskets = workbasketResponse.status === 'fulfilled' ? (workbasketResponse.value?.data || []) : [];
+      const nextWorkbaskets = workbasketResponse.status === 'fulfilled' ? normalizeWorkbasketRows(workbasketResponse.value?.data || []) : [];
       const nextUsers = usersResponse.status === 'fulfilled' ? (usersResponse.value?.data || []) : [];
       const nextClients = clientResponse.status === 'fulfilled'
         ? (clientResponse.value?.data || []).filter((item) => item?.isActive !== false)
         : [];
 
       if (categoryResponse.status === 'rejected') nextErrors.categories = 'Categories could not be loaded.';
-      if (workbasketResponse.status === 'rejected') nextErrors.workbaskets = 'Workbaskets could not be loaded.';
+      if (workbasketResponse.status === 'rejected' && !hasRoutableSubcategory(nextCategories)) nextErrors.workbaskets = 'Workbaskets could not be loaded.';
       if (usersResponse.status === 'rejected') nextErrors.users = 'Users could not be loaded.';
       if (clientResponse.status === 'rejected') {
         const message = clientResponse.reason?.message || '';
@@ -168,8 +185,9 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   const selectedClient = clients.find((item) => item.clientId === formData.clientId);
   const defaultClient = clients.find((item) => item.isDefaultClient || item.isSystemClient || item.isInternal || item.clientId === 'C000001');
   const hasActiveClients = clients.length > 0;
-  const hasActiveSubcategory = categories.some((item) => (item.subcategories || []).some((sub) => sub.isActive));
-  const hasRoutingPrerequisites = hasActiveSubcategory && workbaskets.length > 0;
+  const hasActiveSubcategory = categories.some((item) => getActiveSubcategories(item).length > 0);
+  const hasMappedActiveSubcategory = hasRoutableSubcategory(categories);
+  const hasRoutingPrerequisites = hasActiveSubcategory && hasMappedActiveSubcategory;
   const selectedSubcategory = subcategories.find((item) => item.id === formData.subcategoryId);
   const employeeContextEnabled = selectedSubcategory?.employeeContextEnabled === true;
   const relatedEmployeeUserRequired = selectedSubcategory?.requiresRelatedEmployeeUser === true
@@ -257,7 +275,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   }, [formData.clientId, formData.title, formData.workbasketId, step]);
   const isClientsBlocked = Boolean(dependencyErrors.clients) || !hasActiveClients;
   const isCategoriesBlocked = Boolean(dependencyErrors.categories) || !hasActiveSubcategory;
-  const isWorkbasketsBlocked = Boolean(dependencyErrors.workbaskets) || workbaskets.length === 0;
+  const isWorkbasketsBlocked = Boolean(dependencyErrors.workbaskets) || !hasMappedActiveSubcategory;
   const setupBlockingMessage = isClientsBlocked || isCategoriesBlocked || isWorkbasketsBlocked
     ? 'Complete setup before creating your first docket.'
     : '';
@@ -265,6 +283,20 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   const shouldShowSetupChecklist = !setupChecklistCollapsed || !canSubmitFromSetup || Object.keys(dependencyErrors).length > 0 || Boolean(clientLoadIssue);
   const retryFailedDependencies = () => loadDeps();
   const firmSlug = window.location.pathname.split('/')[3] || '';
+  const canOpenSetupLinks = isFirmAdminOrAbove(user);
+  const setupLink = (href, label) => (canOpenSetupLinks ? <a href={href}>{label}</a> : null);
+  const clientSetupCopy = clientLoadIssue || dependencyErrors.clients
+    ? (clientLoadIssue || dependencyErrors.clients)
+    : (hasActiveClients ? 'Ready.' : 'No client is available to your role yet. Ask an admin to grant client access or use the firm default client setup.');
+  const categorySetupCopy = dependencyErrors.categories
+    ? dependencyErrors.categories
+    : (hasActiveSubcategory ? 'Ready.' : 'No active category/subcategory is available yet.');
+  const workbasketSetupCopy = dependencyErrors.workbaskets
+    ? dependencyErrors.workbaskets
+    : (hasMappedActiveSubcategory ? 'Ready from category routing.' : 'No active category/subcategory is mapped to a workbasket yet.');
+  const userSetupCopy = dependencyErrors.users
+    ? 'Users could not be loaded.'
+    : (users.length > 0 ? 'Ready.' : 'Assignment list is empty; docket can remain unassigned in the workbasket queue.');
 
   const updateField = (name, value) => {
     if (name === 'categoryId' || name === 'subcategoryId') setManualClassification(true);
@@ -361,10 +393,10 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
         </div>
         {shouldShowSetupChecklist ? (
           <ul className="guided-docket-list">
-          <li>Clients: {clientLoadIssue || dependencyErrors.clients ? (clientLoadIssue || dependencyErrors.clients) : (hasActiveClients ? 'Ready.' : 'Add a client first.')} <a href={ROUTES.CLIENTS(firmSlug)}>Open Clients</a></li>
-          <li>Categories: {dependencyErrors.categories ? dependencyErrors.categories : (hasActiveSubcategory ? 'Ready.' : 'Create a category and subcategory first.')} <a href={ROUTES.WORK_CATEGORY_MANAGEMENT(firmSlug)}>Open Category Management</a></li>
-          <li>Workbaskets: {dependencyErrors.workbaskets ? dependencyErrors.workbaskets : (workbaskets.length > 0 ? 'Ready.' : 'Create an active workbasket first.')} <a href={ROUTES.WORK_SETTINGS(firmSlug)}>Open Work Settings</a></li>
-          <li>Users: {dependencyErrors.users ? 'Users could not be loaded.' : (users.length > 0 ? 'Ready.' : 'Add or activate a team member first if assignment is required.')} <a href={ROUTES.ADMIN(firmSlug)}>Open Team/Admin</a></li>
+          <li>Clients: {clientSetupCopy} {setupLink(ROUTES.CLIENTS(firmSlug), 'Open Clients')}</li>
+          <li>Categories: {categorySetupCopy} {setupLink(ROUTES.WORK_CATEGORY_MANAGEMENT(firmSlug), 'Open Category Management')}</li>
+          <li>Workbaskets: {workbasketSetupCopy} {setupLink(ROUTES.WORK_SETTINGS(firmSlug), 'Open Work Settings')}</li>
+          <li>Users: {userSetupCopy} {setupLink(ROUTES.ADMIN(firmSlug), 'Open Team/Admin')}</li>
           </ul>
         ) : null}
         {setupBlockingMessage ? <p className="guided-docket-notice guided-docket-notice--warning">{setupBlockingMessage}</p> : null}
@@ -394,13 +426,13 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
             onChange={(e) => updateField('clientId', e.target.value)}
             error={errors.clientId}
             disabled={loading.clients}
-            helpText={hasActiveClients ? 'Select a client. Use your firm (default) for internal tasks.' : 'Add a client first.'}
+            helpText={hasActiveClients ? 'Select a client. Use your firm (default) for internal tasks.' : 'Ask an admin to grant client access or use the firm default client setup.'}
             options={[
               { value: '', label: loading.clients ? 'Loading clients...' : (hasActiveClients ? 'Use default firm client (auto-filled on submit)' : 'No active clients available') },
               ...clients.map((item) => ({ value: item.clientId, label: `${item.clientId} - ${item.businessName || 'Unnamed client'}` })),
             ]}
           />
-          {!loading.clients && !hasActiveClients ? <p className="mb-2 text-sm text-amber-700">Add a client first.</p> : null}
+          {!loading.clients && !hasActiveClients ? <p className="mb-2 text-sm text-amber-700">No client is available to your role yet. Ask an admin to grant client access or confirm the firm default client setup.</p> : null}
           {clientLoadIssue ? <p className="mb-2 text-sm text-amber-700">{clientLoadIssue}</p> : null}
           <Textarea label="Description (optional)" rows={4} value={formData.description} onChange={(e) => updateField('description', e.target.value)} helpText="Include enough context for the assignee and reviewer." />
         </>

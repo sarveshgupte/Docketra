@@ -26,6 +26,7 @@ const RESERVED_FIRM_SLUGS = [
   'worklists',
   'attachments',
   'firm',
+  'compliance-control',
   'compliance-calendar',
   'client-approval',
   'crm',

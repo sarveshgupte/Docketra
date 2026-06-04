@@ -27,13 +27,12 @@ const docketAuditSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now, index: true },
 }, { timestamps: true });
 
-docketAuditSchema.pre('validate', function normalizeCanonicalAudit(next) {
+docketAuditSchema.pre('validate', function normalizeCanonicalAudit() {
   if (!this.entityType) this.entityType = 'docket';
   if (!this.entityId) this.entityId = this.docketId;
   if (!this.action) this.action = this.event;
   if (!this.actorId) this.actorId = this.userId;
   if (!this.actorRole) this.actorRole = this.userRole;
-  next();
 });
 
 docketAuditSchema.index({ firmId: 1, entityType: 1, entityId: 1, createdAt: -1 });

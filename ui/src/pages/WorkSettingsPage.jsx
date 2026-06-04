@@ -156,7 +156,7 @@ export const WorkSettingsPage = () => {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 md:p-8 space-y-6 transition hover:shadow-md duration-300">
             <div className="border-b border-slate-100 pb-5">
               <span className="text-xs uppercase font-bold tracking-wider text-slate-400">Queue Configuration</span>
-              <h2 className="text-xl font-bold text-slate-800 mt-1">Workbasket linkage & routing</h2>
+              <h2 className="text-xl font-bold text-slate-800 mt-1">Workbasket Management</h2>
               <p className="text-slate-500 text-sm mt-1 leading-relaxed">
                 Use primary workbaskets to control queue destinations for incoming dockets. Linked QC workbaskets are maintained automatically.
               </p>
