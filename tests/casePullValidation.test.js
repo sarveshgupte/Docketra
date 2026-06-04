@@ -27,6 +27,11 @@ async function run() {
   assert.strictEqual(ok.statusCode, 200);
   assert.deepStrictEqual(ok.req.body.caseIds, ['CASE-20260315-00001']);
 
+  const okPrefixedReq = { body: { caseIds: ['CO202603084821'] }, params: {}, query: {} };
+  const okPrefixed = await runMiddleware(middleware, okPrefixedReq);
+  assert.strictEqual(okPrefixed.statusCode, 200);
+  assert.deepStrictEqual(okPrefixed.req.body.caseIds, ['CO202603084821']);
+
   const invalidIdReq = { body: { caseIds: ['bad-id'] }, params: {}, query: {} };
   const invalid = await runMiddleware(middleware, invalidIdReq);
   assert.strictEqual(invalid.statusCode, 400);

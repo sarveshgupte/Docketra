@@ -470,7 +470,7 @@ const FutureAiSection = () => (
         </div>
         <div className="rounded-[2rem] border border-white/[0.08] bg-white/[0.04] p-6 backdrop-blur-sm">
           <p className="text-xs leading-relaxed text-slate-300">
-            Docketra Intelligence enables CA/CS firms to safely leverage advanced LLMs. Safely auto-summarize case documents, draft statutory resolution emails, refine task briefs, and receive intelligent routing recommendations using your own secure API keys.
+            Docketra Intelligence enables CA/CS firms to safely leverage advanced LLMs. Safely auto-summarize docket documents, draft statutory resolution emails, refine task briefs, and receive intelligent routing recommendations using your own secure API keys.
           </p>
           <div className="mt-5 rounded-xl bg-amber-500/10 border border-amber-500/20 p-3">
             <p className="text-[11px] font-bold text-amber-200 leading-relaxed">

@@ -5,9 +5,9 @@ const nonEmptyString = z.string().trim().min(1);
 const xidString = z.string().trim().toUpperCase().regex(/^X\d{6}$/i, 'xID must be in format X123456');
 const clientIdString = z.string().trim().toUpperCase().regex(/^C\d{6}$/i, 'clientId must be in format C123456');
 const caseIdString = z.string().trim().transform((val) => val.replace(/[_\s]+/g, '-')).refine(
-  (val) => /^(?:[a-f\d]{24}|(?:CASE|DOCKET)-\d{8}-\d{5}|\d{8}-\d{5})$/i.test(val),
+  (val) => /^(?:[a-f\d]{24}|(?:CASE|DOCKET)-\d{8}-\d{5}|\d{8}-\d{5}|[a-z]{2,4}\d{12})$/i.test(val),
   {
-    message: 'caseId must be a Mongo ObjectId, CASE-YYYYMMDD-00001, DOCKET-YYYYMMDD-00001, or YYYYMMDD-00001',
+    message: 'caseId must be a Mongo ObjectId, CASE-YYYYMMDD-00001, DOCKET-YYYYMMDD-00001, YYYYMMDD-00001, or a valid prefixed Docket ID',
   }
 );
 const objectIdString = z.string().trim().regex(/^[a-f\d]{24}$/i, 'must be a valid Mongo ObjectId');
