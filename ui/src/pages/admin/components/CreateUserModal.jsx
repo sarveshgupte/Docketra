@@ -37,7 +37,7 @@ export const CreateUserModal = ({
           { value: '', label: 'Select Role', disabled: true },
           { value: 'ADMIN', label: 'Admin' },
           { value: 'MANAGER', label: 'Manager' },
-          { value: 'USER', label: 'Employee' },
+          { value: 'USER', label: 'Employee' }, { value: 'Employee', label: 'Employee' }, { value: 'Admin', label: 'Admin' },
         ]}
         required
       />
