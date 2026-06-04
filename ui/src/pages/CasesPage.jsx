@@ -285,7 +285,7 @@ export const CasesPage = () => {
     const link = document.createElement('a');
     const stamp = getISODateInTimezone(new Date()).replaceAll('-', '');
     link.href = url;
-    link.download = `cases_export_${stamp}.csv`;
+    link.download = `dockets_export_${stamp}.csv`;
     document.body.appendChild(link);
     link.click();
     link.remove();

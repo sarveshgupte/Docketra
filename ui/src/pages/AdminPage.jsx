@@ -816,7 +816,7 @@ export const AdminPage = () => {
   };
 
   const handleDeleteCategory = async (category) => {
-    if (!confirm(`Are you sure you want to delete category "${category.name}"? This is a soft delete - the category will be hidden from dropdowns but historical cases will remain valid.`)) {
+    if (!confirm(`Are you sure you want to delete category "${category.name}"? This is a soft delete - the category will be hidden from dropdowns but historical dockets will remain valid.`)) {
       return;
     }
     
@@ -835,7 +835,7 @@ export const AdminPage = () => {
   };
 
   const handleDeleteSubcategory = async (category, subcategory) => {
-    if (!confirm(`Are you sure you want to delete subcategory "${subcategory.name}"? This is a soft delete - the subcategory will be hidden from dropdowns but historical cases will remain valid.`)) {
+    if (!confirm(`Are you sure you want to delete subcategory "${subcategory.name}"? This is a soft delete - the subcategory will be hidden from dropdowns but historical dockets will remain valid.`)) {
       return;
     }
     

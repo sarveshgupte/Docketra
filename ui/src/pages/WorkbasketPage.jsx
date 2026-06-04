@@ -1084,7 +1084,7 @@ export const WorkbasketPage = () => {
               )}
               emptyFilteredMessage={
                 <EmptyState
-                  title="No caseload matching filters"
+                  title="No dockets matching filters"
                   description="Adjust rebalancing filters or clear all to view workbasket dockets."
                 />
               }

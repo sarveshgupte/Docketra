@@ -6,8 +6,8 @@
  * Usage:
  *   <ActionConfirmModal
  *     isOpen={showModal}
- *     title="Assign Cases"
- *     description="Assign 7 selected cases to yourself?"
+ *     title="Assign Dockets"
+ *     description="Assign 7 selected dockets to yourself?"
  *     onConfirm={handleAssign}
  *     onCancel={() => setShowModal(false)}
  *   />
