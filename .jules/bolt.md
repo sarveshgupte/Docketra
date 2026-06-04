@@ -48,3 +48,7 @@
 ## 2026-05-21 - Concurrent Document Fetch in Case Create Service Validation
 **Learning:** In the `caseCreate` service, `WorkType.findOne` and `SubWorkType.findOne` were awaited sequentially, which caused endpoint latency, despite being independent of the other model validation queries (like `Deal`, `CrmClient`, etc.).
 **Action:** Prepared the `WorkType` and `SubWorkType` queries as promises and merged them into the existing `Promise.all()` concurrently with the other independent lookups.
+
+## 2024-06-04 - Concurrent Document Fetch in Case Create Service Validation
+**Learning:** In the `caseCreate` service, `ClientRepository.findByClientId` and `categoryRepository.findActiveCategory` were awaited sequentially, which caused endpoint latency, despite being independent of the other model validation queries.
+**Action:** Prepared the queries as promises and merged them into the existing `Promise.all()` concurrently with the other independent lookups.

@@ -419,10 +419,15 @@ module.exports = (deps) => {
         }).lean();
       }
 
+      let clientPromise = null;
+      if (finalClientId) {
+        clientPromise = ClientRepository.findByClientId(firmId, finalClientId, req.user.role);
+      }
+
       // ⚡ Bolt Performance Optimization:
-      // Prepare independent validation queries (dealId, crmClientId, fallbackWorkbasket, resolvedEmployee, workType, subWorkType)
+      // Prepare independent validation queries (dealId, crmClientId, fallbackWorkbasket, resolvedEmployee, workType, subWorkType, client)
       // and execute them concurrently via Promise.all to reduce endpoint latency.
-      const [fallbackWorkbasket, crmClient, deal, fetchedEmployee, fetchedRelatedEmployeeUser, selectedWorkType, selectedSubWorkType] = await Promise.all([
+      const [fallbackWorkbasket, crmClient, deal, fetchedEmployee, fetchedRelatedEmployeeUser, selectedWorkType, selectedSubWorkType, fetchedClient] = await Promise.all([
         fallbackWorkbasketPromise,
         crmClientPromise,
         dealPromise,
@@ -430,6 +435,7 @@ module.exports = (deps) => {
         relatedEmployeeUserPromise,
         workTypePromise,
         subWorkTypePromise,
+        clientPromise,
       ]);
       resolvedEmployee = fetchedEmployee || null;
       relatedEmployeeUser = fetchedRelatedEmployeeUser || null;
@@ -471,16 +477,17 @@ module.exports = (deps) => {
 
       // Every new docket must resolve to a firm-scoped client.
       // If omitted (including cleared client in UI), use tenant default client.
+      let client = fetchedClient || null;
       if (!finalClientId) {
         const defaultClient = await getOrCreateDefaultClient(firmId, {
           requestId,
           userId: req.user?._id || req.user?.id || null,
         });
         finalClientId = defaultClient?.clientId || 'C000001';
+        // Verify client exists and validate status - with firm scoping
+        // PR: Client Lifecycle Enforcement - only ACTIVE clients can be used for new cases
+        client = await ClientRepository.findByClientId(firmId, finalClientId, req.user.role);
       }
-      // Verify client exists and validate status - with firm scoping
-      // PR: Client Lifecycle Enforcement - only ACTIVE clients can be used for new cases
-      const client = await ClientRepository.findByClientId(firmId, finalClientId, req.user.role);
       
       if (!client) {
         return res.status(404).json({
@@ -1049,7 +1056,22 @@ module.exports = (deps) => {
         });
       }
 
-      const categoryDoc = await categoryRepository.findActiveCategory(categoryId, req.user.firmId);
+      // ⚡ Bolt Performance Optimization:
+      // Fetch category and original case concurrently via Promise.all
+      const fetchOriginalCase = async () => {
+        try {
+          const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
+          return await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
+        } catch (_error) {
+          return null; // Return null to signify not found
+        }
+      };
+
+      const [categoryDoc, originalCase] = await Promise.all([
+        categoryRepository.findActiveCategory(categoryId, req.user.firmId),
+        fetchOriginalCase()
+      ]);
+
       if (!categoryDoc) {
         return res.status(404).json({
           success: false,
@@ -1065,17 +1087,6 @@ module.exports = (deps) => {
           success: false,
           message: 'Invalid subcategory selected.',
           code: 'CLONE_SUBCATEGORY_INVALID',
-        });
-      }
-
-      let originalCase;
-      try {
-        const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
-        originalCase = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
-      } catch (_error) {
-        return res.status(404).json({
-          success: false,
-          message: 'Original case not found',
         });
       }
       
