@@ -56,7 +56,7 @@ jobs:
           IMAGE_URI="gcr.io/docketra-prod/docketra-api:${{ github.sha }}"
           
           # Build container using Cloud Build
-          gcloud builds submit --project docketra-prod --tag "$IMAGE_URI" .
+          gcloud builds submit --project docketra-prod --tag "$IMAGE_URI" --suppress-logs .
           
           # Deploy image to Google Cloud Run (preserving env variables already configured on the service)
           gcloud run deploy docketra-api \
@@ -65,3 +65,4 @@ jobs:
             --image "$IMAGE_URI" \
             --platform managed \
             --allow-unauthenticated
+
