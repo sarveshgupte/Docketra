@@ -73,3 +73,7 @@ env.yaml
 # Caches and Scratch files
 .firebase/
 scratch/
+graphify-out/
+.codex-calendar-check.png
+
+
