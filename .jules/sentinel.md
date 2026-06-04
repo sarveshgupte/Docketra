@@ -40,3 +40,8 @@
 **Vulnerability:** Raw error messages (`error.message`) were being directly exposed to clients in API error responses (e.g., in `src/controllers/user.controller.js`).
 **Learning:** Exposing raw internal error details to the client can leak sensitive system information, configuration details, or underlying infrastructure state, which can be leveraged by attackers.
 **Prevention:** Always log the full error details server-side using the internal logger (`log.error`) and return generic, safe error messages to the client (e.g., "Unable to load profile").
+
+## 2024-06-04 - Fix Unescaped Regex in DocumentItem and KnowledgeItem
+**Vulnerability:** User-derived input was being interpolated directly into `new RegExp` queries without escaping in `DocumentItem` and `KnowledgeItem` controllers.
+**Learning:** Constructing regex patterns dynamically from unescaped input could allow malicious actors to perform Regex Injection / ReDoS or manipulate search filters in unexpected ways.
+**Prevention:** Always sanitize input by applying `escapeRegExp` before placing it inside a `new RegExp` for dynamic MongoDB matching.

@@ -5,6 +5,7 @@ const Client = require('../models/Client.model');
 const Attachment = require('../models/Attachment.model');
 const Comment = require('../models/Comment.model');
 const CaseHistory = require('../models/CaseHistory.model');
+const { escapeRegExp } = require('../utils/regexp.utils');
 
 // Helper to check if a client display ID is restricted for the current user
 const isClientRestricted = (user, clientDisplayId) => {
@@ -51,7 +52,8 @@ const createDocumentItem = async (req, res) => {
     }
 
     // Prevent duplicate name confusion in the same docket
-    const duplicate = await DocumentItem.findOne({ caseInternalId, name: { $regex: new RegExp(`^${name}$`, 'i') } });
+    // Security: Escape user input to prevent Regex Injection / ReDoS
+    const duplicate = await DocumentItem.findOne({ caseInternalId, name: { $regex: new RegExp(`^${escapeRegExp(name)}$`, 'i') } });
     if (duplicate) {
       return res.status(409).json({
         success: false,

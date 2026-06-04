@@ -4,6 +4,7 @@ const Case = require('../models/Case.model');
 const Client = require('../models/Client.model');
 const ComplianceObligationTemplate = require('../models/ComplianceObligationTemplate.model');
 const { resolveFirmMemoryScope } = require('../services/firmMemoryScope.service');
+const { escapeRegExp } = require('../utils/regexp.utils');
 
 const { KNOWLEDGE_ITEM_TYPES, KNOWLEDGE_ITEM_STATUSES } = KnowledgeItem;
 
@@ -416,20 +417,24 @@ const getWorkspaceAssets = async (req, res) => {
       // 1. Matched Client ID
       ...(resolvedClientId ? [{ linkedClientId: resolvedClientId }] : []),
       // 2. Matched Service Line (obligation_type)
+      // Security: Escape user-derived input to prevent Regex Injection / ReDoS
       ...(targetCase.obligation_type ? [
-        { linkedServiceLine: { $regex: new RegExp(`^${targetCase.obligation_type}$`, 'i') } }
+        { linkedServiceLine: { $regex: new RegExp(`^${escapeRegExp(targetCase.obligation_type)}$`, 'i') } }
       ] : []),
       // 3. Matched Docket Type (category / subcategory / categoryId / subcategoryId)
       ...(targetCase.categoryId ? [{ linkedDocketType: String(targetCase.categoryId) }] : []),
+      // Security: Escape user-derived input to prevent Regex Injection / ReDoS
       ...(targetCase.category ? [
-        { linkedDocketType: { $regex: new RegExp(`^${targetCase.category}$`, 'i') } }
+        { linkedDocketType: { $regex: new RegExp(`^${escapeRegExp(targetCase.category)}$`, 'i') } }
       ] : []),
+      // Security: Escape user-derived input to prevent Regex Injection / ReDoS
       ...(targetCase.subcategory ? [
-        { linkedDocketType: { $regex: new RegExp(`^${targetCase.subcategory}$`, 'i') } }
+        { linkedDocketType: { $regex: new RegExp(`^${escapeRegExp(targetCase.subcategory)}$`, 'i') } }
       ] : []),
       // 4. Matched Stage / Status
+      // Security: Escape user-derived input to prevent Regex Injection / ReDoS
       ...(targetCase.status ? [
-        { linkedStage: { $regex: new RegExp(`^${targetCase.status}$`, 'i') } }
+        { linkedStage: { $regex: new RegExp(`^${escapeRegExp(targetCase.status)}$`, 'i') } }
       ] : []),
     ];
 
