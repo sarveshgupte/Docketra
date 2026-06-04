@@ -1089,12 +1089,12 @@ const storageHealthCheck = async (req, res) => {
     const provider = await StorageProviderFactory.getProvider(ownershipFirmId);
     if (supportsHealthCheck(provider)) await provider.testConnection();
 
-    if (state.canonicalProvider === 'google_drive' && firm?.storageConfig?.credentials) {
+    if (state.isFirmConnected && firm?.storageConfig?.credentials) {
       const credentials = decodeFirmStorageConfig(firm, ownershipFirmId);
       await Firm.findByIdAndUpdate(ownershipFirmId, {
         $set: {
           storageConfig: {
-            provider: 'google_drive',
+            provider: state.canonicalProvider,
             credentials: encrypt(JSON.stringify({
               ...credentials,
               status: 'ACTIVE_BYOS',
@@ -1111,12 +1111,29 @@ const storageHealthCheck = async (req, res) => {
     if (ownershipFirmId) {
       const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig').lean();
       const state = resolveFirmStorageState(firm);
-      if (state.canonicalProvider === 'google_drive') {
+      if (state.isFirmConnected) {
         const mappedStatus = mapProviderErrorToStatus(error);
-        if (mappedStatus === 'DISCONNECTED') {
-          await googleDriveService.markStorageDisconnected(ownershipFirmId, error.message);
+        if (state.canonicalProvider === 'google_drive') {
+          if (mappedStatus === 'DISCONNECTED') {
+            await googleDriveService.markStorageDisconnected(ownershipFirmId, error.message);
+          } else {
+            await googleDriveService.markStorageError(ownershipFirmId, error.message);
+          }
         } else {
-          await googleDriveService.markStorageError(ownershipFirmId, error.message);
+          const credentials = decodeFirmStorageConfig(firm, ownershipFirmId);
+          await Firm.findByIdAndUpdate(ownershipFirmId, {
+            $set: {
+              storageConfig: {
+                provider: state.canonicalProvider,
+                credentials: encrypt(JSON.stringify({
+                  ...credentials,
+                  status: mappedStatus === 'DISCONNECTED' ? 'DISCONNECTED' : 'ERROR',
+                  lastError: error.message || 'Storage connection failure',
+                  lastCheckedAt: new Date().toISOString(),
+                })),
+              },
+            },
+          });
         }
       }
     }

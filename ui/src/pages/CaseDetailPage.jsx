@@ -1027,7 +1027,7 @@ export const CaseDetailPage = () => {
     const warnings = [];
     const unresolvedComments = comments.filter((c) => !c.resolved).length;
     if (unresolvedComments > 0) {
-      warnings.push(`${unresolvedComments} unresolved comment(s) on this case.`);
+      warnings.push(`${unresolvedComments} unresolved comment(s) on this docket.`);
     }
     if (caseInfo.approvalStatus === 'PENDING') {
       warnings.push('Pending approval is outstanding.');

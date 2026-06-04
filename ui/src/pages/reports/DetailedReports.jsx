@@ -97,7 +97,7 @@ export const DetailedReports = () => {
         setPagination(response.data.data.pagination);
       }
     } catch (err) {
-      console.error('Error loading cases:', err);
+      console.error('Error loading dockets:', err);
       if (!err.response) {
         setError('Unable to connect to server');
       } else if (err.response?.status === 404) {

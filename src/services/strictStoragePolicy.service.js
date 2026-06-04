@@ -30,7 +30,7 @@ async function requireWritableBusinessStorage({ firmId, requestId = null, actorX
   if (!strictFirmOwnedStorage) return { strictFirmOwnedStorage: false, byosWritable: true };
 
   const state = resolveFirmStorageState(firm);
-  const byosWritable = state.canonicalProvider === 'google_drive' && state.connectionStatus === 'ACTIVE_BYOS' && !state.isManaged;
+  const byosWritable = state.isFirmConnected && state.connectionStatus === 'ACTIVE_BYOS';
   if (!byosWritable) {
     logStrictStorageEvent({
       event: EVENTS.WRITE_BLOCKED,

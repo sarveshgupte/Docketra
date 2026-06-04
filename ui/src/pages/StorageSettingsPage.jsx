@@ -235,9 +235,9 @@ export function StorageSettingsPage() {
   }, [location.search]);
 
   const currentProvider = config?.provider || 'docketra_managed';
-  const normalizedProvider = currentProvider === 'google_drive' ? 'google-drive' : currentProvider;
+  const normalizedProvider = (currentProvider === 'google_drive' || currentProvider === 'google-drive') ? 'google-drive' : currentProvider;
   const isGoogleConnected = normalizedProvider === 'google-drive' && Boolean(config?.isConfigured);
-  const currentModeLabel = config?.provider === 'google_drive' ? 'Firm-owned Google Drive' : config?.provider === 'onedrive' ? 'Firm-owned Microsoft OneDrive' : config?.provider === 's3' ? 'Firm-owned Amazon S3' : 'Docketra-managed Google Drive';
+  const currentModeLabel = normalizedProvider === 'google-drive' ? 'Firm-owned Google Drive' : config?.provider === 'onedrive' ? 'Firm-owned Microsoft OneDrive' : config?.provider === 's3' ? 'Firm-owned Amazon S3' : 'Docketra-managed Google Drive';
   const statusLabel = config?.status?.includes('ERROR') || config?.status?.includes('DISCONNECTED') ? 'Needs attention' : config?.isConfigured ? 'Active' : 'Not connected';
   const usagePercent = Number(usage?.usagePercent || 0);
   const strictFirmOwnedStorage = Boolean(config?.strictFirmOwnedStorage);
@@ -538,7 +538,7 @@ export function StorageSettingsPage() {
             <div className="flex flex-wrap items-center gap-3 pt-2">
               {config?.isConfigured ? (
                 <>
-                  {config.provider === 'google_drive' && (
+                  {normalizedProvider === 'google-drive' && (
                     <Button type="button" variant="primary" onClick={onOpenStorageFolder} disabled={openingFolder || !rootHealthOk}>
                       {openingFolder ? 'Opening Folder…' : 'Open Storage Folder'}
                     </Button>
@@ -555,7 +555,7 @@ export function StorageSettingsPage() {
               )}
             </div>
 
-            {!folderLinkAvailable && config?.provider === 'google_drive' && (
+            {!folderLinkAvailable && normalizedProvider === 'google-drive' && (
               <p className="text-xs text-rose-500 font-medium">⚠️ Connection error: administrative folder link is temporarily unreachable.</p>
             )}
             {summaryWarning && <p className="text-xs text-amber-600 font-medium">{summaryWarning}</p>}
@@ -585,7 +585,7 @@ export function StorageSettingsPage() {
                 </div>
                 <h3 className="font-bold text-slate-800 text-sm">Google Drive</h3>
                 <span className="text-xs text-slate-400 mt-1 block">OAuth 2.0 Direct Link</span>
-                {currentProvider === 'google_drive' && config?.isConfigured && (
+                {normalizedProvider === 'google-drive' && config?.isConfigured && (
                   <span className="mt-2 text-[10px] px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold uppercase rounded-full">Currently Active</span>
                 )}
               </button>
@@ -743,7 +743,7 @@ export function StorageSettingsPage() {
           </div>
 
           {/* Root Health Warnings */}
-          {config?.provider === 'google_drive' && (
+          {normalizedProvider === 'google-drive' && (
             <div className={`p-5 rounded-2xl border flex items-start gap-3 transition-all ${
               rootHealthOk ? 'bg-emerald-50/50 border-emerald-100 text-emerald-800' : 'bg-amber-50/50 border-amber-100 text-amber-800'
             }`}>

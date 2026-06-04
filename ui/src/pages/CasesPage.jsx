@@ -375,7 +375,7 @@ export const CasesPage = () => {
               await refreshCases();
             }
           } catch (err) {
-            console.error('Failed to assign case:', err);
+            console.error('Failed to assign docket:', err);
             rollback();
           } finally {
             setAssigningCaseId(null);
@@ -393,7 +393,7 @@ export const CasesPage = () => {
         await refreshCases();
       }
     } catch (err) {
-      console.error('Failed to assign case:', err);
+      console.error('Failed to assign docket:', err);
       rollback();
     } finally {
       setAssigningCaseId(null);

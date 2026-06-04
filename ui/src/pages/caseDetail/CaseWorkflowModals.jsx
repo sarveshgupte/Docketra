@@ -79,7 +79,7 @@ export const CaseWorkflowModals = ({
           Pending a docket temporarily pauses it until a specified date.
           The docket will remain in your worklist but move below active dockets until the selected date.
         </p>
-        <Textarea label="Comment (Required)" value={pendComment} onChange={(e) => setPendComment(e.target.value)} placeholder="Explain why this case is being pended…" rows={4} required disabled={pendingCase} />
+        <Textarea label="Comment (Required)" value={pendComment} onChange={(e) => setPendComment(e.target.value)} placeholder="Explain why this docket is being pended…" rows={4} required disabled={pendingCase} />
         <div className="mt-3">
           <label htmlFor="pending-until" className="mb-1 block text-sm font-medium text-gray-700">Reopen Date (Required)</label>
           <input id="pending-until" type="date" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={pendingUntil} onChange={(e) => setPendingUntil(e.target.value)} disabled={pendingCase} min={pendingMinDate} />
@@ -106,9 +106,9 @@ export const CaseWorkflowModals = ({
           </div>
         )}
         <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)' }}>
-          {routedTeamCannotResolve ? "This returns the docket to the original routing user. It does not finally resolve the docket." : "Resolving a case marks it as executed with no further action required. The case will become read-only after resolution."}
+          {routedTeamCannotResolve ? "This returns the docket to the original routing user. It does not finally resolve the docket." : "Resolving a docket marks it as executed with no further action required. The docket will become read-only after resolution."}
         </p>
-        <Textarea label={routedTeamCannotResolve ? "Submit comment (Required)" : "Comment (Required)"} value={resolveComment} onChange={(e) => setResolveComment(e.target.value)} placeholder="Describe how this case was resolved…" rows={4} required disabled={resolvingCase} />
+        <Textarea label={routedTeamCannotResolve ? "Submit comment (Required)" : "Comment (Required)"} value={resolveComment} onChange={(e) => setResolveComment(e.target.value)} placeholder="Describe how this docket was resolved…" rows={4} required disabled={resolvingCase} />
       </div>
     </Modal>
 

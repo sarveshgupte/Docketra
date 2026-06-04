@@ -904,7 +904,7 @@ const updateFirmSettings = async (req, res) => {
 
     if (requestedFirmSettings.strictFirmOwnedStorage) {
       const state = resolveFirmStorageState(firm);
-      const byosHealthy = state.canonicalProvider === 'google_drive' && state.connectionStatus === 'ACTIVE_BYOS' && !state.isManaged;
+      const byosHealthy = state.isFirmConnected && state.connectionStatus === 'ACTIVE_BYOS';
       if (!byosHealthy) {
         logStrictStorageEvent({
           event: STRICT_STORAGE_EVENTS.BYOS_REQUIRED,

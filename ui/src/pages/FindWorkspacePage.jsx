@@ -13,7 +13,7 @@ const LOOKUP_UNAVAILABLE_MESSAGE = 'Workspace lookup is temporarily unavailable.
 const WORKSPACE_PROMISES = [
   '🔎 Finds the right firm URL for you',
   '🔐 Keeps private workspace data hidden',
-  '⚡ Gets teams back to case work faster',
+  '⚡ Gets teams back to docket work faster',
 ];
 
 export const FindWorkspacePage = () => {

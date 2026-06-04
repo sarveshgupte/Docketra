@@ -5,7 +5,7 @@ import { Section } from '../../components/layout/Section';
 const FEATURES = [
   {
     title: 'Centralized Firm Dashboard',
-    description: 'Manage all your clients, cases, and team members from a single, secure platform. Say goodbye to scattered spreadsheets and isolated WhatsApp groups.',
+    description: 'Manage all your clients, dockets, and team members from a single, secure platform. Say goodbye to scattered spreadsheets and isolated WhatsApp groups.',
   },
   {
     title: 'Granular Access Controls',
@@ -21,7 +21,7 @@ const FEATURES = [
   },
   {
     title: 'Secure Document Storage',
-    description: 'Keep client files attached directly to their specific cases. Ensure document hygiene with version control and secure retrieval.',
+    description: 'Keep client files attached directly to their specific dockets. Ensure document hygiene with version control and secure retrieval.',
   },
   {
     title: 'Real-Time Operational Metrics',

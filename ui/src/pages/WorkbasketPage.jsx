@@ -388,7 +388,7 @@ export const WorkbasketPage = () => {
 
   const handlePullCase = async (caseId) => {
     if (!user?.xID) {
-      showError('Authenticated userXID is required to pull cases. Please log in again.');
+      showError('Authenticated userXID is required to pull dockets. Please log in again.');
       return;
     }
 

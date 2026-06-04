@@ -40,8 +40,8 @@ export const buildStorageStatusSummary = (firmSlug, configuration = {}, ownershi
   const strictMode = isStrictMode(configuration, ownershipSummary);
   const activeConnectionStatus = normalizeStatus(activeStorage.connectionStatus);
 
-  const byosConfigured = Boolean(provider === 'google_drive' || activeConnectionStatus === 'ACTIVE_BYOS');
-  const byosProvider = provider === 'google_drive';
+  const byosProvider = ['google_drive', 'onedrive', 's3'].includes(provider);
+  const byosConfigured = Boolean(byosProvider || activeConnectionStatus === 'ACTIVE_BYOS');
   const needsAttention = Boolean(
     ['ERROR', 'DISCONNECTED'].includes(configurationStatus)
     || ['ERROR', 'DISCONNECTED'].includes(healthStatus)
@@ -53,6 +53,13 @@ export const buildStorageStatusSummary = (firmSlug, configuration = {}, ownershi
   const byosActive = byosProvider && byosConfigured && !needsAttention;
   const managedFallback = !byosActive && !needsAttention;
 
+  const getProviderLabel = (prov, isByos) => {
+    if (prov === 'google_drive') return isByos ? 'Firm-owned Google Drive' : 'Docketra-managed Google Drive';
+    if (prov === 'onedrive') return 'Firm-owned Microsoft OneDrive';
+    if (prov === 's3') return 'Firm-owned Amazon S3';
+    return 'Docketra-managed Google Drive';
+  };
+
   let badgeTone = 'neutral';
   let badgeLabel = 'Docketra-managed storage';
   let providerLabel = 'Docketra-managed Google Drive';
@@ -63,21 +70,24 @@ export const buildStorageStatusSummary = (firmSlug, configuration = {}, ownershi
   if (needsAttention) {
     badgeTone = 'warning';
     badgeLabel = 'Storage needs attention';
-    providerLabel = byosProvider ? 'Firm-owned Google Drive' : 'Docketra-managed Google Drive';
+    providerLabel = getProviderLabel(provider, byosProvider);
+    businessDataLocation = byosProvider ? 'Firm-owned cloud storage' : 'Docketra-managed storage';
     helperText = rootHealth?.status === 'recovery_required' ? 'Google Drive root recovery required' : 'Storage connection requires attention from a Primary Admin.';
     statusLabel = 'Needs attention';
   } else if (strictMode && byosActive) {
     badgeTone = 'success';
     badgeLabel = 'Strict firm-owned storage';
-    providerLabel = 'Firm-owned Google Drive';
+    providerLabel = getProviderLabel(provider, true);
     businessDataLocation = 'Firm-owned cloud storage';
     helperText = 'Docketra-managed fallback storage is disabled for this workspace.';
   } else if (byosActive) {
     badgeTone = 'success';
     badgeLabel = 'Firm-owned storage active';
-    providerLabel = 'Firm-owned Google Drive';
+    providerLabel = getProviderLabel(provider, true);
     businessDataLocation = 'Firm-owned cloud storage';
-    helperText = 'Business files are stored in your firm-owned Google Drive.';
+    helperText = provider === 'google_drive'
+      ? 'Business files are stored in your firm-owned Google Drive.'
+      : 'Business files are stored in your firm-owned cloud storage.';
   }
 
   const activeFirmSlug = String(firmSlug || '');

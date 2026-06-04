@@ -392,8 +392,8 @@ export const DashboardPage = () => {
           const worklistResponse = await worklistApi.getEmployeeWorklist({ limit: DASHBOARD_RECENT_CASES_LIMIT });
           return worklistResponse.success ? (worklistResponse.data || []) : [];
         } catch (error) {
-          console.error(isAdmin ? 'Failed to load firm cases:' : 'Failed to load worklist:', error);
-          reportLoadWarning('Recent cases');
+          console.error(isAdmin ? 'Failed to load firm dockets:' : 'Failed to load worklist:', error);
+          reportLoadWarning('Recent dockets');
           return [];
         }
       })();
@@ -423,20 +423,20 @@ export const DashboardPage = () => {
         fetchStatSafely(
           () => worklistApi.getEmployeeWorklist(),
           (worklistResponse) => (worklistResponse.success ? { myOpenCases: (worklistResponse.data || []).length } : {}),
-          'Failed to load open cases count:',
-          'Open case counts',
+          'Failed to load open dockets count:',
+          'Open docket counts',
         ),
         fetchStatSafely(
           () => caseApi.getMyPendingCases(),
           (pendingResponse) => (pendingResponse.success ? { myPendingCases: (pendingResponse.data || []).length } : {}),
-          'Failed to load pending cases:',
-          'Pending case counts',
+          'Failed to load pending dockets:',
+          'Pending docket counts',
         ),
         fetchStatSafely(
           () => caseApi.getMyResolvedCases(),
           (resolvedResponse) => (resolvedResponse.success ? { myResolvedCases: (resolvedResponse.data || []).length } : {}),
-          'Failed to load resolved cases:',
-          'Resolved case counts',
+          'Failed to load resolved dockets:',
+          'Resolved docket counts',
         ),
         fetchStatSafely(
           () => caseApi.getMyUnassignedCreatedCases(),
@@ -445,8 +445,8 @@ export const DashboardPage = () => {
               ? { myUnassignedCreatedCases: (unassignedCreatedResponse.data || []).length }
               : {}
           ),
-          'Failed to load unassigned created cases:',
-          'Unassigned case counts',
+          'Failed to load unassigned created dockets:',
+          'Unassigned docket counts',
         ),
         isAdmin
           ? fetchStatSafely(
@@ -464,8 +464,8 @@ export const DashboardPage = () => {
             (filedResponse) => (
               filedResponse.success ? { adminFiledCases: filedResponse.pagination?.total || 0 } : {}
             ),
-            'Failed to load filed cases:',
-            'Filed cases',
+            'Failed to load filed dockets:',
+            'Filed dockets',
           )
           : Promise.resolve({}),
         isAdmin
@@ -476,8 +476,8 @@ export const DashboardPage = () => {
                 ? { adminResolvedCases: adminResolvedResponse.pagination?.total || 0 }
                 : {}
             ),
-            'Failed to load admin resolved cases:',
-            'Resolved admin cases',
+            'Failed to load admin resolved dockets:',
+            'Resolved admin dockets',
           )
           : Promise.resolve({}),
         isAdmin

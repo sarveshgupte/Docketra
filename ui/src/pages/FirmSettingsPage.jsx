@@ -381,7 +381,7 @@ export const FirmSettingsPage = () => {
           <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
             <div className="space-y-2 lg:col-span-1">
               <h2 className="text-lg font-medium text-[var(--dt-text)]">Operational Configuration</h2>
-              <p className="text-sm text-[var(--dt-text-muted)]">Set the default thresholds that guide case routing, SLAs, and escalation timing.</p>
+              <p className="text-sm text-[var(--dt-text-muted)]">Set the default thresholds that guide docket routing, SLAs, and escalation timing.</p>
             </div>
             <Card className="lg:col-span-2 lg:max-w-4xl">
               <div className="space-y-5">

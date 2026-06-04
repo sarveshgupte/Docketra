@@ -65,8 +65,9 @@ class GoogleDriveProvider extends StorageProvider {
   async uploadFile(folderId, filename, streamOrBuffer, mimeType = 'application/octet-stream') {
     const drive = this.getClient();
     const requestBody = { name: filename };
-    if (folderId) {
-      requestBody.parents = [folderId];
+    const resolvedFolderId = folderId || this.rootFolderId;
+    if (resolvedFolderId) {
+      requestBody.parents = [resolvedFolderId];
     }
     const body = Buffer.isBuffer(streamOrBuffer) ? Readable.from(streamOrBuffer) : streamOrBuffer;
     const created = await drive.files.create({
@@ -99,7 +100,7 @@ class GoogleDriveProvider extends StorageProvider {
 
   async listFiles(folderId) {
     const drive = this.getClient();
-    const resolvedFolderId = folderId || 'root';
+    const resolvedFolderId = folderId || this.rootFolderId || 'root';
     const res = await drive.files.list({
       q: `'${resolvedFolderId}' in parents and trashed = false`,
       fields: 'files(id,name,mimeType,size)',
@@ -190,8 +191,9 @@ class GoogleDriveProvider extends StorageProvider {
   }) {
     const drive = this.getClient();
     const requestBody = { name: fileName, mimeType };
-    if (folderId) {
-      requestBody.parents = [folderId];
+    const resolvedFolderId = folderId || this.rootFolderId;
+    if (resolvedFolderId) {
+      requestBody.parents = [resolvedFolderId];
     }
     const response = await drive.files.create(
       {
