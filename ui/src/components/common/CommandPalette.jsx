@@ -17,6 +17,7 @@ export const CommandPalette = ({
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef(null);
   const itemRefs = useRef([]);
+  const lastInteractionRef = useRef('mouse');
 
   const query = typeof controlledQuery === 'string' ? controlledQuery : internalQuery;
   const setQuery = onQueryChange || setInternalQuery;
@@ -95,11 +96,13 @@ export const CommandPalette = ({
     if (!isOpen) return;
     if (event.key === 'ArrowDown') {
       event.preventDefault();
+      lastInteractionRef.current = 'keyboard';
       setActiveIndex((index) => (visibleItems.length ? Math.min(index + 1, visibleItems.length - 1) : 0));
       return;
     }
     if (event.key === 'ArrowUp') {
       event.preventDefault();
+      lastInteractionRef.current = 'keyboard';
       setActiveIndex((index) => Math.max(index - 1, 0));
       return;
     }
@@ -117,7 +120,9 @@ export const CommandPalette = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    itemRefs.current[activeIndex]?.scrollIntoView({ block: 'nearest' });
+    if (lastInteractionRef.current === 'keyboard') {
+      itemRefs.current[activeIndex]?.scrollIntoView({ block: 'nearest' });
+    }
   }, [activeIndex, isOpen]);
 
   if (!isOpen) return null;
@@ -182,7 +187,10 @@ export const CommandPalette = ({
                           }}
                           className={`command-palette__item ${active ? 'command-palette__item--active' : ''}`}
                           onClick={() => executeCommand(command)}
-                          onMouseEnter={() => setActiveIndex(visibleIndex)}
+                          onMouseEnter={() => {
+                            lastInteractionRef.current = 'mouse';
+                            setActiveIndex(visibleIndex);
+                          }}
                           role="option"
                           aria-selected={active}
                         >

@@ -821,10 +821,12 @@ const globalWorklist = async (req, res) => {
     const parsedPage = Math.max(1, Number.parseInt(page, 10) || 1);
     const parsedLimit = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 20));
     const query = {
-      assignedToXID: null,
-      state: 'IN_WB',
       status: { $nin: [CaseStatus.RESOLVED, CaseStatus.FILED] },
     };
+    if (!requestedWorkbasketId) {
+      query.assignedToXID = null;
+      query.state = 'IN_WB';
+    }
     const andClauses = [];
 
     if (normalizedTab === 'routed' && selectedTeamId) {

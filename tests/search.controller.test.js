@@ -424,6 +424,16 @@ async function testGlobalWorklist() {
   assert.ok(Array.isArray(queryCall.status.$nin));
   assert.strictEqual(queryCall.status.$nin.length, 2);
 
+  // 2b. If workbasketId is specified, query should NOT enforce assignedToXID: null or state: 'IN_WB'
+  mockCaseFind.length = 0;
+  req = mockReq({ user: { xID: 'X000123', firmId: 'firm-123', role: 'Admin' }, query: { workbasketId: '60d5ec49f3e1a329dc3309a2' } });
+  res = mockRes();
+  await searchController.globalWorklist(req, res);
+  assert.strictEqual(res.data.success, true);
+  const workbasketQueryCall = mockCaseFind[0];
+  assert.strictEqual(workbasketQueryCall.assignedToXID, undefined);
+  assert.strictEqual(workbasketQueryCall.state, undefined);
+
   // 3. SLA Filter checks
   mockCaseFind.length = 0;
   req = mockReq({ query: { slaStatus: 'overdue' } });
