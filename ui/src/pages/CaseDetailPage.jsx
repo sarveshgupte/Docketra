@@ -295,14 +295,13 @@ export const CaseDetailPage = () => {
     sortedTimelineEvents,
   });
   const docketTabs = useMemo(() => ([
-    { name: CASE_DETAIL_TABS.OVERVIEW, label: 'Overview' },
-    { name: CASE_DETAIL_TABS.ATTACHMENTS, label: 'Attachments', badge: attachments.length || null },
-    { name: CASE_DETAIL_TABS.ACTIVITY, label: 'Activity', badge: mergedTimelineEvents.length || null },
-    { name: CASE_DETAIL_TABS.KNOWLEDGE, label: 'Linked Knowledge' },
-    { name: CASE_DETAIL_TABS.DOCUMENT_PACKS, label: 'Document Packs' },
-    { name: CASE_DETAIL_TABS.EXCEPTIONS, label: 'Blockers' },
-    { name: CASE_DETAIL_TABS.EFFORT, label: 'Effort & Budget' },
-    { name: CASE_DETAIL_TABS.EMAIL_LOGS, label: 'Email Logs' },
+    { name: CASE_DETAIL_TABS.OVERVIEW, label: '📋 Overview' },
+    { name: CASE_DETAIL_TABS.ACTIVITY, label: '🕒 Activity', badge: mergedTimelineEvents.length || null },
+    { name: CASE_DETAIL_TABS.KNOWLEDGE, label: '🧠 Linked Knowledge' },
+    { name: CASE_DETAIL_TABS.DOCUMENT_PACKS, label: '📦 Document Packs' },
+    { name: CASE_DETAIL_TABS.EXCEPTIONS, label: '⚠️ Blockers' },
+    { name: CASE_DETAIL_TABS.EFFORT, label: '⏱️ Effort & Budget' },
+    { name: CASE_DETAIL_TABS.EMAIL_LOGS, label: '✉️ Email Logs' },
   ]), [attachments.length, mergedTimelineEvents.length]);
 
   const visibleComments = useMemo(() => {
@@ -1291,15 +1290,6 @@ export const CaseDetailPage = () => {
               >
                 ⓘ
               </button>
-              <button
-                type="button"
-                onClick={() => runGuardedAction(() => openSidebar('history'), 'Unable to open history panel right now.')}
-                title="History"
-                className="h-10 w-10 rounded-lg flex items-center justify-center text-lg hover:bg-white text-gray-700 hover:text-indigo-600 transition-all shadow-sm hover:shadow border-0 bg-transparent cursor-pointer"
-                aria-label="Open history sidebar"
-              >
-                🕒
-              </button>
               {canCloneDocket ? (
                 <button
                   type="button"
@@ -1311,15 +1301,6 @@ export const CaseDetailPage = () => {
                   ⧉
                 </button>
               ) : null}
-              <button
-                type="button"
-                onClick={() => runGuardedAction(() => openSidebar('attachments'), 'Unable to open attachments panel right now.')}
-                title="Attachments"
-                className="h-10 w-10 rounded-lg flex items-center justify-center text-lg hover:bg-white text-gray-700 hover:text-indigo-600 transition-all shadow-sm hover:shadow border-0 bg-transparent cursor-pointer"
-                aria-label="Open attachments sidebar"
-              >
-                📎
-              </button>
             </div>
 
             {/* SLA details below icons */}
