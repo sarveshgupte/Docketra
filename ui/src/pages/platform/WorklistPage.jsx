@@ -111,16 +111,19 @@ export const PlatformWorklistPage = () => {
     void fetchUsers();
   }, [isSupervisor, user, scopedWorkbasketId]);
 
+  const [sortState, setSortState] = useState({ key: '', direction: 'asc' });
+
   useEffect(() => {
     setSelectedIds([]);
     setSuccess('');
     setBulkAssigneeXid('');
     setError('');
+    setSortState({ key: '', direction: 'asc' });
   }, [scopedWorkbasketId]);
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedIds(filteredRows.map(r => getDocketRouteId(r)).filter(Boolean));
+      setSelectedIds(sortedRows.map(r => getDocketRouteId(r)).filter(Boolean));
     } else {
       setSelectedIds([]);
     }
@@ -203,6 +206,42 @@ export const PlatformWorklistPage = () => {
     });
   }, [normalizedRows, search, statusFilter, categoryFilter, activeOnly]);
 
+  const sortedRows = useMemo(() => {
+    if (!sortState.key) return filteredRows;
+
+    const getSortValue = (row, key) => {
+      switch (key) {
+        case 'docketId':
+          return formatDocketLabel(row);
+        case 'clientId':
+          return row.clientId || '';
+        case 'clientName':
+          return row.clientName || '';
+        case 'category':
+          return row.category || '';
+        case 'slaDue':
+        case 'slaDays':
+          return row.slaDueAt ? new Date(row.slaDueAt).getTime() : 0;
+        case 'updated':
+          return new Date(row.updatedAt || row.createdAt || 0).getTime();
+        default:
+          return '';
+      }
+    };
+
+    const sorted = [...filteredRows].sort((a, b) => {
+      const valA = getSortValue(a, sortState.key);
+      const valB = getSortValue(b, sortState.key);
+
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        return valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
+      }
+      return (valA || 0) - (valB || 0);
+    });
+
+    return sortState.direction === 'desc' ? sorted.reverse() : sorted;
+  }, [filteredRows, sortState]);
+
   const categories = useMemo(() => [...new Set(normalizedRows.map((item) => String(item.category || '').trim()).filter(Boolean))], [normalizedRows]);
 
   const intelligenceAssignees = useMemo(
@@ -216,9 +255,9 @@ export const PlatformWorklistPage = () => {
     return [
       { label: 'Active Workload', value: isLoading ? '…' : active, color: 'from-blue-500 to-indigo-600', icon: '⚡' },
       { label: 'Pended / Snoozed', value: isLoading ? '…' : pended, color: 'from-amber-500 to-orange-600', icon: '⏳' },
-      { label: 'Visible Dockets', value: isLoading ? '…' : filteredRows.length, color: 'from-emerald-500 to-teal-600', icon: '👁️' },
+      { label: 'Visible Dockets', value: isLoading ? '…' : sortedRows.length, color: 'from-emerald-500 to-teal-600', icon: '👁️' },
     ];
-  }, [normalizedRows, filteredRows.length, isLoading]);
+  }, [normalizedRows, sortedRows.length, isLoading]);
 
   const clearFilters = () => {
     setSearch('');
@@ -234,7 +273,7 @@ export const PlatformWorklistPage = () => {
       caseId: rowId,
       navigate,
       to: `${ROUTES.CASE_DETAIL(firmSlug, rowId)}?returnTo=${encodeURIComponent(`${location.pathname}${location.search || ''}`)}`,
-      state: buildQueueContext({ rows: filteredRows, rowId, location, origin: 'my-worklist' }),
+      state: buildQueueContext({ rows: sortedRows, rowId, location, origin: 'my-worklist' }),
     });
   };
 
@@ -276,7 +315,7 @@ export const PlatformWorklistPage = () => {
 
       <PageSection
         title="📝 Personal Execution Queue"
-        description={`${filteredRows.length} dockets in your current view`}
+        description={`${sortedRows.length} dockets in your current view`}
         actions={
           <button
             type="button"
@@ -292,7 +331,7 @@ export const PlatformWorklistPage = () => {
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5" />
             </svg>
-            {isFetching ? '⟳ Refreshing…' : '↺ Refresh'}
+            {isFetching ? 'Refreshing…' : 'Refresh'}
           </button>
         }
       >
@@ -415,18 +454,35 @@ export const PlatformWorklistPage = () => {
                 label: (
                   <input
                     type="checkbox"
-                    checked={selectedIds.length === filteredRows.length && filteredRows.length > 0}
+                    checked={selectedIds.length === sortedRows.length && sortedRows.length > 0}
                     onChange={handleSelectAll}
                     className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500/20 cursor-pointer"
                   />
                 ),
-                widthClass: 'platform-table-select-col'
+                widthClass: 'platform-table-select-col',
+                width: '40px'
               },
-              'Docket ID', 'Client ID', 'Client Name', 'Category / Subcategory', 'SLA Due', 'SLA Days', 'Updated'
-            ] : ['Docket ID', 'Client ID', 'Client Name', 'Category / Subcategory', 'SLA Due', 'SLA Days', 'Updated']}
+              { key: 'docketId', label: 'Docket ID', sortable: true, width: '150px' },
+              { key: 'clientId', label: 'Client ID', sortable: true, width: '100px' },
+              { key: 'clientName', label: 'Client Name', sortable: true, width: '160px' },
+              { key: 'category', label: 'Category / Subcategory', sortable: true, width: '260px' },
+              { key: 'slaDue', label: 'SLA Due', sortable: true, width: '130px' },
+              { key: 'slaDays', label: 'SLA Days', sortable: true, width: '110px' },
+              { key: 'updated', label: 'Updated', sortable: true, width: '120px' }
+            ] : [
+              { key: 'docketId', label: 'Docket ID', sortable: true, width: '150px' },
+              { key: 'clientId', label: 'Client ID', sortable: true, width: '100px' },
+              { key: 'clientName', label: 'Client Name', sortable: true, width: '160px' },
+              { key: 'category', label: 'Category / Subcategory', sortable: true, width: '260px' },
+              { key: 'slaDue', label: 'SLA Due', sortable: true, width: '130px' },
+              { key: 'slaDays', label: 'SLA Days', sortable: true, width: '110px' },
+              { key: 'updated', label: 'Updated', sortable: true, width: '120px' }
+            ]}
             compact
             tableClassName="w-full text-left border-collapse"
-            rows={filteredRows.map((r) => {
+            sortState={sortState}
+            onSortChange={setSortState}
+            rows={sortedRows.map((r) => {
               const rId = getDocketRouteId(r);
               return (
                 <tr key={r.caseInternalId || r._id || r.id || formatDocketLabel(r)} className="hover:bg-gray-50/70 border-b border-gray-50 last:border-b-0 transition-colors duration-150">

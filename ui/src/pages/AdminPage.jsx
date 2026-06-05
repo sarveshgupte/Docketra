@@ -1489,6 +1489,9 @@ export const AdminPage = () => {
             onToggleSubcategoryStatus={handleToggleSubcategoryStatus}
             onEditSubcategory={handleEditSubcategory}
             onDeleteSubcategory={handleDeleteSubcategory}
+            onManageKnowledge={(workTypeName) => {
+              navigate(`${ROUTES.KNOWLEDGE_LIBRARY(firmSlug)}?action=create&workType=${encodeURIComponent(workTypeName)}`);
+            }}
             StatusBadge={AdminStatusBadge}
           />
         )}

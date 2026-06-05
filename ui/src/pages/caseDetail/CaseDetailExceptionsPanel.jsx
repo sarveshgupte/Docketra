@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { docketExceptionApi } from '../../api/docketException.api';
 import { Button } from '../../components/common/Button';
 import { Textarea } from '../../components/common/Textarea';
+import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../hooks/useToast';
 import { formatDateTime } from '../../utils/formatDateTime';
 import { formatDate } from '../../utils/formatters';
@@ -219,56 +220,55 @@ export const CaseDetailExceptionsPanel = ({ caseInternalId, onRefreshCase }) => 
       )}
 
       {/* MODAL: Log Blocker Exception */}
-      {showLogModal && (
-        <div style={{
-          position: 'fixed', inset: '0', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: '9999',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
-        }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '16px', maxWidth: '480px', width: '100%', padding: '24px', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '4px' }}>Log Blocker Exception</h3>
-            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '16px' }}>Log regulatory portal issues, client action delay blockers, or expired DSCs. This dynamically overrides client portal status views.</p>
-            <form onSubmit={handleLogException} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div>
-                <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Blocker Category *</label>
-                <select className="neo-input w-full text-sm mt-1" value={exceptionType} onChange={e => setExceptionType(e.target.value)}>
-                  <option value="portal_issue">Regulatory Portal Downtime / Tech Issue</option>
-                  <option value="query_raised">Regulatory Clarification Query Raised</option>
-                  <option value="DSC_authorisation_pending">DSC Authorization Pending from Client</option>
-                  <option value="client_delay">Client Document / Asset Delivery Delay</option>
-                  <option value="payment_pending">Government Fee / Challan Payment Pending</option>
-                  <option value="data_mismatch">Data Mismatch in Client Records</option>
-                  <option value="other">Other Blocker Exception</option>
-                </select>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Occurred At Date *</label>
-                  <input type="date" className="neo-input w-full text-sm mt-1" value={occurredAt} onChange={e => setOccurredAt(e.target.value)} required />
-                </div>
-                <div>
-                  <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Revised Filing ETA</label>
-                  <input type="date" className="neo-input w-full text-sm mt-1" value={revisedEta} onChange={e => setRevisedEta(e.target.value)} />
-                </div>
-              </div>
-              <div>
-                <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Portal Reference / Ticket Number (optional)</label>
-                <input type="text" className="neo-input w-full text-sm mt-1" value={ticketNumber} onChange={e => setTicketNumber(e.target.value)} placeholder="e.g. GSTN-108395810, MCA-ACK-93284" />
-              </div>
-              <div>
-                <Textarea label="Blocker Description *" value={description} onChange={e => setDescription(e.target.value)} placeholder="Provide full details on what is blocking this filing, what active steps are being taken, or what exact documents are required from the client..." rows={4} required />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'end', gap: '8px', marginTop: '8px' }}>
-                <Button type="button" variant="outline" onClick={() => setShowLogModal(false)} disabled={logging}>
-                  Cancel
-                </Button>
-                <Button type="submit" variant="primary" disabled={logging}>
-                  {logging ? 'Logging blocker…' : 'Log Blocker'}
-                </Button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showLogModal}
+        onClose={() => setShowLogModal(false)}
+        title="Log Blocker Exception"
+        size="sm"
+      >
+        <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '16px' }}>
+          Log regulatory portal issues, client action delay blockers, or expired DSCs. This dynamically overrides client portal status views.
+        </p>
+        <form onSubmit={handleLogException} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div>
+            <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Blocker Category *</label>
+            <select className="neo-input w-full text-sm mt-1" value={exceptionType} onChange={e => setExceptionType(e.target.value)}>
+              <option value="portal_issue">Regulatory Portal Downtime / Tech Issue</option>
+              <option value="query_raised">Regulatory Clarification Query Raised</option>
+              <option value="DSC_authorisation_pending">DSC Authorization Pending from Client</option>
+              <option value="client_delay">Client Document / Asset Delivery Delay</option>
+              <option value="payment_pending">Government Fee / Challan Payment Pending</option>
+              <option value="data_mismatch">Data Mismatch in Client Records</option>
+              <option value="other">Other Blocker Exception</option>
+            </select>
           </div>
-        </div>
-      )}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Occurred At Date *</label>
+              <input type="date" className="neo-input w-full text-sm mt-1" value={occurredAt} onChange={e => setOccurredAt(e.target.value)} required />
+            </div>
+            <div>
+              <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Revised Filing ETA</label>
+              <input type="date" className="neo-input w-full text-sm mt-1" value={revisedEta} onChange={e => setRevisedEta(e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Portal Reference / Ticket Number (optional)</label>
+            <input type="text" className="neo-input w-full text-sm mt-1" value={ticketNumber} onChange={e => setTicketNumber(e.target.value)} placeholder="e.g. GSTN-108395810, MCA-ACK-93284" />
+          </div>
+          <div>
+            <Textarea label="Blocker Description *" value={description} onChange={e => setDescription(e.target.value)} placeholder="Provide full details on what is blocking this filing, what active steps are being taken, or what exact documents are required from the client..." rows={4} required />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'end', gap: '8px', marginTop: '8px' }}>
+            <Button type="button" variant="outline" onClick={() => setShowLogModal(false)} disabled={logging}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" disabled={logging}>
+              {logging ? 'Logging blocker…' : 'Log Blocker'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </section>
   );
 };

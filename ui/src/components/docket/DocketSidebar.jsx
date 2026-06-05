@@ -72,7 +72,7 @@ export const DocketSidebar = ({
     let typeClass = 'docket-sidebar__timeline-icon--default';
     
     if (actionType.includes('VIEW') || actionType.includes('OPEN') || actionType.includes('EXIT')) {
-      icon = '👁️';
+      icon = '🔍';
       typeClass = 'docket-sidebar__timeline-icon--view';
     } else if (actionType.includes('COMMENT')) {
       icon = '💬';
