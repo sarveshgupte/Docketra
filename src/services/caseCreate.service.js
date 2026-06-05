@@ -150,12 +150,38 @@ module.exports = (deps) => {
         })
         .filter(Boolean)
       : [];
-    if (!title && !body && links.length === 0) return undefined;
+    const files = Array.isArray(sop?.files)
+      ? sop.files
+        .map((file, index) => {
+          const fileName = typeof file?.fileName === 'string' ? file.fileName.trim() : '';
+          const mimeType = typeof file?.mimeType === 'string' ? file.mimeType.trim() : '';
+          const storageProvider = typeof file?.storageProvider === 'string' ? file.storageProvider.trim() : '';
+          if (!fileName || !mimeType || !storageProvider) return null;
+          return {
+            id: String(file?.id || randomUUID()),
+            fileName,
+            mimeType,
+            size: Number.isFinite(Number(file?.size)) ? Number(file.size) : 0,
+            storageProvider,
+            storageFileId: file?.storageFileId ? String(file.storageFileId) : null,
+            objectKey: file?.objectKey ? String(file.objectKey) : null,
+            webViewLink: file?.webViewLink ? String(file.webViewLink) : null,
+            uploadedAt: file?.uploadedAt || createdAt,
+            uploadedByXID: file?.uploadedByXID ? String(file.uploadedByXID).trim() : null,
+            uploadedByName: file?.uploadedByName ? String(file.uploadedByName).trim() : null,
+            description: typeof file?.description === 'string' ? file.description.trim() : '',
+            sortOrder: Number.isFinite(Number(file?.sortOrder)) ? Number(file.sortOrder) : index,
+          };
+        })
+        .filter(Boolean)
+      : [];
+    if (!title && !body && links.length === 0 && files.length === 0) return undefined;
     return {
       title,
       body,
       format: sop?.format === 'markdown' ? 'markdown' : 'plain_text',
       links,
+      files,
       sourceSubcategoryId: subcategoryId ? String(subcategoryId) : null,
       capturedAt: createdAt,
     };

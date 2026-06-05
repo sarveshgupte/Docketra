@@ -30,12 +30,29 @@ const sopLinkSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).optional(),
 }).strict();
 
+const sopFileSchema = z.object({
+  id: z.string().trim().min(1).max(120).optional(),
+  fileName: z.string().trim().min(1).max(255),
+  mimeType: z.string().trim().min(1).max(255),
+  size: z.coerce.number().int().min(0),
+  storageProvider: z.string().trim().min(1).max(64),
+  storageFileId: z.string().trim().max(512).nullable().optional(),
+  objectKey: z.string().trim().max(1024).nullable().optional(),
+  webViewLink: z.string().trim().max(2048).nullable().optional(),
+  uploadedAt: z.coerce.date().optional(),
+  uploadedByXID: z.string().trim().max(120).nullable().optional(),
+  uploadedByName: z.string().trim().max(200).nullable().optional(),
+  description: z.string().trim().max(1000).optional(),
+  sortOrder: z.coerce.number().int().min(0).optional(),
+}).strict();
+
 const subcategorySopSchema = z.object({
   title: z.string().max(200).optional(),
   body: z.string().max(10000).optional(),
   format: z.enum(['plain_text', 'markdown']).optional(),
   lastUpdatedByXID: z.string().trim().optional(),
   links: z.array(sopLinkSchema).max(25).optional(),
+  files: z.array(sopFileSchema).max(50).optional(),
 }).strict().optional();
 
 const passthroughQuery = z.object({}).passthrough();
@@ -140,6 +157,31 @@ module.exports = {
   'PUT /categories/:id/subcategories/:subcategoryId': {
     params: z.object({ id: objectIdOrString, subcategoryId: nonEmptyString }),
     body: z.object({ name: nonEmptyString.optional(), workbasketId: objectIdString.optional(), defaultSlaDays: z.coerce.number().int().min(0).max(365).optional(), requiresRelatedEmployeeUser: z.boolean().optional(), deadlineRule: deadlineRuleSchema, checklistTemplate: z.array(checklistTemplateItemSchema).optional(), sop: subcategorySopSchema }).strict(),
+  },
+  'POST /categories/:id/subcategories/:subcategoryId/sop/files/upload-intent': {
+    params: z.object({ id: objectIdOrString, subcategoryId: nonEmptyString }),
+    body: z.object({
+      fileName: nonEmptyString,
+      mimeType: nonEmptyString,
+      size: z.coerce.number().int().positive(),
+    }).strict(),
+  },
+  'POST /categories/:id/subcategories/:subcategoryId/sop/files/finalize': {
+    params: z.object({ id: objectIdOrString, subcategoryId: nonEmptyString }),
+    body: z.object({
+      uploadId: nonEmptyString.optional(),
+      fileName: nonEmptyString,
+      mimeType: nonEmptyString,
+      size: z.coerce.number().int().positive(),
+      checksum: z.string().trim().optional(),
+      completion: z.object({
+        providerFileId: z.string().trim().optional(),
+        objectKey: z.string().trim().optional(),
+      }).optional(),
+    }).strict(),
+  },
+  'DELETE /categories/:id/subcategories/:subcategoryId/sop/files/:fileId': {
+    params: z.object({ id: objectIdOrString, subcategoryId: nonEmptyString, fileId: nonEmptyString }),
   },
   'PATCH /categories/:id/subcategories/:subcategoryId/status': {
     params: z.object({ id: objectIdOrString, subcategoryId: nonEmptyString }),

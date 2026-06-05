@@ -68,6 +68,26 @@ const normalizeKnowledgeLinkDrafts = (links = []) => {
   }));
 };
 
+const normalizeKnowledgeFileDrafts = (files = []) => {
+  if (!Array.isArray(files)) return [];
+  return files.map((file, index) => ({
+    id: String(file?.id || file?.fileId || `knowledge-file-${index}`),
+    fileName: String(file?.fileName || file?.originalName || '').trim(),
+    mimeType: String(file?.mimeType || '').trim(),
+    size: Number.isFinite(Number(file?.size)) ? Number(file.size) : 0,
+    storageProvider: String(file?.storageProvider || '').trim(),
+    storageFileId: file?.storageFileId ? String(file.storageFileId) : null,
+    objectKey: file?.objectKey ? String(file.objectKey) : null,
+    webViewLink: file?.webViewLink ? String(file.webViewLink) : null,
+    downloadUrl: file?.downloadUrl ? String(file.downloadUrl) : null,
+    uploadedAt: file?.uploadedAt || null,
+    uploadedByXID: file?.uploadedByXID ? String(file.uploadedByXID).trim() : null,
+    uploadedByName: file?.uploadedByName ? String(file.uploadedByName).trim() : null,
+    description: String(file?.description || '').trim(),
+    sortOrder: Number.isFinite(Number(file?.sortOrder)) ? Number(file.sortOrder) : index,
+  }));
+};
+
 const buildSubcategoryKnowledgePayload = (form = {}) => ({
   title: String(form.sopTitle || '').trim(),
   body: String(form.sopBody || ''),
@@ -93,6 +113,7 @@ const createEmptySubcategoryForm = () => ({
   sopTitle: '',
   sopBody: '',
   sopLinks: [createKnowledgeLinkDraft()],
+  sopFiles: [],
 });
 
 const downloadBulkTemplate = (type) => {
@@ -158,6 +179,7 @@ export const AdminPage = () => {
   const [userLoadWarning, setUserLoadWarning] = useState('');
   const [workbasketLoadWarning, setWorkbasketLoadWarning] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [knowledgeFileUploading, setKnowledgeFileUploading] = useState(false);
   const [statsEmpty, setStatsEmpty] = useState(false);
   const [statsFailed, setStatsFailed] = useState(false);
   const [tabError, setTabError] = useState(null);
@@ -819,8 +841,69 @@ export const AdminPage = () => {
       sopTitle: String(subcategory?.sop?.title || ''),
       sopBody: String(subcategory?.sop?.body || ''),
       sopLinks: normalizeKnowledgeLinkDrafts(subcategory?.sop?.links),
+      sopFiles: normalizeKnowledgeFileDrafts(subcategory?.sop?.files),
     });
     setShowEditSubcategoryModal(true);
+  };
+
+  const handleUploadKnowledgeFile = async (file) => {
+    if (!file) return;
+    if (!editSubcategoryForm.categoryId || !editSubcategoryForm.subcategoryId) {
+      showToast('Save the subcategory first before uploading files.', 'error');
+      return;
+    }
+
+    setKnowledgeFileUploading(true);
+    try {
+      const response = await categoryService.uploadSubcategoryKnowledgeFile(
+        editSubcategoryForm.categoryId,
+        editSubcategoryForm.subcategoryId,
+        file,
+      );
+      if (response.success) {
+        const uploadedFile = response.data?.file || null;
+        if (uploadedFile) {
+          setEditSubcategoryForm((prev) => ({
+            ...prev,
+            sopFiles: normalizeKnowledgeFileDrafts([
+              ...(Array.isArray(prev.sopFiles) ? prev.sopFiles.filter((file) => String(file.id) !== String(uploadedFile.id)) : []),
+              uploadedFile,
+            ]),
+          }));
+        }
+        showToast('Knowledge file uploaded successfully', 'success');
+      } else {
+        showToast(response.message || 'Failed to upload knowledge file', 'error');
+      }
+    } catch (error) {
+      showToast(error.response?.data?.message || error.message || 'Failed to upload knowledge file', 'error');
+    } finally {
+      setKnowledgeFileUploading(false);
+    }
+  };
+
+  const handleDeleteKnowledgeFile = async (fileId) => {
+    if (!editSubcategoryForm.categoryId || !editSubcategoryForm.subcategoryId || !fileId) return;
+    if (!confirm('Remove this knowledge file?')) return;
+
+    try {
+      const response = await categoryService.deleteSubcategoryKnowledgeFile(
+        editSubcategoryForm.categoryId,
+        editSubcategoryForm.subcategoryId,
+        fileId,
+      );
+      if (response.success) {
+        setEditSubcategoryForm((prev) => ({
+          ...prev,
+          sopFiles: normalizeKnowledgeFileDrafts((prev.sopFiles || []).filter((file) => String(file.id) !== String(fileId))),
+        }));
+        showToast('Knowledge file removed successfully', 'success');
+      } else {
+        showToast(response.message || 'Failed to remove knowledge file', 'error');
+      }
+    } catch (error) {
+      showToast(error.response?.data?.message || error.message || 'Failed to remove knowledge file', 'error');
+    }
   };
 
   const handleUpdateCategory = async (e) => {
@@ -1649,6 +1732,9 @@ export const AdminPage = () => {
         editSubcategoryForm={editSubcategoryForm}
         setEditSubcategoryForm={setEditSubcategoryForm}
         onUpdateSubcategory={handleUpdateSubcategory}
+        knowledgeFileUploading={knowledgeFileUploading}
+        onUploadKnowledgeFile={handleUploadKnowledgeFile}
+        onDeleteKnowledgeFile={handleDeleteKnowledgeFile}
         workbaskets={workbaskets}
       />
 

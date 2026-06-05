@@ -4,6 +4,19 @@
 
 import api from './api';
 
+const uploadViaSignedUrl = ({ uploadUrl, uploadMethod = 'PUT', uploadHeaders = {}, file }) => new Promise((resolve, reject) => {
+  const xhr = new XMLHttpRequest();
+  xhr.open(uploadMethod, uploadUrl);
+  Object.entries(uploadHeaders || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) xhr.setRequestHeader(key, value);
+  });
+  xhr.onload = () => (xhr.status >= 200 && xhr.status < 300
+    ? resolve()
+    : reject(Object.assign(new Error(`Upload failed with status ${xhr.status}`), { status: xhr.status })));
+  xhr.onerror = () => reject(new Error('Upload failed due to network error'));
+  xhr.send(file);
+});
+
 export const categoryService = {
   /**
    * Get all categories (with optional activeOnly filter)
@@ -94,6 +107,40 @@ export const categoryService = {
       defaultSlaDays,
       ...(options?.sop ? { sop: options.sop } : {}),
     });
+    return response.data;
+  },
+
+  uploadSubcategoryKnowledgeFile: async (categoryId, subcategoryId, file) => {
+    const intentResponse = await api.post(`/admin/categories/${categoryId}/subcategories/${subcategoryId}/sop/files/upload-intent`, {
+      fileName: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      size: file.size,
+    });
+    const intent = intentResponse?.data?.data || intentResponse?.data || {};
+
+    await uploadViaSignedUrl({
+      uploadUrl: intent.uploadUrl,
+      uploadMethod: intent.uploadMethod,
+      uploadHeaders: intent.uploadHeaders,
+      file,
+    });
+
+    const finalizeResponse = await api.post(`/admin/categories/${categoryId}/subcategories/${subcategoryId}/sop/files/finalize`, {
+      uploadId: intent.uploadId,
+      fileName: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      size: file.size,
+      completion: {
+        ...(intent.providerFileId ? { providerFileId: intent.providerFileId } : {}),
+        ...(intent.objectKey ? { objectKey: intent.objectKey } : {}),
+      },
+    });
+
+    return finalizeResponse.data;
+  },
+
+  deleteSubcategoryKnowledgeFile: async (categoryId, subcategoryId, fileId) => {
+    const response = await api.delete(`/admin/categories/${categoryId}/subcategories/${subcategoryId}/sop/files/${fileId}`);
     return response.data;
   },
 

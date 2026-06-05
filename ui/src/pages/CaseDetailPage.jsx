@@ -37,7 +37,6 @@ import { useCaseQuery } from '../hooks/useCaseQuery';
 import { useDocketQueueNavigation } from '../hooks/useDocketQueueNavigation';
 import { invalidateCaseCache } from '../utils/caseCache';
 import { getDocketSlaBadgeStatus } from '../utils/docketSla';
-import { isFirmManagerOrAbove } from '../utils/roleHierarchy';
 import api from '../services/api';
 import { DocketDetails } from '../../components/DocketDetails';
 import { CaseWorkflowModals } from './caseDetail/CaseWorkflowModals';
@@ -66,7 +65,6 @@ import {
 const CaseDetailAttachmentsPanel = lazy(() => import('./caseDetail/CaseDetailAttachmentsPanel').then((module) => ({ default: module.CaseDetailAttachmentsPanel })));
 const CaseDetailActivityPanel = lazy(() => import('./caseDetail/CaseDetailActivityPanel').then((module) => ({ default: module.CaseDetailActivityPanel })));
 const CaseDetailHistoryPanel = lazy(() => import('./caseDetail/CaseDetailHistoryPanel').then((module) => ({ default: module.CaseDetailHistoryPanel })));
-const CaseDetailExceptionsPanel = lazy(() => import('./caseDetail/CaseDetailExceptionsPanel').then((module) => ({ default: module.CaseDetailExceptionsPanel })));
 const CaseDetailEffortPanel = lazy(() => import('./caseDetail/CaseDetailEffortPanel').then((module) => ({ default: module.CaseDetailEffortPanel })));
 const CaseDetailEmailsPanel = lazy(() => import('./caseDetail/CaseDetailEmailsPanel').then((module) => ({ default: module.CaseDetailEmailsPanel })));
 import { useClientDocketHistory } from './caseDetail/useClientDocketHistory';
@@ -297,7 +295,6 @@ export const CaseDetailPage = () => {
   const docketTabs = useMemo(() => ([
     { name: CASE_DETAIL_TABS.OVERVIEW, label: '📋 Overview' },
     { name: CASE_DETAIL_TABS.KNOWLEDGE, label: '🧠 Linked Knowledge' },
-    { name: CASE_DETAIL_TABS.EXCEPTIONS, label: '⚠️ Blockers' },
     { name: CASE_DETAIL_TABS.EFFORT, label: '⏱️ Effort & Budget' },
     { name: CASE_DETAIL_TABS.EMAIL_LOGS, label: '✉️ Email Logs' },
   ]), [attachments.length, mergedTimelineEvents.length]);
@@ -1396,13 +1393,7 @@ export const CaseDetailPage = () => {
                     caseSop={caseInfo?.sop}
                     caseChecklist={caseInfo?.checklist}
                     firmSlug={firmSlug}
-                    canManageSettings={Boolean(permissions.isAdmin) || Boolean(user?.isPrimaryAdmin) || isFirmManagerOrAbove(user)}
-                  />
-                )}
-                {activeTab === CASE_DETAIL_TABS.EXCEPTIONS && (
-                  <CaseDetailExceptionsPanel
-                    caseInternalId={caseInfo?.caseInternalId || caseData?.case?.caseInternalId || caseData?.caseInternalId || ''}
-                    onRefreshCase={loadCase}
+                    canManageSettings={Boolean(permissions.isAdmin) || Boolean(user?.isPrimaryAdmin)}
                   />
                 )}
                 {activeTab === CASE_DETAIL_TABS.EFFORT && (

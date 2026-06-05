@@ -40,8 +40,18 @@ const getKnowledgeLinks = (sop) => (
   Array.isArray(sop?.links) ? sortByOrder(sop.links) : []
 );
 
+const getKnowledgeFiles = (sop) => (
+  Array.isArray(sop?.files) ? sortByOrder(sop.files) : []
+);
+
 const hasKnowledgeContent = ({ sop, checklist }) => (
-  Boolean(normalizeText(sop?.title) || normalizeText(sop?.body) || getKnowledgeLinks(sop).length || checklist.length)
+  Boolean(
+    normalizeText(sop?.title)
+    || normalizeText(sop?.body)
+    || getKnowledgeLinks(sop).length
+    || getKnowledgeFiles(sop).length
+    || checklist.length
+  )
 );
 
 export const LinkedKnowledgeSection = ({
@@ -108,6 +118,10 @@ export const LinkedKnowledgeSection = ({
   );
   const knowledgeLinks = useMemo(
     () => getKnowledgeLinks(resolvedSop),
+    [resolvedSop],
+  );
+  const knowledgeFiles = useMemo(
+    () => getKnowledgeFiles(resolvedSop),
     [resolvedSop],
   );
   const hasKnowledge = hasKnowledgeContent({ sop: resolvedSop, checklist: checklistItems });
@@ -204,9 +218,11 @@ export const LinkedKnowledgeSection = ({
           <div className="rounded-xl border border-slate-200 bg-white p-4">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <p className="text-sm font-semibold text-slate-900">Reference Links / Files</p>
-              <span className="text-xs text-slate-500">{knowledgeLinks.length} item{knowledgeLinks.length === 1 ? '' : 's'}</span>
+              <span className="text-xs text-slate-500">
+                {knowledgeLinks.length + knowledgeFiles.length} item{knowledgeLinks.length + knowledgeFiles.length === 1 ? '' : 's'}
+              </span>
             </div>
-            {knowledgeLinks.length === 0 ? (
+            {knowledgeLinks.length === 0 && knowledgeFiles.length === 0 ? (
               <p className="case-detail__empty-note" style={{ marginTop: '0.75rem' }}>
                 No linked files or references saved.
               </p>
@@ -229,6 +245,35 @@ export const LinkedKnowledgeSection = ({
                     ) : null}
                   </li>
                 ))}
+                {knowledgeFiles.map((file, index) => {
+                  const href = file?.downloadUrl || file?.webViewLink || '';
+                  return (
+                    <li key={file?.id || `${file?.fileName || 'knowledge-file'}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        {href ? (
+                          <a href={href} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-blue-700 underline break-all">
+                            {file?.fileName || 'Knowledge file'}
+                          </a>
+                        ) : (
+                          <span className="text-sm font-semibold text-slate-800 break-all">{file?.fileName || 'Knowledge file'}</span>
+                        )}
+                        <span className="text-xs uppercase tracking-wider text-slate-500">
+                          File
+                        </span>
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
+                        {file?.mimeType ? <span>{file.mimeType}</span> : null}
+                        {Number.isFinite(Number(file?.size)) ? <span>{Math.round(Number(file.size) / 1024)} KB</span> : null}
+                        {file?.uploadedByXID ? <span>Uploaded by {file.uploadedByXID}</span> : null}
+                      </div>
+                      {normalizeText(file?.description) ? (
+                        <p className="text-sm text-slate-600" style={{ marginTop: '0.35rem' }}>
+                          {file.description}
+                        </p>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

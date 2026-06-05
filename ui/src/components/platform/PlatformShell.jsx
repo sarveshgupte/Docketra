@@ -9,7 +9,7 @@ import { NotificationBell } from './NotificationBell';
 import api from '../../services/api';
 import { clientApi } from '../../api/client.api';
 import { isShortcutAllowedTarget } from '../../utils/keyboardShortcuts';
-import { isNavItemActiveWithLocation } from '../../utils/navActive';
+import { isNavItemActiveWithLocation, resolveNavContextLocation } from '../../utils/navActive';
 import { hasFirmRoleAtLeast, normalizeFirmRole } from '../../utils/roleHierarchy';
 import { trackAsync } from '../../utils/performanceMonitor';
 import './platform.css';
@@ -129,14 +129,20 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     [firmSlug, role, user?.permissions, user?.workbaskets, user?.qcWorkbaskets]
   );
   const userName = user?.name || user?.xID || 'User';
+  const navLocation = useMemo(
+    () => resolveNavContextLocation(pathname, locationSearch, firmSlug),
+    [pathname, locationSearch, firmSlug]
+  );
+  const navPathname = navLocation.pathname || pathname;
+  const navSearch = navLocation.search || locationSearch || '';
 
-  const isItemActive = useCallback((item) => isNavItemActiveWithLocation(pathname, locationSearch, item), [pathname, locationSearch]);
+  const isItemActive = useCallback((item) => isNavItemActiveWithLocation(navPathname, navSearch, item), [navPathname, navSearch]);
 
   const currentNavItem = useMemo(
     () => navSections
       .flatMap((section) => section.items.flatMap((item) => (item.type === 'group' ? item.children || [] : [item])))
       .find((item) => isItemActive(item)),
-    [navSections, pathname, locationSearch]
+    [navSections, isItemActive]
   );
 
   useEffect(() => {

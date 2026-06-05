@@ -28,6 +28,9 @@ export const AdminCategoryModals = ({
   editSubcategoryForm,
   setEditSubcategoryForm,
   onUpdateSubcategory,
+  knowledgeFileUploading,
+  onUploadKnowledgeFile,
+  onDeleteKnowledgeFile,
   workbaskets,
 }) => {
   const selectableWorkbaskets = (Array.isArray(workbaskets) ? workbaskets : []).filter(
@@ -68,6 +71,13 @@ export const AdminCategoryModals = ({
       ...prev,
       sopLinks: remaining.length > 0 ? remaining : [createEmptyKnowledgeLink()],
     }));
+  };
+
+  const handleKnowledgeFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await onUploadKnowledgeFile?.(file);
+    event.target.value = '';
   };
 
   return (
@@ -161,6 +171,7 @@ export const AdminCategoryModals = ({
           sopTitle: '',
           sopBody: '',
           sopLinks: [createEmptyKnowledgeLink()],
+          sopFiles: [],
         });
         setSelectedCategory(null);
       }}
@@ -284,6 +295,9 @@ export const AdminCategoryModals = ({
               </div>
             ))}
           </div>
+          <p className="text-xs text-slate-500">
+            Save this subcategory first, then upload actual files from the edit form.
+          </p>
         </div>
 
         <div className="admin__modal-actions">
@@ -300,6 +314,7 @@ export const AdminCategoryModals = ({
                 sopTitle: '',
                 sopBody: '',
                 sopLinks: [createEmptyKnowledgeLink()],
+                sopFiles: [],
               });
               setSelectedCategory(null);
             }}
@@ -324,6 +339,7 @@ export const AdminCategoryModals = ({
           sopTitle: '',
           sopBody: '',
           sopLinks: [createEmptyKnowledgeLink()],
+          sopFiles: [],
         });
       }}
       title="Edit Subcategory"
@@ -418,6 +434,62 @@ export const AdminCategoryModals = ({
                 </div>
               </div>
             ))}
+            <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-700">Uploaded files</p>
+                  <p className="text-xs text-slate-500">Add PDFs, docs, sheets, or other files that should appear in Linked Knowledge.</p>
+                </div>
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.txt,.csv,.zip,application/pdf,image/*,text/plain,text/csv"
+                    onChange={handleKnowledgeFileChange}
+                    disabled={knowledgeFileUploading}
+                  />
+                  {knowledgeFileUploading ? 'Uploading...' : 'Upload File'}
+                </label>
+              </div>
+              {Array.isArray(editSubcategoryForm.sopFiles) && editSubcategoryForm.sopFiles.length > 0 ? (
+                <ul className="space-y-2">
+                  {editSubcategoryForm.sopFiles.map((file, index) => {
+                    const href = file?.downloadUrl || file?.webViewLink || '';
+                    return (
+                      <li key={file?.id || `${file?.fileName || 'knowledge-file'}-${index}`} className="flex items-start justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {href ? (
+                              <a href={href} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-blue-700 underline break-all">
+                                {file?.fileName || 'Knowledge file'}
+                              </a>
+                            ) : (
+                              <span className="text-sm font-semibold text-slate-800 break-all">{file?.fileName || 'Knowledge file'}</span>
+                            )}
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">File</span>
+                          </div>
+                          <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
+                            {file?.mimeType ? <span>{file.mimeType}</span> : null}
+                            {Number.isFinite(Number(file?.size)) ? <span>{Math.round(Number(file.size) / 1024)} KB</span> : null}
+                            {file?.uploadedByXID ? <span>Uploaded by {file.uploadedByXID}</span> : null}
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => onDeleteKnowledgeFile?.(file?.id)}
+                          disabled={knowledgeFileUploading}
+                        >
+                          Remove
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="text-xs text-slate-500">No files uploaded yet.</p>
+              )}
+            </div>
           </div>
         </div>
         <div className="admin__modal-actions">
@@ -436,6 +508,7 @@ export const AdminCategoryModals = ({
                 sopTitle: '',
                 sopBody: '',
                 sopLinks: [createEmptyKnowledgeLink()],
+                sopFiles: [],
               });
             }}
           >

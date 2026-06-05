@@ -8,10 +8,12 @@ const DIRECT_UPLOAD_TTL_MS = Number(process.env.CATEGORY_KNOWLEDGE_UPLOAD_TTL_MS
 const MAX_UPLOAD_SIZE_BYTES = Number(process.env.CATEGORY_KNOWLEDGE_MAX_UPLOAD_SIZE_BYTES || 25 * 1024 * 1024);
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
+  'application/octet-stream',
   'image/png',
   'image/jpeg',
   'image/gif',
   'text/plain',
+  'text/markdown',
   'text/csv',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -170,18 +172,25 @@ const createUploadIntent = async ({
     fileName,
   });
 
-  const directSession = await provider.createDirectUploadSession({
-    fileName,
-    mimeType,
-    size,
-    folderId,
-    firmId: String(firmId),
-    source: 'category_knowledge',
-    contextId: `${categoryId}:${subcategoryId}`,
-    uploadId,
-    objectKey,
-    expiresAt: new Date(Date.now() + DIRECT_UPLOAD_TTL_MS),
-  });
+  let directSession;
+  try {
+    directSession = await provider.createDirectUploadSession({
+      fileName,
+      mimeType,
+      size,
+      folderId,
+      firmId: String(firmId),
+      source: 'category_knowledge',
+      contextId: `${categoryId}:${subcategoryId}`,
+      uploadId,
+      objectKey,
+      expiresAt: new Date(Date.now() + DIRECT_UPLOAD_TTL_MS),
+    });
+  } catch (error) {
+    if (!error.status) error.status = 503;
+    if (!error.code) error.code = 'CATEGORY_KNOWLEDGE_UPLOAD_UNAVAILABLE';
+    throw error;
+  }
 
   return {
     uploadId,
@@ -233,13 +242,20 @@ const finalizeUpload = async ({
   const folderId = await resolveKnowledgeFolder(provider, firmId, categoryId, subcategoryId);
   const verifyFileId = completion.providerFileId || null;
   const verifyObjectKey = completion.objectKey || null;
-  const verified = await provider.verifyUploadedObject({
-    fileId: verifyFileId,
-    objectKey: verifyObjectKey,
-    folderId,
-    expectedSize: Number(size),
-    expectedMimeType: mimeType,
-  });
+  let verified;
+  try {
+    verified = await provider.verifyUploadedObject({
+      fileId: verifyFileId,
+      objectKey: verifyObjectKey,
+      folderId,
+      expectedSize: Number(size),
+      expectedMimeType: mimeType,
+    });
+  } catch (error) {
+    if (!error.status) error.status = 503;
+    if (!error.code) error.code = 'CATEGORY_KNOWLEDGE_UPLOAD_UNAVAILABLE';
+    throw error;
+  }
 
   if (!verified?.ok) {
     const error = new Error('Uploaded knowledge file verification failed');
