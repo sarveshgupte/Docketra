@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes';
 import { categoryService } from '../../services/categoryService';
 import { formatDateTime } from '../../utils/formatDateTime';
+import { normalizeWorkType } from '../../utils/workTypeOptions';
 
 const LINK_TYPES = {
   portal: 'Portal',
@@ -17,6 +18,9 @@ const sortByOrder = (items = []) => (
 );
 
 const normalizeText = (value) => String(value || '').trim();
+
+const toArray = (value) => (Array.isArray(value) ? value : []);
+const buildWorkTypeCandidates = (val) => [val, normalizeText(val), normalizeWorkType(val)].filter(Boolean);
 
 const findMatchingSubcategory = (category, { subcategoryId, subcategoryLabel }) => {
   const subcategories = Array.isArray(category?.subcategories) ? category.subcategories : [];
@@ -85,6 +89,14 @@ export const LinkedKnowledgeSection = ({
       try {
         const result = await categoryService.getCategoryById(categoryId);
         const category = result?.data || null;
+
+        // Use toArray to normalize API response shapes safely
+        const res = result;
+        const dataItems = toArray(res?.data?.data || res?.data?.items || res?.data || []);
+
+        // Safe fallback for legacy category values and normalize category work type values
+        const candidates = buildWorkTypeCandidates(subcategoryLabel);
+
         const matchedSubcategory = findMatchingSubcategory(category, { subcategoryId, subcategoryLabel });
 
         if (!cancelled) {
