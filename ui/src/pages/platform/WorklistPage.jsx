@@ -81,16 +81,26 @@ export const PlatformWorklistPage = () => {
     const fetchUsers = async () => {
       setUsersLoading(true);
       try {
-        const response = await adminApi.getUsers();
+        const response = await adminApi.getUsers({ limit: 1000 });
         if (response.success && Array.isArray(response.data)) {
           const role = String(user?.role || '').trim().toUpperCase();
-          if (role === 'MANAGER') {
-            // Filter users who report to this manager
-            setAssignableUsers(response.data.filter(u => u.isActive && (String(u.managerId) === String(user.id || user._id) || String(u.reportsToUserId) === String(user.id || user._id) || u.xID === user.xID)));
-          } else {
-            // Admin / Primary Admin can assign to any active user
-            setAssignableUsers(response.data.filter(u => u.isActive));
+          let filtered = response.data.filter(u => u.isActive);
+          
+          if (scopedWorkbasketId) {
+            filtered = filtered.filter(u => 
+              String(u.teamId || '') === String(scopedWorkbasketId) ||
+              (Array.isArray(u.teamIds) && u.teamIds.map(id => String(id)).includes(String(scopedWorkbasketId)))
+            );
           }
+          
+          if (role === 'MANAGER') {
+            filtered = filtered.filter(u => 
+              String(u.managerId) === String(user.id || user._id) || 
+              String(u.reportsToUserId) === String(user.id || user._id) || 
+              u.xID === user.xID
+            );
+          }
+          setAssignableUsers(filtered);
         }
       } catch (err) {
         console.error('Failed to load assignable users', err);
@@ -99,7 +109,7 @@ export const PlatformWorklistPage = () => {
       }
     };
     void fetchUsers();
-  }, [isSupervisor, user]);
+  }, [isSupervisor, user, scopedWorkbasketId]);
 
   useEffect(() => {
     setSelectedIds([]);
@@ -160,7 +170,7 @@ export const PlatformWorklistPage = () => {
     data: workloadData = {},
     isLoading: workloadLoading,
     isError: workloadError,
-  } = usePlatformWorkloadIntelligenceQuery({}, { enabled: isSupervisor });
+  } = usePlatformWorkloadIntelligenceQuery({ workbasketId: scopedWorkbasketId || undefined }, { enabled: isSupervisor });
 
   const recovery = getRecoveryPayload(queryError, 'platform_queue');
   const isAccessDenied = isError && recovery.reasonCode === 'CASE_ACCESS_DENIED';

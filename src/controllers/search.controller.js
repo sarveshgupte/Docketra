@@ -942,6 +942,9 @@ const globalWorklist = async (req, res) => {
       ownerTeamId: 1,
       routedToTeamId: 1,
       routingNote: 1,
+      assignedToXID: 1,
+      assignedTo: 1,
+      assignedToName: 1,
     };
     const skip = (parsedPage - 1) * parsedLimit;
 
@@ -1041,6 +1044,10 @@ const globalWorklist = async (req, res) => {
         routedToTeamId: c.routedToTeamId || null,
         routedToTeamName: c.routedToTeamId ? (teamNameMap.get(String(c.routedToTeamId)) || null) : null,
         routingNote: c.routingNote || null,
+        assignedToXID: c.assignedToXID || null,
+        assignedTo: c.assignedTo || null,
+        assignedToName: c.assignedToName || null,
+        assigneeName: c.assignedToName || null,
       };
     });
     

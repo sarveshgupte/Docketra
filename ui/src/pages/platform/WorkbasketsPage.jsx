@@ -58,7 +58,7 @@ export const PlatformWorkbasketsPage = () => {
   const { user } = useAuth();
   const { openDocket } = useActiveDocket();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('UNASSIGNED');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [success, setSuccess] = useState('');
   const [actionError, setActionError] = useState('');
@@ -79,16 +79,26 @@ export const PlatformWorkbasketsPage = () => {
     const fetchUsers = async () => {
       setUsersLoading(true);
       try {
-        const response = await adminApi.getUsers();
+        const response = await adminApi.getUsers({ limit: 1000 });
         if (response.success && Array.isArray(response.data)) {
           const role = String(user?.role || '').trim().toUpperCase();
-          if (role === 'MANAGER') {
-            // Filter users who report to this manager
-            setAssignableUsers(response.data.filter(u => u.isActive && (String(u.managerId) === String(user.id || user._id) || String(u.reportsToUserId) === String(user.id || user._id) || u.xID === user.xID)));
-          } else {
-            // Admin / Primary Admin can assign to any active user
-            setAssignableUsers(response.data.filter(u => u.isActive));
+          let filtered = response.data.filter(u => u.isActive);
+          
+          if (workbasketId) {
+            filtered = filtered.filter(u => 
+              String(u.teamId || '') === String(workbasketId) ||
+              (Array.isArray(u.teamIds) && u.teamIds.map(id => String(id)).includes(String(workbasketId)))
+            );
           }
+          
+          if (role === 'MANAGER') {
+            filtered = filtered.filter(u => 
+              String(u.managerId) === String(user.id || user._id) || 
+              String(u.reportsToUserId) === String(user.id || user._id) || 
+              u.xID === user.xID
+            );
+          }
+          setAssignableUsers(filtered);
         }
       } catch (error) {
         console.error('Failed to load assignable users', error);
@@ -97,7 +107,7 @@ export const PlatformWorkbasketsPage = () => {
       }
     };
     void fetchUsers();
-  }, [isSupervisor, user]);
+  }, [isSupervisor, user, workbasketId]);
 
   useEffect(() => {
     setSelectedIds([]);
@@ -165,7 +175,7 @@ export const PlatformWorkbasketsPage = () => {
     data: workloadData = {},
     isLoading: workloadLoading,
     isError: workloadError,
-  } = usePlatformWorkloadIntelligenceQuery({}, { enabled: isSupervisor });
+  } = usePlatformWorkloadIntelligenceQuery({ workbasketId: workbasketId || undefined }, { enabled: isSupervisor });
 
   const recovery = getRecoveryPayload(queryError, 'platform_queue');
   const isAccessDenied = isError && recovery.reasonCode === 'CASE_ACCESS_DENIED';
@@ -175,7 +185,14 @@ export const PlatformWorkbasketsPage = () => {
   const filteredRows = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return rows.filter((item) => {
-      const matchesStatus = statusFilter === 'ALL' || String(item.status || '').toUpperCase() === statusFilter;
+      let matchesStatus = false;
+      if (statusFilter === 'ALL') {
+        matchesStatus = true;
+      } else if (statusFilter === 'UNASSIGNED') {
+        matchesStatus = !item.assignedToXID && !item.assignedTo && !item.assigneeName;
+      } else {
+        matchesStatus = String(item.status || '').toUpperCase() === statusFilter;
+      }
       const matchesCategory = categoryFilter === 'ALL' || String(item.category || '') === categoryFilter;
       const rowWorkbasketIds = [
         item.workbasketId,
