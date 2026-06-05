@@ -5,7 +5,15 @@ export const isRoutedTeamCannotResolve = ({ caseInfo, user }) => {
     ? user.teamIds.map((id) => String(id))
     : [String(user?.teamId || '')];
 
-  return Boolean(caseInfo?.routedToTeamId) && userTeams.includes(String(caseInfo?.routedToTeamId));
+  const routedToTeamId = String(caseInfo?.routedToTeamId || '');
+  const routeOriginatorTeamId = String(caseInfo?.routeOriginatorTeamId || '');
+
+  // A docket is routed only if routedToTeamId and routeOriginatorTeamId are both present and different
+  if (!routedToTeamId || !routeOriginatorTeamId || routedToTeamId === routeOriginatorTeamId) {
+    return false;
+  }
+
+  return userTeams.includes(routedToTeamId);
 };
 
 export const canAdminMoveAssignedDocketForUser = ({ caseInfo, user }) => (

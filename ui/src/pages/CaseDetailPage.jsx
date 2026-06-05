@@ -257,7 +257,7 @@ export const CaseDetailPage = () => {
   }, []);
 
   const routedTeamCannotResolve = isRoutedTeamCannotResolve({ caseInfo, user });
-  const isRouted = Boolean(caseInfo?.routedToTeamId);
+  const isRouted = Boolean(caseInfo?.routedToTeamId) && Boolean(caseInfo?.routeOriginatorTeamId) && String(caseInfo?.routedToTeamId) !== String(caseInfo?.routeOriginatorTeamId);
   const comments = Array.isArray(caseData?.comments) ? caseData.comments.filter(Boolean) : [];
   const attachments = Array.isArray(caseData?.attachments) ? caseData.attachments.filter(Boolean) : [];
   const auditLog = Array.isArray(caseData?.auditLog) ? caseData.auditLog.filter(Boolean) : [];
