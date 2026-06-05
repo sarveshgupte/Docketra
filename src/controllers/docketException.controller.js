@@ -140,18 +140,14 @@ const getDocketExceptions = async (req, res) => {
     }
 
     const skip = (Number(page) - 1) * Number(limit);
-    // ⚡ Bolt: Execute independent queries concurrently via Promise.all
-    const [total, items] = await Promise.all([
-      DocketException.countDocuments(query).exec(),
-      DocketException.find(query)
-        .populate('caseInternalId', 'title status dueDate statutory_due_date')
-        .populate('clientId', 'businessName clientId')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit))
-        .lean()
-        .exec()
-    ]);
+    const total = await DocketException.countDocuments(query);
+    const items = await DocketException.find(query)
+      .populate('caseInternalId', 'title status dueDate statutory_due_date')
+      .populate('clientId', 'businessName clientId')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .lean();
 
     return res.json({
       success: true,

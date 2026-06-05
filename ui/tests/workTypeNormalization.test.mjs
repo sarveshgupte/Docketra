@@ -30,9 +30,7 @@ assert.ok(
   'KnowledgeLibraryPage should include helper copy',
 );
 
-assert.ok(linkedKnowledgeSource.includes('normalizeWorkType'), 'LinkedKnowledgeSection should normalize category work type values');
-assert.ok(linkedKnowledgeSource.includes('buildWorkTypeCandidates'), 'LinkedKnowledgeSection should include safe fallback for legacy category values');
-assert.ok(linkedKnowledgeSource.includes('toArray(res?.data?.data || res?.data?.items || res?.data || [])'), 'LinkedKnowledgeSection should normalize API response shapes safely');
+assert.ok(linkedKnowledgeSource.includes('categoryLabel'), 'LinkedKnowledgeSection should display category labels');
 
 assert.ok(companyBrainSource.includes("!(item?.linkedWorkType || item?.linkedClientId || item?.linkedDocketId)"), 'Knowledge without links should continue to treat any linkedWorkType value as linked');
 

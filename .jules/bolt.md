@@ -48,6 +48,3 @@
 ## 2026-05-21 - Concurrent Document Fetch in Case Create Service Validation
 **Learning:** In the `caseCreate` service, `WorkType.findOne` and `SubWorkType.findOne` were awaited sequentially, which caused endpoint latency, despite being independent of the other model validation queries (like `Deal`, `CrmClient`, etc.).
 **Action:** Prepared the `WorkType` and `SubWorkType` queries as promises and merged them into the existing `Promise.all()` concurrently with the other independent lookups.
-## 2026-06-05 - Concurrent countDocuments and find Queries
-**Learning:** Found several pagination endpoints (e.g., `documentItem`, `docketException`, `emailCapture`) executing `countDocuments()` and `find()` queries sequentially. This adds database latency as the server must wait for the count to complete before starting to fetch data.
-**Action:** Replaced sequential `countDocuments()` and `find()` queries with a single concurrent execution via `Promise.all([model.countDocuments(...).exec(), model.find(...).exec()])` wherever both are strictly required for pagination. This parallelization eliminates the sequential wait time.
