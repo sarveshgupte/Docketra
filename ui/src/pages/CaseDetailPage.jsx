@@ -305,7 +305,10 @@ export const CaseDetailPage = () => {
     { name: CASE_DETAIL_TABS.EMAIL_LOGS, label: 'Email Logs' },
   ]), [attachments.length, mergedTimelineEvents.length]);
 
-  const visibleComments = useMemo(() => comments.slice(-commentWindowSize), [comments, commentWindowSize]);
+  const visibleComments = useMemo(() => {
+    const list = comments.slice(-commentWindowSize);
+    return [...list].reverse();
+  }, [comments, commentWindowSize]);
   const commentDraftKey = `docketra_case_comment_draft_${firmSlug || 'firm'}_${caseId}`;
   const availableAssignees = useMemo(() => {
     const fromCase = caseData?.assignableUsers || caseData?.users || [];
@@ -1366,40 +1369,65 @@ export const CaseDetailPage = () => {
               {/* Conditional Active Tab Panel Rendering */}
               <Suspense fallback={<CaseDetailPanelSkeleton />}>
                 {activeTab === CASE_DETAIL_TABS.OVERVIEW && (
-                  <CaseDetailOverviewPanel
-                    caseInfo={caseInfo}
-                    firmSlug={firmSlug}
-                    linkedClientRoute={linkedClientRoute}
-                    isInternalWork={isInternalWork}
-                    clientName={clientName}
-                    clientIdLabel={clientIdLabel}
-                    slaDaysLabel={slaDaysLabel}
-                    dueDateLabel={dueDateLabel}
-                    linkedClientEmail={linkedClientEmail}
-                    linkedClientContact={linkedClientContact}
-                    linkedClientId={linkedClientId}
-                    fromClientRoute={fromClientRoute}
-                    loadingClientDockets={loadingClientDockets}
-                    clientDockets={clientDockets}
-                    returnTo={returnTo}
-                    navigate={navigate}
-                    descriptionContent={caseInfo?.description}
-                    lifecycleStatus={lifecycleStatus}
-                    shouldShowActions={shouldShowActions}
-                    canPerformLifecycleActions={canPerformLifecycleActions}
-                    lifecycleQuickActions={lifecycleQuickActions}
-                    actionInFlight={actionInFlight}
-                    isViewOnlyMode={isViewOnlyMode}
-                    onOpenFileModal={() => { setFileComment(''); setShowFileModal(true); }}
-                    showFileAction={!isRouted && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)}
-                    canRouteDocket={canRouteDocket}
-                    onOpenRouteModal={() => setShowRouteModal(true)}
-                    forceQcReview={forceQcReview}
-                    onForceQcReviewChange={setForceQcReview}
-                    isQcContext={isQcContext}
-                    isUnassignedWorkbasket={isUnassignedWorkbasket}
-                    isTerminal={isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)}
-                  />
+                  <>
+                    <CaseDetailOverviewPanel
+                      caseInfo={caseInfo}
+                      firmSlug={firmSlug}
+                      linkedClientRoute={linkedClientRoute}
+                      isInternalWork={isInternalWork}
+                      clientName={clientName}
+                      clientIdLabel={clientIdLabel}
+                      slaDaysLabel={slaDaysLabel}
+                      dueDateLabel={dueDateLabel}
+                      linkedClientEmail={linkedClientEmail}
+                      linkedClientContact={linkedClientContact}
+                      linkedClientId={linkedClientId}
+                      fromClientRoute={fromClientRoute}
+                      loadingClientDockets={loadingClientDockets}
+                      clientDockets={clientDockets}
+                      returnTo={returnTo}
+                      navigate={navigate}
+                      descriptionContent={caseInfo?.description}
+                      lifecycleStatus={lifecycleStatus}
+                      shouldShowActions={shouldShowActions}
+                      canPerformLifecycleActions={canPerformLifecycleActions}
+                      lifecycleQuickActions={lifecycleQuickActions}
+                      actionInFlight={actionInFlight}
+                      isViewOnlyMode={isViewOnlyMode}
+                      onOpenFileModal={() => { setFileComment(''); setShowFileModal(true); }}
+                      showFileAction={!isRouted && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)}
+                      canRouteDocket={canRouteDocket}
+                      onOpenRouteModal={() => setShowRouteModal(true)}
+                      forceQcReview={forceQcReview}
+                      onForceQcReviewChange={setForceQcReview}
+                      isQcContext={isQcContext}
+                      isUnassignedWorkbasket={isUnassignedWorkbasket}
+                      isTerminal={isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)}
+                    />
+                    <CaseDetailAttachmentsPanel
+                      caseId={caseId}
+                      attachments={attachments}
+                      accessMode={accessMode}
+                      permissions={permissions}
+                      caseData={caseData}
+                      lifecycleStatus={lifecycleStatus}
+                      actionInFlight={actionInFlight}
+                      isViewOnlyMode={isViewOnlyMode}
+                      routedTeamCannotResolve={routedTeamCannotResolve}
+                      isQcContext={isQcContext}
+                      isUnassignedWorkbasket={isUnassignedWorkbasket}
+                      onOpenFileModal={() => { setFileComment(''); setShowFileModal(true); }}
+                      onRefreshCase={loadCase}
+                      sectionLoading={sectionLoading.attachments}
+                      selectedFile={selectedFile}
+                      uploadingFile={uploadingFile}
+                      uploadProgress={uploadProgress}
+                      fileDescription={fileDescription}
+                      onUploadFile={handleUploadFile}
+                      onFileSelect={handleFileSelect}
+                      onFileDescriptionChange={setFileDescription}
+                    />
+                  </>
                 )}
                 {activeTab === CASE_DETAIL_TABS.ATTACHMENTS && (
                   <CaseDetailAttachmentsPanel
@@ -1491,6 +1519,26 @@ export const CaseDetailPage = () => {
                   <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     💬 Docket Comments
                   </h2>
+
+                  {(accessMode.canComment || permissions.canAddComment(caseData)) && (
+                    <div className="case-detail__add-comment flex flex-col gap-3 mb-6 pb-6 border-b">
+                      <Textarea
+                        label="Add Comment"
+                        id={commentComposerId}
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder="Enter your comment…"
+                        rows={3}
+                        className="case-detail__comment-input"
+                        enableMentions={true}
+                      />
+                      <div className="case-detail__composer-actions flex justify-end">
+                        <Button variant="primary" onClick={handleAddComment} disabled={!newComment.trim() || submitting}>
+                          {submitting ? 'Adding…' : 'Add Comment'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="case-detail__comments overflow-y-auto max-h-[400px] pr-2 mb-4" ref={commentsListRef}>
                     {sectionLoading.comments ? (
@@ -1511,26 +1559,6 @@ export const CaseDetailPage = () => {
                       </Button>
                     </div>
                   ) : null}
-
-                  {(accessMode.canComment || permissions.canAddComment(caseData)) && (
-                    <div className="case-detail__add-comment flex flex-col gap-3 mt-4 border-t pt-4">
-                      <Textarea
-                        label="Add Comment"
-                        id={commentComposerId}
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Enter your comment…"
-                        rows={3}
-                        className="case-detail__comment-input"
-                        enableMentions={true}
-                      />
-                      <div className="case-detail__composer-actions flex justify-end">
-                        <Button variant="primary" onClick={handleAddComment} disabled={!newComment.trim() || submitting}>
-                          {submitting ? 'Adding…' : 'Add Comment'}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
 
                   {/* Inline Action Buttons below composer */}
                   {shouldShowActions ? (

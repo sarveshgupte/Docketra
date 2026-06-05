@@ -98,8 +98,6 @@ export const CaseDetailOverviewPanel = ({
       </div>
       <div className="field-grid">
         <div className="field-group min-w-0"><span className="field-label">Client ID</span><span className="field-value">{clientIdLabel}</span></div>
-        <div className="field-group min-w-0"><span className="field-label">Business Email</span><span className="field-value break-words">{linkedClientEmail}</span></div>
-        <div className="field-group min-w-0"><span className="field-label">Primary Contact</span><span className="field-value">{linkedClientContact}</span></div>
         <div className="field-group min-w-0"><span className="field-label">Context</span><span className="field-value">{isInternalWork ? 'Internal work' : 'Client work'}</span></div>
       </div>
       <div className="case-detail__composer-actions mt-4">

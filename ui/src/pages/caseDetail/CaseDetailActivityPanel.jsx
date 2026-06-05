@@ -70,22 +70,8 @@ export const CaseDetailActivityPanel = ({
         </Button>
       </div>
     </div>
-    <div className="case-detail__comments" ref={commentsListRef}>
-      {sectionLoading ? (
-        <div className="case-detail__section-skeleton" aria-hidden="true">
-          {Array.from({ length: 4 }).map((_, idx) => <div key={`comment-skeleton-${idx}`} className="case-detail__skeleton-row" />)}
-        </div>
-      ) : <DocketComments comments={visibleComments} />}
-    </div>
-    {comments.length > visibleComments.length ? (
-      <div className="case-detail__virtual-actions">
-        <Button variant="outline" onClick={onLoadOlderComments}>
-          Load older comments ({comments.length - visibleComments.length} remaining)
-        </Button>
-      </div>
-    ) : null}
     {(accessMode.canComment || permissions.canAddComment(caseData)) && (
-      <div className="case-detail__add-comment">
+      <div className="case-detail__add-comment mb-6 pb-6 border-b">
         <Textarea
           label="Add Comment"
           id={commentComposerId}
@@ -96,12 +82,26 @@ export const CaseDetailActivityPanel = ({
           className="case-detail__comment-input"
           enableMentions={true}
         />
-        <div className="case-detail__composer-actions">
+        <div className="case-detail__composer-actions flex justify-end">
           <Button variant="primary" onClick={onAddComment} disabled={!newComment.trim() || submitting}>
             {submitting ? 'Adding…' : 'Add Comment'}
           </Button>
         </div>
       </div>
     )}
+    <div className="case-detail__comments" ref={commentsListRef}>
+      {sectionLoading ? (
+        <div className="case-detail__section-skeleton" aria-hidden="true">
+          {Array.from({ length: 4 }).map((_, idx) => <div key={`comment-skeleton-${idx}`} className="case-detail__skeleton-row" />)}
+        </div>
+      ) : <DocketComments comments={visibleComments} />}
+    </div>
+    {comments.length > visibleComments.length ? (
+      <div className="case-detail__virtual-actions mb-4">
+        <Button variant="outline" onClick={onLoadOlderComments}>
+          Load older comments ({comments.length - visibleComments.length} remaining)
+        </Button>
+      </div>
+    ) : null}
   </section>
 );
