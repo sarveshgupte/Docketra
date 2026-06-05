@@ -40,3 +40,7 @@
 **Vulnerability:** Raw error messages (`error.message`) were being directly exposed to clients in API error responses (e.g., in `src/controllers/user.controller.js`).
 **Learning:** Exposing raw internal error details to the client can leak sensitive system information, configuration details, or underlying infrastructure state, which can be leveraged by attackers.
 **Prevention:** Always log the full error details server-side using the internal logger (`log.error`) and return generic, safe error messages to the client (e.g., "Unable to load profile").
+## 2026-06-02 - Prevent ReDoS by Escaping RegExp Input
+**Vulnerability:** User-derived inputs in `src/controllers/knowledgeItem.controller.js` and `src/controllers/documentItem.controller.js` were passed unescaped into dynamic `new RegExp(...)` constructors in MongoDB queries.
+**Learning:** This pattern can lead to Regular Expression Denial of Service (ReDoS) or NoSQL injection attacks if the input contains regex special characters.
+**Prevention:** Always escape user-derived inputs or dynamically generated strings before using them in regular expressions. A centralized `escapeRegExp` utility was used from `src/utils/regexp.utils.js` for this purpose.
