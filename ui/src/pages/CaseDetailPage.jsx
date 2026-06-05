@@ -1365,7 +1365,7 @@ export const CaseDetailPage = () => {
         {/* Clean Dashboard Layout Container */}
         <div className="case-detail-layout-grid flex w-full flex-col gap-6" style={{ padding: '0 24px 24px' }}>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full">
-            <div className="lg:col-span-12 flex flex-col gap-6 w-full">
+            <div className={activeTab !== CASE_DETAIL_TABS.ACTIVITY ? "lg:col-span-8 flex flex-col gap-6 w-full" : "lg:col-span-12 flex flex-col gap-6 w-full"}>
               {/* Conditional Active Tab Panel Rendering */}
               <Suspense fallback={<CaseDetailPanelSkeleton />}>
                 {activeTab === CASE_DETAIL_TABS.OVERVIEW && (
@@ -1512,22 +1512,140 @@ export const CaseDetailPage = () => {
               </Suspense>
             </div>
 
-            {/* Middle Left: Comments thread & Composer & Actions */}
+            {/* Right Column: Workflow Actions & Comments Sidebar */}
             {activeTab !== CASE_DETAIL_TABS.ACTIVITY && (
-              <div className="lg:col-span-12 flex flex-col gap-6 w-full">
-                <section className="case-card border border-gray-100 bg-white rounded-2xl p-6 shadow-sm">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <div className="lg:col-span-4 flex flex-col gap-6 w-full">
+                {/* Workflow Actions Card */}
+                {shouldShowActions ? (
+                  <section className="case-card border border-gray-100 bg-white rounded-2xl p-6 shadow-sm">
+                    <h2 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      ⚡ Workflow Actions
+                    </h2>
+                    <div className="flex flex-col gap-3">
+                      {/* Primary Actions (Resolve / Submit, Resume / Unpend) */}
+                      <div className="flex flex-col gap-2">
+                        {canPerformLifecycleActions && lifecycleQuickActions.some((action) => ['resolve', 'submit'].includes(action.key)) && (
+                          <Button
+                            variant="primary"
+                            onClick={() => openActionModal('resolve')}
+                            disabled={actionInFlight}
+                            className="w-full justify-center shadow-sm hover:shadow"
+                          >
+                            {routedTeamCannotResolve ? 'Submit Routed Docket' : 'Resolve Docket'}
+                          </Button>
+                        )}
+                        {canPerformLifecycleActions && lifecycleQuickActions.some((action) => action.key === 'unpend') && (
+                          <Button
+                            variant="primary"
+                            onClick={() => setShowUnpendModal(true)}
+                            disabled={actionInFlight}
+                            className="w-full justify-center shadow-sm hover:shadow"
+                          >
+                            Resume Docket
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Secondary Actions (Pend, Route, File) */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {canPerformLifecycleActions && lifecycleQuickActions.some((action) => action.key === 'pend') && (
+                          <Button
+                            variant="secondary"
+                            onClick={() => openActionModal('pend')}
+                            disabled={actionInFlight}
+                            className="w-full justify-center shadow-sm hover:shadow"
+                          >
+                            Pend
+                          </Button>
+                        )}
+                        {canRouteDocket && (
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowRouteModal(true)}
+                            disabled={actionInFlight}
+                            className="w-full justify-center shadow-sm hover:shadow"
+                          >
+                            Route
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        {!isViewOnlyMode && !isRouted && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus) && (
+                          <Button
+                            variant="secondary"
+                            onClick={() => { setFileComment(''); setShowFileModal(true); }}
+                            disabled={actionInFlight}
+                            className="w-full justify-center shadow-sm hover:shadow"
+                          >
+                            File
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Admin Worklist Movement (if permitted) */}
+                      {canAdminMoveAssignedDocket && (
+                        <div className="border-t pt-3 mt-1 flex flex-col gap-2">
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Admin Controls</span>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button variant="outline" size="small" onClick={() => setShowAssignModal(true)} disabled={isMoveLockedByAnotherUser || assigningCase} className="w-full justify-center text-xs">
+                              Move WL
+                            </Button>
+                            <Button variant="outline" size="small" onClick={handleMoveToWorkbasket} disabled={isMoveLockedByAnotherUser || assigningCase} className="w-full justify-center text-xs">
+                              Move WB
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Force QC Review Checkbox */}
+                      {canPerformLifecycleActions && (
+                        <div className="border-t pt-3 mt-1">
+                          <label className="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={forceQcReview}
+                              onChange={(e) => setForceQcReview(e.target.checked)}
+                              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                            />
+                            Force QC Review
+                          </label>
+                        </div>
+                      )}
+
+                      {/* Warnings for QC/Unassigned Workbasket */}
+                      {isUnassignedWorkbasket && (
+                        <div className="mt-2 text-xs text-amber-600 bg-amber-50/50 border border-amber-200/60 rounded-xl p-3">
+                          This docket is currently unassigned in a workbasket. Pull/Assign it from Workbasket flow before personal worklist actions.
+                        </div>
+                      )}
+                      {isQcContext && (
+                        <div className="mt-2 text-xs text-blue-600 bg-blue-50/50 border border-blue-200/60 rounded-xl p-3">
+                          QC context active. Use QC workbasket actions where appropriate.
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                ) : (
+                  <section className="case-card border border-gray-100 bg-white rounded-2xl p-6 shadow-sm">
+                    <p className="text-xs text-gray-500 italic text-center">This docket is in a terminal state ({lifecycleStatus}). Actions are locked.</p>
+                  </section>
+                )}
+
+                {/* Comments Card */}
+                <section className="case-card border border-gray-100 bg-white rounded-2xl p-6 shadow-sm flex flex-col gap-4">
+                  <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                     💬 Docket Comments
                   </h2>
 
                   {(accessMode.canComment || permissions.canAddComment(caseData)) && (
-                    <div className="case-detail__add-comment flex flex-col gap-3 mb-6 pb-6 border-b">
+                    <div className="case-detail__add-comment flex flex-col gap-3 mb-2 pb-2">
                       <Textarea
                         label="Add Comment"
                         id={commentComposerId}
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Enter your comment…"
+                        placeholder="Type a comment..."
                         rows={3}
                         className="case-detail__comment-input"
                         enableMentions={true}
@@ -1540,7 +1658,7 @@ export const CaseDetailPage = () => {
                     </div>
                   )}
                   
-                  <div className="case-detail__comments overflow-y-auto max-h-[400px] pr-2 mb-4" ref={commentsListRef}>
+                  <div className="case-detail__comments overflow-y-auto max-h-[400px] pr-2" ref={commentsListRef}>
                     {sectionLoading.comments ? (
                       <div className="case-detail__section-skeleton" aria-hidden="true">
                         {Array.from({ length: 3 }).map((_, idx) => <div key={`comment-skeleton-${idx}`} className="case-detail__skeleton-row" />)}
@@ -1553,83 +1671,12 @@ export const CaseDetailPage = () => {
                   </div>
 
                   {comments.length > visibleComments.length ? (
-                    <div className="case-detail__virtual-actions mb-4">
+                    <div className="case-detail__virtual-actions">
                       <Button variant="outline" size="small" onClick={() => setCommentWindowSize((size) => size + INITIAL_VIRTUAL_WINDOW)}>
                         Load older comments ({comments.length - visibleComments.length} remaining)
                       </Button>
                     </div>
                   ) : null}
-
-                  {/* Inline Action Buttons below composer */}
-                  {shouldShowActions ? (
-                    <div className="border-t pt-6 mt-6">
-                      <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">
-                        Queue & Workflow Actions
-                      </h3>
-                      <div className="flex flex-wrap items-center gap-3">
-                        {/* Resolve / Submit */}
-                        {canPerformLifecycleActions && lifecycleQuickActions.some((action) => ['resolve', 'submit'].includes(action.key)) && (
-                          <Button
-                            variant="primary"
-                            onClick={() => openActionModal('resolve')}
-                            disabled={actionInFlight}
-                            className="shadow-sm hover:shadow"
-                          >
-                            {routedTeamCannotResolve ? 'Submit' : 'Resolve'}
-                          </Button>
-                        )}
-
-                        {/* Pend */}
-                        {canPerformLifecycleActions && lifecycleQuickActions.some((action) => action.key === 'pend') && (
-                          <Button
-                            variant="secondary"
-                            onClick={() => openActionModal('pend')}
-                            disabled={actionInFlight}
-                            className="shadow-sm hover:shadow"
-                          >
-                            Pend
-                          </Button>
-                        )}
-
-                        {/* Resume / Unpend */}
-                        {canPerformLifecycleActions && lifecycleQuickActions.some((action) => action.key === 'unpend') && (
-                          <Button
-                            variant="primary"
-                            onClick={() => setShowUnpendModal(true)}
-                            disabled={actionInFlight}
-                          >
-                            Resume
-                          </Button>
-                        )}
-
-                        {/* Route */}
-                        {canRouteDocket && (
-                          <Button
-                            variant="outline"
-                            onClick={() => setShowRouteModal(true)}
-                            disabled={actionInFlight}
-                            className="shadow-sm hover:shadow"
-                          >
-                            Route
-                          </Button>
-                        )}
-
-                        {/* File */}
-                        {!isViewOnlyMode && !isRouted && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus) && (
-                          <Button
-                            variant="secondary"
-                            onClick={() => { setFileComment(''); setShowFileModal(true); }}
-                            disabled={actionInFlight}
-                            className="shadow-sm hover:shadow"
-                          >
-                            File
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-gray-500 italic mt-6 border-t pt-4">This docket is in a terminal state. Operational actions are locked.</p>
-                  )}
                 </section>
               </div>
             )}

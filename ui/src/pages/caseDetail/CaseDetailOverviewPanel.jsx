@@ -161,64 +161,6 @@ export const CaseDetailOverviewPanel = ({
           In progress until {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
         </Badge>
       ) : null}
-      {shouldShowActions ? (
-        <section className="case-detail__actions-panel mt-4 border-t pt-4" aria-label="Docket actions">
-          <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Primary</div>
-          <div className="case-detail__composer-actions case-detail__lifecycle-actions mt-2">
-            {canPerformLifecycleActions ? lifecycleQuickActions.filter((action) => ['resolve', 'submit'].includes(action.key)).map((action) => (
-              <Button
-                key={action.key}
-                variant={action.variant}
-                onClick={action.onClick}
-                disabled={actionInFlight}
-              >
-                {action.label}
-              </Button>
-            )) : null}
-          </div>
-          <div className="mt-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Secondary</div>
-          <div className="case-detail__composer-actions case-detail__lifecycle-actions mt-2">
-            {canPerformLifecycleActions ? lifecycleQuickActions.filter((action) => action.key === 'pend').map((action) => (
-              <Button key={action.key} variant={action.variant} onClick={action.onClick} disabled={actionInFlight}>{action.label}</Button>
-            )) : null}
-            {!isViewOnlyMode && showFileAction ? (
-              <Button variant="secondary" onClick={onOpenFileModal} disabled={actionInFlight}>
-                File
-              </Button>
-            ) : null}
-            {canRouteDocket ? (
-              <Button variant="outline" onClick={onOpenRouteModal} disabled={actionInFlight}>
-                Route
-              </Button>
-            ) : null}
-          </div>
-          <div className="mt-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Admin / advanced</div>
-          <div className="case-detail__composer-actions case-detail__lifecycle-actions mt-2">
-            {canPerformLifecycleActions ? lifecycleQuickActions.filter((action) => ['assign', 'move'].includes(action.key)).map((action) => (
-              <Button key={action.key} variant={action.variant} onClick={action.onClick} disabled={actionInFlight}>{action.label}</Button>
-            )) : null}
-          </div>
-          {isUnassignedWorkbasket ? (
-            <p className="mt-3 text-sm text-gray-600">This docket is currently unassigned in a workbasket. Pull/Assign it from Workbasket flow before personal worklist actions.</p>
-          ) : null}
-          {isQcContext ? (
-            <p className="mt-3 text-sm text-gray-600">QC context active. Use QC workbasket actions where appropriate.</p>
-          ) : null}
-          {canPerformLifecycleActions ? (
-            <label className="mt-3 flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={forceQcReview}
-                onChange={(e) => onForceQcReviewChange(e.target.checked)}
-              />
-              Force QC Review
-            </label>
-          ) : null}
-        </section>
-      ) : null}
-      {isTerminal ? (
-        <p className="mt-3 text-sm text-gray-600">This docket is in a terminal state. Record view only; active queue actions are hidden.</p>
-      ) : null}
       <div className="field-group mt-4">
         <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Description</span>
         <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent || 'No description provided for this docket.'}</span>

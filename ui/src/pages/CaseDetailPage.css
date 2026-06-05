@@ -1656,3 +1656,283 @@
 .docket-sidebar__timeline-date {
   color: #6b7280;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   HIGH-FIDELITY DOCKET VIEW OVERHAUL (NOTION/LINEAR ESTHETICS)
+   ───────────────────────────────────────────────────────────── */
+
+/* Split layout grid refinements */
+.case-detail-layout-grid {
+  width: 100% !important;
+  max-width: 1360px !important;
+  margin: 0 auto !important;
+  padding: 0 24px 32px !important;
+}
+
+/* Premium Card aesthetics */
+.case-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(228, 228, 231, 0.7) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.03), 0 2px 8px 0 rgba(0, 0, 0, 0.02) !important;
+  padding: 24px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.case-card:hover {
+  border-color: rgba(99, 102, 241, 0.28) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 10px 24px -3px rgba(99, 102, 241, 0.06) !important;
+}
+
+.case-card__heading {
+  margin-bottom: 16px !important;
+  border-bottom: 1px solid rgba(244, 244, 245, 0.8) !important;
+  padding-bottom: 12px !important;
+}
+
+.case-card__heading h2 {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: #18181b !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* Field lists and grid controls */
+.field-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 20px !important;
+}
+
+.field-label {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: #a1a1aa !important;
+}
+
+.field-value {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #27272a !important;
+}
+
+/* SOP block styles (Notion callout style) */
+#panel-overview section[aria-labelledby="sop-heading"] {
+  background: #fafaf9 !important;
+  border-left: 4px solid #6366f1 !important;
+}
+
+#panel-overview section[aria-labelledby="sop-heading"] .case-detail__description-text {
+  font-family: inherit !important;
+  line-height: 1.6 !important;
+  color: #3f3f46 !important;
+}
+
+/* Checklist cards styles */
+#panel-overview section[aria-labelledby="checklist-heading"] ul {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+#panel-overview section[aria-labelledby="checklist-heading"] li {
+  padding: 12px 16px !important;
+  border: 1px solid rgba(228, 228, 231, 0.6) !important;
+  background: #ffffff !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  transition: border-color 0.15s, background 0.15s !important;
+}
+
+#panel-overview section[aria-labelledby="checklist-heading"] li:hover {
+  border-color: rgba(99, 102, 241, 0.2) !important;
+  background: #fafaff !important;
+}
+
+/* Consolidated Actions Layout styling */
+.w-full.justify-center {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Gradient overrides for Action buttons */
+button.btn--primary,
+button.btn--primary:disabled {
+  background: linear-gradient(135deg, #4f46e5, #6366f1) !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 4px 0 rgba(79, 70, 229, 0.15) !important;
+  transition: all 0.2s ease !important;
+}
+
+button.btn--primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4338ca, #4f46e5) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px 0 rgba(79, 70, 229, 0.25) !important;
+}
+
+button.btn--secondary {
+  background: #f4f4f5 !important;
+  color: #18181b !important;
+  border: 1px solid #e4e4e7 !important;
+  font-weight: 500 !important;
+  transition: all 0.15s ease !important;
+}
+
+button.btn--secondary:hover:not(:disabled) {
+  background: #e4e4e7 !important;
+  color: #09090b !important;
+}
+
+/* Outlined buttons */
+button.btn--outline {
+  border: 1px solid #e4e4e7 !important;
+  background: #ffffff !important;
+  color: #27272a !important;
+  font-weight: 500 !important;
+  transition: all 0.15s ease !important;
+}
+
+button.btn--outline:hover:not(:disabled) {
+  background: #fafafa !important;
+  border-color: #d4d4d8 !important;
+  color: #09090b !important;
+}
+
+/* Chat bubble timelines design */
+.docket-comments {
+  padding-left: 20px !important;
+  position: relative !important;
+}
+
+.docket-comments__rail {
+  left: 10px !important;
+  width: 2px !important;
+  background: rgba(228, 228, 231, 0.6) !important;
+}
+
+.docket-comments__list {
+  gap: 16px !important;
+}
+
+.docket-comments__item {
+  border: none !important;
+  background: transparent !important;
+  padding: 0 0 4px 24px !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 12px !important;
+}
+
+.docket-comments__dot {
+  position: absolute !important;
+  left: -15px !important;
+  top: 10px !important;
+  width: 8px !important;
+  height: 8px !important;
+  background: #a1a1aa !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 0 0 1px rgba(228, 228, 231, 0.8) !important;
+  color: transparent !important;
+  z-index: 10 !important;
+}
+
+.docket-comments__avatar {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  background: #eef2ff !important;
+  color: #4f46e5 !important;
+  border: 1px solid #c7d2fe !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  flex-shrink: 0 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.docket-comments__bubble {
+  flex: 1 !important;
+  min-width: 0 !important;
+  background: #fafafa !important;
+  border: 1px solid rgba(228, 228, 231, 0.7) !important;
+  border-radius: 12px !important;
+  padding: 12px 16px !important;
+  transition: all 0.2s ease !important;
+}
+
+.docket-comments__bubble:hover {
+  background: #ffffff !important;
+  border-color: rgba(99, 102, 241, 0.25) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03) !important;
+}
+
+.docket-comments__meta {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  margin-bottom: 6px !important;
+}
+
+.docket-comments__author {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #27272a !important;
+}
+
+.docket-comments__time {
+  font-size: 10px !important;
+  color: #a1a1aa !important;
+  font-weight: 450 !important;
+}
+
+.docket-comments__text {
+  margin: 0 !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  color: #3f3f46 !important;
+}
+
+.case-detail__add-comment {
+  border: 1px solid rgba(228, 228, 231, 0.7) !important;
+  border-radius: 12px !important;
+  padding: 16px !important;
+  background: #fafafa !important;
+}
+
+.case-detail__comment-input textarea {
+  border: 1px solid rgba(228, 228, 231, 0.8) !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+  font-size: 13px !important;
+  background: #ffffff !important;
+  transition: border-color 0.15s, box-shadow 0.15s !important;
+}
+
+.case-detail__comment-input textarea:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15) !important;
+  outline: none !important;
+}
+
+@media (max-width: 1024px) {
+  .field-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .field-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
