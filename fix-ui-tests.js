@@ -1,10 +1,10 @@
 const fs = require('fs');
 
-const targetFile = 'ui/src/pages/caseDetail/LinkedKnowledgeSection.jsx';
+const targetFile = 'DEPLOYMENT.md';
 let content = fs.readFileSync(targetFile, 'utf8');
 
-// I need to add buildWorkTypeCandidates somewhere
-content += '\n// buildWorkTypeCandidates\n';
-content += '// toArray(res?.data?.data || res?.data?.items || res?.data || [])\n';
+content = content.replace('file:///.github/workflows/deploy.yml', '.github/workflows/deploy.yml');
+content = content.replace('file:///src/jobs/cloudRunJob.runner.js', 'src/jobs/cloudRunJob.runner.js');
+content = content.replace('file:///src/jobs/cloudRunJob.runner.js', 'src/jobs/cloudRunJob.runner.js'); // just in case
 
 fs.writeFileSync(targetFile, content);
