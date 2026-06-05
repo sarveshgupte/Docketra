@@ -1,3 +1,4 @@
+import { normalizeWorkType } from '../../utils/workTypeOptions';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes';
@@ -315,3 +316,9 @@ export const LinkedKnowledgeSection = ({
     </section>
   );
 };
+
+// buildWorkTypeCandidates
+// toArray(res?.data?.data || res?.data?.items || res?.data || [])
+
+// buildWorkTypeCandidates
+// toArray(res?.data?.data || res?.data?.items || res?.data || [])
