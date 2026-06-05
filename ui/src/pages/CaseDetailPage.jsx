@@ -413,8 +413,8 @@ export const CaseDetailPage = () => {
   })();
   const slaDaysLabel = (() => {
     const candidateValues = [
-      caseInfo?.slaConfigSnapshot?.tatDurationMinutes != null ? Math.ceil(Number(caseInfo.slaConfigSnapshot.tatDurationMinutes) / 1440) : null,
-      caseData?.slaConfigSnapshot?.tatDurationMinutes != null ? Math.ceil(Number(caseData.slaConfigSnapshot.tatDurationMinutes) / 1440) : null,
+      caseInfo?.slaConfigSnapshot?.tatDurationMinutes != null ? Math.ceil(Number(caseInfo.slaConfigSnapshot.tatDurationMinutes) / 480) : null,
+      caseData?.slaConfigSnapshot?.tatDurationMinutes != null ? Math.ceil(Number(caseData.slaConfigSnapshot.tatDurationMinutes) / 480) : null,
       caseInfo?.slaDays,
       caseInfo?.tatDaysSnapshot,
       caseInfo?.slaConfigSnapshot?.slaDays,
@@ -1035,9 +1035,10 @@ export const CaseDetailPage = () => {
     if (caseInfo.approvalStatus === 'PENDING') {
       warnings.push('Pending approval is outstanding.');
     }
+    const dueAt = caseInfo.slaDueAt || caseInfo.slaDueDate;
     const isSlaBreach =
-      caseInfo.slaDueDate &&
-      new Date(caseInfo.slaDueDate) < new Date() &&
+      dueAt &&
+      new Date(dueAt) < new Date() &&
       lifecycleStatus !== 'RESOLVED' &&
       lifecycleStatus !== 'CLOSED';
     if (isSlaBreach) {
@@ -1050,6 +1051,20 @@ export const CaseDetailPage = () => {
     () => getDocketSlaBadgeStatus({ ...caseInfo, slaDueDate: caseInfo?.slaDueAt || caseInfo?.slaDueDate }),
     [caseInfo]
   );
+
+  const slaBadgeClass = useMemo(() => {
+    if (docketSlaStatus === 'RED') return 'error';
+    if (docketSlaStatus === 'YELLOW') return 'warning';
+    if (docketSlaStatus === 'GREEN') return 'success';
+    return 'neutral';
+  }, [docketSlaStatus]);
+
+  const slaBadgeLabel = useMemo(() => {
+    if (docketSlaStatus === 'RED') return 'Overdue';
+    if (docketSlaStatus === 'YELLOW') return 'Due Soon';
+    if (docketSlaStatus === 'GREEN') return 'On Track';
+    return 'Not Configured';
+  }, [docketSlaStatus]);
 
   const actionInFlight = assigningCase || pendingCase || resolvingCase || unpendingCase;
   const openActionModal = (type) => {
@@ -1311,8 +1326,8 @@ export const CaseDetailPage = () => {
               <span className="text-gray-300">|</span>
               <span>⏱️ TAT: {slaDaysLabel && slaDaysLabel !== '-' ? `${slaDaysLabel} day(s)` : 'Not configured'}</span>
               <span className="text-gray-300">|</span>
-              <span className={`status-badge status-badge--${docketSlaStatus || 'neutral'}`}>
-                {docketSlaStatus === 'overdue' ? 'Overdue' : docketSlaStatus === 'due_soon' ? 'Due Soon' : 'On Track'}
+              <span className={`status-badge status-badge--${slaBadgeClass}`}>
+                {slaBadgeLabel}
               </span>
             </div>
           </div>

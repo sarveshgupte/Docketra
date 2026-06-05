@@ -581,7 +581,7 @@ export const WorkbasketPage = () => {
       tabular: true,
       headerClassName: 'min-w-[10rem] whitespace-nowrap',
       cellClassName: 'min-w-[10rem] whitespace-nowrap',
-      render: (caseItem) => formatDate(caseItem.slaDueDate || caseItem.slaState?.slaDueAt),
+      render: (caseItem) => formatDate(caseItem.slaDueAt || caseItem.slaDueDate || caseItem.slaState?.slaDueAt),
     },
     {
       key: 'slaDaysRemaining',

@@ -16,9 +16,10 @@ const STORAGE_KEY = 'caseViewPreset';
  * SLA breached AND still Open/Pended AND not updated in 24h.
  */
 export const isEscalatedCase = (record, inactivityThresholdHours) => {
-  if (!record.slaDueDate) return false;
+  const dueAt = record.slaDueDate || record.slaDueAt;
+  if (!dueAt) return false;
   if (record.status === CASE_STATUS.RESOLVED || record.status === CASE_STATUS.FILED) return false;
-  if (new Date(record.slaDueDate) >= new Date()) return false;
+  if (new Date(dueAt) >= new Date()) return false;
   if (record.status !== CASE_STATUS.OPEN && record.status !== CASE_STATUS.PENDING) return false;
   if (!record.updatedAt) return false; // require updatedAt to exist before comparison
   const thresholdHours = Number(
@@ -49,8 +50,9 @@ export const CASE_VIEWS = {
     defaultSort: { key: 'slaDueDate', direction: 'asc' },
     requiresAdmin: false,
     predicate: (record) => {
-      if (!record.slaDueDate) return false;
-      const due = new Date(record.slaDueDate);
+      const dueAt = record.slaDueDate || record.slaDueAt;
+      if (!dueAt) return false;
+      const due = new Date(dueAt);
       const now = new Date();
       return (
         due.getFullYear() === now.getFullYear() &&
@@ -66,9 +68,10 @@ export const CASE_VIEWS = {
     defaultSort: { key: 'slaDueDate', direction: 'asc' },
     requiresAdmin: false,
     predicate: (record) => {
-      if (!record.slaDueDate) return false;
+      const dueAt = record.slaDueDate || record.slaDueAt;
+      if (!dueAt) return false;
       if (record.status === CASE_STATUS.RESOLVED || record.status === CASE_STATUS.FILED) return false;
-      return new Date(record.slaDueDate) < new Date();
+      return new Date(dueAt) < new Date();
     },
   },
   ESCALATED: {
