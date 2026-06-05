@@ -92,6 +92,17 @@ module.exports = (deps) => {
     ...slaService,
   };
 
+  const DEFAULT_CATEGORY_SLA_DAYS = 3;
+  const getEffectiveCategorySlaDays = ({ subcategoryDoc = null, categoryDoc = null } = {}) => {
+    const subcategorySla = Number(subcategoryDoc?.defaultSlaDays || 0);
+    if (Number.isFinite(subcategorySla) && subcategorySla > 0) return subcategorySla;
+
+    const categorySla = Number(categoryDoc?.defaultSlaDays || 0);
+    if (Number.isFinite(categorySla) && categorySla > 0) return categorySla;
+
+    return DEFAULT_CATEGORY_SLA_DAYS;
+  };
+
   const sanitizeCreatePayloadForLog = (body = {}) => ({
     titleProvided: typeof body.title === 'string' ? body.title.trim().length > 0 : Boolean(body.title),
     descriptionLength: typeof body.description === 'string' ? body.description.trim().length : 0,
@@ -649,11 +660,9 @@ module.exports = (deps) => {
       const session = getSession(req);
       try {
         // Create new case with defaults
-        let defaultSlaDays = Number(
-          subcategoryDoc?.defaultSlaDays ?? categoryDoc?.defaultSlaDays ?? 0
-        );
+        let defaultSlaDays = Number(getEffectiveCategorySlaDays({ subcategoryDoc, categoryDoc }));
         if (!Number.isFinite(defaultSlaDays)) {
-          defaultSlaDays = 0;
+          defaultSlaDays = DEFAULT_CATEGORY_SLA_DAYS;
         }
         const requestedSlaDueDate = isAdminUser && slaDueDate ? new Date(slaDueDate) : null;
         const hasValidRequestedSla = requestedSlaDueDate && !Number.isNaN(requestedSlaDueDate.getTime());
@@ -1207,11 +1216,9 @@ module.exports = (deps) => {
             }, { rule: clonedSlaRule, calendarConfig: firmCalendarConfig })
           : null;
 
-        let clonedDefaultSlaDays = Number(
-          subcategoryDoc?.defaultSlaDays ?? categoryDoc?.defaultSlaDays ?? 0
-        );
+        let clonedDefaultSlaDays = Number(getEffectiveCategorySlaDays({ subcategoryDoc, categoryDoc }));
         if (!Number.isFinite(clonedDefaultSlaDays)) {
-          clonedDefaultSlaDays = 0;
+          clonedDefaultSlaDays = DEFAULT_CATEGORY_SLA_DAYS;
         }
 
         let clonedSlaDays = Math.max(0, Number(originalCase.tatDaysSnapshot || clonedDefaultSlaDays || originalCase.slaDays || 0));

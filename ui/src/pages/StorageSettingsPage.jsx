@@ -32,6 +32,7 @@ import { getRecoveryPayload } from '../utils/errorRecovery';
 import { SupportContext } from '../components/feedback/SupportContext';
 import { StatusMessageStack } from './platform/PlatformShared';
 import { ROUTES } from '../constants/routes';
+import { invalidateStorageStatusSummaryCache } from '../hooks/useStorageStatusSummary';
 
 const PAGE_SUBTITLE = 'Docketra-managed storage works by default. You can optionally connect your firm’s own cloud storage bucket or drive.';
 
@@ -196,6 +197,7 @@ export function StorageSettingsPage() {
       if (exportsResult.status !== 'fulfilled') {
         setExportWarning(getExportHistoryWarning(exportsResult.reason));
       }
+      invalidateStorageStatusSummaryCache();
       await loadStorageUsage();
     } catch (error) {
       const status = Number(error?.response?.status || 0);
@@ -238,10 +240,14 @@ export function StorageSettingsPage() {
   const normalizedProvider = (currentProvider === 'google_drive' || currentProvider === 'google-drive') ? 'google-drive' : currentProvider;
   const isGoogleConnected = normalizedProvider === 'google-drive' && Boolean(config?.isConfigured);
   const currentModeLabel = normalizedProvider === 'google-drive' ? 'Firm-owned Google Drive' : config?.provider === 'onedrive' ? 'Firm-owned Microsoft OneDrive' : config?.provider === 's3' ? 'Firm-owned Amazon S3' : 'Docketra-managed Google Drive';
-  const statusLabel = config?.status?.includes('ERROR') || config?.status?.includes('DISCONNECTED') ? 'Needs attention' : config?.isConfigured ? 'Active' : 'Not connected';
   const usagePercent = Number(usage?.usagePercent || 0);
   const strictFirmOwnedStorage = Boolean(config?.strictFirmOwnedStorage);
-  const rootHealthOk = rootHealth?.status === 'healthy' || rootHealth?.status === 'renamed_valid';
+  const rootHealthStatus = String(rootHealth?.status || '').toLowerCase();
+  const rootHealthOk = rootHealthStatus === 'healthy' || rootHealthStatus === 'renamed_valid';
+  const credentialsNeedAttention = String(config?.status || '').includes('ERROR') || String(config?.status || '').includes('DISCONNECTED');
+  const rootNeedsAttention = normalizedProvider === 'google-drive' && Boolean(config?.isConfigured) && rootHealthStatus === 'recovery_required';
+  const storageNeedsAttention = credentialsNeedAttention || rootNeedsAttention;
+  const statusLabel = storageNeedsAttention ? 'Needs attention' : config?.isConfigured ? 'Active' : 'Not connected';
   const rootHealthMessage = rootHealth?.message || (config?.isConfigured ? 'Docketra could not verify your firm-owned cloud storage root.' : 'Connect firm cloud storage to verify root health.');
 
   const onToggleStrictMode = async (nextValue) => {
@@ -557,6 +563,11 @@ export function StorageSettingsPage() {
 
             {!folderLinkAvailable && normalizedProvider === 'google-drive' && (
               <p className="text-xs text-rose-500 font-medium">⚠️ Connection error: administrative folder link is temporarily unreachable.</p>
+            )}
+            {rootNeedsAttention && (
+              <p className="text-xs text-amber-700 font-semibold">
+                Firm storage credentials are connected, but the Google Drive root needs attention: {rootHealthMessage}
+              </p>
             )}
             {summaryWarning && <p className="text-xs text-amber-600 font-medium">{summaryWarning}</p>}
           </div>

@@ -1,8 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Badge } from '../../components/common/Badge';
-import { LifecycleBadge } from '../../../components/LifecycleBadge';
 import { formatDateTime } from '../../utils/formatDateTime';
-import { getLifecycleMeta } from '../../../utils/lifecycleMap';
+import { getBusinessLifecycleTone } from './caseDetailUtils';
 
 
 
@@ -50,6 +49,7 @@ export const CaseDetailOverviewPanel = ({
   categoryLabel,
   subcategoryLabel,
   locationBadges,
+  displayLifecycleLabel,
 }) => {
   // Determine overdue display: positive = days left, negative = days overdue
   const slaRemainingDisplay = (() => {
@@ -58,35 +58,32 @@ export const CaseDetailOverviewPanel = ({
     if (!Number.isFinite(n)) return null;
     return n;
   })();
+  const hasDescription = Boolean(String(descriptionContent || '').trim());
 
   return (
   <>
-    <section className="case-card" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
-      <div className="case-card__heading flex items-center justify-between flex-wrap gap-4 border-b border-gray-100 pb-4 mb-4">
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <h2 id="snapshot-heading" className="text-lg font-bold text-gray-900 m-0">Overview</h2>
+    <section className="case-card docket-overview-panel" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
+      <div className="case-card__heading docket-section-heading flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <p className="docket-section-kicker">Snapshot</p>
+          <h2 id="snapshot-heading">Overview</h2>
           
           {/* Location and Status Badges */}
-          {locationBadges && locationBadges.map((badge) => (
-            <Badge key={badge} variant="secondary">{badge}</Badge>
-          ))}
-          {(caseInfo?.qc?.status || caseInfo?.qcStatus) ? (
-            <Badge variant={String(caseInfo?.qc?.status || caseInfo?.qcStatus).toUpperCase() === 'FAILED' ? 'danger' : 'info'}>
-              QC: {caseInfo?.qc?.status || caseInfo?.qcStatus}
-            </Badge>
-          ) : null}
-          {caseInfo?.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
-
-          {/* SLA Badge */}
-          {slaBadgeLabel && (
-            <span className={`status-badge status-badge--${slaBadgeClass}`}>
-              {slaBadgeLabel}
-            </span>
-          )}
+          <div className="docket-overview-panel__badges">
+            {locationBadges && locationBadges.map((badge) => (
+              <Badge key={badge} variant="secondary">{badge}</Badge>
+            ))}
+            {(caseInfo?.qc?.status || caseInfo?.qcStatus) ? (
+              <Badge variant={String(caseInfo?.qc?.status || caseInfo?.qcStatus).toUpperCase() === 'FAILED' ? 'danger' : 'info'}>
+                QC: {caseInfo?.qc?.status || caseInfo?.qcStatus}
+              </Badge>
+            ) : null}
+            {caseInfo?.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
+          </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-1.5 bg-gray-100/60 p-1 rounded-xl border border-gray-200/40" aria-label="Docket actions">
+        <div className="docket-icon-cluster" aria-label="Docket actions">
           <button
             type="button"
             onClick={() => runGuardedAction(() => openSidebar('cfs'), 'Unable to open CFS panel right now.')}
@@ -127,7 +124,7 @@ export const CaseDetailOverviewPanel = ({
           </button>
         </div>
       </div>
-      <div className="field-grid">
+      <div className="field-grid docket-field-grid">
         <div className="field-group min-w-0">
           <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Client Name</span>
           <span className="field-value text-sm font-medium text-gray-900 break-words">
@@ -172,30 +169,32 @@ export const CaseDetailOverviewPanel = ({
         </div>
         <div className="field-group min-w-0">
           <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Lifecycle</span>
-          {(() => {
-            const meta = getLifecycleMeta(caseInfo?.lifecycle);
-            return meta && meta.key !== 'open_active'
-              ? <LifecycleBadge lifecycle={caseInfo?.lifecycle} />
-              : <span className="field-value text-sm font-medium text-gray-900">—</span>;
-          })()}
+          <span className={`docket-lifecycle-pill docket-lifecycle-pill--${getBusinessLifecycleTone(displayLifecycleLabel)}`}>
+            {displayLifecycleLabel || 'Active'}
+          </span>
         </div>
       </div>
     </section>
 
 
-    <section className={`case-card ${lifecycleStatus === 'IN_PROGRESS' ? 'opacity-90' : ''}`} aria-labelledby="overview-heading">
-      <div className="case-card__heading">
-        <h2 id="overview-heading">Description</h2>
-      </div>
-      {lifecycleStatus === 'IN_PROGRESS' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
-        <Badge variant="warning" className="mt-3 inline-flex">
-          In progress until {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
-        </Badge>
-      ) : null}
-      <div className="mt-4">
-        <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent || 'No description provided for this docket.'}</span>
-      </div>
-    </section>
+    {hasDescription ? (
+      <section className={`case-card docket-description-panel ${lifecycleStatus === 'IN_PROGRESS' ? 'opacity-90' : ''}`} aria-labelledby="overview-heading">
+        <div className="case-card__heading docket-section-heading">
+          <div>
+            <p className="docket-section-kicker">Context</p>
+            <h2 id="overview-heading">Description</h2>
+          </div>
+        </div>
+        {lifecycleStatus === 'IN_PROGRESS' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
+          <Badge variant="warning" className="mt-3 inline-flex">
+            In progress until {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
+          </Badge>
+        ) : null}
+        <div className="mt-4">
+          <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent}</span>
+        </div>
+      </section>
+    ) : null}
 
 
   </>

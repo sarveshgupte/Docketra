@@ -99,6 +99,12 @@ const subcategorySchema = new mongoose.Schema({
     min: 0,
     default: 0,
   },
+  qcPercent: {
+    type: Number,
+    min: 0,
+    max: 100,
+    default: 0,
+  },
   forceQC: {
     type: Boolean,
     default: false,
@@ -185,6 +191,12 @@ const categorySchema = new mongoose.Schema({
   defaultSlaDays: {
     type: Number,
     min: 0,
+    default: 0,
+  },
+  qcPercent: {
+    type: Number,
+    min: 0,
+    max: 100,
     default: 0,
   },
   forceQC: {

@@ -109,6 +109,7 @@ const createEmptySubcategoryForm = () => ({
   name: '',
   workbasketId: '',
   defaultSlaDays: '',
+  qcPercent: '',
   requiresRelatedEmployeeUser: false,
   sopTitle: '',
   sopBody: '',
@@ -211,12 +212,13 @@ export const AdminPage = () => {
   const [categoryForm, setCategoryForm] = useState({
     name: '',
     defaultSlaDays: '',
+    qcPercent: '',
     requiresRelatedEmployeeUser: false,
   });
   
   // Subcategory form state
   const [subcategoryForm, setSubcategoryForm] = useState(createEmptySubcategoryForm);
-  const [editCategoryForm, setEditCategoryForm] = useState({ id: '', name: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
+  const [editCategoryForm, setEditCategoryForm] = useState({ id: '', name: '', defaultSlaDays: '', qcPercent: '', requiresRelatedEmployeeUser: false });
   const [editSubcategoryForm, setEditSubcategoryForm] = useState({
     categoryId: '',
     subcategoryId: '',
@@ -718,12 +720,13 @@ export const AdminPage = () => {
         categoryForm.name.trim(),
         categoryForm.requiresRelatedEmployeeUser === true,
         Number(categoryForm.defaultSlaDays) || 0,
+        Number(categoryForm.qcPercent) || 0,
       );
       
       if (response.success) {
         showToast('Category created successfully', 'success');
         setShowCategoryModal(false);
-        setCategoryForm({ name: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
+        setCategoryForm({ name: '', defaultSlaDays: '', qcPercent: '', requiresRelatedEmployeeUser: false });
         loadAdminData();
       } else {
         showToast(response.message || 'Failed to create category', 'error');
@@ -779,7 +782,10 @@ export const AdminPage = () => {
         subcategoryForm.workbasketId,
         subcategoryForm.requiresRelatedEmployeeUser === true,
         Number(subcategoryForm.defaultSlaDays) || 0,
-        { sop: buildSubcategoryKnowledgePayload(subcategoryForm) },
+        {
+          qcPercent: Number(subcategoryForm.qcPercent) || 0,
+          sop: buildSubcategoryKnowledgePayload(subcategoryForm),
+        },
       );
       
       if (response.success) {
@@ -825,6 +831,7 @@ export const AdminPage = () => {
       id: category._id,
       name: category.name || '',
       defaultSlaDays: String(category.defaultSlaDays || ''),
+      qcPercent: String(category.qcPercent || ''),
       requiresRelatedEmployeeUser: category.requiresRelatedEmployeeUser === true,
     });
     setShowEditCategoryModal(true);
@@ -837,6 +844,7 @@ export const AdminPage = () => {
       name: subcategory.name || '',
       workbasketId: String(subcategory.workbasketId || ''),
       defaultSlaDays: String(subcategory.defaultSlaDays || ''),
+      qcPercent: String(subcategory.qcPercent || ''),
       requiresRelatedEmployeeUser: subcategory.requiresRelatedEmployeeUser === true,
       sopTitle: String(subcategory?.sop?.title || ''),
       sopBody: String(subcategory?.sop?.body || ''),
@@ -915,10 +923,11 @@ export const AdminPage = () => {
         editCategoryForm.name.trim(),
         editCategoryForm.requiresRelatedEmployeeUser === true,
         Number(editCategoryForm.defaultSlaDays) || 0,
+        Number(editCategoryForm.qcPercent) || 0,
       );
       if (response.success) {
         setShowEditCategoryModal(false);
-        setEditCategoryForm({ id: '', name: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
+        setEditCategoryForm({ id: '', name: '', defaultSlaDays: '', qcPercent: '', requiresRelatedEmployeeUser: false });
         showToast('Category updated successfully', 'success');
         loadAdminData();
       } else showToast(response.message || 'Failed to update category', 'error');
@@ -938,7 +947,10 @@ export const AdminPage = () => {
         editSubcategoryForm.workbasketId,
         editSubcategoryForm.requiresRelatedEmployeeUser === true,
         Number(editSubcategoryForm.defaultSlaDays) || 0,
-        { sop: buildSubcategoryKnowledgePayload(editSubcategoryForm) },
+        {
+          qcPercent: Number(editSubcategoryForm.qcPercent) || 0,
+          sop: buildSubcategoryKnowledgePayload(editSubcategoryForm),
+        },
       );
       if (response.success) {
         setShowEditSubcategoryModal(false);
@@ -953,44 +965,6 @@ export const AdminPage = () => {
     } catch (error) {
       showToast(error.response?.data?.message || 'Failed to update subcategory', 'error');
     } finally { setSubmitting(false); }
-  };
-
-  const handleDeleteCategory = async (category) => {
-    if (!confirm(`Are you sure you want to delete category "${category.name}"? This is a soft delete - the category will be hidden from dropdowns but historical dockets will remain valid.`)) {
-      return;
-    }
-    
-    try {
-      const response = await categoryService.deleteCategory(category._id);
-      
-      if (response.success) {
-        showToast('Category deleted successfully', 'success');
-        loadAdminData();
-      } else {
-        showToast(response.message || 'Failed to delete category', 'error');
-      }
-    } catch (error) {
-      showToast(error.response?.data?.message || 'Failed to delete category', 'error');
-    }
-  };
-
-  const handleDeleteSubcategory = async (category, subcategory) => {
-    if (!confirm(`Are you sure you want to delete subcategory "${subcategory.name}"? This is a soft delete - the subcategory will be hidden from dropdowns but historical dockets will remain valid.`)) {
-      return;
-    }
-    
-    try {
-      const response = await categoryService.deleteSubcategory(category._id, subcategory.id);
-      
-      if (response.success) {
-        showToast('Subcategory deleted successfully', 'success');
-        loadAdminData();
-      } else {
-        showToast(response.message || 'Failed to delete subcategory', 'error');
-      }
-    } catch (error) {
-      showToast(error.response?.data?.message || 'Failed to delete subcategory', 'error');
-    }
   };
 
   const handleOpenBulkPaste = (mode) => {
@@ -1626,13 +1600,8 @@ export const AdminPage = () => {
             }}
             onToggleCategoryStatus={handleToggleCategoryStatus}
             onEditCategory={handleEditCategory}
-            onDeleteCategory={handleDeleteCategory}
             onToggleSubcategoryStatus={handleToggleSubcategoryStatus}
             onEditSubcategory={handleEditSubcategory}
-            onDeleteSubcategory={handleDeleteSubcategory}
-            onManageKnowledge={(category, subcategory) => {
-              handleEditSubcategory(category, subcategory);
-            }}
             StatusBadge={AdminStatusBadge}
           />
         )}

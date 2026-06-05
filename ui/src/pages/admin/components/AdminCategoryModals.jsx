@@ -86,7 +86,7 @@ export const AdminCategoryModals = ({
       isOpen={showCategoryModal}
       onClose={() => {
         setShowCategoryModal(false);
-        setCategoryForm({ name: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
+        setCategoryForm({ name: '', defaultSlaDays: '', qcPercent: '', requiresRelatedEmployeeUser: false });
       }}
       title="Create New Category"
     >
@@ -109,6 +109,17 @@ export const AdminCategoryModals = ({
           placeholder="e.g. 3"
           helpText="Counts only the firm's configured working days."
         />
+        <Input
+          label="QC review percentage"
+          name="qcPercent"
+          type="number"
+          min="0"
+          max="100"
+          value={categoryForm.qcPercent || ''}
+          onChange={(e) => setCategoryForm({ ...categoryForm, qcPercent: e.target.value })}
+          placeholder="e.g. 10"
+          helpText="Percentage of resolved dockets sent to QC when subcategory QC is not set."
+        />
         <label className="admin__checkbox-field">
           <input
             type="checkbox"
@@ -128,7 +139,7 @@ export const AdminCategoryModals = ({
             variant="default"
             onClick={() => {
               setShowCategoryModal(false);
-              setCategoryForm({ name: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
+              setCategoryForm({ name: '', defaultSlaDays: '', qcPercent: '', requiresRelatedEmployeeUser: false });
             }}
           >
             Cancel
@@ -141,19 +152,20 @@ export const AdminCategoryModals = ({
       isOpen={showEditCategoryModal}
       onClose={() => {
         setShowEditCategoryModal(false);
-        setEditCategoryForm({ id: '', name: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
+        setEditCategoryForm({ id: '', name: '', defaultSlaDays: '', qcPercent: '', requiresRelatedEmployeeUser: false });
       }}
       title="Edit Category"
     >
       <form onSubmit={onUpdateCategory} className="admin__create-form">
         <Input label="Category Name" name="name" value={editCategoryForm.name} onChange={(e) => setEditCategoryForm({ ...editCategoryForm, name: e.target.value })} required />
         <Input label="Default SLA working days" name="defaultSlaDays" type="number" min="0" value={editCategoryForm.defaultSlaDays || ''} onChange={(e) => setEditCategoryForm({ ...editCategoryForm, defaultSlaDays: e.target.value })} helpText="Counts only the firm's configured working days." />
+        <Input label="QC review percentage" name="qcPercent" type="number" min="0" max="100" value={editCategoryForm.qcPercent || ''} onChange={(e) => setEditCategoryForm({ ...editCategoryForm, qcPercent: e.target.value })} helpText="Percentage of resolved dockets sent to QC when subcategory QC is not set." />
         <label className="admin__checkbox-field">
           <input type="checkbox" checked={editCategoryForm.requiresRelatedEmployeeUser === true} onChange={(e) => setEditCategoryForm({ ...editCategoryForm, requiresRelatedEmployeeUser: e.target.checked })} />
           <span><strong>Require related employee/user during docket creation</strong><br />Enable this for HR, payroll, onboarding, offboarding, reimbursement, or employee-specific work.</span>
         </label>
         <div className="admin__modal-actions">
-          <Button type="button" variant="default" onClick={() => { setShowEditCategoryModal(false); setEditCategoryForm({ id: '', name: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false }); }}>Cancel</Button>
+          <Button type="button" variant="default" onClick={() => { setShowEditCategoryModal(false); setEditCategoryForm({ id: '', name: '', defaultSlaDays: '', qcPercent: '', requiresRelatedEmployeeUser: false }); }}>Cancel</Button>
           <Button type="submit" variant="primary" disabled={submitting}>{submitting ? 'Saving...' : 'Save Category'}</Button>
         </div>
       </form>
@@ -167,6 +179,7 @@ export const AdminCategoryModals = ({
           name: '',
           workbasketId: '',
           defaultSlaDays: '',
+          qcPercent: '',
           requiresRelatedEmployeeUser: false,
           sopTitle: '',
           sopBody: '',
@@ -205,6 +218,17 @@ export const AdminCategoryModals = ({
           onChange={(e) => setSubcategoryForm({ ...subcategoryForm, defaultSlaDays: e.target.value })}
           placeholder="e.g. 2"
           helpText="This is the default SLA for dockets in this subcategory."
+        />
+        <Input
+          label="QC review percentage"
+          name="qcPercent"
+          type="number"
+          min="0"
+          max="100"
+          value={subcategoryForm.qcPercent || ''}
+          onChange={(e) => setSubcategoryForm({ ...subcategoryForm, qcPercent: e.target.value })}
+          placeholder="e.g. 10"
+          helpText="Set 100 to send every resolved docket in this subcategory to QC. Leave 0 to inherit category QC."
         />
         <label className="admin__checkbox-field">
           <input
@@ -310,6 +334,7 @@ export const AdminCategoryModals = ({
                 name: '',
                 workbasketId: '',
                 defaultSlaDays: '',
+                qcPercent: '',
                 requiresRelatedEmployeeUser: false,
                 sopTitle: '',
                 sopBody: '',
@@ -335,6 +360,7 @@ export const AdminCategoryModals = ({
           name: '',
           workbasketId: '',
           defaultSlaDays: '',
+          qcPercent: '',
           requiresRelatedEmployeeUser: false,
           sopTitle: '',
           sopBody: '',
@@ -354,6 +380,7 @@ export const AdminCategoryModals = ({
           required
         />
         <Input label="SLA working days" name="defaultSlaDays" type="number" min="0" value={editSubcategoryForm.defaultSlaDays || ''} onChange={(e) => setEditSubcategoryForm({ ...editSubcategoryForm, defaultSlaDays: e.target.value })} helpText="This is the default SLA for dockets in this subcategory." />
+        <Input label="QC review percentage" name="qcPercent" type="number" min="0" max="100" value={editSubcategoryForm.qcPercent || ''} onChange={(e) => setEditSubcategoryForm({ ...editSubcategoryForm, qcPercent: e.target.value })} helpText="Set 100 to send every resolved docket in this subcategory to QC. Leave 0 to inherit category QC." />
         <label className="admin__checkbox-field">
           <input type="checkbox" checked={editSubcategoryForm.requiresRelatedEmployeeUser === true} onChange={(e) => setEditSubcategoryForm({ ...editSubcategoryForm, requiresRelatedEmployeeUser: e.target.checked })} />
           <span><strong>Require related employee/user during docket creation</strong><br />Enable this for HR, payroll, onboarding, offboarding, reimbursement, or employee-specific work.</span>
@@ -504,6 +531,7 @@ export const AdminCategoryModals = ({
                 name: '',
                 workbasketId: '',
                 defaultSlaDays: '',
+                qcPercent: '',
                 requiresRelatedEmployeeUser: false,
                 sopTitle: '',
                 sopBody: '',

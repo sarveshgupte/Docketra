@@ -37,6 +37,7 @@ import { useCaseQuery } from '../hooks/useCaseQuery';
 import { useDocketQueueNavigation } from '../hooks/useDocketQueueNavigation';
 import { invalidateCaseCache } from '../utils/caseCache';
 import { getDocketSlaBadgeStatus } from '../utils/docketSla';
+import { isFirmManagerOrAbove } from '../utils/roleHierarchy';
 import api from '../services/api';
 import { DocketDetails } from '../../components/DocketDetails';
 import { CaseWorkflowModals } from './caseDetail/CaseWorkflowModals';
@@ -65,12 +66,12 @@ import {
 const CaseDetailAttachmentsPanel = lazy(() => import('./caseDetail/CaseDetailAttachmentsPanel').then((module) => ({ default: module.CaseDetailAttachmentsPanel })));
 const CaseDetailActivityPanel = lazy(() => import('./caseDetail/CaseDetailActivityPanel').then((module) => ({ default: module.CaseDetailActivityPanel })));
 const CaseDetailHistoryPanel = lazy(() => import('./caseDetail/CaseDetailHistoryPanel').then((module) => ({ default: module.CaseDetailHistoryPanel })));
-const CaseDetailEffortPanel = lazy(() => import('./caseDetail/CaseDetailEffortPanel').then((module) => ({ default: module.CaseDetailEffortPanel })));
-const CaseDetailEmailsPanel = lazy(() => import('./caseDetail/CaseDetailEmailsPanel').then((module) => ({ default: module.CaseDetailEmailsPanel })));
 import { useClientDocketHistory } from './caseDetail/useClientDocketHistory';
 // showFileAction={!routedTeamCannotResolve && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)}
 import {
   ACTION_RETRY_KEY,
+  getBusinessLifecycleLabel,
+  getDocketAssignedToLabel,
   INITIAL_VIRTUAL_WINDOW,
   normalizeCase,
   normalizeLifecycleForUi,
@@ -111,6 +112,10 @@ export const CaseDetailPage = () => {
     if (tab === CASE_DETAIL_TABS.COMMENTS_LEGACY) return CASE_DETAIL_TABS.ACTIVITY;
     return VALID_CASE_DETAIL_TAB_NAMES.includes(tab) ? tab : CASE_DETAIL_TABS.OVERVIEW;
   }, [location.search]);
+  const forceViewOnlyMode = useMemo(() => {
+    const params = new URLSearchParams(location.search || '');
+    return params.get('mode') === 'view' || location.state?.viewOnly === true;
+  }, [location.search, location.state?.viewOnly]);
 
   const handlePrevCase = () => {
     if (!hasPrev) return;
@@ -295,9 +300,7 @@ export const CaseDetailPage = () => {
   const docketTabs = useMemo(() => ([
     { name: CASE_DETAIL_TABS.OVERVIEW, label: '📋 Overview' },
     { name: CASE_DETAIL_TABS.KNOWLEDGE, label: '🧠 Linked Knowledge' },
-    { name: CASE_DETAIL_TABS.EFFORT, label: '⏱️ Effort & Budget' },
-    { name: CASE_DETAIL_TABS.EMAIL_LOGS, label: '✉️ Email Logs' },
-  ]), [attachments.length, mergedTimelineEvents.length]);
+  ]), []);
 
   const visibleComments = useMemo(() => {
     const list = comments.slice(-commentWindowSize);
@@ -352,13 +355,6 @@ export const CaseDetailPage = () => {
     clientId: clientMongoId || linkedClientId || caseInfo?.clientId || caseData?.clientId,
     caseId,
   });
-  const docketStatusLabel = caseInfo?.status || caseInfo?.lifecycle || '—';
-  const assigneeLabel = caseInfo?.assignedToName
-    || caseInfo?.assignedTo
-    || caseInfo?.assignedToXID
-    || caseInfo?.ownerName
-    || caseInfo?.ownerXID
-    || 'Unassigned';
   const queueLabel = caseInfo?.workbasketName
     || caseInfo?.queueName
     || caseInfo?.ownerTeamName
@@ -445,6 +441,8 @@ export const CaseDetailPage = () => {
     return '-';
   })();
   const lifecycleStatus = normalizeLifecycleForUi(caseInfo?.lifecycle);
+  const displayLifecycleLabel = getBusinessLifecycleLabel(caseInfo);
+  const displayAssigneeLabel = getDocketAssignedToLabel(caseInfo);
   const normalizedUserXid = String(user?.xID || '').trim().toUpperCase();
   const normalizedAssignedXid = String(caseInfo?.assignedToXID || '').trim().toUpperCase();
   const locationBadges = useMemo(() => {
@@ -822,7 +820,7 @@ export const CaseDetailPage = () => {
   const { retryQueue, queueFailedAction } = useDocketRetryQueue({ caseId, showSuccess, showWarning, onQueueSynced: () => loadCase({ background: true }) });
 
   const accessMode = caseData?.accessMode || {};
-  const isViewOnlyMode = accessMode.isViewOnlyMode;
+  const isViewOnlyMode = Boolean(accessMode.isViewOnlyMode || forceViewOnlyMode);
   const canCloneDocket = canCloneDocketByPolicy({ permissions, caseData });
 
   const {
@@ -885,8 +883,8 @@ export const CaseDetailPage = () => {
       || caseData?.details
       || ''
     ).trim();
-    if (!value) return '-';
-    if (looksEncryptedPayload(value)) return '—';
+    if (!value) return '';
+    if (looksEncryptedPayload(value)) return '';
     return value;
   }, [
     caseInfo?.description,
@@ -1024,7 +1022,7 @@ export const CaseDetailPage = () => {
   // Task 2: Inactivity warning — OPEN case not updated in 3+ days (not pended)
   const isInactiveWarning = useMemo(() => {
     if (!caseInfo) return false;
-    if (lifecycleStatus !== 'OPEN') return false;
+    if (!['WL', 'OPEN', 'ACTIVE', 'CREATED', 'IN_WORKLIST'].includes(lifecycleStatus)) return false;
     if (!caseInfo.updatedAt) return false;
     const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
     return new Date(caseInfo.updatedAt) < threeDaysAgo;
@@ -1085,7 +1083,10 @@ export const CaseDetailPage = () => {
     }
   };
 
-  const shouldShowActions = useMemo(() => !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus), [caseInfo?.lifecycle, lifecycleStatus]);
+  const shouldShowActions = useMemo(
+    () => !isViewOnlyMode && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus),
+    [caseInfo?.lifecycle, isViewOnlyMode, lifecycleStatus],
+  );
 
   const lifecycleActionMap = useMemo(() => ({
     WL: [
@@ -1192,6 +1193,9 @@ export const CaseDetailPage = () => {
       if (typing || isAnyModalOpen) return;
 
       const key = event.key.toLowerCase();
+      const hasModifier = event.metaKey || event.ctrlKey || event.altKey || event.shiftKey;
+      const hasSelection = Boolean(window.getSelection?.()?.toString?.());
+      if (hasModifier || hasSelection) return;
 
       if (key === 'c') {
         event.preventDefault();
@@ -1214,7 +1218,7 @@ export const CaseDetailPage = () => {
 
   if (loading || (activeDocketId === caseId && isDocketLoading && !caseData)) {
     return (
-      <PlatformShell moduleLabel="Operations" title="Docket details" subtitle="Loading docket context and workflow actions.">
+      <PlatformShell title="Docket details">
         <Loading message="Loading docket..." />
       </PlatformShell>
     );
@@ -1225,7 +1229,7 @@ export const CaseDetailPage = () => {
 
   if (isAccessDenied) {
     return (
-      <PlatformShell moduleLabel="Operations" title="Access restricted" subtitle="You do not have permission to view this docket.">
+      <PlatformShell title="Access restricted">
         <div className="container p-6">
           <AccessDeniedState supportContext={recovery.supportContext} />
         </div>
@@ -1235,7 +1239,7 @@ export const CaseDetailPage = () => {
 
   if (!caseData) {
     return (
-      <PlatformShell moduleLabel="Operations" title="Docket details" subtitle="Loading docket context and workflow actions.">
+      <PlatformShell title="Docket details">
         <div className="container">
           <Card>
             {loadError ? <p>{loadError}</p> : null}
@@ -1251,14 +1255,110 @@ export const CaseDetailPage = () => {
 
   if (!caseInfo) return null;
 
-  return (
-    <PlatformShell moduleLabel="Operations" title={formatDocketId(caseInfo?.caseId || caseId)} subtitle={caseInfo?.title || caseInfo?.caseName || 'Docket detail and execution controls.'}>
-      <div className="case-detail" ref={pageContainerRef} tabIndex={-1}>
-        <div className="case-detail__return">
-          <Button type="button" variant="outline" onClick={handleBackToQueue}>
-            ← Back to queue
+  const commentsSection = (
+    <section className="case-card docket-comments-panel flex flex-col gap-4">
+      <div className="docket-section-heading">
+        <div>
+          <p className="docket-section-kicker">Collaboration</p>
+          <h2>💬 Comments</h2>
+        </div>
+        <span className="docket-section-count">{comments.length} total</span>
+      </div>
+
+      {(accessMode.canComment || permissions.canAddComment(caseData)) && (
+        <div className="case-detail__add-comment flex flex-col gap-3">
+          <Textarea
+            label="Add Comment"
+            id={commentComposerId}
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder="Type a comment..."
+            rows={3}
+            className="case-detail__comment-input"
+            enableMentions={true}
+          />
+          <div className="case-detail__composer-actions flex justify-end">
+            <Button variant="primary" onClick={handleAddComment} disabled={!newComment.trim() || submitting}>
+              {submitting ? 'Adding…' : 'Add Comment'}
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      <div className="case-detail__comments pr-2" ref={commentsListRef}>
+        {sectionLoading.comments ? (
+          <div className="case-detail__section-skeleton" aria-hidden="true">
+            {Array.from({ length: 3 }).map((_, idx) => <div key={`comment-skeleton-${idx}`} className="case-detail__skeleton-row" />)}
+          </div>
+        ) : visibleComments.length === 0 ? (
+          <p className="text-sm text-gray-500 italic p-4 bg-gray-50 rounded-xl text-center">No comments added yet.</p>
+        ) : (
+          <DocketComments comments={visibleComments} />
+        )}
+      </div>
+
+      {comments.length > visibleComments.length ? (
+        <div className="case-detail__virtual-actions">
+          <Button variant="outline" size="small" onClick={() => setCommentWindowSize((size) => size + INITIAL_VIRTUAL_WINDOW)}>
+            Load older comments ({comments.length - visibleComments.length} remaining)
           </Button>
         </div>
+      ) : null}
+    </section>
+  );
+
+  return (
+    <PlatformShell
+      title={formatDocketId(caseInfo?.caseId || caseId)}
+      actions={(
+        <Button type="button" variant="primary" onClick={() => navigate(ROUTES.CREATE_CASE(firmSlug))}>
+          + Create Docket
+        </Button>
+      )}
+    >
+      <div className="case-detail docket-detail-redesign" ref={pageContainerRef} tabIndex={-1}>
+        <section className="docket-detail-hero">
+          <div className="docket-detail-hero__topline">
+            <Button type="button" variant="outline" onClick={handleBackToQueue}>
+              ← Back to queue
+            </Button>
+            <div className="docket-detail-hero__badges">
+              {isViewOnlyMode ? <span className="docket-soft-chip">View only</span> : null}
+              {slaBadgeLabel ? <span className={`status-badge status-badge--${slaBadgeClass}`}>{slaBadgeLabel}</span> : null}
+              {locationBadges?.map((badge) => <span key={badge} className="docket-soft-chip">{badge}</span>)}
+            </div>
+          </div>
+
+          <div className="docket-detail-hero__main">
+            <div className="docket-detail-hero__identity">
+              <p className="docket-detail-hero__eyebrow">Active docket</p>
+              <h1>{formatDocketId(caseInfo?.caseId || caseId)}</h1>
+              <p>
+                {categoryLabel || 'Uncategorised'}
+                {subcategoryLabel ? <span> / {subcategoryLabel}</span> : null}
+              </p>
+            </div>
+
+            <div className="docket-detail-hero__metrics" aria-label="Docket summary">
+              <div>
+                <span>Lifecycle</span>
+                <strong>{displayLifecycleLabel || 'Active'}</strong>
+              </div>
+              <div>
+                <span>Assigned To</span>
+                <strong>{displayAssigneeLabel || 'Unassigned'}</strong>
+              </div>
+              <div>
+                <span>WB</span>
+                <strong>{queueLabel || '—'}</strong>
+              </div>
+              <div>
+                <span>Due</span>
+                <strong>{dueDateLabel ? formatDateTime(dueDateLabel) : 'No date'}</strong>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {actionConfirmation ? <div className="case-detail__confirmation">{actionConfirmation}</div> : null}
         <CaseDetailAlerts
@@ -1279,12 +1379,14 @@ export const CaseDetailPage = () => {
         />
 
         {/* Tab Selection Navigation */}
-        <StickyTabs tabs={docketTabs} defaultTab={CASE_DETAIL_TABS.OVERVIEW} />
+        <div className="docket-detail-tabs-wrap">
+          <StickyTabs tabs={docketTabs} defaultTab={CASE_DETAIL_TABS.OVERVIEW} />
+        </div>
 
         {/* Clean Dashboard Layout Container */}
-        <div className="case-detail-layout-grid flex w-full flex-col gap-6" style={{ padding: '0 24px 24px' }}>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full">
-            <div className={activeTab !== CASE_DETAIL_TABS.ACTIVITY ? "lg:col-span-8 flex flex-col gap-6 w-full" : "lg:col-span-12 flex flex-col gap-6 w-full"}>
+        <div className="case-detail-layout-grid docket-detail-layout flex w-full flex-col gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start w-full">
+            <div className={activeTab !== CASE_DETAIL_TABS.ACTIVITY ? "lg:col-span-8 flex flex-col gap-5 w-full" : "lg:col-span-12 flex flex-col gap-5 w-full"}>
               {/* Conditional Active Tab Panel Rendering */}
               <Suspense fallback={<CaseDetailPanelSkeleton />}>
                 {activeTab === CASE_DETAIL_TABS.OVERVIEW && (
@@ -1306,7 +1408,7 @@ export const CaseDetailPage = () => {
                     clientDockets={clientDockets}
                     returnTo={returnTo}
                     navigate={navigate}
-                    descriptionContent={caseInfo?.description}
+                    descriptionContent={descriptionContent}
                     lifecycleStatus={lifecycleStatus}
                     shouldShowActions={shouldShowActions}
                     canPerformLifecycleActions={canPerformLifecycleActions}
@@ -1331,8 +1433,10 @@ export const CaseDetailPage = () => {
                     categoryLabel={categoryLabel}
                     subcategoryLabel={subcategoryLabel}
                     locationBadges={locationBadges}
+                    displayLifecycleLabel={displayLifecycleLabel}
                   />
                 )}
+                {activeTab === CASE_DETAIL_TABS.OVERVIEW ? commentsSection : null}
                 {activeTab === CASE_DETAIL_TABS.ATTACHMENTS && (
                   <CaseDetailAttachmentsPanel
                     caseId={caseId}
@@ -1396,79 +1500,21 @@ export const CaseDetailPage = () => {
                     canManageSettings={Boolean(permissions.isAdmin) || Boolean(user?.isPrimaryAdmin)}
                   />
                 )}
-                {activeTab === CASE_DETAIL_TABS.EFFORT && (
-                  <CaseDetailEffortPanel
-                    caseId={caseId}
-                    caseInternalId={caseInfo?.caseInternalId || caseData?.case?.caseInternalId || caseData?.caseInternalId || ''}
-                    caseInfo={caseInfo}
-                    user={user}
-                    onRefreshCase={loadCase}
-                  />
-                )}
-                {activeTab === CASE_DETAIL_TABS.EMAIL_LOGS && (
-                  <CaseDetailEmailsPanel
-                    caseId={caseId}
-                  />
-                )}
               </Suspense>
             </div>
 
-            {/* Right Column: Workflow Actions & Comments Sidebar */}
+            {/* Right Column: Workflow Actions */}
             {activeTab !== CASE_DETAIL_TABS.ACTIVITY && (
-              <div className="lg:col-span-4 flex flex-col gap-6 w-full">
-                {/* Comments Card */}
-                <section className="case-card border border-gray-100 bg-white rounded-2xl p-6 shadow-sm flex flex-col gap-4">
-                  <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                    💬 Docket Comments
-                  </h2>
-
-                  {(accessMode.canComment || permissions.canAddComment(caseData)) && (
-                    <div className="case-detail__add-comment flex flex-col gap-3 mb-2 pb-2">
-                      <Textarea
-                        label="Add Comment"
-                        id={commentComposerId}
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Type a comment..."
-                        rows={3}
-                        className="case-detail__comment-input"
-                        enableMentions={true}
-                      />
-                      <div className="case-detail__composer-actions flex justify-end">
-                        <Button variant="primary" onClick={handleAddComment} disabled={!newComment.trim() || submitting}>
-                          {submitting ? 'Adding…' : 'Add Comment'}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="case-detail__comments overflow-y-auto max-h-[400px] pr-2" ref={commentsListRef}>
-                    {sectionLoading.comments ? (
-                      <div className="case-detail__section-skeleton" aria-hidden="true">
-                        {Array.from({ length: 3 }).map((_, idx) => <div key={`comment-skeleton-${idx}`} className="case-detail__skeleton-row" />)}
-                      </div>
-                    ) : visibleComments.length === 0 ? (
-                      <p className="text-sm text-gray-500 italic p-4 bg-gray-50 rounded-xl text-center">No comments added yet.</p>
-                    ) : (
-                      <DocketComments comments={visibleComments} />
-                    )}
-                  </div>
-
-                  {comments.length > visibleComments.length ? (
-                    <div className="case-detail__virtual-actions">
-                      <Button variant="outline" size="small" onClick={() => setCommentWindowSize((size) => size + INITIAL_VIRTUAL_WINDOW)}>
-                        Load older comments ({comments.length - visibleComments.length} remaining)
-                      </Button>
-                    </div>
-                  ) : null}
-                </section>
-
+              <div className="lg:col-span-4 flex flex-col gap-5 w-full docket-side-rail">
                 {/* Workflow Actions Card */}
                 {shouldShowActions ? (
-                  <section className="case-card border border-gray-100 bg-white rounded-2xl p-6 shadow-sm">
-                    <h2 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      ⚡ Workflow Actions
-                    </h2>
+                  <section className="case-card docket-action-panel">
+                    <div className="docket-section-heading">
+                      <div>
+                        <p className="docket-section-kicker">Next step</p>
+                        <h2>⚡ Workflow</h2>
+                      </div>
+                    </div>
                     <div className="flex flex-col gap-3">
                       {/* Primary Actions (Resolve / Submit, Resume / Unpend) */}
                       <div className="flex flex-col gap-2">
@@ -1575,8 +1621,10 @@ export const CaseDetailPage = () => {
                     </div>
                   </section>
                 ) : (
-                  <section className="case-card border border-gray-100 bg-white rounded-2xl p-6 shadow-sm">
-                    <p className="text-xs text-gray-500 italic text-center">This docket is in a terminal state ({lifecycleStatus}). Actions are locked.</p>
+                  <section className="case-card docket-action-panel">
+                    <p className="text-xs text-gray-500 italic text-center">
+                      {isViewOnlyMode ? 'View-only mode. Workflow actions are hidden.' : `This docket is in a terminal state (${lifecycleStatus}). Actions are locked.`}
+                    </p>
                   </section>
                 )}
               </div>
@@ -1584,8 +1632,8 @@ export const CaseDetailPage = () => {
           </div>
 
           {/* Bottom Section: Client history */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full mt-6">
-            <div className="lg:col-span-12 flex flex-col gap-6 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 w-full">
+            <div className="lg:col-span-12 flex flex-col gap-5 w-full docket-history-panel">
               <Suspense fallback={<CaseDetailPanelSkeleton />}>
                 <CaseDetailHistoryPanel
                   loadingClientDockets={loadingClientDockets}

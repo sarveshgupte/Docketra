@@ -15,8 +15,11 @@ assert.ok(page.includes('onGenerateExport'), 'Storage settings should define exp
 assert.ok(page.includes('Promise.allSettled(['), 'Storage settings should load folder link availability during configuration load.');
 assert.ok(page.includes('getStorageFolderLink(),'), 'Storage settings should request folder link in loadConfiguration.');
 assert.ok(page.includes('const data = folderLinkUrl ? { folderUrl: folderLinkUrl } : await getStorageFolderLink();'), 'Open folder should use cached link and fetch once when needed.');
+assert.ok(page.includes('invalidateStorageStatusSummaryCache();'), 'Storage settings should invalidate the shell storage badge cache after loading fresh status.');
+assert.ok(page.includes("rootHealthStatus === 'recovery_required'"), 'Storage settings should mark connected Google Drive as needing attention when root recovery is required.');
+assert.ok(page.includes('Firm storage credentials are connected, but the Google Drive root needs attention'), 'Storage settings should explain connected-but-needs-attention state.');
 assert.ok(!page.includes('onDownloadDataResidencySummary'), 'Legacy misnamed export handler should be removed.');
-assert.ok(page.includes('Generate storage export'), 'Storage settings should render storage export action.');
+assert.ok(page.includes('Backup Storage Now'), 'Storage settings should render storage export action.');
 assert.ok(page.includes('Connect firm Google Drive'), 'Storage settings should expose Google OAuth connect action.');
 assert.ok(page.includes('Google Drive storage root health'), 'Storage settings should render root health card.');
 assert.ok(page.includes('Recheck storage'), 'Storage settings should expose recheck storage action.');

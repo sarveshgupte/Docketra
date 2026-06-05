@@ -285,8 +285,11 @@ export const PlatformWorkbasketsPage = () => {
     openDocket({
       caseId: rowId,
       navigate,
-      to: `${ROUTES.CASE_DETAIL(firmSlug, rowId)}?returnTo=${encodeURIComponent(`${location.pathname}${location.search || ''}`)}`,
-      state: buildQueueContext({ rows: sortedRows, rowId, location, origin: 'workbasket' }),
+      to: `${ROUTES.CASE_DETAIL(firmSlug, rowId)}?mode=view&returnTo=${encodeURIComponent(`${location.pathname}${location.search || ''}`)}`,
+      state: {
+        ...buildQueueContext({ rows: sortedRows, rowId, location, origin: 'workbasket' }),
+        viewOnly: true,
+      },
     });
   };
 

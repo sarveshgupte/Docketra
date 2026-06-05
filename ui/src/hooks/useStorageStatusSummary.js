@@ -4,6 +4,14 @@ import { buildStorageStatusSummary } from './storageStatusSummaryLogic';
 
 const CACHE_TTL_MS = 60 * 1000;
 const statusCache = new Map();
+export const STORAGE_STATUS_SUMMARY_REFRESH_EVENT = 'docketra:storage-status-summary-refresh';
+
+export const invalidateStorageStatusSummaryCache = () => {
+  statusCache.clear();
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(STORAGE_STATUS_SUMMARY_REFRESH_EVENT));
+  }
+};
 
 const resolveSettledValue = (result, fallback) => (
   result?.status === 'fulfilled' ? (result.value || fallback) : fallback
@@ -18,6 +26,14 @@ export default function useStorageStatusSummary(firmSlug, options = {}) {
   } = options;
   const cacheKey = `${firmSlug || ''}:${includeOwnershipSummary ? 'ownership' : 'no-ownership'}:${includeRootHealth ? 'root' : 'no-root'}`;
   const [state, setState] = useState(() => ({ loading: Boolean(firmSlug), ...buildStorageStatusSummary(firmSlug || '', {}, {}, null) }));
+  const [refreshVersion, setRefreshVersion] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const onRefresh = () => setRefreshVersion((version) => version + 1);
+    window.addEventListener(STORAGE_STATUS_SUMMARY_REFRESH_EVENT, onRefresh);
+    return () => window.removeEventListener(STORAGE_STATUS_SUMMARY_REFRESH_EVENT, onRefresh);
+  }, []);
 
   useEffect(() => {
     if (!firmSlug) {
@@ -73,7 +89,7 @@ export default function useStorageStatusSummary(firmSlug, options = {}) {
       });
 
     return () => { active = false; };
-  }, [firmSlug, cacheKey, includeOwnershipSummary, includeRootHealth]);
+  }, [firmSlug, cacheKey, includeOwnershipSummary, includeRootHealth, refreshVersion]);
 
   return useMemo(() => state, [state]);
 }

@@ -140,11 +140,11 @@ module.exports = {
     query: z.object({ activeOnly: queryBoolean.optional() }).passthrough(),
   },
   'POST /categories': {
-    body: z.object({ name: nonEmptyString, defaultSlaDays: z.coerce.number().int().min(0).max(365).optional(), requiresRelatedEmployeeUser: z.boolean().optional() }).strict(),
+    body: z.object({ name: nonEmptyString, defaultSlaDays: z.coerce.number().int().min(0).max(365).optional(), qcPercent: z.coerce.number().int().min(0).max(100).optional(), requiresRelatedEmployeeUser: z.boolean().optional() }).strict(),
   },
   'PUT /categories/:id': {
     params: z.object({ id: objectIdOrString }),
-    body: z.object({ name: nonEmptyString.optional(), defaultSlaDays: z.coerce.number().int().min(0).max(365).optional(), requiresRelatedEmployeeUser: z.boolean().optional() }).strict(),
+    body: z.object({ name: nonEmptyString.optional(), defaultSlaDays: z.coerce.number().int().min(0).max(365).optional(), qcPercent: z.coerce.number().int().min(0).max(100).optional(), requiresRelatedEmployeeUser: z.boolean().optional() }).strict(),
   },
   'PATCH /categories/:id/status': {
     params: z.object({ id: objectIdOrString }),
@@ -152,11 +152,11 @@ module.exports = {
   },
   'POST /categories/:id/subcategories': {
     params: z.object({ id: objectIdOrString }),
-    body: z.object({ name: nonEmptyString, workbasketId: objectIdString, defaultSlaDays: z.coerce.number().int().min(0).max(365).optional(), requiresRelatedEmployeeUser: z.boolean().optional(), deadlineRule: deadlineRuleSchema, checklistTemplate: z.array(checklistTemplateItemSchema).optional(), sop: subcategorySopSchema }).strict(),
+    body: z.object({ name: nonEmptyString, workbasketId: objectIdString, defaultSlaDays: z.coerce.number().int().min(0).max(365).optional(), qcPercent: z.coerce.number().int().min(0).max(100).optional(), requiresRelatedEmployeeUser: z.boolean().optional(), deadlineRule: deadlineRuleSchema, checklistTemplate: z.array(checklistTemplateItemSchema).optional(), sop: subcategorySopSchema }).strict(),
   },
   'PUT /categories/:id/subcategories/:subcategoryId': {
     params: z.object({ id: objectIdOrString, subcategoryId: nonEmptyString }),
-    body: z.object({ name: nonEmptyString.optional(), workbasketId: objectIdString.optional(), defaultSlaDays: z.coerce.number().int().min(0).max(365).optional(), requiresRelatedEmployeeUser: z.boolean().optional(), deadlineRule: deadlineRuleSchema, checklistTemplate: z.array(checklistTemplateItemSchema).optional(), sop: subcategorySopSchema }).strict(),
+    body: z.object({ name: nonEmptyString.optional(), workbasketId: objectIdString.optional(), defaultSlaDays: z.coerce.number().int().min(0).max(365).optional(), qcPercent: z.coerce.number().int().min(0).max(100).optional(), requiresRelatedEmployeeUser: z.boolean().optional(), deadlineRule: deadlineRuleSchema, checklistTemplate: z.array(checklistTemplateItemSchema).optional(), sop: subcategorySopSchema }).strict(),
   },
   'POST /categories/:id/subcategories/:subcategoryId/sop/files/upload-intent': {
     params: z.object({ id: objectIdOrString, subcategoryId: nonEmptyString }),

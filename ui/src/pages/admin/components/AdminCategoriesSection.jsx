@@ -31,12 +31,6 @@ const ToggleIcon = () => (
   </svg>
 );
 
-const TrashIcon = () => (
-  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-  </svg>
-);
-
 const DownloadIcon = () => (
   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
     <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -49,6 +43,40 @@ const UploadIcon = () => (
   </svg>
 );
 
+const DEFAULT_CATEGORY_SLA_DAYS = 3;
+
+const getEffectiveSlaDisplay = (category, subcategory) => {
+  const subcategorySla = Number(subcategory?.defaultSlaDays || 0);
+  if (subcategorySla > 0) {
+    return { days: subcategorySla, source: 'subcategory' };
+  }
+
+  const categorySla = Number(category?.defaultSlaDays || 0);
+  if (categorySla > 0) {
+    return { days: categorySla, source: 'category' };
+  }
+
+  return { days: DEFAULT_CATEGORY_SLA_DAYS, source: 'default' };
+};
+
+const getEffectiveQcDisplay = (category, subcategory) => {
+  if (subcategory?.forceQC || category?.forceQC) {
+    return { percent: 100, source: 'forced' };
+  }
+
+  const subcategoryPercent = Number(subcategory?.qcPercent || 0);
+  if (subcategoryPercent > 0) {
+    return { percent: subcategoryPercent, source: 'subcategory' };
+  }
+
+  const categoryPercent = Number(category?.qcPercent || 0);
+  if (categoryPercent > 0) {
+    return { percent: categoryPercent, source: 'category' };
+  }
+
+  return { percent: 0, source: 'none' };
+};
+
 export const AdminCategoriesSection = ({
   categories,
   workbasketNameById,
@@ -58,12 +86,9 @@ export const AdminCategoriesSection = ({
   onAddSubcategory,
   onToggleCategoryStatus,
   onEditCategory,
-  onDeleteCategory,
   onToggleSubcategoryStatus,
   onEditSubcategory,
-  onDeleteSubcategory,
   StatusBadge,
-  onManageKnowledge,
 }) => {
   return (
     <div className="space-y-8 font-sans">
@@ -179,17 +204,6 @@ export const AdminCategoriesSection = ({
                     <ToggleIcon />
                     {category.isActive ? 'Disable' : 'Enable'}
                   </button>
-                  <span className="w-px h-5 bg-slate-200 mx-1" />
-                  <div className="admin__action-group--danger">
-                    <button
-                      type="button"
-                      onClick={() => onDeleteCategory(category)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 rounded-lg transition duration-200"
-                    >
-                      <TrashIcon />
-                      Delete
-                    </button>
-                  </div>
                 </div>
               </div>
 
@@ -223,6 +237,7 @@ export const AdminCategoriesSection = ({
                             <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400">Subcategory</th>
                             <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400">Linked Workbasket</th>
                             <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400">Default SLA Target</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400">QC Sampling</th>
                             <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400">Status</th>
                             <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-slate-400">Actions</th>
                           </tr>
@@ -230,6 +245,8 @@ export const AdminCategoriesSection = ({
                         <tbody className="bg-white divide-y divide-slate-50">
                           {category.subcategories.map((sub) => {
                             const linkedWorkbasketName = workbasketNameById.get(String(sub?.workbasketId || ''));
+                            const sla = getEffectiveSlaDisplay(category, sub);
+                            const qc = getEffectiveQcDisplay(category, sub);
                             return (
                               <tr key={sub.id} className="hover:bg-slate-50/50 transition-all duration-150 group">
                                 <td className="px-4 py-3.5 whitespace-nowrap">
@@ -248,12 +265,27 @@ export const AdminCategoriesSection = ({
                                   )}
                                 </td>
                                 <td className="px-4 py-3.5 whitespace-nowrap">
-                                  {Number(sub.defaultSlaDays || 0) > 0 ? (
+                                  <div className="flex flex-col">
                                     <span className="text-sm font-semibold text-slate-600">
-                                      ⏱️ {sub.defaultSlaDays} working day{Number(sub.defaultSlaDays) === 1 ? '' : 's'}
+                                      ⏱️ {sla.days} working day{Number(sla.days) === 1 ? '' : 's'}
                                     </span>
+                                    <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                                      {sla.source === 'subcategory' ? 'Subcategory' : sla.source === 'category' ? 'Category fallback' : 'System default'}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3.5 whitespace-nowrap">
+                                  {qc.percent > 0 ? (
+                                    <div className="flex flex-col">
+                                      <span className="text-sm font-semibold text-slate-600">
+                                        🔎 {qc.percent}% to QC
+                                      </span>
+                                      <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                                        {qc.source === 'forced' ? 'Forced review' : qc.source === 'subcategory' ? 'Subcategory' : 'Category fallback'}
+                                      </span>
+                                    </div>
                                   ) : (
-                                    <span className="text-slate-400 text-xs font-medium">—</span>
+                                    <span className="text-slate-400 text-xs font-medium">No auto QC</span>
                                   )}
                                 </td>
                                 <td className="px-4 py-3.5 whitespace-nowrap">
@@ -267,14 +299,6 @@ export const AdminCategoriesSection = ({
                                 </td>
                                 <td className="px-4 py-3.5 whitespace-nowrap text-right">
                                   <div className="inline-flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-all duration-150">
-                                    <button
-                                      type="button"
-                                      onClick={() => onManageKnowledge(category, sub)}
-                                      className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition duration-150"
-                                      title="Edit linked knowledge"
-                                    >
-                                      🧠
-                                    </button>
                                     <button
                                       type="button"
                                       onClick={() => onEditSubcategory(category, sub)}
@@ -295,16 +319,6 @@ export const AdminCategoriesSection = ({
                                     >
                                       <ToggleIcon />
                                     </button>
-                                    <div className="admin__action-group--danger" aria-label={`${sub.name} destructive actions`}>
-                                      <button
-                                        type="button"
-                                        onClick={() => onDeleteSubcategory(category, sub)}
-                                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition duration-150"
-                                        title="Delete Subcategory"
-                                      >
-                                        <TrashIcon />
-                                      </button>
-                                    </div>
                                   </div>
                                 </td>
                               </tr>

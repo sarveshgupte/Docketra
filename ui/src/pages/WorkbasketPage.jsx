@@ -533,7 +533,12 @@ export const WorkbasketPage = () => {
         <button
           type="button"
           className="docket-link"
-          onClick={() => openDocket({ caseId: caseItem.caseId, navigate, to: ROUTES.CASE_DETAIL(firmSlug, caseItem.caseId) })}
+          onClick={() => openDocket({
+            caseId: caseItem.caseId,
+            navigate,
+            to: `${ROUTES.CASE_DETAIL(firmSlug, caseItem.caseId)}?mode=view`,
+            state: { viewOnly: true },
+          })}
         >
           {caseItem.caseId}
         </button>
@@ -617,7 +622,12 @@ export const WorkbasketPage = () => {
           <Button
             variant="outline"
             size="small"
-            onClick={() => openDocket({ caseId: caseItem.caseId, navigate, to: ROUTES.CASE_DETAIL(firmSlug, caseItem.caseId) })}
+            onClick={() => openDocket({
+              caseId: caseItem.caseId,
+              navigate,
+              to: `${ROUTES.CASE_DETAIL(firmSlug, caseItem.caseId)}?mode=view`,
+              state: { viewOnly: true },
+            })}
           >
             View
           </Button>

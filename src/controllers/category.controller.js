@@ -122,6 +122,9 @@ const normalizeChecklistTemplate = (items = []) => {
   }));
 };
 
+const normalizeSlaDays = (value) => Math.max(0, Number(value) || 0);
+const normalizeQcPercent = (value) => Math.min(100, Math.max(0, Math.round(Number(value) || 0)));
+
 /**
  * Category Controller for Admin-Managed Categories
  * 
@@ -238,7 +241,7 @@ const getCategoryById = async (req, res) => {
  */
 const createCategory = async (req, res) => {
   try {
-    const { name, defaultSlaDays = 0, requiresRelatedEmployeeUser = false } = req.body;
+    const { name, defaultSlaDays = 0, qcPercent = 0, requiresRelatedEmployeeUser = false } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -268,7 +271,8 @@ const createCategory = async (req, res) => {
       name: name.trim(),
       subcategories: [],
       isActive: true,
-      defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
+      defaultSlaDays: normalizeSlaDays(defaultSlaDays),
+      qcPercent: normalizeQcPercent(qcPercent),
       requiresRelatedEmployeeUser: requiresRelatedEmployeeUser === true,
     });
     
@@ -280,6 +284,7 @@ const createCategory = async (req, res) => {
         categoryId: category._id?.toString(),
         categoryName: category.name,
         defaultSlaDays: category.defaultSlaDays,
+        qcPercent: category.qcPercent,
       },
     });
     
@@ -303,7 +308,7 @@ const createCategory = async (req, res) => {
 const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, defaultSlaDays, requiresRelatedEmployeeUser } = req.body;
+    const { name, defaultSlaDays, qcPercent, requiresRelatedEmployeeUser } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -340,7 +345,10 @@ const updateCategory = async (req, res) => {
     
     category.name = name.trim();
     if (typeof defaultSlaDays !== 'undefined') {
-      category.defaultSlaDays = Math.max(0, Number(defaultSlaDays) || 0);
+      category.defaultSlaDays = normalizeSlaDays(defaultSlaDays);
+    }
+    if (typeof qcPercent !== 'undefined') {
+      category.qcPercent = normalizeQcPercent(qcPercent);
     }
     if (typeof requiresRelatedEmployeeUser !== 'undefined') {
       category.requiresRelatedEmployeeUser = requiresRelatedEmployeeUser === true;
@@ -353,6 +361,7 @@ const updateCategory = async (req, res) => {
         categoryId: category._id?.toString(),
         categoryName: category.name,
         defaultSlaDays: category.defaultSlaDays,
+        qcPercent: category.qcPercent,
       },
     });
     
@@ -434,7 +443,7 @@ const toggleCategoryStatus = async (req, res) => {
 const addSubcategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, defaultSlaDays = 0, workbasketId, deadlineRule, checklistTemplate, sop, requiresRelatedEmployeeUser = false } = req.body;
+    const { name, defaultSlaDays = 0, qcPercent = 0, workbasketId, deadlineRule, checklistTemplate, sop, requiresRelatedEmployeeUser = false } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -492,7 +501,8 @@ const addSubcategory = async (req, res) => {
       name: name.trim(),
       workbasketId: workbasket._id,
       isActive: true,
-      defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
+      defaultSlaDays: normalizeSlaDays(defaultSlaDays),
+      qcPercent: normalizeQcPercent(qcPercent),
       requiresRelatedEmployeeUser: requiresRelatedEmployeeUser === true,
       ...(typeof deadlineRule !== 'undefined' ? { deadlineRule: normalizeDeadlineRule(deadlineRule) } : {}),
       checklistTemplate: normalizeChecklistTemplate(checklistTemplate || []),
@@ -509,7 +519,8 @@ const addSubcategory = async (req, res) => {
         subcategoryId,
         subcategoryName: name.trim(),
         workbasketId: String(workbasket._id),
-        defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
+        defaultSlaDays: normalizeSlaDays(defaultSlaDays),
+        qcPercent: normalizeQcPercent(qcPercent),
       },
     });
     
@@ -533,7 +544,7 @@ const addSubcategory = async (req, res) => {
 const updateSubcategory = async (req, res) => {
   try {
     const { id, subcategoryId } = req.params;
-    const { name, defaultSlaDays, workbasketId, deadlineRule, checklistTemplate, sop, requiresRelatedEmployeeUser } = req.body;
+    const { name, defaultSlaDays, qcPercent, workbasketId, deadlineRule, checklistTemplate, sop, requiresRelatedEmployeeUser } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -624,7 +635,10 @@ const updateSubcategory = async (req, res) => {
       }
     }
     if (typeof defaultSlaDays !== 'undefined') {
-      subcategory.defaultSlaDays = Math.max(0, Number(defaultSlaDays) || 0);
+      subcategory.defaultSlaDays = normalizeSlaDays(defaultSlaDays);
+    }
+    if (typeof qcPercent !== 'undefined') {
+      subcategory.qcPercent = normalizeQcPercent(qcPercent);
     }
     if (typeof requiresRelatedEmployeeUser !== 'undefined') {
       subcategory.requiresRelatedEmployeeUser = requiresRelatedEmployeeUser === true;
@@ -649,6 +663,7 @@ const updateSubcategory = async (req, res) => {
         subcategoryName: subcategory.name,
         workbasketId: subcategory.workbasketId ? String(subcategory.workbasketId) : null,
         defaultSlaDays: subcategory.defaultSlaDays,
+        qcPercent: subcategory.qcPercent,
       },
     });
     
@@ -883,109 +898,20 @@ const toggleSubcategoryStatus = async (req, res) => {
   }
 };
 
-/**
- * Delete category (Admin only) - Soft delete
- * DELETE /api/categories/:id
- * 
- * PR #39: Safe deletion - Sets isActive to false
- * Category remains in database for historical cases
- */
 const deleteCategory = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const firmScope = resolveCategoryFirmScope(req, res);
-    if (!firmScope) return;
-    
-    const category = await Category.findOne({ _id: id, ...firmScope });
-    
-    if (!category) {
-      return res.status(404).json({
-        success: false,
-        message: 'Category not found',
-      });
-    }
-    
-    // Soft delete - set isActive to false
-    category.isActive = false;
-    await category.save();
-    await safeLogCategoryMutation(req, {
-      description: `Category deactivated: ${category.name}`,
-      metadata: {
-        action: 'CATEGORY_DELETED_SOFT',
-        categoryId: category._id?.toString(),
-        categoryName: category.name,
-      },
-    });
-    
-    res.json({
-      success: true,
-      data: category,
-      message: 'Category deactivated successfully',
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: 'Error deleting category',
-    });
-  }
+  return res.status(405).json({
+    success: false,
+    message: 'Categories cannot be deleted. Disable the category instead.',
+    code: 'CATEGORY_DELETE_DISABLED',
+  });
 };
 
-/**
- * Delete subcategory (Admin only) - Soft delete
- * DELETE /api/categories/:id/subcategories/:subcategoryId
- * 
- * PR #39: Safe deletion - Sets isActive to false
- * Subcategory remains in database for historical cases
- */
 const deleteSubcategory = async (req, res) => {
-  try {
-    const { id, subcategoryId } = req.params;
-    const firmScope = resolveCategoryFirmScope(req, res);
-    if (!firmScope) return;
-    
-    const category = await Category.findOne({ _id: id, ...firmScope });
-    
-    if (!category) {
-      return res.status(404).json({
-        success: false,
-        message: 'Category not found',
-      });
-    }
-    
-    const subcategory = category.subcategories.find(sub => sub.id === subcategoryId);
-    
-    if (!subcategory) {
-      return res.status(404).json({
-        success: false,
-        message: 'Subcategory not found',
-      });
-    }
-    
-    // Soft delete - set isActive to false
-    subcategory.isActive = false;
-    await category.save();
-    await safeLogCategoryMutation(req, {
-      description: `Subcategory deactivated: ${category.name} / ${subcategory.name}`,
-      metadata: {
-        action: 'SUBCATEGORY_DELETED_SOFT',
-        categoryId: category._id?.toString(),
-        categoryName: category.name,
-        subcategoryId: subcategory.id,
-        subcategoryName: subcategory.name,
-      },
-    });
-    
-    res.json({
-      success: true,
-      data: category,
-      message: 'Subcategory deactivated successfully',
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: 'Error deleting subcategory',
-    });
-  }
+  return res.status(405).json({
+    success: false,
+    message: 'Subcategories cannot be deleted. Disable the subcategory instead.',
+    code: 'SUBCATEGORY_DELETE_DISABLED',
+  });
 };
 
 

@@ -46,16 +46,16 @@ export const categoryService = {
   /**
    * Create a new category (Admin only)
    */
-  createCategory: async (name, requiresRelatedEmployeeUser = false, defaultSlaDays = 0) => {
-    const response = await api.post('/admin/categories', { name, requiresRelatedEmployeeUser, defaultSlaDays });
+  createCategory: async (name, requiresRelatedEmployeeUser = false, defaultSlaDays = 0, qcPercent = 0) => {
+    const response = await api.post('/admin/categories', { name, requiresRelatedEmployeeUser, defaultSlaDays, qcPercent });
     return response.data;
   },
 
   /**
    * Update category name (Admin only)
    */
-  updateCategory: async (id, name, requiresRelatedEmployeeUser = false, defaultSlaDays = 0) => {
-    const response = await api.put(`/admin/categories/${id}`, { name, requiresRelatedEmployeeUser, defaultSlaDays });
+  updateCategory: async (id, name, requiresRelatedEmployeeUser = false, defaultSlaDays = 0, qcPercent = 0) => {
+    const response = await api.put(`/admin/categories/${id}`, { name, requiresRelatedEmployeeUser, defaultSlaDays, qcPercent });
     return response.data;
   },
 
@@ -83,6 +83,7 @@ export const categoryService = {
       workbasketId,
       requiresRelatedEmployeeUser,
       defaultSlaDays,
+      qcPercent: Number(options?.qcPercent) || 0,
       ...(options?.sop ? { sop: options.sop } : {}),
     });
     return response.data;
@@ -105,6 +106,7 @@ export const categoryService = {
       workbasketId,
       requiresRelatedEmployeeUser,
       defaultSlaDays,
+      qcPercent: Number(options?.qcPercent) || 0,
       ...(options?.sop ? { sop: options.sop } : {}),
     });
     return response.data;
