@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Notification = require('../models/Notification.model');
 const User = require('../models/User.model');
 const { enqueueEmailJob } = require('../queues/email.queue');
@@ -5,6 +6,14 @@ const { NotificationTypes } = require('../constants/notificationTypes');
 const { emitUserNotification } = require('./notificationSocket.service');
 const { resolveDeliveryChannels } = require('./notificationPreference.service');
 const log = require('../utils/log');
+
+// Helper: safely cast a value to mongoose ObjectId, returning null if invalid
+function toObjectId(value) {
+  if (!value) return null;
+  if (value instanceof mongoose.Types.ObjectId) return value;
+  const str = String(value).trim();
+  return mongoose.Types.ObjectId.isValid(str) ? new mongoose.Types.ObjectId(str) : null;
+}
 
 const GROUPING_WINDOW_MS = 30 * 60 * 1000;
 
@@ -77,10 +86,14 @@ async function createNotification(payload) {
     const normalized = normalizePayload({ ...payload, recipientXID: resolvedRecipientXid });
     const recipient = await User.findOne({
       xID: normalized.userId,
-      firmId: normalized.firmId,
+      // User.firmId is ObjectId — must cast from the string in normalized.firmId
+      firmId: toObjectId(payload.firmId),
       status: { $ne: 'deleted' }
     }).select('xID').lean();
-    if (!recipient) return null;
+    if (!recipient) {
+      log.warn('NOTIFICATION_RECIPIENT_NOT_FOUND', { userId: normalized.userId, firmId: normalized.firmId });
+      return null;
+    }
   let deliveryChannels = { inApp: true, email: Boolean(payload?.emailEnabled) };
   try {
     deliveryChannels = await resolveDeliveryChannels({

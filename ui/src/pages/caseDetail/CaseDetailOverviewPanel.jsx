@@ -150,37 +150,34 @@ export const CaseDetailOverviewPanel = ({
         </div>
         <div className="field-group min-w-0">
           <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">SLA (days)</span>
-          <span className="field-value text-sm font-medium text-gray-900">{slaDaysLabel}</span>
+          {slaRemainingDisplay != null ? (
+            <span
+              className="field-value text-sm font-semibold px-1.5 py-0.5 rounded-md"
+              style={{
+                background: slaRemainingDisplay < 0 ? '#fef2f2' : slaRemainingDisplay <= 3 ? '#fffbeb' : '#f0fdf4',
+                color: slaRemainingDisplay < 0 ? '#dc2626' : slaRemainingDisplay <= 3 ? '#d97706' : '#16a34a',
+              }}
+            >
+              {slaRemainingDisplay < 0 ? `${slaRemainingDisplay} days overdue` : `+${slaRemainingDisplay} days`}
+            </span>
+          ) : (
+            <span className="field-value text-sm font-medium text-gray-900">{slaDaysLabel}</span>
+          )}
         </div>
         <div className="field-group min-w-0">
           <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Due / SLA</span>
-          <span
-            className="field-value text-sm font-medium"
-            style={{
-              color: slaRemainingDisplay != null && slaRemainingDisplay < 0
-                ? '#dc2626'
-                : slaRemainingDisplay != null && slaRemainingDisplay <= 3
-                ? '#d97706'
-                : 'inherit',
-            }}
-          >
+          <span className="field-value text-sm font-medium text-gray-900">
             {dueDateLabel ? formatDateTime(dueDateLabel) : `SLA ${slaDaysLabel} day(s)`}
-            {slaRemainingDisplay != null ? (
-              <span
-                className="ml-2 text-xs font-semibold px-1.5 py-0.5 rounded-md"
-                style={{
-                  background: slaRemainingDisplay < 0 ? '#fef2f2' : slaRemainingDisplay <= 3 ? '#fffbeb' : '#f0fdf4',
-                  color: slaRemainingDisplay < 0 ? '#dc2626' : slaRemainingDisplay <= 3 ? '#d97706' : '#16a34a',
-                }}
-              >
-                {slaRemainingDisplay < 0 ? `${slaRemainingDisplay} days overdue` : `${slaRemainingDisplay} day(s) left`}
-              </span>
-            ) : null}
           </span>
         </div>
         <div className="field-group min-w-0">
           <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Lifecycle</span>
-          {getLifecycleMeta(caseInfo?.lifecycle) ? <LifecycleBadge lifecycle={caseInfo?.lifecycle} /> : <span className="field-value text-sm font-medium text-gray-900">—</span>}
+          {(() => {
+            const meta = getLifecycleMeta(caseInfo?.lifecycle);
+            return meta && meta.key !== 'open_active'
+              ? <LifecycleBadge lifecycle={caseInfo?.lifecycle} />
+              : <span className="field-value text-sm font-medium text-gray-900">—</span>;
+          })()}
         </div>
       </div>
     </section>
