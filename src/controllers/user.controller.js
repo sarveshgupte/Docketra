@@ -477,14 +477,14 @@ const completeProfile = async (req, res) => {
       onboardingCompletedNow = true;
     });
   } catch (error) {
-    const statusCode = error.message === 'USER_NOT_FOUND'
-      ? 404
-      : (error.message === 'USER_ALREADY_ONBOARDED' ? 409 : 400);
-    if (statusCode === 400) {
-      log.error('Error completing profile:', error);
-      return res.status(statusCode).json({ success: false, message: 'Unable to complete profile' });
+    if (error.message === 'USER_NOT_FOUND') {
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
-    return res.status(statusCode).json({ success: false, message: error.message });
+    if (error.message === 'USER_ALREADY_ONBOARDED') {
+      return res.status(409).json({ success: false, message: 'User already onboarded' });
+    }
+    log.error('Error completing profile:', error);
+    return res.status(400).json({ success: false, message: 'Unable to complete profile' });
   } finally {
     await session.endSession();
   }
