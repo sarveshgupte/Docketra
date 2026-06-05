@@ -256,6 +256,7 @@ export const CaseDetailPage = () => {
   }, []);
 
   const routedTeamCannotResolve = isRoutedTeamCannotResolve({ caseInfo, user });
+  const isRouted = Boolean(caseInfo?.routedToTeamId);
   const comments = Array.isArray(caseData?.comments) ? caseData.comments.filter(Boolean) : [];
   const attachments = Array.isArray(caseData?.attachments) ? caseData.attachments.filter(Boolean) : [];
   const auditLog = Array.isArray(caseData?.auditLog) ? caseData.auditLog.filter(Boolean) : [];
@@ -1105,8 +1106,12 @@ export const CaseDetailPage = () => {
     if (isQcContext) return [];
     if (isUnassignedWorkbasket && !routedTeamCannotResolve) return [];
     const actions = lifecycleActionMap[lifecycleStatus] || [];
-    if (routedTeamCannotResolve) {
-      return actions.map((action) => action.key === 'resolve' ? { ...action, key: 'submit', label: 'Submit', onClick: () => openActionModal('resolve') } : action);
+    if (isRouted) {
+      if (routedTeamCannotResolve) {
+        return actions.map((action) => action.key === 'resolve' ? { ...action, key: 'submit', label: 'Submit', onClick: () => openActionModal('resolve') } : action);
+      } else {
+        return actions.filter((action) => action.key !== 'resolve' && action.key !== 'pend');
+      }
     }
     return actions;
   }, [isViewOnlyMode, caseInfo?.lifecycle, lifecycleActionMap, lifecycleStatus, routedTeamCannotResolve, isQcContext, isUnassignedWorkbasket]);
@@ -1386,6 +1391,7 @@ export const CaseDetailPage = () => {
                     actionInFlight={actionInFlight}
                     isViewOnlyMode={isViewOnlyMode}
                     onOpenFileModal={() => { setFileComment(''); setShowFileModal(true); }}
+                    showFileAction={!isRouted && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)}
                     canRouteDocket={canRouteDocket}
                     onOpenRouteModal={() => setShowRouteModal(true)}
                     forceQcReview={forceQcReview}
@@ -1581,7 +1587,7 @@ export const CaseDetailPage = () => {
                         )}
 
                         {/* File */}
-                        {!isViewOnlyMode && !routedTeamCannotResolve && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus) && (
+                        {!isViewOnlyMode && !isRouted && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus) && (
                           <Button
                             variant="secondary"
                             onClick={() => { setFileComment(''); setShowFileModal(true); }}
