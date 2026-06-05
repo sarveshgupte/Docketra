@@ -57,16 +57,43 @@ export const categoryService = {
   /**
    * Add subcategory to category (Admin only)
    */
-  addSubcategory: async (categoryId, name, workbasketId, requiresRelatedEmployeeUser = false, defaultSlaDays = 0) => {
-    const response = await api.post(`/admin/categories/${categoryId}/subcategories`, { name, workbasketId, requiresRelatedEmployeeUser, defaultSlaDays });
+  addSubcategory: async (
+    categoryId,
+    name,
+    workbasketId,
+    requiresRelatedEmployeeUser = false,
+    defaultSlaDays = 0,
+    options = {},
+  ) => {
+    const response = await api.post(`/admin/categories/${categoryId}/subcategories`, {
+      name,
+      workbasketId,
+      requiresRelatedEmployeeUser,
+      defaultSlaDays,
+      ...(options?.sop ? { sop: options.sop } : {}),
+    });
     return response.data;
   },
 
   /**
    * Update subcategory name (Admin only)
    */
-  updateSubcategory: async (categoryId, subcategoryId, name, workbasketId, requiresRelatedEmployeeUser = false, defaultSlaDays = 0) => {
-    const response = await api.put(`/admin/categories/${categoryId}/subcategories/${subcategoryId}`, { name, workbasketId, requiresRelatedEmployeeUser, defaultSlaDays });
+  updateSubcategory: async (
+    categoryId,
+    subcategoryId,
+    name,
+    workbasketId,
+    requiresRelatedEmployeeUser = false,
+    defaultSlaDays = 0,
+    options = {},
+  ) => {
+    const response = await api.put(`/admin/categories/${categoryId}/subcategories/${subcategoryId}`, {
+      name,
+      workbasketId,
+      requiresRelatedEmployeeUser,
+      defaultSlaDays,
+      ...(options?.sop ? { sop: options.sop } : {}),
+    });
     return response.data;
   },
 

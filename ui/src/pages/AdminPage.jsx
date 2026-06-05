@@ -46,6 +46,55 @@ import { AdminClientModals } from './admin/components/AdminClientModals';
 import { useAdminDataLoader } from './admin/hooks/useAdminDataLoader';
 import './AdminPage.css';
 
+const KNOWLEDGE_LINK_TYPES = ['portal', 'reference', 'template', 'internal', 'other'];
+const createKnowledgeLinkDraft = (overrides = {}) => ({
+  draftKey: overrides.draftKey || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  title: overrides.title || '',
+  url: overrides.url || '',
+  description: overrides.description || '',
+  type: KNOWLEDGE_LINK_TYPES.includes(overrides.type) ? overrides.type : 'reference',
+});
+
+const normalizeKnowledgeLinkDrafts = (links = []) => {
+  if (!Array.isArray(links) || links.length === 0) {
+    return [createKnowledgeLinkDraft()];
+  }
+  return links.map((link, index) => createKnowledgeLinkDraft({
+    draftKey: String(link?.id || link?.draftKey || `knowledge-link-${index}`),
+    title: String(link?.title || ''),
+    url: String(link?.url || ''),
+    description: String(link?.description || ''),
+    type: String(link?.type || 'reference').toLowerCase(),
+  }));
+};
+
+const buildSubcategoryKnowledgePayload = (form = {}) => ({
+  title: String(form.sopTitle || '').trim(),
+  body: String(form.sopBody || ''),
+  format: 'plain_text',
+  links: (Array.isArray(form.sopLinks) ? form.sopLinks : [])
+    .map((link, index) => ({
+      title: String(link?.title || '').trim(),
+      url: String(link?.url || '').trim(),
+      description: String(link?.description || '').trim(),
+      type: KNOWLEDGE_LINK_TYPES.includes(String(link?.type || '').toLowerCase())
+        ? String(link.type).toLowerCase()
+        : 'reference',
+      sortOrder: index,
+    }))
+    .filter((link) => link.title && link.url),
+});
+
+const createEmptySubcategoryForm = () => ({
+  name: '',
+  workbasketId: '',
+  defaultSlaDays: '',
+  requiresRelatedEmployeeUser: false,
+  sopTitle: '',
+  sopBody: '',
+  sopLinks: [createKnowledgeLinkDraft()],
+});
+
 const downloadBulkTemplate = (type) => {
   const blob = new Blob([buildTemplateCsv(type)], { type: 'text/csv;charset=utf-8;' });
   const url = window.URL.createObjectURL(blob);
@@ -144,14 +193,13 @@ export const AdminPage = () => {
   });
   
   // Subcategory form state
-  const [subcategoryForm, setSubcategoryForm] = useState({
-    name: '',
-    workbasketId: '',
-    defaultSlaDays: '',
-    requiresRelatedEmployeeUser: false,
-  });
+  const [subcategoryForm, setSubcategoryForm] = useState(createEmptySubcategoryForm);
   const [editCategoryForm, setEditCategoryForm] = useState({ id: '', name: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
-  const [editSubcategoryForm, setEditSubcategoryForm] = useState({ categoryId: '', subcategoryId: '', name: '', workbasketId: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
+  const [editSubcategoryForm, setEditSubcategoryForm] = useState({
+    categoryId: '',
+    subcategoryId: '',
+    ...createEmptySubcategoryForm(),
+  });
 
   // Client form state
   const [clientForm, setClientForm] = useState({
@@ -709,12 +757,13 @@ export const AdminPage = () => {
         subcategoryForm.workbasketId,
         subcategoryForm.requiresRelatedEmployeeUser === true,
         Number(subcategoryForm.defaultSlaDays) || 0,
+        { sop: buildSubcategoryKnowledgePayload(subcategoryForm) },
       );
       
       if (response.success) {
         showToast('Subcategory added successfully', 'success');
         setShowSubcategoryModal(false);
-        setSubcategoryForm({ name: '', workbasketId: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
+        setSubcategoryForm(createEmptySubcategoryForm());
         setSelectedCategory(null);
         loadAdminData();
       } else {
@@ -767,6 +816,9 @@ export const AdminPage = () => {
       workbasketId: String(subcategory.workbasketId || ''),
       defaultSlaDays: String(subcategory.defaultSlaDays || ''),
       requiresRelatedEmployeeUser: subcategory.requiresRelatedEmployeeUser === true,
+      sopTitle: String(subcategory?.sop?.title || ''),
+      sopBody: String(subcategory?.sop?.body || ''),
+      sopLinks: normalizeKnowledgeLinkDrafts(subcategory?.sop?.links),
     });
     setShowEditSubcategoryModal(true);
   };
@@ -803,10 +855,15 @@ export const AdminPage = () => {
         editSubcategoryForm.workbasketId,
         editSubcategoryForm.requiresRelatedEmployeeUser === true,
         Number(editSubcategoryForm.defaultSlaDays) || 0,
+        { sop: buildSubcategoryKnowledgePayload(editSubcategoryForm) },
       );
       if (response.success) {
         setShowEditSubcategoryModal(false);
-        setEditSubcategoryForm({ categoryId: '', subcategoryId: '', name: '', workbasketId: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
+        setEditSubcategoryForm({
+          categoryId: '',
+          subcategoryId: '',
+          ...createEmptySubcategoryForm(),
+        });
         showToast('Subcategory updated successfully', 'success');
         loadAdminData();
       } else showToast(response.message || 'Failed to update subcategory', 'error');
@@ -1481,6 +1538,7 @@ export const AdminPage = () => {
             onCreateCategory={() => setShowCategoryModal(true)}
             onAddSubcategory={(category) => {
               setSelectedCategory(category);
+              setSubcategoryForm(createEmptySubcategoryForm());
               setShowSubcategoryModal(true);
             }}
             onToggleCategoryStatus={handleToggleCategoryStatus}
@@ -1489,8 +1547,8 @@ export const AdminPage = () => {
             onToggleSubcategoryStatus={handleToggleSubcategoryStatus}
             onEditSubcategory={handleEditSubcategory}
             onDeleteSubcategory={handleDeleteSubcategory}
-            onManageKnowledge={(workTypeName) => {
-              navigate(`${ROUTES.KNOWLEDGE_LIBRARY(firmSlug)}?action=create&workType=${encodeURIComponent(workTypeName)}`);
+            onManageKnowledge={(category, subcategory) => {
+              handleEditSubcategory(category, subcategory);
             }}
             StatusBadge={AdminStatusBadge}
           />

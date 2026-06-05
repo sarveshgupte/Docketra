@@ -1,21 +1,10 @@
 import { Link } from 'react-router-dom';
 import { Badge } from '../../components/common/Badge';
-import { Button } from '../../components/common/Button';
 import { LifecycleBadge } from '../../../components/LifecycleBadge';
 import { formatDateTime } from '../../utils/formatDateTime';
-import { formatDocketId } from '../../utils/formatters';
-import { ROUTES } from '../../constants/routes';
 import { getLifecycleMeta } from '../../../utils/lifecycleMap';
 
-const hasSopContent = (sop) => Boolean(sop?.title && sop?.body);
-const getSortedSopLinks = (sop) => (Array.isArray(sop?.links) ? [...sop.links].sort((a, b) => Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0)) : []);
 
-const normalizeChecklist = (checklist) => (
-  Array.isArray(checklist)
-    ? [...checklist].sort((a, b) => Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0))
-    : []
-);
-const formatApprovalLabel = (value) => String(value || '').split('_').map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
 
 
 export const CaseDetailOverviewPanel = ({
@@ -27,6 +16,7 @@ export const CaseDetailOverviewPanel = ({
   clientIdLabel,
   slaDaysLabel,
   dueDateLabel,
+  slaRemainingDays,
   linkedClientEmail,
   linkedClientContact,
   linkedClientId,
@@ -61,8 +51,13 @@ export const CaseDetailOverviewPanel = ({
   subcategoryLabel,
   locationBadges,
 }) => {
-  const sortedSopLinks = getSortedSopLinks(caseInfo?.sop);
-  const sortedChecklist = normalizeChecklist(caseInfo?.checklist);
+  // Determine overdue display: positive = days left, negative = days overdue
+  const slaRemainingDisplay = (() => {
+    if (slaRemainingDays == null) return null;
+    const n = Number(slaRemainingDays);
+    if (!Number.isFinite(n)) return null;
+    return n;
+  })();
 
   return (
   <>
@@ -80,7 +75,6 @@ export const CaseDetailOverviewPanel = ({
               QC: {caseInfo?.qc?.status || caseInfo?.qcStatus}
             </Badge>
           ) : null}
-          {caseInfo?.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Internal Approval</Badge>}
           {caseInfo?.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
 
           {/* SLA Badge */}
@@ -160,7 +154,29 @@ export const CaseDetailOverviewPanel = ({
         </div>
         <div className="field-group min-w-0">
           <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Due / SLA</span>
-          <span className="field-value text-sm font-medium text-gray-900">{dueDateLabel ? formatDateTime(dueDateLabel) : `SLA ${slaDaysLabel} day(s)`}</span>
+          <span
+            className="field-value text-sm font-medium"
+            style={{
+              color: slaRemainingDisplay != null && slaRemainingDisplay < 0
+                ? '#dc2626'
+                : slaRemainingDisplay != null && slaRemainingDisplay <= 3
+                ? '#d97706'
+                : 'inherit',
+            }}
+          >
+            {dueDateLabel ? formatDateTime(dueDateLabel) : `SLA ${slaDaysLabel} day(s)`}
+            {slaRemainingDisplay != null ? (
+              <span
+                className="ml-2 text-xs font-semibold px-1.5 py-0.5 rounded-md"
+                style={{
+                  background: slaRemainingDisplay < 0 ? '#fef2f2' : slaRemainingDisplay <= 3 ? '#fffbeb' : '#f0fdf4',
+                  color: slaRemainingDisplay < 0 ? '#dc2626' : slaRemainingDisplay <= 3 ? '#d97706' : '#16a34a',
+                }}
+              >
+                {slaRemainingDisplay < 0 ? `${slaRemainingDisplay} days overdue` : `${slaRemainingDisplay} day(s) left`}
+              </span>
+            ) : null}
+          </span>
         </div>
         <div className="field-group min-w-0">
           <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Lifecycle</span>
@@ -184,77 +200,7 @@ export const CaseDetailOverviewPanel = ({
       </div>
     </section>
 
-    <section className="case-card" aria-labelledby="sop-heading">
-      <div className="case-card__heading">
-        <h2 id="sop-heading">SOP / Work Instructions</h2>
-      </div>
-      {hasSopContent(caseInfo?.sop) ? (
-        <div className="space-y-2">
-          <p className="text-sm font-semibold text-gray-900">{caseInfo.sop.title}</p>
-          <p className="text-xs uppercase tracking-wider text-gray-500">Format: {caseInfo.sop.format || 'plain_text'}</p>
-          {caseInfo.sop.capturedAt ? <p className="text-xs text-gray-500">Captured: {formatDateTime(caseInfo.sop.capturedAt)}</p> : null}
-          <div className="case-detail__description-text whitespace-pre-wrap break-words text-sm text-gray-800">{caseInfo.sop.body}</div>
-          {sortedSopLinks.length ? (
-            <ul className="space-y-2 pt-2">
-              {sortedSopLinks.map((link, idx) => (
-                <li key={link?.id || `${link?.title || 'sop-link'}-${idx}`} className="rounded-md border border-gray-200 bg-white p-3">
-                  <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-blue-700 underline break-all">{link.title}</a>
-                  {link?.type ? <p className="text-xs uppercase tracking-wider text-gray-500">{link.type}</p> : null}
-                  {link?.description ? <p className="text-sm text-gray-700">{link.description}</p> : null}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-      ) : <p className="case-detail__empty-note">No SOP attached to this docket.</p>}
-    </section>
 
-    <section className="case-card" aria-labelledby="checklist-heading">
-      <div className="case-card__heading">
-        <h2 id="checklist-heading">Checklist</h2>
-      </div>
-      {sortedChecklist.length ? (
-        <ul className="space-y-2">
-          {sortedChecklist.map((item, idx) => (
-            <li key={item?.id || `${item?.title || 'item'}-${idx}`} className="rounded-md border border-gray-200 bg-white p-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium text-gray-900">{item?.title || 'Untitled item'}</span>
-                {item?.required ? <Badge variant="warning">Required</Badge> : <Badge variant="default">Optional</Badge>}
-                <Badge variant={item?.completed ? 'success' : 'neutral'}>{item?.completed ? 'Completed' : 'Incomplete'}</Badge>
-                <Badge variant={item?.status === 'accepted' ? 'success' : item?.status === 'rejected' ? 'danger' : item?.status === 'submitted' ? 'info' : 'neutral'}>
-                  {item?.status || 'requested'}
-                </Badge>
-                {item?.dueDate ? <span className="text-xs text-gray-500">Due {formatDateTime(item.dueDate)}</span> : null}
-              </div>
-              {item?.reviewerNotes ? <p className="mt-2 text-xs text-gray-600">Reviewer note: {item.reviewerNotes}</p> : null}
-            </li>
-          ))}
-        </ul>
-      ) : <p className="case-detail__empty-note">No checklist attached to this docket.</p>}
-    </section>
-
-    <section className="case-card" aria-labelledby="approval-stage-heading">
-      <div className="case-card__heading">
-        <h2 id="approval-stage-heading">Approval Stage</h2>
-      </div>
-      {caseInfo?.approvalStage ? (
-        <div className="space-y-2 text-sm text-gray-800">
-          <div className="flex flex-wrap gap-2">
-            <Badge variant={caseInfo.approvalStage.status === 'pending' ? 'warning' : caseInfo.approvalStage.status === 'approved' ? 'success' : 'neutral'}>
-              {formatApprovalLabel(caseInfo.approvalStage.status)}
-            </Badge>
-            <Badge variant="default">{formatApprovalLabel(caseInfo.approvalStage.approvalType)}</Badge>
-          </div>
-          <p>Requested by: <strong>{caseInfo.approvalStage.requestedBy || '—'}</strong></p>
-          <p>Approver: <strong>{caseInfo.approvalStage.approver || '—'}</strong></p>
-          <p>Requested at: <strong>{formatDateTime(caseInfo.approvalStage.requestedAt)}</strong></p>
-          <p>Due at: <strong>{formatDateTime(caseInfo.approvalStage.dueAt)}</strong></p>
-          {caseInfo.approvalStage.comments ? <p>Comments: {caseInfo.approvalStage.comments}</p> : null}
-          {caseInfo.approvalStage.evidenceAttachmentId ? <p>Evidence reference: {caseInfo.approvalStage.evidenceAttachmentId}</p> : null}
-          {caseInfo.approvalStage.decisionComment ? <p>Decision note: {caseInfo.approvalStage.decisionComment}</p> : null}
-        </div>
-      ) : <p className="case-detail__empty-note">No active approval stage on this docket.</p>}
-    </section>
   </>
   );
 };

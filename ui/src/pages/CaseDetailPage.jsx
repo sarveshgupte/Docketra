@@ -372,6 +372,15 @@ export const CaseDetailPage = () => {
     || '—';
   const dueDateLabel = caseInfo?.dueDate || caseInfo?.slaDueAt || caseInfo?.deadlineAt || caseInfo?.pendingUntil || caseInfo?.reopenDate || null;
 
+  // Compute SLA remaining days: positive = days left, negative = overdue
+  const slaRemainingDays = (() => {
+    const dueTs = dueDateLabel ? new Date(dueDateLabel).getTime() : null;
+    if (!dueTs || !Number.isFinite(dueTs)) return null;
+    const nowTs = Date.now();
+    const diffMs = dueTs - nowTs;
+    return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  })();
+
   const categoryLabel = caseInfo?.category
     || caseInfo?.caseCategory
     || caseInfo?.workType
@@ -444,7 +453,7 @@ export const CaseDetailPage = () => {
   const locationBadges = useMemo(() => {
     const badges = [];
     const queueHint = String(caseInfo?.queueContext || caseInfo?.queueName || caseInfo?.workbasketName || '').toUpperCase();
-    if (routedTeamCannotResolve) badges.push('Routed');
+    if (isRouted) badges.push('Routed');
     if (String(caseInfo?.returnedFromRoute || caseInfo?.routeReturnStatus || '').toLowerCase() === 'true') badges.push('Returned from route');
     
     const isPended = lifecycleStatus === 'WAITING' || String(caseInfo?.status || '').toUpperCase() === 'PENDING' || String(caseInfo?.state || '').toUpperCase() === 'PENDED';
@@ -462,7 +471,7 @@ export const CaseDetailPage = () => {
       badges.push(String(caseInfo?.lifecycle || lifecycleStatus || 'Terminal'));
     }
     return badges;
-  }, [caseInfo, lifecycleStatus, routedTeamCannotResolve, normalizedAssignedXid, normalizedUserXid]);
+  }, [caseInfo, lifecycleStatus, isRouted, normalizedAssignedXid, normalizedUserXid]);
   const isMoveLockedByAnotherUser = Boolean(caseInfo?.lockStatus?.isLocked)
     && String(caseInfo?.lockStatus?.activeUserXID || '').trim().toUpperCase() !== String(user?.xID || '').trim().toUpperCase();
   const lockOwnerLabel = [caseInfo?.lockStatus?.activeUserDisplayName, caseInfo?.lockStatus?.activeUserXID]
@@ -1291,6 +1300,7 @@ export const CaseDetailPage = () => {
                     clientIdLabel={clientIdLabel}
                     slaDaysLabel={slaDaysLabel}
                     dueDateLabel={dueDateLabel}
+                    slaRemainingDays={slaRemainingDays}
                     linkedClientEmail={linkedClientEmail}
                     linkedClientContact={linkedClientContact}
                     linkedClientId={linkedClientId}
@@ -1379,11 +1389,14 @@ export const CaseDetailPage = () => {
                 )}
                 {activeTab === CASE_DETAIL_TABS.KNOWLEDGE && (
                   <LinkedKnowledgeSection
-                    caseId={caseId}
+                    categoryId={caseData?.categoryId || caseData?.docketDetail?.category?.id || caseInfo?.category?.id || ''}
+                    subcategoryId={caseData?.subcategoryId || caseData?.docketDetail?.subcategory?.id || caseInfo?.subcategory?.id || ''}
                     categoryLabel={categoryLabel}
-                    clientMongoId={clientMongoId}
+                    subcategoryLabel={subcategoryLabel}
+                    caseSop={caseInfo?.sop}
+                    caseChecklist={caseInfo?.checklist}
                     firmSlug={firmSlug}
-                    isAdmin={user?.role === 'admin' || user?.role === 'owner' || permissions.isAdmin}
+                    canManageSettings={Boolean(permissions.isAdmin) || Boolean(user?.isPrimaryAdmin) || isFirmManagerOrAbove(user)}
                   />
                 )}
                 {activeTab === CASE_DETAIL_TABS.DOCUMENT_PACKS && (

@@ -1,6 +1,7 @@
 import { Modal } from '../../../components/common/Modal';
 import { Input } from '../../../components/common/Input';
 import { Select } from '../../../components/common/Select';
+import { Textarea } from '../../../components/common/Textarea';
 import { Button } from '../../../components/common/Button';
 
 export const AdminCategoryModals = ({
@@ -32,6 +33,42 @@ export const AdminCategoryModals = ({
   const selectableWorkbaskets = (Array.isArray(workbaskets) ? workbaskets : []).filter(
     (workbasket) => workbasket && workbasket.isActive !== false && workbasket.type === 'PRIMARY'
   );
+
+  const createEmptyKnowledgeLink = () => ({
+    draftKey: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    title: '',
+    url: '',
+    description: '',
+    type: 'reference',
+  });
+
+  const ensureKnowledgeLinks = (links = []) => (
+    Array.isArray(links) && links.length > 0 ? links : [createEmptyKnowledgeLink()]
+  );
+
+  const addKnowledgeLink = (form, setForm) => {
+    setForm((prev) => ({
+      ...prev,
+      sopLinks: [...ensureKnowledgeLinks(prev?.sopLinks), createEmptyKnowledgeLink()],
+    }));
+  };
+
+  const updateKnowledgeLink = (setForm, draftKey, field, value) => {
+    setForm((prev) => ({
+      ...prev,
+      sopLinks: ensureKnowledgeLinks(prev?.sopLinks).map((link) => (
+        link.draftKey === draftKey ? { ...link, [field]: value } : link
+      )),
+    }));
+  };
+
+  const removeKnowledgeLink = (form, setForm, draftKey) => {
+    const remaining = ensureKnowledgeLinks(form?.sopLinks).filter((link) => link.draftKey !== draftKey);
+    setForm((prev) => ({
+      ...prev,
+      sopLinks: remaining.length > 0 ? remaining : [createEmptyKnowledgeLink()],
+    }));
+  };
 
   return (
   <>
@@ -116,7 +153,15 @@ export const AdminCategoryModals = ({
       isOpen={showSubcategoryModal}
       onClose={() => {
         setShowSubcategoryModal(false);
-        setSubcategoryForm({ name: '', workbasketId: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
+        setSubcategoryForm({
+          name: '',
+          workbasketId: '',
+          defaultSlaDays: '',
+          requiresRelatedEmployeeUser: false,
+          sopTitle: '',
+          sopBody: '',
+          sopLinks: [createEmptyKnowledgeLink()],
+        });
         setSelectedCategory(null);
       }}
       title={`Add Subcategory to ${selectedCategory?.name || ''}`}
@@ -162,6 +207,84 @@ export const AdminCategoryModals = ({
             Enable this for HR, payroll, onboarding, offboarding, reimbursement, or employee-specific work.
           </span>
         </label>
+        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-4">
+          <div>
+            <p className="text-sm font-bold text-slate-800">Linked Knowledge</p>
+            <p className="text-xs text-slate-500 mt-1">
+              This appears inside docket `Linked Knowledge` and is managed only from category settings.
+            </p>
+          </div>
+          <Input
+            label="Knowledge title"
+            name="sopTitle"
+            value={subcategoryForm.sopTitle || ''}
+            onChange={(e) => setSubcategoryForm({ ...subcategoryForm, sopTitle: e.target.value })}
+            placeholder="Example: OPC monthly filing instructions"
+          />
+          <Textarea
+            label="Knowledge notes / instructions"
+            name="sopBody"
+            rows={6}
+            value={subcategoryForm.sopBody || ''}
+            onChange={(e) => setSubcategoryForm({ ...subcategoryForm, sopBody: e.target.value })}
+            placeholder="Add the read-only text your team should see while executing this docket."
+            helpText="Use this for instructions, process notes, caveats, and reusable execution guidance."
+          />
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-700">Reference links / files</p>
+                <p className="text-xs text-slate-500">Paste URLs to drive files, folders, portals, or internal references.</p>
+              </div>
+              <Button type="button" variant="outline" onClick={() => addKnowledgeLink(subcategoryForm, setSubcategoryForm)}>
+                Add Link
+              </Button>
+            </div>
+            {ensureKnowledgeLinks(subcategoryForm.sopLinks).map((link) => (
+              <div key={link.draftKey} className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Input
+                    label="Link title"
+                    value={link.title}
+                    onChange={(e) => updateKnowledgeLink(setSubcategoryForm, link.draftKey, 'title', e.target.value)}
+                    placeholder="Example: MCA filing checklist"
+                  />
+                  <Input
+                    label="URL"
+                    value={link.url}
+                    onChange={(e) => updateKnowledgeLink(setSubcategoryForm, link.draftKey, 'url', e.target.value)}
+                    placeholder="https://..."
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Select
+                    label="Link type"
+                    value={link.type}
+                    onChange={(e) => updateKnowledgeLink(setSubcategoryForm, link.draftKey, 'type', e.target.value)}
+                    options={[
+                      { value: 'reference', label: 'Reference' },
+                      { value: 'portal', label: 'Portal' },
+                      { value: 'template', label: 'Template' },
+                      { value: 'internal', label: 'Internal' },
+                      { value: 'other', label: 'Other' },
+                    ]}
+                  />
+                  <Input
+                    label="Description"
+                    value={link.description}
+                    onChange={(e) => updateKnowledgeLink(setSubcategoryForm, link.draftKey, 'description', e.target.value)}
+                    placeholder="Optional context for the team"
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <Button type="button" variant="ghost" onClick={() => removeKnowledgeLink(subcategoryForm, setSubcategoryForm, link.draftKey)}>
+                    Remove Link
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
         <div className="admin__modal-actions">
           <Button
@@ -169,7 +292,15 @@ export const AdminCategoryModals = ({
             variant="default"
             onClick={() => {
               setShowSubcategoryModal(false);
-              setSubcategoryForm({ name: '', workbasketId: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
+              setSubcategoryForm({
+                name: '',
+                workbasketId: '',
+                defaultSlaDays: '',
+                requiresRelatedEmployeeUser: false,
+                sopTitle: '',
+                sopBody: '',
+                sopLinks: [createEmptyKnowledgeLink()],
+              });
               setSelectedCategory(null);
             }}
           >
@@ -183,7 +314,17 @@ export const AdminCategoryModals = ({
       isOpen={showEditSubcategoryModal}
       onClose={() => {
         setShowEditSubcategoryModal(false);
-        setEditSubcategoryForm({ categoryId: '', subcategoryId: '', name: '', workbasketId: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
+        setEditSubcategoryForm({
+          categoryId: '',
+          subcategoryId: '',
+          name: '',
+          workbasketId: '',
+          defaultSlaDays: '',
+          requiresRelatedEmployeeUser: false,
+          sopTitle: '',
+          sopBody: '',
+          sopLinks: [createEmptyKnowledgeLink()],
+        });
       }}
       title="Edit Subcategory"
     >
@@ -201,8 +342,105 @@ export const AdminCategoryModals = ({
           <input type="checkbox" checked={editSubcategoryForm.requiresRelatedEmployeeUser === true} onChange={(e) => setEditSubcategoryForm({ ...editSubcategoryForm, requiresRelatedEmployeeUser: e.target.checked })} />
           <span><strong>Require related employee/user during docket creation</strong><br />Enable this for HR, payroll, onboarding, offboarding, reimbursement, or employee-specific work.</span>
         </label>
+        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-4">
+          <div>
+            <p className="text-sm font-bold text-slate-800">Linked Knowledge</p>
+            <p className="text-xs text-slate-500 mt-1">
+              This content is shown inside the docket `Linked Knowledge` tab and stays read-only during execution.
+            </p>
+          </div>
+          <Input
+            label="Knowledge title"
+            name="editSopTitle"
+            value={editSubcategoryForm.sopTitle || ''}
+            onChange={(e) => setEditSubcategoryForm({ ...editSubcategoryForm, sopTitle: e.target.value })}
+            placeholder="Example: OPC monthly filing instructions"
+          />
+          <Textarea
+            label="Knowledge notes / instructions"
+            name="editSopBody"
+            rows={6}
+            value={editSubcategoryForm.sopBody || ''}
+            onChange={(e) => setEditSubcategoryForm({ ...editSubcategoryForm, sopBody: e.target.value })}
+            placeholder="Add the read-only text your team should see while executing this docket."
+            helpText="Use this for instructions, process notes, caveats, and reusable execution guidance."
+          />
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-700">Reference links / files</p>
+                <p className="text-xs text-slate-500">Paste URLs to drive files, folders, portals, or internal references.</p>
+              </div>
+              <Button type="button" variant="outline" onClick={() => addKnowledgeLink(editSubcategoryForm, setEditSubcategoryForm)}>
+                Add Link
+              </Button>
+            </div>
+            {ensureKnowledgeLinks(editSubcategoryForm.sopLinks).map((link) => (
+              <div key={link.draftKey} className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Input
+                    label="Link title"
+                    value={link.title}
+                    onChange={(e) => updateKnowledgeLink(setEditSubcategoryForm, link.draftKey, 'title', e.target.value)}
+                    placeholder="Example: MCA filing checklist"
+                  />
+                  <Input
+                    label="URL"
+                    value={link.url}
+                    onChange={(e) => updateKnowledgeLink(setEditSubcategoryForm, link.draftKey, 'url', e.target.value)}
+                    placeholder="https://..."
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Select
+                    label="Link type"
+                    value={link.type}
+                    onChange={(e) => updateKnowledgeLink(setEditSubcategoryForm, link.draftKey, 'type', e.target.value)}
+                    options={[
+                      { value: 'reference', label: 'Reference' },
+                      { value: 'portal', label: 'Portal' },
+                      { value: 'template', label: 'Template' },
+                      { value: 'internal', label: 'Internal' },
+                      { value: 'other', label: 'Other' },
+                    ]}
+                  />
+                  <Input
+                    label="Description"
+                    value={link.description}
+                    onChange={(e) => updateKnowledgeLink(setEditSubcategoryForm, link.draftKey, 'description', e.target.value)}
+                    placeholder="Optional context for the team"
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <Button type="button" variant="ghost" onClick={() => removeKnowledgeLink(editSubcategoryForm, setEditSubcategoryForm, link.draftKey)}>
+                    Remove Link
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
         <div className="admin__modal-actions">
-          <Button type="button" variant="default" onClick={() => { setShowEditSubcategoryModal(false); setEditSubcategoryForm({ categoryId: '', subcategoryId: '', name: '', workbasketId: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false }); }}>Cancel</Button>
+          <Button
+            type="button"
+            variant="default"
+            onClick={() => {
+              setShowEditSubcategoryModal(false);
+              setEditSubcategoryForm({
+                categoryId: '',
+                subcategoryId: '',
+                name: '',
+                workbasketId: '',
+                defaultSlaDays: '',
+                requiresRelatedEmployeeUser: false,
+                sopTitle: '',
+                sopBody: '',
+                sopLinks: [createEmptyKnowledgeLink()],
+              });
+            }}
+          >
+            Cancel
+          </Button>
           <Button type="submit" variant="primary" disabled={submitting}>{submitting ? 'Saving...' : 'Save Subcategory'}</Button>
         </div>
       </form>

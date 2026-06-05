@@ -161,14 +161,6 @@ export const AdminCategoriesSection = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => onManageKnowledge(category.name)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-indigo-600 bg-slate-100 hover:bg-indigo-50 rounded-lg transition duration-200"
-                    title="Link or Create SOP in Knowledge Library"
-                  >
-                    🧠 SOP
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => onEditCategory(category)}
                     className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition duration-200"
                   >
@@ -277,9 +269,9 @@ export const AdminCategoriesSection = ({
                                   <div className="inline-flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-all duration-150">
                                     <button
                                       type="button"
-                                      onClick={() => onManageKnowledge(sub.name)}
+                                      onClick={() => onManageKnowledge(category, sub)}
                                       className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition duration-150"
-                                      title="Link or Create SOP in Knowledge Library"
+                                      title="Edit linked knowledge"
                                     >
                                       🧠
                                     </button>
