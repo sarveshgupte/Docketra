@@ -136,12 +136,16 @@ const getEmailCaptures = async (req, res) => {
     }
 
     const skip = (Number(page) - 1) * Number(limit);
-    const total = await EmailCapture.countDocuments(query);
-    const captures = await EmailCapture.find(query)
-      .sort(sort)
-      .skip(skip)
-      .limit(Number(limit))
-      .lean();
+    // ⚡ Bolt: Execute independent queries concurrently via Promise.all
+    const [total, captures] = await Promise.all([
+      EmailCapture.countDocuments(query).exec(),
+      EmailCapture.find(query)
+        .sort(sort)
+        .skip(skip)
+        .limit(Number(limit))
+        .lean()
+        .exec()
+    ]);
 
     return res.json({
       success: true,
