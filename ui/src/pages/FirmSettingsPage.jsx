@@ -71,18 +71,28 @@ const normalizeAuditEntry = (entry = {}) => ({
   metadata: entry?.metadata ?? null,
 });
 
+const normalizeActivityEntry = (entry = {}) => ({
+  id: String(entry?.id || `${entry?.source || 'audit'}-${entry?.timestamp || ''}-${entry?.action || ''}-${entry?.xID || ''}`),
+  timestamp: entry?.timestamp || null,
+  actor: String(entry?.xID || 'SYSTEM'),
+  role: String(entry?.metadata?.actorRole || entry?.metadata?.performedByRole || 'ADMIN'),
+  category: String(entry?.source || 'Admin activity'),
+  action: String(entry?.action || 'UPDATED'),
+  description: String(entry?.description || entry?.action || 'Admin activity recorded'),
+  source: String(entry?.source || 'Admin activity'),
+  metadata: entry?.metadata ?? null,
+  changes: Array.isArray(entry?.changes) ? entry.changes : [],
+});
+
 const buildAuditCsv = (entries = []) => buildCsv([
-  ['Timestamp', 'Actor', 'Role', 'Category', 'Action', 'Settings Key', 'Entity Type', 'Entity ID', 'Changes', 'Metadata'],
+  ['Timestamp', 'Actor', 'Role', 'Category', 'Action', 'Description', 'Metadata'],
   ...entries.map((entry) => ([
     formatDateTime(entry.timestamp),
     entry.actor || 'SYSTEM',
     entry.role || 'ADMIN',
-    entry.category || 'configs',
+    entry.category || 'Admin activity',
     entry.action || 'UPDATED',
-    entry.settingsKey || '—',
-    entry.entityType || '—',
-    entry.entityId || '—',
-    summarizeAuditChanges(entry.changes),
+    entry.description || summarizeAuditChanges(entry.changes),
     formatAuditValue(entry.metadata),
   ])),
 ]);
@@ -276,11 +286,11 @@ export const FirmSettingsPage = () => {
     setLoadingActivity(true);
     setActivityError('');
     try {
-      const response = await adminApi.getSettingsAudit({ page: nextPage, limit: AUDIT_PAGE_SIZE });
+      const response = await adminApi.getFirmSettingsActivity({ page: nextPage, limit: AUDIT_PAGE_SIZE });
       const records = Array.isArray(response?.data) ? response.data : [];
       const pagination = response?.pagination || {};
       const normalizedActivity = records
-        .map(normalizeAuditEntry)
+        .map(normalizeActivityEntry)
         .filter((entry) => entry.id && entry.timestamp);
 
       const total = Number(pagination.total) || normalizedActivity.length;
@@ -306,8 +316,8 @@ export const FirmSettingsPage = () => {
       });
       setActivityError(
         isForbidden(error)
-          ? 'You do not have permission to view settings audit history. Ask a workspace admin to update your access.'
-          : 'Could not load settings audit history. You can retry without losing settings changes.',
+          ? 'You do not have permission to view admin activity. Ask a workspace admin to update your access.'
+          : 'Could not load admin audit activity. You can retry without losing settings changes.',
       );
     } finally {
       setLoadingActivity(false);
@@ -318,18 +328,18 @@ export const FirmSettingsPage = () => {
     setExportingActivity(true);
     try {
       const collected = [];
-      const firstResponse = await adminApi.getSettingsAudit({ page: 1, limit: AUDIT_EXPORT_PAGE_SIZE });
+      const firstResponse = await adminApi.getFirmSettingsActivity({ page: 1, limit: AUDIT_EXPORT_PAGE_SIZE });
       const firstRows = Array.isArray(firstResponse?.data) ? firstResponse.data : [];
       const firstPagination = firstResponse?.pagination || {};
       const total = Number(firstPagination.total) || firstRows.length;
       const pageSize = Number(firstPagination.limit) || AUDIT_EXPORT_PAGE_SIZE;
       const totalPages = Math.max(1, Math.ceil(total / pageSize));
-      collected.push(...firstRows.map(normalizeAuditEntry));
+      collected.push(...firstRows.map(normalizeActivityEntry));
 
       for (let page = 2; page <= totalPages; page += 1) {
-        const response = await adminApi.getSettingsAudit({ page, limit: AUDIT_EXPORT_PAGE_SIZE });
+        const response = await adminApi.getFirmSettingsActivity({ page, limit: AUDIT_EXPORT_PAGE_SIZE });
         const rows = Array.isArray(response?.data) ? response.data : [];
-        collected.push(...rows.map(normalizeAuditEntry));
+        collected.push(...rows.map(normalizeActivityEntry));
       }
 
       const csv = buildAuditCsv(collected);
@@ -1102,7 +1112,7 @@ export const FirmSettingsPage = () => {
                 <div className="lg:col-span-1 space-y-2">
                   <h3 className="text-base font-bold text-slate-800">Audit & Change Trace</h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    View recent workspace settings changes. The latest 25 entries load per page, with CSV export for the full audit trail.
+                    View recent workspace governance changes. The latest 25 entries load per page, with CSV export for the full activity trail.
                   </p>
                 </div>
                 <div className="lg:col-span-2">
@@ -1149,7 +1159,7 @@ export const FirmSettingsPage = () => {
                                 <th className="px-4 py-3">Role</th>
                                 <th className="px-4 py-3">Category</th>
                                 <th className="px-4 py-3">Action</th>
-                                <th className="px-4 py-3">Changes</th>
+                                <th className="px-4 py-3">Details</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 bg-white text-slate-600">
@@ -1158,9 +1168,9 @@ export const FirmSettingsPage = () => {
                                   <td className="px-4 py-3 whitespace-nowrap text-slate-500">{formatDateTime(entry.timestamp)}</td>
                                   <td className="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">{entry.actor}</td>
                                   <td className="px-4 py-3 whitespace-nowrap">{entry.role || 'ADMIN'}</td>
-                                  <td className="px-4 py-3 whitespace-nowrap">{entry.category || 'configs'}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap">{entry.category || 'Admin activity'}</td>
                                   <td className="px-4 py-3 whitespace-nowrap font-semibold text-slate-800">{entry.action}</td>
-                                  <td className="px-4 py-3 text-slate-500">{summarizeAuditChanges(entry.changes)}</td>
+                                  <td className="px-4 py-3 text-slate-500">{entry.description || summarizeAuditChanges(entry.changes)}</td>
                                 </tr>
                               ))}
                             </tbody>

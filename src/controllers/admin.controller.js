@@ -1321,7 +1321,9 @@ const getFirmSettingsActivity = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Firm context is required' });
     }
 
+    const rawPage = parseInt(req.query?.page, 10);
     const rawLimit = parseInt(req.query?.limit, 10);
+    const page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
     const limit = Number.isInteger(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 100) : 25;
 
     const caseActionTypes = [
@@ -1341,7 +1343,21 @@ const getFirmSettingsActivity = async (req, res) => {
       'SetupLinkResent',
     ];
 
-    const fetchLimit = Math.min(limit * 4, 250);
+    const [caseAuditTotal, authAuditTotal] = await Promise.all([
+      CaseAudit.countDocuments({
+        firmId,
+        actionType: { $in: caseActionTypes },
+      }),
+      AuthAudit.countDocuments({
+        firmId,
+        actionType: { $in: authActionTypes },
+      }),
+    ]);
+
+    const total = Number(caseAuditTotal || 0) + Number(authAuditTotal || 0);
+    const offset = (page - 1) * limit;
+    const fetchLimit = Math.max(limit, Math.min(page * limit, 5000));
+
     const [caseAuditRows, authAuditRows] = await Promise.all([
       CaseAudit.find({
         firmId,
@@ -1391,12 +1407,18 @@ const getFirmSettingsActivity = async (req, res) => {
 
     const data = [...caseMapped, ...authMapped]
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-      .slice(0, limit);
+      .slice(offset, offset + limit);
 
     return res.json({
       success: true,
       count: data.length,
       data,
+      pagination: {
+        page,
+        limit,
+        total,
+        hasNextPage: (page * limit) < total,
+      },
     });
   } catch (error) {
     log.error('[ADMIN] Error fetching firm settings activity:', error);
