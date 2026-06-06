@@ -60,6 +60,15 @@ test_firm_slug.js
 test_*.js
 test-*.js
 *.test.js.local
+rewrite_*.js
+rewrite_auth*.js
+debug_auth*.js
+auth_debug*.js
+patch.diff
+*.scratch.js
+*.debug.js
+scripts/resetAdmin.js.txt
+load-tests/
 
 
 # wrangler files
@@ -75,5 +84,4 @@ env.yaml
 scratch/
 graphify-out/
 .codex-calendar-check.png
-
 

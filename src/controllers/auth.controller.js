@@ -1276,7 +1276,7 @@ const handlePostPasswordChecks = async (req, res, user) => {
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
-    log.info('PASSWORD RESET LINK:', resetUrl);
+    log.info('PASSWORD RESET LINK:', `${frontendUrl}/reset-password?token=[REDACTED]`);
 
     if (!process.env.FRONTEND_URL) {
       log.warn('[AUTH] FRONTEND_URL not configured. Using default http://localhost:3000.');
@@ -4162,7 +4162,11 @@ const exchangeGoogleAuth = async (req, res) => {
       refreshToken: response.refreshToken,
     });
 
-    return res.json(response);
+    const responseBody = { ...response };
+    delete responseBody.accessToken;
+    delete responseBody.refreshToken;
+
+    return res.json(responseBody);
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Google sign-in failed.' });
   }

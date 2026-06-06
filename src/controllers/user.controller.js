@@ -504,6 +504,43 @@ const completeProfile = async (req, res) => {
     defaultClientId: updatedUser.defaultClientId ? updatedUser.defaultClientId.toString() : null,
   });
 
+  const createAuthSessionService = require('../services/authSession.service');
+  const { getSession } = require('../utils/getSession');
+  const authSessionService = createAuthSessionService({
+    models: {
+      RefreshToken: require('../models/RefreshToken.model'),
+      User: require('../models/User.model'),
+    },
+    utils: {
+      getSession,
+      isActiveStatus: (status) => status === 'active',
+      noteRefreshTokenFailure: () => {},
+      noteRefreshTokenUse: () => {},
+      logAuthAudit: () => {},
+      getFirmSlug: async () => createdFirm?.firmSlug || null,
+      disconnectSocketsForUser: () => {},
+      isSuperAdminRole: () => false,
+      DEFAULT_FIRM_ID: 'PLATFORM',
+      getSuperadminEnv: () => ({}),
+      SUPERADMIN_USER_ID: () => null,
+    },
+    services: {
+      jwtService,
+    },
+  });
+
+  const { refreshToken } = await authSessionService.generateAndStoreRefreshToken({
+    req,
+    userId: updatedUser._id,
+    firmId: updatedUser.firmId,
+    scope: 'tenant',
+  });
+
+  authSessionService.setAuthCookies(res, {
+    accessToken,
+    refreshToken,
+  });
+
   if (onboardingCompletedNow) {
     try {
       await sendWelcomeEmail({
@@ -527,7 +564,6 @@ const completeProfile = async (req, res) => {
     firmSlug: createdFirm?.firmSlug || null,
     isOnboarded: true,
     data: {
-      accessToken,
       isOnboarded: true,
       firmId: updatedUser.firmId ? updatedUser.firmId.toString() : null,
       firmSlug: createdFirm?.firmSlug || null,

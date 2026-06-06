@@ -55,10 +55,10 @@ const run = () => {
   assert.ok(captured.length > 0, 'slow log should emit when threshold exceeded');
   assert.strictEqual(captured[0][1].route, '/api/reports', 'slow log route should exclude query string');
 
-  const productionOutput = execSync('NODE_ENV=production node -e "const log=require(\'./src/utils/log\'); log.error(\'PROD_ERR\',{error:new Error(\'boom\')});"', { cwd: repoRoot }).toString();
+  const productionOutput = execSync('node -e "process.env.NODE_ENV=\'production\'; const log=require(\'./src/utils/log\'); log.error(\'PROD_ERR\',{error:new Error(\'boom\')});"', { cwd: repoRoot }).toString();
   assert.ok(!productionOutput.includes('"stack"'), 'production logs should omit stack by default');
 
-  const stackEnabledOutput = execSync('NODE_ENV=production LOG_INCLUDE_STACK=true node -e "const log=require(\'./src/utils/log\'); log.error(\'PROD_ERR\',{error:new Error(\'boom\')});"', { cwd: repoRoot }).toString();
+  const stackEnabledOutput = execSync('node -e "process.env.NODE_ENV=\'production\'; process.env.LOG_INCLUDE_STACK=\'true\'; const log=require(\'./src/utils/log\'); log.error(\'PROD_ERR\',{error:new Error(\'boom\')});"', { cwd: repoRoot }).toString();
   assert.ok(stackEnabledOutput.includes('"stack"'), 'stack should be included when LOG_INCLUDE_STACK=true');
 
   const reportsSource = fs.readFileSync(path.join(repoRoot, 'src/controllers/reports.controller.js'), 'utf8');

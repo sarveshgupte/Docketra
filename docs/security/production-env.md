@@ -1,8 +1,8 @@
 # Production Environment Security Gate
 
-This document defines required backend environment configuration for Render production deployments.
+This document defines required backend environment configuration for Cloud Run and Render production deployments.
 
-## Required in production (Render backend)
+## Required in production (Cloud Run or Render backend)
 
 - `NODE_ENV=production`
 - `MONGO_URI` (or `MONGODB_URI`)
@@ -42,6 +42,24 @@ Note on callback naming:
 - `AUTH_DEBUG_DIAGNOSTICS=false` prevents production auth/session diagnostics exposure.
 - `UPLOAD_SCAN_STRICT=true` ensures upload scanning is fail-closed in production flows.
 - `REDIS_URL` is required in production for distributed abuse and rate-limit controls.
+
+## Local validation commands
+
+Run these from Windows PowerShell or any POSIX shell:
+
+```powershell
+npm run validate:env:production
+npm run validate:env:production:current
+npm run validate:env:production:fixture
+npm run validate:env:test
+npm run ci:backend:security
+```
+
+`validate:env:production` and `validate:env:production:current` validate the current environment. They load local `.env` and `env.yaml` when present, set only `NODE_ENV=production` for the check, and do not overwrite existing secret or safety flag values. This means local or deployment drift such as `AUTH_DEBUG_DIAGNOSTICS=true` or `UPLOAD_SCAN_STRICT=false` fails the gate.
+
+Do not deploy `env.yaml` to Cloud Run or Render when `AUTH_DEBUG_DIAGNOSTICS=true`; production deployments must keep it `false`.
+
+`validate:env:production:fixture` validates the schema against known safe placeholders. Use it to confirm the production contract itself still works without relying on real credentials.
 
 ## CLAMAV rollout note
 
