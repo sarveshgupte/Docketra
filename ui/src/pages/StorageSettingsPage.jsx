@@ -22,6 +22,7 @@ import {
   getStorageUsage,
   initiateStorageRestore,
   getStorageRestoreStatus,
+  updateBackupSettings,
 } from '../services/storageService';
 import { useAuth } from '../hooks/useAuth';
 import { adminApi } from '../api/admin.api';
@@ -32,6 +33,7 @@ import { getRecoveryPayload } from '../utils/errorRecovery';
 import { SupportContext } from '../components/feedback/SupportContext';
 import { StatusMessageStack } from './platform/PlatformShared';
 import { ROUTES } from '../constants/routes';
+import { invalidateStorageStatusSummaryCache } from '../hooks/useStorageStatusSummary';
 
 const PAGE_SUBTITLE = 'Docketra-managed storage works by default. You can optionally connect your firm’s own cloud storage bucket or drive.';
 
@@ -141,6 +143,14 @@ export function StorageSettingsPage() {
   const [restoreSourceMode, setRestoreSourceMode] = useState('past_job');
   const [restoreErrorMsg, setRestoreErrorMsg] = useState('');
 
+  // Backup settings states
+  const [backupEnabled, setBackupEnabled] = useState(false);
+  const [backupFrequency, setBackupFrequency] = useState('daily');
+  const [deliveryPolicy, setDeliveryPolicy] = useState('link_only');
+  const [notificationRecipients, setNotificationRecipients] = useState('');
+  const [retentionDays, setRetentionDays] = useState(30);
+  const [savingBackupSettings, setSavingBackupSettings] = useState(false);
+
   const loadStorageUsage = async () => {
     setUsageLoading(true);
     setUsageError('');
@@ -196,6 +206,7 @@ export function StorageSettingsPage() {
       if (exportsResult.status !== 'fulfilled') {
         setExportWarning(getExportHistoryWarning(exportsResult.reason));
       }
+      invalidateStorageStatusSummaryCache();
       await loadStorageUsage();
     } catch (error) {
       const status = Number(error?.response?.status || 0);
@@ -218,6 +229,42 @@ export function StorageSettingsPage() {
   }, []);
 
   useEffect(() => {
+    if (config?.backupExport) {
+      setBackupEnabled(Boolean(config.backupExport.backupEnabled));
+      setBackupFrequency(config.backupExport.frequency || 'daily');
+      setDeliveryPolicy(config.backupExport.deliveryPolicy || 'link_only');
+      setNotificationRecipients(Array.isArray(config.backupExport.notificationRecipients) ? config.backupExport.notificationRecipients.join(', ') : '');
+      setRetentionDays(Number(config.backupExport.retentionDays || 30));
+    }
+  }, [config]);
+
+  const onSaveBackupSettings = async (e) => {
+    if (e) e.preventDefault();
+    setSavingBackupSettings(true);
+    try {
+      const recipientsArray = notificationRecipients
+        .split(',')
+        .map(email => email.trim())
+        .filter(Boolean);
+
+      await updateBackupSettings({
+        enabled: backupEnabled,
+        frequency: backupFrequency,
+        deliveryPolicy,
+        notificationRecipients: recipientsArray,
+        retentionDays: Number(retentionDays),
+      });
+
+      toast?.showSuccess?.('Backup settings saved successfully.');
+      await loadConfiguration();
+    } catch (error) {
+      toast?.showError?.(error?.response?.data?.message || 'Failed to save backup settings.');
+    } finally {
+      setSavingBackupSettings(false);
+    }
+  };
+
+  useEffect(() => {
     const params = new URLSearchParams(location.search);
     const providerParam = params.get('provider');
     const connected = params.get('connected');
@@ -238,10 +285,14 @@ export function StorageSettingsPage() {
   const normalizedProvider = (currentProvider === 'google_drive' || currentProvider === 'google-drive') ? 'google-drive' : currentProvider;
   const isGoogleConnected = normalizedProvider === 'google-drive' && Boolean(config?.isConfigured);
   const currentModeLabel = normalizedProvider === 'google-drive' ? 'Firm-owned Google Drive' : config?.provider === 'onedrive' ? 'Firm-owned Microsoft OneDrive' : config?.provider === 's3' ? 'Firm-owned Amazon S3' : 'Docketra-managed Google Drive';
-  const statusLabel = config?.status?.includes('ERROR') || config?.status?.includes('DISCONNECTED') ? 'Needs attention' : config?.isConfigured ? 'Active' : 'Not connected';
   const usagePercent = Number(usage?.usagePercent || 0);
   const strictFirmOwnedStorage = Boolean(config?.strictFirmOwnedStorage);
-  const rootHealthOk = rootHealth?.status === 'healthy' || rootHealth?.status === 'renamed_valid';
+  const rootHealthStatus = String(rootHealth?.status || '').toLowerCase();
+  const rootHealthOk = rootHealthStatus === 'healthy' || rootHealthStatus === 'renamed_valid';
+  const credentialsNeedAttention = String(config?.status || '').includes('ERROR') || String(config?.status || '').includes('DISCONNECTED');
+  const rootNeedsAttention = normalizedProvider === 'google-drive' && Boolean(config?.isConfigured) && rootHealthStatus === 'recovery_required';
+  const storageNeedsAttention = credentialsNeedAttention || rootNeedsAttention;
+  const statusLabel = storageNeedsAttention ? 'Needs attention' : config?.isConfigured ? 'Active' : 'Not connected';
   const rootHealthMessage = rootHealth?.message || (config?.isConfigured ? 'Docketra could not verify your firm-owned cloud storage root.' : 'Connect firm cloud storage to verify root health.');
 
   const onToggleStrictMode = async (nextValue) => {
@@ -557,6 +608,11 @@ export function StorageSettingsPage() {
 
             {!folderLinkAvailable && normalizedProvider === 'google-drive' && (
               <p className="text-xs text-rose-500 font-medium">⚠️ Connection error: administrative folder link is temporarily unreachable.</p>
+            )}
+            {rootNeedsAttention && (
+              <p className="text-xs text-amber-700 font-semibold">
+                Firm storage credentials are connected, but the Google Drive root needs attention: {rootHealthMessage}
+              </p>
             )}
             {summaryWarning && <p className="text-xs text-amber-600 font-medium">{summaryWarning}</p>}
           </div>
@@ -951,6 +1007,90 @@ export function StorageSettingsPage() {
                 Open Restore Wizard
               </Button>
             </div>
+
+            <form onSubmit={onSaveBackupSettings} className="space-y-4 pt-4 border-t border-slate-800 relative">
+              <h4 className="text-sm font-bold uppercase tracking-wider text-indigo-400">Automated Backup Settings</h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <label className="flex items-center space-x-3 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900 h-4 w-4"
+                      checked={backupEnabled}
+                      onChange={(e) => setBackupEnabled(e.target.checked)}
+                    />
+                    <span className="text-sm font-semibold text-slate-200">Enable Automated Scheduled Backups</span>
+                  </label>
+
+                  {backupEnabled && (
+                    <div className="space-y-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <label className="block text-xs font-bold text-slate-400 uppercase">Backup Frequency</label>
+                      <select
+                        className="w-full rounded-xl border border-slate-700 bg-slate-800 text-slate-200 py-2 px-3 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                        value={backupFrequency}
+                        onChange={(e) => setBackupFrequency(e.target.value)}
+                      >
+                        <option value="daily">Every Night (Daily)</option>
+                        <option value="weekly">Once a Week</option>
+                        <option value="monthly">Once a Month</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-slate-400 uppercase">Delivery Policy</label>
+                    <select
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 text-slate-200 py-2 px-3 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                      value={deliveryPolicy}
+                      onChange={(e) => setDeliveryPolicy(e.target.value)}
+                    >
+                      <option value="link_only">Email Secure Download Link only</option>
+                      <option value="attachment">Email ZIP Archive as Attachment</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-400 uppercase">Notification Recipients (comma-separated)</label>
+                  <input
+                    type="text"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-800 text-slate-200 py-2 px-3 text-sm placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                    placeholder="e.g. admin@firm.com, backup@firm.com"
+                    value={notificationRecipients}
+                    onChange={(e) => setNotificationRecipients(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-400 uppercase">Retention Days ({retentionDays} days)</label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="365"
+                    className="w-full accent-indigo-500 bg-slate-800 h-2 rounded-lg cursor-pointer"
+                    value={retentionDays}
+                    onChange={(e) => setRetentionDays(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  allowUnsafeClassName={true}
+                  className="!bg-indigo-600 hover:!bg-indigo-700 !border-none !text-white font-bold text-xs py-2 px-4"
+                  disabled={savingBackupSettings}
+                >
+                  {savingBackupSettings ? 'Saving Settings...' : 'Save Backup Settings'}
+                </Button>
+              </div>
+            </form>
 
             {exportWarning && <p className="text-xs text-rose-400 font-medium relative">⚠️ {exportWarning}</p>}
           </div>

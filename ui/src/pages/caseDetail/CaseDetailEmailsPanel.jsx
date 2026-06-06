@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { emailCaptureApi } from '../../api/emailCapture.api';
 import { Button } from '../../components/common/Button';
 import { Textarea } from '../../components/common/Textarea';
+import { Modal } from '../../components/common/Modal';
 import { formatDateTime } from '../../utils/formatDateTime';
 import { useToast } from '../../hooks/useToast';
 
@@ -134,48 +135,48 @@ export const CaseDetailEmailsPanel = ({ caseId }) => {
         </div>
       )}
 
-      {showPasteModal && (
-        <div style={{
-          position: 'fixed', inset: '0', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: '9999',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
-        }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '16px', maxWidth: '550px', width: '100%', padding: '24px', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '4px' }}>Simulate Inbound Forwarded Email</h3>
-            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '16px' }}>Paste forwarded headers and body to test the email parsing, auto-linking, and audit trail generation.</p>
-            <form onSubmit={handlePasteSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Sender Name</label>
-                  <input type="text" className="neo-input w-full text-sm mt-1" value={senderName} onChange={e => setSenderName(e.target.value)} placeholder="e.g. John Doe" />
-                </div>
-                <div>
-                  <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Sender Email *</label>
-                  <input type="email" className="neo-input w-full text-sm mt-1" value={senderEmail} onChange={e => setSenderEmail(e.target.value)} placeholder="e.g. john@company.com" required />
-                </div>
-              </div>
-              <div>
-                <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Subject Line *</label>
-                <input type="text" className="neo-input w-full text-sm mt-1" value={subject} onChange={e => setSubject(e.target.value)} placeholder="e.g. Requesting Income Tax returns FY 2025-26" required />
-              </div>
-              <div>
-                <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Recipients (Comma separated)</label>
-                <input type="text" className="neo-input w-full text-sm mt-1" value={recipients} onChange={e => setRecipients(e.target.value)} placeholder="e.g. support@docketra.com" />
-              </div>
-              <div>
-                <Textarea label="Email Content (Body) *" value={body} onChange={e => setBody(e.target.value)} placeholder="Paste the forwarded email body or copy-paste plain text contents..." rows={5} required />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'end', gap: '8px', marginTop: '8px' }}>
-                <Button type="button" variant="outline" onClick={() => setShowPasteModal(false)} disabled={submitting}>
-                  Cancel
-                </Button>
-                <Button type="submit" variant="primary" disabled={submitting}>
-                  {submitting ? 'Parsing email…' : 'Ingest and Parse'}
-                </Button>
-              </div>
-            </form>
+      {/* MODAL: Simulate Inbound Forwarded Email */}
+      <Modal
+        isOpen={showPasteModal}
+        onClose={() => setShowPasteModal(false)}
+        title="Simulate Inbound Forwarded Email"
+        size="sm"
+      >
+        <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '16px' }}>
+          Paste forwarded headers and body to test the email parsing, auto-linking, and audit trail generation.
+        </p>
+        <form onSubmit={handlePasteSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Sender Name</label>
+              <input type="text" className="neo-input w-full text-sm mt-1" value={senderName} onChange={e => setSenderName(e.target.value)} placeholder="e.g. John Doe" />
+            </div>
+            <div>
+              <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Sender Email *</label>
+              <input type="email" className="neo-input w-full text-sm mt-1" value={senderEmail} onChange={e => setSenderEmail(e.target.value)} placeholder="e.g. john@company.com" required />
+            </div>
           </div>
-        </div>
-      )}
+          <div>
+            <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Subject Line *</label>
+            <input type="text" className="neo-input w-full text-sm mt-1" value={subject} onChange={e => setSubject(e.target.value)} placeholder="e.g. Requesting Income Tax returns FY 2025-26" required />
+          </div>
+          <div>
+            <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Recipients (Comma separated)</label>
+            <input type="text" className="neo-input w-full text-sm mt-1" value={recipients} onChange={e => setRecipients(e.target.value)} placeholder="e.g. support@docketra.com" />
+          </div>
+          <div>
+            <Textarea label="Email Content (Body) *" value={body} onChange={e => setBody(e.target.value)} placeholder="Paste the forwarded email body or copy-paste plain text contents..." rows={5} required />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'end', gap: '8px', marginTop: '8px' }}>
+            <Button type="button" variant="outline" onClick={() => setShowPasteModal(false)} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" disabled={submitting}>
+              {submitting ? 'Parsing email…' : 'Ingest and Parse'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </section>
   );
 };

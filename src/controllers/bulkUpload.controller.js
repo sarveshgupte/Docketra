@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 const Client = require('../models/Client.model');
 const Category = require('../models/Category.model');
 const User = require('../models/User.model');
@@ -174,13 +174,34 @@ const parseCsv = (content) => {
   return { headers, rows };
 };
 
-const parseXlsx = (buffer) => {
-  const workbook = XLSX.read(buffer, { type: 'buffer' });
-  const sheetName = workbook.SheetNames[0];
-  const sheet = workbook.Sheets[sheetName];
-  const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+const parseXlsx = async (buffer) => {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer);
+  const worksheet = workbook.worksheets[0];
+  if (!worksheet) return { headers: [], rows: [] };
 
-  if (!Array.isArray(matrix) || matrix.length === 0) return { headers: [], rows: [] };
+  const matrix = [];
+  worksheet.eachRow({ includeEmpty: true }, (row) => {
+    const rowValues = [];
+    const len = row.values ? row.values.length : 0;
+    for (let i = 1; i < len; i += 1) {
+      const cell = row.getCell(i);
+      let val = cell.value;
+      if (val && typeof val === 'object') {
+        if (val.result !== undefined) {
+          val = val.result;
+        } else if (val.richText) {
+          val = val.richText.map(t => t.text || '').join('');
+        } else if (val.text) {
+          val = val.text;
+        }
+      }
+      rowValues.push(val === null || val === undefined ? '' : String(val).trim());
+    }
+    matrix.push(rowValues);
+  });
+
+  if (matrix.length === 0) return { headers: [], rows: [] };
 
   const headers = (matrix[0] || []).map((cell) => String(cell || '').trim());
   const rows = matrix.slice(1).map((row, index) => ({
@@ -191,7 +212,7 @@ const parseXlsx = (buffer) => {
   return { headers, rows };
 };
 
-const resolveInputData = (body) => {
+const resolveInputData = async (body) => {
   const csvContent = String(body?.csvContent || '');
   if (csvContent.trim()) return { fileType: 'csv', sizeBytes: Buffer.byteLength(csvContent, 'utf8'), parsed: parseCsv(csvContent) };
 
@@ -202,7 +223,7 @@ const resolveInputData = (body) => {
   const fileName = String(body?.fileName || '').toLowerCase();
   const fileType = fileName.endsWith('.xlsx') ? 'xlsx' : 'csv';
 
-  if (fileType === 'xlsx') return { fileType, sizeBytes: fileBuffer.length, parsed: parseXlsx(fileBuffer) };
+  if (fileType === 'xlsx') return { fileType, sizeBytes: fileBuffer.length, parsed: await parseXlsx(fileBuffer) };
   return { fileType: 'csv', sizeBytes: fileBuffer.length, parsed: parseCsv(fileBuffer.toString('utf8')) };
 };
 
@@ -854,7 +875,7 @@ const previewBulkUpload = async (req, res) => {
   const duplicateMode = resolveDuplicateMode(req.body?.duplicateMode);
   const effectiveDuplicateMode = resolveEffectiveDuplicateMode({ type, duplicateMode });
 
-  const { sizeBytes, fileType, parsed } = resolveInputData(req.body || {});
+  const { sizeBytes, fileType, parsed } = await resolveInputData(req.body || {});
 
   if (!fileType) {
     return res.status(400).json({ success: false, message: 'CSV/XLSX content is required' });
@@ -928,7 +949,7 @@ const confirmBulkUpload = async (req, res) => {
   let rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
 
   if (req.body?.sourcePayload && typeof req.body.sourcePayload === 'object') {
-    const { sizeBytes, fileType, parsed } = resolveInputData(req.body.sourcePayload);
+    const { sizeBytes, fileType, parsed } = await resolveInputData(req.body.sourcePayload);
     if (!fileType) {
       return res.status(400).json({ success: false, message: 'CSV/XLSX content is required' });
     }

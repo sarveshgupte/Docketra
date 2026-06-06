@@ -12,7 +12,7 @@ const { getPublicLandingPage } = require('../controllers/landingPage.controller'
 const EarlyAccessRequest = require('../models/EarlyAccessRequest.model');
 const { executeWrite } = require('../utils/executeWrite');
 const { createSecureUpload, enforceUploadSecurity } = require('../middleware/uploadProtection.middleware');
-const { requireTurnstileForUpload } = require('../middleware/turnstile.middleware');
+const { requireTurnstileForPublicForm, requireTurnstileForUpload } = require('../middleware/turnstile.middleware');
 const { uploadDocument, getUploadMeta, requestUploadPin } = require('../controllers/uploadSession.controller');
 
 const LOG_LENGTHS = {
@@ -46,7 +46,7 @@ router.get('/firms/:firmSlug', getFirmBySlug);
 
 router.get('/pages/:slug', getPublicLandingPage);
 
-router.post('/forms/:id/submit', formSubmitLimiter, submitForm);
+router.post('/forms/:id/submit', formSubmitLimiter, requireTurnstileForPublicForm, submitForm);
 router.get('/forms/:id', getPublicForm);
 router.post('/cms/:firmSlug/intake', formSubmitLimiter, submitApiIntake);
 

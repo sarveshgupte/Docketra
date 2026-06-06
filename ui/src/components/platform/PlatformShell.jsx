@@ -9,7 +9,7 @@ import { NotificationBell } from './NotificationBell';
 import api from '../../services/api';
 import { clientApi } from '../../api/client.api';
 import { isShortcutAllowedTarget } from '../../utils/keyboardShortcuts';
-import { isNavItemActiveWithLocation } from '../../utils/navActive';
+import { isNavItemActiveWithLocation, resolveNavContextLocation } from '../../utils/navActive';
 import { hasFirmRoleAtLeast, normalizeFirmRole } from '../../utils/roleHierarchy';
 import { trackAsync } from '../../utils/performanceMonitor';
 import './platform.css';
@@ -129,14 +129,20 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     [firmSlug, role, user?.permissions, user?.workbaskets, user?.qcWorkbaskets]
   );
   const userName = user?.name || user?.xID || 'User';
+  const navLocation = useMemo(
+    () => resolveNavContextLocation(pathname, locationSearch, firmSlug),
+    [pathname, locationSearch, firmSlug]
+  );
+  const navPathname = navLocation.pathname || pathname;
+  const navSearch = navLocation.search || locationSearch || '';
 
-  const isItemActive = useCallback((item) => isNavItemActiveWithLocation(pathname, locationSearch, item), [pathname, locationSearch]);
+  const isItemActive = useCallback((item) => isNavItemActiveWithLocation(navPathname, navSearch, item), [navPathname, navSearch]);
 
   const currentNavItem = useMemo(
     () => navSections
       .flatMap((section) => section.items.flatMap((item) => (item.type === 'group' ? item.children || [] : [item])))
       .find((item) => isItemActive(item)),
-    [navSections, pathname, locationSearch]
+    [navSections, isItemActive]
   );
 
   useEffect(() => {
@@ -498,6 +504,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                 title={userName}
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
+                aria-controls="platform-account-menu"
                 onClick={() => setMenuOpen((value) => !value)}
                 onKeyDown={(event) => {
                   if (event.key === 'Escape') setMenuOpen(false);
@@ -508,7 +515,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                 <svg className="platform__user-pill-chevron" width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
               {menuOpen ? (
-                <div className="platform__account-dropdown" role="menu" aria-label="Account menu">
+                <div id="platform-account-menu" className="platform__account-dropdown" role="menu" aria-label="Account menu">
                   <Link
                     to={ROUTES.PROFILE(firmSlug)}
                     className="platform__account-dropdown-item"

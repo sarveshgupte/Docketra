@@ -4,6 +4,7 @@ This directory consolidates feature, implementation, and testing documentation.
 
 ## Core Feature Docs
 
+- Inbound docket email: `inbound-docket-email.md`
 - Implementation summaries: `*IMPLEMENTATION*.md`
 - Testing guides: `*TESTING_GUIDE*.md`
 - Rollup summaries: `*SUMMARY*.md`

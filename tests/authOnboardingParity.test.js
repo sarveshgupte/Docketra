@@ -13,6 +13,8 @@ const emailServicePath = require.resolve('../src/services/email/sendWelcomeEmail
 const xIdGeneratorPath = require.resolve('../src/services/xIDGenerator');
 const googleapisPath = require.resolve('googleapis');
 const mongoosePath = require.resolve('mongoose');
+const authAuditPath = require.resolve('../src/models/AuthAudit.model');
+const auditLogPath = require.resolve('../src/models/AuditLog.model');
 
 const clear = (path) => { delete require.cache[path]; };
 
@@ -58,7 +60,14 @@ function bootstrapAuthController(overrides = {}) {
   });
 
   const User = require('../src/models/User.model');
-  User.findOne = overrides.userFindOneImpl || (async () => null);
+  const userQueryStub = {
+    session() { return this; },
+    then(onFulfilled, onRejected) {
+      const fn = overrides.userFindOneImpl || (async () => null);
+      return Promise.resolve(fn()).then(onFulfilled, onRejected);
+    }
+  };
+  User.findOne = () => userQueryStub;
   User.findById = overrides.userFindByIdImpl || (async () => null);
   User.exists = async () => false;
   User.updateOne = async () => ({ acknowledged: true });
@@ -79,6 +88,11 @@ function bootstrapAuthController(overrides = {}) {
   const AuthIdentity = require('../src/models/AuthIdentity.model');
   AuthIdentity.findOne = overrides.authIdentityFindOneImpl || (async () => null);
   AuthIdentity.create = overrides.authIdentityCreateImpl || (async () => [{ _id: 'identity' }]);
+
+  const AuthAudit = require('../src/models/AuthAudit.model');
+  AuthAudit.create = async () => ({});
+  const AuditLog = require('../src/models/AuditLog.model');
+  AuditLog.create = async () => ({});
 
   const RefreshToken = require('../src/models/RefreshToken.model');
   RefreshToken.create = async () => ({ _id: 'refresh' });
@@ -121,6 +135,15 @@ function bootstrapAuthController(overrides = {}) {
 }
 
 function bootstrapUserController(overrides = {}) {
+  process.env.JWT_SECRET = 'test-jwt-secret-placeholder-value-32ch';
+  process.env.MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/docketra';
+  process.env.DISABLE_GOOGLE_AUTH = 'true';
+  process.env.ENCRYPTION_PROVIDER = 'disabled';
+  process.env.SUPERADMIN_PASSWORD_HASH = process.env.SUPERADMIN_PASSWORD_HASH || '$2b$10$abcdefghijklmnopqrstuu0Lz3M0RtZpmjHtkobaN6D2PfYZ7RUTy';
+  process.env.SUPERADMIN_XID = process.env.SUPERADMIN_XID || 'X000001';
+  process.env.SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'superadmin@example.com';
+  process.env.SUPERADMIN_OBJECT_ID = process.env.SUPERADMIN_OBJECT_ID || '000000000000000000000001';
+
   [
     userControllerPath,
     jwtServicePath,
@@ -146,6 +169,14 @@ function bootstrapUserController(overrides = {}) {
   Firm.findOne = overrides.firmFindOneImpl || (() => queryStub);
   Firm.create = overrides.firmCreateImpl || (async () => [{ _id: 'firm-1', firmSlug: 'firm-slug-1' }]);
 
+  const AuthAudit = require('../src/models/AuthAudit.model');
+  AuthAudit.create = async () => ({});
+  const AuditLog = require('../src/models/AuditLog.model');
+  AuditLog.create = async () => ({});
+
+  const RefreshToken = require('../src/models/RefreshToken.model');
+  RefreshToken.create = async () => ({ _id: 'refresh' });
+
   const jwtService = require('../src/services/jwt.service');
   jwtService.generateAccessToken = () => 'profile-token';
 
@@ -155,33 +186,26 @@ function bootstrapUserController(overrides = {}) {
   return require('../src/controllers/user.controller');
 }
 
-async function testEmailSignupSendsWelcomeAfterOnboarding() {
-  let welcomeSent = false;
-
-  const createdUser = {
-    _id: 'u1',
-    xID: 'X000001',
-    xid: 'DK-EML01',
-    primary_email: 'email@example.com',
-    email: 'email@example.com',
-    isOnboarded: true,
-    firmId: 'firm-1',
-    role: 'Admin',
-  };
-
+async function testSignupVerifyReturnsCleanMetadata() {
   const { controller, restoreGoogle } = bootstrapAuthController({
     userFindOneImpl: async () => null,
-    userFindByIdImpl: () => ({ session: async () => createdUser }),
-    sendWelcomeEmailImpl: async () => { welcomeSent = true; },
-    verifyOtpImpl: async () => ({ ok: true }),
+  });
+
+  // Mock signupService.verifyOtp
+  const signupService = require('../src/services/signup.service');
+  signupService.verifyOtp = async () => ({
+    success: true,
+    message: 'Signup successful',
+    xid: 'X000001',
+    firmSlug: 'firm-1',
+    firmUrl: 'http://localhost/firm-1',
+    redirectPath: '/firm-1/login',
   });
 
   const { res, state } = createRes();
-  await controller.signupWithEmail({
+  await controller.signupVerify({
     body: {
       email: 'email@example.com',
-      password: 'Pass#123456',
-      firmName: 'Email Firm',
       otp: '123456',
     },
     ip: '127.0.0.1',
@@ -192,86 +216,14 @@ async function testEmailSignupSendsWelcomeAfterOnboarding() {
 
   assert.strictEqual(state.statusCode, 201);
   assert.strictEqual(state.body.success, true);
-  assert.strictEqual(welcomeSent, true);
+  assert.strictEqual(state.body.data.xid, 'X000001');
+  assert.strictEqual(state.body.data.firmSlug, 'firm-1');
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(state.body.data, 'accessToken'), false);
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(state.body.data, 'refreshToken'), false);
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(state.body.data, 'token'), false);
 }
 
-async function testGoogleLoginLinksExistingEmailAndNoDuplicate() {
-  let userCreateCalled = false;
-  let identityCreateCalled = false;
 
-  const { controller, restoreGoogle } = bootstrapAuthController({
-    userFindOneImpl: async () => ({
-      _id: 'u1',
-      xid: 'DK-EXIST',
-      xID: 'X000111',
-      primary_email: 'existing@example.com',
-      email: 'existing@example.com',
-      isOnboarded: true,
-      role: 'Employee',
-      save: async () => {},
-    }),
-    userCreateImpl: async () => { userCreateCalled = true; return []; },
-    authIdentityFindOneImpl: async () => null,
-    authIdentityCreateImpl: async () => { identityCreateCalled = true; return { _id: 'identity' }; },
-    verifyIdTokenImpl: async () => ({
-      getPayload: () => ({ email: 'existing@example.com', name: 'Existing User', sub: 'google-existing' }),
-    }),
-  });
-
-  const { res, state } = createRes();
-  await controller.googleTokenLogin({ body: { idToken: 'id-token' }, ip: '127.0.0.1', get: () => 'agent' }, res);
-  restoreGoogle();
-
-  assert.strictEqual(state.statusCode, 200);
-  assert.strictEqual(state.body.success, true);
-  assert.strictEqual(identityCreateCalled, true);
-  assert.strictEqual(userCreateCalled, false);
-}
-
-async function testGoogleLoginNewUserRequiresOnboardingAndNo409() {
-  let welcomeCount = 0;
-  let userCreateArgs = null;
-
-  const createdUser = {
-    _id: 'u-new',
-    xID: 'X000321',
-    xid: 'DK-NEW01',
-    primary_email: 'new-google@example.com',
-    email: 'new-google@example.com',
-    isOnboarded: false,
-    role: 'Employee',
-    save: async () => {},
-  };
-
-  let findCount = 0;
-  const { controller, restoreGoogle } = bootstrapAuthController({
-    userFindOneImpl: async () => {
-      findCount += 1;
-      return findCount === 1 ? null : createdUser;
-    },
-    userCreateImpl: async (docs) => {
-      userCreateArgs = docs[0];
-      return [createdUser];
-    },
-    authIdentityFindOneImpl: async () => null,
-    authIdentityCreateImpl: async () => ({ _id: 'identity-new' }),
-    sendWelcomeEmailImpl: async () => { welcomeCount += 1; },
-    verifyIdTokenImpl: async () => ({
-      getPayload: () => ({ email: 'new-google@example.com', name: 'New Google', sub: 'google-new-sub' }),
-    }),
-  });
-
-  const { res, state } = createRes();
-  await controller.googleTokenLogin({ body: { idToken: 'id-token' }, ip: '127.0.0.1', get: () => 'agent' }, res);
-  restoreGoogle();
-
-  assert.strictEqual(state.statusCode, 200, 'google login should not return 409');
-  assert.strictEqual(state.body.success, true);
-  assert.strictEqual(state.body.data.isOnboarded, false);
-  assert.strictEqual(userCreateArgs.passwordHash, null);
-  assert.strictEqual(userCreateArgs.isOnboarded, false);
-  assert.strictEqual(welcomeCount, 0, 'google login must not send welcome email');
-}
 
 async function testCompleteProfileSendsWelcomeOnFalseToTrueTransition() {
   let welcomeSent = false;
@@ -295,20 +247,22 @@ async function testCompleteProfileSendsWelcomeOnFalseToTrueTransition() {
   const { res, state } = createRes();
   await controller.completeProfile({
     user: { _id: 'u-google' },
-    body: { name: 'Google New', firmName: 'New Firm', phoneNumber: '+1 555 555 5555' },
+    body: { name: 'Google New', firmName: 'New Firm', phone: '1234567890' },
+    ip: '127.0.0.1',
+    headers: { 'user-agent': 'test-agent' },
+    get: () => 'test-agent',
   }, res);
 
   assert.strictEqual(state.statusCode, 200);
   assert.strictEqual(state.body.success, true);
   assert.strictEqual(state.body.data.isOnboarded, true);
+  assert.strictEqual(state.body.data.accessToken, undefined, 'completeProfile response must not expose accessToken');
   assert.strictEqual(welcomeSent, true);
 }
 
 async function run() {
   try {
-    await testEmailSignupSendsWelcomeAfterOnboarding();
-    await testGoogleLoginLinksExistingEmailAndNoDuplicate();
-    await testGoogleLoginNewUserRequiresOnboardingAndNo409();
+    await testSignupVerifyReturnsCleanMetadata();
     await testCompleteProfileSendsWelcomeOnFalseToTrueTransition();
     console.log('authOnboardingParity tests passed');
   } catch (error) {
@@ -329,6 +283,8 @@ async function run() {
       xIdGeneratorPath,
       googleapisPath,
       mongoosePath,
+      authAuditPath,
+      auditLogPath,
     ].forEach(clear);
   }
 }

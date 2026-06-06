@@ -12,6 +12,7 @@ const {
   googleCallback,
   googleConfirmDrive,
   getStorageConfiguration,
+  updateBackupSettings,
   getStorageOwnershipSummary,
   getStorageFolderLink,
   getStorageRootHealth,
@@ -25,6 +26,8 @@ const {
   getStorageDataMap,
 } = require('../controllers/storage.controller');
 
+const { userWriteLimiter } = require('../middleware/rateLimiters');
+
 const router = applyRouteValidation(express.Router(), routeSchemas);
 
 router.get('/status', userReadLimiter, getStorageStatus);
@@ -35,6 +38,7 @@ router.get('/google/callback', oauthLimiter, googleCallback);
 router.post('/google/confirm-drive', oauthLimiter, requirePrimaryAdmin, googleConfirmDrive);
 
 router.get('/configuration', userReadLimiter, getStorageConfiguration);
+router.post('/backup-settings', userWriteLimiter, requirePrimaryAdmin, updateBackupSettings);
 router.get('/ownership-summary', userReadLimiter, getStorageOwnershipSummary);
 router.get('/folder-link', userReadLimiter, requirePrimaryAdmin, getStorageFolderLink);
 router.get('/root-health', userReadLimiter, requirePrimaryAdmin, getStorageRootHealth);

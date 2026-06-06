@@ -435,6 +435,11 @@ const firmSchema = new mongoose.Schema({
         max: 3650,
         default: 30,
       },
+      frequency: {
+        type: String,
+        enum: ['daily', 'weekly', 'monthly', 'disabled'],
+        default: 'daily',
+      },
     },
   },
   

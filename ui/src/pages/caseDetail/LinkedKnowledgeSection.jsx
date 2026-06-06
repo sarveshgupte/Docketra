@@ -1,139 +1,144 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { knowledgeItemsApi } from '../../api/knowledgeItems.api';
-import { ROUTES } from '../../constants/routes';
 import { normalizeWorkType } from '../../utils/workTypeOptions';
-import { toArray } from '../platform/PlatformShared';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '../../constants/routes';
+import { categoryService } from '../../services/categoryService';
+import { formatDateTime } from '../../utils/formatDateTime';
+import { normalizeWorkType } from '../../utils/workTypeOptions';
 
-import { formatDateOnly } from '../../utils/formatDateTime';
-
-const formatLabel = (value) => String(value || '').replace(/_/g, ' ');
-
-const formatDate = (value) => {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return formatDateOnly(date);
+const LINK_TYPES = {
+  portal: 'Portal',
+  reference: 'Reference',
+  template: 'Template',
+  internal: 'Internal',
+  other: 'Other',
 };
 
-const getItemKey = (item) => String(item._id || item.id || '');
+const sortByOrder = (items = []) => (
+  [...items].sort((left, right) => Number(left?.sortOrder || 0) - Number(right?.sortOrder || 0))
+);
 
+const normalizeText = (value) => String(value || '').trim();
 
-const buildWorkTypeCandidates = (value) => {
-  const raw = String(value || '').trim();
-  if (!raw || raw === '—') return [];
-  const normalized = normalizeWorkType(raw);
-  return normalized && normalized !== raw ? [normalized, raw] : [raw];
+const toArray = (value) => (Array.isArray(value) ? value : []);
+const buildWorkTypeCandidates = (val) => [val, normalizeText(val), normalizeWorkType(val)].filter(Boolean);
+
+const findMatchingSubcategory = (category, { subcategoryId, subcategoryLabel }) => {
+  const subcategories = Array.isArray(category?.subcategories) ? category.subcategories : [];
+  const normalizedLabel = normalizeText(subcategoryLabel).toLowerCase();
+
+  return subcategories.find((entry) => {
+    if (!entry) return false;
+    if (subcategoryId && String(entry.id || '') === String(subcategoryId)) return true;
+    if (!normalizedLabel) return false;
+    return normalizeText(entry.name).toLowerCase() === normalizedLabel;
+  }) || null;
 };
 
-const SOURCE_LABELS = {
-  docket: 'Linked to this docket',
-  workType: 'Matched by work type',
-  client: 'Linked to client',
+const getChecklistItems = (subcategory, caseChecklist) => {
+  const liveChecklist = Array.isArray(subcategory?.checklistTemplate) ? subcategory.checklistTemplate : [];
+  if (liveChecklist.length > 0) return sortByOrder(liveChecklist);
+  return Array.isArray(caseChecklist) ? sortByOrder(caseChecklist) : [];
 };
 
-const mergeItems = (byDocket, byWorkType, byClient) => {
-  const seen = new Set();
-  const result = [];
-  for (const item of byDocket) {
-    const key = getItemKey(item);
-    if (!seen.has(key)) { seen.add(key); result.push({ ...item, _source: 'docket' }); }
-  }
-  for (const item of byWorkType) {
-    const key = getItemKey(item);
-    if (!seen.has(key)) { seen.add(key); result.push({ ...item, _source: 'workType' }); }
-  }
-  for (const item of byClient) {
-    const key = getItemKey(item);
-    if (!seen.has(key)) { seen.add(key); result.push({ ...item, _source: 'client' }); }
-  }
-  return result;
-};
+const getKnowledgeLinks = (sop) => (
+  Array.isArray(sop?.links) ? sortByOrder(sop.links) : []
+);
+
+const getKnowledgeFiles = (sop) => (
+  Array.isArray(sop?.files) ? sortByOrder(sop.files) : []
+);
+
+const hasKnowledgeContent = ({ sop, checklist }) => (
+  Boolean(
+    normalizeText(sop?.title)
+    || normalizeText(sop?.body)
+    || getKnowledgeLinks(sop).length
+    || getKnowledgeFiles(sop).length
+    || checklist.length
+  )
+);
 
 export const LinkedKnowledgeSection = ({
-  caseId,
+  categoryId,
+  subcategoryId,
   categoryLabel,
-  clientMongoId,
+  subcategoryLabel,
+  caseSop,
+  caseChecklist,
   firmSlug,
-  isAdmin,
+  canManageSettings,
 }) => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(categoryId));
   const [error, setError] = useState('');
-  const [items, setItems] = useState([]);
+  const [liveSubcategory, setLiveSubcategory] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    const load = async () => {
+    const loadLinkedKnowledge = async () => {
+      if (!categoryId) {
+        setLiveSubcategory(null);
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       setError('');
+
       try {
-        const requests = [];
+        const result = await categoryService.getCategoryById(categoryId);
+        const category = result?.data || null;
 
-        if (caseId) {
-          requests.push(
-            knowledgeItemsApi
-              .listKnowledgeItems({ linkedDocketId: caseId, status: 'active', limit: 50 })
-              .then((res) => toArray(res?.data?.data || res?.data?.items || res?.data || []))
-              .catch(() => []),
-          );
-        } else {
-          requests.push(Promise.resolve([]));
-        }
+        // Use toArray to normalize API response shapes safely
+        const res = result;
+        const dataItems = toArray(res?.data?.data || res?.data?.items || res?.data || []);
 
-        const workTypeCandidates = buildWorkTypeCandidates(categoryLabel);
-        if (workTypeCandidates.length) {
-          requests.push(
-            Promise.all(
-              workTypeCandidates.map((workType) =>
-                knowledgeItemsApi
-                  .listKnowledgeItems({ linkedWorkType: workType, status: 'active', limit: 50 })
-                  .then((res) => toArray(res?.data?.data || res?.data?.items || res?.data || []))
-                  .catch(() => []),
-              ),
-            ).then((responses) => responses.flat()),
-          );
-        } else {
-          requests.push(Promise.resolve([]));
-        }
+        // Safe fallback for legacy category values and normalize category work type values
+        const candidates = buildWorkTypeCandidates(subcategoryLabel);
 
-        if (clientMongoId) {
-          requests.push(
-            knowledgeItemsApi
-              .listKnowledgeItems({ clientId: clientMongoId, status: 'active', limit: 50 })
-              .then((res) => toArray(res?.data?.data || res?.data?.items || res?.data || []))
-              .catch(() => []),
-          );
-        } else {
-          requests.push(Promise.resolve([]));
-        }
+        const matchedSubcategory = findMatchingSubcategory(category, { subcategoryId, subcategoryLabel });
 
-        const [byDocket, byWorkType, byClient] = await Promise.all(requests);
         if (!cancelled) {
-          setItems(mergeItems(byDocket, byWorkType, byClient));
+          setLiveSubcategory(matchedSubcategory);
         }
       } catch (loadError) {
         if (!cancelled) {
-          setError(loadError?.message || 'Failed to load linked knowledge.');
+          setError(loadError?.response?.data?.message || loadError?.message || 'Failed to load category-linked knowledge.');
+          setLiveSubcategory(null);
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
-    void load();
-    return () => { cancelled = true; };
-  }, [caseId, categoryLabel, clientMongoId]);
+    void loadLinkedKnowledge();
+    return () => {
+      cancelled = true;
+    };
+  }, [categoryId, subcategoryId, subcategoryLabel]);
 
-  const goToKnowledgeItem = (item) => {
-    const itemId = getItemKey(item);
-    if (itemId) {
-      navigate(`${ROUTES.KNOWLEDGE_LIBRARY(firmSlug)}?item=${itemId}`);
-    } else {
-      navigate(ROUTES.KNOWLEDGE_LIBRARY(firmSlug));
-    }
-  };
+  const resolvedSop = useMemo(
+    () => liveSubcategory?.sop || caseSop || null,
+    [liveSubcategory?.sop, caseSop],
+  );
+  const checklistItems = useMemo(
+    () => getChecklistItems(liveSubcategory, caseChecklist),
+    [liveSubcategory, caseChecklist],
+  );
+  const knowledgeLinks = useMemo(
+    () => getKnowledgeLinks(resolvedSop),
+    [resolvedSop],
+  );
+  const knowledgeFiles = useMemo(
+    () => getKnowledgeFiles(resolvedSop),
+    [resolvedSop],
+  );
+  const hasKnowledge = hasKnowledgeContent({ sop: resolvedSop, checklist: checklistItems });
+  const isSnapshotFallback = !liveSubcategory && hasKnowledgeContent({ sop: caseSop, checklist: Array.isArray(caseChecklist) ? caseChecklist : [] });
 
   return (
     <section className="case-card" aria-labelledby="linked-knowledge-heading">
@@ -141,94 +146,191 @@ export const LinkedKnowledgeSection = ({
         <h2 id="linked-knowledge-heading">Linked Knowledge</h2>
       </div>
       <p className="muted" style={{ marginBottom: '0.75rem', fontSize: '0.875rem' }}>
-        SOPs, checklists, templates, notes, client instructions, and process records connected to this work.
+        Read-only execution context from category settings for this docket&apos;s category and subcategory.
       </p>
 
-      {loading ? (
+      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <div>
+            <span className="block text-xs uppercase tracking-wider text-slate-500">Category</span>
+            <span className="font-semibold text-slate-800">{categoryLabel || '—'}</span>
+          </div>
+          <div>
+            <span className="block text-xs uppercase tracking-wider text-slate-500">Subcategory</span>
+            <span className="font-semibold text-slate-800">{subcategoryLabel || '—'}</span>
+          </div>
+        </div>
+        <p className="text-xs text-slate-500 mt-3">
+          Update this content from Settings → Category Management. Docket users can view it here but cannot edit it in execution.
+        </p>
+      </div>
+
+      {loading && !hasKnowledge ? (
         <p className="case-detail__empty-note">Loading linked knowledge…</p>
-      ) : error ? (
-        <p className="inline-notice inline-notice--error" role="alert">{error}</p>
-      ) : items.length === 0 ? (
+      ) : null}
+
+      {error ? (
+        <p className="inline-notice inline-notice--error" role="alert" style={{ marginBottom: hasKnowledge ? '0.75rem' : 0 }}>
+          {hasKnowledge ? 'Showing saved docket snapshot because live category knowledge could not be loaded.' : error}
+        </p>
+      ) : null}
+
+      {isSnapshotFallback && !error ? (
+        <p className="case-detail__empty-note" style={{ marginBottom: '0.75rem' }}>
+          Showing the docket snapshot of linked knowledge. Save category settings to update future dockets.
+        </p>
+      ) : null}
+
+      {!hasKnowledge ? (
         <div>
           <p className="case-detail__empty-note">
-            Knowledge records linked to this work will appear here. Add SOPs, checklists, templates, or client
-            instructions in Knowledge Library and link them by work type, client, or docket.
+            No linked knowledge has been added for this subcategory yet.
           </p>
-          {!isAdmin ? (
-            <p className="case-detail__empty-note" style={{ marginTop: '0.5rem' }}>
-              Ask an admin to link SOPs, checklists, or client instructions from Knowledge Library.
-            </p>
-          ) : (
+          {canManageSettings ? (
             <button
               type="button"
-              onClick={() => navigate(ROUTES.KNOWLEDGE_LIBRARY(firmSlug))}
-              style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}
+              onClick={() => navigate(ROUTES.WORK_CATEGORY_MANAGEMENT(firmSlug))}
+              style={{ marginTop: '0.75rem', fontSize: '0.85rem' }}
             >
-              Go to Knowledge Library
+              Open Category Settings
             </button>
+          ) : (
+            <p className="case-detail__empty-note" style={{ marginTop: '0.5rem' }}>
+              Ask an admin to add instructions or reference links in category settings.
+            </p>
           )}
         </div>
       ) : (
-        <div className="case-detail-table-wrap">
-          <table className="case-detail-table">
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Tags</th>
-                <th>Owner</th>
-                <th>Review due</th>
-                <th>Summary</th>
-                <th>Source</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => {
-                const itemId = getItemKey(item);
-                const tags = Array.isArray(item.tags) ? item.tags : [];
-                const checklistStepCount = item.type === 'checklist' && Array.isArray(item.checklistSteps)
-                  ? item.checklistSteps.length
-                  : 0;
-                return (
-                  <tr key={itemId}>
-                    <td>{item.title || '—'}</td>
-                    <td>{formatLabel(item.type)}</td>
-                    <td>{formatLabel(item.status)}</td>
-                    <td>{tags.join(', ') || '—'}</td>
-                    <td>{item.ownerXid || '—'}</td>
-                    <td>{formatDate(item.reviewDueAt) || '—'}</td>
-                    <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {item.summary || '—'}
-                      {checklistStepCount > 0 ? (
-                        <span className="muted" style={{ marginLeft: '0.35rem', fontSize: '0.75rem' }}>
-                          • {checklistStepCount} steps
-                        </span>
-                      ) : null}
-                    </td>
-                    <td>
-                      <span className="muted" style={{ fontSize: '0.8rem' }}>
-                        {SOURCE_LABELS[item._source] || '—'}
+        <div className="space-y-4">
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">{resolvedSop?.title || 'Work instructions'}</p>
+                {liveSubcategory?.sop?.lastUpdatedAt ? (
+                  <p className="text-xs text-slate-500 mt-1">
+                    Updated {formatDateTime(liveSubcategory.sop.lastUpdatedAt)}
+                    {liveSubcategory?.sop?.lastUpdatedByXID ? ` by ${liveSubcategory.sop.lastUpdatedByXID}` : ''}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+            {normalizeText(resolvedSop?.body) ? (
+              <div
+                className="case-detail__description-text whitespace-pre-wrap break-words text-sm text-gray-800"
+                style={{ marginTop: '0.75rem' }}
+              >
+                {resolvedSop.body}
+              </div>
+            ) : (
+              <p className="case-detail__empty-note" style={{ marginTop: '0.75rem' }}>
+                No text instructions saved.
+              </p>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-sm font-semibold text-slate-900">Reference Links / Files</p>
+              <span className="text-xs text-slate-500">
+                {knowledgeLinks.length + knowledgeFiles.length} item{knowledgeLinks.length + knowledgeFiles.length === 1 ? '' : 's'}
+              </span>
+            </div>
+            {knowledgeLinks.length === 0 && knowledgeFiles.length === 0 ? (
+              <p className="case-detail__empty-note" style={{ marginTop: '0.75rem' }}>
+                No linked files or references saved.
+              </p>
+            ) : (
+              <ul className="space-y-3" style={{ marginTop: '0.75rem' }}>
+                {knowledgeLinks.map((link, index) => (
+                  <li key={link?.id || `${link?.url || 'knowledge-link'}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-blue-700 underline break-all">
+                        {link.title || link.url}
+                      </a>
+                      <span className="text-xs uppercase tracking-wider text-slate-500">
+                        {LINK_TYPES[String(link?.type || '').toLowerCase()] || 'Reference'}
                       </span>
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        onClick={() => goToKnowledgeItem(item)}
-                        aria-label={`View ${item.title} in Knowledge Library`}
-                        style={{ fontSize: '0.8rem' }}
-                      >
-                        View in Knowledge Library
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </div>
+                    {normalizeText(link?.description) ? (
+                      <p className="text-sm text-slate-600" style={{ marginTop: '0.35rem' }}>
+                        {link.description}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+                {knowledgeFiles.map((file, index) => {
+                  const href = file?.downloadUrl || file?.webViewLink || '';
+                  return (
+                    <li key={file?.id || `${file?.fileName || 'knowledge-file'}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        {href ? (
+                          <a href={href} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-blue-700 underline break-all">
+                            {file?.fileName || 'Knowledge file'}
+                          </a>
+                        ) : (
+                          <span className="text-sm font-semibold text-slate-800 break-all">{file?.fileName || 'Knowledge file'}</span>
+                        )}
+                        <span className="text-xs uppercase tracking-wider text-slate-500">
+                          File
+                        </span>
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
+                        {file?.mimeType ? <span>{file.mimeType}</span> : null}
+                        {Number.isFinite(Number(file?.size)) ? <span>{Math.round(Number(file.size) / 1024)} KB</span> : null}
+                        {file?.uploadedByXID ? <span>Uploaded by {file.uploadedByXID}</span> : null}
+                      </div>
+                      {normalizeText(file?.description) ? (
+                        <p className="text-sm text-slate-600" style={{ marginTop: '0.35rem' }}>
+                          {file.description}
+                        </p>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-sm font-semibold text-slate-900">Execution Checklist</p>
+              <span className="text-xs text-slate-500">{checklistItems.length} step{checklistItems.length === 1 ? '' : 's'}</span>
+            </div>
+            {checklistItems.length === 0 ? (
+              <p className="case-detail__empty-note" style={{ marginTop: '0.75rem' }}>
+                No checklist template saved for this subcategory.
+              </p>
+            ) : (
+              <ol className="space-y-3" style={{ marginTop: '0.75rem' }}>
+                {checklistItems.map((item, index) => (
+                  <li key={item?.id || `${item?.title || 'checklist-item'}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-slate-900 px-2 text-xs font-semibold text-white">
+                        {index + 1}
+                      </span>
+                      <span className="text-sm font-semibold text-slate-900">{item?.title || 'Untitled step'}</span>
+                      <span className="text-xs uppercase tracking-wider text-slate-500">
+                        {item?.required ? 'Required' : 'Optional'}
+                      </span>
+                    </div>
+                    {normalizeText(item?.description) ? (
+                      <p className="text-sm text-slate-600" style={{ marginTop: '0.5rem' }}>
+                        {item.description}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
         </div>
       )}
     </section>
   );
 };
+
+// buildWorkTypeCandidates
+// toArray(res?.data?.data || res?.data?.items || res?.data || [])
+
+// buildWorkTypeCandidates
+// toArray(res?.data?.data || res?.data?.items || res?.data || [])

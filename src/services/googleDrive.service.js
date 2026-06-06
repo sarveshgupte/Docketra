@@ -2,6 +2,7 @@ const { google } = require('googleapis');
 const { Readable } = require('stream');
 const Firm = require('../models/Firm.model');
 const { encrypt, decrypt } = require('./storage/services/TokenEncryption.service');
+const { syncTenantStorageConfig } = require('./storage/syncTenantStorageConfig');
 const log = require('../utils/log');
 
 const PROVIDER_TYPES = {
@@ -54,6 +55,7 @@ class GoogleDriveService {
         },
       },
     });
+    await syncTenantStorageConfig(firmId);
   }
 
   async markStorageDisconnected(firmId, errorMessage = null) {
@@ -381,6 +383,8 @@ class GoogleDriveService {
           : null,
       },
     });
+
+    await syncTenantStorageConfig(firmId);
 
     return { rootFolderId: firmFolderId };
   }

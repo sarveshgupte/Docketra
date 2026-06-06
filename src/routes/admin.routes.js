@@ -17,6 +17,7 @@ const {
   getHierarchyTree,
   updateUserHierarchy,
   updateRestrictedClients,
+  updateQcSamplingRate,
   getFirmSettings,
   getFirmSettingsActivity,
   getSettingsAudit,
@@ -48,6 +49,9 @@ const {
   toggleCategoryStatus,
   addSubcategory,
   updateSubcategory,
+  createSubcategoryKnowledgeFileUploadIntent,
+  finalizeSubcategoryKnowledgeFileUpload,
+  deleteSubcategoryKnowledgeFile,
   toggleSubcategoryStatus,
 } = require('../controllers/category.controller');
 const {
@@ -104,6 +108,9 @@ router.put('/categories/:id', ...adminBaseAccess, authorizeFirmPermission('CATEG
 router.patch('/categories/:id/status', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_MANAGE'), userWriteLimiter, toggleCategoryStatus);
 router.post('/categories/:id/subcategories', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_MANAGE'), userWriteLimiter, addSubcategory);
 router.put('/categories/:id/subcategories/:subcategoryId', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_MANAGE'), userWriteLimiter, updateSubcategory);
+router.post('/categories/:id/subcategories/:subcategoryId/sop/files/upload-intent', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_MANAGE'), userWriteLimiter, createSubcategoryKnowledgeFileUploadIntent);
+router.post('/categories/:id/subcategories/:subcategoryId/sop/files/finalize', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_MANAGE'), userWriteLimiter, finalizeSubcategoryKnowledgeFileUpload);
+router.delete('/categories/:id/subcategories/:subcategoryId/sop/files/:fileId', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_MANAGE'), userWriteLimiter, deleteSubcategoryKnowledgeFile);
 router.patch('/categories/:id/subcategories/:subcategoryId/status', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_MANAGE'), userWriteLimiter, toggleSubcategoryStatus);
 
 router.get('/hierarchy', ...adminBaseAccess, authorizeFirmPermission('USER_VIEW'), userReadLimiter, getHierarchyTree);
@@ -116,6 +123,7 @@ router.post('/users/:xID/resend-invite', ...adminBaseAccess, authorizeFirmPermis
 router.post('/users/:xID/reset-password', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), sensitiveLimiter, sendUserPasswordReset);
 
 router.patch('/users/:xID/restrict-clients', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateRestrictedClients);
+router.patch('/users/:xID/qc-sampling-rate', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateQcSamplingRate);
 router.patch('/users/:xID/workbaskets', ...adminBaseAccess, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, updateUserWorkbaskets);
 router.patch('/users/:id/hierarchy', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateUserHierarchy);
 router.get('/firm-settings', ...adminBaseAccess, authorizeFirmPermission(['FIRM_SETTINGS_MANAGE', 'ADMIN_STATS']), userReadLimiter, getFirmSettings);

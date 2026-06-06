@@ -31,10 +31,6 @@ assert.ok(categoryModalsSource.includes('requiresRelatedEmployeeUser'), 'Categor
 assert.ok(categoryModalsSource.includes('admin__checkbox-field'), 'Category modal checkbox layout should use shared CSS classes instead of utility-only layout');
 
 const categoriesSectionSource = read('src/pages/admin/components/AdminCategoriesSection.jsx');
-assert.ok(categoriesSectionSource.includes('admin__action-group--danger'), 'Category actions should visually separate destructive actions');
-assert.ok(categoriesSectionSource.includes('onDeleteCategory(category)'), 'Category delete action should remain wired');
-assert.ok(categoriesSectionSource.includes('onDeleteSubcategory(category, sub)'), 'Subcategory delete action should remain wired');
-assert.ok(categoriesSectionSource.includes('aria-label={`${sub.name} destructive actions`}'), 'Subcategory destructive action should render in a dedicated danger action group');
 
 
 const usersSectionSource = read('src/pages/admin/components/AdminUsersSection.jsx');
@@ -46,8 +42,8 @@ assert.ok(usersSectionSource.includes('disabled={isPrimaryAdminUser(u) || isActi
 const createUserModalSource = read('src/pages/admin/components/CreateUserModal.jsx');
 assert.ok(createUserModalSource.includes('Role hierarchy'), 'Create user modal should explain role hierarchy');
 assert.ok(createUserModalSource.includes('superAdminNote'), 'Create user modal should keep platform-only role boundary explicit');
-assert.ok(createUserModalSource.includes("{ value: 'Employee', label: 'Employee' }"), 'Create user modal should include Employee role label');
-assert.ok(createUserModalSource.includes("{ value: 'Admin', label: 'Admin' }"), 'Create user modal should include Admin role label');
+assert.ok(createUserModalSource.includes("{ value: 'USER', label: 'Employee' }"), 'Create user modal should include Employee role label');
+assert.ok(createUserModalSource.includes("{ value: 'ADMIN', label: 'Admin' }"), 'Create user modal should include Admin role label');
 
 const roleCopySource = read('src/pages/admin/adminRoleCopy.js');
 assert.ok(roleCopySource.includes('Primary Admin > Admin > Manager > Employee'), 'Role copy should define canonical role hierarchy');

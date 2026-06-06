@@ -71,15 +71,5 @@ export const CaseDetailAlerts = ({
         ⚠ No activity in 3 days
       </div>
     )}
-    {docketSlaStatus === 'RED' ? (
-      <div className="neo-alert neo-alert--danger case-detail__alert" role="status">
-        <strong>SLA breached</strong> — This docket is overdue and needs attention.
-      </div>
-    ) : null}
-    {docketSlaStatus === 'YELLOW' ? (
-      <div className="neo-alert neo-alert--warning case-detail__alert" role="status">
-        <strong>SLA at risk</strong> — Less than 24 hours remain on this docket.
-      </div>
-    ) : null}
   </>
 );

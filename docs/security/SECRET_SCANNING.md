@@ -25,11 +25,26 @@ Workflow: `.github/workflows/secret-scanning.yml`
 
 Run the same gate locally before opening a PR:
 
-```bash
+```powershell
 npm run security:secrets
 ```
 
-This command runs `scripts/run-secret-scan.sh`, which uses local `gitleaks` if available and otherwise downloads a pinned version.
+This command runs `scripts/run-secret-scan.js`, a cross-platform Node wrapper. It scans a temporary git-tracked snapshot so ignored local files such as `.env` and `env.yaml` are not copied into scanner output.
+
+Scanner resolution order:
+
+- local `gitleaks` binary, if installed
+- pinned Docker image in GitHub Actions, when Docker is available
+- platform-specific pinned `gitleaks` release downloaded from GitHub
+
+The Bash shim at `scripts/run-secret-scan.sh` is kept only for manual compatibility; npm uses the Node wrapper directly.
+
+PowerShell release-gate commands:
+
+```powershell
+npm run test:secret-scanning:contract
+npm run security:secrets
+```
 
 ## Safe examples and placeholders
 

@@ -19,7 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NODE_ENV: test
-      JWT_SECRET: ci-placeholder-jwt-secret-for-tests-only-do-not-use
+      JWT_SECRET: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      JWT_PASSWORD_SETUP_SECRET: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
       SUPERADMIN_XID: X000001
       SUPERADMIN_EMAIL: superadmin@example.com
       # Test-only bcrypt hash placeholder ("password"). Never use in production.
@@ -28,8 +29,13 @@ jobs:
       MONGO_URI: mongodb://127.0.0.1:27017/docketra
       REDIS_URL: redis://127.0.0.1:6379
       DISABLE_GOOGLE_AUTH: "true"
-      ENCRYPTION_PROVIDER: disabled
-      METRICS_TOKEN: test-metrics-token
+      ENABLE_EXTERNAL_STORAGE: "false"
+      ENCRYPTION_PROVIDER: local
+      MASTER_ENCRYPTION_KEY: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+      STORAGE_TOKEN_SECRET: cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      METRICS_TOKEN: dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+      UPLOAD_SCAN_STRICT: "true"
+      AUTH_DEBUG_DIAGNOSTICS: "false"
       # CI-only placeholder values used exclusively by `validate:env:production`.
       # These are NOT real credentials. Real production values must be configured
       # in Render environment variables or GitHub Actions secrets — never committed.

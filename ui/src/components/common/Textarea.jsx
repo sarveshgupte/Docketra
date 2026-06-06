@@ -34,14 +34,20 @@ export const Textarea = ({
   className = '',
   rows = 4,
   enableMentions = false,
-  ...props
+  // Destructure event handlers and value so the {...rest} spread below does NOT
+  // accidentally override our custom handleInputChange / handleKeyDown.
+  onChange: parentOnChange,
+  onKeyDown: parentOnKeyDown,
+  value,
+  id: propId,
+  ...rest
 }) => {
   const generatedId = useId();
-  const textareaId = props.id || props.name || `textarea-${generatedId}`;
+  const textareaId = propId || rest.name || `textarea-${generatedId}`;
   const errorId = `${textareaId}-error`;
   const helpId = `${textareaId}-help`;
   const describedBy = [
-    props['aria-describedby'],
+    rest['aria-describedby'],
     error ? errorId : null,
     !error && helpText ? helpId : null,
   ].filter(Boolean).join(' ') || undefined;
@@ -79,32 +85,40 @@ export const Textarea = ({
 
   // Handle Input Changes to track mentions
   const handleInputChange = (event) => {
-    const value = event.target.value;
+    const currentValue = event.target.value;
     const cursor = event.target.selectionStart;
 
     // First call the parent's onChange so that state remains synced
-    if (props.onChange) {
-      props.onChange(event);
+    if (parentOnChange) {
+      parentOnChange(event);
     }
 
-    if (!enableMentions || !users.length) return;
+    if (!enableMentions) return;
 
     // Check if user is typing a mention
-    const textBeforeCursor = value.substring(0, cursor);
+    const textBeforeCursor = currentValue.substring(0, cursor);
     const atIndex = textBeforeCursor.lastIndexOf('@');
 
+    // Active mention: @ found and no space between @ and cursor
     if (atIndex !== -1 && !textBeforeCursor.substring(atIndex + 1).includes(' ')) {
-      // Mention is active!
       const query = textBeforeCursor.substring(atIndex + 1).toUpperCase();
       setMentionIndex(atIndex);
       setMentionSearch(query);
 
-      // Filter users by name or xID
-      const filtered = users.filter(
-        (u) =>
-          String(u.name || '').toUpperCase().includes(query) ||
-          String(u.xID || '').toUpperCase().includes(query)
-      );
+      // When users haven't loaded yet, don't show empty popover
+      if (!users.length) {
+        setShowSuggestions(false);
+        return;
+      }
+
+      // Empty query (just typed @) → show all users
+      const filtered = query === ''
+        ? users
+        : users.filter(
+            (u) =>
+              String(u.name || '').toUpperCase().includes(query) ||
+              String(u.xID || '').toUpperCase().includes(query)
+          );
 
       setSuggestions(filtered);
       setSelectedIndex(0);
@@ -117,8 +131,8 @@ export const Textarea = ({
   // Keyboard navigation inside popover
   const handleKeyDown = (event) => {
     if (!showSuggestions || !suggestions.length) {
-      if (props.onKeyDown) {
-        props.onKeyDown(event);
+      if (parentOnKeyDown) {
+        parentOnKeyDown(event);
       }
       return;
     }
@@ -136,26 +150,26 @@ export const Textarea = ({
       event.preventDefault();
       setShowSuggestions(false);
     } else {
-      if (props.onKeyDown) {
-        props.onKeyDown(event);
+      if (parentOnKeyDown) {
+        parentOnKeyDown(event);
       }
     }
   };
 
   // Select user and replace `@query` range with tag
   const selectUser = (selectedUser) => {
-    const text = props.value || '';
+    const text = value || '';
     const cursor = document.getElementById(textareaId)?.selectionStart || text.length;
 
     // Format: @Name (xID)
     const mentionText = `@${selectedUser.name} (${selectedUser.xID}) `;
     const newValue = text.substring(0, mentionIndex) + mentionText + text.substring(cursor);
 
-    // Trigger parent onChange
-    if (props.onChange) {
-      props.onChange({
+    // Trigger parent onChange with a synthetic event
+    if (parentOnChange) {
+      parentOnChange({
         target: {
-          name: props.name,
+          name: rest.name,
           id: textareaId,
           value: newValue,
         },
@@ -189,12 +203,18 @@ export const Textarea = ({
     };
   }, []);
 
-  const getWorkbasketName = (u) => {
-    if (u.teamId && u.teamId.name) return u.teamId.name;
-    if (Array.isArray(u.teamIds) && u.teamIds.length > 0 && u.teamIds[0].name) {
-      return u.teamIds.map(t => t.name).join(', ');
+  // Returns an array of PRIMARY (non-QC) workbasket name strings for a user
+  const getWorkbaskets = (u) => {
+    if (Array.isArray(u.teamIds) && u.teamIds.length > 0) {
+      const names = u.teamIds
+        .filter(t => t.type !== 'QC')
+        .map(t => t.name)
+        .filter(Boolean);
+      if (names.length > 0) return names;
     }
-    return 'Unassigned';
+    // Fallback: single teamId — only show if not QC
+    if (u.teamId && u.teamId.name && u.teamId.type !== 'QC') return [u.teamId.name];
+    return ['Unassigned'];
   };
 
   return (
@@ -211,10 +231,10 @@ export const Textarea = ({
         aria-invalid={error ? 'true' : undefined}
         aria-describedby={describedBy}
         aria-required={required || undefined}
-        value={props.value}
+        value={value}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
-        {...props}
+        {...rest}
       />
 
       {/* Mention suggestions popover */}
@@ -254,13 +274,36 @@ export const Textarea = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-semibold text-sm truncate text-[var(--dt-text)]">{u.name}</span>
-                    <span className="text-[10px] text-[var(--dt-text-muted)] font-mono font-bold bg-gray-50 border border-[var(--dt-border-whisper)] px-1 rounded">
+                    {/* xID badge — accent tint, tight letter-spacing, tabular nums */}
+                    <span
+                      style={{
+                        fontFamily: "'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace",
+                        fontSize: '9.5px',
+                        letterSpacing: '0.08em',
+                        fontWeight: 700,
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        background: 'color-mix(in srgb, var(--dt-accent) 10%, transparent)',
+                        color: 'var(--dt-accent)',
+                        border: '1px solid color-mix(in srgb, var(--dt-accent) 25%, transparent)',
+                        flexShrink: 0,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
                       {u.xID}
                     </span>
                   </div>
-                  <div className="text-[10px] text-[var(--dt-text-muted)] truncate flex items-center gap-1 mt-0.5">
-                    <span>💼</span>
-                    <span className="truncate">{getWorkbasketName(u)}</span>
+                  {/* Workbasket pills — one per WB */}
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {getWorkbaskets(u).map((wbName, wbIdx) => (
+                      <span
+                        key={wbIdx}
+                        className="inline-flex items-center gap-0.5 text-[10px] text-[var(--dt-text-muted)] bg-[var(--dt-surface-subtle)] border border-[var(--dt-border-whisper)] rounded px-1.5 py-0.5 font-medium"
+                      >
+                        <span style={{ fontSize: '9px' }}>💼</span>
+                        {wbName}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>

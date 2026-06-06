@@ -1,17 +1,16 @@
 import { Button } from '../../components/common/Button';
-import { LifecycleBadge } from '../../../components/LifecycleBadge';
 import { formatDateTime } from '../../utils/formatDateTime';
 import { formatDocketId } from '../../utils/formatters';
 import { ROUTES } from '../../constants/routes';
-import { getLifecycleMeta } from '../../../utils/lifecycleMap';
+import { getBusinessLifecycleLabel, getBusinessLifecycleTone, getDocketAssignedToLabel } from './caseDetailUtils';
 
 const getNormalizedHistoryRow = (row) => {
   const docketId = row?.caseId || row?.docketId || row?._id || '';
   const category = row?.category || row?.caseCategory || row?.workType || row?.workTypeName || row?.categorySnapshot?.name;
   const subcategory = row?.subcategory || row?.subCategory || row?.caseSubCategory || row?.subCategoryName || row?.subcategoryName || row?.subCategorySnapshot?.name || row?.categorySnapshot?.subcategory;
-  const lifecycle = row?.status || row?.lifecycle || row?.state;
+  const lifecycle = getBusinessLifecycleLabel(row);
   const closedDate = row?.resolvedAt || row?.filedAt || row?.closedAt || row?.completedAt;
-  const assignee = row?.assignedToName || row?.assignedTo || row?.assignedToXID || row?.ownerName || row?.ownerXID;
+  const assignee = getDocketAssignedToLabel(row);
   const workbasket = row?.workbasketName || row?.queueName || row?.ownerTeamName || row?.ownerTeamId || row?.workbasket;
   return {
     docketId,
@@ -57,19 +56,21 @@ export const CaseDetailHistoryPanel = ({
                 <th scope="col">Docket ID</th>
                 <th scope="col">Category</th>
                 <th scope="col">Subcategory</th>
-                <th scope="col">Status / Lifecycle</th>
+                <th scope="col">Lifecycle</th>
                 <th scope="col">Created Date</th>
                 <th scope="col">Updated Date</th>
                 <th scope="col">Closed/Resolved/Filed Date</th>
-                <th scope="col">Assigned To / Owner</th>
-                <th scope="col">Workbasket / Queue</th>
-                <th scope="col">Action</th>
+                <th scope="col">Assigned To</th>
+                <th scope="col">WB</th>
               </tr>
             </thead>
             <tbody>
               {clientDockets.map((rawRow) => {
                 const row = getNormalizedHistoryRow(rawRow);
-                const lifecycleKnown = getLifecycleMeta(row.lifecycle);
+                const openDocketInViewMode = () => navigate(
+                  `${ROUTES.CASE_DETAIL(firmSlug, row.docketId)}?mode=view`,
+                  { state: { returnTo: linkedClientRoute || returnTo, fromClientRoute: linkedClientRoute || fromClientRoute, viewOnly: true } },
+                );
                 return (
                   <tr key={row.docketId || JSON.stringify(rawRow)}>
                     <td>
@@ -78,30 +79,23 @@ export const CaseDetailHistoryPanel = ({
                         variant="ghost"
                         className="case-detail-table__link"
                         aria-label={`Open docket ${formatDocketId(row.docketId)}`}
-                        onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, row.docketId), { state: { returnTo: linkedClientRoute || returnTo, fromClientRoute: linkedClientRoute || fromClientRoute } })}
+                        onClick={openDocketInViewMode}
                       >
                         {formatDocketId(row.docketId)}
                       </Button>
                     </td>
                     <td>{row.category || '—'}</td>
                     <td>{row.subcategory || '—'}</td>
-                    <td>{lifecycleKnown ? <LifecycleBadge lifecycle={row.lifecycle} /> : (row.lifecycle || '—')}</td>
+                    <td>
+                      <span className={`docket-lifecycle-pill docket-lifecycle-pill--${getBusinessLifecycleTone(row.lifecycle)}`}>
+                        {row.lifecycle || 'Active'}
+                      </span>
+                    </td>
                     <td>{row.createdAt ? formatDateTime(row.createdAt) : '—'}</td>
                     <td>{row.updatedAt ? formatDateTime(row.updatedAt) : '—'}</td>
                     <td>{row.closedDate ? formatDateTime(row.closedDate) : '—'}</td>
-                    <td>{row.assignee || '—'}</td>
+                    <td>{row.assignee || 'Unassigned'}</td>
                     <td>{row.workbasket || '—'}</td>
-                    <td>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="case-detail-table__link"
-                        aria-label={`View docket ${formatDocketId(row.docketId)}`}
-                        onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, row.docketId), { state: { returnTo: linkedClientRoute || returnTo, fromClientRoute: linkedClientRoute || fromClientRoute } })}
-                      >
-                        View
-                      </Button>
-                    </td>
                   </tr>
                 );
               })}

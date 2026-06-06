@@ -129,14 +129,10 @@ async function updateNotificationPreferences(userId, firmId, patch = {}) {
 }
 
 async function resolveDeliveryChannels({ userId, firmId, type, fallbackEmailEnabled = false }) {
-  const preferences = await getOrCreateNotificationPreferences(userId, firmId);
-  const normalizedType = String(type || '').trim().toUpperCase();
-  const typeChannels = preferences.typeChannels[normalizedType];
-  const effective = normalizeChannels(typeChannels, preferences.defaultChannels);
-  if (fallbackEmailEnabled) {
-    effective.email = true;
-  }
-  return effective;
+  return {
+    inApp: true,
+    email: false,
+  };
 }
 
 module.exports = {

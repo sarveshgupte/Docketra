@@ -11,6 +11,7 @@ const OneDriveProvider = require('../services/storage/providers/OneDriveProvider
 const { StorageValidationError } = require('../services/storage/errors/StorageErrors');
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const { resolveFirmStorageState, normalizeProvider } = require('../services/storage/resolveFirmStorageState');
+const { syncTenantStorageConfig } = require('../services/storage/syncTenantStorageConfig');
 const { S3Provider } = require('../services/storage/providers/S3Provider');
 const { supportsListFiles, supportsHealthCheck } = require('../services/storage/providerCapabilities');
 const { writeSettingsAudit } = require('../services/productAudit.service');
@@ -467,6 +468,8 @@ const googleConfirmDrive = async (req, res) => {
       },
     });
 
+    await syncTenantStorageConfig(ownershipFirmId);
+
     return res.json({ success: true, status: 'ACTIVE_BYOS' });
   } catch (error) {
     const mappedStatus = mapProviderErrorToStatus(error);
@@ -478,6 +481,7 @@ const getStorageConfiguration = async (req, res) => {
   try {
     const ownershipFirmId = await resolveOwnershipFirmIdForRead(req);
     if (!ownershipFirmId) return res.status(400).json({ error: 'Tenant mapping missing' });
+    await syncTenantStorageConfig(ownershipFirmId);
     const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig settings.storageBackup settings.firm.strictFirmOwnedStorage').lean();
     const state = resolveFirmStorageState(firm);
 
@@ -587,6 +591,9 @@ const getStorageOwnershipSummary = async (req, res) => {
       backupExport: {
         backupEnabled: Boolean(firm?.settings?.storageBackup?.enabled),
         retentionDays: Number(firm?.settings?.storageBackup?.retentionDays || 30),
+        deliveryPolicy: firm?.settings?.storageBackup?.deliveryPolicy || 'link_only',
+        notificationRecipients: firm?.settings?.storageBackup?.notificationRecipients || [],
+        frequency: firm?.settings?.storageBackup?.frequency || 'daily',
         lastExport,
       },
       ownershipModel:
@@ -868,6 +875,8 @@ const changeFirmStorage = async (req, res) => {
       dedupeKey: `firm-storage-change:${canonicalProvider}`,
     });
 
+    await syncTenantStorageConfig(firmId);
+
     return res.json({ success: true, data: { provider, isActive: true, tested: Boolean(adapter) } });
   } catch (error) {
     log.error('[STORAGE]', {
@@ -894,18 +903,6 @@ const exportFirmStorage = async (req, res) => {
       exportId: backup.exportId,
     });
     const downloadUrl = access?.downloadUrl || null;
-    if (downloadUrl) {
-      try {
-        await storageBackupService.emailBackupNotification({
-          firmId: ownershipFirmId,
-          exportId: backup.exportId,
-          downloadUrl,
-          success: true,
-        });
-      } catch (emailError) {
-        log.error('[STORAGE]', { event: 'backup_email_failed', firmId: req.firmId, message: emailError.message });
-      }
-    }
 
     log.info('[STORAGE]', { event: 'backup_generated', firmId: ownershipFirmId, exportId: backup.exportId });
     await writeSettingsAudit({
@@ -1066,6 +1063,9 @@ const disconnectStorage = async (req, res) => {
       metadata: { source: STORAGE_AUDIT_SOURCES.DISCONNECT, runtimeTenantId: req.firmId },
       dedupeKey: 'storage-disconnect',
     });
+
+    await syncTenantStorageConfig(ownershipFirmId);
+
     return res.json({
       success: true,
       provider: toUiProvider(MANAGED_STORAGE_MODE),
@@ -1105,6 +1105,7 @@ const storageHealthCheck = async (req, res) => {
         },
       });
     }
+    await syncTenantStorageConfig(ownershipFirmId);
     const connectionStatus = state?.isManaged ? 'ACTIVE_MANAGED' : 'ACTIVE_BYOS';
     return res.json({ healthy: true, provider: toUiProvider(state.canonicalProvider), status: connectionStatus, connectionStatus });
   } catch (error) {
@@ -1135,6 +1136,7 @@ const storageHealthCheck = async (req, res) => {
             },
           });
         }
+        await syncTenantStorageConfig(ownershipFirmId);
       }
     }
     return res.status(502).json({ healthy: false, error: isProduction() ? 'health_check_failed' : (error.message || 'health_check_failed') });
@@ -1307,6 +1309,45 @@ const getStorageDataMap = async (req, res) => {
   }
 };
 
+const updateBackupSettings = async (req, res) => {
+  try {
+    if (!ensurePrimaryAdmin(req, res)) return;
+    const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
+    const firmId = String(ownershipFirmId);
+    
+    const { enabled, deliveryPolicy, retentionDays, notificationRecipients, frequency } = req.body || {};
+
+    const updateDoc = {
+      'settings.storageBackup.enabled': Boolean(enabled),
+      'settings.storageBackup.deliveryPolicy': deliveryPolicy === 'attachment' ? 'attachment' : 'link_only',
+      'settings.storageBackup.retentionDays': Math.min(Math.max(Number(retentionDays || 30), 1), 3650),
+    };
+
+    if (Array.isArray(notificationRecipients)) {
+      updateDoc['settings.storageBackup.notificationRecipients'] = notificationRecipients;
+    }
+
+    if (frequency) {
+      updateDoc['settings.storageBackup.frequency'] = frequency;
+    }
+
+    await Firm.findByIdAndUpdate(firmId, { $set: updateDoc });
+
+    await writeSettingsAudit({
+      req,
+      tenantId: firmId,
+      settingsKey: 'storage-backup-config',
+      action: 'CONFIG_CHANGED',
+      newDoc: updateDoc,
+    });
+
+    return res.json({ success: true, message: 'Backup settings updated successfully.' });
+  } catch (error) {
+    log.error('[STORAGE]', { event: 'update_backup_settings_failed', message: error.message });
+    return res.status(500).json({ success: false, error: 'update_backup_settings_failed', message: error.message });
+  }
+};
+
 module.exports = {
   getStorageStatus,
   getStorageHealth,
@@ -1314,6 +1355,7 @@ module.exports = {
   googleCallback,
   googleConfirmDrive,
   getStorageConfiguration,
+  updateBackupSettings,
   testStorageConnection,
   exportFirmStorage,
   downloadFirmStorageExport,

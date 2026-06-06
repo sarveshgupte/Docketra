@@ -52,3 +52,6 @@
 ## 2024-06-04 - Concurrent Document Fetch in Case Create Service Validation
 **Learning:** In the `caseCreate` service, `ClientRepository.findByClientId` and `categoryRepository.findActiveCategory` were awaited sequentially, which caused endpoint latency, despite being independent of the other model validation queries.
 **Action:** Prepared the queries as promises and merged them into the existing `Promise.all()` concurrently with the other independent lookups.
+## 2024-07-26 - Optimize N+1 query loop with $in query and bulk insertMany
+**Learning:** Found an N+1 query bottleneck in `src/controllers/workbasket.controller.js` where a `Team.findOne` was performed inside a loop over all PRIMARY workbaskets. This led to excessive DB round-trips. Furthermore, when a workbasket was missing, a separate `create` was fired inside the loop.
+**Action:** Lift the query out of the loop and utilize the `$in` operator with a single `find` to check existence of multiple linked QC teams. Combine missing elements into a single `insertMany` to minimize network roundtrips to O(1) and improve scaling for firms with lots of workbaskets.

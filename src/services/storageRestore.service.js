@@ -21,6 +21,19 @@ function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
+async function isPlainZipFile(filePath) {
+  try {
+    const fd = await fsp.open(filePath, 'r');
+    const buffer = Buffer.alloc(4);
+    await fd.read(buffer, 0, 4, 0);
+    await fd.close();
+    return buffer.readUInt32BE(0) === 0x504b0304;
+  } catch (err) {
+    log.warn('[RESTORE] Failed to check zip magic bytes', { err: err.message });
+    return false;
+  }
+}
+
 async function decryptFileGcm(inputPath, outputPath, keyMaterial) {
   const stat = await fsp.stat(inputPath);
   const size = stat.size;
@@ -115,8 +128,14 @@ class StorageRestoreService {
         jobState.status = 'decrypting';
         jobState.progress = 10;
       }
-      log.info('[RESTORE] Decrypting encrypted backup file', { firmId, jobId });
-      await decryptFileGcm(encryptedPath, zipPath, keyMaterial);
+      const isPlain = await isPlainZipFile(encryptedPath);
+      if (isPlain) {
+        log.info('[RESTORE] Uploaded archive is plain ZIP. Skipping decryption.', { firmId, jobId });
+        await fsp.copyFile(encryptedPath, zipPath);
+      } else {
+        log.info('[RESTORE] Decrypting encrypted backup file', { firmId, jobId });
+        await decryptFileGcm(encryptedPath, zipPath, keyMaterial);
+      }
 
       // Step 3: Unzip and extract metadata
       if (jobState) {
