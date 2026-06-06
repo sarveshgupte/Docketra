@@ -132,6 +132,14 @@ const getScopeBadge = (rule) => {
 
 const isForbidden = (error) => Number(error?.response?.status) === 403;
 
+const coerceFirmNumber = (value, fallback, min = 0) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+
+  const normalized = Math.trunc(parsed);
+  return normalized >= min ? normalized : fallback;
+};
+
 // Premium custom Toggle Switch component
 const ToggleSwitch = ({ label, name, checked, onChange, helpText }) => {
   return (
@@ -204,6 +212,7 @@ export const FirmSettingsPage = () => {
   const [activityError, setActivityError] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(true);
+  const [savingConfig, setSavingConfig] = useState(false);
   const [categories, setCategories] = useState([]);
   const [workbaskets, setWorkbaskets] = useState([]);
   const [slaRules, setSlaRules] = useState([]);
@@ -450,14 +459,24 @@ export const FirmSettingsPage = () => {
   };
 
   const handleSave = async () => {
+    if (loadingConfig || savingConfig) return;
+
+    setSavingConfig(true);
+    setSaveMessage({ type: '', text: '' });
+    const firmDefaults = getFirmConfig();
+
     const firmPayload = {
-      slaDefaultDays: Number(config.slaDefaultDays) || 0,
+      slaDefaultDays: coerceFirmNumber(config.slaDefaultDays, firmDefaults.slaDefaultDays, 1),
       slaWorkingDays: Array.isArray(config.slaWorkingDays) && config.slaWorkingDays.length ? config.slaWorkingDays : [1, 2, 3, 4, 5],
       slaHolidayDates: Array.isArray(config.slaHolidayDates) ? config.slaHolidayDates : [],
       slaWorkingDateOverrides: Array.isArray(config.slaWorkingDateOverrides) ? config.slaWorkingDateOverrides : [],
-      calendarReminderLeadDays: Number(config.calendarReminderLeadDays) || 0,
-      escalationInactivityThresholdHours: Number(config.escalationInactivityThresholdHours) || 0,
-      workloadThreshold: Number(config.workloadThreshold) || 15,
+      calendarReminderLeadDays: coerceFirmNumber(config.calendarReminderLeadDays, firmDefaults.calendarReminderLeadDays, 0),
+      escalationInactivityThresholdHours: coerceFirmNumber(
+        config.escalationInactivityThresholdHours,
+        firmDefaults.escalationInactivityThresholdHours,
+        1,
+      ),
+      workloadThreshold: coerceFirmNumber(config.workloadThreshold, firmDefaults.workloadThreshold, 1),
       enablePerformanceView: Boolean(config.enablePerformanceView),
       enableEscalationView: Boolean(config.enableEscalationView),
       enableBulkActions: Boolean(config.enableBulkActions),
@@ -472,6 +491,8 @@ export const FirmSettingsPage = () => {
       void loadActivity(1);
     } catch {
       setSaveMessage({ type: 'error', text: 'Could not save settings. Please retry.' });
+    } finally {
+      setSavingConfig(false);
     }
   };
 
@@ -608,6 +629,45 @@ export const FirmSettingsPage = () => {
     },
   ];
 
+  const saveBar = hasUnsavedChanges ? (
+    <Card className="mb-6 border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-900">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l1.5 1.5 3-3m-8.25-.75v-1.5a3 3 0 013-3h6a3 3 0 013 3v1.5m-12 0h12a2.25 2.25 0 012.25 2.25v6a3 3 0 01-3 3H6a3 3 0 01-3-3v-6A2.25 2.25 0 015.25 9z" />
+            </svg>
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-slate-900">Unsaved configuration changes</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Review your edits, then save to apply them across the workspace.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={loadFirmSettings}
+            disabled={savingConfig || loadingConfig}
+          >
+            Discard
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={handleSave}
+            disabled={loadingConfig || savingConfig}
+            loading={savingConfig}
+          >
+            {savingConfig ? 'Saving...' : 'Save settings'}
+          </Button>
+        </div>
+      </div>
+    </Card>
+  ) : null;
+
   return (
     <PlatformShell 
       moduleLabel="Settings" 
@@ -653,15 +713,16 @@ export const FirmSettingsPage = () => {
             })}
           </div>
 
-          {/* Primary Status Notifications */}
-          {primaryStatusMessages.length > 0 && (
-            <div className="mb-6">
-              <StatusMessageStack messages={primaryStatusMessages} />
-            </div>
-          )}
-
           {/* Viewport for active tab */}
           <div className="transition-all duration-300">
+            {saveBar}
+
+            {/* Primary Status Notifications */}
+            {primaryStatusMessages.length > 0 && (
+              <div className="mb-6">
+                <StatusMessageStack messages={primaryStatusMessages} />
+              </div>
+            )}
             
             {/* Tab: General Defaults */}
             {currentTab === 'general' && (
@@ -1145,42 +1206,6 @@ export const FirmSettingsPage = () => {
             )}
 
           </div>
-
-          {/* Sticky Unsaved Changes Floating Banner */}
-          {hasUnsavedChanges && (
-            <div className="fixed bottom-6 left-1/2 z-50 w-full max-w-md -translate-x-1/2 px-4">
-              <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-800/80 bg-slate-950/95 backdrop-blur-md px-5 py-3.5 shadow-2xl shadow-slate-950/50 transition-all duration-300">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 border border-amber-500/20">
-                    <svg className="h-4 w-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold text-slate-100">Unsaved configuration changes</span>
-                    <span className="text-[10px] text-slate-400 mt-0.5">Please save or discard updates</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={loadFirmSettings}
-                    className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-200"
-                  >
-                    Discard
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={loadingConfig}
-                    className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-indigo-500 shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/20 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
-                  >
-                    {loadingConfig ? 'Saving...' : 'Save Settings'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
         </div>
       </div>
