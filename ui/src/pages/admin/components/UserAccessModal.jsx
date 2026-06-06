@@ -15,6 +15,8 @@ export const UserAccessModal = ({
   qcOnlyWorkbaskets,
   selectedWorkbasketDraft,
   setSelectedWorkbasketDraft,
+  qcSamplingRateDraft,
+  setQcSamplingRateDraft,
   clients,
   restrictedClientDraft,
   clientAccessModeDraft,
@@ -56,6 +58,28 @@ export const UserAccessModal = ({
           </div>
         </div>
       ) : null}
+
+      <div className="space-y-2">
+        <FormLabel>QC Sampling Rate Override</FormLabel>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={qcSamplingRateDraft !== null && qcSamplingRateDraft !== undefined ? qcSamplingRateDraft : ''}
+            onChange={(e) => {
+              const val = e.target.value;
+              setQcSamplingRateDraft(val === '' ? null : Math.min(100, Math.max(0, parseInt(val, 10) || 0)));
+            }}
+            placeholder="Use category default rate"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+          <span className="text-sm font-medium text-gray-600">%</span>
+        </div>
+        <p className="text-xs text-gray-500">
+          Leave blank to use default category/subcategory rates. Specify 100% to send all resolved cases to QC (e.g. for trainees), or a lower rate (e.g. 10%) for experienced team members.
+        </p>
+      </div>
 
       <FormLabel>Client access</FormLabel>
       {!canManageClientAccess || isPrimaryAdminTarget ? <div className="text-xs text-gray-600">{isPrimaryAdminTarget ? 'Primary Admin always has all-client access.' : 'You do not have permission to change client access.'}</div> : null}

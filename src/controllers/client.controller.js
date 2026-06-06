@@ -1514,7 +1514,18 @@ const listClientActivity = async (req, res) => {
     const userFirmId = req.user?.firmId;
     const ClientAudit = require('../models/ClientAudit.model');
     const data = await ClientAudit.find({ clientId, firmId: userFirmId }).sort({ timestamp: -1 }).limit(100).lean();
-    return res.json({ success: true, data: data.map((item) => ({ id: item._id, actionType: item.actionType, description: item.description, timestamp: item.timestamp })) });
+    return res.json({
+      success: true,
+      data: data.map((item) => ({
+        id: item._id,
+        actionType: item.actionType,
+        description: item.description,
+        timestamp: item.timestamp,
+        performedByXID: item.performedByXID,
+        metadata: item.metadata,
+        impersonationActive: item.impersonationActive,
+      })),
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Error fetching client activity', error: "Internal server error" });
   }

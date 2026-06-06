@@ -2,6 +2,80 @@
 
 const OPENAI_ENDPOINT = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1/chat/completions';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+const REDACTED_API_KEY = '[REDACTED_API_KEY]';
+const REDACTED_PROMPT = '[REDACTED_PROMPT]';
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function safeStringify(value) {
+  if (typeof value === 'string') {
+    return value;
+  }
+  try {
+    return JSON.stringify(value || {});
+  } catch (_error) {
+    return '';
+  }
+}
+
+function redactExactValue(text, value, replacement) {
+  if (!value || typeof value !== 'string') {
+    return text;
+  }
+  return text.replace(new RegExp(escapeRegExp(value), 'g'), replacement);
+}
+
+function collectStringValues(value, output = [], seen = new Set()) {
+  if (output.length >= 25 || value == null) {
+    return output;
+  }
+
+  if (typeof value === 'string') {
+    output.push(value);
+    return output;
+  }
+
+  if (typeof value !== 'object' || seen.has(value)) {
+    return output;
+  }
+
+  seen.add(value);
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectStringValues(item, output, seen);
+    }
+    return output;
+  }
+
+  for (const item of Object.values(value)) {
+    collectStringValues(item, output, seen);
+  }
+  return output;
+}
+
+function redactProviderErrorBody(body, sensitiveValues = {}) {
+  let safeBody = safeStringify(body)
+    .replace(/([?&](?:key|api_key|apiKey)=)[^&\s"'<>]+/gi, `$1${REDACTED_API_KEY}`)
+    .replace(/("(?:key|api_key|apiKey)"\s*:\s*")[^"]+/gi, `$1${REDACTED_API_KEY}`)
+    .replace(/((?:authorization|bearer)\s*[:=]\s*)[^\s"',}]+/gi, `$1${REDACTED_API_KEY}`);
+
+  const apiKey = sensitiveValues.apiKey;
+  safeBody = redactExactValue(safeBody, apiKey, REDACTED_API_KEY);
+  if (apiKey) {
+    safeBody = redactExactValue(safeBody, encodeURIComponent(apiKey), REDACTED_API_KEY);
+  }
+
+  for (const sensitiveValue of sensitiveValues.prompts || []) {
+    safeBody = redactExactValue(safeBody, sensitiveValue, REDACTED_PROMPT);
+    if (sensitiveValue) {
+      safeBody = redactExactValue(safeBody, encodeURIComponent(sensitiveValue), REDACTED_PROMPT);
+    }
+  }
+
+  return safeBody.slice(0, 250);
+}
 
 async function analyze(text, options = {}) {
   const apiKey = options.apiKey || process.env.OPENAI_API_KEY;
@@ -42,10 +116,15 @@ async function analyze(text, options = {}) {
     const error = new Error(`OpenAI request failed (${response.status})`);
     if (response.status === 401) {
       error.code = 'AI_INVALID_API_KEY';
+    } else {
+      error.code = 'AI_PROVIDER_REQUEST_FAILED';
     }
     error.status = response.status;
     error.provider = 'openai';
-    error.details = body.slice(0, 250);
+    error.details = redactProviderErrorBody(body, {
+      apiKey,
+      prompts: [text, JSON.stringify(prompt)],
+    });
     throw error;
   }
 
@@ -115,10 +194,15 @@ async function generateDocketFields(input, options = {}) {
     const error = new Error(`OpenAI request failed (${response.status})`);
     if (response.status === 401) {
       error.code = 'AI_INVALID_API_KEY';
+    } else {
+      error.code = 'AI_PROVIDER_REQUEST_FAILED';
     }
     error.status = response.status;
     error.provider = 'openai';
-    error.details = body.slice(0, 250);
+    error.details = redactProviderErrorBody(body, {
+      apiKey,
+      prompts: [safeStringify(input), ...collectStringValues(input)],
+    });
     throw error;
   }
 
@@ -150,4 +234,5 @@ async function generateDocketFields(input, options = {}) {
 module.exports = {
   analyze,
   generateDocketFields,
+  redactProviderErrorBody,
 };

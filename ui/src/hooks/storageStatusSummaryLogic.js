@@ -39,6 +39,7 @@ export const buildStorageStatusSummary = (firmSlug, configuration = {}, ownershi
   const healthStatus = normalizeStatus(ownershipSummary?.lastHealthCheck?.status || activeStorage.connectionStatus);
   const strictMode = isStrictMode(configuration, ownershipSummary);
   const activeConnectionStatus = normalizeStatus(activeStorage.connectionStatus);
+  const rootHealthStatus = normalizeStatus(rootHealth?.status);
 
   const byosProvider = ['google_drive', 'onedrive', 's3'].includes(provider);
   const byosConfigured = Boolean(byosProvider || activeConnectionStatus === 'ACTIVE_BYOS');
@@ -47,7 +48,7 @@ export const buildStorageStatusSummary = (firmSlug, configuration = {}, ownershi
     || ['ERROR', 'DISCONNECTED'].includes(healthStatus)
     || ['ERROR', 'DISCONNECTED'].includes(activeConnectionStatus)
     || error
-    || (rootHealth?.status === 'recovery_required' && (strictMode || byosConfigured || byosProvider))
+    || (rootHealthStatus === 'RECOVERY_REQUIRED' && (strictMode || byosConfigured || byosProvider))
   );
 
   const byosActive = byosProvider && byosConfigured && !needsAttention;
@@ -72,7 +73,7 @@ export const buildStorageStatusSummary = (firmSlug, configuration = {}, ownershi
     badgeLabel = 'Storage needs attention';
     providerLabel = getProviderLabel(provider, byosProvider);
     businessDataLocation = byosProvider ? 'Firm-owned cloud storage' : 'Docketra-managed storage';
-    helperText = rootHealth?.status === 'recovery_required' ? 'Google Drive root recovery required' : 'Storage connection requires attention from a Primary Admin.';
+    helperText = rootHealthStatus === 'RECOVERY_REQUIRED' ? 'Google Drive root recovery required' : 'Storage connection requires attention from a Primary Admin.';
     statusLabel = 'Needs attention';
   } else if (strictMode && byosActive) {
     badgeTone = 'success';

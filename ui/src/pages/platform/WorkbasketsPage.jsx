@@ -58,7 +58,7 @@ export const PlatformWorkbasketsPage = () => {
   const { user } = useAuth();
   const { openDocket } = useActiveDocket();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('UNASSIGNED');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [success, setSuccess] = useState('');
   const [actionError, setActionError] = useState('');
@@ -79,16 +79,26 @@ export const PlatformWorkbasketsPage = () => {
     const fetchUsers = async () => {
       setUsersLoading(true);
       try {
-        const response = await adminApi.getUsers();
+        const response = await adminApi.getUsers({ limit: 1000 });
         if (response.success && Array.isArray(response.data)) {
           const role = String(user?.role || '').trim().toUpperCase();
-          if (role === 'MANAGER') {
-            // Filter users who report to this manager
-            setAssignableUsers(response.data.filter(u => u.isActive && (String(u.managerId) === String(user.id || user._id) || String(u.reportsToUserId) === String(user.id || user._id) || u.xID === user.xID)));
-          } else {
-            // Admin / Primary Admin can assign to any active user
-            setAssignableUsers(response.data.filter(u => u.isActive));
+          let filtered = response.data.filter(u => u.isActive);
+          
+          if (workbasketId) {
+            filtered = filtered.filter(u => 
+              String(u.teamId || '') === String(workbasketId) ||
+              (Array.isArray(u.teamIds) && u.teamIds.map(id => String(id)).includes(String(workbasketId)))
+            );
           }
+          
+          if (role === 'MANAGER') {
+            filtered = filtered.filter(u => 
+              String(u.managerId) === String(user.id || user._id) || 
+              String(u.reportsToUserId) === String(user.id || user._id) || 
+              u.xID === user.xID
+            );
+          }
+          setAssignableUsers(filtered);
         }
       } catch (error) {
         console.error('Failed to load assignable users', error);
@@ -97,18 +107,21 @@ export const PlatformWorkbasketsPage = () => {
       }
     };
     void fetchUsers();
-  }, [isSupervisor, user]);
+  }, [isSupervisor, user, workbasketId]);
+
+  const [sortState, setSortState] = useState({ key: '', direction: 'asc' });
 
   useEffect(() => {
     setSelectedIds([]);
     setSuccess('');
     setActionError('');
     setBulkAssigneeXid('');
+    setSortState({ key: '', direction: 'asc' });
   }, [workbasketId]);
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedIds(filteredRows.map(r => getDocketRouteId(r)).filter(Boolean));
+      setSelectedIds(sortedRows.map(r => getDocketRouteId(r)).filter(Boolean));
     } else {
       setSelectedIds([]);
     }
@@ -165,7 +178,7 @@ export const PlatformWorkbasketsPage = () => {
     data: workloadData = {},
     isLoading: workloadLoading,
     isError: workloadError,
-  } = usePlatformWorkloadIntelligenceQuery({}, { enabled: isSupervisor });
+  } = usePlatformWorkloadIntelligenceQuery({ workbasketId: workbasketId || undefined }, { enabled: isSupervisor });
 
   const recovery = getRecoveryPayload(queryError, 'platform_queue');
   const isAccessDenied = isError && recovery.reasonCode === 'CASE_ACCESS_DENIED';
@@ -175,7 +188,22 @@ export const PlatformWorkbasketsPage = () => {
   const filteredRows = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return rows.filter((item) => {
-      const matchesStatus = statusFilter === 'ALL' || String(item.status || '').toUpperCase() === statusFilter;
+      // Exclude cases that are already assigned to a user from the Shared Intake Queue
+      const isAssigned = Boolean(item.assignedToXID || item.assignedTo || item.assigneeName);
+      if (isAssigned) return false;
+
+      let matchesStatus = false;
+      const isRouted = Boolean(item.routedToTeamId);
+
+      if (statusFilter === 'ALL') {
+        matchesStatus = true;
+      } else if (statusFilter === 'UNASSIGNED') {
+        matchesStatus = !isRouted;
+      } else if (statusFilter === 'ROUTED') {
+        matchesStatus = isRouted;
+      } else {
+        matchesStatus = false;
+      }
       const matchesCategory = categoryFilter === 'ALL' || String(item.category || '') === categoryFilter;
       const rowWorkbasketIds = [
         item.workbasketId,
@@ -197,6 +225,44 @@ export const PlatformWorkbasketsPage = () => {
     });
   }, [rows, search, statusFilter, categoryFilter, workbasketId]);
 
+  const sortedRows = useMemo(() => {
+    if (!sortState.key) return filteredRows;
+
+    const getSortValue = (row, key) => {
+      switch (key) {
+        case 'docketId':
+          return formatDocketLabel(row);
+        case 'clientId':
+          return row.clientId || '';
+        case 'clientName':
+          return row.clientName || '';
+        case 'category':
+          return row.category || '';
+        case 'status':
+          return row.routedToTeamId ? 'Routed' : 'Unassigned';
+        case 'slaDue':
+        case 'slaDays':
+          return row.slaDueAt ? new Date(row.slaDueAt).getTime() : 0;
+        case 'updated':
+          return new Date(row.updatedAt || row.createdAt || 0).getTime();
+        default:
+          return '';
+      }
+    };
+
+    const sorted = [...filteredRows].sort((a, b) => {
+      const valA = getSortValue(a, sortState.key);
+      const valB = getSortValue(b, sortState.key);
+
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        return valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
+      }
+      return (valA || 0) - (valB || 0);
+    });
+
+    return sortState.direction === 'desc' ? sorted.reverse() : sorted;
+  }, [filteredRows, sortState]);
+
   const categories = useMemo(() => [...new Set(rows.map((item) => String(item.category || '').trim()).filter(Boolean))], [rows]);
 
   const intelligenceAssignees = useMemo(
@@ -204,19 +270,6 @@ export const PlatformWorkbasketsPage = () => {
     [assignableUsers, workloadData]
   );
   
-  const metrics = useMemo(() => {
-    const available = rows.length;
-    const assigned = rows.filter((item) => Boolean(item.assigneeName || item.assignedTo)).length;
-    const pending = rows.filter((item) => String(item.status || '').toUpperCase() === 'PENDING').length;
-    const escalated = rows.filter((item) => String(item.status || '').toUpperCase() === 'ESCALATED').length;
-    return [
-      { label: 'Available Dockets', value: isLoading ? '…' : available, color: 'from-blue-500 to-indigo-600', icon: '📥' },
-      { label: 'Assigned to Team', value: isLoading ? '…' : assigned, color: 'from-emerald-500 to-teal-600', icon: '👤' },
-      { label: 'Pending Review', value: isLoading ? '…' : pending, color: 'from-amber-500 to-orange-600', icon: '⏳' },
-      { label: 'Escalated Dockets', value: isLoading ? '…' : escalated, color: 'from-rose-500 to-red-600', icon: '⚠️' },
-    ];
-  }, [rows, isLoading]);
-
   const clearFilters = () => {
     setSearch('');
     setStatusFilter('ALL');
@@ -229,8 +282,11 @@ export const PlatformWorkbasketsPage = () => {
     openDocket({
       caseId: rowId,
       navigate,
-      to: `${ROUTES.CASE_DETAIL(firmSlug, rowId)}?returnTo=${encodeURIComponent(`${location.pathname}${location.search || ''}`)}`,
-      state: buildQueueContext({ rows: filteredRows, rowId, location, origin: 'workbasket' }),
+      to: `${ROUTES.CASE_DETAIL(firmSlug, rowId)}?mode=view&returnTo=${encodeURIComponent(`${location.pathname}${location.search || ''}`)}`,
+      state: {
+        ...buildQueueContext({ rows: sortedRows, rowId, location, origin: 'workbasket' }),
+        viewOnly: true,
+      },
     });
   };
 
@@ -247,9 +303,27 @@ export const PlatformWorkbasketsPage = () => {
       title={selectedWorkbasket ? `📥 Workbaskets — ${selectedWorkbasket.name}` : '📥 Workbaskets'}
       subtitle="Shared docket queue — pull work into your personal execution list."
       actions={
-        <Link to={ROUTES.CREATE_CASE(firmSlug)} className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 rounded-lg shadow-sm hover:shadow">
-          ✚ Create Docket
-        </Link>
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+            className="inline-flex items-center gap-1.5 px-4 py-2 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 active:bg-gray-100 text-sm font-semibold text-gray-700 transition-all shadow-sm disabled:opacity-50"
+          >
+            <svg
+              className={`w-4 h-4 text-gray-500 ${isFetching ? 'animate-spin' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5" />
+            </svg>
+            {isFetching ? 'Refreshing…' : 'Refresh'}
+          </button>
+          <Link to={ROUTES.CREATE_CASE(firmSlug)} className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 rounded-lg shadow-sm hover:shadow">
+            ✚ Create Docket
+          </Link>
+        </div>
       }
     >
       <StatusMessageStack
@@ -261,38 +335,7 @@ export const PlatformWorkbasketsPage = () => {
         ]}
       />
 
-      {/* Flat stat row — Notion/HubSpot style KPI strip */}
-      <StatRow
-        items={[
-          { label: '📥 Available', value: isLoading ? '…' : metrics[0]?.value, note: 'dockets in queue' },
-          { label: '👤 Assigned',  value: isLoading ? '…' : metrics[1]?.value, note: 'to team members' },
-          { label: '⏳ Pending',   value: isLoading ? '…' : metrics[2]?.value, note: 'awaiting review' },
-          { label: '⚠️ Escalated', value: isLoading ? '…' : metrics[3]?.value, note: 'need attention' },
-        ]}
-      />
-
-      <PageSection
-        title="🗂️ Shared Intake Queue"
-        description={`${filteredRows.length} dockets waiting to be picked up`}
-        actions={
-          <button
-            type="button"
-            onClick={() => void refetch()}
-            disabled={isFetching}
-            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 active:bg-gray-100 text-sm font-medium text-gray-700 transition-all shadow-sm disabled:opacity-50"
-          >
-            <svg
-              className={`w-4 h-4 text-gray-500 ${isFetching ? 'animate-spin' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5" />
-            </svg>
-            {isFetching ? '⟳ Refreshing…' : '↺ Refresh'}
-          </button>
-        }
-      >
+      <PageSection>
         <SectionToolbar>
           <div className="w-full bg-gray-50/50 border border-gray-100/80 rounded-2xl p-4 mb-6 shadow-inner">
             <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL'}>
@@ -333,11 +376,9 @@ export const PlatformWorkbasketsPage = () => {
                     className="px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                     aria-label="Filter by status"
                   >
-                    <option value="ALL">All Statuses</option>
+                    <option value="ALL">All statuses</option>
                     <option value="UNASSIGNED">Unassigned</option>
-                    <option value="OPEN">Open</option>
                     <option value="ROUTED">Routed</option>
-                    <option value="IN_PROGRESS">In Progress</option>
                   </select>
                   <select
                     value={categoryFilter}
@@ -419,18 +460,28 @@ export const PlatformWorkbasketsPage = () => {
                 label: (
                   <input
                     type="checkbox"
-                    checked={selectedIds.length === filteredRows.length && filteredRows.length > 0}
+                    checked={selectedIds.length === sortedRows.length && sortedRows.length > 0}
                     onChange={handleSelectAll}
                     className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500/20 cursor-pointer"
                   />
                 ),
-                widthClass: 'platform-table-select-col'
+                widthClass: 'platform-table-select-col',
+                width: '40px'
               },
-              'Docket ID', 'Client ID', 'Client Name', 'Category / Subcategory', 'SLA Due', 'SLA Days', 'Updated'
+              { key: 'docketId', label: 'Docket ID', sortable: true, width: '150px' },
+              { key: 'clientId', label: 'Client ID', sortable: true, width: '100px' },
+              { key: 'clientName', label: 'Client Name', sortable: true, width: '160px' },
+              { key: 'category', label: 'Category / Subcategory', sortable: true, width: '260px' },
+              { key: 'status', label: 'Status', sortable: true, width: '120px' },
+              { key: 'slaDue', label: 'SLA Due', sortable: true, width: '130px' },
+              { key: 'slaDays', label: 'SLA Days', sortable: true, width: '110px' },
+              { key: 'updated', label: 'Updated', sortable: true, width: '120px' }
             ]}
             compact
             tableClassName="w-full text-left border-collapse"
-            rows={filteredRows.map((r) => {
+            sortState={sortState}
+            onSortChange={setSortState}
+            rows={sortedRows.map((r) => {
               const rId = getDocketRouteId(r);
               return (
                 <tr key={r.caseInternalId || r._id} className="hover:bg-gray-50/70 border-b border-gray-50 last:border-b-0 transition-colors duration-150">
@@ -460,6 +511,12 @@ export const PlatformWorkbasketsPage = () => {
                         {r.subcategory}
                       </span>
                     )}
+                  </td>
+                  <td className="px-6 py-4 text-sm font-semibold">
+                    <StatusBadge
+                      status={r.routedToTeamId ? 'ROUTED' : 'UNASSIGNED'}
+                      label={r.routedToTeamId ? 'Routed' : 'Unassigned'}
+                    />
                   </td>
                   <td className="px-6 py-4 text-gray-500 text-sm font-medium">{r.slaDueAt ? formatDateLabel(r.slaDueAt) : '—'}</td>
                   <td className="px-6 py-4 text-sm font-medium">{formatSlaDays(r.slaDueAt)}</td>

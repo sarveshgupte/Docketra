@@ -103,19 +103,37 @@ class StorageBackupService {
       };
     }
     if (typeof provider.getOrCreateFolder === 'function' && typeof provider.uploadFile === 'function') {
-      const root = await provider.getOrCreateFolder(null, 'Docketra');
-      const firmFolder = await provider.getOrCreateFolder(root, String(firmId));
-      const backups = await provider.getOrCreateFolder(firmFolder, DEFAULT_BACKUP_FOLDER);
+      try {
+        const root = await provider.getOrCreateFolder(null, 'Docketra');
+        const firmFolder = await provider.getOrCreateFolder(root, String(firmId));
+        const backups = await provider.getOrCreateFolder(firmFolder, DEFAULT_BACKUP_FOLDER);
+        const targetName = objectKey.split('/').pop();
+        const uploaded = await provider.uploadFile(
+          backups,
+          targetName,
+          fs.createReadStream(archivePath),
+          'application/octet-stream'
+        );
+        return {
+          archiveObjectKey: `${BACKUP_PATH_PREFIX}/${targetName}`,
+          providerFileId: uploaded?.fileId || null,
+        };
+      } catch (err) {
+        log.warn('[BACKUP] Nested folder creation failed. Falling back to root upload.', { err: err.message });
+      }
+    }
+    if (typeof provider.uploadFile === 'function') {
       const targetName = objectKey.split('/').pop();
+      const parent = provider.providerName === 'onedrive' ? 'root' : null;
       const uploaded = await provider.uploadFile(
-        backups,
+        parent,
         targetName,
         fs.createReadStream(archivePath),
         'application/octet-stream'
       );
       return {
-        archiveObjectKey: `${BACKUP_PATH_PREFIX}/${targetName}`,
-        providerFileId: uploaded?.fileId || null,
+        archiveObjectKey: targetName,
+        providerFileId: uploaded?.fileId || uploaded?.id || targetName,
       };
     }
     throw new Error('Connected storage provider does not support server-side stream uploads yet');
@@ -125,7 +143,7 @@ class StorageBackupService {
     if (provider && typeof provider.generateDownloadUrl === 'function' && providerFileId) {
       return provider.generateDownloadUrl(providerFileId, LINK_TTL_SECONDS);
     }
-    if (provider && provider.providerName === 'google-drive' && providerFileId) {
+    if (provider && (provider.providerName === 'google-drive' || provider.providerName === 'docketra_managed') && providerFileId) {
       return `https://drive.google.com/file/d/${encodeURIComponent(providerFileId)}/view`;
     }
     return null;
@@ -240,6 +258,25 @@ class StorageBackupService {
         metadata: { archiveObjectKey, checksum, size, providerFileId },
       });
 
+      if (options.sendEmail) {
+        try {
+          const deliveryPolicy = firm?.settings?.storageBackup?.deliveryPolicy || 'link_only';
+          const attachmentPath = deliveryPolicy === 'attachment' ? encryptedPath : null;
+          const downloadUrl = await this.createProviderDownloadUrl({ provider, providerFileId });
+
+          await this.emailBackupNotification({
+            firmId,
+            exportId,
+            downloadUrl,
+            success: true,
+            recipients: options.recipients || [],
+            attachmentPath,
+          });
+        } catch (emailError) {
+          log.error('[BACKUP]', { event: 'backup_email_failed', firmId: String(firmId), message: emailError.message });
+        }
+      }
+
       return {
         exportId,
         archiveObjectKey,
@@ -265,6 +302,21 @@ class StorageBackupService {
         entityId: exportId,
         metadata: { message: error.message },
       });
+
+      if (options.sendEmail) {
+        try {
+          await this.emailBackupNotification({
+            firmId,
+            exportId,
+            downloadUrl: null,
+            success: false,
+            recipients: options.recipients || [],
+          });
+        } catch (emailError) {
+          log.error('[BACKUP]', { event: 'backup_email_failed', firmId: String(firmId), message: emailError.message });
+        }
+      }
+
       throw error;
     } finally {
       if (encryptedPath) await fsp.rm(encryptedPath, { force: true }).catch(() => {});
@@ -302,7 +354,7 @@ class StorageBackupService {
     };
   }
 
-  async emailBackupNotification({ firmId, exportId, downloadUrl, success = true, recipients = [] }) {
+  async emailBackupNotification({ firmId, exportId, downloadUrl, success = true, recipients = [], attachmentPath = null }) {
     const resolvedRecipients = recipients.length
       ? recipients
       : await this.resolveDefaultRecipients(firmId);
@@ -312,16 +364,40 @@ class StorageBackupService {
     const subject = success
       ? 'Docketra backup completed'
       : 'Docketra backup failed';
-    const text = success
-      ? `Backup ${exportId} completed. Retrieve it securely here: ${downloadUrl}`
+    
+    let text = success
+      ? `Backup ${exportId} completed.`
       : `Backup ${exportId} failed. Review backup status in admin settings.`;
 
-    await emailService.sendEmail({
+    if (downloadUrl) {
+      text += ` Retrieve it securely here: ${downloadUrl}`;
+    }
+
+    const mailOptions = {
       to: resolvedRecipients.join(','),
       subject,
       text,
       html: `<p>${text}</p>`,
-    });
+    };
+
+    if (attachmentPath && fs.existsSync(attachmentPath)) {
+      try {
+        const fileBuffer = await fsp.readFile(attachmentPath);
+        const base64Content = fileBuffer.toString('base64');
+        const fileName = path.basename(attachmentPath);
+        mailOptions.attachments = [
+          {
+            content: base64Content,
+            name: fileName,
+          }
+        ];
+      } catch (err) {
+        log.error('[BACKUP] Failed to read backup attachment file', { err: err.message });
+      }
+    }
+
+    await emailService.sendDirectAuthEmail(mailOptions);
+    
     await BackupJob.updateOne(
       { firmId: String(firmId), jobId: String(exportId) },
       {
@@ -346,26 +422,33 @@ class StorageBackupService {
   async runNightlyBackupsOnce() {
     const firms = await Firm.find({
       'settings.storageBackup.enabled': true,
-      'storage.mode': 'firm_connected',
-      'storageConfig.provider': { $ne: null },
     }).select('_id settings.storageBackup').lean();
 
     for (const firm of firms) {
       try {
-        const result = await this.runBackupForFirm(firm._id, {
+        const frequency = firm?.settings?.storageBackup?.frequency || 'daily';
+        if (frequency === 'disabled') continue;
+
+        if (frequency === 'weekly' || frequency === 'monthly') {
+          const lastJob = await BackupJob.findOne({
+            firmId: String(firm._id),
+            status: 'success',
+          }).sort({ startedAt: -1 }).lean();
+
+          if (lastJob && lastJob.startedAt) {
+            const daysSinceLastBackup = (Date.now() - new Date(lastJob.startedAt).getTime()) / (1000 * 60 * 60 * 24);
+            const thresholdDays = frequency === 'weekly' ? 7 : 30;
+            if (daysSinceLastBackup < thresholdDays - 0.1) {
+              log.info('[BACKUP]', { event: 'scheduled_backup_skipped_frequency', firmId: String(firm._id), frequency, daysSinceLastBackup });
+              continue;
+            }
+          }
+        }
+
+        await this.runBackupForFirm(firm._id, {
           sendEmail: true,
           recipients: firm?.settings?.storageBackup?.notificationRecipients || [],
         });
-        const access = await this.buildBackupAccess({ firmId: firm._id, exportId: result.exportId });
-        if (access?.downloadUrl) {
-          await this.emailBackupNotification({
-            firmId: firm._id,
-            exportId: result.exportId,
-            downloadUrl: access.downloadUrl,
-            success: true,
-            recipients: firm?.settings?.storageBackup?.notificationRecipients || [],
-          });
-        }
       } catch (error) {
         log.error('[BACKUP]', {
           event: 'nightly_backup_failed',

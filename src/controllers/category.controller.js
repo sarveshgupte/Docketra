@@ -7,6 +7,12 @@ const { logAuthEvent } = require('../services/audit.service');
 const log = require('../utils/log');
 const { validateCategoryMappedWorkbasket } = require('../services/categoryWorkbasketValidation.service');
 const { suggestDocketCategory } = require('../services/docketCategorySuggestion.service');
+const {
+  createUploadIntent,
+  finalizeUpload,
+  deleteKnowledgeFile,
+  hydrateKnowledgeFiles,
+} = require('../services/categoryKnowledgeFile.service');
 
 const normalizeDeadlineRule = (input = {}) => {
   if (!input || typeof input !== 'object') return { mode: 'NONE', allowManualOverride: true };
@@ -46,23 +52,60 @@ const normalizeSopLinks = (links = []) => {
     .filter(Boolean);
 };
 
-const normalizeSubcategorySop = (input = {}, { actorXID } = {}) => {
+const normalizeSopFiles = (files = []) => {
+  if (!Array.isArray(files)) return [];
+  return files.slice(0, 50)
+    .map((file, index) => {
+      const fileName = typeof file?.fileName === 'string' ? file.fileName.trim() : '';
+      const mimeType = typeof file?.mimeType === 'string' ? file.mimeType.trim() : '';
+      const storageProvider = typeof file?.storageProvider === 'string' ? file.storageProvider.trim() : '';
+      if (!fileName || !mimeType || !storageProvider) return null;
+      return {
+        id: String(file?.id || new mongoose.Types.ObjectId()).trim(),
+        fileName,
+        mimeType,
+        size: Number.isFinite(Number(file?.size)) ? Number(file.size) : 0,
+        storageProvider,
+        storageFileId: typeof file?.storageFileId === 'string' ? file.storageFileId.trim() : null,
+        objectKey: typeof file?.objectKey === 'string' ? file.objectKey.trim() : null,
+        webViewLink: typeof file?.webViewLink === 'string' ? file.webViewLink.trim() : null,
+        uploadedAt: file?.uploadedAt ? new Date(file.uploadedAt) : new Date(),
+        uploadedByXID: file?.uploadedByXID ? String(file.uploadedByXID).trim() : null,
+        uploadedByName: file?.uploadedByName ? String(file.uploadedByName).trim() : null,
+        description: typeof file?.description === 'string' ? file.description.trim() : '',
+        sortOrder: Number.isFinite(Number(file?.sortOrder)) ? Number(file.sortOrder) : index,
+      };
+    })
+    .filter(Boolean);
+};
+
+const normalizeSubcategorySop = (input = {}, { actorXID, existingSop = null } = {}) => {
   if (!input || typeof input !== 'object') {
-    return { title: '', body: '', format: 'plain_text', lastUpdatedAt: null, lastUpdatedByXID: null };
+    return {
+      title: '',
+      body: '',
+      format: 'plain_text',
+      lastUpdatedAt: null,
+      lastUpdatedByXID: null,
+      links: [],
+      files: [],
+    };
   }
 
   const title = typeof input.title === 'string' ? input.title.trim() : '';
   const body = typeof input.body === 'string' ? input.body : '';
   const format = input.format === 'markdown' ? 'markdown' : 'plain_text';
   const hasContent = Boolean(title || body);
+  const files = input.files !== undefined ? normalizeSopFiles(input.files) : normalizeSopFiles(existingSop?.files || []);
 
   return {
     title,
     body,
     format,
     links: normalizeSopLinks(input.links),
-    lastUpdatedAt: hasContent ? new Date() : null,
-    lastUpdatedByXID: hasContent && actorXID ? String(actorXID).trim() : null,
+    files,
+    lastUpdatedAt: hasContent || files.length > 0 ? new Date() : null,
+    lastUpdatedByXID: (hasContent || files.length > 0) && actorXID ? String(actorXID).trim() : null,
   };
 };
 
@@ -78,6 +121,9 @@ const normalizeChecklistTemplate = (items = []) => {
     dueOffsetDays: item?.dueOffsetDays === undefined ? undefined : Number(item.dueOffsetDays),
   }));
 };
+
+const normalizeSlaDays = (value) => Math.max(0, Number(value) || 0);
+const normalizeQcPercent = (value) => Math.min(100, Math.max(0, Math.round(Number(value) || 0)));
 
 /**
  * Category Controller for Admin-Managed Categories
@@ -135,11 +181,15 @@ const getCategories = async (req, res) => {
     const filter = shouldFilterActiveOnly ? { ...firmScope, isActive: true } : { ...firmScope };
     
     const categories = await Category.find(filter).sort({ name: 1 });
+    const hydratedCategories = await Promise.all(categories.map((category) => hydrateKnowledgeFiles({
+      firmId: category?.firmId || firmScope.firmId || req.user?.firmId,
+      category,
+    })));
     
     res.json({
       success: true,
-      data: categories,
-      count: categories.length,
+      data: hydratedCategories,
+      count: hydratedCategories.length,
     });
   } catch (error) {
     res.status(500).json({
@@ -168,9 +218,14 @@ const getCategoryById = async (req, res) => {
       });
     }
     
+    const hydratedCategory = await hydrateKnowledgeFiles({
+      firmId: category?.firmId || firmScope.firmId || req.user?.firmId,
+      category,
+    });
+
     res.json({
       success: true,
-      data: category,
+      data: hydratedCategory,
     });
   } catch (error) {
     res.status(500).json({
@@ -186,7 +241,7 @@ const getCategoryById = async (req, res) => {
  */
 const createCategory = async (req, res) => {
   try {
-    const { name, defaultSlaDays = 0, requiresRelatedEmployeeUser = false } = req.body;
+    const { name, defaultSlaDays = 0, qcPercent = 0, requiresRelatedEmployeeUser = false } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -216,7 +271,8 @@ const createCategory = async (req, res) => {
       name: name.trim(),
       subcategories: [],
       isActive: true,
-      defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
+      defaultSlaDays: normalizeSlaDays(defaultSlaDays),
+      qcPercent: normalizeQcPercent(qcPercent),
       requiresRelatedEmployeeUser: requiresRelatedEmployeeUser === true,
     });
     
@@ -228,6 +284,7 @@ const createCategory = async (req, res) => {
         categoryId: category._id?.toString(),
         categoryName: category.name,
         defaultSlaDays: category.defaultSlaDays,
+        qcPercent: category.qcPercent,
       },
     });
     
@@ -251,7 +308,7 @@ const createCategory = async (req, res) => {
 const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, defaultSlaDays, requiresRelatedEmployeeUser } = req.body;
+    const { name, defaultSlaDays, qcPercent, requiresRelatedEmployeeUser } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -288,7 +345,10 @@ const updateCategory = async (req, res) => {
     
     category.name = name.trim();
     if (typeof defaultSlaDays !== 'undefined') {
-      category.defaultSlaDays = Math.max(0, Number(defaultSlaDays) || 0);
+      category.defaultSlaDays = normalizeSlaDays(defaultSlaDays);
+    }
+    if (typeof qcPercent !== 'undefined') {
+      category.qcPercent = normalizeQcPercent(qcPercent);
     }
     if (typeof requiresRelatedEmployeeUser !== 'undefined') {
       category.requiresRelatedEmployeeUser = requiresRelatedEmployeeUser === true;
@@ -301,6 +361,7 @@ const updateCategory = async (req, res) => {
         categoryId: category._id?.toString(),
         categoryName: category.name,
         defaultSlaDays: category.defaultSlaDays,
+        qcPercent: category.qcPercent,
       },
     });
     
@@ -382,7 +443,7 @@ const toggleCategoryStatus = async (req, res) => {
 const addSubcategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, defaultSlaDays = 0, workbasketId, deadlineRule, checklistTemplate, sop, requiresRelatedEmployeeUser = false } = req.body;
+    const { name, defaultSlaDays = 0, qcPercent = 0, workbasketId, deadlineRule, checklistTemplate, sop, requiresRelatedEmployeeUser = false } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -440,7 +501,8 @@ const addSubcategory = async (req, res) => {
       name: name.trim(),
       workbasketId: workbasket._id,
       isActive: true,
-      defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
+      defaultSlaDays: normalizeSlaDays(defaultSlaDays),
+      qcPercent: normalizeQcPercent(qcPercent),
       requiresRelatedEmployeeUser: requiresRelatedEmployeeUser === true,
       ...(typeof deadlineRule !== 'undefined' ? { deadlineRule: normalizeDeadlineRule(deadlineRule) } : {}),
       checklistTemplate: normalizeChecklistTemplate(checklistTemplate || []),
@@ -457,7 +519,8 @@ const addSubcategory = async (req, res) => {
         subcategoryId,
         subcategoryName: name.trim(),
         workbasketId: String(workbasket._id),
-        defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
+        defaultSlaDays: normalizeSlaDays(defaultSlaDays),
+        qcPercent: normalizeQcPercent(qcPercent),
       },
     });
     
@@ -481,7 +544,7 @@ const addSubcategory = async (req, res) => {
 const updateSubcategory = async (req, res) => {
   try {
     const { id, subcategoryId } = req.params;
-    const { name, defaultSlaDays, workbasketId, deadlineRule, checklistTemplate, sop, requiresRelatedEmployeeUser } = req.body;
+    const { name, defaultSlaDays, qcPercent, workbasketId, deadlineRule, checklistTemplate, sop, requiresRelatedEmployeeUser } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -572,7 +635,10 @@ const updateSubcategory = async (req, res) => {
       }
     }
     if (typeof defaultSlaDays !== 'undefined') {
-      subcategory.defaultSlaDays = Math.max(0, Number(defaultSlaDays) || 0);
+      subcategory.defaultSlaDays = normalizeSlaDays(defaultSlaDays);
+    }
+    if (typeof qcPercent !== 'undefined') {
+      subcategory.qcPercent = normalizeQcPercent(qcPercent);
     }
     if (typeof requiresRelatedEmployeeUser !== 'undefined') {
       subcategory.requiresRelatedEmployeeUser = requiresRelatedEmployeeUser === true;
@@ -584,7 +650,7 @@ const updateSubcategory = async (req, res) => {
       subcategory.checklistTemplate = normalizeChecklistTemplate(checklistTemplate);
     }
     if (typeof sop !== 'undefined') {
-      subcategory.sop = normalizeSubcategorySop(sop, { actorXID: req.user?.xID });
+      subcategory.sop = normalizeSubcategorySop(sop, { actorXID: req.user?.xID, existingSop: subcategory.sop });
     }
     await category.save();
     await safeLogCategoryMutation(req, {
@@ -597,6 +663,7 @@ const updateSubcategory = async (req, res) => {
         subcategoryName: subcategory.name,
         workbasketId: subcategory.workbasketId ? String(subcategory.workbasketId) : null,
         defaultSlaDays: subcategory.defaultSlaDays,
+        qcPercent: subcategory.qcPercent,
       },
     });
     
@@ -610,6 +677,161 @@ const updateSubcategory = async (req, res) => {
       success: false,
       message: 'Error updating subcategory',
     });
+  }
+};
+
+const createSubcategoryKnowledgeFileUploadIntent = async (req, res) => {
+  try {
+    const { id, subcategoryId } = req.params;
+    const { fileName, mimeType, size } = req.body || {};
+    const firmScope = resolveCategoryFirmScope(req, res);
+    if (!firmScope) return;
+
+    const category = await Category.findOne({ _id: id, ...firmScope }).select('_id subcategories');
+    if (!category) {
+      return res.status(404).json({ success: false, message: 'Category not found' });
+    }
+    const subcategory = category.subcategories.find((sub) => String(sub.id) === String(subcategoryId));
+    if (!subcategory) {
+      return res.status(404).json({ success: false, message: 'Subcategory not found' });
+    }
+
+    const intent = await createUploadIntent({
+      firmId: firmScope.firmId,
+      categoryId: id,
+      subcategoryId,
+      fileName,
+      mimeType,
+      size,
+    });
+
+    return res.status(201).json({
+      success: true,
+      data: intent,
+    });
+  } catch (error) {
+    if (error?.status) {
+      return res.status(error.status).json({ success: false, message: error.message, code: error.code || undefined });
+    }
+    log.error('[CATEGORY] Failed to create knowledge file upload intent', error.message);
+    return res.status(500).json({ success: false, message: 'Unable to create knowledge file upload intent' });
+  }
+};
+
+const finalizeSubcategoryKnowledgeFileUpload = async (req, res) => {
+  try {
+    const { id, subcategoryId } = req.params;
+    const { uploadId, completion = {}, checksum, fileName, mimeType, size } = req.body || {};
+    const firmScope = resolveCategoryFirmScope(req, res);
+    if (!firmScope) return;
+
+    const category = await Category.findOne({ _id: id, ...firmScope }).select('_id subcategories name');
+    if (!category) {
+      return res.status(404).json({ success: false, message: 'Category not found' });
+    }
+    const subcategory = category.subcategories.find((sub) => String(sub.id) === String(subcategoryId));
+    if (!subcategory) {
+      return res.status(404).json({ success: false, message: 'Subcategory not found' });
+    }
+
+    const result = await finalizeUpload({
+      firmId: firmScope.firmId,
+      categoryId: id,
+      subcategoryId,
+      fileName,
+      mimeType,
+      size,
+      completion,
+      checksum,
+      actorXID: req.user?.xID,
+      actorName: req.user?.name || req.user?.email || req.user?.xID || 'System',
+    });
+
+    await safeLogCategoryMutation(req, {
+      description: `Knowledge file uploaded: ${category.name} / ${subcategory.name}`,
+      metadata: {
+        action: 'SUBCATEGORY_KNOWLEDGE_FILE_UPLOADED',
+        categoryId: category._id?.toString(),
+        categoryName: category.name,
+        subcategoryId: subcategory.id,
+        subcategoryName: subcategory.name,
+        fileId: result.file?.id || null,
+        fileName: result.file?.fileName || fileName || null,
+        mimeType: result.file?.mimeType || mimeType || null,
+        size: result.file?.size || size || null,
+      },
+    });
+
+    const hydratedCategory = await hydrateKnowledgeFiles({
+      firmId: firmScope.firmId,
+      category: result.category,
+    });
+    const hydratedSubcategory = hydratedCategory.subcategories.find((sub) => String(sub.id) === String(subcategoryId));
+    const hydratedFile = hydratedSubcategory?.sop?.files?.find((entry) => String(entry.id) === String(result.file?.id));
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        category: hydratedCategory,
+        file: hydratedFile || result.file,
+      },
+    });
+  } catch (error) {
+    if (error?.status) {
+      return res.status(error.status).json({ success: false, message: error.message, code: error.code || undefined });
+    }
+    log.error('[CATEGORY] Failed to finalize knowledge file upload', error.message);
+    return res.status(500).json({ success: false, message: 'Unable to finalize knowledge file upload' });
+  }
+};
+
+const deleteSubcategoryKnowledgeFile = async (req, res) => {
+  try {
+    const { id, subcategoryId, fileId } = req.params;
+    const firmScope = resolveCategoryFirmScope(req, res);
+    if (!firmScope) return;
+
+    const category = await Category.findOne({ _id: id, ...firmScope }).select('_id name subcategories');
+    if (!category) {
+      return res.status(404).json({ success: false, message: 'Category not found' });
+    }
+    const subcategory = category.subcategories.find((sub) => String(sub.id) === String(subcategoryId));
+    if (!subcategory) {
+      return res.status(404).json({ success: false, message: 'Subcategory not found' });
+    }
+
+    const result = await deleteKnowledgeFile({
+      firmId: firmScope.firmId,
+      categoryId: id,
+      subcategoryId,
+      fileId,
+    });
+
+    await safeLogCategoryMutation(req, {
+      description: `Knowledge file removed: ${category.name} / ${subcategory.name}`,
+      metadata: {
+        action: 'SUBCATEGORY_KNOWLEDGE_FILE_DELETED',
+        categoryId: category._id?.toString(),
+        categoryName: category.name,
+        subcategoryId: subcategory.id,
+        subcategoryName: subcategory.name,
+        fileId,
+        fileName: result.file?.fileName || null,
+      },
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        fileId,
+      },
+    });
+  } catch (error) {
+    if (error?.status) {
+      return res.status(error.status).json({ success: false, message: error.message, code: error.code || undefined });
+    }
+    log.error('[CATEGORY] Failed to delete knowledge file', error.message);
+    return res.status(500).json({ success: false, message: 'Unable to delete knowledge file' });
   }
 };
 
@@ -676,109 +898,20 @@ const toggleSubcategoryStatus = async (req, res) => {
   }
 };
 
-/**
- * Delete category (Admin only) - Soft delete
- * DELETE /api/categories/:id
- * 
- * PR #39: Safe deletion - Sets isActive to false
- * Category remains in database for historical cases
- */
 const deleteCategory = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const firmScope = resolveCategoryFirmScope(req, res);
-    if (!firmScope) return;
-    
-    const category = await Category.findOne({ _id: id, ...firmScope });
-    
-    if (!category) {
-      return res.status(404).json({
-        success: false,
-        message: 'Category not found',
-      });
-    }
-    
-    // Soft delete - set isActive to false
-    category.isActive = false;
-    await category.save();
-    await safeLogCategoryMutation(req, {
-      description: `Category deactivated: ${category.name}`,
-      metadata: {
-        action: 'CATEGORY_DELETED_SOFT',
-        categoryId: category._id?.toString(),
-        categoryName: category.name,
-      },
-    });
-    
-    res.json({
-      success: true,
-      data: category,
-      message: 'Category deactivated successfully',
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: 'Error deleting category',
-    });
-  }
+  return res.status(405).json({
+    success: false,
+    message: 'Categories cannot be deleted. Disable the category instead.',
+    code: 'CATEGORY_DELETE_DISABLED',
+  });
 };
 
-/**
- * Delete subcategory (Admin only) - Soft delete
- * DELETE /api/categories/:id/subcategories/:subcategoryId
- * 
- * PR #39: Safe deletion - Sets isActive to false
- * Subcategory remains in database for historical cases
- */
 const deleteSubcategory = async (req, res) => {
-  try {
-    const { id, subcategoryId } = req.params;
-    const firmScope = resolveCategoryFirmScope(req, res);
-    if (!firmScope) return;
-    
-    const category = await Category.findOne({ _id: id, ...firmScope });
-    
-    if (!category) {
-      return res.status(404).json({
-        success: false,
-        message: 'Category not found',
-      });
-    }
-    
-    const subcategory = category.subcategories.find(sub => sub.id === subcategoryId);
-    
-    if (!subcategory) {
-      return res.status(404).json({
-        success: false,
-        message: 'Subcategory not found',
-      });
-    }
-    
-    // Soft delete - set isActive to false
-    subcategory.isActive = false;
-    await category.save();
-    await safeLogCategoryMutation(req, {
-      description: `Subcategory deactivated: ${category.name} / ${subcategory.name}`,
-      metadata: {
-        action: 'SUBCATEGORY_DELETED_SOFT',
-        categoryId: category._id?.toString(),
-        categoryName: category.name,
-        subcategoryId: subcategory.id,
-        subcategoryName: subcategory.name,
-      },
-    });
-    
-    res.json({
-      success: true,
-      data: category,
-      message: 'Subcategory deactivated successfully',
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: 'Error deleting subcategory',
-    });
-  }
+  return res.status(405).json({
+    success: false,
+    message: 'Subcategories cannot be deleted. Disable the subcategory instead.',
+    code: 'SUBCATEGORY_DELETE_DISABLED',
+  });
 };
 
 
@@ -814,6 +947,9 @@ module.exports = {
   deleteCategory: wrapWriteHandler(deleteCategory),
   addSubcategory: wrapWriteHandler(addSubcategory),
   updateSubcategory: wrapWriteHandler(updateSubcategory),
+  createSubcategoryKnowledgeFileUploadIntent: wrapWriteHandler(createSubcategoryKnowledgeFileUploadIntent),
+  finalizeSubcategoryKnowledgeFileUpload: wrapWriteHandler(finalizeSubcategoryKnowledgeFileUpload),
+  deleteSubcategoryKnowledgeFile: wrapWriteHandler(deleteSubcategoryKnowledgeFile),
   toggleSubcategoryStatus: wrapWriteHandler(toggleSubcategoryStatus),
   deleteSubcategory: wrapWriteHandler(deleteSubcategory),
   suggestCategory,

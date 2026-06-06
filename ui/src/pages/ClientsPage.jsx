@@ -334,18 +334,9 @@ export const ClientsPage = () => {
     const email = clientForm.businessEmail.trim();
 
     if (!name) nextErrors.businessName = 'Business name is required.';
-    if (!email) nextErrors.businessEmail = 'Business email is required.';
     if (email && !EMAIL_REGEX.test(email)) nextErrors.businessEmail = 'Enter a valid business email address.';
-    if (!clientForm.primaryContactNumber.trim()) nextErrors.primaryContactNumber = 'Business contact number is required.';
-    if (!clientForm.businessAddress.trim()) nextErrors.businessAddress = 'Business address is required.';
-    if (!clientForm.city.trim()) nextErrors.city = 'City is required.';
-    if (!clientForm.state.trim()) nextErrors.state = 'State is required.';
-    if (!clientForm.pincode.trim()) nextErrors.pincode = 'Pincode is required.';
     if (clientForm.pincode.trim() && !PINCODE_REGEX.test(clientForm.pincode.trim())) nextErrors.pincode = 'Enter a valid 6-digit pincode.';
-    if (!clientForm.contactPersonName.trim()) nextErrors.contactPersonName = 'Contact person name is required.';
-    if (!clientForm.contactPersonEmail.trim()) nextErrors.contactPersonEmail = 'Contact person email is required.';
     if (clientForm.contactPersonEmail.trim() && !EMAIL_REGEX.test(clientForm.contactPersonEmail.trim())) nextErrors.contactPersonEmail = 'Enter a valid contact person email address.';
-    if (!clientForm.contactPersonPhone.trim()) nextErrors.contactPersonPhone = 'Contact person phone is required.';
 
     setClientFormErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;

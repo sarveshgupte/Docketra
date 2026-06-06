@@ -132,22 +132,12 @@ const groupNotificationsByDate = (items) => {
 export function NotificationHistoryView() {
   const { firmSlug } = useParams();
   const navigate = useNavigate();
-  
-  // Tabs & Filters State
-  const [activeTab, setActiveTab] = useState('feed');
-  const [filterType, setFilterType] = useState('ALL');
 
   // Notifications State
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
-
-  // Preferences Toggles State
-  const [preferences, setPreferences] = useState(null);
-  const [prefLoading, setPrefLoading] = useState(false);
-  const [showSavedBanner, setShowSavedBanner] = useState(false);
-  const bannerTimeoutRef = useRef(null);
 
   // Hydrate Notifications
   const loadNotifications = useCallback(async () => {
@@ -169,26 +159,10 @@ export function NotificationHistoryView() {
     }
   }, []);
 
-  // Hydrate Preferences
-  const loadPreferences = useCallback(async () => {
-    setPrefLoading(true);
-    try {
-      const response = await notificationsApi.getPreferences();
-      if (response?.data) {
-        setPreferences(response.data);
-      }
-    } catch {
-      // Keep state neutral
-    } finally {
-      setPrefLoading(false);
-    }
-  }, []);
-
   // Initial Fetch
   useEffect(() => {
     void loadNotifications();
-    void loadPreferences();
-  }, [loadNotifications, loadPreferences]);
+  }, [loadNotifications]);
 
   // Real-time socket updates for dynamic history view
   useEffect(() => {
@@ -222,28 +196,16 @@ export function NotificationHistoryView() {
     };
   }, []);
 
-  // Filter & Paginate Feed items
-  const filteredRows = useMemo(() => {
-    return items.filter((item) => {
-      if (filterType === 'ALL') return true;
-      const type = String(item.type || '').toUpperCase();
-      if (filterType === 'ASSIGNMENTS') {
-        return type === 'DOCKET_ASSIGNED' || type === 'DOCKET_REASSIGNED';
-      }
-      if (filterType === 'COMMENTS') {
-        return type === 'COMMENT_ADDED' || type === 'MENTION';
-      }
-      if (filterType === 'SLA') {
-        return type === 'SLA_BREACHED' || type === 'DOCKET_OVERDUE' || type === 'DOCKET_DUE_SOON';
-      }
-      if (filterType === 'SYSTEM') {
-        return type !== 'DOCKET_ASSIGNED' && type !== 'DOCKET_REASSIGNED' && type !== 'COMMENT_ADDED' && type !== 'MENTION' && type !== 'SLA_BREACHED' && type !== 'DOCKET_OVERDUE' && type !== 'DOCKET_DUE_SOON';
-      }
-      return true;
+  // Sort Feed items in descending order of creation date
+  const sortedItems = useMemo(() => {
+    return [...items].sort((a, b) => {
+      const dateA = new Date(a.created_at || a.createdAt || 0).getTime();
+      const dateB = new Date(b.created_at || b.createdAt || 0).getTime();
+      return dateB - dateA;
     });
-  }, [items, filterType]);
+  }, [items]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(sortedItems.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
 
   useEffect(() => {
@@ -254,8 +216,8 @@ export function NotificationHistoryView() {
 
   const paginatedRows = useMemo(() => {
     const sliceStart = (safePage - 1) * PAGE_SIZE;
-    return filteredRows.slice(sliceStart, sliceStart + PAGE_SIZE);
-  }, [filteredRows, safePage]);
+    return sortedItems.slice(sliceStart, sliceStart + PAGE_SIZE);
+  }, [sortedItems, safePage]);
 
   const groupedFeed = useMemo(() => {
     return groupNotificationsByDate(paginatedRows);
@@ -292,328 +254,136 @@ export function NotificationHistoryView() {
     }
   };
 
-  // Preference Toggle Handler
-  const handlePreferenceToggle = async (type, channel) => {
-    if (!preferences) return;
-
-    // Mutate state optimistically
-    const updatedPrefs = { ...preferences };
-    if (!updatedPrefs.typeChannels) {
-      updatedPrefs.typeChannels = {};
-    }
-    if (!updatedPrefs.typeChannels[type]) {
-      // Populate defaults if not configured
-      updatedPrefs.typeChannels[type] = {
-        inApp: preferences.defaultChannels?.inApp ?? true,
-        email: preferences.defaultChannels?.email ?? false,
-      };
-    }
-
-    updatedPrefs.typeChannels[type][channel] = !updatedPrefs.typeChannels[type][channel];
-    setPreferences(updatedPrefs);
-
-    try {
-      await notificationsApi.updatePreferences(updatedPrefs);
-      
-      // Visual feedback success banner
-      if (bannerTimeoutRef.current) {
-        clearTimeout(bannerTimeoutRef.current);
-      }
-      setShowSavedBanner(true);
-      bannerTimeoutRef.current = setTimeout(() => {
-        setShowSavedBanner(false);
-      }, 2500);
-    } catch {
-      // Revert if API failed
-      loadPreferences();
-    }
-  };
-
-  const corePreferencesList = [
-    {
-      type: 'DOCKET_ASSIGNED',
-      name: 'Docket Assignments',
-      description: 'Get notified immediately when dockets are assigned or reassigned to your queue.',
-    },
-    {
-      type: 'COMMENT_ADDED',
-      name: 'Team Comments & Mentions',
-      description: 'Get notified when someone comments on your docket or tags you (@User) in comment activity.',
-    },
-    {
-      type: 'SLA_BREACHED',
-      name: 'SLA Warnings & Overdue Alerts',
-      description: 'Critical alerts regarding approaching case deadlines, SLA breaches, and calendar limits.',
-    },
-    {
-      type: 'DOCKET_ROUTED_TO_WORKBASKET',
-      name: 'Workbasket & QC Routing',
-      description: 'Receive alerts when dockets are routed to workbaskets or returned from Quality Control check.',
-    },
-    {
-      type: 'CLIENT_UPLOAD',
-      name: 'Client Activity & Uploads',
-      description: 'Get notified when a client uploads documents to their shared workspaces.',
-    },
-  ];
-
   return (
     <PlatformShell
       title="Notification Hub"
-      subtitle="Manage your inbox settings, toggle push notifications, and monitor live workspace alerts."
-      actions={(
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {showSavedBanner ? (
-            <span className="status-saved-banner">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              Preferences saved
-            </span>
-          ) : null}
-          <Button type="button" variant="outline" onClick={() => navigate(ROUTES.DASHBOARD(firmSlug))}>
-            Back to Dashboard
-          </Button>
-        </div>
-      )}
+      subtitle="Monitor live workspace alerts and track active docket updates."
+      actions={
+        <Button type="button" variant="outline" onClick={() => navigate(ROUTES.DASHBOARD(firmSlug))}>
+          Back to Dashboard
+        </Button>
+      }
     >
       <div className="platform-page notification-history">
-        
-        {/* Navigation Tabs */}
-        <div className="notifications-tabs" aria-label="Notification Hub tabs">
-          <button
-            type="button"
-            className={`notifications-tab ${activeTab === 'feed' ? 'notifications-tab--active' : ''}`}
-            onClick={() => setActiveTab('feed')}
-          >
-            🔔 Activity Feed
-            {unreadCount > 0 ? (
-              <span style={{ fontSize: 11, background: '#ef4444', color: 'white', padding: '1px 6px', borderRadius: 10, fontWeight: 700 }}>
-                {unreadCount}
-              </span>
-            ) : null}
-          </button>
-          <button
-            type="button"
-            className={`notifications-tab ${activeTab === 'settings' ? 'notifications-tab--active' : ''}`}
-            onClick={() => setActiveTab('settings')}
-          >
-            ⚙️ Preferences & Settings
-          </button>
-        </div>
-
-        {activeTab === 'feed' ? (
-          <PageSection>
-            {/* Toolbar: Category Filters & Bulk Actions */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
-              <div className="notification-filters">
-                {['ALL', 'ASSIGNMENTS', 'COMMENTS', 'SLA', 'SYSTEM'].map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    className={`notification-filter-btn ${filterType === cat ? 'notification-filter-btn--active' : ''}`}
-                    onClick={() => {
-                      setFilterType(cat);
-                      setPage(1);
-                    }}
-                  >
-                    {cat.toLowerCase().replace(/^\w/, (c) => c.toUpperCase())}
-                  </button>
-                ))}
-              </div>
-
-              {!loading && !error && unreadCount > 0 ? (
-                <Button type="button" variant="outline" onClick={markAllNotificationsRead}>
-                  Mark all as read
-                </Button>
-              ) : null}
+        <PageSection>
+          {/* Toolbar: Bulk Actions */}
+          {!loading && !error && unreadCount > 0 ? (
+            <div className="notification-history__bulk-actions">
+              <Button type="button" variant="outline" onClick={markAllNotificationsRead}>
+                Mark all as read
+              </Button>
             </div>
+          ) : null}
 
-            {loading ? <LoadingState label="Hydrating notification feed..." /> : null}
+          {loading ? <LoadingState label="Hydrating notification feed..." /> : null}
 
-            {!loading && error ? (
-              <ErrorState
-                title="Failed to load notifications"
-                body="Please try reloading your notifications feed."
-                actionLabel="Retry feed reload"
-                onAction={loadNotifications}
-                boxed
-              />
-            ) : null}
+          {!loading && error ? (
+            <ErrorState
+              title="Failed to load notifications"
+              body="Please try reloading your notifications feed."
+              actionLabel="Retry feed reload"
+              onAction={loadNotifications}
+              boxed
+            />
+          ) : null}
 
-            {!loading && !error && filteredRows.length === 0 ? (
-              <EmptyState
-                title={`No ${filterType === 'ALL' ? '' : filterType.toLowerCase() + ' '}notifications`}
-                body="Updates and activity reports will be compiled and displayed here."
-                boxed
-              />
-            ) : null}
+          {!loading && !error && sortedItems.length === 0 ? (
+            <EmptyState
+              title="No notifications"
+              body="Updates and activity reports will be compiled and displayed here."
+              boxed
+            />
+          ) : null}
 
-            {!loading && !error && filteredRows.length > 0 ? (
-              <>
-                {/* List Grouped by Date */}
-                {Object.entries(groupedFeed).map(([groupName, groupItems]) => {
-                  if (groupItems.length === 0) return null;
+          {!loading && !error && sortedItems.length > 0 ? (
+            <>
+              {/* List Grouped by Date */}
+              {Object.entries(groupedFeed).map(([groupName, groupItems]) => {
+                if (groupItems.length === 0) return null;
 
-                  return (
-                    <div key={groupName} className="notification-group">
-                      <h3 className="notification-group-title">{groupName}</h3>
-                      <div className="notification-history__list" style={{ display: 'grid', gap: 12 }}>
-                        {groupItems.map((item) => {
-                          const isRead = item.read || item.isRead;
-                          const docketId = item.docket_id || item.docketId;
-                          const createdAt = item.created_at || item.createdAt;
-                          const visuals = getNotificationVisuals(item.type);
+                return (
+                  <div key={groupName} className="notification-group">
+                    <h3 className="notification-group-title">{groupName}</h3>
+                    <div className="notification-history__list">
+                      {groupItems.map((item) => {
+                        const isRead = item.read || item.isRead;
+                        const docketId = item.docket_id || item.docketId;
+                        const createdAt = item.created_at || item.createdAt;
+                        const visuals = getNotificationVisuals(item.type);
 
-                          return (
-                            <div
-                              key={item._id}
-                              className={`notification-card ${isRead ? '' : 'notification-card--unread'}`}
-                            >
-                              {/* Themed icon wrap */}
-                              <div className={`notification-card__icon-wrap notification-card__icon-wrap--${visuals.colorClass}`}>
-                                {visuals.icon}
-                              </div>
-
-                              <div className="notification-card__content">
-                                <div className="notification-card__title-row">
-                                  <p className="notification-card__message" style={{ fontWeight: isRead ? 500 : 700 }}>
-                                    {item.message}
-                                  </p>
-                                  <div className="notification-card__actions">
-                                    {!isRead ? (
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        style={{ padding: '4px 8px', fontSize: 11 }}
-                                        onClick={() => markNotificationRead(item._id)}
-                                        aria-label={`Mark as read: ${item.message}`}
-                                      >
-                                        Mark read
-                                      </Button>
-                                    ) : null}
-                                    {!isRead ? <span className="notification-card__read-dot" /> : null}
-                                  </div>
-                                </div>
-
-                                <div className="notification-card__meta-row">
-                                  <span className="notification-card__tag" style={{ color: `var(--dt-${visuals.colorClass})` }}>
-                                    {visuals.tag}
-                                  </span>
-                                  <span className="notification-card__meta-dot" />
-                                  <span>{createdAt ? formatDate(createdAt) : '—'}</span>
-                                  {docketId ? (
-                                    <>
-                                      <span className="notification-card__meta-dot" />
-                                      <button
-                                        type="button"
-                                        className="notification-history__docket-link"
-                                        onClick={() => goToDocket(docketId)}
-                                        style={{ fontWeight: 600 }}
-                                        aria-label={`Open docket ${docketId}`}
-                                      >
-                                        Docket #{docketId}
-                                      </button>
-                                    </>
-                                  ) : null}
-                                </div>
-                              </div>
+                        return (
+                          <div
+                            key={item._id}
+                            className={`notification-history__item ${isRead ? '' : 'notification-history__item--unread'}`}
+                          >
+                            <div className="notification-history__actions">
+                              <p className="notification-history__message">
+                                {item.message}
+                              </p>
+                              {!isRead ? (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="xs"
+                                  onClick={() => markNotificationRead(item._id)}
+                                  aria-label={`Mark as read: ${item.message}`}
+                                >
+                                  Mark read
+                                </Button>
+                              ) : null}
                             </div>
-                          );
-                        })}
-                      </div>
+
+                            <div className="notification-history__meta">
+                              <span>{visuals.tag}</span>
+                              <span>{createdAt ? formatDate(createdAt) : '—'}</span>
+                              {docketId ? (
+                                <span>
+                                  <button
+                                    type="button"
+                                    className="notification-history__docket-link"
+                                    onClick={() => goToDocket(docketId)}
+                                    aria-label={`Open docket ${docketId}`}
+                                  >
+                                    Docket #{docketId}
+                                  </button>
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-
-                {/* Feed Pagination */}
-                <div className="notification-history__pagination" aria-label="Notification history pagination">
-                  <span style={{ fontSize: 13, color: 'var(--color-ink-secondary, #7a7870)' }}>
-                    Displaying <strong>{(safePage - 1) * PAGE_SIZE + 1} - {Math.min(safePage * PAGE_SIZE, filteredRows.length)}</strong> of <strong>{filteredRows.length}</strong> alerts
-                  </span>
-                  <div className="notification-history__pagination-actions">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={safePage <= 1}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={safePage >= totalPages}
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    >
-                      Next
-                    </Button>
                   </div>
-                </div>
-              </>
-            ) : null}
-          </PageSection>
-        ) : (
-          <PageSection>
-            {/* Preferences tab */}
-            {prefLoading ? (
-              <LoadingState label="Hydrating preferences context..." />
-            ) : (
-              <div className="preferences-card animate-slideDown">
-                <div className="preferences-header">
-                  <h3 className="preferences-title">Delivery Preferences</h3>
-                  <p className="preferences-subtitle">Customize how and where you receive notifications across active categories.</p>
-                </div>
+                );
+              })}
 
-                <div className="preferences-grid">
-                  {corePreferencesList.map((pref) => {
-                    const settings = preferences?.typeChannels?.[pref.type] || {
-                      inApp: preferences?.defaultChannels?.inApp ?? true,
-                      email: preferences?.defaultChannels?.email ?? false,
-                    };
-
-                    return (
-                      <div key={pref.type} className="preference-item-row">
-                        <div className="preference-item-info">
-                          <h4 className="preference-item-name">{pref.name}</h4>
-                          <p className="preference-item-description">{pref.description}</p>
-                        </div>
-
-                        <div className="preference-item-channels">
-                          <label className="preference-channel-toggle" htmlFor={`inApp-${pref.type}`}>
-                            <span>In-App</span>
-                            <span className="custom-toggle">
-                              <input
-                                type="checkbox"
-                                id={`inApp-${pref.type}`}
-                                checked={Boolean(settings.inApp)}
-                                onChange={() => handlePreferenceToggle(pref.type, 'inApp')}
-                              />
-                              <span className="custom-toggle-slider" />
-                            </span>
-                          </label>
-
-                          <label className="preference-channel-toggle" htmlFor={`email-${pref.type}`}>
-                            <span>Email</span>
-                            <span className="custom-toggle">
-                              <input
-                                type="checkbox"
-                                id={`email-${pref.type}`}
-                                checked={Boolean(settings.email)}
-                                onChange={() => handlePreferenceToggle(pref.type, 'email')}
-                              />
-                              <span className="custom-toggle-slider" />
-                            </span>
-                          </label>
-                        </div>
-                      </div>
-                    );
-                  })}
+              {/* Feed Pagination */}
+              <div className="notification-history__pagination" aria-label="Notification history pagination">
+                <span className="muted">
+                  Displaying <strong>{(safePage - 1) * PAGE_SIZE + 1} - {Math.min(safePage * PAGE_SIZE, sortedItems.length)}</strong> of <strong>{sortedItems.length}</strong> alerts
+                </span>
+                <div className="notification-history__pagination-actions">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={safePage <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={safePage >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    Next
+                  </Button>
                 </div>
               </div>
-            )}
-          </PageSection>
-        )}
+            </>
+          ) : null}
+        </PageSection>
       </div>
     </PlatformShell>
   );

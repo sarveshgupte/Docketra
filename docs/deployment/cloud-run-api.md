@@ -4,6 +4,7 @@
 - Added root `Dockerfile` for production API container.
 - Added `npm run start:api` script.
 - API-side background schedulers removed from startup to keep API stateless.
+- Production container runs as the non-root `node` user from the official Node image.
 
 ## What stayed the same
 - Express route tree and auth/tenancy contracts.
@@ -63,6 +64,7 @@ Current implementation is valid on Cloud Run for many workloads. Caveats:
 ## Uploads/local disk compatibility
 - Cloud Run filesystem is ephemeral.
 - Current temp upload flows can work **within a single request lifecycle**.
+- Docker image pre-creates `/app/uploads/private` and `/app/uploads/tmp` with ownership for the non-root `node` runtime user.
 - Do not rely on persistence across restarts/instances.
 - Follow-up: direct-to-object-storage upload for large async workflows.
 
@@ -77,6 +79,25 @@ Current implementation is valid on Cloud Run for many workloads. Caveats:
 - Auth login, token refresh, and tenant-scoped routes work.
 - Socket connects to `/socket.io` with auth token.
 - File upload endpoint works for allowed MIME/size.
+
+## Local Docker verification
+Build the production image:
+
+```bash
+docker build -t docketra-api-security .
+```
+
+Run it with a safe local env file that contains only test values:
+
+```bash
+docker run --rm -p 8080:8080 --env-file ./safe-test.env docketra-api-security
+```
+
+The container should bind to `PORT=8080` and run as a non-root user:
+
+```bash
+docker run --rm docketra-api-security id
+```
 
 ## Rollback
 - Cloud Run: shift traffic back to previous revision.

@@ -48,17 +48,28 @@ const listWorkbaskets = async (req, res) => {
 
     // Self-healing guard: ensure all PRIMARY workbaskets have a linked QC workbasket
     if (req.user?.firmId) {
+      // ⚡ Bolt: Optimize QC workbasket self-healing checks
+      // 💡 What: Replaced N+1 findOne queries in a loop with a single $in query and bulk insertMany.
+      // 🎯 Why: Reduces DB network round-trips from O(N) to O(1) and eliminates sequential awaiting.
+      // 📊 Impact: Significantly improves API latency for firms with numerous PRIMARY workbaskets.
       const allPrimary = await Team.find({ firmId: req.user.firmId, type: 'PRIMARY' });
-      for (const primary of allPrimary) {
-        const linkedQc = await Team.findOne({ firmId: req.user.firmId, type: 'QC', parentWorkbasketId: primary._id });
-        if (!linkedQc) {
-          await Team.create({
+      if (allPrimary.length > 0) {
+        const primaryIds = allPrimary.map(p => p._id);
+        const existingQcs = await Team.find({ firmId: req.user.firmId, type: 'QC', parentWorkbasketId: { $in: primaryIds } }).select('parentWorkbasketId').lean();
+        const existingQcParentIds = new Set(existingQcs.map(qc => String(qc.parentWorkbasketId)));
+
+        const missingQcs = allPrimary
+          .filter(primary => !existingQcParentIds.has(String(primary._id)))
+          .map(primary => ({
             firmId: req.user.firmId,
             name: `${primary.name} — QC`,
             type: 'QC',
             parentWorkbasketId: primary._id,
             isActive: primary.isActive,
-          });
+          }));
+
+        if (missingQcs.length > 0) {
+          await Team.insertMany(missingQcs, { ordered: false });
         }
       }
     }

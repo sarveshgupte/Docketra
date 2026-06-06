@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { randomUUID } = require('crypto');
+const { createHash, randomUUID } = require('crypto');
 const Case = require('../models/Case.model');
 const { logCaseHistory } = require('./auditLog.service');
 const Category = require('../models/Category.model');
@@ -29,6 +29,62 @@ const QC_DECISIONS = Object.freeze({
   FAILED: 'FAILED',
   CORRECTED: 'CORRECTED',
 });
+
+function normalizeQcPercent(value) {
+  const percent = Math.round(Number(value) || 0);
+  return Math.min(100, Math.max(0, percent));
+}
+
+function shouldRouteToQcByPercent({ docketId, percent }) {
+  const normalizedPercent = normalizeQcPercent(percent);
+  if (normalizedPercent <= 0) return false;
+  if (normalizedPercent >= 100) return true;
+
+  const hash = createHash('sha256').update(String(docketId || '')).digest();
+  const bucket = hash.readUInt32BE(0) % 100;
+  return bucket < normalizedPercent;
+}
+
+function findDocketSubcategory(category, docket) {
+  const subcategories = Array.isArray(category?.subcategories) ? category.subcategories : [];
+  const docketSubcategoryId = String(docket?.subcategoryId || '').trim();
+  const docketSubcategoryName = String(docket?.subcategory || docket?.caseSubCategory || '').trim().toLowerCase();
+
+  return subcategories.find((subcategory) => (
+    (docketSubcategoryId && String(subcategory?.id || '') === docketSubcategoryId)
+    || (docketSubcategoryName && String(subcategory?.name || '').trim().toLowerCase() === docketSubcategoryName)
+  )) || null;
+}
+
+function resolveQcRoutingDecision({ docket, category, subcategory, sendToQC, resolverUser }) {
+  if (sendToQC) {
+    return { routeToQc: true, source: 'manual', percent: 100 };
+  }
+
+  const forcedByConfiguration = Boolean(docket?.forceQc || subcategory?.forceQC || category?.forceQC);
+  if (forcedByConfiguration) {
+    return { routeToQc: true, source: 'configured', percent: 100 };
+  }
+
+  let effectivePercent;
+  let source = 'sampled';
+  if (resolverUser && resolverUser.qcSamplingRate !== undefined && resolverUser.qcSamplingRate !== null) {
+    effectivePercent = normalizeQcPercent(resolverUser.qcSamplingRate);
+    source = 'user_sampled';
+  } else {
+    const subcategoryPercent = normalizeQcPercent(subcategory?.qcPercent);
+    const categoryPercent = normalizeQcPercent(category?.qcPercent);
+    effectivePercent = subcategoryPercent > 0 ? subcategoryPercent : categoryPercent;
+  }
+
+  const sampled = shouldRouteToQcByPercent({ docketId: docket?.caseId || docket?._id, percent: effectivePercent });
+
+  return {
+    routeToQc: sampled,
+    source: sampled ? (source === 'user_sampled' ? 'user_sampled' : 'sampled') : 'none',
+    percent: effectivePercent,
+  };
+}
 
 function getQcDecisionTransition(fromCanonicalState, decision) {
   const fromState = String(fromCanonicalState || '').toUpperCase();
@@ -432,16 +488,35 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
       }
 
       let finalTarget = normalizedTarget;
+      let qcRoutingDecision = { routeToQc: false, source: 'none', percent: 0 };
       if (normalizedTarget === DocketStatus.RESOLVED) {
-        const category = docket.category
-          ? await Category.findOne({ name: docket.category, firmId }).session(session).lean()
+        const categoryLookup = [];
+        if (docket.categoryId && mongoose.Types.ObjectId.isValid(docket.categoryId)) {
+          categoryLookup.push({ _id: docket.categoryId });
+        }
+        if (docket.category) {
+          categoryLookup.push({ name: docket.category });
+        }
+        const category = categoryLookup.length
+          ? await Category.findOne({ firmId, $or: categoryLookup }).session(session).lean()
           : null;
-        const forceQC = Boolean(docket.forceQc || category?.forceQC);
-        if (forceQC || sendToQC) {
+        const resolverXID = docket.assignedToXID || actor.xID;
+        const resolverUser = resolverXID
+          ? await User.findOne({ firmId, xID: resolverXID }).session(session).lean()
+          : null;
+
+        qcRoutingDecision = resolveQcRoutingDecision({
+          docket,
+          category,
+          subcategory,
+          sendToQC,
+          resolverUser,
+        });
+        if (qcRoutingDecision.routeToQc) {
           finalTarget = DocketStatus.QC_PENDING;
           requireComment(comment, 'QC request');
         }
-        docket.forceQc = Boolean(forceQC || sendToQC);
+        docket.forceQc = Boolean(docket.forceQc || sendToQC || category?.forceQC || subcategory?.forceQC);
       }
 
       let qcWorkbasketId = null;
@@ -516,6 +591,8 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
           requestedAt: new Date(),
           originalAssigneeXID: submitterXID,
           attempts: Number(docket.qc?.attempts || 0) + 1,
+          source: qcRoutingDecision.source,
+          samplingPercent: qcRoutingDecision.percent,
         };
         if (qcWorkbasketId) {
           docket.ownerTeamId = qcWorkbasketId;
@@ -564,6 +641,7 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
           timestamp: new Date().toISOString(),
           duplicateOf: duplicateOf || null,
           reopenAt: docket.reopenAt || null,
+          qcRouting: normalizedTarget === DocketStatus.RESOLVED ? qcRoutingDecision : undefined,
           ...(finalTarget === DocketStatus.RESOLVED ? {
             actionEvent: 'DOCKET_RESOLVED',
             comment,
@@ -969,4 +1047,5 @@ module.exports = {
   reopenDuePending,
   reassign,
   handleUserDeactivation,
+  resolveQcRoutingDecision,
 };

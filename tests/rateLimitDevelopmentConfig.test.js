@@ -4,6 +4,15 @@
 const assert = require('assert');
 const fs = require('fs');
 
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-placeholder-value-32ch';
+process.env.MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/docketra';
+process.env.DISABLE_GOOGLE_AUTH = 'true';
+process.env.ENCRYPTION_PROVIDER = 'disabled';
+process.env.SUPERADMIN_PASSWORD_HASH = process.env.SUPERADMIN_PASSWORD_HASH || '$2b$10$abcdefghijklmnopqrstuu0Lz3M0RtZpmjHtkobaN6D2PfYZ7RUTy';
+process.env.SUPERADMIN_XID = process.env.SUPERADMIN_XID || 'X000001';
+process.env.SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'superadmin@example.com';
+process.env.SUPERADMIN_OBJECT_ID = process.env.SUPERADMIN_OBJECT_ID || '000000000000000000000001';
+
 const config = require('../src/config/config');
 
 function read(relativePath) {
@@ -38,20 +47,20 @@ function testRouteLimiterWiring() {
   const dashboardRoutes = read('../src/routes/dashboard.routes.js');
   const categoryRoutes = read('../src/routes/category.routes.js');
   const routeGroups = read('../src/routes/routeGroups.js');
-  const inboundRoutes = read('../src/routes/inbound.routes.js');
   const publicRoutes = read('../src/routes/public.routes.js');
-  const serverSource = read('../src/server.js');
+  const serverSource = read('../src/app/routes/mountPlatformRoutes.js');
 
   assert.ok(authRoutes.includes("router.post('/verify-totp', otpVerifyLimiter, verifyTotp);"));
   assert.ok(authRoutes.includes("router.post('/complete-mfa-login', otpVerifyLimiter, completeMfaLogin);"));
-  assert.ok(authRoutes.includes("router.post('/resend-otp', authBlockEnforcer, authLimiter, otpResendLimiter, resendLoginOtp);"));
+  assert.ok(authRoutes.includes("router.post('/resend-otp', authBlockEnforcer, authLimiter, otpResendLimiter, attachFirmFromSlug, loginResend);"));
 
-  assert.ok(publicSignupRoutes.includes("router.post('/resend-otp', otpResendLimiter, resendOtp);"));
-  assert.ok(publicSignupRoutes.includes("router.post('/verify-otp', otpVerifyLimiter, wrapWriteHandler(verifyOtp));"));
-  assert.ok(publicSignupRoutes.includes("router.post('/initiate-signup', wrapWriteHandler(initiateSignup));"));
+  assert.ok(publicSignupRoutes.includes("router.post('/resend-otp', deprecationHandler);"));
+  assert.ok(publicSignupRoutes.includes("router.post('/verify-otp', deprecationHandler);"));
+  assert.ok(publicSignupRoutes.includes("router.post('/initiate-signup', deprecationHandler);"));
+  assert.ok(publicSignupRoutes.includes("router.post('/complete-signup', deprecationHandler);"));
 
   assert.ok(firmRoutes.includes("router.post('/login', loginLimiter, noFirmNoTransaction, setTenantLoginScope, login);"));
-  assert.ok(firmRoutes.includes("router.post('/verify-otp', otpVerifyLimiter, noFirmNoTransaction, setTenantLoginScope, verifyLoginOtp);"));
+  assert.ok(firmRoutes.includes("router.post('/verify-otp', loginLimiter, noFirmNoTransaction, setTenantLoginScope, safeVerifyLoginOtp);"));
   assert.ok(!firmRoutes.includes('router.use(loginLimiter);'));
 
   assert.ok(clientRoutes.includes("router.get('/', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, getClients);"));
@@ -64,10 +73,9 @@ function testRouteLimiterWiring() {
   assert.ok(routeGroups.includes('const firmReadAccess = [authenticate, userReadLimiter, attachFirmContext, requireTenant, buildFirmInvariantGuard()];'));
   assert.ok(routeGroups.includes('const adminTenantScopedApiAccess = [...tenantScopedApiAccess, requireAdmin];'));
   assert.ok(categoryRoutes.includes("router.get('/', ...firmReadAccess, authorizeFirmPermission('CATEGORY_VIEW'), getCategories);"));
-  assert.ok(inboundRoutes.includes("router.post('/email', inboundEmailLimiter, inboundStorageHealthGuard, handleInboundEmail);"));
   assert.ok(publicRoutes.includes("router.post('/signup', signupLimiter, async (req, res, next) => {"));
 
-  assert.ok(serverSource.includes("app.get('/:firmSlug/login', publicLimiter, tenantResolver, (req, res) => {"));
+  assert.ok(serverSource.includes("app.get('/:firmSlug/login', publicLimiter, tenantResolver, firmLoginHandler);"));
   assert.ok(serverSource.includes("app.use('/api/admin', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), adminRoutes);"));
   assert.ok(!serverSource.includes('const superadminRouteLimiter = rateLimit({'));
   assert.ok(!serverSource.includes("app.use('/api/admin', authenticate, firmContext, requireTenant, tenantThrottle, sensitiveLimiter"));

@@ -9,6 +9,16 @@ const request = require('supertest');
 
 const originalLoad = Module._load;
 
+process.env.JWT_SECRET = 'test-jwt-secret-placeholder-value-32ch';
+process.env.MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/docketra';
+process.env.DISABLE_GOOGLE_AUTH = 'true';
+process.env.ENCRYPTION_PROVIDER = 'disabled';
+process.env.SUPERADMIN_PASSWORD_HASH = process.env.SUPERADMIN_PASSWORD_HASH || '$2b$10$abcdefghijklmnopqrstuu0Lz3M0RtZpmjHtkobaN6D2PfYZ7RUTy';
+process.env.SUPERADMIN_XID = process.env.SUPERADMIN_XID || 'X000001';
+process.env.SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'superadmin@example.com';
+process.env.SUPERADMIN_OBJECT_ID = process.env.SUPERADMIN_OBJECT_ID || '000000000000000000000001';
+process.env.GOOGLE_CLIENT_ID = 'google-client-id';
+
 const clearModule = (modulePath) => {
   try {
     delete require.cache[require.resolve(modulePath)];
@@ -18,50 +28,6 @@ const clearModule = (modulePath) => {
 };
 
 async function testRouteWrapsWriteSignupHandlers() {
-  const authLimiter = (req, res, next) => next();
-  const otpVerifyLimiter = (req, res, next) => next();
-  const otpResendLimiter = (req, res, next) => next();
-  const initiateSignup = async () => ({
-    success: true,
-    statusCode: 201,
-    message: 'If the details are valid, a verification code will be sent shortly.',
-  });
-  const wrappedHandlers = [];
-
-  Module._load = function (request, parent, isMain) {
-    if (request === '../middleware/rateLimiters') return { authLimiter, otpVerifyLimiter, otpResendLimiter };
-    if (request === '../controllers/publicSignup.controller') {
-      return {
-        initiateSignup,
-        verifyOtp: async () => ({}),
-        resendOtp: async () => ({}),
-        completeSignup: async () => ({}),
-      };
-    }
-    if (request === '../middleware/wrapWriteHandler') {
-      return (fn) => {
-        const wrapped = async (req, res, next) => {
-          const result = await fn(req, res, next);
-          if (res.headersSent || typeof result === 'undefined') {
-            return undefined;
-          }
-
-          const statusCode = Number.isInteger(result?.statusCode) ? result.statusCode : 200;
-          if (result && typeof result === 'object' && Object.hasOwn(result, 'statusCode')) {
-            const { statusCode: _statusCode, ...payload } = result;
-            return res.status(statusCode).json(payload);
-          }
-
-          return res.status(statusCode).json(result);
-        };
-        wrapped.original = fn;
-        wrappedHandlers.push(wrapped);
-        return wrapped;
-      };
-    }
-    return originalLoad.apply(this, arguments);
-  };
-
   clearModule('../src/routes/publicSignup.routes');
   const router = require('../src/routes/publicSignup.routes');
   const initiateLayer = router.stack.find((layer) => layer.route?.path === '/initiate-signup');
@@ -75,41 +41,26 @@ async function testRouteWrapsWriteSignupHandlers() {
   assert.strictEqual(googleLayer, undefined, 'google-auth route should not exist');
   assert.ok(completeLayer, 'complete-signup route should exist');
 
-  const initiateHandlers = initiateLayer.route.stack.map((item) => item.handle);
-  assert.strictEqual(typeof initiateHandlers[0], 'function', 'request validation should be registered before signup middleware');
-  assert.strictEqual(initiateHandlers[1].original, initiateSignup, 'initiate-signup should be wrapped with wrapWriteHandler');
-
-  const completeHandlers = completeLayer.route.stack.map((item) => item.handle);
-  const verifyHandlers = verifyLayer.route.stack.map((item) => item.handle);
-  const resendHandlers = resendLayer.route.stack.map((item) => item.handle);
-  assert.strictEqual(typeof completeHandlers[0], 'function', 'complete-signup should register validation middleware');
-  assert.strictEqual(typeof verifyHandlers[0], 'function', 'verify-otp should register validation middleware');
-  assert.strictEqual(typeof resendHandlers[0], 'function', 'resend-otp should register validation middleware');
-  assert.strictEqual(completeHandlers[1], authLimiter, 'authLimiter should remain ahead of complete-signup handling');
-  assert.strictEqual(verifyHandlers[1], otpVerifyLimiter, 'verify-otp should use the OTP verification limiter');
-  assert.strictEqual(resendHandlers[1], otpResendLimiter, 'resend-otp should use the OTP resend limiter');
-  assert.strictEqual(typeof verifyHandlers[2].original, 'function', 'verify-otp should be wrapped with wrapWriteHandler');
-  assert.strictEqual(typeof completeHandlers[2].original, 'function', 'complete-signup should be wrapped with wrapWriteHandler');
-
   const app = express();
   app.use(express.json());
   app.use('/api/public', router);
 
-  const response = await request(app)
-    .post('/api/public/initiate-signup')
-    .send({
-      name: 'Alice',
-      email: 'alice@example.com',
-      password: 'Password#123',
-      phone: '9999999999',
-      firmName: 'Acme Legal',
-    });
+  const paths = [
+    '/api/public/initiate-signup',
+    '/api/public/resend-otp',
+    '/api/public/verify-otp',
+    '/api/public/complete-signup',
+  ];
 
-  assert.strictEqual(response.status, 201, 'initiate-signup should be reachable under /api/public');
-  assert.strictEqual(response.body.success, true, 'initiate-signup should return wrapped handler response');
+  for (const path of paths) {
+    const response = await request(app).post(path).send({});
+    assert.strictEqual(response.status, 410, `${path} should return 410 Gone`);
+    assert.strictEqual(response.body.success, false);
+    assert.strictEqual(response.body.code, 'ROUTE_DEPRECATED');
+    assert.ok(response.body.message.includes('retired') || response.body.message.includes('canonical'));
+  }
 
-  assert.strictEqual(wrappedHandlers.length, 3, 'three write handlers should be wrapped');
-  console.log('  ✓ wraps public signup write routes with wrapWriteHandler');
+  console.log('  ✓ legacy public signup routes return 410 Gone and ROUTE_DEPRECATED');
 }
 
 async function testControllerForwardsTransactionSession() {
@@ -216,7 +167,7 @@ async function testVerifyControllerForwardsTransactionSession() {
 
   assert.strictEqual(result.success, true);
   assert.strictEqual(result.statusCode, 200);
-  assert.strictEqual(result.token, 'jwt-token');
+  assert.strictEqual(result.token, undefined, 'verifyOtp response must not return token');
   assert.strictEqual(captured.payload.session, session, 'verify controller should pass active transaction session to service');
   console.log('  ✓ forwards req.transactionSession.session to verifyOtp');
 }
@@ -301,14 +252,14 @@ async function testServiceWritesUseSession() {
       lean: async () => null,
     }),
   };
-  const mockTemporarySignup = {
+  const mockSignupSession = {
     deleteMany: async (...args) => { captured.deleteMany = args; },
     create: async (...args) => { captured.create = args; },
   };
 
   Module._load = function (request, parent, isMain) {
     if (request === '../models/User.model') return mockUser;
-    if (request === '../models/TemporarySignup') return mockTemporarySignup;
+    if (request === '../models/SignupSession.model') return mockSignupSession;
     if (request === '../models/AuthAudit.model') return { create: async () => ({}) };
     if (request === './email.service') {
       return {
@@ -326,6 +277,7 @@ async function testServiceWritesUseSession() {
     return originalLoad.apply(this, arguments);
   };
 
+  clearModule('../src/services/tenantIdentity.service');
   clearModule('../src/services/signup.service');
   const signupService = require('../src/services/signup.service');
   const session = { id: 'session-2' };
@@ -340,8 +292,8 @@ async function testServiceWritesUseSession() {
 
   assert.deepStrictEqual(captured.deleteMany[1], { session }, 'deleteMany should receive the session option');
   assert.deepStrictEqual(captured.create[1], { session }, 'create should receive the session option');
-  assert.strictEqual(Object.hasOwn(captured.create[0], 'storageType'), false, 'temporary signup should not persist a storage selection');
-  console.log('  ✓ passes { session } to TemporarySignup write operations');
+  assert.strictEqual(Object.hasOwn(captured.create[0], 'storageType'), false, 'signup session should not persist a storage selection');
+  console.log('  ✓ passes { session } to SignupSession write operations');
 }
 
 async function testInitiateSignupRejectsDuplicateEmailOrPhone() {
@@ -354,16 +306,16 @@ async function testInitiateSignupRejectsDuplicateEmailOrPhone() {
       lean: async () => ({ _id: 'user-1' }),
     }),
   };
-  const mockTemporarySignup = {
+  const mockSignupSession = {
     deleteMany: async () => ({}),
     create: async () => {
-      throw new Error('Temporary signup should not be created when identity already exists');
+      throw new Error('Signup session should not be created when identity already exists');
     },
   };
 
   Module._load = function (request, parent, isMain) {
     if (request === '../models/User.model') return mockUser;
-    if (request === '../models/TemporarySignup') return mockTemporarySignup;
+    if (request === '../models/SignupSession.model') return mockSignupSession;
     if (request === '../models/AuthAudit.model') return { create: async () => ({}) };
     if (request === './email.service') {
       return {
@@ -387,6 +339,7 @@ async function testInitiateSignupRejectsDuplicateEmailOrPhone() {
     return originalLoad.apply(this, arguments);
   };
 
+  clearModule('../src/services/tenantIdentity.service');
   clearModule('../src/services/signup.service');
   const signupService = require('../src/services/signup.service');
   const result = await signupService.initiateManualSignup({
@@ -447,7 +400,7 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
         updateOne: async () => ({ matchedCount: 0 }),
       };
     }
-    if (request === '../models/TemporarySignup') {
+    if (request === '../models/SignupSession.model') {
       return {};
     }
     if (request === './clientIdGenerator') {
@@ -471,6 +424,7 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
     return originalLoad.apply(this, arguments);
   };
 
+  clearModule('../src/services/tenantIdentity.service');
   clearModule('../src/services/signup.service');
   const signupService = require('../src/services/signup.service');
 
@@ -527,7 +481,7 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
 }
 
 function testServerRegistersApiPublicSignupRoutes() {
-  const serverSource = fs.readFileSync(require.resolve('../src/server.js'), 'utf8');
+  const serverSource = fs.readFileSync(require.resolve('../src/app/routes/mountPlatformRoutes.js'), 'utf8');
 
   assert.ok(
     serverSource.includes("app.use('/api/public', publicLimiter, publicSignupRoutes);"),
@@ -552,6 +506,15 @@ async function testResendCredentialsEmailUsesStoredXid() {
 
   try {
     Module._load = function (request, parent, isMain) {
+      if (request === '../utils/log') {
+        return {
+          info: (...args) => {
+            infoLogs.push(args);
+          },
+          error: () => {},
+          warn: () => {},
+        };
+      }
       if (request === '../models/User.model') {
         return {
           findOne: () => ({
@@ -560,8 +523,23 @@ async function testResendCredentialsEmailUsesStoredXid() {
                 name: 'Alice',
                 email: 'alice@example.com',
                 xID: 'X000777',
-                firmId: 'firm-1',
+                firmId: '507f1f77bcf86cd799439011',
               }),
+            }),
+          }),
+        };
+      }
+      if (request === '../models/Client.model') {
+        return {
+          findOne: () => ({
+            select() { return this; },
+            session() { return this; },
+            lean: async () => ({
+              _id: '507f1f77bcf86cd799439011',
+              firmId: '507f1f77bcf86cd799439011',
+              isDefaultClient: true,
+              firmSlug: 'acme-legal',
+              businessName: 'Acme Legal',
             }),
           }),
         };
@@ -589,6 +567,7 @@ async function testResendCredentialsEmailUsesStoredXid() {
       return originalLoad.apply(this, arguments);
     };
 
+    clearModule('../src/services/tenantIdentity.service');
     clearModule('../src/services/signup.service');
     const signupService = require('../src/services/signup.service');
     const result = await signupService.resendCredentialsEmail({

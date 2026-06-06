@@ -204,8 +204,8 @@ const findConfig = async (tenantId, caseType, options = {}) => {
   return fallbackQuery.lean();
 };
 
-const initializeCaseSla = async ({ tenantId, caseType, now = new Date(), session }) => {
-  const dbConfig = tenantId ? await findConfig(tenantId, caseType || null, { session }) : null;
+const initializeCaseSla = async ({ tenantId, caseType, now = new Date(), session, calendarConfig }) => {
+  const dbConfig = calendarConfig || (tenantId ? await findConfig(tenantId, caseType || null, { session }) : null);
   const config = normalizeConfig(dbConfig || DEFAULT_SLA_CONFIG);
   const startedAt = new Date(now);
   const slaDueAt = calculateDueDate(startedAt, config.tatDurationMinutes, config);

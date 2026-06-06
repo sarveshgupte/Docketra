@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Textarea } from '../common/Textarea';
 
 export function CommentInput({ onSubmit, disabled = false }) {
   const [value, setValue] = useState('');
@@ -23,14 +24,14 @@ export function CommentInput({ onSubmit, disabled = false }) {
   return (
     <form className="docket-comment-input" onSubmit={submit}>
       <label className="docket-comment-input__label" htmlFor="docket-comment-field">Add comment</label>
-      <textarea
+      <Textarea
         id="docket-comment-field"
-        className="docket-comment-input__field"
         rows={3}
         value={value}
         onChange={(event) => setValue(event.target.value)}
         placeholder="Share updates, next steps, or mention teammates with @username"
         disabled={disabled}
+        enableMentions={true}
       />
       <div className="docket-comment-input__actions">
         {error ? <span className="docket-comment-input__error">{error}</span> : <span className="docket-comment-input__hint">Use @username to mention teammates.</span>}
@@ -41,3 +42,4 @@ export function CommentInput({ onSubmit, disabled = false }) {
     </form>
   );
 }
+

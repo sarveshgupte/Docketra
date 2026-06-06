@@ -60,7 +60,7 @@ const normalizeTimelineRows = (rows = []) => {
           DOCKET_SESSION_STARTED: '🟢',
           DOCKET_EXITED: '🚪',
           DOCKET_SESSION_ENDED: '🚪',
-          DOCKET_VIEWED: '👁️',
+          DOCKET_VIEWED: '🔍',
           UPDATED: '✏️',
         }[type] || '•'),
       };

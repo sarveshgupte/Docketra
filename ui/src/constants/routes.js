@@ -10,10 +10,16 @@ export const ROUTES = {
   NOTIFICATIONS: (firmSlug) => `/app/firm/${firmSlug}/notifications`,
   NOTIFICATIONS_HISTORY: (firmSlug) => `/app/firm/${firmSlug}/notifications`, // legacy alias for NOTIFICATIONS
   DOCKETS: (firmSlug) => `/app/firm/${firmSlug}/dockets`,
-  DOCKET_DETAIL: (firmSlug, docketId) => `/app/firm/${firmSlug}/dockets/${docketId}`,
+  DOCKET_DETAIL: (firmSlug, docketId) => {
+    const cleanId = typeof docketId === 'string' ? docketId.replace(/^CASE-/i, 'DOCKET-') : docketId;
+    return `/app/firm/${firmSlug}/dockets/${cleanId}`;
+  },
   CREATE_DOCKET: (firmSlug) => `/app/firm/${firmSlug}/dockets/create`,
   CASES: (firmSlug) => `/app/firm/${firmSlug}/dockets`, // legacy alias for DOCKETS
-  CASE_DETAIL: (firmSlug, docketId) => `/app/firm/${firmSlug}/dockets/${docketId}`, // legacy alias for DOCKET_DETAIL
+  CASE_DETAIL: (firmSlug, docketId) => {
+    const cleanId = typeof docketId === 'string' ? docketId.replace(/^CASE-/i, 'DOCKET-') : docketId;
+    return `/app/firm/${firmSlug}/dockets/${cleanId}`;
+  }, // legacy alias for DOCKET_DETAIL
   CREATE_CASE: (firmSlug) => `/app/firm/${firmSlug}/dockets/create`, // legacy alias for CREATE_DOCKET
   WORKLIST: (firmSlug) => `/app/firm/${firmSlug}/worklist`,
   MY_WORKLIST: (firmSlug) => `/app/firm/${firmSlug}/my-worklist`,

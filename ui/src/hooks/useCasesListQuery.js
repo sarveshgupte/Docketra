@@ -9,6 +9,7 @@ const normalizeCases = (records = []) =>
   records.map((record) => ({
     ...record,
     caseId: record.caseId || record._id,
+    slaDueDate: record.slaDueDate || record.slaDueAt || null,
   }));
 
 export const useCasesListQuery = ({

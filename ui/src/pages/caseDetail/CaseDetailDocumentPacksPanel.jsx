@@ -4,6 +4,7 @@ import { caseApi } from '../../api/case.api';
 import { Button } from '../../components/common/Button';
 import { Textarea } from '../../components/common/Textarea';
 import { Select } from '../../components/common/Select';
+import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../hooks/useToast';
 import { formatDateTime } from '../../utils/formatDateTime';
 
@@ -292,68 +293,68 @@ export const CaseDetailDocumentPacksPanel = ({ caseId, caseInternalId, attachmen
       )}
 
       {/* MODAL: Create Ingested Document Item */}
-      {showCreateModal && (
-        <div style={{
-          position: 'fixed', inset: '0', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: '9999',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
-        }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '16px', maxWidth: '500px', width: '100%', padding: '24px', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '4px' }}>Ingest Version-Controlled Document Pack</h3>
-            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '16px' }}>Configure an immutable document pack. You must bind this pack to an already-uploaded case file reference.</p>
-            <form onSubmit={handleCreateDocument} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div>
-                <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Document Name *</label>
-                <input type="text" className="neo-input w-full text-sm mt-1" value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Approved PAN Card, Form 16, GST Challan" required />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
-                <div>
-                  <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Category</label>
-                  <select className="neo-input w-full text-sm mt-1" value={newCategory} onChange={e => setNewCategory(e.target.value)}>
-                    <option value="Obligation Attachment">Obligation Attachment</option>
-                    <option value="Client ID Evidence">Client ID Evidence</option>
-                    <option value="Filing Challan / Receipt">Filing Challan / Receipt</option>
-                    <option value="Review Draft">Review Draft</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Initial File Reference (from active attachments) *</label>
-                <select className="neo-input w-full text-sm mt-1" value={newFileRef} onChange={e => setNewFileRef(e.target.value)} required>
-                  <option value="">Select file...</option>
-                  {attachments.map(a => (
-                    <option key={a._id} value={a._id}>{a.fileName || a.filename}</option>
-                  ))}
-                </select>
-                <p className="text-[10px] text-gray-400 mt-1">If your file is not listed, upload it in the Attachments tab first.</p>
-              </div>
-              <div>
-                <Textarea label="Ingestion change note" value={newChangeNote} onChange={e => setNewChangeNote(e.target.value)} placeholder="Initial upload change note" rows={2} />
-              </div>
-              <div>
-                <Textarea label="Document Pack internal notes" value={newNotes} onChange={e => setNewNotes(e.target.value)} placeholder="Provide internal notes for staff review guidelines" rows={2} />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'end', gap: '8px', marginTop: '8px' }}>
-                <Button type="button" variant="outline" onClick={() => setShowCreateModal(false)} disabled={creating}>
-                  Cancel
-                </Button>
-                <Button type="submit" variant="primary" disabled={creating}>
-                  {creating ? 'Ingesting pack…' : 'Ingest Document Pack'}
-                </Button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Ingest Version-Controlled Document Pack"
+        size="sm"
+      >
+        <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '16px' }}>
+          Configure an immutable document pack. You must bind this pack to an already-uploaded case file reference.
+        </p>
+        <form onSubmit={handleCreateDocument} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div>
+            <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Document Name *</label>
+            <input type="text" className="neo-input w-full text-sm mt-1" value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Approved PAN Card, Form 16, GST Challan" required />
           </div>
-        </div>
-      )}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
+            <div>
+              <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Category</label>
+              <select className="neo-input w-full text-sm mt-1" value={newCategory} onChange={e => setNewCategory(e.target.value)}>
+                <option value="Obligation Attachment">Obligation Attachment</option>
+                <option value="Client ID Evidence">Client ID Evidence</option>
+                <option value="Filing Challan / Receipt">Filing Challan / Receipt</option>
+                <option value="Review Draft">Review Draft</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Initial File Reference (from active attachments) *</label>
+            <select className="neo-input w-full text-sm mt-1" value={newFileRef} onChange={e => setNewFileRef(e.target.value)} required>
+              <option value="">Select file...</option>
+              {attachments.map(a => (
+                <option key={a._id} value={a._id}>{a.fileName || a.filename}</option>
+              ))}
+            </select>
+            <p className="text-[10px] text-gray-400 mt-1">If your file is not listed, upload it in the Attachments tab first.</p>
+          </div>
+          <div>
+            <Textarea label="Ingestion change note" value={newChangeNote} onChange={e => setNewChangeNote(e.target.value)} placeholder="Initial upload change note" rows={2} />
+          </div>
+          <div>
+            <Textarea label="Document Pack internal notes" value={newNotes} onChange={e => setNewNotes(e.target.value)} placeholder="Provide internal notes for staff review guidelines" rows={2} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'end', gap: '8px', marginTop: '8px' }}>
+            <Button type="button" variant="outline" onClick={() => setShowCreateModal(false)} disabled={creating}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" disabled={creating}>
+              {creating ? 'Ingesting pack…' : 'Ingest Document Pack'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* MODAL: Upload New Version */}
-      {selectedDocForVersion && (
-        <div style={{
-          position: 'fixed', inset: '0', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: '9999',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
-        }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '16px', maxWidth: '450px', width: '100%', padding: '24px', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '4px' }}>Push New Version</h3>
+      <Modal
+        isOpen={Boolean(selectedDocForVersion)}
+        onClose={() => setSelectedDocForVersion(null)}
+        title="Push New Version"
+        size="sm"
+      >
+        {selectedDocForVersion && (
+          <>
             <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '16px' }}>
               Upload version {selectedDocForVersion.versions?.length + 1} to document pack **{selectedDocForVersion.name}**. Must map to an uploaded file reference.
             </p>
@@ -380,9 +381,9 @@ export const CaseDetailDocumentPacksPanel = ({ caseId, caseInternalId, attachmen
                 </Button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
     </section>
   );
 };

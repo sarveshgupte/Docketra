@@ -1,4 +1,16 @@
 const assert = require('assert');
+
+process.env.JWT_SECRET = 'test-jwt-secret-placeholder-value-32ch';
+process.env.MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/docketra';
+process.env.DISABLE_GOOGLE_AUTH = 'true';
+process.env.ENCRYPTION_PROVIDER = 'disabled';
+process.env.SUPERADMIN_PASSWORD_HASH = process.env.SUPERADMIN_PASSWORD_HASH || '$2b$10$abcdefghijklmnopqrstuu0Lz3M0RtZpmjHtkobaN6D2PfYZ7RUTy';
+process.env.SUPERADMIN_XID = process.env.SUPERADMIN_XID || 'X000001';
+process.env.SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'superadmin@example.com';
+process.env.SUPERADMIN_OBJECT_ID = process.env.SUPERADMIN_OBJECT_ID || '000000000000000000000001';
+process.env.GOOGLE_CLIENT_ID = 'google-client-id';
+process.env.MASTER_ENCRYPTION_KEY = 'mfa-security-key';
+
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');
@@ -6,9 +18,11 @@ const { encrypt } = require('../src/utils/encryption');
 
 const User = require('../src/models/User.model');
 const Firm = require('../src/models/Firm.model');
+const Client = require('../src/models/Client.model');
 const AuthAudit = require('../src/models/AuthAudit.model');
 const AuditLog = require('../src/models/AuditLog.model');
 const RefreshToken = require('../src/models/RefreshToken.model');
+const LoginSession = require('../src/models/LoginSession.model');
 const emailService = require('../src/services/email.service');
 const jwtService = require('../src/services/jwt.service');
 const routeSchemas = require('../src/schemas/auth.routes.schema');
@@ -16,10 +30,15 @@ const { login, completeMfaLogin } = require('../src/controllers/auth.controller'
 
 const createMockRes = () => {
   const body = {};
+  const cookies = {};
   const res = {
     headersSent: false,
     status(code) {
       this.statusCode = code;
+      return this;
+    },
+    cookie(name, value) {
+      cookies[name] = value;
       return this;
     },
     json(payload) {
@@ -28,7 +47,7 @@ const createMockRes = () => {
       return this;
     },
   };
-  return { res, body };
+  return { res, body, cookies };
 };
 
 async function shouldRequireEmailOtpBeforeIssuingTokens() {
@@ -38,13 +57,18 @@ async function shouldRequireEmailOtpBeforeIssuingTokens() {
   process.env.SUPERADMIN_XID = 'DIFFERENT_SUPERADMIN';
   process.env.JWT_SECRET = testJwtSecret;
 
+  const originalUserFind = User.find;
   const originalUserFindOne = User.findOne;
+  const originalUserUpdateOne = User.updateOne;
   const originalBcryptCompare = bcrypt.compare;
   const originalAccessToken = jwtService.generateAccessToken;
   const originalRefreshCreate = RefreshToken.create;
   const originalAuthAuditCreate = AuthAudit.create;
   const originalAuditLogCreate = AuditLog.create;
   const originalSendLoginOtpEmail = emailService.sendLoginOtpEmail;
+  const originalLoginSessionDeleteMany = LoginSession.deleteMany;
+  const originalLoginSessionCreate = LoginSession.create;
+  const originalClientFindOne = Client.findOne;
 
   let accessTokenCalled = false;
   let refreshTokenPersisted = false;
@@ -66,6 +90,21 @@ async function shouldRequireEmailOtpBeforeIssuingTokens() {
     forcePasswordReset: false,
     twoFactorSecret: 'BASE32SECRET2345',
     save: async () => {},
+  });
+  User.find = async () => [await User.findOne()];
+  User.updateOne = async () => ({ acknowledged: true });
+  LoginSession.deleteMany = async () => ({});
+  LoginSession.create = async () => ({});
+  Client.findOne = () => ({
+    select() { return this; },
+    session() { return this; },
+    lean: async () => ({
+      _id: 'firm-id-placeholder',
+      firmId: 'firm-id-placeholder',
+      firmSlug: 'firm-a',
+      businessName: 'Firm A',
+      status: 'active',
+    }),
   });
   bcrypt.compare = async () => true;
   jwtService.generateAccessToken = () => {
@@ -101,24 +140,25 @@ async function shouldRequireEmailOtpBeforeIssuingTokens() {
   } finally {
     process.env.SUPERADMIN_XID = originalSuperadminXid;
     process.env.JWT_SECRET = originalJwtSecret;
+    User.find = originalUserFind;
     User.findOne = originalUserFindOne;
+    User.updateOne = originalUserUpdateOne;
     bcrypt.compare = originalBcryptCompare;
     jwtService.generateAccessToken = originalAccessToken;
     RefreshToken.create = originalRefreshCreate;
     AuthAudit.create = originalAuthAuditCreate;
     AuditLog.create = originalAuditLogCreate;
     emailService.sendLoginOtpEmail = originalSendLoginOtpEmail;
+    LoginSession.deleteMany = originalLoginSessionDeleteMany;
+    LoginSession.create = originalLoginSessionCreate;
+    Client.findOne = originalClientFindOne;
   }
 
   assert.strictEqual(body.success, true, 'Login should return success when OTP is required');
   assert.strictEqual(body.otpRequired, true, 'Login must indicate OTP is required');
   assert(body.loginToken, 'Response must include loginToken for OTP completion');
   assert.strictEqual(body.xID, undefined, 'Response must not include xID in OTP challenge');
-  const decodedLoginToken = jwt.verify(body.loginToken, testJwtSecret);
-  assert.strictEqual(decodedLoginToken.userId, '507f1f77bcf86cd799439011', 'loginToken must include userId');
-  assert.strictEqual(decodedLoginToken.firmId, 'firm-id-placeholder', 'loginToken must include firmId');
-  assert.strictEqual(decodedLoginToken.role, 'SUPER_ADMIN', 'loginToken must include role');
-  assert.strictEqual(decodedLoginToken.loginStage, 'email-otp', 'loginToken must include OTP stage marker');
+  assert.strictEqual(body.loginToken.length, 64, 'loginToken must be a 64-char hex string');
   assert(/^\d{6}$/.test(deliveredOtp), 'Login should send a 6 digit OTP');
   assert.strictEqual(accessTokenCalled, false, 'Access token must not be issued before MFA completion');
   assert.strictEqual(refreshTokenPersisted, false, 'Refresh token must not be persisted before MFA completion');
@@ -126,10 +166,12 @@ async function shouldRequireEmailOtpBeforeIssuingTokens() {
 
 async function shouldCompleteMfaLoginAndIssueTokens() {
   const originalJwtSecret = process.env.JWT_SECRET;
-  const originalSecurityKey = process.env.SECURITY_ENCRYPTION_KEY;
+  const originalMasterKey = process.env.MASTER_ENCRYPTION_KEY;
   process.env.JWT_SECRET = 'mfa-test-secret';
-  process.env.SECURITY_ENCRYPTION_KEY = 'mfa-security-key';
+  process.env.MASTER_ENCRYPTION_KEY = 'mfa-security-key';
+  const originalUserFind = User.find;
   const originalUserFindOne = User.findOne;
+  const originalUserUpdateOne = User.updateOne;
   const originalFirmFindOne = Firm.findOne;
   const originalTotpVerify = speakeasy.totp.verify;
   const originalAccessToken = jwtService.generateAccessToken;
@@ -138,6 +180,10 @@ async function shouldCompleteMfaLoginAndIssueTokens() {
   const originalGetRefreshTokenExpiry = jwtService.getRefreshTokenExpiry;
   const originalRefreshCreate = RefreshToken.create;
   const originalAuthAuditCreate = AuthAudit.create;
+  const originalAuditLogCreate = AuditLog.create;
+  const originalLoginSessionFindOne = LoginSession.findOne;
+  const originalLoginSessionUpdateOne = LoginSession.updateOne;
+  const originalClientFindOne = Client.findOne;
 
   const auditEvents = [];
   let refreshTokenPersisted = false;
@@ -158,6 +204,26 @@ async function shouldCompleteMfaLoginAndIssueTokens() {
     forcePasswordReset: false,
     twoFactorSecret: encrypt('BASE32SECRET2345'),
   });
+  User.find = async () => [await User.findOne()];
+  User.updateOne = async () => ({ acknowledged: true });
+  LoginSession.findOne = async () => ({
+    _id: 'session-id',
+    userId: '507f1f77bcf86cd799439011',
+    tokenHash: 'hashed-login-token',
+    consumedAt: null,
+  });
+  LoginSession.updateOne = async () => ({});
+  Client.findOne = () => ({
+    select() { return this; },
+    session() { return this; },
+    lean: async () => ({
+      _id: 'firm-id-placeholder',
+      firmId: 'firm-id-placeholder',
+      firmSlug: 'firm-a',
+      businessName: 'Firm A',
+      status: 'active',
+    }),
+  });
   Firm.findOne = async () => ({ firmSlug: 'firm-a' });
   speakeasy.totp.verify = ({ secret }) => {
     observedTotpSecret = secret;
@@ -175,8 +241,9 @@ async function shouldCompleteMfaLoginAndIssueTokens() {
     auditEvents.push(doc);
     return doc;
   };
+  AuditLog.create = async () => ({});
 
-  const { res, body } = createMockRes();
+  const { res, body, cookies } = createMockRes();
   const preAuthToken = jwt.sign(
     {
       userId: '507f1f77bcf86cd799439011',
@@ -200,7 +267,9 @@ async function shouldCompleteMfaLoginAndIssueTokens() {
       () => {}
     );
   } finally {
+    User.find = originalUserFind;
     User.findOne = originalUserFindOne;
+    User.updateOne = originalUserUpdateOne;
     Firm.findOne = originalFirmFindOne;
     speakeasy.totp.verify = originalTotpVerify;
     jwtService.generateAccessToken = originalAccessToken;
@@ -209,14 +278,18 @@ async function shouldCompleteMfaLoginAndIssueTokens() {
     jwtService.getRefreshTokenExpiry = originalGetRefreshTokenExpiry;
     RefreshToken.create = originalRefreshCreate;
     AuthAudit.create = originalAuthAuditCreate;
+    AuditLog.create = originalAuditLogCreate;
+    LoginSession.findOne = originalLoginSessionFindOne;
+    LoginSession.updateOne = originalLoginSessionUpdateOne;
+    Client.findOne = originalClientFindOne;
     process.env.JWT_SECRET = originalJwtSecret;
-    process.env.SECURITY_ENCRYPTION_KEY = originalSecurityKey;
+    process.env.MASTER_ENCRYPTION_KEY = originalMasterKey;
   }
 
   assert.strictEqual(body.success, true, 'MFA completion should succeed');
   assert.strictEqual(body.message, 'Login successful', 'MFA completion should return login success message');
-  assert.strictEqual(body.accessToken, 'access-token', 'MFA completion should return access token');
-  assert.strictEqual(body.refreshToken, 'refresh-token', 'MFA completion should return refresh token');
+  assert.strictEqual(cookies.accessToken, 'access-token', 'MFA completion should set access token cookie');
+  assert.strictEqual(cookies.refreshToken, 'refresh-token', 'MFA completion should set refresh token cookie');
   assert.strictEqual(body.data.xID, 'XMFA001', 'MFA completion should return user payload');
   assert.strictEqual(refreshTokenPersisted, true, 'MFA completion should persist refresh token');
   assert.strictEqual(observedTotpSecret, 'BASE32SECRET2345', 'MFA completion must decrypt stored MFA secret before TOTP validation');
@@ -225,12 +298,18 @@ async function shouldCompleteMfaLoginAndIssueTokens() {
 
 async function shouldRejectInvalidMfaToken() {
   const originalJwtSecret = process.env.JWT_SECRET;
-  const originalSecurityKey = process.env.SECURITY_ENCRYPTION_KEY;
+  const originalMasterKey = process.env.MASTER_ENCRYPTION_KEY;
   process.env.JWT_SECRET = 'mfa-test-secret';
-  process.env.SECURITY_ENCRYPTION_KEY = 'mfa-security-key';
+  process.env.MASTER_ENCRYPTION_KEY = 'mfa-security-key';
+  const originalUserFind = User.find;
   const originalUserFindOne = User.findOne;
+  const originalUserUpdateOne = User.updateOne;
   const originalTotpVerify = speakeasy.totp.verify;
   const originalAccessToken = jwtService.generateAccessToken;
+  const originalLoginSessionFindOne = LoginSession.findOne;
+  const originalClientFindOne = Client.findOne;
+  const originalAuthAuditCreate = AuthAudit.create;
+  const originalAuditLogCreate = AuditLog.create;
 
   let accessTokenCalled = false;
 
@@ -241,7 +320,28 @@ async function shouldRejectInvalidMfaToken() {
     isActive: true,
     twoFactorSecret: encrypt('BASE32SECRET2345'),
   });
+  User.find = async () => [await User.findOne()];
+  User.updateOne = async () => ({ acknowledged: true });
+  LoginSession.findOne = async () => ({
+    _id: 'session-id',
+    userId: '507f1f77bcf86cd799439011',
+    tokenHash: 'hashed-login-token',
+    consumedAt: null,
+  });
+  Client.findOne = () => ({
+    select() { return this; },
+    session() { return this; },
+    lean: async () => ({
+      _id: 'firm-id-placeholder',
+      firmId: 'firm-id-placeholder',
+      firmSlug: 'firm-a',
+      businessName: 'Firm A',
+      status: 'active',
+    }),
+  });
   speakeasy.totp.verify = () => false;
+  AuthAudit.create = async () => ({});
+  AuditLog.create = async () => ({});
   jwtService.generateAccessToken = () => {
     accessTokenCalled = true;
     return 'access-token';
@@ -271,11 +371,17 @@ async function shouldRejectInvalidMfaToken() {
       () => {}
     );
   } finally {
+    User.find = originalUserFind;
     User.findOne = originalUserFindOne;
+    User.updateOne = originalUserUpdateOne;
     speakeasy.totp.verify = originalTotpVerify;
     jwtService.generateAccessToken = originalAccessToken;
+    LoginSession.findOne = originalLoginSessionFindOne;
+    Client.findOne = originalClientFindOne;
+    AuthAudit.create = originalAuthAuditCreate;
+    AuditLog.create = originalAuditLogCreate;
     process.env.JWT_SECRET = originalJwtSecret;
-    process.env.SECURITY_ENCRYPTION_KEY = originalSecurityKey;
+    process.env.MASTER_ENCRYPTION_KEY = originalMasterKey;
   }
 
   assert.strictEqual(res.statusCode, 401, 'Invalid MFA token should return 401');
@@ -284,6 +390,7 @@ async function shouldRejectInvalidMfaToken() {
 }
 
 async function shouldRejectMissingPreAuthToken() {
+  const originalUserFind = User.find;
   const originalUserFindOne = User.findOne;
   const originalTotpVerify = speakeasy.totp.verify;
 
@@ -292,6 +399,7 @@ async function shouldRejectMissingPreAuthToken() {
     userLookupCalled = true;
     return null;
   };
+  User.find = async () => [await User.findOne()];
   speakeasy.totp.verify = () => true;
 
   const { res, body } = createMockRes();
@@ -308,6 +416,7 @@ async function shouldRejectMissingPreAuthToken() {
       () => {}
     );
   } finally {
+    User.find = originalUserFind;
     User.findOne = originalUserFindOne;
     speakeasy.totp.verify = originalTotpVerify;
   }
