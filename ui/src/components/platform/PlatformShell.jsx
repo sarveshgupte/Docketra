@@ -504,6 +504,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                 title={userName}
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
+                aria-controls="platform-account-menu"
                 onClick={() => setMenuOpen((value) => !value)}
                 onKeyDown={(event) => {
                   if (event.key === 'Escape') setMenuOpen(false);
@@ -514,7 +515,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                 <svg className="platform__user-pill-chevron" width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
               {menuOpen ? (
-                <div className="platform__account-dropdown" role="menu" aria-label="Account menu">
+                <div id="platform-account-menu" className="platform__account-dropdown" role="menu" aria-label="Account menu">
                   <Link
                     to={ROUTES.PROFILE(firmSlug)}
                     className="platform__account-dropdown-item"

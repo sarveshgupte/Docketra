@@ -109,7 +109,7 @@ If you need to deploy changes manually from your workstation:
 
 ## 5) Automated Deployment (GitHub Actions CI/CD)
 
-The project includes a Continuous Deployment pipeline defined in [.github/workflows/deploy.yml](.github/workflows/deploy.yml).
+The project includes a Continuous Deployment pipeline defined in [.github/workflows/deploy.yml](./.github/workflows/deploy.yml).
 
 ### Execution Flow
 Every push to the `main` branch automatically:
@@ -132,7 +132,7 @@ To run the automated deployment pipeline, configure the following secrets in you
 Google Cloud Run does not support long-running daemon workers like traditional VPS or PaaS setups (e.g. Render). Instead, background tasks are run on demand or scheduled.
 
 ### Job Runner Entrypoint
-Background actions run through the [cloudRunJob.runner.js](src/jobs/cloudRunJob.runner.js) entrypoint:
+Background actions run through the [cloudRunJob.runner.js](./src/jobs/cloudRunJob.runner.js) entrypoint:
 ```bash
 node src/jobs/cloudRunJob.runner.js <job_name>
 ```
