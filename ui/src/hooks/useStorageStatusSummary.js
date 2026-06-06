@@ -21,6 +21,7 @@ const isAccessDenied = (result) => [401, 403].includes(Number(result?.reason?.re
 
 export default function useStorageStatusSummary(firmSlug, options = {}) {
   const {
+    bypassCache = false,
     includeOwnershipSummary = true,
     includeRootHealth = true,
   } = options;
@@ -42,7 +43,7 @@ export default function useStorageStatusSummary(firmSlug, options = {}) {
     }
 
     const cached = statusCache.get(cacheKey);
-    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
+    if (!bypassCache && cached && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
       setState({ ...cached.data, loading: false });
       return;
     }
@@ -78,7 +79,9 @@ export default function useStorageStatusSummary(firmSlug, options = {}) {
           rootHealth,
           nonBlockingAccessError ? null : configurationError,
         );
-        statusCache.set(cacheKey, { data: nextState, timestamp: Date.now() });
+        if (!bypassCache) {
+          statusCache.set(cacheKey, { data: nextState, timestamp: Date.now() });
+        }
         setState(nextState);
       })
       .catch((err) => {
@@ -89,7 +92,7 @@ export default function useStorageStatusSummary(firmSlug, options = {}) {
       });
 
     return () => { active = false; };
-  }, [firmSlug, cacheKey, includeOwnershipSummary, includeRootHealth, refreshVersion]);
+  }, [firmSlug, cacheKey, bypassCache, includeOwnershipSummary, includeRootHealth, refreshVersion]);
 
   return useMemo(() => state, [state]);
 }

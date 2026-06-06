@@ -17,6 +17,7 @@ const {
   getHierarchyTree,
   updateUserHierarchy,
   updateRestrictedClients,
+  updateQcSamplingRate,
   getFirmSettings,
   getFirmSettingsActivity,
   getSettingsAudit,
@@ -122,6 +123,7 @@ router.post('/users/:xID/resend-invite', ...adminBaseAccess, authorizeFirmPermis
 router.post('/users/:xID/reset-password', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), sensitiveLimiter, sendUserPasswordReset);
 
 router.patch('/users/:xID/restrict-clients', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateRestrictedClients);
+router.patch('/users/:xID/qc-sampling-rate', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateQcSamplingRate);
 router.patch('/users/:xID/workbaskets', ...adminBaseAccess, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, updateUserWorkbaskets);
 router.patch('/users/:id/hierarchy', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateUserHierarchy);
 router.get('/firm-settings', ...adminBaseAccess, authorizeFirmPermission(['FIRM_SETTINGS_MANAGE', 'ADMIN_STATS']), userReadLimiter, getFirmSettings);

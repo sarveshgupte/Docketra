@@ -20,9 +20,9 @@ assert.ok(page.includes("rootHealthStatus === 'recovery_required'"), 'Storage se
 assert.ok(page.includes('Firm storage credentials are connected, but the Google Drive root needs attention'), 'Storage settings should explain connected-but-needs-attention state.');
 assert.ok(!page.includes('onDownloadDataResidencySummary'), 'Legacy misnamed export handler should be removed.');
 assert.ok(page.includes('Backup Storage Now'), 'Storage settings should render storage export action.');
-assert.ok(page.includes('Connect firm Google Drive'), 'Storage settings should expose Google OAuth connect action.');
+assert.ok(page.includes('Connect Firm Google Drive'), 'Storage settings should expose Google OAuth connect action.');
 assert.ok(page.includes('Google Drive storage root health'), 'Storage settings should render root health card.');
-assert.ok(page.includes('Recheck storage'), 'Storage settings should expose recheck storage action.');
+assert.ok(page.includes('Recheck Storage Status'), 'Storage settings should expose recheck storage action.');
 assert.ok(page.includes('disabled={openingFolder || !rootHealthOk}'), 'Open folder should be disabled when root health is not valid.');
 assert.ok(page.includes('onDisconnectGoogle'), 'Storage settings should define Google disconnect action.');
 

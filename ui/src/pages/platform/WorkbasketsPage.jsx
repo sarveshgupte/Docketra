@@ -188,13 +188,21 @@ export const PlatformWorkbasketsPage = () => {
   const filteredRows = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return rows.filter((item) => {
+      // Exclude cases that are already assigned to a user from the Shared Intake Queue
+      const isAssigned = Boolean(item.assignedToXID || item.assignedTo || item.assigneeName);
+      if (isAssigned) return false;
+
       let matchesStatus = false;
+      const isRouted = Boolean(item.routedToTeamId);
+
       if (statusFilter === 'ALL') {
         matchesStatus = true;
       } else if (statusFilter === 'UNASSIGNED') {
-        matchesStatus = !item.assignedToXID && !item.assignedTo && !item.assigneeName;
+        matchesStatus = !isRouted;
+      } else if (statusFilter === 'ROUTED') {
+        matchesStatus = isRouted;
       } else {
-        matchesStatus = String(item.status || '').toUpperCase() === statusFilter;
+        matchesStatus = false;
       }
       const matchesCategory = categoryFilter === 'ALL' || String(item.category || '') === categoryFilter;
       const rowWorkbasketIds = [
@@ -230,6 +238,8 @@ export const PlatformWorkbasketsPage = () => {
           return row.clientName || '';
         case 'category':
           return row.category || '';
+        case 'status':
+          return row.routedToTeamId ? 'Routed' : 'Unassigned';
         case 'slaDue':
         case 'slaDays':
           return row.slaDueAt ? new Date(row.slaDueAt).getTime() : 0;
@@ -260,19 +270,6 @@ export const PlatformWorkbasketsPage = () => {
     [assignableUsers, workloadData]
   );
   
-  const metrics = useMemo(() => {
-    const available = rows.length;
-    const assigned = rows.filter((item) => Boolean(item.assigneeName || item.assignedTo)).length;
-    const pending = rows.filter((item) => String(item.status || '').toUpperCase() === 'PENDING').length;
-    const escalated = rows.filter((item) => String(item.status || '').toUpperCase() === 'ESCALATED').length;
-    return [
-      { label: 'Available Dockets', value: isLoading ? '…' : available, color: 'from-blue-500 to-indigo-600', icon: '📥' },
-      { label: 'Assigned to Team', value: isLoading ? '…' : assigned, color: 'from-emerald-500 to-teal-600', icon: '👤' },
-      { label: 'Pending Review', value: isLoading ? '…' : pending, color: 'from-amber-500 to-orange-600', icon: '⏳' },
-      { label: 'Escalated Dockets', value: isLoading ? '…' : escalated, color: 'from-rose-500 to-red-600', icon: '⚠️' },
-    ];
-  }, [rows, isLoading]);
-
   const clearFilters = () => {
     setSearch('');
     setStatusFilter('ALL');
@@ -306,39 +303,12 @@ export const PlatformWorkbasketsPage = () => {
       title={selectedWorkbasket ? `📥 Workbaskets — ${selectedWorkbasket.name}` : '📥 Workbaskets'}
       subtitle="Shared docket queue — pull work into your personal execution list."
       actions={
-        <Link to={ROUTES.CREATE_CASE(firmSlug)} className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 rounded-lg shadow-sm hover:shadow">
-          ✚ Create Docket
-        </Link>
-      }
-    >
-      <StatusMessageStack
-        messages={[
-          { tone: 'error', message: isError ? 'Unable to load workbaskets right now.' : '' },
-          { tone: 'error', message: actionError },
-          { tone: 'success', message: success },
-          { tone: 'info', message: isFetching && !isLoading ? 'Refreshing the workbaskets queue in the background…' : '' },
-        ]}
-      />
-
-      {/* Flat stat row — Notion/HubSpot style KPI strip */}
-      <StatRow
-        items={[
-          { label: '📥 Available', value: isLoading ? '…' : metrics[0]?.value, note: 'dockets in queue' },
-          { label: '👤 Assigned',  value: isLoading ? '…' : metrics[1]?.value, note: 'to team members' },
-          { label: '⏳ Pending',   value: isLoading ? '…' : metrics[2]?.value, note: 'awaiting review' },
-          { label: '⚠️ Escalated', value: isLoading ? '…' : metrics[3]?.value, note: 'need attention' },
-        ]}
-      />
-
-      <PageSection
-        title="🗂️ Shared Intake Queue"
-        description={`${sortedRows.length} dockets waiting to be picked up`}
-        actions={
+        <div className="flex items-center gap-2.5">
           <button
             type="button"
             onClick={() => void refetch()}
             disabled={isFetching}
-            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 active:bg-gray-100 text-sm font-medium text-gray-700 transition-all shadow-sm disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-2 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 active:bg-gray-100 text-sm font-semibold text-gray-700 transition-all shadow-sm disabled:opacity-50"
           >
             <svg
               className={`w-4 h-4 text-gray-500 ${isFetching ? 'animate-spin' : ''}`}
@@ -350,8 +320,22 @@ export const PlatformWorkbasketsPage = () => {
             </svg>
             {isFetching ? 'Refreshing…' : 'Refresh'}
           </button>
-        }
-      >
+          <Link to={ROUTES.CREATE_CASE(firmSlug)} className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 rounded-lg shadow-sm hover:shadow">
+            ✚ Create Docket
+          </Link>
+        </div>
+      }
+    >
+      <StatusMessageStack
+        messages={[
+          { tone: 'error', message: isError ? 'Unable to load workbaskets right now.' : '' },
+          { tone: 'error', message: actionError },
+          { tone: 'success', message: success },
+          { tone: 'info', message: isFetching && !isLoading ? 'Refreshing the workbaskets queue in the background…' : '' },
+        ]}
+      />
+
+      <PageSection>
         <SectionToolbar>
           <div className="w-full bg-gray-50/50 border border-gray-100/80 rounded-2xl p-4 mb-6 shadow-inner">
             <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL'}>
@@ -392,11 +376,9 @@ export const PlatformWorkbasketsPage = () => {
                     className="px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                     aria-label="Filter by status"
                   >
-                    <option value="ALL">All Statuses</option>
+                    <option value="ALL">All statuses</option>
                     <option value="UNASSIGNED">Unassigned</option>
-                    <option value="OPEN">Open</option>
                     <option value="ROUTED">Routed</option>
-                    <option value="IN_PROGRESS">In Progress</option>
                   </select>
                   <select
                     value={categoryFilter}
@@ -490,6 +472,7 @@ export const PlatformWorkbasketsPage = () => {
               { key: 'clientId', label: 'Client ID', sortable: true, width: '100px' },
               { key: 'clientName', label: 'Client Name', sortable: true, width: '160px' },
               { key: 'category', label: 'Category / Subcategory', sortable: true, width: '260px' },
+              { key: 'status', label: 'Status', sortable: true, width: '120px' },
               { key: 'slaDue', label: 'SLA Due', sortable: true, width: '130px' },
               { key: 'slaDays', label: 'SLA Days', sortable: true, width: '110px' },
               { key: 'updated', label: 'Updated', sortable: true, width: '120px' }
@@ -528,6 +511,12 @@ export const PlatformWorkbasketsPage = () => {
                         {r.subcategory}
                       </span>
                     )}
+                  </td>
+                  <td className="px-6 py-4 text-sm font-semibold">
+                    <StatusBadge
+                      status={r.routedToTeamId ? 'ROUTED' : 'UNASSIGNED'}
+                      label={r.routedToTeamId ? 'Routed' : 'Unassigned'}
+                    />
                   </td>
                   <td className="px-6 py-4 text-gray-500 text-sm font-medium">{r.slaDueAt ? formatDateLabel(r.slaDueAt) : '—'}</td>
                   <td className="px-6 py-4 text-sm font-medium">{formatSlaDays(r.slaDueAt)}</td>

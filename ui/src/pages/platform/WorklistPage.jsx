@@ -160,6 +160,13 @@ export const PlatformWorklistPage = () => {
     }
   };
 
+  const queryStatus = useMemo(() => {
+    if (activeOnly) {
+      return 'ASSIGNED,IN_PROGRESS,OPEN';
+    }
+    return 'ASSIGNED,IN_PROGRESS,OPEN,PENDING,FILED,RESOLVED,QC_PENDING';
+  }, [activeOnly]);
+
   const {
     data: rows = [],
     isLoading,
@@ -167,7 +174,10 @@ export const PlatformWorklistPage = () => {
     isError,
     error: queryError,
     refetch,
-  } = usePlatformMyWorklistQuery({ workbasketId: scopedWorkbasketId || undefined });
+  } = usePlatformMyWorklistQuery({
+    workbasketId: scopedWorkbasketId || undefined,
+    status: queryStatus,
+  });
 
   const {
     data: workloadData = {},
@@ -191,8 +201,11 @@ export const PlatformWorklistPage = () => {
     const needle = search.trim().toLowerCase();
     return normalizedRows.filter((item) => {
       const status = String(item.status || '').toUpperCase();
-      const activeStatus = activeOnly && status === 'PENDING' ? false : true;
-      const matchesStatus = (statusFilter === 'ALL' || status === statusFilter) && activeStatus;
+
+      // Hide PENDING, FILED, and RESOLVED if activeOnly is enabled
+      const isPendingOrTerminal = ['PENDING', 'FILED', 'RESOLVED', 'FILED_LEGACY'].includes(status);
+      const activeStatus = (activeOnly && isPendingOrTerminal) ? false : true;
+
       const matchesCategory = categoryFilter === 'ALL' || String(item.category || '') === categoryFilter;
       const matchesQuery = !needle || [
         formatDocketLabel(item),
@@ -202,9 +215,9 @@ export const PlatformWorklistPage = () => {
         item.subcategory,
         item.assigneeName,
       ].some((value) => String(value || '').toLowerCase().includes(needle));
-      return matchesStatus && matchesCategory && matchesQuery;
+      return activeStatus && matchesCategory && matchesQuery;
     });
-  }, [normalizedRows, search, statusFilter, categoryFilter, activeOnly]);
+  }, [normalizedRows, search, categoryFilter, activeOnly]);
 
   const sortedRows = useMemo(() => {
     if (!sortState.key) return filteredRows;
@@ -249,16 +262,6 @@ export const PlatformWorklistPage = () => {
     [assignableUsers, workloadData]
   );
   
-  const metrics = useMemo(() => {
-    const active = normalizedRows.filter((item) => String(item.status || '').toUpperCase() !== 'PENDING').length;
-    const pended = normalizedRows.filter((item) => String(item.status || '').toUpperCase() === 'PENDING').length;
-    return [
-      { label: 'Active Workload', value: isLoading ? '…' : active, color: 'from-blue-500 to-indigo-600', icon: '⚡' },
-      { label: 'Pended / Snoozed', value: isLoading ? '…' : pended, color: 'from-amber-500 to-orange-600', icon: '⏳' },
-      { label: 'Visible Dockets', value: isLoading ? '…' : sortedRows.length, color: 'from-emerald-500 to-teal-600', icon: '👁️' },
-    ];
-  }, [normalizedRows, sortedRows.length, isLoading]);
-
   const clearFilters = () => {
     setSearch('');
     setStatusFilter('ALL');
@@ -291,37 +294,12 @@ export const PlatformWorklistPage = () => {
       title={scopedWorkbasket ? `✅ Worklist — ${scopedWorkbasket.name}` : '✅ My Worklist'}
       subtitle="Your active docket workload — execute, pend, route, or resolve."
       actions={
-        <Link to={ROUTES.CREATE_CASE(firmSlug)} className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 rounded-lg shadow-sm hover:shadow">
-          ✚ Create Docket
-        </Link>
-      }
-    >
-      <StatusMessageStack
-        messages={[
-          { tone: 'error', message: error || (isError ? `${worklistLoadMessage}${worklistSupportCode ? ` (Ref: ${worklistSupportCode})` : ''}` : '') },
-          { tone: 'success', message: success },
-          { tone: 'info', message: isFetching && !isLoading ? 'Refreshing worklist without interrupting your current view…' : '' },
-        ]}
-      />
-
-      {/* Flat stat row — Notion/HubSpot style KPI strip */}
-      <StatRow
-        items={[
-          { label: '🔥 Active',          value: isLoading ? '…' : metrics[0]?.value, note: 'dockets in progress' },
-          { label: '📵 Pended / Snoozed', value: isLoading ? '…' : metrics[1]?.value, note: 'waiting to reopen' },
-          { label: '📌 Visible',          value: isLoading ? '…' : metrics[2]?.value, note: 'in current view' },
-        ]}
-      />
-
-      <PageSection
-        title="📝 Personal Execution Queue"
-        description={`${sortedRows.length} dockets in your current view`}
-        actions={
+        <div className="flex items-center gap-2.5">
           <button
             type="button"
             onClick={() => void refetch()}
             disabled={isFetching}
-            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 active:bg-gray-100 text-sm font-medium text-gray-700 transition-all shadow-sm disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-2 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 active:bg-gray-100 text-sm font-semibold text-gray-700 transition-all shadow-sm disabled:opacity-50"
           >
             <svg
               className={`w-4 h-4 text-gray-500 ${isFetching ? 'animate-spin' : ''}`}
@@ -333,8 +311,21 @@ export const PlatformWorklistPage = () => {
             </svg>
             {isFetching ? 'Refreshing…' : 'Refresh'}
           </button>
-        }
-      >
+          <Link to={ROUTES.CREATE_CASE(firmSlug)} className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 rounded-lg shadow-sm hover:shadow">
+            ✚ Create Docket
+          </Link>
+        </div>
+      }
+    >
+      <StatusMessageStack
+        messages={[
+          { tone: 'error', message: error || (isError ? `${worklistLoadMessage}${worklistSupportCode ? ` (Ref: ${worklistSupportCode})` : ''}` : '') },
+          { tone: 'success', message: success },
+          { tone: 'info', message: isFetching && !isLoading ? 'Refreshing worklist without interrupting your current view…' : '' },
+        ]}
+      />
+
+      <PageSection>
         <SectionToolbar>
           <div className="w-full bg-gray-50/50 border border-gray-100/80 rounded-2xl p-4 mb-6 shadow-inner">
             <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL' && activeOnly}>
@@ -369,16 +360,6 @@ export const PlatformWorklistPage = () => {
                   />
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                  <select
-                    value={statusFilter}
-                    onChange={(event) => setStatusFilter(event.target.value)}
-                    className="px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                    aria-label="Filter worklist by status"
-                  >
-                    <option value="ALL">All Statuses</option>
-                    <option value="IN_PROGRESS">In Progress</option>
-                    <option value="PENDING">Pending</option>
-                  </select>
                   <select
                     value={categoryFilter}
                     onChange={(event) => setCategoryFilter(event.target.value)}

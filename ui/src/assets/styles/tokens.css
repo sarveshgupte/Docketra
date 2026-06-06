@@ -1,60 +1,58 @@
 /**
  * Docketra Design Tokens
  * Notion/HubSpot-grade B2B SaaS — light, focused, opinionated.
- */
-
-:root {
+ */:root {
   /* ── Surfaces & backgrounds ─────────────────────────────────── */
-  --dt-bg:             #f7f7f5;   /* warm off-white app bg — Notion-like */
-  --dt-bg-warm:        #f7f7f5;
+  --dt-bg:             #ffffff;   /* white canvas floor */
+  --dt-bg-warm:        #ffffff;
   --dt-surface:        #ffffff;
   --dt-surface-raised: #ffffff;
-  --dt-surface-muted:  #f3f2ef;
-  --dt-surface-subtle: #fafaf8;
+  --dt-surface-muted:  #f5f5f5;   /* surface card gray */
+  --dt-surface-subtle: #f8f9fa;   /* surface soft warm white */
 
   /* ── Text ────────────────────────────────────────────────────── */
-  --dt-text:          #1a1916;   /* near-black, warm */
-  --dt-text-secondary:#3d3c38;
-  --dt-text-muted:    #7a7870;
-  --dt-text-disabled: #b0ae a8;
+  --dt-text:          #111111;   /* ink */
+  --dt-text-secondary:#374151;   /* body text */
+  --dt-text-muted:    #6b7280;   /* muted gray */
+  --dt-text-disabled: #e5e7eb;
   --dt-text-inverse:  #ffffff;
 
   /* ── Borders ─────────────────────────────────────────────────── */
-  --dt-border-whisper: #e8e6e0;
-  --dt-border:         #ddd9d0;
-  --dt-border-strong:  #c9c4b8;
+  --dt-border-whisper: #f3f4f6;   /* soft hairline */
+  --dt-border:         #e5e7eb;   /* standard hairline */
+  --dt-border-strong:  #d1d5db;
 
-  /* ── Accent (blue — primary interactive) ─────────────────────── */
-  --dt-accent:        #2563eb;
-  --dt-accent-hover:  #1d4ed8;
-  --dt-accent-active: #1e40af;
-  --dt-accent-subtle: #eff5ff;
+  /* ── Accent (monochromatic primary actions + brand accent) ───── */
+  --dt-accent:        #111111;   /* black primary actions */
+  --dt-accent-hover:  #242424;
+  --dt-accent-active: #000000;
+  --dt-accent-subtle: #f5f5f5;
 
   /* ── Focus ───────────────────────────────────────────────────── */
-  --dt-focus:     #2563eb;
-  --dt-focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  --dt-focus:     #111111;
+  --dt-focus-ring: 0 0 0 3px rgba(17, 17, 17, 0.12);
 
   /* ── Semantic colors ─────────────────────────────────────────── */
-  --dt-success:        #16a34a;
+  --dt-success:        #10b981;   /* success emerald */
   --dt-success-subtle: #f0fdf4;
-  --dt-warning:        #d97706;
+  --dt-warning:        #f59e0b;   /* warning orange */
   --dt-warning-subtle: #fffbeb;
-  --dt-error:          #dc2626;
+  --dt-error:          #ef4444;   /* error red */
   --dt-error-subtle:   #fef2f2;
-  --dt-info:           #2563eb;
+  --dt-info:           #3b82f6;   /* accent brand blue */
   --dt-info-subtle:    #eff6ff;
 
   /* ── Radius ──────────────────────────────────────────────────── */
-  --dt-radius-control: 5px;
-  --dt-radius-card:    8px;
-  --dt-radius-panel:   10px;
-  --dt-radius-pill:    999px;
+  --dt-radius-control: 8px;      /* rounded.md */
+  --dt-radius-card:    12px;     /* rounded.lg */
+  --dt-radius-panel:   16px;     /* rounded.xl */
+  --dt-radius-pill:    9999px;
 
   /* ── Shadows ─────────────────────────────────────────────────── */
-  --dt-shadow-card:    0 1px 2px rgba(17, 24, 39, 0.04), 0 2px 8px rgba(17, 24, 39, 0.04);
-  --dt-shadow-control: 0 1px 1px rgba(17, 24, 39, 0.03);
-  --dt-shadow-popover: 0 4px 16px rgba(17, 24, 39, 0.10), 0 1px 4px rgba(17, 24, 39, 0.06);
-  --dt-shadow-modal:   0 8px 32px rgba(15, 23, 42, 0.16), 0 2px 8px rgba(15, 23, 42, 0.08);
+  --dt-shadow-card:    0 1px 2px rgba(0, 0, 0, 0.05);
+  --dt-shadow-control: 0 1px 1px rgba(0, 0, 0, 0.03);
+  --dt-shadow-popover: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --dt-shadow-modal:   0 8px 32px rgba(0, 0, 0, 0.12);
 
   /* ── Typography ──────────────────────────────────────────────── */
   --dt-font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -92,24 +90,24 @@
 
   /* ── Status badge tokens ─────────────────────────────────────── */
   --badge-open-bg:     #eff6ff;
-  --badge-open-color:  #1e40af;
+  --badge-open-color:  #3b82f6;
   --badge-open-border: #bfdbfe;
 
-  --badge-resolved-bg:     #f8fafc;
-  --badge-resolved-color:  #334155;
-  --badge-resolved-border: #e2e8f0;
+  --badge-resolved-bg:     #f0fdf4;
+  --badge-resolved-color:  #10b981;
+  --badge-resolved-border: #bbf7d0;
 
   --badge-pended-bg:     #fffbeb;
-  --badge-pended-color:  #92400e;
-  --badge-pended-border: #fde68a;
+  --badge-pended-color:  #f59e0b;
+  --badge-pended-border: #fef3c7;
 
-  --badge-filed-bg:     #f8fafc;
-  --badge-filed-color:  #475569;
-  --badge-filed-border: #e2e8f0;
+  --badge-filed-bg:     #f5f5f5;
+  --badge-filed-color:  #374151;
+  --badge-filed-border: #e5e7eb;
 
   --badge-unassigned-bg:     #fef2f2;
-  --badge-unassigned-color:  #b91c1c;
-  --badge-unassigned-border: #fecaca;
+  --badge-unassigned-color:  #ef4444;
+  --badge-unassigned-border: #fee2e2;
 
   /* ── Layout tokens ───────────────────────────────────────────── */
   --layout-surface:       var(--color-surface);
@@ -117,26 +115,26 @@
   --layout-border-subtle: var(--dt-border-whisper);
 
   /* ── Status colors ───────────────────────────────────────────── */
-  --status-draft-bg:       #f3f4f6;
-  --status-draft-color:    #4b5563;
-  --status-open-bg:        #dbeafe;
-  --status-open-color:     #1d4ed8;
-  --status-review-bg:      #fef3c7;
-  --status-review-color:   #b45309;
-  --status-escalated-bg:   #fee2e2;
-  --status-escalated-color:#be123c;
-  --status-closed-bg:      #dcfce7;
-  --status-closed-color:   #15803d;
-  --status-neutral-bg:     #f1f5f9;
-  --status-neutral-color:  #475569;
+  --status-draft-bg:       #f5f5f5;
+  --status-draft-color:    #111111;
+  --status-open-bg:        #eff6ff;
+  --status-open-color:     #3b82f6;
+  --status-review-bg:      #fffbeb;
+  --status-review-color:   #f59e0b;
+  --status-escalated-bg:   #fef2f2;
+  --status-escalated-color:#ef4444;
+  --status-closed-bg:      #f0fdf4;
+  --status-closed-color:   #10b981;
+  --status-neutral-bg:     #f5f5f5;
+  --status-neutral-color:  #6b7280;
 
   /* ── Radius aliases ──────────────────────────────────────────── */
-  --radius-xs:   3px;
+  --radius-xs:   4px;
   --radius-sm:   var(--dt-radius-control);
   --radius-md:   var(--dt-radius-card);
   --radius-lg:   var(--dt-radius-panel);
-  --radius-xl:   14px;
-  --radius-pill: 999px;
+  --radius-xl:   16px;
+  --radius-pill: 9999px;
 
   /* ── Shadow aliases ──────────────────────────────────────────── */
   --shadow-xs: none;
@@ -175,8 +173,8 @@
   --space-2xl: 96px;
 
   /* ── Legacy aliases ──────────────────────────────────────────── */
-  --primary-600:     #1d4ed8;
-  --primary-500:     #2563eb;
+  --primary-600:     #111111;
+  --primary-500:     #111111;
   --surface-base:    var(--color-bg-app);
   --surface-card:    var(--color-surface);
   --surface-raised:  var(--color-surface);

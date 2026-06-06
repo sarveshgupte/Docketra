@@ -528,8 +528,9 @@ const employeeWorklist = async (req, res) => {
     }
 
     const defaultStatuses = worklistStatuses.map((statusValue) => String(statusValue || '').trim().toUpperCase());
+    const allowedStatuses = [...defaultStatuses, 'FILED', 'RESOLVED'];
     const filteredStatuses = normalizedRequestedStatuses.length > 0
-      ? defaultStatuses.filter((statusValue) => normalizedRequestedStatuses.includes(statusValue))
+      ? allowedStatuses.filter((statusValue) => normalizedRequestedStatuses.includes(statusValue))
       : defaultStatuses;
 
     const query = {
@@ -934,6 +935,8 @@ const globalWorklist = async (req, res) => {
       clientId: 1,
       clientName: 1,
       category: 1,
+      subcategory: 1,
+      caseSubCategory: 1,
       status: 1,
       slaDueAt: 1,
       createdAt: 1,
@@ -1031,6 +1034,7 @@ const globalWorklist = async (req, res) => {
         clientName: c.clientName || clientNameByClientId.get(String(c.clientId || '').trim()) || null,
         status: c.status,
         category: c.category,
+        subcategory: c.subcategory || c.caseSubCategory || null,
         slaDueAt: c.slaDueAt,
         slaDaysRemaining,
         createdAt: c.createdAt,

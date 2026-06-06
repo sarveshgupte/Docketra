@@ -52,6 +52,18 @@ export const AdminUsersSection = ({
             },
             { key: 'status', header: 'Status', render: (u) => <AdminStatusBadge status={u.status} /> },
             {
+              key: 'qcRate',
+              header: 'QC Rate',
+              render: (u) => {
+                const hasRate = u.qcSamplingRate !== undefined && u.qcSamplingRate !== null;
+                return (
+                  <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ${hasRate ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}>
+                    {hasRate ? `${u.qcSamplingRate}%` : 'Default'}
+                  </span>
+                );
+              }
+            },
+            {
               key: 'actions',
               header: 'Actions',
               align: 'right',

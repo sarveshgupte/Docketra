@@ -10,6 +10,7 @@ import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { TableSkeleton } from '../components/common/Skeleton';
+import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { AdminStatusBadge } from './admin/components/AdminStatusBadge';
 import { adminApi } from '../api/admin.api';
@@ -206,6 +207,7 @@ export const AdminPage = () => {
     department: '',
     teamIds: [],
     assignQcWorkbaskets: false,
+    qcSamplingRate: null,
   });
   
   // Category form state
@@ -254,6 +256,7 @@ export const AdminPage = () => {
   const [clientAccessModeDraft, setClientAccessModeDraft] = useState('ALL');
   const [workbaskets, setWorkbaskets] = useState([]);
   const [selectedWorkbasketDraft, setSelectedWorkbasketDraft] = useState([]);
+  const [qcSamplingRateDraft, setQcSamplingRateDraft] = useState(null);
   const filteredUsers = useMemo(() => users, [users]);
   const filteredClientsList = useMemo(() => clients, [clients]);
   const workbasketNameById = useMemo(() => (
@@ -439,7 +442,7 @@ export const AdminPage = () => {
         setUserSectionMessage(`User invite sent to ${newUser.email}.`);
         setShowCreateModal(false);
         setNewUser({
-          name: '', email: '', role: '', department: '', teamIds: [], assignQcWorkbaskets: false,
+          name: '', email: '', role: '', department: '', teamIds: [], assignQcWorkbaskets: false, qcSamplingRate: null,
         });
         await Promise.all([loadAdminStats(), loadAdminData()]);
       } else {
@@ -629,6 +632,7 @@ export const AdminPage = () => {
     }
 
     setSelectedUserForAccess(user);
+    setQcSamplingRateDraft(user.qcSamplingRate !== undefined && user.qcSamplingRate !== null ? user.qcSamplingRate : null);
     const userClientAccess = Array.isArray(user.clientAccess) ? user.clientAccess.map((id) => String(id)) : [];
     const selectedClientIds = loadedClients
       .filter((client) => userClientAccess.includes(String(client._id)))
@@ -691,11 +695,25 @@ export const AdminPage = () => {
         return;
       }
 
+      try {
+        const qcResponse = await adminApi.updateQcSamplingRate(selectedUserForAccess.xID, {
+          qcSamplingRate: qcSamplingRateDraft,
+        });
+        if (!qcResponse?.success) {
+          showToast(qcResponse?.message || 'Access saved, but QC sampling rate update failed. Please retry.', 'error');
+          return;
+        }
+      } catch (qcError) {
+        showToast(qcError.response?.data?.message || 'Access saved, but QC sampling rate update failed. Please retry.', 'error');
+        return;
+      }
+
       showToast('User client docket access updated', 'success');
       setShowAccessModal(false);
       setSelectedUserForAccess(null);
       setSelectedWorkbasketDraft([]);
       setClientAccessModeDraft('ALL');
+      setQcSamplingRateDraft(null);
       await loadAdminData();
     } catch (saveAccessError) {
       showToast(saveAccessError.response?.data?.message || 'Failed to update user access', 'error');
@@ -1480,7 +1498,11 @@ export const AdminPage = () => {
 
   if (loading) {
     return (
-      <PlatformShell moduleLabel="Operations" title="Team" subtitle="Manage users, permissions, and security actions for your firm.">
+      <PlatformShell
+        moduleLabel="Settings"
+        title={isWorkSettingsContext ? "Category Management" : "Users & Team"}
+        subtitle={isWorkSettingsContext ? "Create and manage docket categories and subcategories." : "Manage users, access control, and security actions."}
+      >
         <TableSkeleton rows={7} />
       </PlatformShell>
     );
@@ -1488,15 +1510,15 @@ export const AdminPage = () => {
 
   return (
     <PlatformShell
-      moduleLabel={isWorkSettingsContext ? "Settings" : "Operations"}
-      title={isWorkSettingsContext ? "Category Management" : "Team"}
+      moduleLabel="Settings"
+      title={isWorkSettingsContext ? "Category Management" : "Users & Team"}
       subtitle={isWorkSettingsContext ? "Create and manage docket categories and subcategories." : "Manage users, access control, and security actions."}
       actions={(<Button variant="outline" onClick={() => void handleRefreshAdminSurface()}>Refresh</Button>)}
     >
-      <div className="admin">
-        {/* Go Back to Settings Link */}
-        {isWorkSettingsContext && (
-          <div className="flex items-center mb-6">
+      <div className="min-h-screen bg-slate-50/50 pb-16 font-sans">
+        <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 space-y-6">
+          {/* Go Back to Settings Link */}
+          <div className="flex items-center">
             <button
               type="button"
               onClick={() => navigate(ROUTES.SETTINGS(firmSlug))}
@@ -1505,7 +1527,7 @@ export const AdminPage = () => {
               ← Go back to settings
             </button>
           </div>
-        )}
+          <div className="admin">
         <div className="admin__toolbar">
           <div className="admin__tabs" aria-label="Admin sections">
             {!isWorkSettingsContext && (
@@ -1637,12 +1659,15 @@ export const AdminPage = () => {
           setSelectedUserForAccess(null);
           setRestrictedClientDraft([]);
           setSelectedWorkbasketDraft([]);
+          setQcSamplingRateDraft(null);
         }}
         selectedUser={selectedUserForAccess}
         primaryWorkbaskets={primaryWorkbaskets}
         qcOnlyWorkbaskets={qcOnlyWorkbaskets}
         selectedWorkbasketDraft={selectedWorkbasketDraft}
         setSelectedWorkbasketDraft={setSelectedWorkbasketDraft}
+        qcSamplingRateDraft={qcSamplingRateDraft}
+        setQcSamplingRateDraft={setQcSamplingRateDraft}
         clients={clients}
         restrictedClientDraft={restrictedClientDraft}
         clientAccessModeDraft={clientAccessModeDraft}
@@ -1780,6 +1805,8 @@ export const AdminPage = () => {
           </div>
         </form>
       </Modal>
+        </div>
+      </div>
     </PlatformShell>
   );
 };

@@ -10,12 +10,11 @@ const tenantStorageConfigSchema = new mongoose.Schema(
     },
     provider: {
       type: String,
-      enum: ['google_drive', 'onedrive'],
+      enum: ['google_drive', 'onedrive', 's3'],
       required: true,
     },
     encryptedRefreshToken: {
       type: String,
-      required: true,
     },
     driveId: {
       type: String,

@@ -145,11 +145,12 @@ const createUser = async (req, res) => {
       role: userDoc.role,
       firmId: userDoc.firmId,
       defaultClientId: userDoc.defaultClientId,
+      qcSamplingRate: userDoc.qcSamplingRate,
     };
   };
 
   try {
-    const { name, email, role } = req.body;
+    const { name, email, role, qcSamplingRate } = req.body;
 
     // Check if user already exists
     const normalizedEmail = email.trim().toLowerCase();
@@ -179,10 +180,16 @@ const createUser = async (req, res) => {
 
     await assertFirmPlanCapacity({ firmId: req.user?.firmId, role: role || 'Employee' });
     
+    let parsedRate = null;
+    if (qcSamplingRate !== undefined && qcSamplingRate !== null && qcSamplingRate !== '') {
+      parsedRate = Math.round(Number(qcSamplingRate));
+    }
+
     const user = new User({
       name,
       email: normalizedEmail,
       role,
+      qcSamplingRate: parsedRate,
       createdBy: req.body.createdBy, // In real app, this comes from auth
     });
     

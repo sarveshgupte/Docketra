@@ -56,7 +56,7 @@ function findDocketSubcategory(category, docket) {
   )) || null;
 }
 
-function resolveQcRoutingDecision({ docket, category, subcategory, sendToQC }) {
+function resolveQcRoutingDecision({ docket, category, subcategory, sendToQC, resolverUser }) {
   if (sendToQC) {
     return { routeToQc: true, source: 'manual', percent: 100 };
   }
@@ -66,14 +66,22 @@ function resolveQcRoutingDecision({ docket, category, subcategory, sendToQC }) {
     return { routeToQc: true, source: 'configured', percent: 100 };
   }
 
-  const subcategoryPercent = normalizeQcPercent(subcategory?.qcPercent);
-  const categoryPercent = normalizeQcPercent(category?.qcPercent);
-  const effectivePercent = subcategoryPercent > 0 ? subcategoryPercent : categoryPercent;
+  let effectivePercent;
+  let source = 'sampled';
+  if (resolverUser && resolverUser.qcSamplingRate !== undefined && resolverUser.qcSamplingRate !== null) {
+    effectivePercent = normalizeQcPercent(resolverUser.qcSamplingRate);
+    source = 'user_sampled';
+  } else {
+    const subcategoryPercent = normalizeQcPercent(subcategory?.qcPercent);
+    const categoryPercent = normalizeQcPercent(category?.qcPercent);
+    effectivePercent = subcategoryPercent > 0 ? subcategoryPercent : categoryPercent;
+  }
+
   const sampled = shouldRouteToQcByPercent({ docketId: docket?.caseId || docket?._id, percent: effectivePercent });
 
   return {
     routeToQc: sampled,
-    source: sampled ? 'sampled' : 'none',
+    source: sampled ? (source === 'user_sampled' ? 'user_sampled' : 'sampled') : 'none',
     percent: effectivePercent,
   };
 }
@@ -492,12 +500,17 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
         const category = categoryLookup.length
           ? await Category.findOne({ firmId, $or: categoryLookup }).session(session).lean()
           : null;
-        const subcategory = findDocketSubcategory(category, docket);
+        const resolverXID = docket.assignedToXID || actor.xID;
+        const resolverUser = resolverXID
+          ? await User.findOne({ firmId, xID: resolverXID }).session(session).lean()
+          : null;
+
         qcRoutingDecision = resolveQcRoutingDecision({
           docket,
           category,
           subcategory,
           sendToQC,
+          resolverUser,
         });
         if (qcRoutingDecision.routeToQc) {
           finalTarget = DocketStatus.QC_PENDING;
@@ -1034,4 +1047,5 @@ module.exports = {
   reopenDuePending,
   reassign,
   handleUserDeactivation,
+  resolveQcRoutingDecision,
 };

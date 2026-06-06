@@ -47,6 +47,32 @@ export const CreateUserModal = ({
       </ul>
 
       <Input label="Department" type="text" value={newUser.department} onChange={(e) => setNewUser({ ...newUser, department: e.target.value })} placeholder="e.g., Operations" />
+      
+      <div className="space-y-1">
+        <label className="block text-sm font-medium text-gray-800">QC Sampling Rate Override (Optional)</label>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={newUser.qcSamplingRate !== null && newUser.qcSamplingRate !== undefined ? newUser.qcSamplingRate : ''}
+            onChange={(e) => {
+              const val = e.target.value;
+              setNewUser({
+                ...newUser,
+                qcSamplingRate: val === '' ? null : Math.min(100, Math.max(0, parseInt(val, 10) || 0))
+              });
+            }}
+            placeholder="Use category default rate"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+          <span className="text-sm font-medium text-gray-600">%</span>
+        </div>
+        <p className="text-xs text-gray-500">
+          Leave empty to use category/subcategory rates. Specify 100% for trainees, or 10% for seniors.
+        </p>
+      </div>
+
       <div className="space-y-2">
         <FormLabel>Workbaskets (at least one)</FormLabel>
         {workbasketLoadWarning ? <div className="text-xs text-amber-700">{workbasketLoadWarning}</div> : null}

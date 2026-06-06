@@ -144,6 +144,8 @@ const STATUS_CLASS_MAP = {
   closed: 'closed',
   filed: 'neutral',
   archived: 'archived',
+  unassigned: 'draft',
+  routed: 'review',
 };
 
 export const StatusBadge = ({ status, label }) => {
