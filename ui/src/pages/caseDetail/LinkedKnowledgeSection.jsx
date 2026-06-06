@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes';
 import { categoryService } from '../../services/categoryService';
 import { formatDateTime } from '../../utils/formatDateTime';
-import { normalizeWorkType } from '../../utils/workTypeOptions';
 
 const LINK_TYPES = {
   portal: 'Portal',
@@ -329,8 +328,3 @@ export const LinkedKnowledgeSection = ({
   );
 };
 
-// buildWorkTypeCandidates
-// toArray(res?.data?.data || res?.data?.items || res?.data || [])
-
-// buildWorkTypeCandidates
-// toArray(res?.data?.data || res?.data?.items || res?.data || [])
