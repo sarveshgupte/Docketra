@@ -97,7 +97,6 @@ const getSuperadminAiAssistantChat = async (req, res) => {
     // Defensively log error details safely without leaking prompt text, keys, or internal PII
     log.error('[AI_ASSISTANT] Error generating response from Gemini:', {
       message: error.message,
-      code: error.code || null,
       status: error.status || null,
       provider: error.provider || null,
       details: error.details ? String(error.details).slice(0, 150) : null,

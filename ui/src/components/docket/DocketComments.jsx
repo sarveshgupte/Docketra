@@ -44,31 +44,14 @@ export const DocketComments = memo(({ comments = [] }) => {
             || `${comment.createdAt || 'na'}-${comment.createdByXID || comment.createdBy || 'system'}-${comment.text || ''}`;
           const createdAtLabel = formatDateTime(comment.createdAt) || 'Unknown time';
           const relativeLabel = formatRelativeTime(comment.createdAt);
-
-          const initials = (() => {
-            const cleanName = String(createdByName || createdByXID || comment.createdBy || 'U').split('(')[0].trim();
-            const parts = cleanName.split(' ').filter(Boolean);
-            if (parts.length >= 2) {
-              return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-            }
-            return cleanName.slice(0, 2).toUpperCase();
-          })();
-
           return (
             <li key={commentKey} className="docket-comments__item">
               <span className="docket-comments__dot" aria-hidden="true">•</span>
-              <div className="docket-comments__avatar">
-                {initials}
+              <div className="docket-comments__meta">
+                <span>{createdBy}</span>
+                <span title={relativeLabel || createdAtLabel}>{createdAtLabel}</span>
               </div>
-              <div className="docket-comments__bubble">
-                <div className="docket-comments__meta">
-                  <span className="docket-comments__author">{createdBy}</span>
-                  <span className="docket-comments__time" title={relativeLabel || createdAtLabel}>
-                    {relativeLabel || createdAtLabel}
-                  </span>
-                </div>
-                <p className="docket-comments__text">{renderCommentText(comment.text)}</p>
-              </div>
+              <p className="docket-comments__text">{renderCommentText(comment.text)}</p>
             </li>
           );
         })}

@@ -53,26 +53,4 @@ assert.equal(byosRecoverySummary.badgeLabel, 'Storage needs attention');
 assert.equal(byosRecoverySummary.needsAttention, true);
 assert.equal(byosRecoverySummary.helperText, 'Google Drive root recovery required');
 
-const uppercaseRootRecoverySummary = buildStorageStatusSummary(
-  'demo-firm',
-  {
-    provider: 'google_drive',
-    isConfigured: true,
-    status: 'ACTIVE_BYOS',
-  },
-  {
-    activeStorage: {
-      provider: 'google_drive',
-      connectionStatus: 'ACTIVE_BYOS',
-    },
-  },
-  {
-    status: 'RECOVERY_REQUIRED',
-  },
-  null,
-);
-
-assert.equal(uppercaseRootRecoverySummary.badgeLabel, 'Storage needs attention');
-assert.equal(uppercaseRootRecoverySummary.needsAttention, true);
-
 console.log('storageStatusSummary.test.mjs passed');

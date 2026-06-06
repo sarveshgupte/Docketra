@@ -528,9 +528,8 @@ const employeeWorklist = async (req, res) => {
     }
 
     const defaultStatuses = worklistStatuses.map((statusValue) => String(statusValue || '').trim().toUpperCase());
-    const allowedStatuses = [...defaultStatuses, 'FILED', 'RESOLVED'];
     const filteredStatuses = normalizedRequestedStatuses.length > 0
-      ? allowedStatuses.filter((statusValue) => normalizedRequestedStatuses.includes(statusValue))
+      ? defaultStatuses.filter((statusValue) => normalizedRequestedStatuses.includes(statusValue))
       : defaultStatuses;
 
     const query = {
@@ -935,8 +934,6 @@ const globalWorklist = async (req, res) => {
       clientId: 1,
       clientName: 1,
       category: 1,
-      subcategory: 1,
-      caseSubCategory: 1,
       status: 1,
       slaDueAt: 1,
       createdAt: 1,
@@ -945,9 +942,6 @@ const globalWorklist = async (req, res) => {
       ownerTeamId: 1,
       routedToTeamId: 1,
       routingNote: 1,
-      assignedToXID: 1,
-      assignedTo: 1,
-      assignedToName: 1,
     };
     const skip = (parsedPage - 1) * parsedLimit;
 
@@ -1034,7 +1028,6 @@ const globalWorklist = async (req, res) => {
         clientName: c.clientName || clientNameByClientId.get(String(c.clientId || '').trim()) || null,
         status: c.status,
         category: c.category,
-        subcategory: c.subcategory || c.caseSubCategory || null,
         slaDueAt: c.slaDueAt,
         slaDaysRemaining,
         createdAt: c.createdAt,
@@ -1048,10 +1041,6 @@ const globalWorklist = async (req, res) => {
         routedToTeamId: c.routedToTeamId || null,
         routedToTeamName: c.routedToTeamId ? (teamNameMap.get(String(c.routedToTeamId)) || null) : null,
         routingNote: c.routingNote || null,
-        assignedToXID: c.assignedToXID || null,
-        assignedTo: c.assignedTo || null,
-        assignedToName: c.assignedToName || null,
-        assigneeName: c.assignedToName || null,
       };
     });
     

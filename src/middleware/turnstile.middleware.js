@@ -11,10 +11,8 @@ const createTurnstileMiddleware = ({
   missingDescription,
   failedDescription,
   passedDescription,
-  skip = null,
 }) => async (req, res, next) => {
   if (!turnstileService.isTurnstileEnabled()) return next();
-  if (typeof skip === 'function' && skip(req)) return next();
 
   const token = turnstileService.extractTurnstileToken(req.body);
   if (!token) {
@@ -91,21 +89,6 @@ const requireTurnstileForLoginVerify = createTurnstileMiddleware({
   passedDescription: 'Login verify Turnstile verification passed',
 });
 
-const isEmbeddedPublicFormSubmission = (req) => (
-  req?.query?.embed === 'true' || req?.body?.submissionMode === 'embedded_form'
-);
-
-const requireTurnstileForPublicForm = createTurnstileMiddleware({
-  missingAction: SECURITY_AUDIT_ACTIONS.PUBLIC_FORM_TURNSTILE_MISSING,
-  failedAction: SECURITY_AUDIT_ACTIONS.PUBLIC_FORM_TURNSTILE_FAILED,
-  passedAction: SECURITY_AUDIT_ACTIONS.PUBLIC_FORM_TURNSTILE_PASSED,
-  resource: 'public/forms/submit',
-  missingDescription: 'Public form Turnstile token missing',
-  failedDescription: 'Public form Turnstile verification failed',
-  passedDescription: 'Public form Turnstile verification passed',
-  skip: isEmbeddedPublicFormSubmission,
-});
-
 module.exports = {
   GENERIC_TURNSTILE_FAILURE_MESSAGE,
   createTurnstileMiddleware,
@@ -113,5 +96,4 @@ module.exports = {
   requireTurnstileForSignup,
   requireTurnstileForUpload,
   requireTurnstileForLoginVerify,
-  requireTurnstileForPublicForm,
 };

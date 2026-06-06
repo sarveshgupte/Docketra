@@ -63,8 +63,7 @@ const createRes = () => ({
   // Create schema should require businessName and support canonical optional fields
   const postSchema = clientRouteSchema['POST /'].body;
 
-  const createMinimal = postSchema.parse({ businessName: 'Pranali Ltd' });
-  assert.equal(createMinimal.businessName, 'Pranali Ltd');
+  assert.throws(() => postSchema.parse({ businessName: 'Pranali Ltd' }), /businessEmail|primaryContactNumber|businessAddress|city|state|pincode|contactPersonName|contactPersonEmail|contactPersonPhone/i);
 
   assert.throws(
     () => postSchema.parse({}),

@@ -144,7 +144,6 @@ const buildChecklistSnapshot = ({ checklist = [], internalDueDate }) => {
 
 const buildSopSnapshot = ({ sop = {}, subcategoryId = null }) => {
   const links = Array.isArray(sop?.links) ? sop.links : [];
-  const files = Array.isArray(sop?.files) ? sop.files : [];
   return {
     title: String(sop?.title || '').trim(),
     body: String(sop?.body || '').trim(),
@@ -157,21 +156,6 @@ const buildSopSnapshot = ({ sop = {}, subcategoryId = null }) => {
       type: ['portal', 'reference', 'template', 'internal', 'other'].includes(String(link?.type || 'reference')) ? String(link.type) : 'reference',
       sortOrder: Number.isFinite(Number(link?.sortOrder)) ? Number(link.sortOrder) : idx,
     })).filter((link) => link.title && link.url),
-    files: files.map((file, idx) => ({
-      id: String(file?.id || randomUUID()),
-      fileName: String(file?.fileName || '').trim(),
-      mimeType: String(file?.mimeType || '').trim(),
-      size: Number.isFinite(Number(file?.size)) ? Number(file.size) : 0,
-      storageProvider: String(file?.storageProvider || '').trim(),
-      storageFileId: file?.storageFileId ? String(file.storageFileId) : null,
-      objectKey: file?.objectKey ? String(file.objectKey) : null,
-      webViewLink: file?.webViewLink ? String(file.webViewLink) : null,
-      uploadedAt: file?.uploadedAt || new Date(),
-      uploadedByXID: file?.uploadedByXID ? String(file.uploadedByXID).trim() : null,
-      uploadedByName: file?.uploadedByName ? String(file.uploadedByName).trim() : null,
-      description: String(file?.description || '').trim(),
-      sortOrder: Number.isFinite(Number(file?.sortOrder)) ? Number(file.sortOrder) : idx,
-    })).filter((file) => file.fileName && file.mimeType && file.storageProvider),
     sourceSubcategoryId: subcategoryId || null,
     capturedAt: new Date(),
   };

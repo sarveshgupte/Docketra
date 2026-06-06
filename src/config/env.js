@@ -258,6 +258,5 @@ module.exports = {
   loadEnv,
   envSchema,
   maskEnvForLog,
-  maskEnvValue,
   isSensitiveEnvKey,
 };

@@ -87,10 +87,10 @@ const maskEmail = (email) => {
 
 /**
  * Send email via Brevo Transactional Email API
- * @param {Object} options - Email options { to, subject, html, text, attachments }
+ * @param {Object} options - Email options { to, subject, html, text }
  * @returns {Promise<Object>} Result object with success status and messageId
  */
-const sendTransactionalEmail = async ({ to, subject, html, text, attachments }) => {
+const sendTransactionalEmail = async ({ to, subject, html, text }) => {
   const apiKey = process.env.BREVO_API_KEY;
   const mailFrom = resolveMailFrom();
   
@@ -108,7 +108,7 @@ const sendTransactionalEmail = async ({ to, subject, html, text, attachments }) 
   log.info(`[EMAIL] Using sender: ${sender.name} <${sender.email}>`);
   log.info(`[EMAIL] Sending email via Brevo API`);
   
-  const payloadData = {
+  const payload = JSON.stringify({
     sender: {
       name: sender.name,
       email: sender.email
@@ -117,13 +117,7 @@ const sendTransactionalEmail = async ({ to, subject, html, text, attachments }) 
     subject: subject,
     htmlContent: html,
     textContent: text
-  };
-
-  if (attachments && Array.isArray(attachments)) {
-    payloadData.attachment = attachments;
-  }
-  
-  const payload = JSON.stringify(payloadData);
+  });
   
   return new Promise((resolve, reject) => {
     const options = {
@@ -172,7 +166,7 @@ const sendTransactionalEmail = async ({ to, subject, html, text, attachments }) 
  * Send email via Brevo API or log to console
  * Production: Use Brevo Transactional Email API
  * Development: Log to console only
- * @param {Object} mailOptions - Email options (to, subject, html, text, attachments)
+ * @param {Object} mailOptions - Email options (to, subject, html, text)
  * @param {Object} context - Request context for side-effect queueing (optional):
  *   - _pendingSideEffects: Array to store pending effects
  *   - transactionActive: boolean
@@ -195,8 +189,7 @@ const sendEmailNow = async (mailOptions) => {
         to: mailOptions.to,
         subject: mailOptions.subject,
         html: mailOptions.html,
-        text: mailOptions.text,
-        attachments: mailOptions.attachments
+        text: mailOptions.text
       });
       recordSuccess('smtp');
       log.info(`[EMAIL] Email sent successfully via Brevo: ${result.messageId || 'sent'}`);
@@ -213,9 +206,6 @@ const sendEmailNow = async (mailOptions) => {
   log.info('========================================');
   log.info(`To: ${mailOptions.to} (masked: ${maskedEmail})`);
   log.info(`Subject: ${mailOptions.subject}`);
-  if (mailOptions.attachments && mailOptions.attachments.length > 0) {
-    log.info(`Attachments: ${mailOptions.attachments.map(a => a.name).join(', ')}`);
-  }
   log.info('----------------------------------------');
   log.info(mailOptions.text || mailOptions.html);
   log.info('----------------------------------------');
@@ -252,7 +242,6 @@ const sendDirectAuthEmail = async ({
   subject,
   html,
   text,
-  attachments,
   otp = false,
 }) => {
   if (otp) {
@@ -268,7 +257,7 @@ const sendDirectAuthEmail = async ({
     });
   }
 
-  return sendEmailNow({ to, subject, html, text, attachments });
+  return sendEmailNow({ to, subject, html, text });
 };
 
 /**

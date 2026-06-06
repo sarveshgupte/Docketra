@@ -3,7 +3,6 @@ const caseActionService = require('../services/caseAction.service');
 const CaseStatus = require('../domain/case/caseStatus');
 const { logCaseListViewed } = require('../services/auditLog.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
-const { transition } = require('../services/docketWorkflow.service');
 
 /**
  * Case Actions Controller
@@ -33,7 +32,7 @@ const { transition } = require('../services/docketWorkflow.service');
 const resolveCase = async (req, res) => {
   try {
     const { caseId } = req.params;
-    const { comment, sendToQC = false } = req.body;
+    const { comment } = req.body;
     
     // Validate user authentication
     if (!req.user || !req.user.xID) {
@@ -54,21 +53,13 @@ const resolveCase = async (req, res) => {
       return res.status(409).json({ success: false, message: 'Cannot resolve while routed' });
     }
 
-    const caseData = await transition({
-      docketId: caseId,
-      firmId: req.user.firmId,
-      actor: req.user,
-      toState: 'RESOLVED',
-      comment,
-      sendToQC,
-    });
+    // Call service to resolve case - with firm scoping
+    const caseData = await caseActionService.resolveCase(req.user.firmId, caseId, comment, req.user, req);
     
     res.json({
       success: true,
       data: caseData,
-      message: String(caseData?.status || '').toUpperCase() === 'QC_PENDING'
-        ? 'Case sent to QC successfully'
-        : 'Case resolved successfully',
+      message: 'Case resolved successfully',
     });
   } catch (error) {
     // Handle specific errors

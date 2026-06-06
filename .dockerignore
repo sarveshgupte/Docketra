@@ -7,13 +7,8 @@ ui/dist
 ui/.env*
 tests
 docs
-scripts/dev-only
 coverage
 *.log
 .env
 .env.*
-env.yaml
-.dev.vars
-.dev.vars.*
-scratch
 .DS_Store

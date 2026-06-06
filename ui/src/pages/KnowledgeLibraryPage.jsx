@@ -2,20 +2,20 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { PlatformShell } from '../components/platform/PlatformShell';
 import { knowledgeItemsApi } from '../api/knowledgeItems.api';
-import { adminApi } from '../api/admin.api';
 import { WORK_TYPE_OPTIONS, isKnownWorkType, normalizeWorkType } from '../utils/workTypeOptions';
 import {
   DataTable,
   FilterBar,
   PageSection,
+  StatGrid,
   StatusMessageStack,
   toArray,
 } from './platform/PlatformShared';
 
-import { formatDateOnly } from '../utils/formatDateTime';
-
 const ITEM_TYPES = ['sop', 'checklist', 'template', 'note', 'client_instruction', 'process'];
 const ITEM_STATUSES = ['draft', 'active'];
+
+import { formatDateOnly } from '../utils/formatDateTime';
 
 const formatLabel = (value) => String(value || '').replace(/_/g, ' ');
 
@@ -24,19 +24,6 @@ const formatDate = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '—';
   return formatDateOnly(date);
-};
-
-const formatDateTime = (value) => {
-  if (!value) return '—';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
 };
 
 const normalizeTagInput = (raw) =>
@@ -186,7 +173,7 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
       linkedWorkType: normalizeWorkType(form.linkedWorkType) || null,
       linkedClientId: form.linkedClientId.trim() || null,
       reviewDueAt: form.reviewDueAt || null,
-      checklistSteps: form.type === 'checklist' && Array.isArray(form.checklistSteps)
+      checklistSteps: Array.isArray(form.checklistSteps)
         ? form.checklistSteps.map((step, idx) => ({
             label: String(step.label || '').trim(),
             description: String(step.description || '').trim() || null,
@@ -199,23 +186,22 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
   };
 
   const fieldsetStyle = {
-    border: '1px solid #e8e6e0',
-    borderRadius: '8px',
-    padding: '1.25rem',
-    marginBottom: '1rem',
-    background: '#ffffff',
+    border: '1px solid #e5e7eb',
+    borderRadius: '6px',
+    padding: '1rem',
+    marginBottom: '0.75rem',
   };
   const legendStyle = {
     fontWeight: 700,
-    fontSize: '0.78rem',
+    fontSize: '0.85rem',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
-    color: '#7a7870',
-    padding: '0 0.5rem',
+    color: '#374151',
+    padding: '0 0.4rem',
   };
-  const labelStyle = { display: 'block', marginBottom: '0.3rem', fontWeight: 600, fontSize: '0.82rem', color: '#3d3c38' };
-  const fieldGap = { display: 'flex', flexDirection: 'column', gap: '0.85rem' };
-  const rowGap = { display: 'flex', gap: '0.85rem', flexWrap: 'wrap' };
+  const labelStyle = { display: 'block', marginBottom: '0.25rem', fontWeight: 600 };
+  const fieldGap = { display: 'flex', flexDirection: 'column', gap: '0.75rem' };
+  const rowGap = { display: 'flex', gap: '0.75rem', flexWrap: 'wrap' };
 
   return (
     <form onSubmit={handleSubmit} aria-label="Knowledge item form">
@@ -227,18 +213,17 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
           <div style={fieldGap}>
             <div>
               <label htmlFor="ki-title" style={labelStyle}>
-                Title <span aria-hidden="true" style={{ color: '#ef4444' }}>*</span>
+                Title <span aria-hidden="true">*</span>
               </label>
               <input
                 id="ki-title"
                 name="title"
                 type="text"
-                className="form-input"
                 value={form.title}
                 onChange={handleChange}
                 required
                 maxLength={500}
-                style={{ width: '100%', height: '36px' }}
+                style={{ width: '100%' }}
                 aria-required="true"
               />
             </div>
@@ -246,9 +231,9 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
             <div style={rowGap}>
               <div style={{ flex: 1, minWidth: '140px' }}>
                 <label htmlFor="ki-type" style={labelStyle}>
-                  Type <span aria-hidden="true" style={{ color: '#ef4444' }}>*</span>
+                  Type <span aria-hidden="true">*</span>
                 </label>
-                <select id="ki-type" name="type" className="form-input" value={form.type} onChange={handleChange} required aria-required="true" style={{ width: '100%', height: '36px' }}>
+                <select id="ki-type" name="type" value={form.type} onChange={handleChange} required aria-required="true" style={{ width: '100%' }}>
                   {ITEM_TYPES.map((t) => (
                     <option key={t} value={t}>{formatLabel(t)}</option>
                   ))}
@@ -257,9 +242,9 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
 
               <div style={{ flex: 1, minWidth: '140px' }}>
                 <label htmlFor="ki-status" style={labelStyle}>
-                  Status <span aria-hidden="true" style={{ color: '#ef4444' }}>*</span>
+                  Status <span aria-hidden="true">*</span>
                 </label>
-                <select id="ki-status" name="status" className="form-input" value={form.status} onChange={handleChange} required aria-required="true" style={{ width: '100%', height: '36px' }}>
+                <select id="ki-status" name="status" value={form.status} onChange={handleChange} required aria-required="true" style={{ width: '100%' }}>
                   {ITEM_STATUSES.map((s) => (
                     <option key={s} value={s}>{formatLabel(s)}</option>
                   ))}
@@ -272,12 +257,11 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
               <textarea
                 id="ki-summary"
                 name="summary"
-                className="form-input"
                 value={form.summary}
                 onChange={handleChange}
                 maxLength={2000}
                 rows={2}
-                style={{ width: '100%', padding: '0.5rem' }}
+                style={{ width: '100%' }}
               />
             </div>
 
@@ -286,28 +270,26 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
               <textarea
                 id="ki-content"
                 name="content"
-                className="form-input"
                 value={form.content}
                 onChange={handleChange}
                 maxLength={50000}
                 rows={6}
-                style={{ width: '100%', padding: '0.5rem', fontFamily: 'monospace' }}
+                style={{ width: '100%' }}
               />
             </div>
 
             <div>
               <label htmlFor="ki-tags" style={labelStyle}>
-                Tags <span style={{ fontWeight: 400, color: '#7a7870' }}>(comma-separated)</span>
+                Tags <span style={{ fontWeight: 400, color: '#6b7280' }}>(comma-separated)</span>
               </label>
               <input
                 id="ki-tags"
                 name="tags"
                 type="text"
-                className="form-input"
                 value={form.tags}
                 onChange={handleChange}
                 placeholder="e.g. compliance, filing, annual"
-                style={{ width: '100%', height: '36px' }}
+                style={{ width: '100%' }}
               />
             </div>
           </div>
@@ -324,10 +306,9 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
                   id="ki-ownerXid"
                   name="ownerXid"
                   type="text"
-                  className="form-input"
                   value={form.ownerXid}
                   onChange={handleChange}
-                  style={{ width: '100%', height: '36px' }}
+                  style={{ width: '100%' }}
                 />
               </div>
 
@@ -336,10 +317,9 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
                 <select
                   id="ki-linkedWorkTypeSelect"
                   name="linkedWorkTypeSelect"
-                  className="form-input"
                   value={selectedWorkType}
                   onChange={handleChange}
-                  style={{ width: '100%', height: '36px' }}
+                  style={{ width: '100%' }}
                 >
                   <option value="">Unlinked</option>
                   {WORK_TYPE_OPTIONS.map((option) => (
@@ -355,14 +335,13 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
                     id="ki-linkedWorkType"
                     name="linkedWorkType"
                     type="text"
-                    className="form-input"
                     value={form.linkedWorkType}
                     onChange={handleChange}
-                    style={{ width: '100%', marginTop: '0.4rem', height: '36px' }}
+                    style={{ width: '100%', marginTop: '0.4rem' }}
                     placeholder="Enter custom work type"
                   />
                 ) : null}
-                <p style={{ fontSize: '0.75rem', color: '#7a7870', marginTop: '0.3rem', marginBottom: 0, lineHeight: 1.35 }}>
+                <p style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem', marginBottom: 0 }}>
                   Use the same work type/category used by dockets so this knowledge appears during work execution.
                 </p>
               </div>
@@ -371,19 +350,18 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
             <div style={rowGap}>
               <div style={{ flex: 1, minWidth: '200px' }}>
                 <label htmlFor="ki-linkedClientId" style={labelStyle}>
-                  Linked client ID <span style={{ fontWeight: 400, color: '#7a7870' }}>(advanced, optional)</span>
+                  Linked client ID <span style={{ fontWeight: 400, color: '#6b7280' }}>(advanced, optional)</span>
                 </label>
                 <input
                   id="ki-linkedClientId"
                   name="linkedClientId"
                   type="text"
-                  className="form-input"
                   value={form.linkedClientId}
                   onChange={handleChange}
-                  style={{ width: '100%', height: '36px' }}
+                  style={{ width: '100%' }}
                 />
-                <p style={{ fontSize: '0.75rem', color: '#7a7870', marginTop: '0.3rem', marginBottom: 0, lineHeight: 1.35 }}>
-                  Linking a client lets this knowledge appear in Client Memory workspace.
+                <p style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem', marginBottom: 0 }}>
+                  Linking a client lets this knowledge appear in Client Memory. Use the client&apos;s internal Mongo ID. A client picker will be added in a future update.
                 </p>
               </div>
 
@@ -393,10 +371,9 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
                   id="ki-reviewDueAt"
                   name="reviewDueAt"
                   type="date"
-                  className="form-input"
                   value={form.reviewDueAt}
                   onChange={handleChange}
-                  style={{ width: '100%', height: '36px' }}
+                  style={{ width: '100%' }}
                 />
               </div>
             </div>
@@ -407,112 +384,57 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
         {form.type === 'checklist' ? (
           <fieldset style={fieldsetStyle}>
             <legend style={legendStyle}>Checklist steps</legend>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-              <span style={{ fontSize: '0.8rem', color: '#7a7870', fontWeight: 500 }}>
-                {(form.checklistSteps || []).length} step{(form.checklistSteps || []).length !== 1 ? 's' : ''} defined
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                {(form.checklistSteps || []).length} step{(form.checklistSteps || []).length !== 1 ? 's' : ''}
               </span>
-              <button
-                type="button"
-                onClick={addChecklistStep}
-                style={{
-                  padding: '2px 8px',
-                  fontSize: '0.75rem',
-                  background: '#2563eb',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontWeight: 600
-                }}
-              >
-                + Add Step
-              </button>
+              <button type="button" onClick={addChecklistStep}>Add step</button>
             </div>
             {(form.checklistSteps || []).length === 0 ? (
-              <p style={{ color: '#7a7870', fontSize: '0.8rem', margin: '0.5rem 0', fontStyle: 'italic' }}>
-                No checklist steps yet. Add the first step to make this checklist useful.
+              <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '0.5rem 0' }}>
+                No checklist steps yet. Add the first step to make this checklist useful during work execution.
               </p>
             ) : null}
             {(form.checklistSteps || []).map((step, index) => (
               <div
                 key={`step-${index}`}
                 style={{
-                  borderTop: index ? '1px solid #e8e6e0' : 'none',
-                  paddingTop: index ? '0.75rem' : 0,
-                  marginTop: index ? '0.75rem' : 0,
+                  borderTop: index ? '1px solid #f3f4f6' : 'none',
+                  paddingTop: index ? '0.5rem' : 0,
+                  marginTop: index ? '0.5rem' : 0,
                 }}
               >
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.4rem' }}>
-                  <div style={{
-                    width: '20px',
-                    height: '20px',
-                    borderRadius: '50%',
-                    background: '#eff5ff',
-                    color: '#2563eb',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}>
-                    {index + 1}
-                  </div>
+                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  <span style={{ minWidth: '60px', fontSize: '0.85rem', color: '#6b7280' }}>Step {index + 1}</span>
                   <input
                     type="text"
-                    className="form-input"
                     value={step.label}
                     onChange={(e) => updateChecklistStep(index, { label: e.target.value })}
-                    placeholder="Step label (e.g. Verify tax return status)"
+                    placeholder="Step label"
                     maxLength={300}
-                    style={{ flex: 1, height: '32px' }}
+                    style={{ flex: 1 }}
                   />
                 </div>
                 <textarea
                   value={step.description || ''}
                   onChange={(e) => updateChecklistStep(index, { description: e.target.value })}
-                  placeholder="Detailed guidance / instructions for this step (optional)"
+                  placeholder="Description (optional)"
                   rows={2}
-                  className="form-input"
                   maxLength={2000}
-                  style={{ width: '100%', marginTop: '0.25rem', padding: '0.4rem', fontSize: '0.8rem' }}
+                  style={{ width: '100%', marginTop: '0.35rem' }}
                 />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.4rem' }}>
-                  <label style={{ fontSize: '0.78rem', color: '#3d3c38', display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={step.required !== false}
-                      onChange={(e) => updateChecklistStep(index, { required: e.target.checked })}
-                    />{' '}
-                    Required step
-                  </label>
-                  <div className="action-row" style={{ gap: '0.25rem' }}>
-                    <button
-                      type="button"
-                      disabled={index === 0}
-                      onClick={() => moveChecklistStep(index, -1)}
-                      style={{ padding: '2px 6px', fontSize: '10px', height: '24px' }}
-                      title="Move Up"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      disabled={index === (form.checklistSteps || []).length - 1}
-                      onClick={() => moveChecklistStep(index, 1)}
-                      style={{ padding: '2px 6px', fontSize: '10px', height: '24px' }}
-                      title="Move Down"
-                    >
-                      ↓
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => removeChecklistStep(index)}
-                      style={{ padding: '2px 6px', fontSize: '10px', color: '#ef4444', borderColor: '#fee2e2', height: '24px' }}
-                    >
-                      Delete
-                    </button>
-                  </div>
+                <label style={{ fontSize: '0.85rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={step.required !== false}
+                    onChange={(e) => updateChecklistStep(index, { required: e.target.checked })}
+                  />{' '}
+                  Required step
+                </label>
+                <div className="action-row" style={{ marginTop: '0.3rem' }}>
+                  <button type="button" onClick={() => moveChecklistStep(index, -1)} disabled={index === 0}>Up</button>
+                  <button type="button" onClick={() => moveChecklistStep(index, 1)} disabled={index === (form.checklistSteps || []).length - 1}>Down</button>
+                  <button type="button" onClick={() => removeChecklistStep(index)}>Remove</button>
                 </div>
               </div>
             ))}
@@ -520,27 +442,27 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
         ) : null}
 
         {initial?.type === 'checklist' && form.type !== 'checklist' ? (
-          <p className="inline-notice inline-notice--warning" style={{ fontSize: '0.8rem' }}>Checklist steps are only used for checklist records.</p>
+          <p className="inline-notice inline-notice--warning">Checklist steps are only used for checklist records.</p>
         ) : null}
 
         {/* ── D. Privacy reminder ── */}
         <p
           className="inline-notice inline-notice--warning"
-          style={{ fontSize: '0.78rem', marginBottom: 0 }}
+          style={{ fontSize: '0.82rem', marginBottom: 0 }}
         >
-          Structured knowledge only. Do not paste sensitive client documents here; store them in BYOS.
+          Structured knowledge only. Do not upload or paste sensitive client documents here; store heavy documents in firm-controlled storage/BYOS.
         </p>
 
         {saveError ? (
-          <p className="inline-notice inline-notice--error" role="alert" style={{ fontSize: '0.8rem', padding: '0.5rem' }}>{saveError}</p>
+          <p className="inline-notice inline-notice--error" role="alert">{saveError}</p>
         ) : null}
 
-        <div className="action-row" style={{ marginTop: '0.75rem', justifyContent: 'flex-end' }}>
-          <button type="button" onClick={onCancel} disabled={saving} style={{ height: '36px', px: '15px' }}>
-            Cancel
+        <div className="action-row">
+          <button type="submit" disabled={saving}>
+            {saving ? 'Saving…' : 'Save'}
           </button>
-          <button type="submit" className="action-primary" disabled={saving} style={{ height: '36px', px: '20px' }}>
-            {saving ? 'Saving…' : 'Save Item'}
+          <button type="button" onClick={onCancel} disabled={saving}>
+            Cancel
           </button>
         </div>
       </div>
@@ -554,34 +476,32 @@ const DRAWER_ASIDE_STYLE = {
   top: 0,
   right: 0,
   bottom: 0,
-  width: '540px',
+  width: '520px',
   maxWidth: '100vw',
   background: '#fff',
-  borderLeft: '1px solid #e8e6e0',
-  boxShadow: '-4px 0 24px rgba(0,0,0,0.08)',
+  borderLeft: '1px solid #e5e7eb',
+  boxShadow: '-4px 0 24px rgba(0,0,0,0.10)',
   zIndex: 200,
-  display: 'flex',
-  flexDirection: 'column',
 };
 
 const DetailRow = ({ label, value }) => (
-  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-    <span style={{ fontWeight: 600, minWidth: '150px', color: '#7a7870', fontSize: '0.82rem' }}>{label}</span>
-    <span style={{ color: '#1a1916', flex: 1, fontSize: '0.82rem' }}>{value || '—'}</span>
+  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
+    <span style={{ fontWeight: 600, minWidth: '160px', color: '#374151', fontSize: '0.85rem' }}>{label}</span>
+    <span style={{ color: '#111827', flex: 1, fontSize: '0.85rem' }}>{value || '—'}</span>
   </div>
 );
 
 const DrawerSectionLabel = ({ children }) => (
   <div style={{
-    fontSize: '0.7rem',
+    fontSize: '0.72rem',
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: '0.07em',
-    color: '#b0aea8',
+    color: '#9ca3af',
     marginBottom: '0.5rem',
-    marginTop: '1.25rem',
-    paddingBottom: '0.2rem',
-    borderBottom: '1px solid #f3f2ef',
+    marginTop: '1rem',
+    paddingBottom: '0.25rem',
+    borderBottom: '1px solid #f3f4f6',
   }}>
     {children}
   </div>
@@ -595,19 +515,19 @@ const KnowledgeItemDetailDrawer = ({ item, onEdit, onArchive, onClose }) => {
     <aside
       aria-label="Knowledge Item Detail"
       role="complementary"
-      style={DRAWER_ASIDE_STYLE}
+      style={{ ...DRAWER_ASIDE_STYLE, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}
     >
       {/* Header */}
       <div style={{
         padding: '1.25rem 1.5rem',
-        borderBottom: '1px solid #e8e6e0',
+        borderBottom: '1px solid #e5e7eb',
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'space-between',
         gap: '0.75rem',
       }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, lineHeight: 1.3, wordBreak: 'break-word', color: '#1a1916' }}>
+          <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, lineHeight: 1.3, wordBreak: 'break-word' }}>
             {item.title}
           </h2>
           <div style={{ marginTop: '0.35rem' }}>
@@ -618,13 +538,13 @@ const KnowledgeItemDetailDrawer = ({ item, onEdit, onArchive, onClose }) => {
           type="button"
           onClick={onClose}
           aria-label="Close detail drawer"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', color: '#b0aea8', flexShrink: 0 }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', color: '#6b7280', flexShrink: 0 }}
         >
           ✕
         </button>
       </div>
 
-      <div style={{ padding: '1rem 1.5rem', flex: 1, overflowY: 'auto' }}>
+      <div style={{ padding: '1rem 1.5rem', flex: 1 }}>
 
         {/* Metadata */}
         <DrawerSectionLabel>Metadata</DrawerSectionLabel>
@@ -640,7 +560,7 @@ const KnowledgeItemDetailDrawer = ({ item, onEdit, onArchive, onClose }) => {
         {item.summary ? (
           <>
             <DrawerSectionLabel>Summary</DrawerSectionLabel>
-            <p style={{ fontSize: '0.85rem', color: '#3d3c38', margin: 0, lineHeight: 1.45 }}>{item.summary}</p>
+            <p style={{ fontSize: '0.875rem', color: '#374151', margin: 0 }}>{item.summary}</p>
           </>
         ) : null}
 
@@ -649,19 +569,16 @@ const KnowledgeItemDetailDrawer = ({ item, onEdit, onArchive, onClose }) => {
           <>
             <DrawerSectionLabel>Content</DrawerSectionLabel>
             <pre style={{
-              background: '#fafaf8',
-              border: '1px solid #e8e6e0',
-              borderRadius: '6px',
+              background: '#f9fafb',
+              border: '1px solid #e5e7eb',
+              borderRadius: '4px',
               padding: '0.75rem',
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
-              fontSize: '0.8rem',
-              fontFamily: 'monospace',
-              maxHeight: '280px',
+              fontSize: '0.85rem',
+              maxHeight: '240px',
               overflowY: 'auto',
               margin: 0,
-              color: '#1a1916',
-              lineHeight: 1.4
             }}>
               {item.content}
             </pre>
@@ -672,16 +589,16 @@ const KnowledgeItemDetailDrawer = ({ item, onEdit, onArchive, onClose }) => {
         {item.type === 'checklist' && Array.isArray(item.checklistSteps) && item.checklistSteps.length ? (
           <>
             <DrawerSectionLabel>Checklist steps</DrawerSectionLabel>
-            <ol style={{ margin: 0, paddingLeft: '1.2rem' }}>
+            <ol style={{ margin: 0, paddingLeft: '1.1rem' }}>
               {item.checklistSteps.map((step, index) => (
-                <li key={`detail-step-${index}`} style={{ marginBottom: '0.5rem', fontSize: '0.82rem', color: '#3d3c38', lineHeight: 1.4 }}>
+                <li key={`detail-step-${index}`} style={{ marginBottom: '0.4rem', fontSize: '0.875rem' }}>
                   <div>
                     <strong>{step.label}</strong>{' '}
-                    <span style={{ color: '#b0aea8', fontSize: '0.75rem' }}>
+                    <span style={{ color: '#9ca3af', fontSize: '0.78rem' }}>
                       ({step.required === false ? 'Optional' : 'Required'})
                     </span>
                   </div>
-                  {step.description ? <div style={{ color: '#7a7870', fontSize: '0.78rem', marginTop: '0.1rem' }}>{step.description}</div> : null}
+                  {step.description ? <div style={{ color: '#6b7280', fontSize: '0.82rem' }}>{step.description}</div> : null}
                 </li>
               ))}
             </ol>
@@ -697,11 +614,11 @@ const KnowledgeItemDetailDrawer = ({ item, onEdit, onArchive, onClose }) => {
                 <span
                   key={tag}
                   style={{
-                    background: '#f3f2ef',
-                    color: '#3d3c38',
-                    borderRadius: '4px',
-                    padding: '0.15em 0.5em',
-                    fontSize: '0.75rem',
+                    background: '#f3f4f6',
+                    color: '#374151',
+                    borderRadius: '999px',
+                    padding: '0.15em 0.6em',
+                    fontSize: '0.78rem',
                     fontWeight: 500,
                   }}
                 >
@@ -713,7 +630,7 @@ const KnowledgeItemDetailDrawer = ({ item, onEdit, onArchive, onClose }) => {
         ) : null}
 
         {/* Audit */}
-        <DrawerSectionLabel>Audit Info</DrawerSectionLabel>
+        <DrawerSectionLabel>Audit</DrawerSectionLabel>
         <DetailRow label="Created by" value={item.createdBy || item.createdByXid} />
         <DetailRow label="Updated by" value={item.updatedBy || item.updatedByXid} />
         <DetailRow label="Created at" value={formatDate(item.createdAt)} />
@@ -721,14 +638,14 @@ const KnowledgeItemDetailDrawer = ({ item, onEdit, onArchive, onClose }) => {
 
       </div>
 
-      <div className="action-row" style={{ padding: '1rem 1.5rem', borderTop: '1px solid #e8e6e0', gap: '0.5rem', justifyContent: 'flex-end', background: '#fafaf8' }}>
+      <div className="action-row" style={{ padding: '1rem 1.5rem', borderTop: '1px solid #e5e7eb', gap: '0.5rem' }}>
         {item.status !== 'archived' ? (
           <>
             <button type="button" onClick={() => onEdit(item)}>Edit</button>
-            <button type="button" onClick={() => onArchive(item)} style={{ color: '#ef4444', borderColor: '#fee2e2' }}>Archive</button>
+            <button type="button" onClick={() => onArchive(item)}>Archive</button>
           </>
         ) : null}
-        <button type="button" className="action-primary" onClick={onClose}>Close</button>
+        <button type="button" onClick={onClose}>Close</button>
       </div>
     </aside>
   );
@@ -745,18 +662,12 @@ export const KnowledgeLibraryPage = () => {
   const [statusMessage, setStatusMessage] = useState('');
   const hasLoadedRef = useRef(false);
 
-  // Tab state: 'directory' | 'audit'
-  const [activeTab, setActiveTab] = useState('directory');
-
-  // Client-side filters
+  // Client-side filters — no API params
   const [searchQ, setSearchQ] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterTag, setFilterTag] = useState('');
   const [filterWorkType, setFilterWorkType] = useState('');
-
-  // Sorting state
-  const [sortState, setSortState] = useState({ key: 'updatedAt', direction: 'desc' });
 
   // Form state
   const [formMode, setFormMode] = useState(null); // null | 'create' | 'edit'
@@ -769,56 +680,7 @@ export const KnowledgeLibraryPage = () => {
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [drawerError, setDrawerError] = useState('');
 
-  // Audit trail state
-  const [auditLogs, setAuditLogs] = useState([]);
-  const [auditLoading, setAuditLoading] = useState(false);
-  const [auditError, setAuditError] = useState('');
-  const [auditPage, setAuditPage] = useState(1);
-  const [auditTotalPages, setAuditTotalPages] = useState(1);
-  const [auditTotal, setAuditTotal] = useState(0);
-
   const itemParam = searchParams.get('item');
-  const actionParam = searchParams.get('action');
-  const workTypeParam = searchParams.get('workType');
-
-  // Load audit trail logs
-  const loadAuditLogs = async (p = 1) => {
-    setAuditLoading(true);
-    setAuditError('');
-    try {
-      const result = await adminApi.getAuditLogs({ module: 'knowledge', page: p, limit: 15 });
-      setAuditLogs(Array.isArray(result?.data) ? result.data : []);
-      setAuditPage(p);
-      setAuditTotalPages(result?.pagination?.totalPages || 1);
-      setAuditTotal(result?.pagination?.total || 0);
-    } catch (err) {
-      setAuditError(err?.message || 'Failed to load audit trail logs.');
-    } finally {
-      setAuditLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'audit') {
-      void loadAuditLogs(1);
-    }
-  }, [activeTab]);
-
-  useEffect(() => {
-    if (actionParam === 'create') {
-      setSaveError('');
-      setEditingItem({
-        linkedWorkType: workTypeParam || ''
-      });
-      setFormMode('create');
-
-      // Clear query params to prevent infinite loop or re-launch on page refresh
-      const next = new URLSearchParams(searchParams);
-      next.delete('action');
-      next.delete('workType');
-      setSearchParams(next, { replace: true });
-    }
-  }, [actionParam, workTypeParam, searchParams, setSearchParams]);
 
   // Open detail drawer when ?item= param is present
   useEffect(() => {
@@ -879,7 +741,7 @@ export const KnowledgeLibraryPage = () => {
     setError('');
 
     try {
-      // Load all items
+      // Load all items; all filter/search narrowing is applied client-side via filteredItems.
       const result = await knowledgeItemsApi.listKnowledgeItems({});
       const loaded = toArray(result?.data?.data || result?.data?.items || result?.data);
       setItems(loaded);
@@ -920,30 +782,6 @@ export const KnowledgeLibraryPage = () => {
     }
     return result;
   }, [items, filterType, filterStatus, filterTag, filterWorkType, searchQ]);
-
-  // Client-side sorting
-  const sortedItems = useMemo(() => {
-    const sorted = [...filteredItems];
-    if (sortState.key) {
-      sorted.sort((a, b) => {
-        let valA = a[sortState.key];
-        let valB = b[sortState.key];
-        
-        if (sortState.key === 'updatedAt' || sortState.key === 'createdAt' || sortState.key === 'reviewDueAt') {
-          valA = valA ? new Date(valA).getTime() : 0;
-          valB = valB ? new Date(valB).getTime() : 0;
-        } else {
-          valA = String(valA || '').toLowerCase();
-          valB = String(valB || '').toLowerCase();
-        }
-        
-        if (valA < valB) return sortState.direction === 'asc' ? -1 : 1;
-        if (valA > valB) return sortState.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-    return sorted;
-  }, [filteredItems, sortState]);
 
   const now = Date.now();
   const totalCount = items.length;
@@ -1003,9 +841,6 @@ export const KnowledgeLibraryPage = () => {
       }
       closeForm();
       void loadData({ background: true });
-      if (activeTab === 'audit') {
-        void loadAuditLogs(1);
-      }
     } catch (saveErr) {
       setSaveError(saveErr?.message || 'Failed to save knowledge item. Please try again.');
     } finally {
@@ -1022,25 +857,14 @@ export const KnowledgeLibraryPage = () => {
       setStatusMessage('Knowledge item archived.');
       closeDrawer();
       void loadData({ background: true });
-      if (activeTab === 'audit') {
-        void loadAuditLogs(1);
-      }
     } catch (archiveErr) {
       setStatusMessage(`Archive failed: ${archiveErr?.message || 'Please try again.'}`);
     }
   };
 
-  const columns = [
-    { key: 'title', label: 'Knowledge Item', sortable: true },
-    { key: 'type', label: 'Type', sortable: true },
-    { key: 'status', label: 'Status', sortable: true },
-    { key: 'links', label: 'Links', sortable: false },
-    { key: 'reviewDueAt', label: 'Review Due', sortable: true },
-    { key: 'updatedAt', label: 'Updated', sortable: true },
-    { key: 'actions', label: 'Actions', sortable: false }
-  ];
+  const columns = ['Knowledge item', 'Type', 'Status', 'Links', 'Review due', 'Updated', 'Actions'];
 
-  const tableRows = sortedItems.map((item) => {
+  const tableRows = filteredItems.map((item) => {
     const itemId = item._id || item.id;
     const tags = toArray(item.tags);
     const summaryPreview = item.summary ? (item.summary.length > 80 ? `${item.summary.slice(0, 80)}…` : item.summary) : null;
@@ -1051,9 +875,9 @@ export const KnowledgeLibraryPage = () => {
       <tr key={itemId}>
         {/* Knowledge item cell */}
         <td style={{ maxWidth: '260px' }}>
-          <div style={{ fontWeight: 600, fontSize: '0.875rem', lineHeight: 1.3, color: '#1a1916' }}>{item.title || '—'}</div>
+          <div style={{ fontWeight: 600, fontSize: '0.875rem', lineHeight: 1.3 }}>{item.title || '—'}</div>
           {summaryPreview ? (
-            <div style={{ fontSize: '0.78rem', color: '#7a7870', marginTop: '0.2rem' }}>{summaryPreview}</div>
+            <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem' }}>{summaryPreview}</div>
           ) : null}
           {tags.length ? (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.3rem' }}>
@@ -1061,9 +885,9 @@ export const KnowledgeLibraryPage = () => {
                 <span
                   key={tag}
                   style={{
-                    background: '#f3f2ef',
-                    color: '#3d3c38',
-                    borderRadius: '4px',
+                    background: '#f3f4f6',
+                    color: '#374151',
+                    borderRadius: '999px',
                     padding: '0.1em 0.5em',
                     fontSize: '0.7rem',
                     fontWeight: 500,
@@ -1073,7 +897,7 @@ export const KnowledgeLibraryPage = () => {
                 </span>
               ))}
               {tags.length > 4 ? (
-                <span style={{ fontSize: '0.7rem', color: '#b0aea8' }}>+{tags.length - 4}</span>
+                <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>+{tags.length - 4}</span>
               ) : null}
             </div>
           ) : null}
@@ -1086,8 +910,8 @@ export const KnowledgeLibraryPage = () => {
             <span style={{
               display: 'inline-block',
               marginLeft: '0.35rem',
-              background: '#f3f2ef',
-              color: '#3d3c38',
+              background: '#f3f4f6',
+              color: '#374151',
               borderRadius: '999px',
               padding: '0.1em 0.5em',
               fontSize: '0.7rem',
@@ -1106,17 +930,17 @@ export const KnowledgeLibraryPage = () => {
           {hasLinks ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
               {item.linkedWorkType ? (
-                <span style={{ color: '#2563eb', fontWeight: 500 }}>⚙ {formatLabel(item.linkedWorkType)}</span>
+                <span style={{ color: '#1e40af' }}>⚙ {formatLabel(item.linkedWorkType)}</span>
               ) : null}
               {item.linkedClientId ? (
-                <span style={{ color: '#059669', fontWeight: 500 }}>👤 {item.linkedClientId}</span>
+                <span style={{ color: '#065f46' }}>👤 {item.linkedClientId}</span>
               ) : null}
               {item.linkedDocketId ? (
-                <span style={{ color: '#4f46e5', fontWeight: 500 }}>📁 {item.linkedDocketId}</span>
+                <span style={{ color: '#4338ca' }}>📁 {item.linkedDocketId}</span>
               ) : null}
             </div>
           ) : (
-            <span style={{ color: '#b0aea8', fontStyle: 'italic' }}>Unlinked</span>
+            <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Unlinked</span>
           )}
         </td>
 
@@ -1133,7 +957,7 @@ export const KnowledgeLibraryPage = () => {
               type="button"
               onClick={() => openDrawer(item)}
               aria-label={`View ${item.title}`}
-              style={{ fontSize: '0.8rem', padding: '3px 8px' }}
+              style={{ fontSize: '0.8rem' }}
             >
               View
             </button>
@@ -1143,7 +967,7 @@ export const KnowledgeLibraryPage = () => {
                   type="button"
                   onClick={() => openEdit(item)}
                   aria-label={`Edit ${item.title}`}
-                  style={{ fontSize: '0.8rem', padding: '3px 8px' }}
+                  style={{ fontSize: '0.8rem' }}
                 >
                   Edit
                 </button>
@@ -1151,7 +975,7 @@ export const KnowledgeLibraryPage = () => {
                   type="button"
                   onClick={() => void handleArchive(item)}
                   aria-label={`Archive ${item.title}`}
-                  style={{ fontSize: '0.8rem', padding: '3px 8px', color: '#ef4444', borderColor: '#fee2e2' }}
+                  style={{ fontSize: '0.8rem' }}
                 >
                   Archive
                 </button>
@@ -1174,81 +998,19 @@ export const KnowledgeLibraryPage = () => {
       subtitle="Knowledge Library feeds Company Brain. SOPs, checklists, templates, notes, client instructions, and process records — all in one place."
       actions={(
         <div className="action-row">
-          <button type="button" className="action-primary" onClick={openCreate} disabled={loading} style={{ height: '36px' }}>
+          <button type="button" onClick={openCreate} disabled={loading}>
             New Knowledge Item
           </button>
           <button
             type="button"
-            onClick={() => {
-              if (activeTab === 'directory') void loadData({ background: true });
-              else void loadAuditLogs(1);
-            }}
-            disabled={loading || refreshing || auditLoading}
-            style={{ height: '36px' }}
+            onClick={() => void loadData({ background: true })}
+            disabled={loading || refreshing}
           >
-            {refreshing || auditLoading ? 'Refreshing…' : 'Refresh'}
+            {refreshing ? 'Refreshing…' : 'Refresh'}
           </button>
         </div>
       )}
     >
-      <style>{`
-        .hover-card:hover {
-          transform: translateY(-2.5px);
-          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05) !important;
-          border-color: #ddd9d0 !important;
-        }
-        .form-input {
-          width: 100%;
-          padding: 0.5rem 0.75rem;
-          font-size: 0.85rem;
-          border-radius: 6px;
-          border: 1px solid #e8e6e0;
-          background: #fafaf8;
-          color: #1a1916;
-          outline: none;
-          transition: all 0.15s ease;
-        }
-        .form-input:focus {
-          border-color: #2563eb !important;
-          background: #ffffff !important;
-          box-shadow: 0 0 0 2.5px rgba(37, 99, 235, 0.12) !important;
-        }
-        .tab-btn:hover {
-          color: #2563eb !important;
-          background: #eff5ff !important;
-        }
-        .timeline-item {
-          position: relative;
-          padding-left: 2rem;
-          padding-bottom: 1.25rem;
-        }
-        .timeline-item::before {
-          content: '';
-          position: absolute;
-          left: 9px;
-          top: 20px;
-          bottom: 0;
-          width: 2px;
-          background: #e8e6e0;
-        }
-        .timeline-item:last-child::before {
-          display: none;
-        }
-        .timeline-dot {
-          position: absolute;
-          left: 0;
-          top: 1px;
-          width: 20px;
-          height: 20px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 10px;
-          z-index: 2;
-        }
-      `}</style>
-
       <StatusMessageStack
         messages={[
           { tone: 'error', message: error },
@@ -1257,416 +1019,152 @@ export const KnowledgeLibraryPage = () => {
         ]}
       />
 
-      {/* Reworked Premium Stat Cards */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))',
-        gap: '0.75rem',
-        marginBottom: '1rem'
-      }}>
-        {[
-          { label: 'Total Records', value: totalCount, icon: '📂', accent: '#4f46e5' },
-          { label: 'Active SOPs', value: activeCount, icon: '✅', accent: '#10b981' },
-          { label: 'Drafts', value: draftCount, icon: '📝', accent: '#f59e0b' },
-          { label: 'Review Due', value: reviewDueCount, icon: '⚠️', accent: '#ef4444', color: reviewDueCount > 0 ? '#ef4444' : '#1a1916' },
-          { label: 'Checklists', value: checklistCount, icon: '📋', accent: '#8b5cf6' },
-          { label: 'Unlinked', value: unlinkedCount, icon: '🔗', accent: '#ec4899' },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            style={{
-              background: '#ffffff',
-              border: '1px solid #e8e6e0',
-              borderTop: `3.5px solid ${stat.accent}`,
-              borderRadius: '8px',
-              padding: '1rem 1.1rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.15rem',
-              boxShadow: '0 1px 2.5px rgba(0,0,0,0.015)',
-              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-            }}
-            className="hover-card"
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '10.5px', color: '#7a7870', fontWeight: 650, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{stat.label}</span>
-              <span style={{ fontSize: '1.05rem' }}>{stat.icon}</span>
-            </div>
-            <span style={{ fontSize: '1.55rem', fontWeight: 800, color: stat.color || '#1a1916', marginTop: '0.25rem' }}>
-              {loading ? '…' : stat.value}
-            </span>
-          </div>
-        ))}
-      </div>
+      {/* Guidance panel */}
+      <PageSection>
+        <div style={{
+          background: '#f0f9ff',
+          border: '1px solid #bae6fd',
+          borderRadius: '6px',
+          padding: '0.85rem 1rem',
+          fontSize: '0.875rem',
+          color: '#0c4a6e',
+          marginBottom: '0.5rem',
+        }}>
+          <strong>Use Knowledge Library for reusable firm knowledge.</strong> Link records to work types, clients, or dockets so they appear during execution.
+        </div>
+        <p className="inline-notice inline-notice--warning" style={{ marginBottom: 0, fontSize: '0.82rem' }}>
+          Do not upload or paste sensitive client documents here. Store heavy documents in firm-controlled storage/BYOS and use Knowledge Items for structured operational knowledge.
+        </p>
+      </PageSection>
 
-      {/* Tabs Control */}
-      <div style={{
-        display: 'flex',
-        gap: '0.25rem',
-        borderBottom: '1px solid #e8e6e0',
-        marginBottom: '1rem',
-        background: '#ffffff',
-        borderRadius: '8px',
-        padding: '3px 4px 0px',
-        border: '1px solid #e8e6e0'
-      }}>
-        <button
-          type="button"
-          onClick={() => setActiveTab('directory')}
-          style={{
-            background: activeTab === 'directory' ? '#eff5ff' : 'transparent',
-            border: 'none',
-            borderBottom: activeTab === 'directory' ? '2px solid #2563eb' : '2px solid transparent',
-            color: activeTab === 'directory' ? '#2563eb' : '#7a7870',
-            fontWeight: activeTab === 'directory' ? 650 : 500,
-            padding: '0.5rem 1.2rem',
-            cursor: 'pointer',
-            borderRadius: '6px 6px 0 0',
-            fontSize: '12.5px',
-            transition: 'all 0.15s ease',
-          }}
-          className={activeTab !== 'directory' ? 'tab-btn' : ''}
-        >
-          📚 Knowledge Directory
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('audit')}
-          style={{
-            background: activeTab === 'audit' ? '#eff5ff' : 'transparent',
-            border: 'none',
-            borderBottom: activeTab === 'audit' ? '2px solid #2563eb' : '2px solid transparent',
-            color: activeTab === 'audit' ? '#2563eb' : '#7a7870',
-            fontWeight: activeTab === 'audit' ? 650 : 500,
-            padding: '0.5rem 1.2rem',
-            cursor: 'pointer',
-            borderRadius: '6px 6px 0 0',
-            fontSize: '12.5px',
-            transition: 'all 0.15s ease',
-          }}
-          className={activeTab !== 'audit' ? 'tab-btn' : ''}
-        >
-          📜 Audit Trails
-        </button>
-      </div>
+      <StatGrid
+        items={[
+          { label: 'Total records', value: loading ? '…' : totalCount },
+          { label: 'Active', value: loading ? '…' : activeCount },
+          { label: 'Draft', value: loading ? '…' : draftCount },
+          { label: 'Archived', value: loading ? '…' : archivedCount },
+          { label: 'Review due', value: loading ? '…' : reviewDueCount, helpText: reviewDueCount > 0 ? 'Items past their scheduled review date.' : '' },
+          { label: 'Checklist records', value: loading ? '…' : checklistCount },
+          { label: 'Unlinked records', value: loading ? '…' : unlinkedCount, helpText: unlinkedCount > 0 ? 'Items with no linked work type, client, or docket.' : '' },
+        ]}
+      />
 
-      {/* TAB A: KNOWLEDGE DIRECTORY */}
-      {activeTab === 'directory' && (
-        <PageSection
-          title="Knowledge Items"
-          description="Manage all firm SOPs, templates, checklists, and instruction records."
-          actions={null}
-        >
-          <FilterBar
-            onClear={hasActiveFilters ? clearFilters : undefined}
-            clearDisabled={!hasActiveFilters}
-          >
-            <input
-              type="search"
-              placeholder="Search by title, summary, type…"
-              value={searchQ}
-              onChange={(event) => setSearchQ(event.target.value)}
-              aria-label="Search knowledge items"
-              className="form-input"
-              style={{ minWidth: '220px', height: '34px' }}
-            />
-            <select
-              value={filterType}
-              onChange={(event) => setFilterType(event.target.value)}
-              aria-label="Filter by type"
-              className="form-input"
-              style={{ minWidth: '125px', height: '34px' }}
-            >
-              <option value="">All Types</option>
-              {ITEM_TYPES.map((t) => (
-                <option key={t} value={t}>{formatLabel(t)}</option>
-              ))}
-            </select>
-            <select
-              value={filterStatus}
-              onChange={(event) => setFilterStatus(event.target.value)}
-              aria-label="Filter by status"
-              className="form-input"
-              style={{ minWidth: '125px', height: '34px' }}
-            >
-              <option value="">All Statuses</option>
-              <option value="draft">Draft</option>
-              <option value="active">Active</option>
-              <option value="archived">Archived</option>
-            </select>
-            <select
-              value={filterWorkType}
-              onChange={(event) => setFilterWorkType(event.target.value)}
-              aria-label="Filter by category"
-              className="form-input"
-              style={{ minWidth: '160px', height: '34px' }}
-            >
-              <option value="">All Categories</option>
-              {WORK_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-            <input
-              type="text"
-              placeholder="Filter by tag…"
-              value={filterTag}
-              onChange={(event) => setFilterTag(event.target.value)}
-              aria-label="Filter by tag"
-              className="form-input"
-              style={{ minWidth: '130px', height: '34px' }}
-            />
-          </FilterBar>
-
-          <DataTable
-            columns={columns}
-            rows={tableRows}
-            loading={loading}
-            loadingLabel="Loading knowledge items…"
-            emptyLabel="Your Knowledge Library is empty. Add your first SOP, checklist, or template."
-            emptyLabelFiltered="No knowledge items match these filters. Clear filters or adjust your search."
-            hasActiveFilters={hasActiveFilters}
-            error={error}
-            onRetry={() => void loadData()}
-            retryLabel="Retry"
-            pageSize={15}
-            paginationLabel="Knowledge items pagination"
-            sortState={sortState}
-            onSortChange={setSortState}
-          />
-        </PageSection>
-      )}
-
-      {/* TAB B: AUDIT TRAILS */}
-      {activeTab === 'audit' && (
-        <PageSection
-          title="Audit Trail Logs"
-          description="Detailed chronological log of modifications, creation, and archiving operations."
-        >
-          {auditLoading ? (
-            <div style={{ textAlign: 'center', padding: '3rem' }}>
-              <span style={{ fontSize: '0.9rem', color: '#7a7870' }}>Loading audit trail logs…</span>
-            </div>
-          ) : auditError ? (
-            <p className="inline-notice inline-notice--error" role="alert">{auditError}</p>
-          ) : auditLogs.length === 0 ? (
-            <div style={{
-              background: '#ffffff',
-              border: '1px solid #e8e6e0',
-              borderRadius: '8px',
-              padding: '3rem',
-              textAlign: 'center',
-              color: '#7a7870'
-            }}>
-              📂 No audit events recorded for Knowledge Items.
-            </div>
-          ) : (
-            <div style={{ background: '#ffffff', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '1.5rem' }}>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {auditLogs.map((entry) => {
-                  let dotColor = '#3b82f6';
-                  let dotBg = '#eff5ff';
-                  let dotChar = '✏️';
-
-                  if (entry.action === 'KNOWLEDGE_ITEM_CREATED') {
-                    dotColor = '#10b981';
-                    dotBg = '#d1fae5';
-                    dotChar = '＋';
-                  } else if (entry.action === 'KNOWLEDGE_ITEM_ARCHIVED') {
-                    dotColor = '#ef4444';
-                    dotBg = '#fee2e2';
-                    dotChar = '📥';
-                  }
-
-                  return (
-                    <div key={entry._id} className="timeline-item">
-                      <div
-                        className="timeline-dot"
-                        style={{
-                          background: dotBg,
-                          color: dotColor,
-                          border: `1.5px solid ${dotColor}`,
-                        }}
-                      >
-                        {dotChar}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 650, color: '#1a1916' }}>
-                            {entry.summary || 'Knowledge item action'}
-                          </span>
-                          <span style={{ fontSize: '0.78rem', color: '#7a7870' }}>
-                            {formatDateTime(entry.createdAt)}
-                          </span>
-                        </div>
-                        {entry.metadata ? (
-                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.15rem' }}>
-                            {entry.metadata.title && (
-                              <span style={{ fontSize: '0.75rem', background: '#fafaf8', border: '1px solid #e8e6e0', padding: '1px 6px', borderRadius: '4px', color: '#3d3c38' }}>
-                                Item: {entry.metadata.title}
-                              </span>
-                            )}
-                            {entry.metadata.type && (
-                              <span style={{ fontSize: '0.75rem', background: '#fafaf8', border: '1px solid #e8e6e0', padding: '1px 6px', borderRadius: '4px', color: '#3d3c38' }}>
-                                Type: {formatLabel(entry.metadata.type)}
-                              </span>
-                            )}
-                            <span style={{
-                              fontSize: '10px',
-                              textTransform: 'uppercase',
-                              fontWeight: 700,
-                              background: entry.severity === 'medium' ? '#fffbeb' : '#fafaf8',
-                              color: entry.severity === 'medium' ? '#b45309' : '#7a7870',
-                              border: entry.severity === 'medium' ? '1px solid #fde68a' : '1px solid #e8e6e0',
-                              padding: '1px 6px',
-                              borderRadius: '4px'
-                            }}>
-                              Severity: {entry.severity || 'low'}
-                            </span>
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Audit Trail Pagination */}
-              {auditTotalPages > 1 && (
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginTop: '1.25rem',
-                  paddingTop: '1rem',
-                  borderTop: '1px solid #e8e6e0'
-                }}>
-                  <span style={{ fontSize: '0.78rem', color: '#7a7870' }}>
-                    Showing page {auditPage} of {auditTotalPages} · {auditTotal} logs
-                  </span>
-                  <div className="action-row" style={{ gap: '0.5rem' }}>
-                    <button
-                      type="button"
-                      disabled={auditPage <= 1}
-                      onClick={() => void loadAuditLogs(auditPage - 1)}
-                      style={{ height: '30px', padding: '2px 10px', fontSize: '0.78rem' }}
-                    >
-                      ← Previous
-                    </button>
-                    <button
-                      type="button"
-                      disabled={auditPage >= auditTotalPages}
-                      onClick={() => void loadAuditLogs(auditPage + 1)}
-                      style={{ height: '30px', padding: '2px 10px', fontSize: '0.78rem' }}
-                    >
-                      Next →
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </PageSection>
-      )}
-
-      {/* Premium Form Slide-over Panel (React Overlay Pattern) */}
       {formMode ? (
-        <>
-          <div
-            onClick={closeForm}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(26,25,22,0.35)',
-              zIndex: 199,
-              backdropFilter: 'blur(1.5px)',
-              animation: 'fadeIn 0.18s ease-out',
-            }}
+        <PageSection title={formMode === 'create' ? 'New Knowledge Item' : 'Edit Knowledge Item'}>
+          <KnowledgeItemForm
+            initial={editingItem || {}}
+            onSave={handleSave}
+            onCancel={closeForm}
+            saving={saving}
+            saveError={saveError}
           />
-          <aside
-            aria-label={formMode === 'create' ? 'New Knowledge Item' : 'Edit Knowledge Item'}
-            role="dialog"
-            style={{ ...DRAWER_ASIDE_STYLE }}
-          >
-            {/* Header */}
-            <div style={{
-              padding: '1.25rem 1.5rem',
-              borderBottom: '1px solid #e8e6e0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '0.75rem',
-              background: '#ffffff'
-            }}>
-              <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#1a1916' }}>
-                {formMode === 'create' ? '📋 New Knowledge Item' : '✏️ Edit Knowledge Item'}
-              </h2>
-              <button
-                type="button"
-                onClick={closeForm}
-                aria-label="Close form panel"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', color: '#b0aea8' }}
-              >
-                ✕
-              </button>
-            </div>
-            <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto', background: '#f7f7f5' }}>
-              <KnowledgeItemForm
-                initial={editingItem || {}}
-                onSave={handleSave}
-                onCancel={closeForm}
-                saving={saving}
-                saveError={saveError}
-              />
-            </div>
-          </aside>
-        </>
+        </PageSection>
       ) : null}
 
-      {/* Premium Detail Drawer Slide-over Panel (React Overlay Pattern) */}
-      {drawerOpen ? (
-        <>
-          <div
-            onClick={closeDrawer}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(26,25,22,0.35)',
-              zIndex: 199,
-              backdropFilter: 'blur(1.5px)',
-              animation: 'fadeIn 0.18s ease-out',
-            }}
+      <PageSection
+        title="Knowledge items"
+        description="All firm knowledge records. Use filters to narrow results."
+        actions={null}
+      >
+        <FilterBar
+          onClear={hasActiveFilters ? clearFilters : undefined}
+          clearDisabled={!hasActiveFilters}
+        >
+          <input
+            type="search"
+            placeholder="Search…"
+            value={searchQ}
+            onChange={(event) => setSearchQ(event.target.value)}
+            aria-label="Search knowledge items"
+            style={{ minWidth: '160px' }}
           />
-          {drawerLoading ? (
-            <aside
-              aria-label="Knowledge Item Detail"
-              role="complementary"
-              style={{ ...DRAWER_ASIDE_STYLE, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}
-            >
-              <p style={{ fontSize: '0.85rem', color: '#7a7870' }}>Loading knowledge item…</p>
-              <button type="button" onClick={closeDrawer} style={{ marginTop: '1rem' }}>Close</button>
-            </aside>
-          ) : drawerError ? (
-            <aside
-              aria-label="Knowledge Item Detail"
-              role="complementary"
-              style={{ ...DRAWER_ASIDE_STYLE, display: 'flex', flexDirection: 'column', padding: '1.5rem' }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Knowledge Item Detail</h2>
-                <button type="button" onClick={closeDrawer} aria-label="Close detail drawer" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', color: '#b0aea8' }}>✕</button>
-              </div>
-              <p className="inline-notice inline-notice--error" role="alert">{drawerError}</p>
-              <button type="button" onClick={closeDrawer} style={{ marginTop: '1rem' }}>Close</button>
-            </aside>
-          ) : (
-            <KnowledgeItemDetailDrawer
-              item={drawerItem}
-              onEdit={openEdit}
-              onArchive={(item) => void handleArchive(item)}
-              onClose={closeDrawer}
-            />
-          )}
-        </>
+          <select
+            value={filterType}
+            onChange={(event) => setFilterType(event.target.value)}
+            aria-label="Filter by type"
+          >
+            <option value="">All types</option>
+            {ITEM_TYPES.map((t) => (
+              <option key={t} value={t}>{formatLabel(t)}</option>
+            ))}
+          </select>
+          <select
+            value={filterStatus}
+            onChange={(event) => setFilterStatus(event.target.value)}
+            aria-label="Filter by status"
+          >
+            <option value="">All statuses</option>
+            <option value="draft">Draft</option>
+            <option value="active">Active</option>
+            <option value="archived">Archived</option>
+          </select>
+          <select
+            value={filterWorkType}
+            onChange={(event) => setFilterWorkType(event.target.value)}
+            aria-label="Filter by work type"
+          >
+            <option value="">All work types</option>
+            {WORK_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+          <input
+            type="text"
+            placeholder="Filter by tag…"
+            value={filterTag}
+            onChange={(event) => setFilterTag(event.target.value)}
+            aria-label="Filter by tag"
+            style={{ minWidth: '130px' }}
+          />
+        </FilterBar>
+
+        <DataTable
+          columns={columns}
+          rows={tableRows}
+          loading={loading}
+          loadingLabel="Loading knowledge items…"
+          emptyLabel="Your Knowledge Library is empty. Add your first SOP, checklist, template, note, client instruction, or process record."
+          emptyLabelFiltered="No knowledge items match these filters. Clear filters or adjust your search."
+          hasActiveFilters={hasActiveFilters}
+          error={error}
+          onRetry={() => void loadData()}
+          retryLabel="Retry"
+          pageSize={20}
+          paginationLabel="Knowledge items pagination"
+        />
+      </PageSection>
+
+      {drawerOpen ? (
+        drawerLoading ? (
+          <aside
+            aria-label="Knowledge Item Detail"
+            role="complementary"
+            style={{ ...DRAWER_ASIDE_STYLE, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}
+          >
+            <p>Loading knowledge item…</p>
+            <button type="button" onClick={closeDrawer} style={{ marginTop: '1rem' }}>Close</button>
+          </aside>
+        ) : drawerError ? (
+          <aside
+            aria-label="Knowledge Item Detail"
+            role="complementary"
+            style={{ ...DRAWER_ASIDE_STYLE, display: 'flex', flexDirection: 'column', padding: '1.5rem' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Knowledge Item Detail</h2>
+              <button type="button" onClick={closeDrawer} aria-label="Close detail drawer" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', color: '#6b7280' }}>✕</button>
+            </div>
+            <p className="inline-notice inline-notice--error" role="alert">{drawerError}</p>
+            <button type="button" onClick={closeDrawer} style={{ marginTop: '1rem' }}>Close</button>
+          </aside>
+        ) : (
+          <KnowledgeItemDetailDrawer
+            item={drawerItem}
+            onEdit={openEdit}
+            onArchive={(item) => void handleArchive(item)}
+            onClose={closeDrawer}
+          />
+        )
       ) : null}
     </PlatformShell>
   );

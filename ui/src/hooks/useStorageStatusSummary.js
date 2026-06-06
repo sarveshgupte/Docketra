@@ -4,14 +4,6 @@ import { buildStorageStatusSummary } from './storageStatusSummaryLogic';
 
 const CACHE_TTL_MS = 60 * 1000;
 const statusCache = new Map();
-export const STORAGE_STATUS_SUMMARY_REFRESH_EVENT = 'docketra:storage-status-summary-refresh';
-
-export const invalidateStorageStatusSummaryCache = () => {
-  statusCache.clear();
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new Event(STORAGE_STATUS_SUMMARY_REFRESH_EVENT));
-  }
-};
 
 const resolveSettledValue = (result, fallback) => (
   result?.status === 'fulfilled' ? (result.value || fallback) : fallback
@@ -21,20 +13,11 @@ const isAccessDenied = (result) => [401, 403].includes(Number(result?.reason?.re
 
 export default function useStorageStatusSummary(firmSlug, options = {}) {
   const {
-    bypassCache = false,
     includeOwnershipSummary = true,
     includeRootHealth = true,
   } = options;
   const cacheKey = `${firmSlug || ''}:${includeOwnershipSummary ? 'ownership' : 'no-ownership'}:${includeRootHealth ? 'root' : 'no-root'}`;
   const [state, setState] = useState(() => ({ loading: Boolean(firmSlug), ...buildStorageStatusSummary(firmSlug || '', {}, {}, null) }));
-  const [refreshVersion, setRefreshVersion] = useState(0);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    const onRefresh = () => setRefreshVersion((version) => version + 1);
-    window.addEventListener(STORAGE_STATUS_SUMMARY_REFRESH_EVENT, onRefresh);
-    return () => window.removeEventListener(STORAGE_STATUS_SUMMARY_REFRESH_EVENT, onRefresh);
-  }, []);
 
   useEffect(() => {
     if (!firmSlug) {
@@ -43,7 +26,7 @@ export default function useStorageStatusSummary(firmSlug, options = {}) {
     }
 
     const cached = statusCache.get(cacheKey);
-    if (!bypassCache && cached && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
       setState({ ...cached.data, loading: false });
       return;
     }
@@ -79,9 +62,7 @@ export default function useStorageStatusSummary(firmSlug, options = {}) {
           rootHealth,
           nonBlockingAccessError ? null : configurationError,
         );
-        if (!bypassCache) {
-          statusCache.set(cacheKey, { data: nextState, timestamp: Date.now() });
-        }
+        statusCache.set(cacheKey, { data: nextState, timestamp: Date.now() });
         setState(nextState);
       })
       .catch((err) => {
@@ -92,7 +73,7 @@ export default function useStorageStatusSummary(firmSlug, options = {}) {
       });
 
     return () => { active = false; };
-  }, [firmSlug, cacheKey, bypassCache, includeOwnershipSummary, includeRootHealth, refreshVersion]);
+  }, [firmSlug, cacheKey, includeOwnershipSummary, includeRootHealth]);
 
   return useMemo(() => state, [state]);
 }

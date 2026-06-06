@@ -21,7 +21,6 @@ const SCHEMAS_DIR = path.join(__dirname, '..', 'src', 'schemas');
  */
 const ALLOWLIST_NO_VALIDATION = {
   'routeGroups.js': 'Utility middleware grouping module; does not define Express route handlers.',
-  'publicSignup.routes.js': 'Deprecated/retired public signup routes, return 410 for all requests.',
 };
 
 const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete'];

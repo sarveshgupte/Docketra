@@ -23,7 +23,6 @@ import { useActiveDocket } from '../../hooks/useActiveDocket';
 import { formatDateTime } from '../../utils/formatDateTime';
 import { getFirmConfig } from '../../utils/firmConfig';
 import { trackAsync } from '../../utils/performanceMonitor';
-import { resolveNavContextLocation } from '../../utils/navActive';
 import './Layout.css';
 import { ROUTES, safeRoute } from '../../constants/routes';
 
@@ -172,9 +171,6 @@ export const Layout = ({ children, title, subtitle }) => {
   const notificationFetchInFlightRef = useRef(false);
 
   const currentFirmSlug = firmSlug || user?.firmSlug;
-  const navLocation = resolveNavContextLocation(location.pathname, location.search, currentFirmSlug);
-  const navPathname = navLocation.pathname || location.pathname;
-  const navSearch = navLocation.search || location.search || '';
   const normalizedRole = String(user?.role || '').trim().toUpperCase();
   const hasAdminAccess = user?.role === USER_ROLES.ADMIN || normalizedRole === 'PRIMARY_ADMIN';
   const hasManagerAccess = normalizedRole === 'MANAGER';
@@ -207,15 +203,15 @@ export const Layout = ({ children, title, subtitle }) => {
     }
   };
 
-  const isActive = (path) => navPathname === path;
-  const isActivePrefix = (prefix) => navPathname.startsWith(prefix);
+  const isActive = (path) => location.pathname === path;
+  const isActivePrefix = (prefix) => location.pathname.startsWith(prefix);
   const isActivePath = (path) => {
     const normalizedPath = String(path || '').split('?')[0].split('#')[0];
-    return navPathname === normalizedPath || navPathname.startsWith(`${normalizedPath}/`);
+    return location.pathname === normalizedPath || location.pathname.startsWith(`${normalizedPath}/`);
   };
   const isActiveQueryRoute = (path, query = {}) => {
     if (!isActivePath(path)) return false;
-    const params = new URLSearchParams(navSearch);
+    const params = new URLSearchParams(location.search);
     return Object.entries(query).every(([key, value]) => params.get(key) === String(value));
   };
   const isExactNavMatch = (to) => {
@@ -225,7 +221,7 @@ export const Layout = ({ children, title, subtitle }) => {
 
     if (queryString) {
       const expectedQuery = new URLSearchParams(queryString);
-      const currentQuery = new URLSearchParams(navSearch);
+      const currentQuery = new URLSearchParams(location.search);
       const queryMatches = [...expectedQuery.entries()].every(([key, value]) => currentQuery.get(key) === value);
       if (!queryMatches) return false;
     }

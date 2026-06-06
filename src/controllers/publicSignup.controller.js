@@ -95,6 +95,7 @@ const verifyOtp = async (req, res) => {
       success: true,
       statusCode: 200,
       message: result.message,
+      token: result.token,
       xid: result.xid,
       firmSlug: result.firmSlug,
       firmUrl: result.firmUrl,

@@ -9,7 +9,6 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const read = (relPath) => fs.readFileSync(path.resolve(repoRoot, relPath), 'utf8');
 
 const workbasketsPage = read('ui/src/pages/platform/WorkbasketsPage.jsx');
-const worklistPage = read('ui/src/pages/platform/WorklistPage.jsx');
 const platformQueries = read('ui/src/hooks/usePlatformDataQueries.js');
 const searchController = read('src/controllers/search.controller.js');
 
@@ -46,40 +45,6 @@ assert.ok(
 assert.ok(
   searchController.includes('workbasketName: c.ownerTeamId') && searchController.includes('queueName: c.ownerTeamId'),
   'Global worklist API should return queue names for workbasket rows.',
-);
-
-// Assertions for assignee workbasket filtering and workload intelligence scoping
-assert.ok(
-  workbasketsPage.includes("usePlatformWorkloadIntelligenceQuery({ workbasketId: workbasketId || undefined }"),
-  'Workbasket details page should scope workload intelligence query to the active workbasketId.'
-);
-assert.ok(
-  worklistPage.includes("usePlatformWorkloadIntelligenceQuery({ workbasketId: scopedWorkbasketId || undefined }"),
-  'Worklist page should scope workload intelligence query to the active scopedWorkbasketId.'
-);
-assert.ok(
-  workbasketsPage.includes("getUsers({ limit: 1000 })"),
-  'Workbasket details page should request users with limit: 1000.'
-);
-assert.ok(
-  worklistPage.includes("getUsers({ limit: 1000 })"),
-  'Worklist page should request users with limit: 1000.'
-);
-assert.ok(
-  workbasketsPage.includes("String(u.teamId || '') === String(workbasketId)"),
-  'Workbasket details page should filter users by the active workbasketId.'
-);
-assert.ok(
-  worklistPage.includes("String(u.teamId || '') === String(scopedWorkbasketId)"),
-  'Worklist page should filter users by the active scopedWorkbasketId.'
-);
-assert.ok(
-  workbasketsPage.includes("statusFilter === 'UNASSIGNED'"),
-  'Workbasket details page should handle UNASSIGNED statusFilter explicitly.'
-);
-assert.ok(
-  workbasketsPage.includes("useState('UNASSIGNED')"),
-  'Workbasket details page should default statusFilter to UNASSIGNED.'
 );
 
 console.log('workbasketDetailQueueVisibility.test.mjs passed');

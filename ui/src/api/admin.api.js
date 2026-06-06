@@ -18,10 +18,6 @@ export const adminApi = {
     (http) => http.patch(`/admin/users/${xID}/restrict-clients`, payload),
     'Failed to update user client access'
   ),
-  updateQcSamplingRate: (xID, payload = { qcSamplingRate: null }) => request(
-    (http) => http.patch(`/admin/users/${xID}/qc-sampling-rate`, payload),
-    'Failed to update user QC sampling rate'
-  ),
   updateUserWorkbaskets: (xID, payload = { teamIds: [] }) => request(
     (http) => http.patch(`/admin/users/${xID}/workbaskets`, payload),
     'Failed to update user workbasket access'

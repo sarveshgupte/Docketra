@@ -10,7 +10,6 @@ import {
   setPendingCasePromise,
 } from '../utils/caseCache';
 import { buildQueryString } from '../utils/queryParams';
-import { queryClient } from '../queryClient';
 
 const caseRoute = {
   detail: (caseId) => `/dockets/${caseId}`,
@@ -40,26 +39,9 @@ const uploadViaSignedUrl = ({ uploadUrl, uploadMethod = 'PUT', uploadHeaders = {
   xhr.send(file);
 });
 
-const invalidateCaseQueries = (caseId) => {
-  if (caseId) {
-    invalidateCaseCache(caseId);
-  }
-  try {
-    queryClient.invalidateQueries({ queryKey: ['platform'] });
-    queryClient.invalidateQueries({ queryKey: ['cases-list'] });
-    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-    queryClient.invalidateQueries({ queryKey: ['reports'] });
-    if (caseId) {
-      queryClient.invalidateQueries({ queryKey: ['case', caseId] });
-    }
-  } catch (error) {
-    console.debug('[ReactQuery] Invalidation failed:', error.message);
-  }
-};
-
 const withCaseInvalidation = async (caseId, requestFn) => {
   const response = await requestFn();
-  invalidateCaseQueries(caseId);
+  invalidateCaseCache(caseId);
   return response;
 };
 
@@ -120,9 +102,7 @@ export const caseApi = {
   },
 
   createDocket: async (docketData, forceCreate = false) => {
-    const response = await request((http) => http.post('/dockets', { ...docketData, forceCreate }), 'Failed to create docket');
-    invalidateCaseQueries();
-    return response;
+    return request((http) => http.post('/dockets', { ...docketData, forceCreate }), 'Failed to create docket');
   },
   suggestDocketCategory: (payload = {}) => request((http) => http.post('/categories/suggest-docket-category', payload), 'Failed to suggest category'),
 
@@ -174,11 +154,7 @@ export const caseApi = {
     () => request((http) => http.put(`/dockets/${caseId}/status`, payload), 'Failed to update docket status'),
   ),
 
-  cloneCase: async (caseId, payload = {}) => {
-    const response = await request((http) => http.post(`/dockets/${caseId}/clone`, payload), 'Failed to clone docket');
-    invalidateCaseQueries();
-    return response;
-  },
+  cloneCase: (caseId, payload = {}) => request((http) => http.post(`/dockets/${caseId}/clone`, payload), 'Failed to clone docket'),
   lockCase: (caseId) => request((http) => http.post(`/dockets/${caseId}/lock`), 'Failed to lock docket'),
   unlockCase: (caseId) => request((http) => http.post(`/dockets/${caseId}/unlock`), 'Failed to unlock docket'),
 

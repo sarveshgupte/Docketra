@@ -22,7 +22,7 @@ module.exports = {
       linkedCaseId: z.string().trim().optional(),
       calendarEntryType: z.enum(['important_date', 'holiday', 'birthday', 'working_day', 'off_day']).optional(),
       reminderDaysBefore: z.coerce.number().int().min(0).max(30).optional(),
-      recurrencePattern: recurrencePatternSchema.nullable().optional(),
+      recurrencePattern: recurrencePatternSchema.optional(),
     }).passthrough(),
   },
   'PUT /:id': {

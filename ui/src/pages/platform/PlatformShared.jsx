@@ -8,17 +8,13 @@ export const formatDocketLabel = (item = {}) => {
   return raw ? raw.replace(/^CASE-/i, 'DOCKET-') : 'DOCKET-UNKNOWN';
 };
 
-export const getDocketRouteId = (item = {}) => {
-  const raw = item.caseId
-    || item.docketId
-    || item.caseInternalId
-    || item._id
-    || null;
-  if (typeof raw === 'string') {
-    return raw.replace(/^CASE-/i, 'DOCKET-');
-  }
-  return raw;
-};
+export const getDocketRouteId = (item = {}) => (
+  item.caseId
+  || item.docketId
+  || item.caseInternalId
+  || item._id
+  || null
+);
 
 export const formatStatusLabel = (value) => String(value || 'UNKNOWN').replace(/_/g, ' ');
 
@@ -144,8 +140,6 @@ const STATUS_CLASS_MAP = {
   closed: 'closed',
   filed: 'neutral',
   archived: 'archived',
-  unassigned: 'draft',
-  routed: 'review',
 };
 
 export const StatusBadge = ({ status, label }) => {
@@ -245,8 +239,6 @@ export const DataTable = ({
   paginationLabel = 'Table pagination',
   hasActiveFilters = false,
   emptyLabelFiltered = 'No results match the current filters.',
-  sortState,
-  onSortChange,
 }) => {
   const safeRows = Array.isArray(rows) ? rows : [];
   const [page, setPage] = useState(1);
@@ -277,49 +269,7 @@ export const DataTable = ({
         <thead>
           <tr>{columns.map((column) => {
             const definition = typeof column === 'string' ? { label: column } : column;
-            const isSorted = sortState && sortState.key === definition.key;
-            const dir = isSorted ? sortState.direction : null;
-            
-            return (
-              <th 
-                key={definition.key || definition.label} 
-                className={definition.widthClass || ''}
-                style={definition.width ? { width: definition.width } : undefined}
-              >
-                {definition.sortable && onSortChange ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const nextDirection = isSorted && dir === 'asc' ? 'desc' : 'asc';
-                      onSortChange({ key: definition.key, direction: nextDirection });
-                    }}
-                    className="flex items-center gap-1 hover:text-indigo-600 transition-colors w-full text-left"
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      padding: 0,
-                      margin: 0,
-                      font: 'inherit',
-                      color: isSorted ? '#2563eb' : 'inherit',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      textTransform: 'inherit',
-                      letterSpacing: 'inherit',
-                      fontWeight: 'inherit',
-                      minHeight: 'auto',
-                    }}
-                  >
-                    <span>{definition.label}</span>
-                    <span style={{ fontSize: '12px', opacity: isSorted ? 1 : 0.4, display: 'inline-block', marginLeft: '2px' }}>
-                      {dir === 'asc' ? '↑' : dir === 'desc' ? '↓' : '↕'}
-                    </span>
-                  </button>
-                ) : (
-                  definition.label
-                )}
-              </th>
-            );
+            return <th key={definition.key || definition.label} className={definition.widthClass || ''}>{definition.label}</th>;
           })}</tr>
         </thead>
         <tbody>

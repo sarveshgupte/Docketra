@@ -25,23 +25,6 @@
 - Verify console warnings for duplicate in-flight requests are absent during normal flows.
 - Verify slow API logs appear only for genuinely slow requests (`[perf] Slow API response`).
 
-## Optional k6 endpoint smoke
-The dev-only k6 script lives at `scripts/dev-only/load-tests/core-endpoints.k6.js`. It intentionally has no default login password or tenant-specific identifiers; provide local test values through environment variables.
-
-PowerShell example:
-
-```powershell
-$env:BASE_URL = "http://127.0.0.1:3000"
-$env:TENANT_SLUG = "<local-tenant-slug>"
-$env:LOGIN_XID = "<local-test-xid>"
-$env:LOGIN_PASSWORD = "<local-test-password>"
-$env:CATEGORY_ID = "<local-category-id>"
-$env:SUBCATEGORY_ID = "<local-subcategory-id>"
-k6 run scripts/dev-only/load-tests/core-endpoints.k6.js
-```
-
-Do not commit real local credentials, firm IDs, or captured response payloads from load-test runs.
-
 ## Queue performance regression checks (All Dockets / Worklist / Workbasket / QC)
 1. Open **My Worklist**, type in search rapidly, then change sort and category.
    - Expected: table does not blank between transitions.

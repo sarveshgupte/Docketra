@@ -41,15 +41,7 @@ Module._load = function(request, parent, isMain) {
   if (request === '../services/storage/services/TokenEncryption.service') {
     return {
       encrypt: (v) => `enc:${v}`,
-      decrypt: () => JSON.stringify({
-        refreshToken: 'refresh',
-        accessToken: 'access',
-        privateKey: 'private',
-        clientSecret: 'client-secret',
-        rootFolderId: 'root-folder-id',
-        connectedEmail: 'admin@example.com',
-        status: 'ACTIVE_BYOS',
-      }),
+      decrypt: () => JSON.stringify({ refreshToken: 'refresh', rootFolderId: 'root-folder-id', connectedEmail: 'admin@example.com', status: 'ACTIVE_BYOS' }),
     };
   }
   if (request === '../utils/role.utils') return { isAdminRole: () => isAdmin, isPrimaryAdminRole: () => isAdmin };
@@ -120,7 +112,6 @@ async function testGetStorageConfiguration() {
   assert.ok(!serialized.includes('refreshToken'), 'response must not include refresh tokens');
   assert.ok(!serialized.includes('accessToken'), 'response must not include access tokens');
   assert.ok(!serialized.includes('privateKey'), 'response must not include private keys');
-  assert.ok(!serialized.includes('clientSecret'), 'response must not include client secrets');
   console.log('  ✓ getStorageConfiguration returns sanitized storage config');
 }
 
@@ -176,7 +167,6 @@ async function testDisconnectStorage() {
   assert.ok(!serialized.includes('accessToken'));
   assert.ok(!serialized.includes('rootFolderId'));
   assert.ok(!serialized.includes('driveId'));
-  assert.ok(!serialized.includes('clientSecret'));
   console.log('  ✓ disconnectStorage resets BYOS and returns sanitized response');
 }
 
@@ -192,7 +182,6 @@ async function testStorageUsageSanitizedQuota() {
   assert.ok(!serialized.includes('rootFolderId'));
   assert.ok(!serialized.includes('driveId'));
   assert.ok(!serialized.includes('privateKey'));
-  assert.ok(!serialized.includes('clientSecret'));
   console.log('  ✓ storageUsage returns sanitized usage payload');
 }
 

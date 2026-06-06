@@ -27,9 +27,7 @@ export default function StorageStatusBadge() {
   }, [location.pathname]);
   const activeFirmSlug = hasValidFirmSlug(firmSlug) ? firmSlug : inferredFirmSlug;
   const statusFirmSlug = canViewStorageStatus ? activeFirmSlug : '';
-  const bypassCache = String(location.pathname || '').includes('/storage-settings');
   const summary = useStorageStatusSummary(statusFirmSlug, {
-    bypassCache,
     includeOwnershipSummary: canReadOwnershipSummary,
     includeRootHealth: canReadRootHealth,
   });

@@ -253,7 +253,7 @@ module.exports = {
   'POST /:caseId/review': { params: caseIdParams, body: strictEmpty },
   'POST /:caseId/close': { params: caseIdParams, body: strictEmpty },
   'POST /:caseId/reopen': { params: caseIdParams, body: strictEmpty },
-  'POST /:caseId/resolve': { params: caseIdParams, body: z.object({ comment: nonEmptyString, sendToQC: z.boolean().optional() }).strict() },
+  'POST /:caseId/resolve': { params: caseIdParams, body: z.object({ comment: nonEmptyString }).strict() },
   'POST /:caseId/pend': { params: caseIdParams, body: z.object({ comment: nonEmptyString, reopenDate: nonEmptyString }).strict() },
   'POST /:caseId/file': { params: caseIdParams, body: z.object({ comment: nonEmptyString }).strict() },
 

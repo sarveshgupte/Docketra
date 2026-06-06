@@ -85,24 +85,6 @@ module.exports = (deps) => {
     getFirmSlaCalendarConfig = loadFirmSlaCalendarConfig,
   } = deps;
 
-  const safeSlaService = {
-    resolveSlaRule: async () => null,
-    calculateSlaDueDate: async () => null,
-    calculateFallbackDueDateFromDays: () => null,
-    ...slaService,
-  };
-
-  const DEFAULT_CATEGORY_SLA_DAYS = 3;
-  const getEffectiveCategorySlaDays = ({ subcategoryDoc = null, categoryDoc = null } = {}) => {
-    const subcategorySla = Number(subcategoryDoc?.defaultSlaDays || 0);
-    if (Number.isFinite(subcategorySla) && subcategorySla > 0) return subcategorySla;
-
-    const categorySla = Number(categoryDoc?.defaultSlaDays || 0);
-    if (Number.isFinite(categorySla) && categorySla > 0) return categorySla;
-
-    return DEFAULT_CATEGORY_SLA_DAYS;
-  };
-
   const sanitizeCreatePayloadForLog = (body = {}) => ({
     titleProvided: typeof body.title === 'string' ? body.title.trim().length > 0 : Boolean(body.title),
     descriptionLength: typeof body.description === 'string' ? body.description.trim().length : 0,
@@ -161,38 +143,12 @@ module.exports = (deps) => {
         })
         .filter(Boolean)
       : [];
-    const files = Array.isArray(sop?.files)
-      ? sop.files
-        .map((file, index) => {
-          const fileName = typeof file?.fileName === 'string' ? file.fileName.trim() : '';
-          const mimeType = typeof file?.mimeType === 'string' ? file.mimeType.trim() : '';
-          const storageProvider = typeof file?.storageProvider === 'string' ? file.storageProvider.trim() : '';
-          if (!fileName || !mimeType || !storageProvider) return null;
-          return {
-            id: String(file?.id || randomUUID()),
-            fileName,
-            mimeType,
-            size: Number.isFinite(Number(file?.size)) ? Number(file.size) : 0,
-            storageProvider,
-            storageFileId: file?.storageFileId ? String(file.storageFileId) : null,
-            objectKey: file?.objectKey ? String(file.objectKey) : null,
-            webViewLink: file?.webViewLink ? String(file.webViewLink) : null,
-            uploadedAt: file?.uploadedAt || createdAt,
-            uploadedByXID: file?.uploadedByXID ? String(file.uploadedByXID).trim() : null,
-            uploadedByName: file?.uploadedByName ? String(file.uploadedByName).trim() : null,
-            description: typeof file?.description === 'string' ? file.description.trim() : '',
-            sortOrder: Number.isFinite(Number(file?.sortOrder)) ? Number(file.sortOrder) : index,
-          };
-        })
-        .filter(Boolean)
-      : [];
-    if (!title && !body && links.length === 0 && files.length === 0) return undefined;
+    if (!title && !body && links.length === 0) return undefined;
     return {
       title,
       body,
       format: sop?.format === 'markdown' ? 'markdown' : 'plain_text',
       links,
-      files,
       sourceSubcategoryId: subcategoryId ? String(subcategoryId) : null,
       capturedAt: createdAt,
     };
@@ -667,19 +623,16 @@ module.exports = (deps) => {
       const session = getSession(req);
       try {
         // Create new case with defaults
-        let defaultSlaDays = Number(getEffectiveCategorySlaDays({ subcategoryDoc, categoryDoc }));
+        let defaultSlaDays = Number(
+          subcategoryDoc?.defaultSlaDays ?? categoryDoc?.defaultSlaDays ?? 0
+        );
         if (!Number.isFinite(defaultSlaDays)) {
-          defaultSlaDays = DEFAULT_CATEGORY_SLA_DAYS;
+          defaultSlaDays = 0;
         }
         const requestedSlaDueDate = isAdminUser && slaDueDate ? new Date(slaDueDate) : null;
         const hasValidRequestedSla = requestedSlaDueDate && !Number.isNaN(requestedSlaDueDate.getTime());
         const createdAt = new Date();
-        let firmCalendarConfig = {};
-        try {
-          firmCalendarConfig = await getFirmSlaCalendarConfig(firmId, { session }) || {};
-        } catch (e) {
-          log.warn(`[SLA] Failed to load calendar config for firm ${firmId}: ${e.message}. Using default schedule.`);
-        }
+        const firmCalendarConfig = await getFirmSlaCalendarConfig(firmId, { session });
 
         step('before SLA initialization');
         const slaState = await caseSlaService.initializeCaseSla({
@@ -687,43 +640,23 @@ module.exports = (deps) => {
           caseType: actualCategory,
           now: createdAt,
           session,
-          calendarConfig: firmCalendarConfig,
         });
         step('after SLA initialization');
 
-        const resolvedSlaRule = await safeSlaService.resolveSlaRule({
+        const resolvedSlaDueAt = await slaService.calculateSlaDueDate({
           firmId,
           category: actualCategory,
           subcategory: subcategoryDoc?.name || caseSubCategory || '',
           workbasketId: routedWorkbasketId,
           createdAt,
-        }, { firmId });
-
-        const resolvedSlaDueAt = resolvedSlaRule
-          ? await safeSlaService.calculateSlaDueDate({
-              createdAt,
-            }, { rule: resolvedSlaRule, calendarConfig: firmCalendarConfig })
-          : null;
-
-        let resolvedSlaDays = Math.max(0, Number(tatDaysSnapshot || defaultSlaDays || 0));
-        if (resolvedSlaRule && !hasValidRequestedSla) {
-          resolvedSlaDays = resolvedSlaRule.slaWorkingDays || Math.ceil((resolvedSlaRule.slaHours || 0) / 8) || resolvedSlaDays;
-        }
+        }, { calendarConfig: firmCalendarConfig });
 
         if (resolvedSlaDueAt && !hasValidRequestedSla) {
           slaState.slaDueAt = resolvedSlaDueAt;
-          const ruleDays = resolvedSlaRule.slaWorkingDays;
-          const ruleHours = resolvedSlaRule.slaHours;
-          const ruleDurationMinutes = ruleDays
-            ? Math.round(ruleDays * 8 * 60)
-            : Math.round(ruleHours * 60);
-
-          slaState.slaConfigSnapshot.tatDurationMinutes = ruleDurationMinutes;
         }
 
         if (!resolvedSlaDueAt && defaultSlaDays > 0 && !hasValidRequestedSla) {
-          slaState.slaDueAt = safeSlaService.calculateFallbackDueDateFromDays(createdAt, defaultSlaDays, { calendarConfig: firmCalendarConfig });
-          slaState.slaConfigSnapshot.tatDurationMinutes = defaultSlaDays * 8 * 60;
+          slaState.slaDueAt = slaService.calculateFallbackDueDateFromDays(createdAt, defaultSlaDays, { calendarConfig: firmCalendarConfig });
         }
 
         if (hasValidRequestedSla) {
@@ -837,7 +770,7 @@ module.exports = (deps) => {
           workTypeId: selectedWorkType?._id || null,
           subWorkTypeId: selectedSubWorkType?._id || null,
           tatDaysSnapshot,
-          slaDays: resolvedSlaDays,
+          slaDays: Math.max(0, Number(tatDaysSnapshot || defaultSlaDays || 0)),
           dueDate: resolvedDueDate,
           sopSnapshot: buildSopSnapshot({
             sop: subcategoryDoc?.sop || {},
@@ -1156,6 +1089,13 @@ module.exports = (deps) => {
           code: 'CLONE_SUBCATEGORY_INVALID',
         });
       }
+
+      if (!originalCase) {
+        return res.status(404).json({
+          success: false,
+          message: 'Original case not found',
+        });
+      }
       
       if (!originalCase) {
         return res.status(404).json({
@@ -1201,63 +1141,18 @@ module.exports = (deps) => {
           : 'medium';
         const firmCalendarConfig = await getFirmSlaCalendarConfig(req.user.firmId, { session });
 
-        const targetCategory = categoryDoc?.name || originalCase.category || '';
-        const targetSubcategory = subcategoryDoc?.name || originalCase.subcategory || '';
-        const targetWorkbasketId = originalCase.ownerTeamId || req.user.teamId || null;
-
-        const clonedSlaState = await caseSlaService.initializeCaseSla({
-          tenantId: req.user.firmId,
-          caseType: targetCategory,
-          now,
-          session,
-          calendarConfig: firmCalendarConfig,
-        });
-
-        const clonedSlaRule = await safeSlaService.resolveSlaRule({
+        const clonedSlaDueAt = await slaService.calculateSlaDueDate({
           firmId: req.user.firmId,
-          category: targetCategory,
-          subcategory: targetSubcategory,
-          workbasketId: targetWorkbasketId,
+          category: categoryDoc?.name || originalCase.category || '',
+          subcategory: subcategoryDoc?.name || originalCase.subcategory || '',
+          workbasketId: originalCase.ownerTeamId || req.user.teamId || null,
           createdAt: now,
-        }, { firmId: req.user.firmId });
-
-        const clonedSlaDueAt = clonedSlaRule
-          ? await safeSlaService.calculateSlaDueDate({
-              createdAt: now,
-            }, { rule: clonedSlaRule, calendarConfig: firmCalendarConfig })
-          : null;
-
-        let clonedDefaultSlaDays = Number(getEffectiveCategorySlaDays({ subcategoryDoc, categoryDoc }));
-        if (!Number.isFinite(clonedDefaultSlaDays)) {
-          clonedDefaultSlaDays = DEFAULT_CATEGORY_SLA_DAYS;
-        }
-
-        let clonedSlaDays = Math.max(0, Number(originalCase.tatDaysSnapshot || clonedDefaultSlaDays || originalCase.slaDays || 0));
-        if (clonedSlaRule) {
-          clonedSlaDays = clonedSlaRule.slaWorkingDays || Math.ceil((clonedSlaRule.slaHours || 0) / 8) || clonedSlaDays;
-        }
-
-        if (clonedSlaDueAt) {
-          clonedSlaState.slaDueAt = clonedSlaDueAt;
-          const ruleDays = clonedSlaRule.slaWorkingDays;
-          const ruleHours = clonedSlaRule.slaHours;
-          const ruleDurationMinutes = ruleDays
-            ? Math.round(ruleDays * 8 * 60)
-            : Math.round(ruleHours * 60);
-
-          clonedSlaState.slaConfigSnapshot.tatDurationMinutes = ruleDurationMinutes;
-        } else if (clonedDefaultSlaDays > 0) {
-          clonedSlaState.slaDueAt = safeSlaService.calculateFallbackDueDateFromDays(now, clonedDefaultSlaDays, { calendarConfig: firmCalendarConfig });
-          clonedSlaState.slaConfigSnapshot.tatDurationMinutes = clonedDefaultSlaDays * 8 * 60;
-        } else {
-          clonedSlaState.slaDueAt = originalCase.slaDueAt || now;
-          clonedSlaState.slaConfigSnapshot = originalCase.slaConfigSnapshot;
-        }
+        }, { calendarConfig: firmCalendarConfig });
 
         clonedCase = new Case({
           title: originalCase.title,
           description: originalCase.description,
-          category: targetCategory,
+          category: categoryDoc?.name || originalCase.category || '',
           caseCategory: categoryDoc?.name || originalCase.caseCategory || '',
           caseSubCategory: subcategoryDoc?.name || '',
           subcategory: subcategoryDoc?.name || '',
@@ -1271,7 +1166,7 @@ module.exports = (deps) => {
           assignedTo: null,
           assignedToXID: null,
           queueType: 'GLOBAL',
-          ownerTeamId: targetWorkbasketId,
+          ownerTeamId: originalCase.ownerTeamId || req.user.teamId || null,
           routedToTeamId: null,
           routedByUserId: null,
           routedAt: null,
@@ -1279,14 +1174,14 @@ module.exports = (deps) => {
           pendingUntil: null,
           reopenAt: null,
           duplicateOf: originalCase.duplicateOf || null,
-          slaDueAt: clonedSlaState.slaDueAt,
-          slaDays: clonedSlaDays,
+          slaDueAt: clonedSlaDueAt || originalCase.slaDueAt || now,
+          slaDays: Number(originalCase.slaDays || originalCase.tatDaysSnapshot || 0),
           dueDate: originalCase.dueDate || null,
           tatPaused: false,
           tatLastStartedAt: now,
           tatAccumulatedMinutes: 0,
           tatTotalMinutes: originalCase.tatTotalMinutes || 0,
-          slaConfigSnapshot: clonedSlaState.slaConfigSnapshot || undefined,
+          slaConfigSnapshot: originalCase.slaConfigSnapshot || undefined,
           createdBy: (req.user.email || originalCase.createdBy || req.user.xID || '').toLowerCase(),
           createdByXID: req.user.xID,
           workTypeId: originalCase.workTypeId || null,

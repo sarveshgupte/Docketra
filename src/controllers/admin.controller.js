@@ -843,70 +843,6 @@ const updateRestrictedClients = async (req, res) => {
 };
 
 /**
- * Update user-level QC sampling rate (Admin only)
- * PATCH /api/admin/users/:xID/qc-sampling-rate
- */
-const updateQcSamplingRate = async (req, res) => {
-  try {
-    const { xID } = req.params;
-    const { qcSamplingRate } = req.body;
-
-    if (!xID) {
-      return res.status(400).json({ success: false, message: 'xID is required' });
-    }
-
-    const admin = req.user;
-
-    const user = await User.findOne({ xID: xID.toUpperCase(), firmId: admin.firmId }).lean();
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found in your firm' });
-    }
-
-    let parsedRate = null;
-    if (qcSamplingRate !== undefined && qcSamplingRate !== null && qcSamplingRate !== '') {
-      parsedRate = Math.round(Number(qcSamplingRate));
-      if (isNaN(parsedRate) || parsedRate < 0 || parsedRate > 100) {
-        return res.status(400).json({ success: false, message: 'qcSamplingRate must be a number between 0 and 100' });
-      }
-    }
-
-    await User.findOneAndUpdate(
-      { xID: xID.toUpperCase(), firmId: admin.firmId },
-      { $set: { qcSamplingRate: parsedRate } },
-      { new: false }
-    );
-
-    try {
-      await logAdminAction({
-        adminXID: admin.xID,
-        actionType: 'USER_QC_SAMPLING_RATE_UPDATED',
-        targetXID: user.xID,
-        metadata: {
-          previousRate: user.qcSamplingRate,
-          newRate: parsedRate,
-        },
-        req,
-      });
-    } catch (auditErr) {
-      log.warn('[ADMIN] Non-fatal: audit log failed for updateQcSamplingRate', { error: auditErr.message });
-    }
-
-    return res.json({
-      success: true,
-      message: 'User QC sampling rate updated successfully',
-      data: { xID: user.xID, qcSamplingRate: parsedRate },
-    });
-  } catch (error) {
-    log.error('[ADMIN] Error updating QC sampling rate:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error updating QC sampling rate',
-    });
-  }
-};
-
-/**
  * Get firm and work settings (Admin only)
  * GET /api/admin/firm-settings
  */
@@ -986,11 +922,11 @@ const updateFirmSettings = async (req, res) => {
       }
     }
 
-    if (!firm.settings) {
-      firm.settings = {};
-    }
-    firm.settings.firm = requestedFirmSettings;
-    firm.settings.work = requestedWorkSettings;
+    firm.settings = {
+      ...(firm.settings || {}),
+      firm: requestedFirmSettings,
+      work: requestedWorkSettings,
+    };
     await firm.save();
 
     const nextSettings = {
@@ -2042,7 +1978,6 @@ module.exports = {
   getHierarchyTree,
   updateUserHierarchy: wrapWriteHandler(updateUserHierarchy),
   updateRestrictedClients: wrapWriteHandler(updateRestrictedClients),
-  updateQcSamplingRate: wrapWriteHandler(updateQcSamplingRate),
   getFirmSettings,
   getFirmSettingsActivity,
   getSettingsAudit,

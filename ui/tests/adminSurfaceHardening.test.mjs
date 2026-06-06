@@ -31,6 +31,10 @@ assert.ok(categoryModalsSource.includes('requiresRelatedEmployeeUser'), 'Categor
 assert.ok(categoryModalsSource.includes('admin__checkbox-field'), 'Category modal checkbox layout should use shared CSS classes instead of utility-only layout');
 
 const categoriesSectionSource = read('src/pages/admin/components/AdminCategoriesSection.jsx');
+assert.ok(categoriesSectionSource.includes('admin__action-group--danger'), 'Category actions should visually separate destructive actions');
+assert.ok(categoriesSectionSource.includes('onDeleteCategory(category)'), 'Category delete action should remain wired');
+assert.ok(categoriesSectionSource.includes('onDeleteSubcategory(category, sub)'), 'Subcategory delete action should remain wired');
+assert.ok(categoriesSectionSource.includes('aria-label={`${sub.name} destructive actions`}'), 'Subcategory destructive action should render in a dedicated danger action group');
 
 
 const usersSectionSource = read('src/pages/admin/components/AdminUsersSection.jsx');

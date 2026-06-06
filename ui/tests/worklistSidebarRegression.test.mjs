@@ -15,14 +15,9 @@ assert.ok(navSource.includes("activeMatch: 'exactWithQuery'"), 'Scoped worklist 
 const activeSource = read('ui/src/utils/navActive.js');
 assert.ok(activeSource.includes("if (matchMode === 'exactWithQuery')"), 'Exact-with-query mode should be handled explicitly.');
 assert.ok(activeSource.includes('return current === item.to;'), 'Query-aware active check should require exact location match.');
-assert.ok(activeSource.includes('resolveNavContextLocation'), 'Nav active utilities should resolve docket returnTo context for sticky sidebar highlights.');
 
 const shellSource = read('ui/src/components/platform/PlatformShell.jsx');
-assert.ok(shellSource.includes('isNavItemActiveWithLocation(navPathname, navSearch, item)'), 'Sidebar active state should use query-aware location matching.');
+assert.ok(shellSource.includes('isNavItemActiveWithLocation(pathname, locationSearch, item)'), 'Sidebar active state should use query-aware location matching.');
 assert.equal(shellSource.includes('isNavItemActive(pathname, item) ||'), false, 'Sidebar should not double-match by pathname for query-scoped worklists.');
-assert.ok(shellSource.includes('resolveNavContextLocation(pathname, locationSearch, firmSlug)'), 'Platform shell should preserve the originating nav context on docket detail pages.');
-
-const legacyLayoutSource = read('ui/src/components/common/Layout.jsx');
-assert.ok(legacyLayoutSource.includes('resolveNavContextLocation(location.pathname, location.search, currentFirmSlug)'), 'Legacy layout should keep the originating worklist highlighted when a docket opens.');
 
 console.log('worklistSidebarRegression.test.mjs passed');

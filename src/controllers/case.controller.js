@@ -1277,8 +1277,8 @@ const getDocketEligibleUsers = async (req, res) => {
       status: { $ne: 'deleted' },
     })
       .select('_id id xID name fullName displayName email status isActive teamId teamIds')
-      .populate('teamId', 'name type')
-      .populate('teamIds', 'name type')
+      .populate('teamId', 'name')
+      .populate('teamIds', 'name')
       .sort({ createdAt: -1 })
       .lean();
     return res.json({ success: true, data: users });

@@ -4,19 +4,6 @@
 
 import api from './api';
 
-const uploadViaSignedUrl = ({ uploadUrl, uploadMethod = 'PUT', uploadHeaders = {}, file }) => new Promise((resolve, reject) => {
-  const xhr = new XMLHttpRequest();
-  xhr.open(uploadMethod, uploadUrl);
-  Object.entries(uploadHeaders || {}).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) xhr.setRequestHeader(key, value);
-  });
-  xhr.onload = () => (xhr.status >= 200 && xhr.status < 300
-    ? resolve()
-    : reject(Object.assign(new Error(`Upload failed with status ${xhr.status}`), { status: xhr.status })));
-  xhr.onerror = () => reject(new Error('Upload failed due to network error'));
-  xhr.send(file);
-});
-
 export const categoryService = {
   /**
    * Get all categories (with optional activeOnly filter)
@@ -46,16 +33,16 @@ export const categoryService = {
   /**
    * Create a new category (Admin only)
    */
-  createCategory: async (name, requiresRelatedEmployeeUser = false, defaultSlaDays = 0, qcPercent = 0) => {
-    const response = await api.post('/admin/categories', { name, requiresRelatedEmployeeUser, defaultSlaDays, qcPercent });
+  createCategory: async (name, requiresRelatedEmployeeUser = false, defaultSlaDays = 0) => {
+    const response = await api.post('/admin/categories', { name, requiresRelatedEmployeeUser, defaultSlaDays });
     return response.data;
   },
 
   /**
    * Update category name (Admin only)
    */
-  updateCategory: async (id, name, requiresRelatedEmployeeUser = false, defaultSlaDays = 0, qcPercent = 0) => {
-    const response = await api.put(`/admin/categories/${id}`, { name, requiresRelatedEmployeeUser, defaultSlaDays, qcPercent });
+  updateCategory: async (id, name, requiresRelatedEmployeeUser = false, defaultSlaDays = 0) => {
+    const response = await api.put(`/admin/categories/${id}`, { name, requiresRelatedEmployeeUser, defaultSlaDays });
     return response.data;
   },
 
@@ -70,79 +57,16 @@ export const categoryService = {
   /**
    * Add subcategory to category (Admin only)
    */
-  addSubcategory: async (
-    categoryId,
-    name,
-    workbasketId,
-    requiresRelatedEmployeeUser = false,
-    defaultSlaDays = 0,
-    options = {},
-  ) => {
-    const response = await api.post(`/admin/categories/${categoryId}/subcategories`, {
-      name,
-      workbasketId,
-      requiresRelatedEmployeeUser,
-      defaultSlaDays,
-      qcPercent: Number(options?.qcPercent) || 0,
-      ...(options?.sop ? { sop: options.sop } : {}),
-    });
+  addSubcategory: async (categoryId, name, workbasketId, requiresRelatedEmployeeUser = false, defaultSlaDays = 0) => {
+    const response = await api.post(`/admin/categories/${categoryId}/subcategories`, { name, workbasketId, requiresRelatedEmployeeUser, defaultSlaDays });
     return response.data;
   },
 
   /**
    * Update subcategory name (Admin only)
    */
-  updateSubcategory: async (
-    categoryId,
-    subcategoryId,
-    name,
-    workbasketId,
-    requiresRelatedEmployeeUser = false,
-    defaultSlaDays = 0,
-    options = {},
-  ) => {
-    const response = await api.put(`/admin/categories/${categoryId}/subcategories/${subcategoryId}`, {
-      name,
-      workbasketId,
-      requiresRelatedEmployeeUser,
-      defaultSlaDays,
-      qcPercent: Number(options?.qcPercent) || 0,
-      ...(options?.sop ? { sop: options.sop } : {}),
-    });
-    return response.data;
-  },
-
-  uploadSubcategoryKnowledgeFile: async (categoryId, subcategoryId, file) => {
-    const intentResponse = await api.post(`/admin/categories/${categoryId}/subcategories/${subcategoryId}/sop/files/upload-intent`, {
-      fileName: file.name,
-      mimeType: file.type || 'application/octet-stream',
-      size: file.size,
-    });
-    const intent = intentResponse?.data?.data || intentResponse?.data || {};
-
-    await uploadViaSignedUrl({
-      uploadUrl: intent.uploadUrl,
-      uploadMethod: intent.uploadMethod,
-      uploadHeaders: intent.uploadHeaders,
-      file,
-    });
-
-    const finalizeResponse = await api.post(`/admin/categories/${categoryId}/subcategories/${subcategoryId}/sop/files/finalize`, {
-      uploadId: intent.uploadId,
-      fileName: file.name,
-      mimeType: file.type || 'application/octet-stream',
-      size: file.size,
-      completion: {
-        ...(intent.providerFileId ? { providerFileId: intent.providerFileId } : {}),
-        ...(intent.objectKey ? { objectKey: intent.objectKey } : {}),
-      },
-    });
-
-    return finalizeResponse.data;
-  },
-
-  deleteSubcategoryKnowledgeFile: async (categoryId, subcategoryId, fileId) => {
-    const response = await api.delete(`/admin/categories/${categoryId}/subcategories/${subcategoryId}/sop/files/${fileId}`);
+  updateSubcategory: async (categoryId, subcategoryId, name, workbasketId, requiresRelatedEmployeeUser = false, defaultSlaDays = 0) => {
+    const response = await api.put(`/admin/categories/${categoryId}/subcategories/${subcategoryId}`, { name, workbasketId, requiresRelatedEmployeeUser, defaultSlaDays });
     return response.data;
   },
 

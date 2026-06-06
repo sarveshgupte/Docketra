@@ -1,5 +1,5 @@
 const express = require('express');
-const { createSecureUpload, enforceUploadSecurity } = require('../middleware/uploadProtection.middleware');
+const multer = require('multer');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/docketFileStorage.routes.schema');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
@@ -8,7 +8,12 @@ const { requireStorageConnected } = require('../middleware/requireStorageConnect
 const { uploadDocketFile, listDocketAttachments, getDocketFile } = require('../controllers/docketFileStorage.controller');
 
 const router = applyRouteValidation(express.Router(), routeSchemas);
-const upload = createSecureUpload({ memory: true });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024,
+  },
+});
 
 router.post(
   '/dockets/:docketId/attachments',
@@ -16,7 +21,6 @@ router.post(
   authorizeFirmPermission('CASE_UPDATE'),
   requireCaseAccess({ source: 'params', field: 'docketId' }),
   upload.single('file'),
-  enforceUploadSecurity,
   uploadDocketFile
 );
 

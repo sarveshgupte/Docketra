@@ -212,14 +212,6 @@ const userSchema = new mongoose.Schema({
     type: [String],
     default: [],
   },
-
-  // QC Sampling Rate (0-100) or null to use category/subcategory defaults
-  qcSamplingRate: {
-    type: Number,
-    min: 0,
-    max: 100,
-    default: null,
-  },
   
   // Soft delete mechanism; allows disabling users without removing data
   // Also called 'active' in some contexts

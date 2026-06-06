@@ -1,6 +1,6 @@
 const { z, nonEmptyString, xidString } = require('./common');
 
-const EMPLOYEE_WORKLIST_STATUSES = ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'QC_PENDING', 'PENDING', 'FILED', 'RESOLVED'];
+const EMPLOYEE_WORKLIST_STATUSES = ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'QC_PENDING', 'PENDING'];
 const employeeWorklistStatusEnum = z.enum(EMPLOYEE_WORKLIST_STATUSES);
 const employeeWorklistStatusCsv = z.string().trim().refine((value) => {
   const normalized = String(value || '').trim();

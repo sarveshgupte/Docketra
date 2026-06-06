@@ -31,7 +31,7 @@ export const typography = {
 };
 
 export const colorPalette = {
-  primary: '#111111',
+  primary: '#2563EB',
   secondary: '#6B7280',
   error: '#B91C1C',
   success: '#15803D',

@@ -81,26 +81,16 @@ export const PlatformWorklistPage = () => {
     const fetchUsers = async () => {
       setUsersLoading(true);
       try {
-        const response = await adminApi.getUsers({ limit: 1000 });
+        const response = await adminApi.getUsers();
         if (response.success && Array.isArray(response.data)) {
           const role = String(user?.role || '').trim().toUpperCase();
-          let filtered = response.data.filter(u => u.isActive);
-          
-          if (scopedWorkbasketId) {
-            filtered = filtered.filter(u => 
-              String(u.teamId || '') === String(scopedWorkbasketId) ||
-              (Array.isArray(u.teamIds) && u.teamIds.map(id => String(id)).includes(String(scopedWorkbasketId)))
-            );
-          }
-          
           if (role === 'MANAGER') {
-            filtered = filtered.filter(u => 
-              String(u.managerId) === String(user.id || user._id) || 
-              String(u.reportsToUserId) === String(user.id || user._id) || 
-              u.xID === user.xID
-            );
+            // Filter users who report to this manager
+            setAssignableUsers(response.data.filter(u => u.isActive && (String(u.managerId) === String(user.id || user._id) || String(u.reportsToUserId) === String(user.id || user._id) || u.xID === user.xID)));
+          } else {
+            // Admin / Primary Admin can assign to any active user
+            setAssignableUsers(response.data.filter(u => u.isActive));
           }
-          setAssignableUsers(filtered);
         }
       } catch (err) {
         console.error('Failed to load assignable users', err);
@@ -109,21 +99,18 @@ export const PlatformWorklistPage = () => {
       }
     };
     void fetchUsers();
-  }, [isSupervisor, user, scopedWorkbasketId]);
-
-  const [sortState, setSortState] = useState({ key: '', direction: 'asc' });
+  }, [isSupervisor, user]);
 
   useEffect(() => {
     setSelectedIds([]);
     setSuccess('');
     setBulkAssigneeXid('');
     setError('');
-    setSortState({ key: '', direction: 'asc' });
   }, [scopedWorkbasketId]);
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedIds(sortedRows.map(r => getDocketRouteId(r)).filter(Boolean));
+      setSelectedIds(filteredRows.map(r => getDocketRouteId(r)).filter(Boolean));
     } else {
       setSelectedIds([]);
     }
@@ -160,13 +147,6 @@ export const PlatformWorklistPage = () => {
     }
   };
 
-  const queryStatus = useMemo(() => {
-    if (activeOnly) {
-      return 'ASSIGNED,IN_PROGRESS,OPEN';
-    }
-    return 'ASSIGNED,IN_PROGRESS,OPEN,PENDING,FILED,RESOLVED,QC_PENDING';
-  }, [activeOnly]);
-
   const {
     data: rows = [],
     isLoading,
@@ -174,16 +154,13 @@ export const PlatformWorklistPage = () => {
     isError,
     error: queryError,
     refetch,
-  } = usePlatformMyWorklistQuery({
-    workbasketId: scopedWorkbasketId || undefined,
-    status: queryStatus,
-  });
+  } = usePlatformMyWorklistQuery({ workbasketId: scopedWorkbasketId || undefined });
 
   const {
     data: workloadData = {},
     isLoading: workloadLoading,
     isError: workloadError,
-  } = usePlatformWorkloadIntelligenceQuery({ workbasketId: scopedWorkbasketId || undefined }, { enabled: isSupervisor });
+  } = usePlatformWorkloadIntelligenceQuery({}, { enabled: isSupervisor });
 
   const recovery = getRecoveryPayload(queryError, 'platform_queue');
   const isAccessDenied = isError && recovery.reasonCode === 'CASE_ACCESS_DENIED';
@@ -201,11 +178,8 @@ export const PlatformWorklistPage = () => {
     const needle = search.trim().toLowerCase();
     return normalizedRows.filter((item) => {
       const status = String(item.status || '').toUpperCase();
-
-      // Hide PENDING, FILED, and RESOLVED if activeOnly is enabled
-      const isPendingOrTerminal = ['PENDING', 'FILED', 'RESOLVED', 'FILED_LEGACY'].includes(status);
-      const activeStatus = (activeOnly && isPendingOrTerminal) ? false : true;
-
+      const activeStatus = activeOnly && status === 'PENDING' ? false : true;
+      const matchesStatus = (statusFilter === 'ALL' || status === statusFilter) && activeStatus;
       const matchesCategory = categoryFilter === 'ALL' || String(item.category || '') === categoryFilter;
       const matchesQuery = !needle || [
         formatDocketLabel(item),
@@ -215,45 +189,9 @@ export const PlatformWorklistPage = () => {
         item.subcategory,
         item.assigneeName,
       ].some((value) => String(value || '').toLowerCase().includes(needle));
-      return activeStatus && matchesCategory && matchesQuery;
+      return matchesStatus && matchesCategory && matchesQuery;
     });
-  }, [normalizedRows, search, categoryFilter, activeOnly]);
-
-  const sortedRows = useMemo(() => {
-    if (!sortState.key) return filteredRows;
-
-    const getSortValue = (row, key) => {
-      switch (key) {
-        case 'docketId':
-          return formatDocketLabel(row);
-        case 'clientId':
-          return row.clientId || '';
-        case 'clientName':
-          return row.clientName || '';
-        case 'category':
-          return row.category || '';
-        case 'slaDue':
-        case 'slaDays':
-          return row.slaDueAt ? new Date(row.slaDueAt).getTime() : 0;
-        case 'updated':
-          return new Date(row.updatedAt || row.createdAt || 0).getTime();
-        default:
-          return '';
-      }
-    };
-
-    const sorted = [...filteredRows].sort((a, b) => {
-      const valA = getSortValue(a, sortState.key);
-      const valB = getSortValue(b, sortState.key);
-
-      if (typeof valA === 'string' && typeof valB === 'string') {
-        return valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
-      }
-      return (valA || 0) - (valB || 0);
-    });
-
-    return sortState.direction === 'desc' ? sorted.reverse() : sorted;
-  }, [filteredRows, sortState]);
+  }, [normalizedRows, search, statusFilter, categoryFilter, activeOnly]);
 
   const categories = useMemo(() => [...new Set(normalizedRows.map((item) => String(item.category || '').trim()).filter(Boolean))], [normalizedRows]);
 
@@ -262,6 +200,16 @@ export const PlatformWorklistPage = () => {
     [assignableUsers, workloadData]
   );
   
+  const metrics = useMemo(() => {
+    const active = normalizedRows.filter((item) => String(item.status || '').toUpperCase() !== 'PENDING').length;
+    const pended = normalizedRows.filter((item) => String(item.status || '').toUpperCase() === 'PENDING').length;
+    return [
+      { label: 'Active Workload', value: isLoading ? '…' : active, color: 'from-blue-500 to-indigo-600', icon: '⚡' },
+      { label: 'Pended / Snoozed', value: isLoading ? '…' : pended, color: 'from-amber-500 to-orange-600', icon: '⏳' },
+      { label: 'Visible Dockets', value: isLoading ? '…' : filteredRows.length, color: 'from-emerald-500 to-teal-600', icon: '👁️' },
+    ];
+  }, [normalizedRows, filteredRows.length, isLoading]);
+
   const clearFilters = () => {
     setSearch('');
     setStatusFilter('ALL');
@@ -276,7 +224,7 @@ export const PlatformWorklistPage = () => {
       caseId: rowId,
       navigate,
       to: `${ROUTES.CASE_DETAIL(firmSlug, rowId)}?returnTo=${encodeURIComponent(`${location.pathname}${location.search || ''}`)}`,
-      state: buildQueueContext({ rows: sortedRows, rowId, location, origin: 'my-worklist' }),
+      state: buildQueueContext({ rows: filteredRows, rowId, location, origin: 'my-worklist' }),
     });
   };
 
@@ -294,27 +242,9 @@ export const PlatformWorklistPage = () => {
       title={scopedWorkbasket ? `✅ Worklist — ${scopedWorkbasket.name}` : '✅ My Worklist'}
       subtitle="Your active docket workload — execute, pend, route, or resolve."
       actions={
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => void refetch()}
-            disabled={isFetching}
-            className="inline-flex items-center gap-1.5 px-4 py-2 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 active:bg-gray-100 text-sm font-semibold text-gray-700 transition-all shadow-sm disabled:opacity-50"
-          >
-            <svg
-              className={`w-4 h-4 text-gray-500 ${isFetching ? 'animate-spin' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5" />
-            </svg>
-            {isFetching ? 'Refreshing…' : 'Refresh'}
-          </button>
-          <Link to={ROUTES.CREATE_CASE(firmSlug)} className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 rounded-lg shadow-sm hover:shadow">
-            ✚ Create Docket
-          </Link>
-        </div>
+        <Link to={ROUTES.CREATE_CASE(firmSlug)} className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 rounded-lg shadow-sm hover:shadow">
+          ✚ Create Docket
+        </Link>
       }
     >
       <StatusMessageStack
@@ -325,7 +255,37 @@ export const PlatformWorklistPage = () => {
         ]}
       />
 
-      <PageSection>
+      {/* Flat stat row — Notion/HubSpot style KPI strip */}
+      <StatRow
+        items={[
+          { label: '🔥 Active',          value: isLoading ? '…' : metrics[0]?.value, note: 'dockets in progress' },
+          { label: '📵 Pended / Snoozed', value: isLoading ? '…' : metrics[1]?.value, note: 'waiting to reopen' },
+          { label: '📌 Visible',          value: isLoading ? '…' : metrics[2]?.value, note: 'in current view' },
+        ]}
+      />
+
+      <PageSection
+        title="📝 Personal Execution Queue"
+        description={`${filteredRows.length} dockets in your current view`}
+        actions={
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 active:bg-gray-100 text-sm font-medium text-gray-700 transition-all shadow-sm disabled:opacity-50"
+          >
+            <svg
+              className={`w-4 h-4 text-gray-500 ${isFetching ? 'animate-spin' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5" />
+            </svg>
+            {isFetching ? '⟳ Refreshing…' : '↺ Refresh'}
+          </button>
+        }
+      >
         <SectionToolbar>
           <div className="w-full bg-gray-50/50 border border-gray-100/80 rounded-2xl p-4 mb-6 shadow-inner">
             <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL' && activeOnly}>
@@ -360,6 +320,16 @@ export const PlatformWorklistPage = () => {
                   />
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
+                  <select
+                    value={statusFilter}
+                    onChange={(event) => setStatusFilter(event.target.value)}
+                    className="px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    aria-label="Filter worklist by status"
+                  >
+                    <option value="ALL">All Statuses</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="PENDING">Pending</option>
+                  </select>
                   <select
                     value={categoryFilter}
                     onChange={(event) => setCategoryFilter(event.target.value)}
@@ -435,35 +405,18 @@ export const PlatformWorklistPage = () => {
                 label: (
                   <input
                     type="checkbox"
-                    checked={selectedIds.length === sortedRows.length && sortedRows.length > 0}
+                    checked={selectedIds.length === filteredRows.length && filteredRows.length > 0}
                     onChange={handleSelectAll}
                     className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500/20 cursor-pointer"
                   />
                 ),
-                widthClass: 'platform-table-select-col',
-                width: '40px'
+                widthClass: 'platform-table-select-col'
               },
-              { key: 'docketId', label: 'Docket ID', sortable: true, width: '150px' },
-              { key: 'clientId', label: 'Client ID', sortable: true, width: '100px' },
-              { key: 'clientName', label: 'Client Name', sortable: true, width: '160px' },
-              { key: 'category', label: 'Category / Subcategory', sortable: true, width: '260px' },
-              { key: 'slaDue', label: 'SLA Due', sortable: true, width: '130px' },
-              { key: 'slaDays', label: 'SLA Days', sortable: true, width: '110px' },
-              { key: 'updated', label: 'Updated', sortable: true, width: '120px' }
-            ] : [
-              { key: 'docketId', label: 'Docket ID', sortable: true, width: '150px' },
-              { key: 'clientId', label: 'Client ID', sortable: true, width: '100px' },
-              { key: 'clientName', label: 'Client Name', sortable: true, width: '160px' },
-              { key: 'category', label: 'Category / Subcategory', sortable: true, width: '260px' },
-              { key: 'slaDue', label: 'SLA Due', sortable: true, width: '130px' },
-              { key: 'slaDays', label: 'SLA Days', sortable: true, width: '110px' },
-              { key: 'updated', label: 'Updated', sortable: true, width: '120px' }
-            ]}
+              'Docket ID', 'Client ID', 'Client Name', 'Category / Subcategory', 'SLA Due', 'SLA Days', 'Updated'
+            ] : ['Docket ID', 'Client ID', 'Client Name', 'Category / Subcategory', 'SLA Due', 'SLA Days', 'Updated']}
             compact
             tableClassName="w-full text-left border-collapse"
-            sortState={sortState}
-            onSortChange={setSortState}
-            rows={sortedRows.map((r) => {
+            rows={filteredRows.map((r) => {
               const rId = getDocketRouteId(r);
               return (
                 <tr key={r.caseInternalId || r._id || r.id || formatDocketLabel(r)} className="hover:bg-gray-50/70 border-b border-gray-50 last:border-b-0 transition-colors duration-150">

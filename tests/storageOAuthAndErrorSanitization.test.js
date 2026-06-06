@@ -110,7 +110,7 @@ async function run() {
   assert.strictEqual(resFolder.code, 200);
   assert.ok(String(resFolder.payload.folderUrl || '').includes('drive.google.com/drive/folders/'));
   const bodyDump = JSON.stringify(resFolder.payload);
-  ['refreshToken', 'accessToken', 'privateKey', 'clientSecret', 'credentials'].forEach((secret) => {
+  ['refreshToken', 'accessToken', 'privateKey', 'credentials'].forEach((secret) => {
     assert.ok(!bodyDump.includes(secret), `folder link response must not expose ${secret}`);
   });
 

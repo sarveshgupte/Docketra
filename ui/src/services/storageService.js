@@ -89,19 +89,14 @@ export async function initiateStorageRestore(payload) {
   if (payload.file) {
     formData.append('file', payload.file);
   }
-  const response = await api.post('/firm/storage/restore/initiate', formData, {
+  const response = await api.post('/storage/restore/initiate', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return response.data;
 }
 
 export async function getStorageRestoreStatus(jobId) {
-  const response = await api.get(`/firm/storage/restore/status/${encodeURIComponent(jobId)}`);
-  return response.data;
-}
-
-export async function updateBackupSettings(payload) {
-  const response = await api.post('/storage/backup-settings', payload);
+  const response = await api.get(`/storage/restore/status/${encodeURIComponent(jobId)}`);
   return response.data;
 }
 

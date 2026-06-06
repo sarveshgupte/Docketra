@@ -72,7 +72,6 @@ function buildPlatformApp({ tenantResolver }) {
     workTypeRoutes: express.Router(),
     adminRoutes: adminRouter,
     dashboardRoutes: express.Router(),
-    docketraIntelligenceRoutes: express.Router(),
     slaRoutes: express.Router(),
     superadminRoutes: superadminRouter,
     firmRoutes: express.Router(),
@@ -116,7 +115,7 @@ function buildTenantApp() {
     tenantScopedApiAccess: [identityAuth, stubFirmContext, requireTenant, pass, invariantGuard({ requireFirm: true, forbidSuperAdmin: true })],
     adminTenantScopedApiAccess: [identityAuth, stubFirmContext, requireTenant, pass, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), pass],
     adminAuditTrail: () => pass,
-    userRoutes: express.Router(), selfUserRoutes: express.Router(), taskRoutes: taskRouter, complianceCalendarRoutes: express.Router(), caseRoutes: express.Router(), docketRoutes: express.Router(), docketSessionRoutes: express.Router(), attachmentRoutes: express.Router(), searchRoutes: express.Router(), worklistRoutes: express.Router(), clientApprovalRoutes: express.Router(), clientRoutes: express.Router(), crmClientRoutes: express.Router(), leadRoutes: express.Router(), formRoutes: express.Router(), landingPageRoutes: express.Router(), dealRoutes: express.Router(), invoiceRoutes: express.Router(), reportsRoutes: express.Router(), insightsRoutes: express.Router(), firmMetricsRoutes: express.Router(), storageRoutes: express.Router(), aiRoutes: express.Router(), firmStorageRoutes: express.Router(), filesRoutes: express.Router(), tenantRoutes: express.Router(), docketFileStorageRoutes: express.Router(), notificationsRoutes: express.Router(), teamRoutes: express.Router(), bulkUploadRoutes: express.Router(), productUpdateRoutes: express.Router(), settingsRoutes: express.Router(), knowledgeItemRoutes: express.Router(), emailCaptureRoutes: express.Router(), documentItemRoutes: express.Router(), clientPortalRoutes: express.Router(), docketExceptionRoutes: express.Router(), docketEffortRoutes: express.Router(),
+    userRoutes: express.Router(), selfUserRoutes: express.Router(), taskRoutes: taskRouter, complianceCalendarRoutes: express.Router(), caseRoutes: express.Router(), docketRoutes: express.Router(), docketSessionRoutes: express.Router(), attachmentRoutes: express.Router(), searchRoutes: express.Router(), clientApprovalRoutes: express.Router(), clientRoutes: express.Router(), crmClientRoutes: express.Router(), leadRoutes: express.Router(), formRoutes: express.Router(), landingPageRoutes: express.Router(), dealRoutes: express.Router(), invoiceRoutes: express.Router(), reportsRoutes: express.Router(), insightsRoutes: express.Router(), firmMetricsRoutes: express.Router(), storageRoutes: express.Router(), aiRoutes: express.Router(), firmStorageRoutes: express.Router(), filesRoutes: express.Router(), tenantRoutes: express.Router(), docketFileStorageRoutes: express.Router(), notificationsRoutes: express.Router(), teamRoutes: express.Router(), bulkUploadRoutes: express.Router(), productUpdateRoutes: express.Router(), settingsRoutes: express.Router(), knowledgeItemRoutes: express.Router(),
   });
 
   return app;

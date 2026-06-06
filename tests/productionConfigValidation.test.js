@@ -2,8 +2,6 @@
 'use strict';
 
 const assert = require('assert');
-const path = require('path');
-const { spawnSync } = require('child_process');
 const { envSchema } = require('../src/config/env');
 
 const BASE_ENV = {
@@ -28,9 +26,6 @@ const BASE_ENV = {
   STORAGE_TOKEN_SECRET: 'F'.repeat(64),
 };
 
-const repoRoot = path.resolve(__dirname, '..');
-const productionValidatorPath = path.join(repoRoot, 'scripts', 'validateEnvProduction.js');
-
 function expectFail(overrides, field) {
   const parsed = envSchema.safeParse({ ...BASE_ENV, ...overrides });
   assert.strictEqual(parsed.success, false, `Expected ${field} to fail`);
@@ -50,56 +45,6 @@ function testProductionGuards() {
   expectFail({ ENCRYPTION_PROVIDER: 'kms' }, 'ENCRYPTION_PROVIDER');
   expectFail({ AI_PROVIDER: 'gemini' }, 'AI_PROVIDER');
   console.log('PASS production rejects weak/unsafe auth and upload env settings');
-}
-
-function runProductionValidator(args = [], overrides = {}) {
-  return spawnSync(process.execPath, [productionValidatorPath, ...args], {
-    cwd: repoRoot,
-    env: {
-      ...process.env,
-      ...BASE_ENV,
-      ...overrides,
-    },
-    encoding: 'utf8',
-  });
-}
-
-function testCurrentEnvValidationCommandRejectsForbiddenDrift() {
-  const badDebug = runProductionValidator([], { AUTH_DEBUG_DIAGNOSTICS: 'true' });
-  assert.notStrictEqual(
-    badDebug.status,
-    0,
-    'Current production env validator must fail when AUTH_DEBUG_DIAGNOSTICS=true'
-  );
-  assert.match(
-    `${badDebug.stdout}\n${badDebug.stderr}`,
-    /AUTH_DEBUG_DIAGNOSTICS/,
-    'Current production env validator failure should name AUTH_DEBUG_DIAGNOSTICS'
-  );
-
-  const badUploadMode = runProductionValidator([], { UPLOAD_SCAN_STRICT: 'false' });
-  assert.notStrictEqual(
-    badUploadMode.status,
-    0,
-    'Current production env validator must fail when UPLOAD_SCAN_STRICT is not true'
-  );
-  assert.match(
-    `${badUploadMode.stdout}\n${badUploadMode.stderr}`,
-    /UPLOAD_SCAN_STRICT/,
-    'Current production env validator failure should name UPLOAD_SCAN_STRICT'
-  );
-
-  const fixtureValidation = runProductionValidator(['--fixture'], {
-    AUTH_DEBUG_DIAGNOSTICS: 'true',
-    UPLOAD_SCAN_STRICT: 'false',
-  });
-  assert.strictEqual(
-    fixtureValidation.status,
-    0,
-    'Fixture production env validation should use known safe placeholders instead of current env drift'
-  );
-
-  console.log('PASS production current-env validator rejects forbidden auth/upload drift');
 }
 
 function testRedisOptionalButValidatedWhenConfiguredInProduction() {
@@ -185,7 +130,6 @@ function testGoogleByosValidationOnlyWhenExternalStorageEnabled() {
 
 function run() {
   testProductionGuards();
-  testCurrentEnvValidationCommandRejectsForbiddenDrift();
   testRedisOptionalButValidatedWhenConfiguredInProduction();
   testMasterKeyFormats();
   testMongoTestDbAllowed();

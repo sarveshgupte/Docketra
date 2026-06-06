@@ -10,7 +10,6 @@ import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { TableSkeleton } from '../components/common/Skeleton';
-import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { AdminStatusBadge } from './admin/components/AdminStatusBadge';
 import { adminApi } from '../api/admin.api';
@@ -46,77 +45,6 @@ import { AdminCategoryModals } from './admin/components/AdminCategoryModals';
 import { AdminClientModals } from './admin/components/AdminClientModals';
 import { useAdminDataLoader } from './admin/hooks/useAdminDataLoader';
 import './AdminPage.css';
-
-const KNOWLEDGE_LINK_TYPES = ['portal', 'reference', 'template', 'internal', 'other'];
-const createKnowledgeLinkDraft = (overrides = {}) => ({
-  draftKey: overrides.draftKey || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-  title: overrides.title || '',
-  url: overrides.url || '',
-  description: overrides.description || '',
-  type: KNOWLEDGE_LINK_TYPES.includes(overrides.type) ? overrides.type : 'reference',
-});
-
-const normalizeKnowledgeLinkDrafts = (links = []) => {
-  if (!Array.isArray(links) || links.length === 0) {
-    return [createKnowledgeLinkDraft()];
-  }
-  return links.map((link, index) => createKnowledgeLinkDraft({
-    draftKey: String(link?.id || link?.draftKey || `knowledge-link-${index}`),
-    title: String(link?.title || ''),
-    url: String(link?.url || ''),
-    description: String(link?.description || ''),
-    type: String(link?.type || 'reference').toLowerCase(),
-  }));
-};
-
-const normalizeKnowledgeFileDrafts = (files = []) => {
-  if (!Array.isArray(files)) return [];
-  return files.map((file, index) => ({
-    id: String(file?.id || file?.fileId || `knowledge-file-${index}`),
-    fileName: String(file?.fileName || file?.originalName || '').trim(),
-    mimeType: String(file?.mimeType || '').trim(),
-    size: Number.isFinite(Number(file?.size)) ? Number(file.size) : 0,
-    storageProvider: String(file?.storageProvider || '').trim(),
-    storageFileId: file?.storageFileId ? String(file.storageFileId) : null,
-    objectKey: file?.objectKey ? String(file.objectKey) : null,
-    webViewLink: file?.webViewLink ? String(file.webViewLink) : null,
-    downloadUrl: file?.downloadUrl ? String(file.downloadUrl) : null,
-    uploadedAt: file?.uploadedAt || null,
-    uploadedByXID: file?.uploadedByXID ? String(file.uploadedByXID).trim() : null,
-    uploadedByName: file?.uploadedByName ? String(file.uploadedByName).trim() : null,
-    description: String(file?.description || '').trim(),
-    sortOrder: Number.isFinite(Number(file?.sortOrder)) ? Number(file.sortOrder) : index,
-  }));
-};
-
-const buildSubcategoryKnowledgePayload = (form = {}) => ({
-  title: String(form.sopTitle || '').trim(),
-  body: String(form.sopBody || ''),
-  format: 'plain_text',
-  links: (Array.isArray(form.sopLinks) ? form.sopLinks : [])
-    .map((link, index) => ({
-      title: String(link?.title || '').trim(),
-      url: String(link?.url || '').trim(),
-      description: String(link?.description || '').trim(),
-      type: KNOWLEDGE_LINK_TYPES.includes(String(link?.type || '').toLowerCase())
-        ? String(link.type).toLowerCase()
-        : 'reference',
-      sortOrder: index,
-    }))
-    .filter((link) => link.title && link.url),
-});
-
-const createEmptySubcategoryForm = () => ({
-  name: '',
-  workbasketId: '',
-  defaultSlaDays: '',
-  qcPercent: '',
-  requiresRelatedEmployeeUser: false,
-  sopTitle: '',
-  sopBody: '',
-  sopLinks: [createKnowledgeLinkDraft()],
-  sopFiles: [],
-});
 
 const downloadBulkTemplate = (type) => {
   const blob = new Blob([buildTemplateCsv(type)], { type: 'text/csv;charset=utf-8;' });
@@ -181,7 +109,6 @@ export const AdminPage = () => {
   const [userLoadWarning, setUserLoadWarning] = useState('');
   const [workbasketLoadWarning, setWorkbasketLoadWarning] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [knowledgeFileUploading, setKnowledgeFileUploading] = useState(false);
   const [statsEmpty, setStatsEmpty] = useState(false);
   const [statsFailed, setStatsFailed] = useState(false);
   const [tabError, setTabError] = useState(null);
@@ -207,25 +134,24 @@ export const AdminPage = () => {
     department: '',
     teamIds: [],
     assignQcWorkbaskets: false,
-    qcSamplingRate: null,
   });
   
   // Category form state
   const [categoryForm, setCategoryForm] = useState({
     name: '',
     defaultSlaDays: '',
-    qcPercent: '',
     requiresRelatedEmployeeUser: false,
   });
   
   // Subcategory form state
-  const [subcategoryForm, setSubcategoryForm] = useState(createEmptySubcategoryForm);
-  const [editCategoryForm, setEditCategoryForm] = useState({ id: '', name: '', defaultSlaDays: '', qcPercent: '', requiresRelatedEmployeeUser: false });
-  const [editSubcategoryForm, setEditSubcategoryForm] = useState({
-    categoryId: '',
-    subcategoryId: '',
-    ...createEmptySubcategoryForm(),
+  const [subcategoryForm, setSubcategoryForm] = useState({
+    name: '',
+    workbasketId: '',
+    defaultSlaDays: '',
+    requiresRelatedEmployeeUser: false,
   });
+  const [editCategoryForm, setEditCategoryForm] = useState({ id: '', name: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
+  const [editSubcategoryForm, setEditSubcategoryForm] = useState({ categoryId: '', subcategoryId: '', name: '', workbasketId: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
 
   // Client form state
   const [clientForm, setClientForm] = useState({
@@ -256,7 +182,6 @@ export const AdminPage = () => {
   const [clientAccessModeDraft, setClientAccessModeDraft] = useState('ALL');
   const [workbaskets, setWorkbaskets] = useState([]);
   const [selectedWorkbasketDraft, setSelectedWorkbasketDraft] = useState([]);
-  const [qcSamplingRateDraft, setQcSamplingRateDraft] = useState(null);
   const filteredUsers = useMemo(() => users, [users]);
   const filteredClientsList = useMemo(() => clients, [clients]);
   const workbasketNameById = useMemo(() => (
@@ -442,7 +367,7 @@ export const AdminPage = () => {
         setUserSectionMessage(`User invite sent to ${newUser.email}.`);
         setShowCreateModal(false);
         setNewUser({
-          name: '', email: '', role: '', department: '', teamIds: [], assignQcWorkbaskets: false, qcSamplingRate: null,
+          name: '', email: '', role: '', department: '', teamIds: [], assignQcWorkbaskets: false,
         });
         await Promise.all([loadAdminStats(), loadAdminData()]);
       } else {
@@ -632,7 +557,6 @@ export const AdminPage = () => {
     }
 
     setSelectedUserForAccess(user);
-    setQcSamplingRateDraft(user.qcSamplingRate !== undefined && user.qcSamplingRate !== null ? user.qcSamplingRate : null);
     const userClientAccess = Array.isArray(user.clientAccess) ? user.clientAccess.map((id) => String(id)) : [];
     const selectedClientIds = loadedClients
       .filter((client) => userClientAccess.includes(String(client._id)))
@@ -695,25 +619,11 @@ export const AdminPage = () => {
         return;
       }
 
-      try {
-        const qcResponse = await adminApi.updateQcSamplingRate(selectedUserForAccess.xID, {
-          qcSamplingRate: qcSamplingRateDraft,
-        });
-        if (!qcResponse?.success) {
-          showToast(qcResponse?.message || 'Access saved, but QC sampling rate update failed. Please retry.', 'error');
-          return;
-        }
-      } catch (qcError) {
-        showToast(qcError.response?.data?.message || 'Access saved, but QC sampling rate update failed. Please retry.', 'error');
-        return;
-      }
-
       showToast('User client docket access updated', 'success');
       setShowAccessModal(false);
       setSelectedUserForAccess(null);
       setSelectedWorkbasketDraft([]);
       setClientAccessModeDraft('ALL');
-      setQcSamplingRateDraft(null);
       await loadAdminData();
     } catch (saveAccessError) {
       showToast(saveAccessError.response?.data?.message || 'Failed to update user access', 'error');
@@ -738,13 +648,12 @@ export const AdminPage = () => {
         categoryForm.name.trim(),
         categoryForm.requiresRelatedEmployeeUser === true,
         Number(categoryForm.defaultSlaDays) || 0,
-        Number(categoryForm.qcPercent) || 0,
       );
       
       if (response.success) {
         showToast('Category created successfully', 'success');
         setShowCategoryModal(false);
-        setCategoryForm({ name: '', defaultSlaDays: '', qcPercent: '', requiresRelatedEmployeeUser: false });
+        setCategoryForm({ name: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
         loadAdminData();
       } else {
         showToast(response.message || 'Failed to create category', 'error');
@@ -800,16 +709,12 @@ export const AdminPage = () => {
         subcategoryForm.workbasketId,
         subcategoryForm.requiresRelatedEmployeeUser === true,
         Number(subcategoryForm.defaultSlaDays) || 0,
-        {
-          qcPercent: Number(subcategoryForm.qcPercent) || 0,
-          sop: buildSubcategoryKnowledgePayload(subcategoryForm),
-        },
       );
       
       if (response.success) {
         showToast('Subcategory added successfully', 'success');
         setShowSubcategoryModal(false);
-        setSubcategoryForm(createEmptySubcategoryForm());
+        setSubcategoryForm({ name: '', workbasketId: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
         setSelectedCategory(null);
         loadAdminData();
       } else {
@@ -849,7 +754,6 @@ export const AdminPage = () => {
       id: category._id,
       name: category.name || '',
       defaultSlaDays: String(category.defaultSlaDays || ''),
-      qcPercent: String(category.qcPercent || ''),
       requiresRelatedEmployeeUser: category.requiresRelatedEmployeeUser === true,
     });
     setShowEditCategoryModal(true);
@@ -862,74 +766,9 @@ export const AdminPage = () => {
       name: subcategory.name || '',
       workbasketId: String(subcategory.workbasketId || ''),
       defaultSlaDays: String(subcategory.defaultSlaDays || ''),
-      qcPercent: String(subcategory.qcPercent || ''),
       requiresRelatedEmployeeUser: subcategory.requiresRelatedEmployeeUser === true,
-      sopTitle: String(subcategory?.sop?.title || ''),
-      sopBody: String(subcategory?.sop?.body || ''),
-      sopLinks: normalizeKnowledgeLinkDrafts(subcategory?.sop?.links),
-      sopFiles: normalizeKnowledgeFileDrafts(subcategory?.sop?.files),
     });
     setShowEditSubcategoryModal(true);
-  };
-
-  const handleUploadKnowledgeFile = async (file) => {
-    if (!file) return;
-    if (!editSubcategoryForm.categoryId || !editSubcategoryForm.subcategoryId) {
-      showToast('Save the subcategory first before uploading files.', 'error');
-      return;
-    }
-
-    setKnowledgeFileUploading(true);
-    try {
-      const response = await categoryService.uploadSubcategoryKnowledgeFile(
-        editSubcategoryForm.categoryId,
-        editSubcategoryForm.subcategoryId,
-        file,
-      );
-      if (response.success) {
-        const uploadedFile = response.data?.file || null;
-        if (uploadedFile) {
-          setEditSubcategoryForm((prev) => ({
-            ...prev,
-            sopFiles: normalizeKnowledgeFileDrafts([
-              ...(Array.isArray(prev.sopFiles) ? prev.sopFiles.filter((file) => String(file.id) !== String(uploadedFile.id)) : []),
-              uploadedFile,
-            ]),
-          }));
-        }
-        showToast('Knowledge file uploaded successfully', 'success');
-      } else {
-        showToast(response.message || 'Failed to upload knowledge file', 'error');
-      }
-    } catch (error) {
-      showToast(error.response?.data?.message || error.message || 'Failed to upload knowledge file', 'error');
-    } finally {
-      setKnowledgeFileUploading(false);
-    }
-  };
-
-  const handleDeleteKnowledgeFile = async (fileId) => {
-    if (!editSubcategoryForm.categoryId || !editSubcategoryForm.subcategoryId || !fileId) return;
-    if (!confirm('Remove this knowledge file?')) return;
-
-    try {
-      const response = await categoryService.deleteSubcategoryKnowledgeFile(
-        editSubcategoryForm.categoryId,
-        editSubcategoryForm.subcategoryId,
-        fileId,
-      );
-      if (response.success) {
-        setEditSubcategoryForm((prev) => ({
-          ...prev,
-          sopFiles: normalizeKnowledgeFileDrafts((prev.sopFiles || []).filter((file) => String(file.id) !== String(fileId))),
-        }));
-        showToast('Knowledge file removed successfully', 'success');
-      } else {
-        showToast(response.message || 'Failed to remove knowledge file', 'error');
-      }
-    } catch (error) {
-      showToast(error.response?.data?.message || error.message || 'Failed to remove knowledge file', 'error');
-    }
   };
 
   const handleUpdateCategory = async (e) => {
@@ -941,11 +780,10 @@ export const AdminPage = () => {
         editCategoryForm.name.trim(),
         editCategoryForm.requiresRelatedEmployeeUser === true,
         Number(editCategoryForm.defaultSlaDays) || 0,
-        Number(editCategoryForm.qcPercent) || 0,
       );
       if (response.success) {
         setShowEditCategoryModal(false);
-        setEditCategoryForm({ id: '', name: '', defaultSlaDays: '', qcPercent: '', requiresRelatedEmployeeUser: false });
+        setEditCategoryForm({ id: '', name: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
         showToast('Category updated successfully', 'success');
         loadAdminData();
       } else showToast(response.message || 'Failed to update category', 'error');
@@ -965,24 +803,54 @@ export const AdminPage = () => {
         editSubcategoryForm.workbasketId,
         editSubcategoryForm.requiresRelatedEmployeeUser === true,
         Number(editSubcategoryForm.defaultSlaDays) || 0,
-        {
-          qcPercent: Number(editSubcategoryForm.qcPercent) || 0,
-          sop: buildSubcategoryKnowledgePayload(editSubcategoryForm),
-        },
       );
       if (response.success) {
         setShowEditSubcategoryModal(false);
-        setEditSubcategoryForm({
-          categoryId: '',
-          subcategoryId: '',
-          ...createEmptySubcategoryForm(),
-        });
+        setEditSubcategoryForm({ categoryId: '', subcategoryId: '', name: '', workbasketId: '', defaultSlaDays: '', requiresRelatedEmployeeUser: false });
         showToast('Subcategory updated successfully', 'success');
         loadAdminData();
       } else showToast(response.message || 'Failed to update subcategory', 'error');
     } catch (error) {
       showToast(error.response?.data?.message || 'Failed to update subcategory', 'error');
     } finally { setSubmitting(false); }
+  };
+
+  const handleDeleteCategory = async (category) => {
+    if (!confirm(`Are you sure you want to delete category "${category.name}"? This is a soft delete - the category will be hidden from dropdowns but historical dockets will remain valid.`)) {
+      return;
+    }
+
+    try {
+      const response = await categoryService.deleteCategory(category._id);
+
+      if (response.success) {
+        showToast('Category deleted successfully', 'success');
+        loadAdminData();
+      } else {
+        showToast(response.message || 'Failed to delete category', 'error');
+      }
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to delete category', 'error');
+    }
+  };
+
+  const handleDeleteSubcategory = async (category, subcategory) => {
+    if (!confirm(`Are you sure you want to delete subcategory "${subcategory.name}"? This is a soft delete - the subcategory will be hidden from dropdowns but historical dockets will remain valid.`)) {
+      return;
+    }
+
+    try {
+      const response = await categoryService.deleteSubcategory(category._id, subcategory.id);
+
+      if (response.success) {
+        showToast('Subcategory deleted successfully', 'success');
+        loadAdminData();
+      } else {
+        showToast(response.message || 'Failed to delete subcategory', 'error');
+      }
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to delete subcategory', 'error');
+    }
   };
 
   const handleOpenBulkPaste = (mode) => {
@@ -1498,11 +1366,7 @@ export const AdminPage = () => {
 
   if (loading) {
     return (
-      <PlatformShell
-        moduleLabel="Settings"
-        title={isWorkSettingsContext ? "Category Management" : "Users & Team"}
-        subtitle={isWorkSettingsContext ? "Create and manage docket categories and subcategories." : "Manage users, access control, and security actions."}
-      >
+      <PlatformShell moduleLabel="Operations" title="Team" subtitle="Manage users, permissions, and security actions for your firm.">
         <TableSkeleton rows={7} />
       </PlatformShell>
     );
@@ -1510,15 +1374,15 @@ export const AdminPage = () => {
 
   return (
     <PlatformShell
-      moduleLabel="Settings"
-      title={isWorkSettingsContext ? "Category Management" : "Users & Team"}
+      moduleLabel={isWorkSettingsContext ? "Settings" : "Operations"}
+      title={isWorkSettingsContext ? "Category Management" : "Team"}
       subtitle={isWorkSettingsContext ? "Create and manage docket categories and subcategories." : "Manage users, access control, and security actions."}
       actions={(<Button variant="outline" onClick={() => void handleRefreshAdminSurface()}>Refresh</Button>)}
     >
-      <div className="min-h-screen bg-slate-50/50 pb-16 font-sans">
-        <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 space-y-6">
-          {/* Go Back to Settings Link */}
-          <div className="flex items-center">
+      <div className="admin">
+        {/* Go Back to Settings Link */}
+        {isWorkSettingsContext && (
+          <div className="flex items-center mb-6">
             <button
               type="button"
               onClick={() => navigate(ROUTES.SETTINGS(firmSlug))}
@@ -1527,7 +1391,7 @@ export const AdminPage = () => {
               ← Go back to settings
             </button>
           </div>
-          <div className="admin">
+        )}
         <div className="admin__toolbar">
           <div className="admin__tabs" aria-label="Admin sections">
             {!isWorkSettingsContext && (
@@ -1617,13 +1481,14 @@ export const AdminPage = () => {
             onCreateCategory={() => setShowCategoryModal(true)}
             onAddSubcategory={(category) => {
               setSelectedCategory(category);
-              setSubcategoryForm(createEmptySubcategoryForm());
               setShowSubcategoryModal(true);
             }}
             onToggleCategoryStatus={handleToggleCategoryStatus}
             onEditCategory={handleEditCategory}
+            onDeleteCategory={handleDeleteCategory}
             onToggleSubcategoryStatus={handleToggleSubcategoryStatus}
             onEditSubcategory={handleEditSubcategory}
+            onDeleteSubcategory={handleDeleteSubcategory}
             StatusBadge={AdminStatusBadge}
           />
         )}
@@ -1659,15 +1524,12 @@ export const AdminPage = () => {
           setSelectedUserForAccess(null);
           setRestrictedClientDraft([]);
           setSelectedWorkbasketDraft([]);
-          setQcSamplingRateDraft(null);
         }}
         selectedUser={selectedUserForAccess}
         primaryWorkbaskets={primaryWorkbaskets}
         qcOnlyWorkbaskets={qcOnlyWorkbaskets}
         selectedWorkbasketDraft={selectedWorkbasketDraft}
         setSelectedWorkbasketDraft={setSelectedWorkbasketDraft}
-        qcSamplingRateDraft={qcSamplingRateDraft}
-        setQcSamplingRateDraft={setQcSamplingRateDraft}
         clients={clients}
         restrictedClientDraft={restrictedClientDraft}
         clientAccessModeDraft={clientAccessModeDraft}
@@ -1726,9 +1588,6 @@ export const AdminPage = () => {
         editSubcategoryForm={editSubcategoryForm}
         setEditSubcategoryForm={setEditSubcategoryForm}
         onUpdateSubcategory={handleUpdateSubcategory}
-        knowledgeFileUploading={knowledgeFileUploading}
-        onUploadKnowledgeFile={handleUploadKnowledgeFile}
-        onDeleteKnowledgeFile={handleDeleteKnowledgeFile}
         workbaskets={workbaskets}
       />
 
@@ -1805,8 +1664,6 @@ export const AdminPage = () => {
           </div>
         </form>
       </Modal>
-        </div>
-      </div>
     </PlatformShell>
   );
 };

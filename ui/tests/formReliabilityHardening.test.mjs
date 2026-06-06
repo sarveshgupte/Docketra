@@ -30,9 +30,6 @@ const publicFormSource = read('src/pages/PublicFormPage.jsx');
 assert.ok(publicFormSource.includes('setFieldErrors'), 'Public intake form should maintain field-level validation state');
 assert.ok(publicFormSource.includes('Please review the highlighted fields and try again.'), 'Public intake form should show a friendly validation summary');
 assert.ok(publicFormSource.includes("field.required ? ' *' : ' (optional)'"), 'Public intake form should clearly label required vs optional fields');
-assert.ok(publicFormSource.includes('VITE_TURNSTILE_SITE_KEY'), 'Public intake form should read the Turnstile site key for standalone public submissions');
-assert.ok(publicFormSource.includes('turnstileToken: isTurnstileConfigured ? effectiveTurnstileToken : undefined'), 'Public intake form should submit the resolved Turnstile token when configured');
-assert.ok(publicFormSource.includes('!embedMode'), 'Public intake form should not require Turnstile for embedded submissions');
-assert.ok(publicFormSource.includes('disabled={submitting || !hasNameField || (isTurnstileConfigured && !getEffectiveTurnstileToken())}'), 'Public intake submit should stay disabled while submitting or waiting for Turnstile');
+assert.ok(publicFormSource.includes('disabled={submitting || !hasNameField}'), 'Public intake submit should stay disabled while submitting');
 
 console.log('formReliabilityHardening.test.mjs passed');

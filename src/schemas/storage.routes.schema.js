@@ -61,13 +61,4 @@ module.exports = {
     params: z.object({ token: nonEmptyString }),
     query: z.object({}).passthrough(),
   },
-  'POST /backup-settings': {
-    body: z.object({
-      enabled: z.boolean().optional(),
-      deliveryPolicy: z.enum(['link_only', 'attachment']).optional(),
-      retentionDays: z.coerce.number().int().min(1).max(3650).optional(),
-      notificationRecipients: z.array(z.string().email()).optional(),
-      frequency: z.enum(['daily', 'weekly', 'monthly', 'disabled']).optional(),
-    }).strict(),
-  },
 };

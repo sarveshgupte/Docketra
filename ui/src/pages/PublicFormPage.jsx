@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useParams } from 'react-router-dom';
 import { publicFormsApi } from '../api/forms.api';
 import { generateSecureRandomString } from '../utils/crypto';
@@ -44,12 +44,6 @@ export const PublicFormPage = () => {
   const [fieldErrors, setFieldErrors] = useState({});
   const [success, setSuccess] = useState('');
   const [submissionKey, setSubmissionKey] = useState(() => createSubmissionKey());
-  const turnstileSiteKey = String(import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim();
-  const isTurnstileConfigured = Boolean(turnstileSiteKey) && !embedMode;
-  const turnstileContainerRef = useRef(null);
-  const turnstileWidgetIdRef = useRef(null);
-  const turnstileTokenRef = useRef('');
-  const [turnstileToken, setTurnstileToken] = useState('');
 
   const fields = useMemo(() => {
     const configuredFields = Array.isArray(formConfig?.fields) ? formConfig.fields : [];
@@ -94,62 +88,6 @@ export const PublicFormPage = () => {
     setFormState(nextState);
     setSubmissionKey(createSubmissionKey());
   }, [fields]);
-
-  useEffect(() => {
-    if (!isTurnstileConfigured) return undefined;
-
-    const existingScript = document.querySelector('script[data-turnstile-script="true"]');
-    if (!existingScript) {
-      const script = document.createElement('script');
-      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-      script.async = true;
-      script.defer = true;
-      script.dataset.turnstileScript = 'true';
-      document.head.appendChild(script);
-    }
-
-    const interval = window.setInterval(() => {
-      if (!window.turnstile || !turnstileContainerRef.current || turnstileWidgetIdRef.current) return;
-      turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
-        sitekey: turnstileSiteKey,
-        callback: (nextToken) => {
-          setTurnstileToken(String(nextToken || ''));
-          turnstileTokenRef.current = String(nextToken || '');
-        },
-        'expired-callback': () => {
-          setTurnstileToken('');
-          turnstileTokenRef.current = '';
-        },
-        'error-callback': () => {
-          setTurnstileToken('');
-          turnstileTokenRef.current = '';
-        },
-      });
-      window.clearInterval(interval);
-    }, 250);
-
-    return () => window.clearInterval(interval);
-  }, [isTurnstileConfigured, turnstileSiteKey]);
-
-  const getEffectiveTurnstileToken = () => {
-    const refToken = String(turnstileTokenRef.current || '').trim();
-    if (refToken) return refToken;
-    const stateToken = String(turnstileToken || '').trim();
-    if (stateToken) return stateToken;
-    const widgetId = turnstileWidgetIdRef.current;
-    return widgetId != null && window.turnstile?.getResponse
-      ? String(window.turnstile.getResponse(widgetId) || '').trim()
-      : '';
-  };
-
-  const resetTurnstile = () => {
-    if (!isTurnstileConfigured) return;
-    if (turnstileWidgetIdRef.current != null && window.turnstile?.reset) {
-      window.turnstile.reset(turnstileWidgetIdRef.current);
-    }
-    setTurnstileToken('');
-    turnstileTokenRef.current = '';
-  };
 
   const pageContainerStyle = useMemo(() => ({
     minHeight: embedMode ? 'auto' : '100vh',
@@ -205,12 +143,6 @@ export const PublicFormPage = () => {
       return;
     }
 
-    const effectiveTurnstileToken = isTurnstileConfigured ? getEffectiveTurnstileToken() : '';
-    if (isTurnstileConfigured && !effectiveTurnstileToken) {
-      setError('Please complete Turnstile verification before submitting.');
-      return;
-    }
-
     setSubmitting(true);
     setError('');
     setSuccess('');
@@ -226,7 +158,6 @@ export const PublicFormPage = () => {
         utm_medium: searchParams.get('utm_medium') || undefined,
         submissionMode: embedMode ? 'embedded_form' : 'public_form',
         idempotencyKey: submissionKey,
-        turnstileToken: isTurnstileConfigured ? effectiveTurnstileToken : undefined,
       };
 
       const response = await publicFormsApi.submitForm(formId, payload, { embed: embedMode ? 'true' : undefined });
@@ -241,14 +172,12 @@ export const PublicFormPage = () => {
       setSuccess(message);
       setSubmissionKey(createSubmissionKey());
       setFormState(fields.reduce((acc, field) => ({ ...acc, [field.key]: '' }), { [HONEYPOT_KEY]: '' }));
-      resetTurnstile();
     } catch (submitError) {
       const apiFieldErrors = submitError?.data?.fieldErrors || submitError?.response?.data?.fieldErrors || {};
       if (apiFieldErrors && typeof apiFieldErrors === 'object') {
         setFieldErrors(apiFieldErrors);
       }
       setError(submitError.message || 'Unable to submit form.');
-      resetTurnstile();
     } finally {
       setSubmitting(false);
     }
@@ -301,9 +230,7 @@ export const PublicFormPage = () => {
             );
           })}
 
-          {isTurnstileConfigured ? <div ref={turnstileContainerRef} style={{ minHeight: 65, marginBottom: 12 }} /> : null}
-
-          <button type="submit" disabled={submitting || !hasNameField || (isTurnstileConfigured && !getEffectiveTurnstileToken())} style={{ width: '100%', padding: '10px 14px' }}>
+          <button type="submit" disabled={submitting || !hasNameField} style={{ width: '100%', padding: '10px 14px' }}>
             {submitting ? 'Submitting…' : 'Submit Intake'}
           </button>
         </form>

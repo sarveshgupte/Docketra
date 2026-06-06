@@ -515,7 +515,7 @@ export const FirmSettingsPage = () => {
               onClick={() => navigate(ROUTES.SETTINGS(firmSlug))}
               className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-indigo-600 transition"
             >
-              ← Go back to settings
+              ← Back to Overview
             </button>
           </div>
 
@@ -1013,24 +1013,19 @@ export const FirmSettingsPage = () => {
 
           {/* Sticky Unsaved Changes Floating Banner */}
           {hasUnsavedChanges && (
-            <div className="fixed bottom-6 left-1/2 z-50 w-full max-w-md -translate-x-1/2 px-4">
-              <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-800/80 bg-slate-950/95 backdrop-blur-md px-5 py-3.5 shadow-2xl shadow-slate-950/50 transition-all duration-300">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 border border-amber-500/20">
-                    <svg className="h-4 w-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold text-slate-100">Unsaved configuration changes</span>
-                    <span className="text-[10px] text-slate-400 mt-0.5">Please save or discard updates</span>
-                  </div>
+            <div className="fixed bottom-6 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 px-4">
+              <div className="flex items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50/95 backdrop-blur-sm px-4.5 py-3 shadow-xl">
+                <div className="flex items-center gap-2">
+                  <svg className="h-4.5 w-4.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span className="text-xs font-black text-amber-800">Unsaved configuration changes</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={loadFirmSettings}
-                    className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-200"
+                    className="rounded-lg px-2.5 py-1 text-xs font-bold text-amber-900 hover:bg-amber-100 transition-all"
                   >
                     Discard
                   </button>
@@ -1038,7 +1033,7 @@ export const FirmSettingsPage = () => {
                     type="button"
                     onClick={handleSave}
                     disabled={loadingConfig}
-                    className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-indigo-500 shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/20 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+                    className="rounded-lg bg-amber-700 px-3.5 py-1.5 text-xs font-black text-amber-100 hover:bg-amber-800 shadow-md transition-all"
                   >
                     {loadingConfig ? 'Saving...' : 'Save Settings'}
                   </button>

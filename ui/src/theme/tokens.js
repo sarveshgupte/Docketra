@@ -41,7 +41,7 @@ export const fontSizes = {
 };
 
 export const colors = {
-  primary: '#111111',
+  primary: '#1E3A8A',
   gray: {
     50: '#F9FAFB',
     100: '#F3F4F6',

@@ -533,12 +533,7 @@ export const WorkbasketPage = () => {
         <button
           type="button"
           className="docket-link"
-          onClick={() => openDocket({
-            caseId: caseItem.caseId,
-            navigate,
-            to: `${ROUTES.CASE_DETAIL(firmSlug, caseItem.caseId)}?mode=view`,
-            state: { viewOnly: true },
-          })}
+          onClick={() => openDocket({ caseId: caseItem.caseId, navigate, to: ROUTES.CASE_DETAIL(firmSlug, caseItem.caseId) })}
         >
           {caseItem.caseId}
         </button>
@@ -586,7 +581,7 @@ export const WorkbasketPage = () => {
       tabular: true,
       headerClassName: 'min-w-[10rem] whitespace-nowrap',
       cellClassName: 'min-w-[10rem] whitespace-nowrap',
-      render: (caseItem) => formatDate(caseItem.slaDueAt || caseItem.slaDueDate || caseItem.slaState?.slaDueAt),
+      render: (caseItem) => formatDate(caseItem.slaDueDate || caseItem.slaState?.slaDueAt),
     },
     {
       key: 'slaDaysRemaining',
@@ -622,12 +617,7 @@ export const WorkbasketPage = () => {
           <Button
             variant="outline"
             size="small"
-            onClick={() => openDocket({
-              caseId: caseItem.caseId,
-              navigate,
-              to: `${ROUTES.CASE_DETAIL(firmSlug, caseItem.caseId)}?mode=view`,
-              state: { viewOnly: true },
-            })}
+            onClick={() => openDocket({ caseId: caseItem.caseId, navigate, to: ROUTES.CASE_DETAIL(firmSlug, caseItem.caseId) })}
           >
             View
           </Button>

@@ -5,7 +5,6 @@ This document covers anti-spam controls for auth signup and recovery endpoints:
 - `POST /api/auth/signup/init`
 - `POST /api/auth/signup/verify`
 - `POST /api/auth/signup/resend`
-- `POST /api/public/forms/:id/submit` for standalone public form submissions
 
 ## Controls
 - **Dedicated signup rate limiting (`signupLimiter`)** is applied to all three signup endpoints.
@@ -44,12 +43,6 @@ This document covers anti-spam controls for auth signup and recovery endpoints:
 - Backend Siteverify validation is mandatory when `TURNSTILE_ENABLED=true`.
 - In production, `TURNSTILE_ENABLED=true` without `TURNSTILE_SECRET_KEY` fails env validation and startup.
 
-## Cloudflare Turnstile (public forms)
-- Standalone public form submissions (`submissionMode=public_form`) use form-specific Turnstile middleware when `TURNSTILE_ENABLED=true`.
-- Embedded public form submissions (`embed=true` or `submissionMode=embedded_form`) skip Turnstile so existing embed-origin allowlist checks remain authoritative for embedded flows.
-- The public form UI renders Turnstile only when `VITE_TURNSTILE_SITE_KEY` is configured and the form is not in embed mode.
-- If Turnstile is disabled by environment, public forms remain usable with existing rate limiting, honeypot, validation, and origin checks.
-
 
 ## Audit and abuse observability (privacy-safe)
 - Signup flow now emits security audit events for:
@@ -70,7 +63,3 @@ This document covers anti-spam controls for auth signup and recovery endpoints:
   - `FORGOT_PASSWORD_TURNSTILE_MISSING`
   - `FORGOT_PASSWORD_TURNSTILE_FAILED`
   - `FORGOT_PASSWORD_TURNSTILE_PASSED`
-- Standalone public form submissions additionally emit:
-  - `PUBLIC_FORM_TURNSTILE_MISSING`
-  - `PUBLIC_FORM_TURNSTILE_FAILED`
-  - `PUBLIC_FORM_TURNSTILE_PASSED`

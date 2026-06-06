@@ -22,8 +22,6 @@ module.exports = {
       utm_medium: z.string().trim().max(120).optional(),
       website: z.string().trim().max(200).optional(),
       submissionMode: z.enum(['public_form', 'embedded_form']).optional(),
-      turnstileToken: z.string().trim().optional(),
-      'cf-turnstile-response': z.string().trim().optional(),
     }).passthrough(),
   },
   'GET /forms/:id': {

@@ -136,16 +136,12 @@ const getEmailCaptures = async (req, res) => {
     }
 
     const skip = (Number(page) - 1) * Number(limit);
-    // 💡 What: Replaced sequential execution of countDocuments and find with concurrent execution using Promise.all().
-    // 🎯 Why: This halves the database latency for pagination operations by running independent queries simultaneously.
-    const [total, captures] = await Promise.all([
-      EmailCapture.countDocuments(query),
-      EmailCapture.find(query)
-        .sort(sort)
-        .skip(skip)
-        .limit(Number(limit))
-        .lean()
-    ]);
+    const total = await EmailCapture.countDocuments(query);
+    const captures = await EmailCapture.find(query)
+      .sort(sort)
+      .skip(skip)
+      .limit(Number(limit))
+      .lean();
 
     return res.json({
       success: true,

@@ -4,7 +4,6 @@ const Case = require('../models/Case.model');
 const Client = require('../models/Client.model');
 const ComplianceObligationTemplate = require('../models/ComplianceObligationTemplate.model');
 const { resolveFirmMemoryScope } = require('../services/firmMemoryScope.service');
-const { logAuditEvent } = require('../services/adminActionAudit.service');
 
 const { KNOWLEDGE_ITEM_TYPES, KNOWLEDGE_ITEM_STATUSES } = KnowledgeItem;
 
@@ -120,20 +119,6 @@ const createKnowledgeItem = async (req, res) => {
       updatedByXid: actorXid || null,
     });
 
-    // Log admin audit event
-    await logAuditEvent({
-      firmId: req.user.firmId,
-      actorId: req.user._id || req.user.id,
-      targetId: item._id,
-      action: 'KNOWLEDGE_ITEM_CREATED',
-      metadata: {
-        title: item.title,
-        type: item.type,
-        module: 'knowledge',
-        severity: 'low',
-      },
-    });
-
     return res.status(201).json({ success: true, data: item.toObject() });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message || 'Failed to create knowledge item' });
@@ -234,9 +219,8 @@ const listKnowledgeItems = async (req, res) => {
       data: items,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
-  } catch (error) {
-    console.error('listKnowledgeItems error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to list knowledge items: ' + error.message });
+  } catch (_error) {
+    return res.status(500).json({ success: false, message: 'Failed to list knowledge items' });
   }
 };
 
@@ -367,20 +351,6 @@ const updateKnowledgeItem = async (req, res) => {
     item.updatedByXid = normalizeXid(req.user) || null;
     await item.save();
 
-    // Log admin audit event
-    await logAuditEvent({
-      firmId: req.user.firmId,
-      actorId: req.user._id || req.user.id,
-      targetId: item._id,
-      action: 'KNOWLEDGE_ITEM_UPDATED',
-      metadata: {
-        title: item.title,
-        type: item.type,
-        module: 'knowledge',
-        severity: 'low',
-      },
-    });
-
     return res.json({ success: true, data: item.toObject() });
   } catch (error) {
     if (error instanceof mongoose.Error.CastError) {
@@ -407,20 +377,6 @@ const archiveKnowledgeItem = async (req, res) => {
     item.status = 'archived';
     item.updatedByXid = normalizeXid(req.user) || null;
     await item.save();
-
-    // Log admin audit event
-    await logAuditEvent({
-      firmId: req.user.firmId,
-      actorId: req.user._id || req.user.id,
-      targetId: item._id,
-      action: 'KNOWLEDGE_ITEM_ARCHIVED',
-      metadata: {
-        title: item.title,
-        type: item.type,
-        module: 'knowledge',
-        severity: 'medium',
-      },
-    });
 
     return res.json({ success: true, data: item.toObject() });
   } catch (error) {

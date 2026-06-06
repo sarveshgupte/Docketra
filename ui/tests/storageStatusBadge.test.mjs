@@ -20,9 +20,6 @@ assert.ok(shell.includes("hasFirmRoleAtLeast(role, 'MANAGER')"), 'Storage status
 assert.ok(badge.includes("hasFirmRoleAtLeast(user, 'MANAGER')"), 'StorageStatusBadge should defensively gate regular users.');
 assert.ok(hook.includes('ownershipSummary?.activeStorage'), 'Storage status summary should read nested activeStorage ownership data.');
 assert.ok(hook.includes('Promise.allSettled'), 'Storage status summary should not let optional endpoint failures poison the badge state.');
-assert.ok(hook.includes('bypassCache = false'), 'Storage status summary hook should support bypassing stale cache.');
-assert.ok(badge.includes("includes('/storage-settings')"), 'Storage settings route should bypass cached shell badge status.');
-assert.ok(badge.includes('bypassCache,'), 'StorageStatusBadge should pass cache bypass option into the summary hook.');
 
 for (const label of ['Firm-owned storage active', 'Docketra-managed storage', 'Storage needs attention', 'Strict firm-owned storage']) {
   assert.ok(storageSummarySource.includes(label), `Hook should map badge label state: ${label}`);

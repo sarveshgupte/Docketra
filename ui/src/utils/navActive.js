@@ -1,5 +1,3 @@
-import { isRoleCompatibleRoute, isSafeReturnToPath } from './returnToSafety.js';
-
 const trimTrailingSlash = (value) => (value.length > 1 ? value.replace(/\/+$/, '') : value);
 
 const normalizePath = (value = '') => {
@@ -33,31 +31,6 @@ const matchesExcludedRoute = (pathname, search = '', excludedRoute = '') => {
   }
 
   return isExactOrDescendantPath(pathname, excludedRoute);
-};
-
-export const resolveNavContextLocation = (pathname = '', search = '', firmSlug = '') => {
-  const normalizedFirmSlug = String(firmSlug || '').trim();
-  if (!normalizedFirmSlug) return { pathname, search };
-
-  const normalizedPathname = normalizePath(pathname);
-  const docketDetailPrefix = normalizePath(`/app/firm/${normalizedFirmSlug}/dockets`);
-  const isDocketDetailRoute =
-    normalizedPathname === docketDetailPrefix
-    || normalizedPathname.startsWith(`${docketDetailPrefix}/`);
-
-  if (!isDocketDetailRoute) return { pathname, search };
-
-  const returnTo = new URLSearchParams(search || '').get('returnTo');
-  if (!isSafeReturnToPath(returnTo)) return { pathname, search };
-  if (!isRoleCompatibleRoute(returnTo, { isSuperAdminUser: false, firmSlug: normalizedFirmSlug })) {
-    return { pathname, search };
-  }
-
-  const [returnPath = '', returnQuery = ''] = String(returnTo).split('?');
-  return {
-    pathname: normalizePath(returnPath || '/'),
-    search: returnQuery ? `?${returnQuery}` : '',
-  };
 };
 
 export const isNavItemActive = (pathname, item) => {

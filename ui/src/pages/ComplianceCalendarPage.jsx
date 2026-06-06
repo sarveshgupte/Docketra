@@ -122,7 +122,7 @@ const createPayload = (form) => {
       interval: Math.max(1, Number(form.recurrenceInterval) || 1),
       untilDate: form.recurrenceUntil ? new Date(`${form.recurrenceUntil}T00:00:00`) : null,
     }
-    : undefined;
+    : null;
 
   return {
     title,
@@ -132,7 +132,7 @@ const createPayload = (form) => {
     reminderDaysBefore: form.reminderDaysBefore === '' ? undefined : Number(form.reminderDaysBefore),
     clientName: safeText(form.clientName),
     linkedCaseId: safeText(form.linkedCaseId),
-    ...(recurrencePattern ? { recurrencePattern } : {}),
+    recurrencePattern,
   };
 };
 

@@ -36,22 +36,6 @@ const sopLinkSchema = new mongoose.Schema({
   sortOrder: { type: Number, min: 0 },
 }, { _id: false });
 
-const sopFileSchema = new mongoose.Schema({
-  id: { type: String, required: true, trim: true },
-  fileName: { type: String, required: true, trim: true, maxlength: 255 },
-  mimeType: { type: String, required: true, trim: true, maxlength: 255 },
-  size: { type: Number, required: true, min: 0 },
-  storageProvider: { type: String, required: true, trim: true, maxlength: 64 },
-  storageFileId: { type: String, trim: true, default: null },
-  objectKey: { type: String, trim: true, default: null },
-  webViewLink: { type: String, trim: true, default: null, maxlength: 2048 },
-  uploadedAt: { type: Date, default: Date.now },
-  uploadedByXID: { type: String, trim: true, default: null },
-  uploadedByName: { type: String, trim: true, default: null },
-  description: { type: String, trim: true, default: '', maxlength: 1000 },
-  sortOrder: { type: Number, min: 0 },
-}, { _id: false });
-
 const subcategorySopSchema = new mongoose.Schema({
   title: { type: String, trim: true, maxlength: 200, default: '' },
   body: { type: String, maxlength: 10000, default: '' },
@@ -59,7 +43,6 @@ const subcategorySopSchema = new mongoose.Schema({
   lastUpdatedAt: { type: Date, default: null },
   lastUpdatedByXID: { type: String, trim: true, default: null },
   links: { type: [sopLinkSchema], default: [] },
-  files: { type: [sopFileSchema], default: [] },
 }, { _id: false });
 
 const subcategorySchema = new mongoose.Schema({
@@ -97,12 +80,6 @@ const subcategorySchema = new mongoose.Schema({
   defaultSlaDays: {
     type: Number,
     min: 0,
-    default: 0,
-  },
-  qcPercent: {
-    type: Number,
-    min: 0,
-    max: 100,
     default: 0,
   },
   forceQC: {
@@ -191,12 +168,6 @@ const categorySchema = new mongoose.Schema({
   defaultSlaDays: {
     type: Number,
     min: 0,
-    default: 0,
-  },
-  qcPercent: {
-    type: Number,
-    min: 0,
-    max: 100,
     default: 0,
   },
   forceQC: {
