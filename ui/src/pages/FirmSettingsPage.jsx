@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
@@ -10,6 +10,7 @@ import { adminApi } from '../api/admin.api';
 import { slaApi } from '../api/sla.api';
 import { categoryService } from '../services/categoryService';
 import { getFirmConfig, setFirmConfig } from '../utils/firmConfig';
+import { buildCsv } from '../utils/csv';
 import { formatDateTime } from '../utils/formatDateTime';
 import { StatusMessageStack } from './platform/PlatformShared';
 import { ROUTES } from '../constants/routes';
@@ -37,6 +38,54 @@ const defaultSlaForm = {
   slaHours: '',
   isActive: true,
 };
+
+const AUDIT_PAGE_SIZE = 25;
+const AUDIT_EXPORT_PAGE_SIZE = 100;
+
+const formatAuditValue = (value) => {
+  if (value === null || value === undefined || value === '') return '—';
+  if (Array.isArray(value)) return value.map((item) => formatAuditValue(item)).join(', ');
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+};
+
+const summarizeAuditChanges = (changes = []) => {
+  if (!Array.isArray(changes) || changes.length === 0) return 'No field changes';
+  return changes.map((change) => {
+    const field = change?.field || 'field';
+    return `${field}: ${formatAuditValue(change?.from)} -> ${formatAuditValue(change?.to)}`;
+  }).join('; ');
+};
+
+const normalizeAuditEntry = (entry = {}) => ({
+  id: String(entry?._id || entry?.id || ''),
+  timestamp: entry?.timestamp || null,
+  actor: String(entry?.performedBy || 'SYSTEM'),
+  role: String(entry?.performedByRole || 'ADMIN'),
+  category: String(entry?.category || 'configs'),
+  action: String(entry?.action || 'UPDATED'),
+  settingsKey: String(entry?.settingsKey || entry?.category || ''),
+  entityType: String(entry?.entityType || ''),
+  entityId: String(entry?.entityId || ''),
+  changes: Array.isArray(entry?.changes) ? entry.changes : [],
+  metadata: entry?.metadata ?? null,
+});
+
+const buildAuditCsv = (entries = []) => buildCsv([
+  ['Timestamp', 'Actor', 'Role', 'Category', 'Action', 'Settings Key', 'Entity Type', 'Entity ID', 'Changes', 'Metadata'],
+  ...entries.map((entry) => ([
+    formatDateTime(entry.timestamp),
+    entry.actor || 'SYSTEM',
+    entry.role || 'ADMIN',
+    entry.category || 'configs',
+    entry.action || 'UPDATED',
+    entry.settingsKey || '—',
+    entry.entityType || '—',
+    entry.entityId || '—',
+    summarizeAuditChanges(entry.changes),
+    formatAuditValue(entry.metadata),
+  ])),
+]);
 
 const getRuleScopeLabel = (rule) => {
   const scopes = [];
@@ -142,8 +191,16 @@ export const FirmSettingsPage = () => {
   const { firmSlug } = useParams();
   const [config, setConfig] = useState(getFirmConfig());
   const [activity, setActivity] = useState([]);
+  const [activityPagination, setActivityPagination] = useState({
+    page: 1,
+    limit: AUDIT_PAGE_SIZE,
+    total: 0,
+    totalPages: 1,
+    hasNextPage: false,
+  });
   const [saveMessage, setSaveMessage] = useState({ type: '', text: '' });
   const [loadingActivity, setLoadingActivity] = useState(true);
+  const [exportingActivity, setExportingActivity] = useState(false);
   const [activityError, setActivityError] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(true);
@@ -206,34 +263,86 @@ export const FirmSettingsPage = () => {
     }
   };
 
-  const loadActivity = async () => {
+  const loadActivity = useCallback(async (nextPage = 1) => {
     setLoadingActivity(true);
     setActivityError('');
     try {
-      const response = await adminApi.getFirmSettingsActivity({ limit: 50 });
-      const records = response?.data || [];
+      const response = await adminApi.getSettingsAudit({ page: nextPage, limit: AUDIT_PAGE_SIZE });
+      const records = Array.isArray(response?.data) ? response.data : [];
+      const pagination = response?.pagination || {};
       const normalizedActivity = records
-        .map((entry) => ({
-          id: entry.id || `${entry.source || 'audit'}-${entry.timestamp || ''}-${entry.action || ''}-${entry.xID || ''}`,
-          actor: entry.xID || 'SYSTEM',
-          timestamp: entry.timestamp,
-          description: entry.description || entry.action || 'Admin activity recorded',
-        }))
-        .filter((entry) => entry.timestamp)
-        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-        .slice(0, 10);
+        .map(normalizeAuditEntry)
+        .filter((entry) => entry.id && entry.timestamp);
+
+      const total = Number(pagination.total) || normalizedActivity.length;
+      const limit = Number(pagination.limit) || AUDIT_PAGE_SIZE;
+      const totalPages = Math.max(1, Math.ceil(total / limit));
+
       setActivity(normalizedActivity);
+      setActivityPagination({
+        page: Number(pagination.page) || nextPage,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: Boolean(pagination.hasNextPage),
+      });
     } catch (error) {
       setActivity([]);
+      setActivityPagination({
+        page: nextPage,
+        limit: AUDIT_PAGE_SIZE,
+        total: 0,
+        totalPages: 1,
+        hasNextPage: false,
+      });
       setActivityError(
         isForbidden(error)
-          ? 'You do not have permission to view admin activity. Ask a workspace admin to update your access.'
-          : 'Could not load admin audit activity. You can retry without losing settings changes.',
+          ? 'You do not have permission to view settings audit history. Ask a workspace admin to update your access.'
+          : 'Could not load settings audit history. You can retry without losing settings changes.',
       );
     } finally {
       setLoadingActivity(false);
     }
-  };
+  }, []);
+
+  const exportAuditCsv = useCallback(async () => {
+    setExportingActivity(true);
+    try {
+      const collected = [];
+      const firstResponse = await adminApi.getSettingsAudit({ page: 1, limit: AUDIT_EXPORT_PAGE_SIZE });
+      const firstRows = Array.isArray(firstResponse?.data) ? firstResponse.data : [];
+      const firstPagination = firstResponse?.pagination || {};
+      const total = Number(firstPagination.total) || firstRows.length;
+      const pageSize = Number(firstPagination.limit) || AUDIT_EXPORT_PAGE_SIZE;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      collected.push(...firstRows.map(normalizeAuditEntry));
+
+      for (let page = 2; page <= totalPages; page += 1) {
+        const response = await adminApi.getSettingsAudit({ page, limit: AUDIT_EXPORT_PAGE_SIZE });
+        const rows = Array.isArray(response?.data) ? response.data : [];
+        collected.push(...rows.map(normalizeAuditEntry));
+      }
+
+      const csv = buildAuditCsv(collected);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+      link.href = url;
+      link.download = `firm-settings-audit-${stamp}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setSaveMessage({
+        type: 'error',
+        text: error?.message || 'Could not export audit history.',
+      });
+    } finally {
+      setExportingActivity(false);
+    }
+  }, []);
 
   const loadSlaData = async () => {
     setLoadingSlaData(true);
@@ -283,10 +392,10 @@ export const FirmSettingsPage = () => {
   };
 
   useEffect(() => {
-    loadActivity();
+    void loadActivity(1);
     loadFirmSettings();
     loadSlaData();
-  }, []);
+  }, [loadActivity]);
 
   const handleNumberChange = (event) => {
     const { name, value } = event.target;
@@ -360,7 +469,7 @@ export const FirmSettingsPage = () => {
       setConfig(saved);
       setHasUnsavedChanges(false);
       setSaveMessage({ type: 'success', text: 'Firm settings saved successfully.' });
-      void loadActivity();
+      void loadActivity(1);
     } catch {
       setSaveMessage({ type: 'error', text: 'Could not save settings. Please retry.' });
     }
@@ -932,70 +1041,96 @@ export const FirmSettingsPage = () => {
                 <div className="lg:col-span-1 space-y-2">
                   <h3 className="text-base font-bold text-slate-800">Audit & Change Trace</h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    View recent workspace settings changes. Log nodes display the modifying administrator user ID and details.
+                    View recent workspace settings changes. The latest 25 entries load per page, with CSV export for the full audit trail.
                   </p>
                 </div>
                 <div className="lg:col-span-2">
                   <Card className="p-6 bg-white shadow-sm border border-slate-200/60 rounded-xl">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-6">
                       <span className="text-sm font-bold text-slate-800">Administrator Activity Log</span>
-                      <button
-                        type="button"
-                        onClick={loadActivity}
-                        disabled={loadingActivity}
-                        className="text-xs font-bold text-indigo-600 hover:text-indigo-700 disabled:text-slate-400"
-                      >
-                        Refresh Log
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void exportAuditCsv()}
+                          loading={exportingActivity}
+                          disabled={loadingActivity || activity.length === 0}
+                        >
+                          Export CSV
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void loadActivity(activityPagination.page)}
+                          loading={loadingActivity}
+                        >
+                          Refresh Log
+                        </Button>
+                      </div>
                     </div>
 
                     {loadingActivity ? (
-                      <div className="px-4 py-8 text-center text-xs text-slate-400">Loading activity timeline…</div>
+                      <div className="px-4 py-8 text-center text-xs text-slate-400">Loading activity history…</div>
                     ) : activityError ? (
                       <div className="rounded-xl border border-rose-100 bg-rose-50/50 p-4 text-xs text-rose-700">
                         <p className="font-semibold">{activityError}</p>
                       </div>
                     ) : activity.length ? (
-                      <div className="flow-root pl-1.5">
-                        <ul className="-mb-8">
-                          {activity.map((entry, entryIdx) => {
-                            const actorName = entry.actor;
-                            const initials = actorName
-                              .split(' ')
-                              .map((n) => n[0])
-                              .join('')
-                              .toUpperCase()
-                              .substring(0, 2) || 'AD';
-                            return (
-                              <li key={entry.id}>
-                                <div className="relative pb-8">
-                                  {entryIdx !== activity.length - 1 ? (
-                                    <span className="absolute left-5 top-5 -ml-px h-full w-0.5 bg-slate-100" aria-hidden="true" />
-                                  ) : null}
-                                  <div className="relative flex space-x-3.5">
-                                    <div>
-                                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-xs font-bold text-slate-600 shadow-sm">
-                                        {initials}
-                                      </span>
-                                    </div>
-                                    <div className="flex-1 min-w-0 pt-1.5">
-                                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
-                                        <div>
-                                          <span className="text-xs font-bold text-slate-800">{actorName}</span>
-                                          <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{entry.description}</p>
-                                        </div>
-                                        <span className="text-[10px] font-semibold text-slate-400 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-md h-fit whitespace-nowrap self-start sm:self-center">
-                                          {formatDateTime(entry.timestamp)}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </div>
+                      <>
+                        <div className="overflow-x-auto rounded-xl border border-slate-100">
+                          <table className="min-w-full divide-y divide-slate-100 text-xs">
+                            <thead className="bg-slate-50 text-left font-bold text-slate-600">
+                              <tr>
+                                <th className="px-4 py-3">Timestamp</th>
+                                <th className="px-4 py-3">Actor</th>
+                                <th className="px-4 py-3">Role</th>
+                                <th className="px-4 py-3">Category</th>
+                                <th className="px-4 py-3">Action</th>
+                                <th className="px-4 py-3">Changes</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 bg-white text-slate-600">
+                              {activity.map((entry) => (
+                                <tr key={entry.id} className="hover:bg-slate-50/60">
+                                  <td className="px-4 py-3 whitespace-nowrap text-slate-500">{formatDateTime(entry.timestamp)}</td>
+                                  <td className="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">{entry.actor}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap">{entry.role || 'ADMIN'}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap">{entry.category || 'configs'}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap font-semibold text-slate-800">{entry.action}</td>
+                                  <td className="px-4 py-3 text-slate-500">{summarizeAuditChanges(entry.changes)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4 text-xs text-slate-500">
+                          <span>
+                            Page {activityPagination.page} of {activityPagination.totalPages} · {activityPagination.total} total entries
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={loadingActivity || activityPagination.page <= 1}
+                              onClick={() => void loadActivity(activityPagination.page - 1)}
+                            >
+                              Previous
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={loadingActivity || !activityPagination.hasNextPage}
+                              onClick={() => void loadActivity(activityPagination.page + 1)}
+                            >
+                              Next
+                            </Button>
+                          </div>
+                        </div>
+                      </>
                     ) : (
                       <div className="px-4 py-8">
                         <EmptyState

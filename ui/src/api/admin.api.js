@@ -29,6 +29,7 @@ export const adminApi = {
   updateUserHierarchy: (id, payload) => request((http) => http.patch(`/admin/users/${id}/hierarchy`, payload), 'Failed to update hierarchy'),
   getFirmSettings: () => request((http) => http.get('/admin/firm-settings'), 'Failed to load firm settings'),
   getFirmSettingsActivity: (params = {}) => request((http) => http.get('/admin/firm-settings/activity', { params }), 'Failed to load admin settings activity'),
+  getSettingsAudit: (params = {}) => request((http) => http.get('/admin/settings/audit', { params }), 'Failed to load settings audit'),
   updateFirmSettings: (payload) => request((http) => http.put('/admin/firm-settings', payload), 'Failed to save firm settings'),
   getCmsIntakeSettings: (params = {}) => request((http) => http.get('/admin/cms-intake-settings', { params }), 'Failed to load CMS intake settings'),
   updateCmsIntakeSettings: (payload) => request((http) => http.put('/admin/cms-intake-settings', payload), 'Failed to save CMS intake settings'),
