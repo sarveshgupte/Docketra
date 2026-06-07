@@ -29,8 +29,15 @@ const createDocumentItem = async (req, res) => {
     const userXID = req.user?.xID;
     const { caseInternalId, name, category, fileReference, notes, changeNote } = req.body;
 
-    // Fetch docket and enforce firm isolation
-    const targetCase = await Case.findOne({ caseInternalId, firmId });
+    // ⚡ Bolt Performance Optimization:
+    // Execute independent entity validation queries concurrently using Promise.all().
+    // Impact: Reduces DB round-trips from 3 to 1, cutting database latency for this endpoint.
+    const [targetCase, attachment, duplicate] = await Promise.all([
+      Case.findOne({ caseInternalId, firmId }),
+      Attachment.findOne({ _id: fileReference, firmId }),
+      DocumentItem.findOne({ caseInternalId, name: { $regex: new RegExp(`^${name}$`, 'i') } })
+    ]);
+
     if (!targetCase) {
       return res.status(404).json({ success: false, message: 'Docket not found' });
     }
@@ -45,13 +52,11 @@ const createDocumentItem = async (req, res) => {
     }
 
     // Validate the underlying Attachment reference exists
-    const attachment = await Attachment.findOne({ _id: fileReference, firmId });
     if (!attachment) {
       return res.status(404).json({ success: false, message: 'Attachment file reference not found' });
     }
 
     // Prevent duplicate name confusion in the same docket
-    const duplicate = await DocumentItem.findOne({ caseInternalId, name: { $regex: new RegExp(`^${name}$`, 'i') } });
     if (duplicate) {
       return res.status(409).json({
         success: false,
@@ -134,7 +139,14 @@ const addDocumentVersion = async (req, res) => {
     const { id } = req.params;
     const { fileReference, changeNote } = req.body;
 
-    const documentItem = await DocumentItem.findOne({ _id: id, firmId });
+    // ⚡ Bolt Performance Optimization:
+    // Execute independent validation queries concurrently using Promise.all().
+    // Impact: Reduces DB network round-trips, improving overall endpoint latency.
+    const [documentItem, attachment] = await Promise.all([
+      DocumentItem.findOne({ _id: id, firmId }),
+      Attachment.findOne({ _id: fileReference, firmId })
+    ]);
+
     if (!documentItem) {
       return res.status(404).json({ success: false, message: 'Document item not found' });
     }
@@ -149,7 +161,6 @@ const addDocumentVersion = async (req, res) => {
     }
 
     // Validate the new Attachment reference
-    const attachment = await Attachment.findOne({ _id: fileReference, firmId });
     if (!attachment) {
       return res.status(404).json({ success: false, message: 'Attachment file reference not found' });
     }
