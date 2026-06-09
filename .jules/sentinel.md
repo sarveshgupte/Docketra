@@ -40,3 +40,7 @@
 **Vulnerability:** Raw error messages (`error.message`) were being directly exposed to clients in API error responses (e.g., in `src/controllers/user.controller.js`).
 **Learning:** Exposing raw internal error details to the client can leak sensitive system information, configuration details, or underlying infrastructure state, which can be leveraged by attackers.
 **Prevention:** Always log the full error details server-side using the internal logger (`log.error`) and return generic, safe error messages to the client (e.g., "Unable to load profile").
+## 2026-06-09 - ReDoS and NoSQL Injection Prevention in RegExp Constructors
+**Vulnerability:** User inputs (`name` in document items, `targetCase` attributes in knowledge items) were passed directly into `new RegExp()` constructors for Mongoose `$regex` queries without sanitization.
+**Learning:** This pattern allowed an attacker to supply regex control characters (like `.*` or `+`) inside standard text fields, potentially causing ReDoS (catastrophic backtracking) or executing unintended wildcards (regex-based NoSQL injection).
+**Prevention:** All dynamic user strings interpolated into `new RegExp` or Mongoose `$regex` must be strictly sanitized using the `escapeRegExp` utility (`src/utils/regexp.utils.js`) before construction.
