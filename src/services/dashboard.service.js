@@ -664,42 +664,45 @@ const getComplianceControlRoom = async (firmId, filters = {}) => {
     ...(andFilters.length ? { $and: andFilters } : {}),
   };
 
-  const [summaryAgg, items] = await Promise.all([
-    Case.aggregate([
-      { $match: match },
-      {
-        $facet: {
-          dueThisWeek: [{
-            $match: {
-              compliance_state: { $in: Array.from(ACTIVE_COMPLIANCE_STATES) },
-              $or: [
-                { statutory_due_date: { $gte: now, $lte: weekEnd } },
-                { internal_due_date: { $gte: now, $lte: weekEnd } },
-              ],
-            },
-          }, { $count: 'count' }],
-          overdue: [{
-            $match: {
-              compliance_state: { $in: Array.from(ACTIVE_COMPLIANCE_STATES) },
-              $or: [
-                { statutory_due_date: { $lt: now } },
-                { internal_due_date: { $lt: now } },
-              ],
-            },
-          }, { $count: 'count' }],
-          awaitingClient: [{ $match: { compliance_state: COMPLIANCE_STATES.AWAITING_CLIENT } }, { $count: 'count' }],
-          awaitingPartner: [{ $match: { compliance_state: COMPLIANCE_STATES.AWAITING_PARTNER } }, { $count: 'count' }],
-          readyToFile: [{ $match: { compliance_state: COMPLIANCE_STATES.READY_TO_FILE } }, { $count: 'count' }],
-          blocked: [{ $match: { compliance_state: COMPLIANCE_STATES.BLOCKED } }, { $count: 'count' }],
-          filedRecently: [{
-            $match: {
-              compliance_state: COMPLIANCE_STATES.FILED,
-              filed_at: { $gte: recentFiledStart, $lte: now },
-            },
-          }, { $count: 'count' }],
-        },
-      },
-    ]),
+  // ⚡ Bolt: Revert $facet for simple counts
+  // 💡 What: Replaced $facet aggregation with concurrent find() and countDocuments().
+  // 🎯 Why: While $facet groups multiple count operations into a single network roundtrip, it is an anti-pattern for simple counts if the initial $match yields a large dataset. Individual countDocuments queries can be resolved entirely using index scans, whereas $facet forces MongoDB to pull all matching documents into memory to evaluate the sub-pipelines, bypassing indexes and risking the 100MB aggregation memory limit.
+  // 📊 Impact: Reduces memory usage and leverages MongoDB index scans for counts.
+  const [
+    dueThisWeek,
+    overdue,
+    awaitingClient,
+    awaitingPartner,
+    readyToFile,
+    blocked,
+    filedRecently,
+    items,
+  ] = await Promise.all([
+    Case.countDocuments({
+      ...match,
+      compliance_state: { $in: Array.from(ACTIVE_COMPLIANCE_STATES) },
+      $or: [
+        { statutory_due_date: { $gte: now, $lte: weekEnd } },
+        { internal_due_date: { $gte: now, $lte: weekEnd } },
+      ],
+    }),
+    Case.countDocuments({
+      ...match,
+      compliance_state: { $in: Array.from(ACTIVE_COMPLIANCE_STATES) },
+      $or: [
+        { statutory_due_date: { $lt: now } },
+        { internal_due_date: { $lt: now } },
+      ],
+    }),
+    Case.countDocuments({ ...match, compliance_state: COMPLIANCE_STATES.AWAITING_CLIENT }),
+    Case.countDocuments({ ...match, compliance_state: COMPLIANCE_STATES.AWAITING_PARTNER }),
+    Case.countDocuments({ ...match, compliance_state: COMPLIANCE_STATES.READY_TO_FILE }),
+    Case.countDocuments({ ...match, compliance_state: COMPLIANCE_STATES.BLOCKED }),
+    Case.countDocuments({
+      ...match,
+      compliance_state: COMPLIANCE_STATES.FILED,
+      filed_at: { $gte: recentFiledStart, $lte: now },
+    }),
     Case.find(match)
       .select('caseId caseNumber title clientId clientName assignedToXID approver_xid reviewer_xid compliance_state statutory_due_date internal_due_date pend_until filed_at obligation_type obligation_period risk_level blocked_reason priority status')
       .sort({ statutory_due_date: 1, internal_due_date: 1, createdAt: -1 })
@@ -707,17 +710,14 @@ const getComplianceControlRoom = async (firmId, filters = {}) => {
       .lean(),
   ]);
 
-  const takeCount = (facet = [], key = 'count') => Number(facet?.[0]?.[key] || 0);
-  const summary = summaryAgg?.[0] || {};
-
   const summaryPayload = {
-    dueThisWeek: takeCount(summary.dueThisWeek),
-    overdue: takeCount(summary.overdue),
-    awaitingClient: takeCount(summary.awaitingClient),
-    awaitingPartner: takeCount(summary.awaitingPartner),
-    readyToFile: takeCount(summary.readyToFile),
-    blocked: takeCount(summary.blocked),
-    filedRecently: takeCount(summary.filedRecently),
+    dueThisWeek: dueThisWeek || 0,
+    overdue: overdue || 0,
+    awaitingClient: awaitingClient || 0,
+    awaitingPartner: awaitingPartner || 0,
+    readyToFile: readyToFile || 0,
+    blocked: blocked || 0,
+    filedRecently: filedRecently || 0,
   };
   const itemsPayload = items.map((item) => ({
     caseId: item.caseId || item.caseNumber,
