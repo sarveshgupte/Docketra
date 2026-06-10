@@ -40,3 +40,8 @@
 **Vulnerability:** Raw error messages (`error.message`) were being directly exposed to clients in API error responses (e.g., in `src/controllers/user.controller.js`).
 **Learning:** Exposing raw internal error details to the client can leak sensitive system information, configuration details, or underlying infrastructure state, which can be leveraged by attackers.
 **Prevention:** Always log the full error details server-side using the internal logger (`log.error`) and return generic, safe error messages to the client (e.g., "Unable to load profile").
+
+## 2024-06-11 - Prevent Mass Assignment / IDOR on Audit Fields
+**Vulnerability:** Client-provided `createdBy` and `updatedBy` properties were being read from `req.body` directly and saved to the database in `src/controllers/user.controller.js`.
+**Learning:** Blindly trusting `req.body` properties allows malicious actors to forge or overwrite critical audit trail metadata, violating data integrity and attributing actions to other users (Insecure Direct Object Reference).
+**Prevention:** Never trust client-provided audit fields. Always derive these fields securely from the server-side authenticated context (e.g., `req.user?._id || null`).
