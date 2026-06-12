@@ -7,7 +7,7 @@
  * This layout remains for legacy/non-firm pages until fully retired.
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useId, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { useAuth } from '../../hooks/useAuth';
@@ -160,6 +160,7 @@ export const Layout = ({ children, title, subtitle }) => {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notificationItems, setNotificationItems] = useState([]);
+  const sidebarId = useId();
   const [isMobileViewport, setIsMobileViewport] = useState(
     typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches
   );
@@ -677,6 +678,7 @@ export const Layout = ({ children, title, subtitle }) => {
       </a>
       {/* Sidebar */}
       <aside
+        id={sidebarId}
         className={[
           'enterprise-sidebar',
           sidebarCollapsed ? 'enterprise-sidebar--collapsed' : '',
@@ -742,6 +744,8 @@ export const Layout = ({ children, title, subtitle }) => {
             onClick={() => setSidebarCollapsed((value) => !value)}
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-expanded={!sidebarCollapsed}
+            aria-controls={sidebarId}
           >
             <span className="enterprise-sidebar__footer-toggle-icon" aria-hidden="true">
               {sidebarCollapsed ? <IconChevronRight /> : <IconChevronLeft />}
@@ -795,6 +799,7 @@ export const Layout = ({ children, title, subtitle }) => {
             onClick={handleSidebarToggle}
             aria-label={isMobileViewport ? 'Toggle sidebar' : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
             aria-expanded={isMobileViewport ? mobileSidebarOpen : !sidebarCollapsed}
+            aria-controls={sidebarId}
           >
             <IconMenu />
           </button>
