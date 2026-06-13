@@ -29,7 +29,7 @@ const maskEmail = (email) => {
 const checkCaseLock = async (req, res, next) => {
   try {
     const { caseId } = req.params;
-    const userEmail = req.body.performedBy || req.body.createdBy || req.body.clonedBy;
+    const userEmail = req.user?.email || req.body.performedBy || req.body.createdBy || req.body.clonedBy;
     
     if (!userEmail) {
       return res.status(400).json({
