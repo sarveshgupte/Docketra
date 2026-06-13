@@ -40,8 +40,3 @@
 **Vulnerability:** Raw error messages (`error.message`) were being directly exposed to clients in API error responses (e.g., in `src/controllers/user.controller.js`).
 **Learning:** Exposing raw internal error details to the client can leak sensitive system information, configuration details, or underlying infrastructure state, which can be leveraged by attackers.
 **Prevention:** Always log the full error details server-side using the internal logger (`log.error`) and return generic, safe error messages to the client (e.g., "Unable to load profile").
-
-## 2024-06-13 - [Mass Assignment] Prevent IDOR and Forgery by Deriving Audit Fields from Auth Context
-**Vulnerability:** The `user.controller.js` and `caseLock.middleware.js` incorrectly trusted user input (`req.body.createdBy`, `req.body.updatedBy`, `req.body.performedBy`) for logging and state assignment. This allowed attackers to perform Mass Assignment, potentially modifying audit trails or escalating privileges.
-**Learning:** Developers often pass client-side audit parameters directly to models instead of using secure server-side authenticated state. This is an unsafe practice because HTTP payloads can easily be intercepted and modified.
-**Prevention:** Never trust client-provided audit fields from `req.body`. Always securely derive audit, ownership, and identification context from authenticated server state, such as `req.user?._id` or `req.user?.email`.
