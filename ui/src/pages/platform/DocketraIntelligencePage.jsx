@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
-import { ROUTES } from '../../constants/routes';
 import {
   DataTable,
   EmptyState,
@@ -136,7 +135,6 @@ export const DocketraIntelligencePage = () => {
       moduleLabel="Docketra Intelligence"
       title="Docketra Intelligence"
       subtitle="Manager view for team capacity, availability, and next-assignment guidance."
-      actions={<Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>Open Workbaskets</Link>}
     >
       <StatusMessageStack
         messages={[

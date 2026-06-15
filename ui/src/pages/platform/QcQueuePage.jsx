@@ -148,9 +148,10 @@ export const PlatformQcQueuePage = () => {
 
   return (
     <PlatformShell
+      moduleLabel="Queues"
       title={selectedQcWorkbasket ? `QC Workbaskets — ${selectedQcWorkbasket.name}` : 'QC Workbaskets'}
-      subtitle="Quality-control queue for pass, return-for-correction, and fail review decisions."
-      actions={<Link to={ROUTES.ADMIN_REPORTS(firmSlug)}>QC Reports</Link>}
+      subtitle="Review queue."
+      actions={<Link to={ROUTES.ADMIN_REPORTS(firmSlug)}>Reports</Link>}
     >
       <StatusMessageStack
         messages={[

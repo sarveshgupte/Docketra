@@ -300,8 +300,9 @@ export const PlatformWorkbasketsPage = () => {
 
   return (
     <PlatformShell
-      title={selectedWorkbasket ? `📥 Workbaskets — ${selectedWorkbasket.name}` : '📥 Workbaskets'}
-      subtitle="Shared docket queue — pull work into your personal execution list."
+      moduleLabel="Queues"
+      title={selectedWorkbasket ? `Workbaskets — ${selectedWorkbasket.name}` : 'Workbaskets'}
+      subtitle="Shared queue."
       actions={
         <div className="flex items-center gap-2.5">
           <button
@@ -321,7 +322,7 @@ export const PlatformWorkbasketsPage = () => {
             {isFetching ? 'Refreshing…' : 'Refresh'}
           </button>
           <Link to={ROUTES.CREATE_CASE(firmSlug)} className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 rounded-lg shadow-sm hover:shadow">
-            ✚ Create Docket
+            New docket
           </Link>
         </div>
       }

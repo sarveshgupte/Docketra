@@ -55,6 +55,7 @@ async function testAutoActivationOnOpen() {
   const originalUserFindOne = User.findOne;
   let saved = false;
   let notificationStored = false;
+  let capturedQuery = null;
 
   try {
     User.findOne = () => ({
@@ -62,13 +63,16 @@ async function testAutoActivationOnOpen() {
         lean: async () => ({ xID: 'X100' })
       })
     });
-    Case.findOne = async () => ({
-      caseId: 'CASE-1',
-      lifecycle: DocketLifecycle.IN_WORKLIST,
-      status: 'ASSIGNED',
-      assignedToXID: 'X100',
-      save: async () => { saved = true; },
-    });
+    Case.findOne = async (query) => {
+      capturedQuery = query;
+      return {
+        caseId: 'CASE-1',
+        lifecycle: DocketLifecycle.IN_WORKLIST,
+        status: 'ASSIGNED',
+        assignedToXID: 'X100',
+        save: async () => { saved = true; },
+      };
+    };
 
     Notification.findOne = () => ({
       sort: async () => null,
@@ -79,7 +83,7 @@ async function testAutoActivationOnOpen() {
     };
 
     const updated = await activateOnOpen({
-      docketId: 'CASE-1',
+      docketId: 'DOCKET-1',
       firmId: 'FIRM-1',
       actor: { xID: 'X100' },
     });
@@ -88,6 +92,14 @@ async function testAutoActivationOnOpen() {
     assert.strictEqual(updated.lifecycle, DocketLifecycle.ACTIVE);
     assert.strictEqual(saved, true);
     assert.strictEqual(notificationStored, true);
+    
+    // Verify prefix-insensitive candidates query construction
+    assert.ok(capturedQuery, 'Query should be captured');
+    const caseIdIn = capturedQuery.$or.find(q => q.caseId)?.[ 'caseId' ]?.[ '$in' ];
+    assert.ok(Array.isArray(caseIdIn), 'caseId query should use $in operator');
+    assert.ok(caseIdIn.includes('DOCKET-1'), 'Candidates should include DOCKET-1');
+    assert.ok(caseIdIn.includes('CASE-1'), 'Candidates should include CASE-1');
+    assert.ok(caseIdIn.includes('1'), 'Candidates should include bare number 1');
   } finally {
     Case.findOne = originalFindOne;
     Notification.findOne = originalNotificationFindOne;

@@ -1,5 +1,6 @@
 const log = require('../utils/log');
 const isNonProd = process.env.NODE_ENV !== 'production';
+const emitTenantScopeWarnings = process.env.TENANT_SCOPE_WARNINGS === 'true';
 
 const enforceTenantScope = (query = {}, req, options = {}) => {
   const userFirmId = req?.user?.firmId;
@@ -19,11 +20,18 @@ const enforceTenantScope = (query = {}, req, options = {}) => {
   }
 
   if (isNonProd && !Object.prototype.hasOwnProperty.call(query || {}, 'firmId')) {
-    log.warn('[TENANT_SCOPE_WARNING] Query missing firmId before scope enforcement', {
+    const message = '[TENANT_SCOPE_WARNING] Query missing firmId before scope enforcement';
+    const context = {
       route: req?.originalUrl || req?.url || null,
       method: req?.method || null,
       source: options.source || null,
-    });
+    };
+
+    if (options.warnOnMissingFirmId === true || emitTenantScopeWarnings) {
+      log.warn(message, context);
+    } else if (typeof log.debug === 'function') {
+      log.debug(message, context);
+    }
   }
 
   return {

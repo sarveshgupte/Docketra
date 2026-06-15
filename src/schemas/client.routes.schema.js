@@ -10,12 +10,23 @@ module.exports = {
     query: z.object({}).strict(),
     body: z.object({}).strict(),
   },
+  'POST /:clientId/status/send-otp': {
+    params: z.object({ clientId: clientIdString }),
+    body: z.object({}).strict(),
+  },
+  'POST /:clientId/status/verify-otp': {
+    params: z.object({ clientId: clientIdString }),
+    body: z.object({
+      otp: z.string().trim().regex(/^\d{6}$/, 'OTP must be 6 digits'),
+    }).strict(),
+  },
   'GET /:clientId': { params: z.object({ clientId: clientIdString }), query: z.object({}).passthrough() },
   'POST /': {
     body: z.object({
       businessName: nonEmptyString,
       businessEmail: optionalEmail,
       primaryContactNumber: optionalString,
+      businessContactNumber: optionalString,
       businessAddress: optionalString,
       PAN: optionalString,
       CIN: optionalString,
@@ -27,6 +38,7 @@ module.exports = {
       contactPersonName: optionalString,
       contactPersonEmail: optionalEmail,
       contactPersonPhone: optionalString,
+      contactPersonNumber: optionalString,
       contactPersonEmailAddress: optionalEmail,
       contactPersonPhoneNumber: optionalString,
     }).strict(),
@@ -38,6 +50,7 @@ module.exports = {
       businessAddress: optionalString,
       businessEmail: optionalEmail,
       primaryContactNumber: optionalString,
+      businessContactNumber: optionalString,
       secondaryContactNumber: z.string().trim().nullable().optional().or(z.literal('')),
       PAN: optionalString,
       TAN: optionalString,
@@ -49,6 +62,7 @@ module.exports = {
       contactPersonName: optionalString,
       contactPersonEmail: optionalEmail,
       contactPersonPhone: optionalString,
+      contactPersonNumber: optionalString,
       contactPersonEmailAddress: optionalEmail,
       contactPersonPhoneNumber: optionalString,
       latitude: z.never({ invalid_type_error: 'Latitude is deprecated and cannot be modified.' }).optional(),
@@ -57,7 +71,10 @@ module.exports = {
   },
   'PATCH /:clientId/status': {
     params: z.object({ clientId: clientIdString }),
-    body: z.object({ isActive: z.boolean() }).strict(),
+    body: z.object({
+      isActive: z.boolean(),
+      verificationToken: nonEmptyString,
+    }).strict(),
   },
   'POST /:clientId/change-name': {
     params: z.object({ clientId: clientIdString }),

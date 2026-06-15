@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { caseApi } from '../../api/case.api';
 import { extractErrorMessage } from '../../services/apiResponse';
 import { formatDateTime } from '../../utils/formatDateTime';
+import { ROUTES } from '../../constants/routes';
 import { toLifecycleStage } from './caseDetailUtils';
 
 export const useDocketLifecycleActions = (deps) => {
@@ -15,18 +16,48 @@ export const useDocketLifecycleActions = (deps) => {
     firmSlug, navigate, returnTo,
   } = deps;
 
+  const buildRefreshReturnTarget = useCallback(() => {
+    const fallback = ROUTES.WORKLIST(firmSlug || 'gupta');
+    const baseTarget = returnTo || fallback;
+    try {
+      const [pathnamePart, searchPart = ''] = String(baseTarget).split('?');
+      const params = new URLSearchParams(searchPart);
+      params.set('refresh', String(Date.now()));
+      const nextSearch = params.toString();
+      return nextSearch ? `${pathnamePart}?${nextSearch}` : pathnamePart;
+    } catch {
+      return fallback;
+    }
+  }, [firmSlug, returnTo]);
+
   const handlePendCase = useCallback(async () => { /* same behavior */
     if (!pendComment.trim()) return void showWarning('Comment is mandatory for pending a docket');
     if (!pendingUntil) return void showWarning('Reopen date is mandatory for pending a docket');
     const selectedDate = new Date(pendingUntil); const today = new Date(); selectedDate.setHours(0,0,0,0); today.setHours(0,0,0,0);
     if (selectedDate < today) return void showWarning('Reopen date must be today or in the future');
     setPendingCase(true);
-    try { const [y,m,d]=String(pendingUntil).split('-').map(Number); const reopenAt=new Date(Date.UTC(y,m-1,d,2,30,0)).toISOString();
-      const response = await caseApi.transitionDocket(caseId, { toState:'PENDING', comment:pendComment.trim(), reopenAt });
-      if (response.success) { const msg=`Docket ${caseId} pended • ${formatDateTime()}`; showSuccess(msg); setActionConfirmation(msg); setActionError(null); setShowPendModal(false); setPendComment(''); setPendingUntil(''); loadCase({ background:true }); }
+    try {
+      const response = await caseApi.pendCase(caseId, pendComment.trim(), pendingUntil);
+      if (response.success) {
+        const reopenAt = response?.data?.pendingUntil || response?.data?.reopenAt || pendingUntil;
+        const msg = `Docket ${caseId} is pended and will reopen on ${formatDateTime(reopenAt)} in your WL.`;
+        showSuccess(msg);
+        setActionConfirmation(msg);
+        setActionError(null);
+        setShowPendModal(false);
+        setPendComment('');
+        setPendingUntil('');
+        window.setTimeout(() => {
+          if (navigate) {
+            navigate(buildRefreshReturnTarget(), { replace: true });
+          } else {
+            loadCase({ background: true });
+          }
+        }, 10000);
+      }
     } catch (error) { const m=extractErrorMessage(error,'Failed to pend docket. Please try again.'); showError(m); setActionError({ message:m, retry:handlePendCase }); }
     finally { setPendingCase(false); }
-  }, [pendComment,pendingUntil,showWarning,setPendingCase,caseId,showSuccess,setActionConfirmation,setActionError,setShowPendModal,setPendComment,setPendingUntil,loadCase,showError]);
+  }, [pendComment,pendingUntil,showWarning,setPendingCase,caseId,showSuccess,setActionConfirmation,setActionError,setShowPendModal,setPendComment,setPendingUntil,navigate,buildRefreshReturnTarget,loadCase,showError]);
 
   const handleResolveCase = useCallback(async () => {
     if (!resolveComment.trim()) return void showWarning('Comment is mandatory for resolving a docket');
@@ -40,7 +71,7 @@ export const useDocketLifecycleActions = (deps) => {
     }});
   }, [resolveComment,showWarning,setConfirmModal,lifecycleStatus,caseData,setResolvingCase,setCaseData,caseId,forceQcReview,showSuccess,setActionConfirmation,setActionError,setShowResolveModal,setResolveComment,appendTimelineEvent,user?.name,user?.xID,user?.email,loadCase,showError,queueFailedAction]);
 
-  const handleUnpendCase = useCallback(async ()=>{ if(!unpendComment.trim()) return void showWarning('Comment is mandatory for unpending a docket'); const ts=new Date().toISOString(); setConfirmModal({ title:'Unpend Docket', description:`Stage change: Awaiting Internal Approval -> Under Execution\nTimestamp: ${ts}\nThis transition will create an audit record.`, confirmText:'Unpend Docket', onConfirm: async()=>{ setConfirmModal(null); setUnpendingCase(true); try{ const r=await caseApi.unpendCase(caseId, unpendComment); if(r.success){ const m=`Docket ${caseId} unpended • ${formatDateTime()}`; showSuccess(m); setActionConfirmation(m); setActionError(null); setShowUnpendModal(false); setUnpendComment(''); loadCase({ background:true }); } } catch(error){ const m=extractErrorMessage(error,'Failed to unpend docket. Please try again.'); showError(m); setActionError({ message:m, retry:handleUnpendCase }); } finally { setUnpendingCase(false); } }}); }, [unpendComment,showWarning,setConfirmModal,setUnpendingCase,caseId,showSuccess,setActionConfirmation,setActionError,setShowUnpendModal,setUnpendComment,loadCase,showError]);
+  const handleUnpendCase = useCallback(async ()=>{ if(!unpendComment.trim()) return void showWarning('Comment is mandatory for unpending a docket'); setUnpendingCase(true); try{ const r=await caseApi.unpendCase(caseId, unpendComment.trim()); if(r.success){ const m=`Docket ${caseId} unpended • ${formatDateTime()}`; showSuccess(m); setActionConfirmation(m); setActionError(null); setShowUnpendModal(false); setUnpendComment(''); loadCase({ background:true }); } } catch(error){ const m=extractErrorMessage(error,'Failed to unpend docket. Please try again.'); showError(m); setActionError({ message:m, retry:handleUnpendCase }); } finally { setUnpendingCase(false); } }, [unpendComment,showWarning,setUnpendingCase,caseId,showSuccess,setActionConfirmation,setActionError,setShowUnpendModal,setUnpendComment,loadCase,showError]);
 
   const handleRouteToTeam = useCallback(async () => {
     if (!routeTeamId) return void showWarning('Select a team to route.');

@@ -73,6 +73,12 @@ class CFSDriveService {
     }
 
     const provider = providerInstance;
+    
+    // If Bring Your Own Storage (BYOS) is connected, we use its rootFolderId directly
+    if (provider.providerName !== 'docketra_managed' && provider.rootFolderId) {
+      return provider.rootFolderId;
+    }
+
     const folderName = `firm_${firmId}`;
     const folderId = await provider.getOrCreateFolder(null, folderName);
     

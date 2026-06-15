@@ -21,7 +21,7 @@ assert(!clientApi.includes('/admin/clients'), 'Client API must not use stale /ad
 assert(clientApi.includes("http.post('/clients', clientData)"), 'Create must use /clients');
 assert(clientApi.includes('http.put(`/clients/${clientId}`, clientData)'), 'Update must use /clients/:clientId');
 assert(protectedRoutes.includes('<ProtectedRoute requireClientManage>'), 'Clients route should enforce client-manage guard');
-assert(protectedRoute.includes('Client management access is required to view that page.'), 'Guard copy should be client-management specific');
+assert(protectedRoute.includes('Client management requires Admin access.'), 'Guard copy should be client-management specific');
 assert(protectedRoute.includes('Admin access is required to view that page.'), 'Generic admin guard copy should remain admin-specific');
 assert(!clientsPage.includes('Admin access required'), 'Clients page should not contain stale admin-only denial copy');
 

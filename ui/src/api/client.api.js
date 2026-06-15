@@ -25,7 +25,9 @@ export const clientApi = {
   getClientById: (clientId) => request((http) => http.get(`/clients/${clientId}`), 'Failed to load client details'),
   createClient: (clientData) => request((http) => http.post('/clients', clientData), 'Failed to create client'),
   updateClient: (clientId, clientData) => request((http) => http.put(`/clients/${clientId}`, clientData), 'Failed to update client'),
-  toggleClientStatus: (clientId, isActive) => request((http) => http.patch(`/clients/${clientId}/status`, { isActive }), 'Failed to update client status'),
+  sendClientStatusOtp: (clientId) => request((http) => http.post(`/clients/${clientId}/status/send-otp`, {}), 'Failed to send client status OTP'),
+  verifyClientStatusOtp: (clientId, otp) => request((http) => http.post(`/clients/${clientId}/status/verify-otp`, { otp }), 'Failed to verify client status OTP'),
+  toggleClientStatus: (clientId, isActive, verificationToken) => request((http) => http.patch(`/clients/${clientId}/status`, { isActive, verificationToken }), 'Failed to update client status'),
   changeLegalName: (clientId, newBusinessName, reason) => request((http) => http.post(`/clients/${clientId}/change-name`, { newBusinessName, reason }), 'Failed to change legal name'),
 
   updateClientFactSheet: (clientId, description, notes, basicInfo) => request(

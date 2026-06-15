@@ -19,6 +19,7 @@ const { executeWrite } = require('../utils/executeWrite');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const { CANONICAL_CLIENT_STATUSES } = require('../utils/clientStatus');
 const Firm = require('../models/Firm.model');
+const User = require('../models/User.model');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { parseBooleanQuery } = require('../utils/query.utils');
 const { sanitizePayload, enforceAllowedFields, PayloadValidationError } = require('../utils/payloadValidation');
@@ -29,6 +30,12 @@ const directUploadService = require('../services/directUpload.service');
 const { buildWorkflowMeta, logWorkflowEvent } = require('../utils/workflowDiagnostics');
 const { resolveFirmMemoryScope } = require('../services/firmMemoryScope.service');
 const { ensureTenantKey, resolveTenantKeyTenantId, resolveTenantKeyCandidates } = require('../security/encryption.service');
+const { sendOtp: sendCentralOtp, verifyOtp: verifyCentralOtp } = require('../services/otp.service');
+const { logAuthEvent } = require('../services/audit.service');
+const jwt = require('jsonwebtoken');
+
+const usedClientStatusOtpJti = new Map();
+const CLIENT_STATUS_OTP_PURPOSE = 'client_status_change';
 
 const getClientAccessContext = (req, res, message) => {
   const firmId = req.user?.firmId;
@@ -54,6 +61,103 @@ const normalizeString = (value) => {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
   return trimmed.length ? trimmed : undefined;
+};
+
+const pruneUsedClientStatusOtpJti = () => {
+  const now = Date.now();
+  for (const [jti, usedUntil] of usedClientStatusOtpJti.entries()) {
+    if (!usedUntil || usedUntil <= now) {
+      usedClientStatusOtpJti.delete(jti);
+    }
+  }
+};
+
+const resolveClientStatusOtpIdentifier = async (req) => {
+  const directEmail = String(req.user?.primary_email || req.user?.email || '').trim().toLowerCase();
+  if (directEmail) return directEmail;
+
+  const normalizedXid = String(req.user?.xID || req.user?.xid || '').trim().toUpperCase();
+  if (!normalizedXid) return '';
+
+  const user = await User.findOne({
+    $or: [{ xID: normalizedXid }, { xid: normalizedXid }],
+  }).select('primary_email email');
+
+  return String(user?.primary_email || user?.email || '').trim().toLowerCase();
+};
+
+const ensureClientStatusOtpVerification = async (req, res) => {
+  const verificationToken = String(req.body?.verificationToken || '').trim();
+  if (!verificationToken) {
+    res.status(403).json({
+      success: false,
+      code: 'CLIENT_STATUS_OTP_REQUIRED',
+      message: 'OTP verification is required before changing client status.',
+    });
+    return false;
+  }
+
+  try {
+    pruneUsedClientStatusOtpJti();
+    const decoded = jwt.verify(verificationToken, process.env.JWT_SECRET, {
+      issuer: 'docketra',
+      audience: 'docketra-api',
+      algorithms: ['HS256'],
+    });
+
+    if (decoded?.type !== 'otp_verification' || decoded?.purpose !== CLIENT_STATUS_OTP_PURPOSE) {
+      res.status(403).json({
+        success: false,
+        code: 'INVALID_CLIENT_STATUS_VERIFICATION',
+        message: 'Client status verification is invalid or expired.',
+      });
+      return false;
+    }
+
+    const jti = String(decoded?.jti || '').trim();
+    if (!jti) {
+      res.status(403).json({
+        success: false,
+        code: 'INVALID_CLIENT_STATUS_VERIFICATION',
+        message: 'Client status verification is invalid or expired.',
+      });
+      return false;
+    }
+
+    const usedUntil = usedClientStatusOtpJti.get(jti);
+    if (usedUntil && usedUntil > Date.now()) {
+      res.status(403).json({
+        success: false,
+        code: 'CLIENT_STATUS_VERIFICATION_REUSED',
+        message: 'This OTP verification has already been used. Request a new code.',
+      });
+      return false;
+    }
+
+    const expectedIdentifier = await resolveClientStatusOtpIdentifier(req);
+    if (!expectedIdentifier || decoded.identifier !== expectedIdentifier) {
+      res.status(403).json({
+        success: false,
+        code: 'CLIENT_STATUS_IDENTIFIER_MISMATCH',
+        message: 'Client status verification does not match the signed-in user.',
+      });
+      return false;
+    }
+
+    const expiryMs = Number(decoded?.exp || 0) * 1000;
+    if (expiryMs > Date.now()) {
+      usedClientStatusOtpJti.set(jti, expiryMs);
+    }
+
+    return true;
+  } catch {
+    res.status(403).json({
+      success: false,
+      code: 'INVALID_CLIENT_STATUS_VERIFICATION',
+      message: 'Client status verification is invalid or expired.',
+    });
+    return false;
+  }
 };
 
 
@@ -270,7 +374,7 @@ const getClients = async (req, res) => {
         filter,
         accessContext.role,
         {
-          select: 'clientId businessName businessEmail primaryContactNumber status isActive isSystemClient isInternal isDefaultClient createdAt profileRef',
+          select: 'clientId businessName businessEmail primaryContactNumber contactPersonName contactPersonDesignation contactPersonPhoneNumber contactPersonEmailAddress status isActive isSystemClient isInternal isDefaultClient createdAt profileRef',
           sort: { clientId: 1 },
           limit,
           skip,
@@ -448,6 +552,7 @@ const createClient = async (req, res) => {
       'businessAddress',
       'businessEmail',
       'primaryContactNumber',
+      'businessContactNumber',
       'secondaryContactNumber',
       'PAN',
       'TAN',
@@ -461,7 +566,8 @@ const createClient = async (req, res) => {
       'contactPersonPhoneNumber',
       'contactPersonEmailAddress',
       'contactPersonEmail',
-      'contactPersonPhone'
+      'contactPersonPhone',
+      'contactPersonNumber'
     ];
     
     let sanitizedBody;
@@ -486,6 +592,7 @@ const createClient = async (req, res) => {
     const {
       businessName,
       primaryContactNumber,
+      businessContactNumber,
       businessEmail,
       businessAddress,
       secondaryContactNumber,
@@ -497,7 +604,13 @@ const createClient = async (req, res) => {
       contactPersonDesignation,
       contactPersonPhoneNumber,
       contactPersonEmailAddress,
+      contactPersonEmail,
+      contactPersonPhone,
+      contactPersonNumber,
     } = sanitizedBody;
+    const resolvedContactPersonEmail = contactPersonEmailAddress ?? contactPersonEmail;
+    const resolvedBusinessContactNumber = primaryContactNumber ?? businessContactNumber;
+    const resolvedContactPersonPhone = contactPersonPhoneNumber ?? contactPersonPhone ?? contactPersonNumber;
     
     // Validate required business fields
     if (!businessName || !businessName.trim()) {
@@ -555,7 +668,7 @@ const createClient = async (req, res) => {
         legalName: businessName.trim(),
         businessAddress: businessAddress ? businessAddress.trim() : null,
         businessEmail: (typeof businessEmail === 'string' && businessEmail.trim()) ? businessEmail.trim().toLowerCase() : null,
-        primaryContactNumber: (typeof primaryContactNumber === 'string' && primaryContactNumber.trim()) ? primaryContactNumber.trim() : null,
+        primaryContactNumber: (typeof resolvedBusinessContactNumber === 'string' && resolvedBusinessContactNumber.trim()) ? resolvedBusinessContactNumber.trim() : null,
         secondaryContactNumber: secondaryContactNumber ? secondaryContactNumber.trim() : null,
         PAN: PAN ? PAN.trim().toUpperCase() : null,
         GST: GST ? GST.trim().toUpperCase() : null,
@@ -563,8 +676,8 @@ const createClient = async (req, res) => {
         CIN: CIN ? CIN.trim().toUpperCase() : null,
         contactPersonName: contactPersonName ? contactPersonName.trim() : null,
         contactPersonDesignation: contactPersonDesignation ? contactPersonDesignation.trim() : null,
-        contactPersonPhoneNumber: contactPersonPhoneNumber ? contactPersonPhoneNumber.trim() : null,
-        contactPersonEmailAddress: contactPersonEmailAddress ? contactPersonEmailAddress.trim().toLowerCase() : null,
+        contactPersonPhoneNumber: resolvedContactPersonPhone ? resolvedContactPersonPhone.trim() : null,
+        contactPersonEmailAddress: resolvedContactPersonEmail ? resolvedContactPersonEmail.trim().toLowerCase() : null,
       },
     });
 
@@ -627,6 +740,7 @@ const updateClient = async (req, res) => {
     const {
       businessEmail,
       primaryContactNumber,
+      businessContactNumber,
       secondaryContactNumber,
       businessName,
       businessAddress,
@@ -638,7 +752,13 @@ const updateClient = async (req, res) => {
       contactPersonDesignation,
       contactPersonPhoneNumber,
       contactPersonEmailAddress,
+      contactPersonEmail,
+      contactPersonPhone,
+      contactPersonNumber,
     } = req.body;
+    const resolvedBusinessContactNumber = primaryContactNumber ?? businessContactNumber;
+    const resolvedContactPersonEmail = contactPersonEmailAddress ?? contactPersonEmail;
+    const resolvedContactPersonPhone = contactPersonPhoneNumber ?? contactPersonPhone ?? contactPersonNumber;
     
     // Get firmId from authenticated user for query scoping
     const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to update clients');
@@ -662,7 +782,7 @@ const updateClient = async (req, res) => {
         legalName: businessName !== undefined ? String(businessName).trim() : undefined,
         businessAddress: businessAddress !== undefined ? String(businessAddress).trim() : undefined,
         businessEmail: businessEmail !== undefined ? String(businessEmail).trim().toLowerCase() : undefined,
-        primaryContactNumber: primaryContactNumber !== undefined ? String(primaryContactNumber).trim() : undefined,
+        primaryContactNumber: resolvedBusinessContactNumber !== undefined ? String(resolvedBusinessContactNumber).trim() : undefined,
         secondaryContactNumber: secondaryContactNumber !== undefined ? (secondaryContactNumber ? String(secondaryContactNumber).trim() : null) : undefined,
         PAN: PAN !== undefined ? (PAN ? String(PAN).trim().toUpperCase() : null) : undefined,
         TAN: TAN !== undefined ? (TAN ? String(TAN).trim().toUpperCase() : null) : undefined,
@@ -670,8 +790,8 @@ const updateClient = async (req, res) => {
         GST: GST !== undefined ? (GST ? String(GST).trim().toUpperCase() : null) : undefined,
         contactPersonName: contactPersonName !== undefined ? (contactPersonName ? String(contactPersonName).trim() : null) : undefined,
         contactPersonDesignation: contactPersonDesignation !== undefined ? (contactPersonDesignation ? String(contactPersonDesignation).trim() : null) : undefined,
-        contactPersonPhoneNumber: contactPersonPhoneNumber !== undefined ? (contactPersonPhoneNumber ? String(contactPersonPhoneNumber).trim() : null) : undefined,
-        contactPersonEmailAddress: contactPersonEmailAddress !== undefined ? (contactPersonEmailAddress ? String(contactPersonEmailAddress).trim().toLowerCase() : null) : undefined,
+        contactPersonPhoneNumber: resolvedContactPersonPhone !== undefined ? (resolvedContactPersonPhone ? String(resolvedContactPersonPhone).trim() : null) : undefined,
+        contactPersonEmailAddress: resolvedContactPersonEmail !== undefined ? (resolvedContactPersonEmail ? String(resolvedContactPersonEmail).trim().toLowerCase() : null) : undefined,
       },
     });
 
@@ -690,6 +810,132 @@ const updateClient = async (req, res) => {
       success: false,
       message: 'Error updating client',
       error: "Internal server error",
+    });
+  }
+};
+
+const sendClientStatusOtp = async (req, res) => {
+  try {
+    const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to update clients');
+    if (!accessContext) return;
+    const { clientId } = req.params;
+
+    const client = await ClientRepository.findByClientId(accessContext.firmId, clientId, accessContext.role, {
+      logContext: buildClientLogContext(req, { model: 'Client', clientId }),
+    });
+
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: 'Client not found',
+      });
+    }
+
+    const otpIdentifier = String(req.user?.primary_email || req.user?.email || req.user?.xID || '').trim();
+    if (!otpIdentifier) {
+      return res.status(400).json({
+        success: false,
+        message: 'Signed-in user contact is required for OTP verification.',
+      });
+    }
+
+    const result = await sendCentralOtp({
+      identifier: otpIdentifier,
+      purpose: CLIENT_STATUS_OTP_PURPOSE,
+    });
+
+    await logAuthEvent({
+      actionType: 'OTP_SENT',
+      firmId: accessContext.firmId,
+      userId: req.user?._id || null,
+      xID: req.user?.xID || 'UNKNOWN',
+      performedBy: req.user?.xID || 'UNKNOWN',
+      description: `OTP sent for client status change authorization on ${client.businessName || client.clientId}`,
+      req,
+      metadata: {
+        eventType: 'OTP_SENT',
+        purpose: CLIENT_STATUS_OTP_PURPOSE,
+        clientId,
+        target: 'client_status_change',
+      },
+    });
+
+    return res.status(202).json({
+      success: true,
+      message: 'OTP sent successfully to your registered email.',
+      data: result,
+    });
+  } catch (error) {
+    const statusCode = error.message === 'OTP_RATE_LIMITED' ? 429 : 400;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message === 'OTP_RATE_LIMITED' ? 'Please wait before requesting another OTP.' : 'Error sending OTP.',
+    });
+  }
+};
+
+const verifyClientStatusOtp = async (req, res) => {
+  try {
+    const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to update clients');
+    if (!accessContext) return;
+    const { clientId } = req.params;
+    const { otp } = req.body;
+
+    const client = await ClientRepository.findByClientId(accessContext.firmId, clientId, accessContext.role, {
+      logContext: buildClientLogContext(req, { model: 'Client', clientId }),
+    });
+
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: 'Client not found',
+      });
+    }
+
+    const identifier = String(req.user?.primary_email || req.user?.email || req.user?.xID || '').trim();
+    if (!identifier) {
+      return res.status(400).json({
+        success: false,
+        message: 'Signed-in user contact is required for OTP verification.',
+      });
+    }
+    const result = await verifyCentralOtp({
+      identifier,
+      code: String(otp || '').trim(),
+      purpose: CLIENT_STATUS_OTP_PURPOSE,
+    });
+
+    await logAuthEvent({
+      actionType: 'OTP_VERIFIED',
+      firmId: accessContext.firmId,
+      userId: req.user?._id || null,
+      xID: req.user?.xID || 'UNKNOWN',
+      performedBy: req.user?.xID || 'UNKNOWN',
+      description: `OTP verified for client status change authorization on ${client.businessName || client.clientId}`,
+      req,
+      metadata: {
+        eventType: 'OTP_VERIFIED',
+        purpose: CLIENT_STATUS_OTP_PURPOSE,
+        clientId,
+        target: 'client_status_change',
+      },
+    });
+
+    return res.json({
+      success: true,
+      message: 'OTP verified successfully.',
+      data: result,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message === 'OTP_INVALID'
+        ? 'Invalid OTP code. Please try again.'
+        : error.message === 'OTP_EXPIRED'
+          ? 'OTP has expired. Please request a new code.'
+          : error.message === 'OTP_ATTEMPTS_EXCEEDED'
+            ? 'Too many invalid attempts. Please request a new OTP.'
+            : 'OTP verification failed. Please try again.',
     });
   }
 };
@@ -726,7 +972,7 @@ const toggleClientStatus = async (req, res) => {
         message: 'Client not found',
       });
     }
-    
+
     // PROTECTION: Prevent deactivation of system/internal/default clients
     // Check multiple flags to ensure the organization's root client is protected
     const isProtectedClient = client.isDefaultClient === true || client.isSystemClient === true;
@@ -743,11 +989,32 @@ const toggleClientStatus = async (req, res) => {
         message: 'Default client cannot be deactivated.',
       });
     }
+
+    if (!await ensureClientStatusOtpVerification(req, res)) return;
     
-    // Update both legacy and new status fields
+    const previousStatus = client.status;
+    const previousIsActive = client.isActive;
     client.isActive = isActive;
     client.status = isActive ? CANONICAL_CLIENT_STATUSES.ACTIVE : CANONICAL_CLIENT_STATUSES.INACTIVE;
     await client.save();
+
+    await logAuthEvent({
+      actionType: 'ClientStatusChanged',
+      firmId: accessContext.firmId,
+      userId: req.user?._id || null,
+      xID: req.user?.xID || 'UNKNOWN',
+      performedBy: req.user?.xID || 'UNKNOWN',
+      description: `Client ${client.businessName || client.clientId} ${isActive ? 'activated' : 'deactivated'}`,
+      req,
+      metadata: {
+        clientId,
+        clientName: client.businessName || null,
+        previousStatus,
+        nextStatus: client.status,
+        previousIsActive,
+        nextIsActive: client.isActive,
+      },
+    });
     
     log.info(`[CLIENT_STATUS] Client ${clientId} ${isActive ? 'activated' : 'deactivated'} by ${req.user?.xID}`);
     
@@ -1580,6 +1847,8 @@ module.exports = {
   getClients,
   getClientById,
   createClient,
+  sendClientStatusOtp: wrapWriteHandler(sendClientStatusOtp),
+  verifyClientStatusOtp: wrapWriteHandler(verifyClientStatusOtp),
   updateClient: wrapWriteHandler(updateClient),
   toggleClientStatus: wrapWriteHandler(toggleClientStatus),
   changeLegalName: wrapWriteHandler(changeLegalName),

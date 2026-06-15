@@ -9,7 +9,6 @@ import {
   AuditLogsPage,
   AiSettingsPage,
   CaseDetailPage,
-  CasesPage,
   ClientWorkspacePage,
   ComplianceCalendarPage,
   ClientsPage,
@@ -433,19 +432,11 @@ export const ProtectedRoutes = () => (
         <Route
           path="dockets/:caseId"
           element={(
-            <RouteErrorBoundary title="Unable to load docket" message="Docket actions are temporarily unavailable. Please retry from the dockets list.">
+            <RouteErrorBoundary title="Unable to load docket" message="Docket actions are temporarily unavailable. Please retry from the worklist or reopen the page.">
               <ProtectedRoute>
                 <CaseDetailPage />
               </ProtectedRoute>
             </RouteErrorBoundary>
-          )}
-        />
-        <Route
-          path="dockets"
-          element={(
-            <ProtectedRoute>
-              <CasesPage />
-            </ProtectedRoute>
           )}
         />
         <Route
@@ -462,7 +453,7 @@ export const ProtectedRoutes = () => (
         />
         <Route
           path="cases"
-          element={<Navigate to="../dockets" replace />}
+          element={<Navigate to="../task-manager" replace />}
         />
         <Route
           path="cases/create"

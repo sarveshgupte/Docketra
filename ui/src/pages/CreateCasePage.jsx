@@ -18,13 +18,13 @@ export const CreateCasePage = () => {
     <PlatformShell
       moduleLabel="Dockets"
       title="Create Docket"
-      subtitle="Use the guided flow to classify, route, and assign your first docket with clear setup checks."
+      subtitle="Create and route a docket from one page."
       actions={null}
     >
       <div className="create-case">
         <GuidedDocketForm
           initialClientId={initialClientId}
-          onCancel={() => navigate(ROUTES.DOCKETS(firmSlug))}
+          onCancel={() => navigate(ROUTES.TASK_MANAGER(firmSlug))}
           onCreated={(response, wbName) => {
             const docketId = response?.data?.docketId || response?.data?.caseId;
             showSuccess(`✅ Docket ${docketId || 'created'} created successfully. This docket has been moved to ${wbName || 'general'} wb.`);

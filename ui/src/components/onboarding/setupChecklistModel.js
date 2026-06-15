@@ -87,7 +87,7 @@ export const resolveCtaRoute = (ctaId, firmSlug, mode) => {
     'storage-settings': safeRoute(ROUTES.STORAGE_SETTINGS(firmSlug)),
     clients: safeRoute(ROUTES.CLIENTS(firmSlug)),
     'work-settings': safeRoute(ROUTES.WORK_SETTINGS(firmSlug)),
-    dockets: safeRoute(ROUTES.CASES(firmSlug)),
+    dockets: safeRoute(ROUTES.TASK_MANAGER(firmSlug)),
     worklist: safeRoute(mode === 'user' ? ROUTES.MY_WORKLIST(firmSlug) : ROUTES.WORKLIST(firmSlug)),
     'global-worklist': safeRoute(ROUTES.GLOBAL_WORKLIST(firmSlug)),
     'qc-queue': safeRoute(ROUTES.QC_QUEUE(firmSlug)),

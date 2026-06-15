@@ -33,7 +33,15 @@ const swapModule = (modulePath, exportsValue) => { restore.push({ modulePath, or
   const ok = (_req, res) => res.status(200).json({ success: true });
   swapModule(authControllerModulePath, new Proxy({ getAllUsers: (_req, res) => res.status(200).json({ success: true, data: [] }) }, { get: (t, p) => t[p] || ok }));
   swapModule(adminControllerModulePath, new Proxy({ getAdminStats: (_req, res) => res.status(200).json({ success: true, data: {} }), getHierarchyTree: (_req, res) => res.status(200).json({ success: true, data: [] }), listWorkbaskets: (_req, res) => res.status(200).json({ success: true, data: [] }) }, { get: (t, p) => t[p] || ok }));
-  swapModule(workbasketControllerModulePath, { listWorkbaskets: (_req, res) => res.status(200).json({ success: true, data: [] }), createWorkbasket: ok, renameWorkbasket: ok, toggleWorkbasketStatus: ok, updateUserWorkbaskets: ok });
+  swapModule(workbasketControllerModulePath, {
+    listWorkbaskets: (_req, res) => res.status(200).json({ success: true, data: [] }),
+    createDefaultRouting: ok,
+    createWorkbasket: ok,
+    renameWorkbasket: ok,
+    toggleWorkbasketStatus: ok,
+    updateUserWorkbaskets: ok,
+    addQcMember: ok,
+  });
   swapModule(storageControllerModulePath, new Proxy({}, { get: () => ok }));
   swapModule(aiControllerModulePath, new Proxy({}, { get: () => ok }));
 
@@ -54,6 +62,9 @@ const swapModule = (modulePath, exportsValue) => { restore.push({ modulePath, or
     const res = await request(app).get(ep).set('x-test-role', 'ADMIN');
     assert.strictEqual(res.status, 200);
   }
+
+  const firmSettingsAdminWrite = await request(app).put('/api/admin/firm-settings').set('x-test-role', 'ADMIN').send({});
+  assert.strictEqual(firmSettingsAdminWrite.status, 200, 'ADMIN should be able to save firm settings');
 
   const blocked = [['patch','/api/admin/users/X2/restrict-clients'],['post','/api/storage/disconnect'],['post','/api/ai/test-configuration'],['post','/api/admin/cms-intake-settings/intake-api-key/regenerate']];
   for (const [m, ep] of blocked) {

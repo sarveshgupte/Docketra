@@ -50,6 +50,7 @@ const requestLifecycle = (req, res, next) => {
       firmId: req.firmId || req.firm?.id || req.user?.firmId || null,
       startTime: new Date(startTime).toISOString(),
       durationMs,
+      status: responseStatusCode,
       statusCode: responseStatusCode,
       lifecycleEnd: reason,
       transactionCommitted: !!req.transactionCommitted,

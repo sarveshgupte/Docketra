@@ -8,6 +8,8 @@ import StorageStatusBadge from './StorageStatusBadge';
 import { NotificationBell } from './NotificationBell';
 import api from '../../services/api';
 import { clientApi } from '../../api/client.api';
+import { caseApi } from '../../api/case.api';
+import { useToast } from '../../hooks/useToast';
 import { isShortcutAllowedTarget } from '../../utils/keyboardShortcuts';
 import { isNavItemActiveWithLocation, resolveNavContextLocation } from '../../utils/navActive';
 import { hasFirmRoleAtLeast, normalizeFirmRole } from '../../utils/roleHierarchy';
@@ -33,6 +35,35 @@ const normalizeClientRows = (payload) => {
       };
     })
     .filter((client) => Boolean(client.routeId));
+};
+
+const EMPTY_SEARCH_RESULTS = { exactDocket: null, dockets: [], clients: [] };
+
+const normalizeWorkbasketId = (value) => String(value || '').trim();
+
+const getUserLinkedWorkbasketIds = (user) => new Set([
+  ...(Array.isArray(user?.workbaskets) ? user.workbaskets.map((item) => normalizeWorkbasketId(item?._id || item?.id || item?.workbasketId)) : []),
+  normalizeWorkbasketId(user?.teamId),
+  ...(Array.isArray(user?.teamIds) ? user.teamIds.map(normalizeWorkbasketId) : []),
+].filter(Boolean));
+
+const looksLikeDocketIdQuery = (value) => {
+  const normalized = String(value || '').trim();
+  return normalized.length >= 4 && !/\s/.test(normalized) && /\d/.test(normalized);
+};
+
+const normalizeExactDocket = (payload) => {
+  const docket = payload?.data?.case || payload?.data;
+  if (!docket?.caseId) return null;
+  return {
+    caseId: docket.caseId,
+    title: docket.title || docket.caseName || 'View docket',
+    clientName: docket.clientName || null,
+    status: docket.status || null,
+    state: docket.state || null,
+    assignedToXID: docket.assignedToXID || null,
+    workbasketId: normalizeWorkbasketId(docket.workbasketId || docket.ownerTeamId || docket.routedToTeamId),
+  };
 };
 
 /* Nav icon components — static SVG JSX, never user-controlled */
@@ -110,12 +141,13 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   const [commandQuery, setCommandQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
-  const [searchResults, setSearchResults] = useState({ dockets: [], clients: [] });
+  const [searchResults, setSearchResults] = useState(EMPTY_SEARCH_RESULTS);
   const [clientDirectory, setClientDirectory] = useState([]);
   const { pathname, search: locationSearch } = useLocation();
   const navigate = useNavigate();
   const { firmSlug } = useParams();
   const { user, logout } = useAuth();
+  const { showError, showSuccess } = useToast();
   const menuRef = useRef(null);
   const searchRequestIdRef = useRef(0);
   const searchCacheRef = useRef(new Map());
@@ -124,6 +156,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   const hasOperationsControlAccess = hasFirmRoleAtLeast(role, 'MANAGER');
   const canViewStorageStatus = hasOperationsControlAccess;
   const hasQcQueueAccess = hasAdminAccess || (Array.isArray(user?.qcWorkbaskets) && user.qcWorkbaskets.length > 0);
+  const linkedWorkbasketIds = useMemo(() => getUserLinkedWorkbasketIds(user), [user]);
   const navSections = useMemo(
     () => getPlatformNavigation(firmSlug, { role, permissions: user?.permissions, workbaskets: user?.workbaskets, qcWorkbaskets: user?.qcWorkbaskets }),
     [firmSlug, role, user?.permissions, user?.workbaskets, user?.qcWorkbaskets]
@@ -156,7 +189,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     setCommandQuery('');
     setSearchError('');
     setSearching(false);
-    setSearchResults({ dockets: [], clients: [] });
+    setSearchResults(EMPTY_SEARCH_RESULTS);
   }, []);
 
   const closeCommandPalette = useCallback(() => {
@@ -197,11 +230,45 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     navigate(route);
   }, [closeCommandPalette, navigate]);
 
+  const canPullDocketToWorklist = useCallback((docket) => {
+    if (!docket) return false;
+    const assignedToXID = String(docket.assignedToXID || '').trim();
+    const state = String(docket.state || '').trim().toUpperCase();
+    const status = String(docket.status || '').trim().toUpperCase();
+    const workbasketId = normalizeWorkbasketId(docket.workbasketId);
+
+    if (assignedToXID) return false;
+    if (!workbasketId || !linkedWorkbasketIds.has(workbasketId)) return false;
+    if (state) return state === 'IN_WB';
+    return status === 'UNASSIGNED';
+  }, [linkedWorkbasketIds]);
+
+  const pullDocketToWorklist = useCallback(async (docket) => {
+    if (!docket?.caseId) return;
+    try {
+      await caseApi.pullCase(docket.caseId);
+      showSuccess(`Docket ${docket.caseId} pulled to your worklist.`);
+      searchCacheRef.current.delete(String(commandQuery || '').trim().toLowerCase());
+      setSearchResults((previous) => ({
+        exactDocket: previous.exactDocket?.caseId === docket.caseId
+          ? { ...previous.exactDocket, assignedToXID: user?.xID || 'me' }
+          : previous.exactDocket,
+        dockets: previous.dockets.map((item) => (
+          item.caseId === docket.caseId ? { ...item, assignedToXID: user?.xID || 'me' } : item
+        )),
+        clients: previous.clients,
+      }));
+    } catch (error) {
+      showError(error?.response?.data?.message || 'Unable to pull this docket to your worklist.');
+      throw error;
+    }
+  }, [commandQuery, showError, showSuccess, user?.xID]);
+
   useEffect(() => {
     if (!commandPaletteOpen) {
       setSearching(false);
       setSearchError('');
-      setSearchResults({ dockets: [], clients: [] });
+      setSearchResults(EMPTY_SEARCH_RESULTS);
       return;
     }
 
@@ -209,7 +276,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     if (term.length < 2) {
       setSearching(false);
       setSearchError('');
-      setSearchResults({ dockets: [], clients: [] });
+      setSearchResults(EMPTY_SEARCH_RESULTS);
       return;
     }
 
@@ -228,11 +295,19 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
       setSearching(true);
       setSearchError('');
       try {
-        const [docketRes, clientsRes] = await Promise.allSettled([
+        const [docketRes, clientsRes, exactDocketRes] = await Promise.allSettled([
           trackAsync('command-center.search.dockets', `command-center:dockets:${cacheKey}`, () => api.get('/search', { params: { q: term } })),
           hasAdminAccess && clientDirectory.length === 0
             ? trackAsync('command-center.search.clients.initial-load', 'command-center:clients', () => clientApi.getClients(true, false, { limit: 50 }))
             : Promise.resolve({ data: [] }),
+          looksLikeDocketIdQuery(term)
+            ? trackAsync('command-center.search.docket-id', `command-center:docket-id:${cacheKey}`, () => caseApi.getCaseById(term))
+                .then((response) => normalizeExactDocket(response))
+                .catch((error) => {
+                  if (error?.response?.status === 404) return null;
+                  throw error;
+                })
+            : Promise.resolve(null),
         ]);
 
         const isStale = !commandPaletteOpen || requestId !== searchRequestIdRef.current || commandQuery.trim() !== term;
@@ -240,6 +315,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
 
         const dockets = docketRes.status === 'fulfilled' ? docketRes.value?.data?.data || [] : [];
         const freshClientDirectory = clientsRes.status === 'fulfilled' ? normalizeClientRows(clientsRes.value) : clientDirectory;
+        const exactDocket = exactDocketRes.status === 'fulfilled' ? exactDocketRes.value : null;
         if (clientsRes.status === 'fulfilled' && freshClientDirectory.length > 0) {
           setClientDirectory(freshClientDirectory);
         }
@@ -247,17 +323,23 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
         const needle = term.toLowerCase();
         const clients = clientRows.filter((client) => (`${client.label} ${client.description}`).toLowerCase().includes(needle)).slice(0, 6);
 
-        if (docketRes.status === 'rejected' || clientsRes.status === 'rejected') {
+        if (docketRes.status === 'rejected' || clientsRes.status === 'rejected' || exactDocketRes.status === 'rejected') {
           setSearchError('Record search is temporarily unavailable. Commands and module jumps are still available.');
         }
 
-        const nextResults = { dockets: dockets.slice(0, 6), clients };
+        const nextResults = {
+          exactDocket,
+          dockets: dockets
+            .filter((docket) => String(docket?.caseId || '') !== String(exactDocket?.caseId || ''))
+            .slice(0, 6),
+          clients,
+        };
         setSearchResults(nextResults);
         searchCacheRef.current.set(cacheKey, nextResults);
       } catch {
         if (requestId !== searchRequestIdRef.current) return;
         setSearchError('Record search is temporarily unavailable. Commands and module jumps are still available.');
-        setSearchResults({ dockets: [], clients: [] });
+        setSearchResults(EMPTY_SEARCH_RESULTS);
       } finally {
         if (requestId === searchRequestIdRef.current) {
           setSearching(false);
@@ -292,12 +374,33 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
       { id: 'sign-out', label: 'Sign out', action: () => { void handleLogout(); }, description: 'Sign out from current firm workspace.' },
     ];
 
-    const docketItems = searchResults.dockets.map((docket) => ({
-      id: `docket-${docket.caseId}`,
-      label: `Docket ${docket.caseId}`,
-      description: docket.title || 'Open docket detail',
-      action: () => openRoute(ROUTES.CASE_DETAIL(firmSlug, docket.caseId)),
-    }));
+    const buildDocketCommand = (docket, { exact = false } = {}) => {
+      const meta = [
+        docket?.status ? String(docket.status).replace(/_/g, ' ') : null,
+        docket?.clientName || null,
+      ].filter(Boolean);
+      const canPull = canPullDocketToWorklist(docket);
+
+      return {
+        id: `${exact ? 'docket-match' : 'docket'}-${docket.caseId}`,
+        label: `${exact ? 'View docket ' : 'Docket '}${docket.caseId}`,
+        description: docket.title || 'Open docket detail',
+        meta,
+        shortcut: exact ? 'Enter' : undefined,
+        action: () => openRoute(ROUTES.CASE_DETAIL(firmSlug, docket.caseId)),
+        secondaryAction: canPull
+          ? {
+            label: 'Pull to WL',
+            ariaLabel: `Pull docket ${docket.caseId} to my worklist`,
+            action: () => pullDocketToWorklist(docket),
+          }
+          : null,
+      };
+    };
+
+    const exactDocketItems = searchResults.exactDocket ? [buildDocketCommand(searchResults.exactDocket, { exact: true })] : [];
+
+    const docketItems = searchResults.dockets.map((docket) => buildDocketCommand(docket));
 
     const clientItems = searchResults.clients.map((client) => ({
       id: `client-${client.routeId}`,
@@ -310,6 +413,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     const sections = [];
 
     if (hasRecordQuery) {
+      if (exactDocketItems.length) sections.push({ id: 'docket-id-match', label: 'Docket ID match', items: exactDocketItems });
       if (docketItems.length) sections.push({ id: 'dockets', label: 'Dockets', items: docketItems });
       if (clientItems.length) sections.push({ id: 'clients', label: 'Clients', items: clientItems });
       sections.push({ id: 'destinations', label: 'Modules and commands', items: navigationItems });
@@ -320,7 +424,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     }
 
     return sections;
-  }, [firmSlug, role, openRoute, searchResults, hasAdminAccess, hasOperationsControlAccess, hasQcQueueAccess, commandQuery]);
+  }, [firmSlug, role, openRoute, searchResults, hasAdminAccess, hasQcQueueAccess, commandQuery, canPullDocketToWorklist, pullDocketToWorklist]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -376,7 +480,18 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     return isDescendant && currentNavItem.label !== title;
   }, [currentNavItem, pathname, title]);
 
-  const shortcutHint = 'Shortcuts: Ctrl/⌘+K open, / quick open, Alt+Shift+N new docket, Alt+Shift+D dashboard';
+  const shortcutHint = [
+    'Ctrl/⌘+K open',
+    '/ quick open',
+    'Enter view',
+    'Alt+Enter pull to WL when available',
+    'Alt+Shift+T work',
+    'Alt+Shift+W my worklist',
+    hasQcQueueAccess ? 'Alt+Shift+Q QC' : null,
+    hasAdminAccess ? 'Alt+Shift+B workbaskets' : null,
+    'Alt+Shift+N new docket',
+    'Alt+Shift+D dashboard',
+  ].filter(Boolean).join(', ');
 
   const firmLabel = user?.firm?.name || firmSlug || 'Workspace';
   const firmInitials = firmLabel.substring(0, 2).toUpperCase();
@@ -490,7 +605,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                 onClick={() => setCommandPaletteOpen(true)}
                 aria-label="Open command center"
               >
-                <span className="platform__command-trigger-label">Search dockets, clients, modules…</span>
+                <span className="platform__command-trigger-label">Search</span>
                 <kbd>Ctrl/⌘ K</kbd>
               </button>
             </div>
@@ -539,8 +654,8 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
         sections={commandSections}
         query={commandQuery}
         onQueryChange={setCommandQuery}
-        queryPlaceholder="Search dockets, clients, queues, modules, and commands"
-        helperText={searching ? 'Searching workspace records…' : (searchError || shortcutHint)}
+        queryPlaceholder="Search docket IDs, clients, queues, modules, and commands"
+        helperText={searching ? 'Searching records and docket IDs…' : (searchError || `Shortcuts: ${shortcutHint}`)}
       />
     </div>
   );

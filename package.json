@@ -10,7 +10,7 @@
     "start:job": "node src/jobs/cloudRunJob.runner.js",
     "dev": "nodemon src/server.js",
     "build": "npm run build:ui",
-    "lint": "find src tests -name '*.js' -print0 | xargs -0 -n1 node --check",
+    "lint": "node scripts/lint.js",
     "verify:build": "npm --prefix ui run build",
     "build:ui": "npm --prefix ui run build",
     "install:ui": "npm --prefix ui ci",

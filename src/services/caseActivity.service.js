@@ -3,7 +3,17 @@ const commentHistoryNarrativeStorage = require('./commentHistoryNarrativeStorage
 const { logCaseHistory } = require('./auditLog.service');
 const log = require('../utils/log');
 const CLOUD_NARRATIVE_TIMEOUT_MS = 1800;
+const emitNarrativeStorageWarnings = process.env.NARRATIVE_STORAGE_WARNINGS === 'true';
 const DEFAULT_RUNTIME_TENANT = 'default-client-runtime-tenant';
+const logNarrativeFallback = (message, context = {}) => {
+  if (emitNarrativeStorageWarnings) {
+    log.warn(message, context);
+    return;
+  }
+  if (typeof log.debug === 'function') {
+    log.debug(message, context);
+  }
+};
 
 const withTimeout = (promise, timeoutMs, label) => Promise.race([
   promise,
@@ -171,10 +181,14 @@ module.exports = (deps) => {
           }),
           CLOUD_NARRATIVE_TIMEOUT_MS,
           'comment narrative upload'
-        );
+      );
         storageMode = 'cloud_first';
       } catch (uploadError) {
-        log.warn(`[ADD_COMMENT] Cloud-first comment narrative storage failed to upload: ${uploadError.message}. Falling back to local MongoDB storage.`);
+        logNarrativeFallback('[ADD_COMMENT] Cloud-first comment narrative storage failed to upload; falling back to local MongoDB storage.', {
+          message: uploadError.message,
+          caseId: caseData.caseId,
+          firmId: effectiveFirmId,
+        });
       }
 
       const commentPayload = {

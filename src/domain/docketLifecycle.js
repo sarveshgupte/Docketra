@@ -4,7 +4,7 @@ const { normalizeStatus } = require('./case/caseStateMachine');
 const STATES = Object.freeze(['WL', 'ACTIVE', 'WAITING', 'DONE']);
 
 const TRANSITIONS = Object.freeze({
-  WL: Object.freeze(['ACTIVE']),
+  WL: Object.freeze(['ACTIVE', 'WAITING']),
   ACTIVE: Object.freeze(['WAITING', 'DONE']),
   WAITING: Object.freeze(['ACTIVE']),
   DONE: Object.freeze([]),

@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Case = require('../models/Case.model');
 const { COMPLIANCE_STATES } = require('../domain/compliance/complianceStateMachine');
 const { createNotification } = require('../domain/notifications');
@@ -12,6 +13,40 @@ const toDateOrNull = (value) => {
   if (!value) return null;
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const getCaseNumberCandidates = (id) => {
+  if (!id) return [];
+  const normalized = String(id).trim().replace(/[_\s]+/g, '-').toUpperCase();
+  const candidates = [String(id)];
+  
+  const prefixMatch = normalized.match(/^(CASE|DOCKET)-(.+)$/i);
+  if (prefixMatch) {
+    const prefix = prefixMatch[1].toUpperCase();
+    const bare = prefixMatch[2];
+    const otherPrefix = prefix === 'CASE' ? 'DOCKET' : 'CASE';
+    candidates.push(`${prefix}-${bare}`, `${otherPrefix}-${bare}`, bare);
+  } else {
+    candidates.push(normalized, `CASE-${normalized}`, `DOCKET-${normalized}`);
+  }
+
+  return [...new Set(candidates)];
+};
+
+const makeDocketQuery = (docketId, firmId) => {
+  const candidates = getCaseNumberCandidates(docketId);
+  const query = {
+    firmId,
+    $or: [
+      { caseId: { $in: candidates } },
+      { caseNumber: { $in: candidates } },
+    ],
+  };
+  if (mongoose.Types.ObjectId.isValid(docketId)) {
+    query.$or.push({ caseInternalId: docketId });
+    query.$or.push({ _id: docketId });
+  }
+  return query;
 };
 
 const shouldAwaitPartner = (approvalType) => approvalType === 'internal_partner';
@@ -62,7 +97,8 @@ const requestApproval = async ({
     error.statusCode = 400;
     throw error;
   }
-  const docket = await Case.findOne({ firmId, $or: [{ caseId }, { caseNumber: caseId }] });
+  const query = makeDocketQuery(caseId, firmId);
+  const docket = await Case.findOne(query);
   if (!docket) {
     const error = new Error('Docket not found');
     error.statusCode = 404;
@@ -129,7 +165,8 @@ const decideApproval = async ({
     throw error;
   }
 
-  const docket = await Case.findOne({ firmId, $or: [{ caseId }, { caseNumber: caseId }] });
+  const query = makeDocketQuery(caseId, firmId);
+  const docket = await Case.findOne(query);
   if (!docket) {
     const error = new Error('Docket not found');
     error.statusCode = 404;
@@ -220,7 +257,8 @@ const sendApprovalReminderPlaceholder = async ({
   actorXID,
   escalate = false,
 }) => {
-  const docket = await Case.findOne({ firmId, $or: [{ caseId }, { caseNumber: caseId }] })
+  const query = makeDocketQuery(caseId, firmId);
+  const docket = await Case.findOne(query)
     .select('caseId caseNumber approval_stage')
     .lean();
   if (!docket) {

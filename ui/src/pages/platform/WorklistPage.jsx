@@ -66,8 +66,9 @@ export const PlatformWorklistPage = () => {
   const [usersLoading, setUsersLoading] = useState(false);
   const [bulkAssigneeXid, setBulkAssigneeXid] = useState('');
   const [bulkMoving, setBulkMoving] = useState(false);
+  const searchParams = useMemo(() => new URLSearchParams(location.search || ''), [location.search]);
 
-  const scopedWorkbasketId = new URLSearchParams(location.search || '').get('workbasketId') || '';
+  const scopedWorkbasketId = searchParams.get('workbasketId') || '';
   const assignedWorkbaskets = Array.isArray(user?.workbaskets) ? user.workbaskets : [];
   const scopedWorkbasket = assignedWorkbaskets.find((wb) => String(wb?._id || wb?.id || wb?.workbasketId || '') === scopedWorkbasketId);
 
@@ -164,7 +165,7 @@ export const PlatformWorklistPage = () => {
     if (activeOnly) {
       return 'ASSIGNED,IN_PROGRESS,OPEN';
     }
-    return 'ASSIGNED,IN_PROGRESS,OPEN,PENDING,FILED,RESOLVED,QC_PENDING';
+    return 'ASSIGNED,IN_PROGRESS,OPEN,PENDING';
   }, [activeOnly]);
 
   const {
@@ -178,6 +179,21 @@ export const PlatformWorklistPage = () => {
     workbasketId: scopedWorkbasketId || undefined,
     status: queryStatus,
   });
+
+  useEffect(() => {
+    const refreshToken = searchParams.get('refresh');
+    if (!refreshToken) return;
+
+    void refetch();
+
+    const nextParams = new URLSearchParams(location.search || '');
+    nextParams.delete('refresh');
+    const nextSearch = nextParams.toString();
+    navigate(
+      `${location.pathname}${nextSearch ? `?${nextSearch}` : ''}`,
+      { replace: true }
+    );
+  }, [searchParams, refetch, navigate, location.pathname, location.search]);
 
   const {
     data: workloadData = {},
@@ -291,8 +307,9 @@ export const PlatformWorklistPage = () => {
 
   return (
     <PlatformShell
-      title={scopedWorkbasket ? `✅ Worklist — ${scopedWorkbasket.name}` : '✅ My Worklist'}
-      subtitle="Your active docket workload — execute, pend, route, or resolve."
+      moduleLabel="Queues"
+      title={scopedWorkbasket ? `Worklist — ${scopedWorkbasket.name}` : 'My Worklist'}
+      subtitle="Active queue."
       actions={
         <div className="flex items-center gap-2.5">
           <button
@@ -312,7 +329,7 @@ export const PlatformWorklistPage = () => {
             {isFetching ? 'Refreshing…' : 'Refresh'}
           </button>
           <Link to={ROUTES.CREATE_CASE(firmSlug)} className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 rounded-lg shadow-sm hover:shadow">
-            ✚ Create Docket
+            New docket
           </Link>
         </div>
       }

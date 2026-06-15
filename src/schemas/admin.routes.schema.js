@@ -118,7 +118,10 @@ module.exports = {
   },
   'PATCH /clients/:clientId/status': {
     params: z.object({ clientId: clientIdString }),
-    body: z.object({ status: z.enum(['ACTIVE', 'INACTIVE']) }).strict(),
+    body: z.object({
+      isActive: z.boolean(),
+      verificationToken: nonEmptyString,
+    }).strict(),
   },
   'POST /clients/:clientId/change-name': {
     params: z.object({ clientId: clientIdString }),

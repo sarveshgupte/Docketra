@@ -65,12 +65,21 @@ function normalizeClientDisplay(client) {
   if (!client) return client;
 
   const normalizeValue = (value) => {
-    if (!value || value === '') return 'Not Available';
+    if (value === undefined || value === null) return null;
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+      if (['not available', 'n/a', 'na', '-'].includes(trimmed.toLowerCase())) return null;
+      return trimmed;
+    }
     return value;
   };
 
   client.businessEmail = normalizeValue(client.businessEmail);
   client.primaryContactNumber = normalizeValue(client.primaryContactNumber);
+  client.contactPersonEmailAddress = normalizeValue(client.contactPersonEmailAddress);
+  client.contactPersonPhoneNumber = normalizeValue(client.contactPersonPhoneNumber);
+  client.secondaryContactNumber = normalizeValue(client.secondaryContactNumber);
 
   return client;
 }

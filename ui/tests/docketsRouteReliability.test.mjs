@@ -11,17 +11,9 @@ const dashboardSource = read('src/pages/platform/DashboardPage.jsx');
 const worklistSource = read('src/pages/platform/WorklistPage.jsx');
 
 assert.ok(
-  protectedRoutesSource.includes('path="dockets"'),
-  'Protected route map must include canonical dockets route.'
-);
-assert.ok(
-  /<ProtectedRoute>\r?\n\s+<CasesPage \/>\r?\n\s+<\/ProtectedRoute>/.test(protectedRoutesSource),
-  'Dockets route should render CasesPage directly so page-level inline errors stay inside shell.'
-);
-assert.ok(
   protectedRoutesSource.includes('path="cases"')
-    && protectedRoutesSource.includes('element={<Navigate to="../dockets" replace />}'),
-  'Legacy /cases route must redirect to canonical /dockets path.'
+    && protectedRoutesSource.includes('element={<Navigate to="../task-manager" replace />}'),
+  'Legacy /cases route must redirect to the task manager hub.'
 );
 assert.ok(
   protectedRoutesSource.includes('path="cases/create"')
@@ -52,8 +44,8 @@ assert.ok(
   'PlatformShell must manage document title for unified workspace pages such as Dockets.'
 );
 assert.ok(
-  dashboardSource.includes('ROUTES.DOCKETS(firmSlug)'),
-  'Dashboard entry point must navigate to canonical dockets route.'
+  dashboardSource.includes('ROUTES.TASK_MANAGER(firmSlug)'),
+  'Dashboard entry point must navigate to the task manager hub.'
 );
 assert.ok(
   worklistSource.includes('?returnTo=${encodeURIComponent(`${location.pathname}${location.search ||'),

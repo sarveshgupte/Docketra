@@ -360,15 +360,47 @@ const swapModule = (modulePath, exportsValue) => {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // 3. WRITE PROTECTION — ADMIN blocked by requirePrimaryAdmin
+  // 3. WRITE PROTECTION — firm settings follow permission model, storage + AI remain primary-admin only
   // ══════════════════════════════════════════════════════════════════════════
-  const writeEndpoints = [
+  const adminWritableEndpoints = [
     ['put', '/api/admin/firm-settings'],
+  ];
+
+  for (const [method, endpoint] of adminWritableEndpoints) {
+    const adminRes = await request(app)
+      [method](endpoint)
+      .set('Authorization', 'Bearer valid')
+      .set('x-test-role', 'ADMIN')
+      .send({});
+    assert.strictEqual(
+      adminRes.status,
+      200,
+      `ADMIN ${method.toUpperCase()} ${endpoint} expected 200, got ${adminRes.status}`,
+    );
+    assert.strictEqual(
+      adminRes.body?.success,
+      true,
+      `ADMIN ${method.toUpperCase()} ${endpoint} expected success:true, got ${JSON.stringify(adminRes.body)}`,
+    );
+
+    const primaryAdminRes = await request(app)
+      [method](endpoint)
+      .set('Authorization', 'Bearer valid')
+      .set('x-test-role', 'PRIMARY_ADMIN')
+      .send({});
+    assert.strictEqual(
+      primaryAdminRes.status,
+      200,
+      `PRIMARY_ADMIN ${method.toUpperCase()} ${endpoint} expected 200, got ${primaryAdminRes.status}`,
+    );
+  }
+
+  const primaryAdminOnlyWriteEndpoints = [
     ['put', '/api/admin/storage'],
     ['put', '/api/ai/configuration'],
   ];
 
-  for (const [method, endpoint] of writeEndpoints) {
+  for (const [method, endpoint] of primaryAdminOnlyWriteEndpoints) {
     // ADMIN must be blocked with 403
     const adminRes = await request(app)
       [method](endpoint)

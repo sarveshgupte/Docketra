@@ -5,6 +5,8 @@ import { EmptyState } from '../../../components/ui/EmptyState';
 import { formatDate } from '../../../utils/formatters';
 import { AdminSectionHeader } from './AdminSectionHeader';
 
+const isProtectedClient = (client) => Boolean(client?.isDefaultClient || client?.isSystemClient || client?.isInternal);
+
 export const AdminClientsSection = ({
   clients,
   hasAdditionalClients,
@@ -16,6 +18,7 @@ export const AdminClientsSection = ({
   onBulkPaste,
   onCreateClient,
   onEditClient,
+  onToggleClientStatus,
   StatusBadge,
 }) => (
   <Card>
@@ -64,6 +67,15 @@ export const AdminClientsSection = ({
                 render: (c) => (
                   <div className="flex justify-end gap-2">
                     <Button size="sm" variant="outline" onClick={() => onEditClient(c)}>Edit</Button>
+                    {!isProtectedClient(c) ? (
+                      <Button
+                        size="sm"
+                        variant={String(c?.status || '').trim().toUpperCase() === 'ACTIVE' ? 'danger' : 'default'}
+                        onClick={() => onToggleClientStatus(c)}
+                      >
+                        {String(c?.status || '').trim().toUpperCase() === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                      </Button>
+                    ) : null}
                   </div>
                 ),
               },

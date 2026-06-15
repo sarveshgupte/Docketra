@@ -528,7 +528,7 @@ const employeeWorklist = async (req, res) => {
     }
 
     const defaultStatuses = worklistStatuses.map((statusValue) => String(statusValue || '').trim().toUpperCase());
-    const allowedStatuses = [...defaultStatuses, 'FILED', 'RESOLVED'];
+    const allowedStatuses = [...defaultStatuses, 'PENDING', 'FILED', 'RESOLVED'];
     const filteredStatuses = normalizedRequestedStatuses.length > 0
       ? allowedStatuses.filter((statusValue) => normalizedRequestedStatuses.includes(statusValue))
       : defaultStatuses;

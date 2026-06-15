@@ -15,7 +15,7 @@ assert.ok(shellSource.includes('<aside className={`platform__sidebar'), 'Platfor
 assert.ok(shellSource.includes('<nav className="platform__nav">'), 'PlatformShell should render nav landmark.');
 assert.ok(shellSource.includes('<header className="platform__topbar">'), 'PlatformShell should render header landmark.');
 assert.ok(shellSource.includes('<main id="platform-main" className="platform__content">'), 'PlatformShell should render main landmark.');
-assert.ok(shellSource.includes('isNavItemActiveWithLocation(pathname, locationSearch, item)'), 'PlatformShell should keep nav active wiring.');
+assert.ok(shellSource.includes('isNavItemActiveWithLocation(navPathname, navSearch, item)'), 'PlatformShell should keep nav active wiring.');
 assert.ok(shellSource.includes('role="toolbar" aria-label="Page actions"'), 'Topbar actions should keep toolbar labels.');
 assert.ok(shellSource.includes('className="platform__command-trigger"'), 'Topbar should include command trigger.');
 assert.ok(shellSource.includes('<StorageStatusBadge />'), 'Topbar should include storage badge.');

@@ -717,10 +717,11 @@ export const CaseDetailPage = () => {
 
   useEffect(() => {
     if (!actionError && !actionConfirmation) return;
+    const shouldKeepLonger = actionConfirmation.includes('will reopen on') && actionConfirmation.includes('in your WL');
     const timer = setTimeout(() => {
       setActionError(null);
       setActionConfirmation('');
-    }, 5000);
+    }, shouldKeepLonger ? 10000 : 5000);
     return () => clearTimeout(timer);
   }, [actionError, actionConfirmation]);
 
@@ -1018,15 +1019,6 @@ export const CaseDetailPage = () => {
     if (!normalized) return;
     navigate(`${ROUTES.WORKLIST(firmSlug)}?assigneeXID=${encodeURIComponent(normalized)}`);
   }, [firmSlug, navigate]);
-
-  // Task 2: Inactivity warning — OPEN case not updated in 3+ days (not pended)
-  const isInactiveWarning = useMemo(() => {
-    if (!caseInfo) return false;
-    if (!['WL', 'OPEN', 'ACTIVE', 'CREATED', 'IN_WORKLIST'].includes(lifecycleStatus)) return false;
-    if (!caseInfo.updatedAt) return false;
-    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
-    return new Date(caseInfo.updatedAt) < threeDaysAgo;
-  }, [caseInfo, lifecycleStatus]);
 
   // Task 3: Smart lifecycle warnings for File/Resolve modals
   const lifecycleWarnings = useMemo(() => {
@@ -1374,7 +1366,6 @@ export const CaseDetailPage = () => {
           onOpenAssignModal={() => setShowAssignModal(true)}
           onMoveToWorkbasket={handleMoveToWorkbasket}
           onViewUserWorklist={handleViewUserWorklist}
-          isInactiveWarning={isInactiveWarning}
           docketSlaStatus={docketSlaStatus}
         />
 

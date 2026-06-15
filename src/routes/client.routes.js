@@ -14,6 +14,8 @@ const {
   getClientById,
   createClient,
   updateClient,
+  sendClientStatusOtp,
+  verifyClientStatusOtp,
   toggleClientStatus,
   changeLegalName,
   updateClientFactSheet,
@@ -62,6 +64,8 @@ router.post('/:clientId/cfs/comments', authorizeFirmPermission('CLIENT_MANAGE'),
 // Admin-only endpoints
 router.post('/', authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, createClient);
 router.put('/:clientId', authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, updateClient);
+router.post('/:clientId/status/send-otp', authorizeFirmPermission('CLIENT_MANAGE'), sensitiveLimiter, sendClientStatusOtp);
+router.post('/:clientId/status/verify-otp', authorizeFirmPermission('CLIENT_MANAGE'), sensitiveLimiter, verifyClientStatusOtp);
 router.patch('/:clientId/status', authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, toggleClientStatus);
 router.post('/:clientId/change-name', authorizeFirmPermission('CLIENT_MANAGE'), sensitiveLimiter, changeLegalName);
 

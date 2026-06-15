@@ -41,24 +41,18 @@ const isValidCaseNumberFormat = (id) => {
 };
 
 const getCaseNumberCandidates = (id) => {
-  const normalized = String(id || '').trim().replace(/[_\s]+/g, '-');
+  const normalized = String(id || '').trim().replace(/[_\s]+/g, '-').toUpperCase();
   if (!normalized) return [];
 
-  const bareMatch = normalized.match(/^(\d{8}-\d{5})$/);
-  if (bareMatch) {
-    const bare = bareMatch[1];
-    return [bare, `CASE-${bare}`, `DOCKET-${bare}`];
-  }
-
-  const prefixedMatch = normalized.match(/^(CASE|DOCKET)-(\d{8}-\d{5})$/i);
-  if (prefixedMatch) {
-    const prefix = prefixedMatch[1].toUpperCase();
-    const bare = prefixedMatch[2];
+  const prefixMatch = normalized.match(/^(CASE|DOCKET)-(.+)$/i);
+  if (prefixMatch) {
+    const prefix = prefixMatch[1].toUpperCase();
+    const bare = prefixMatch[2];
     const otherPrefix = prefix === 'CASE' ? 'DOCKET' : 'CASE';
     return [`${prefix}-${bare}`, `${otherPrefix}-${bare}`, bare];
   }
 
-  return [normalized];
+  return [normalized, `CASE-${normalized}`, `DOCKET-${normalized}`];
 };
 
 /**

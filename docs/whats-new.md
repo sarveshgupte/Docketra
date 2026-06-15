@@ -1,5 +1,12 @@
 # What's New
 
+## 2026-06-07 — Removed obsolete docket list entry point
+
+- Removed the firm-level `/app/firm/:firmSlug/dockets` list route from the protected route tree.
+- Retargeted shell, dashboard, task-manager, onboarding, and reports links to live Task Manager / Worklist surfaces.
+- Updated route-contract tests so the removed list URL is no longer treated as canonical.
+- Kept docket detail and create flows intact.
+
 ## 2026-05-24 — Data residency docs/status/QA normalization
 
 - Audited and normalized data-residency language across policy, trust, audit, and BYOS setup docs to reflect the transitional cloud-first reality without overclaiming full Mongo business-data elimination.

@@ -583,7 +583,15 @@ const CaseRepository = {
       throw new Error('Case ID required');
     }
 
-    const filter = { caseId, firmId };
+    const candidates = getIdentifierCandidates(caseId);
+    const identifierMatcher = candidates.map((candidate) => new RegExp(`^${escapeRegExp(candidate)}$`, 'i'));
+    const filter = {
+      firmId,
+      $or: [
+        { caseId: { $in: identifierMatcher } },
+        { caseNumber: { $in: identifierMatcher } },
+      ],
+    };
     if (expectedCurrentStatus) {
       filter.status = expectedCurrentStatus;
     }

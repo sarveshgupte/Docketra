@@ -15,7 +15,6 @@ export const CaseDetailAlerts = ({
   onOpenAssignModal,
   onMoveToWorkbasket,
   onViewUserWorklist,
-  isInactiveWarning,
   docketSlaStatus,
 }) => (
   <>
@@ -64,11 +63,6 @@ export const CaseDetailAlerts = ({
         })()}
         {' '}since{' '}
         {formatDateTime(caseInfo.lockStatus.lastActivityAt || caseInfo.lockStatus.lockedAt)}.
-      </div>
-    )}
-    {isInactiveWarning && (
-      <div className="case-detail__inactivity-warning case-detail__alert" role="status">
-        ⚠ No activity in 3 days
       </div>
     )}
   </>

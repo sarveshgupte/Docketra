@@ -23,6 +23,40 @@ const { REASON_CODES } = require('./pilotDiagnostics.service');
 const { getCanonicalDocketState } = require('../utils/docketStateMapper');
 const { canTransition } = require('../utils/docketStateTransitions');
 
+const getCaseNumberCandidates = (id) => {
+  if (!id) return [];
+  const normalized = String(id).trim().replace(/[_\s]+/g, '-').toUpperCase();
+  const candidates = [String(id)];
+  
+  const prefixMatch = normalized.match(/^(CASE|DOCKET)-(.+)$/i);
+  if (prefixMatch) {
+    const prefix = prefixMatch[1].toUpperCase();
+    const bare = prefixMatch[2];
+    const otherPrefix = prefix === 'CASE' ? 'DOCKET' : 'CASE';
+    candidates.push(`${prefix}-${bare}`, `${otherPrefix}-${bare}`, bare);
+  } else {
+    candidates.push(normalized, `CASE-${normalized}`, `DOCKET-${normalized}`);
+  }
+
+  return [...new Set(candidates)];
+};
+
+const makeDocketQuery = (docketId, firmId) => {
+  const candidates = getCaseNumberCandidates(docketId);
+  const query = {
+    firmId,
+    $or: [
+      { caseId: { $in: candidates } },
+      { caseNumber: { $in: candidates } },
+    ],
+  };
+  if (mongoose.Types.ObjectId.isValid(docketId)) {
+    query.$or.push({ caseInternalId: docketId });
+    query.$or.push({ _id: docketId });
+  }
+  return query;
+};
+
 const QC_DECISIONS = Object.freeze({
   APPROVED: 'APPROVED',
   PASSED: 'PASSED',
@@ -399,11 +433,20 @@ async function pullFromWorkbench({ docketId, firmId, userId, userObjectId = null
   const assigneeXID = String(assignToXID || userId || '').toUpperCase();
   if (!assigneeXID) throw makeError('assignee xID required');
 
+  const candidates = getCaseNumberCandidates(docketId);
   const filter = {
-    caseId: docketId,
     firmId,
     status: toPersistenceState(DocketStatus.AVAILABLE),
     $or: [{ assignedToXID: null }, { assignedToXID: { $exists: false } }, { assignedToXID: '' }],
+    $and: [
+      {
+        $or: [
+          { caseId: { $in: candidates } },
+          { caseNumber: { $in: candidates } },
+          ...(mongoose.Types.ObjectId.isValid(docketId) ? [{ caseInternalId: docketId }, { _id: docketId }] : [])
+        ]
+      }
+    ]
   };
 
   const update = {
@@ -429,13 +472,14 @@ async function pullFromWorkbench({ docketId, firmId, userId, userObjectId = null
   });
 
   if (!updated) {
-    const existing = await Case.findOne({ caseId: docketId, firmId }).select('assignedToXID status state');
+    const query = makeDocketQuery(docketId, firmId);
+    const existing = await Case.findOne(query).select('assignedToXID status state');
     if (!existing) throw makeError('Docket not found', 404, 'DOCKET_NOT_FOUND');
     throw makeError('Docket is already assigned', 409, 'DOCKET_ALREADY_ASSIGNED');
   }
 
   await writeAudit({
-    docketId,
+    docketId: updated.caseId,
     fromState: DocketStatus.AVAILABLE,
     toState: DocketStatus.ASSIGNED,
     userId,
@@ -450,12 +494,12 @@ async function pullFromWorkbench({ docketId, firmId, userId, userObjectId = null
     session,
   });
 
-  emitDocketEvent(EVENT_NAMES.ASSIGNMENT, { docketId, firmId, assigneeXID, assignedBy: userId });
+  emitDocketEvent(EVENT_NAMES.ASSIGNMENT, { docketId: updated.caseId, firmId, assigneeXID, assignedBy: userId });
   await createDocketNotification({
     firmId,
     userId: assigneeXID,
     type: NotificationTypes.ASSIGNED,
-    docketId,
+    docketId: updated.caseId,
     actor: { xID: userId, role: 'USER' },
   });
 
@@ -476,7 +520,8 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
   try {
     let result;
     await session.withTransaction(async () => {
-      const docket = await Case.findOne({ caseId: docketId, firmId }).session(session);
+      const query = makeDocketQuery(docketId, firmId);
+      const docket = await Case.findOne(query).session(session);
       if (!docket) throw makeError('Docket not found', 404, 'DOCKET_NOT_FOUND');
 
       const fromState = toDocketState(docket.status);
@@ -560,7 +605,7 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
       transitionLifecycle(docket, targetLifecycle, {
         firmId,
         actor,
-        docketId,
+        docketId: docket.caseId,
       });
       docket.lastActionByXID = actor.xID;
       docket.lastActionAt = new Date();
@@ -609,14 +654,14 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
         docket.qcDecisionByXID = null;
         docket.qcDecisionAt = null;
         docket.qcFailedCorrected = false;
-        emitDocketEvent(EVENT_NAMES.QC_REQUEST, { docketId, firmId, requestedBy: actor.xID });
+        emitDocketEvent(EVENT_NAMES.QC_REQUEST, { docketId: docket.caseId, firmId, requestedBy: actor.xID });
       }
 
       enforceOwnershipRules(docket);
       await docket.save({ session });
 
       await writeAudit({
-        docketId,
+        docketId: docket.caseId,
         fromState,
         toState: finalTarget,
         userId: actor.xID,
@@ -677,7 +722,8 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
   const normalizedDecision = String(decision || '').toUpperCase();
   if (!QC_DECISIONS[normalizedDecision]) throw makeError('Invalid QC decision');
 
-  const docket = await Case.findOne({ caseId: docketId, firmId });
+  const query = makeDocketQuery(docketId, firmId);
+  const docket = await Case.findOne(query);
   if (!docket) throw makeError('Docket not found', 404, 'DOCKET_NOT_FOUND');
 
   const fromState = toDocketState(docket.status);
@@ -703,14 +749,14 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
       handledAt: new Date(),
       comment,
     };
-    emitDocketEvent(EVENT_NAMES.QC_FAILURE, { docketId, firmId, requestedBy: docket.qc?.requestedBy, handledBy: actor.xID });
+    emitDocketEvent(EVENT_NAMES.QC_FAILURE, { docketId: docket.caseId, firmId, requestedBy: docket.qc?.requestedBy, handledBy: actor.xID });
     await createDocketNotification({
       firmId,
       userId: docket.assignedToXID,
       type: NotificationTypes.QC_RETURNED,
-      docketId,
+      docketId: docket.caseId,
       actor,
-      message: `QC returned Docket ${docketId} for correction.`,
+      message: `QC returned Docket ${docket.caseId} for correction.`,
     });
   }
 
@@ -752,7 +798,7 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
   transitionLifecycle(docket, targetLifecycle, {
     firmId,
     actor,
-    docketId,
+    docketId: docket.caseId,
   });
   docket.lastActionByXID = actor.xID;
   docket.lastActionAt = new Date();
@@ -761,7 +807,7 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
   await docket.save();
 
   await writeAudit({
-    docketId,
+    docketId: docket.caseId,
     fromState,
     toState: toState,
     userId: actor.xID,
@@ -879,7 +925,8 @@ async function reopenDuePending() {
 
 async function reassign({ docketId, firmId, actor, toUserXID, comment }) {
   requireComment(comment, 'Reassignment');
-  const docket = await Case.findOne({ caseId: docketId, firmId });
+  const query = makeDocketQuery(docketId, firmId);
+  const docket = await Case.findOne(query);
   if (!docket) throw makeError('Docket not found', 404, 'DOCKET_NOT_FOUND');
   assertNotLockedByAnotherActiveUser(docket, actor);
   const nextAssignee = String(toUserXID || '').toUpperCase().trim();
@@ -899,7 +946,7 @@ async function reassign({ docketId, firmId, actor, toUserXID, comment }) {
   enforceOwnershipRules(docket);
   await docket.save();
   await writeAudit({
-    docketId,
+    docketId: docket.caseId,
     fromState: toDocketState(docket.status),
     toState: toDocketState(docket.status),
     userId: actor.xID,
@@ -917,7 +964,7 @@ async function reassign({ docketId, firmId, actor, toUserXID, comment }) {
     firmId,
     userId: docket.assignedToXID,
     type: NotificationTypes.REASSIGNED,
-    docketId,
+    docketId: docket.caseId,
     actor,
   });
 
@@ -933,7 +980,8 @@ async function reassign({ docketId, firmId, actor, toUserXID, comment }) {
 }
 
 async function activateOnOpen({ docketId, firmId, actor }) {
-  const docket = await Case.findOne({ caseId: docketId, firmId });
+  const query = makeDocketQuery(docketId, firmId);
+  const docket = await Case.findOne(query);
   if (!docket) throw makeError('Docket not found', 404, 'DOCKET_NOT_FOUND');
 
   const lifecycle = normalizeLifecycle(docket.lifecycle || DocketLifecycle.CREATED);
@@ -941,7 +989,7 @@ async function activateOnOpen({ docketId, firmId, actor }) {
     transitionLifecycle(docket, DocketLifecycle.ACTIVE, {
       firmId,
       actor,
-      docketId,
+      docketId: docket.caseId,
       suppressLifecycleNotification: true,
     });
     docket.status = toPersistenceState(DocketStatus.IN_PROGRESS);
@@ -957,7 +1005,7 @@ async function activateOnOpen({ docketId, firmId, actor }) {
       firmId,
       userId: docket.assignedToXID,
       type: NotificationTypes.DOCKET_ACTIVATED,
-      docketId,
+      docketId: docket.caseId,
       actor: actor || { xID: docket.assignedToXID || 'SYSTEM', role: 'SYSTEM' },
     });
   }

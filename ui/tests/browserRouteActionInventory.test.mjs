@@ -11,7 +11,7 @@ const OUTPUT_PATH = path.resolve(process.cwd(), 'test-results/route-action-inven
 
 const routeTemplates = [
   '/superadmin','/superadmin/login','/app/superadmin','/app/superadmin/firms','/app/superadmin/onboarding-insights','/app/superadmin/diagnostics',
-  '/:firmSlug/login','/:firmSlug/forgot-password','/app/firm/:firmSlug/dashboard','/app/firm/:firmSlug/worklist','/app/firm/:firmSlug/global-worklist','/app/firm/:firmSlug/qc-queue','/app/firm/:firmSlug/clients','/app/firm/:firmSlug/crm','/app/firm/:firmSlug/cms','/app/firm/:firmSlug/task-manager','/app/firm/:firmSlug/dockets','/app/firm/:firmSlug/dockets/create','/app/firm/:firmSlug/settings','/app/firm/:firmSlug/storage-settings','/app/firm/:firmSlug/ai-settings','/app/firm/:firmSlug/admin','/app/firm/:firmSlug/admin/hierarchy','/app/firm/:firmSlug/admin/audit-logs','/app/firm/:firmSlug/admin/reports'
+  '/:firmSlug/login','/:firmSlug/forgot-password','/app/firm/:firmSlug/dashboard','/app/firm/:firmSlug/worklist','/app/firm/:firmSlug/global-worklist','/app/firm/:firmSlug/qc-queue','/app/firm/:firmSlug/clients','/app/firm/:firmSlug/crm','/app/firm/:firmSlug/cms','/app/firm/:firmSlug/task-manager','/app/firm/:firmSlug/dockets/create','/app/firm/:firmSlug/settings','/app/firm/:firmSlug/storage-settings','/app/firm/:firmSlug/ai-settings','/app/firm/:firmSlug/admin','/app/firm/:firmSlug/admin/hierarchy','/app/firm/:firmSlug/admin/audit-logs','/app/firm/:firmSlug/admin/reports'
 ];
 
 const roles = [

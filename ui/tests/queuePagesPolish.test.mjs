@@ -13,22 +13,26 @@ const whatsNew = read('../docs/whats-new.md');
 const whatsNewHeadingCount = (whatsNew.match(/^# What's New$/gm) || []).length;
 const dailyOpsEntryCount = (whatsNew.match(/^## 2026-05-21 — Reworked Daily Operations navigation$/gm) || []).length;
 
-assert.ok(workbaskets.includes('title="Workbaskets"'), 'Workbaskets should render in PlatformShell context.');
+assert.ok(workbaskets.includes('moduleLabel="Queues"'), 'Workbaskets should render in the shared queue shell context.');
+assert.ok(workbaskets.includes("selectedWorkbasket ? `Workbaskets — ${selectedWorkbasket.name}` : 'Workbaskets'"), 'Workbaskets should keep the shorter header title.');
 assert.ok(workbaskets.includes('No dockets are waiting in your workbaskets.'), 'Workbaskets should use queue-specific empty copy.');
-assert.ok(workbaskets.includes('StatGrid items={metrics}'), 'Workbaskets should include queue summary metrics.');
-assert.ok(workbaskets.includes('tableClassName="queue-table"'), 'Workbaskets should use shared queue table styling.');
-assert.ok(workbaskets.includes("{ label: 'Assigned', value:"), 'Workbaskets metric label should not imply user-specific ownership when not identity-filtered.');
+assert.ok(workbaskets.includes('subtitle="Shared queue."'), 'Workbaskets should keep the header copy short.');
+assert.ok(workbaskets.includes('New docket'), 'Workbaskets should keep the primary action concise.');
+assert.ok(workbaskets.includes('tableClassName="w-full text-left border-collapse"'), 'Workbaskets should keep the shared table styling.');
 assert.ok(workbaskets.includes('error=""'), 'Workbaskets should avoid duplicate top-level + table-level query errors.');
 
 assert.ok(worklist.includes("title={scopedWorkbasket ? `Worklist — ${scopedWorkbasket.name}` : 'My Worklist'}"), 'Worklist title should support scoped and fallback variants.');
-assert.ok(worklist.includes('className="filter-bar__checkbox"'), 'My Worklist should preserve compact checkbox styling.');
+assert.ok(worklist.includes('subtitle="Active queue."'), 'My Worklist should keep the header copy short.');
+assert.ok(worklist.includes('Show active dockets only'), 'My Worklist should keep the compact status toggle.');
 assert.ok(worklist.includes('error=""'), 'My Worklist should suppress duplicate table-level errors.');
-assert.ok(worklist.includes('title="Personal execution queue"'), 'My Worklist should communicate personal queue ownership.');
+assert.ok(worklist.includes('New docket'), 'My Worklist should keep the primary action concise.');
 assert.equal(worklist.includes('<option value=\"IN_QC\">In QC</option>'), false, 'Normal worklist status filter should not include In QC.');
 
-assert.ok(qcQueue.includes('title="QC Workbaskets"'), 'QC queue should render in PlatformShell context.');
+assert.ok(qcQueue.includes('moduleLabel="Queues"'), 'QC queue should render in the shared queue shell context.');
+assert.ok(qcQueue.includes("selectedQcWorkbasket ? `QC Workbaskets — ${selectedQcWorkbasket.name}` : 'QC Workbaskets'"), 'QC queue should keep the shorter header title.');
 assert.ok(qcQueue.includes('No dockets are waiting for QC review.'), 'QC queue should use QC-specific empty copy.');
 assert.ok(qcQueue.includes('Send back'), 'QC queue should keep compact correction action naming.');
+assert.ok(qcQueue.includes('subtitle="Review queue."'), 'QC queue should keep the header copy short.');
 assert.ok(qcQueue.includes('error=""'), 'QC queue should avoid duplicate top-level + table-level query errors.');
 
 assert.ok(casesPage.includes('title="All Dockets"'), 'All Dockets should continue to expose oversight/list framing.');

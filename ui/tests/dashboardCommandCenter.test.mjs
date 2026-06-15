@@ -19,7 +19,7 @@ for (const routeRef of [
   'ROUTES.WORKLIST(firmSlug)',
   'ROUTES.GLOBAL_WORKLIST(firmSlug)',
   'ROUTES.QC_QUEUE(firmSlug)',
-  'ROUTES.DOCKETS(firmSlug)',
+  'ROUTES.TASK_MANAGER(firmSlug)',
   'ROUTES.CLIENTS(firmSlug)',
   'ROUTES.SETTINGS(firmSlug)',
 ]) {

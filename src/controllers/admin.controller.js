@@ -997,40 +997,26 @@ const updateFirmSettings = async (req, res) => {
       firm: normalizeFirmSettings(firm.settings?.firm || {}),
       work: normalizeWorkSettings(firm.settings?.work || {}),
     };
-    await writeSettingsAudit({
-      req,
-      settingsKey: 'firm-settings',
-      action: 'CONFIG_CHANGED',
-      oldDoc: previousSettings,
-      newDoc: nextSettings,
-      metadata: { source: 'admin.updateFirmSettings' },
-      dedupeKey: 'firm-settings-update',
-    });
-
-    await logAdminAction({
-      adminXID: req.user?.xID,
-      actionType: 'FIRM_SETTINGS_UPDATED',
-      targetFirmId: firm.firmId,
-      metadata: {
-        previous: previousSettings,
-        next: nextSettings,
-      },
-      req,
-    });
-
-
-    if (previousSettings.firm.strictFirmOwnedStorage !== nextSettings.firm.strictFirmOwnedStorage) {
-      logStrictStorageEvent({
-        event: nextSettings.firm.strictFirmOwnedStorage ? STRICT_STORAGE_EVENTS.ENABLED : STRICT_STORAGE_EVENTS.DISABLED,
-        firmId: firm.firmId || ownershipFirmId,
-        actorXid: req.user?.xID || null,
-        requestId: req.requestId || null,
-        providerMode: nextSettings.firm.strictFirmOwnedStorage ? 'firm_connected' : 'managed_fallback',
-        targetPathCategory: null,
-      });
-    }
-
-    await Promise.all([
+    const sideEffects = [
+      writeSettingsAudit({
+        req,
+        settingsKey: 'firm-settings',
+        action: 'CONFIG_CHANGED',
+        oldDoc: previousSettings,
+        newDoc: nextSettings,
+        metadata: { source: 'admin.updateFirmSettings' },
+        dedupeKey: 'firm-settings-update',
+      }),
+      logAdminAction({
+        adminXID: req.user?.xID,
+        actionType: 'FIRM_SETTINGS_UPDATED',
+        targetFirmId: firm.firmId,
+        metadata: {
+          previous: previousSettings,
+          next: nextSettings,
+        },
+        req,
+      }),
       settingsAuditService.logConfigChange({
         firmId: ownershipFirmId,
         action: 'FIRM_CONFIG_UPDATED',
@@ -1053,7 +1039,29 @@ const updateFirmSettings = async (req, res) => {
         after: nextSettings.work,
         metadata: { source: 'admin.controller.updateFirmSettings' },
       }),
-    ]);
+    ];
+
+    if (previousSettings.firm.strictFirmOwnedStorage !== nextSettings.firm.strictFirmOwnedStorage) {
+      sideEffects.push(Promise.resolve().then(() => logStrictStorageEvent({
+        event: nextSettings.firm.strictFirmOwnedStorage ? STRICT_STORAGE_EVENTS.ENABLED : STRICT_STORAGE_EVENTS.DISABLED,
+        firmId: firm.firmId || ownershipFirmId,
+        actorXid: req.user?.xID || null,
+        requestId: req.requestId || null,
+        providerMode: nextSettings.firm.strictFirmOwnedStorage ? 'firm_connected' : 'managed_fallback',
+        targetPathCategory: null,
+      })));
+    }
+
+    const sideEffectResults = await Promise.allSettled(sideEffects);
+    sideEffectResults.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        log.warn('[ADMIN] Non-blocking firm settings side effect failed', {
+          sideEffectIndex: index,
+          requestId: req.requestId || null,
+          error: result.reason?.message || result.reason,
+        });
+      }
+    });
 
     return res.json({
       success: true,
@@ -1335,6 +1343,7 @@ const getFirmSettingsActivity = async (req, res) => {
 
     const authActionTypes = [
       'AdminMutation',
+      'ClientStatusChanged',
       'UserCreated',
       'AccountActivated',
       'AccountDeactivated',

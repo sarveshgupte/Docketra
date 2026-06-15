@@ -7,7 +7,6 @@ const firmSlug = 'acme-law';
 
 const sidebarRoutes = [
   ROUTES.DASHBOARD(firmSlug),
-  ROUTES.CASES(firmSlug),
   ROUTES.WORKLIST(firmSlug),
   ROUTES.GLOBAL_WORKLIST(firmSlug),
   ROUTES.QC_QUEUE(firmSlug),
@@ -69,7 +68,7 @@ assert.ok(
   'Firm-scoped routes must render in FirmLayout shell'
 );
 
-for (const expectedPath of ['path="dashboard"', 'path="dockets"', 'path="worklist"', 'path="global-worklist"', 'path="qc-queue"', 'path="clients"', 'path="crm/clients"', 'path="cms"', 'path="company-brain"', 'path="admin/reports"', 'path="settings"', 'path="profile"']) {
+for (const expectedPath of ['path="dashboard"', 'path="worklist"', 'path="global-worklist"', 'path="qc-queue"', 'path="clients"', 'path="crm/clients"', 'path="cms"', 'path="company-brain"', 'path="admin/reports"', 'path="settings"', 'path="profile"']) {
   assert.ok(
     protectedRoutesSource.includes(expectedPath),
     `Missing core protected route entry: ${expectedPath}`

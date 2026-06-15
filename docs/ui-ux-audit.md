@@ -1,6 +1,80 @@
 > **Historical document (point-in-time):** This file captures an earlier audit/readiness snapshot and may not reflect the current product surface. For current state, see `README.md`, `docs/product/current-product-overview.md`, and `docs/operations/pilot-readiness-checklist.md`.
 
-# Docketra UI/UX audit and improvement pass (April 2026)
+# Docketra UI/UX audit and improvement pass (June 2026)
+
+## Current audit scope
+
+- Route/layout structure across the firm shell, platform shell, and protected route tree.
+- Existing design-system primitives used by dashboard, task, docket, CRM, admin, auth/public, and reports surfaces.
+- Table/list/detail ergonomics, empty/loading/error states, and mobile stacking behavior.
+- Keyboard/accessibility behavior in primary navigation, command-center actions, and critical forms.
+
+## Top issues found
+
+| Rank | Issue | User impact | Risk | Surface area | Test impact | Safe in one PR |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Obsolete firm list URL `/app/firm/:firmSlug/dockets` was still linked from shell and dashboard surfaces. | Users could land on an inconsistent or misleading “All Dockets” entry point. | Low | High | High | Yes |
+| 2 | Legacy `cases` redirects still pointed at the removed list URL. | Deep links and older bookmarks could bounce through a dead destination. | Low | Medium | High | Yes |
+| 3 | Task Manager and Dashboard still framed “All Dockets” as a primary destination. | The app shell over-emphasized a registry view that is no longer the preferred hub. | Low | High | Medium | Yes |
+| 4 | Quick actions mixed list/queue language across dashboard and task surfaces. | Users had to infer whether they were opening a queue, registry, or command center. | Low | Medium | Medium | Yes |
+| 5 | Shell navigation hierarchy was functional but slightly inconsistent in active-state clarity. | Orientation and confidence degrade on dense firm workspaces. | Low | High | Medium | Yes |
+| 6 | Some queue/list pages still relied on older fallback copy for error recovery. | Users need clearer retry paths when data fails to load. | Low | Medium | Medium | Yes |
+| 7 | Dashboard attention cards were visually dense but still mixed hierarchy styles. | Scanning workload priorities takes more effort than necessary. | Low | High | Medium | Yes |
+| 8 | Mobile sidebar and topbar behavior needed tighter tap targets and better scroll handling. | Touch users can lose context or struggle with dense navigation. | Low | Medium | Medium | Yes |
+| 9 | Older route tests still encoded the removed URL as canonical. | The test suite would preserve obsolete navigation if left untouched. | Low | High | High | Yes |
+| 10 | Some legacy labels still used broad “dockets” language even when the destination was now Task Manager. | Copy drift can undermine the platform’s operational hierarchy. | Low | Medium | Medium | Yes |
+
+## Design skills applied
+
+- `impeccable`
+- `design-taste-frontend`
+- `high-end-visual-design`
+- `redesign-existing-projects`
+- `stitch-design-taste`
+
+## Changes made
+
+- Removed the firm list route from `ProtectedRoutes` and redirected legacy `cases` traffic to `task-manager`.
+- Retargeted visible shell/dashboard/task/report entry points away from the obsolete All Dockets destination.
+- Tightened shell CSS rhythm, topbar hierarchy, and attention-card presentation.
+- Kept docket detail and create flows intact.
+- Updated navigation and route contract tests to match the new route shape.
+
+## Files changed
+
+- `ui/src/routes/ProtectedRoutes.jsx`
+- `ui/src/components/common/Layout.jsx`
+- `ui/src/components/platform/PlatformShell.jsx`
+- `ui/src/components/platform/platform.css`
+- `ui/src/pages/platform/DashboardPage.jsx`
+- `ui/src/pages/platform/TaskManagerPage.jsx`
+- `ui/src/pages/platform/ReportsPage.jsx`
+- `ui/src/pages/CreateCasePage.jsx`
+- `ui/src/pages/Dashboard.jsx`
+- `ui/src/pages/DashboardPage.jsx`
+- `ui/src/hooks/useDocketQueueNavigation.js`
+- `ui/src/components/onboarding/setupChecklistModel.js`
+- `ui/src/components/onboarding/roleOnboardingContent.js`
+- `ui/tests/browserRouteActionInventory.test.mjs`
+- `ui/tests/dashboardCommandCenter.test.mjs`
+- `ui/tests/docketsRouteReliability.test.mjs`
+- `ui/tests/firmWorkspaceShellUnification.test.mjs`
+- `ui/tests/navigationReliability.test.mjs`
+- `ui/tests/pilotLaunchReadinessInventory.test.mjs`
+
+## Risks and tradeoffs
+
+- The obsolete list URL is no longer linked, but docket detail and create routes still use `/dockets/...`, so there is still some canonical naming drift in the URL namespace.
+- The route helper constants still exist for backward compatibility, which reduces churn but means a future cleanup could simplify them further.
+- Admin-surface test drift is unrelated to this route cleanup and still needs follow-up.
+
+## Future recommendations
+
+- Continue converging queue/registry language so Task Manager becomes the dominant operational entry point.
+- Replace remaining legacy dockets wording in shell copy where it still implies a removed list hub.
+- Revisit mobile nav and dashboard density after the next functional slice so the shell stays compact without feeling cramped.
+
+## Docketra UI/UX audit and improvement pass (April 2026)
 
 ## Visual polish, density, and enterprise fit-and-finish pass (April 2026)
 

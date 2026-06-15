@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
 import { ROUTES } from '../../constants/routes';
-import { EmptyState, PageSection, StatGrid, StatusMessageStack } from './PlatformShared';
+import { EmptyState, PageSection, StatGrid, StatRow, StatusMessageStack } from './PlatformShared';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuth } from '../../hooks/useAuth';
 import { usePlatformDashboardSummaryQuery, usePlatformRiskBriefQuery } from '../../hooks/usePlatformDataQueries';
@@ -95,20 +95,20 @@ export const PlatformDashboardPage = () => {
     return Number(value);
   };
   const cards = [
-    { label: '📂 Open dockets', value: metricValue(summary.totalDockets), helpText: 'All tracked dockets across the firm.' },
-    { label: '⚙️ In progress', value: metricValue(summary.inProgress), helpText: 'Execution work currently active.' },
-    { label: '⏳ Pending', value: metricValue(summary.pending), helpText: 'Waiting on review or decision.' },
-    { label: '✅ QC passed', value: metricValue(summary.qcPassed), helpText: 'Quality-approved docket outcomes.' },
-    { label: '🏁 Resolved', value: metricValue(summary.resolved), helpText: 'Dockets closed successfully.' },
+    { label: 'Open dockets', value: metricValue(summary.totalDockets), helpText: 'All tracked dockets across the firm.' },
+    { label: 'In progress', value: metricValue(summary.inProgress), helpText: 'Execution work currently active.' },
+    { label: 'Pending', value: metricValue(summary.pending), helpText: 'Waiting on review or decision.' },
+    { label: 'QC passed', value: metricValue(summary.qcPassed), helpText: 'Quality-approved docket outcomes.' },
+    { label: 'Resolved', value: metricValue(summary.resolved), helpText: 'Dockets closed successfully.' },
   ];
   const quickActions = [
-    { label: 'New Docket', icon: '➕', helpText: 'Create and route a new docket.', route: ROUTES.CREATE_CASE(firmSlug) },
-    { label: 'My Worklist', icon: '✅', helpText: 'Review your assigned daily queue.', route: ROUTES.WORKLIST(firmSlug) },
-    { label: 'Workbaskets', icon: '📥', helpText: 'Check team workbasket backlog.', route: ROUTES.GLOBAL_WORKLIST(firmSlug) },
-    { label: 'QC Worklist', icon: '🔍', helpText: 'Review dockets in quality checks.', route: ROUTES.QC_QUEUE(firmSlug) },
-    { label: 'All Dockets', icon: '📚', helpText: 'Search and open all firm dockets.', route: ROUTES.DOCKETS(firmSlug) },
-    ...(isAdmin ? [{ label: 'Clients', icon: '🧠', helpText: 'Open client records and context.', route: ROUTES.CLIENTS(firmSlug) }] : []),
-    ...(isAdmin ? [{ label: 'Settings', icon: '🔧', helpText: 'Manage firm and workspace settings.', route: ROUTES.SETTINGS(firmSlug) }] : []),
+    { label: 'New Docket', kicker: 'Create', helpText: 'Create and route a new docket.', route: ROUTES.CREATE_CASE(firmSlug) },
+    { label: 'My Worklist', kicker: 'Queue', helpText: 'Review your assigned daily queue.', route: ROUTES.WORKLIST(firmSlug) },
+    { label: 'Workbaskets', kicker: 'Shared', helpText: 'Check team workbasket backlog.', route: ROUTES.GLOBAL_WORKLIST(firmSlug) },
+    { label: 'QC Worklist', kicker: 'Review', helpText: 'Review dockets in quality checks.', route: ROUTES.QC_QUEUE(firmSlug) },
+    { label: 'Task Manager', kicker: 'Registry', helpText: 'Search and open the daily execution hub.', route: ROUTES.TASK_MANAGER(firmSlug) },
+    ...(isAdmin ? [{ label: 'Clients', kicker: 'Relationships', helpText: 'Open client records and context.', route: ROUTES.CLIENTS(firmSlug) }] : []),
+    ...(isAdmin ? [{ label: 'Settings', kicker: 'Administration', helpText: 'Manage firm and workspace settings.', route: ROUTES.SETTINGS(firmSlug) }] : []),
   ];
   const recommendedAction = !setupComplete
     ? (nextStep?.route ? { label: nextStep.actionLabel, route: nextStep.route, note: nextStep.title } : null)
@@ -135,10 +135,10 @@ export const PlatformDashboardPage = () => {
     { label: 'Closed loop', value: metricValue(summary.resolved), note: 'resolved' },
   ];
   const riskCards = [
-    { label: '🚨 At-risk entities', value: riskLoading ? '…' : Number(riskBrief.atRiskEntities || 0), helpText: 'Open dockets already overdue on due date/SLA.' },
-    { label: '📨 Waiting on clients', value: riskLoading ? '…' : Number(riskBrief.waitingClient || 0), helpText: 'Pended dockets blocked on client-side response.' },
-    { label: '🧾 Awaiting approval', value: riskLoading ? '…' : Number(riskBrief.awaitingApproval || 0), helpText: 'Submitted/review queues pending approver sign-off.' },
-    { label: '🕒 Stale pending', value: riskLoading ? '…' : Number(riskBrief.stalePending || 0), helpText: 'Pended dockets untouched for more than 10 days.' },
+    { label: 'At-risk entities', value: riskLoading ? '…' : Number(riskBrief.atRiskEntities || 0), helpText: 'Open dockets already overdue on due date or SLA.' },
+    { label: 'Waiting on clients', value: riskLoading ? '…' : Number(riskBrief.waitingClient || 0), helpText: 'Pended dockets blocked on client-side response.' },
+    { label: 'Awaiting approval', value: riskLoading ? '…' : Number(riskBrief.awaitingApproval || 0), helpText: 'Submitted or review queues pending approver sign-off.' },
+    { label: 'Stale pending', value: riskLoading ? '…' : Number(riskBrief.stalePending || 0), helpText: 'Pended dockets untouched for more than 10 days.' },
   ];
   const blockerRows = Object.entries(riskBrief.blockedByType || {})
     .sort((a, b) => Number(b[1]) - Number(a[1]))
@@ -166,7 +166,7 @@ export const PlatformDashboardPage = () => {
       >
         <div className="dashboard-command-panel">
           <article className="panel dashboard-priority-card dashboard-priority-card--primary">
-            <span className="dashboard-card-icon" aria-hidden="true">🎯</span>
+            <p className="dashboard-card-kicker">Priority</p>
             <div>
               <p className="section-title">Next best action</p>
               <p>{recommendedAction?.note || 'Review daily queues and continue execution.'}</p>
@@ -174,26 +174,18 @@ export const PlatformDashboardPage = () => {
             {recommendedAction?.route ? <Link to={recommendedAction.route}>{recommendedAction.label}</Link> : null}
           </article>
           <article className="panel dashboard-priority-card dashboard-priority-card--queues">
-            <span className="dashboard-card-icon" aria-hidden="true">🧭</span>
+            <p className="dashboard-card-kicker">Queues</p>
             <div>
               <p className="section-title">Daily queues</p>
               <p className="muted">Jump directly into the queue that matches today’s work.</p>
             </div>
             <div className="action-row action-row--tight dashboard-queue-actions">
-              <Link to={ROUTES.WORKLIST(firmSlug)}>✅ My Worklist</Link>
-              <Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>📥 Workbaskets</Link>
-              <Link to={ROUTES.QC_QUEUE(firmSlug)}>🔍 QC Worklist</Link>
+              <Link to={ROUTES.WORKLIST(firmSlug)}>My Worklist</Link>
+              <Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>Workbaskets</Link>
+              <Link to={ROUTES.QC_QUEUE(firmSlug)}>QC Worklist</Link>
             </div>
           </article>
-          <article className="panel dashboard-health-mini">
-            {healthSummary.map((item) => (
-              <div key={item.label}>
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
-                <small>{item.note}</small>
-              </div>
-            ))}
-          </article>
+          <StatRow items={healthSummary} />
         </div>
       </PageSection>
 
@@ -216,7 +208,7 @@ export const PlatformDashboardPage = () => {
               {blockerRows.length ? (
                 <ul className="dashboard-attention-list-items">
                   {blockerRows.map(([type, count]) => (
-                    <li key={type} className="panel">
+                    <li key={type} className="dashboard-attention-item">
                       <p className="section-title">{type.replaceAll('_', ' ')}</p>
                       <p className="muted">{count} active dockets</p>
                     </li>
@@ -231,7 +223,7 @@ export const PlatformDashboardPage = () => {
               {(riskBrief.overloadedAssignees || []).length ? (
                 <ul className="dashboard-attention-list-items">
                   {riskBrief.overloadedAssignees.map((row) => (
-                    <li key={row.assigneeXID} className="panel">
+                    <li key={row.assigneeXID} className="dashboard-attention-item">
                       <p className="section-title">{row.assigneeXID}</p>
                       <p className="muted">{row.docketCount} active dockets</p>
                     </li>
@@ -243,90 +235,61 @@ export const PlatformDashboardPage = () => {
             </article>
           </div>
 
-          {exceptionDashboard && (
-            <div className="panel w-full" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <p className="section-title" style={{ fontSize: '0.9rem', fontWeight: '700', margin: 0 }}>🛡️ Active Exceptions & Blocker Analytics</p>
-                <span className="text-xs text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full font-bold">
-                  {exceptionDashboard.dueDateRisk?.atRisk || 0} Blocked Dockets At Risk
-                </span>
+          {exceptionDashboard ? (
+            <div className="panel" style={{ marginTop: 16 }}>
+              <div className="section-header">
+                <div>
+                  <p className="section-title">Exceptions and blockers</p>
+                  <p className="muted section-description">Open exceptions grouped by type, age, due-date risk, and client concentration.</p>
+                </div>
+                <div className="dashboard-attention-meta">
+                  <span className="dashboard-attention-flag">{exceptionDashboard.dueDateRisk?.atRisk || 0} at risk</span>
+                </div>
               </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                {/* Card 1: Blockers by Type */}
-                <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100">
-                  <p style={{ fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', marginBottom: '8px' }}>Blockers by Category</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {Object.entries(exceptionDashboard.byType || {}).map(([type, count]) => {
-                      if (count === 0) return null;
-                      return (
-                        <div key={type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                          <span style={{ textTransform: 'capitalize', color: '#374151' }}>{type.replace(/_/g, ' ')}</span>
-                          <span style={{ fontWeight: '700', backgroundColor: '#e0e7ff', color: '#4338ca', padding: '1px 6px', borderRadius: '4px', fontSize: '0.7rem' }}>{count}</span>
-                        </div>
-                      );
-                    })}
-                    {Object.values(exceptionDashboard.byType || {}).every(v => v === 0) && (
-                      <p style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>No active blockers logged.</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Card 2: Blockers by Age Risk */}
-                <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100">
-                  <p style={{ fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', marginBottom: '8px' }}>Blocker Age Risk</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                      <span style={{ color: '#4b5563' }}>🟢 &lt; 3 Days (Fresh)</span>
-                      <span style={{ fontWeight: '700', color: '#059669' }}>{exceptionDashboard.byAge?.under_3_days || 0}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                      <span style={{ color: '#4b5563' }}>🟡 3 to 7 Days (Monitoring)</span>
-                      <span style={{ fontWeight: '700', color: '#d97706' }}>{exceptionDashboard.byAge?.between_3_and_7_days || 0}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                      <span style={{ color: '#4b5563' }}>🔴 &gt; 7 Days (Critical Delay)</span>
-                      <span style={{ fontWeight: '700', color: '#dc2626' }}>{exceptionDashboard.byAge?.over_7_days || 0}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card 3: Due Date Risk */}
-                <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100">
-                  <p style={{ fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', marginBottom: '8px' }}>Due Date Jeopardy</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                      <span style={{ color: '#4b5563' }}>⚠️ Overdue Statutory Date</span>
-                      <span style={{ fontWeight: '700', color: '#dc2626' }}>{exceptionDashboard.dueDateRisk?.overdue || 0}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                      <span style={{ color: '#4b5563' }}>🚨 Reaching Due Date (≤ 2 Days)</span>
-                      <span style={{ fontWeight: '700', color: '#d97706' }}>{exceptionDashboard.dueDateRisk?.closeDue || 0}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card 4: Top Blocked Clients */}
-                <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100">
-                  <p style={{ fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', marginBottom: '8px' }}>Top Blocked Entities</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {Object.entries(exceptionDashboard.byClient || {})
+              <div className="dashboard-quick-actions-grid">
+                <article className="dashboard-attention-item">
+                  <p className="dashboard-card-kicker">By category</p>
+                  {Object.entries(exceptionDashboard.byType || {}).some(([, count]) => count > 0) ? (
+                    Object.entries(exceptionDashboard.byType || {}).map(([type, count]) => count > 0 ? (
+                      <div key={type} className="dashboard-attention-meta">
+                        <span className="section-title">{type.replace(/_/g, ' ')}</span>
+                        <span className="dashboard-attention-flag">{count}</span>
+                      </div>
+                    ) : null)
+                  ) : (
+                    <p className="muted">No active blockers logged.</p>
+                  )}
+                </article>
+                <article className="dashboard-attention-item">
+                  <p className="dashboard-card-kicker">By age</p>
+                  <div className="dashboard-attention-meta"><span className="section-title">Under 3 days</span><span className="dashboard-attention-flag">{exceptionDashboard.byAge?.under_3_days || 0}</span></div>
+                  <div className="dashboard-attention-meta"><span className="section-title">3 to 7 days</span><span className="dashboard-attention-flag">{exceptionDashboard.byAge?.between_3_and_7_days || 0}</span></div>
+                  <div className="dashboard-attention-meta"><span className="section-title">Over 7 days</span><span className="dashboard-attention-flag">{exceptionDashboard.byAge?.over_7_days || 0}</span></div>
+                </article>
+                <article className="dashboard-attention-item">
+                  <p className="dashboard-card-kicker">Due-date jeopardy</p>
+                  <div className="dashboard-attention-meta"><span className="section-title">Overdue statutory date</span><span className="dashboard-attention-flag">{exceptionDashboard.dueDateRisk?.overdue || 0}</span></div>
+                  <div className="dashboard-attention-meta"><span className="section-title">Due within 2 days</span><span className="dashboard-attention-flag">{exceptionDashboard.dueDateRisk?.closeDue || 0}</span></div>
+                </article>
+                <article className="dashboard-attention-item">
+                  <p className="dashboard-card-kicker">Top blocked clients</p>
+                  {Object.entries(exceptionDashboard.byClient || {}).length ? (
+                    Object.entries(exceptionDashboard.byClient || {})
                       .sort((a, b) => b[1] - a[1])
                       .slice(0, 3)
                       .map(([clientKey, count]) => (
-                        <div key={clientKey} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                          <span style={{ color: '#374151', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '170px' }} title={clientKey}>{clientKey}</span>
-                          <span style={{ fontWeight: '700', color: '#1e3a8a' }}>{count}</span>
+                        <div key={clientKey} className="dashboard-attention-meta">
+                          <span className="section-title" title={clientKey}>{clientKey}</span>
+                          <span className="dashboard-attention-flag">{count}</span>
                         </div>
-                      ))}
-                    {Object.keys(exceptionDashboard.byClient || {}).length === 0 && (
-                      <p style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>No blocked clients.</p>
-                    )}
-                  </div>
-                </div>
+                      ))
+                  ) : (
+                    <p className="muted">No blocked clients.</p>
+                  )}
+                </article>
               </div>
             </div>
-          )}
+          ) : null}
         </PageSection>
       ) : null}
 
@@ -335,8 +298,11 @@ export const PlatformDashboardPage = () => {
           {attentionItems.length ? (
             <ul className="dashboard-attention-list-items">
               {attentionItems.map((item) => (
-                <li key={item.key} className="panel">
-                  <p className="section-title">⚠️ {item.title}</p>
+                <li key={item.key} className="dashboard-attention-item">
+                  <div className="dashboard-attention-meta">
+                    <span className="dashboard-attention-flag">Needs action</span>
+                  </div>
+                  <p className="section-title">{item.title}</p>
                   <p className="muted">{item.reason}</p>
                   {item.route ? <Link to={item.route}>{item.actionLabel || 'Open'}</Link> : null}
                 </li>
@@ -359,7 +325,7 @@ export const PlatformDashboardPage = () => {
           <div className="dashboard-quick-actions-grid">
             {quickActions.map((action) => (
               <article className="panel" key={action.label}>
-                <p className="dashboard-action-icon" aria-hidden="true">{action.icon}</p>
+                <p className="dashboard-action-icon">{action.kicker}</p>
                 <p className="section-title">{action.label}</p>
                 <p className="muted">{action.helpText}</p>
                 <Link to={action.route}>Open</Link>

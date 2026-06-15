@@ -13,12 +13,12 @@ const EXPLICITLY_IGNORED_FILES = [
   'docs/features/DOCUMENTATION_AUDIT_SUMMARY.md',
   'docs/features/FIRM_SCOPED_ROUTING_COMPLETE.md',
 ];
-const WALKER_IGNORED_DIRS = new Set(['node_modules', '.git', 'dist']);
+const WALKER_IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', '.agents', '.github']);
 
 function collectMarkdownFiles(currentDir, files = [], rootDir = currentDir) {
   const entries = fs.readdirSync(currentDir);
   for (const entry of entries) {
-    if (WALKER_IGNORED_DIRS.has(entry)) {
+    if (WALKER_IGNORED_DIRS.has(entry) || entry.startsWith('.')) {
       continue;
     }
 

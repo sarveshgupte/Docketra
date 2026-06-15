@@ -17,32 +17,46 @@ function normalize(value) {
 }
 
 function getCanonicalDocketState(docket = {}) {
+  const status = normalize(docket.status);
+  if (status) {
+    if (TERMINAL_STATUS_MAP[status]) {
+      return TERMINAL_STATUS_MAP[status];
+    }
+
+    if (['QC_PENDING'].includes(status)) {
+      return 'IN_QC';
+    }
+
+    if (status === 'PENDING') {
+      return 'PENDED';
+    }
+
+    // QC outcome should NOT affect state mapping
+    // Only state and assignment should determine IN_PROGRESS
+    if (['ASSIGNED', 'IN_PROGRESS'].includes(status)) {
+      return 'IN_PROGRESS';
+    }
+
+    if (status === 'OPEN') {
+      return docket.assignedToXID ? 'IN_PROGRESS' : 'IN_WB';
+    }
+
+    const assignedToXID = String(docket.assignedToXID || '').trim();
+    if (assignedToXID) {
+      return 'IN_PROGRESS';
+    }
+
+    const queueType = normalize(docket.queueType);
+    if (queueType === 'PERSONAL') {
+      return 'IN_PROGRESS';
+    }
+
+    return 'IN_WB';
+  }
+
   const explicit = normalize(docket.state);
   if (CANONICAL_DOCKET_STATES.includes(explicit)) {
     return explicit;
-  }
-
-  const status = normalize(docket.status);
-  if (TERMINAL_STATUS_MAP[status]) {
-    return TERMINAL_STATUS_MAP[status];
-  }
-
-  if (['QC_PENDING'].includes(status)) {
-    return 'IN_QC';
-  }
-
-  if (status === 'PENDING') {
-    return 'PENDED';
-  }
-
-  // QC outcome should NOT affect state mapping
-  // Only state and assignment should determine IN_PROGRESS
-  if (['ASSIGNED', 'IN_PROGRESS'].includes(status)) {
-    return 'IN_PROGRESS';
-  }
-
-  if (status === 'OPEN') {
-    return docket.assignedToXID ? 'IN_PROGRESS' : 'IN_WB';
   }
 
   const assignedToXID = String(docket.assignedToXID || '').trim();

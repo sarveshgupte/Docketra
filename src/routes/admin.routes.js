@@ -129,7 +129,7 @@ router.patch('/users/:id/hierarchy', ...adminBaseAccess, requirePrimaryAdmin, au
 router.get('/firm-settings', ...adminBaseAccess, authorizeFirmPermission(['FIRM_SETTINGS_MANAGE', 'ADMIN_STATS']), userReadLimiter, getFirmSettings);
 router.get('/firm-settings/activity', ...adminBaseAccess, authorizeFirmPermission(['FIRM_SETTINGS_MANAGE', 'ADMIN_STATS']), userReadLimiter, getFirmSettingsActivity);
 router.get('/settings/audit', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getSettingsAudit);
-router.put('/firm-settings', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission(['FIRM_SETTINGS_MANAGE', 'ADMIN_STATS']), userWriteLimiter, updateFirmSettings);
+router.put('/firm-settings', ...adminBaseAccess, authorizeFirmPermission(['FIRM_SETTINGS_MANAGE', 'ADMIN_STATS']), userWriteLimiter, updateFirmSettings);
 router.get('/cms-intake-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getCmsIntakeSettings);
 router.put('/cms-intake-settings', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('ADMIN_STATS'), userWriteLimiter, updateCmsIntakeSettings);
 router.post('/cms-intake-settings/intake-api-key/regenerate', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('ADMIN_STATS'), sensitiveLimiter, regenerateCmsIntakeApiKey);

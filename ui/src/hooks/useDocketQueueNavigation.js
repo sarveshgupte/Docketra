@@ -18,7 +18,7 @@ export const useDocketQueueNavigation = ({ location, firmSlug }) => {
     if (isFirmAppRoute(fromState)) return fromState;
     const fromQuery = parseReturnToFromQuery(location.search || '');
     if (fromQuery) return fromQuery;
-    return ROUTES.CASES(firmSlug);
+    return ROUTES.TASK_MANAGER(firmSlug);
   }, [firmSlug, location.search, location.state?.returnTo]);
 
   const hasPrev = sourceList.length > 0 && sourceIndex > 0;

@@ -46,7 +46,6 @@ for (const allowedRoute of [
   'path="worklist"',
   'path="global-worklist"',
   'path="qc-queue"',
-  'path="dockets"',
   'path="dockets/create"',
   'path="dockets/:caseId"',
   'path="clients"',

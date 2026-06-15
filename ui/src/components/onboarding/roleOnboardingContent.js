@@ -144,7 +144,7 @@ export const buildRoleTourSteps = (role, firmSlug) => {
       description: 'Use Dockets to create, search, and review operational records with full status and audit trail.',
       selector: '[data-tour-anchor="recent-dockets"]',
       actionLabel: 'Open dockets',
-      route: safeRoute(ROUTES.CASES(firmSlug)),
+      route: safeRoute(ROUTES.TASK_MANAGER(firmSlug)),
     },
   ];
 

@@ -120,7 +120,7 @@ const createPayload = (form) => {
     ? {
       frequency: recurrenceFrequency,
       interval: Math.max(1, Number(form.recurrenceInterval) || 1),
-      untilDate: form.recurrenceUntil ? new Date(`${form.recurrenceUntil}T00:00:00`) : null,
+      ...(form.recurrenceUntil ? { untilDate: new Date(`${form.recurrenceUntil}T00:00:00`) } : {}),
     }
     : undefined;
 
@@ -256,6 +256,7 @@ export const ComplianceCalendarPage = () => {
   const [editingEntryId, setEditingEntryId] = useState('');
   const [form, setForm] = useState(() => getInitialFormState(new Date()));
   const [message, setMessage] = useState({ tone: '', message: '' });
+  const [formMessage, setFormMessage] = useState({ tone: '', message: '' });
   const [error, setError] = useState('');
 
   const loadEntries = async () => {
@@ -330,10 +331,13 @@ export const ComplianceCalendarPage = () => {
     { label: 'Recurring', value: recurringCount, helpText: 'Entries with repeat schedules.' },
   ]), [calendarEntries.length, dueSoonCount, overdueCount, reminderCount, recurringCount]);
 
-  const resetForm = () => {
+  const resetForm = ({ preserveMessage = false } = {}) => {
     setEditingEntryId('');
     setForm(getInitialFormState(selectedDate));
-    setMessage({ tone: '', message: '' });
+    if (!preserveMessage) {
+      setMessage({ tone: '', message: '' });
+    }
+    setFormMessage({ tone: '', message: '' });
   };
 
   const handleEdit = (entry) => {
@@ -353,6 +357,7 @@ export const ComplianceCalendarPage = () => {
       recurrenceInterval: String(entry.recurrencePattern?.interval || 1),
       recurrenceUntil: toInputDate(entry.recurrencePattern?.untilDate || ''),
     });
+    setFormMessage({ tone: '', message: '' });
   };
 
   const handleEventSelect = (event) => {
@@ -367,6 +372,7 @@ export const ComplianceCalendarPage = () => {
         dueDate: toInputDate(start),
       }));
     }
+    setFormMessage({ tone: '', message: '' });
   };
 
   const handleSubmit = async (event) => {
@@ -375,24 +381,38 @@ export const ComplianceCalendarPage = () => {
 
     const payload = createPayload(form);
     if (!payload.title || !payload.dueDate) {
-      setMessage({ tone: 'error', message: 'Title and date are required.' });
+      setFormMessage({ tone: 'error', message: 'Add a title and date.' });
+      return;
+    }
+
+    if (
+      form.recurrenceFrequency !== 'none'
+      && form.recurrenceUntil
+      && new Date(`${form.recurrenceUntil}T00:00:00`) < new Date(payload.dueDate)
+    ) {
+      setFormMessage({ tone: 'error', message: 'Repeat-until date must be after the entry date.' });
       return;
     }
 
     setSavingEntry(true);
     setMessage({ tone: '', message: '' });
+    setFormMessage({ tone: '', message: '' });
     try {
       if (editingEntryId) {
         await calendarApi.updateEntry(editingEntryId, payload);
         setMessage({ tone: 'success', message: 'Calendar entry updated.' });
+        setFormMessage({ tone: 'success', message: 'Entry updated.' });
       } else {
         await calendarApi.createEntry(payload);
         setMessage({ tone: 'success', message: 'Calendar entry added.' });
+        setFormMessage({ tone: 'success', message: 'Entry added.' });
       }
       await loadEntries();
-      resetForm();
+      resetForm({ preserveMessage: true });
     } catch (saveError) {
-      setMessage({ tone: 'error', message: saveError?.message || 'Unable to save the calendar entry.' });
+      const nextMessage = saveError?.message || 'Unable to save the entry.';
+      setMessage({ tone: 'error', message: nextMessage });
+      setFormMessage({ tone: 'error', message: nextMessage });
     } finally {
       setSavingEntry(false);
     }
@@ -439,15 +459,15 @@ export const ComplianceCalendarPage = () => {
         <div className="compliance-calendar-grid">
           <PageSection
             title="Month view"
-            description="Click an entry to edit it. Primary admins and admins can create and update entries; managers and users can only view."
+            description="View and edit shared calendar entries."
             className="compliance-calendar-panel"
           >
             <div className="compliance-calendar-panel__body">
               <div className="compliance-calendar-toolbar">
                 <p className="compliance-calendar-note">
                   {canEditCalendar
-                    ? 'Select a day to start a new entry, or pick an existing event to edit it.'
-                    : 'Read-only view for your role. Admins manage the schedule.'}
+                    ? 'Pick a day to add an entry, or open one to edit.'
+                    : 'Read-only view.'}
                 </p>
                 <div className="compliance-calendar-toolbar__summary">
                   <span>{monthEvents.length} visible entries</span>
@@ -461,7 +481,7 @@ export const ComplianceCalendarPage = () => {
                 ) : monthEvents.length === 0 ? (
                   <EmptyState
                     title="No entries for this month"
-                    body="Add the first event below, or clear filters to widen the list."
+                    body="Add your first entry below."
                     boxed
                   />
                 ) : (
@@ -495,11 +515,14 @@ export const ComplianceCalendarPage = () => {
 
           <PageSection
             title="Add entry"
-            description="Keep the shared calendar simple: title, date, reminder, and repeat settings."
+            description="Add a shared event or reminder."
             className="compliance-calendar-panel"
           >
             {canEditCalendar ? (
               <form onSubmit={handleSubmit} className="compliance-calendar-panel__body">
+                {formMessage.message ? (
+                  <StatusMessageStack messages={[formMessage]} />
+                ) : null}
                 <div className="compliance-calendar-form-grid">
                   <Input
                     label="Title"
@@ -530,7 +553,7 @@ export const ComplianceCalendarPage = () => {
                     max="30"
                     value={form.reminderDaysBefore}
                     onChange={(event) => setForm((current) => ({ ...current, reminderDaysBefore: event.target.value }))}
-                    helpText="Leave blank for no reminder."
+                    helpText="Blank means no reminder."
                   />
                 </div>
 
@@ -552,7 +575,7 @@ export const ComplianceCalendarPage = () => {
                   rows={4}
                   value={form.description}
                   onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-                  helpText="Keep the note short. It appears with the entry details."
+                  helpText="Optional."
                 />
 
                 <div className="compliance-calendar-form-grid compliance-calendar-form-grid--three">
@@ -570,7 +593,7 @@ export const ComplianceCalendarPage = () => {
                     value={form.recurrenceInterval}
                     onChange={(event) => setForm((current) => ({ ...current, recurrenceInterval: event.target.value }))}
                     disabled={form.recurrenceFrequency === 'none'}
-                    helpText="Used for recurring events."
+                    helpText="For recurring entries."
                   />
                   <Input
                     label="Repeat until"
@@ -578,7 +601,7 @@ export const ComplianceCalendarPage = () => {
                     value={form.recurrenceUntil}
                     onChange={(event) => setForm((current) => ({ ...current, recurrenceUntil: event.target.value }))}
                     disabled={form.recurrenceFrequency === 'none'}
-                    helpText="Repetition ends on this date."
+                    helpText="Optional end date."
                   />
                 </div>
 

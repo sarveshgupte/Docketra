@@ -38,7 +38,7 @@ assert.ok(clientsSource.includes('title="Could not load clients"'), 'Clients pag
 assert.ok(clientsSource.includes('actionLabel="Retry"'), 'Clients page should provide retry guidance for error recovery');
 
 const routesSource = read('src/routes/ProtectedRoutes.jsx');
-for (const route of ['path="clients"', 'path="dockets"', 'path="dockets/:caseId"', 'path="profile"', 'path="compliance-control"', 'path="compliance-calendar"', 'path="crm/leads"', 'path="crm/clients/:crmClientId"', 'path="admin/hierarchy"', 'path="admin"', 'path="settings/firm"', 'path="settings/work"', 'path="storage-settings"', 'path="ai-settings"']) {
+for (const route of ['path="clients"', 'path="dockets/:caseId"', 'path="dockets/create"', 'path="profile"', 'path="compliance-control"', 'path="compliance-calendar"', 'path="crm/leads"', 'path="crm/clients/:crmClientId"', 'path="admin/hierarchy"', 'path="admin"', 'path="settings/firm"', 'path="settings/work"', 'path="storage-settings"', 'path="ai-settings"']) {
   assert.ok(routesSource.includes(route), `Protected routes should keep migrated route registered: ${route}`);
 }
 

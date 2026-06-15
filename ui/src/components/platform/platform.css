@@ -10,25 +10,25 @@
   --sidebar-width: 220px;
   --sidebar-collapsed-width: 56px;
   --topbar-height: 52px;
-  --panel-radius: 12px;
-  --panel-border: #e5e7eb;
+  --panel-radius: var(--dt-radius-card, 12px);
+  --panel-border: var(--dt-border, #e5e7eb);
   --panel-padding: 14px 16px;
   --control-height: 30px;
 
   /* Core palette */
-  --color-ink: #111111;
-  --color-ink-secondary: #374151;
-  --color-ink-muted: #6b7280;
-  --color-ink-disabled: #e5e7eb;
-  --color-border: #e5e7eb;
-  --color-border-strong: #d1d5db;
-  --color-surface: #ffffff;
-  --color-surface-subtle: #f8f9fa;
-  --color-surface-muted: #f5f5f5;
-  --color-bg: #ffffff;
-  --color-accent: #111111;
-  --color-accent-subtle: #f5f5f5;
-  --color-accent-hover: #242424;
+  --color-ink: var(--dt-text, #111111);
+  --color-ink-secondary: var(--dt-text-secondary, #374151);
+  --color-ink-muted: var(--dt-text-muted, #6b7280);
+  --color-ink-disabled: var(--dt-text-disabled, #e5e7eb);
+  --color-border: var(--dt-border, #e5e7eb);
+  --color-border-strong: var(--dt-border-strong, #d1d5db);
+  --color-surface: var(--dt-surface, #ffffff);
+  --color-surface-subtle: var(--dt-surface-subtle, #f8f9fa);
+  --color-surface-muted: var(--dt-surface-muted, #f5f5f5);
+  --color-bg: var(--dt-bg, #ffffff);
+  --color-accent: var(--dt-accent, #111111);
+  --color-accent-subtle: var(--dt-accent-subtle, #f5f5f5);
+  --color-accent-hover: var(--dt-accent-hover, #242424);
   --color-focus: rgba(17, 17, 17, 0.12);
 }
 
@@ -40,8 +40,8 @@
   min-height: 100vh;
   background: var(--color-bg);
   color: var(--color-ink-secondary);
-  --panel-radius: 8px;
-  --panel-border: #e8e6e0;
+  --panel-radius: var(--dt-radius-control, 8px);
+  --panel-border: var(--dt-border, #e8e6e0);
   --panel-padding: 14px 16px;
   --control-height: 30px;
   --sidebar-width: 220px;
@@ -280,6 +280,7 @@
   background: var(--color-surface-muted, #f5f5f5);
   color: var(--color-ink, #111111);
   font-weight: 600;
+  box-shadow: inset 0 0 0 1px rgba(17, 17, 17, 0.06);
 }
 
 .platform__nav-link.is-active .platform__nav-link-icon {
@@ -339,10 +340,10 @@
   top: 0;
   z-index: 30;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  min-height: var(--topbar-height);
+  min-height: 60px;
   padding: 8px 20px;
   border-bottom: 1px solid #e8e6e0;
   background: rgba(255, 255, 255, 0.97);
@@ -353,31 +354,26 @@
 .platform__title-block {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
   min-width: 0;
   flex: 1;
   max-width: min(640px, 55vw);
 }
 
 .platform__topbar h1 {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1.25;
   margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   color: #1a1916;
 }
 
 .platform__topbar p {
   margin: 0;
-  font-size: 11px;
+  font-size: 12px;
   color: #7a7870;
-  line-height: 1.35;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.45;
+  max-width: 70ch;
 }
 
 .platform__breadcrumbs {
@@ -393,10 +389,10 @@
 .platform__module-label {
   display: inline-flex;
   font-size: 10px;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #b0aea8;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* ── Topbar actions ─────────────────────────────────────────────────────── */
@@ -1393,6 +1389,10 @@
   gap: 10px;
 }
 
+.tile-grid--smart {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
 .module-tile {
   display: grid;
   gap: 4px;
@@ -1419,6 +1419,60 @@
 .module-tile span {
   font-size: 12px;
   color: #7a7870;
+}
+
+.module-tile--smart {
+  gap: 6px;
+  background: #ffffff;
+  padding: 14px 15px;
+}
+
+.module-tile--smart:hover {
+  border-color: #1f4f93;
+  background: #f8fbff;
+  box-shadow: 0 0 0 3px rgba(31, 79, 147, 0.08);
+}
+
+.module-tile--live {
+  border-color: #d8e4f3;
+  background: linear-gradient(180deg, #fbfdff 0%, #f5f9ff 100%);
+}
+
+.module-tile__eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #7a7870;
+  font-weight: 600;
+}
+
+.task-manager-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr);
+  gap: 12px;
+}
+
+.task-manager-hero__primary,
+.task-manager-hero__secondary {
+  display: grid;
+  gap: 10px;
+}
+
+.task-manager-kicker {
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a7870;
+  font-weight: 600;
+}
+
+.task-manager-hero .stat-row {
+  margin-bottom: 0;
+}
+
+.task-manager-hero__primary .section-title {
+  font-size: 15px;
 }
 
 /* ── Filter bar ────────────────────────────────────────────────────────── */
@@ -2476,6 +2530,14 @@
   grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
   gap: 12px;
 }
+.dashboard-card-kicker {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
 .dashboard-priority-card {
   display: grid;
   gap: 10px;
@@ -2514,6 +2576,18 @@
   border: 1px solid rgba(226, 232, 240, 0.9);
   font-size: 18px;
   margin: 0;
+}
+.dashboard-action-icon {
+  width: auto;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .dashboard-priority-card--primary .dashboard-card-icon {
   background: rgba(255, 255, 255, 0.12);
@@ -2562,6 +2636,30 @@
   padding: 0;
   display: grid;
   gap: 10px;
+}
+.dashboard-attention-item {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid #e8e6e0;
+  border-radius: 12px;
+  background: #ffffff;
+}
+.dashboard-attention-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.dashboard-attention-flag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 11px;
+  font-weight: 700;
 }
 .dashboard-quick-actions-grid {
   display: grid;
@@ -2724,7 +2822,7 @@ select:focus-visible {
   }
 
   .platform__topbar {
-    min-height: 52px;
+    min-height: 56px;
     padding: 8px 14px;
     gap: 10px;
   }
@@ -2809,6 +2907,7 @@ select:focus-visible {
     overflow-x: auto;
     padding: 6px 10px;
     gap: 2px;
+    scroll-snap-type: x proximity;
   }
 
   .platform__nav-section {
@@ -2818,9 +2917,10 @@ select:focus-visible {
   .platform__nav-link {
     flex-shrink: 0;
     justify-content: center;
-    height: auto;
-    padding: 5px 8px;
+    min-height: 40px;
+    padding: 8px 10px;
     gap: 5px;
+    scroll-snap-align: start;
   }
 
   .platform__nav-link-label {
@@ -2834,6 +2934,11 @@ select:focus-visible {
   .platform__topbar {
     align-items: flex-start;
     flex-wrap: wrap;
+  }
+
+  .platform__topbar h1,
+  .platform__topbar p {
+    white-space: normal;
   }
 
   .platform__actions {
@@ -2893,6 +2998,10 @@ select:focus-visible {
 
   .stat-row__item:last-child {
     border-bottom: none;
+  }
+
+  .task-manager-hero {
+    grid-template-columns: 1fr;
   }
 
   .intelligence-recommendation-card,

@@ -6,6 +6,7 @@ const {
   reassign,
   reopenDuePending,
 } = require('../services/docketWorkflow.service');
+const mongoose = require('mongoose');
 const Case = require('../models/Case.model');
 const Team = require('../models/Team.model');
 const User = require('../models/User.model');
@@ -13,10 +14,43 @@ const { logCaseHistory } = require('../services/auditLog.service');
 const { canAssignFromWorkbasket, canMoveBetweenWorklists, canMoveDocketBetweenQueues, getFirmUserByXid } = require('../services/workbasketAuthorization.service');
 const { isValidTransition: isValidLifecycleTransition } = require('../domain/docketLifecycle');
 
+const getCaseNumberCandidates = (id) => {
+  if (!id) return [];
+  const normalized = String(id).trim().replace(/[_\s]+/g, '-').toUpperCase();
+  const candidates = [String(id)];
+  
+  const prefixMatch = normalized.match(/^(CASE|DOCKET)-(.+)$/i);
+  if (prefixMatch) {
+    const prefix = prefixMatch[1].toUpperCase();
+    const bare = prefixMatch[2];
+    const otherPrefix = prefix === 'CASE' ? 'DOCKET' : 'CASE';
+    candidates.push(`${prefix}-${bare}`, `${otherPrefix}-${bare}`, bare);
+  } else {
+    candidates.push(normalized, `CASE-${normalized}`, `DOCKET-${normalized}`);
+  }
+
+  return [...new Set(candidates)];
+};
+
+const makeDocketQuery = (docketId, firmId) => {
+  const candidates = getCaseNumberCandidates(docketId);
+  const query = {
+    firmId,
+    $or: [
+      { caseId: { $in: candidates } },
+      { caseNumber: { $in: candidates } },
+    ],
+  };
+  if (mongoose.Types.ObjectId.isValid(docketId)) {
+    query.$or.push({ caseInternalId: docketId });
+    query.$or.push({ _id: docketId });
+  }
+  return query;
+};
+
 function isAdmin(req) {
   return ['ADMIN','PRIMARY_ADMIN'].includes(String(req.user?.role || '').toUpperCase());
 }
-
 
 function isValidTransition(fromState, toState) {
   return isValidLifecycleTransition(fromState, toState);
@@ -39,7 +73,8 @@ async function assignDocket(req, res) {
     const { caseId } = req.params;
     const assigneeXID = req.body?.assigneeXID || req.user?.xID;
 
-    const docket = await Case.findOne({ caseId, firmId: req.user.firmId }).select('caseId ownerTeamId workbasketId status state assignedToXID').lean();
+    const query = makeDocketQuery(caseId, req.user.firmId);
+    const docket = await Case.findOne(query).select('caseId ownerTeamId workbasketId status state assignedToXID').lean();
     if (!docket) return res.status(404).json({ success: false, message: 'Docket not found' });
     const assignee = await getFirmUserByXid(req.user.firmId, assigneeXID);
     if (!assignee) return res.status(404).json({ success: false, message: 'Assignee not found' });
@@ -120,7 +155,8 @@ async function reassignDocket(req, res) {
 
     const { caseId } = req.params;
     const { assigneeXID, comment } = req.body || {};
-    const docket = await Case.findOne({ caseId, firmId: req.user.firmId }).select('caseId ownerTeamId workbasketId status state assignedToXID').lean();
+    const query = makeDocketQuery(caseId, req.user.firmId);
+    const docket = await Case.findOne(query).select('caseId ownerTeamId workbasketId status state assignedToXID').lean();
     if (!docket) return res.status(404).json({ success: false, message: 'Docket not found' });
     const assignee = await getFirmUserByXid(req.user.firmId, assigneeXID);
     if (!assignee) return res.status(404).json({ success: false, message: 'Assignee not found' });
@@ -147,7 +183,8 @@ async function moveDocket(req, res) {
   try {
     const { caseId } = req.params;
     const { destinationType, assigneeXID, destinationId, note } = req.body || {};
-    const docket = await Case.findOne({ caseId, firmId: req.user.firmId }).select('caseId firmId ownerTeamId workbasketId assignedToXID status state').lean();
+    const query = makeDocketQuery(caseId, req.user.firmId);
+    const docket = await Case.findOne(query).select('caseId firmId ownerTeamId workbasketId assignedToXID status state').lean();
     if (!docket) return res.status(404).json({ success: false, message: 'Docket not found' });
 
     let updates = {};
@@ -213,7 +250,7 @@ async function moveDocket(req, res) {
     }
 
     const updated = await Case.findOneAndUpdate(
-      { caseId, firmId: req.user.firmId },
+      makeDocketQuery(caseId, req.user.firmId),
       { $set: updates },
       { new: true },
     );

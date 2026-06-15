@@ -574,7 +574,7 @@ export const DashboardPage = () => {
       value: stats.dueInSevenDays,
       subtitle: 'Amber Risk Band',
       subtitleClassName: 'text-amber-600',
-      onClick: () => navigate(`${safeRoute(ROUTES.CASES(firmSlug))}?approvalStatus=PENDING`),
+      onClick: () => navigate(ROUTES.TASK_MANAGER(firmSlug)),
     },
     {
       title: isAdmin ? 'Awaiting Internal Review' : 'Awaiting My Review',
@@ -604,13 +604,13 @@ export const DashboardPage = () => {
       title: 'Filed Dockets',
       value: stats.adminFiledCases,
       subtitle: 'Archived dockets',
-      onClick: () => navigate(`${safeRoute(ROUTES.CASES(firmSlug))}?status=FILED`),
+      onClick: () => navigate(ROUTES.TASK_MANAGER(firmSlug)),
     },
     {
       title: 'All Resolved',
       value: stats.adminResolvedCases,
       subtitle: 'All executed dockets',
-      onClick: () => navigate(`${safeRoute(ROUTES.CASES(firmSlug))}?status=RESOLVED`),
+      onClick: () => navigate(ROUTES.TASK_MANAGER(firmSlug)),
     },
     {
       title: 'Unassigned',

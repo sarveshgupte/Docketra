@@ -12,9 +12,9 @@ const ROOT_MANIFEST_FILE = '.docketra-storage-root.json';
 
 class GoogleDriveService {
   buildCanonicalRootName(firm) {
-    const slug = String(firm?.slug || firm?.firmSlug || '').trim();
-    const suffix = slug || String(firm?._id || firm?.firmId || '');
-    return `Docketra — ${suffix}`;
+    const slug = String(firm?.slug || firm?.firmSlug || '').trim().toLowerCase();
+    const suffix = slug || String(firm?._id || firm?.firmId || '').toLowerCase();
+    return `docketra - ${suffix}`;
   }
 
   buildRootManifest({ firm, rootFolderId, createdAt = null }) {

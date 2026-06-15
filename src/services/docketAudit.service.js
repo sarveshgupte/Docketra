@@ -1,8 +1,11 @@
 const { createHash } = require('crypto');
 const DocketAuditLog = require('../models/DocketAuditLog.model');
 const DocketAudit = require('../models/DocketAudit.model');
+const log = require('../utils/log');
 
 const MAX_VALUE_LENGTH = 300;
+const isLiveSession = (session) => Boolean(session && !session.hasEnded);
+const isEndedSessionError = (error) => Boolean(error?.message && String(error.message).includes('session that has ended'));
 const AUDIT_EVENTS = Object.freeze({
   STATE_CHANGED: 'STATE_CHANGED',
   QC_ACTION: 'QC_ACTION',
@@ -131,7 +134,7 @@ async function logDocketEvent({
     metadata: normalizedMetadata,
   };
   payload.dedupeKey = buildDedupeKey(payload);
-  const created = await DocketAudit.create([payload], session ? { session } : undefined);
+  const created = await DocketAudit.create([payload], isLiveSession(session) ? { session } : undefined);
   return Array.isArray(created) ? created[0] : created;
 }
 
@@ -195,7 +198,7 @@ const createLog = async ({
           legacyAction: String(action || '').toUpperCase(),
           source: 'docket.audit.legacy_bridge',
         },
-        session,
+        session: isLiveSession(session) ? session : null,
       });
     } catch (_) {
       // Intentionally swallow canonical logging failures to avoid breaking existing workflows.
@@ -215,10 +218,19 @@ const createLog = async ({
       reasonCode: reasonCode || sanitizeValue(metadata)?.reasonCode || null,
       timestamp,
       dedupeKey: finalDedupeKey,
-    }], session ? { session } : {});
+    }], isLiveSession(session) ? { session } : {});
     return Array.isArray(created) ? created[0] : created;
   } catch (error) {
     if (error?.code === 11000) {
+      return null;
+    }
+    if (isEndedSessionError(error)) {
+      log.warn('[DOCKET_AUDIT] Skipped audit write on ended session', {
+        message: error.message,
+        docketId,
+        firmId,
+        action,
+      });
       return null;
     }
     throw error;

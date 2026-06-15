@@ -17,8 +17,8 @@ function expectRejectUnknown(schema, payload, label) {
 
 (function run() {
   // Admin strictness hardening
-  expectValid(adminSchemas['PATCH /clients/:clientId/status'].body, { status: 'ACTIVE' }, 'admin client status');
-  expectRejectUnknown(adminSchemas['PATCH /clients/:clientId/status'].body, { status: 'ACTIVE', actorXID: 'X999999' }, 'admin client status');
+  expectValid(adminSchemas['PATCH /clients/:clientId/status'].body, { isActive: true, verificationToken: 'token' }, 'admin client status');
+  expectRejectUnknown(adminSchemas['PATCH /clients/:clientId/status'].body, { isActive: true, verificationToken: 'token', actorXID: 'X999999' }, 'admin client status');
 
   expectValid(adminSchemas['POST /clients/:clientId/change-name'].body, { legalName: 'Acme LLP' }, 'admin client rename');
   expectRejectUnknown(adminSchemas['POST /clients/:clientId/change-name'].body, { legalName: 'Acme LLP', updatedBy: 'bad' }, 'admin client rename');

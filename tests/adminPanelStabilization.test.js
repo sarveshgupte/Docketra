@@ -5,6 +5,13 @@ const assert = require('assert');
 const Module = require('module');
 
 const originalLoad = Module._load;
+const noopLog = { error: () => {}, warn: () => {}, info: () => {} };
+const createClientProfileStorageMock = () => ({
+  clientProfileStorageService: {
+    getClientProfile: async () => null,
+    hydrateClientWithProfile: (client) => client,
+  },
+});
 
 const clearModule = (modulePath) => {
   try {
@@ -49,16 +56,26 @@ async function testClientReadsUseRepositoryAndReturnPlaintext() {
             isInternal: false,
           }];
         },
+        count: async () => 1,
       };
     }
     if (request === '../mappers/client.mapper') {
       return { mapClientResponse: (client) => client };
+    }
+    if (request === '../services/clientProfileStorage.service') {
+      return createClientProfileStorageMock();
+    }
+    if (request === '../services/firmMemoryScope.service') {
+      return { resolveFirmMemoryScope: () => ({ errorStatus: null, errorMessage: null, hasFirmWideAccess: true, scopedClientIds: [] }) };
     }
     if (request === '../utils/query.utils') {
       return { parseBooleanQuery: (value) => value === true || value === 'true' };
     }
     if (request === '../middleware/wrapWriteHandler') {
       return (fn) => fn;
+    }
+    if (request === '../utils/log') {
+      return noopLog;
     }
     if (
       request.includes('/models/')
@@ -104,16 +121,26 @@ async function testClientActiveOnlyQueryParsingStaysBooleanSafe() {
           capturedFilter = filter;
           return [];
         },
+        count: async () => 0,
       };
     }
     if (request === '../mappers/client.mapper') {
       return { mapClientResponse: (client) => client };
+    }
+    if (request === '../services/clientProfileStorage.service') {
+      return createClientProfileStorageMock();
+    }
+    if (request === '../services/firmMemoryScope.service') {
+      return { resolveFirmMemoryScope: () => ({ errorStatus: null, errorMessage: null, hasFirmWideAccess: true, scopedClientIds: [] }) };
     }
     if (request === '../utils/query.utils') {
       return { parseBooleanQuery: (value) => value === true || value === 'true' };
     }
     if (request === '../middleware/wrapWriteHandler') {
       return (fn) => fn;
+    }
+    if (request === '../utils/log') {
+      return noopLog;
     }
     if (
       request.includes('/models/')
@@ -160,16 +187,26 @@ async function testClientListingReturnsEmptyListWhenNoClientsExist() {
           repositoryCalled = true;
           return [];
         },
+        count: async () => 0,
       };
     }
     if (request === '../mappers/client.mapper') {
       return { mapClientResponse: (client) => client };
+    }
+    if (request === '../services/clientProfileStorage.service') {
+      return createClientProfileStorageMock();
+    }
+    if (request === '../services/firmMemoryScope.service') {
+      return { resolveFirmMemoryScope: () => ({ errorStatus: null, errorMessage: null, hasFirmWideAccess: true, scopedClientIds: [] }) };
     }
     if (request === '../utils/query.utils') {
       return { parseBooleanQuery: (value) => value === true || value === 'true' };
     }
     if (request === '../middleware/wrapWriteHandler') {
       return (fn) => fn;
+    }
+    if (request === '../utils/log') {
+      return noopLog;
     }
     if (
       request.includes('/models/')
@@ -215,16 +252,26 @@ async function testClientListingLogsStructuredFailures() {
           find: async () => {
             throw new Error('repository exploded');
           },
+          count: async () => 0,
         };
       }
       if (request === '../mappers/client.mapper') {
         return { mapClientResponse: (client) => client };
+      }
+      if (request === '../services/clientProfileStorage.service') {
+        return createClientProfileStorageMock();
+      }
+      if (request === '../services/firmMemoryScope.service') {
+        return { resolveFirmMemoryScope: () => ({ errorStatus: null, errorMessage: null, hasFirmWideAccess: true, scopedClientIds: [] }) };
       }
       if (request === '../utils/query.utils') {
         return { parseBooleanQuery: (value) => value === true || value === 'true' };
       }
       if (request === '../middleware/wrapWriteHandler') {
         return (fn) => fn;
+      }
+      if (request === '../utils/log') {
+        return { error: (...args) => console.error(...args), warn: () => {}, info: () => {} };
       }
       if (
         request.includes('/models/')
@@ -256,7 +303,7 @@ async function testClientListingLogsStructuredFailures() {
     assert.strictEqual(logged[0][1].userId, 'user-1');
     assert.strictEqual(logged[0][1].route, '/api/clients?activeOnly=true');
     assert.deepStrictEqual(logged[0][1].query, { activeOnly: 'true' });
-    assert.strictEqual(logged[0][1].error, 'repository exploded');
+    assert.strictEqual(logged[0][1].error, 'Internal server error');
     assert.match(logged[0][1].stack, /repository exploded/);
     console.log('  ✓ client listing logs structured context when repository access fails');
   } finally {
@@ -285,11 +332,20 @@ async function testDefaultClientCannotBeDeactivated() {
     if (request === '../mappers/client.mapper') {
       return { mapClientResponse: (client) => client };
     }
+    if (request === '../services/clientProfileStorage.service') {
+      return createClientProfileStorageMock();
+    }
+    if (request === '../services/firmMemoryScope.service') {
+      return { resolveFirmMemoryScope: () => ({ errorStatus: null, errorMessage: null, hasFirmWideAccess: true, scopedClientIds: [] }) };
+    }
     if (request === '../utils/query.utils') {
       return { parseBooleanQuery: (value) => value === true || value === 'true' };
     }
     if (request === '../middleware/wrapWriteHandler') {
       return (fn) => fn;
+    }
+    if (request === '../utils/log') {
+      return noopLog;
     }
     if (
       request.includes('/models/')
@@ -360,6 +416,9 @@ async function testStorageGateBlocksUnavailableProviderMode() {
     if (request === '../middleware/wrapWriteHandler') {
       return (fn) => fn;
     }
+    if (request === '../utils/log') {
+      return { error: () => {}, warn: () => {}, info: () => {} };
+    }
     if (
       request.includes('/models/')
       || request.includes('/services/')
@@ -373,6 +432,7 @@ async function testStorageGateBlocksUnavailableProviderMode() {
   clearModule('../src/controllers/admin.controller');
   const { updateStorageConfig } = require('../src/controllers/admin.controller');
   const req = {
+    ownershipFirmId: 'firm-1',
     user: { firmId: 'firm-1', xID: 'X000001' },
     body: { mode: 'firm_connected', provider: 'google_drive' },
   };

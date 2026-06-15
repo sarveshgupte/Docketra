@@ -1,11 +1,46 @@
 const { randomUUID } = require('crypto');
+const mongoose = require('mongoose');
 const Case = require('../models/Case.model');
 const docketAuditService = require('./docketAudit.service');
 const {
   toDocketState,
   toPersistenceState,
 } = require('../domain/docket/docketStateMachine');
-const { isValidTransition, toLifecycleFromStatus } = require('../domain/docketLifecycle');
+const { isValidTransition, toLifecycleFromStatus, normalizeLifecycle } = require('../domain/docketLifecycle');
+
+const getCaseNumberCandidates = (id) => {
+  if (!id) return [];
+  const normalized = String(id).trim().replace(/[_\s]+/g, '-').toUpperCase();
+  const candidates = [String(id)];
+  
+  const prefixMatch = normalized.match(/^(CASE|DOCKET)-(.+)$/i);
+  if (prefixMatch) {
+    const prefix = prefixMatch[1].toUpperCase();
+    const bare = prefixMatch[2];
+    const otherPrefix = prefix === 'CASE' ? 'DOCKET' : 'CASE';
+    candidates.push(`${prefix}-${bare}`, `${otherPrefix}-${bare}`, bare);
+  } else {
+    candidates.push(normalized, `CASE-${normalized}`, `DOCKET-${normalized}`);
+  }
+
+  return [...new Set(candidates)];
+};
+
+const makeDocketQuery = (docketId, firmId) => {
+  const candidates = getCaseNumberCandidates(docketId);
+  const query = {
+    firmId,
+    $or: [
+      { caseId: { $in: candidates } },
+      { caseNumber: { $in: candidates } },
+    ],
+  };
+  if (mongoose.Types.ObjectId.isValid(docketId)) {
+    query.$or.push({ caseInternalId: docketId });
+    query.$or.push({ _id: docketId });
+  }
+  return query;
+};
 
 async function transitionDocket(docketId, newState, userId, options = {}) {
   const {
@@ -30,7 +65,8 @@ async function transitionDocket(docketId, newState, userId, options = {}) {
     throw err;
   }
 
-  const docket = await Case.findOne({ caseId: docketId, firmId }).lean();
+  const query = makeDocketQuery(docketId, firmId);
+  const docket = await Case.findOne(query).lean();
   if (!docket) {
     const err = new Error('Docket not found');
     err.statusCode = 404;
@@ -45,8 +81,8 @@ async function transitionDocket(docketId, newState, userId, options = {}) {
 
   const fromState = toDocketState(docket.status);
   const toState = toDocketState(newState);
-  const currentState = docket.lifecycle;
-  const nextState = toLifecycleFromStatus(newState);
+  const currentState = normalizeLifecycle(docket.lifecycle);
+  const nextState = normalizeLifecycle(toLifecycleFromStatus(newState));
 
   if (toState === 'PENDING' && !reason) {
     const err = new Error('PENDING transition requires reason');
@@ -69,10 +105,12 @@ async function transitionDocket(docketId, newState, userId, options = {}) {
   const expected = Number.isInteger(expectedVersion) ? expectedVersion : currentVersion;
 
   const updateFilter = {
-    caseId: docketId,
-    firmId,
-    version: expected,
+    _id: docket._id,
   };
+  updateFilter.$or = [{ version: expected }];
+  if (expected === 0) {
+    updateFilter.$or.push({ version: { $exists: false } });
+  }
 
   const update = {
     $set: {

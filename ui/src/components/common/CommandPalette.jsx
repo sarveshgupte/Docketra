@@ -15,6 +15,7 @@ export const CommandPalette = ({
 }) => {
   const [internalQuery, setInternalQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [pendingActionId, setPendingActionId] = useState(null);
   const inputRef = useRef(null);
   const itemRefs = useRef([]);
   const lastInteractionRef = useRef('mouse');
@@ -79,6 +80,7 @@ export const CommandPalette = ({
   useEffect(() => {
     if (!isOpen) {
       setActiveIndex(0);
+      setPendingActionId(null);
       return;
     }
 
@@ -86,10 +88,23 @@ export const CommandPalette = ({
     inputRef.current?.select();
   }, [isOpen]);
 
-  const executeCommand = (command) => {
+  const executeCommand = async (command) => {
     if (!command) return;
-    command.action?.();
+    await Promise.resolve(command.action?.());
     onClose?.();
+  };
+
+  const executeSecondaryAction = async (command) => {
+    if (!command?.secondaryAction?.action) return;
+    setPendingActionId(command.id);
+    try {
+      await Promise.resolve(command.secondaryAction.action());
+      if (command.secondaryAction.closeOnSelect !== false) {
+        onClose?.();
+      }
+    } finally {
+      setPendingActionId(null);
+    }
   };
 
   const handleInputKeyDown = (event) => {
@@ -109,7 +124,11 @@ export const CommandPalette = ({
     if (event.key === 'Enter') {
       if (!visibleItems[activeIndex]) return;
       event.preventDefault();
-      executeCommand(visibleItems[activeIndex]);
+      if (event.altKey && visibleItems[activeIndex]?.secondaryAction?.action) {
+        void executeSecondaryAction(visibleItems[activeIndex]);
+        return;
+      }
+      void executeCommand(visibleItems[activeIndex]);
       return;
     }
     if (event.key === 'Escape') {
@@ -186,7 +205,7 @@ export const CommandPalette = ({
                             itemRefs.current[visibleIndex] = element;
                           }}
                           className={`command-palette__item ${active ? 'command-palette__item--active' : ''}`}
-                          onClick={() => executeCommand(command)}
+                          onClick={() => { void executeCommand(command); }}
                           onMouseEnter={() => {
                             lastInteractionRef.current = 'mouse';
                             setActiveIndex(visibleIndex);
@@ -198,7 +217,30 @@ export const CommandPalette = ({
                             <span className="command-palette__item-label">{command.label}</span>
                             {command.description ? <span className="command-palette__item-description">{command.description}</span> : null}
                           </span>
-                          {command.shortcut ? <kbd className="command-palette__item-shortcut">{command.shortcut}</kbd> : null}
+                          <span className="command-palette__item-affordances">
+                            {Array.isArray(command.meta) && command.meta.length > 0
+                              ? command.meta.map((meta) => (
+                                <span key={`${command.id}-${meta}`} className="command-palette__item-meta">
+                                  {meta}
+                                </span>
+                              ))
+                              : null}
+                            {command.secondaryAction?.label ? (
+                              <button
+                                type="button"
+                                className="command-palette__item-secondary"
+                                disabled={pendingActionId === command.id}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void executeSecondaryAction(command);
+                                }}
+                                aria-label={command.secondaryAction.ariaLabel || command.secondaryAction.label}
+                              >
+                                {pendingActionId === command.id ? 'Pulling…' : command.secondaryAction.label}
+                              </button>
+                            ) : null}
+                            {command.shortcut ? <kbd className="command-palette__item-shortcut">{command.shortcut}</kbd> : null}
+                          </span>
                         </button>
                       </li>
                     );

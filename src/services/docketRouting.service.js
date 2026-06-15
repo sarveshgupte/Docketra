@@ -11,6 +11,16 @@ const CaseStatus = require('../domain/case/caseStatus');
 const { NotificationTypes, createNotification } = require('../domain/notifications');
 const log = require('../utils/log');
 const CLOUD_NARRATIVE_TIMEOUT_MS = 1800;
+const emitNarrativeStorageWarnings = process.env.NARRATIVE_STORAGE_WARNINGS === 'true';
+const logNarrativeFallback = (message, context = {}) => {
+  if (emitNarrativeStorageWarnings) {
+    log.warn(message, context);
+    return;
+  }
+  if (typeof log.debug === 'function') {
+    log.debug(message, context);
+  }
+};
 
 const withTimeout = (promise, timeoutMs, label) => Promise.race([
   promise,
@@ -109,7 +119,11 @@ async function routeDocket({ docketId, actor, firmId, toTeamId, note }) {
     );
     storageMode = 'cloud_first';
   } catch (uploadError) {
-    log.warn(`[ROUTING_COMMENT] Cloud-first comment narrative storage failed to upload: ${uploadError.message}. Falling back to local MongoDB storage.`);
+    logNarrativeFallback('[ROUTING_COMMENT] Cloud-first comment narrative storage failed to upload; falling back to local MongoDB storage.', {
+      message: uploadError.message,
+      docketId: docket.caseId,
+      firmId,
+    });
   }
 
   const commentPayload = {

@@ -6,6 +6,18 @@ const log = require('../utils/log');
 const commentHistoryNarrativeStorage = require('./commentHistoryNarrativeStorage.service');
 const { sanitizeForAudit, buildSafeFilterFlags } = require('../utils/redaction');
 const CLOUD_NARRATIVE_TIMEOUT_MS = 1800;
+const emitNarrativeStorageWarnings = process.env.NARRATIVE_STORAGE_WARNINGS === 'true';
+const isLiveSession = (session) => Boolean(session && !session.hasEnded);
+const isEndedSessionError = (error) => Boolean(error?.message && String(error.message).includes('session that has ended'));
+const logNarrativeFallback = (message, context = {}) => {
+  if (emitNarrativeStorageWarnings) {
+    log.warn(message, context);
+    return;
+  }
+  if (typeof log.debug === 'function') {
+    log.debug(message, context);
+  }
+};
 const normalizeAuditTerminology = (value) => {
   const text = String(value || '');
   return text
@@ -97,7 +109,8 @@ const logCaseHistory = async ({
   session
 }) => {
   try {
-    const inTransaction = Boolean(session);
+    const activeSession = isLiveSession(session) ? session : null;
+    const inTransaction = Boolean(activeSession);
 
     // Validate required fields
     if (!caseId || !actionType || !description) {
@@ -135,7 +148,11 @@ const logCaseHistory = async ({
       );
       storageMode = 'cloud_first';
     } catch (uploadError) {
-      log.warn(`[AUDIT] Cloud-first narrative storage upload failed: ${uploadError.message}. Falling back to local MongoDB storage.`);
+      logNarrativeFallback('[AUDIT] Cloud-first narrative storage upload failed; falling back to local MongoDB storage.', {
+        message: uploadError.message,
+        caseId,
+        firmId,
+      });
     }
 
     // Build history entry
@@ -174,8 +191,7 @@ const logCaseHistory = async ({
       historyEntry.userAgent = getUserAgent(req);
     }
 
-    const options = session ? { session } : {};
-    const [entry] = await CaseHistory.create([historyEntry], options);
+    const [entry] = await CaseHistory.create([historyEntry], activeSession ? { session: activeSession } : {});
 
     try {
       await logDocketEvent({
@@ -190,7 +206,7 @@ const logCaseHistory = async ({
           source: 'auditLog.service.logCaseHistory',
           ...(metadata || {}),
         }),
-        session: session || null,
+        session: activeSession,
       });
     } catch (_) {
       // Preserve existing behavior: case history logging must remain non-blocking.
@@ -198,7 +214,9 @@ const logCaseHistory = async ({
 
     return entry || null;
   } catch (error) {
-    log.error('[AUDIT] Failed to create case history entry', {
+    const endedSession = isEndedSessionError(error);
+    const logMethod = endedSession ? 'warn' : 'error';
+    log[logMethod]('[AUDIT] Failed to create case history entry', {
       error: error.message,
       historyEntry: {
         caseId,
@@ -212,7 +230,7 @@ const logCaseHistory = async ({
         metadata: sanitizeForAudit(metadata),
       },
     });
-    if (session) {
+    if (isLiveSession(session) && !endedSession) {
       throw error;
     }
     // Don't throw - history logging is supplementary and must not block operations

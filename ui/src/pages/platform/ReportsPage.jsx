@@ -69,7 +69,7 @@ export const PlatformReportsPage = () => {
       moduleLabel="Reports / Operations Insights"
       title="Reports"
       subtitle="Productivity, quality, and workload insights for operational leadership"
-      actions={<Link to={ROUTES.DOCKETS(firmSlug)}>All Dockets</Link>}
+      actions={<Link to={ROUTES.TASK_MANAGER(firmSlug)}>Task Manager</Link>}
     >
       <StatusMessageStack
         messages={[

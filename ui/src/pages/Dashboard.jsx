@@ -178,7 +178,7 @@ export const DashboardPage = () => {
             </ul>
           </DashboardCard>
 
-          <DashboardCard title="My Dockets" actions={<Button variant="outline" onClick={() => navigate(ROUTES.CASES(firmSlug))}>View All</Button>}>
+          <DashboardCard title="My Dockets" actions={<Button variant="outline" onClick={() => navigate(ROUTES.TASK_MANAGER(firmSlug))}>View All</Button>}>
             <DocketList
               items={myDockets?.items || []}
               loading={dashboardSummaryQuery.isFetching}
@@ -187,7 +187,7 @@ export const DashboardPage = () => {
             />
           </DashboardCard>
 
-          <DashboardCard title="Overdue Dockets" actions={<Button variant="outline" onClick={() => navigate(ROUTES.CASES(firmSlug))}>View All</Button>}>
+          <DashboardCard title="Overdue Dockets" actions={<Button variant="outline" onClick={() => navigate(ROUTES.TASK_MANAGER(firmSlug))}>View All</Button>}>
             <DocketList
               items={overdueDockets?.items || []}
               loading={dashboardSummaryQuery.isFetching}
@@ -196,7 +196,7 @@ export const DashboardPage = () => {
             />
           </DashboardCard>
 
-          <DashboardCard title="Recent Activity" emoji="📌" actions={<Button variant="outline" onClick={() => navigate(ROUTES.CASES(firmSlug))}>View All</Button>}>
+          <DashboardCard title="Recent Activity" emoji="📌" actions={<Button variant="outline" onClick={() => navigate(ROUTES.TASK_MANAGER(firmSlug))}>View All</Button>}>
             <DocketList
               items={recentDockets?.items || []}
               loading={dashboardSummaryQuery.isFetching}
@@ -205,7 +205,7 @@ export const DashboardPage = () => {
             />
           </DashboardCard>
 
-          <DashboardCard title="Workbasket Load" actions={<Button variant="outline" onClick={() => navigate(ROUTES.CASES(firmSlug))}>View All</Button>}>
+          <DashboardCard title="Workbasket Load" actions={<Button variant="outline" onClick={() => navigate(ROUTES.TASK_MANAGER(firmSlug))}>View All</Button>}>
             <WorkbasketChart items={workbasketLoad} loading={dashboardSummaryQuery.isFetching} />
           </DashboardCard>
         </div>

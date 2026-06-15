@@ -15,10 +15,16 @@ assert.ok(hooksSource.includes("queryKey: ['platform', 'my-worklist', options.as
 assert.ok(hooksSource.includes('getEmployeeWorklist({ limit: 50, ...options })'), 'My worklist query should pass assigneeXID and filters to API.');
 assert.ok(worklistApiSource.includes('sortBy: filters.sortBy'), 'API client should include sortBy query param.');
 assert.ok(worklistApiSource.includes('sortOrder: filters.sortOrder'), 'API client should include sortOrder query param.');
+assert.ok(worklistApiSource.includes('status: filters.status'), 'API client should include status query param.');
 assert.ok(worklistApiSource.includes('search: filters.search'), 'API client should include search query param.');
 assert.ok(worklistApiSource.includes('category: filters.category'), 'API client should include category query param.');
 assert.ok(worklistApiSource.includes('subcategory: filters.subcategory'), 'API client should include subcategory query param.');
 assert.ok(worklistPage.includes('Show active dockets only'), 'Worklist should include active-only checkbox.');
-assert.ok(worklistPage.includes("activeOnly && status === 'PENDING' ? false : true"), 'Active-only checkbox should exclude pending records by default.');
+assert.ok(worklistPage.includes("const isPendingOrTerminal = ['PENDING', 'FILED', 'RESOLVED', 'FILED_LEGACY'].includes(status);"), 'Active-only filtering should classify pended and terminal rows explicitly.');
+assert.ok(worklistPage.includes("const activeStatus = (activeOnly && isPendingOrTerminal) ? false : true;"), 'Active-only checkbox should exclude non-active rows by default.');
+assert.ok(worklistPage.includes("return 'ASSIGNED,IN_PROGRESS,OPEN,PENDING';"), 'Unchecked active-only filter should request pended and assigned dockets together.');
+assert.ok(worklistPage.includes("const refreshToken = searchParams.get('refresh');"), 'Worklist should listen for explicit refresh tokens after pend redirect.');
+assert.ok(worklistPage.includes("nextParams.delete('refresh');"), 'Worklist should clear one-shot refresh tokens after refetching.');
+assert.equal(worklistPage.includes('FILED,RESOLVED'), false, 'Unchecked active-only filter should not pull terminal dockets into the worklist.');
 
 console.log('worklistViewingSelectorBehavior.test.mjs passed');

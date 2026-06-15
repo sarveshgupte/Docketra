@@ -13,6 +13,7 @@ const { getCanonicalDocketState } = require('../utils/docketStateMapper');
 const { canResolve, canFile } = require('../utils/docketStateTransitions');
 
 const LIFECYCLE_TRANSITIONS = Object.freeze({
+  ASSIGNED: Object.freeze([CaseStatus.PENDING, CaseStatus.QC_PENDING, CaseStatus.RESOLVED, CaseStatus.FILED]),
   OPEN: Object.freeze([CaseStatus.PENDING, CaseStatus.QC_PENDING, CaseStatus.RESOLVED, CaseStatus.FILED]),
   ACTIVE: Object.freeze([CaseStatus.PENDING, CaseStatus.QC_PENDING, CaseStatus.RESOLVED, CaseStatus.FILED]),
   IN_PROGRESS: Object.freeze([CaseStatus.PENDING, CaseStatus.QC_PENDING, CaseStatus.RESOLVED, CaseStatus.FILED]),
@@ -285,12 +286,14 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user, req = null) =
     reason: comment,
     statusPatch: {
       pendedByXID: user.xID,
+      pendingReason: comment.trim(),
       pendingUntil,
       reopenAt: pendingUntil,
       lastActionByXID: user.xID,
       lastActionAt: new Date(),
     },
     auditMetadata: {
+      reason: comment.trim(),
       pendingUntil,
       reopenAt: pendingUntil,
       commentLength: comment.length,

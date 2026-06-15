@@ -162,7 +162,7 @@ MANAGER-level read access is intentional per current route policy.
 
 | Method | Path | Permission | Behaviour |
 |---|---|---|---|
-| `PUT` | `/api/admin/firm-settings` | **PRIMARY_ADMIN only** | Updates firm + work settings; audits change |
+| `PUT` | `/api/admin/firm-settings` | `PRIMARY_ADMIN` / `ADMIN` with `FIRM_SETTINGS_MANAGE` | Updates firm + work settings; audits change |
 | `PUT` | `/api/admin/cms-intake-settings` | **PRIMARY_ADMIN only** | Updates CMS intake defaults |
 | `POST` | `/api/admin/cms-intake-settings/intake-api-key/regenerate` | **PRIMARY_ADMIN only** | Rotates the CMS intake API key; returns new plaintext key **once only** |
 | `PUT` | `/api/admin/storage` | **PRIMARY_ADMIN only** | Updates BYOS storage provider config |
@@ -172,7 +172,7 @@ MANAGER-level read access is intentional per current route policy.
 
 ADMIN (non-primary) attempting any of these mutations receives:
 ```json
-{ "success": false, "message": "Primary admin access required" }
+{ "success": false, "message": "Insufficient role permissions" }
 ```
 HTTP status `403`.
 

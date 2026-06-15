@@ -130,6 +130,11 @@ const downloadBulkTemplate = (type) => {
   window.URL.revokeObjectURL(url);
 };
 
+const isClientCurrentlyActive = (client) => {
+  if (typeof client?.isActive === 'boolean') return client.isActive;
+  return String(client?.status || '').trim().toUpperCase() === 'ACTIVE';
+};
+
 
 export const AdminPage = () => {
   const navigate = useNavigate();
@@ -178,6 +183,13 @@ export const AdminPage = () => {
   const [otpInput, setOtpInput] = useState('');
   const [unlockTargetUser, setUnlockTargetUser] = useState(null);
   const [otpLoading, setOtpLoading] = useState(false);
+  const [clientStatusOtpTarget, setClientStatusOtpTarget] = useState(null);
+  const [clientStatusOtpInput, setClientStatusOtpInput] = useState('');
+  const [clientStatusVerificationToken, setClientStatusVerificationToken] = useState('');
+  const [clientStatusOtpMessage, setClientStatusOtpMessage] = useState('');
+  const [sendingClientStatusOtp, setSendingClientStatusOtp] = useState(false);
+  const [verifyingClientStatusOtp, setVerifyingClientStatusOtp] = useState(false);
+  const [savingClientStatus, setSavingClientStatus] = useState(false);
   const [userLoadWarning, setUserLoadWarning] = useState('');
   const [workbasketLoadWarning, setWorkbasketLoadWarning] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -1339,22 +1351,98 @@ export const AdminPage = () => {
   };
 
   const handleToggleClientStatus = async (client) => {
-    // Use canonical status field (ACTIVE/INACTIVE)
-    const isCurrentlyActive = client.status === 'ACTIVE';
-    const newStatus = !isCurrentlyActive;
-    const action = newStatus ? 'activate' : 'deactivate';
-    
+    if (!client?.clientId) {
+      showToast('Client record is missing an ID.', 'error');
+      return;
+    }
+
+    const isProtectedClient = client.isDefaultClient || client.isSystemClient || client.isInternal;
+    if (isProtectedClient && isClientCurrentlyActive(client)) {
+      showToast('Default client cannot be deactivated.', 'error');
+      return;
+    }
+
+    setClientStatusOtpTarget(client);
+    setClientStatusOtpInput('');
+    setClientStatusVerificationToken('');
+    setClientStatusOtpMessage('');
+  };
+
+  const closeClientStatusOtpModal = () => {
+    if (sendingClientStatusOtp || verifyingClientStatusOtp || savingClientStatus) return;
+    setClientStatusOtpTarget(null);
+    setClientStatusOtpInput('');
+    setClientStatusVerificationToken('');
+    setClientStatusOtpMessage('');
+  };
+
+  const handleSendClientStatusOtp = async () => {
+    if (!clientStatusOtpTarget?.clientId) return;
+    setSendingClientStatusOtp(true);
+    setClientStatusOtpMessage('');
     try {
-      const response = await clientApi.toggleClientStatus(client.clientId, newStatus);
-      
-      if (response.success) {
-        showToast(`Client ${action}d successfully`, 'success');
-        loadAdminData();
-      } else {
-        showToast(response.message || `Failed to ${action} client`, 'error');
-      }
+      await clientApi.sendClientStatusOtp(clientStatusOtpTarget.clientId);
+      setClientStatusOtpMessage('OTP sent.');
+      showToast('OTP sent successfully.', 'success');
     } catch (error) {
-      showToast(error.response?.data?.message || `Failed to ${action} client`, 'error');
+      const message = error?.response?.data?.message || 'Failed to send OTP.';
+      setClientStatusOtpMessage(message);
+      showToast(message, 'error');
+    } finally {
+      setSendingClientStatusOtp(false);
+    }
+  };
+
+  const handleVerifyClientStatusOtp = async () => {
+    if (!clientStatusOtpTarget?.clientId) return;
+    const normalizedOtp = String(clientStatusOtpInput || '').trim();
+    if (!/^\d{6}$/.test(normalizedOtp)) {
+      const message = 'Please enter a valid 6-digit OTP.';
+      setClientStatusOtpMessage(message);
+      showToast(message, 'error');
+      return;
+    }
+
+    setVerifyingClientStatusOtp(true);
+    try {
+      const response = await clientApi.verifyClientStatusOtp(clientStatusOtpTarget.clientId, normalizedOtp);
+      setClientStatusVerificationToken(response?.data?.verificationToken || '');
+      setClientStatusOtpMessage('OTP verified.');
+      showToast('OTP verified successfully.', 'success');
+    } catch (error) {
+      const message = error?.response?.data?.message || 'Failed to verify OTP.';
+      setClientStatusOtpMessage(message);
+      showToast(message, 'error');
+    } finally {
+      setVerifyingClientStatusOtp(false);
+    }
+  };
+
+  const confirmToggleClientStatus = async () => {
+    if (!clientStatusOtpTarget?.clientId || !clientStatusVerificationToken) return;
+    const isCurrentlyActive = isClientCurrentlyActive(clientStatusOtpTarget);
+    const nextIsActive = !isCurrentlyActive;
+    try {
+      setSavingClientStatus(true);
+      const response = await clientApi.toggleClientStatus(
+        clientStatusOtpTarget.clientId,
+        nextIsActive,
+        clientStatusVerificationToken,
+      );
+
+      if (!response?.success) {
+        throw new Error(response?.message || 'Failed to update client status.');
+      }
+
+      showToast(`Client ${nextIsActive ? 'activated' : 'deactivated'} successfully`, 'success');
+      closeClientStatusOtpModal();
+      loadAdminData();
+    } catch (error) {
+      const message = error?.response?.data?.message || error?.message || 'Failed to update client status.';
+      setClientStatusOtpMessage(message);
+      showToast(message, 'error');
+    } finally {
+      setSavingClientStatus(false);
     }
   };
 
@@ -1604,6 +1692,7 @@ export const AdminPage = () => {
               setShowClientModal(true);
             }}
             onEditClient={handleEditClient}
+            onToggleClientStatus={handleToggleClientStatus}
             StatusBadge={AdminStatusBadge}
           />
         )}
@@ -1751,6 +1840,67 @@ export const AdminPage = () => {
         changeNameForm={changeNameForm}
         setChangeNameForm={setChangeNameForm}
       />
+
+      <Modal
+        isOpen={Boolean(clientStatusOtpTarget)}
+        onClose={closeClientStatusOtpModal}
+        title={`${isClientCurrentlyActive(clientStatusOtpTarget) ? 'Deactivate' : 'Activate'} Client`}
+        maxWidth="sm"
+        actions={(
+          <>
+            <Button
+              variant="outline"
+              onClick={closeClientStatusOtpModal}
+              disabled={sendingClientStatusOtp || verifyingClientStatusOtp || savingClientStatus}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleSendClientStatusOtp}
+              loading={sendingClientStatusOtp}
+              disabled={sendingClientStatusOtp || verifyingClientStatusOtp || savingClientStatus}
+            >
+              Send Code
+            </Button>
+            <Button
+              variant="default"
+              onClick={handleVerifyClientStatusOtp}
+              loading={verifyingClientStatusOtp}
+              disabled={sendingClientStatusOtp || verifyingClientStatusOtp || savingClientStatus || clientStatusOtpInput.trim().length !== 6}
+            >
+              Verify
+            </Button>
+            <Button
+              variant={isClientCurrentlyActive(clientStatusOtpTarget) ? 'danger' : 'primary'}
+              onClick={confirmToggleClientStatus}
+              loading={savingClientStatus}
+              disabled={!clientStatusVerificationToken || sendingClientStatusOtp || verifyingClientStatusOtp || savingClientStatus}
+            >
+              {isClientCurrentlyActive(clientStatusOtpTarget) ? 'Deactivate Client' : 'Activate Client'}
+            </Button>
+          </>
+        )}
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-[var(--dt-text-secondary)] leading-relaxed">
+            Verify with OTP to {isClientCurrentlyActive(clientStatusOtpTarget) ? 'deactivate' : 'activate'} this client. This will be logged.
+          </p>
+          <Input
+            label="OTP"
+            placeholder="000000"
+            value={clientStatusOtpInput}
+            onChange={(e) => setClientStatusOtpInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            disabled={sendingClientStatusOtp || verifyingClientStatusOtp || savingClientStatus}
+            maxLength={6}
+            autoFocus
+            className="text-center font-mono text-2xl tracking-widest"
+          />
+          {clientStatusOtpMessage ? (
+            <p className="text-sm text-[var(--dt-text-secondary)] leading-relaxed">{clientStatusOtpMessage}</p>
+          ) : null}
+        </div>
+      </Modal>
 
       <Modal
         isOpen={showOtpModal}

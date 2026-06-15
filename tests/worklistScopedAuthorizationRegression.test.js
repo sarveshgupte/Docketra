@@ -112,6 +112,15 @@ const hasOrGroup = (query, expectedKeys) => Array.isArray(query?.$and) && query.
   assert.ok(hasOrGroup(q, ['workbasketId', 'ownerTeamId', 'routedToTeamId']), 'workbasket scope OR group missing');
   assert.ok(hasOrGroup(q, ['caseId', 'caseNumber', 'clientId', 'clientName', 'category', 'subcategory', 'caseSubCategory']), 'search OR group missing');
 
+  calls.caseFindQueries = [];
+  const resPending = mkRes();
+  await employeeWorklist({
+    query: { status: 'PENDING', workbasketId: '507f1f77bcf86cd799439012' },
+    user: baseReqUser,
+  }, resPending);
+  assert.equal(resPending.statusCode, 200);
+  assert.deepEqual(calls.caseFindQueries[0].status.$in, ['PENDING']);
+
   // invalid workbasket id -> 400
   const res400 = mkRes();
   await employeeWorklist({ query: { workbasketId: 'bad-id' }, user: baseReqUser }, res400);

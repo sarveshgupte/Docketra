@@ -83,6 +83,7 @@ const authAuditSchema = new mongoose.Schema({
        'ADMIN_ACTION',
        'FILE_DOWNLOADED',
        'SECURITY_ALERT',
+       'ClientStatusChanged',
 
        // Admin guard events
        'DeactivationAttemptBlocked',

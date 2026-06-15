@@ -12,7 +12,6 @@ import { categoryService } from '../services/categoryService';
 import { getFirmConfig, setFirmConfig } from '../utils/firmConfig';
 import { buildCsv } from '../utils/csv';
 import { formatDateTime } from '../utils/formatDateTime';
-import { StatusMessageStack } from './platform/PlatformShared';
 import { ROUTES } from '../constants/routes';
 
 const enabledDisabledOptions = [
@@ -42,34 +41,69 @@ const defaultSlaForm = {
 const AUDIT_PAGE_SIZE = 25;
 const AUDIT_EXPORT_PAGE_SIZE = 100;
 
+const tabs = [
+  { id: 'general', label: 'Defaults' },
+  { id: 'calendar', label: 'Calendar' },
+  { id: 'sla', label: 'SLA Rules' },
+  { id: 'features', label: 'Views' },
+  { id: 'audit', label: 'Audit' },
+];
+
+const tabMeta = {
+  general: {
+    title: 'Operational defaults',
+    description: 'Base due dates, reminder lead time, escalation threshold, and workload guidance used across the workspace.',
+  },
+  calendar: {
+    title: 'Work calendar',
+    description: 'Working days, holidays, and exceptions used by SLA due dates, reminders, and docket un-pending.',
+  },
+  sla: {
+    title: 'SLA overrides',
+    description: 'Rules that override the default SLA for specific categories, subcategories, or workbaskets.',
+  },
+  features: {
+    title: 'Workspace views',
+    description: 'Turn advanced operational views on or off without changing the underlying workflow data.',
+  },
+  audit: {
+    title: 'Audit history',
+    description: 'Recent administrative activity for this workspace, paged at 25 records with CSV export.',
+  },
+};
+
+const featureRows = [
+  {
+    name: 'enablePerformanceView',
+    label: 'Performance analytics',
+    helpText: 'Throughput, pace, and workload summary views.',
+  },
+  {
+    name: 'enableEscalationView',
+    label: 'Escalation monitoring',
+    helpText: 'Overdue, due-soon, and attention-needed views.',
+  },
+  {
+    name: 'enableBulkActions',
+    label: 'Bulk actions',
+    helpText: 'Batch reassignment and worklist actions for supervisors.',
+  },
+];
+
 const formatAuditValue = (value) => {
-  if (value === null || value === undefined || value === '') return '—';
+  if (value === null || value === undefined || value === '') return '-';
   if (Array.isArray(value)) return value.map((item) => formatAuditValue(item)).join(', ');
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
 };
 
 const summarizeAuditChanges = (changes = []) => {
-  if (!Array.isArray(changes) || changes.length === 0) return 'No field changes';
+  if (!Array.isArray(changes) || changes.length === 0) return 'No field changes recorded.';
   return changes.map((change) => {
     const field = change?.field || 'field';
     return `${field}: ${formatAuditValue(change?.from)} -> ${formatAuditValue(change?.to)}`;
   }).join('; ');
 };
-
-const normalizeAuditEntry = (entry = {}) => ({
-  id: String(entry?._id || entry?.id || ''),
-  timestamp: entry?.timestamp || null,
-  actor: String(entry?.performedBy || 'SYSTEM'),
-  role: String(entry?.performedByRole || 'ADMIN'),
-  category: String(entry?.category || 'configs'),
-  action: String(entry?.action || 'UPDATED'),
-  settingsKey: String(entry?.settingsKey || entry?.category || ''),
-  entityType: String(entry?.entityType || ''),
-  entityId: String(entry?.entityId || ''),
-  changes: Array.isArray(entry?.changes) ? entry.changes : [],
-  metadata: entry?.metadata ?? null,
-});
 
 const normalizeActivityEntry = (entry = {}) => ({
   id: String(entry?.id || `${entry?.source || 'audit'}-${entry?.timestamp || ''}-${entry?.action || ''}-${entry?.xID || ''}`),
@@ -102,111 +136,118 @@ const getRuleScopeLabel = (rule) => {
   if (rule.category) scopes.push(rule.category);
   if (rule.subcategory) scopes.push(rule.subcategory);
   if (rule.workbasketName || rule.workbasketId) scopes.push(rule.workbasketName || rule.workbasketId);
-  if (scopes.length === 0) return 'Default';
-  return scopes.join(' • ');
+  if (scopes.length === 0) return 'Default workspace rule';
+  return scopes.join(' / ');
 };
 
-const getScopeBadge = (rule) => {
-  if (rule.category && rule.subcategory) {
-    return (
-      <div className="flex flex-wrap gap-1.5">
-        <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-700/10">
-          {rule.category}
-        </span>
-        <span className="inline-flex items-center rounded-md bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-700 ring-1 ring-inset ring-sky-700/10">
-          {rule.subcategory}
-        </span>
-      </div>
-    );
-  }
-  if (rule.category) {
-    return (
-      <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-700/10">
-        {rule.category}
-      </span>
-    );
-  }
-  if (rule.workbasketName || rule.workbasketId) {
-    return (
-      <span className="inline-flex items-center rounded-md bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-700 ring-1 ring-inset ring-violet-700/10">
-        {rule.workbasketName || rule.workbasketId}
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center rounded-md bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-700/10">
-      Default
-    </span>
-  );
-};
-
-const isForbidden = (error) => Number(error?.response?.status) === 403;
+const isForbidden = (error) => Number(error?.status || error?.response?.status) === 403;
 
 const coerceFirmNumber = (value, fallback, min = 0) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
-
   const normalized = Math.trunc(parsed);
   return normalized >= min ? normalized : fallback;
 };
 
-// Premium custom Toggle Switch component
-const ToggleSwitch = ({ label, name, checked, onChange, helpText }) => {
+const BackIcon = () => (
+  <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <path d="M12.5 4.5L7 10l5.5 5.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const RefreshIcon = () => (
+  <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <path d="M15.2 7.2A6 6 0 106 15.6" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M15.5 4.5v3.2h-3.2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const DownloadIcon = () => (
+  <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <path d="M10 3.5v8" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M6.8 8.7L10 11.9l3.2-3.2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M4.5 15.5h11" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const Notice = ({ tone = 'neutral', text }) => {
+  if (!text) return null;
+  const classes = tone === 'error'
+    ? 'border-rose-200 bg-rose-50 text-rose-700'
+    : tone === 'success'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      : 'border-slate-200 bg-slate-50 text-slate-700';
   return (
-    <div className="flex items-start justify-between py-4 border-b border-slate-100 last:border-0">
-      <div className="flex flex-col mr-4">
-        <span className="text-sm font-semibold text-slate-800">{label}</span>
-        {helpText && <span className="text-xs text-slate-500 mt-0.5">{helpText}</span>}
-      </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange({ target: { name, value: checked ? 'false' : 'true' } })}
-        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 ${
-          checked ? 'bg-indigo-600' : 'bg-slate-200'
-        }`}
-      >
-        <span
-          aria-hidden="true"
-          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-            checked ? 'translate-x-5' : 'translate-x-0'
-          }`}
-        />
-      </button>
+    <div className={`rounded-xl border px-4 py-3 text-sm ${classes}`}>
+      {text}
     </div>
   );
 };
 
-// Premium calendar exception date chip badge
-const CalendarChip = ({ date, onRemove, variant }) => {
-  const isHoliday = variant === 'holiday';
+const SectionHeading = ({ title, description, aside = null }) => (
+  <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 md:flex-row md:items-start md:justify-between">
+    <div className="space-y-1.5">
+      <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
+      <p className="max-w-2xl text-sm leading-6 text-slate-500">{description}</p>
+    </div>
+    {aside}
+  </div>
+);
+
+const DateChip = ({ value, onRemove, tone = 'neutral' }) => {
+  const toneClasses = tone === 'danger'
+    ? 'border-rose-200 bg-rose-50 text-rose-700'
+    : 'border-sky-200 bg-sky-50 text-sky-700';
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-semibold shadow-sm transition-all hover:shadow-md ${
-      isHoliday 
-        ? 'bg-rose-50 border border-rose-200 text-rose-700' 
-        : 'bg-indigo-50 border border-indigo-200 text-indigo-700'
-    }`}>
-      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-      <span>{date}</span>
+    <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${toneClasses}`}>
+      <span>{value}</span>
       <button
         type="button"
-        onClick={() => onRemove(date)}
-        className={`ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full text-xs transition-colors font-bold ${
-          isHoliday ? 'text-rose-400 hover:bg-rose-100 hover:text-rose-700' : 'text-indigo-400 hover:bg-indigo-100 hover:text-indigo-700'
-        }`}
+        onClick={() => onRemove(value)}
+        className="text-current/70 transition hover:text-current"
       >
-        ×
+        x
       </button>
     </span>
   );
 };
 
+const FeatureToggle = ({ label, helpText, checked, onChange, name }) => (
+  <div className="flex items-start justify-between gap-4 border-b border-slate-200 py-4 last:border-b-0 last:pb-0 first:pt-0">
+    <div className="space-y-1">
+      <p className="text-sm font-medium text-slate-900">{label}</p>
+      <p className="text-sm text-slate-500">{helpText}</p>
+    </div>
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange({ target: { name, value: checked ? 'false' : 'true' } })}
+      className={`relative inline-flex h-7 w-12 shrink-0 rounded-full border transition ${
+        checked ? 'border-slate-900 bg-slate-900' : 'border-slate-300 bg-slate-200'
+      }`}
+    >
+      <span
+        className={`absolute top-0.5 h-5.5 w-5.5 rounded-full bg-white transition ${
+          checked ? 'left-6' : 'left-0.5'
+        }`}
+      />
+    </button>
+  </div>
+);
+
+const MetricTile = ({ label, value, hint }) => (
+  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+    <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">{label}</p>
+    <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
+    <p className="mt-1 text-xs text-slate-500">{hint}</p>
+  </div>
+);
+
 export const FirmSettingsPage = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
+
   const [config, setConfig] = useState(getFirmConfig());
   const [activity, setActivity] = useState([]);
   const [activityPagination, setActivityPagination] = useState({
@@ -233,8 +274,6 @@ export const FirmSettingsPage = () => {
   const [slaForm, setSlaForm] = useState(defaultSlaForm);
   const [holidayDateDraft, setHolidayDateDraft] = useState('');
   const [workingDateDraft, setWorkingDateDraft] = useState('');
-  
-  // Tab states: general, calendar, sla, features, changelog
   const [currentTab, setCurrentTab] = useState('general');
 
   const categoryOptions = useMemo(() => ([
@@ -316,8 +355,8 @@ export const FirmSettingsPage = () => {
       });
       setActivityError(
         isForbidden(error)
-          ? 'You do not have permission to view admin activity. Ask a workspace admin to update your access.'
-          : 'Could not load admin audit activity. You can retry without losing settings changes.',
+          ? 'You do not have permission to view admin activity.'
+          : 'Could not load audit history right now.',
       );
     } finally {
       setLoadingActivity(false);
@@ -373,25 +412,17 @@ export const FirmSettingsPage = () => {
         slaApi.getRules({ includeInactive: true }),
       ]);
 
-      const categoriesData = categoryResult.status === 'fulfilled' && Array.isArray(categoryResult.value?.data)
-        ? categoryResult.value.data
-        : [];
-      const workbasketsData = workbasketResult.status === 'fulfilled' && Array.isArray(workbasketResult.value?.data)
-        ? workbasketResult.value.data
-        : [];
-
-      setCategories(categoriesData);
-      setWorkbaskets(workbasketsData);
+      setCategories(categoryResult.status === 'fulfilled' && Array.isArray(categoryResult.value?.data) ? categoryResult.value.data : []);
+      setWorkbaskets(workbasketResult.status === 'fulfilled' && Array.isArray(workbasketResult.value?.data) ? workbasketResult.value.data : []);
 
       if (slaResult.status === 'fulfilled') {
         setSlaRules(Array.isArray(slaResult.value?.data) ? slaResult.value.data : []);
       } else {
         setSlaRules([]);
-        const slaError = slaResult.reason;
         setSlaMessage({
           type: 'error',
-          text: isForbidden(slaError)
-            ? 'You do not have permission to view SLA settings. Ask a workspace admin to update your access.'
+          text: isForbidden(slaResult.reason)
+            ? 'You do not have permission to view SLA settings.'
             : 'Could not load SLA configuration.',
         });
       }
@@ -402,7 +433,7 @@ export const FirmSettingsPage = () => {
       setSlaMessage({
         type: 'error',
         text: isForbidden(error)
-          ? 'You do not have permission to view SLA settings. Ask a workspace admin to update your access.'
+          ? 'You do not have permission to view SLA settings.'
           : 'Could not load SLA configuration.',
       });
     } finally {
@@ -412,8 +443,8 @@ export const FirmSettingsPage = () => {
 
   useEffect(() => {
     void loadActivity(1);
-    loadFirmSettings();
-    loadSlaData();
+    void loadFirmSettings();
+    void loadSlaData();
   }, [loadActivity]);
 
   const handleNumberChange = (event) => {
@@ -458,6 +489,7 @@ export const FirmSettingsPage = () => {
     }));
     reset('');
     setHasUnsavedChanges(true);
+    setSaveMessage({ type: '', text: '' });
   };
 
   const removeCalendarDate = (fieldName, value) => {
@@ -466,6 +498,7 @@ export const FirmSettingsPage = () => {
       [fieldName]: (Array.isArray(prev[fieldName]) ? prev[fieldName] : []).filter((entry) => entry !== value),
     }));
     setHasUnsavedChanges(true);
+    setSaveMessage({ type: '', text: '' });
   };
 
   const handleSave = async () => {
@@ -491,16 +524,19 @@ export const FirmSettingsPage = () => {
       enableEscalationView: Boolean(config.enableEscalationView),
       enableBulkActions: Boolean(config.enableBulkActions),
       brandLogoUrl: typeof config.brandLogoUrl === 'string' ? config.brandLogoUrl.trim() : '',
+      strictFirmOwnedStorage: Boolean(config.strictFirmOwnedStorage),
     };
+
     try {
       const response = await adminApi.updateFirmSettings({ firm: firmPayload });
       const saved = setFirmConfig(response?.data?.firm || firmPayload);
       setConfig(saved);
       setHasUnsavedChanges(false);
-      setSaveMessage({ type: 'success', text: 'Firm settings saved successfully.' });
+      setSaveMessage({ type: 'success', text: 'Settings saved.' });
       void loadActivity(1);
-    } catch {
-      setSaveMessage({ type: 'error', text: 'Could not save settings. Please retry.' });
+    } catch (error) {
+      const errorText = error?.data?.error || error?.message || 'Could not save settings.';
+      setSaveMessage({ type: 'error', text: errorText });
     } finally {
       setSavingConfig(false);
     }
@@ -530,6 +566,7 @@ export const FirmSettingsPage = () => {
       slaHours: String(rule.slaWorkingDays || (rule.slaHours ? Number(rule.slaHours) / 8 : '') || ''),
       isActive: rule.isActive !== false,
     });
+    setCurrentTab('sla');
     setSlaMessage({ type: '', text: '' });
   };
 
@@ -552,8 +589,8 @@ export const FirmSettingsPage = () => {
       await loadSlaData();
       resetSlaForm();
       setSlaMessage({ type: 'success', text: 'SLA rule saved.' });
-    } catch {
-      setSlaMessage({ type: 'error', text: 'Could not save the SLA rule.' });
+    } catch (error) {
+      setSlaMessage({ type: 'error', text: error?.message || 'Could not save the SLA rule.' });
     } finally {
       setSavingSlaRule(false);
     }
@@ -570,229 +607,211 @@ export const FirmSettingsPage = () => {
         resetSlaForm();
       }
       setSlaMessage({ type: 'success', text: 'SLA rule deleted.' });
-    } catch {
-      setSlaMessage({ type: 'error', text: 'Could not delete the SLA rule.' });
+    } catch (error) {
+      setSlaMessage({ type: 'error', text: error?.message || 'Could not delete the SLA rule.' });
     } finally {
       setDeletingRuleId('');
     }
   };
 
-  const primaryStatusMessages = [
-    saveMessage.text
-      ? { tone: saveMessage.type === 'success' ? 'success' : 'error', message: saveMessage.text }
-      : null,
-  ].filter(Boolean);
+  const activeTabMeta = tabMeta[currentTab] || tabMeta.general;
 
-  const slaStatusMessages = [
-    slaMessage.text
-      ? { tone: slaMessage.type === 'success' ? 'success' : 'error', message: slaMessage.text }
-      : null,
-  ].filter(Boolean);
-
-  // Tab configurations
-  const tabs = [
+  const generalMetrics = [
     {
-      id: 'general',
-      label: 'General Defaults',
-      icon: (
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <circle cx={12} cy={12} r={3} />
-        </svg>
-      ),
+      label: 'Default SLA',
+      value: `${coerceFirmNumber(config.slaDefaultDays, 3, 1)}d`,
+      hint: 'Used when no rule override exists.',
     },
     {
-      id: 'calendar',
-      label: 'Work Calendar',
-      icon: (
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-      ),
+      label: 'Reminder lead',
+      value: `${coerceFirmNumber(config.calendarReminderLeadDays, 3, 0)}d`,
+      hint: 'Shown ahead of important deadlines.',
     },
     {
-      id: 'sla',
-      label: 'SLA Rules',
-      icon: (
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-      ),
+      label: 'Escalation',
+      value: `${coerceFirmNumber(config.escalationInactivityThresholdHours, 24, 1)}h`,
+      hint: 'Inactivity threshold before attention is raised.',
     },
     {
-      id: 'features',
-      label: 'Feature Controls',
-      icon: (
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-        </svg>
-      ),
-    },
-    {
-      id: 'changelog',
-      label: 'Audit History',
-      icon: (
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
+      label: 'Workload cap',
+      value: String(coerceFirmNumber(config.workloadThreshold, 15, 1)),
+      hint: 'Reference ceiling for user allocation.',
     },
   ];
 
-  const saveBar = hasUnsavedChanges ? (
-    <Card className="mb-6 border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-      <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-900">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l1.5 1.5 3-3m-8.25-.75v-1.5a3 3 0 013-3h6a3 3 0 013 3v1.5m-12 0h12a2.25 2.25 0 012.25 2.25v6a3 3 0 01-3 3H6a3 3 0 01-3-3v-6A2.25 2.25 0 015.25 9z" />
-            </svg>
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-900">Unsaved configuration changes</p>
-            <p className="mt-1 text-sm text-slate-500">
-              Review your edits, then save to apply them across the workspace.
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={loadFirmSettings}
-            disabled={savingConfig || loadingConfig}
-          >
-            Discard
-          </Button>
-          <Button
-            type="button"
-            variant="primary"
-            onClick={handleSave}
-            disabled={loadingConfig || savingConfig}
-            loading={savingConfig}
-          >
-            {savingConfig ? 'Saving...' : 'Save settings'}
-          </Button>
-        </div>
-      </div>
-    </Card>
-  ) : null;
-
   return (
-    <PlatformShell 
-      moduleLabel="Settings" 
-      title="Firm Settings" 
-      subtitle="Configure operational defaults, SLA policy, and feature visibility for this workspace."
+    <PlatformShell
+      moduleLabel="Settings"
+      title="Firm Settings"
+      subtitle="Keep workspace defaults, calendars, SLA rules, and views in one place."
     >
-      <div className="min-h-screen w-full flex-1 bg-slate-50/50 pb-24">
-        <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-          
-          {/* Go Back Link */}
-          <div className="mb-6">
-            <button
-              type="button"
-              onClick={() => navigate(ROUTES.SETTINGS(firmSlug))}
-              className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-indigo-600 transition"
-            >
-              ← Go back to settings
-            </button>
-          </div>
+      <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6">
+        <button
+          type="button"
+          onClick={() => navigate(ROUTES.SETTINGS(firmSlug))}
+          className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-900"
+        >
+          <BackIcon />
+          <span>Back to settings</span>
+        </button>
 
-          {/* Premium Tabbed Navigation Header */}
-          <div className="mb-8 border-b border-slate-200 bg-white rounded-xl p-1.5 shadow-sm flex flex-wrap gap-1">
-            {tabs.map((tab) => {
-              const isActive = currentTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => {
-                    setCurrentTab(tab.id);
-                    setSaveMessage({ type: '', text: '' });
-                  }}
-                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-xs font-bold transition-all ${
-                    isActive
-                      ? 'bg-slate-900 text-white shadow-md'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
-                  }`}
-                >
-                  {tab.icon}
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Viewport for active tab */}
-          <div className="transition-all duration-300">
-            {saveBar}
-
-            {/* Primary Status Notifications */}
-            {primaryStatusMessages.length > 0 && (
-              <div className="mb-6">
-                <StatusMessageStack messages={primaryStatusMessages} />
+        <Card className="overflow-hidden border border-slate-200 bg-white shadow-sm">
+          <div className="space-y-6 p-5 sm:p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-2">
+                <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">Workspace control</p>
+                <h1 className="text-2xl font-semibold text-slate-950">Firm settings</h1>
+                <p className="max-w-3xl text-sm leading-6 text-slate-500">
+                  Keep the surface simple: set the defaults once, define the working calendar, add only the SLA exceptions you need, and review the audit trail when something changes.
+                </p>
               </div>
-            )}
-            
-            {/* Tab: General Defaults */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {generalMetrics.map((metric) => (
+                  <MetricTile
+                    key={metric.label}
+                    label={metric.label}
+                    value={metric.value}
+                    hint={metric.hint}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2">
+              <div className="flex flex-wrap gap-2">
+                {tabs.map((tab) => {
+                  const active = currentTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => {
+                        setCurrentTab(tab.id);
+                        setSaveMessage((prev) => (prev.type === 'success' ? { type: '', text: '' } : prev));
+                      }}
+                      className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+                        active
+                          ? 'bg-white text-slate-950 shadow-sm'
+                          : 'text-slate-500 hover:bg-white/70 hover:text-slate-900'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-slate-950">
+                {hasUnsavedChanges ? 'Unsaved changes' : 'Settings state'}
+              </p>
+              <p className="text-sm text-slate-500">
+                {hasUnsavedChanges
+                  ? 'Review the current tab and save when you are ready.'
+                  : 'Changes apply across reminders, SLA handling, and the shared calendar.'}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={loadFirmSettings}
+                disabled={loadingConfig || savingConfig || !hasUnsavedChanges}
+              >
+                Discard
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={handleSave}
+                disabled={loadingConfig || savingConfig || !hasUnsavedChanges}
+                loading={savingConfig}
+              >
+                {savingConfig ? 'Saving...' : 'Save settings'}
+              </Button>
+            </div>
+          </div>
+        </Card>
+
+        <Notice tone={saveMessage.type || 'neutral'} text={saveMessage.text} />
+
+        <Card className="border border-slate-200 bg-white shadow-sm">
+          <div className="space-y-6 p-5 sm:p-6">
+            <SectionHeading title={activeTabMeta.title} description={activeTabMeta.description} />
+
             {currentTab === 'general' && (
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                <div className="lg:col-span-1 space-y-2">
-                  <h3 className="text-base font-bold text-slate-800">Operational Slates</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Set core default parameters that govern auto-assignment, queue thresholds, and background reminders.
-                  </p>
+              <div className="grid gap-6 lg:grid-cols-[1.05fr_1.65fr]">
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-slate-900">What these defaults control</p>
+                  <div className="space-y-3 text-sm leading-6 text-slate-500">
+                    <p>Default SLA days are used when no category rule overrides them.</p>
+                    <p>Reminder lead time feeds calendar warnings for upcoming deadlines.</p>
+                    <p>Escalation and workload values drive management views and attention states.</p>
+                  </div>
                 </div>
-                <div className="lg:col-span-2">
-                  <Card className="p-6 bg-white shadow-sm border border-slate-200/60 rounded-xl space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <div className="grid gap-6">
+                  <Card className="border border-slate-200 bg-white p-5 shadow-none">
+                    <div className="grid gap-4 md:grid-cols-2">
                       <Input
-                        label="Default SLA Deadline (Days)"
+                        label="Default SLA deadline (days)"
                         name="slaDefaultDays"
                         type="number"
                         min="1"
                         value={config.slaDefaultDays}
                         onChange={handleNumberChange}
-                        helpText="Deadline offset used if no category-level SLA is set."
+                        helpText="Used if no SLA rule override exists."
                       />
                       <Input
-                        label="Reminder Notification Lead Time (Days)"
+                        label="Reminder lead time (days)"
                         name="calendarReminderLeadDays"
                         type="number"
                         min="0"
                         max="30"
                         value={config.calendarReminderLeadDays}
                         onChange={handleNumberChange}
-                        helpText="Schedules automated dashboard warnings ahead of critical dates."
+                        helpText="How early reminders appear before the due date."
                       />
                       <Input
-                        label="Escalation Inactivity Limit (Hours)"
+                        label="Escalation inactivity limit (hours)"
                         name="escalationInactivityThresholdHours"
                         type="number"
                         min="1"
                         value={config.escalationInactivityThresholdHours}
                         onChange={handleNumberChange}
-                        helpText="Hours before unassigned items flag as escalated."
+                        helpText="Hours without movement before attention is raised."
                       />
                       <Input
-                        label="Maximum Workload Cap"
+                        label="Maximum workload cap"
                         name="workloadThreshold"
                         type="number"
                         min="1"
                         value={config.workloadThreshold}
                         onChange={handleNumberChange}
-                        helpText="Target capacity load suggestion per user."
+                        helpText="Reference cap used in capacity views."
                       />
                     </div>
-                    <div className="pt-4 border-t border-slate-100">
+                  </Card>
+
+                  <Card className="border border-slate-200 bg-white p-5 shadow-none">
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">Workspace branding</p>
+                        <p className="mt-1 text-sm text-slate-500">Optional. Keeps the page lightweight while still letting you replace the default initials with a logo.</p>
+                      </div>
                       <Input
-                        label="Workspace Brand Logo URL"
+                        label="Brand logo URL"
                         name="brandLogoUrl"
                         type="url"
                         placeholder="https://example.com/logo.png"
                         value={config.brandLogoUrl || ''}
                         onChange={handleTextChange}
-                        helpText="Optional logo to replace default initials in navigation."
+                        helpText="A publicly reachable logo URL."
                       />
                     </div>
                   </Card>
@@ -800,268 +819,254 @@ export const FirmSettingsPage = () => {
               </div>
             )}
 
-            {/* Tab: Work Calendar */}
             {currentTab === 'calendar' && (
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                <div className="lg:col-span-1 space-y-2">
-                  <h3 className="text-base font-bold text-slate-800">Operational Schedules</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Define active business days and add custom vacation lists. Deadlines skip weekends and holidays automatically.
-                  </p>
+              <div className="grid gap-6 lg:grid-cols-[1.05fr_1.65fr]">
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-slate-900">Shared operational calendar</p>
+                  <div className="space-y-3 text-sm leading-6 text-slate-500">
+                    <p>These dates are used by reminder generation, working-day SLA math, and how a docket resumes after pending.</p>
+                    <p>Keep this list short and deliberate. Add only firm-wide exceptions.</p>
+                  </div>
                 </div>
-                <div className="lg:col-span-2 space-y-6">
-                  <Card className="p-6 bg-white shadow-sm border border-slate-200/60 rounded-xl">
-                    <span className="text-sm font-bold text-slate-800 block mb-3">Weekly Schedule</span>
-                    <div className="flex flex-wrap gap-2">
-                      {weekdayOptions.map((day) => {
-                        const isWorking = (config.slaWorkingDays || []).includes(day.value);
-                        return (
-                          <button
-                            key={day.value}
-                            type="button"
-                            onClick={() => toggleWorkingDay(day.value)}
-                            className={`px-4 py-2 rounded-lg text-xs font-bold border transition-all ${
-                              isWorking
-                                ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm'
-                                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-                            }`}
-                          >
-                            {day.label}
-                          </button>
-                        );
-                      })}
+
+                <div className="grid gap-6">
+                  <Card className="border border-slate-200 bg-white p-5 shadow-none">
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">Working week</p>
+                        <p className="mt-1 text-sm text-slate-500">Choose the days treated as working days for due date calculation.</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {weekdayOptions.map((day) => {
+                          const isWorking = (config.slaWorkingDays || []).includes(day.value);
+                          return (
+                            <button
+                              key={day.value}
+                              type="button"
+                              onClick={() => toggleWorkingDay(day.value)}
+                              className={`min-w-[64px] rounded-xl border px-4 py-2 text-sm font-medium transition ${
+                                isWorking
+                                  ? 'border-slate-900 bg-slate-900 text-white'
+                                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900'
+                              }`}
+                            >
+                              {day.label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </Card>
 
-                  <Card className="p-6 bg-white shadow-sm border border-slate-200/60 rounded-xl space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      
-                      {/* Holidays Section */}
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    <Card className="border border-slate-200 bg-white p-5 shadow-none">
                       <div className="space-y-4">
-                        <span className="text-sm font-bold text-slate-800 block">Holidays & Off Days</span>
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">Holidays and off days</p>
+                          <p className="mt-1 text-sm text-slate-500">Deadlines skip these dates automatically.</p>
+                        </div>
                         <div className="flex gap-2">
                           <input
                             type="date"
                             value={holidayDateDraft}
-                            onChange={(e) => setHolidayDateDraft(e.target.value)}
-                            className="block w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            onChange={(event) => setHolidayDateDraft(event.target.value)}
+                            className="min-h-11 flex-1 rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
                           />
-                          <button
+                          <Button
                             type="button"
+                            variant="primary"
                             onClick={() => addCalendarDate('slaHolidayDates', holidayDateDraft, setHolidayDateDraft)}
-                            className="bg-slate-900 text-white hover:bg-slate-800 text-xs font-bold px-3.5 py-1.5 rounded-lg whitespace-nowrap"
                           >
-                            Add Off
-                          </button>
+                            Add
+                          </Button>
                         </div>
-                        <div className="flex flex-wrap gap-2 pt-2">
-                          {(config.slaHolidayDates || []).length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {(config.slaHolidayDates || []).length ? (
                             (config.slaHolidayDates || []).map((date) => (
-                              <CalendarChip
+                              <DateChip
                                 key={date}
-                                date={date}
-                                variant="holiday"
-                                onRemove={(d) => removeCalendarDate('slaHolidayDates', d)}
+                                value={date}
+                                tone="danger"
+                                onRemove={(selected) => removeCalendarDate('slaHolidayDates', selected)}
                               />
                             ))
                           ) : (
-                            <span className="text-xs text-slate-400 italic">No specific holidays configured.</span>
+                            <p className="text-sm text-slate-400">No holidays configured.</p>
                           )}
                         </div>
                       </div>
+                    </Card>
 
-                      {/* Working Exceptions Section */}
+                    <Card className="border border-slate-200 bg-white p-5 shadow-none">
                       <div className="space-y-4">
-                        <span className="text-sm font-bold text-slate-800 block">Working Day Overrides</span>
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">Working-day overrides</p>
+                          <p className="mt-1 text-sm text-slate-500">Use this when a non-working day should still count as active.</p>
+                        </div>
                         <div className="flex gap-2">
                           <input
                             type="date"
                             value={workingDateDraft}
-                            onChange={(e) => setWorkingDateDraft(e.target.value)}
-                            className="block w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            onChange={(event) => setWorkingDateDraft(event.target.value)}
+                            className="min-h-11 flex-1 rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
                           />
-                          <button
+                          <Button
                             type="button"
+                            variant="primary"
                             onClick={() => addCalendarDate('slaWorkingDateOverrides', workingDateDraft, setWorkingDateDraft)}
-                            className="bg-indigo-600 text-white hover:bg-indigo-500 text-xs font-bold px-3.5 py-1.5 rounded-lg whitespace-nowrap"
                           >
-                            Add Work
-                          </button>
+                            Add
+                          </Button>
                         </div>
-                        <div className="flex flex-wrap gap-2 pt-2">
-                          {(config.slaWorkingDateOverrides || []).length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {(config.slaWorkingDateOverrides || []).length ? (
                             (config.slaWorkingDateOverrides || []).map((date) => (
-                              <CalendarChip
+                              <DateChip
                                 key={date}
-                                date={date}
-                                variant="working"
-                                onRemove={(d) => removeCalendarDate('slaWorkingDateOverrides', d)}
+                                value={date}
+                                onRemove={(selected) => removeCalendarDate('slaWorkingDateOverrides', selected)}
                               />
                             ))
                           ) : (
-                            <span className="text-xs text-slate-400 italic">No working-day overrides.</span>
+                            <p className="text-sm text-slate-400">No overrides configured.</p>
                           )}
                         </div>
                       </div>
-
-                    </div>
-                  </Card>
+                    </Card>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Tab: SLA Rules */}
             {currentTab === 'sla' && (
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                <div className="lg:col-span-1 space-y-2">
-                  <h3 className="text-base font-bold text-slate-800">SLA Priority Engine</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Set targeted SLA overrides based on categories, subcategories, or team workbaskets. Granular targets override global defaults automatically.
-                  </p>
+              <div className="grid gap-6 lg:grid-cols-[1.05fr_1.65fr]">
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-slate-900">Override only where needed</p>
+                  <div className="space-y-3 text-sm leading-6 text-slate-500">
+                    <p>Use a workspace default for most work. Add rules only for the categories or teams that genuinely need a different SLA.</p>
+                    <p>These rules sit on top of the calendar settings above, so weekends and holidays are still respected.</p>
+                  </div>
                 </div>
-                <div className="lg:col-span-2 space-y-6">
-                  
-                  {/* SLA Rule Form Card */}
-                  <Card className="p-6 bg-white shadow-sm border border-slate-200/60 rounded-xl space-y-6">
-                    <span className="text-sm font-bold text-slate-800 block border-b border-slate-100 pb-2">
-                      {slaForm.id ? 'Modify SLA Override' : 'Create SLA Rule Override'}
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Select
-                        label="Target Category"
-                        name="category"
-                        value={slaForm.category}
-                        onChange={handleSlaFormChange}
-                        options={categoryOptions}
-                      />
-                      <Select
-                        label="Target Subcategory"
-                        name="subcategory"
-                        value={slaForm.subcategory}
-                        onChange={handleSlaFormChange}
-                        options={subcategoryOptions}
-                      />
-                      <Select
-                        label="Target Workbasket"
-                        name="workbasketId"
-                        value={slaForm.workbasketId}
-                        onChange={handleSlaFormChange}
-                        options={workbasketOptions}
-                      />
-                      <Input
-                        label="SLA Target Duration (Working Days)"
-                        name="slaHours"
-                        type="number"
-                        min="1"
-                        value={slaForm.slaHours}
-                        onChange={handleSlaFormChange}
-                      />
-                      <Select
-                        label="Status State"
-                        name="isActive"
-                        value={String(Boolean(slaForm.isActive))}
-                        onChange={handleSlaFormChange}
-                        options={enabledDisabledOptions}
-                      />
-                    </div>
 
-                    {slaStatusMessages.length > 0 && (
-                      <StatusMessageStack messages={slaStatusMessages} />
-                    )}
+                <div className="grid gap-6">
+                  <Card className="border border-slate-200 bg-white p-5 shadow-none">
+                    <div className="space-y-5">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">{slaForm.id ? 'Edit SLA rule' : 'Create SLA rule'}</p>
+                        <p className="mt-1 text-sm text-slate-500">Scope the rule as narrowly as needed. Leaving a field blank keeps it broader.</p>
+                      </div>
 
-                    <div className="flex gap-2.5 justify-end">
-                      {slaForm.id && (
-                        <button
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <Select
+                          label="Category"
+                          name="category"
+                          value={slaForm.category}
+                          onChange={handleSlaFormChange}
+                          options={categoryOptions}
+                        />
+                        <Select
+                          label="Subcategory"
+                          name="subcategory"
+                          value={slaForm.subcategory}
+                          onChange={handleSlaFormChange}
+                          options={subcategoryOptions}
+                        />
+                        <Select
+                          label="Workbasket"
+                          name="workbasketId"
+                          value={slaForm.workbasketId}
+                          onChange={handleSlaFormChange}
+                          options={workbasketOptions}
+                        />
+                        <Input
+                          label="Working days"
+                          name="slaHours"
+                          type="number"
+                          min="1"
+                          value={slaForm.slaHours}
+                          onChange={handleSlaFormChange}
+                        />
+                        <Select
+                          label="Status"
+                          name="isActive"
+                          value={String(Boolean(slaForm.isActive))}
+                          onChange={handleSlaFormChange}
+                          options={enabledDisabledOptions}
+                        />
+                      </div>
+
+                      <Notice tone={slaMessage.type || 'neutral'} text={slaMessage.text} />
+
+                      <div className="flex flex-wrap justify-end gap-2">
+                        {slaForm.id ? (
+                          <Button type="button" variant="outline" onClick={resetSlaForm}>
+                            Cancel
+                          </Button>
+                        ) : null}
+                        <Button
                           type="button"
-                          onClick={resetSlaForm}
-                          className="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-600 transition"
+                          variant="primary"
+                          onClick={handleSaveRule}
+                          disabled={savingSlaRule || loadingSlaData}
+                          loading={savingSlaRule}
                         >
-                          Cancel Edit
-                        </button>
-                      )}
-                      <Button 
-                        type="button" 
-                        variant="primary" 
-                        onClick={handleSaveRule} 
-                        disabled={savingSlaRule || loadingSlaData}
-                      >
-                        {savingSlaRule ? 'Saving…' : (slaForm.id ? 'Update Rule' : 'Save Rule')}
-                      </Button>
+                          {slaForm.id ? 'Update rule' : 'Save rule'}
+                        </Button>
+                      </div>
                     </div>
                   </Card>
 
-                  {/* Existing Rules Table */}
-                  <Card className="p-6 bg-white shadow-sm border border-slate-200/60 rounded-xl space-y-4">
-                    <span className="text-sm font-bold text-slate-800 block">Configured Priority Overrides</span>
-                    <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white">
+                  <Card className="border border-slate-200 bg-white p-5 shadow-none">
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">Current rules</p>
+                        <p className="mt-1 text-sm text-slate-500">The most specific rule wins over the workspace default.</p>
+                      </div>
+
                       {loadingSlaData ? (
-                        <div className="px-4 py-8 text-center text-xs text-slate-400">Loading SLA configurations…</div>
+                        <p className="text-sm text-slate-400">Loading SLA rules...</p>
                       ) : slaRules.length ? (
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full divide-y divide-slate-100 text-xs">
-                            <thead className="bg-slate-50 text-left font-bold text-slate-600">
-                              <tr>
-                                <th className="px-4 py-3">Scoped Target</th>
-                                <th className="px-4 py-3">Days Allowed</th>
-                                <th className="px-4 py-3">Status</th>
-                                <th className="px-4 py-3 text-right">Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 text-slate-600 bg-white">
-                              {slaRules.map((rule) => (
-                                <tr key={rule._id || rule.id} className="hover:bg-slate-50/50">
-                                  <td className="px-4 py-3 font-semibold text-slate-800">
-                                    {getScopeBadge(rule)}
-                                  </td>
-                                  <td className="px-4 py-3 font-medium">
-                                    {rule.slaWorkingDays || (rule.slaHours ? Number(rule.slaHours) / 8 : '—')} days
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
-                                      rule.isActive === false
-                                        ? 'bg-slate-100 text-slate-600'
-                                        : 'bg-emerald-50 text-emerald-700'
+                        <div className="space-y-3">
+                          {slaRules.map((rule) => {
+                            const ruleId = rule._id || rule.id;
+                            return (
+                              <div key={ruleId} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                  <div className="space-y-1">
+                                    <p className="text-sm font-medium text-slate-900">{getRuleScopeLabel(rule)}</p>
+                                    <p className="text-sm text-slate-500">
+                                      {(rule.slaWorkingDays || (rule.slaHours ? Number(rule.slaHours) / 8 : '-'))} working days
+                                    </p>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className={`rounded-full px-3 py-1 text-xs font-medium ${
+                                      rule.isActive === false ? 'bg-slate-200 text-slate-600' : 'bg-emerald-100 text-emerald-700'
                                     }`}>
                                       {rule.isActive === false ? 'Inactive' : 'Active'}
                                     </span>
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    <div className="flex justify-end gap-1.5">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleEditRule(rule)}
-                                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 text-slate-500 bg-white hover:bg-indigo-50/20 transition-all"
-                                        title="Edit override"
-                                      >
-                                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDeleteRule(rule._id || rule.id)}
-                                        disabled={deletingRuleId === (rule._id || rule.id)}
-                                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 hover:border-rose-300 hover:text-rose-600 text-slate-500 bg-white hover:bg-rose-50/20 transition-all"
-                                        title="Delete override"
-                                      >
-                                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                                    <Button type="button" variant="outline" size="sm" onClick={() => handleEditRule(rule)}>
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleDeleteRule(ruleId)}
+                                      disabled={deletingRuleId === ruleId}
+                                    >
+                                      {deletingRuleId === ruleId ? 'Deleting...' : 'Delete'}
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       ) : (
-                        <div className="px-4 py-8">
-                          <EmptyState
-                            title="No SLA rules configured"
-                            description="Add custom priority rules above to override default SLA calculations for selected categories."
-                          />
-                        </div>
+                        <EmptyState
+                          title="No SLA overrides yet"
+                          description="The workspace default SLA is active until you add a rule."
+                        />
                       )}
                     </div>
                   </Card>
@@ -1069,155 +1074,136 @@ export const FirmSettingsPage = () => {
               </div>
             )}
 
-            {/* Tab: Feature Controls */}
             {currentTab === 'features' && (
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                <div className="lg:col-span-1 space-y-2">
-                  <h3 className="text-base font-bold text-slate-800">Operational Views</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Toggle advanced dashboards and management views. Turning off hidden options simplifies workspace complexity for standard staff.
-                  </p>
+              <div className="grid gap-6 lg:grid-cols-[1.05fr_1.65fr]">
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-slate-900">Keep only the views the team needs</p>
+                  <div className="space-y-3 text-sm leading-6 text-slate-500">
+                    <p>These toggles simplify the workspace without changing underlying data or workflows.</p>
+                    <p>Turn a view back on at any time if the team needs it again.</p>
+                  </div>
                 </div>
-                <div className="lg:col-span-2">
-                  <Card className="p-6 bg-white shadow-sm border border-slate-200/60 rounded-xl">
-                    <ToggleSwitch
-                      label="Operational Performance Analytics"
-                      name="enablePerformanceView"
-                      checked={Boolean(config.enablePerformanceView)}
+
+                <Card className="border border-slate-200 bg-white p-5 shadow-none">
+                  {featureRows.map((row) => (
+                    <FeatureToggle
+                      key={row.name}
+                      label={row.label}
+                      helpText={row.helpText}
+                      checked={Boolean(config[row.name])}
                       onChange={handleToggleChange}
-                      helpText="Provides users with throughput stats, team speed metrics, and volume counts."
+                      name={row.name}
                     />
-                    <ToggleSwitch
-                      label="SLA Escalation Monitoring"
-                      name="enableEscalationView"
-                      checked={Boolean(config.enableEscalationView)}
-                      onChange={handleToggleChange}
-                      helpText="Displays critical escalation flags, breaching alerts, and priority actions."
-                    />
-                    <ToggleSwitch
-                      label="Bulk Assignment & Worklist Actions"
-                      name="enableBulkActions"
-                      checked={Boolean(config.enableBulkActions)}
-                      onChange={handleToggleChange}
-                      helpText="Allows managers to reassign, clear, and modify multiple active items simultaneously."
-                    />
-                  </Card>
-                </div>
+                  ))}
+                </Card>
               </div>
             )}
 
-            {/* Tab: Audit History */}
-            {currentTab === 'changelog' && (
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                <div className="lg:col-span-1 space-y-2">
-                  <h3 className="text-base font-bold text-slate-800">Audit & Change Trace</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    View recent workspace governance changes. The latest 25 entries load per page, with CSV export for the full activity trail.
-                  </p>
+            {currentTab === 'audit' && (
+              <div className="grid gap-6 lg:grid-cols-[1.05fr_1.65fr]">
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-slate-900">Latest workspace activity</p>
+                  <div className="space-y-3 text-sm leading-6 text-slate-500">
+                    <p>The latest 25 entries load here. CSV export pulls the full available history from the same paged feed.</p>
+                    <p>Use this to verify settings changes, user actions, and general firm administration events.</p>
+                  </div>
                 </div>
-                <div className="lg:col-span-2">
-                  <Card className="p-6 bg-white shadow-sm border border-slate-200/60 rounded-xl">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-6">
-                      <span className="text-sm font-bold text-slate-800">Administrator Activity Log</span>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => void exportAuditCsv()}
-                          loading={exportingActivity}
-                          disabled={loadingActivity || activity.length === 0}
-                        >
-                          Export CSV
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => void loadActivity(activityPagination.page)}
-                          loading={loadingActivity}
-                        >
-                          Refresh Log
-                        </Button>
-                      </div>
-                    </div>
 
-                    {loadingActivity ? (
-                      <div className="px-4 py-8 text-center text-xs text-slate-400">Loading activity history…</div>
-                    ) : activityError ? (
-                      <div className="rounded-xl border border-rose-100 bg-rose-50/50 p-4 text-xs text-rose-700">
-                        <p className="font-semibold">{activityError}</p>
-                      </div>
-                    ) : activity.length ? (
-                      <>
-                        <div className="overflow-x-auto rounded-xl border border-slate-100">
-                          <table className="min-w-full divide-y divide-slate-100 text-xs">
-                            <thead className="bg-slate-50 text-left font-bold text-slate-600">
-                              <tr>
-                                <th className="px-4 py-3">Timestamp</th>
-                                <th className="px-4 py-3">Actor</th>
-                                <th className="px-4 py-3">Role</th>
-                                <th className="px-4 py-3">Category</th>
-                                <th className="px-4 py-3">Action</th>
-                                <th className="px-4 py-3">Details</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 bg-white text-slate-600">
-                              {activity.map((entry) => (
-                                <tr key={entry.id} className="hover:bg-slate-50/60">
-                                  <td className="px-4 py-3 whitespace-nowrap text-slate-500">{formatDateTime(entry.timestamp)}</td>
-                                  <td className="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">{entry.actor}</td>
-                                  <td className="px-4 py-3 whitespace-nowrap">{entry.role || 'ADMIN'}</td>
-                                  <td className="px-4 py-3 whitespace-nowrap">{entry.category || 'Admin activity'}</td>
-                                  <td className="px-4 py-3 whitespace-nowrap font-semibold text-slate-800">{entry.action}</td>
-                                  <td className="px-4 py-3 text-slate-500">{entry.description || summarizeAuditChanges(entry.changes)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                        <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4 text-xs text-slate-500">
-                          <span>
-                            Page {activityPagination.page} of {activityPagination.totalPages} · {activityPagination.total} total entries
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              disabled={loadingActivity || activityPagination.page <= 1}
-                              onClick={() => void loadActivity(activityPagination.page - 1)}
-                            >
-                              Previous
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              disabled={loadingActivity || !activityPagination.hasNextPage}
-                              onClick={() => void loadActivity(activityPagination.page + 1)}
-                            >
-                              Next
-                            </Button>
+                <Card className="border border-slate-200 bg-white p-5 shadow-none">
+                  <div className="mb-4 flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">Administrator activity</p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Page {activityPagination.page} of {activityPagination.totalPages} · {activityPagination.total} entries
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void exportAuditCsv()}
+                        loading={exportingActivity}
+                        disabled={loadingActivity || activity.length === 0}
+                      >
+                        <span className="mr-2 inline-flex"><DownloadIcon /></span>
+                        Export CSV
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void loadActivity(activityPagination.page)}
+                        loading={loadingActivity}
+                      >
+                        <span className="mr-2 inline-flex"><RefreshIcon /></span>
+                        Refresh
+                      </Button>
+                    </div>
+                  </div>
+
+                  {loadingActivity ? (
+                    <p className="text-sm text-slate-400">Loading audit history...</p>
+                  ) : activityError ? (
+                    <Notice tone="error" text={activityError} />
+                  ) : activity.length ? (
+                    <div className="space-y-3">
+                      {activity.map((entry) => (
+                        <div key={entry.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm font-medium text-slate-900">{entry.action}</span>
+                                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600">{entry.actor}</span>
+                                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-500">{entry.role}</span>
+                              </div>
+                              <p className="text-sm leading-6 text-slate-600">{entry.description || summarizeAuditChanges(entry.changes)}</p>
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              <p>{formatDateTime(entry.timestamp)}</p>
+                              <p className="mt-1">{entry.category || 'Admin activity'}</p>
+                            </div>
                           </div>
                         </div>
-                      </>
-                    ) : (
-                      <div className="px-4 py-8">
-                        <EmptyState
-                          title="No activity recorded"
-                          description="Workspace changes will log here once configuration updates are made."
-                        />
+                      ))}
+
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
+                        <p className="text-sm text-slate-500">
+                          Showing page {activityPagination.page} of {activityPagination.totalPages}
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={loadingActivity || activityPagination.page <= 1}
+                            onClick={() => void loadActivity(activityPagination.page - 1)}
+                          >
+                            Previous
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={loadingActivity || !activityPagination.hasNextPage}
+                            onClick={() => void loadActivity(activityPagination.page + 1)}
+                          >
+                            Next
+                          </Button>
+                        </div>
                       </div>
-                    )}
-                  </Card>
-                </div>
+                    </div>
+                  ) : (
+                    <EmptyState
+                      title="No activity recorded"
+                      description="Workspace changes will appear here after settings or administration activity happens."
+                    />
+                  )}
+                </Card>
               </div>
             )}
-
           </div>
-
-        </div>
+        </Card>
       </div>
     </PlatformShell>
   );

@@ -3,6 +3,7 @@ const caseActionService = require('../services/caseAction.service');
 const CaseStatus = require('../domain/case/caseStatus');
 const { logCaseListViewed } = require('../services/auditLog.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
+const log = require('../utils/log');
 const { transition } = require('../services/docketWorkflow.service');
 
 /**
@@ -147,6 +148,14 @@ const pendCase = async (req, res) => {
       message: 'Case pended successfully',
     });
   } catch (error) {
+    log.error('PEND_CASE_FAILED', {
+      caseId: req?.params?.caseId || null,
+      firmId: req?.user?.firmId || null,
+      userXID: req?.user?.xID || null,
+      message: error?.message || 'Unknown pend error',
+      stack: error?.stack || null,
+    });
+
     // Handle specific errors
     if (error.message === 'Comment is mandatory for this action' ||
         error.message === 'Reopen date is required') {
@@ -172,7 +181,8 @@ const pendCase = async (req, res) => {
 
     if (error.message.startsWith('Illegal transition:') ||
         error.message === 'Resolved cases cannot be modified' ||
-        error.message === 'Invalid lifecycle transition') {
+        error.message === 'Invalid lifecycle transition' ||
+        error.message === 'Version mismatch: docket was updated by another request') {
       return res.status(400).json({
         success: false,
         message: error.message,

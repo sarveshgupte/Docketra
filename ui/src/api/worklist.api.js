@@ -7,6 +7,7 @@ export const worklistApi = {
       page: filters.page,
       limit: filters.limit,
       assigneeXID: filters.assigneeXID,
+      status: filters.status,
       sortBy: filters.sortBy,
       sortOrder: filters.sortOrder,
       search: filters.search,

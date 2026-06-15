@@ -16,20 +16,22 @@ const queries = read('ui/src/hooks/usePlatformDataQueries.js');
 assert.ok(taskManager.includes('My Worklist'), 'Task Manager should expose My Worklist label.');
 assert.ok(taskManager.includes('Workbaskets'), 'Task Manager should expose Workbaskets label.');
 assert.ok(taskManager.includes('QC Workbaskets'), 'Task Manager should expose QC Workbaskets label.');
-assert.ok(taskManager.includes('All Dockets'), 'Task Manager should expose All Dockets label.');
-assert.ok(taskManager.includes('not a pull queue'), 'All Dockets copy should clarify non-queue behavior.');
+assert.ok(taskManager.includes('Next best destination'), 'Task Manager should frame the page as a smart execution hub.');
+assert.ok(taskManager.includes('Available surfaces'), 'Task Manager should group the surfaces the current user can actually access.');
+assert.ok(taskManager.includes('hasQcQueueAccess = hasFirmRoleAtLeast(role, \'ADMIN\') || assignedQcWorkbaskets.length > 0'), 'QC surfaces should only render for admin-wide or explicit QC access.');
+assert.ok(taskManager.includes('QC Workbaskets are hidden until QC queue access is assigned.'), 'Task Manager should explain why QC is absent when the user has no QC queue access.');
 
 assert.ok(platformShell.includes('hasQcQueueAccess = hasAdminAccess || (Array.isArray(user?.qcWorkbaskets) && user.qcWorkbaskets.length > 0)'), 'QC nav visibility should require admin or explicit QC workbasket access.');
-assert.ok(platformShell.includes('Go to QC Workbaskets'), 'Command center should use QC Workbaskets terminology.');
+assert.ok(platformShell.includes('Go to QC Workbench'), 'Command center should keep QC route shortcut terminology.');
 
-assert.ok(queries.includes("caseApi.getCases({ state: 'IN_QC', includeTerminated: false, limit: 50 })"), 'QC query should request IN_QC non-terminal dockets only.');
+assert.ok(queries.includes("caseApi.getCases({ status: CASE_STATUS.QC_PENDING, limit: 50 })"), 'QC query should request QC-pending dockets through the shared platform data hook.');
 
 for (const [name, source] of [
   ['Workbaskets', workbaskets],
   ['QC Workbaskets', qcQueue],
 ]) {
-  assert.ok(source.includes('No work available.'), `${name} should use successful empty-state work messaging.`);
-  assert.ok(source.includes('No dockets found.'), `${name} should use successful empty-state filter messaging.`);
+  assert.ok(source.includes('No dockets are waiting'), `${name} should use queue-specific empty-state work messaging.`);
+  assert.ok(source.includes('No dockets match') || source.includes('No QC dockets match'), `${name} should use clear filtered empty-state messaging.`);
 }
 
 assert.ok(casesColumns.includes('showQueueActions = true'), 'Column hook should support explicit queue-action visibility control.');
@@ -41,8 +43,10 @@ assert.ok(casesPage.includes('CASE_STATUS.FILED'), 'All Dockets filters should i
 
 
 assert.ok(taskManager.includes('Workbaskets'), 'Task Manager should show Workbaskets naming in user-facing copy.');
-assert.ok(workbaskets.includes('title="Workbaskets"'), 'Workbaskets page title should use Workbaskets naming.');
-assert.ok(qcQueue.includes('title="QC Workbaskets"'), 'QC page title should use QC Workbaskets naming.');
+assert.ok(taskManager.includes('Go to Workbench'), 'Task Manager should preserve direct workbench quick action wording.');
+assert.ok(taskManager.includes('Go to My Worklist'), 'Task Manager should preserve direct personal queue quick action wording.');
+assert.ok(workbaskets.includes('Workbaskets'), 'Workbaskets page title should use Workbaskets naming.');
+assert.ok(qcQueue.includes('QC Workbaskets'), 'QC page title should use QC Workbaskets naming.');
 assert.ok(!read('docs/whats-new.md').includes('parent workbasket managers'), 'Whats new should not claim parent manager QC visibility unless explicitly implemented in this PR scope.');
 
 console.log('taskManagerQueueNavigationAndAllDocketsNormalization.test.mjs passed');

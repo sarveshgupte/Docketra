@@ -64,12 +64,6 @@ const IconAdmin = () => (
   </svg>
 );
 
-const IconCases = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2z" />
-  </svg>
-);
-
 const IconReport = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
@@ -563,7 +557,6 @@ export const Layout = ({ children, title, subtitle }) => {
             || isActivePrefix(ROUTES.WORKLIST(currentFirmSlug))
             || isActivePrefix(ROUTES.MY_WORKLIST(currentFirmSlug))
             || isActivePrefix(ROUTES.QC_QUEUE(currentFirmSlug))
-            || isActivePrefix(ROUTES.CASES(currentFirmSlug))
             || isActiveQueryRoute(ROUTES.ADMIN(currentFirmSlug), { tab: 'categories' })
             || isActivePrefix(ROUTES.WORK_SETTINGS(currentFirmSlug))
           ),
@@ -572,7 +565,6 @@ export const Layout = ({ children, title, subtitle }) => {
             { id: 'tm-workbasket', to: ROUTES.GLOBAL_WORKLIST(currentFirmSlug), label: workbasketNavLabel, icon: <IconWorkbasket />, active: isActivePath(ROUTES.GLOBAL_WORKLIST(currentFirmSlug)), badge: countsFetched ? workbasketCount : 'loading' },
             { id: 'tm-worklist', to: ROUTES.WORKLIST(currentFirmSlug), label: 'My Worklist', icon: <IconWorklist />, active: isActivePath(ROUTES.WORKLIST(currentFirmSlug)) || isActivePath(ROUTES.MY_WORKLIST(currentFirmSlug)), badge: countsFetched ? worklistCount : 'loading' },
             { id: 'tm-qc', to: ROUTES.QC_QUEUE(currentFirmSlug), label: 'QC Workbasket', icon: <IconAdmin />, active: isActivePath(ROUTES.QC_QUEUE(currentFirmSlug)), hidden: !hasQcQueueAccess },
-            { id: 'tm-dockets', to: ROUTES.CASES(currentFirmSlug), label: 'All Dockets', icon: <IconCases />, active: isActivePath(ROUTES.CASES(currentFirmSlug)) },
             { id: 'tm-clients', to: ROUTES.CLIENTS(currentFirmSlug), label: 'Clients', icon: <IconTeam />, active: isActivePath(ROUTES.CLIENTS(currentFirmSlug)), hidden: !hasAdminAccess },
             {
               id: 'tm-category-management',
@@ -823,7 +815,7 @@ export const Layout = ({ children, title, subtitle }) => {
                   <button
                     key={`case-${item.caseId}`}
                     className="dropdown-item"
-                    onClick={() => openDocket({ caseId: item.caseId, navigate, to: safeRoute(ROUTES.CASE_DETAIL(currentFirmSlug, item.caseId), ROUTES.CASES(currentFirmSlug)) })}
+                    onClick={() => openDocket({ caseId: item.caseId, navigate, to: safeRoute(ROUTES.CASE_DETAIL(currentFirmSlug, item.caseId), ROUTES.TASK_MANAGER(currentFirmSlug)) })}
                   >
                     Docket: {item.caseId} — {item.title}
                   </button>
@@ -835,7 +827,7 @@ export const Layout = ({ children, title, subtitle }) => {
           {/* Create Docket CTA */}
           <button
             className="btn btn-primary enterprise-header__new-case"
-            onClick={() => navigate(safeRoute(ROUTES.CREATE_CASE(currentFirmSlug), ROUTES.CASES(currentFirmSlug)))}
+            onClick={() => navigate(safeRoute(ROUTES.CREATE_CASE(currentFirmSlug), ROUTES.TASK_MANAGER(currentFirmSlug)))}
             aria-label="Create new docket"
           >
             <IconPlus />
@@ -925,7 +917,7 @@ export const Layout = ({ children, title, subtitle }) => {
                           </div>
                           {item.docketNumber && currentFirmSlug ? (
                             <Link
-                              to={safeRoute(ROUTES.CASE_DETAIL(currentFirmSlug, item.docketNumber), ROUTES.CASES(currentFirmSlug))}
+                              to={safeRoute(ROUTES.CASE_DETAIL(currentFirmSlug, item.docketNumber), ROUTES.TASK_MANAGER(currentFirmSlug))}
                               className="enterprise-header__notification-link"
                               onClick={() => { void markNotificationRead(item.id); setNotificationOpen(false); }}
                             >
