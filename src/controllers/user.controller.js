@@ -190,7 +190,7 @@ const createUser = async (req, res) => {
       email: normalizedEmail,
       role,
       qcSamplingRate: parsedRate,
-      createdBy: req.body.createdBy, // In real app, this comes from auth
+      createdBy: req.user?._id, // Set from authenticated user
     });
     
     await user.save();
@@ -241,7 +241,7 @@ const updateUser = async (req, res) => {
     if (name) user.name = name;
     if (role) user.role = role;
     if (isActive !== undefined) user.isActive = isActive;
-    user.updatedBy = req.body.updatedBy; // In real app, this comes from auth
+    user.updatedBy = req.user?._id; // Set from authenticated user
     
     await user.save();
     if (role && role !== previousRole) {
@@ -314,7 +314,7 @@ const deleteUser = async (req, res) => {
     }
     
     user.isActive = false;
-    user.updatedBy = req.body.updatedBy; // In real app, this comes from auth
+    user.updatedBy = req.user?._id; // Set from authenticated user
     await user.save();
     await logSecurityAuditEvent({
       req,
