@@ -1,3 +1,6 @@
 ## 2024-07-26 - Optimize N+1 query loop with $in query and bulk insertMany
 **Learning:** Found an N+1 query bottleneck in `src/controllers/workbasket.controller.js` where a `Team.findOne` was performed inside a loop over all PRIMARY workbaskets. This led to excessive DB round-trips. Furthermore, when a workbasket was missing, a separate `create` was fired inside the loop.
 **Action:** Lift the query out of the loop and utilize the `$in` operator with a single `find` to check existence of multiple linked QC teams. Combine missing elements into a single `insertMany` to minimize network roundtrips to O(1) and improve scaling for firms with lots of workbaskets.
+## 2026-06-16 - Prevent blocking concurrent queries with sequential awaits
+**Learning:** Found an unnecessary sequential query execution in `src/services/dashboard.service.js`. A `Case.countDocuments({ status: 'PENDING', ... })` was being explicitly awaited *after* a massive `Promise.all()` containing 5+ other database queries. This forced the application to wait for the entire `Promise.all()` to finish before starting a completely independent aggregation, adding a sequential network and database round trip.
+**Action:** Always move independent, sequential database queries into existing `Promise.all()` blocks to maximize concurrency and minimize overall latency.
