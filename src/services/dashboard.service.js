@@ -216,6 +216,7 @@ const getRiskBrief = async (firmId) => {
     awaitingApproval,
     overloadedAssigneesRaw,
     blockedTaxonomyRaw,
+    stalePending,
   ] = await Promise.all([
     Case.countDocuments({
       firmId: firmObjectId,
@@ -273,13 +274,14 @@ const getRiskBrief = async (firmId) => {
       },
       { $sort: { count: -1 } },
     ]),
+    // 💡 What: Moved the sequential stalePending query into the concurrent Promise.all execution.
+    // 🎯 Why: Previously, this query executed after the main Promise.all completed, adding a sequential network round-trip. Running it concurrently minimizes overall execution time.
+    Case.countDocuments({
+      firmId: firmObjectId,
+      status: 'PENDING',
+      updatedAt: { $lt: tenDaysAgo },
+    }),
   ]);
-
-  const stalePending = await Case.countDocuments({
-    firmId: firmObjectId,
-    status: 'PENDING',
-    updatedAt: { $lt: tenDaysAgo },
-  });
 
   const blockedByType = blockedTaxonomyRaw.reduce((acc, item) => {
     const key = String(item?._id || 'other');
