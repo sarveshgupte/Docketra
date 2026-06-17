@@ -1,3 +1,6 @@
 ## 2024-07-26 - Optimize N+1 query loop with $in query and bulk insertMany
 **Learning:** Found an N+1 query bottleneck in `src/controllers/workbasket.controller.js` where a `Team.findOne` was performed inside a loop over all PRIMARY workbaskets. This led to excessive DB round-trips. Furthermore, when a workbasket was missing, a separate `create` was fired inside the loop.
 **Action:** Lift the query out of the loop and utilize the `$in` operator with a single `find` to check existence of multiple linked QC teams. Combine missing elements into a single `insertMany` to minimize network roundtrips to O(1) and improve scaling for firms with lots of workbaskets.
+## 2024-07-26 - Optimize N+1 database round-trip for docket reassignment
+**Learning:** Found a sequential `await reassignCase()` bottleneck inside a `for` loop in `src/controllers/capacity.controller.js`. When a user reassigns multiple dockets in bulk, waiting for each reassignment to complete sequentially causes significant latency overhead due to N+1 database round-trips.
+**Action:** Replace sequential `await reassignCase()` executions with concurrent execution using `Promise.all(caseIds.map(...))`. This drastically reduces the total execution time, improving the response time for bulk reassignment operations.

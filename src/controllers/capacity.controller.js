@@ -326,14 +326,21 @@ const bulkReassignDockets = async (req, res) => {
     const successCases = [];
     const failedCases = [];
 
-    // Reassign each case atomically
-    for (const caseId of caseIds) {
-      try {
-        await reassignCase(String(firmId), caseId, assignedToXID, req.user);
-        successCases.push(caseId);
-      } catch (err) {
-        failedCases.push({ caseId, error: err.message });
-      }
+    // 💡 What: Used batching for concurrent docket reassignments.
+    // 🎯 Why: Waiting for each case assignment sequentially causes N+1 latency, but unbounded Promise.all can cause database pool exhaustion or race conditions.
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < caseIds.length; i += BATCH_SIZE) {
+      const batch = caseIds.slice(i, i + BATCH_SIZE);
+      await Promise.all(
+        batch.map(async (caseId) => {
+          try {
+            await reassignCase(String(firmId), caseId, assignedToXID, req.user);
+            successCases.push(caseId);
+          } catch (err) {
+            failedCases.push({ caseId, error: err.message });
+          }
+        })
+      );
     }
 
     return res.json({
