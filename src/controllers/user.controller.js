@@ -185,12 +185,14 @@ const createUser = async (req, res) => {
       parsedRate = Math.round(Number(qcSamplingRate));
     }
 
+    // Security Fix: Prevent Mass Assignment / IDOR
+    // Audit fields must be set from authenticated context, never from client input
     const user = new User({
       name,
       email: normalizedEmail,
       role,
       qcSamplingRate: parsedRate,
-      createdBy: req.body.createdBy, // In real app, this comes from auth
+      createdBy: req.user?._id || null,
     });
     
     await user.save();
@@ -241,7 +243,10 @@ const updateUser = async (req, res) => {
     if (name) user.name = name;
     if (role) user.role = role;
     if (isActive !== undefined) user.isActive = isActive;
-    user.updatedBy = req.body.updatedBy; // In real app, this comes from auth
+
+    // Security Fix: Prevent Mass Assignment / IDOR
+    // Audit fields must be set from authenticated context, never from client input
+    user.updatedBy = req.user?._id || null;
     
     await user.save();
     if (role && role !== previousRole) {
@@ -314,7 +319,9 @@ const deleteUser = async (req, res) => {
     }
     
     user.isActive = false;
-    user.updatedBy = req.body.updatedBy; // In real app, this comes from auth
+    // Security Fix: Prevent Mass Assignment / IDOR
+    // Audit fields must be set from authenticated context, never from client input
+    user.updatedBy = req.user?._id || null;
     await user.save();
     await logSecurityAuditEvent({
       req,
