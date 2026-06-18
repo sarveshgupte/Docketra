@@ -5,6 +5,7 @@ const Client = require('../models/Client.model');
 const ComplianceObligationTemplate = require('../models/ComplianceObligationTemplate.model');
 const { resolveFirmMemoryScope } = require('../services/firmMemoryScope.service');
 const { logAuditEvent } = require('../services/adminActionAudit.service');
+const { escapeRegExp } = require('../utils/regexp.utils');
 
 const { KNOWLEDGE_ITEM_TYPES, KNOWLEDGE_ITEM_STATUSES } = KnowledgeItem;
 
@@ -461,19 +462,19 @@ const getWorkspaceAssets = async (req, res) => {
       ...(resolvedClientId ? [{ linkedClientId: resolvedClientId }] : []),
       // 2. Matched Service Line (obligation_type)
       ...(targetCase.obligation_type ? [
-        { linkedServiceLine: { $regex: new RegExp(`^${targetCase.obligation_type}$`, 'i') } }
+        { linkedServiceLine: { $regex: new RegExp(`^${escapeRegExp(targetCase.obligation_type)}$`, 'i') } }
       ] : []),
       // 3. Matched Docket Type (category / subcategory / categoryId / subcategoryId)
       ...(targetCase.categoryId ? [{ linkedDocketType: String(targetCase.categoryId) }] : []),
       ...(targetCase.category ? [
-        { linkedDocketType: { $regex: new RegExp(`^${targetCase.category}$`, 'i') } }
+        { linkedDocketType: { $regex: new RegExp(`^${escapeRegExp(targetCase.category)}$`, 'i') } }
       ] : []),
       ...(targetCase.subcategory ? [
-        { linkedDocketType: { $regex: new RegExp(`^${targetCase.subcategory}$`, 'i') } }
+        { linkedDocketType: { $regex: new RegExp(`^${escapeRegExp(targetCase.subcategory)}$`, 'i') } }
       ] : []),
       // 4. Matched Stage / Status
       ...(targetCase.status ? [
-        { linkedStage: { $regex: new RegExp(`^${targetCase.status}$`, 'i') } }
+        { linkedStage: { $regex: new RegExp(`^${escapeRegExp(targetCase.status)}$`, 'i') } }
       ] : []),
     ];
 
