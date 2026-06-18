@@ -1,3 +1,7 @@
 ## 2024-07-26 - Optimize N+1 query loop with $in query and bulk insertMany
 **Learning:** Found an N+1 query bottleneck in `src/controllers/workbasket.controller.js` where a `Team.findOne` was performed inside a loop over all PRIMARY workbaskets. This led to excessive DB round-trips. Furthermore, when a workbasket was missing, a separate `create` was fired inside the loop.
 **Action:** Lift the query out of the loop and utilize the `$in` operator with a single `find` to check existence of multiple linked QC teams. Combine missing elements into a single `insertMany` to minimize network roundtrips to O(1) and improve scaling for firms with lots of workbaskets.
+
+## 2024-07-26 - Avoid memory-intensive $facet for simple counts
+**Learning:** Found a performance anti-pattern in `getComplianceControlRoom` (`src/services/dashboard.service.js`) where the MongoDB `$facet` operator was used to retrieve multiple simple counts. While `$facet` executes in a single network roundtrip, it forces MongoDB to pull all matched documents into memory to evaluate the sub-pipelines, bypassing indexes and risking the 100MB aggregation memory limit.
+**Action:** Replace `$facet` aggregations with concurrent individual `Model.countDocuments()` queries and execute them via `Promise.all()`. This allows MongoDB to resolve counts entirely using index scans (O(1) memory), resulting in much faster execution over large datasets.
