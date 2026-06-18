@@ -40,3 +40,8 @@
 **Vulnerability:** Raw error messages (`error.message`) were being directly exposed to clients in API error responses (e.g., in `src/controllers/user.controller.js`).
 **Learning:** Exposing raw internal error details to the client can leak sensitive system information, configuration details, or underlying infrastructure state, which can be leveraged by attackers.
 **Prevention:** Always log the full error details server-side using the internal logger (`log.error`) and return generic, safe error messages to the client (e.g., "Unable to load profile").
+
+## 2026-06-12 - Fix ReDoS / NoSQL Injection in controllers
+**Vulnerability:** User-derived inputs in `src/controllers/documentItem.controller.js` and `src/controllers/knowledgeItem.controller.js` were passed unescaped into dynamic `new RegExp(...)` constructors in MongoDB queries.
+**Learning:** Failing to sanitize dynamic string variables in `new RegExp(...)` queries can lead to Regular Expression Denial of Service (ReDoS) or unintended matching through NoSQL Injection, especially if attackers pass inputs with regex control characters.
+**Prevention:** Always escape dynamic inputs using `escapeRegExp` from `src/utils/regexp.utils.js` before using them within `new RegExp` constructions.
