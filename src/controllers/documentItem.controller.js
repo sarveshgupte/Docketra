@@ -1,3 +1,4 @@
+const { escapeRegExp } = require('../utils/regexp.utils');
 const mongoose = require('mongoose');
 const DocumentItem = require('../models/DocumentItem.model');
 const Case = require('../models/Case.model');
@@ -51,7 +52,7 @@ const createDocumentItem = async (req, res) => {
     }
 
     // Prevent duplicate name confusion in the same docket
-    const duplicate = await DocumentItem.findOne({ caseInternalId, name: { $regex: new RegExp(`^${name}$`, 'i') } });
+    const duplicate = await DocumentItem.findOne({ caseInternalId, name: { $regex: new RegExp(`^${escapeRegExp(name)}$`, 'i') } });
     if (duplicate) {
       return res.status(409).json({
         success: false,
