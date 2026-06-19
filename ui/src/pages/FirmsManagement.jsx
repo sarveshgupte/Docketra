@@ -474,6 +474,7 @@ export const FirmsManagement = () => {
                 <h2>Create New Firm</h2>
                 <button 
                   className="modal-close"
+                  aria-label="Close create firm modal"
                   onClick={() => {
                     setShowCreateModal(false);
                     setFormData({ name: '', adminName: '', adminEmail: '' });
@@ -548,6 +549,7 @@ export const FirmsManagement = () => {
                  <h2>Admin Management</h2>
                  <button
                    className="modal-close"
+                   aria-label="Close admin management modal"
                    onClick={() => setAdminModal({ open: false, loading: false, firm: null, details: [], addForm: { name: '', email: '' } })}
                  >
                    ×
