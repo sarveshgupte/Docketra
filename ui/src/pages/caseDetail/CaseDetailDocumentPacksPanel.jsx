@@ -226,6 +226,8 @@ export const CaseDetailDocumentPacksPanel = ({ caseId, caseInternalId, attachmen
                       ✚ Push New Version
                     </Button>
                     <button
+                      type="button"
+                      aria-expanded={isExpanded}
                       className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors ml-2 px-2 py-1"
                       onClick={() => setExpandedDocId(isExpanded ? null : doc._id)}
                     >
