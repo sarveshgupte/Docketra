@@ -844,7 +844,14 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
 
 async function reopenDuePending() {
   const now = new Date();
-  const dueCases = await Case.find({ status: toPersistenceState(DocketStatus.PENDING), reopenAt: { $lte: now } });
+  const pendingDueFilter = {
+    status: toPersistenceState(DocketStatus.PENDING),
+    $or: [
+      { reopenAt: { $lte: now } },
+      { pendingUntil: { $lte: now } },
+    ],
+  };
+  const dueCases = await Case.find(pendingDueFilter);
 
   if (!dueCases || dueCases.length === 0) {
     return { count: 0, docketIds: [] };

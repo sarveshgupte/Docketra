@@ -42,8 +42,8 @@ const SignupStepDots = ({ step }) => (
     {[1, 2].map((item) => (
       <span
         key={item}
-        className={`h-2 rounded-full transition-all ${
-          item === step ? 'w-9 bg-slate-950' : 'w-5 bg-slate-200'
+        className={`h-1.5 rounded transition-all ${
+          item === step ? 'w-8 bg-slate-950' : 'w-4 bg-slate-200'
         }`}
       />
     ))}
@@ -324,9 +324,16 @@ export default function Signup() {
     return (
       <SignupShell mode="success">
           <section className="hidden lg:block" aria-label="Workspace signup success">
-            <Link to="/" className="inline-flex items-center gap-2 text-lg font-extrabold text-slate-950">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-white" aria-hidden="true">✨</span>
-              Docketra
+            <Link to="/" className="inline-flex items-center gap-2.5 text-lg font-extrabold tracking-tight text-slate-950">
+              <svg className="h-9 w-9 text-amber-600 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M25 15H50C69.33 15 85 30.67 85 50C85 69.33 69.33 85 50 85H25V15Z" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M40 30H50C61.05 30 70 38.95 70 50C70 61.05 61.05 70 50 70H40V30Z" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
+              </svg>
+              <div className="flex flex-col leading-none text-left">
+                <span className="text-lg font-black text-slate-900 tracking-tight">Docketra</span>
+                <span className="text-[8px] font-bold text-amber-700 tracking-wider uppercase mt-0.5">The Company Brain</span>
+              </div>
             </Link>
             <p className="mt-10 text-sm font-bold uppercase text-amber-700">🎉 Workspace created</p>
             <h1 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
@@ -382,9 +389,16 @@ export default function Signup() {
   return (
     <SignupShell>
         <section className="hidden lg:block" aria-label="Workspace signup context">
-          <Link to="/" className="inline-flex items-center gap-2 text-lg font-extrabold text-slate-950">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-white" aria-hidden="true">✨</span>
-            Docketra
+          <Link to="/" className="inline-flex items-center gap-2.5 text-lg font-extrabold tracking-tight text-slate-950">
+            <svg className="h-9 w-9 text-amber-600 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M25 15H50C69.33 15 85 30.67 85 50C85 69.33 69.33 85 50 85H25V15Z" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M40 30H50C61.05 30 70 38.95 70 50C70 61.05 61.05 70 50 70H40V30Z" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
+            </svg>
+            <div className="flex flex-col leading-none text-left">
+              <span className="text-lg font-black text-slate-900 tracking-tight">Docketra</span>
+              <span className="text-[8px] font-bold text-amber-700 tracking-wider uppercase mt-0.5">The Company Brain</span>
+            </div>
           </Link>
           <p className="mt-10 text-sm font-bold uppercase text-amber-700">🚀 Workspace signup</p>
           <h1 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
@@ -402,7 +416,8 @@ export default function Signup() {
           </ul>
           <div className="mt-6 flex flex-wrap gap-2">
             {TRUST_BADGES.map((badge) => (
-              <span key={badge} className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-bold text-slate-600">
+              <span key={badge} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white/80 px-2.5 py-1 text-xs font-bold text-slate-600">
+                <span className="h-1.5 w-1.5 rounded bg-slate-400" />
                 {badge}
               </span>
             ))}
@@ -424,9 +439,16 @@ export default function Signup() {
         </section>
 
         <Card className="auth-card w-full max-w-none rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.45)] backdrop-blur md:p-7">
-          <Link to="/" className="mb-5 inline-flex items-center gap-2 text-base font-extrabold text-slate-950 lg:hidden">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-950 text-white" aria-hidden="true">✨</span>
-            Docketra
+          <Link to="/" className="mb-5 inline-flex items-center gap-2 text-base font-extrabold tracking-tight text-slate-950 lg:hidden">
+            <svg className="h-8 w-8 text-amber-600 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M25 15H50C69.33 15 85 30.67 85 50C85 69.33 69.33 85 50 85H25V15Z" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M40 30H50C61.05 30 70 38.95 70 50C70 61.05 61.05 70 50 70H40V30Z" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
+            </svg>
+            <div className="flex flex-col leading-none text-left">
+              <span className="text-base font-black text-slate-900 tracking-tight">Docketra</span>
+              <span className="text-[7px] font-bold text-amber-700 tracking-wider uppercase mt-0.5">The Company Brain</span>
+            </div>
           </Link>
           <div className="auth-header text-center">
             <p className="auth-kicker">Docketra · Secure workspace setup</p>

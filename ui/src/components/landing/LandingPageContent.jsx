@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PublicMarketingHeader from '../marketing/PublicMarketingHeader';
 import Container from '../layout/Container';
+import BubbleMenu from '../common/BubbleMenu';
+import ScrollFloat from '../common/ScrollFloat';
+import BorderGlow from '../common/BorderGlow';
 
 const REVEAL = {
   initial: { opacity: 0, y: 20 },
@@ -72,15 +75,15 @@ const ProductMockup = () => (
       {/* Browser Bar */}
       <div className="flex items-center justify-between border-b border-slate-100 bg-slate-900/5 px-4 py-3">
         <div className="flex gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-rose-450" />
-          <span className="h-3 w-3 rounded-full bg-amber-450" />
-          <span className="h-3 w-3 rounded-full bg-emerald-450" />
+          <span className="h-3 w-3 rounded-full bg-rose-400" />
+          <span className="h-3 w-3 rounded-full bg-amber-400" />
+          <span className="h-3 w-3 rounded-full bg-emerald-400" />
         </div>
         <div className="rounded-full bg-slate-200/60 px-4 py-0.5 text-[11px] font-semibold text-slate-600">
           app.docketra.com/workspace/mehta-co
         </div>
         <div className="flex gap-2">
-          <span className="h-4 w-4 rounded-full bg-slate-300" />
+          <span className="h-4 w-4 rounded-md bg-slate-300" />
         </div>
       </div>
 
@@ -122,7 +125,7 @@ const ProductMockup = () => (
 
           {/* User badge */}
           <div className="mt-8 flex items-center gap-2 border-t border-white/5 pt-3">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-600 text-[10px] font-black text-white">AM</div>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-600 text-[10px] font-black text-white">AM</div>
             <div className="leading-none">
               <p className="text-[10px] font-black text-white">Arjun Mehta</p>
               <p className="text-[8px] text-slate-500 font-bold mt-0.5">Partner</p>
@@ -134,19 +137,27 @@ const ProductMockup = () => (
         <main className="bg-slate-50/50 p-5 grid grid-rows-[auto_auto_1fr]">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-base font-black text-slate-900">Good morning, Arjun 👋</h3>
-              <p className="text-[10px] text-slate-500 font-bold mt-0.5">Here's what's happening today.</p>
+              <h3 className="text-base font-black text-slate-900">Good morning, Arjun</h3>
+              <p className="text-[10px] text-slate-500 font-bold mt-0.5">Open deadlines, review queues, and client context for today.</p>
             </div>
             <div className="flex gap-2">
-              <span className="h-5 w-5 rounded bg-white shadow-sm flex items-center justify-center text-[10px]">🔍</span>
-              <span className="h-5 w-5 rounded bg-white shadow-sm flex items-center justify-center text-[10px]">🔔</span>
+              <span className="flex h-5 w-5 items-center justify-center rounded bg-white text-slate-500 shadow-sm">
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-5.8-5.8m1.8-5.2a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </span>
+              <span className="flex h-5 w-5 items-center justify-center rounded bg-white text-slate-500 shadow-sm">
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 11-6 0" />
+                </svg>
+              </span>
             </div>
           </div>
 
           {/* Quick Metrics Grid */}
           <div className="mt-4 grid grid-cols-4 gap-2">
             {[
-              { label: 'Active Dockets', val: '156', trend: '↑ 12 from yesterday', color: 'text-emerald-600' },
+              { label: 'Active Dockets', val: '156', trend: '+12 since yesterday', color: 'text-emerald-600' },
               { label: 'Due Today', val: '23', trend: 'High priority', color: 'text-rose-600' },
               { label: 'In Review (QC)', val: '17', trend: '3 need your attention', color: 'text-amber-600' },
               { label: 'Overdue', val: '8', trend: 'Across 3 dockets', color: 'text-slate-600' },
@@ -212,7 +223,7 @@ const ProductMockup = () => (
                     <ul className="list-disc pl-2.5 mt-0.5 space-y-0.5">
                       <li>Holding company restructure in progress</li>
                       <li>ROC adjudication reply filed on 12 May</li>
-                      <li>SIDBI notice pending – hearing on 26 May</li>
+                      <li>SIDBI notice pending, hearing on 26 May</li>
                     </ul>
                   </div>
                   <div>
@@ -261,14 +272,14 @@ const HeroSection = () => (
     {/* Grid Overlay Pattern */}
     <div className="absolute inset-0 bg-[linear-gradient(to_right,#f8fafc_1px,transparent_1px),linear-gradient(to_bottom,#f8fafc_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-80" />
     
-    <Container className="relative">
-      <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.1fr]">
+    <Container size="7xl" className="relative">
+      <div className="grid items-start gap-12 lg:grid-cols-[1fr_1.4fr] pt-8 md:pt-14">
         <motion.div {...REVEAL}>
           <div className="flex items-center gap-2">
-            <svg className="h-5 w-5 text-amber-600 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="h-5 w-5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
               <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
             </svg>
-            <span className="text-xs font-bold text-amber-700 tracking-widest uppercase">Built for Indian professional firms</span>
+            <span className="text-xs font-extrabold text-amber-700">Built for Indian professional firms</span>
           </div>
 
           <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] tracking-tight text-slate-950 sm:text-5xl lg:text-[3.5rem]">
@@ -277,28 +288,32 @@ const HeroSection = () => (
           </h1>
           
           <p className="mt-6 max-w-xl text-base leading-relaxed text-slate-700 font-medium">
-            Never lose client memory. Run every engagement with perfect context, clear dockets and airtight execution — from intake to closure.
+            Docketra connects client memory, dockets, deadlines, QC, worklists, and reports in one firm workspace.
           </p>
 
-          <p className="mt-2 text-xs font-bold text-slate-500">
-            Purpose-built for CS, CA, law, and compliance teams.
+          <p className="mt-2 text-sm font-bold text-slate-800">
+            For CS, CA, law, and compliance teams that cannot afford missing context.
           </p>
 
-          {/* Quick wedge badges */}
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 max-w-xl">
-            {HERO_BADGES.map((badge) => (
-              <div key={badge.label} className="flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm transition-all hover:border-amber-300">
-                {badge.icon}
-                <span className="text-xs font-black text-slate-800">{badge.label}</span>
-              </div>
-            ))}
-          </div>
+          <BorderGlow
+            edgeSensitivity={35}
+            glowColor="37 99 235"
+            backgroundColor="#fffdf9"
+            borderRadius={12}
+            colors={['#fbbf24', '#f59e0b', '#d97706']}
+            fillOpacity={0.06}
+            className="mt-5 max-w-xl"
+          >
+            <div className="p-4 text-xs font-medium leading-relaxed text-slate-700">
+              <span className="font-extrabold text-slate-950">What is Docketra?</span> A Company Brain and Work Execution OS that keeps client history, promises, documents, checklists, ownership, and review status attached to the work being done.
+            </div>
+          </BorderGlow>
 
           {/* CTA Group */}
-          <div className="mt-8 flex flex-col gap-3.5 sm:flex-row items-center">
+          <div className="mt-6 flex flex-col gap-3.5 sm:flex-row items-center">
             <Link
               to="/signup"
-              className="inline-flex h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-slate-950 px-8 text-xs font-black text-amber-400 shadow-xl transition-all hover:bg-slate-855 hover:scale-[1.01]"
+              className="inline-flex h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-slate-950 px-8 text-xs font-black text-amber-400 shadow-xl transition-all hover:bg-slate-800 hover:scale-[1.01] active:scale-[0.98]"
             >
               <span>Create workspace</span>
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -310,7 +325,7 @@ const HeroSection = () => (
               type="button"
               className="inline-flex h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-6 text-xs font-black text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
             >
-              <svg className="h-4 w-4 text-slate-450" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -318,11 +333,21 @@ const HeroSection = () => (
             </button>
           </div>
 
-          <p className="mt-3 text-[11px] font-bold text-slate-400 flex gap-4 justify-center sm:justify-start">
+          <p className="mt-3 flex gap-3 text-[11px] font-bold text-slate-500 sm:justify-start">
             <span>No credit card required</span>
-            <span>·</span>
-            <span>Setup in 60 seconds</span>
+            <span aria-hidden="true">|</span>
+            <span>Pilot-friendly setup</span>
           </p>
+
+          {/* Quick wedge badges */}
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 max-w-xl">
+            {HERO_BADGES.map((badge) => (
+              <div key={badge.label} className="flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm transition-all hover:border-amber-300">
+                {badge.icon}
+                <span className="text-xs font-black text-slate-800">{badge.label}</span>
+              </div>
+            ))}
+          </div>
         </motion.div>
 
         <motion.div
@@ -344,8 +369,8 @@ const SubHeroStats = () => (
       <div className="grid gap-8 md:grid-cols-3">
         {[
           {
-            title: 'Built for Indian firms',
-            desc: 'CS, CA, Law & Compliance',
+            title: 'Built around firm memory',
+            desc: 'Client context follows the work',
             icon: (
               <svg className="h-6 w-6 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -353,8 +378,8 @@ const SubHeroStats = () => (
             )
           },
           {
-            title: 'Hosted in India',
-            desc: 'Your data stays in India',
+            title: 'India-hosted posture',
+            desc: 'Designed for Indian firm operations',
             icon: (
               <svg className="h-6 w-6 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -363,8 +388,8 @@ const SubHeroStats = () => (
             )
           },
           {
-            title: 'Bank-grade security',
-            desc: 'B2B Tenant Isolation - Encrypted - Private',
+            title: 'Security-first controls',
+            desc: 'Tenant isolation, access roles, audit trails',
             icon: (
               <svg className="h-6 w-6 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -392,23 +417,36 @@ const ProblemSection = () => (
     <Container className="relative">
       <motion.div className="grid gap-12 lg:grid-cols-[1fr_1.1fr]" {...REVEAL}>
         <div>
-          <p className="text-xs font-black uppercase tracking-widest text-amber-700">THE PROBLEM WE SOLVE</p>
+          <p className="text-xs font-black text-amber-700">Where firms lose control</p>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-950 md:text-4xl leading-tight">
-            Firms don't lose data. They <span className="text-amber-700">lose context.</span>
+            The risk is not that work exists. The risk is that nobody can see it clearly.
           </h2>
           <p className="mt-6 text-sm font-medium leading-relaxed text-slate-600">
-            Scattered emails, WhatsApp instructions, spreadsheets and disconnected tools create gaps. People leave, memory goes. Deadlines slip. Risk creeps in.
+            In growing CS, CA, law, and compliance practices, the truth about a client is often split across inboxes, chats, spreadsheets, files, and individual memory.
           </p>
-          <p className="mt-4 text-sm font-bold leading-relaxed text-slate-900 border-l-4 border-amber-500 pl-4 bg-amber-50/20 py-2">
-            Docketra is your collective memory—structured, searchable and always up to date.
-          </p>
+          <BorderGlow
+            edgeSensitivity={35}
+            glowColor="37 99 235"
+            backgroundColor="#fffdf9"
+            borderRadius={16}
+            colors={['#fbbf24', '#f59e0b', '#d97706']}
+            fillOpacity={0.06}
+            className="mt-6"
+          >
+            <div className="p-5">
+              <p className="text-sm font-black text-slate-950">That is the gap Docketra closes.</p>
+              <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-700">
+                It gives the firm a shared operating memory, so handovers, deadlines, reviews, and client promises stay attached to active work.
+              </p>
+            </div>
+          </BorderGlow>
         </div>
 
-        <div className="space-y-4">
+        <div className="grid gap-4">
           {[
             {
-              title: 'Nothing is easy to find',
-              desc: 'Information is everywhere, so nothing is retrievable.',
+              title: 'The partner becomes the search engine',
+              desc: 'Every escalation starts with: who knows the client history, where is the last file, and what did we promise?',
               icon: (
                 <svg className="h-5 w-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -416,8 +454,8 @@ const ProblemSection = () => (
               )
             },
             {
-              title: 'Quality is inconsistent',
-              desc: 'Review depends on individuals, not a system.',
+              title: 'Review depends on follow-ups',
+              desc: 'QC comments, corrections, and approvals move through chats instead of a visible review state.',
               icon: (
                 <svg className="h-5 w-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -426,7 +464,7 @@ const ProblemSection = () => (
             },
             {
               title: 'Knowledge walks out',
-              desc: 'When people leave, so does client memory.',
+              desc: 'When a team member exits, the firm loses client-specific instructions, exceptions, and past decisions.',
               icon: (
                 <svg className="h-5 w-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 20H7a3 3 0 01-3-3V5a3 3 0 013-3h10a3 3 0 013 3v12a3 3 0 01-3 3z" />
@@ -434,8 +472,8 @@ const ProblemSection = () => (
               )
             },
             {
-              title: 'Reports take too long',
-              desc: 'Manual compilation steals billable time.',
+              title: 'Capacity is discovered too late',
+              desc: 'Managers know who is overloaded only after deadlines turn red or clients start chasing.',
               icon: (
                 <svg className="h-5 w-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -443,8 +481,8 @@ const ProblemSection = () => (
               )
             },
             {
-              title: 'Work lacks visibility',
-              desc: 'No real-time view of what\'s done, due or at risk.',
+              title: 'Reporting becomes reconstruction',
+              desc: 'Status updates take hours because work, owners, documents, and exceptions are split across tools.',
               icon: (
                 <svg className="h-5 w-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -452,16 +490,27 @@ const ProblemSection = () => (
                 </svg>
               )
             }
-          ].map((pain) => (
-            <div key={pain.title} className="flex gap-4 rounded-xl border border-slate-200/50 bg-slate-50/30 p-4 hover:border-amber-205 transition-colors">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 shadow-sm">
-                {pain.icon}
-              </span>
-              <div>
-                <h3 className="text-sm font-black text-slate-900">{pain.title}</h3>
-                <p className="text-xs font-bold text-slate-500 mt-0.5">{pain.desc}</p>
+          ].map((pain, index) => (
+            <BorderGlow
+              key={pain.title}
+              edgeSensitivity={30}
+              glowColor="37 99 235"
+              backgroundColor="#f8fafc"
+              borderRadius={12}
+              colors={['#fbbf24', '#f59e0b', '#d97706']}
+              fillOpacity={0.02}
+            >
+              <div className="flex gap-4 p-4">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 shadow-sm">
+                  {pain.icon}
+                </span>
+                <div>
+                  <p className="text-[10px] font-black text-amber-700">Pain {index + 1}</p>
+                  <h3 className="mt-0.5 text-sm font-black text-slate-900">{pain.title}</h3>
+                  <p className="text-xs font-bold text-slate-500 mt-0.5">{pain.desc}</p>
+                </div>
               </div>
-            </div>
+            </BorderGlow>
           ))}
         </div>
       </motion.div>
@@ -482,11 +531,25 @@ const ProductPillarsSection = () => (
         </p>
       </motion.div>
 
-      <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-6">
         {[
           {
-            title: 'Centralised Dockets',
-            body: 'One place for everything—documents, compliance, tasks, notes, dates and dependencies.',
+            title: 'Client memory',
+            body: 'Client history, notes, documents, preferences, and prior work stay attached to the account and the active docket.',
+            solves: 'Solves scattered context',
+            className: 'lg:col-span-3',
+            icon: (
+              <svg className="h-6 w-6 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20H7a3 3 0 01-3-3V5a3 3 0 013-3h10a3 3 0 013 3v12a3 3 0 01-3 3z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8M8 11h8M8 15h5" />
+              </svg>
+            )
+          },
+          {
+            title: 'Dockets',
+            body: 'Every engagement gets a structured home for scope, deadlines, owners, documents, activities, and dependencies.',
+            solves: 'Solves ownership gaps',
+            className: 'lg:col-span-3',
             icon: (
               <svg className="h-6 w-6 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
@@ -494,34 +557,41 @@ const ProductPillarsSection = () => (
             )
           },
           {
-            title: 'Smart Worklists',
-            body: 'Personalised daily plan across deadlines, priorities and engagements.',
+            title: 'Worklists and workbaskets',
+            body: 'Teams see exactly what to do next, what is waiting, what is due, and what needs a pull from the shared queue.',
+            solves: 'Solves daily execution drift',
+            className: 'lg:col-span-2',
             icon: (
               <svg className="h-6 w-6 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l2 2 4-4" />
               </svg>
             )
           },
           {
-            title: 'Workbaskets',
-            body: 'Collaborate with your team, delegate with clarity and track progress.',
-            icon: (
-              <svg className="h-6 w-6 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
-            )
-          },
-          {
-            title: 'Quality & Control',
-            body: 'QC workflows, templates, checklists and approvals that make quality repeatable.',
+            title: 'QC and exceptions',
+            body: 'Review gates, comments, approvals, and exceptions stay visible before filing, dispatch, or closure.',
+            solves: 'Solves review uncertainty',
+            className: 'lg:col-span-2',
             icon: (
               <svg className="h-6 w-6 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
             )
+          },
+          {
+            title: 'Reports and audit trails',
+            body: 'Partners see workload, overdue items, review queues, and operational history without rebuilding status from scratch.',
+            solves: 'Solves partner blind spots',
+            className: 'lg:col-span-2',
+            icon: (
+              <svg className="h-6 w-6 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10a2 2 0 01-2 2h-2a2 2 0 01-2-2zm9-1v-4a2 2 0 00-2-2h-2a2 2 0 00-2 2v4a2 2 0 002 2h2a2 2 0 002-2z" />
+              </svg>
+            )
           }
-        ].map((pillar, index) => (
-          <motion.div key={pillar.title} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md hover:border-amber-300 transition-all flex flex-col justify-between" {...REVEAL}>
+        ].map((pillar) => (
+          <motion.div key={pillar.title} className={`flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:border-amber-300 hover:shadow-md ${pillar.className}`} {...REVEAL}>
             <div>
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 shadow-sm">
                 {pillar.icon}
@@ -530,13 +600,8 @@ const ProductPillarsSection = () => (
               <p className="mt-2.5 text-xs font-semibold leading-relaxed text-slate-500">{pillar.body}</p>
             </div>
             
-            <div className="mt-6 border-t border-slate-100 pt-4">
-              <span className="text-xs font-black text-amber-700 hover:text-amber-800 flex items-center gap-1 cursor-pointer">
-                Explore {index === 0 ? 'Dockets' : index === 1 ? 'Worklists' : index === 2 ? 'Workbaskets' : 'QC'}
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                </svg>
-              </span>
+            <div className="mt-6 rounded-xl bg-slate-50 px-3 py-2">
+              <span className="text-[11px] font-black text-amber-800">{pillar.solves}</span>
             </div>
           </motion.div>
         ))}
@@ -549,10 +614,13 @@ const HowItWorksSection = () => (
   <section id="workflow" className="scroll-mt-16 bg-white py-20">
     <Container>
       <motion.div className="mx-auto max-w-3xl text-center" {...REVEAL}>
-        <p className="text-xs font-black uppercase tracking-widest text-amber-700">FROM INTAKE TO CLOSURE</p>
+        <p className="text-xs font-black text-amber-700">From intake to closure</p>
         <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-950 md:text-4xl">
-          A workflow that fits the way your firm works.
+          The operating rhythm your team can repeat every day.
         </h2>
+        <p className="mx-auto mt-4 max-w-xl text-sm font-medium leading-relaxed text-slate-600">
+          Each step keeps the client, the work, the owner, and the review state connected.
+        </p>
       </motion.div>
 
       {/* Stepper nodes list */}
@@ -565,7 +633,7 @@ const HowItWorksSection = () => (
             {
               step: 1,
               title: 'Intake',
-              desc: 'Capture client, matter and engagement details in seconds.',
+              desc: 'Capture the request, client, promise, and source context once.',
               icon: (
                 <svg className="h-6 w-6 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -575,7 +643,7 @@ const HowItWorksSection = () => (
             {
               step: 2,
               title: 'Plan',
-              desc: 'Create docket, define scope, milestones and responsibilities.',
+              desc: 'Create a docket with scope, milestones, owners, and due dates.',
               icon: (
                 <svg className="h-6 w-6 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -585,7 +653,7 @@ const HowItWorksSection = () => (
             {
               step: 3,
               title: 'Execute',
-              desc: 'Worklists drive execution. Attach docs, notes and communications.',
+              desc: 'Worklists tell each person what needs action today.',
               icon: (
                 <svg className="h-6 w-6 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -595,7 +663,7 @@ const HowItWorksSection = () => (
             {
               step: 4,
               title: 'Review (QC)',
-              desc: 'Multi-tier review, comments, approvals and exception management.',
+              desc: 'QC captures comments, approvals, and exceptions before closure.',
               icon: (
                 <svg className="h-6 w-6 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -605,7 +673,7 @@ const HowItWorksSection = () => (
             {
               step: 5,
               title: 'Close & Report',
-              desc: 'Close with confidence. Generate reports and maintain audit trail.',
+              desc: 'Close the docket with history, reports, and audit trail intact.',
               icon: (
                 <svg className="h-6 w-6 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10a2 2 0 01-2 2h-2a2 2 0 01-2-2zm9-1v-4a2 2 0 00-2-2h-2a2 2 0 00-2 2v4a2 2 0 002 2h2a2 2 0 002-2z" />
@@ -614,9 +682,9 @@ const HowItWorksSection = () => (
             }
           ].map((stage, idx) => (
             <motion.div key={stage.step} className="flex flex-col items-center text-center bg-white p-4" {...REVEAL}>
-              {/* Stepper Bubble */}
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 border-2 border-slate-200/80 shadow-inner relative z-10">
-                <span className="absolute -top-3 flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[10px] font-black text-white">{stage.step}</span>
+              {/* Stepper Card */}
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-slate-100 border border-slate-200 shadow-sm relative z-10">
+                <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded bg-slate-900 text-[9px] font-black text-white">{stage.step}</span>
                 {stage.icon}
               </div>
               <h4 className="mt-4 text-sm font-black text-slate-950">{stage.title}</h4>
@@ -635,28 +703,30 @@ const WhyNotTaskManagerSection = () => (
       <motion.div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm md:p-10" {...REVEAL}>
         <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
           <div>
-            <p className="text-xs font-black uppercase tracking-widest text-amber-700">DOCKETRA TESTING ONBOARDING</p>
+            <p className="text-xs font-black text-amber-700">Why firms outgrow task managers</p>
             <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">
-              100% Free Testing Phase Active
+              Task tools track work. Docketra tracks the work and the context around it.
             </h2>
             <p className="mt-4 text-xs font-semibold leading-relaxed text-slate-500">
-              Unlike generic task managers that hide features behind credit card requests, Docketra supports a fully transparent, robust testing period. Onboard firms for testing with zero payment obligations.
+              A task list can tell someone what to do. A firm operating system also shows the client history, reviewer, deadline risk, documents, audit trail, and handover context.
             </p>
-            <div className="mt-6 flex items-center gap-3">
-              <span className="rounded-full bg-amber-500/10 px-3.5 py-1 text-xs font-black text-amber-800 border border-amber-300/30">
-                Limit: 10 Users/Firm
+            <div className="mt-6 flex flex-wrap gap-3">
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/20 px-3 py-1 text-xs font-black text-amber-800">
+                <span className="h-1.5 w-1.5 bg-amber-600 rounded-sm" />
+                Pilot teams up to 10 users
               </span>
-              <span className="rounded-full bg-slate-100 px-3.5 py-1 text-xs font-black text-slate-600 border border-slate-200">
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-650">
+                <span className="h-1.5 w-1.5 bg-slate-400 rounded-sm" />
                 100% Free Pilot
               </span>
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             {[
-              { val: 'Atomic tenant isolation', label: 'B2B multi-tenancy ensures completely segregated workspace boundaries.' },
-              { val: 'Zero billing surprises', label: 'No payment cards or hidden paywalls during our free testing onboarding phase.' },
-              { val: 'Docket-level QC', label: 'Structured handoffs and review states ensure no filing leaves the firm unverified.' },
-              { val: 'Full audit telemetry', label: 'Trace every login, action, and configuration change with clean audit trails.' },
+              { val: 'Context survives handover', label: 'Client notes, prior work, and instructions stay linked to the docket.' },
+              { val: 'Work has clear ownership', label: 'Worklists and workbaskets make who owns what visible to the team.' },
+              { val: 'Review is built in', label: 'Docket-level QC keeps comments, approvals, and exceptions out of chat.' },
+              { val: 'Partners get visibility', label: 'Reports and audit trails show what is due, blocked, overdue, and closed.' },
             ].map((sig) => (
               <div key={sig.val} className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
                 <h4 className="text-xs font-black text-slate-900">{sig.val}</h4>
@@ -676,14 +746,14 @@ const TrustSection = () => (
     <Container className="relative">
       <motion.div className="grid gap-12 lg:grid-cols-[1fr_1.1fr_0.9fr]" {...REVEAL}>
         <div>
-          <p className="text-xs font-black uppercase tracking-widest text-amber-400">TRUST ISN'T A FEATURE. IT'S OUR FOUNDATION.</p>
+          <p className="text-xs font-black text-amber-400">Trust is the operating model</p>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-white md:text-4xl leading-tight">
-            Enterprise-grade security. Indian by design.
+            Firm-scoped security. India-aware operations.
           </h2>
           
           <div className="mt-8 flex flex-wrap gap-2">
             <span className="inline-flex items-center rounded bg-white/5 border border-white/10 px-2.5 py-1 text-[10px] font-black text-amber-300">
-              AES-256 Encryption
+              Encryption in transit and at rest
             </span>
             <span className="inline-flex items-center rounded bg-white/5 border border-white/10 px-2.5 py-1 text-[10px] font-black text-amber-300">
               Role-based Access
@@ -734,20 +804,20 @@ const FinalCtaSection = () => (
     <Container className="relative">
       <motion.div className="mx-auto max-w-4xl text-center" {...REVEAL}>
         <h2 className="text-3xl font-extrabold tracking-tight text-slate-950 md:text-5xl leading-tight">
-          Make your firm unforgettable.
+          Give every docket a memory.
         </h2>
         <h3 className="text-2xl font-extrabold tracking-tight text-amber-700 md:text-3xl mt-2">
-          For clients. And for your team. ✨
+          For partners, managers, and execution teams.
         </h3>
         
         <p className="mx-auto mt-4 max-w-xl text-xs sm:text-sm font-semibold leading-relaxed text-slate-600">
-          Create a workspace in under a minute and see Docketra in action.
+          Start with one workspace, one team, and a clearer way to run client work from intake to closure.
         </p>
 
         <div className="mt-8 flex flex-col justify-center gap-3.5 sm:flex-row items-center max-w-md mx-auto">
           <Link
             to="/signup"
-            className="inline-flex h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-slate-950 px-8 text-xs font-black text-amber-400 shadow-xl transition-all hover:bg-slate-850"
+            className="inline-flex h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-slate-950 px-8 text-xs font-black text-amber-400 shadow-xl transition-all hover:bg-slate-800 active:scale-[0.98]"
           >
             <span>Create workspace</span>
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -757,7 +827,7 @@ const FinalCtaSection = () => (
 
           <Link
             to="/find-workspace"
-            className="inline-flex h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-slate-350 bg-white px-6 text-xs font-black text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+            className="inline-flex h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 text-xs font-black text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
           >
             <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -766,12 +836,12 @@ const FinalCtaSection = () => (
           </Link>
         </div>
 
-        <p className="mt-4 text-[10px] font-bold text-slate-450 flex gap-4 justify-center">
+        <p className="mt-4 flex flex-wrap justify-center gap-3 text-[10px] font-bold text-slate-500">
           <span>No credit card required</span>
-          <span>·</span>
+          <span aria-hidden="true">|</span>
           <span>Cancel anytime</span>
-          <span>·</span>
-          <span>Setup in 60 seconds</span>
+          <span aria-hidden="true">|</span>
+          <span>Pilot-friendly setup</span>
         </p>
       </motion.div>
     </Container>
@@ -790,11 +860,11 @@ const MarketingFooter = () => (
             <span>Docketra</span>
           </Link>
           <p className="mt-2 text-xs text-slate-400 max-w-sm leading-relaxed font-semibold">
-            Enterprise operating platform for Indian CS, CA, legal, and statutory compliance firms. Built on atomic tenant isolation.
+            Firm operating platform for Indian CS, CA, legal, and statutory compliance practices. Built around tenant isolation and operational visibility.
           </p>
         </div>
 
-        <nav aria-label="Footer legal navigation" className="flex flex-wrap items-center gap-x-6 gap-y-3 font-semibold text-xs text-slate-455">
+        <nav aria-label="Footer legal navigation" className="flex flex-wrap items-center gap-x-6 gap-y-3 font-semibold text-xs text-slate-400">
           <Link to="/terms" className="transition-colors hover:text-white">Terms</Link>
           <Link to="/privacy" className="transition-colors hover:text-white">Privacy</Link>
           <Link to="/security" className="transition-colors hover:text-white">Security</Link>

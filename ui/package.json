@@ -13,6 +13,7 @@
     "axios": "^1.17.0",
     "dayjs": "^1.11.13",
     "framer-motion": "file:vendor/framer-motion",
+    "gsap": "^3.15.0",
     "react": "^18.2.0",
     "react-big-calendar": "^1.20.0",
     "react-dom": "^18.2.0",
