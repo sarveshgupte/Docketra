@@ -365,7 +365,7 @@ module.exports = (deps) => {
         requestBody: {
           textLength: typeof req.body?.text === 'string' ? req.body.text.length : null,
           hasNote: Boolean(req.body?.note),
-          createdBy: req.body?.createdBy || null,
+          createdBy: req.user?._id || null, // Sentinel: Prevents Mass Assignment IDOR vulnerability
         },
       });
       return res.status(status).json(body);
