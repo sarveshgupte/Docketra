@@ -226,8 +226,15 @@ async function moveDocket(req, res) {
       destinationPolicyContext = { ...destinationPolicyContext, teamId: String(destinationTeam._id), team: destinationTeam };
     }
 
-    const managerOwnedTeams = await Team.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('_id').lean();
-    const managedUsers = await User.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('xID').lean();
+    // 💡 What: Conditionally query managerOwnedTeams and managedUsers only when the user is a MANAGER, using Promise.all for concurrency.
+    let managerOwnedTeams = [];
+    let managedUsers = [];
+    if (String(req.user?.role || '').trim().toUpperCase() === 'MANAGER') {
+      [managerOwnedTeams, managedUsers] = await Promise.all([
+        Team.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('_id').lean(),
+        User.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('xID').lean(),
+      ]);
+    }
     const managerScope = {
       permittedTeamIds: [...new Set([
         ...(Array.isArray(req.user?.teamIds) ? req.user.teamIds : []).map((id) => String(id)),
