@@ -6,7 +6,6 @@ const Client = require('../models/Client.model');
 const Attachment = require('../models/Attachment.model');
 const Comment = require('../models/Comment.model');
 const CaseHistory = require('../models/CaseHistory.model');
-const { escapeRegExp } = require('../utils/regexp.utils');
 
 // Helper to check if a client display ID is restricted for the current user
 const isClientRestricted = (user, clientDisplayId) => {
