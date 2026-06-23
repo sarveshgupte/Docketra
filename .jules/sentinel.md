@@ -40,6 +40,11 @@
 **Vulnerability:** Raw error messages (`error.message`) were being directly exposed to clients in API error responses (e.g., in `src/controllers/user.controller.js`).
 **Learning:** Exposing raw internal error details to the client can leak sensitive system information, configuration details, or underlying infrastructure state, which can be leveraged by attackers.
 **Prevention:** Always log the full error details server-side using the internal logger (`log.error`) and return generic, safe error messages to the client (e.g., "Unable to load profile").
+
+## 2026-06-21 - Prevent NoSQL Injection / ReDoS in Regex Query
+**Vulnerability:** Unescaped user input (`name`) was being passed directly into a regular expression constructor in a MongoDB `findOne` query in `src/controllers/documentItem.controller.js`.
+**Learning:** Passing user input directly to a regex constructor without escaping can lead to ReDoS and potential NoSQL injection attacks by allowing attackers to manipulate the regular expression behavior.
+**Prevention:** Always escape user-provided values used within dynamic regular expressions (e.g. using `escapeRegExp` from `src/utils/regexp.utils.js`).
 ## 2024-05-28 - ReDoS Vulnerabilities in Regex Queries
 **Vulnerability:** Several dynamically constructed `new RegExp(...)` statements in Mongoose queries were found in the `src/controllers/documentItem.controller.js` and `src/controllers/knowledgeItem.controller.js` controllers, using unescaped user-supplied inputs to filter documents.
 **Learning:** Instantiating `new RegExp()` using unescaped inputs provides an attack vector for Regular Expression Denial of Service (ReDoS) by allowing maliciously crafted input strings to severely degrade performance or crash the service. There was a lack of consistent, centralized escaping for regex generation across the codebase.
