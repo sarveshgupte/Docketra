@@ -1,3 +1,4 @@
+const { escapeRegExp } = require('../utils/regexp.utils');
 const mongoose = require('mongoose');
 const KnowledgeItem = require('../models/KnowledgeItem.model');
 const Case = require('../models/Case.model');
