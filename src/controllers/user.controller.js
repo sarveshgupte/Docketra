@@ -190,7 +190,7 @@ const createUser = async (req, res) => {
       email: normalizedEmail,
       role,
       qcSamplingRate: parsedRate,
-      createdBy: req.body.createdBy, // In real app, this comes from auth
+      createdBy: req.user?._id || null,
     });
     
     await user.save();
