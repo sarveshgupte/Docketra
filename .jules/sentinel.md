@@ -44,3 +44,8 @@
 **Vulnerability:** The application was trusting client-provided audit fields (`createdBy` and `updatedBy`) from `req.body` directly in the `user.controller.js` file, which allows mass assignment and IDOR vulnerabilities, enabling an attacker to manipulate audit records.
 **Learning:** This exposes the application to situations where attackers can modify user records and mask their actions or impersonate system/other users' operations.
 **Prevention:** To prevent Mass Assignment and IDOR vulnerabilities, never trust client-provided audit fields (e.g., `createdBy`, `updatedBy`, `performedBy`) from `req.body`. Always derive these values securely from server-side authenticated context like `req.user` (e.g., `req.user?._id || null`).
+
+## 2026-06-17 - Prevent ReDoS by Escaping Dynamic Regex Inputs in Controllers
+**Vulnerability:** Regular Expression Denial of Service (ReDoS) and NoSQL Regex Injection via unescaped variables passed to `new RegExp()` constructors in `documentItem.controller.js` and `knowledgeItem.controller.js`.
+**Learning:** Directly passing dynamic, user-controlled strings to the `RegExp` constructor allows attackers to construct potentially catastrophic patterns that drastically degrade performance or bypass exact match logic.
+**Prevention:** Always wrap dynamically generated string segments in the centralized `escapeRegExp` utility (`src/utils/regexp.utils.js`) before injecting them into a `RegExp` constructor.
