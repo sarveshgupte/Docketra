@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const EmailCapture = require('../models/EmailCapture.model');
+const log = require('../utils/log');
 const Case = require('../models/Case.model');
 const Client = require('../models/Client.model');
 const Comment = require('../models/Comment.model');
@@ -98,7 +99,8 @@ const createEmailCapture = async (req, res) => {
       data: capture,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to capture email content' });
+    log.error('Failed to capture email content:', error);
+    return res.status(500).json({ success: false, message: 'Failed to capture email content' });
   }
 };
 
@@ -158,7 +160,8 @@ const getEmailCaptures = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to fetch email captures' });
+    log.error('Failed to fetch email captures:', error);
+    return res.status(500).json({ success: false, message: 'Failed to fetch email captures' });
   }
 };
 
@@ -186,7 +189,8 @@ const getEmailCaptureById = async (req, res) => {
 
     return res.json({ success: true, data: capture });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to fetch email capture' });
+    log.error('Failed to fetch email capture:', error);
+    return res.status(500).json({ success: false, message: 'Failed to fetch email capture' });
   }
 };
 
@@ -255,7 +259,8 @@ const updateEmailCapture = async (req, res) => {
 
     return res.json({ success: true, message: 'Email capture updated successfully', data: capture });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to update email capture' });
+    log.error('Failed to update email capture:', error);
+    return res.status(500).json({ success: false, message: 'Failed to update email capture' });
   }
 };
 
@@ -327,7 +332,8 @@ const linkToDocket = async (req, res) => {
       data: capture,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to link email capture to docket' });
+    log.error('Failed to link email capture to docket:', error);
+    return res.status(500).json({ success: false, message: 'Failed to link email capture to docket' });
   }
 };
 
@@ -411,7 +417,8 @@ const createDocketFromEmail = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to spawn docket from email capture' });
+    log.error('Failed to spawn docket from email capture:', error);
+    return res.status(500).json({ success: false, message: 'Failed to spawn docket from email capture' });
   }
 };
 
