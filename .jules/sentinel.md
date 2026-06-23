@@ -44,3 +44,12 @@
 **Vulnerability:** Several dynamically constructed `new RegExp(...)` statements in Mongoose queries were found in the `src/controllers/documentItem.controller.js` and `src/controllers/knowledgeItem.controller.js` controllers, using unescaped user-supplied inputs to filter documents.
 **Learning:** Instantiating `new RegExp()` using unescaped inputs provides an attack vector for Regular Expression Denial of Service (ReDoS) by allowing maliciously crafted input strings to severely degrade performance or crash the service. There was a lack of consistent, centralized escaping for regex generation across the codebase.
 **Prevention:** Always use the centralized `escapeRegExp` utility from `src/utils/regexp.utils.js` to escape dynamic user inputs before passing them to `new RegExp()` or MongoDB `$regex` statements, ensuring inputs are treated strictly as literals rather than regular expression syntax.
+## 2024-05-22 - Mass Assignment and IDOR Vulnerability in Audit Fields
+**Vulnerability:** The application was trusting client-provided audit fields (`createdBy` and `updatedBy`) from `req.body` directly in the `user.controller.js` file, which allows mass assignment and IDOR vulnerabilities, enabling an attacker to manipulate audit records.
+**Learning:** This exposes the application to situations where attackers can modify user records and mask their actions or impersonate system/other users' operations.
+**Prevention:** To prevent Mass Assignment and IDOR vulnerabilities, never trust client-provided audit fields (e.g., `createdBy`, `updatedBy`, `performedBy`) from `req.body`. Always derive these values securely from server-side authenticated context like `req.user` (e.g., `req.user?._id || null`).
+
+## 2026-06-17 - Prevent ReDoS by Escaping Dynamic Regex Inputs in Controllers
+**Vulnerability:** Regular Expression Denial of Service (ReDoS) and NoSQL Regex Injection via unescaped variables passed to `new RegExp()` constructors in `documentItem.controller.js` and `knowledgeItem.controller.js`.
+**Learning:** Directly passing dynamic, user-controlled strings to the `RegExp` constructor allows attackers to construct potentially catastrophic patterns that drastically degrade performance or bypass exact match logic.
+**Prevention:** Always wrap dynamically generated string segments in the centralized `escapeRegExp` utility (`src/utils/regexp.utils.js`) before injecting them into a `RegExp` constructor.
