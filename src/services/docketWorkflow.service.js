@@ -857,19 +857,42 @@ async function reopenDuePending() {
     return { count: 0, docketIds: [] };
   }
 
-  const caseIdsForUpdate = [];
-  const writeAuditPromises = [];
+  const updatePromises = [];
   const docketIds = [];
 
   for (const docket of dueCases) {
-    caseIdsForUpdate.push(docket._id);
     docketIds.push(docket.caseId);
+    const hasAssignee = docket.assignedToXID && String(docket.assignedToXID).trim() !== '';
+    const toState = hasAssignee ? DocketStatus.IN_PROGRESS : DocketStatus.AVAILABLE;
+    const persistenceState = toPersistenceState(toState);
 
-    writeAuditPromises.push(
+    const updateFields = {
+      lifecycle: DocketLifecycle.ACTIVE,
+      status: persistenceState,
+      state: hasAssignee ? 'IN_PROGRESS' : 'IN_WB',
+      queueType: hasAssignee ? 'PERSONAL' : 'GLOBAL',
+      qcOutcome: null,
+      reopenAt: null,
+      pendingUntil: null,
+      lastActionAt: now,
+      lastActionByXID: 'SYSTEM',
+      updatedAt: now,
+    };
+
+    if (!hasAssignee) {
+      updateFields.assignedToXID = null;
+      updateFields.assignedTo = null;
+    }
+
+    updatePromises.push(
+      Case.updateOne({ _id: docket._id }, { $set: updateFields })
+    );
+
+    updatePromises.push(
       writeAudit({
         docketId: docket.caseId,
         fromState: DocketStatus.PENDING,
-        toState: "AVAILABLE",
+        toState: toState,
         userId: 'SYSTEM',
         comment: 'Auto reopened',
         action: 'PENDING_REOPEN',
@@ -877,40 +900,19 @@ async function reopenDuePending() {
         changes: [{
           field: 'status',
           from: DocketStatus.PENDING,
-          to: "AVAILABLE",
+          to: toState,
         }],
         metadata: {
           reasonCode: REASON_CODES.AUTO_REOPEN_DUE,
           fromState: 'PEND',
-          toState: 'WL',
+          toState: hasAssignee ? 'WL' : 'WB',
         },
       })
     );
   }
 
   // Execute bulk DB updates and parallel writes simultaneously
-  await Promise.all([
-    Case.updateMany(
-      { _id: { $in: caseIdsForUpdate } },
-      {
-        $set: {
-          lifecycle: DocketLifecycle.ACTIVE,
-          status: toPersistenceState(DocketStatus.IN_PROGRESS),
-          state: 'IN_WB',
-          queueType: 'GLOBAL',
-          assignedToXID: null,
-          assignedTo: null,
-          qcOutcome: null,
-          reopenAt: null,
-          pendingUntil: null,
-          lastActionAt: now,
-          lastActionByXID: 'SYSTEM',
-          updatedAt: now,
-        },
-      }
-    ),
-    ...writeAuditPromises,
-  ]);
+  await Promise.all(updatePromises);
 
   // Safely emit events ONLY after persistence is complete
   for (const docket of dueCases) {

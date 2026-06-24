@@ -15,14 +15,21 @@ require.cache[require.resolve('../src/models/Category.model')] = { exports: Cate
 const svc = require('../src/services/docketWorkflow.service');
 
 (async () => {
-  let updatePayload = null;
-  CaseMock.find = async () => ([{ _id: '1', caseId: 'C1', firmId: 'F1', assignedToXID: 'X1' }]);
-  CaseMock.updateMany = async (_f, u) => { updatePayload = u; return { modifiedCount: 1 }; };
+  let updatePayloads = [];
+  CaseMock.find = async () => ([
+    { _id: '1', caseId: 'C1', firmId: 'F1', assignedToXID: 'X1' },
+    { _id: '2', caseId: 'C2', firmId: 'F1', assignedToXID: null }
+  ]);
+  CaseMock.updateOne = async (_f, u) => { updatePayloads.push(u); return { modifiedCount: 1 }; };
   await svc.reopenDuePending();
-  assert.strictEqual(updatePayload.$set.status, 'IN_PROGRESS');
-  assert.strictEqual(updatePayload.$set.queueType, 'GLOBAL');
-  assert.strictEqual(updatePayload.$set.assignedToXID, null);
-  assert.strictEqual(updatePayload.$set.qcSubmittedByXID, undefined);
+  assert.strictEqual(updatePayloads[0].$set.status, 'IN_PROGRESS');
+  assert.strictEqual(updatePayloads[0].$set.queueType, 'PERSONAL');
+  assert.strictEqual(updatePayloads[0].$set.state, 'IN_PROGRESS');
+  assert.strictEqual(updatePayloads[0].$set.assignedToXID, undefined);
+  assert.strictEqual(updatePayloads[1].$set.status, 'UNASSIGNED');
+  assert.strictEqual(updatePayloads[1].$set.queueType, 'GLOBAL');
+  assert.strictEqual(updatePayloads[1].$set.state, 'IN_WB');
+  assert.strictEqual(updatePayloads[1].$set.assignedToXID, null);
 
   const docket = {
     caseId: 'C2', firmId: 'F1', status: 'QC_PENDING', state: 'IN_QC', lifecycle: 'WL', assignedToXID: 'XSUB', qc: {}, toObject: () => ({ status: 'QC_PENDING' }), save: async () => {},

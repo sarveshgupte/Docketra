@@ -41,7 +41,7 @@ async function testCanonicalAuditShape() {
 
 async function testReopenMovesToWorkbenchWithAudit() {
   const originalFind = Case.find;
-  const originalUpdateMany = Case.updateMany;
+  const originalUpdateOne = Case.updateOne;
   const originalLogDocketEvent = docketAuditService.logDocketEvent;
   const originalCreateLog = docketAuditService.createLog;
 
@@ -61,7 +61,7 @@ async function testReopenMovesToWorkbenchWithAudit() {
       }];
     };
 
-    Case.updateMany = async (_filter, update) => {
+    Case.updateOne = async (_filter, update) => {
       updatePayload = update;
       return { acknowledged: true, modifiedCount: 1 };
     };
@@ -85,7 +85,7 @@ async function testReopenMovesToWorkbenchWithAudit() {
     assert.strictEqual(updatePayload.$set.state, 'IN_WB');
     assert.strictEqual(updatePayload.$set.queueType, 'GLOBAL');
     assert.strictEqual(updatePayload.$set.assignedToXID, null);
-    assert.strictEqual(updatePayload.$set.status, 'IN_PROGRESS');
+    assert.strictEqual(updatePayload.$set.status, 'UNASSIGNED');
     assert.strictEqual(updatePayload.$set.lifecycle, 'ACTIVE');
 
     const canonical = observed.find((entry) => entry.kind === 'canonical');
@@ -94,7 +94,7 @@ async function testReopenMovesToWorkbenchWithAudit() {
     assert.strictEqual(canonical.payload.metadata.reasonCode, REASON_CODES.AUTO_REOPEN_DUE);
   } finally {
     Case.find = originalFind;
-    Case.updateMany = originalUpdateMany;
+    Case.updateOne = originalUpdateOne;
     docketAuditService.logDocketEvent = originalLogDocketEvent;
     docketAuditService.createLog = originalCreateLog;
   }
