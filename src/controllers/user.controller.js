@@ -491,7 +491,10 @@ const completeProfile = async (req, res) => {
       log.error('Error completing profile:', error);
       return res.status(statusCode).json({ success: false, message: 'Unable to complete profile' });
     }
-    return res.status(statusCode).json({ success: false, message: error.message });
+    const safeMessage = error.message === 'USER_NOT_FOUND'
+      ? 'User not found'
+      : 'User is already onboarded';
+    return res.status(statusCode).json({ success: false, message: safeMessage });
   } finally {
     await session.endSession();
   }
