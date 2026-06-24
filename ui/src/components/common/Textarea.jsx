@@ -231,6 +231,10 @@ export const Textarea = ({
         aria-invalid={error ? 'true' : undefined}
         aria-describedby={describedBy}
         aria-required={required || undefined}
+        aria-autocomplete={enableMentions ? "list" : undefined}
+        aria-expanded={enableMentions && showSuggestions && suggestions.length > 0 ? "true" : "false"}
+        aria-controls={enableMentions && showSuggestions && suggestions.length > 0 ? "mention-suggestions" : undefined}
+        aria-activedescendant={enableMentions && showSuggestions && suggestions.length > 0 ? `mention-option-${selectedIndex}` : undefined}
         value={value}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
@@ -240,6 +244,7 @@ export const Textarea = ({
       {/* Mention suggestions popover */}
       {showSuggestions && suggestions.length > 0 && (
         <div 
+          id="mention-suggestions"
           ref={suggestionsRef}
           className="absolute z-50 left-0 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-[var(--dt-border-whisper)] rounded-md shadow-lg py-1 text-xs"
           role="listbox"
@@ -252,6 +257,7 @@ export const Textarea = ({
             const isActive = index === selectedIndex;
             return (
               <div
+                id={`mention-option-${index}`}
                 key={u.id || u._id || index}
                 onClick={() => selectUser(u)}
                 onMouseEnter={() => setSelectedIndex(index)}
@@ -262,6 +268,7 @@ export const Textarea = ({
                 }`}
                 role="option"
                 aria-selected={isActive}
+                aria-label={`${u.name}, ${u.xID}, Workbaskets: ${getWorkbaskets(u).join(', ')}`}
               >
                 {/* Initials Avatar with custom gradient */}
                 <div 
