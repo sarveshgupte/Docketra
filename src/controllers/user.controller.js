@@ -592,12 +592,16 @@ const patchUserRole = async (req, res) => {
 
     const targetCurrentRole = normalizeRole(target.role);
     if (targetRole === 'PRIMARY_ADMIN' && targetCurrentRole !== 'PRIMARY_ADMIN') {
-      const existingPrimary = await User.findOne({
+      // ⚡ Bolt Performance Optimization:
+      // 💡 What: Replaced User.findOne().select('_id') with User.exists()
+      // 🎯 Why: findOne forces a full document hydration just to check existence, whereas exists() provides an O(1) early return upon the first match.
+      // 📊 Impact: Faster query execution when checking for existing primary admin.
+      const existingPrimary = await User.exists({
         firmId: req.user?.firmId,
         role: 'PRIMARY_ADMIN',
         status: { $ne: 'deleted' },
         _id: { $ne: target._id },
-      }).select('_id');
+      });
       if (existingPrimary) {
         return res.status(409).json({ success: false, message: 'Firm already has a PRIMARY_ADMIN' });
       }
