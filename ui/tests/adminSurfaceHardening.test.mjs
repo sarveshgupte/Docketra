@@ -42,8 +42,8 @@ assert.ok(usersSectionSource.includes('disabled={isPrimaryAdminUser(u) || isActi
 const createUserModalSource = read('src/pages/admin/components/CreateUserModal.jsx');
 assert.ok(createUserModalSource.includes('Role hierarchy'), 'Create user modal should explain role hierarchy');
 assert.ok(createUserModalSource.includes('superAdminNote'), 'Create user modal should keep platform-only role boundary explicit');
-assert.ok(createUserModalSource.includes("{ value: 'Employee', label: 'Employee' }"), 'Create user modal should include Employee role label');
-assert.ok(createUserModalSource.includes("{ value: 'Admin', label: 'Admin' }"), 'Create user modal should include Admin role label');
+assert.ok(createUserModalSource.includes("{ value: 'USER', label: 'Employee' }"), 'Create user modal should include Employee role label');
+assert.ok(createUserModalSource.includes("{ value: 'ADMIN', label: 'Admin' }"), 'Create user modal should include Admin role label');
 
 const roleCopySource = read('src/pages/admin/adminRoleCopy.js');
 assert.ok(roleCopySource.includes('Primary Admin > Admin > Manager > Employee'), 'Role copy should define canonical role hierarchy');

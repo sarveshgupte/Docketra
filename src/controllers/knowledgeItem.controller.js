@@ -6,7 +6,6 @@ const Client = require('../models/Client.model');
 const ComplianceObligationTemplate = require('../models/ComplianceObligationTemplate.model');
 const { resolveFirmMemoryScope } = require('../services/firmMemoryScope.service');
 const { logAuditEvent } = require('../services/adminActionAudit.service');
-const { escapeRegExp } = require('../utils/regexp.utils');
 
 const { KNOWLEDGE_ITEM_TYPES, KNOWLEDGE_ITEM_STATUSES } = KnowledgeItem;
 
