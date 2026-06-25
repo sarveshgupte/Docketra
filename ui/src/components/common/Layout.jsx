@@ -890,7 +890,7 @@ export const Layout = ({ children, title, subtitle }) => {
                                   void markNotificationRead(item.id);
                                 }}
                               >
-                                ✓
+                                <span aria-hidden="true">✓</span>
                               </button>
                               <button
                                 type="button"
@@ -902,7 +902,7 @@ export const Layout = ({ children, title, subtitle }) => {
                                   clearNotification(item.id);
                                 }}
                               >
-                                ✕
+                                <span aria-hidden="true">✕</span>
                               </button>
                               {item.unread ? <span className="enterprise-header__notification-unread-badge">New</span> : null}
                             </div>
