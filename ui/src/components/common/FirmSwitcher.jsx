@@ -3,7 +3,7 @@
  * Allows SuperAdmin to select and switch into a firm context
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import { superadminService } from '../../services/superadminService';
 import { useToast } from '../../hooks/useToast';
 import { Button } from './Button';
@@ -15,6 +15,7 @@ export const FirmSwitcher = ({ onFirmSwitch }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedMode, setSelectedMode] = useState('READ_ONLY');
   const { showSuccess, showError } = useToast();
+  const dropdownId = useId();
 
   useEffect(() => {
     loadFirms();
@@ -64,7 +65,7 @@ export const FirmSwitcher = ({ onFirmSwitch }) => {
         onClick={() => setShowDropdown(!showDropdown)}
         disabled={loading}
         aria-expanded={showDropdown}
-        aria-controls="firm-switcher-dropdown"
+        aria-controls={dropdownId}
       >
         {loading ? 'Loading...' : 'Switch to Firm'}
       </Button>
@@ -75,7 +76,7 @@ export const FirmSwitcher = ({ onFirmSwitch }) => {
             className="firm-switcher__backdrop" 
             onClick={() => setShowDropdown(false)}
           />
-          <div id="firm-switcher-dropdown" className="firm-switcher__dropdown">
+          <div id={dropdownId} className="firm-switcher__dropdown">
             <div className="firm-switcher__header">
               <h3>Select a Firm</h3>
               <button 
