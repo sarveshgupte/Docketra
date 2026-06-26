@@ -597,7 +597,7 @@ export const DocketSidebar = ({
       >
         <div className="docket-sidebar__header">
           <h3 className="text-base font-semibold text-gray-900">{TITLES[type] || 'Details'}</h3>
-          <button type="button" onClick={onClose} className="docket-sidebar__close" aria-label="Close panel">✕</button>
+          <button type="button" onClick={onClose} className="docket-sidebar__close" aria-label="Close panel"><span aria-hidden="true">✕</span></button>
         </div>
         <div className="docket-sidebar__content">{renderContent()}</div>
       </aside>
