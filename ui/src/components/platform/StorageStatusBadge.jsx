@@ -63,6 +63,7 @@ export default function StorageStatusBadge() {
         className={`platform__storage-pill platform__storage-pill--${summary.badgeTone}`}
         aria-label={`Storage status: ${summary.badgeLabel}`}
         aria-expanded={open}
+        aria-controls="storage-status-popover"
         aria-haspopup="dialog"
         onClick={() => setOpen((value) => !value)}
         title={summary.helperText}
@@ -72,7 +73,7 @@ export default function StorageStatusBadge() {
         <span className="platform__storage-label-short">Storage</span>
       </button>
       {open ? (
-        <div className="platform__storage-popover" role="dialog" aria-label="Storage status details">
+        <div id="storage-status-popover" className="platform__storage-popover" role="dialog" aria-label="Storage status details">
           <p className="platform__storage-helper">{summary.helperText}</p>
           <dl className="platform__storage-meta">
             <div><dt>Active provider</dt><dd>{summary.providerLabel}</dd></div>
