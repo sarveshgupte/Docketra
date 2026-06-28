@@ -4,3 +4,6 @@
 ## 2026-06-12 - Prevent N+1 Query in Bulk Operations
 **Learning:** During bulk uploads involving generation of nested or default parent documents, loop-invariant database dependencies (such as finding categories or configurations via nested callbacks) and iterative `findOne` / `save` operations on individual identifiers degrade performance from O(1) database queries to O(N).
 **Action:** Lift invariant fetches outside bulk processing loops. Pre-fetch existing constraints (like `idempotencyKey` deduplication checks) via a single `$in` query mapping them into an in-memory structure (e.g. `Set` or `Map`). Collect newly instantiated documents into an array and persist them concurrently via `.insertMany(docs, { ordered: false })` at batch boundaries to mitigate network and CPU overhead.
+## 2026-06-28 - Optimize N+1 Query in Firm Metrics
+**Learning:** Replaced 5 sequential Case.countDocuments queries with a single Case.aggregate pipeline using conditional sums ($cond within $sum) to evaluate multiple metrics in a single database pass, eliminating unnecessary round-trips.
+**Action:** When calculating multiple distinct counts on the same collection for the same entity, prefer a single aggregation pipeline with $sum / $cond over multiple independent count queries to reduce network latency and index load.
