@@ -158,7 +158,7 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
             {loading ? <p className="audit-drawer__meta">Loading audit history...</p> : null}
           </div>
           <button type="button" className="audit-drawer__close" onClick={onClose} aria-label="Close audit history">
-            ×
+            <span aria-hidden="true">×</span>
           </button>
         </div>
         <div className="audit-drawer__toolbar">
