@@ -200,7 +200,8 @@ const sendEmailNow = async (mailOptions) => {
         subject: mailOptions.subject,
         html: mailOptions.html,
         text: mailOptions.text,
-        attachments: mailOptions.attachments
+        attachments: mailOptions.attachments,
+        replyTo: mailOptions.replyTo
       });
       recordSuccess('smtp');
       log.info(`[EMAIL] Email sent successfully via Brevo: ${result.messageId || 'sent'}`);
@@ -1102,6 +1103,7 @@ const sendSignupOtpEmail = async ({
 module.exports = {
   sendEmail,
   sendEmailNow,
+  sendTransactionalEmail,
   generateSecureToken,
   hashToken,
   sendPasswordSetupEmail,

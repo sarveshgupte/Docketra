@@ -43,7 +43,33 @@ async function run() {
     };
 
     const emailService = require('../src/services/email.service');
-    const result = await emailService.sendPasswordSetupEmail({
+    assert.strictEqual(typeof emailService.sendTransactionalEmail, 'function');
+
+    const result = await emailService.sendEmailNow({
+      to: 'client@example.com',
+      subject: 'Document request',
+      html: '<p>Please send documents.</p>',
+      text: 'Please send documents.',
+      replyTo: {
+        email: 'docket-case-abc123@docketra.in',
+        name: 'Admin User (via Docketra)',
+      },
+    });
+
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.messageId, 'brevo-localhost-123');
+    assert.strictEqual(capturedRequest.options.hostname, 'api.brevo.com');
+    assert.strictEqual(capturedRequest.options.headers['api-key'], 'test-brevo-key');
+    let payload = JSON.parse(capturedRequest.body);
+    assert.deepStrictEqual(payload.sender, { name: 'Docketra', email: 'sender@example.com' });
+    assert.deepStrictEqual(payload.to, [{ email: 'client@example.com' }]);
+    assert.deepStrictEqual(payload.replyTo, {
+      email: 'docket-case-abc123@docketra.in',
+      name: 'Admin User (via Docketra)',
+    });
+
+    capturedRequest = null;
+    const setupResult = await emailService.sendPasswordSetupEmail({
       email: 'guptesarvesh@gmail.com',
       name: 'Sarvesh User',
       token: 'setup-token',
@@ -53,11 +79,11 @@ async function run() {
       firmName: 'Gupte OPC',
     });
 
-    assert.strictEqual(result.success, true);
-    assert.strictEqual(result.messageId, 'brevo-localhost-123');
+    assert.strictEqual(setupResult.success, true);
+    assert.strictEqual(setupResult.messageId, 'brevo-localhost-123');
     assert.strictEqual(capturedRequest.options.hostname, 'api.brevo.com');
     assert.strictEqual(capturedRequest.options.headers['api-key'], 'test-brevo-key');
-    const payload = JSON.parse(capturedRequest.body);
+    payload = JSON.parse(capturedRequest.body);
     assert.deepStrictEqual(payload.sender, { name: 'Docketra', email: 'sender@example.com' });
     assert.deepStrictEqual(payload.to, [{ email: 'guptesarvesh@gmail.com' }]);
     assert.match(payload.htmlContent, /http:\/\/localhost:5173\/setup-password\?token=setup-token/);

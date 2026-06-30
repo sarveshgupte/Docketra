@@ -1333,10 +1333,9 @@ const sendEmailToClient = async (req, res) => {
     const inboundDomain = process.env.INBOUND_EMAIL_DOMAIN || 'docketra.in';
     const uniqueEmail = `docket-${caseData.caseNumber.toLowerCase()}-${signature}@${inboundDomain}`;
 
-    const mailFrom = process.env.MAIL_FROM || 'notifications@docketra.in';
     const emailService = require('../services/email.service');
     
-    const emailResult = await emailService.sendTransactionalEmail({
+    const emailResult = await emailService.sendEmailNow({
       to: recipientEmail,
       subject: subject,
       html: `<p>${body.replace(/\n/g, '<br>')}</p>`,
