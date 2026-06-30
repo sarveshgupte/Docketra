@@ -6,19 +6,40 @@ import { Modal } from '../../components/common/Modal';
 import { formatDateTime } from '../../utils/formatDateTime';
 import { useToast } from '../../hooks/useToast';
 
-export const CaseDetailEmailsPanel = ({ caseId }) => {
+export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefreshCase }) => {
   const { showSuccess, showError } = useToast();
   const [emails, setEmailList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showPasteModal, setShowPasteModal] = useState(false);
+  const [showSendModal, setShowSendModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  // Form states
+  // Manual Ingest Form states
   const [senderName, setSenderName] = useState('');
   const [senderEmail, setSenderEmail] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [recipients, setRecipients] = useState('');
+
+  // Compose Form states
+  const [sendTo, setSendTo] = useState(clientEmail && clientEmail !== '—' ? clientEmail : '');
+  const [sendSubject, setSendSubject] = useState('');
+  const [sendBody, setSendBody] = useState('');
+
+  useEffect(() => {
+    if (clientEmail && clientEmail !== '—') {
+      setSendTo(clientEmail);
+    }
+  }, [clientEmail]);
+
+  useEffect(() => {
+    const displayNum = caseInfo?.caseNumber || caseId;
+    setSendSubject(`Request for Documents - Docket ${displayNum}`);
+    setSendBody(
+      `Dear Client,\n\nWe require documents to proceed with docket ${displayNum}.\n\nPlease reply directly to this email with the requested files attached.\n\nBest regards,\nDocketra Support`
+    );
+  }, [caseId, caseInfo]);
 
   const loadEmails = useCallback(async () => {
     setLoading(true);
@@ -74,16 +95,50 @@ export const CaseDetailEmailsPanel = ({ caseId }) => {
     }
   };
 
+  const handleSendEmail = async (e) => {
+    e.preventDefault();
+    if (!sendTo || !sendSubject || !sendBody) {
+      showError('Recipient Email, Subject, and Email Body are required.');
+      return;
+    }
+
+    setSending(true);
+    try {
+      const payload = {
+        to: sendTo,
+        subject: sendSubject,
+        body: sendBody,
+      };
+
+      const res = await emailCaptureApi.sendClientEmail(caseId, payload);
+      if (res.success) {
+        showSuccess('Email successfully sent to client!');
+        setShowSendModal(false);
+        loadEmails();
+        onRefreshCase?.();
+      }
+    } catch (err) {
+      showError('Failed to send email: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
     <section className="case-card case-detail-section" id="panel-emails" role="tabpanel">
-      <div className="case-card__heading case-detail-section__heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="case-card__heading case-detail-section__heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2>Email Ingestion Logs</h2>
-          <p className="case-detail-section__subheading">Registry of client forwards and inbound obligational emails parsed for this docket.</p>
+          <p className="case-detail-section__subheading">Registry of client forwards and inbound/outbound emails parsed for this docket.</p>
         </div>
-        <Button onClick={() => setShowPasteModal(true)} variant="primary">
-          ✚ Ingest Forwarded Email
-        </Button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Button onClick={() => setShowSendModal(true)} variant="primary">
+            ✉ Send Email to Client
+          </Button>
+          <Button onClick={() => setShowPasteModal(true)} variant="outline">
+            ✚ Ingest Forwarded Email
+          </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -91,8 +146,8 @@ export const CaseDetailEmailsPanel = ({ caseId }) => {
       ) : emails.length === 0 ? (
         <div className="text-center py-6 bg-gray-50/50 rounded-xl border border-dashed border-gray-200 mt-3">
           <span className="text-3xl">📧</span>
-          <p className="mt-2 text-sm text-gray-500 font-medium">No forwarded emails registered for this docket yet.</p>
-          <p className="text-xs text-gray-400 mt-1">Ingest email content manually or forward client emails to link them directly.</p>
+          <p className="mt-2 text-sm text-gray-500 font-medium">No emails registered for this docket yet.</p>
+          <p className="text-xs text-gray-400 mt-1">Compose email requests or ingest client forwards to track communications.</p>
         </div>
       ) : (
         <div className="mt-4 space-y-4">
@@ -135,6 +190,39 @@ export const CaseDetailEmailsPanel = ({ caseId }) => {
         </div>
       )}
 
+      {/* MODAL: Compose Email to Client */}
+      <Modal
+        isOpen={showSendModal}
+        onClose={() => setShowSendModal(false)}
+        title="Compose Document Request Email"
+        size="sm"
+      >
+        <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '16px' }}>
+          This will send an email using the system verified address. The client's replies will automatically attach to this docket.
+        </p>
+        <form onSubmit={handleSendEmail} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div>
+            <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>To (Client Email) *</label>
+            <input type="email" className="neo-input w-full text-sm mt-1" value={sendTo} onChange={e => setSendTo(e.target.value)} placeholder="e.g. client@company.com" required />
+          </div>
+          <div>
+            <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Subject *</label>
+            <input type="text" className="neo-input w-full text-sm mt-1" value={sendSubject} onChange={e => setSendSubject(e.target.value)} required />
+          </div>
+          <div>
+            <Textarea label="Email Content (Body) *" value={sendBody} onChange={e => setSendBody(e.target.value)} rows={6} required />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'end', gap: '8px', marginTop: '8px' }}>
+            <Button type="button" variant="outline" onClick={() => setShowSendModal(false)} disabled={sending}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" disabled={sending}>
+              {sending ? 'Sending email…' : 'Send Email'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
       {/* MODAL: Simulate Inbound Forwarded Email */}
       <Modal
         isOpen={showPasteModal}
@@ -162,7 +250,7 @@ export const CaseDetailEmailsPanel = ({ caseId }) => {
           </div>
           <div>
             <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Recipients (Comma separated)</label>
-            <input type="text" className="neo-input w-full text-sm mt-1" value={recipients} onChange={e => setRecipients(e.target.value)} placeholder="e.g. support@docketra.com" />
+            <input type="text" className="neo-input w-full text-sm mt-1" value={recipients} onChange={e => setRecipients(e.target.value)} placeholder="e.g. support@docketra.in" />
           </div>
           <div>
             <Textarea label="Email Content (Body) *" value={body} onChange={e => setBody(e.target.value)} placeholder="Paste the forwarded email body or copy-paste plain text contents..." rows={5} required />

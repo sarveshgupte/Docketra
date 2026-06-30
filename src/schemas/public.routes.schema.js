@@ -83,4 +83,14 @@ module.exports = {
       message: z.string().trim().min(1).max(2000),
     }).passthrough(),
   },
+  'POST /emails/inbound': {
+    body: z.object({
+      from: z.any(),
+      to: z.any(),
+      subject: z.string().trim().optional(),
+      text: z.string().trim().optional(),
+      html: z.string().trim().optional(),
+      attachments: z.array(z.any()).optional(),
+    }).passthrough(),
+  },
 };

@@ -41,7 +41,7 @@ Docketra uses a split-runtime architecture optimized for serverless scalability:
 
 ### Frontend Build-time Variables (Vite)
 These are injected during compilation of the UI assets:
-- `VITE_API_BASE_URL`: Public API URL endpoint (e.g., `https://docketra-api-1078507569854.us-central1.run.app/api`).
+- `VITE_API_BASE_URL`: Public API URL endpoint (e.g., `https://api.docketra.in/api`).
 - `VITE_GOOGLE_CLIENT_ID`: Google OAuth client ID for sign-in.
 - `VITE_SUPPORT_EMAIL`: Support contact email.
 - `VITE_TURNSTILE_SITE_KEY`: Cloudflare Turnstile key for bot protection (if enabled).
@@ -57,11 +57,11 @@ Configured in the Google Cloud Run Service/Job environment settings:
 - `STORAGE_TOKEN_SECRET`: Key for OAuth tokens encryption.
 - `MASTER_ENCRYPTION_KEY`: Data encryption key.
 - `API_PUBLIC_ORIGIN`: Public domain URL of the Cloud Run API service.
-- `FRONTEND_URL`: URL of the primary frontend application (e.g., `https://docketra-prod.web.app`).
-- `FRONTEND_ORIGINS`: Comma-separated allowed CORS origins (e.g., `https://docketra-prod.web.app,https://docketra-prod.firebaseapp.com`).
+- `FRONTEND_URL`: URL of the primary frontend application (e.g., `https://docketra.in`).
+- `FRONTEND_ORIGINS`: Comma-separated allowed CORS origins (e.g., `https://docketra.in,https://www.docketra.in`).
 - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`: Credentials for Google Drive / Authentication.
-- `GOOGLE_AUTH_REDIRECT_URI`: OAuth callback for sign-in (e.g., `https://docketra-api-1078507569854.us-central1.run.app/api/auth/google/callback`).
-- `GOOGLE_OAUTH_REDIRECT_URI`: OAuth callback for storage integration (e.g., `https://docketra-api-1078507569854.us-central1.run.app/api/storage/google/callback`).
+- `GOOGLE_AUTH_REDIRECT_URI`: OAuth callback for sign-in (e.g., `https://api.docketra.in/api/auth/google/callback`).
+- `GOOGLE_OAUTH_REDIRECT_URI`: OAuth callback for storage integration (e.g., `https://api.docketra.in/api/storage/google/callback`).
 - `SUPERADMIN_EMAIL` / `SUPERADMIN_PASSWORD_HASH` / `SUPERADMIN_XID` / `SUPERADMIN_OBJECT_ID`: Core Super Admin bootstrap credentials.
 
 ---
@@ -78,7 +78,7 @@ If you need to deploy changes manually from your workstation:
    ```
 2. Build the project using production environment variables:
    ```bash
-   VITE_API_BASE_URL="https://docketra-api-1078507569854.us-central1.run.app/api" \
+   VITE_API_BASE_URL="https://api.docketra.in/api" \
    VITE_GOOGLE_CLIENT_ID="1078507569854-c24hg50jkar8p68ooumkdebr3qtrcoe5.apps.googleusercontent.com" \
    VITE_SUPPORT_EMAIL="sarveshgupte@gmail.com" \
    VITE_TURNSTILE_SITE_KEY="0x4AAAAAADUM0lvwvSX_G56o" \
@@ -155,8 +155,8 @@ To automate these jobs:
 ## 7) Post-Deployment Verification Checklist
 
 After deploying updates, verify these operations:
-- [ ] **Frontend**: Access `https://docketra-prod.web.app` and ensure the page loads with modern layout.
-- [ ] **Backend Health**: Verify `https://docketra-api-1078507569854.us-central1.run.app/health` returns `{"status":"UP"}` (or similar JSON).
+- [ ] **Frontend**: Access `https://docketra.in` and ensure the page loads with modern layout.
+- [ ] **Backend Health**: Verify `https://api.docketra.in/health` returns `{"status":"UP"}` (or similar JSON).
 - [ ] **Database Connection**: Confirm you can log in as a superadmin or tenant user.
 - [ ] **CORS Settings**: Check that frontend requests do not throw console errors related to Cross-Origin Resource Sharing.
 - [ ] **File Storage**: Test a file upload to verify the active storage driver (e.g. Google Drive integration) successfully uploads, indexes, and downloads items.

@@ -90,7 +90,7 @@ const maskEmail = (email) => {
  * @param {Object} options - Email options { to, subject, html, text, attachments }
  * @returns {Promise<Object>} Result object with success status and messageId
  */
-const sendTransactionalEmail = async ({ to, subject, html, text, attachments }) => {
+const sendTransactionalEmail = async ({ to, subject, html, text, attachments, replyTo }) => {
   const apiKey = process.env.BREVO_API_KEY;
   const mailFrom = resolveMailFrom();
   
@@ -118,6 +118,10 @@ const sendTransactionalEmail = async ({ to, subject, html, text, attachments }) 
     htmlContent: html,
     textContent: text
   };
+
+  if (replyTo) {
+    payloadData.replyTo = replyTo;
+  }
 
   if (attachments && Array.isArray(attachments)) {
     payloadData.attachment = attachments;

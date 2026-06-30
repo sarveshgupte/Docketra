@@ -7,4 +7,7 @@ export const emailCaptureApi = {
 
   createEmailCapture: (payload) =>
     request((http) => http.post('/email-captures', payload), 'Failed to ingest email capture'),
+
+  sendClientEmail: (caseId, payload) =>
+    request((http) => http.post(`/cases/${caseId}/send-client-email`, payload), 'Failed to send email to client'),
 };

@@ -105,9 +105,19 @@ const createEmailCapture = async (req, res) => {
 const getEmailCaptures = async (req, res) => {
   try {
     const firmId = req.user?.firmId;
-    const { page = 1, limit = 20, classification, ownerXID, ageing } = req.query;
+    const { page = 1, limit = 20, classification, ownerXID, ageing, caseId } = req.query;
 
     const query = { firmId };
+
+    if (caseId) {
+      query.$or = [
+        { linkedCaseId: caseId },
+        { linkedCaseId: caseId.toUpperCase() }
+      ];
+      if (mongoose.Types.ObjectId.isValid(caseId)) {
+        query.$or.push({ linkedCaseInternalId: caseId });
+      }
+    }
 
     // Strict client access boundary: exclude restricted client email content
     const restrictedIds = await getRestrictedClientIds(firmId, req.user?.restrictedClientIds);

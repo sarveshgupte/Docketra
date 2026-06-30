@@ -11,6 +11,7 @@ import {
 } from '../utils/caseCache';
 import { buildQueryString } from '../utils/queryParams';
 import { queryClient } from '../queryClient';
+import { API_BASE_URL } from '../utils/constants';
 
 const caseRoute = {
   detail: (caseId) => `/dockets/${caseId}`,
@@ -187,7 +188,7 @@ export const caseApi = {
     () => request((http) => http.post('/dockets/pull', { caseIds: [caseId] }), 'Failed to pull docket'),
   ),
 
-  getSummaryPdfUrl: (caseId) => `${window.location.origin}/api/dockets/${caseId}/summary-pdf`,
+  getSummaryPdfUrl: (caseId) => `${API_BASE_URL}/dockets/${caseId}/summary-pdf`,
 
   getClientDockets: (clientId) => request(
     (http) => http.get(`/clients/${clientId}/dockets?sort=createdAt&order=desc&limit=20`),
@@ -310,7 +311,7 @@ export const caseApi = {
   ),
 
   viewAttachment: (caseId, attachmentId) => {
-    window.open(`${window.location.origin}/api/dockets/${caseId}/attachments/${attachmentId}/view`, '_blank');
+    window.open(`${API_BASE_URL}/dockets/${caseId}/attachments/${attachmentId}/view`, '_blank');
   },
 
   downloadAttachment: async (caseId, attachmentId, filename) => {

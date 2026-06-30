@@ -103,4 +103,7 @@ router.get('/upload/:token/meta', getUploadMeta);
 router.post('/upload/:token', publicUploadLimiter, upload.single('file'), requireTurnstileForUpload, enforceUploadSecurity, uploadDocument);
 router.post('/upload/:token/request-pin', publicUploadLimiter, requestUploadPin);
 
+const { handleInboundEmail } = require('../controllers/inboundEmail.controller');
+router.post('/emails/inbound', handleInboundEmail);
+
 module.exports = router;

@@ -80,7 +80,7 @@ const ProductMockup = () => (
           <span className="h-3 w-3 rounded-full bg-emerald-400" />
         </div>
         <div className="rounded-full bg-slate-200/60 px-4 py-0.5 text-[11px] font-semibold text-slate-600">
-          app.docketra.com/workspace/mehta-co
+          docketra.in/workspace/mehta-co
         </div>
         <div className="flex gap-2">
           <span className="h-4 w-4 rounded-md bg-slate-300" />

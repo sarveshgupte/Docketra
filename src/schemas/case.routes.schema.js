@@ -326,4 +326,12 @@ module.exports = {
   'POST /:caseId/apply-ai-routing': { params: caseIdParams, body: strictEmpty },
   'POST /:caseId/reject-ai-routing': { params: caseIdParams, body: strictEmpty },
   'POST /:caseId/manager-move': { params: caseIdParams, body: z.object({ targetTeamId: objectIdString.optional() }).passthrough() },
+  'POST /:caseId/send-client-email': {
+    params: caseIdParams,
+    body: z.object({
+      to: z.string().trim().email().optional().or(z.literal('')),
+      subject: nonEmptyString,
+      body: nonEmptyString,
+    }).strict(),
+  },
 };

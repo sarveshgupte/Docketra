@@ -30,6 +30,7 @@ Minimal repo-specific agent notes based on committed scripts and package workflo
 Before performing frontend work, review and apply relevant skills from:
 
 - .agents/skills/impeccable
+- .github/skills/impeccable (run `node .github/skills/impeccable/scripts/context.mjs` once per UI session; if it reports `NO_PRODUCT_MD`, follow `reference/init.md` before redesign work)
 - .agents/skills/emil-design-eng
 - .agents/skills/design-taste-frontend
 - .agents/skills/design-taste-frontend-v1

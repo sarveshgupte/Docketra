@@ -1089,6 +1089,80 @@ async function handleUserDeactivation({ firmId, userXID }) {
   return { moved, skipped, scanned, workbasketMoved: moved, pendingMoved: 0, qcPendingMoved: 0 };
 }
 
+function generateDocketEmailSignature(caseInternalId) {
+  if (!caseInternalId) return '';
+  const crypto = require('crypto');
+  const secret = process.env.SYSTEM_HASH_SECRET || 'docketra-system-default-secret-key-12345';
+  return crypto.createHmac('sha256', secret)
+    .update(String(caseInternalId))
+    .digest('hex')
+    .substring(0, 6)
+    .toLowerCase();
+}
+
+async function reopenDocketFromClientEmail(caseId, firmId, senderEmail) {
+  const docket = await Case.findOne({
+    firmId: String(firmId),
+    $or: [{ caseId: String(caseId) }, { caseNumber: String(caseId) }],
+  });
+
+  if (!docket) {
+    throw new Error('Docket not found');
+  }
+
+  // Check if docket status is PENDING
+  if (docket.status !== toPersistenceState(DocketStatus.PENDING)) {
+    return { reopened: false, reason: 'Docket is not in PENDING status' };
+  }
+
+  const now = new Date();
+  const hasAssignee = docket.assignedToXID && String(docket.assignedToXID).trim() !== '';
+  const toState = hasAssignee ? DocketStatus.IN_PROGRESS : DocketStatus.AVAILABLE;
+  const persistenceState = toPersistenceState(toState);
+
+  const updateFields = {
+    lifecycle: DocketLifecycle.ACTIVE,
+    status: persistenceState,
+    state: hasAssignee ? 'IN_PROGRESS' : 'IN_WB',
+    queueType: hasAssignee ? 'PERSONAL' : 'GLOBAL',
+    qcOutcome: null,
+    reopenAt: null,
+    pendingUntil: null,
+    lastActionAt: now,
+    lastActionByXID: 'SYSTEM',
+    updatedAt: now,
+  };
+
+  if (!hasAssignee) {
+    updateFields.assignedToXID = null;
+    updateFields.assignedTo = null;
+  }
+
+  await Case.updateOne({ _id: docket._id }, { $set: updateFields });
+
+  await writeAudit({
+    docketId: docket.caseId,
+    fromState: DocketStatus.PENDING,
+    toState: toState,
+    userId: 'SYSTEM',
+    comment: `Auto reopened on client email from ${senderEmail}`,
+    action: 'PENDING_REOPEN',
+    firmId: docket.firmId,
+    changes: [{
+      field: 'status',
+      from: DocketStatus.PENDING,
+      to: toState,
+    }],
+    metadata: {
+      reasonCode: 'CLIENT_EMAIL_RECEIVED',
+      fromState: 'PEND',
+      toState: hasAssignee ? 'WL' : 'WB',
+    },
+  });
+
+  return { reopened: true, fromStatus: DocketStatus.PENDING, toStatus: toState };
+}
+
 module.exports = {
   DocketStatus,
   QC_DECISIONS,
@@ -1105,4 +1179,6 @@ module.exports = {
   reassign,
   handleUserDeactivation,
   resolveQcRoutingDecision,
+  generateDocketEmailSignature,
+  reopenDocketFromClientEmail,
 };

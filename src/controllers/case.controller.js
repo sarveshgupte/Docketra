@@ -1287,6 +1287,113 @@ const getDocketEligibleUsers = async (req, res) => {
   }
 };
 
+const sendEmailToClient = async (req, res) => {
+  try {
+    const { caseId } = req.params;
+    const { to, subject, body } = req.body;
+    if (!subject || !body) {
+      return res.status(400).json({ success: false, message: 'Subject and email body are required.' });
+    }
+
+    const firmId = req.user.firmId;
+    const { resolveCaseIdentifier } = require('../utils/caseIdentifier');
+    const internalId = await resolveCaseIdentifier(firmId, caseId, req.user.role);
+    const caseData = await CaseRepository.findByInternalId(firmId, internalId, req.user.role, { includeClient: true });
+    
+    if (!caseData) {
+      return res.status(404).json({ success: false, message: 'Docket not found' });
+    }
+
+    // Resolve recipient email: either custom `to` or client businessEmail
+    let recipientEmail = String(to || '').trim().toLowerCase();
+    if (!recipientEmail) {
+      const candidates = [
+        caseData?.clientEmail,
+        caseData?.client?.email,
+        caseData?.client?.businessEmail,
+        caseData?.clientData?.email,
+        caseData?.clientData?.businessEmail,
+      ];
+      recipientEmail = candidates.find((value) => typeof value === 'string' && value.trim());
+      
+      if (!recipientEmail && caseData?.clientId) {
+        const clientRecord = await ClientRepository.findByClientId(firmId, caseData.clientId, req.user.role);
+        recipientEmail = clientRecord?.businessEmail || clientRecord?.contactPersonEmailAddress || '';
+      }
+    }
+    recipientEmail = String(recipientEmail || '').trim().toLowerCase();
+
+    if (!recipientEmail) {
+      return res.status(400).json({ success: false, message: 'No recipient email specified and no client email configured.' });
+    }
+
+    // Format unique email signature
+    const { generateDocketEmailSignature } = require('../services/docketWorkflow.service');
+    const signature = generateDocketEmailSignature(caseData.caseInternalId);
+    const inboundDomain = process.env.INBOUND_EMAIL_DOMAIN || 'docketra.in';
+    const uniqueEmail = `docket-${caseData.caseNumber.toLowerCase()}-${signature}@${inboundDomain}`;
+
+    const mailFrom = process.env.MAIL_FROM || 'notifications@docketra.in';
+    const emailService = require('../services/email.service');
+    
+    const emailResult = await emailService.sendTransactionalEmail({
+      to: recipientEmail,
+      subject: subject,
+      html: `<p>${body.replace(/\n/g, '<br>')}</p>`,
+      text: body,
+      replyTo: {
+        email: uniqueEmail,
+        name: `${req.user.name || req.user.email} (via Docketra)`,
+      },
+    });
+
+    // Write comment on Case
+    await Comment.create({
+      caseId: caseData.caseId || caseData.caseNumber,
+      firmId: String(firmId),
+      text: `Sent document request email to client (${recipientEmail}): "${subject}"\n\nReply-To: ${uniqueEmail}`,
+      createdBy: req.user.email,
+      createdByXID: req.user.xID,
+      createdByName: req.user.name,
+    });
+
+    // Write CaseHistory audit record
+    await CaseHistory.create({
+      caseId: caseData.caseId || caseData.caseNumber,
+      firmId: String(firmId),
+      actionType: 'EmailSent',
+      description: `Sent document request email to client (${recipientEmail}) with subject: "${subject}"`,
+      performedBy: req.user.email,
+      performedByXID: req.user.xID,
+      actorRole: req.user.role === 'PRIMARY_ADMIN' || req.user.role === 'ADMIN' ? 'ADMIN' : 'USER',
+      actionLabel: 'Document Request Email Sent',
+      timestamp: new Date(),
+    });
+
+    // Save outgoing email into EmailCapture so it shows in the email log
+    const EmailCapture = require('../models/EmailCapture.model');
+    await EmailCapture.create({
+      firmId,
+      tenantId: String(firmId),
+      sender: { name: req.user.name || req.user.email, email: uniqueEmail },
+      recipients: [recipientEmail],
+      subject,
+      receivedAt: new Date(),
+      bodyExcerpt: body.substring(0, 1000),
+      linkedClientId: caseData.client?._id || null,
+      linkedCaseInternalId: caseData.caseInternalId,
+      linkedCaseId: caseData.caseId || caseData.caseNumber,
+      classification: 'awaiting_reply',
+      ownerXID: req.user.xID || null,
+      createdByXID: req.user.xID || 'SYSTEM',
+    });
+
+    return res.json({ success: true, message: 'Email sent successfully to client.', data: { recipientEmail, uniqueEmail } });
+  } catch (error) {
+    return res.status(error.status || 500).json({ success: false, message: error.message || 'Failed to send email to client' });
+  }
+};
+
 module.exports = {
   createCase: wrapWriteHandler(createCase),
   addComment: wrapWriteHandler(addComment),
@@ -1314,4 +1421,5 @@ module.exports = {
   viewClientFactSheetFile,
   listClientCFSFilesForCase,
   downloadClientCFSFileForCase,
+  sendEmailToClient: wrapWriteHandler(sendEmailToClient),
 };

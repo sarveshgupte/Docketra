@@ -8,7 +8,7 @@ const read = (p) => fs.readFileSync(path.resolve(__dirname, '..', p), 'utf8');
 
 const publicContactConfig = read('src/config/publicContact.js');
 assert.ok(publicContactConfig.includes('VITE_SUPPORT_EMAIL'), 'Public contact config must read VITE_SUPPORT_EMAIL.');
-assert.ok(publicContactConfig.includes('support@docketra.com'), 'Public contact config must include support@docketra.com fallback.');
+assert.ok(publicContactConfig.includes('support@docketra.in'), 'Public contact config must include support@docketra.in fallback.');
 
 const publicUiFiles = [
   'src/components/routing/AppLayout.jsx',

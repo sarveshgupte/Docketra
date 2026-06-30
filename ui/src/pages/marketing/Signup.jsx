@@ -483,7 +483,7 @@ export default function Signup() {
               </div>
               <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
                 <p className="text-xs font-bold uppercase text-sky-700">URL preview</p>
-                <p className="mt-2 break-words font-black">docketra.com/{workspaceSlugPreview}</p>
+                <p className="mt-2 break-words font-black">docketra.in/{workspaceSlugPreview}</p>
                 <p className="mt-3 text-xs leading-5 text-sky-700">Final URL is confirmed after verification.</p>
               </div>
             </div>

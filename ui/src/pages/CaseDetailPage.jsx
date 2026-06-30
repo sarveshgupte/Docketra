@@ -24,7 +24,7 @@ import { extractErrorMessage } from '../services/apiResponse';
 import { getRecoveryPayload } from '../utils/errorRecovery';
 import { formatDateTime, getISODateInTimezone } from '../utils/formatDateTime';
 import { formatDocketId } from '../utils/formatters';
-import { CASE_DETAIL_TABS, VALID_CASE_DETAIL_TAB_NAMES } from '../utils/constants';
+import { CASE_DETAIL_TABS, VALID_CASE_DETAIL_TAB_NAMES, API_BASE_URL } from '../utils/constants';
 import { DocketSidebar } from '../components/docket/DocketSidebar';
 import { DocketComments } from '../components/docket/DocketComments';
 import { StickyTabs } from '../components/common/StickyTabs';
@@ -66,6 +66,7 @@ import {
 const CaseDetailAttachmentsPanel = lazy(() => import('./caseDetail/CaseDetailAttachmentsPanel').then((module) => ({ default: module.CaseDetailAttachmentsPanel })));
 const CaseDetailActivityPanel = lazy(() => import('./caseDetail/CaseDetailActivityPanel').then((module) => ({ default: module.CaseDetailActivityPanel })));
 const CaseDetailHistoryPanel = lazy(() => import('./caseDetail/CaseDetailHistoryPanel').then((module) => ({ default: module.CaseDetailHistoryPanel })));
+const CaseDetailEmailsPanel = lazy(() => import('./caseDetail/CaseDetailEmailsPanel').then((module) => ({ default: module.CaseDetailEmailsPanel })));
 import { useClientDocketHistory } from './caseDetail/useClientDocketHistory';
 // showFileAction={!routedTeamCannotResolve && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)}
 import {
@@ -299,6 +300,7 @@ export const CaseDetailPage = () => {
   });
   const docketTabs = useMemo(() => ([
     { name: CASE_DETAIL_TABS.OVERVIEW, label: '📋 Overview' },
+    { name: CASE_DETAIL_TABS.EMAIL_LOGS, label: '📧 Emails' },
     { name: CASE_DETAIL_TABS.KNOWLEDGE, label: '🧠 Linked Knowledge' },
   ]), []);
 
@@ -732,8 +734,8 @@ export const CaseDetailPage = () => {
       // Use sendBeacon for better reliability on page unload
       // Note: This is best-effort and may not work in all browsers/scenarios
       if (navigator.sendBeacon) {
-        const apiBaseUrl = window.location.origin;
-        const url = `${apiBaseUrl}/api/cases/${caseId}/track-exit`;
+        // Use API_BASE_URL from constants instead of window.location.origin which fails under cross-origin hosting
+        const url = `${API_BASE_URL}/cases/${caseId}/track-exit`;
         
         // Send beacon - note that sendBeacon doesn't support custom headers
         // The backend must handle authentication via cookies or accept the request
@@ -1489,6 +1491,14 @@ export const CaseDetailPage = () => {
                     caseChecklist={caseInfo?.checklist}
                     firmSlug={firmSlug}
                     canManageSettings={Boolean(permissions.isAdmin) || Boolean(user?.isPrimaryAdmin)}
+                  />
+                )}
+                {activeTab === CASE_DETAIL_TABS.EMAIL_LOGS && (
+                  <CaseDetailEmailsPanel
+                    caseId={caseId}
+                    caseInfo={caseInfo}
+                    clientEmail={linkedClientEmail}
+                    onRefreshCase={loadCase}
                   />
                 )}
               </Suspense>

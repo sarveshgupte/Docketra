@@ -39,6 +39,7 @@ const {
   listClientCFSFilesForCase,
   downloadClientCFSFileForCase,
   getDocketSummaryPdf,
+  sendEmailToClient,
 } = require('../controllers/case.controller');
 const {
   generateUploadLink,
@@ -188,6 +189,7 @@ router.get('/:caseId/comments', authorizeFirmPermission('CASE_VIEW'), userReadLi
 router.post('/:caseId/upload-link', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, generateUploadLink);
 router.get('/:caseId/upload-link', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getUploadLinkStatus);
 router.post('/:caseId/upload-link/revoke', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, revokeUploadLink);
+router.post('/:caseId/send-client-email', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, sendEmailToClient);
 router.get('/:caseId/request-checklist', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getRequestChecklist);
 router.put('/:caseId/request-checklist', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, saveRequestChecklist);
 router.patch('/:caseId/request-checklist/:itemId/review', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, reviewChecklistItem);
