@@ -27,53 +27,54 @@ const getSharedSignals = async ({ firmId, user }) => {
   const userObjectId = user?._id || null;
   const userXid = String(user?.xID || user?.xid || '').toUpperCase();
 
+  // 💡 What: Replaced Model.countDocuments() with Model.exists() to improve query performance.
   const [
     firm,
-    activeClientCount,
-    categoryCount,
-    categoryWithSubcategoryCount,
-    workbasketCount,
-    docketCount,
-    invitedOrActiveUsers,
-    unassignedDocketCount,
-    userAssignedWorkbasketCount,
-    managerWorkbasketCount,
-    qcMappingCount,
-    managerVisibleQueueCount,
-    userAssignedDocketCount,
-    userInteractionCount,
+    activeClientExists,
+    categoryExists,
+    categoryWithSubcategoryExists,
+    workbasketExists,
+    docketExists,
+    invitedOrActiveUsersExists,
+    unassignedDocketExists,
+    userAssignedWorkbasketExists,
+    managerWorkbasketExists,
+    qcMappingExists,
+    managerVisibleQueueExists,
+    userAssignedDocketExists,
+    userInteractionExists,
   ] = await Promise.all([
     Firm.findById(firmId).select('isSetupComplete storage.mode storageConfig.provider').lean(),
-    Client.countDocuments({ firmId, status: 'active', isActive: { $ne: false } }),
-    Category.countDocuments({ firmId, isActive: { $ne: false } }),
-    Category.countDocuments({
+    Client.exists({ firmId, status: 'active', isActive: { $ne: false } }),
+    Category.exists({ firmId, isActive: { $ne: false } }),
+    Category.exists({
       firmId,
       isActive: { $ne: false },
       subcategories: { $elemMatch: { isActive: { $ne: false } } },
     }),
-    Team.countDocuments({ firmId, isActive: { $ne: false }, type: 'PRIMARY' }),
-    Case.countDocuments({ firmId: normalizedFirmId }),
-    User.countDocuments({
+    Team.exists({ firmId, isActive: { $ne: false }, type: 'PRIMARY' }),
+    Case.exists({ firmId: normalizedFirmId }),
+    User.exists({
       firmId,
       status: { $in: ['invited', 'active'] },
       isActive: { $ne: false },
       isSystem: { $ne: true },
     }),
-    Case.countDocuments({ firmId: normalizedFirmId, assignedToXID: { $in: [null, ''] } }),
+    Case.exists({ firmId: normalizedFirmId, assignedToXID: { $in: [null, ''] } }),
     userObjectId
-      ? Team.countDocuments({
+      ? Team.exists({
         firmId,
         isActive: { $ne: false },
         type: 'PRIMARY',
         $or: [{ managerId: userObjectId }, { _id: { $in: user.teamIds || [] } }, { _id: user.teamId }],
       })
-      : 0,
+      : null,
     userObjectId
-      ? Team.countDocuments({ firmId, isActive: { $ne: false }, type: 'PRIMARY', managerId: userObjectId })
-      : 0,
-    Team.countDocuments({ firmId, isActive: { $ne: false }, type: 'QC', parentWorkbasketId: { $ne: null } }),
+      ? Team.exists({ firmId, isActive: { $ne: false }, type: 'PRIMARY', managerId: userObjectId })
+      : null,
+    Team.exists({ firmId, isActive: { $ne: false }, type: 'QC', parentWorkbasketId: { $ne: null } }),
     userObjectId
-      ? Case.countDocuments({
+      ? Case.exists({
         firmId: normalizedFirmId,
         $or: [
           { assignedToXID: userXid },
@@ -82,30 +83,30 @@ const getSharedSignals = async ({ firmId, user }) => {
           { routedToTeamId: { $in: (user.teamIds || []).filter(Boolean) } },
         ],
       })
-      : 0,
+      : null,
     userXid
-      ? Case.countDocuments({ firmId: normalizedFirmId, assignedToXID: userXid })
-      : 0,
+      ? Case.exists({ firmId: normalizedFirmId, assignedToXID: userXid })
+      : null,
     userXid
-      ? DocketActivity.countDocuments({ firmId, performedByXID: userXid })
-      : 0,
+      ? DocketActivity.exists({ firmId, performedByXID: userXid })
+      : null,
   ]);
 
   return {
     firm,
-    activeClientCount,
-    categoryCount,
-    categoryWithSubcategoryCount,
-    workbasketCount,
-    docketCount,
-    invitedOrActiveUsers,
-    unassignedDocketCount,
-    userAssignedWorkbasketCount,
-    managerWorkbasketCount,
-    qcMappingCount,
-    managerVisibleQueueCount,
-    userAssignedDocketCount,
-    userInteractionCount,
+    hasActiveClients: !!activeClientExists,
+    hasCategories: !!categoryExists,
+    hasCategoryWithSubcategory: !!categoryWithSubcategoryExists,
+    hasWorkbaskets: !!workbasketExists,
+    hasDockets: !!docketExists,
+    hasInvitedOrActiveUsers: !!invitedOrActiveUsersExists,
+    hasUnassignedDockets: !!unassignedDocketExists,
+    hasUserAssignedWorkbaskets: !!userAssignedWorkbasketExists,
+    hasManagerWorkbaskets: !!managerWorkbasketExists,
+    hasQcMappings: !!qcMappingExists,
+    hasManagerVisibleQueues: !!managerVisibleQueueExists,
+    hasUserAssignedDockets: !!userAssignedDocketExists,
+    hasUserInteractions: !!userInteractionExists,
   };
 };
 
@@ -115,10 +116,10 @@ const buildBlockers = ({ signals }) => {
   if (!signals?.firm?.isSetupComplete) {
     blockers.push({ code: REASON_CODES.SETUP_INCOMPLETE, message: 'Firm profile setup is incomplete.', nextCheck: 'Complete firm defaults and onboarding checklist.' });
   }
-  if ((signals?.categoryWithSubcategoryCount || 0) === 0) {
+  if (!signals?.hasCategoryWithSubcategory) {
     blockers.push({ code: REASON_CODES.MISSING_ROUTING, message: 'No active category/subcategory routing found.', nextCheck: 'Create at least one active category + subcategory pair.' });
   }
-  if ((signals?.workbasketCount || 0) === 0) {
+  if (!signals?.hasWorkbaskets) {
     blockers.push({ code: REASON_CODES.INACTIVE_WORKBENCH, message: 'No active workbench is available for docket routing.', nextCheck: 'Create or reactivate a primary workbench in Work Settings.' });
   }
   return blockers;
@@ -127,19 +128,19 @@ const buildBlockers = ({ signals }) => {
 const buildRoleSteps = ({ role, signals }) => {
   const {
     firm,
-    activeClientCount,
-    categoryCount,
-    categoryWithSubcategoryCount,
-    workbasketCount,
-    docketCount,
-    invitedOrActiveUsers,
-    unassignedDocketCount,
-    userAssignedWorkbasketCount,
-    managerWorkbasketCount,
-    qcMappingCount,
-    managerVisibleQueueCount,
-    userAssignedDocketCount,
-    userInteractionCount,
+    hasActiveClients,
+    hasCategories,
+    hasCategoryWithSubcategory,
+    hasWorkbaskets,
+    hasDockets,
+    hasInvitedOrActiveUsers,
+    hasUnassignedDockets,
+    hasUserAssignedWorkbaskets,
+    hasManagerWorkbaskets,
+    hasQcMappings,
+    hasManagerVisibleQueues,
+    hasUserAssignedDockets,
+    hasUserInteractions,
   } = signals;
 
   if (role === 'PRIMARY_ADMIN') {
@@ -160,28 +161,28 @@ const buildRoleSteps = ({ role, signals }) => {
       }),
       buildStep({
         id: 'active-client',
-        completed: activeClientCount > 0,
-        explanation: activeClientCount > 0 ? 'Detected from your workspace setup.' : 'Waiting for first client to be added.',
+        completed: hasActiveClients,
+        explanation: hasActiveClients ? 'Detected from your workspace setup.' : 'Waiting for first client to be added.',
         cta: 'clients',
       }),
       buildStep({
         id: 'categories-workbaskets',
-        completed: categoryWithSubcategoryCount > 0 && workbasketCount > 0,
-        explanation: (categoryWithSubcategoryCount > 0 && workbasketCount > 0)
+        completed: hasCategoryWithSubcategory && hasWorkbaskets,
+        explanation: (hasCategoryWithSubcategory && hasWorkbaskets)
           ? 'Detected from your workspace setup.'
           : 'Add category/sub-category mapping and at least one workbasket.',
         cta: 'work-settings',
       }),
       buildStep({
         id: 'invite-team',
-        completed: invitedOrActiveUsers > 0,
-        explanation: invitedOrActiveUsers > 0 ? 'Detected from your workspace setup.' : 'Invite at least one admin/manager/user.',
+        completed: hasInvitedOrActiveUsers,
+        explanation: hasInvitedOrActiveUsers ? 'Detected from your workspace setup.' : 'Invite at least one admin/manager/user.',
         cta: 'admin-team',
       }),
       buildStep({
         id: 'create-docket',
-        completed: docketCount > 0,
-        explanation: docketCount > 0 ? 'Detected from your workspace setup.' : 'Create your first docket to activate workflow.',
+        completed: hasDockets,
+        explanation: hasDockets ? 'Detected from your workspace setup.' : 'Create your first docket to activate workflow.',
         cta: 'dockets',
       }),
     ];
@@ -191,34 +192,34 @@ const buildRoleSteps = ({ role, signals }) => {
     return [
       buildStep({
         id: 'workbasket-visibility',
-        completed: workbasketCount > 0,
-        explanation: workbasketCount > 0 ? 'Detected from your workspace setup.' : 'Pending workbasket assignment.',
+        completed: hasWorkbaskets,
+        explanation: hasWorkbaskets ? 'Detected from your workspace setup.' : 'Pending workbasket assignment.',
         cta: 'worklist',
       }),
       buildStep({
         id: 'active-client',
-        completed: activeClientCount > 0,
-        explanation: activeClientCount > 0 ? 'Detected from your workspace setup.' : 'Waiting for first client to be added.',
+        completed: hasActiveClients,
+        explanation: hasActiveClients ? 'Detected from your workspace setup.' : 'Waiting for first client to be added.',
         cta: 'clients',
       }),
       buildStep({
         id: 'categories-workbaskets',
-        completed: categoryCount > 0 && workbasketCount > 0,
-        explanation: (categoryCount > 0 && workbasketCount > 0)
+        completed: hasCategories && hasWorkbaskets,
+        explanation: (hasCategories && hasWorkbaskets)
           ? 'Detected from your workspace setup.'
           : 'Set up categories and workbaskets first.',
         cta: 'work-settings',
       }),
       buildStep({
         id: 'create-docket',
-        completed: docketCount > 0,
-        explanation: docketCount > 0 ? 'Detected from your workspace setup.' : 'No docket found yet.',
+        completed: hasDockets,
+        explanation: hasDockets ? 'Detected from your workspace setup.' : 'No docket found yet.',
         cta: 'dockets',
       }),
       buildStep({
         id: 'unassigned-reviewed',
-        completed: unassignedDocketCount === 0,
-        explanation: unassignedDocketCount === 0
+        completed: !hasUnassignedDockets,
+        explanation: !hasUnassignedDockets
           ? 'Detected from your workspace setup.'
           : 'Unassigned dockets still need routing.',
         cta: 'global-worklist',
@@ -230,22 +231,22 @@ const buildRoleSteps = ({ role, signals }) => {
     return [
       buildStep({
         id: 'assigned-workbaskets',
-        completed: managerWorkbasketCount > 0 || userAssignedWorkbasketCount > 0,
-        explanation: (managerWorkbasketCount > 0 || userAssignedWorkbasketCount > 0)
+        completed: hasManagerWorkbaskets || hasUserAssignedWorkbaskets,
+        explanation: (hasManagerWorkbaskets || hasUserAssignedWorkbaskets)
           ? 'Detected from your workspace setup.'
           : 'Pending workbasket assignment.',
         cta: 'worklist',
       }),
       buildStep({
         id: 'qc-mapping',
-        completed: qcMappingCount > 0,
-        explanation: qcMappingCount > 0 ? 'Detected from your workspace setup.' : 'QC queue mapping is not configured yet.',
+        completed: hasQcMappings,
+        explanation: hasQcMappings ? 'Detected from your workspace setup.' : 'QC queue mapping is not configured yet.',
         cta: 'qc-queue',
       }),
       buildStep({
         id: 'team-visible-queue',
-        completed: managerVisibleQueueCount > 0,
-        explanation: managerVisibleQueueCount > 0
+        completed: hasManagerVisibleQueues,
+        explanation: hasManagerVisibleQueues
           ? 'Detected from your workspace setup.'
           : 'No dockets visible in your assigned queue yet.',
         cta: 'worklist',
@@ -256,20 +257,20 @@ const buildRoleSteps = ({ role, signals }) => {
   return [
     buildStep({
       id: 'assigned-workbaskets',
-      completed: userAssignedWorkbasketCount > 0,
-      explanation: userAssignedWorkbasketCount > 0 ? 'Detected from your workspace setup.' : 'Pending workbasket assignment.',
+      completed: hasUserAssignedWorkbaskets,
+      explanation: hasUserAssignedWorkbaskets ? 'Detected from your workspace setup.' : 'Pending workbasket assignment.',
       cta: 'my-worklist',
     }),
     buildStep({
       id: 'assigned-docket',
-      completed: userAssignedDocketCount > 0,
-      explanation: userAssignedDocketCount > 0 ? 'Detected from your workspace setup.' : 'No assigned dockets yet.',
+      completed: hasUserAssignedDockets,
+      explanation: hasUserAssignedDockets ? 'Detected from your workspace setup.' : 'No assigned dockets yet.',
       cta: 'my-worklist',
     }),
     buildStep({
       id: 'first-workflow-update',
-      completed: userInteractionCount > 0,
-      explanation: userInteractionCount > 0
+      completed: hasUserInteractions,
+      explanation: hasUserInteractions
         ? 'Detected from your workspace setup.'
         : 'Update one docket to complete your first workflow action.',
       cta: 'dockets',
@@ -292,11 +293,11 @@ const getOnboardingProgress = async ({ firmId, user }) => {
     steps,
     blockers,
     signals: {
-      activeClientCount: signals.activeClientCount,
-      categoryCount: signals.categoryCount,
-      workbasketCount: signals.workbasketCount,
-      docketCount: signals.docketCount,
-      unassignedDocketCount: signals.unassignedDocketCount,
+      hasActiveClients: signals.hasActiveClients,
+      hasCategories: signals.hasCategories,
+      hasWorkbaskets: signals.hasWorkbaskets,
+      hasDockets: signals.hasDockets,
+      hasUnassignedDockets: signals.hasUnassignedDockets,
     },
   };
 };
