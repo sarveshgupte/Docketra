@@ -669,6 +669,7 @@ export const Layout = ({ children, title, subtitle }) => {
       </a>
       {/* Sidebar */}
       <aside
+        id="enterprise-sidebar"
         className={[
           'enterprise-sidebar',
           sidebarCollapsed ? 'enterprise-sidebar--collapsed' : '',
@@ -732,6 +733,8 @@ export const Layout = ({ children, title, subtitle }) => {
             type="button"
             className="enterprise-sidebar__footer-toggle"
             onClick={() => setSidebarCollapsed((value) => !value)}
+            aria-expanded={!sidebarCollapsed}
+            aria-controls="enterprise-sidebar"
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
@@ -785,8 +788,9 @@ export const Layout = ({ children, title, subtitle }) => {
           <button
             className="enterprise-header__sidebar-toggle"
             onClick={handleSidebarToggle}
-            aria-label={isMobileViewport ? 'Toggle sidebar' : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
             aria-expanded={isMobileViewport ? mobileSidebarOpen : !sidebarCollapsed}
+            aria-controls="enterprise-sidebar"
+            aria-label={isMobileViewport ? 'Toggle sidebar' : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
           >
             <IconMenu />
           </button>
