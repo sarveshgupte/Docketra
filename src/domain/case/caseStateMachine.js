@@ -33,6 +33,19 @@ const transitions = Object.freeze({
   ]),
   [CaseStatus.UNASSIGNED]: Object.freeze([
     CaseStatus.ASSIGNED,
+    CaseStatus.ROUTED,
+  ]),
+  [CaseStatus.ROUTED]: Object.freeze([
+    CaseStatus.ASSIGNED,
+    CaseStatus.ROUTED_ASSIGNED,
+    CaseStatus.IN_PROGRESS,
+    CaseStatus.PENDING,
+  ]),
+  [CaseStatus.ROUTED_ASSIGNED]: Object.freeze([
+    CaseStatus.OPEN,
+    CaseStatus.PENDING,
+    CaseStatus.FILED,
+    CaseStatus.RESOLVED,
   ]),
   [CaseStatus.ASSIGNED]: Object.freeze([
     CaseStatus.IN_PROGRESS,
@@ -50,6 +63,10 @@ const transitions = Object.freeze({
   ]),
   [CaseStatus.PENDING]: Object.freeze([
     CaseStatus.OPEN,
+    CaseStatus.ASSIGNED,
+    CaseStatus.ROUTED,
+    CaseStatus.ROUTED_ASSIGNED,
+    CaseStatus.UNASSIGNED,
     CaseStatus.FILED,
   ]),
   [CaseStatus.FILED]: Object.freeze([]),

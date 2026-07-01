@@ -61,7 +61,7 @@ function toLifecycleFromStatus(status) {
     return 'DONE';
   }
 
-  if (normalized === 'ASSIGNED') {
+  if (normalized === 'ASSIGNED' || normalized === 'ROUTED_ASSIGNED') {
     return 'WL';
   }
 

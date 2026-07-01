@@ -863,14 +863,31 @@ async function reopenDuePending() {
   for (const docket of dueCases) {
     docketIds.push(docket.caseId);
     const hasAssignee = docket.assignedToXID && String(docket.assignedToXID).trim() !== '';
-    const toState = hasAssignee ? DocketStatus.IN_PROGRESS : DocketStatus.AVAILABLE;
-    const persistenceState = toPersistenceState(toState);
+    const isRouted = docket.routedToTeamId && String(docket.routedToTeamId).trim() !== '';
+
+    let toState;
+    let stateVal;
+    let queueTypeVal;
+
+    if (hasAssignee) {
+      toState = 'ASSIGNED';
+      stateVal = 'IN_PROGRESS';
+      queueTypeVal = 'PERSONAL';
+    } else if (isRouted) {
+      toState = 'ROUTED';
+      stateVal = 'IN_WB';
+      queueTypeVal = 'GLOBAL';
+    } else {
+      toState = 'UNASSIGNED';
+      stateVal = 'IN_WB';
+      queueTypeVal = 'GLOBAL';
+    }
 
     const updateFields = {
       lifecycle: DocketLifecycle.ACTIVE,
-      status: persistenceState,
-      state: hasAssignee ? 'IN_PROGRESS' : 'IN_WB',
-      queueType: hasAssignee ? 'PERSONAL' : 'GLOBAL',
+      status: toState,
+      state: stateVal,
+      queueType: queueTypeVal,
       qcOutcome: null,
       reopenAt: null,
       pendingUntil: null,
@@ -892,7 +909,7 @@ async function reopenDuePending() {
       writeAudit({
         docketId: docket.caseId,
         fromState: DocketStatus.PENDING,
-        toState: toState,
+        toState: toDocketState(toState),
         userId: 'SYSTEM',
         comment: 'Auto reopened',
         action: 'PENDING_REOPEN',
@@ -900,7 +917,7 @@ async function reopenDuePending() {
         changes: [{
           field: 'status',
           from: DocketStatus.PENDING,
-          to: toState,
+          to: toDocketState(toState),
         }],
         metadata: {
           reasonCode: REASON_CODES.AUTO_REOPEN_DUE,

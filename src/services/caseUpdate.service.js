@@ -549,8 +549,11 @@ module.exports = (deps) => {
       const auditDoc = new CaseAudit(auditEntry);
       await auditDoc.validate();
       
+      const isRouted = caseData.routedToTeamId && caseData.routeOriginatorTeamId && String(caseData.routedToTeamId) !== String(caseData.routeOriginatorTeamId);
+      const targetUnassignedStatus = isRouted ? CaseStatus.ROUTED : CaseStatus.UNASSIGNED;
+      
       // Update case to move to global worklist through centralized status service
-      await CaseService.updateStatus(displayCaseId, CaseStatus.UNASSIGNED, {
+      await CaseService.updateStatus(displayCaseId, targetUnassignedStatus, {
         tenantId: req.user.firmId,
         role: req.user.role,
         userId: user.xID,

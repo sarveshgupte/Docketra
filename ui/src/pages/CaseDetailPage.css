@@ -2396,6 +2396,7 @@ button.btn--outline:hover:not(:disabled) {
 }
 
 .docket-detail-redesign .docket-lifecycle-pill--routed,
+.docket-detail-redesign .docket-lifecycle-pill--routed-assigned,
 .docket-detail-redesign .docket-lifecycle-pill--submitted {
   background: rgba(238, 242, 255, 0.84);
   border-color: rgba(165, 180, 252, 0.72);

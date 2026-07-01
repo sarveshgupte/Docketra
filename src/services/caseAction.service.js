@@ -17,7 +17,7 @@ const LIFECYCLE_TRANSITIONS = Object.freeze({
   OPEN: Object.freeze([CaseStatus.PENDING, CaseStatus.QC_PENDING, CaseStatus.RESOLVED, CaseStatus.FILED]),
   ACTIVE: Object.freeze([CaseStatus.PENDING, CaseStatus.QC_PENDING, CaseStatus.RESOLVED, CaseStatus.FILED]),
   IN_PROGRESS: Object.freeze([CaseStatus.PENDING, CaseStatus.QC_PENDING, CaseStatus.RESOLVED, CaseStatus.FILED]),
-  PENDING: Object.freeze([CaseStatus.OPEN]),
+  PENDING: Object.freeze([CaseStatus.OPEN, CaseStatus.ASSIGNED, CaseStatus.ROUTED, CaseStatus.UNASSIGNED]),
   QC_PENDING: Object.freeze([CaseStatus.RESOLVED, CaseStatus.OPEN]),
   RESOLVED: Object.freeze([]),
   FILED: Object.freeze([]),
@@ -440,9 +440,21 @@ const unpendCase = async (firmId, caseId, comment, user, req = null) => {
     throw new Error('Case not found');
   }
 
+  const hasAssignee = caseData.assignedToXID && String(caseData.assignedToXID).trim() !== '';
+  const isRouted = caseData.routedToTeamId && String(caseData.routedToTeamId).trim() !== '';
+
+  let targetStatus;
+  if (hasAssignee) {
+    targetStatus = CaseStatus.ASSIGNED;
+  } else if (isRouted) {
+    targetStatus = CaseStatus.ROUTED;
+  } else {
+    targetStatus = CaseStatus.UNASSIGNED;
+  }
+
   assertLifecycleTransitionAllowed({
     currentStatus: caseData.status,
-    nextStatus: CaseStatus.OPEN,
+    nextStatus: targetStatus,
     actorRole: user?.role,
   });
   
@@ -450,7 +462,7 @@ const unpendCase = async (firmId, caseId, comment, user, req = null) => {
   const previousStatus = caseData.status;
   const previousPendingUntil = caseData.pendingUntil;
 
-  await CaseService.updateStatus(caseId, CaseStatus.OPEN, {
+  await CaseService.updateStatus(caseId, targetStatus, {
     tenantId: firmId,
     role: user.role,
     userId: user.xID,
@@ -518,10 +530,23 @@ const performAutoReopen = async (caseData) => {
   const previousStatus = caseData.status;
   const previousPendingUntil = caseData.pendingUntil;
   const now = new Date();
+
+  const hasAssignee = caseData.assignedToXID && String(caseData.assignedToXID).trim() !== '';
+  const isRouted = caseData.routedToTeamId && String(caseData.routedToTeamId).trim() !== '';
+
+  let targetStatus;
+  if (hasAssignee) {
+    targetStatus = CaseStatus.ASSIGNED;
+  } else if (isRouted) {
+    targetStatus = CaseStatus.ROUTED;
+  } else {
+    targetStatus = CaseStatus.UNASSIGNED;
+  }
+
   const session = await mongoose.startSession();
   try {
     await session.withTransaction(async () => {
-      await CaseService.updateStatus(caseData.caseId, CaseStatus.OPEN, {
+      await CaseService.updateStatus(caseData.caseId, targetStatus, {
         tenantId: caseData.firmId,
         role: 'Admin',
         userId: 'SYSTEM',
@@ -564,7 +589,7 @@ const performAutoReopen = async (caseData) => {
         'SYSTEM',
         {
           previousStatus,
-          newStatus: CaseStatus.OPEN,
+          newStatus: targetStatus,
           pendingUntil: previousPendingUntil,
           autoReopened: true,
           reason: 'pending_until elapsed',

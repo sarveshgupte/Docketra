@@ -1,7 +1,7 @@
 const ALLOWED_TRANSITIONS = Object.freeze({
   IN_WB: Object.freeze(['IN_PROGRESS']),
   IN_PROGRESS: Object.freeze(['IN_QC', 'PENDED', 'RESOLVED']),
-  PENDED: Object.freeze(['IN_PROGRESS']),
+  PENDED: Object.freeze(['IN_PROGRESS', 'IN_WB']),
   IN_QC: Object.freeze(['RESOLVED', 'IN_PROGRESS']),
   RESOLVED: Object.freeze([]),
   FILED: Object.freeze([]),

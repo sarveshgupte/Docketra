@@ -6,6 +6,8 @@ const { canTransition, canResolve, canFile } = require('../src/utils/docketState
   assert.strictEqual(getCanonicalDocketState({ status: 'UNASSIGNED' }), 'IN_WB');
   assert.strictEqual(getCanonicalDocketState({ status: 'OPEN', assignedToXID: 'USER1' }), 'IN_PROGRESS');
   assert.strictEqual(getCanonicalDocketState({ status: 'OPEN', assignedToXID: null }), 'IN_WB');
+  assert.strictEqual(getCanonicalDocketState({ status: 'ROUTED' }), 'IN_WB');
+  assert.strictEqual(getCanonicalDocketState({ status: 'ROUTED_ASSIGNED' }), 'IN_PROGRESS');
   assert.strictEqual(getCanonicalDocketState({ status: 'QC_PENDING' }), 'IN_QC');
   assert.strictEqual(getCanonicalDocketState({ status: 'PENDING' }), 'PENDED');
   assert.strictEqual(getCanonicalDocketState({ status: 'RESOLVED' }), 'RESOLVED');
@@ -18,6 +20,7 @@ const { canTransition, canResolve, canFile } = require('../src/utils/docketState
   assert.strictEqual(canTransition('IN_PROGRESS', 'PENDED'), true);
   assert.strictEqual(canTransition('IN_PROGRESS', 'RESOLVED'), true);
   assert.strictEqual(canTransition('PENDED', 'IN_PROGRESS'), true);
+  assert.strictEqual(canTransition('PENDED', 'IN_WB'), true);
   assert.strictEqual(canTransition('IN_QC', 'RESOLVED'), true);
   assert.strictEqual(canTransition('IN_QC', 'IN_PROGRESS'), true);
   assert.strictEqual(canTransition('IN_WB', 'FILED'), false);
