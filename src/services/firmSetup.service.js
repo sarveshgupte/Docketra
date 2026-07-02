@@ -223,11 +223,14 @@ const setupDefaultFirm = async (firmId, primaryAdminUser, {
   const actorXid = primaryAdminUser?.xID || primaryAdminUser?.xid || 'SYSTEM';
 
   const execute = async (activeSession) => {
-    const [categoryCount, workbasketCount, firm] = await Promise.all([
-      Category.countDocuments({ firmId }).session(activeSession),
-      Team.countDocuments({ firmId, parentWorkbasketId: null }).session(activeSession),
+    const [hasCategories, hasWorkbaskets, firm] = await Promise.all([
+      Category.exists({ firmId }).session(activeSession),
+      Team.exists({ firmId, parentWorkbasketId: null }).session(activeSession),
       Firm.findById(firmId).session(activeSession),
     ]);
+
+    const categoryCount = hasCategories ? 1 : 0;
+    const workbasketCount = hasWorkbaskets ? 1 : 0;
 
     log.info('[FIRM_SETUP] setup started', {
       firmId: String(firmId),
@@ -236,7 +239,7 @@ const setupDefaultFirm = async (firmId, primaryAdminUser, {
       force,
     });
 
-    if (!force && categoryCount > 0 && workbasketCount > 0) {
+    if (!force && hasCategories && hasWorkbaskets) {
       const skipReason = 'FIRM_ALREADY_CONFIGURED';
       log.info('[FIRM_SETUP] setup skipped', {
         firmId: String(firmId),
