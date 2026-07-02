@@ -303,7 +303,62 @@ async function runTests() {
 
     await handleInboundEmail({ body: hackerPayload }, mockRes);
     assert.strictEqual(resStatus, 403, 'Expected 403 Forbidden for unauthorized sender');
+    assert.strictEqual(resJson?.code, 'FORBIDDEN');
     console.log('✓ Test Case 11 passed.');
+
+    // Test case 12: Duplicate delivery (Idempotency check)
+    console.log('Running Test Case 12: Duplicate delivery idempotency...');
+    const tc12 = await setupTestCase(12);
+    const signature12 = generateDocketEmailSignature(tc12.docket.caseInternalId);
+    const duplicatePayload = loadCloudMailinFixture('plain_text.json', tc12.docket.caseNumber, signature12);
+    duplicatePayload.envelope.from = 'client-12@company.com';
+    duplicatePayload.headers.from = 'Test Client <client-12@company.com>';
+    duplicatePayload.headers.message_id = '<msg-id-idempotency-test@company.com>';
+
+    // First delivery
+    await handleInboundEmail({ body: duplicatePayload }, mockRes);
+    assert.strictEqual(resStatus, 200);
+    const firstEmailCaptureId = resJson?.data?.emailCaptureId;
+    assert.ok(firstEmailCaptureId, 'Expected emailCaptureId on first run');
+
+    // Second delivery (duplicate)
+    await handleInboundEmail({ body: duplicatePayload }, mockRes);
+    assert.strictEqual(resStatus, 200);
+    assert.strictEqual(resJson?.data?.attachmentsUploaded, 0, 'Expected 0 uploads on duplicate');
+    assert.strictEqual(resJson?.data?.emailCaptureId?.toString(), firstEmailCaptureId?.toString(), 'Expected same emailCaptureId');
+    console.log('✓ Test Case 12 passed.');
+
+    // Test case 13: Oversized attachment
+    console.log('Running Test Case 13: Oversized attachment check...');
+    const tc13 = await setupTestCase(13);
+    const signature13 = generateDocketEmailSignature(tc13.docket.caseInternalId);
+    const oversizedPayload = loadCloudMailinFixture('one_pdf.json', tc13.docket.caseNumber, signature13);
+    oversizedPayload.envelope.from = 'client-13@company.com';
+    oversizedPayload.headers.from = 'Test Client <client-13@company.com>';
+    oversizedPayload.attachments[0].size = 6 * 1024 * 1024; // 6MB (exceeds default 5MB config)
+
+    await handleInboundEmail({ body: oversizedPayload }, mockRes);
+    assert.strictEqual(resStatus, 400, 'Expected 400 Bad Request for oversized attachment');
+    assert.strictEqual(resJson?.code, 'INVALID_REQUEST');
+    console.log('✓ Test Case 13 passed.');
+
+    // Test case 14: Malformed payload
+    console.log('Running Test Case 14: Malformed payload...');
+    await handleInboundEmail({ body: {} }, mockRes);
+    assert.strictEqual(resStatus, 400, 'Expected 400 Bad Request for malformed payload');
+    assert.strictEqual(resJson?.code, 'INVALID_REQUEST');
+    console.log('✓ Test Case 14 passed.');
+
+    // Test case 15: Missing docket lookup
+    console.log('Running Test Case 15: Missing docket lookup...');
+    const missingDocketPayload = loadCloudMailinFixture('plain_text.json', 'CO999999999999', '123456');
+    missingDocketPayload.envelope.from = 'client-1@company.com';
+    missingDocketPayload.headers.from = 'Test Client <client-1@company.com>';
+
+    await handleInboundEmail({ body: missingDocketPayload }, mockRes);
+    assert.strictEqual(resStatus, 404, 'Expected 404 Not Found for missing docket');
+    assert.strictEqual(resJson?.code, 'NOT_FOUND');
+    console.log('✓ Test Case 15 passed.');
 
     // Restore original upload function
     DocketFileStorageService.uploadFile = originalUploadFile;

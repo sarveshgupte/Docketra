@@ -97,4 +97,19 @@ INBOUND_EMAIL_DEBUG=true
    * If a validation fails, it returns a generic `400` with code `INVALID_REQUEST` or `403` with code `FORBIDDEN`.
    * The detailed breakdown (e.g., `UNAUTHORIZED_SENDER` or `INVALID_SIGNATURE`) is printed internally in Google Cloud Run stdout logs.
    * Setting the environment variable `INBOUND_EMAIL_DEBUG=true` allows developers to bypass masking and return debug properties in the HTTP response.
+4. **Error Response Schema**:
+   All public error responses format as:
+   ```json
+   {
+     "success": false,
+     "code": "INVALID_REQUEST",
+     "message": "Human readable reason here",
+     "requestId": "unique-request-id-string"
+   }
+   ```
+5. **Idempotency (Duplicate Prevention)**:
+   The controller extracts the unique RFC `Message-ID` header from the CloudMailin payload. Before processing, it queries the `EmailCapture` collection. If a capture with the same `messageId` and `firmId` exists, it skips processing (re-uploading attachments, adding comments, reopening dockets) and returns an early `HTTP 200` to prevent data duplication.
+6. **Attachment Size Limit**:
+   Files are validated against the `SECURITY_UPLOAD_MAX_SIZE_MB` env variable (default: `5`). Attachments exceeding this limit trigger an immediate `400 INVALID_REQUEST` error.
+
 
