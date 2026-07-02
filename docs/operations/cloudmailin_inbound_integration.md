@@ -80,12 +80,21 @@ SYSTEM_HASH_SECRET=T1l4dmNtUXphRFpKYjNOMmRHVjVjMmx6ZEdsdmJtUnlaV055WlhSM2FXNW5iR
 
 # 3. Size limit for incoming JSON body (Required: 10mb for base64 attachments)
 JSON_BODY_LIMIT=10mb
+
+# 4. Inbound Email Debug Mode (Set true for detailed webhook response mapping)
+INBOUND_EMAIL_DEBUG=true
 ```
 
 ---
 
-## 5. Security & Verification
+## 5. Security, Verification & Error Responses
 1. **Stateless HMAC Check**:
    The controller parses the `To` header matching `docket-<caseNumber>-<secureToken>@domain.com`. The `<secureToken>` is compared against `HMAC-SHA256(caseInternalId, SYSTEM_HASH_SECRET)`.
 2. **Sender Whitelist Check**:
    The controller decrypts the associated case client details using `ClientRepository.findById()` and verifies that the `from` sender email matches the registered business email. Invalid senders are rejected with `403 Forbidden`.
+3. **Public Error Response Masking**:
+   To secure internal system details, the inbound parser suppresses precise verification failures in production.
+   * If a validation fails, it returns a generic `400` with code `INVALID_REQUEST` or `403` with code `FORBIDDEN`.
+   * The detailed breakdown (e.g., `UNAUTHORIZED_SENDER` or `INVALID_SIGNATURE`) is printed internally in Google Cloud Run stdout logs.
+   * Setting the environment variable `INBOUND_EMAIL_DEBUG=true` allows developers to bypass masking and return debug properties in the HTTP response.
+

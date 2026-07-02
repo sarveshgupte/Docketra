@@ -8,6 +8,28 @@ const DocketFileStorageService = require('../services/docketFileStorage.service'
 const { reopenDocketFromClientEmail, generateDocketEmailSignature } = require('../services/docketWorkflow.service');
 const log = require('../utils/log');
 
+const sendError = (res, statusCode, publicCode, debugCode, debugDetails = {}) => {
+  const isDebug = process.env.INBOUND_EMAIL_DEBUG === 'true';
+  const response = {
+    success: false,
+    code: publicCode
+  };
+
+  if (isDebug) {
+    response.debugCode = debugCode;
+    response.details = debugDetails;
+  }
+
+  // Logs detail internally to Cloud Run / stdout
+  if (statusCode >= 400 && statusCode < 500) {
+    log.warn(`[INBOUND_EMAIL] ${statusCode} ${debugCode}: ${JSON.stringify(debugDetails)}`);
+  } else {
+    log.error(`[INBOUND_EMAIL] ${statusCode} ${debugCode}: ${JSON.stringify(debugDetails)}`);
+  }
+
+  return res.status(statusCode).json(response);
+};
+
 const handleInboundEmail = async (req, res) => {
   try {
     const envelope = req.body.envelope || {};
@@ -22,19 +44,7 @@ const handleInboundEmail = async (req, res) => {
     const attachments = req.body.attachments || [];
     
     if (!rawFrom || !rawTo) {
-      // TODO: REMOVE AFTER CLOUDMAILIN DEBUGGING
-      return res.status(400).json({
-        success: false,
-        error: "REQUIRED_FIELDS_MISSING",
-        details: {
-          from: rawFrom || null,
-          to: rawTo || null,
-          resolvedRecipient: null,
-          caseNumber: null,
-          signature: null,
-          reason: "From and To fields are required."
-        }
-      });
+      return sendError(res, 400, 'INVALID_REQUEST', 'REQUIRED_FIELDS_MISSING', { from: rawFrom || null, to: rawTo || null });
     }
 
     // Extract sender email
@@ -70,20 +80,7 @@ const handleInboundEmail = async (req, res) => {
     // Match format: docket-<caseNumber>-<signature>@domain
     const recipientMatch = recipientEmail.match(/^(?:docket-)?([a-zA-Z0-9-]+)-([a-f0-9]{6})@/i);
     if (!recipientMatch) {
-      log.warn(`[INBOUND_EMAIL] Invalid recipient format: ${recipientEmail}`);
-      // TODO: REMOVE AFTER CLOUDMAILIN DEBUGGING
-      return res.status(400).json({
-        success: false,
-        error: "INVALID_RECIPIENT_FORMAT",
-        details: {
-          from: senderEmail,
-          to: rawTo,
-          resolvedRecipient: recipientEmail,
-          caseNumber: null,
-          signature: null,
-          reason: "Invalid recipient format. Must be docket-<caseNumber>-<signature>@domain."
-        }
-      });
+      return sendError(res, 400, 'INVALID_REQUEST', 'INVALID_RECIPIENT_FORMAT', { recipientEmail });
     }
 
     const caseNumber = recipientMatch[1].toUpperCase();
@@ -98,39 +95,23 @@ const handleInboundEmail = async (req, res) => {
     });
 
     if (!targetCase) {
-      log.warn(`[INBOUND_EMAIL] Docket ${caseNumber} not found.`);
-      return res.status(404).json({ success: false, message: `Docket ${caseNumber} not found.` });
+      return sendError(res, 404, 'NOT_FOUND', 'CASE_NOT_FOUND', { caseNumber });
     }
 
     // Verify cryptographic signature token
     const expectedSignature = generateDocketEmailSignature(targetCase.caseInternalId);
     if (providedSignature !== expectedSignature) {
-      log.warn(`[INBOUND_EMAIL] Invalid signature token for docket ${caseNumber}. Provided: ${providedSignature}, Expected: ${expectedSignature}`);
-      return res.status(403).json({ success: false, message: 'Invalid secure token signature. Access denied.' });
+      return sendError(res, 403, 'FORBIDDEN', 'INVALID_SIGNATURE', { providedSignature, expectedSignature, caseNumber });
     }
 
     // Find Client and verify sender email
     if (!targetCase.clientId) {
-      log.warn(`[INBOUND_EMAIL] Docket ${caseNumber} has no linked client.`);
-      // TODO: REMOVE AFTER CLOUDMAILIN DEBUGGING
-      return res.status(400).json({
-        success: false,
-        error: "MISSING_LINKED_CLIENT",
-        details: {
-          from: senderEmail,
-          to: rawTo,
-          resolvedRecipient: recipientEmail,
-          caseNumber: caseNumber,
-          signature: providedSignature,
-          reason: "Docket has no linked client."
-        }
-      });
+      return sendError(res, 400, 'INVALID_REQUEST', 'MISSING_LINKED_CLIENT', { caseNumber });
     }
 
     const client = await Client.findOne({ clientId: targetCase.clientId, firmId: targetCase.firmId });
     if (!client) {
-      log.warn(`[INBOUND_EMAIL] Linked client ${targetCase.clientId} not found for docket ${caseNumber}.`);
-      return res.status(404).json({ success: false, message: 'Linked client not found.' });
+      return sendError(res, 404, 'NOT_FOUND', 'CLIENT_NOT_FOUND', { clientId: targetCase.clientId, caseNumber });
     }
 
     // Decrypt client records to retrieve plain businessEmail and compare
@@ -141,8 +122,7 @@ const handleInboundEmail = async (req, res) => {
     ].filter(Boolean);
 
     if (!clientEmails.includes(senderEmail)) {
-      log.warn(`[INBOUND_EMAIL] Sender email ${senderEmail} is not authorized for client ${decryptedClient.clientId} of docket ${caseNumber}.`);
-      return res.status(403).json({ success: false, message: 'Sender email is not authorized for this client docket.' });
+      return sendError(res, 403, 'FORBIDDEN', 'UNAUTHORIZED_SENDER', { senderEmail, allowedEmails: clientEmails, caseNumber });
     }
 
     // Process attachments
@@ -221,8 +201,7 @@ const handleInboundEmail = async (req, res) => {
     });
 
   } catch (error) {
-    log.error(`[INBOUND_EMAIL_ERROR] ${error.stack || error.message}`);
-    return res.status(500).json({ success: false, message: 'Failed to process inbound email.' });
+    return sendError(res, 500, 'INTERNAL_SERVER_ERROR', 'EXCEPTION_CAUGHT', { message: error.message, stack: error.stack });
   }
 };
 
