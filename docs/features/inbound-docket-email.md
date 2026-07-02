@@ -1,215 +1,127 @@
-# Inbound Docket Email
+# Inbound Docket Email Integration
 
-## Product Intent
+This document defines the production implementation, workflow, data model, security, and idempotency architectures for Docketra's Inbound Email Integration.
 
-Each docket should have a unique inbound email address. When a client, team member, or external party sends email to that address, Docketra should attach the email context to the docket automatically.
+---
 
-Example:
+## 1. End-to-End Sequence Diagram
 
-```text
-dk_8H3K92P@reply.docketra.in
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Assignee as Docket Assignee
+    actor Client as Client
+    participant Brevo as Outbound (Brevo)
+    participant Cloudflare as DNS Routing
+    participant CloudMailin as CloudMailin Webhook
+    participant Backend as Docketra Backend
+    participant Drive as Google Drive Storage
+
+    Assignee->>Backend: Request Documents / Send Message
+    Backend->>Backend: Generate Reply-To: docket-<caseNumber>-<signature>@mail.docketra.in
+    Backend->>Brevo: Send Outbound Email (sets Message-ID)
+    Brevo->>Client: Deliver Email to Client Inbox
+
+    Note over Client, Backend: Email Threading (In-Reply-To / References)
+
+    Client->>Cloudflare: Client Replies to Reply-To address
+    Cloudflare->>CloudMailin: Route email payload
+    CloudMailin->>Backend: POST /api/public/emails/inbound (JSON-Normalized)
+    
+    rect rgb(240, 248, 255)
+        Note over Backend: Security & Idempotency Checks
+        Backend->>Backend: Verify RFC Message-ID (Idempotency check)
+        Backend->>Backend: Verify HMAC Token (<signature>)
+        Backend->>Backend: Verify Decrypted Client Email Whitelist
+        Backend->>Backend: Enforce attachment size limits (< 5MB)
+    end
+
+    Backend->>Drive: Upload Files via DocketFileStorageService
+    Backend->>Backend: Create EmailCapture Record
+    Backend->>Backend: Create Comment & Activity Event
+    Backend->>Backend: Trigger Auto-Reopen workflow & Notify Assignee
+    Backend->>CloudMailin: Return HTTP 200 OK
 ```
 
-The alias must be random and unguessable. Do not expose predictable docket IDs such as `DOCKET-20260421-00001@...` as public inbound addresses.
+---
 
-## Expected User Experience
+## 2. Inbound Workflow & Threading
 
-- Docket Overview shows a copyable "Forward emails to this docket" address.
-- Incoming email subject and body become a docket comment.
-- Email attachments become docket attachments.
-- A timeline/activity event records that an inbound email was received.
-- Users should not have to open a separate Email Logs tab for day-to-day execution.
+### A. Outbound Email & Reply-To Generation
+When an assignee requests documents from a client:
+1. An outbound email is dispatched via **Brevo**.
+2. A custom, cryptographically secure `Reply-To` address is injected:
+   `docket-<caseNumber>-<signature>@mail.docketra.in`
+3. The `<signature>` token is statefully calculated using:
+   `HMAC-SHA256(caseInternalId, SYSTEM_HASH_SECRET)` truncated to 6 hex characters.
+4. The email headers are injected with a unique `Message-ID`.
 
-Recommended docket surface:
+### B. Reply-by-Email Threading
+When the client clicks "Reply" in their email client:
+1. The reply is sent back to the unique `Reply-To` address.
+2. The client's mail server automatically appends `In-Reply-To` and `References` headers mapping to Docketra's original `Message-ID`.
+3. CloudMailin normalization forwards these threading headers in the `headers` block, allowing Docketra to associate replies with the original outbound email log thread.
 
-- `Overview`: display/copy the inbound email alias.
-- `Comments`: show the email subject/body as a system-authored comment.
-- `Attachments`: show files extracted from the email.
-- `Activity`: show inbound email received, sender, timestamp, and attachment count.
+---
 
-## Recommended Provider Direction
+## 3. Webhook Parsing & Core Business Logic
 
-Use Cloudflare Email Routing plus an Email Worker for inbound docket mail.
+Upon receiving the payload at `POST /api/public/emails/inbound`:
 
-Keep Brevo for outbound transactional email such as OTPs, invites, and notifications.
+### A. Automatic Comment & Attachment Creation
+* Extract plain/HTML body excerpts and create an `EmailCapture` record.
+* Upload base64 attachment contents directly to the associated case folder in **Google Drive** via `DocketFileStorageService.uploadFile`.
+* Format a new system-authored case `Comment` listing all uploaded files:
+  ```text
+  Received client email: "Re: Document Request" from client@company.com.
+  Attached files: passport.pdf, pancard.png
+  ```
 
-Why Cloudflare:
+### B. State Workflow (Auto-Reopen Rules)
+* **Reopen Condition**: The docket state will automatically reopen (`PENDED` -> `REOPENED` / `ACTIVE`) **only** if the current status is `PENDING` and the reason is `waiting_client`.
+* If the case is in any other status (e.g. `CLOSED` or `IN_PROGRESS`), the incoming files are attached to the timeline but the case state is left unchanged.
 
-- low-cost/free inbound routing for early scale
-- supports routing domain email to Workers
-- can process catch-all aliases such as `*@reply.docketra.in`
-- works well with a random alias model
-- lets Docketra own the parsing, storage, and audit workflow
+### C. Assignee Notification Flow
+* Once the docket reopens, a target system notification is sent to the docket assignee (`assignedToXID`) notifying them that the client has responded with attachments.
 
-Tradeoff:
+---
 
-- Cloudflare provides the raw MIME email stream. Docketra must parse it, likely with a library such as `postal-mime`, instead of receiving already-normalized JSON from Brevo inbound parsing.
+## 4. Security & Error Handling
 
-## Domain And DNS Model
+### A. Public Error Response Masking
+To prevent timing attacks or information leaks in production, all webhook validation errors are masked with generic response codes:
 
-Use a dedicated inbound subdomain, not the primary marketing/login domain.
+* **HTTP 400 Bad Request**: Mismatched parameters, missing fields, or oversized attachments return:
+  ```json
+  {
+    "success": false,
+    "code": "INVALID_REQUEST",
+    "message": "Human readable reason here",
+    "requestId": "unique-request-id-string"
+  }
+  ```
+* **HTTP 403 Forbidden**: Invalid token signature or unauthorized sender emails return:
+  ```json
+  {
+    "success": false,
+    "code": "FORBIDDEN",
+    "message": "Sender email is not authorized for this client docket.",
+    "requestId": "unique-request-id-string"
+  }
+  ```
 
-Recommended:
+### B. Audit Events Logged
+The integration registers the following system events:
+* `EMAIL_SENT`: Logged upon outbound Brevo dispatch.
+* `CLIENT_RESPONDED`: Logged when the inbound webhook receives a valid client reply.
+* `ATTACHMENT_RECEIVED`: Logged when attachments are successfully uploaded to Google Drive.
+* `PENDING_REOPENED`: Logged when the docket is automatically reopened.
 
-```text
-reply.docketra.in
-```
+---
 
-This keeps inbound docket routing separate from normal human inboxes and outbound sender reputation.
+## 5. Idempotency Model
 
-Future DNS setup:
-
-- Buy/configure `docketra.in`.
-- Move DNS management to Cloudflare.
-- Enable Cloudflare Email Routing for `reply.docketra.in`.
-- Add catch-all or route rules for docket aliases.
-- Route matching inbound messages to the Email Worker.
-
-Gmail can continue to be used for normal personal/business email. The inbound docket subdomain should be separate from Gmail-hosted inboxes.
-
-## Technical Flow
-
-```text
-External sender
-  -> dk_<random-token>@reply.docketra.in
-  -> Cloudflare Email Routing
-  -> Cloudflare Email Worker
-  -> Docketra webhook
-  -> resolve alias to docket
-  -> create comment from subject/body
-  -> create attachments from email files
-  -> create activity/audit event
-```
-
-## Data Model Additions
-
-Add a durable inbound alias mapping.
-
-Suggested fields on the docket or a dedicated alias collection:
-
-```text
-firmId
-caseInternalId
-caseId
-inboundEmailAlias
-inboundEmailLocalPart
-inboundEmailDomain
-status: active | disabled
-createdAt
-disabledAt
-lastReceivedAt
-```
-
-Alias generation requirements:
-
-- random token, not derived directly from docket ID
-- unique per firm/domain
-- immutable for a docket unless explicitly rotated
-- disabled when a docket is archived or inbound email is turned off
-
-## Backend API Shape
-
-The Cloudflare Worker should POST a normalized payload into Docketra.
-
-Suggested endpoint:
-
-```text
-POST /api/webhooks/inbound-email/cloudflare
-```
-
-Webhook requirements:
-
-- verify shared secret or signed request from the Worker
-- reject unknown aliases
-- enforce firm/docket tenant boundary
-- deduplicate by email `Message-ID`
-- store raw metadata enough for audit and troubleshooting
-- cap body and attachment sizes
-- virus/spam handling policy before attachment publication
-
-Suggested normalized payload:
-
-```json
-{
-  "alias": "dk_8H3K92P@reply.docketra.in",
-  "messageId": "<message-id@example.com>",
-  "from": { "email": "client@example.com", "name": "Client Name" },
-  "to": ["dk_8H3K92P@reply.docketra.in"],
-  "cc": [],
-  "subject": "GST documents for filing",
-  "textBody": "Please find attached...",
-  "htmlBody": "<p>Please find attached...</p>",
-  "receivedAt": "2026-06-05T14:30:00.000Z",
-  "attachments": [
-    {
-      "fileName": "gst-data.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "size": 24012,
-      "contentBase64": "<base64>"
-    }
-  ]
-}
-```
-
-For large attachments, prefer temporary object storage references over base64 payloads.
-
-## Docket Comment Format
-
-System-created comment:
-
-```text
-Email received from Client Name <client@example.com>
-Subject: GST documents for filing
-
-Please find attached...
-```
-
-The comment should be clearly marked as email-originated and should link to the corresponding activity/audit event.
-
-## Attachment Handling
-
-Email attachments should become regular docket attachments with source metadata.
-
-Suggested attachment metadata:
-
-```text
-source: email
-sourceEmailMessageId
-sourceEmailFrom
-sourceEmailSubject
-uploadedBy: system
-uploadedByXID: SYSTEM
-```
-
-Attachments should follow existing storage rules, firm-owned storage policy, and tenant isolation.
-
-## Security And Abuse Controls
-
-- Random aliases only.
-- Webhook signature/shared secret verification.
-- Message-ID dedupe.
-- Max email size.
-- Max attachment count and size.
-- Allowed/blocked MIME type policy.
-- Spam score or sender trust policy before auto-posting.
-- Audit log for every accepted/rejected inbound email.
-- Never let inbound email create cross-firm data linkage.
-
-## Existing Groundwork
-
-The repository already contains partial email capture infrastructure:
-
-- `src/models/EmailCapture.model.js`
-- `src/controllers/emailCapture.controller.js`
-- `ui/src/pages/caseDetail/CaseDetailEmailsPanel.jsx`
-
-This existing path is manual/simulated. The future feature should convert it into a real inbound pipeline and avoid exposing a separate Email Logs tab unless there is a clear operational need.
-
-## Open Decisions
-
-- Whether to store raw `.eml` files for audit.
-- Whether inbound email should be allowed after a docket is resolved/filed.
-- Whether non-client senders should be accepted by default or held for review.
-- Whether high spam score emails should create private audit entries only.
-- Whether aliases should be shown to all docket users or only managers/admins.
-
+Since external webhook providers cannot deliver custom `Idempotency-Key` headers:
+1. **Route Bypass**: The webhook route `/api/public/emails/inbound` is exempted from the global API idempotency middleware.
+2. **RFC Message-ID Deduplication**: The controller extracts `headers.message_id`. If a duplicate is received (due to retry loops or transient network errors), it verifies existence in the database and immediately returns `200 OK` with the cached `emailCaptureId`, avoiding duplicate files, comments, or state mutations.
+3. **Upload Constraints**: Any attachments exceeding `SECURITY_UPLOAD_MAX_SIZE_MB` (default `5MB`) are immediately rejected with `400 INVALID_REQUEST` to prevent resource abuse.
