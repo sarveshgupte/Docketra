@@ -1,0 +1,27 @@
+{
+  "envelope": {
+    "to": "docket-CO202603080001-TOKEN_PLACEHOLDER@mail.docketra.in",
+    "from": "client@company.com",
+    "helo_domain": "mail.company.com",
+    "remote_ip": "127.0.0.1"
+  },
+  "headers": {
+    "from": "Test Client <client@company.com>",
+    "to": "docket-CO202603080001-TOKEN_PLACEHOLDER@mail.docketra.in",
+    "subject": "KYC Document Upload",
+    "date": "Thu, 02 Jul 2026 10:47:00 +0000",
+    "message_id": "<one-pdf-msg-id@company.com>"
+  },
+  "body": {
+    "plain": "Here is the PDF attachment you requested.",
+    "html": "<html><body><p>Here is the PDF attachment you requested.</p></body></html>"
+  },
+  "attachments": [
+    {
+      "file_name": "passport.pdf",
+      "content_type": "application/pdf",
+      "size": 18,
+      "content": "bW9jayBkZmM="
+    }
+  ]
+}

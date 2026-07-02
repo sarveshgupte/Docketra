@@ -1,0 +1,27 @@
+{
+  "envelope": {
+    "to": "docket-CO202603080001-TOKEN_PLACEHOLDER@mail.docketra.in",
+    "from": "client@company.com",
+    "helo_domain": "mail.company.com",
+    "remote_ip": "127.0.0.1"
+  },
+  "headers": {
+    "from": "Test Client <client@company.com>",
+    "to": "docket-CO202603080001-TOKEN_PLACEHOLDER@mail.docketra.in",
+    "subject": "Fwd: Verification document",
+    "date": "Thu, 02 Jul 2026 10:49:00 +0000",
+    "message_id": "<fwd-msg-id@company.com>"
+  },
+  "body": {
+    "plain": "---------- Forwarded message ---------\nFrom: Agent <agent@company.com>\nDate: Wed, Jul 1, 2026 at 5:00 PM\nSubject: Verification document\nTo: Client <client@company.com>\n\nHere is the doc.",
+    "html": "<html><body><p>---------- Forwarded message ---------<br>From: Agent &lt;agent@company.com&gt;</p></body></html>"
+  },
+  "attachments": [
+    {
+      "file_name": "fwd_doc.pdf",
+      "content_type": "application/pdf",
+      "size": 18,
+      "content": "bW9jayBkZmM="
+    }
+  ]
+}

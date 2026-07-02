@@ -1,0 +1,22 @@
+{
+  "envelope": {
+    "to": "docket-CO202603080001-TOKEN_PLACEHOLDER@mail.docketra.in",
+    "from": "client@company.com",
+    "helo_domain": "mail.company.com",
+    "remote_ip": "127.0.0.1"
+  },
+  "headers": {
+    "from": "Test Client <client@company.com>",
+    "to": "docket-CO202603080001-TOKEN_PLACEHOLDER@mail.docketra.in",
+    "subject": "Re: Request for Documents - Docket CO202603080001",
+    "date": "Thu, 02 Jul 2026 10:50:00 +0000",
+    "message_id": "<reply-msg-id@company.com>",
+    "in_reply_to": "<outbound-request-msg-id@docketra.com>",
+    "references": "<outbound-request-msg-id@docketra.com>"
+  },
+  "body": {
+    "plain": "Checking and replying to you now.",
+    "html": "<html><body><p>Checking and replying to you now.</p></body></html>"
+  },
+  "attachments": []
+}

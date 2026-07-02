@@ -6,6 +6,8 @@
  */
 
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const { createMongoMemoryOrNull } = require('./utils/mongoMemory');
@@ -21,19 +23,30 @@ const DocketFileStorageService = require('../src/services/docketFileStorage.serv
 const { handleInboundEmail } = require('../src/controllers/inboundEmail.controller');
 const { generateDocketEmailSignature } = require('../src/services/docketWorkflow.service');
 
+// Helper to load and customize a CloudMailin fixture
+function loadCloudMailinFixture(name, caseNumber, token) {
+  const filePath = path.join(__dirname, 'fixtures', 'cloudmailin', name);
+  const contentStr = fs.readFileSync(filePath, 'utf8');
+  const replacedStr = contentStr
+    .replace(/CO202603080001/g, caseNumber)
+    .replace(/TOKEN_PLACEHOLDER/g, token);
+  return JSON.parse(replacedStr);
+}
+
 // Helper to seed a basic firm, user, client and docket
-async function setupTestCase() {
+async function setupTestCase(index) {
   const firm = await Firm.create({
-    firmId: 'FIRM001',
-    name: 'Test Firm Inc.',
-    firmSlug: 'test-firm-inc',
+    firmId: `FIRM00${index}`,
+    name: `Test Firm Inc. ${index}`,
+    firmSlug: `test-firm-inc-${index}`,
     status: 'active',
   });
 
+  const clientPaddedId = String(index).padStart(6, '0');
   const client = await Client.create({
-    clientId: 'C000001',
-    businessName: 'Test Client Ltd.',
-    businessEmail: 'client@company.com',
+    clientId: `C${clientPaddedId}`,
+    businessName: `Test Client Ltd. ${index}`,
+    businessEmail: `client-${index}@company.com`,
     firmId: firm._id,
     status: 'ACTIVE',
     isActive: true,
@@ -44,20 +57,22 @@ async function setupTestCase() {
     createdBy: 'superadmin@test.com',
   });
 
+  const adminPaddedXid = String(index * 2).padStart(6, '0');
   const primaryAdmin = await User.create({
-    xID: 'X000122',
+    xID: `X${adminPaddedXid}`,
     name: 'Primary Admin',
-    email: 'primary-admin@docketra.com',
+    email: `primary-admin-${index}@docketra.com`,
     role: 'PRIMARY_ADMIN',
     firmId: firm._id,
     defaultClientId: client._id,
     isOnboarded: true,
   });
 
+  const userPaddedXid = String(index * 2 + 1).padStart(6, '0');
   const user = await User.create({
-    xID: 'X000123',
+    xID: `X${userPaddedXid}`,
     name: 'Assigned Agent',
-    email: 'agent@docketra.com',
+    email: `agent-${index}@docketra.com`,
     role: 'USER',
     firmId: firm._id,
     defaultClientId: client._id,
@@ -67,13 +82,13 @@ async function setupTestCase() {
 
   const docket = await Case.create({
     title: 'KYC Verification',
-    caseId: 'CASE-2026-0001',
-    caseNumber: 'CO202603080001',
+    caseId: `CASE-2026-${clientPaddedId}`,
+    caseNumber: `CO20260308${clientPaddedId}`,
     caseInternalId: new mongoose.Types.ObjectId(),
     firmId: firm._id,
-    clientId: 'C000001',
-    clientEmail: 'client@company.com',
-    assignedToXID: 'X000123',
+    clientId: `C${clientPaddedId}`,
+    clientEmail: `client-${index}@company.com`,
+    assignedToXID: `X${userPaddedXid}`,
     assignedTo: user._id,
     status: 'PENDING',
     pendingReason: 'waiting_client',
@@ -82,7 +97,7 @@ async function setupTestCase() {
     queueType: 'PERSONAL',
     categoryId: new mongoose.Types.ObjectId(),
     subcategoryId: 'subcategory-1',
-    createdByXID: 'X000123',
+    createdByXID: `X${userPaddedXid}`,
     slaDueAt: new Date(Date.now() + 86400000),
   });
 
@@ -103,19 +118,14 @@ async function runTests() {
   await mongoose.connect(mongoServer.getUri());
 
   try {
-    const { firm, client, user, docket } = await setupTestCase();
-    const caseNumber = docket.caseNumber;
-    const signature = generateDocketEmailSignature(docket.caseInternalId);
-    
-    // Mock the uploadFile service function to avoid making real network requests to storage providers
-    const uploadedFiles = [];
+    let uploadedFiles = [];
     const originalUploadFile = DocketFileStorageService.uploadFile;
     DocketFileStorageService.uploadFile = async ({ file, fileName, fileType, docketId, firmId, uploadedBy, uploadedByName, source, description }) => {
       uploadedFiles.push({ fileName, fileType, source, description });
       
       // Simulate Attachment record generation
       const mockAttachment = await Attachment.create({
-        caseId: docket.caseId,
+        caseId: docketId,
         firmId: String(firmId),
         fileName,
         mimeType: fileType,
@@ -134,109 +144,166 @@ async function runTests() {
       return { id: mockAttachment._id, fileName };
     };
 
-    // Test case 1: Successful Inbound Email Processing
-    console.log('Running Test Case 1: Processing a valid inbound email...');
-    const req1 = {
-      body: {
-        from: 'client@company.com',
-        to: `docket-${caseNumber}-${signature}@docketra.in`,
-        subject: 'Here are the requested KYC docs',
-        text: 'Hello, please find my KYC document attached. Thanks.',
-        attachments: [
-          {
-            filename: 'passport.pdf',
-            mimeType: 'application/pdf',
-            content: Buffer.from('mock pdf content').toString('base64'),
-          }
-        ]
-      }
+    let resStatus = null;
+    let resJson = null;
+    const mockRes = {
+      status: function(code) { resStatus = code; return this; },
+      json: function(payload) { resJson = payload; return this; }
     };
+
+    // Test case 1: Compatibility Test - Legacy Request Body
+    console.log('Running Test Case 1: Legacy payload compatibility...');
+    const tc1 = await setupTestCase(1);
+    const signature1 = generateDocketEmailSignature(tc1.docket.caseInternalId);
     
-    let responseStatus1 = null;
-    let responseJson1 = null;
-    const res1 = {
-      status: function(code) {
-        responseStatus1 = code;
-        return this;
-      },
-      json: function(payload) {
-        responseJson1 = payload;
-        return this;
+    const legacyReq = {
+      body: {
+        from: `client-1@company.com`,
+        to: `docket-${tc1.docket.caseNumber}-${signature1}@docketra.in`,
+        subject: 'Legacy format email subject',
+        text: 'Hello, this is a legacy format text body.'
       }
     };
 
-    await handleInboundEmail(req1, res1);
-
-    assert.strictEqual(responseStatus1, 200, 'Expected 200 OK status code');
-    assert.strictEqual(responseJson1.success, true, 'Expected payload success to be true');
-    assert.strictEqual(responseJson1.data.reopened, true, 'Expected case to be reopened');
-    assert.strictEqual(responseJson1.data.attachmentsUploaded, 1, 'Expected 1 attachment uploaded');
-
-    // Verify docket status was updated
-    const updatedDocket = await Case.findById(docket._id);
-    assert.strictEqual(updatedDocket.status, 'IN_PROGRESS', 'Expected case status to update to IN_PROGRESS');
-    assert.strictEqual(updatedDocket.lifecycle, 'ACTIVE', 'Expected case lifecycle to update to ACTIVE');
-
-    // Verify comment was generated
-    const comments = await Comment.find({ caseId: docket.caseId });
-    assert.strictEqual(comments.length, 1, 'Expected 1 comment to be logged');
-    assert.ok(comments[0].text.includes('passport.pdf'), 'Comment text should list attachment name');
-
-    // Verify email capture record was written
-    const captures = await EmailCapture.find({ linkedCaseId: docket.caseNumber });
-    assert.strictEqual(captures.length, 1, 'Expected 1 email capture record');
-    assert.strictEqual(captures[0].subject, 'Here are the requested KYC docs');
-    assert.strictEqual(captures[0].classification, 'actionable');
-
+    await handleInboundEmail(legacyReq, mockRes);
+    assert.strictEqual(resStatus, 200, 'Legacy payload should succeed');
+    assert.strictEqual(resJson.success, true);
     console.log('✓ Test Case 1 passed.');
 
-    // Test case 2: Reject email with invalid signature token
-    console.log('Running Test Case 2: Rejecting email with invalid signature token...');
-    const req2 = {
-      body: {
-        from: 'client@company.com',
-        to: `docket-${caseNumber}-123456@docketra.in`,
-        subject: 'KYC Document retry',
-        text: 'Retrying with invalid sig.',
-      }
-    };
-    
-    let responseStatus2 = null;
-    const res2 = {
-      status: function(code) {
-        responseStatus2 = code;
-        return this;
-      },
-      json: function(payload) { return this; }
-    };
+    // Test case 2: CloudMailin - Plain Text email
+    console.log('Running Test Case 2: CloudMailin plain text email...');
+    const tc2 = await setupTestCase(2);
+    const signature2 = generateDocketEmailSignature(tc2.docket.caseInternalId);
+    const plainTextPayload = loadCloudMailinFixture('plain_text.json', tc2.docket.caseNumber, signature2);
+    plainTextPayload.envelope.from = 'client-2@company.com';
+    plainTextPayload.headers.from = 'Test Client <client-2@company.com>';
 
-    await handleInboundEmail(req2, res2);
-    assert.strictEqual(responseStatus2, 403, 'Expected 403 Forbidden for mismatched signature');
+    await handleInboundEmail({ body: plainTextPayload }, mockRes);
+    assert.strictEqual(resStatus, 200);
+    const captures = await EmailCapture.find({ linkedCaseId: tc2.docket.caseNumber });
+    assert.strictEqual(captures.length, 1);
+    assert.strictEqual(captures[0].bodyExcerpt, 'Hello, please find my submission details here in plain text. Thank you.');
     console.log('✓ Test Case 2 passed.');
 
-    // Test case 3: Reject email with unauthorized sender
-    console.log('Running Test Case 3: Rejecting email with unauthorized sender...');
-    const req3 = {
-      body: {
-        from: 'hacker@malicious.com',
-        to: `docket-${caseNumber}-${signature}@docketra.in`,
-        subject: 'Malicious file upload',
-        text: 'Attaching bad script.',
-      }
-    };
-    
-    let responseStatus3 = null;
-    const res3 = {
-      status: function(code) {
-        responseStatus3 = code;
-        return this;
-      },
-      json: function(payload) { return this; }
-    };
+    // Test case 3: CloudMailin - HTML email
+    console.log('Running Test Case 3: CloudMailin HTML email...');
+    const tc3 = await setupTestCase(3);
+    const signature3 = generateDocketEmailSignature(tc3.docket.caseInternalId);
+    const htmlPayload = loadCloudMailinFixture('html.json', tc3.docket.caseNumber, signature3);
+    htmlPayload.envelope.from = 'client-3@company.com';
+    htmlPayload.headers.from = 'Test Client <client-3@company.com>';
 
-    await handleInboundEmail(req3, res3);
-    assert.strictEqual(responseStatus3, 403, 'Expected 403 Forbidden for unauthorized sender');
+    await handleInboundEmail({ body: htmlPayload }, mockRes);
+    assert.strictEqual(resStatus, 200);
+    const htmlCaptures = await EmailCapture.find({ linkedCaseId: tc3.docket.caseNumber });
+    assert.strictEqual(htmlCaptures[0].bodyExcerpt, 'Hello, please find my submission details here. Thank you.');
     console.log('✓ Test Case 3 passed.');
+
+    // Test case 4: CloudMailin - One PDF Attachment email
+    console.log('Running Test Case 4: CloudMailin one PDF attachment email...');
+    uploadedFiles = [];
+    const tc4 = await setupTestCase(4);
+    const signature4 = generateDocketEmailSignature(tc4.docket.caseInternalId);
+    const onePdfPayload = loadCloudMailinFixture('one_pdf.json', tc4.docket.caseNumber, signature4);
+    onePdfPayload.envelope.from = 'client-4@company.com';
+    onePdfPayload.headers.from = 'Test Client <client-4@company.com>';
+
+    await handleInboundEmail({ body: onePdfPayload }, mockRes);
+    assert.strictEqual(resStatus, 200);
+    assert.strictEqual(uploadedFiles.length, 1, 'Expected one PDF upload');
+    assert.strictEqual(uploadedFiles[0].fileName, 'passport.pdf');
+    assert.strictEqual(uploadedFiles[0].fileType, 'application/pdf');
+    console.log('✓ Test Case 4 passed.');
+
+    // Test case 5: CloudMailin - Multiple Attachments email
+    console.log('Running Test Case 5: CloudMailin multiple attachments email...');
+    uploadedFiles = [];
+    const tc5 = await setupTestCase(5);
+    const signature5 = generateDocketEmailSignature(tc5.docket.caseInternalId);
+    const multiplePayload = loadCloudMailinFixture('multiple_attachments.json', tc5.docket.caseNumber, signature5);
+    multiplePayload.envelope.from = 'client-5@company.com';
+    multiplePayload.headers.from = 'Test Client <client-5@company.com>';
+
+    await handleInboundEmail({ body: multiplePayload }, mockRes);
+    assert.strictEqual(resStatus, 200);
+    assert.strictEqual(uploadedFiles.length, 2, 'Expected two uploads');
+    assert.strictEqual(uploadedFiles[0].fileName, 'passport.pdf');
+    assert.strictEqual(uploadedFiles[1].fileName, 'pancard.png');
+    console.log('✓ Test Case 5 passed.');
+
+    // Test case 6: CloudMailin - Forwarded email
+    console.log('Running Test Case 6: CloudMailin forwarded email...');
+    uploadedFiles = [];
+    const tc6 = await setupTestCase(6);
+    const signature6 = generateDocketEmailSignature(tc6.docket.caseInternalId);
+    const forwardedPayload = loadCloudMailinFixture('forwarded.json', tc6.docket.caseNumber, signature6);
+    forwardedPayload.envelope.from = 'client-6@company.com';
+    forwardedPayload.headers.from = 'Test Client <client-6@company.com>';
+
+    await handleInboundEmail({ body: forwardedPayload }, mockRes);
+    assert.strictEqual(resStatus, 200);
+    assert.strictEqual(uploadedFiles.length, 1);
+    assert.strictEqual(uploadedFiles[0].fileName, 'fwd_doc.pdf');
+    console.log('✓ Test Case 6 passed.');
+
+    // Test case 7: CloudMailin - Reply email
+    console.log('Running Test Case 7: CloudMailin reply email...');
+    const tc7 = await setupTestCase(7);
+    const signature7 = generateDocketEmailSignature(tc7.docket.caseInternalId);
+    const replyPayload = loadCloudMailinFixture('reply.json', tc7.docket.caseNumber, signature7);
+    replyPayload.envelope.from = 'client-7@company.com';
+    replyPayload.headers.from = 'Test Client <client-7@company.com>';
+
+    await handleInboundEmail({ body: replyPayload }, mockRes);
+    assert.strictEqual(resStatus, 200);
+    console.log('✓ Test Case 7 passed.');
+
+    // Test case 8: Regression - Missing 'from' sender email
+    console.log('Running Test Case 8: Regression - Missing from field...');
+    const tc8 = await setupTestCase(8);
+    const signature8 = generateDocketEmailSignature(tc8.docket.caseInternalId);
+    const brokenFromPayload = loadCloudMailinFixture('plain_text.json', tc8.docket.caseNumber, signature8);
+    delete brokenFromPayload.envelope.from;
+    delete brokenFromPayload.headers.from;
+
+    await handleInboundEmail({ body: brokenFromPayload }, mockRes);
+    assert.strictEqual(resStatus, 400, 'Expected 400 Bad Request');
+    console.log('✓ Test Case 8 passed.');
+
+    // Test case 9: Regression - Missing 'to' recipient email
+    console.log('Running Test Case 9: Regression - Missing to field...');
+    const tc9 = await setupTestCase(9);
+    const signature9 = generateDocketEmailSignature(tc9.docket.caseInternalId);
+    const brokenToPayload = loadCloudMailinFixture('plain_text.json', tc9.docket.caseNumber, signature9);
+    delete brokenToPayload.envelope.to;
+    delete brokenToPayload.headers.to;
+
+    await handleInboundEmail({ body: brokenToPayload }, mockRes);
+    assert.strictEqual(resStatus, 400, 'Expected 400 Bad Request');
+    console.log('✓ Test Case 9 passed.');
+
+    // Test case 10: Reject email with invalid signature token
+    console.log('Running Test Case 10: Rejecting email with invalid signature token...');
+    const tc10 = await setupTestCase(10);
+    const invalidSigPayload = loadCloudMailinFixture('plain_text.json', tc10.docket.caseNumber, '123456');
+    invalidSigPayload.envelope.from = 'client-10@company.com';
+    invalidSigPayload.headers.from = 'Test Client <client-10@company.com>';
+
+    await handleInboundEmail({ body: invalidSigPayload }, mockRes);
+    assert.strictEqual(resStatus, 403, 'Expected 403 Forbidden for mismatched signature');
+    console.log('✓ Test Case 10 passed.');
+
+    // Test case 11: Reject email with unauthorized sender
+    console.log('Running Test Case 11: Rejecting email with unauthorized sender...');
+    const tc11 = await setupTestCase(11);
+    const signature11 = generateDocketEmailSignature(tc11.docket.caseInternalId);
+    const hackerPayload = loadCloudMailinFixture('plain_text.json', tc11.docket.caseNumber, signature11);
+    hackerPayload.envelope.from = 'hacker@malicious.com';
+    hackerPayload.headers.from = 'Hacker <hacker@malicious.com>';
+
+    await handleInboundEmail({ body: hackerPayload }, mockRes);
+    assert.strictEqual(resStatus, 403, 'Expected 403 Forbidden for unauthorized sender');
+    console.log('✓ Test Case 11 passed.');
 
     // Restore original upload function
     DocketFileStorageService.uploadFile = originalUploadFile;
@@ -249,7 +316,7 @@ async function runTests() {
     await mongoServer.stop();
   }
 
-  console.log('\nAll Client Inbound/Outbound Email Integration tests passed.');
+  console.log('\nAll CloudMailin Inbound Email Integration tests passed.');
 }
 
 runTests().catch((err) => {

@@ -2,9 +2,8 @@ import { Link } from 'react-router-dom';
 import { Badge } from '../../components/common/Badge';
 import { formatDateTime } from '../../utils/formatDateTime';
 import { getBusinessLifecycleTone } from './caseDetailUtils';
-
-
-
+import { ROUTES } from '../../constants/routes';
+import { formatDocketId } from '../../utils/formatters';
 
 export const CaseDetailOverviewPanel = ({
   caseInfo,
@@ -51,13 +50,6 @@ export const CaseDetailOverviewPanel = ({
   locationBadges,
   displayLifecycleLabel,
 }) => {
-  // Determine overdue display: positive = days left, negative = days overdue
-  const slaRemainingDisplay = (() => {
-    if (slaRemainingDays == null) return null;
-    const n = Number(slaRemainingDays);
-    if (!Number.isFinite(n)) return null;
-    return n;
-  })();
   const hasDescription = Boolean(String(descriptionContent || '').trim());
 
   return (
@@ -124,6 +116,29 @@ export const CaseDetailOverviewPanel = ({
           </button>
         </div>
       </div>
+
+      {/* Guidance Banners */}
+      {(isUnassignedWorkbasket || isQcContext || isTerminal) && (
+        <div className="docket-guidance-banners mb-4 flex flex-col gap-2">
+          {isUnassignedWorkbasket && (
+            <div className="docket-guidance-banner docket-guidance-banner--warning">
+              This docket is currently unassigned in a workbasket. Pull/Assign it from Workbasket flow before personal worklist actions.
+            </div>
+          )}
+          {isQcContext && (
+            <div className="docket-guidance-banner docket-guidance-banner--info">
+              QC context active. Use QC workbasket actions where appropriate.
+            </div>
+          )}
+          {isTerminal && (
+            <div className="docket-guidance-banner docket-guidance-banner--neutral">
+              Record view only; active queue actions are hidden.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Client Context Field Grid */}
       <div className="field-grid docket-field-grid">
         <div className="field-group min-w-0">
           <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Client Name</span>
@@ -135,68 +150,121 @@ export const CaseDetailOverviewPanel = ({
         </div>
         <div className="field-group min-w-0">
           <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Client ID</span>
-          <span className="field-value text-sm font-medium text-gray-900 break-words">{clientIdLabel}</span>
+          <span className="field-value text-sm font-medium text-gray-900 break-words">{clientIdLabel || '—'}</span>
         </div>
-        <div className="field-group min-w-0">
-          <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Category</span>
-          <span className="field-value text-sm font-medium text-gray-900 break-words">{categoryLabel}</span>
-        </div>
-        <div className="field-group min-w-0">
-          <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Subcategory</span>
-          <span className="field-value text-sm font-medium text-gray-900 break-words">{subcategoryLabel}</span>
-        </div>
-        <div className="field-group min-w-0">
-          <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">SLA (days)</span>
-          {slaRemainingDisplay != null ? (
-            <span
-              className="field-value text-sm font-semibold px-1.5 py-0.5 rounded-md"
-              style={{
-                background: slaRemainingDisplay < 0 ? '#fef2f2' : slaRemainingDisplay <= 3 ? '#fffbeb' : '#f0fdf4',
-                color: slaRemainingDisplay < 0 ? '#dc2626' : slaRemainingDisplay <= 3 ? '#d97706' : '#16a34a',
-              }}
-            >
-              {slaRemainingDisplay < 0 ? `${slaRemainingDisplay} days overdue` : `+${slaRemainingDisplay} days`}
+        {linkedClientEmail && linkedClientEmail !== '—' && (
+          <div className="field-group min-w-0">
+            <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Contact Email</span>
+            <span className="field-value text-sm font-medium text-gray-900 break-words">
+              <a href={`mailto:${linkedClientEmail}`} className="hover:underline text-indigo-600 font-semibold">{linkedClientEmail}</a>
             </span>
-          ) : (
-            <span className="field-value text-sm font-medium text-gray-900">{slaDaysLabel}</span>
-          )}
+          </div>
+        )}
+        {linkedClientContact && linkedClientContact !== '—' && (
+          <div className="field-group min-w-0">
+            <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Contact Person / Phone</span>
+            <span className="field-value text-sm font-medium text-gray-900 break-words">{linkedClientContact}</span>
+          </div>
+        )}
+      </div>
+
+      {isInternalWork && (
+        <div className="mt-3 text-xs text-gray-500 italic">
+          Internal work docket context.
         </div>
-        <div className="field-group min-w-0">
-          <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Due / SLA</span>
-          <span className="field-value text-sm font-medium text-gray-900">
-            {dueDateLabel ? formatDateTime(dueDateLabel) : `SLA ${slaDaysLabel} day(s)`}
-          </span>
+      )}
+    </section>
+
+    {/* Context & Description Panel */}
+    <section className={`case-card docket-description-panel ${lifecycleStatus === 'IN_PROGRESS' ? 'opacity-90' : ''}`} aria-labelledby="overview-heading">
+      <div className="case-card__heading docket-section-heading">
+        <div>
+          <p className="docket-section-kicker">Context</p>
+          <h2 id="overview-heading">Description</h2>
         </div>
-        <div className="field-group min-w-0">
-          <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Lifecycle</span>
-          <span className={`docket-lifecycle-pill docket-lifecycle-pill--${getBusinessLifecycleTone(displayLifecycleLabel)}`}>
-            {displayLifecycleLabel || 'Active'}
-          </span>
-        </div>
+      </div>
+      {lifecycleStatus === 'IN_PROGRESS' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
+        <Badge variant="warning" className="mt-3 inline-flex">
+          In progress until {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
+        </Badge>
+      ) : null}
+      <div className="mt-4">
+        {hasDescription ? (
+          <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent}</span>
+        ) : (
+          <span className="field-value case-detail__description-text text-sm font-medium text-gray-400 italic">No description provided for this docket.</span>
+        )}
       </div>
     </section>
 
-
-    {hasDescription ? (
-      <section className={`case-card docket-description-panel ${lifecycleStatus === 'IN_PROGRESS' ? 'opacity-90' : ''}`} aria-labelledby="overview-heading">
-        <div className="case-card__heading docket-section-heading">
+    {/* Compact Recent Dockets Card */}
+    {!isInternalWork && (
+      <section className="case-card docket-recent-dockets mt-5" aria-labelledby="recent-dockets-heading">
+        <div className="case-card__heading docket-section-heading flex items-center justify-between flex-wrap gap-4">
           <div>
-            <p className="docket-section-kicker">Context</p>
-            <h2 id="overview-heading">Description</h2>
+            <p className="docket-section-kicker">Client Activity</p>
+            <h2 id="recent-dockets-heading">Recent dockets</h2>
           </div>
+          {linkedClientId && (
+            <button
+              type="button"
+              onClick={() => navigate('?tab=history')}
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer"
+            >
+              View all in History
+            </button>
+          )}
         </div>
-        {lifecycleStatus === 'IN_PROGRESS' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
-          <Badge variant="warning" className="mt-3 inline-flex">
-            In progress until {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
-          </Badge>
-        ) : null}
+
         <div className="mt-4">
-          <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent}</span>
+          {loadingClientDockets ? (
+            <p className="text-sm text-gray-500 italic">Loading client dockets...</p>
+          ) : clientDockets && clientDockets.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-gray-900 border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="py-2 font-semibold text-xs uppercase tracking-wider text-gray-500">Docket ID</th>
+                    <th className="py-2 font-semibold text-xs uppercase tracking-wider text-gray-500">Category</th>
+                    <th className="py-2 font-semibold text-xs uppercase tracking-wider text-gray-500">Status</th>
+                    <th className="py-2 font-semibold text-xs uppercase tracking-wider text-gray-500 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {clientDockets.slice(0, 3).map((docket) => (
+                    <tr key={docket.caseId} className="hover:bg-gray-50/50">
+                      <td className="py-2 font-semibold text-indigo-600">
+                        <Link to={ROUTES.CASE_DETAIL(firmSlug, docket.caseId)} className="hover:underline">
+                          {formatDocketId(docket.caseId)}
+                        </Link>
+                      </td>
+                      <td className="py-2 text-gray-600">
+                        {docket.category} {docket.subcategory ? `• ${docket.subcategory}` : ''}
+                      </td>
+                      <td className="py-2">
+                        <span className={`inline-flex px-1.5 py-0.5 text-xs font-semibold rounded-md bg-gray-100 text-gray-800`}>
+                          {docket.lifecycle || docket.status || 'Active'}
+                        </span>
+                      </td>
+                      <td className="py-2 text-right">
+                        <Link
+                          to={ROUTES.CASE_DETAIL(firmSlug, docket.caseId)}
+                          className="text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+                        >
+                          View
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 italic">No related dockets.</p>
+          )}
         </div>
       </section>
-    ) : null}
-
-
+    )}
   </>
   );
 };

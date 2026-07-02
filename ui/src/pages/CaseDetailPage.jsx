@@ -5,7 +5,7 @@
  */
 
 import { lazy, Suspense, useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
@@ -1327,13 +1327,42 @@ export const CaseDetailPage = () => {
             <div className="docket-detail-hero__identity">
               <p className="docket-detail-hero__eyebrow">Active docket</p>
               <h1>{formatDocketId(caseInfo?.caseId || caseId)}</h1>
-              <p>
-                {categoryLabel || 'Uncategorised'}
-                {subcategoryLabel ? <span> / {subcategoryLabel}</span> : null}
-              </p>
+              <div className="docket-detail-hero__tags">
+                <span className="docket-tag docket-tag--category">
+                  {categoryLabel || 'Uncategorised'}
+                </span>
+                {subcategoryLabel ? (
+                  <>
+                    <span className="docket-tag-separator">/</span>
+                    <span className="docket-tag docket-tag--subcategory">
+                      {subcategoryLabel}
+                    </span>
+                  </>
+                ) : null}
+              </div>
             </div>
 
             <div className="docket-detail-hero__metrics" aria-label="Docket summary">
+              <div>
+                <span>Client Name</span>
+                <strong>
+                  {isInternalWork ? (
+                    <span className="text-gray-500 font-normal">Internal Work</span>
+                  ) : (
+                    linkedClientRoute ? (
+                      <Link to={linkedClientRoute} className="case-detail-table__link font-semibold hover:underline">
+                        {clientName}
+                      </Link>
+                    ) : (
+                      clientName || '—'
+                    )
+                  )}
+                </strong>
+              </div>
+              <div>
+                <span>Client ID</span>
+                <strong>{clientIdLabel || '—'}</strong>
+              </div>
               <div>
                 <span>Lifecycle</span>
                 <strong>{displayLifecycleLabel || 'Active'}</strong>
@@ -1349,6 +1378,17 @@ export const CaseDetailPage = () => {
               <div>
                 <span>Due</span>
                 <strong>{dueDateLabel ? formatDateTime(dueDateLabel) : 'No date'}</strong>
+                {slaRemainingDays != null && (
+                  <span
+                    className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded mt-1"
+                    style={{
+                      background: Number(slaRemainingDays) < 0 ? '#fef2f2' : Number(slaRemainingDays) <= 3 ? '#fffbeb' : '#f0fdf4',
+                      color: Number(slaRemainingDays) < 0 ? '#dc2626' : Number(slaRemainingDays) <= 3 ? '#d97706' : '#16a34a',
+                    }}
+                  >
+                    {Number(slaRemainingDays) < 0 ? `${Math.abs(Number(slaRemainingDays))} days overdue` : `+${slaRemainingDays} days`}
+                  </span>
+                )}
               </div>
             </div>
           </div>

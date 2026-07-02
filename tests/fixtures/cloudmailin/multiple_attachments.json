@@ -1,0 +1,33 @@
+{
+  "envelope": {
+    "to": "docket-CO202603080001-TOKEN_PLACEHOLDER@mail.docketra.in",
+    "from": "client@company.com",
+    "helo_domain": "mail.company.com",
+    "remote_ip": "127.0.0.1"
+  },
+  "headers": {
+    "from": "Test Client <client@company.com>",
+    "to": "docket-CO202603080001-TOKEN_PLACEHOLDER@mail.docketra.in",
+    "subject": "Multiple Files Submission",
+    "date": "Thu, 02 Jul 2026 10:48:00 +0000",
+    "message_id": "<multiple-attachments-msg-id@company.com>"
+  },
+  "body": {
+    "plain": "Attaching passport and pan card details.",
+    "html": "<html><body><p>Attaching passport and pan card details.</p></body></html>"
+  },
+  "attachments": [
+    {
+      "file_name": "passport.pdf",
+      "content_type": "application/pdf",
+      "size": 18,
+      "content": "bW9jayBkZmM="
+    },
+    {
+      "file_name": "pancard.png",
+      "content_type": "image/png",
+      "size": 20,
+      "content": "bW9jayBwYW5jYXJk"
+    }
+  ]
+}

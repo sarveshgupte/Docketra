@@ -10,20 +10,41 @@ const log = require('../utils/log');
 
 const handleInboundEmail = async (req, res) => {
   try {
-    const { from, to, subject, text, html, attachments } = req.body;
+    const envelope = req.body.envelope || {};
+    const headers = req.body.headers || {};
+    const body = req.body.body || {};
+
+    const rawFrom = req.body.from || envelope.from || headers.from;
+    const rawTo = req.body.to || envelope.to || headers.to;
+    const rawSubject = req.body.subject || headers.subject || 'No Subject';
+    const rawText = req.body.text || body.plain || req.body.plain || '';
+    const rawHtml = req.body.html || body.html || '';
+    const attachments = req.body.attachments || [];
     
-    if (!from || !to) {
-      return res.status(400).json({ success: false, message: 'From and To fields are required.' });
+    if (!rawFrom || !rawTo) {
+      // TODO: REMOVE AFTER CLOUDMAILIN DEBUGGING
+      return res.status(400).json({
+        success: false,
+        error: "REQUIRED_FIELDS_MISSING",
+        details: {
+          from: rawFrom || null,
+          to: rawTo || null,
+          resolvedRecipient: null,
+          caseNumber: null,
+          signature: null,
+          reason: "From and To fields are required."
+        }
+      });
     }
 
     // Extract sender email
     let senderEmail = '';
     let senderName = '';
-    if (typeof from === 'object') {
-      senderEmail = from.email;
-      senderName = from.name;
+    if (typeof rawFrom === 'object') {
+      senderEmail = rawFrom.email;
+      senderName = rawFrom.name;
     } else {
-      const fromStr = String(from).trim();
+      const fromStr = String(rawFrom).trim();
       const matchFrom = fromStr.match(/^(.+?)\s*<([^>]+)>$/);
       if (matchFrom) {
         senderName = matchFrom[1].trim().replace(/^["']|["']$/g, '');
@@ -36,13 +57,13 @@ const handleInboundEmail = async (req, res) => {
 
     // Extract recipient and parse caseNumber and signature token
     let recipientEmail = '';
-    if (typeof to === 'object') {
-      recipientEmail = to.email;
-    } else if (Array.isArray(to)) {
-      const found = to.find(r => String(r?.email || r).toLowerCase().includes('docket-'));
-      recipientEmail = typeof found === 'object' ? found.email : String(found || to[0]);
+    if (typeof rawTo === 'object') {
+      recipientEmail = rawTo.email;
+    } else if (Array.isArray(rawTo)) {
+      const found = rawTo.find(r => String(r?.email || r).toLowerCase().includes('docket-'));
+      recipientEmail = typeof found === 'object' ? found.email : String(found || rawTo[0]);
     } else {
-      recipientEmail = String(to).trim();
+      recipientEmail = String(rawTo).trim();
     }
     recipientEmail = recipientEmail.toLowerCase();
 
@@ -50,7 +71,19 @@ const handleInboundEmail = async (req, res) => {
     const recipientMatch = recipientEmail.match(/^(?:docket-)?([a-zA-Z0-9-]+)-([a-f0-9]{6})@/i);
     if (!recipientMatch) {
       log.warn(`[INBOUND_EMAIL] Invalid recipient format: ${recipientEmail}`);
-      return res.status(400).json({ success: false, message: 'Invalid recipient format. Must be docket-<caseNumber>-<signature>@domain.' });
+      // TODO: REMOVE AFTER CLOUDMAILIN DEBUGGING
+      return res.status(400).json({
+        success: false,
+        error: "INVALID_RECIPIENT_FORMAT",
+        details: {
+          from: senderEmail,
+          to: rawTo,
+          resolvedRecipient: recipientEmail,
+          caseNumber: null,
+          signature: null,
+          reason: "Invalid recipient format. Must be docket-<caseNumber>-<signature>@domain."
+        }
+      });
     }
 
     const caseNumber = recipientMatch[1].toUpperCase();
@@ -79,7 +112,19 @@ const handleInboundEmail = async (req, res) => {
     // Find Client and verify sender email
     if (!targetCase.clientId) {
       log.warn(`[INBOUND_EMAIL] Docket ${caseNumber} has no linked client.`);
-      return res.status(400).json({ success: false, message: 'Docket has no linked client.' });
+      // TODO: REMOVE AFTER CLOUDMAILIN DEBUGGING
+      return res.status(400).json({
+        success: false,
+        error: "MISSING_LINKED_CLIENT",
+        details: {
+          from: senderEmail,
+          to: rawTo,
+          resolvedRecipient: recipientEmail,
+          caseNumber: caseNumber,
+          signature: providedSignature,
+          reason: "Docket has no linked client."
+        }
+      });
     }
 
     const client = await Client.findOne({ clientId: targetCase.clientId, firmId: targetCase.firmId });
@@ -104,14 +149,16 @@ const handleInboundEmail = async (req, res) => {
     const uploadedAttachments = [];
     if (attachments && Array.isArray(attachments)) {
       for (const att of attachments) {
-        if (!att.content || !att.filename) continue;
-        const fileBuffer = Buffer.from(att.content, 'base64');
-        const mimeType = att.mimeType || att.contentType || 'application/octet-stream';
+        const filename = att.filename || att.file_name;
+        const mimeType = att.mimeType || att.content_type || att.contentType || 'application/octet-stream';
+        const content = att.content;
+        if (!content || !filename) continue;
+        const fileBuffer = Buffer.from(content, 'base64');
         
         try {
           const uploadResult = await DocketFileStorageService.uploadFile({
             file: fileBuffer,
-            fileName: att.filename,
+            fileName: filename,
             fileType: mimeType,
             docketId: targetCase.caseNumber,
             firmId: targetCase.firmId,
@@ -122,7 +169,7 @@ const handleInboundEmail = async (req, res) => {
           });
           uploadedAttachments.push(uploadResult);
         } catch (uploadError) {
-          log.error(`[INBOUND_EMAIL] Failed to upload attachment ${att.filename} for docket ${caseNumber}: ${uploadError.message}`);
+          log.error(`[INBOUND_EMAIL] Failed to upload attachment ${filename} for docket ${caseNumber}: ${uploadError.message}`);
         }
       }
     }
@@ -131,13 +178,14 @@ const handleInboundEmail = async (req, res) => {
     const reopenResult = await reopenDocketFromClientEmail(targetCase.caseNumber, targetCase.firmId, senderEmail);
 
     // Create EmailCapture record
-    const bodyExcerpt = String(text || html || '').trim().substring(0, 1000);
+    const emailBody = rawText || rawHtml || '';
+    const bodyExcerpt = String(emailBody).trim().substring(0, 1000);
     const capture = await EmailCapture.create({
       firmId: targetCase.firmId,
       tenantId: String(targetCase.firmId),
       sender: { name: senderName || decryptedClient.contactPersonName || 'Client', email: senderEmail },
       recipients: [recipientEmail],
-      subject: subject || 'No Subject',
+      subject: rawSubject || 'No Subject',
       receivedAt: new Date(),
       bodyExcerpt,
       linkedClientId: decryptedClient._id,
@@ -150,7 +198,7 @@ const handleInboundEmail = async (req, res) => {
 
     // Create Comment listing attached files
     const attachmentNames = uploadedAttachments.map(a => a.fileName).join(', ');
-    const commentText = `Received client email: "${subject || 'No Subject'}" from ${senderEmail}.\n` +
+    const commentText = `Received client email: "${rawSubject || 'No Subject'}" from ${senderEmail}.\n` +
       (uploadedAttachments.length > 0 ? `Attached files: ${attachmentNames}` : 'No attachments received.');
 
     await Comment.create({
