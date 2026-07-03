@@ -210,12 +210,15 @@ const getRiskBrief = async (firmId) => {
   const tenDaysAgo = new Date(now.getTime() - (10 * 24 * 60 * 60 * 1000));
   const activeStatuses = ['OPEN', 'IN_PROGRESS', 'PENDING', 'UNDER_REVIEW', 'SUBMITTED', 'REVIEWED'];
 
+  // 💡 What: Moved stalePending count query into Promise.all to execute concurrently with other dashboard metrics
+  // 🎯 Why: Replaces sequential execution, lowering database latency for the dashboard
   const [
     atRiskEntities,
     waitingClient,
     awaitingApproval,
     overloadedAssigneesRaw,
     blockedTaxonomyRaw,
+    stalePending,
   ] = await Promise.all([
     Case.countDocuments({
       firmId: firmObjectId,
@@ -273,13 +276,14 @@ const getRiskBrief = async (firmId) => {
       },
       { $sort: { count: -1 } },
     ]),
+    Case.countDocuments({
+      firmId: firmObjectId,
+      status: 'PENDING',
+      updatedAt: { $lt: tenDaysAgo },
+    }),
   ]);
 
-  const stalePending = await Case.countDocuments({
-    firmId: firmObjectId,
-    status: 'PENDING',
-    updatedAt: { $lt: tenDaysAgo },
-  });
+
 
   const blockedByType = blockedTaxonomyRaw.reduce((acc, item) => {
     const key = String(item?._id || 'other');
