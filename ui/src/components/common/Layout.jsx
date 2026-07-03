@@ -890,7 +890,7 @@ export const Layout = ({ children, title, subtitle }) => {
                                   void markNotificationRead(item.id);
                                 }}
                               >
-                                ✓
+                                <span aria-hidden="true">✓</span>
                               </button>
                               <button
                                 type="button"
