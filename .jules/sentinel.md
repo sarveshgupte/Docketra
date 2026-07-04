@@ -58,8 +58,7 @@
 **Vulnerability:** Regular Expression Denial of Service (ReDoS) and NoSQL Regex Injection via unescaped variables passed to `new RegExp()` constructors in `documentItem.controller.js` and `knowledgeItem.controller.js`.
 **Learning:** Directly passing dynamic, user-controlled strings to the `RegExp` constructor allows attackers to construct potentially catastrophic patterns that drastically degrade performance or bypass exact match logic.
 **Prevention:** Always wrap dynamically generated string segments in the centralized `escapeRegExp` utility (`src/utils/regexp.utils.js`) before injecting them into a `RegExp` constructor.
-## 2026-07-04 - Secure Random Number Generation
-
-**Vulnerability:** Weak pseudo-random number generator (`Math.random()`) was used to generate request IDs in `src/controllers/inboundEmail.controller.js`.
-**Learning:** Even when random numbers aren't strictly used for cryptographic keys, using insecure PRNGs like `Math.random()` for identifiers triggers SAST warnings and provides predictable outputs that can compromise tracing or allow spoofing.
-**Prevention:** Use Node.js's native `crypto` module (e.g., `crypto.randomUUID()`) universally on the backend for generating robust, cryptographically secure IDs instead of `Math.random()`.
+## 2026-07-04 - Hardcoded Secrets in Documentation
+**Vulnerability:** A hardcoded system hash secret was found in `docs/operations/cloudmailin_inbound_integration.md` and a Sidekiq secret was found in `README.md`.
+**Learning:** Hardcoding secrets, even in documentation or examples, can lead to accidental exposure and compromise system security. SAST tools like gitleaks will flag these.
+**Prevention:** Never hardcode actual secrets in documentation, code, or examples. Always use placeholder values like `your_secure_random_base64_string_here` or `REDACTED`.
