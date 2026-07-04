@@ -58,3 +58,7 @@
 **Vulnerability:** Regular Expression Denial of Service (ReDoS) and NoSQL Regex Injection via unescaped variables passed to `new RegExp()` constructors in `documentItem.controller.js` and `knowledgeItem.controller.js`.
 **Learning:** Directly passing dynamic, user-controlled strings to the `RegExp` constructor allows attackers to construct potentially catastrophic patterns that drastically degrade performance or bypass exact match logic.
 **Prevention:** Always wrap dynamically generated string segments in the centralized `escapeRegExp` utility (`src/utils/regexp.utils.js`) before injecting them into a `RegExp` constructor.
+## 2026-07-04 - Dummy secrets triggering gitleaks
+**Vulnerability:** gitleaks flags dummy `SYSTEM_HASH_SECRET` in `.md` documentation.
+**Learning:** Dummy examples or placeholders in documentation should not use randomly generated base64 strings that pass high entropy checks.
+**Prevention:** Use explicitly obvious, low-entropy placeholder strings like `your_base64_encoded_secret_key_here_for_example_purposes_only` for dummy secrets in `.env.example` files and `.md` documentation to prevent secret scanning alerts.
