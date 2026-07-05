@@ -42,8 +42,15 @@ const createComplianceTemplate = async (req, res) => {
   try {
     assertFirmContext(req);
     if (!ensureAdminAccess(req, res)) return;
+
+    const bodyCopy = { ...req.body };
+    delete bodyCopy._id;
+    delete bodyCopy.firmId;
+    delete bodyCopy.createdByXID;
+    delete bodyCopy.updatedByXID;
+
     const payload = {
-      ...req.body,
+      ...bodyCopy,
       firmId: String(req.user.firmId),
       createdByXID: req.user?.xID || req.user?.xid || null,
       updatedByXID: req.user?.xID || req.user?.xid || null,
@@ -59,11 +66,18 @@ const updateComplianceTemplate = async (req, res) => {
   try {
     assertFirmContext(req);
     if (!ensureAdminAccess(req, res)) return;
+
+    const bodyCopy = { ...req.body };
+    delete bodyCopy._id;
+    delete bodyCopy.firmId;
+    delete bodyCopy.createdByXID;
+    delete bodyCopy.updatedByXID;
+
     const updated = await ComplianceObligationTemplate.findOneAndUpdate(
       { _id: req.params.templateId, firmId: String(req.user.firmId) },
       {
         $set: {
-          ...req.body,
+          ...bodyCopy,
           updatedByXID: req.user?.xID || req.user?.xid || null,
         },
       },
