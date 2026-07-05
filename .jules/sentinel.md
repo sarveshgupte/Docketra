@@ -58,3 +58,7 @@
 **Vulnerability:** Regular Expression Denial of Service (ReDoS) and NoSQL Regex Injection via unescaped variables passed to `new RegExp()` constructors in `documentItem.controller.js` and `knowledgeItem.controller.js`.
 **Learning:** Directly passing dynamic, user-controlled strings to the `RegExp` constructor allows attackers to construct potentially catastrophic patterns that drastically degrade performance or bypass exact match logic.
 **Prevention:** Always wrap dynamically generated string segments in the centralized `escapeRegExp` utility (`src/utils/regexp.utils.js`) before injecting them into a `RegExp` constructor.
+## 2026-07-05 - Prevent Information Leakage in Email Capture API Responses
+**Vulnerability:** Information Leakage / Information Disclosure. The `emailCapture.controller.js` file was passing raw internal error messages (`error.message`) directly into `res.status(500).json()` calls across all its handlers.
+**Learning:** Returning un-sanitized error objects to clients can leak sensitive environment details, database queries, internal IPs, or stack traces, providing attackers with valuable insights into the backend infrastructure and application flow.
+**Prevention:** Always log the detailed error internally on the server using `log.error('Context', error)` and send a generic, safe response back to the client (e.g., `message: 'Failed to capture email content'`).
