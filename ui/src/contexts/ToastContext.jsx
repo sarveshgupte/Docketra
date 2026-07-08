@@ -139,7 +139,7 @@ const ToastContainer = ({ toasts, removeToast }) => {
               className="text-gray-400 transition-colors hover:text-gray-600"
               aria-label="Close notification"
             >
-              ×
+              <span aria-hidden="true">×</span>
             </button>
           </div>
         );
