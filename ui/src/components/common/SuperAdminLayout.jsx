@@ -146,7 +146,7 @@ export const SuperAdminLayout = ({ children }) => {
               placeholder="Search firms, admins, audit refs"
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
             />
-            <button type="button" onClick={() => void runSearch()} className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white">Search</button>
+            <button aria-label="Submit global search" type="button" onClick={() => void runSearch()} className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white">Search</button>
           </div>
           <p className="mt-2 text-xs text-gray-500">Search returns platform lifecycle/support metadata only. It does not search client records, dockets, tasks, attachments, or private client content.</p>
           {searchOpen ? (
