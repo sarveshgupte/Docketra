@@ -1,3 +1,6 @@
 ## 2024-05-20 - [ARIA state for Expandable Menus]
 **Learning:** Found multiple components across the codebase lacking `aria-controls` bindings to pair with `aria-expanded` (e.g. `FirmSwitcher`). While `aria-expanded` tells screen readers the state, `aria-controls` is critical for associating the trigger button directly with the ID of the expanded content block.
 **Action:** Always ensure disclosure buttons/dropdown triggers have an explicit `aria-controls="[dropdown-id]"` attribute connected to the `id` of their respective content panels when implementing custom drop-downs.
+## 2024-05-18 - Added aria-hidden to decorative icons
+**Learning:** Found multiple instances where purely decorative SVG and text-based icons (like ✓ and ✕) lacked `aria-hidden="true"`. This caused screen readers to either announce "graphic" redundantly or attempt to interpret the raw characters, cluttering the auditory experience. Since parent interactive elements (like buttons) already provided accessible names via `aria-label` or `title`, hiding the child icons was the correct path to a cleaner, more focused screen reader experience.
+**Action:** Always add `aria-hidden="true"` to purely decorative SVG elements or text characters when they act as icons, especially when their parent interactive container already has an accessible name.
