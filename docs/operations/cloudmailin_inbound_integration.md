@@ -76,7 +76,7 @@ CloudMailin must be configured to deliver webhooks in **JSON (Normalized)** form
 INBOUND_EMAIL_DOMAIN=mail.docketra.in
 
 # 2. Secret key used for cryptographic HMAC token checks
-SYSTEM_HASH_SECRET=ci-placeholder-hash-secret
+SYSTEM_HASH_SECRET=<ci-placeholder-hash-secret>
 
 # 3. Size limit for incoming JSON body (Required: 10mb for base64 attachments)
 JSON_BODY_LIMIT=10mb
