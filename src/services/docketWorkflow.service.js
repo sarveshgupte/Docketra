@@ -1109,7 +1109,10 @@ async function handleUserDeactivation({ firmId, userXID }) {
 function generateDocketEmailSignature(caseInternalId) {
   if (!caseInternalId) return '';
   const crypto = require('crypto');
-  const secret = process.env.SYSTEM_HASH_SECRET || 'docketra-system-default-secret-key-12345';
+  const secret = process.env.SYSTEM_HASH_SECRET;
+  if (!secret) {
+    throw new Error('SYSTEM_HASH_SECRET environment variable is missing');
+  }
   return crypto.createHmac('sha256', secret)
     .update(String(caseInternalId))
     .digest('hex')

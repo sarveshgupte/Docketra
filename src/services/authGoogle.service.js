@@ -32,9 +32,12 @@ const getGoogleOAuthClient = (env = {}) => {
 };
 
 const signGoogleState = (payload) => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is missing');
+  }
   const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const signature = crypto
-    .createHmac('sha256', process.env.JWT_SECRET || 'docketra-google-auth')
+    .createHmac('sha256', process.env.JWT_SECRET)
     .update(encodedPayload)
     .digest('base64url');
   return `${encodedPayload}.${signature}`;
@@ -50,8 +53,12 @@ const parseGoogleState = (rawState) => {
     return null;
   }
 
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is missing');
+  }
+
   const expectedSig = crypto
-    .createHmac('sha256', process.env.JWT_SECRET || 'docketra-google-auth')
+    .createHmac('sha256', process.env.JWT_SECRET)
     .update(encodedPayload)
     .digest('base64url');
 
