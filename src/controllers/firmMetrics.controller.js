@@ -25,19 +25,44 @@ const getFirmMetrics = async (req, res) => {
     const now = new Date();
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    const [
-      overdueComplianceItems,
-      dueInSevenDays,
-      awaitingPartnerReview,
-      totalOpenCases,
-      totalExecutedCases
-    ] = await Promise.all([
-      Case.countDocuments({ firmId, dueDate: { $lt: now }, status: { $nin: TERMINAL_STATUSES } }),
-      Case.countDocuments({ firmId, dueDate: { $gte: now, $lte: sevenDaysFromNow }, status: { $nin: TERMINAL_STATUSES } }),
-      Case.countDocuments({ firmId, $or: [{ approvalStatus: 'PENDING' }, { status: { $in: PARTNER_REVIEW_STATUSES } }] }),
-      Case.countDocuments({ firmId, status: 'OPEN' }),
-      Case.countDocuments({ firmId, status: { $in: EXECUTED_STATUSES } })
+    // ⚡ Bolt: Optimize firm metrics queries
+    // 💡 What: Replaced 5 concurrent countDocuments() queries with a single aggregate() pipeline using $facet.
+    // 🎯 Why: Reduces DB network round-trips from 5 to 1 and limits redundant scanning for the same firm.
+    // 📊 Impact: O(1) database query instead of O(5), improving dashboard load time.
+    const aggResult = await Case.aggregate([
+      { $match: { firmId } },
+      {
+        $facet: {
+          overdueComplianceItems: [
+            { $match: { dueDate: { $lt: now }, status: { $nin: TERMINAL_STATUSES } } },
+            { $count: "count" }
+          ],
+          dueInSevenDays: [
+            { $match: { dueDate: { $gte: now, $lte: sevenDaysFromNow }, status: { $nin: TERMINAL_STATUSES } } },
+            { $count: "count" }
+          ],
+          awaitingPartnerReview: [
+            { $match: { $or: [{ approvalStatus: 'PENDING' }, { status: { $in: PARTNER_REVIEW_STATUSES } }] } },
+            { $count: "count" }
+          ],
+          totalOpenCases: [
+            { $match: { status: 'OPEN' } },
+            { $count: "count" }
+          ],
+          totalExecutedCases: [
+            { $match: { status: { $in: EXECUTED_STATUSES } } },
+            { $count: "count" }
+          ]
+        }
+      }
     ]);
+
+    const result = aggResult[0] || {};
+    const overdueComplianceItems = result.overdueComplianceItems?.[0]?.count || 0;
+    const dueInSevenDays = result.dueInSevenDays?.[0]?.count || 0;
+    const awaitingPartnerReview = result.awaitingPartnerReview?.[0]?.count || 0;
+    const totalOpenCases = result.totalOpenCases?.[0]?.count || 0;
+    const totalExecutedCases = result.totalExecutedCases?.[0]?.count || 0;
 
     return res.json({
       success: true,
