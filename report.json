@@ -1,0 +1,22 @@
+[
+ {
+  "RuleID": "generic-api-key",
+  "Description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+  "StartLine": 79,
+  "EndLine": 79,
+  "StartColumn": 2,
+  "EndColumn": 100,
+  "Match": "SYSTEM_HASH_SECRET=REDACTED",
+  "Secret": "REDACTED",
+  "File": "docs/operations/cloudmailin_inbound_integration.md",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.058695,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": "",
+  "Tags": [],
+  "Fingerprint": "docs/operations/cloudmailin_inbound_integration.md:generic-api-key:79"
+ }
+]
