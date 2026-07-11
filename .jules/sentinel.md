@@ -58,3 +58,7 @@
 **Vulnerability:** Regular Expression Denial of Service (ReDoS) and NoSQL Regex Injection via unescaped variables passed to `new RegExp()` constructors in `documentItem.controller.js` and `knowledgeItem.controller.js`.
 **Learning:** Directly passing dynamic, user-controlled strings to the `RegExp` constructor allows attackers to construct potentially catastrophic patterns that drastically degrade performance or bypass exact match logic.
 **Prevention:** Always wrap dynamically generated string segments in the centralized `escapeRegExp` utility (`src/utils/regexp.utils.js`) before injecting them into a `RegExp` constructor.
+## 2026-07-11 - Fail Securely on Missing Cryptographic Secrets
+**Vulnerability:** Weak hardcoded fallback secrets (`'docketra-system-default-secret-key-12345'`, `'docketra-google-auth'`) were used for generating HMAC signatures in `src/services/docketWorkflow.service.js` and `src/services/authGoogle.service.js` if environment variables were missing.
+**Learning:** Using hardcoded fallback secrets defeats the purpose of cryptographic signing. If an environment is misconfigured, the application should fail securely (fail-closed) rather than silently falling back to a known, compromised default that an attacker could leverage to forge signatures or state tokens.
+**Prevention:** Always throw a clear error during initialization or execution if required cryptographic secrets (like `JWT_SECRET` or `SYSTEM_HASH_SECRET`) are undefined, ensuring the application cannot run in an insecure state.
