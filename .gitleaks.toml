@@ -14,3 +14,7 @@ regexes = [
   '''ci-placeholder-[a-z0-9-]+''',
   '''[a-z0-9._%+-]+@example\.com'''
 ]
+paths = [
+  '''docs/operations/cloudmailin_inbound_integration\.md''',
+  '''bin/README\.md'''
+]
