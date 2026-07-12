@@ -240,7 +240,8 @@ const handleInboundEmail = async (req, res) => {
     });
 
   } catch (error) {
-    return sendError(res, 500, 'INTERNAL_SERVER_ERROR', 'EXCEPTION_CAUGHT', { message: error.message, stack: error.stack, reason: 'Failed to process inbound email.' }, reqId);
+    // SECURITY: Do not leak error stack traces or raw messages to clients
+    return sendError(res, 500, 'INTERNAL_SERVER_ERROR', 'EXCEPTION_CAUGHT', { reason: 'Failed to process inbound email.' }, reqId);
   }
 };
 
