@@ -8,7 +8,7 @@
 └─░───┘
 ```
 
-[license]: ./LICENSE
+[license]: https://github.com/gitleaks/gitleaks/blob/master/LICENSE
 [badge-license]: https://img.shields.io/github/license/gitleaks/gitleaks.svg
 [go-docs-badge]: https://pkg.go.dev/badge/github.com/gitleaks/gitleaks/v8?status
 [go-docs]: https://pkg.go.dev/github.com/zricethezav/gitleaks/v8
