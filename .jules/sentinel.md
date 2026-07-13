@@ -58,3 +58,7 @@
 **Vulnerability:** Regular Expression Denial of Service (ReDoS) and NoSQL Regex Injection via unescaped variables passed to `new RegExp()` constructors in `documentItem.controller.js` and `knowledgeItem.controller.js`.
 **Learning:** Directly passing dynamic, user-controlled strings to the `RegExp` constructor allows attackers to construct potentially catastrophic patterns that drastically degrade performance or bypass exact match logic.
 **Prevention:** Always wrap dynamically generated string segments in the centralized `escapeRegExp` utility (`src/utils/regexp.utils.js`) before injecting them into a `RegExp` constructor.
+## 2026-07-13 - Secure Random Number Generation
+**Vulnerability:** Weak pseudo-random number generator (`Math.random()`) was being used to generate request IDs in `src/controllers/inboundEmail.controller.js`.
+**Learning:** `Math.random()` is cryptographically insecure and predictable, which could allow an attacker to guess generated IDs and potentially correlate or spoof requests.
+**Prevention:** Always use Node.js's native `crypto` module (e.g., `crypto.randomBytes(4).toString('hex')`) for generating any security-sensitive values, including request IDs or correlation tokens.
