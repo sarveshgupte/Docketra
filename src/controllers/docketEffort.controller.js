@@ -301,9 +301,19 @@ const getProfitabilityReports = async (req, res) => {
       filter.clientId = { $nin: restrictedIds };
     }
 
+    // ⚡ Bolt Performance Optimization:
+    // Execute independent entity validation queries concurrently instead of sequentially.
+    // Impact: Reduces endpoint latency. Replace O(n^2) nested loop array search with O(n) hash map lookup.
     // Fetch cases and efforts
-    const cases = await Case.find(filter).lean();
-    const efforts = await DocketEffort.find(filter).lean();
+    const [cases, efforts] = await Promise.all([
+      Case.find(filter).lean(),
+      DocketEffort.find(filter).lean()
+    ]);
+
+    const caseMap = new Map();
+    cases.forEach((c) => {
+      caseMap.set(String(c._id), c);
+    });
 
     // 1. Budget vs Actual by Docket
     const budgetVsActual = cases
@@ -329,7 +339,7 @@ const getProfitabilityReports = async (req, res) => {
     const clientEffortMap = {};
     efforts.forEach((eff) => {
       // Find client code from target Case
-      const c = cases.find((item) => String(item._id) === String(eff.caseInternalId));
+      const c = caseMap.get(String(eff.caseInternalId));
       const clientLabel = c?.clientId || 'Internal / General';
       if (!clientEffortMap[clientLabel]) {
         clientEffortMap[clientLabel] = { clientId: clientLabel, totalMinutes: 0, entriesCount: 0 };
