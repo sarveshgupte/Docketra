@@ -58,3 +58,7 @@
 **Vulnerability:** Regular Expression Denial of Service (ReDoS) and NoSQL Regex Injection via unescaped variables passed to `new RegExp()` constructors in `documentItem.controller.js` and `knowledgeItem.controller.js`.
 **Learning:** Directly passing dynamic, user-controlled strings to the `RegExp` constructor allows attackers to construct potentially catastrophic patterns that drastically degrade performance or bypass exact match logic.
 **Prevention:** Always wrap dynamically generated string segments in the centralized `escapeRegExp` utility (`src/utils/regexp.utils.js`) before injecting them into a `RegExp` constructor.
+## 2024-05-24 - [Gitleaks Secrets]
+**Vulnerability:** Gitleaks found dummy secrets in `README.md` and `docs/operations/cloudmailin_inbound_integration.md`.
+**Learning:** Even placeholder tokens (like `cafebabe:deadbeef` or `T1l4dm...`) in documentation files will fail the CI `security:secrets` check.
+**Prevention:** Avoid using realistic-looking hashes or strings matching common secret patterns (like `export BUNDLE_...`) in documentation, or use explicitly ignored mock values such as `<REDACTED>` or `<SECRET>`.
