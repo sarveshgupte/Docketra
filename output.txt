@@ -1,0 +1,17 @@
+
+> docketra@1.0.0 security:secrets
+> node scripts/run-secret-scan.js
+
+[secret-scan] Downloading pinned gitleaks 8.24.2 for linux/x64
+[secret-scan] Running gitleaks via downloaded binary
+
+    ○
+    │╲
+    │ ○
+    ○ ░
+    ░    gitleaks
+
+[90m9:28PM[0m [32mINF[0m [1mscanned ~15394233 bytes (15.39 MB) in 1.15s[0m
+[90m9:28PM[0m [33mWRN[0m [1mleaks found: 1[0m
+[secret-scan] ERROR: Unable to run gitleaks automatically.
+[secret-scan] Install gitleaks manually and rerun: npm run security:secrets
