@@ -1352,14 +1352,16 @@ const updateFirmAdminStatus = async (req, res) => {
   const oldStatus = admin.status;
   if (status === 'disabled' && normalizeAdminLifecycleStatus(admin.status) === 'active') {
     const session = getSession(req);
-    const activeAdminsCountQuery = User.countDocuments({
+    // 💡 What: Replaced unbounded countDocuments() with find().limit() for threshold checking
+    // 🎯 Why: Checking if an array length is <= 1 using countDocuments forces a full index scan. find().limit(2) provides O(1) early return performance.
+    const activeAdminsCountQuery = User.find({
       firmId: firm._id,
       role: { $in: ADMIN_ROLE_VALUES },
       status: 'active',
-    });
-    const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
+    }).select('_id').limit(2).lean();
+    const activeAdmins = await resolveSessionQuery(activeAdminsCountQuery, session);
 
-    if (activeAdminsCount <= 1) {
+    if (activeAdmins.length <= 1) {
       log.warn('[SUPERADMIN] Blocked disable: last active admin protection', {
         firmId: firm.firmId,
         adminXID: admin.xID,
@@ -1619,14 +1621,16 @@ const deleteFirmAdmin = async (req, res) => {
   }
 
   if (adminForDelete.status === 'active') {
-    const activeAdminsCountQuery = User.countDocuments({
+    // 💡 What: Replaced unbounded countDocuments() with find().limit() for threshold checking
+    // 🎯 Why: Checking if an array length is <= 1 using countDocuments forces a full index scan. find().limit(2) provides O(1) early return performance.
+    const activeAdminsCountQuery = User.find({
       firmId: firm._id,
       role: { $in: ADMIN_ROLE_VALUES },
       status: 'active',
-    });
-    const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
+    }).select('_id').limit(2).lean();
+    const activeAdmins = await resolveSessionQuery(activeAdminsCountQuery, session);
 
-    if (activeAdminsCount <= 1) {
+    if (activeAdmins.length <= 1) {
       log.warn('[SUPERADMIN] Blocked delete: last active admin protection', {
         firmId: firm.firmId,
         adminXID: admin.xID,

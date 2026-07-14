@@ -4,3 +4,7 @@
 ## 2026-06-12 - Prevent N+1 Query in Bulk Operations
 **Learning:** During bulk uploads involving generation of nested or default parent documents, loop-invariant database dependencies (such as finding categories or configurations via nested callbacks) and iterative `findOne` / `save` operations on individual identifiers degrade performance from O(1) database queries to O(N).
 **Action:** Lift invariant fetches outside bulk processing loops. Pre-fetch existing constraints (like `idempotencyKey` deduplication checks) via a single `$in` query mapping them into an in-memory structure (e.g. `Set` or `Map`). Collect newly instantiated documents into an array and persist them concurrently via `.insertMany(docs, { ordered: false })` at batch boundaries to mitigate network and CPU overhead.
+
+## 2026-07-14 - Optimize threshold checks with early return
+**Learning:** Checking if a database count exceeds a specific threshold (e.g., `>= 3` or `<= 1`) using `countDocuments` forces a full index scan, which is inefficient. We only need to know if at least N elements exist.
+**Action:** Replaced unbounded `countDocuments` threshold checks with `find().select('_id').limit(N).lean()` and checked the array length, providing an O(1) early return and improving performance.
