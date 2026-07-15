@@ -24,7 +24,7 @@ const errorHandler = (err, req, res, next) => {
   recordError(req, err);
   metricsService.recordError(err.statusCode || 500);
   // Logging sanitization is handled centrally by the structured logger utility.
-  log.error('API_ERROR', { req, error: err.message, stack: err.stack });
+  log.error('API_ERROR', { req, error: err });
   
   // Mongoose validation error
   if (err.name === 'ValidationError') {
