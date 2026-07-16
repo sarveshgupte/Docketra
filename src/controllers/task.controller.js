@@ -65,7 +65,18 @@ const getTaskById = async (req, res) => {
 const createTask = async (req, res) => {
   try {
     const firmId = req.firmId || req.user?.firmId;
-    const task = await taskService.createTask(firmId, req.body);
+
+    // SECURITY: Prevent mass assignment by removing protected fields from the payload
+    // Derive audit/ownership fields directly from the authenticated context instead of trusting req.body
+    const payload = { ...req.body };
+    delete payload._id;
+    delete payload.firmId;
+    delete payload.createdBy;
+    delete payload.updatedBy;
+    payload.createdBy = req.user?._id || null;
+    payload.updatedBy = req.user?._id || null;
+
+    const task = await taskService.createTask(firmId, payload);
     
     res.status(201).json({
       success: true,
@@ -88,7 +99,17 @@ const createTask = async (req, res) => {
 const updateTask = async (req, res) => {
   try {
     const firmId = req.firmId || req.user?.firmId;
-    const task = await taskService.updateTask(firmId, req.params.id, req.body);
+
+    // SECURITY: Prevent mass assignment by removing protected fields from the payload
+    // Derive audit fields directly from the authenticated context instead of trusting req.body
+    const payload = { ...req.body };
+    delete payload._id;
+    delete payload.firmId;
+    delete payload.createdBy;
+    delete payload.updatedBy;
+    payload.updatedBy = req.user?._id || null;
+
+    const task = await taskService.updateTask(firmId, req.params.id, payload);
     
     if (!task) {
       return res.status(404).json({

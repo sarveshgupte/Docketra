@@ -58,3 +58,7 @@
 **Vulnerability:** Regular Expression Denial of Service (ReDoS) and NoSQL Regex Injection via unescaped variables passed to `new RegExp()` constructors in `documentItem.controller.js` and `knowledgeItem.controller.js`.
 **Learning:** Directly passing dynamic, user-controlled strings to the `RegExp` constructor allows attackers to construct potentially catastrophic patterns that drastically degrade performance or bypass exact match logic.
 **Prevention:** Always wrap dynamically generated string segments in the centralized `escapeRegExp` utility (`src/utils/regexp.utils.js`) before injecting them into a `RegExp` constructor.
+## 2026-07-16 - Prevent Mass Assignment in Task Controller
+**Vulnerability:** The `createTask` and `updateTask` endpoints in `src/controllers/task.controller.js` were blindly passing `req.body` to the underlying service layers, allowing a malicious client to perform mass assignment and potentially manipulate protected fields like `_id`, `firmId`, `createdBy`, and `updatedBy` (IDOR).
+**Learning:** Passing raw `req.body` directly to database creation or update functions trusts client input implicitly, opening the door for unauthorized modifications of sensitive properties.
+**Prevention:** Always create a shallow copy of `req.body`, explicitly `delete` protected fields from the payload, and assign secure server-side context values (like `req.user?._id`) before passing the data to the service layer.
