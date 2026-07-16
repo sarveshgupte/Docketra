@@ -4,3 +4,6 @@
 ## 2026-06-12 - Prevent N+1 Query in Bulk Operations
 **Learning:** During bulk uploads involving generation of nested or default parent documents, loop-invariant database dependencies (such as finding categories or configurations via nested callbacks) and iterative `findOne` / `save` operations on individual identifiers degrade performance from O(1) database queries to O(N).
 **Action:** Lift invariant fetches outside bulk processing loops. Pre-fetch existing constraints (like `idempotencyKey` deduplication checks) via a single `$in` query mapping them into an in-memory structure (e.g. `Set` or `Map`). Collect newly instantiated documents into an array and persist them concurrently via `.insertMany(docs, { ordered: false })` at batch boundaries to mitigate network and CPU overhead.
+## 2026-07-16 - Solve N+1 latency in bulk reassignment operations
+**Learning:** Sequential execution of expensive asynchronous operations (like `reassignCase`) inside loops degrades bulk mutations into a latency bottleneck due to N+1 network roundtrips.
+**Action:** Replaced the sequential `await` execution inside the loop with `Promise.allSettled()` while explicitly capping concurrency via batching (e.g., chunks of 50) to prevent database pool exhaustion and API rate limiting.
