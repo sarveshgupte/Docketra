@@ -435,11 +435,14 @@ const repairClientEncryptionKey = async (req, res) => {
       return res.json({ success: true, repaired: false, message: 'Client encryption key already configured.' });
     }
     const candidateTenantIds = await resolveTenantKeyCandidates(accessContext.firmId);
+    // 💡 What: Replaced ClientRepository.count() with ClientRepository.exists()
+    // 🎯 Why: countDocuments forces a full index scan when we only need to know if at least one document exists. exists() provides an O(1) early return upon the first match.
+    // 📊 Impact: O(1) early return instead of O(N) full index scan when encrypted data exists.
     const hasEncryptedDataChecks = await Promise.all(candidateTenantIds.map(async (candidateTenantId) => {
-      const encryptedCount = await ClientRepository.count(candidateTenantId, {
+      const hasMatch = await ClientRepository.exists(candidateTenantId, {
         $or: [{ businessEmail: { $regex: '^enc:v1:' } }, { primaryContactNumber: { $regex: '^enc:v1:' } }],
       });
-      return encryptedCount > 0;
+      return hasMatch ? true : false;
     }));
     const encryptedDataExistsAcrossCandidates = hasEncryptedDataChecks.some(Boolean);
     if (encryptedDataExistsAcrossCandidates) {

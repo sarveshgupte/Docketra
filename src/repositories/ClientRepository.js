@@ -337,6 +337,11 @@ const ClientRepository = {
     return Client.countDocuments({ firmId: ownershipFirmId, ...query });
   },
 
+  async exists(firmId, query = {}) {
+    const ownershipFirmId = await resolveOwnershipFirmId(firmId);
+    return Client.exists({ firmId: ownershipFirmId, ...query });
+  },
+
   countClients(firmId, query = {}) {
     return this.count(firmId, query);
   },

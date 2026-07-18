@@ -4,3 +4,6 @@
 ## 2026-06-12 - Prevent N+1 Query in Bulk Operations
 **Learning:** During bulk uploads involving generation of nested or default parent documents, loop-invariant database dependencies (such as finding categories or configurations via nested callbacks) and iterative `findOne` / `save` operations on individual identifiers degrade performance from O(1) database queries to O(N).
 **Action:** Lift invariant fetches outside bulk processing loops. Pre-fetch existing constraints (like `idempotencyKey` deduplication checks) via a single `$in` query mapping them into an in-memory structure (e.g. `Set` or `Map`). Collect newly instantiated documents into an array and persist them concurrently via `.insertMany(docs, { ordered: false })` at batch boundaries to mitigate network and CPU overhead.
+## 2026-07-18 - Prevent O(N) Query During Client Encryption Check
+**Learning:** Found a full index scan when checking for encrypted client data using `ClientRepository.count() > 0` in `repairClientEncryptionKey`. `countDocuments` forces the database to iterate through all matching documents even if only a boolean answer is needed.
+**Action:** Implemented and used `ClientRepository.exists(firmId, query)` which leverages Mongoose's `.exists()` for an O(1) early return upon the first match, replacing the slower `.count()` operation.
