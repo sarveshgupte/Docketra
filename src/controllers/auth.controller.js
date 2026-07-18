@@ -2966,12 +2966,19 @@ const resendSetup = async (req, res) => {
   const user = await User.findOne(userQuery);
   if (!user) return res.json(genericResponse);
 
-  const recentCount = await AuthAudit.countDocuments({
+  // ⚡ Bolt Performance Optimization:
+  // Replaced unbounded countDocuments() with find().select('_id').limit(3).lean()
+  // Impact: Avoids full index scan by returning early after finding the threshold number of documents.
+  // Expected improvement: O(1) early return performance for rate limiting checks.
+  const recentRecords = await AuthAudit.find({
     userId: user._id,
     actionType: 'SetupLinkResent',
     createdAt: { $gte: oneHourAgo },
-  });
-  if (recentCount >= 3) {
+  })
+    .select('_id')
+    .limit(3)
+    .lean();
+  if (recentRecords.length >= 3) {
     return res.status(429).json({ success: false, code: 'SETUP_RESEND_RATE_LIMITED', message: 'Rate limit exceeded. Max 3 setup links per hour.' });
   }
 
