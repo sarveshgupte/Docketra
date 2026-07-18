@@ -129,7 +129,7 @@ async function main() {
 
   const configPath = path.join(repoRoot, '.gitleaks.toml');
   fs.copyFileSync(configPath, path.join(scanRoot, '.gitleaks.toml'));
-  const args = ['dir', scanRoot, '--redact', '-c', path.join(scanRoot, '.gitleaks.toml')];
+  const args = ['dir', scanRoot, '--redact', '--report-format', 'json', '--report-path', '/app/gitleaks-report.json', '-c', path.join(scanRoot, '.gitleaks.toml')];
 
   if (commandExists('gitleaks') && run('local binary', 'gitleaks', args)) return;
 
