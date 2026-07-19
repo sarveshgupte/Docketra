@@ -8,6 +8,7 @@ const DocketFileStorageService = require('../services/docketFileStorage.service'
 const { reopenDocketFromClientEmail, generateDocketEmailSignature } = require('../services/docketWorkflow.service');
 const log = require('../utils/log');
 const config = require('../config/config');
+const { randomUUID } = require('crypto');
 
 const sendError = (res, statusCode, publicCode, debugCode, debugDetails = {}, reqId) => {
   const isDebug = process.env.INBOUND_EMAIL_DEBUG === 'true';
@@ -34,7 +35,7 @@ const sendError = (res, statusCode, publicCode, debugCode, debugDetails = {}, re
 };
 
 const handleInboundEmail = async (req, res) => {
-  const reqId = req.id || req.requestId || Math.random().toString(36).substring(7);
+  const reqId = req.id || req.requestId || randomUUID();
   const startTime = Date.now();
 
   try {
@@ -240,7 +241,8 @@ const handleInboundEmail = async (req, res) => {
     });
 
   } catch (error) {
-    return sendError(res, 500, 'INTERNAL_SERVER_ERROR', 'EXCEPTION_CAUGHT', { message: error.message, stack: error.stack, reason: 'Failed to process inbound email.' }, reqId);
+    log.error(`[INBOUND_EMAIL] 500 EXCEPTION_CAUGHT: reqId=${reqId} message=${error.message} stack=${error.stack}`);
+    return sendError(res, 500, 'INTERNAL_SERVER_ERROR', 'EXCEPTION_CAUGHT', { reason: 'Failed to process inbound email.' }, reqId);
   }
 };
 
