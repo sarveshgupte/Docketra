@@ -58,3 +58,8 @@
 **Vulnerability:** Regular Expression Denial of Service (ReDoS) and NoSQL Regex Injection via unescaped variables passed to `new RegExp()` constructors in `documentItem.controller.js` and `knowledgeItem.controller.js`.
 **Learning:** Directly passing dynamic, user-controlled strings to the `RegExp` constructor allows attackers to construct potentially catastrophic patterns that drastically degrade performance or bypass exact match logic.
 **Prevention:** Always wrap dynamically generated string segments in the centralized `escapeRegExp` utility (`src/utils/regexp.utils.js`) before injecting them into a `RegExp` constructor.
+
+## 2024-05-22 - Mass Assignment and IDOR Vulnerability in Form and Compliance Templates
+**Vulnerability:** The application was trusting `req.body` directly in `src/controllers/complianceTemplate.controller.js` and `src/controllers/form.controller.js` before spreading it into MongoDB payloads. This allows attackers to maliciously inject protected fields (e.g. `_id`, `firmId`, `createdByXID`, `updatedByXID`) leading to mass assignment and IDOR vulnerabilities.
+**Learning:** This exposes the application to situations where attackers can overwrite system-managed identifiers, link records to unauthorized firms, or manipulate audit trails, severely compromising data integrity and tenant isolation.
+**Prevention:** To prevent Mass Assignment and IDOR vulnerabilities, never trust client-provided payloads blindly. Always explicitly clone `req.body` and `delete` protected root-level fields (e.g. `_id`, `firmId`, `createdByXID`, `updatedByXID`) before spreading it into a database query or payload.
