@@ -1,0 +1,42 @@
+[
+ {
+  "RuleID": "sidekiq-secret",
+  "Description": "Discovered a Sidekiq Secret, which could lead to compromised background job processing and application data breaches.",
+  "StartLine": 50,
+  "EndLine": 50,
+  "StartColumn": 23,
+  "EndColumn": 75,
+  "Match": "BUNDLE_ENTERPRISE__CONTRIBSYS__COM=REDACTED\"",
+  "Secret": "REDACTED",
+  "File": "README.md",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 2.6098502,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": "",
+  "Tags": [],
+  "Fingerprint": "README.md:sidekiq-secret:50"
+ },
+ {
+  "RuleID": "generic-api-key",
+  "Description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+  "StartLine": 79,
+  "EndLine": 79,
+  "StartColumn": 2,
+  "EndColumn": 100,
+  "Match": "SYSTEM_HASH_SECRET=REDACTED",
+  "Secret": "REDACTED",
+  "File": "docs/operations/cloudmailin_inbound_integration.md",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 5.058695,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": "",
+  "Tags": [],
+  "Fingerprint": "docs/operations/cloudmailin_inbound_integration.md:generic-api-key:79"
+ }
+]
