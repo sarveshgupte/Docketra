@@ -1,3 +1,4 @@
+const { randomUUID } = require('crypto');
 const Case = require('../models/Case.model');
 const Client = require('../models/Client.model');
 const Comment = require('../models/Comment.model');
@@ -34,7 +35,7 @@ const sendError = (res, statusCode, publicCode, debugCode, debugDetails = {}, re
 };
 
 const handleInboundEmail = async (req, res) => {
-  const reqId = req.id || req.requestId || Math.random().toString(36).substring(7);
+  const reqId = req.id || req.requestId || randomUUID().substring(0, 8);
   const startTime = Date.now();
 
   try {
