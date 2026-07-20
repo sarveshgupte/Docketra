@@ -22,6 +22,12 @@ const buildStep = ({ id, completed, explanation, cta, completionMode = 'detected
   completionMode,
 });
 
+// ⚡ Bolt Performance Optimization:
+// Use find().select('_id').limit(1).lean() instead of countDocuments()
+// when we only need to know if at least one document exists.
+// This prevents full index scans and provides O(1) early return performance.
+const checkExists = (model, query) => model.find(query).select('_id').limit(1).lean().then(docs => docs.length);
+
 const getSharedSignals = async ({ firmId, user }) => {
   const normalizedFirmId = String(firmId || '');
   const userObjectId = user?._id || null;
@@ -44,24 +50,24 @@ const getSharedSignals = async ({ firmId, user }) => {
     userInteractionCount,
   ] = await Promise.all([
     Firm.findById(firmId).select('isSetupComplete storage.mode storageConfig.provider').lean(),
-    Client.countDocuments({ firmId, status: 'active', isActive: { $ne: false } }),
-    Category.countDocuments({ firmId, isActive: { $ne: false } }),
-    Category.countDocuments({
+    checkExists(Client, { firmId, status: 'active', isActive: { $ne: false } }),
+    checkExists(Category, { firmId, isActive: { $ne: false } }),
+    checkExists(Category, {
       firmId,
       isActive: { $ne: false },
       subcategories: { $elemMatch: { isActive: { $ne: false } } },
     }),
-    Team.countDocuments({ firmId, isActive: { $ne: false }, type: 'PRIMARY' }),
-    Case.countDocuments({ firmId: normalizedFirmId }),
-    User.countDocuments({
+    checkExists(Team, { firmId, isActive: { $ne: false }, type: 'PRIMARY' }),
+    checkExists(Case, { firmId: normalizedFirmId }),
+    checkExists(User, {
       firmId,
       status: { $in: ['invited', 'active'] },
       isActive: { $ne: false },
       isSystem: { $ne: true },
     }),
-    Case.countDocuments({ firmId: normalizedFirmId, assignedToXID: { $in: [null, ''] } }),
+    checkExists(Case, { firmId: normalizedFirmId, assignedToXID: { $in: [null, ''] } }),
     userObjectId
-      ? Team.countDocuments({
+      ? checkExists(Team, {
         firmId,
         isActive: { $ne: false },
         type: 'PRIMARY',
@@ -69,11 +75,11 @@ const getSharedSignals = async ({ firmId, user }) => {
       })
       : 0,
     userObjectId
-      ? Team.countDocuments({ firmId, isActive: { $ne: false }, type: 'PRIMARY', managerId: userObjectId })
+      ? checkExists(Team, { firmId, isActive: { $ne: false }, type: 'PRIMARY', managerId: userObjectId })
       : 0,
-    Team.countDocuments({ firmId, isActive: { $ne: false }, type: 'QC', parentWorkbasketId: { $ne: null } }),
+    checkExists(Team, { firmId, isActive: { $ne: false }, type: 'QC', parentWorkbasketId: { $ne: null } }),
     userObjectId
-      ? Case.countDocuments({
+      ? checkExists(Case, {
         firmId: normalizedFirmId,
         $or: [
           { assignedToXID: userXid },
@@ -84,10 +90,10 @@ const getSharedSignals = async ({ firmId, user }) => {
       })
       : 0,
     userXid
-      ? Case.countDocuments({ firmId: normalizedFirmId, assignedToXID: userXid })
+      ? checkExists(Case, { firmId: normalizedFirmId, assignedToXID: userXid })
       : 0,
     userXid
-      ? DocketActivity.countDocuments({ firmId, performedByXID: userXid })
+      ? checkExists(DocketActivity, { firmId, performedByXID: userXid })
       : 0,
   ]);
 

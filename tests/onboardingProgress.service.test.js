@@ -48,53 +48,52 @@ function setupMocks() {
       findById: () => ({ select: () => ({ lean: async () => state.firm }) }),
     },
   };
+  const mockFind = (countGetter) => ({
+    find: () => ({ select: () => ({ limit: () => ({ lean: async () => Array(Math.min(1, await countGetter())).fill({ _id: 'mock' }) }) }) }),
+    countDocuments: countGetter,
+  });
+
   require.cache[require.resolve('../src/models/Client.model')] = {
-    exports: { countDocuments: async () => state.counts.activeClients },
+    exports: mockFind(async () => state.counts.activeClients),
   };
 
   let categoryCall = 0;
   require.cache[require.resolve('../src/models/Category.model')] = {
-    exports: {
-      countDocuments: async () => {
-        categoryCall += 1;
-        return categoryCall === 1 ? state.counts.categories : state.counts.categoriesWithSub;
-      },
-    },
+    exports: mockFind(async () => {
+      categoryCall += 1;
+      return categoryCall === 1 ? state.counts.categories : state.counts.categoriesWithSub;
+    }),
   };
 
   let teamCall = 0;
   require.cache[require.resolve('../src/models/Team.model')] = {
-    exports: {
-      countDocuments: async () => {
-        teamCall += 1;
-        if (teamCall === 1) return state.counts.primaryTeams;
-        if (teamCall === 2) return state.counts.userTeams;
-        if (teamCall === 3) return state.counts.managedTeams;
-        return state.counts.qcMappings;
-      },
-    },
+    exports: mockFind(async () => {
+      teamCall += 1;
+      if (teamCall === 1) return state.counts.primaryTeams;
+      if (teamCall === 2) return state.counts.userTeams;
+      if (teamCall === 3) return state.counts.managedTeams;
+      return state.counts.qcMappings;
+    }),
   };
 
   require.cache[require.resolve('../src/models/User.model')] = {
-    exports: { countDocuments: async () => state.counts.invitedUsers },
+    exports: mockFind(async () => state.counts.invitedUsers),
   };
 
   let caseCall = 0;
   require.cache[require.resolve('../src/models/Case.model')] = {
-    exports: {
-      countDocuments: async () => {
-        caseCall += 1;
-        if (caseCall === 1) return state.counts.dockets;
-        if (caseCall === 2) return state.counts.unassignedDockets;
-        if (caseCall === 3) return state.counts.visibleQueue;
-        return state.counts.userAssignedDockets;
-      },
-    },
+    exports: mockFind(async () => {
+      caseCall += 1;
+      if (caseCall === 1) return state.counts.dockets;
+      if (caseCall === 2) return state.counts.unassignedDockets;
+      if (caseCall === 3) return state.counts.visibleQueue;
+      return state.counts.userAssignedDockets;
+    }),
   };
 
   require.cache[require.resolve('../src/models/DocketActivity.model')] = {
     exports: {
-      DocketActivity: { countDocuments: async () => state.counts.activity },
+      DocketActivity: mockFind(async () => state.counts.activity),
     },
   };
 }
