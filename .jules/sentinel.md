@@ -58,3 +58,7 @@
 **Vulnerability:** Regular Expression Denial of Service (ReDoS) and NoSQL Regex Injection via unescaped variables passed to `new RegExp()` constructors in `documentItem.controller.js` and `knowledgeItem.controller.js`.
 **Learning:** Directly passing dynamic, user-controlled strings to the `RegExp` constructor allows attackers to construct potentially catastrophic patterns that drastically degrade performance or bypass exact match logic.
 **Prevention:** Always wrap dynamically generated string segments in the centralized `escapeRegExp` utility (`src/utils/regexp.utils.js`) before injecting them into a `RegExp` constructor.
+## 2026-07-22 - Prevent hardcoded secrets in documentation
+**Vulnerability:** A hardcoded system secret (`SYSTEM_HASH_SECRET`) was found in the `docs/operations/cloudmailin_inbound_integration.md` documentation file.
+**Learning:** Including hardcoded secrets or credentials in documentation, even examples, can trigger automated secret scanners like gitleaks and potentially expose sensitive information or valid credentials if not carefully sanitized. Documentation should always use explicit, clear placeholder tags.
+**Prevention:** Replace hardcoded secrets in documentation with clear placeholders conforming to the allowlist format in `.gitleaks.toml` (e.g., `<required-system-hash-secret>`) to ensure scanners pass and users understand they must supply their own secrets.
