@@ -122,11 +122,15 @@ const uploadDocketBulk = async (req, res) => {
     let created = 0;
     const errors = invalidRows.map((row) => ({ rowIndex: row.rowIndex, errors: mapValidationErrors(row) }));
 
-    for (const rowEntry of rowsToCreate) {
-      if (!rowEntry.isValid) continue;
-
-      // eslint-disable-next-line no-await-in-loop
+    const results = await Promise.all(rowsToCreate.map(async (rowEntry) => {
+      if (!rowEntry.isValid) return null;
       const result = await invokeCreateCase(req, rowEntry.normalizedData);
+      return { rowEntry, result };
+    }));
+
+    for (const res of results) {
+      if (!res) continue;
+      const { rowEntry, result } = res;
       if (result.statusCode >= 200 && result.statusCode < 300 && result.payload?.success) {
         created += 1;
       } else {
