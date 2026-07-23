@@ -12,5 +12,6 @@ regexes = [
   '''<db-name>''',
   '''<redis-host>''',
   '''ci-placeholder-[a-z0-9-]+''',
+  '''cafebabe:deadbeef+''',
   '''[a-z0-9._%+-]+@example\.com'''
 ]
