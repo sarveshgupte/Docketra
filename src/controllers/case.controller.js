@@ -1331,7 +1331,7 @@ const sendEmailToClient = async (req, res) => {
     const { generateDocketEmailSignature } = require('../services/docketWorkflow.service');
     const signature = generateDocketEmailSignature(caseData.caseInternalId);
     const inboundDomain = process.env.INBOUND_EMAIL_DOMAIN || 'docketra.in';
-    const uniqueEmail = `docket-${caseData.caseNumber.toLowerCase()}-${signature}@${inboundDomain}`;
+    const uniqueEmail = `docket-${caseData.caseInternalId}-${signature}@${inboundDomain}`;
 
     const emailService = require('../services/email.service');
     

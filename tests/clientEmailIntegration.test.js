@@ -24,11 +24,11 @@ const { handleInboundEmail } = require('../src/controllers/inboundEmail.controll
 const { generateDocketEmailSignature } = require('../src/services/docketWorkflow.service');
 
 // Helper to load and customize a CloudMailin fixture
-function loadCloudMailinFixture(name, caseNumber, token) {
+function loadCloudMailinFixture(name, caseInternalId, token) {
   const filePath = path.join(__dirname, 'fixtures', 'cloudmailin', name);
   const contentStr = fs.readFileSync(filePath, 'utf8');
   const replacedStr = contentStr
-    .replace(/CO202603080001/g, caseNumber)
+    .replace(/CO202603080001/g, caseInternalId.toString())
     .replace(/TOKEN_PLACEHOLDER/g, token);
   return JSON.parse(replacedStr);
 }
@@ -159,7 +159,7 @@ async function runTests() {
     const legacyReq = {
       body: {
         from: `client-1@company.com`,
-        to: `docket-${tc1.docket.caseNumber}-${signature1}@docketra.in`,
+        to: `docket-${tc1.docket.caseInternalId}-${signature1}@docketra.in`,
         subject: 'Legacy format email subject',
         text: 'Hello, this is a legacy format text body.'
       }
@@ -174,13 +174,13 @@ async function runTests() {
     console.log('Running Test Case 2: CloudMailin plain text email...');
     const tc2 = await setupTestCase(2);
     const signature2 = generateDocketEmailSignature(tc2.docket.caseInternalId);
-    const plainTextPayload = loadCloudMailinFixture('plain_text.json', tc2.docket.caseNumber, signature2);
+    const plainTextPayload = loadCloudMailinFixture('plain_text.json', tc2.docket.caseInternalId, signature2);
     plainTextPayload.envelope.from = 'client-2@company.com';
     plainTextPayload.headers.from = 'Test Client <client-2@company.com>';
 
     await handleInboundEmail({ body: plainTextPayload }, mockRes);
     assert.strictEqual(resStatus, 200);
-    const captures = await EmailCapture.find({ linkedCaseId: tc2.docket.caseNumber });
+    const captures = await EmailCapture.find({ linkedCaseInternalId: tc2.docket.caseInternalId });
     assert.strictEqual(captures.length, 1);
     assert.strictEqual(captures[0].bodyExcerpt, 'Hello, please find my submission details here in plain text. Thank you.');
     console.log('✓ Test Case 2 passed.');
@@ -189,13 +189,13 @@ async function runTests() {
     console.log('Running Test Case 3: CloudMailin HTML email...');
     const tc3 = await setupTestCase(3);
     const signature3 = generateDocketEmailSignature(tc3.docket.caseInternalId);
-    const htmlPayload = loadCloudMailinFixture('html.json', tc3.docket.caseNumber, signature3);
+    const htmlPayload = loadCloudMailinFixture('html.json', tc3.docket.caseInternalId, signature3);
     htmlPayload.envelope.from = 'client-3@company.com';
     htmlPayload.headers.from = 'Test Client <client-3@company.com>';
 
     await handleInboundEmail({ body: htmlPayload }, mockRes);
     assert.strictEqual(resStatus, 200);
-    const htmlCaptures = await EmailCapture.find({ linkedCaseId: tc3.docket.caseNumber });
+    const htmlCaptures = await EmailCapture.find({ linkedCaseInternalId: tc3.docket.caseInternalId });
     assert.strictEqual(htmlCaptures[0].bodyExcerpt, 'Hello, please find my submission details here. Thank you.');
     console.log('✓ Test Case 3 passed.');
 
@@ -204,7 +204,7 @@ async function runTests() {
     uploadedFiles = [];
     const tc4 = await setupTestCase(4);
     const signature4 = generateDocketEmailSignature(tc4.docket.caseInternalId);
-    const onePdfPayload = loadCloudMailinFixture('one_pdf.json', tc4.docket.caseNumber, signature4);
+    const onePdfPayload = loadCloudMailinFixture('one_pdf.json', tc4.docket.caseInternalId, signature4);
     onePdfPayload.envelope.from = 'client-4@company.com';
     onePdfPayload.headers.from = 'Test Client <client-4@company.com>';
 
@@ -220,7 +220,7 @@ async function runTests() {
     uploadedFiles = [];
     const tc5 = await setupTestCase(5);
     const signature5 = generateDocketEmailSignature(tc5.docket.caseInternalId);
-    const multiplePayload = loadCloudMailinFixture('multiple_attachments.json', tc5.docket.caseNumber, signature5);
+    const multiplePayload = loadCloudMailinFixture('multiple_attachments.json', tc5.docket.caseInternalId, signature5);
     multiplePayload.envelope.from = 'client-5@company.com';
     multiplePayload.headers.from = 'Test Client <client-5@company.com>';
 
@@ -236,7 +236,7 @@ async function runTests() {
     uploadedFiles = [];
     const tc6 = await setupTestCase(6);
     const signature6 = generateDocketEmailSignature(tc6.docket.caseInternalId);
-    const forwardedPayload = loadCloudMailinFixture('forwarded.json', tc6.docket.caseNumber, signature6);
+    const forwardedPayload = loadCloudMailinFixture('forwarded.json', tc6.docket.caseInternalId, signature6);
     forwardedPayload.envelope.from = 'client-6@company.com';
     forwardedPayload.headers.from = 'Test Client <client-6@company.com>';
 
@@ -250,7 +250,7 @@ async function runTests() {
     console.log('Running Test Case 7: CloudMailin reply email...');
     const tc7 = await setupTestCase(7);
     const signature7 = generateDocketEmailSignature(tc7.docket.caseInternalId);
-    const replyPayload = loadCloudMailinFixture('reply.json', tc7.docket.caseNumber, signature7);
+    const replyPayload = loadCloudMailinFixture('reply.json', tc7.docket.caseInternalId, signature7);
     replyPayload.envelope.from = 'client-7@company.com';
     replyPayload.headers.from = 'Test Client <client-7@company.com>';
 
@@ -262,7 +262,7 @@ async function runTests() {
     console.log('Running Test Case 8: Regression - Missing from field...');
     const tc8 = await setupTestCase(8);
     const signature8 = generateDocketEmailSignature(tc8.docket.caseInternalId);
-    const brokenFromPayload = loadCloudMailinFixture('plain_text.json', tc8.docket.caseNumber, signature8);
+    const brokenFromPayload = loadCloudMailinFixture('plain_text.json', tc8.docket.caseInternalId, signature8);
     delete brokenFromPayload.envelope.from;
     delete brokenFromPayload.headers.from;
 
@@ -274,7 +274,7 @@ async function runTests() {
     console.log('Running Test Case 9: Regression - Missing to field...');
     const tc9 = await setupTestCase(9);
     const signature9 = generateDocketEmailSignature(tc9.docket.caseInternalId);
-    const brokenToPayload = loadCloudMailinFixture('plain_text.json', tc9.docket.caseNumber, signature9);
+    const brokenToPayload = loadCloudMailinFixture('plain_text.json', tc9.docket.caseInternalId, signature9);
     delete brokenToPayload.envelope.to;
     delete brokenToPayload.headers.to;
 
@@ -285,7 +285,7 @@ async function runTests() {
     // Test case 10: Reject email with invalid signature token
     console.log('Running Test Case 10: Rejecting email with invalid signature token...');
     const tc10 = await setupTestCase(10);
-    const invalidSigPayload = loadCloudMailinFixture('plain_text.json', tc10.docket.caseNumber, '123456');
+    const invalidSigPayload = loadCloudMailinFixture('plain_text.json', tc10.docket.caseInternalId, '123456');
     invalidSigPayload.envelope.from = 'client-10@company.com';
     invalidSigPayload.headers.from = 'Test Client <client-10@company.com>';
 
@@ -297,7 +297,7 @@ async function runTests() {
     console.log('Running Test Case 11: Rejecting email with unauthorized sender...');
     const tc11 = await setupTestCase(11);
     const signature11 = generateDocketEmailSignature(tc11.docket.caseInternalId);
-    const hackerPayload = loadCloudMailinFixture('plain_text.json', tc11.docket.caseNumber, signature11);
+    const hackerPayload = loadCloudMailinFixture('plain_text.json', tc11.docket.caseInternalId, signature11);
     hackerPayload.envelope.from = 'hacker@malicious.com';
     hackerPayload.headers.from = 'Hacker <hacker@malicious.com>';
 
@@ -310,7 +310,7 @@ async function runTests() {
     console.log('Running Test Case 12: Duplicate delivery idempotency...');
     const tc12 = await setupTestCase(12);
     const signature12 = generateDocketEmailSignature(tc12.docket.caseInternalId);
-    const duplicatePayload = loadCloudMailinFixture('plain_text.json', tc12.docket.caseNumber, signature12);
+    const duplicatePayload = loadCloudMailinFixture('plain_text.json', tc12.docket.caseInternalId, signature12);
     duplicatePayload.envelope.from = 'client-12@company.com';
     duplicatePayload.headers.from = 'Test Client <client-12@company.com>';
     duplicatePayload.headers.message_id = '<msg-id-idempotency-test@company.com>';
@@ -332,7 +332,7 @@ async function runTests() {
     console.log('Running Test Case 13: Oversized attachment check...');
     const tc13 = await setupTestCase(13);
     const signature13 = generateDocketEmailSignature(tc13.docket.caseInternalId);
-    const oversizedPayload = loadCloudMailinFixture('one_pdf.json', tc13.docket.caseNumber, signature13);
+    const oversizedPayload = loadCloudMailinFixture('one_pdf.json', tc13.docket.caseInternalId, signature13);
     oversizedPayload.envelope.from = 'client-13@company.com';
     oversizedPayload.headers.from = 'Test Client <client-13@company.com>';
     oversizedPayload.attachments[0].size = 6 * 1024 * 1024; // 6MB (exceeds default 5MB config)
@@ -351,7 +351,8 @@ async function runTests() {
 
     // Test case 15: Missing docket lookup
     console.log('Running Test Case 15: Missing docket lookup...');
-    const missingDocketPayload = loadCloudMailinFixture('plain_text.json', 'CO999999999999', '123456');
+    const randomObjectId = new mongoose.Types.ObjectId().toString();
+    const missingDocketPayload = loadCloudMailinFixture('plain_text.json', randomObjectId, '123456');
     missingDocketPayload.envelope.from = 'client-1@company.com';
     missingDocketPayload.headers.from = 'Test Client <client-1@company.com>';
 
@@ -359,6 +360,20 @@ async function runTests() {
     assert.strictEqual(resStatus, 404, 'Expected 404 Not Found for missing docket');
     assert.strictEqual(resJson?.code, 'NOT_FOUND');
     console.log('✓ Test Case 15 passed.');
+
+    // Test case 16: Gmail Reply formatting (Angle brackets)
+    console.log('Running Test Case 16: Gmail reply format with angle brackets...');
+    const tc16 = await setupTestCase(16);
+    const signature16 = generateDocketEmailSignature(tc16.docket.caseInternalId);
+    const gmailPayload = loadCloudMailinFixture('plain_text.json', tc16.docket.caseInternalId, signature16);
+    gmailPayload.envelope.from = 'client-16@company.com';
+    gmailPayload.headers.from = 'Test Client <client-16@company.com>';
+    // Angle bracket formatted recipient email
+    gmailPayload.headers.to = `"Agent Name via Docketra" <docket-${tc16.docket.caseInternalId}-${signature16}@mail.docketra.in>`;
+
+    await handleInboundEmail({ body: gmailPayload }, mockRes);
+    assert.strictEqual(resStatus, 200, 'Gmail reply formatting should succeed');
+    console.log('✓ Test Case 16 passed.');
 
     // Restore original upload function
     DocketFileStorageService.uploadFile = originalUploadFile;

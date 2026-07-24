@@ -71,7 +71,7 @@ const handleInboundEmail = async (req, res) => {
     }
     senderEmail = senderEmail.toLowerCase().trim();
 
-    // Extract recipient and parse caseNumber and signature token
+    // Extract recipient and parse caseInternalId and signature token
     let recipientEmail = '';
     if (typeof rawTo === 'object') {
       recipientEmail = rawTo.email;
@@ -81,27 +81,28 @@ const handleInboundEmail = async (req, res) => {
     } else {
       recipientEmail = String(rawTo).trim();
     }
-    recipientEmail = recipientEmail.toLowerCase();
+    
+    // Extract email address if wrapped in <...> (e.g. from Gmail replies)
+    const matchAngle = recipientEmail.match(/<([^>]+)>/);
+    if (matchAngle) {
+      recipientEmail = matchAngle[1].trim();
+    }
+    recipientEmail = recipientEmail.toLowerCase().trim();
 
-    // Match format: docket-<caseNumber>-<signature>@domain
-    const recipientMatch = recipientEmail.match(/^(?:docket-)?([a-zA-Z0-9-]+)-([a-f0-9]{6})@/i);
+    // Match format: docket-<caseInternalId>-<signature>@domain
+    const recipientMatch = recipientEmail.match(/^(?:docket-)?([a-f0-9]{24})-([a-f0-9]{6})@/i);
     if (!recipientMatch) {
-      return sendError(res, 400, 'INVALID_REQUEST', 'INVALID_RECIPIENT_FORMAT', { recipientEmail, reason: 'Invalid recipient format. Must be docket-<caseNumber>-<signature>@domain.' }, reqId);
+      return sendError(res, 400, 'INVALID_REQUEST', 'INVALID_RECIPIENT_FORMAT', { recipientEmail, reason: 'Invalid recipient format. Must be docket-<caseInternalId>-<signature>@domain.' }, reqId);
     }
 
-    const caseNumber = recipientMatch[1].toUpperCase();
+    const caseInternalId = recipientMatch[1];
     const providedSignature = recipientMatch[2].toLowerCase();
 
     // Find Case
-    const targetCase = await Case.findOne({
-      $or: [
-        { caseNumber: caseNumber },
-        { caseId: caseNumber }
-      ]
-    });
+    const targetCase = await Case.findOne({ caseInternalId });
 
     if (!targetCase) {
-      return sendError(res, 404, 'NOT_FOUND', 'CASE_NOT_FOUND', { caseNumber, reason: `Docket ${caseNumber} not found.` }, reqId);
+      return sendError(res, 404, 'NOT_FOUND', 'CASE_NOT_FOUND', { caseInternalId, reason: `Docket with internal ID ${caseInternalId} not found.` }, reqId);
     }
 
     // Webhook Idempotency Check
@@ -110,7 +111,7 @@ const handleInboundEmail = async (req, res) => {
       const existingCapture = await EmailCapture.findOne({ messageId, firmId: targetCase.firmId });
       if (existingCapture) {
         const processingTimeMs = Date.now() - startTime;
-        log.info(`[INBOUND_EMAIL] Duplicate: reqId=${reqId}, sender=${senderEmail}, recipient=${recipientEmail}, case=${caseNumber}, attachments=0, time=${processingTimeMs}ms`);
+        log.info(`[INBOUND_EMAIL] Duplicate: reqId=${reqId}, sender=${senderEmail}, recipient=${recipientEmail}, case=${targetCase.caseNumber}, attachments=0, time=${processingTimeMs}ms`);
         
         return res.status(200).json({
           success: true,
@@ -127,17 +128,17 @@ const handleInboundEmail = async (req, res) => {
     // Verify cryptographic signature token
     const expectedSignature = generateDocketEmailSignature(targetCase.caseInternalId);
     if (providedSignature !== expectedSignature) {
-      return sendError(res, 403, 'FORBIDDEN', 'INVALID_SIGNATURE', { providedSignature, expectedSignature, caseNumber, reason: 'Invalid secure token signature. Access denied.' }, reqId);
+      return sendError(res, 403, 'FORBIDDEN', 'INVALID_SIGNATURE', { providedSignature, expectedSignature, caseNumber: targetCase.caseNumber, reason: 'Invalid secure token signature. Access denied.' }, reqId);
     }
 
     // Find Client and verify sender email
     if (!targetCase.clientId) {
-      return sendError(res, 400, 'INVALID_REQUEST', 'MISSING_LINKED_CLIENT', { caseNumber, reason: 'Docket has no linked client.' }, reqId);
+      return sendError(res, 400, 'INVALID_REQUEST', 'MISSING_LINKED_CLIENT', { caseNumber: targetCase.caseNumber, reason: 'Docket has no linked client.' }, reqId);
     }
 
     const client = await Client.findOne({ clientId: targetCase.clientId, firmId: targetCase.firmId });
     if (!client) {
-      return sendError(res, 404, 'NOT_FOUND', 'CLIENT_NOT_FOUND', { clientId: targetCase.clientId, caseNumber, reason: 'Linked client not found.' }, reqId);
+      return sendError(res, 404, 'NOT_FOUND', 'CLIENT_NOT_FOUND', { clientId: targetCase.clientId, caseNumber: targetCase.caseNumber, reason: 'Linked client not found.' }, reqId);
     }
 
     // Decrypt client records to retrieve plain businessEmail and compare
@@ -148,7 +149,7 @@ const handleInboundEmail = async (req, res) => {
     ].filter(Boolean);
 
     if (!clientEmails.includes(senderEmail)) {
-      return sendError(res, 403, 'FORBIDDEN', 'UNAUTHORIZED_SENDER', { senderEmail, allowedEmails: clientEmails, caseNumber, reason: 'Sender email is not authorized for this client docket.' }, reqId);
+      return sendError(res, 403, 'FORBIDDEN', 'UNAUTHORIZED_SENDER', { senderEmail, allowedEmails: clientEmails, caseNumber: targetCase.caseNumber, reason: 'Sender email is not authorized for this client docket.' }, reqId);
     }
 
     // Process attachments & Verify size
@@ -184,7 +185,7 @@ const handleInboundEmail = async (req, res) => {
           });
           uploadedAttachments.push(uploadResult);
         } catch (uploadError) {
-          log.error(`[INBOUND_EMAIL] Failed to upload attachment ${filename} for docket ${caseNumber}: ${uploadError.message}`);
+          log.error(`[INBOUND_EMAIL] Failed to upload attachment ${filename} for docket ${targetCase.caseNumber}: ${uploadError.message}`);
         }
       }
     }
@@ -227,7 +228,7 @@ const handleInboundEmail = async (req, res) => {
     });
 
     const processingTimeMs = Date.now() - startTime;
-    log.info(`[INBOUND_EMAIL] Processed: reqId=${reqId}, sender=${senderEmail}, recipient=${recipientEmail}, case=${caseNumber}, attachments=${uploadedAttachments.length}, time=${processingTimeMs}ms`);
+    log.info(`[INBOUND_EMAIL] Processed: reqId=${reqId}, sender=${senderEmail}, recipient=${recipientEmail}, case=${targetCase.caseNumber}, attachments=${uploadedAttachments.length}, time=${processingTimeMs}ms`);
 
     return res.status(200).json({
       success: true,
