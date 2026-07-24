@@ -103,7 +103,12 @@ router.get('/upload/:token/meta', getUploadMeta);
 router.post('/upload/:token', publicUploadLimiter, upload.single('file'), requireTurnstileForUpload, enforceUploadSecurity, uploadDocument);
 router.post('/upload/:token/request-pin', publicUploadLimiter, requestUploadPin);
 
-const { handleInboundEmail } = require('../controllers/inboundEmail.controller');
-router.post('/emails/inbound', handleInboundEmail);
+router.post('/emails/inbound', (req, res) => {
+  return res.status(410).json({
+    success: false,
+    code: 'FEATURE_DEPRECATED',
+    message: 'Inbound email webhooks are deprecated. Use secure upload portal URL (/upload/:token).',
+  });
+});
 
 module.exports = router;

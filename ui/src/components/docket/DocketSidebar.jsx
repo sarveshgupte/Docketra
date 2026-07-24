@@ -39,6 +39,8 @@ export const DocketSidebar = ({
   const attachmentFileInputRef = useRef(null);
   const [requestPanelOpen, setRequestPanelOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('upload');
+  const [requestClientMessage, setRequestClientMessage] = useState('');
+  const [requestInternalComment, setRequestInternalComment] = useState('');
   const [requestExpiry, setRequestExpiry] = useState('24h');
   const [requestRequirePin, setRequestRequirePin] = useState(false);
   const [requestSendEmail, setRequestSendEmail] = useState(true);
@@ -386,6 +388,34 @@ export const DocketSidebar = ({
                   </div>
                 </div>
 
+                <div className="border-t border-gray-100 pt-2 space-y-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                      Message for Client <span className="text-gray-400 font-normal">(Sent in email & portal)</span>
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="e.g. Please upload your updated PAN card and FY25 GST returns..."
+                      value={requestClientMessage}
+                      onChange={(event) => setRequestClientMessage(event.target.value)}
+                      className="w-full rounded-md border border-gray-300 p-1.5 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                      Internal Note <span className="text-gray-400 font-normal">(Logged on docket feed)</span>
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="e.g. Requested client GST return copy for verification..."
+                      value={requestInternalComment}
+                      onChange={(event) => setRequestInternalComment(event.target.value)}
+                      className="w-full rounded-md border border-gray-300 p-1.5 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between border-t border-gray-100 pt-2">
                   <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer">
                     <input
@@ -423,6 +453,8 @@ export const DocketSidebar = ({
                       requirePin: requestRequirePin,
                       expiry: requestExpiry,
                       sendEmail: requestSendEmail,
+                      clientMessage: requestClientMessage,
+                      internalComment: requestInternalComment,
                     })
                   }
                   disabled={uploadLinkGenerating}

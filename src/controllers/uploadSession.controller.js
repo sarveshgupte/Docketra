@@ -39,7 +39,7 @@ async function resolveClientEmail(caseData, firmId) {
 async function generateUploadLink(req, res) {
   try {
     const { caseId } = req.params;
-    const { requirePin = false, expiry = '24h', sendEmail: shouldSendEmail = false } = req.body;
+    const { requirePin = false, expiry = '24h', sendEmail: shouldSendEmail = false, clientMessage, internalComment, reopenAt } = req.body;
 
     const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
     const caseData = await CaseRepository.findByInternalId(
@@ -53,6 +53,18 @@ async function generateUploadLink(req, res) {
       return res.status(404).json({ success: false, message: 'Case not found' });
     }
 
+    const Comment = require('../models/Comment.model');
+    if (internalComment && typeof internalComment === 'string' && internalComment.trim()) {
+      await Comment.create({
+        caseId: caseData.caseId || caseData.caseNumber,
+        firmId: String(req.user.firmId),
+        text: internalComment.trim(),
+        createdBy: req.user.email,
+        createdByXID: req.user.xID,
+        createdByName: req.user.name,
+      });
+    }
+
     const expiryHours = expiry === '7d' ? 168 : 24;
 
     const result = await createUploadSession({
@@ -60,6 +72,10 @@ async function generateUploadLink(req, res) {
       firmId: String(req.user.firmId),
       requirePin,
       expiryHours,
+      clientMessage: clientMessage ? String(clientMessage).trim() : null,
+      senderName: req.user.name || req.user.email,
+      senderEmail: req.user.email,
+      reopenAt: reopenAt ? new Date(reopenAt) : null,
     });
 
     const reqHost = req.get('host');
@@ -70,19 +86,30 @@ async function generateUploadLink(req, res) {
     const clientEmail = await resolveClientEmail(caseData, req.user.firmId);
 
     if (shouldSendEmail && clientEmail) {
-      const expiresInLabel = expiry === '7d' ? '7 days' : '24 hours';
+      const senderName = req.user.name || 'Docketra Team';
+      const formattedMessage = clientMessage
+        ? `<div style="background: #f8fafc; border-left: 4px solid #0284c7; padding: 14px 18px; margin: 16px 0; border-radius: 4px;"><p style="margin: 0; color: #475569; font-size: 13px; font-weight: 600; text-transform: uppercase;">Message from ${senderName}:</p><p style="margin: 6px 0 0 0; color: #0f172a; font-size: 15px; line-height: 1.5;">${clientMessage}</p></div>`
+        : '';
+
       await sendEmail({
         to: clientEmail,
-        subject: 'Documents required',
+        subject: `Action Required: Documents needed for Docket ${caseData.caseNumber}`,
         html: `
-          <p>Please upload documents:</p>
-          <p><a href="${uploadLink}">${uploadLink}</a></p>
-          <p>Expires in ${expiresInLabel}</p>
+          <div style="font-family: Inter, system-ui, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #0f172a;">
+            <h2 style="margin-top: 0; color: #0f172a;">Document Request</h2>
+            <p>Dear Client,</p>
+            <p>Documents/information have been requested for <strong>Docket ${caseData.caseNumber}</strong> (${caseData.workType || 'Compliance'}).</p>
+            ${formattedMessage}
+            <p style="margin-top: 24px;">
+              <a href="${uploadLink}" style="background-color: #0284c7; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">Upload Documents & Respond &rarr;</a>
+            </p>
+            <p style="color: #64748b; font-size: 13px; margin-top: 24px;">Or copy and paste this secure link into your browser:<br/><a href="${uploadLink}" style="color: #0284c7;">${uploadLink}</a></p>
+          </div>
         `,
         text: [
-          'Please upload documents:',
-          uploadLink,
-          `Expires in ${expiresInLabel}`,
+          `Action Required: Documents needed for Docket ${caseData.caseNumber}`,
+          clientMessage ? `Message from ${senderName}: ${clientMessage}` : '',
+          `Upload Link: ${uploadLink}`,
         ].filter(Boolean).join('\n\n'),
       });
     }
@@ -231,13 +258,26 @@ async function getUploadMeta(req, res) {
 
     let checklist = [];
     let summary = null;
+    let docketDetails = null;
+
     if (!expired) {
-      const caseData = await CaseRepository.findByCaseId(session.firmId, session.docketId, 'admin');
+      const caseData = await CaseRepository.findByCaseId(session.firmId, session.docketId, 'admin', { includeClient: true });
+      const clientEmail = await resolveClientEmail(caseData, session.firmId);
+      
       const normalized = Array.isArray(caseData?.checklist)
         ? caseData.checklist.map((item, idx) => normalizeChecklistItem(item, idx))
         : [];
       checklist = toClientFacingChecklist(normalized);
       summary = getChecklistSummary(normalized);
+
+      docketDetails = {
+        docketNumber: caseData?.caseNumber || session.docketId,
+        workType: caseData?.workType || 'Compliance',
+        clientName: caseData?.client?.businessName || caseData?.client?.contactPersonName || 'Client',
+        senderName: session.senderName || 'Docketra Team',
+        clientMessage: session.clientMessage || null,
+        clientEmail,
+      };
     }
 
     return res.json({
@@ -247,6 +287,7 @@ async function getUploadMeta(req, res) {
         expired,
         checklist,
         summary,
+        docket: docketDetails,
       },
     });
   } catch (err) {
@@ -317,6 +358,20 @@ async function uploadDocument(req, res) {
       source: 'CLIENT_UPLOAD',
     });
 
+    // Write client comment & document upload to Docket Comment Feed
+    const Comment = require('../models/Comment.model');
+    const commentText = `Received client document: "${req.file.originalname}" via upload portal.` +
+      (comment && String(comment).trim() ? `\nClient Comment: "${String(comment).trim()}"` : '');
+
+    await Comment.create({
+      caseId: caseData.caseId || caseData.caseNumber,
+      firmId: String(caseData.firmId),
+      text: commentText,
+      createdBy: 'CLIENT',
+      createdByXID: 'CLIENT',
+      createdByName: 'Client (Upload Portal)',
+    });
+
     if (checklistItemId && Array.isArray(caseData?.checklist)) {
       const normalizedChecklist = caseData.checklist.map((item, idx) => normalizeChecklistItem(item, idx));
       const idx = normalizedChecklist.findIndex((item) => String(item?.id || '') === String(checklistItemId));
@@ -350,6 +405,10 @@ async function uploadDocument(req, res) {
       fileId: caseFile._id,
     });
 
+    // Early auto-unpend: If docket is currently pended, transition PEND -> ASSIGNED
+    const { reopenDocketFromClientEmail } = require('../services/docketWorkflow.service');
+    await reopenDocketFromClientEmail(caseData.caseId, caseData.firmId, session.senderEmail || 'Client Upload Portal');
+
     if (caseData?.assignedToXID) {
       await createNotification({
         firmId: String(caseData.firmId),
@@ -360,7 +419,7 @@ async function uploadDocument(req, res) {
       });
     }
 
-    return res.json({ success: true, message: 'File upload queued for processing' });
+    return res.json({ success: true, message: 'File upload processed and queued for storage' });
   } catch (err) {
     return res.status(400).json({ success: false, message: err.message });
   }
