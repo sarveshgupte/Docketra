@@ -15,7 +15,10 @@ import {
   usePlatformDeadlineRiskQuery,
   usePlatformWorkbasketCapacityQuery,
   usePlatformWorkloadIntelligenceQuery,
+  usePlatformExecutiveBriefQuery,
+  usePlatformClientRiskQuery,
 } from '../../hooks/usePlatformDataQueries';
+import { docketraIntelligenceApi } from '../../api/docketraIntelligence.api';
 
 const toNumber = (value) => {
   const numeric = Number(value);
