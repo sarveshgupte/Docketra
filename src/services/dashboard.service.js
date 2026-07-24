@@ -210,12 +210,14 @@ const getRiskBrief = async (firmId) => {
   const tenDaysAgo = new Date(now.getTime() - (10 * 24 * 60 * 60 * 1000));
   const activeStatuses = ['OPEN', 'IN_PROGRESS', 'PENDING', 'UNDER_REVIEW', 'SUBMITTED', 'REVIEWED'];
 
+  // ⚡ Bolt: Removed sequential database wait by moving stalePending count into Promise.all()
   const [
     atRiskEntities,
     waitingClient,
     awaitingApproval,
     overloadedAssigneesRaw,
     blockedTaxonomyRaw,
+    stalePending,
   ] = await Promise.all([
     Case.countDocuments({
       firmId: firmObjectId,
@@ -224,16 +226,16 @@ const getRiskBrief = async (firmId) => {
         { slaDueAt: { $lt: now } },
         { dueDate: { $lt: now } },
       ],
-    }),
+    }).exec(),
     Case.countDocuments({
       firmId: firmObjectId,
       status: 'PENDING',
       pendingReason: 'waiting_client',
-    }),
+    }).exec(),
     Case.countDocuments({
       firmId: firmObjectId,
       status: { $in: ['UNDER_REVIEW', 'SUBMITTED', 'REVIEWED'] },
-    }),
+    }).exec(),
     Case.aggregate([
       {
         $match: {
@@ -246,7 +248,7 @@ const getRiskBrief = async (firmId) => {
       { $match: { docketCount: { $gte: 10 } } },
       { $sort: { docketCount: -1 } },
       { $limit: 5 },
-    ]),
+    ]).exec(),
     Case.aggregate([
       {
         $match: {
@@ -272,14 +274,13 @@ const getRiskBrief = async (firmId) => {
         },
       },
       { $sort: { count: -1 } },
-    ]),
+    ]).exec(),
+    Case.countDocuments({
+      firmId: firmObjectId,
+      status: 'PENDING',
+      updatedAt: { $lt: tenDaysAgo },
+    }).exec(),
   ]);
-
-  const stalePending = await Case.countDocuments({
-    firmId: firmObjectId,
-    status: 'PENDING',
-    updatedAt: { $lt: tenDaysAgo },
-  });
 
   const blockedByType = blockedTaxonomyRaw.reduce((acc, item) => {
     const key = String(item?._id || 'other');
