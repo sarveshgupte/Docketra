@@ -30,7 +30,7 @@
 [![Gitleaks Action][gitleaks-badge]][gitleaks-action]
 [![GoDoc][go-docs-badge]][go-docs]
 [![GoReportCard][go-report-card-badge]][go-report-card]
-[![License][badge-license]][license]
+
 
 
 ### Join our Discord! [![Discord](https://img.shields.io/discord/1102689410522284044.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/8Hzbrnkr7E)
