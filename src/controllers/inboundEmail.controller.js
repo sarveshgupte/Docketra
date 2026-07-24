@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const Case = require('../models/Case.model');
 const Client = require('../models/Client.model');
 const Comment = require('../models/Comment.model');
@@ -34,7 +35,7 @@ const sendError = (res, statusCode, publicCode, debugCode, debugDetails = {}, re
 };
 
 const handleInboundEmail = async (req, res) => {
-  const reqId = req.id || req.requestId || Math.random().toString(36).substring(7);
+  const reqId = req.id || req.requestId || crypto.randomBytes(4).toString('hex');
   const startTime = Date.now();
 
   try {
@@ -241,7 +242,8 @@ const handleInboundEmail = async (req, res) => {
     });
 
   } catch (error) {
-    return sendError(res, 500, 'INTERNAL_SERVER_ERROR', 'EXCEPTION_CAUGHT', { message: error.message, stack: error.stack, reason: 'Failed to process inbound email.' }, reqId);
+    log.error('[INBOUND_EMAIL] EXCEPTION_CAUGHT:', error);
+    return sendError(res, 500, 'INTERNAL_SERVER_ERROR', 'EXCEPTION_CAUGHT', { reason: 'Failed to process inbound email.' }, reqId);
   }
 };
 
