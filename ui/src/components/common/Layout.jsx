@@ -705,7 +705,7 @@ export const Layout = ({ children, title, subtitle }) => {
         </div>
 
         {/* Navigation */}
-        <nav className="enterprise-sidebar__nav" aria-label="Firm operations navigation">
+        <nav id="enterprise-sidebar-nav" className="enterprise-sidebar__nav" aria-label="Firm operations navigation">
           {navSections.map((section) => (
             <SidebarSection
               key={section.id}
@@ -733,6 +733,8 @@ export const Layout = ({ children, title, subtitle }) => {
             className="enterprise-sidebar__footer-toggle"
             onClick={() => setSidebarCollapsed((value) => !value)}
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-expanded={!sidebarCollapsed}
+            aria-controls="enterprise-sidebar-nav"
             title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             <span className="enterprise-sidebar__footer-toggle-icon" aria-hidden="true">
@@ -787,6 +789,7 @@ export const Layout = ({ children, title, subtitle }) => {
             onClick={handleSidebarToggle}
             aria-label={isMobileViewport ? 'Toggle sidebar' : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
             aria-expanded={isMobileViewport ? mobileSidebarOpen : !sidebarCollapsed}
+            aria-controls="enterprise-sidebar-nav"
           >
             <IconMenu />
           </button>
