@@ -1228,7 +1228,7 @@ export const CaseDetailPage = () => {
 
   if (loading || (activeDocketId === caseId && isDocketLoading && !caseData)) {
     return (
-      <PlatformShell title="Docket details">
+      <PlatformShell title={null}>
         <Loading message="Loading docket..." />
       </PlatformShell>
     );
@@ -1249,7 +1249,7 @@ export const CaseDetailPage = () => {
 
   if (!caseData) {
     return (
-      <PlatformShell title="Docket details">
+      <PlatformShell title={null}>
         <div className="container">
           <Card>
             {loadError ? <p>{loadError}</p> : null}
@@ -1319,7 +1319,7 @@ export const CaseDetailPage = () => {
 
   return (
     <PlatformShell
-      title="Docket details"
+      title={null}
       actions={(
         <Button type="button" variant="primary" onClick={() => navigate(ROUTES.CREATE_CASE(firmSlug))}>
           + Create Docket
