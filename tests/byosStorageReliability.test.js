@@ -1,5 +1,5 @@
-process.env.STORAGE_TOKEN_SECRET = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-process.env.JWT_SECRET = 'test_jwt_secret_key_12345678901234567890';
+process.env.STORAGE_TOKEN_SECRET = 'ci-placeholder-storage-token-secret-32-chars';
+process.env.JWT_SECRET = 'ci-placeholder-jwt-secret-key-32-chars';
 process.env.GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'mock_client_id';
 process.env.GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || 'mock_client_secret';
 process.env.GOOGLE_OAUTH_REDIRECT_URI = process.env.GOOGLE_OAUTH_REDIRECT_URI || 'http://localhost:3000/api/storage/google/callback';
