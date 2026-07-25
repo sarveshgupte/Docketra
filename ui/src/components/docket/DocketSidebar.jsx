@@ -199,11 +199,13 @@ export const DocketSidebar = ({
           || caseInfo?.businessName
           || caseInfo?.client?.businessName
           || '—';
-        const clientStatus = cfsData?.status
+        const rawStatus = cfsData?.status
           || cfsData?.clientStatus
+          || cfsData?.client?.status
           || caseInfo?.clientStatus
           || caseInfo?.client?.status
-          || null;
+          || 'active';
+        const clientStatus = String(rawStatus).charAt(0).toUpperCase() + String(rawStatus).slice(1).toLowerCase();
         const notes = cfsData?.description || cfsData?.notes || '';
 
         if (cfsLoading) {
@@ -230,7 +232,7 @@ export const DocketSidebar = ({
           <div className="space-y-4 text-sm text-gray-700">
           <div><span className="font-semibold text-gray-900">Client Name:</span> {clientName}</div>
           <div><span className="font-semibold text-gray-900">Client ID:</span> {clientId}</div>
-          <div><span className="font-semibold text-gray-900">Client Status:</span> {clientStatus || 'Unavailable'}</div>
+          <div><span className="font-semibold text-gray-900">Client Status:</span> {clientStatus}</div>
           <div>
             <span className="mb-1 block font-semibold text-gray-900">Notes</span>
             <textarea
