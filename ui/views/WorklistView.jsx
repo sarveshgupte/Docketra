@@ -251,59 +251,86 @@ export function WorklistView({
 
   const columns = useMemo(() => [
     {
-      key: 'clientId',
-      header: 'Client ID',
-      sortable: true,
-      render: (row) => row.clientId || '—',
-    },
-    {
-      key: 'clientName',
-      header: 'Client Name',
-      sortable: true,
-      contentClassName: 'truncate max-w-[220px]',
-      render: (row) => row.clientName || '—',
-    },
-    {
-      key: 'category',
-      header: 'Category',
-      sortable: true,
-      render: (row) => row.category || '—',
-    },
-    {
-      key: 'subcategory',
-      header: 'Sub Category',
-      sortable: true,
-      render: (row) => row.subcategory || '—',
-    },
-    {
       key: 'caseId',
-      header: 'Docket#',
+      header: 'Docket #',
       sortable: true,
       render: (row) => (
-        <div className="font-semibold text-gray-900">
+        <div className="font-semibold text-indigo-600 hover:text-indigo-800">
           {formatDocketNumber(row.docketNumber || row.caseId || '—')}
         </div>
       ),
     },
     {
+      key: 'clientName',
+      header: 'Client',
+      sortable: true,
+      contentClassName: 'max-w-[200px]',
+      render: (row) => (
+        <div>
+          <div className="font-semibold text-gray-900 truncate">{row.clientName || '—'}</div>
+          {row.clientId && row.clientId !== '—' && (
+            <div className="text-[11px] text-gray-500 font-mono mt-0.5">{row.clientId}</div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'category',
+      header: 'Category / Subcategory',
+      sortable: true,
+      render: (row) => (
+        <div>
+          <div className="font-medium text-gray-900">{row.category || '—'}</div>
+          {row.subcategory && row.subcategory !== '—' && (
+            <div className="text-[11px] text-gray-500 mt-0.5">{row.subcategory}</div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'lifecycle',
+      header: 'Status',
+      sortable: true,
+      render: (row) => {
+        const isPending = isPendingDocket(row);
+        const lifecycle = row.lifecycle || row.status || 'Active';
+        return (
+          <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-md ${
+            isPending ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+            lifecycle === 'RESOLVED' || lifecycle === 'CLOSED' || lifecycle === 'FILED' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+            'bg-indigo-50 text-indigo-700 border border-indigo-200'
+          }`}>
+            {isPending ? 'Pending' : lifecycle}
+          </span>
+        );
+      },
+    },
+    {
       key: 'dueDate',
       header: 'Due Date',
       sortable: true,
-      render: (row) => formatDate(row.dueDate),
+      render: (row) => {
+        const formatted = formatDate(row.dueDate);
+        const isOverdue = row.dueDate && new Date(row.dueDate).getTime() < Date.now();
+        return (
+          <div>
+            <div className={`text-sm ${isOverdue ? 'font-semibold text-red-600' : 'text-gray-700'}`}>
+              {formatted}
+            </div>
+            {isOverdue && (
+              <span className="text-[10px] uppercase font-bold text-red-500">Overdue</span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'updatedAt',
-      header: 'Last Updated Date',
+      header: 'Last Updated',
       sortable: true,
       render: (row) => formatDate(row.updatedAt),
     },
-    {
-      key: 'createdAt',
-      header: 'Docket Create Date',
-      sortable: true,
-      render: (row) => formatDate(row.createdAt),
-    },
-  ], []);
+  ], [isPendingDocket]);
 
   if (loading) {
     return (
