@@ -929,6 +929,20 @@ export const CaseDetailPage = () => {
     }
   }, [caseId, showError]);
 
+  const loadCaseHistory = useCallback(async () => {
+    if (!caseId) return;
+    try {
+      const response = await caseApi.getCaseHistory(caseId);
+      const rawEvents = response?.data?.history || response?.data?.events || response?.data || [];
+      const historyList = Array.isArray(rawEvents) ? rawEvents : [];
+      if (historyList.length > 0) {
+        setCaseData((prev) => mergeCaseData(prev, { history: historyList }, { source: 'history-fetch' }));
+      }
+    } catch (_err) {
+      // Best-effort history refresh
+    }
+  }, [caseId, mergeCaseData]);
+
   const openSidebar = (type) => {
     try {
       setSidebarType((previousType) => {
@@ -939,6 +953,8 @@ export const CaseDetailPage = () => {
         setSidebarOpen(true);
         if (type === 'cfs') {
           void loadClientFactSheet();
+        } else if (type === 'history') {
+          void loadCaseHistory();
         }
         return type;
       });
