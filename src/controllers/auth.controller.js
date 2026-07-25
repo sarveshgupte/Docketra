@@ -3866,45 +3866,49 @@ const sendOtpEndpoint = async (req, res) => authOtpServiceFacade.sendOtpEndpoint
 
 const verifyOtpEndpoint = async (req, res) => authOtpServiceFacade.verifyOtpEndpoint(req, res);
 
-
-
 const findWorkspaceByXid = async (req, res) => {
-  const xid = String(req.body?.xid || '').trim().toUpperCase();
-  if (!/^X\d{6}$/.test(xid)) {
+  try {
+    const xid = String(req.body?.xid || '').trim().toUpperCase();
+    if (!/^X\d{6}$/.test(xid)) {
+      return res.status(200).json({ success: true, data: { workspaces: [] } });
+    }
+
+    const users = await User.find({
+      $or: [{ xID: xid }, { xid }],
+      role: { $ne: 'SUPER_ADMIN' },
+      isActive: true,
+    }).select('firmId').lean();
+
+    const firmRefs = [...new Set(users.map((u) => normalizeMongoId(u.firmId)).filter(Boolean))];
+    if (!firmRefs.length) return res.status(200).json({ success: true, data: { workspaces: [] } });
+
+    const objectIdRefs = firmRefs.filter((value) => mongoose.Types.ObjectId.isValid(value));
+    const stringRefs = firmRefs.filter((value) => !mongoose.Types.ObjectId.isValid(value)).map((value) => String(value).toUpperCase());
+
+    const firms = await Firm.find({
+      $and: [
+        { $or: [{ status: 'active' }, { isActive: true }] },
+        {
+          $or: [
+            objectIdRefs.length ? { _id: { $in: objectIdRefs } } : null,
+            stringRefs.length ? { firmId: { $in: stringRefs } } : null,
+          ].filter(Boolean),
+        },
+      ],
+    }).select('firmSlug name').lean();
+
+    const workspaces = firms
+      .map((firm) => ({
+        firmSlug: String(firm.firmSlug || '').trim(),
+        firmName: String(firm.name || firm.firmName || '').trim() || 'Workspace',
+      }))
+      .filter((firm) => firm.firmSlug);
+
+    return res.status(200).json({ success: true, data: { workspaces } });
+  } catch (err) {
+    log.warn('[findWorkspaceByXid] lookup failed', { error: err?.message });
     return res.status(200).json({ success: true, data: { workspaces: [] } });
   }
-
-  const users = await User.find({
-    $or: [{ xID: xid }, { xid }],
-    role: { $ne: 'SUPER_ADMIN' },
-    isActive: true,
-  }).select('firmId').lean();
-
-  const firmRefs = [...new Set(users.map((u) => normalizeMongoId(u.firmId)).filter(Boolean))];
-  if (!firmRefs.length) return res.status(200).json({ success: true, data: { workspaces: [] } });
-
-  const objectIdRefs = firmRefs.filter((value) => mongoose.Types.ObjectId.isValid(value));
-  const stringRefs = firmRefs.filter((value) => !mongoose.Types.ObjectId.isValid(value)).map((value) => String(value).toUpperCase());
-
-  const firms = await Firm.find({
-    $and: [
-      { $or: [{ status: 'active' }, { isActive: true }] },
-      {
-        $or: [
-          objectIdRefs.length ? { _id: { $in: objectIdRefs } } : null,
-          stringRefs.length ? { firmId: { $in: stringRefs } } : null,
-        ].filter(Boolean),
-      },
-    ],
-  }).select('firmSlug name').lean();
-    const workspaces = firms
-    .map((firm) => ({
-      firmSlug: String(firm.firmSlug || '').trim(),
-      firmName: String(firm.name || firm.firmName || '').trim() || 'Workspace',
-    }))
-    .filter((firm) => firm.firmSlug);
-
-  return res.status(200).json({ success: true, data: { workspaces } });
 };
 
 const GOOGLE_AUTH_STATE_TTL_MS = 10 * 60 * 1000;
@@ -4212,7 +4216,7 @@ module.exports = {
   signupResend: wrapWriteHandler(signupResend),
   sendOtpEndpoint: wrapWriteHandler(sendOtpEndpoint),
   verifyOtpEndpoint: wrapWriteHandler(verifyOtpEndpoint),
-  findWorkspaceByXid: wrapWriteHandler(findWorkspaceByXid),
+  findWorkspaceByXid,
   startGoogleAuth,
   googleAuthCallback,
   exchangeGoogleAuth: wrapWriteHandler(exchangeGoogleAuth),
