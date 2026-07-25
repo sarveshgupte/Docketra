@@ -9,7 +9,7 @@ const read = (relativePath) => fs.readFileSync(path.resolve(workspaceRoot, relat
 
 const migratedPages = [
   { file: 'src/pages/CasesPage.jsx', expectedTitle: 'title="Dockets"' },
-  { file: 'src/pages/CaseDetailPage.jsx', expectedTitle: 'title={formatDocketId(caseInfo?.caseId || caseId)}' },
+  { file: 'src/pages/CaseDetailPage.jsx', expectedTitle: 'title="Docket details"' },
   { file: 'src/pages/ClientsPage.jsx', expectedTitle: 'title="Clients"' },
   { file: 'src/pages/ClientWorkspacePage.jsx', expectedTitle: 'title={client?.businessName || "Client workspace"}' },
   { file: 'src/pages/AdminPage.jsx', expectedTitle: 'title={isWorkSettingsContext ? "Category Management" : "Users & Team"}' },

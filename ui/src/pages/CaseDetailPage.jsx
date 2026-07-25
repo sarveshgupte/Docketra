@@ -1303,7 +1303,7 @@ export const CaseDetailPage = () => {
 
   return (
     <PlatformShell
-      title={formatDocketId(caseInfo?.caseId || caseId)}
+      title="Docket details"
       actions={(
         <Button type="button" variant="primary" onClick={() => navigate(ROUTES.CREATE_CASE(firmSlug))}>
           + Create Docket
