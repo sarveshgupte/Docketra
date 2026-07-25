@@ -3,7 +3,7 @@ const { applyRouteValidation } = require('../middleware/requestValidation.middle
 const routeSchemas = require('../schemas/case.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
-const { requireRole } = require('../middleware/rbac.middleware');
+const { requireRole, requirePrimaryAdmin } = require('../middleware/rbac.middleware');
 const {
   userReadLimiter,
   userWriteLimiter,
@@ -138,9 +138,9 @@ const {
  */
 
 // ── Bulk upload (must come before /:caseId to avoid param matching) ──────────
-router.get('/bulk/template', authorizeFirmPermission('CASE_CREATE'), userReadLimiter, generateDocketImportTemplate);
-router.post('/bulk/preview', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, previewDocketBulkUpload);
-router.post('/bulk/upload', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, uploadDocketBulk);
+router.get('/bulk/template', requirePrimaryAdmin, authorizeFirmPermission('CASE_CREATE'), userReadLimiter, generateDocketImportTemplate);
+router.post('/bulk/preview', requirePrimaryAdmin, authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, previewDocketBulkUpload);
+router.post('/bulk/upload', requirePrimaryAdmin, authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, uploadDocketBulk);
 
 // ── Collection-level reads ────────────────────────────────────────────────────
 router.get('/', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, applyClientAccessFilter, getCases);

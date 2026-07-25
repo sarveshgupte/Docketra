@@ -712,6 +712,7 @@ export const CasesPage = () => {
               showPerformance={showPerformance}
               onTogglePerformance={() => setShowPerformance((v) => !v)}
               isAdmin={isAdmin}
+              isPrimaryAdmin={user?.role === 'PRIMARY_ADMIN' || Boolean(user?.isPrimaryAdmin)}
               onOpenBulkUpload={() => setShowDocketBulkUpload(true)}
               onCreateDocket={handleCreateCase}
               exportLabel="Export Dockets"
