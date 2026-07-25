@@ -26,7 +26,6 @@ export const CasesHeaderActions = ({
         {showPerformance ? 'Hide Performance View' : 'Show Performance View'}
       </Button>
     )}
-    {isPrimaryAdmin && <Button variant="outline" onClick={onOpenBulkUpload}>Bulk Upload</Button>}
     {isAdmin && <Button variant="primary" onClick={onCreateDocket}>Create Docket</Button>}
   </div>
 );

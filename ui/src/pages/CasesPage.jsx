@@ -871,12 +871,6 @@ export const CasesPage = () => {
         </SectionCard>
       </div>
       <AuditTimelineDrawer isOpen={Boolean(timelineCaseId)} caseId={timelineCaseId} onClose={() => setTimelineCaseId(null)} />
-      <DocketBulkUploadModal
-        isOpen={showDocketBulkUpload}
-        onClose={() => setShowDocketBulkUpload(false)}
-        showToast={showToast}
-        onUploaded={refreshCases}
-      />
       {confirmModal && (
         <ActionConfirmModal
           isOpen={true}
