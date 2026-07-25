@@ -258,6 +258,7 @@ export const FirmLoginPage = () => {
       if (!window.turnstile || !turnstileContainerRef.current || turnstileWidgetIdRef.current) return;
       turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
         sitekey: turnstileSiteKey,
+        size: 'invisible',
         callback: (token) => {
           const nextToken = String(token || '');
           setTurnstileToken(nextToken);
@@ -377,10 +378,12 @@ export const FirmLoginPage = () => {
       return;
     }
 
-    const effectiveTurnstileToken = isTurnstileConfigured ? getEffectiveTurnstileToken() : '';
+    let effectiveTurnstileToken = isTurnstileConfigured ? getEffectiveTurnstileToken() : '';
     if (isTurnstileConfigured && !effectiveTurnstileToken) {
-      setError('Please complete Turnstile verification before continuing.');
-      return;
+      if (turnstileWidgetIdRef.current != null && window.turnstile?.execute) {
+        try { window.turnstile.execute(turnstileWidgetIdRef.current); } catch (_) {}
+      }
+      effectiveTurnstileToken = getEffectiveTurnstileToken();
     }
 
     setLoading(true);
@@ -580,8 +583,8 @@ export const FirmLoginPage = () => {
             />
             {otpHint && <p className="find-workspace-page__security-note">{otpHint}</p>}
             <p className="find-workspace-page__security-note">Tip: You can paste the full OTP directly.</p>
-            {isTurnstileConfigured && <div ref={turnstileContainerRef} className="min-h-[65px] my-2" />}
-            <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || !otpFormValid || (isTurnstileConfigured && !getEffectiveTurnstileToken())}>{loading ? 'Verifying...' : 'Submit & Sign in'}</Button>
+            {isTurnstileConfigured && <div ref={turnstileContainerRef} style={{ display: 'none' }} />}
+            <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || !otpFormValid}>{loading ? 'Verifying...' : 'Submit & Sign in'}</Button>
             <Button type="button" variant="outline" fullWidth disabled={loading || cooldown > 0} onClick={handleResendOtp}>
               {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
             </Button>
