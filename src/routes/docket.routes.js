@@ -80,7 +80,7 @@ const {
 } = require('../controllers/docketAi.controller');
 
 const { getTimeline } = require('../controllers/docketActivity.controller');
-const { previewDocketBulkUpload, uploadDocketBulk } = require('../controllers/docketBulkUpload.controller');
+const { generateDocketImportTemplate, previewDocketBulkUpload, uploadDocketBulk } = require('../controllers/docketBulkUpload.controller');
 
 
 const {
@@ -138,6 +138,7 @@ const {
  */
 
 // ── Bulk upload (must come before /:caseId to avoid param matching) ──────────
+router.get('/bulk/template', authorizeFirmPermission('CASE_CREATE'), userReadLimiter, generateDocketImportTemplate);
 router.post('/bulk/preview', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, previewDocketBulkUpload);
 router.post('/bulk/upload', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, uploadDocketBulk);
 

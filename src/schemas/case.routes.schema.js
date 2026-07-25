@@ -65,6 +65,9 @@ const cloneCaseBody = z.object({
 }).strict();
 
 module.exports = {
+  'GET /bulk/template': {
+    query: z.object({}).passthrough(),
+  },
   'POST /bulk/preview': {
     body: z.object({
       rows: z.array(z.record(z.string(), z.string())).max(1000).optional(),
