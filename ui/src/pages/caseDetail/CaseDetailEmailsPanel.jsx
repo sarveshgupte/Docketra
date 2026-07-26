@@ -178,7 +178,7 @@ export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefresh
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <Button onClick={() => setShowSendModal(true)} variant="primary">
-            ✉ Send Email to Client
+            ✉ Request Documents & Send Email
           </Button>
         </div>
       </div>

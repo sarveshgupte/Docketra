@@ -273,242 +273,70 @@ export const DocketSidebar = ({
 
         return (
           <div className="space-y-4 flex flex-col h-full">
-            {/* Premium Segmented Pill Selector */}
-            <div className="flex p-1 bg-gray-100 rounded-lg">
+            {/* Clean Upload Form */}
+            <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3">
+              <input
+                ref={attachmentFileInputRef}
+                type="file"
+                className="hidden"
+                onChange={(event) => onAttachmentFileChange?.(event.target.files?.[0] || null)}
+                disabled={uploadingAttachment}
+              />
+              
+              {/* Clean Clickable Upload Dropzone Box */}
+              <div
+                onClick={() => !uploadingAttachment && attachmentFileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all ${
+                  selectedAttachmentFile
+                    ? 'border-blue-500 bg-blue-50/20'
+                    : 'border-gray-300 hover:border-blue-400 bg-gray-50/50 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex flex-col items-center justify-center">
+                  <svg
+                    className={`w-6 h-6 mb-1.5 ${
+                      selectedAttachmentFile ? 'text-blue-500 animate-pulse' : 'text-gray-400'
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                    />
+                  </svg>
+                  <p className="text-xs font-semibold text-gray-700 max-w-[200px] truncate">
+                    {selectedAttachmentFile ? selectedAttachmentFile.name : 'Click to select or drag a file'}
+                  </p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">
+                    {selectedAttachmentFile ? 'File attached successfully' : 'Compulsory comment required'}
+                  </p>
+                </div>
+              </div>
+
+              <textarea
+                className="w-full rounded-md border border-gray-300 p-2 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                rows={2}
+                value={attachmentComment}
+                onChange={(event) => onAttachmentCommentChange?.(event.target.value)}
+                placeholder="Add compulsory comment for this attachment"
+                disabled={uploadingAttachment}
+              />
+
               <button
                 type="button"
-                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                  activeTab === 'upload'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-900'
-                }`}
-                onClick={() => setActiveTab('upload')}
+                className="w-full inline-flex items-center justify-center rounded-md bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={onUploadAttachment}
+                disabled={uploadingAttachment || !selectedAttachmentFile || !attachmentComment?.trim()}
               >
-                Attach File
-              </button>
-              <button
-                type="button"
-                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                  activeTab === 'link'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-900'
-                }`}
-                onClick={() => setActiveTab('link')}
-              >
-                Secure Request Link
+                {uploadingAttachment
+                  ? `Uploading${uploadProgress ? ` ${uploadProgress}%` : '...'}`
+                  : 'Upload Attachment'}
               </button>
             </div>
-
-            {/* Tab contents */}
-            {activeTab === 'upload' ? (
-              <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3">
-                <input
-                  ref={attachmentFileInputRef}
-                  type="file"
-                  className="hidden"
-                  onChange={(event) => onAttachmentFileChange?.(event.target.files?.[0] || null)}
-                  disabled={uploadingAttachment}
-                />
-                
-                {/* Clean Clickable Upload Dropzone Box */}
-                <div
-                  onClick={() => !uploadingAttachment && attachmentFileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all ${
-                    selectedAttachmentFile
-                      ? 'border-blue-500 bg-blue-50/20'
-                      : 'border-gray-300 hover:border-blue-400 bg-gray-50/50 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex flex-col items-center justify-center">
-                    <svg
-                      className={`w-6 h-6 mb-1.5 ${
-                        selectedAttachmentFile ? 'text-blue-500 animate-pulse' : 'text-gray-400'
-                      }`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                      />
-                    </svg>
-                    <p className="text-xs font-semibold text-gray-700 max-w-[200px] truncate">
-                      {selectedAttachmentFile ? selectedAttachmentFile.name : 'Click to select or drag a file'}
-                    </p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">
-                      {selectedAttachmentFile ? 'File attached successfully' : 'Compulsory comment required'}
-                    </p>
-                  </div>
-                </div>
-
-                <textarea
-                  className="w-full rounded-md border border-gray-300 p-2 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  rows={2}
-                  value={attachmentComment}
-                  onChange={(event) => onAttachmentCommentChange?.(event.target.value)}
-                  placeholder="Add compulsory comment for this attachment"
-                  disabled={uploadingAttachment}
-                />
-
-                <button
-                  type="button"
-                  className="w-full inline-flex items-center justify-center rounded-md bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-                  onClick={onUploadAttachment}
-                  disabled={uploadingAttachment || !selectedAttachmentFile || !attachmentComment?.trim()}
-                >
-                  {uploadingAttachment
-                    ? `Uploading${uploadProgress ? ` ${uploadProgress}%` : '...'}`
-                    : 'Upload Attachment'}
-                </button>
-              </div>
-            ) : (
-              <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Link Expiry</span>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {['24h', '48h', '7d', '14d', '30d'].map((exp) => (
-                      <label key={exp} className="flex items-center gap-1 text-xs text-gray-700 cursor-pointer">
-                        <input
-                          type="radio"
-                          checked={requestExpiry === exp}
-                          onChange={() => setRequestExpiry(exp)}
-                          className="text-blue-600 focus:ring-blue-500"
-                        />
-                        <span>{exp}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-100 pt-2 space-y-2">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-700 mb-1">
-                      Message for Client <span className="text-gray-400 font-normal">(Sent in email & portal)</span>
-                    </label>
-                    <textarea
-                      rows={2}
-                      placeholder="e.g. Please upload your updated PAN card and FY25 GST returns..."
-                      value={requestClientMessage}
-                      onChange={(event) => setRequestClientMessage(event.target.value)}
-                      className="w-full rounded-md border border-gray-300 p-1.5 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-700 mb-1">
-                      Internal Note <span className="text-gray-400 font-normal">(Logged on docket feed)</span>
-                    </label>
-                    <textarea
-                      rows={2}
-                      placeholder="e.g. Requested client GST return copy for verification..."
-                      value={requestInternalComment}
-                      onChange={(event) => setRequestInternalComment(event.target.value)}
-                      className="w-full rounded-md border border-gray-300 p-1.5 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between border-t border-gray-100 pt-2">
-                  <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={requestRequirePin}
-                      onChange={(event) => setRequestRequirePin(event.target.checked)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span>Require 4-digit PIN verification</span>
-                  </label>
-                </div>
-
-                <div className="border-t border-gray-100 pt-2">
-                  <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={requestSendEmail}
-                      onChange={(event) => setRequestSendEmail(event.target.checked)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span>Send link via email to client</span>
-                  </label>
-                  {requestSendEmail && (
-                    <p className="mt-1 text-[10px] text-gray-500 ml-6 truncate font-medium">
-                      To: {clientEmail || 'No client email available'}
-                    </p>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  className="w-full inline-flex items-center justify-center rounded-md bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-                  onClick={() =>
-                    onGenerateUploadLink?.({
-                      requirePin: requestRequirePin,
-                      expiry: requestExpiry,
-                      sendEmail: requestSendEmail,
-                      clientMessage: requestClientMessage,
-                      internalComment: requestInternalComment,
-                    })
-                  }
-                  disabled={uploadLinkGenerating}
-                >
-                  {uploadLinkGenerating ? 'Generating…' : 'Generate Link'}
-                </button>
-
-                {uploadLinkResult?.link ? (
-                  <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50/20 p-2.5 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold text-blue-800">Secure link ready</p>
-                      {uploadLinkResult.expiresAt ? (
-                        <p className="text-[9px] text-gray-500">
-                          Exp: {new Date(uploadLinkResult.expiresAt).toLocaleDateString()}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        readOnly
-                        value={uploadLinkResult.link}
-                        className="flex-1 rounded-md border border-gray-200 bg-white p-1 text-[10px] font-mono text-gray-600 select-all"
-                      />
-                      <button
-                        type="button"
-                        className="rounded-md border border-gray-300 bg-white px-2 py-1 text-[10px] font-semibold text-gray-700 hover:bg-gray-50 whitespace-nowrap active:bg-gray-100 transition-colors"
-                        onClick={handleCopyLink}
-                      >
-                        {copyStatus === 'success' ? 'Copied' : 'Copy'}
-                      </button>
-                    </div>
-
-                    {uploadLinkResult.pin ? (
-                      <div className="flex items-center justify-between bg-white/60 rounded px-2 py-1 border border-gray-100">
-                        <span className="text-[10px] font-medium text-gray-500">Verification PIN:</span>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold text-gray-800">
-                            {showGeneratedPin ? uploadLinkResult.pin : '••••'}
-                          </span>
-                          <button
-                            type="button"
-                            className="text-[10px] font-semibold text-blue-600 hover:text-blue-800"
-                            onClick={() => setShowGeneratedPin((visible) => !visible)}
-                          >
-                            {showGeneratedPin ? 'Hide' : 'Show'}
-                          </button>
-                        </div>
-                      </div>
-                    ) : uploadLinkResult.requiresPin ? (
-                      <div className="flex items-center justify-between bg-white/60 rounded px-2 py-1 border border-gray-100">
-                        <span className="text-[10px] font-medium text-gray-500">Verification PIN:</span>
-                        <span className="text-[10px] font-semibold text-gray-500 italic">Protected (Active)</span>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            )}
 
             {/* Scrollable attachments list at the bottom */}
             <div className="border-t border-gray-200 pt-3 flex flex-col flex-1 min-h-[160px]">
