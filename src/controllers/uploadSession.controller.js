@@ -93,7 +93,32 @@ async function generateUploadLink(req, res) {
       const senderName = req.user.name || firmName;
       const validityText = expiryHours >= 168 ? `${Math.round(expiryHours / 24)} Days` : `${expiryHours} Hours`;
 
-      const emailSubject = customSubject || `Action Required: Documents needed for ${caseData.title || caseData.workType || 'your request'}`;
+      function getDocketDisplayTitle(caseData) {
+        const rawTitle = String(caseData?.title || '').trim();
+        if (rawTitle && rawTitle.toLowerCase() !== 'title' && rawTitle.toLowerCase() !== 'untitled docket') {
+          return rawTitle;
+        }
+        const category = caseData?.category || caseData?.caseCategory || caseData?.categoryName;
+        const subCategory = caseData?.subCategory || caseData?.caseSubCategory || caseData?.subCategoryName;
+        const workType = caseData?.workType || caseData?.serviceType;
+
+        if (category && subCategory) {
+          return `${category} - ${subCategory}`;
+        }
+        if (subCategory) {
+          return subCategory;
+        }
+        if (category) {
+          return category;
+        }
+        if (workType) {
+          return workType;
+        }
+        return '';
+      }
+
+      const displayTitle = getDocketDisplayTitle(caseData);
+      const emailSubject = customSubject || `Action Required: Documents needed for ${displayTitle || 'your request'}`;
 
       let htmlContent = '';
       let textContent = '';

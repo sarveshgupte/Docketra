@@ -28,6 +28,30 @@ function calculateDueDateStr(validity) {
   });
 }
 
+function getDocketDisplayTitle(caseInfo) {
+  const rawTitle = String(caseInfo?.title || '').trim();
+  if (rawTitle && rawTitle.toLowerCase() !== 'title' && rawTitle.toLowerCase() !== 'untitled docket') {
+    return rawTitle;
+  }
+  const category = caseInfo?.category || caseInfo?.caseCategory || caseInfo?.categoryName;
+  const subCategory = caseInfo?.subCategory || caseInfo?.caseSubCategory || caseInfo?.subCategoryName;
+  const workType = caseInfo?.workType || caseInfo?.serviceType;
+
+  if (category && subCategory) {
+    return `${category} - ${subCategory}`;
+  }
+  if (subCategory) {
+    return subCategory;
+  }
+  if (category) {
+    return category;
+  }
+  if (workType) {
+    return workType;
+  }
+  return '';
+}
+
 export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefreshCase }) => {
   const { showSuccess, showError } = useToast();
   const { user } = useAuth();
@@ -54,7 +78,8 @@ export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefresh
   }, [clientEmail]);
 
   useEffect(() => {
-    const titleText = caseInfo?.title ? `"${caseInfo.title}"` : 'your request';
+    const displayTitle = getDocketDisplayTitle(caseInfo);
+    const titleText = displayTitle ? `"${displayTitle}"` : 'your request';
     const dueDateStr = calculateDueDateStr(linkValidity);
     const validityLabels = {
       '24h': '24 Hours',
@@ -65,7 +90,7 @@ export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefresh
     };
     const validityText = validityLabels[linkValidity] || '7 Days';
 
-    setSendSubject(`Request for Documents${caseInfo?.title ? ` - ${caseInfo.title}` : ''}`);
+    setSendSubject(`Request for Documents${displayTitle ? ` - ${displayTitle}` : ''}`);
     setSendBody(
       `Dear Client,\n\nWe require documents to proceed with ${titleText}.\n\nPlease access your client upload link to submit requested files and message our team directly.\n\nLink Validity: ${validityText} (Valid until: ${dueDateStr})\n\nBest regards,\n${firmName}`
     );
