@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { emailCaptureApi } from '../../api/emailCapture.api';
+import { caseApi } from '../../api/case.api';
 import { Button } from '../../components/common/Button';
 import { Textarea } from '../../components/common/Textarea';
 import { Modal } from '../../components/common/Modal';
@@ -38,6 +39,7 @@ export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefresh
   // Compose Form states
   const [sendTo, setSendTo] = useState(clientEmail && clientEmail !== '—' ? clientEmail : '');
   const [linkValidity, setLinkValidity] = useState('7d');
+  const [requirePin, setRequirePin] = useState(false);
   const [sendSubject, setSendSubject] = useState('');
   const [sendBody, setSendBody] = useState('');
 
@@ -88,7 +90,7 @@ export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefresh
   }, [loadEmails]);
 
   const handleSendEmail = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!sendTo || !sendSubject || !sendBody) {
       showError('Recipient Email, Subject, and Email Body are required.');
       return;
@@ -98,19 +100,45 @@ export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefresh
     try {
       const payload = {
         to: sendTo,
-        subject: sendSubject,
-        body: sendBody,
+        customSubject: sendSubject,
+        customBody: sendBody,
+        sendEmail: true,
+        expiry: linkValidity,
+        requirePin: requirePin,
       };
 
-      const res = await emailCaptureApi.sendClientEmail(caseId, payload);
+      const res = await caseApi.generateUploadLink(caseId, payload);
       if (res.success) {
-        showSuccess('Email successfully sent to client!');
+        showSuccess('Document request email with secure upload link sent to client!');
         setShowSendModal(false);
         loadEmails();
         onRefreshCase?.();
       }
     } catch (err) {
       showError('Failed to send email: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleCopyLinkOnly = async () => {
+    setSending(true);
+    try {
+      const payload = {
+        sendEmail: false,
+        expiry: linkValidity,
+        requirePin: requirePin,
+      };
+
+      const res = await caseApi.generateUploadLink(caseId, payload);
+      if (res.success && res.data?.link) {
+        await navigator.clipboard.writeText(res.data.link);
+        showSuccess('Secure upload link copied to clipboard!');
+        setShowSendModal(false);
+        onRefreshCase?.();
+      }
+    } catch (err) {
+      showError('Failed to generate link: ' + (err.response?.data?.message || err.message));
     } finally {
       setSending(false);
     }
@@ -212,16 +240,33 @@ export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefresh
             <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Subject *</label>
             <input type="text" className="neo-input w-full text-sm mt-1" value={sendSubject} onChange={e => setSendSubject(e.target.value)} required />
           </div>
+          <div className="flex items-center gap-2 pt-1">
+            <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={requirePin}
+                onChange={(e) => setRequirePin(e.target.checked)}
+                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span>Require 4-digit PIN verification for upload</span>
+            </label>
+          </div>
+
           <div>
             <Textarea label="Email Content (Body) *" value={sendBody} onChange={e => setSendBody(e.target.value)} rows={6} required />
           </div>
-          <div style={{ display: 'flex', justifyContent: 'end', gap: '8px', marginTop: '8px' }}>
-            <Button type="button" variant="outline" onClick={() => setShowSendModal(false)} disabled={sending}>
-              Cancel
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+            <Button type="button" variant="outline" onClick={handleCopyLinkOnly} disabled={sending}>
+              📋 Copy Link Only
             </Button>
-            <Button type="submit" variant="primary" disabled={sending}>
-              {sending ? 'Sending email…' : 'Send Email'}
-            </Button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Button type="button" variant="outline" onClick={() => setShowSendModal(false)} disabled={sending}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" disabled={sending}>
+                {sending ? 'Sending...' : '✉ Send Email & Generate Link'}
+              </Button>
+            </div>
           </div>
         </form>
       </Modal>

@@ -368,25 +368,18 @@ export const DocketSidebar = ({
               <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Link Expiry</span>
-                  <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
-                      <input
-                        type="radio"
-                        checked={requestExpiry === '24h'}
-                        onChange={() => setRequestExpiry('24h')}
-                        className="text-blue-600 focus:ring-blue-500"
-                      />
-                      <span>24h</span>
-                    </label>
-                    <label className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
-                      <input
-                        type="radio"
-                        checked={requestExpiry === '7d'}
-                        onChange={() => setRequestExpiry('7d')}
-                        className="text-blue-600 focus:ring-blue-500"
-                      />
-                      <span>7d</span>
-                    </label>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {['24h', '48h', '7d', '14d', '30d'].map((exp) => (
+                      <label key={exp} className="flex items-center gap-1 text-xs text-gray-700 cursor-pointer">
+                        <input
+                          type="radio"
+                          checked={requestExpiry === exp}
+                          onChange={() => setRequestExpiry(exp)}
+                          className="text-blue-600 focus:ring-blue-500"
+                        />
+                        <span>{exp}</span>
+                      </label>
+                    ))}
                   </div>
                 </div>
 
