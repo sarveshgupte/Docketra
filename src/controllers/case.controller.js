@@ -1351,7 +1351,7 @@ const sendEmailToClient = async (req, res) => {
     await Comment.create({
       caseId: caseData.caseId || caseData.caseNumber,
       firmId: String(firmId),
-      text: `Sent document request email to client (${recipientEmail}): "${subject}"\n\nReply-To: ${uniqueEmail}`,
+      text: `Sent document request email to client (${recipientEmail}): "${subject}"`,
       createdBy: req.user.email,
       createdByXID: req.user.xID,
       createdByName: req.user.name,

@@ -186,6 +186,18 @@ async function generateUploadLink(req, res) {
         ownerXID: req.user.xID || null,
         createdByXID: req.user.xID || 'SYSTEM',
       });
+
+      // Log clean comment on docket feed if no internalComment was specified
+      if (!internalComment || typeof internalComment !== 'string' || !internalComment.trim()) {
+        await Comment.create({
+          caseId: caseData.caseId || caseData.caseNumber,
+          firmId: String(req.user.firmId),
+          text: `Sent document request email to client (${clientEmail}): "${emailSubject}"`,
+          createdBy: req.user.email,
+          createdByXID: req.user.xID,
+          createdByName: req.user.name,
+        });
+      }
     }
 
     return res.json({
