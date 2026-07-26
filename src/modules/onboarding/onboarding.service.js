@@ -45,17 +45,23 @@ const generateUniqueSlug = async (companyName, session) => {
     throw err;
   }
 
-  for (let index = 0; index < 20; index += 1) {
-    const candidate = index === 0 ? baseSlug : `${baseSlug}-${index + 1}`;
-    const existing = await Client.findOne({ firmSlug: candidate, isDefaultClient: true }).session(session);
-    if (!existing) {
-      // Also check legacy Firm slugs for backward compat
-      let Firm;
-      try { Firm = require('../../models/Firm.model'); } catch (_) { /* no Firm model */ }
-      if (Firm) {
-        const existingFirm = await Firm.findOne({ firmSlug: candidate }).session(session);
-        if (existingFirm) continue;
-      }
+  const candidates = Array.from({ length: 20 }, (_, index) => (index === 0 ? baseSlug : `${baseSlug}-${index + 1}`));
+
+  let Firm;
+  try { Firm = require('../../models/Firm.model'); } catch (_) { /* no Firm model */ }
+
+  const [existingClients, existingFirms] = await Promise.all([
+    Client.find({ firmSlug: { $in: candidates }, isDefaultClient: true }).select('firmSlug').session(session).lean(),
+    Firm ? Firm.find({ firmSlug: { $in: candidates } }).select('firmSlug').session(session).lean() : Promise.resolve([])
+  ]);
+
+  const usedSlugs = new Set([
+    ...existingClients.map((client) => client.firmSlug),
+    ...existingFirms.map((firm) => firm.firmSlug)
+  ]);
+
+  for (const candidate of candidates) {
+    if (!usedSlugs.has(candidate)) {
       return candidate;
     }
   }
