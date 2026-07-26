@@ -1333,6 +1333,7 @@ const sendEmailToClient = async (req, res) => {
     const inboundDomain = process.env.INBOUND_EMAIL_DOMAIN || 'docketra.in';
     const uniqueEmail = `docket-${caseData.caseInternalId}-${signature}@${inboundDomain}`;
 
+    const firmName = req.user?.firmName || req.user?.firm?.name || 'Our Firm';
     const emailService = require('../services/email.service');
     
     const emailResult = await emailService.sendEmailNow({
@@ -1342,7 +1343,7 @@ const sendEmailToClient = async (req, res) => {
       text: body,
       replyTo: {
         email: uniqueEmail,
-        name: `${req.user.name || req.user.email} (via Docketra)`,
+        name: `${req.user.name || req.user.email} (${firmName})`,
       },
     });
 

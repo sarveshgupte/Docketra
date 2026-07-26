@@ -86,30 +86,36 @@ async function generateUploadLink(req, res) {
     const clientEmail = await resolveClientEmail(caseData, req.user.firmId);
 
     if (shouldSendEmail && clientEmail) {
-      const senderName = req.user.name || 'Docketra Team';
+      const firmName = req.user.firmName || req.user.firm?.name || caseData.firmName || 'Our Firm';
+      const senderName = req.user.name || firmName;
       const formattedMessage = clientMessage
         ? `<div style="background: #f8fafc; border-left: 4px solid #0284c7; padding: 14px 18px; margin: 16px 0; border-radius: 4px;"><p style="margin: 0; color: #475569; font-size: 13px; font-weight: 600; text-transform: uppercase;">Message from ${senderName}:</p><p style="margin: 6px 0 0 0; color: #0f172a; font-size: 15px; line-height: 1.5;">${clientMessage}</p></div>`
         : '';
+      const validityText = expiryHours >= 168 ? `${Math.round(expiryHours / 24)} Days` : `${expiryHours} Hours`;
 
       await sendEmail({
         to: clientEmail,
-        subject: `Action Required: Documents needed for Docket ${caseData.caseNumber}`,
+        subject: `Action Required: Documents needed for ${caseData.title || caseData.workType || 'your request'}`,
         html: `
           <div style="font-family: Inter, system-ui, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #0f172a;">
             <h2 style="margin-top: 0; color: #0f172a;">Document Request</h2>
             <p>Dear Client,</p>
-            <p>Documents/information have been requested for <strong>Docket ${caseData.caseNumber}</strong> (${caseData.workType || 'Compliance'}).</p>
+            <p>Documents/information have been requested for <strong>${caseData.title || caseData.workType || 'your request'}</strong>.</p>
             ${formattedMessage}
             <p style="margin-top: 24px;">
               <a href="${uploadLink}" style="background-color: #0284c7; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">Upload Documents & Respond &rarr;</a>
             </p>
-            <p style="color: #64748b; font-size: 13px; margin-top: 24px;">Or copy and paste this secure link into your browser:<br/><a href="${uploadLink}" style="color: #0284c7;">${uploadLink}</a></p>
+            <p style="color: #64748b; font-size: 13px; margin-top: 16px;">Link Validity: ${validityText}</p>
+            <p style="color: #64748b; font-size: 13px; margin-top: 12px;">Or copy and paste this secure link into your browser:<br/><a href="${uploadLink}" style="color: #0284c7;">${uploadLink}</a></p>
+            <p style="margin-top: 24px; color: #0f172a;">Best regards,<br/><strong>${firmName}</strong></p>
           </div>
         `,
         text: [
-          `Action Required: Documents needed for Docket ${caseData.caseNumber}`,
+          `Action Required: Documents needed for ${caseData.title || caseData.workType || 'your request'}`,
           clientMessage ? `Message from ${senderName}: ${clientMessage}` : '',
           `Upload Link: ${uploadLink}`,
+          `Link Validity: ${validityText}`,
+          `Best regards,\n${firmName}`,
         ].filter(Boolean).join('\n\n'),
       });
     }

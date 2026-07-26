@@ -1,13 +1,35 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { emailCaptureApi } from '../../api/emailCapture.api';
 import { Button } from '../../components/common/Button';
 import { Textarea } from '../../components/common/Textarea';
 import { Modal } from '../../components/common/Modal';
 import { formatDateTime } from '../../utils/formatDateTime';
 import { useToast } from '../../hooks/useToast';
+import { useAuth } from '../../hooks/useAuth';
+import { getFirmConfig } from '../../utils/firmConfig';
+
+function calculateDueDateStr(validity) {
+  const daysMap = {
+    '24h': 1,
+    '48h': 2,
+    '7d': 7,
+    '14d': 14,
+    '30d': 30,
+  };
+  const days = daysMap[validity] || 7;
+  const targetDate = new Date();
+  targetDate.setDate(targetDate.getDate() + days);
+
+  return targetDate.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
 
 export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefreshCase }) => {
   const { showSuccess, showError } = useToast();
+  const { user } = useAuth();
   const [emails, setEmailList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showSendModal, setShowSendModal] = useState(false);
@@ -15,8 +37,13 @@ export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefresh
 
   // Compose Form states
   const [sendTo, setSendTo] = useState(clientEmail && clientEmail !== '—' ? clientEmail : '');
+  const [linkValidity, setLinkValidity] = useState('7d');
   const [sendSubject, setSendSubject] = useState('');
   const [sendBody, setSendBody] = useState('');
+
+  const firmName = useMemo(() => {
+    return user?.firmName || user?.firm?.name || caseInfo?.firmName || getFirmConfig()?.name || 'Our Firm';
+  }, [user, caseInfo]);
 
   useEffect(() => {
     if (clientEmail && clientEmail !== '—') {
@@ -25,12 +52,22 @@ export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefresh
   }, [clientEmail]);
 
   useEffect(() => {
-    const displayNum = caseInfo?.caseNumber || caseId;
-    setSendSubject(`Request for Documents - Docket ${displayNum}`);
+    const titleText = caseInfo?.title ? `"${caseInfo.title}"` : 'your request';
+    const dueDateStr = calculateDueDateStr(linkValidity);
+    const validityLabels = {
+      '24h': '24 Hours',
+      '48h': '48 Hours',
+      '7d': '7 Days',
+      '14d': '14 Days',
+      '30d': '30 Days',
+    };
+    const validityText = validityLabels[linkValidity] || '7 Days';
+
+    setSendSubject(`Request for Documents${caseInfo?.title ? ` - ${caseInfo.title}` : ''}`);
     setSendBody(
-      `Dear Client,\n\nWe require documents to proceed with docket ${displayNum}.\n\nPlease access your client upload link to submit requested files and message our team directly.\n\nBest regards,\nDocketra Support`
+      `Dear Client,\n\nWe require documents to proceed with ${titleText}.\n\nPlease access your client upload link to submit requested files and message our team directly.\n\nLink Validity: ${validityText} (Valid until: ${dueDateStr})\n\nBest regards,\n${firmName}`
     );
-  }, [caseId, caseInfo]);
+  }, [caseId, caseInfo, firmName, linkValidity]);
 
   const loadEmails = useCallback(async () => {
     setLoading(true);
@@ -156,6 +193,20 @@ export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefresh
           <div>
             <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>To (Client Email) *</label>
             <input type="email" className="neo-input w-full text-sm mt-1" value={sendTo} onChange={e => setSendTo(e.target.value)} placeholder="e.g. client@company.com" required />
+          </div>
+          <div>
+            <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Link Validity / Due Date *</label>
+            <select
+              className="neo-input w-full text-sm mt-1 bg-white"
+              value={linkValidity}
+              onChange={(e) => setLinkValidity(e.target.value)}
+            >
+              <option value="24h">24 Hours (Due in 1 day)</option>
+              <option value="48h">48 Hours (Due in 2 days)</option>
+              <option value="7d">7 Days (Due in 1 week)</option>
+              <option value="14d">14 Days (Due in 2 weeks)</option>
+              <option value="30d">30 Days (Due in 1 month)</option>
+            </select>
           </div>
           <div>
             <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Subject *</label>
