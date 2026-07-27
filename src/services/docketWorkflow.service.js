@@ -1192,93 +1192,142 @@ async function processExpiredPendedDockets() {
     reopenAt: { $lte: now },
   });
 
+  if (!expiredSessions.length) return { processedCount: 0 };
+
+  // ⚡ Bolt Performance Optimization:
+  // Instead of querying dockets and clients sequentially inside the loop, we pre-fetch
+  // all necessary documents using an $in query, turning an O(N) operation into O(1).
+  const docketIds = [...new Set(expiredSessions.map(s => String(s.docketId)))];
+  const firmIds = [...new Set(expiredSessions.map(s => String(s.firmId)))];
+
+  const dockets = await Case.find({
+    firmId: { $in: firmIds },
+    $or: [{ caseId: { $in: docketIds } }, { caseNumber: { $in: docketIds } }]
+  }).lean();
+
+  // Create a fast lookup map for dockets
+  const docketMap = new Map();
+  dockets.forEach(d => {
+    docketMap.set(`${d.firmId}_${d.caseId}`, d);
+    docketMap.set(`${d.firmId}_${d.caseNumber}`, d);
+  });
+
+  // Collect client IDs that need email fetching
+  const clientQueryPairs = [];
+  const clientQuerySet = new Set();
+  expiredSessions.forEach(session => {
+    const docket = docketMap.get(`${session.firmId}_${session.docketId}`);
+    if (docket && !session.senderEmail && docket.clientId) {
+      const key = `${docket.firmId}_${docket.clientId}`;
+      if (!clientQuerySet.has(key)) {
+        clientQuerySet.add(key);
+        clientQueryPairs.push({ clientId: docket.clientId, firmId: docket.firmId });
+      }
+    }
+  });
+
+  const clientMap = new Map();
+  if (clientQueryPairs.length > 0) {
+    const clients = await Client.find({
+      $or: clientQueryPairs
+    }).lean();
+    clients.forEach(c => {
+      clientMap.set(`${c.firmId}_${c.clientId}`, c);
+    });
+  }
+
   let processedCount = 0;
 
-  for (const session of expiredSessions) {
-    try {
-      const docket = await Case.findOne({
-        firmId: String(session.firmId),
-        $or: [{ caseId: String(session.docketId) }, { caseNumber: String(session.docketId) }],
-      });
+  // ⚡ Bolt Performance Optimization:
+  // Process mutations concurrently in batches to avoid connection pool exhaustion
+  // while still gaining parallel execution speed.
+  const batchSize = 50;
+  for (let i = 0; i < expiredSessions.length; i += batchSize) {
+    const batch = expiredSessions.slice(i, i + batchSize);
 
-      if (!docket) {
-        await UploadSession.updateOne({ _id: session._id }, { $set: { isActive: false } });
-        continue;
+    await Promise.allSettled(batch.map(async (session) => {
+      try {
+        const docket = docketMap.get(`${session.firmId}_${session.docketId}`);
+
+        if (!docket) {
+          await UploadSession.updateOne({ _id: session._id }, { $set: { isActive: false } });
+          return;
+        }
+
+        let clientEmail = session.senderEmail;
+        if (!clientEmail && docket.clientId) {
+          const client = clientMap.get(`${docket.firmId}_${docket.clientId}`);
+          clientEmail = client?.businessEmail || client?.contactPersonEmailAddress || '';
+        }
+
+        // If reminder hasn't been sent yet, send automated reminder email
+        if (!session.reminderSent && clientEmail) {
+          const baseUrl = (process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:5173').replace(/\/+$/, '');
+          const uploadLink = `${baseUrl}/upload/${session.token}`;
+
+          await sendEmail({
+            to: clientEmail,
+            subject: `Reminder: Action required for Docket ${docket.caseNumber}`,
+            html: `
+              <p>Dear Client,</p>
+              <p>This is a reminder that information/documents are requested for <strong>Docket ${docket.caseNumber}</strong> (${docket.workType || 'Compliance'}).</p>
+              ${session.clientMessage ? `<blockquote style="background: #f8fafc; border-left: 4px solid #0284c7; padding: 12px; margin: 16px 0;"><strong>Message from Team:</strong><br/>${session.clientMessage}</blockquote>` : ''}
+              <p><a href="${uploadLink}" style="background-color: #0284c7; color: #ffffff; padding: 10px 18px; text-decoration: none; border-radius: 6px; display: inline-block;">Upload Documents & Respond &rarr;</a></p>
+            `,
+            text: `Reminder: Action required for Docket ${docket.caseNumber}. Please upload requested documents: ${uploadLink}`,
+          });
+
+          // Add automated system comment to the docket comment feed
+          await Comment.create({
+            caseId: docket.caseId || docket.caseNumber,
+            firmId: String(docket.firmId),
+            text: `Automated reminder email sent to client (${clientEmail}) for document request.`,
+            createdBy: 'SYSTEM',
+            createdByXID: 'SYSTEM',
+            createdByName: 'System Scheduler',
+          });
+        }
+
+        // Unpend docket if in PENDING status
+        if (docket.status === toPersistenceState(DocketStatus.PENDING)) {
+          const hasAssignee = docket.assignedToXID && String(docket.assignedToXID).trim() !== '';
+          const toState = hasAssignee ? DocketStatus.IN_PROGRESS : DocketStatus.AVAILABLE;
+          const persistenceState = toPersistenceState(toState);
+
+          await Case.updateOne(
+            { _id: docket._id },
+            {
+              $set: {
+                lifecycle: DocketLifecycle.ACTIVE,
+                status: persistenceState,
+                state: hasAssignee ? 'IN_PROGRESS' : 'IN_WB',
+                queueType: hasAssignee ? 'PERSONAL' : 'GLOBAL',
+                reopenAt: null,
+                pendingUntil: null,
+                lastActionAt: now,
+                lastActionByXID: 'SYSTEM',
+                updatedAt: now,
+              },
+            }
+          );
+
+          await writeAudit({
+            docketId: docket.caseId,
+            fromState: DocketStatus.PENDING,
+            toState: toState,
+            userId: 'SYSTEM',
+            comment: `Auto reopened on scheduled date (${now.toISOString().split('T')[0]})`,
+            action: 'PENDING_REOPEN',
+            firmId: docket.firmId,
+          });
+        }
+
+        await UploadSession.updateOne({ _id: session._id }, { $set: { isActive: false, reminderSent: true } });
+        processedCount += 1;
+      } catch (err) {
+        console.error(`Failed to process expired pended session ${session._id}:`, err);
       }
-
-      let clientEmail = session.senderEmail;
-      if (!clientEmail && docket.clientId) {
-        const client = await Client.findOne({ clientId: docket.clientId, firmId: docket.firmId });
-        clientEmail = client?.businessEmail || client?.contactPersonEmailAddress || '';
-      }
-
-      // If reminder hasn't been sent yet, send automated reminder email
-      if (!session.reminderSent && clientEmail) {
-        const baseUrl = (process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:5173').replace(/\/+$/, '');
-        const uploadLink = `${baseUrl}/upload/${session.token}`;
-
-        await sendEmail({
-          to: clientEmail,
-          subject: `Reminder: Action required for Docket ${docket.caseNumber}`,
-          html: `
-            <p>Dear Client,</p>
-            <p>This is a reminder that information/documents are requested for <strong>Docket ${docket.caseNumber}</strong> (${docket.workType || 'Compliance'}).</p>
-            ${session.clientMessage ? `<blockquote style="background: #f8fafc; border-left: 4px solid #0284c7; padding: 12px; margin: 16px 0;"><strong>Message from Team:</strong><br/>${session.clientMessage}</blockquote>` : ''}
-            <p><a href="${uploadLink}" style="background-color: #0284c7; color: #ffffff; padding: 10px 18px; text-decoration: none; border-radius: 6px; display: inline-block;">Upload Documents & Respond &rarr;</a></p>
-          `,
-          text: `Reminder: Action required for Docket ${docket.caseNumber}. Please upload requested documents: ${uploadLink}`,
-        });
-
-        // Add automated system comment to the docket comment feed
-        await Comment.create({
-          caseId: docket.caseId || docket.caseNumber,
-          firmId: String(docket.firmId),
-          text: `Automated reminder email sent to client (${clientEmail}) for document request.`,
-          createdBy: 'SYSTEM',
-          createdByXID: 'SYSTEM',
-          createdByName: 'System Scheduler',
-        });
-      }
-
-      // Unpend docket if in PENDING status
-      if (docket.status === toPersistenceState(DocketStatus.PENDING)) {
-        const hasAssignee = docket.assignedToXID && String(docket.assignedToXID).trim() !== '';
-        const toState = hasAssignee ? DocketStatus.IN_PROGRESS : DocketStatus.AVAILABLE;
-        const persistenceState = toPersistenceState(toState);
-
-        await Case.updateOne(
-          { _id: docket._id },
-          {
-            $set: {
-              lifecycle: DocketLifecycle.ACTIVE,
-              status: persistenceState,
-              state: hasAssignee ? 'IN_PROGRESS' : 'IN_WB',
-              queueType: hasAssignee ? 'PERSONAL' : 'GLOBAL',
-              reopenAt: null,
-              pendingUntil: null,
-              lastActionAt: now,
-              lastActionByXID: 'SYSTEM',
-              updatedAt: now,
-            },
-          }
-        );
-
-        await writeAudit({
-          docketId: docket.caseId,
-          fromState: DocketStatus.PENDING,
-          toState: toState,
-          userId: 'SYSTEM',
-          comment: `Auto reopened on scheduled date (${now.toISOString().split('T')[0]})`,
-          action: 'PENDING_REOPEN',
-          firmId: docket.firmId,
-        });
-      }
-
-      await UploadSession.updateOne({ _id: session._id }, { $set: { isActive: false, reminderSent: true } });
-      processedCount += 1;
-    } catch (err) {
-      console.error(`Failed to process expired pended session ${session._id}:`, err);
-    }
+    }));
   }
 
   return { processedCount };
