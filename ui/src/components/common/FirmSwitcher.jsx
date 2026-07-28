@@ -83,7 +83,7 @@ export const FirmSwitcher = ({ onFirmSwitch }) => {
                 onClick={() => setShowDropdown(false)}
                 aria-label="Close firm switcher"
               >
-                ×
+                <span aria-hidden="true">×</span>
               </button>
             </div>
             <div className="firm-switcher__mode-selector">
