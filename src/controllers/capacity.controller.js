@@ -326,14 +326,22 @@ const bulkReassignDockets = async (req, res) => {
     const successCases = [];
     const failedCases = [];
 
-    // Reassign each case atomically
-    for (const caseId of caseIds) {
-      try {
-        await reassignCase(String(firmId), caseId, assignedToXID, req.user);
-        successCases.push(caseId);
-      } catch (err) {
-        failedCases.push({ caseId, error: err.message });
-      }
+    // Reassign each case atomically, processing in batches of 50
+    const batchSize = 50;
+    for (let i = 0; i < caseIds.length; i += batchSize) {
+      const batch = caseIds.slice(i, i + batchSize);
+      const results = await Promise.allSettled(
+        batch.map(caseId => reassignCase(String(firmId), caseId, assignedToXID, req.user))
+      );
+
+      results.forEach((result, index) => {
+        const caseId = batch[index];
+        if (result.status === 'fulfilled') {
+          successCases.push(caseId);
+        } else {
+          failedCases.push({ caseId, error: result.reason.message || 'Unknown error' });
+        }
+      });
     }
 
     return res.json({
