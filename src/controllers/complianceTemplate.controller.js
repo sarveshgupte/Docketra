@@ -42,12 +42,16 @@ const createComplianceTemplate = async (req, res) => {
   try {
     assertFirmContext(req);
     if (!ensureAdminAccess(req, res)) return;
-    const payload = {
-      ...req.body,
-      firmId: String(req.user.firmId),
-      createdByXID: req.user?.xID || req.user?.xid || null,
-      updatedByXID: req.user?.xID || req.user?.xid || null,
-    };
+    const payload = { ...req.body };
+    delete payload._id;
+    delete payload.firmId;
+    delete payload.createdByXID;
+    delete payload.updatedByXID;
+
+    payload.firmId = String(req.user.firmId);
+    payload.createdByXID = req.user?.xID || req.user?.xid || null;
+    payload.updatedByXID = req.user?.xID || req.user?.xid || null;
+
     const created = await ComplianceObligationTemplate.create(payload);
     return res.status(201).json({ success: true, data: created });
   } catch (error) {
@@ -59,11 +63,18 @@ const updateComplianceTemplate = async (req, res) => {
   try {
     assertFirmContext(req);
     if (!ensureAdminAccess(req, res)) return;
+
+    const updatePayload = { ...req.body };
+    delete updatePayload._id;
+    delete updatePayload.firmId;
+    delete updatePayload.createdByXID;
+    delete updatePayload.updatedByXID;
+
     const updated = await ComplianceObligationTemplate.findOneAndUpdate(
       { _id: req.params.templateId, firmId: String(req.user.firmId) },
       {
         $set: {
-          ...req.body,
+          ...updatePayload,
           updatedByXID: req.user?.xID || req.user?.xid || null,
         },
       },
