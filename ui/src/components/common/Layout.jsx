@@ -857,7 +857,10 @@ export const Layout = ({ children, title, subtitle }) => {
                     <span className="enterprise-header__notification-count">{unreadCount} unread</span>
                   </div>
                   <div className="enterprise-header__notification-section-actions">
-                    <button type="button" className="enterprise-header__notification-text-btn" onClick={markAllRead}>Mark all read</button>
+                    <button type="button" className="enterprise-header__notification-text-btn" onClick={markAllRead}>
+                      <span aria-hidden="true">Mark all read</span>
+                      <span className="sr-only">Mark all notifications as read</span>
+                    </button>
                     {currentFirmSlug ? (
                       <button
                         type="button"
