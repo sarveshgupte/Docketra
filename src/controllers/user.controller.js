@@ -68,12 +68,16 @@ const getUsers = async (req, res) => {
     if (isActive !== undefined) query.isActive = isActive === 'true';
     
     // PERFORMANCE: Execute independent queries concurrently
+    // ⚡ Bolt Performance Optimization: Added .lean() to User.find()
+    // 🎯 Why: Bypasses Mongoose document hydration, returning plain objects directly.
+    // 📊 Impact: Significantly reduces memory overhead and CPU usage when fetching arrays of users.
     const [users, total] = await Promise.all([
       User.find(query)
         .select('-passwordHash -passwordSetupTokenHash -passwordHistory')
         .limit(parseInt(limit))
         .skip((parseInt(page) - 1) * parseInt(limit))
-        .sort({ createdAt: -1 }),
+        .sort({ createdAt: -1 })
+        .lean(),
       User.countDocuments(query)
     ]);
     
