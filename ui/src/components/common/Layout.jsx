@@ -783,6 +783,7 @@ export const Layout = ({ children, title, subtitle }) => {
         <header className="enterprise-header" role="banner">
           {/* Mobile sidebar toggle */}
           <button
+          type="button"
             className="enterprise-header__sidebar-toggle"
             onClick={handleSidebarToggle}
             aria-label={isMobileViewport ? 'Toggle sidebar' : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
@@ -813,6 +814,7 @@ export const Layout = ({ children, title, subtitle }) => {
                 </div>
                 {searchResults.cases.slice(0, 3).map((item) => (
                   <button
+                    type="button"
                     key={`case-${item.caseId}`}
                     className="dropdown-item"
                     onClick={() => openDocket({ caseId: item.caseId, navigate, to: safeRoute(ROUTES.CASE_DETAIL(currentFirmSlug, item.caseId), ROUTES.TASK_MANAGER(currentFirmSlug)) })}
@@ -826,6 +828,7 @@ export const Layout = ({ children, title, subtitle }) => {
 
           {/* Create Docket CTA */}
           <button
+            type="button"
             className="btn btn-primary enterprise-header__new-case"
             onClick={() => navigate(safeRoute(ROUTES.CREATE_CASE(currentFirmSlug), ROUTES.TASK_MANAGER(currentFirmSlug)))}
             aria-label="Create new docket"
@@ -839,6 +842,7 @@ export const Layout = ({ children, title, subtitle }) => {
             {/* Notification Bell */}
             <div className="dropdown" ref={notificationDropdownRef}>
               <button
+                type="button"
                 className="enterprise-header__icon-btn"
                 aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : 'Notifications'}
                 title={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
@@ -957,7 +961,7 @@ export const Layout = ({ children, title, subtitle }) => {
                   >
                     Profile
                   </Link>
-                  <button className="dropdown-item" role="menuitem" onClick={handleLogout}>
+                  <button type="button" className="dropdown-item" role="menuitem" onClick={handleLogout}>
                     Logout
                   </button>
                 </div>
