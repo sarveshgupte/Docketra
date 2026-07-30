@@ -40,6 +40,10 @@
 **Vulnerability:** Raw error messages (`error.message`) were being directly exposed to clients in API error responses (e.g., in `src/controllers/user.controller.js`).
 **Learning:** Exposing raw internal error details to the client can leak sensitive system information, configuration details, or underlying infrastructure state, which can be leveraged by attackers.
 **Prevention:** Always log the full error details server-side using the internal logger (`log.error`) and return generic, safe error messages to the client (e.g., "Unable to load profile").
+## 2026-06-22 - Fix Mass Assignment / IDOR via User-Provided Audit Fields
+**Vulnerability:** Several controllers (`src/controllers/user.controller.js`, `src/middleware/caseLock.middleware.js`) accepted and blindly trusted identity fields (`createdBy`, `updatedBy`, `performedBy`) directly from `req.body`.
+**Learning:** This is a classic Mass Assignment / Parameter Tampering vulnerability, allowing malicious actors to spoof actions as other users, tamper with audit trails, and bypass internal business constraints.
+**Prevention:** Always derive the identity of the actor securely on the server-side from the authenticated user context object (e.g., `req.user?._id`, `req.user?.email`).
 
 ## 2026-06-21 - Prevent NoSQL Injection / ReDoS in Regex Query
 **Vulnerability:** Unescaped user input (`name`) was being passed directly into a regular expression constructor in a MongoDB `findOne` query in `src/controllers/documentItem.controller.js`.
