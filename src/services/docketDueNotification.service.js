@@ -150,9 +150,16 @@ async function processFirmCalendarReminders({ now = new Date() } = {}) {
   let scanned = 0;
   let created = 0;
 
+  // ⚡ Bolt: Prevent N+1 Query on Firm lookup
+  // 💡 What: Pre-fetch firm settings for all calendar entries outside of the loop.
+  // 🎯 Why: Replaced iterative O(N) `Firm.findById` queries inside the loop with a single O(1) query using `$in` to drastically improve performance and reduce DB roundtrips.
+  const uniqueFirmIds = [...new Set(entries.map((entry) => String(entry.firmId)))];
+  const firms = await Firm.find({ _id: { $in: uniqueFirmIds } }).select('_id settings.firm').lean();
+  const firmMap = new Map(firms.map((f) => [String(f._id), f]));
+
   for (const entry of entries) {
     scanned += 1;
-    const firm = await Firm.findById(entry.firmId).select('settings.firm').lean();
+    const firm = firmMap.get(String(entry.firmId));
     const firmSettings = normalizeFirmSettings(firm?.settings?.firm || {});
     const leadDays = Number.isFinite(Number(entry.reminderDaysBefore))
       ? Number(entry.reminderDaysBefore)
