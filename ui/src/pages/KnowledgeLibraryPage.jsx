@@ -620,7 +620,7 @@ const KnowledgeItemDetailDrawer = ({ item, onEdit, onArchive, onClose }) => {
           aria-label="Close detail drawer"
           style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', color: '#b0aea8', flexShrink: 0 }}
         >
-          ✕
+          <span aria-hidden="true">✕</span>
         </button>
       </div>
 
@@ -1606,7 +1606,7 @@ export const KnowledgeLibraryPage = () => {
                 aria-label="Close form panel"
                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', color: '#b0aea8' }}
               >
-                ✕
+                <span aria-hidden="true">✕</span>
               </button>
             </div>
             <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto', background: '#f7f7f5' }}>
@@ -1653,7 +1653,7 @@ export const KnowledgeLibraryPage = () => {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
                 <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Knowledge Item Detail</h2>
-                <button type="button" onClick={closeDrawer} aria-label="Close detail drawer" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', color: '#b0aea8' }}>✕</button>
+                <button type="button" onClick={closeDrawer} aria-label="Close detail drawer" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', color: '#b0aea8' }}><span aria-hidden="true">✕</span></button>
               </div>
               <p className="inline-notice inline-notice--error" role="alert">{drawerError}</p>
               <button type="button" onClick={closeDrawer} style={{ marginTop: '1rem' }}>Close</button>
