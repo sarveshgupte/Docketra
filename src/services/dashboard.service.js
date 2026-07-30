@@ -210,12 +210,16 @@ const getRiskBrief = async (firmId) => {
   const tenDaysAgo = new Date(now.getTime() - (10 * 24 * 60 * 60 * 1000));
   const activeStatuses = ['OPEN', 'IN_PROGRESS', 'PENDING', 'UNDER_REVIEW', 'SUBMITTED', 'REVIEWED'];
 
+  // ⚡ Bolt Performance Optimization:
+  // 💡 What: Moved the sequential stalePending countDocuments query into the Promise.all block.
+  // 🎯 Why: This allows all independent database queries for the risk brief to execute concurrently, reducing overall latency.
   const [
     atRiskEntities,
     waitingClient,
     awaitingApproval,
     overloadedAssigneesRaw,
     blockedTaxonomyRaw,
+    stalePending,
   ] = await Promise.all([
     Case.countDocuments({
       firmId: firmObjectId,
@@ -273,13 +277,12 @@ const getRiskBrief = async (firmId) => {
       },
       { $sort: { count: -1 } },
     ]),
+    Case.countDocuments({
+      firmId: firmObjectId,
+      status: 'PENDING',
+      updatedAt: { $lt: tenDaysAgo },
+    }),
   ]);
-
-  const stalePending = await Case.countDocuments({
-    firmId: firmObjectId,
-    status: 'PENDING',
-    updatedAt: { $lt: tenDaysAgo },
-  });
 
   const blockedByType = blockedTaxonomyRaw.reduce((acc, item) => {
     const key = String(item?._id || 'other');
