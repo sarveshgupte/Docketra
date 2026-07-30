@@ -1,5 +1,6 @@
 const Team = require('../models/Team.model');
 const User = require('../models/User.model');
+const log = require('../utils/log');
 const { assertPrimaryAdmin } = require('../utils/hierarchy.utils');
 const { logAuditEvent } = require('../services/adminActionAudit.service');
 const { createPrimaryWithQc, isValidObjectId } = require('../services/workbasketGuardrails.service');
@@ -25,7 +26,8 @@ const createTeam = async (req, res) => {
     const { primary: team } = await createPrimaryWithQc({ firmId: req.user.firmId, name, managerId });
     return res.status(201).json({ success: true, data: team });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message || 'Failed to create team' });
+    log.error('[TEAM] Failed to create team', { firmId: req.user?.firmId, userXID: req.user?.xID, req, error });
+    return res.status(400).json({ success: false, message: 'Failed to create team' });
   }
 };
 
@@ -78,7 +80,8 @@ const updateTeam = async (req, res) => {
     });
     return res.json({ success: true, data: team });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message || 'Failed to update team' });
+    log.error('[TEAM] Failed to update team', { firmId: req.user?.firmId, userXID: req.user?.xID, req, error });
+    return res.status(400).json({ success: false, message: 'Failed to update team' });
   }
 };
 
@@ -107,7 +110,8 @@ const assignUserToTeam = async (req, res) => {
 
     return res.json({ success: true, data: { userId: user._id, teamId: team._id } });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message || 'Failed to assign user to team' });
+    log.error('[TEAM] Failed to assign user to team', { firmId: req.user?.firmId, userXID: req.user?.xID, req, error });
+    return res.status(400).json({ success: false, message: 'Failed to assign user to team' });
   }
 };
 
