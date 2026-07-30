@@ -4,3 +4,7 @@
 ## 2026-06-12 - Prevent N+1 Query in Bulk Operations
 **Learning:** During bulk uploads involving generation of nested or default parent documents, loop-invariant database dependencies (such as finding categories or configurations via nested callbacks) and iterative `findOne` / `save` operations on individual identifiers degrade performance from O(1) database queries to O(N).
 **Action:** Lift invariant fetches outside bulk processing loops. Pre-fetch existing constraints (like `idempotencyKey` deduplication checks) via a single `$in` query mapping them into an in-memory structure (e.g. `Set` or `Map`). Collect newly instantiated documents into an array and persist them concurrently via `.insertMany(docs, { ordered: false })` at batch boundaries to mitigate network and CPU overhead.
+
+## 2026-07-03 - Optimize nested array bulk upload
+**Learning:** Bulk uploading nested array records should accumulate sub-item additions in memory and execute a single `.save()` per parent document at batch boundaries instead of on every iteration. This avoids synchronous blocking overhead.
+**Action:** Always inspect loops in data imports to replace frequent synchronous updates with batch accumulations where appropriate.

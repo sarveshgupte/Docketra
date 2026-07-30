@@ -532,6 +532,8 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
   const createdClients = [];
   const createdUsers = [];
   const categoryCache = new Map();
+  const categoryDirtyMap = new Map();
+  const categoryRowMap = new Map();
   const clientBulkOps = [];
   const teamBulkOps = [];
   const BATCH_SIZE = 500;
@@ -581,9 +583,16 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
               workbasketId: row.data.workbasketId || null,
               isActive: true,
             });
-            await categoryDoc.save();
+            categoryDirtyMap.set(categoryKey, categoryDoc);
           }
         }
+
+        // ⚡ Bolt: Maintain mapping of category keys to row indices for error reporting
+        if (!categoryRowMap.has(categoryKey)) {
+          categoryRowMap.set(categoryKey, []);
+        }
+        categoryRowMap.get(categoryKey).push({ rowNumber: row.rowNumber, action: row.action });
+        // Instead of immediate success mapping here, we do it after saving
       }
 
       if (type === 'clients') {
@@ -682,13 +691,39 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
         }
       }
 
-      if (type === 'categories') {
+      if (type === 'categories' && !categoryDirtyMap.has(String(row.data.category || '').trim().toLowerCase())) {
+        // If it wasn't dirty (no subcategory created), record success immediately
         successCount += 1;
         results.push({ row: row.rowNumber, status: row.action });
       }
     } catch (error) {
       failureCount += 1;
       results.push({ row: row.rowNumber, status: 'failed', error: error.message });
+    }
+
+    if (type === 'categories' && categoryDirtyMap.size >= BATCH_SIZE) {
+       for (const [key, categoryDoc] of categoryDirtyMap.entries()) {
+          const rowsAffected = categoryRowMap.get(key) || [];
+          try {
+             await categoryDoc.save();
+             rowsAffected.forEach((r) => {
+                // Ensure we don't duplicate result entries for same row
+                if (!results.find(res => res.row === r.rowNumber)) {
+                  successCount += 1;
+                  results.push({ row: r.rowNumber, status: r.action });
+                }
+             });
+          } catch (error) {
+             rowsAffected.forEach((r) => {
+                if (!results.find(res => res.row === r.rowNumber)) {
+                  failureCount += 1;
+                  results.push({ row: r.rowNumber, status: 'failed', error: error.message });
+                }
+             });
+          }
+       }
+       categoryDirtyMap.clear();
+       categoryRowMap.clear();
     }
 
     if (type === 'clients' && clientBulkOps.length >= BATCH_SIZE) {
@@ -762,7 +797,7 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
       }
     }
 
-    if (type === 'categories' || (index + 1) % BATCH_SIZE === 0) {
+    if ((index + 1) % BATCH_SIZE === 0) {
       await updateProgress({
         processed: index + 1,
         successCount,
@@ -770,6 +805,30 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
         results: results.slice(-200),
       });
     }
+  }
+
+  if (type === 'categories' && categoryDirtyMap.size > 0) {
+     for (const [key, categoryDoc] of categoryDirtyMap.entries()) {
+        const rowsAffected = categoryRowMap.get(key) || [];
+        try {
+           await categoryDoc.save();
+           rowsAffected.forEach((r) => {
+              if (!results.find(res => res.row === r.rowNumber)) {
+                successCount += 1;
+                results.push({ row: r.rowNumber, status: r.action });
+              }
+           });
+        } catch (error) {
+           rowsAffected.forEach((r) => {
+              if (!results.find(res => res.row === r.rowNumber)) {
+                failureCount += 1;
+                results.push({ row: r.rowNumber, status: 'failed', error: error.message });
+              }
+           });
+        }
+     }
+     categoryDirtyMap.clear();
+     categoryRowMap.clear();
   }
 
   if (type === 'clients' && clientBulkOps.length > 0) {
