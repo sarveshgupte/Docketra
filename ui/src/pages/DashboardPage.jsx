@@ -731,9 +731,9 @@ export const DashboardPage = () => {
                     title={isAdmin ? 'No dockets yet' : 'No assigned dockets yet'}
                     description={
                       isAdmin
-                        ? (onboardingProgress?.signals?.activeClientCount === 0
+                        ? (onboardingProgress?.signals?.hasActiveClients === false
                           ? 'No dockets yet because no active client exists. Add your first client, then create a docket.'
-                          : (onboardingProgress?.signals?.categoryCount === 0 || onboardingProgress?.signals?.workbasketCount === 0
+                          : (onboardingProgress?.signals?.hasCategories === false || onboardingProgress?.signals?.hasWorkbaskets === false
                             ? 'No dockets yet because category/workbasket setup is incomplete. Finish work settings to start routing.'
                             : 'No docket records yet. Start by adding one real docket so dashboards, workbaskets, and compliance tracking become actionable.'))
                         : (onboardingRole === 'manager'
