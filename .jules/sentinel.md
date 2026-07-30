@@ -58,3 +58,7 @@
 **Vulnerability:** Regular Expression Denial of Service (ReDoS) and NoSQL Regex Injection via unescaped variables passed to `new RegExp()` constructors in `documentItem.controller.js` and `knowledgeItem.controller.js`.
 **Learning:** Directly passing dynamic, user-controlled strings to the `RegExp` constructor allows attackers to construct potentially catastrophic patterns that drastically degrade performance or bypass exact match logic.
 **Prevention:** Always wrap dynamically generated string segments in the centralized `escapeRegExp` utility (`src/utils/regexp.utils.js`) before injecting them into a `RegExp` constructor.
+## 2024-05-15 - [CRITICAL] Mass Assignment Vulnerability in Compliance Template Controller
+**Vulnerability:** Mass assignment allowed creating/updating protected fields (like `firmId`, `_id`, `createdByXID`) due to unrestricted `...req.body` spreading in `createComplianceTemplate` and `updateComplianceTemplate`.
+**Learning:** Even though trusted fields are added after `...req.body`, it's safer to strip protected fields explicitly, especially in Mongoose $set where an attacker could theoretically inject deep updates or override internal logic.
+**Prevention:** Always clone `req.body`, `delete` protected fields (`_id`, `firmId`, etc.), and then spread the cloned safe body, as explicitly required in the memory guidelines.
