@@ -669,6 +669,7 @@ export const Layout = ({ children, title, subtitle }) => {
       </a>
       {/* Sidebar */}
       <aside
+        id="main-enterprise-sidebar"
         className={[
           'enterprise-sidebar',
           sidebarCollapsed ? 'enterprise-sidebar--collapsed' : '',
@@ -787,6 +788,7 @@ export const Layout = ({ children, title, subtitle }) => {
             onClick={handleSidebarToggle}
             aria-label={isMobileViewport ? 'Toggle sidebar' : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
             aria-expanded={isMobileViewport ? mobileSidebarOpen : !sidebarCollapsed}
+            aria-controls="main-enterprise-sidebar"
           >
             <IconMenu />
           </button>
