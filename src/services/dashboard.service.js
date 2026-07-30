@@ -216,6 +216,7 @@ const getRiskBrief = async (firmId) => {
     awaitingApproval,
     overloadedAssigneesRaw,
     blockedTaxonomyRaw,
+    stalePending,
   ] = await Promise.all([
     Case.countDocuments({
       firmId: firmObjectId,
@@ -273,13 +274,14 @@ const getRiskBrief = async (firmId) => {
       },
       { $sort: { count: -1 } },
     ]),
+    // 💡 What: Moved stalePending countDocuments query into the preceding Promise.all array.
+    // 🎯 Why: This turns a sequential database call into a concurrent one, reducing overall latency by executing it in parallel with the other risk aggregations.
+    Case.countDocuments({
+      firmId: firmObjectId,
+      status: 'PENDING',
+      updatedAt: { $lt: tenDaysAgo },
+    }),
   ]);
-
-  const stalePending = await Case.countDocuments({
-    firmId: firmObjectId,
-    status: 'PENDING',
-    updatedAt: { $lt: tenDaysAgo },
-  });
 
   const blockedByType = blockedTaxonomyRaw.reduce((acc, item) => {
     const key = String(item?._id || 'other');
