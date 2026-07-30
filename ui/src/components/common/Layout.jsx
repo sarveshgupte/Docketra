@@ -883,26 +883,30 @@ export const Layout = ({ children, title, subtitle }) => {
                               <button
                                 type="button"
                                 className="enterprise-header__notification-action-btn"
-                                aria-label="Mark notification as read"
                                 title="Mark as read"
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   void markNotificationRead(item.id);
                                 }}
                               >
-                                ✓
+                                <span aria-hidden="true">✓</span>
+                                <span className="sr-only">
+                                  Mark as read: {item.title ? (item.title.length > 80 ? `${item.title.substring(0, 80)}…` : item.title) : 'notification'}
+                                </span>
                               </button>
                               <button
                                 type="button"
                                 className="enterprise-header__notification-action-btn"
-                                aria-label="Clear notification"
                                 title="Clear"
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   clearNotification(item.id);
                                 }}
                               >
-                                ✕
+                                <span aria-hidden="true">✕</span>
+                                <span className="sr-only">
+                                  Clear: {item.title ? (item.title.length > 80 ? `${item.title.substring(0, 80)}…` : item.title) : 'notification'}
+                                </span>
                               </button>
                               {item.unread ? <span className="enterprise-header__notification-unread-badge">New</span> : null}
                             </div>
