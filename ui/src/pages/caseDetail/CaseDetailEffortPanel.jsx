@@ -322,11 +322,13 @@ export const CaseDetailEffortPanel = ({ caseId, caseInternalId, caseInfo, user, 
                       </span>
                       {String(item.userXID).toUpperCase() === String(user?.xID).toUpperCase() && (
                         <button
+                          type="button"
+                          aria-label="Delete effort entry"
                           onClick={() => handleDeleteEffort(item._id, item.minutes)}
                           className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors text-xs font-bold"
                           title="Delete entry"
                         >
-                          🗑️
+                          <span aria-hidden="true">🗑️</span>
                         </button>
                       )}
                     </div>
