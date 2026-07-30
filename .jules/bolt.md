@@ -4,3 +4,6 @@
 ## 2026-06-12 - Prevent N+1 Query in Bulk Operations
 **Learning:** During bulk uploads involving generation of nested or default parent documents, loop-invariant database dependencies (such as finding categories or configurations via nested callbacks) and iterative `findOne` / `save` operations on individual identifiers degrade performance from O(1) database queries to O(N).
 **Action:** Lift invariant fetches outside bulk processing loops. Pre-fetch existing constraints (like `idempotencyKey` deduplication checks) via a single `$in` query mapping them into an in-memory structure (e.g. `Set` or `Map`). Collect newly instantiated documents into an array and persist them concurrently via `.insertMany(docs, { ordered: false })` at batch boundaries to mitigate network and CPU overhead.
+## 2024-11-20 - Replace O(N*M) nested loop with O(N) hash map lookup
+**Learning:** In analytical reports involving multiple collections (e.g., matching efforts to cases), using `Array.prototype.find()` inside a loop over another large array creates an O(N*M) performance bottleneck, significantly slowing down report generation for large datasets.
+**Action:** Pre-compute an O(1) lookup map (using `Map` or an object dictionary) from the target array before the loop, reducing the time complexity to O(N+M) and improving scaling for large datasets.

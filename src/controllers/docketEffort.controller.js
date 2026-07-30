@@ -327,9 +327,16 @@ const getProfitabilityReports = async (req, res) => {
     // 2. Client Effort Summary
     // We map effort minutes by client Display IDs (clientId).
     const clientEffortMap = {};
+
+    // 💡 What: Replaced O(N*M) nested array search inside efforts loop with O(1) hash map lookup.
+    // 🎯 Why: This improves performance of report generation by turning an O(N^2) operation into O(N).
+    // 📊 Impact: Significantly reduces CPU time for large data sets with many cases and efforts.
+    // 🔬 Measurement: Observe lower latency in getProfitabilityReports endpoint under load.
+    const casesMap = new Map(cases.map((c) => [String(c._id), c]));
+
     efforts.forEach((eff) => {
       // Find client code from target Case
-      const c = cases.find((item) => String(item._id) === String(eff.caseInternalId));
+      const c = casesMap.get(String(eff.caseInternalId));
       const clientLabel = c?.clientId || 'Internal / General';
       if (!clientEffortMap[clientLabel]) {
         clientEffortMap[clientLabel] = { clientId: clientLabel, totalMinutes: 0, entriesCount: 0 };
