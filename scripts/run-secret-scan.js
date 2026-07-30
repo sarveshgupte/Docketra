@@ -129,12 +129,16 @@ async function main() {
 
   const configPath = path.join(repoRoot, '.gitleaks.toml');
   fs.copyFileSync(configPath, path.join(scanRoot, '.gitleaks.toml'));
-  const args = ['dir', scanRoot, '--redact', '-c', path.join(scanRoot, '.gitleaks.toml')];
+  const ignorePath = path.join(repoRoot, '.gitleaksignore');
+  if (fs.existsSync(ignorePath)) {
+    fs.copyFileSync(ignorePath, path.join(scanRoot, '.gitleaksignore'));
+  }
+  const args = ['dir', scanRoot, '--verbose', '-c', path.join(scanRoot, '.gitleaks.toml')];
 
   if (commandExists('gitleaks') && run('local binary', 'gitleaks', args)) return;
 
   if (process.env.GITHUB_ACTIONS === 'true' && commandExists('docker')) {
-    const dockerArgs = ['run', '--rm', '-v', `${scanRoot}:/repo`, '-w', '/repo', GITLEAKS_IMAGE, 'dir', '/repo', '--redact', '-c', '/repo/.gitleaks.toml'];
+    const dockerArgs = ['run', '--rm', '-v', `${scanRoot}:/repo`, '-w', '/repo', GITLEAKS_IMAGE, 'dir', '/repo', '--verbose', '-c', '/repo/.gitleaks.toml'];
     if (run(`docker image ${GITLEAKS_IMAGE}`, 'docker', dockerArgs)) return;
   }
 

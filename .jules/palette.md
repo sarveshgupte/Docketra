@@ -1,3 +1,3 @@
-## 2024-05-20 - [ARIA state for Expandable Menus]
-**Learning:** Found multiple components across the codebase lacking `aria-controls` bindings to pair with `aria-expanded` (e.g. `FirmSwitcher`). While `aria-expanded` tells screen readers the state, `aria-controls` is critical for associating the trigger button directly with the ID of the expanded content block.
-**Action:** Always ensure disclosure buttons/dropdown triggers have an explicit `aria-controls="[dropdown-id]"` attribute connected to the `id` of their respective content panels when implementing custom drop-downs.
+## 2024-07-04 - Missing Combobox ARIA Support on Mentions
+**Learning:** The custom `Textarea` component that supports `@mentions` uses a standard `<div>` dropdown (listbox) but was missing the crucial ARIA attributes on the input element (`aria-autocomplete`, `aria-expanded`, `aria-controls`, `aria-activedescendant`). This prevents screen readers from understanding the popup state or navigating the suggestions.
+**Action:** When creating custom comboboxes or autocomplete inputs, always link the input to the suggestion listbox using unique IDs generated via `useId()`, and dynamically update `aria-expanded` and `aria-activedescendant`.
