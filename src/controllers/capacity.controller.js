@@ -326,14 +326,24 @@ const bulkReassignDockets = async (req, res) => {
     const successCases = [];
     const failedCases = [];
 
-    // Reassign each case atomically
-    for (const caseId of caseIds) {
-      try {
-        await reassignCase(String(firmId), caseId, assignedToXID, req.user);
-        successCases.push(caseId);
-      } catch (err) {
-        failedCases.push({ caseId, error: err.message });
-      }
+    // 💡 What: Replaced sequential await calls with chunked concurrent execution using Promise.allSettled.
+    // 🎯 Why: Resolves N+1 latency in bulk reassignments by processing independent cases concurrently, while chunking prevents connection pool exhaustion.
+    // 📊 Impact: Significantly reduces overall execution time for bulk operations.
+    const CHUNK_SIZE = 50;
+    for (let i = 0; i < caseIds.length; i += CHUNK_SIZE) {
+      const chunk = caseIds.slice(i, i + CHUNK_SIZE);
+      const results = await Promise.allSettled(
+        chunk.map((caseId) => reassignCase(String(firmId), caseId, assignedToXID, req.user))
+      );
+
+      results.forEach((result, index) => {
+        const caseId = chunk[index];
+        if (result.status === 'fulfilled') {
+          successCases.push(caseId);
+        } else {
+          failedCases.push({ caseId, error: result.reason?.message || 'Unknown error' });
+        }
+      });
     }
 
     return res.json({
