@@ -4,3 +4,6 @@
 ## 2026-06-12 - Prevent N+1 Query in Bulk Operations
 **Learning:** During bulk uploads involving generation of nested or default parent documents, loop-invariant database dependencies (such as finding categories or configurations via nested callbacks) and iterative `findOne` / `save` operations on individual identifiers degrade performance from O(1) database queries to O(N).
 **Action:** Lift invariant fetches outside bulk processing loops. Pre-fetch existing constraints (like `idempotencyKey` deduplication checks) via a single `$in` query mapping them into an in-memory structure (e.g. `Set` or `Map`). Collect newly instantiated documents into an array and persist them concurrently via `.insertMany(docs, { ordered: false })` at batch boundaries to mitigate network and CPU overhead.
+## 2024-05-24 - Replace $facet for simple analytics with Promise.all()
+**Learning:** The `$facet` aggregation stage forces MongoDB to execute sub-pipelines in memory, which bypasses indexes on the collection and risks hitting the 100MB memory limit, degrading performance as collections grow.
+**Action:** Replace `$facet` with concurrent distinct queries (e.g., `aggregate` for totals and `countDocuments` for isolated segments like `createdToday`) mapped via `Promise.all()`. This allows each query to leverage fast index scans.
