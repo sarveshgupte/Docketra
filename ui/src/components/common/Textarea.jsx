@@ -46,6 +46,7 @@ export const Textarea = ({
   const textareaId = propId || rest.name || `textarea-${generatedId}`;
   const errorId = `${textareaId}-error`;
   const helpId = `${textareaId}-help`;
+  const listboxId = `${textareaId}-listbox`;
   const describedBy = [
     rest['aria-describedby'],
     error ? errorId : null,
@@ -231,6 +232,10 @@ export const Textarea = ({
         aria-invalid={error ? 'true' : undefined}
         aria-describedby={describedBy}
         aria-required={required || undefined}
+        aria-autocomplete={enableMentions ? 'list' : undefined}
+        aria-expanded={showSuggestions ? 'true' : 'false'}
+        aria-controls={showSuggestions ? listboxId : undefined}
+        aria-activedescendant={showSuggestions && suggestions.length > 0 ? `${listboxId}-option-${selectedIndex}` : undefined}
         value={value}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
@@ -240,6 +245,7 @@ export const Textarea = ({
       {/* Mention suggestions popover */}
       {showSuggestions && suggestions.length > 0 && (
         <div 
+          id={listboxId}
           ref={suggestionsRef}
           className="absolute z-50 left-0 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-[var(--dt-border-whisper)] rounded-md shadow-lg py-1 text-xs"
           role="listbox"
@@ -252,6 +258,7 @@ export const Textarea = ({
             const isActive = index === selectedIndex;
             return (
               <div
+                id={`${listboxId}-option-${index}`}
                 key={u.id || u._id || index}
                 onClick={() => selectUser(u)}
                 onMouseEnter={() => setSelectedIndex(index)}
