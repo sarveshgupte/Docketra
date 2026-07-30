@@ -59,6 +59,7 @@ export const ReportsTable = ({ cases, onCaseClick, pagination, onPageChange }) =
           {pagination && pagination.pages > 1 && (
             <div className="reports-table__pagination">
               <button
+                type="button"
                 className="neo-button"
                 disabled={pagination.page === 1}
                 onClick={() => onPageChange(pagination.page - 1)}
@@ -71,6 +72,7 @@ export const ReportsTable = ({ cases, onCaseClick, pagination, onPageChange }) =
               </span>
               
               <button
+                type="button"
                 className="neo-button"
                 disabled={pagination.page === pagination.pages}
                 onClick={() => onPageChange(pagination.page + 1)}
