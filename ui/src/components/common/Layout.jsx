@@ -705,7 +705,7 @@ export const Layout = ({ children, title, subtitle }) => {
         </div>
 
         {/* Navigation */}
-        <nav className="enterprise-sidebar__nav" aria-label="Firm operations navigation">
+        <nav id="enterprise-sidebar-nav" className="enterprise-sidebar__nav" aria-label="Firm operations navigation">
           {navSections.map((section) => (
             <SidebarSection
               key={section.id}
@@ -734,6 +734,8 @@ export const Layout = ({ children, title, subtitle }) => {
             onClick={() => setSidebarCollapsed((value) => !value)}
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-expanded={!sidebarCollapsed}
+            aria-controls="enterprise-sidebar-nav"
           >
             <span className="enterprise-sidebar__footer-toggle-icon" aria-hidden="true">
               {sidebarCollapsed ? <IconChevronRight /> : <IconChevronLeft />}
