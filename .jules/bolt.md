@@ -4,3 +4,6 @@
 ## 2026-06-12 - Prevent N+1 Query in Bulk Operations
 **Learning:** During bulk uploads involving generation of nested or default parent documents, loop-invariant database dependencies (such as finding categories or configurations via nested callbacks) and iterative `findOne` / `save` operations on individual identifiers degrade performance from O(1) database queries to O(N).
 **Action:** Lift invariant fetches outside bulk processing loops. Pre-fetch existing constraints (like `idempotencyKey` deduplication checks) via a single `$in` query mapping them into an in-memory structure (e.g. `Set` or `Map`). Collect newly instantiated documents into an array and persist them concurrently via `.insertMany(docs, { ordered: false })` at batch boundaries to mitigate network and CPU overhead.
+## 2026-07-31 - Revert $facet for simple counts in tenantCaseMetrics
+**Learning:** Found $facet in src/services/tenantCaseMetrics.service.js. $facet cannot use indexes inside sub-pipelines. Replaced it with Promise.all() running concurrent countDocuments().
+**Action:** Use concurrent countDocuments() queries instead of $facet when fetching distinct data slices.
