@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Case = require('../models/Case.model');
 const Client = require('../models/Client.model');
 const DocketException = require('../models/DocketException.model');
+const log = require('../utils/log');
 
 // Helper to check if a client display ID is restricted for the current user
 const isClientRestricted = (user, clientDisplayId) => {
@@ -204,7 +205,8 @@ const getClientStatusView = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to fetch client status view' });
+    log.error('FETCH_CLIENT_STATUS_FAILED', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to fetch client status view' });
   }
 };
 
@@ -262,7 +264,8 @@ const getClientStatusViewByCaseId = async (req, res) => {
       data: safeView,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to fetch docket client status' });
+    log.error('FETCH_DOCKET_CLIENT_STATUS_FAILED', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to fetch docket client status' });
   }
 };
 
