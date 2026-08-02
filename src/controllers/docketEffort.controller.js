@@ -302,8 +302,13 @@ const getProfitabilityReports = async (req, res) => {
     }
 
     // Fetch cases and efforts
-    const cases = await Case.find(filter).lean();
-    const efforts = await DocketEffort.find(filter).lean();
+    const [cases, efforts] = await Promise.all([
+      Case.find(filter).lean(),
+      DocketEffort.find(filter).lean(),
+    ]);
+
+    const casesById = new Map();
+    cases.forEach(c => casesById.set(String(c._id), c));
 
     // 1. Budget vs Actual by Docket
     const budgetVsActual = cases
@@ -329,7 +334,7 @@ const getProfitabilityReports = async (req, res) => {
     const clientEffortMap = {};
     efforts.forEach((eff) => {
       // Find client code from target Case
-      const c = cases.find((item) => String(item._id) === String(eff.caseInternalId));
+      const c = casesById.get(String(eff.caseInternalId));
       const clientLabel = c?.clientId || 'Internal / General';
       if (!clientEffortMap[clientLabel]) {
         clientEffortMap[clientLabel] = { clientId: clientLabel, totalMinutes: 0, entriesCount: 0 };
