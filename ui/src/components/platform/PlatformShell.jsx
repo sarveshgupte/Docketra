@@ -499,7 +499,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   return (
     <div className="platform">
       <a href="#platform-main" className="platform__skip-link">Skip to content</a>
-      <aside className={`platform__sidebar ${collapsed ? 'platform__sidebar--collapsed' : ''}`} aria-label="Primary navigation">
+      <aside id="platform-sidebar" className={`platform__sidebar ${collapsed ? 'platform__sidebar--collapsed' : ''}`} aria-label="Primary navigation">
         {/* Firm brand */}
         <div className="platform__brand">
           <div className="platform__firm-badge" aria-hidden="true" title={firmLabel}>
@@ -517,6 +517,8 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
             onClick={() => setCollapsed((value) => !value)}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-expanded={!collapsed}
+            aria-controls="platform-sidebar"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               {collapsed
