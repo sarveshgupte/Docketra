@@ -58,3 +58,8 @@
 **Vulnerability:** Regular Expression Denial of Service (ReDoS) and NoSQL Regex Injection via unescaped variables passed to `new RegExp()` constructors in `documentItem.controller.js` and `knowledgeItem.controller.js`.
 **Learning:** Directly passing dynamic, user-controlled strings to the `RegExp` constructor allows attackers to construct potentially catastrophic patterns that drastically degrade performance or bypass exact match logic.
 **Prevention:** Always wrap dynamically generated string segments in the centralized `escapeRegExp` utility (`src/utils/regexp.utils.js`) before injecting them into a `RegExp` constructor.
+
+## 2024-10-27 - Hardcoded Fallback Secret in HMAC Generation
+**Vulnerability:** A hardcoded fallback secret (`docketra-system-default-secret-key-12345`) was used in `generateDocketEmailSignature` when the `SYSTEM_HASH_SECRET` environment variable was missing.
+**Learning:** Hardcoded cryptographic secrets are easily discovered in source code, allowing attackers to forge signatures and bypass security controls. In this case, an attacker could forge email signatures and manipulate workflows if the system was improperly configured.
+**Prevention:** Never use hardcoded strings as fallbacks for cryptographic secrets. Always fail securely (e.g., throw an error during initialization or execution) if a required secret is missing from the environment configuration.
