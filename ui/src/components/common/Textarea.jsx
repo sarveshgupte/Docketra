@@ -44,6 +44,7 @@ export const Textarea = ({
 }) => {
   const generatedId = useId();
   const textareaId = propId || rest.name || `textarea-${generatedId}`;
+  const suggestionsListId = `${textareaId}-suggestions`;
   const errorId = `${textareaId}-error`;
   const helpId = `${textareaId}-help`;
   const describedBy = [
@@ -228,6 +229,11 @@ export const Textarea = ({
         rows={rows}
         style={{ minHeight: '100px', resize: 'vertical' }}
         required={required}
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={showSuggestions && suggestions.length > 0}
+        aria-controls={showSuggestions && suggestions.length > 0 ? suggestionsListId : undefined}
+        aria-activedescendant={showSuggestions && suggestions.length > 0 ? `${suggestionsListId}-option-${selectedIndex}` : undefined}
         aria-invalid={error ? 'true' : undefined}
         aria-describedby={describedBy}
         aria-required={required || undefined}
@@ -240,6 +246,7 @@ export const Textarea = ({
       {/* Mention suggestions popover */}
       {showSuggestions && suggestions.length > 0 && (
         <div 
+          id={suggestionsListId}
           ref={suggestionsRef}
           className="absolute z-50 left-0 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-[var(--dt-border-whisper)] rounded-md shadow-lg py-1 text-xs"
           role="listbox"
@@ -252,6 +259,7 @@ export const Textarea = ({
             const isActive = index === selectedIndex;
             return (
               <div
+                id={`${suggestionsListId}-option-${index}`}
                 key={u.id || u._id || index}
                 onClick={() => selectUser(u)}
                 onMouseEnter={() => setSelectedIndex(index)}
