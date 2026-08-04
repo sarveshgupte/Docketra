@@ -326,15 +326,20 @@ const bulkReassignDockets = async (req, res) => {
     const successCases = [];
     const failedCases = [];
 
-    // Reassign each case atomically
-    for (const caseId of caseIds) {
-      try {
-        await reassignCase(String(firmId), caseId, assignedToXID, req.user);
-        successCases.push(caseId);
-      } catch (err) {
-        failedCases.push({ caseId, error: err.message });
+    // ⚡ Bolt Performance Optimization:
+    // Replaced sequential iteration with concurrent execution using Promise.allSettled().
+    // Impact: Reduces overall latency from O(N) database operations to O(1) concurrent batches.
+    const results = await Promise.allSettled(
+      caseIds.map((caseId) => reassignCase(String(firmId), caseId, assignedToXID, req.user))
+    );
+
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        successCases.push(caseIds[index]);
+      } else {
+        failedCases.push({ caseId: caseIds[index], error: result.reason.message });
       }
-    }
+    });
 
     return res.json({
       success: true,
