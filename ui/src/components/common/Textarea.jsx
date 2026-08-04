@@ -231,6 +231,10 @@ export const Textarea = ({
         aria-invalid={error ? 'true' : undefined}
         aria-describedby={describedBy}
         aria-required={required || undefined}
+        aria-autocomplete={enableMentions ? 'list' : undefined}
+        aria-expanded={enableMentions ? (showSuggestions && suggestions.length > 0) : undefined}
+        aria-controls={enableMentions && showSuggestions && suggestions.length > 0 ? `${textareaId}-mentions` : undefined}
+        aria-activedescendant={enableMentions && showSuggestions && suggestions.length > 0 ? `${textareaId}-mention-${selectedIndex}` : undefined}
         value={value}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
@@ -240,6 +244,7 @@ export const Textarea = ({
       {/* Mention suggestions popover */}
       {showSuggestions && suggestions.length > 0 && (
         <div 
+          id={`${textareaId}-mentions`}
           ref={suggestionsRef}
           className="absolute z-50 left-0 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-[var(--dt-border-whisper)] rounded-md shadow-lg py-1 text-xs"
           role="listbox"
@@ -252,6 +257,7 @@ export const Textarea = ({
             const isActive = index === selectedIndex;
             return (
               <div
+                id={`${textareaId}-mention-${index}`}
                 key={u.id || u._id || index}
                 onClick={() => selectUser(u)}
                 onMouseEnter={() => setSelectedIndex(index)}
