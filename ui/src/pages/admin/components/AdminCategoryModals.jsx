@@ -38,7 +38,7 @@ export const AdminCategoryModals = ({
   );
 
   const createEmptyKnowledgeLink = () => ({
-    draftKey: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    draftKey: `${Date.now()}-${generateSecureRandomString(6)}`,
     title: '',
     url: '',
     description: '',

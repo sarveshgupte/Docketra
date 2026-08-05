@@ -49,7 +49,7 @@ import './AdminPage.css';
 
 const KNOWLEDGE_LINK_TYPES = ['portal', 'reference', 'template', 'internal', 'other'];
 const createKnowledgeLinkDraft = (overrides = {}) => ({
-  draftKey: overrides.draftKey || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  draftKey: overrides.draftKey || `${Date.now()}-${generateSecureRandomString(6)}`,
   title: overrides.title || '',
   url: overrides.url || '',
   description: overrides.description || '',
