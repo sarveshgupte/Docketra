@@ -64,7 +64,7 @@ export const SuperadminAiAssistantPage = () => {
 
     setError('');
     const userMsg = {
-      id: `msg-${Date.now()}-${Math.random()}`,
+      id: `msg-${Date.now()}-${generateSecureRandomString(8)}`,
       role: 'user',
       content: text.trim()
     };
@@ -81,7 +81,7 @@ export const SuperadminAiAssistantPage = () => {
 
       if (response?.success && response?.data?.text) {
         setMessages(prev => [...prev, {
-          id: `msg-${Date.now()}-${Math.random()}`,
+          id: `msg-${Date.now()}-${generateSecureRandomString(8)}`,
           role: 'assistant',
           content: response.data.text
         }]);
