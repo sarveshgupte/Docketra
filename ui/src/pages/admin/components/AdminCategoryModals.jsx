@@ -3,6 +3,7 @@ import { Input } from '../../../components/common/Input';
 import { Select } from '../../../components/common/Select';
 import { Textarea } from '../../../components/common/Textarea';
 import { Button } from '../../../components/common/Button';
+import { generateSecureRandomString } from '../../../utils/crypto';
 
 export const AdminCategoryModals = ({
   showCategoryModal,
@@ -38,7 +39,7 @@ export const AdminCategoryModals = ({
   );
 
   const createEmptyKnowledgeLink = () => ({
-    draftKey: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    draftKey: `${Date.now()}-${generateSecureRandomString(6)}`,
     title: '',
     url: '',
     description: '',
