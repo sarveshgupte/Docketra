@@ -12,6 +12,7 @@ import { Button } from '../components/common/Button';
 import { TableSkeleton } from '../components/common/Skeleton';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
+import { generateSecureRandomString } from '../utils/crypto';
 import { AdminStatusBadge } from './admin/components/AdminStatusBadge';
 import { adminApi } from '../api/admin.api';
 import { categoryService } from '../services/categoryService';
@@ -49,7 +50,7 @@ import './AdminPage.css';
 
 const KNOWLEDGE_LINK_TYPES = ['portal', 'reference', 'template', 'internal', 'other'];
 const createKnowledgeLinkDraft = (overrides = {}) => ({
-  draftKey: overrides.draftKey || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  draftKey: overrides.draftKey || `${Date.now()}-${generateSecureRandomString(6)}`,
   title: overrides.title || '',
   url: overrides.url || '',
   description: overrides.description || '',
