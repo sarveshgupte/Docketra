@@ -7,6 +7,7 @@ const ClientRepository = require('../repositories/ClientRepository');
 const DocketFileStorageService = require('../services/docketFileStorage.service');
 const { reopenDocketFromClientEmail, generateDocketEmailSignature } = require('../services/docketWorkflow.service');
 const log = require('../utils/log');
+const crypto = require('crypto');
 const config = require('../config/config');
 
 const sendError = (res, statusCode, publicCode, debugCode, debugDetails = {}, reqId) => {
@@ -34,7 +35,7 @@ const sendError = (res, statusCode, publicCode, debugCode, debugDetails = {}, re
 };
 
 const handleInboundEmail = async (req, res) => {
-  const reqId = req.id || req.requestId || Math.random().toString(36).substring(7);
+  const reqId = req.id || req.requestId || crypto.randomUUID();
   const startTime = Date.now();
 
   try {
