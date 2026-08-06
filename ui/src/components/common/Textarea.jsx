@@ -46,6 +46,7 @@ export const Textarea = ({
   const textareaId = propId || rest.name || `textarea-${generatedId}`;
   const errorId = `${textareaId}-error`;
   const helpId = `${textareaId}-help`;
+  const listboxId = `${textareaId}-listbox`;
   const describedBy = [
     rest['aria-describedby'],
     error ? errorId : null,
@@ -231,6 +232,9 @@ export const Textarea = ({
         aria-invalid={error ? 'true' : undefined}
         aria-describedby={describedBy}
         aria-required={required || undefined}
+        aria-autocomplete={enableMentions ? 'list' : undefined}
+        aria-expanded={showSuggestions && suggestions.length > 0}
+        aria-controls={showSuggestions && suggestions.length > 0 ? listboxId : undefined}
         value={value}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
@@ -241,6 +245,7 @@ export const Textarea = ({
       {showSuggestions && suggestions.length > 0 && (
         <div 
           ref={suggestionsRef}
+          id={listboxId}
           className="absolute z-50 left-0 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-[var(--dt-border-whisper)] rounded-md shadow-lg py-1 text-xs"
           role="listbox"
           aria-label="Teammate mentions list"
