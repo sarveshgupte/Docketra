@@ -4,3 +4,7 @@
 ## 2026-06-12 - Prevent N+1 Query in Bulk Operations
 **Learning:** During bulk uploads involving generation of nested or default parent documents, loop-invariant database dependencies (such as finding categories or configurations via nested callbacks) and iterative `findOne` / `save` operations on individual identifiers degrade performance from O(1) database queries to O(N).
 **Action:** Lift invariant fetches outside bulk processing loops. Pre-fetch existing constraints (like `idempotencyKey` deduplication checks) via a single `$in` query mapping them into an in-memory structure (e.g. `Set` or `Map`). Collect newly instantiated documents into an array and persist them concurrently via `.insertMany(docs, { ordered: false })` at batch boundaries to mitigate network and CPU overhead.
+
+## 2024-08-07 - Avoid Sequential DB queries after Promise.all
+**Learning:** Found a sequential `countDocuments` query immediately following a large `Promise.all` array containing multiple concurrent database queries in the dashboard service.
+**Action:** Always inspect the code surrounding a `Promise.all` block for independent database queries that can be merged into the concurrent execution array to minimize overall network latency.
