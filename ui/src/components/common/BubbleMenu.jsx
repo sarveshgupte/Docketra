@@ -187,7 +187,8 @@ export default function BubbleMenu({
             className={`bubble toggle-bubble menu-btn ${isMenuOpen ? 'open' : ''}`}
             onClick={handleToggle}
             aria-label={menuAriaLabel}
-            aria-pressed={isMenuOpen}
+            aria-expanded={isMenuOpen}
+            aria-controls="bubble-menu-items"
             style={{ background: menuBg }}
           >
             <span className="menu-line" style={{ background: menuContentColor }} />
@@ -197,6 +198,7 @@ export default function BubbleMenu({
       </nav>
       {showOverlay && (
         <div
+          id="bubble-menu-items"
           ref={overlayRef}
           className={`bubble-menu-items ${useFixedPosition ? 'fixed' : 'absolute'}`}
           aria-hidden={!isMenuOpen}
