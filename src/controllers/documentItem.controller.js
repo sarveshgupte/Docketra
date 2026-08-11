@@ -1,5 +1,6 @@
 const { escapeRegExp } = require('../utils/regexp.utils');
 const mongoose = require('mongoose');
+const log = require('../utils/log');
 const DocumentItem = require('../models/DocumentItem.model');
 const Case = require('../models/Case.model');
 const Client = require('../models/Client.model');
@@ -124,7 +125,8 @@ const createDocumentItem = async (req, res) => {
       data: documentItem,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to create document item' });
+    log.error('DOCUMENT_CREATE_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to create document item' });
   }
 };
 
@@ -199,7 +201,8 @@ const addDocumentVersion = async (req, res) => {
       data: documentItem,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to upload document version' });
+    log.error('DOCUMENT_VERSION_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to upload document version' });
   }
 };
 
@@ -252,7 +255,8 @@ const getDocumentItems = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to fetch document items' });
+    log.error('DOCUMENT_FETCH_ALL_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to fetch document items' });
   }
 };
 
@@ -281,7 +285,8 @@ const getDocumentItemById = async (req, res) => {
 
     return res.json({ success: true, data: documentItem });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to fetch document item' });
+    log.error('DOCUMENT_FETCH_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to fetch document item' });
   }
 };
 
@@ -339,7 +344,8 @@ const updateDocumentStatus = async (req, res) => {
       data: documentItem,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to update document status' });
+    log.error('DOCUMENT_STATUS_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to update document status' });
   }
 };
 
@@ -406,7 +412,8 @@ const selectCurrentVersion = async (req, res) => {
       data: documentItem,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to select current version' });
+    log.error('DOCUMENT_VERSION_SELECT_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to select current version' });
   }
 };
 
