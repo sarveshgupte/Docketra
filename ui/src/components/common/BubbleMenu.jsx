@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 
@@ -58,6 +58,8 @@ export default function BubbleMenu({
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
+  const generatedId = useId();
+  const menuId = `bubble-menu-${generatedId}`;
 
   const overlayRef = useRef(null);
   const bubblesRef = useRef([]);
@@ -188,6 +190,8 @@ export default function BubbleMenu({
             onClick={handleToggle}
             aria-label={menuAriaLabel}
             aria-pressed={isMenuOpen}
+            aria-expanded={isMenuOpen}
+            aria-controls={showOverlay ? menuId : undefined}
             style={{ background: menuBg }}
           >
             <span className="menu-line" style={{ background: menuContentColor }} />
@@ -197,6 +201,7 @@ export default function BubbleMenu({
       </nav>
       {showOverlay && (
         <div
+          id={menuId}
           ref={overlayRef}
           className={`bubble-menu-items ${useFixedPosition ? 'fixed' : 'absolute'}`}
           aria-hidden={!isMenuOpen}
