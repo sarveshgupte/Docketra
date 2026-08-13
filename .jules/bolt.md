@@ -4,3 +4,6 @@
 ## 2026-06-12 - Prevent N+1 Query in Bulk Operations
 **Learning:** During bulk uploads involving generation of nested or default parent documents, loop-invariant database dependencies (such as finding categories or configurations via nested callbacks) and iterative `findOne` / `save` operations on individual identifiers degrade performance from O(1) database queries to O(N).
 **Action:** Lift invariant fetches outside bulk processing loops. Pre-fetch existing constraints (like `idempotencyKey` deduplication checks) via a single `$in` query mapping them into an in-memory structure (e.g. `Set` or `Map`). Collect newly instantiated documents into an array and persist them concurrently via `.insertMany(docs, { ordered: false })` at batch boundaries to mitigate network and CPU overhead.
+## 2026-08-13 - Optimize bounded countDocuments threshold checks
+**Learning:** When checking if a count exceeds a specific, small threshold (like `>= 3`), using `Model.countDocuments()` forces MongoDB to scan all matching index entries (O(N) operation).
+**Action:** Replace `Model.countDocuments(query)` with `Model.find(query).select('_id').limit(N).lean()` and check the array length. This allows the database query to return early as soon as the threshold `N` is reached, turning it into an O(1) operation.
