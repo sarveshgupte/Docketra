@@ -59,11 +59,18 @@ const updateComplianceTemplate = async (req, res) => {
   try {
     assertFirmContext(req);
     if (!ensureAdminAccess(req, res)) return;
+
+    const updates = { ...req.body };
+    delete updates._id;
+    delete updates.firmId;
+    delete updates.createdByXID;
+    delete updates.updatedByXID;
+
     const updated = await ComplianceObligationTemplate.findOneAndUpdate(
       { _id: req.params.templateId, firmId: String(req.user.firmId) },
       {
         $set: {
-          ...req.body,
+          ...updates,
           updatedByXID: req.user?.xID || req.user?.xid || null,
         },
       },
