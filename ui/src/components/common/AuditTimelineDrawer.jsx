@@ -157,7 +157,7 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
             <p className="audit-drawer__meta">Audit log is system-recorded</p>
             {loading ? <p className="audit-drawer__meta">Loading audit history...</p> : null}
           </div>
-          <button type="button" className="audit-drawer__close" onClick={onClose} aria-label="Close audit history">
+          <button type="button" className="audit-drawer__close" onClick={onClose} aria-label="Close audit history" title="Close audit history">
             ×
           </button>
         </div>
