@@ -468,6 +468,14 @@ const fileCase = async (firmId, caseId, comment, user, req = null) => {
     const log = require('../utils/log');
     log.warn('BROADCAST_DOCKET_FILED_NOTIFICATION_FAILED', { error: notifErr.message, caseId });
   }
+
+  // Sync client's docket history snapshot to BYOS storage in background
+  if (caseData?.clientId) {
+    try {
+      const { clientDocketHistoryStorageService } = require('./clientDocketHistoryStorage.service');
+      clientDocketHistoryStorageService.syncClientDocketHistory(firmId, caseData.clientId).catch(() => {});
+    } catch (_) {}
+  }
   
   return caseData;
 };
