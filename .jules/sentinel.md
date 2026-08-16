@@ -62,3 +62,8 @@
 **Vulnerability:** The Compliance Template Controller directly spread `req.body` into MongoDB create and update payloads without filtering out protected fields.
 **Learning:** Directly spreading `req.body` allows attackers to overwrite critical fields like `_id`, `firmId`, `createdByXID`, and `updatedByXID`, leading to IDOR and privilege escalation.
 **Prevention:** Always clone `req.body` and explicitly `delete` protected root-level fields before spreading it into a database payload.
+
+## 2026-08-15 - Prevent Information Exposure via Error Stack Traces
+**Vulnerability:** Leaking `error.stack` details directly in `sendError` API responses within `src/controllers/inboundEmail.controller.js`.
+**Learning:** Including raw stack traces in client HTTP responses is an Information Exposure vulnerability (CWE-200), revealing internal filesystem paths, dependencies, and application topology to unauthenticated clients.
+**Prevention:** Only log stack traces server-side and ensure HTTP responses strictly return generic, safe operational error codes/messages without internal internals.

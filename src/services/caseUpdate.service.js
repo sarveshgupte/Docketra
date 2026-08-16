@@ -245,17 +245,51 @@ module.exports = (deps) => {
         caseData?.assignedToXID,
         caseData?.createdByXID,
       ].filter(Boolean).map((id) => String(id).toUpperCase()));
+
+      // If docket is filed, broadcast to entire team and manager
+      if (normalizedStatus === CaseStatus.FILED || normalizedStatus === 'FILED') {
+        try {
+          const Team = require('../models/Team.model');
+          const User = require('../models/User.model');
+          const targetTeamId = caseData?.workbasketId || caseData?.ownerTeamId || caseData?.teamId;
+          if (targetTeamId) {
+            const [teamDoc, teamUsers] = await Promise.all([
+              Team.findOne({ _id: targetTeamId, firmId: req.user.firmId }).select('managerId').lean(),
+              User.find({ firmId: req.user.firmId, $or: [{ teamId: targetTeamId }, { teamIds: targetTeamId }], status: { $ne: 'deleted' } }).select('xID').lean(),
+            ]);
+            if (teamDoc?.managerId) {
+              const managerUser = await User.findById(teamDoc.managerId).select('xID').lean();
+              if (managerUser?.xID) statusRecipients.add(String(managerUser.xID).toUpperCase());
+            }
+            if (Array.isArray(teamUsers)) {
+              teamUsers.forEach((u) => {
+                if (u.xID) statusRecipients.add(String(u.xID).toUpperCase());
+              });
+            }
+          }
+        } catch (teamQueryErr) {
+          log.warn('TEAM_FILING_NOTIF_QUERY_SKIPPED', { error: teamQueryErr.message });
+        }
+      }
+
       statusRecipients.delete(String(req.user?.xID || '').toUpperCase());
+
+      const clientLabel = caseData?.client?.businessName || caseData?.client?.name || caseData?.clientName || 'Client';
+      const isFiled = normalizedStatus === CaseStatus.FILED || normalizedStatus === 'FILED';
+      const notifTitle = isFiled ? 'Docket Filed' : 'Docket status changed';
+      const notifMessage = isFiled
+        ? `Docket ${caseData.caseNumber || caseData.caseId} has been filed by ${req.user.name || req.user.xID} (${req.user.xID}) for ${clientLabel}.`
+        : `${req.user.name || req.user.xID} changed docket ${caseData.caseId} to ${normalizedStatus}.`;
 
       await Promise.all(
         [...statusRecipients].map((recipient) => createNotification({
           firmId: req.user.firmId,
           userId: recipient,
           type: NotificationTypes.STATUS_CHANGED,
-          docketId: caseData.caseId,
-          actor: { xID: req.user.xID, role: req.user.role },
-          title: 'Docket status changed',
-          message: `${req.user.name || req.user.xID} changed docket ${caseData.caseId} to ${normalizedStatus}.`,
+          docketId: caseData.caseNumber || caseData.caseId,
+          actor: { xID: req.user.xID, role: req.user.role, name: req.user.name },
+          title: notifTitle,
+          message: notifMessage,
         })),
       );
       log.info('CASE_UPDATED', {
