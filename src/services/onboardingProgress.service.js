@@ -27,6 +27,10 @@ const getSharedSignals = async ({ firmId, user }) => {
   const userObjectId = user?._id || null;
   const userXid = String(user?.xID || user?.xid || '').toUpperCase();
 
+  // ⚡ Bolt Performance Optimization:
+  // 💡 What: Replaced Model.countDocuments() with Model.exists() for boolean presence checks.
+  // 🎯 Why: countDocuments performs an index scan to tally all matches. exists() returns an O(1) early return upon finding the first match, avoiding unnecessary computation since onboarding signals only care if the count is > 0.
+  // 📊 Impact: Significantly reduces DB load and latency on the dashboard for organizations with large datasets.
   const [
     firm,
     activeClientCount,
@@ -44,36 +48,36 @@ const getSharedSignals = async ({ firmId, user }) => {
     userInteractionCount,
   ] = await Promise.all([
     Firm.findById(firmId).select('isSetupComplete storage.mode storageConfig.provider').lean(),
-    Client.countDocuments({ firmId, status: 'active', isActive: { $ne: false } }),
-    Category.countDocuments({ firmId, isActive: { $ne: false } }),
-    Category.countDocuments({
+    Client.exists({ firmId, status: 'active', isActive: { $ne: false } }),
+    Category.exists({ firmId, isActive: { $ne: false } }),
+    Category.exists({
       firmId,
       isActive: { $ne: false },
       subcategories: { $elemMatch: { isActive: { $ne: false } } },
     }),
-    Team.countDocuments({ firmId, isActive: { $ne: false }, type: 'PRIMARY' }),
-    Case.countDocuments({ firmId: normalizedFirmId }),
-    User.countDocuments({
+    Team.exists({ firmId, isActive: { $ne: false }, type: 'PRIMARY' }),
+    Case.exists({ firmId: normalizedFirmId }),
+    User.exists({
       firmId,
       status: { $in: ['invited', 'active'] },
       isActive: { $ne: false },
       isSystem: { $ne: true },
     }),
-    Case.countDocuments({ firmId: normalizedFirmId, assignedToXID: { $in: [null, ''] } }),
+    Case.exists({ firmId: normalizedFirmId, assignedToXID: { $in: [null, ''] } }),
     userObjectId
-      ? Team.countDocuments({
+      ? Team.exists({
         firmId,
         isActive: { $ne: false },
         type: 'PRIMARY',
         $or: [{ managerId: userObjectId }, { _id: { $in: user.teamIds || [] } }, { _id: user.teamId }],
       })
-      : 0,
+      : null,
     userObjectId
-      ? Team.countDocuments({ firmId, isActive: { $ne: false }, type: 'PRIMARY', managerId: userObjectId })
-      : 0,
-    Team.countDocuments({ firmId, isActive: { $ne: false }, type: 'QC', parentWorkbasketId: { $ne: null } }),
+      ? Team.exists({ firmId, isActive: { $ne: false }, type: 'PRIMARY', managerId: userObjectId })
+      : null,
+    Team.exists({ firmId, isActive: { $ne: false }, type: 'QC', parentWorkbasketId: { $ne: null } }),
     userObjectId
-      ? Case.countDocuments({
+      ? Case.exists({
         firmId: normalizedFirmId,
         $or: [
           { assignedToXID: userXid },
@@ -82,30 +86,30 @@ const getSharedSignals = async ({ firmId, user }) => {
           { routedToTeamId: { $in: (user.teamIds || []).filter(Boolean) } },
         ],
       })
-      : 0,
+      : null,
     userXid
-      ? Case.countDocuments({ firmId: normalizedFirmId, assignedToXID: userXid })
-      : 0,
+      ? Case.exists({ firmId: normalizedFirmId, assignedToXID: userXid })
+      : null,
     userXid
-      ? DocketActivity.countDocuments({ firmId, performedByXID: userXid })
-      : 0,
+      ? DocketActivity.exists({ firmId, performedByXID: userXid })
+      : null,
   ]);
 
   return {
     firm,
-    activeClientCount,
-    categoryCount,
-    categoryWithSubcategoryCount,
-    workbasketCount,
-    docketCount,
-    invitedOrActiveUsers,
-    unassignedDocketCount,
-    userAssignedWorkbasketCount,
-    managerWorkbasketCount,
-    qcMappingCount,
-    managerVisibleQueueCount,
-    userAssignedDocketCount,
-    userInteractionCount,
+    activeClientCount: activeClientCount ? 1 : 0,
+    categoryCount: categoryCount ? 1 : 0,
+    categoryWithSubcategoryCount: categoryWithSubcategoryCount ? 1 : 0,
+    workbasketCount: workbasketCount ? 1 : 0,
+    docketCount: docketCount ? 1 : 0,
+    invitedOrActiveUsers: invitedOrActiveUsers ? 1 : 0,
+    unassignedDocketCount: unassignedDocketCount ? 1 : 0,
+    userAssignedWorkbasketCount: userAssignedWorkbasketCount ? 1 : 0,
+    managerWorkbasketCount: managerWorkbasketCount ? 1 : 0,
+    qcMappingCount: qcMappingCount ? 1 : 0,
+    managerVisibleQueueCount: managerVisibleQueueCount ? 1 : 0,
+    userAssignedDocketCount: userAssignedDocketCount ? 1 : 0,
+    userInteractionCount: userInteractionCount ? 1 : 0,
   };
 };
 
