@@ -312,13 +312,20 @@ const submitForm = async (req, res) => {
 
     const result = await processCmsSubmission({
       firmId: form.firmId,
-      payload: {
-        ...req.body,
-        source: embedMode ? EMBEDDED_SOURCE : 'form',
-        formSlug: form.slug || String(form._id),
-        formId: String(form._id),
-        idempotencyKey: String(req.body?.idempotencyKey || req.headers?.['idempotency-key'] || '').trim() || undefined,
-      },
+      payload: (() => {
+        const payloadBase = { ...req.body };
+        delete payloadBase._id;
+        delete payloadBase.firmId;
+        delete payloadBase.createdByXID;
+        delete payloadBase.updatedByXID;
+        return {
+          ...payloadBase,
+          source: embedMode ? EMBEDDED_SOURCE : 'form',
+          formSlug: form.slug || String(form._id),
+          formId: String(form._id),
+          idempotencyKey: String(req.body?.idempotencyKey || req.headers?.['idempotency-key'] || '').trim() || undefined,
+        };
+      })(),
       requestMeta: {
         query: req.query,
         headers: req.headers,
