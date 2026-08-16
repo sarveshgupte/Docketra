@@ -150,26 +150,51 @@ async function processFirmCalendarReminders({ now = new Date() } = {}) {
   let scanned = 0;
   let created = 0;
 
+  // ⚡ Bolt: Optimize firm calendar reminders notification loop
+  // 💡 What: Pre-fetch firms and users for valid entries instead of querying Firm and User per entry loop.
+  // 🎯 Why: Replaces O(N) database queries with O(1) batched queries, mitigating network latency overhead.
+  // 📊 Impact: Substantially reduces DB round-trips from 2N to 2 queries for fetching firms and users.
+  const firmIds = [...new Set(entries.map((e) => String(e.firmId)))];
+  const firms = await Firm.find({ _id: { $in: firmIds } }).select('_id settings.firm').lean();
+  const firmMap = new Map(firms.map((f) => [String(f._id), f]));
+
+  const validEntries = [];
+  const validFirmIds = new Set();
+
   for (const entry of entries) {
     scanned += 1;
-    const firm = await Firm.findById(entry.firmId).select('settings.firm').lean();
+    const firm = firmMap.get(String(entry.firmId));
     const firmSettings = normalizeFirmSettings(firm?.settings?.firm || {});
     const leadDays = Number.isFinite(Number(entry.reminderDaysBefore))
       ? Number(entry.reminderDaysBefore)
       : Number(firmSettings.calendarReminderLeadDays || 0);
     const reminderDate = addDays(new Date(entry.dueDate), -leadDays);
     reminderDate.setUTCHours(0, 0, 0, 0);
-    if (reminderDate.getTime() !== start.getTime()) continue;
+    if (reminderDate.getTime() === start.getTime()) {
+      validEntries.push(entry);
+      validFirmIds.add(String(entry.firmId));
+    }
+  }
 
-    const users = await User.find({
-      firmId: entry.firmId,
-      status: { $ne: 'deleted' },
-      isActive: true,
-    }).select('xID').lean();
+  const usersByFirm = new Map();
+  if (validFirmIds.size > 0) {
+    const users = await User.find({ firmId: { $in: [...validFirmIds] }, status: { $ne: 'deleted' }, isActive: true }).select('firmId xID').lean();
+    for (const user of users) {
+      const fId = String(user.firmId);
+      if (!usersByFirm.has(fId)) usersByFirm.set(fId, []);
+      usersByFirm.get(fId).push(user);
+    }
+  }
+
+  for (const entry of validEntries) {
+    const firmUsers = usersByFirm.get(String(entry.firmId)) || [];
+    const leadDays = Number.isFinite(Number(entry.reminderDaysBefore))
+      ? Number(entry.reminderDaysBefore)
+      : Number(normalizeFirmSettings(firmMap.get(String(entry.firmId))?.settings?.firm || {}).calendarReminderLeadDays || 0);
     const dueDateKey = toDueDateKey(entry.dueDate);
     const calendarEntryId = String(entry._id);
 
-    for (const user of users) {
+    for (const user of firmUsers) {
       const recipientXID = String(user.xID || '').toUpperCase().trim();
       if (!recipientXID) continue;
       const existing = await Notification.findOne({
