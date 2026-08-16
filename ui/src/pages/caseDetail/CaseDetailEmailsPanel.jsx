@@ -64,6 +64,7 @@ export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefresh
   const [sendTo, setSendTo] = useState(clientEmail && clientEmail !== '—' ? clientEmail : '');
   const [linkValidity, setLinkValidity] = useState('7d');
   const [requirePin, setRequirePin] = useState(false);
+  const [autoPend, setAutoPend] = useState(true);
   const [sendSubject, setSendSubject] = useState('');
   const [sendBody, setSendBody] = useState('');
 
@@ -130,11 +131,16 @@ export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefresh
         sendEmail: true,
         expiry: linkValidity,
         requirePin: requirePin,
+        autoPend: autoPend,
       };
 
       const res = await caseApi.generateUploadLink(caseId, payload);
       if (res.success) {
-        showSuccess('Document request email with secure upload link sent to client!');
+        showSuccess(
+          autoPend
+            ? 'Document request email sent & docket set to Waiting / Pending!'
+            : 'Document request email with secure upload link sent to client!'
+        );
         setShowSendModal(false);
         loadEmails();
         onRefreshCase?.();
@@ -265,7 +271,16 @@ export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefresh
             <label className="field-label" style={{ fontSize: '0.75rem', fontWeight: '600' }}>Subject *</label>
             <input type="text" className="neo-input w-full text-sm mt-1" value={sendSubject} onChange={e => setSendSubject(e.target.value)} required />
           </div>
-          <div className="flex items-center gap-2 pt-1">
+          <div className="space-y-2 pt-1">
+            <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoPend}
+                onChange={(e) => setAutoPend(e.target.checked)}
+                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span>Automatically set docket to Waiting / Pending while awaiting upload</span>
+            </label>
             <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
               <input
                 type="checkbox"

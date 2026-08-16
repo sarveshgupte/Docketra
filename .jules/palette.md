@@ -4,3 +4,6 @@
 ## 2024-08-06 - Missing ARIA combobox attributes on mention textarea
 **Learning:** Custom textarea mention implementations effectively act as comboboxes. Without `aria-expanded`, `aria-controls`, and `aria-autocomplete`, screen reader users have no context that a popup list is available or what controls it.
 **Action:** Always apply the combobox ARIA pattern (`aria-expanded`, `aria-controls`, `aria-autocomplete`) to text inputs that trigger popup suggestion lists, ensuring the listbox has a corresponding `id`.
+## 2024-05-18 - Improve icon-only buttons with titles, add empty state, and focus indicators
+**Learning:** Sighted mouse users lack context when icon-only buttons only use aria-labels. Also empty states are an opportunity to delight. Keyboard navigation needs focus-visible states on menu links.
+**Action:** Add title tooltips alongside aria-labels for icon buttons. Always ensure empty states use positive, explanatory copy. Always apply focus-visible tailwind classes to interactive navigation elements.
