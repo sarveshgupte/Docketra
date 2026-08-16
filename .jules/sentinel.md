@@ -58,3 +58,7 @@
 **Vulnerability:** Regular Expression Denial of Service (ReDoS) and NoSQL Regex Injection via unescaped variables passed to `new RegExp()` constructors in `documentItem.controller.js` and `knowledgeItem.controller.js`.
 **Learning:** Directly passing dynamic, user-controlled strings to the `RegExp` constructor allows attackers to construct potentially catastrophic patterns that drastically degrade performance or bypass exact match logic.
 **Prevention:** Always wrap dynamically generated string segments in the centralized `escapeRegExp` utility (`src/utils/regexp.utils.js`) before injecting them into a `RegExp` constructor.
+## 2026-08-16 - Fix Mass Assignment in Tasks
+**Vulnerability:** The `createTask` and `updateTask` methods in `task.controller.js` were passing `req.body` directly to the service layer without sanitizing protected root-level fields like `_id`, `firmId`, `createdBy`, and `updatedBy`.
+**Learning:** Passing unfiltered `req.body` payloads directly to database operations creates mass assignment and IDOR vulnerabilities. Attackers can inject protected fields to modify audit logs, override tenancy (`firmId`), or manipulate object IDs.
+**Prevention:** Always explicitly clone `req.body` and `delete` protected fields (e.g., `_id`, `firmId`, `createdBy`, `updatedBy`, `createdByXID`, `updatedByXID`) before passing the payload to service or repository layers.
