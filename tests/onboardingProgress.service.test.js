@@ -49,15 +49,16 @@ function setupMocks() {
     },
   };
   require.cache[require.resolve('../src/models/Client.model')] = {
-    exports: { countDocuments: async () => state.counts.activeClients },
+    exports: { exists: async () => state.counts.activeClients > 0 ? { _id: 'mock_id' } : null },
   };
 
   let categoryCall = 0;
   require.cache[require.resolve('../src/models/Category.model')] = {
     exports: {
-      countDocuments: async () => {
+      exists: async () => {
         categoryCall += 1;
-        return categoryCall === 1 ? state.counts.categories : state.counts.categoriesWithSub;
+        const val = categoryCall === 1 ? state.counts.categories : state.counts.categoriesWithSub;
+        return val > 0 ? { _id: 'mock_id' } : null;
       },
     },
   };
@@ -65,36 +66,40 @@ function setupMocks() {
   let teamCall = 0;
   require.cache[require.resolve('../src/models/Team.model')] = {
     exports: {
-      countDocuments: async () => {
+      exists: async () => {
         teamCall += 1;
-        if (teamCall === 1) return state.counts.primaryTeams;
-        if (teamCall === 2) return state.counts.userTeams;
-        if (teamCall === 3) return state.counts.managedTeams;
-        return state.counts.qcMappings;
+        let val;
+        if (teamCall === 1) val = state.counts.primaryTeams;
+        else if (teamCall === 2) val = state.counts.userTeams;
+        else if (teamCall === 3) val = state.counts.managedTeams;
+        else val = state.counts.qcMappings;
+        return val > 0 ? { _id: 'mock_id' } : null;
       },
     },
   };
 
   require.cache[require.resolve('../src/models/User.model')] = {
-    exports: { countDocuments: async () => state.counts.invitedUsers },
+    exports: { exists: async () => state.counts.invitedUsers > 0 ? { _id: 'mock_id' } : null },
   };
 
   let caseCall = 0;
   require.cache[require.resolve('../src/models/Case.model')] = {
     exports: {
-      countDocuments: async () => {
+      exists: async () => {
         caseCall += 1;
-        if (caseCall === 1) return state.counts.dockets;
-        if (caseCall === 2) return state.counts.unassignedDockets;
-        if (caseCall === 3) return state.counts.visibleQueue;
-        return state.counts.userAssignedDockets;
+        let val;
+        if (caseCall === 1) val = state.counts.dockets;
+        else if (caseCall === 2) val = state.counts.unassignedDockets;
+        else if (caseCall === 3) val = state.counts.visibleQueue;
+        else val = state.counts.userAssignedDockets;
+        return val > 0 ? { _id: 'mock_id' } : null;
       },
     },
   };
 
   require.cache[require.resolve('../src/models/DocketActivity.model')] = {
     exports: {
-      DocketActivity: { countDocuments: async () => state.counts.activity },
+      DocketActivity: { exists: async () => state.counts.activity > 0 ? { _id: 'mock_id' } : null },
     },
   };
 }

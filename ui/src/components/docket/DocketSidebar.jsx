@@ -4,12 +4,12 @@ import { formatDateOnly, formatDateTime, formatTimeOnly } from '../../utils/form
 const TITLES = {
   cfs: 'Client Fact Sheet',
   attachments: 'Attachments',
-  history: 'History',
+  history: 'Audit History',
 };
 
 const EMPTY_STATES = {
   attachments: 'No attachments yet. Upload files or forward email artifacts to keep everything together.',
-  history: 'No history yet. Lifecycle events will appear here as this docket progresses.',
+  history: 'No audit events yet. Operational and lifecycle events will appear here as this docket progresses.',
 };
 
 export const DocketSidebar = ({
@@ -452,7 +452,7 @@ export const DocketSidebar = ({
       >
         <div className="docket-sidebar__header">
           <h3 className="text-base font-semibold text-gray-900">{TITLES[type] || 'Details'}</h3>
-          <button type="button" onClick={onClose} className="docket-sidebar__close" aria-label="Close panel">✕</button>
+          <button type="button" onClick={onClose} className="docket-sidebar__close" aria-label="Close panel" title="Close panel">✕</button>
         </div>
         <div className="docket-sidebar__content">{renderContent()}</div>
       </aside>

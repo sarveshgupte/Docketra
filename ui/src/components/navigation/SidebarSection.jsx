@@ -33,6 +33,7 @@ export const SidebarSection = ({
         onClick={() => canToggle && setIsOpen((value) => !value)}
         aria-expanded={isOpen}
         aria-controls={sectionContentId}
+        title={isOpen ? 'Collapse section' : 'Expand section'}
         disabled={!canToggle || collapsed}
       >
         <span className="enterprise-sidebar__section-title">{title}</span>
@@ -80,6 +81,7 @@ export const SidebarSection = ({
                         aria-expanded={isGroupOpen}
                         aria-controls={groupContentId}
                         aria-label={`${isGroupOpen ? 'Collapse' : 'Expand'} ${item.label}`}
+                        title={`${isGroupOpen ? 'Collapse' : 'Expand'} ${item.label}`}
                       >
                         <span className={`enterprise-sidebar__group-chevron ${isGroupOpen ? 'is-open' : ''}`} aria-hidden="true">▾</span>
                       </button>

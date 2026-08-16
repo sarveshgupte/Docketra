@@ -70,7 +70,7 @@ export const CasesSavedViews = ({ savedViews, savedViewsOpen, setSavedViewsOpen,
           <button type="button" className="cases-page__saved-view-load" onClick={() => handleLoadSavedView(sv.name)} title={`Load: ${sv.name}`}>
             {sv.name}
           </button>
-          <button type="button" className="cases-page__saved-view-remove" onClick={() => removeView(sv.name)} aria-label={`Remove saved view: ${sv.name}`}>
+          <button type="button" className="cases-page__saved-view-remove" onClick={() => removeView(sv.name)} aria-label={`Remove saved view: ${sv.name}`} title={`Remove saved view: ${sv.name}`}>
             ×
           </button>
         </span>

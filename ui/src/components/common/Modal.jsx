@@ -154,6 +154,7 @@ export const Modal = ({
             onClick={() => requestClose('close-button')}
             className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--dt-text-muted)] transition-colors hover:bg-[var(--dt-surface-muted)] hover:text-[var(--dt-text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--dt-focus)] focus:ring-offset-2"
             aria-label="Close modal"
+            title="Close modal"
           >
             <span aria-hidden="true" className="text-base leading-none">✕</span>
           </button>
