@@ -59,6 +59,10 @@
 **Learning:** Directly passing dynamic, user-controlled strings to the `RegExp` constructor allows attackers to construct potentially catastrophic patterns that drastically degrade performance or bypass exact match logic.
 **Prevention:** Always wrap dynamically generated string segments in the centralized `escapeRegExp` utility (`src/utils/regexp.utils.js`) before injecting them into a `RegExp` constructor.
 
+## 2026-08-16 - Mass Assignment and IDOR Vulnerability in Case Lock Middleware
+**Vulnerability:** The `checkCaseLock` middleware trusted client-provided fields (`req.body.performedBy`, `req.body.createdBy`, `req.body.clonedBy`) to determine the user identity (email) for lock operations.
+**Learning:** Trusting client-provided fields allows an attacker to bypass lock checks or perform operations under the guise of another user, leading to IDOR.
+**Prevention:** Always derive user identity securely from the authenticated server-side context (e.g., `req.user?.email`).
 ## 2026-08-15 - Prevent Information Exposure via Error Stack Traces
 **Vulnerability:** Leaking `error.stack` details directly in `sendError` API responses within `src/controllers/inboundEmail.controller.js`.
 **Learning:** Including raw stack traces in client HTTP responses is an Information Exposure vulnerability (CWE-200), revealing internal filesystem paths, dependencies, and application topology to unauthenticated clients.
