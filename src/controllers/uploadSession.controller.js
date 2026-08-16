@@ -36,10 +36,13 @@ async function resolveClientEmail(caseData, firmId) {
   return String(clientEmail || '').trim().toLowerCase();
 }
 
+const CaseStatus = require('../domain/case/caseStatus');
+const log = require('../utils/log');
+
 async function generateUploadLink(req, res) {
   try {
     const { caseId } = req.params;
-    const { requirePin = false, expiry = '24h', sendEmail: shouldSendEmail = false, clientMessage, internalComment, reopenAt, to, customSubject, customBody } = req.body;
+    const { requirePin = false, expiry = '24h', sendEmail: shouldSendEmail = false, clientMessage, internalComment, reopenAt, to, customSubject, customBody, autoPend = false } = req.body;
 
     const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
     const caseData = await CaseRepository.findByInternalId(
@@ -67,6 +70,7 @@ async function generateUploadLink(req, res) {
 
     const expiryMap = { '24h': 24, '48h': 48, '7d': 168, '14d': 336, '30d': 720 };
     const expiryHours = expiryMap[expiry] || (typeof expiry === 'number' ? expiry : 168);
+    const pendingUntilDate = reopenAt ? new Date(reopenAt) : new Date(Date.now() + expiryHours * 3600 * 1000);
 
     const result = await createUploadSession({
       docketId: caseData.caseId,
@@ -76,8 +80,40 @@ async function generateUploadLink(req, res) {
       clientMessage: clientMessage ? String(clientMessage).trim() : null,
       senderName: req.user.name || req.user.email,
       senderEmail: req.user.email,
-      reopenAt: reopenAt ? new Date(reopenAt) : null,
+      reopenAt: pendingUntilDate,
     });
+
+    // Auto-pend docket if requested and not already terminal or pended
+    const currentStatus = String(caseData.status || '').toUpperCase();
+    if (autoPend && currentStatus !== 'PENDING' && currentStatus !== 'PEND' && currentStatus !== 'RESOLVED' && currentStatus !== 'FILED') {
+      try {
+        const CaseService = require('../services/case.service');
+        await CaseService.updateStatus(caseData.caseId || caseData.caseNumber, CaseStatus.PENDING, {
+          tenantId: req.user.firmId,
+          role: req.user.role,
+          userId: req.user.xID,
+          performedByXID: req.user.xID,
+          performedBy: req.user.email,
+          actorRole: req.user.role === 'Admin' || req.user.role === 'PRIMARY_ADMIN' ? 'ADMIN' : 'USER',
+          reason: `Waiting for client document upload via secure link (validity: ${expiryHours}h)`,
+          statusPatch: {
+            pendedByXID: req.user.xID,
+            pendingReason: `Waiting for client document upload via secure link`,
+            pendingUntil: pendingUntilDate,
+            reopenAt: pendingUntilDate,
+            lastActionByXID: req.user.xID,
+            lastActionAt: new Date(),
+          },
+          auditMetadata: {
+            reason: 'Awaiting client document upload via secure link',
+            pendingUntil: pendingUntilDate,
+            reopenAt: pendingUntilDate,
+          },
+        });
+      } catch (pendErr) {
+        log.warn('AUTO_PEND_ON_UPLOAD_LINK_SKIPPED', { error: pendErr.message, caseId: caseData.caseId });
+      }
+    }
 
     const reqHost = req.get('host');
     const reqProtocol = req.protocol || 'http';

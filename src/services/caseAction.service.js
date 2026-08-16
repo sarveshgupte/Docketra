@@ -414,6 +414,60 @@ const fileCase = async (firmId, caseId, comment, user, req = null) => {
       commentLength: comment.length,
     }
   );
+
+  // Broadcast in-app filing notification to team members, manager, and creator
+  try {
+    const User = require('../models/User.model');
+    const Team = require('../models/Team.model');
+    const { createNotification, NotificationTypes } = require('../domain/notifications');
+
+    const recipientXIDs = new Set();
+    if (caseData?.assignedToXID) recipientXIDs.add(String(caseData.assignedToXID).toUpperCase());
+    if (caseData?.createdByXID) recipientXIDs.add(String(caseData.createdByXID).toUpperCase());
+
+    const targetTeamId = caseData?.workbasketId || caseData?.ownerTeamId || caseData?.teamId;
+    if (targetTeamId) {
+      const [teamDoc, teamUsers] = await Promise.all([
+        Team.findOne({ _id: targetTeamId, firmId }).select('managerId').lean(),
+        User.find({ firmId, $or: [{ teamId: targetTeamId }, { teamIds: targetTeamId }], status: { $ne: 'deleted' } }).select('xID').lean(),
+      ]);
+
+      if (teamDoc?.managerId) {
+        const managerUser = await User.findById(teamDoc.managerId).select('xID').lean();
+        if (managerUser?.xID) recipientXIDs.add(String(managerUser.xID).toUpperCase());
+      }
+
+      if (Array.isArray(teamUsers)) {
+        teamUsers.forEach((u) => {
+          if (u.xID) recipientXIDs.add(String(u.xID).toUpperCase());
+        });
+      }
+    }
+
+    const actorXID = String(user?.xID || '').toUpperCase();
+    recipientXIDs.delete(actorXID);
+
+    const clientLabel = caseData?.client?.businessName || caseData?.client?.name || caseData?.clientName || 'Client';
+    const docketNumber = caseData?.caseNumber || caseData?.caseId;
+    const actorName = user?.name || user?.xID || 'Team Member';
+
+    await Promise.all(
+      [...recipientXIDs].map((xid) =>
+        createNotification({
+          firmId,
+          userId: xid,
+          type: NotificationTypes.STATUS_CHANGED,
+          docketId: docketNumber,
+          actor: { xID: user?.xID, role: user?.role, name: user?.name },
+          title: 'Docket Filed',
+          message: `Docket ${docketNumber} has been filed by ${actorName} (${user?.xID}) for ${clientLabel}.`,
+        })
+      )
+    );
+  } catch (notifErr) {
+    const log = require('../utils/log');
+    log.warn('BROADCAST_DOCKET_FILED_NOTIFICATION_FAILED', { error: notifErr.message, caseId });
+  }
   
   return caseData;
 };
