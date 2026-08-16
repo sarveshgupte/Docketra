@@ -137,8 +137,8 @@ export function NotificationPanel({ firmSlug, limit = 8 }) {
     return (
       <Card>
         <EmptyState
-          title="No meaningful notifications"
-          description="Important updates (assignment, lifecycle, comments) will appear here."
+          title="All caught up!"
+          description="No new updates right now. Important activity (assignments, lifecycle changes, comments) will appear here."
           icon
         />
       </Card>

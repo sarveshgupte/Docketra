@@ -1701,6 +1701,7 @@ export const CaseDetailPage = () => {
                   returnTo={returnTo}
                   fromClientRoute={fromClientRoute}
                   navigate={navigate}
+                  caseInfo={caseInfo}
                 />
               </Suspense>
             </div>

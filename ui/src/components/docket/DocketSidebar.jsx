@@ -4,12 +4,12 @@ import { formatDateOnly, formatDateTime, formatTimeOnly } from '../../utils/form
 const TITLES = {
   cfs: 'Client Fact Sheet',
   attachments: 'Attachments',
-  history: 'History',
+  history: 'Audit History',
 };
 
 const EMPTY_STATES = {
   attachments: 'No attachments yet. Upload files or forward email artifacts to keep everything together.',
-  history: 'No history yet. Lifecycle events will appear here as this docket progresses.',
+  history: 'No audit events yet. Operational and lifecycle events will appear here as this docket progresses.',
 };
 
 export const DocketSidebar = ({
