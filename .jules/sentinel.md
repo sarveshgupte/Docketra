@@ -58,3 +58,11 @@
 **Vulnerability:** Regular Expression Denial of Service (ReDoS) and NoSQL Regex Injection via unescaped variables passed to `new RegExp()` constructors in `documentItem.controller.js` and `knowledgeItem.controller.js`.
 **Learning:** Directly passing dynamic, user-controlled strings to the `RegExp` constructor allows attackers to construct potentially catastrophic patterns that drastically degrade performance or bypass exact match logic.
 **Prevention:** Always wrap dynamically generated string segments in the centralized `escapeRegExp` utility (`src/utils/regexp.utils.js`) before injecting them into a `RegExp` constructor.
+## 2026-08-12 - Secure Randomness for Request IDs
+**Vulnerability:** Weak PRNG (`Math.random()`) was being used for generating fallback `reqId`s in `src/controllers/inboundEmail.controller.js`.
+**Learning:** Using `Math.random()` to generate request IDs is cryptographically insecure and can lead to predictability or correlation failures in logging systems, while also triggering SAST tools. Also learned that applying these strict rules to purely cosmetic React UI keys constitutes unnecessary "security theater".
+**Prevention:** Use Node.js's native `crypto` module (e.g., `crypto.randomBytes(4).toString('hex')` or `crypto.randomUUID()`) to generate secure fallback request IDs on the backend. Do not perform "security theater" fixes on frontend component keys.
+## 2026-08-16 - Information Exposure in Error Handlers
+**Vulnerability:** Raw internal error details (`error.stack` and `error.message`) were exposed directly to clients via `inboundEmail.controller.js` when processing inbound emails, constituting a CWE-200 Information Exposure vulnerability.
+**Learning:** Returning exception stacks or raw error messages from the HTTP layer to the client provides attackers with internal knowledge of backend infrastructure and file structures.
+**Prevention:** Never expose `error.stack` in a client response. Centralize complete error logging on the server (e.g. `log.error`) and return generic safe messages (e.g., `Internal server error`) to the client.
