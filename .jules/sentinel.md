@@ -63,3 +63,7 @@
 **Vulnerability:** The `checkCaseLock` middleware trusted client-provided fields (`req.body.performedBy`, `req.body.createdBy`, `req.body.clonedBy`) to determine the user identity (email) for lock operations.
 **Learning:** Trusting client-provided fields allows an attacker to bypass lock checks or perform operations under the guise of another user, leading to IDOR.
 **Prevention:** Always derive user identity securely from the authenticated server-side context (e.g., `req.user?.email`).
+## 2026-08-15 - Prevent Information Exposure via Error Stack Traces
+**Vulnerability:** Leaking `error.stack` details directly in `sendError` API responses within `src/controllers/inboundEmail.controller.js`.
+**Learning:** Including raw stack traces in client HTTP responses is an Information Exposure vulnerability (CWE-200), revealing internal filesystem paths, dependencies, and application topology to unauthenticated clients.
+**Prevention:** Only log stack traces server-side and ensure HTTP responses strictly return generic, safe operational error codes/messages without internal internals.
