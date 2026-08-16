@@ -75,10 +75,10 @@ export const CaseDetailOverviewPanel = ({
           </button>
           <button
             type="button"
-            onClick={() => runGuardedAction(() => openSidebar('history'), 'Unable to open Activity timeline right now.')}
-            title="Activity Timeline"
+            onClick={() => runGuardedAction(() => openSidebar('history'), 'Unable to open Audit History panel right now.')}
+            title="Audit History"
             className="h-8 w-8 rounded-lg flex items-center justify-center text-sm hover:bg-gray-100 text-gray-600 hover:text-indigo-600 transition-all border border-gray-200 cursor-pointer bg-white shadow-xs"
-            aria-label="Open activity timeline"
+            aria-label="Open audit history"
           >
             🕒
           </button>

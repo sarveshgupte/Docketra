@@ -1801,14 +1801,15 @@ const listClientActivity = async (req, res) => {
 const listClientDockets = async (req, res) => {
   try {
     const { clientId } = req.params;
-    const { limit = 20, order = 'desc' } = req.query;
+    const { limit = 50, order = 'desc' } = req.query;
     const Case = require('../models/Case.model');
+    const { clientDocketHistoryStorageService } = require('../services/clientDocketHistoryStorage.service');
 
     let queryChain = Case.find({ firmId: req.user.firmId, clientId })
       .sort({ createdAt: String(order).toLowerCase() === 'asc' ? 1 : -1 })
       .limit(parseInt(limit, 10))
       .select([
-        'caseId', 'docketId', 'category', 'caseCategory', 'workType', 'workTypeName', 'categorySnapshot',
+        'caseId', 'caseNumber', 'caseName', 'title', 'docketId', 'category', 'caseCategory', 'workType', 'workTypeName', 'categorySnapshot',
         'subcategory', 'subCategory', 'caseSubCategory', 'subCategoryName', 'subcategoryName', 'subCategorySnapshot',
         'status', 'lifecycle', 'state', 'createdAt', 'updatedAt', 'resolvedAt', 'filedAt', 'closedAt', 'completedAt',
         'assignedToName', 'assignedTo', 'assignedToXID', 'ownerName', 'ownerXID',
@@ -1827,6 +1828,7 @@ const listClientDockets = async (req, res) => {
 
     const mappedRows = rows.map((c) => {
       const mapped = { ...c };
+      mapped.caseName = c.caseName || c.title || null;
       if (c.assignedTo) {
         mapped.assignedToName = c.assignedTo?.name || c.assignedToName || c.assignedToXID || null;
         mapped.assignedToXID = c.assignedTo?.xID || c.assignedToXID || null;
@@ -1836,6 +1838,9 @@ const listClientDockets = async (req, res) => {
       }
       return mapped;
     });
+
+    // Opportunistically sync client docket history snapshot to BYOS storage in background
+    clientDocketHistoryStorageService.syncClientDocketHistory(req.user.firmId, clientId).catch(() => {});
 
     return res.status(200).json({ success: true, data: mappedRows });
   } catch (error) {
