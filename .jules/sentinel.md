@@ -66,3 +66,7 @@
 **Vulnerability:** Raw internal error details (`error.stack` and `error.message`) were exposed directly to clients via `inboundEmail.controller.js` when processing inbound emails, constituting a CWE-200 Information Exposure vulnerability.
 **Learning:** Returning exception stacks or raw error messages from the HTTP layer to the client provides attackers with internal knowledge of backend infrastructure and file structures.
 **Prevention:** Never expose `error.stack` in a client response. Centralize complete error logging on the server (e.g. `log.error`) and return generic safe messages (e.g., `Internal server error`) to the client.
+## 2026-08-16 - Mass Assignment via req.body Spread Operator
+**Vulnerability:** Constructing MongoDB queries by directly spreading `req.body` (`...req.body`) for `ComplianceObligationTemplate` allows attackers to overwrite critical protected fields such as `_id`, `firmId`, `createdByXID`, and `updatedByXID`.
+**Learning:** Destructuring client input directly into payload objects bypasses all field-level access controls, creating Mass Assignment and Insecure Direct Object Reference (IDOR) vulnerabilities.
+**Prevention:** Always clone `req.body` (e.g., `const bodyParams = { ...req.body };`) and explicitly `delete` protected root-level fields before spreading the remaining safe parameters into database queries.
