@@ -7,3 +7,6 @@
 ## 2024-10-24 - Optimize rate limiting checks using find().limit(N)
 **Learning:** Found a rate limiting check using `AuthAudit.countDocuments()` which enforces a threshold of 3. `countDocuments` forces a full index scan to aggregate all matching documents, which is inefficient when we only care if a small threshold is met.
 **Action:** Replace `Model.countDocuments(query)` with `Model.find(query).select("_id").limit(N).lean()` when checking if a count exceeds a specific threshold (e.g., `>= 3`). This allows MongoDB to short-circuit and provide an O(1) early return once the limit is reached, saving significant database CPU and latency.
+## 2024-03-22 - Optimizing Boolean Checks with Mongoose
+**Learning:** When checking if at least one document matches a condition, using `exists()` is significantly faster than `countDocuments() > 0`. `countDocuments()` forces MongoDB to scan all matching index entries, while `exists()` returns early on the first match (O(1) time complexity).
+**Action:** Always prefer `Model.exists(query)` over `Model.countDocuments(query) > 0` when the exact count is not needed, such as when seeding initial data or checking boolean presence.

@@ -250,9 +250,13 @@ const loadClientsForGeneration = async ({ firmId, clientIds = null }) => {
 };
 
 const seedSampleTemplates = async ({ firmId, actorXID }) => {
-  const existingSamples = await ComplianceObligationTemplate.countDocuments({ firmId: String(firmId), isSample: true });
-  if (existingSamples > 0) {
-    return { inserted: 0, skipped: existingSamples };
+  // ⚡ Bolt: Replace countDocuments with exists for boolean presence check
+  // 💡 What: Replaced ComplianceObligationTemplate.countDocuments() > 0 with ComplianceObligationTemplate.exists()
+  // 🎯 Why: countDocuments forces a full index scan. exists() provides an O(1) early return upon the first match.
+  // 📊 Impact: Significantly faster execution when checking for existing sample templates, avoiding full index scans.
+  const hasExistingSamples = await ComplianceObligationTemplate.exists({ firmId: String(firmId), isSample: true });
+  if (hasExistingSamples) {
+    return { inserted: 0, skipped: 1 };
   }
   const fallback = await resolveFallbackCategoryConfig({ firmId: String(firmId) });
   const categoryConfig = fallback
