@@ -186,7 +186,7 @@ export default function BubbleMenu({
 
           <button
             type="button"
-            className={`bubble toggle-bubble menu-btn ${isMenuOpen ? 'open' : ''}`}
+            className={`bubble toggle-bubble menu-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${isMenuOpen ? 'open' : ''}`}
             onClick={handleToggle}
             aria-label={menuAriaLabel}
             aria-pressed={isMenuOpen}
@@ -214,7 +214,7 @@ export default function BubbleMenu({
                     role="menuitem"
                     href={item.href}
                     aria-label={item.ariaLabel || item.label}
-                    className="menu-card-link"
+                    className="menu-card-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                     style={{
                       '--item-rot': `${item.rotation ?? 0}deg`,
                       '--card-bg': menuBg,

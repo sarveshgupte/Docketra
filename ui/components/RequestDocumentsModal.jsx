@@ -62,7 +62,7 @@ export function RequestDocumentsModal({
       <div style={styles.modal} role="dialog" aria-modal="true" aria-labelledby="request-documents-modal-title">
         <div style={styles.header}>
           <h2 id="request-documents-modal-title" style={{ margin: 0 }}>Request Documents</h2>
-          <button type="button" onClick={onClose} style={styles.closeBtn} aria-label="Close">✕</button>
+          <button type="button" onClick={onClose} style={styles.closeBtn} aria-label="Close" title="Close">✕</button>
         </div>
 
         <div style={styles.section}>
