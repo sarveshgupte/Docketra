@@ -16,3 +16,6 @@
 ## 2024-03-22 - Optimizing Boolean Checks with Mongoose
 **Learning:** When checking if at least one document matches a condition, using `exists()` is significantly faster than `countDocuments() > 0`. `countDocuments()` forces MongoDB to scan all matching index entries, while `exists()` returns early on the first match (O(1) time complexity).
 **Action:** Always prefer `Model.exists(query)` over `Model.countDocuments(query) > 0` when the exact count is not needed, such as when seeding initial data or checking boolean presence.
+## 2024-11-20 - Group independent database queries concurrently
+**Learning:** Sequential database queries (like a `Case.find` following a `Promise.all` array of `Case.countDocuments`) create unnecessary network latency bottlenecks. Grouping independent queries together using `Promise.all()` executes them concurrently and eliminates sequential network roundtrips.
+**Action:** Identifying and eliminating unnecessary sequential database queries by grouping them into a single `Promise.all` array executes them concurrently, reducing overall network latency.
