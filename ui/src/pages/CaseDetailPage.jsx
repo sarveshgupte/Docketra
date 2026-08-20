@@ -929,6 +929,20 @@ export const CaseDetailPage = () => {
     }
   }, [caseId, showError]);
 
+  const loadCaseHistory = useCallback(async () => {
+    if (!caseId) return;
+    try {
+      const response = await caseApi.getCaseHistory(caseId);
+      const rawEvents = response?.data?.history || response?.data?.events || response?.data || [];
+      const historyList = Array.isArray(rawEvents) ? rawEvents : [];
+      if (historyList.length > 0) {
+        setCaseData((prev) => mergeCaseData(prev, { history: historyList }, { source: 'history-fetch' }));
+      }
+    } catch (_err) {
+      // Best-effort history refresh
+    }
+  }, [caseId, mergeCaseData]);
+
   const openSidebar = (type) => {
     try {
       setSidebarType((previousType) => {
@@ -939,6 +953,8 @@ export const CaseDetailPage = () => {
         setSidebarOpen(true);
         if (type === 'cfs') {
           void loadClientFactSheet();
+        } else if (type === 'history') {
+          void loadCaseHistory();
         }
         return type;
       });
@@ -1212,7 +1228,7 @@ export const CaseDetailPage = () => {
 
   if (loading || (activeDocketId === caseId && isDocketLoading && !caseData)) {
     return (
-      <PlatformShell title="Docket details">
+      <PlatformShell title={null}>
         <Loading message="Loading docket..." />
       </PlatformShell>
     );
@@ -1233,7 +1249,7 @@ export const CaseDetailPage = () => {
 
   if (!caseData) {
     return (
-      <PlatformShell title="Docket details">
+      <PlatformShell title={null}>
         <div className="container">
           <Card>
             {loadError ? <p>{loadError}</p> : null}
@@ -1303,7 +1319,7 @@ export const CaseDetailPage = () => {
 
   return (
     <PlatformShell
-      title={formatDocketId(caseInfo?.caseId || caseId)}
+      title={null}
       actions={(
         <Button type="button" variant="primary" onClick={() => navigate(ROUTES.CREATE_CASE(firmSlug))}>
           + Create Docket
@@ -1685,6 +1701,7 @@ export const CaseDetailPage = () => {
                   returnTo={returnTo}
                   fromClientRoute={fromClientRoute}
                   navigate={navigate}
+                  caseInfo={caseInfo}
                 />
               </Suspense>
             </div>

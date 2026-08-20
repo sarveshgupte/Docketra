@@ -30,11 +30,11 @@ export const Table = ({
 };
 
 export const TableHead = ({ children, className = '' }) => {
-  return <thead className={joinClasses('bg-[var(--dt-surface-subtle)] border-b border-[var(--dt-border-whisper)]', className)}>{children}</thead>;
+  return <thead className={joinClasses('sticky top-0 z-10 bg-slate-50/95 backdrop-blur-sm border-b border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.03)]', className)}>{children}</thead>;
 };
 
 export const TableBody = ({ children, className = '' }) => {
-  return <tbody className={joinClasses('divide-y divide-[var(--dt-border-whisper)] bg-[var(--dt-surface)]', className)}>{children}</tbody>;
+  return <tbody className={joinClasses('divide-y divide-slate-100 bg-white', className)}>{children}</tbody>;
 };
 
 export const TableRow = ({ children, onClick, className = '', ...rest }) => {
@@ -43,8 +43,8 @@ export const TableRow = ({ children, onClick, className = '', ...rest }) => {
       onClick={onClick}
       {...rest}
       className={joinClasses(
-        'transition-colors duration-150 hover:bg-[var(--dt-surface-subtle)] focus-within:bg-[var(--dt-surface-subtle)]',
-        onClick && 'cursor-pointer',
+        'transition-colors duration-150 hover:bg-slate-50/80 focus-within:bg-slate-50/80',
+        onClick && 'cursor-pointer hover:bg-indigo-50/30',
         className,
       )}
     >

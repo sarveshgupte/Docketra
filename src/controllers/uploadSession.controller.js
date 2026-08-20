@@ -36,10 +36,13 @@ async function resolveClientEmail(caseData, firmId) {
   return String(clientEmail || '').trim().toLowerCase();
 }
 
+const CaseStatus = require('../domain/case/caseStatus');
+const log = require('../utils/log');
+
 async function generateUploadLink(req, res) {
   try {
     const { caseId } = req.params;
-    const { requirePin = false, expiry = '24h', sendEmail: shouldSendEmail = false, clientMessage, internalComment, reopenAt } = req.body;
+    const { requirePin = false, expiry = '24h', sendEmail: shouldSendEmail = false, clientMessage, internalComment, reopenAt, to, customSubject, customBody, autoPend = false } = req.body;
 
     const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
     const caseData = await CaseRepository.findByInternalId(
@@ -65,7 +68,9 @@ async function generateUploadLink(req, res) {
       });
     }
 
-    const expiryHours = expiry === '7d' ? 168 : 24;
+    const expiryMap = { '24h': 24, '48h': 48, '7d': 168, '14d': 336, '30d': 720 };
+    const expiryHours = expiryMap[expiry] || (typeof expiry === 'number' ? expiry : 168);
+    const pendingUntilDate = reopenAt ? new Date(reopenAt) : new Date(Date.now() + expiryHours * 3600 * 1000);
 
     const result = await createUploadSession({
       docketId: caseData.caseId,
@@ -75,43 +80,160 @@ async function generateUploadLink(req, res) {
       clientMessage: clientMessage ? String(clientMessage).trim() : null,
       senderName: req.user.name || req.user.email,
       senderEmail: req.user.email,
-      reopenAt: reopenAt ? new Date(reopenAt) : null,
+      reopenAt: pendingUntilDate,
     });
+
+    // Auto-pend docket if requested and not already terminal or pended
+    const currentStatus = String(caseData.status || '').toUpperCase();
+    if (autoPend && currentStatus !== 'PENDING' && currentStatus !== 'PEND' && currentStatus !== 'RESOLVED' && currentStatus !== 'FILED') {
+      try {
+        const CaseService = require('../services/case.service');
+        await CaseService.updateStatus(caseData.caseId || caseData.caseNumber, CaseStatus.PENDING, {
+          tenantId: req.user.firmId,
+          role: req.user.role,
+          userId: req.user.xID,
+          performedByXID: req.user.xID,
+          performedBy: req.user.email,
+          actorRole: req.user.role === 'Admin' || req.user.role === 'PRIMARY_ADMIN' ? 'ADMIN' : 'USER',
+          reason: `Waiting for client document upload via secure link (validity: ${expiryHours}h)`,
+          statusPatch: {
+            pendedByXID: req.user.xID,
+            pendingReason: `Waiting for client document upload via secure link`,
+            pendingUntil: pendingUntilDate,
+            reopenAt: pendingUntilDate,
+            lastActionByXID: req.user.xID,
+            lastActionAt: new Date(),
+          },
+          auditMetadata: {
+            reason: 'Awaiting client document upload via secure link',
+            pendingUntil: pendingUntilDate,
+            reopenAt: pendingUntilDate,
+          },
+        });
+      } catch (pendErr) {
+        log.warn('AUTO_PEND_ON_UPLOAD_LINK_SKIPPED', { error: pendErr.message, caseId: caseData.caseId });
+      }
+    }
 
     const reqHost = req.get('host');
     const reqProtocol = req.protocol || 'http';
     const fallbackBaseUrl = reqHost ? `${reqProtocol}://${reqHost}` : 'http://localhost:5173';
     const baseUrl = (process.env.FRONTEND_URL || process.env.APP_URL || fallbackBaseUrl).replace(/\/+$/, '');
     const uploadLink = `${baseUrl}/upload/${result.token}`;
-    const clientEmail = await resolveClientEmail(caseData, req.user.firmId);
+
+    const resolvedEmail = await resolveClientEmail(caseData, req.user.firmId);
+    const clientEmail = (to && String(to).trim()) ? String(to).trim().toLowerCase() : resolvedEmail;
 
     if (shouldSendEmail && clientEmail) {
-      const senderName = req.user.name || 'Docketra Team';
-      const formattedMessage = clientMessage
-        ? `<div style="background: #f8fafc; border-left: 4px solid #0284c7; padding: 14px 18px; margin: 16px 0; border-radius: 4px;"><p style="margin: 0; color: #475569; font-size: 13px; font-weight: 600; text-transform: uppercase;">Message from ${senderName}:</p><p style="margin: 6px 0 0 0; color: #0f172a; font-size: 15px; line-height: 1.5;">${clientMessage}</p></div>`
-        : '';
+      const firmName = req.user.firmName || req.user.firm?.name || caseData.firmName || 'Our Firm';
+      const senderName = req.user.name || firmName;
+      const validityText = expiryHours >= 168 ? `${Math.round(expiryHours / 24)} Days` : `${expiryHours} Hours`;
 
-      await sendEmail({
-        to: clientEmail,
-        subject: `Action Required: Documents needed for Docket ${caseData.caseNumber}`,
-        html: `
+      function getDocketDisplayTitle(caseData) {
+        const rawTitle = String(caseData?.title || '').trim();
+        if (rawTitle && rawTitle.toLowerCase() !== 'title' && rawTitle.toLowerCase() !== 'untitled docket') {
+          return rawTitle;
+        }
+        const category = caseData?.category || caseData?.caseCategory || caseData?.categoryName;
+        const subCategory = caseData?.subCategory || caseData?.caseSubCategory || caseData?.subCategoryName;
+        const workType = caseData?.workType || caseData?.serviceType;
+
+        if (category && subCategory) {
+          return `${category} - ${subCategory}`;
+        }
+        if (subCategory) {
+          return subCategory;
+        }
+        if (category) {
+          return category;
+        }
+        if (workType) {
+          return workType;
+        }
+        return '';
+      }
+
+      const displayTitle = getDocketDisplayTitle(caseData);
+      const emailSubject = customSubject || `Action Required: Documents needed for ${displayTitle || 'your request'}`;
+
+      let htmlContent = '';
+      let textContent = '';
+
+      if (customBody && typeof customBody === 'string' && customBody.trim()) {
+        const linkBlockHtml = `<div style="margin: 20px 0;"><a href="${uploadLink}" style="background-color: #0284c7; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">Upload Documents & Respond &rarr;</a><p style="color: #64748b; font-size: 13px; margin-top: 10px;">Or copy link: <a href="${uploadLink}" style="color: #0284c7;">${uploadLink}</a></p></div>`;
+
+        if (customBody.includes('[Upload Link]')) {
+          htmlContent = `<div style="font-family: Inter, system-ui, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #0f172a;">${customBody.replace(/\[Upload Link\]/g, linkBlockHtml).replace(/\n/g, '<br>')}</div>`;
+          textContent = customBody.replace(/\[Upload Link\]/g, `\n\nUpload Link: ${uploadLink}\n\n`);
+        } else {
+          htmlContent = `<div style="font-family: Inter, system-ui, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #0f172a;">${customBody.replace(/\n/g, '<br>')}<br><br>${linkBlockHtml}</div>`;
+          textContent = `${customBody}\n\nUpload Link: ${uploadLink}`;
+        }
+      } else {
+        const formattedMessage = clientMessage
+          ? `<div style="background: #f8fafc; border-left: 4px solid #0284c7; padding: 14px 18px; margin: 16px 0; border-radius: 4px;"><p style="margin: 0; color: #475569; font-size: 13px; font-weight: 600; text-transform: uppercase;">Message from ${senderName}:</p><p style="margin: 6px 0 0 0; color: #0f172a; font-size: 15px; line-height: 1.5;">${clientMessage}</p></div>`
+          : '';
+
+        htmlContent = `
           <div style="font-family: Inter, system-ui, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #0f172a;">
             <h2 style="margin-top: 0; color: #0f172a;">Document Request</h2>
             <p>Dear Client,</p>
-            <p>Documents/information have been requested for <strong>Docket ${caseData.caseNumber}</strong> (${caseData.workType || 'Compliance'}).</p>
+            <p>Documents/information have been requested for <strong>${caseData.title || caseData.workType || 'your request'}</strong>.</p>
             ${formattedMessage}
             <p style="margin-top: 24px;">
               <a href="${uploadLink}" style="background-color: #0284c7; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">Upload Documents & Respond &rarr;</a>
             </p>
-            <p style="color: #64748b; font-size: 13px; margin-top: 24px;">Or copy and paste this secure link into your browser:<br/><a href="${uploadLink}" style="color: #0284c7;">${uploadLink}</a></p>
+            <p style="color: #64748b; font-size: 13px; margin-top: 16px;">Link Validity: ${validityText}</p>
+            <p style="color: #64748b; font-size: 13px; margin-top: 12px;">Or copy and paste this secure link into your browser:<br/><a href="${uploadLink}" style="color: #0284c7;">${uploadLink}</a></p>
+            <p style="margin-top: 24px; color: #0f172a;">Best regards,<br/><strong>${firmName}</strong></p>
           </div>
-        `,
-        text: [
-          `Action Required: Documents needed for Docket ${caseData.caseNumber}`,
+        `;
+
+        textContent = [
+          `Action Required: Documents needed for ${caseData.title || caseData.workType || 'your request'}`,
           clientMessage ? `Message from ${senderName}: ${clientMessage}` : '',
           `Upload Link: ${uploadLink}`,
-        ].filter(Boolean).join('\n\n'),
+          `Link Validity: ${validityText}`,
+          `Best regards,\n${firmName}`,
+        ].filter(Boolean).join('\n\n');
+      }
+
+      await sendEmail({
+        to: clientEmail,
+        subject: emailSubject,
+        html: htmlContent,
+        text: textContent,
       });
+
+      // Log EmailCapture so message appears in docket's Email Communications log
+      const EmailCapture = require('../models/EmailCapture.model');
+      await EmailCapture.create({
+        firmId: req.user.firmId,
+        tenantId: String(req.user.firmId),
+        sender: { name: req.user.name || req.user.email, email: req.user.email },
+        recipients: [clientEmail],
+        subject: emailSubject,
+        receivedAt: new Date(),
+        bodyExcerpt: textContent.substring(0, 1000),
+        linkedClientId: caseData.client?._id || null,
+        linkedCaseInternalId: caseData.caseInternalId,
+        linkedCaseId: caseData.caseId || caseData.caseNumber,
+        classification: 'awaiting_reply',
+        ownerXID: req.user.xID || null,
+        createdByXID: req.user.xID || 'SYSTEM',
+      });
+
+      // Log clean comment on docket feed if no internalComment was specified
+      if (!internalComment || typeof internalComment !== 'string' || !internalComment.trim()) {
+        await Comment.create({
+          caseId: caseData.caseId || caseData.caseNumber,
+          firmId: String(req.user.firmId),
+          text: `Sent document request email to client (${clientEmail}): "${emailSubject}"`,
+          createdBy: req.user.email,
+          createdByXID: req.user.xID,
+          createdByName: req.user.name,
+        });
+      }
     }
 
     return res.json({

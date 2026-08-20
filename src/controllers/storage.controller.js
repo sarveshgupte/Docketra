@@ -252,8 +252,7 @@ async function resolveFirmSlugForRedirect(firmId) {
 
 function mapProviderErrorToStatus(error) {
   const message = (error?.message || '').toLowerCase();
-  if (error?.status === 401 || message.includes('invalid_grant')) return 'DISCONNECTED';
-  if (error?.status === 403 && (message.includes('permission') || message.includes('insufficient'))) return 'DISCONNECTED';
+  if (error?.status === 401 || message.includes('invalid_grant') || message.includes('token_expired')) return 'DISCONNECTED';
   if (error?.status === 403 && message.includes('quota')) return 'QUOTA_EXCEEDED';
   return 'ERROR';
 }

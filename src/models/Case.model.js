@@ -446,6 +446,24 @@ const caseSchema = new mongoose.Schema({
   },
   
   /**
+   * Historical Data Import Metadata
+   */
+  isHistoricalImport: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
+  importJobId: {
+    type: String,
+    trim: true,
+    default: null,
+  },
+  importedAt: {
+    type: Date,
+    default: null,
+  },
+
+  /**
    * Date when a Pending case should be reviewed
    * REQUIRED when status is 'Pending' (validated via custom validator)
    * Helps track cases waiting for external input

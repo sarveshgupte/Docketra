@@ -9,6 +9,7 @@ export const CasesHeaderActions = ({
   showPerformance,
   onTogglePerformance,
   isAdmin,
+  isPrimaryAdmin,
   onOpenBulkUpload,
   onCreateDocket,
   exportLabel,
@@ -25,7 +26,6 @@ export const CasesHeaderActions = ({
         {showPerformance ? 'Hide Performance View' : 'Show Performance View'}
       </Button>
     )}
-    {isAdmin && <Button variant="outline" onClick={onOpenBulkUpload}>Bulk Upload</Button>}
     {isAdmin && <Button variant="primary" onClick={onCreateDocket}>Create Docket</Button>}
   </div>
 );
@@ -70,7 +70,7 @@ export const CasesSavedViews = ({ savedViews, savedViewsOpen, setSavedViewsOpen,
           <button type="button" className="cases-page__saved-view-load" onClick={() => handleLoadSavedView(sv.name)} title={`Load: ${sv.name}`}>
             {sv.name}
           </button>
-          <button type="button" className="cases-page__saved-view-remove" onClick={() => removeView(sv.name)} aria-label={`Remove saved view: ${sv.name}`}>
+          <button type="button" className="cases-page__saved-view-remove" onClick={() => removeView(sv.name)} aria-label={`Remove saved view: ${sv.name}`} title={`Remove saved view: ${sv.name}`}>
             ×
           </button>
         </span>

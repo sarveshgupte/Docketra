@@ -854,7 +854,24 @@ module.exports = (deps) => {
             ? String(risk_level).toLowerCase()
             : 'medium',
           blocked_reason: typeof blocked_reason === 'string' ? blocked_reason.trim() : null,
+          isHistoricalImport: Boolean(req.body.isHistoricalImport),
+          importJobId: req.body.importJobId ? String(req.body.importJobId).trim() : null,
+          importedAt: req.body.isHistoricalImport ? new Date() : null,
         });
+
+        if (req.body.isHistoricalImport) {
+          if (String(req.body.status || '').toUpperCase() === 'RESOLVED') {
+            newCase.status = CaseStatus.RESOLVED;
+            newCase.state = 'RESOLVED';
+            newCase.resolvedAt = req.body.completedDate ? new Date(req.body.completedDate) : new Date();
+          }
+          if (req.body.startDate) {
+            const parsedStart = new Date(req.body.startDate);
+            if (!Number.isNaN(parsedStart.getTime())) {
+              newCase.createdAt = parsedStart;
+            }
+          }
+        }
         
         step('before case create');
         await newCase.saveWithRetry({ session });

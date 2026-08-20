@@ -2966,12 +2966,17 @@ const resendSetup = async (req, res) => {
   const user = await User.findOne(userQuery);
   if (!user) return res.json(genericResponse);
 
-  const recentCount = await AuthAudit.countDocuments({
+  // ⚡ Bolt Performance Optimization:
+  // 💡 What: Replaced AuthAudit.countDocuments() with AuthAudit.find().select('_id').limit(3).lean()
+  // 🎯 Why: countDocuments forces a full index scan when we only need to know if 3 documents exist. find().limit(3) provides an O(1) early return upon reaching the limit.
+  // 📊 Impact: Avoids unbounded full index scans and provides O(1) early return performance.
+  const recentResends = await AuthAudit.find({
     userId: user._id,
     actionType: 'SetupLinkResent',
     createdAt: { $gte: oneHourAgo },
-  });
-  if (recentCount >= 3) {
+  }).select('_id').limit(3).lean();
+
+  if (recentResends.length >= 3) {
     return res.status(429).json({ success: false, code: 'SETUP_RESEND_RATE_LIMITED', message: 'Rate limit exceeded. Max 3 setup links per hour.' });
   }
 
@@ -3866,45 +3871,49 @@ const sendOtpEndpoint = async (req, res) => authOtpServiceFacade.sendOtpEndpoint
 
 const verifyOtpEndpoint = async (req, res) => authOtpServiceFacade.verifyOtpEndpoint(req, res);
 
-
-
 const findWorkspaceByXid = async (req, res) => {
-  const xid = String(req.body?.xid || '').trim().toUpperCase();
-  if (!/^X\d{6}$/.test(xid)) {
+  try {
+    const xid = String(req.body?.xid || '').trim().toUpperCase();
+    if (!/^X\d{6}$/.test(xid)) {
+      return res.status(200).json({ success: true, data: { workspaces: [] } });
+    }
+
+    const users = await User.find({
+      $or: [{ xID: xid }, { xid }],
+      role: { $ne: 'SUPER_ADMIN' },
+      isActive: true,
+    }).select('firmId').lean();
+
+    const firmRefs = [...new Set(users.map((u) => normalizeMongoId(u.firmId)).filter(Boolean))];
+    if (!firmRefs.length) return res.status(200).json({ success: true, data: { workspaces: [] } });
+
+    const objectIdRefs = firmRefs.filter((value) => mongoose.Types.ObjectId.isValid(value));
+    const stringRefs = firmRefs.filter((value) => !mongoose.Types.ObjectId.isValid(value)).map((value) => String(value).toUpperCase());
+
+    const firms = await Firm.find({
+      $and: [
+        { $or: [{ status: 'active' }, { isActive: true }] },
+        {
+          $or: [
+            objectIdRefs.length ? { _id: { $in: objectIdRefs } } : null,
+            stringRefs.length ? { firmId: { $in: stringRefs } } : null,
+          ].filter(Boolean),
+        },
+      ],
+    }).select('firmSlug name').lean();
+
+    const workspaces = firms
+      .map((firm) => ({
+        firmSlug: String(firm.firmSlug || '').trim(),
+        firmName: String(firm.name || firm.firmName || '').trim() || 'Workspace',
+      }))
+      .filter((firm) => firm.firmSlug);
+
+    return res.status(200).json({ success: true, data: { workspaces } });
+  } catch (err) {
+    log.warn('[findWorkspaceByXid] lookup failed', { error: err?.message });
     return res.status(200).json({ success: true, data: { workspaces: [] } });
   }
-
-  const users = await User.find({
-    $or: [{ xID: xid }, { xid }],
-    role: { $ne: 'SUPER_ADMIN' },
-    isActive: true,
-  }).select('firmId').lean();
-
-  const firmRefs = [...new Set(users.map((u) => normalizeMongoId(u.firmId)).filter(Boolean))];
-  if (!firmRefs.length) return res.status(200).json({ success: true, data: { workspaces: [] } });
-
-  const objectIdRefs = firmRefs.filter((value) => mongoose.Types.ObjectId.isValid(value));
-  const stringRefs = firmRefs.filter((value) => !mongoose.Types.ObjectId.isValid(value)).map((value) => String(value).toUpperCase());
-
-  const firms = await Firm.find({
-    $and: [
-      { $or: [{ status: 'active' }, { isActive: true }] },
-      {
-        $or: [
-          objectIdRefs.length ? { _id: { $in: objectIdRefs } } : null,
-          stringRefs.length ? { firmId: { $in: stringRefs } } : null,
-        ].filter(Boolean),
-      },
-    ],
-  }).select('firmSlug name').lean();
-    const workspaces = firms
-    .map((firm) => ({
-      firmSlug: String(firm.firmSlug || '').trim(),
-      firmName: String(firm.name || firm.firmName || '').trim() || 'Workspace',
-    }))
-    .filter((firm) => firm.firmSlug);
-
-  return res.status(200).json({ success: true, data: { workspaces } });
 };
 
 const GOOGLE_AUTH_STATE_TTL_MS = 10 * 60 * 1000;
@@ -4212,7 +4221,7 @@ module.exports = {
   signupResend: wrapWriteHandler(signupResend),
   sendOtpEndpoint: wrapWriteHandler(sendOtpEndpoint),
   verifyOtpEndpoint: wrapWriteHandler(verifyOtpEndpoint),
-  findWorkspaceByXid: wrapWriteHandler(findWorkspaceByXid),
+  findWorkspaceByXid,
   startGoogleAuth,
   googleAuthCallback,
   exchangeGoogleAuth: wrapWriteHandler(exchangeGoogleAuth),
