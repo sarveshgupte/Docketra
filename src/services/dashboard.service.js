@@ -210,12 +210,17 @@ const getRiskBrief = async (firmId) => {
   const tenDaysAgo = new Date(now.getTime() - (10 * 24 * 60 * 60 * 1000));
   const activeStatuses = ['OPEN', 'IN_PROGRESS', 'PENDING', 'UNDER_REVIEW', 'SUBMITTED', 'REVIEWED'];
 
+  // ⚡ Bolt: Group independent queries concurrently
+  // 💡 What: Merged the sequential stalePending countDocuments query into the preceding Promise.all array.
+  // 🎯 Why: Identifying and eliminating unnecessary sequential database queries by grouping them into a single Promise.all array executes them concurrently, reducing overall network latency.
+  // 📊 Impact: Eliminates an extra sequential network roundtrip and reduces the total latency of getRiskBrief.
   const [
     atRiskEntities,
     waitingClient,
     awaitingApproval,
     overloadedAssigneesRaw,
     blockedTaxonomyRaw,
+    stalePending,
   ] = await Promise.all([
     Case.countDocuments({
       firmId: firmObjectId,
@@ -273,13 +278,12 @@ const getRiskBrief = async (firmId) => {
       },
       { $sort: { count: -1 } },
     ]),
+    Case.countDocuments({
+      firmId: firmObjectId,
+      status: 'PENDING',
+      updatedAt: { $lt: tenDaysAgo },
+    }),
   ]);
-
-  const stalePending = await Case.countDocuments({
-    firmId: firmObjectId,
-    status: 'PENDING',
-    updatedAt: { $lt: tenDaysAgo },
-  });
 
   const blockedByType = blockedTaxonomyRaw.reduce((acc, item) => {
     const key = String(item?._id || 'other');
@@ -838,13 +842,6 @@ const getApprovalQueues = async (firmId, {
     ...(andFilters.length ? { $and: [...andFilters, extra] } : extra),
   });
 
-  const [myApprovals, awaitingPartner, awaitingClientSignatory, overdueApprovals] = await Promise.all([
-    Case.countDocuments(composeQuery(viewerXID ? { 'approval_stage.approver': String(viewerXID).trim().toUpperCase() } : {})),
-    Case.countDocuments(composeQuery({ 'approval_stage.approval_type': 'internal_partner' })),
-    Case.countDocuments(composeQuery({ 'approval_stage.approval_type': { $in: ['client', 'authorised_signatory'] } })),
-    Case.countDocuments(composeQuery({ 'approval_stage.due_at': { $lt: now } })),
-  ]);
-
   const queueFilter = getApprovalQueueFilter({ view, userXID: viewerXID });
   const listQuery = {
     firmId: firmObjectId,
@@ -853,11 +850,22 @@ const getApprovalQueues = async (firmId, {
     ...(clientId ? { clientId: String(clientId).trim() } : {}),
     ...(approvalType ? { 'approval_stage.approval_type': String(approvalType).trim().toLowerCase() } : {}),
   };
-  const items = await Case.find(listQuery)
-    .select('caseId caseNumber title clientId clientName assignedToXID approval_stage compliance_state statutory_due_date internal_due_date obligation_type obligation_period')
-    .sort({ 'approval_stage.due_at': 1, 'approval_stage.requested_at': 1, createdAt: -1 })
-    .limit(300)
-    .lean();
+
+  // ⚡ Bolt: Group independent queries concurrently
+  // 💡 What: Merged the sequential Case.find list query into the preceding Promise.all array containing Case.countDocuments queries.
+  // 🎯 Why: Identifying and eliminating unnecessary sequential database queries by grouping them into a single Promise.all array executes them concurrently, reducing overall network latency.
+  // 📊 Impact: Eliminates an extra sequential network roundtrip and reduces the total latency of getApprovalQueue.
+  const [myApprovals, awaitingPartner, awaitingClientSignatory, overdueApprovals, items] = await Promise.all([
+    Case.countDocuments(composeQuery(viewerXID ? { 'approval_stage.approver': String(viewerXID).trim().toUpperCase() } : {})),
+    Case.countDocuments(composeQuery({ 'approval_stage.approval_type': 'internal_partner' })),
+    Case.countDocuments(composeQuery({ 'approval_stage.approval_type': { $in: ['client', 'authorised_signatory'] } })),
+    Case.countDocuments(composeQuery({ 'approval_stage.due_at': { $lt: now } })),
+    Case.find(listQuery)
+      .select('caseId caseNumber title clientId clientName assignedToXID approval_stage compliance_state statutory_due_date internal_due_date obligation_type obligation_period')
+      .sort({ 'approval_stage.due_at': 1, 'approval_stage.requested_at': 1, createdAt: -1 })
+      .limit(300)
+      .lean(),
+  ]);
 
   return {
     summary: {

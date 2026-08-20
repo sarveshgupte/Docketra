@@ -1,6 +1,9 @@
 const { randomUUID } = require('crypto');
 const { createCase } = require('./case.controller');
 const { validateBulkDockets, mapValidationErrors } = require('../services/bulkUpload.service');
+const Client = require('../models/Client.model');
+const Category = require('../models/Category.model');
+const Team = require('../models/Team.model');
 const log = require('../utils/log');
 
 const BULK_ASYNC_THRESHOLD = 750;
@@ -24,6 +27,80 @@ const resolveRows = (body = {}) => {
   if (Array.isArray(body.rows) && body.rows.length > 0) return body.rows;
   if (typeof body.csvContent === 'string' && body.csvContent.trim()) return parseCsvRows(body.csvContent);
   return [];
+};
+
+const generateDocketImportTemplate = async (req, res) => {
+  try {
+    const firmId = req.user.firmId;
+    const [clients, teams, categories] = await Promise.all([
+      Client.find({ firmId, status: { $in: ['active', 'Lead'] } }).select('clientId businessName').lean(),
+      Team.find({ firmId, isActive: true }).select('name').lean(),
+      Category.find({ firmId, isActive: true }).select('name subcategories').lean(),
+    ]);
+
+    const sampleTeam = teams[0]?.name || 'General Operations';
+    const sampleCategory = categories[0]?.name || 'General';
+    const sampleSubcategory = categories[0]?.subcategories?.find((sub) => sub?.isActive)?.name || 'General Task';
+
+    const headers = [
+      'docketId',
+      'clientId',
+      'clientName',
+      'workbasket',
+      'category',
+      'subcategory',
+      'title',
+      'description',
+      'assignedToEmail',
+      'startDate',
+      'completedDate',
+      'status',
+      'priority',
+    ];
+
+    const sampleRows = clients.length > 0
+      ? clients.map((c, i) => [
+        `DCK-IMPORT-${1000 + i}`,
+        c.clientId || '',
+        `"${c.businessName || ''}"`,
+        sampleTeam,
+        sampleCategory,
+        sampleSubcategory,
+        `Historical Task for ${c.businessName}`,
+        'Historical docket record imported during onboarding',
+        req.user.email || '',
+        '2023-01-15',
+        '2023-01-20',
+        'RESOLVED',
+        'medium',
+      ].join(','))
+      : [
+        [
+          'DCK-IMPORT-1001',
+          'C000001',
+          '"Sample Client Ltd"',
+          sampleTeam,
+          sampleCategory,
+          sampleSubcategory,
+          'Annual Compliance Filing 2023',
+          'Historical docket imported during onboarding',
+          req.user.email || 'admin@firm.com',
+          '2023-01-15',
+          '2023-01-20',
+          'RESOLVED',
+          'medium',
+        ].join(','),
+      ];
+
+    const csvContent = [headers.join(','), ...sampleRows].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="Docketra_Historical_Dockets_Template.csv"');
+    return res.status(200).send(csvContent);
+  } catch (error) {
+    log.error('[DOCKET_BULK_TEMPLATE] Failed to generate docket import template', error);
+    return res.status(500).json({ success: false, message: 'Failed to generate docket import template' });
+  }
 };
 
 const previewDocketBulkUpload = async (req, res) => {
@@ -64,6 +141,12 @@ const invokeCreateCase = async (req, row) => {
     subcategoryId: row.subcategoryId,
     workbasketId: row.workbasketId,
     priority: row.priority,
+    clientId: row.clientId,
+    status: row.status || 'RESOLVED',
+    startDate: row.startDate,
+    completedDate: row.completedDate,
+    assignedTo: row.assignedTo,
+    isHistoricalImport: row.isHistoricalImport !== false,
   };
 
   const innerReq = {
@@ -150,6 +233,7 @@ const uploadDocketBulk = async (req, res) => {
 };
 
 module.exports = {
+  generateDocketImportTemplate,
   previewDocketBulkUpload,
   uploadDocketBulk,
 };

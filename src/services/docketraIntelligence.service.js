@@ -227,49 +227,6 @@ const scoreMember = (entry) => {
   };
 };
 
-const buildWorkloadRecommendations = (members = []) => {
-  const ranked = [...members].sort((a, b) =>
-    (b.availabilityScore - a.availabilityScore) ||
-    (a.metrics.overdue - b.metrics.overdue) ||
-    (a.metrics.reviewWorkload - b.metrics.reviewWorkload) ||
-    (a.metrics.openDockets - b.metrics.openDockets) ||
-    String(a.name || '').localeCompare(String(b.name || ''))
-  );
-
-  const bestAssignees = ranked
-    .filter((member) => member.availabilityLabel !== 'Overloaded')
-    .slice(0, 3)
-    .map((member) => ({
-      xID: member.xID,
-      name: member.name,
-      availabilityScore: member.availabilityScore,
-      availabilityLabel: member.availabilityLabel,
-      openDockets: member.metrics.openDockets,
-      overdue: member.metrics.overdue,
-      reviewWorkload: member.metrics.reviewWorkload,
-    }));
-
-  const avoidAssigning = ranked
-    .filter((member) => member.availabilityLabel === 'Overloaded' || (member.availabilityLabel === 'Busy' && member.metrics.overdue > 0))
-    .slice(0, 3)
-    .map((member) => ({
-      xID: member.xID,
-      name: member.name,
-      availabilityScore: member.availabilityScore,
-      availabilityLabel: member.availabilityLabel,
-      reason: member.metrics.overdue > 0
-        ? `${member.metrics.overdue} overdue docket(s)`
-        : `${member.metrics.openDockets} active docket(s) with review/effort pressure`,
-    }));
-
-  return {
-    recommendedAssignee: bestAssignees[0] || null,
-    bestAssignees,
-    avoidAssigning,
-    explanation: 'Recommendations rank availability score first, then overdue work, review load, and active docket pressure.',
-  };
-};
-
 const getWorkbasketIdVariants = (workbasketId) => {
   const variants = [String(workbasketId)];
   if (mongoose.Types.ObjectId.isValid(String(workbasketId))) {
@@ -290,7 +247,7 @@ const buildWorkbasketDocketQuery = ({ firmIdVariants, workbasketId }) => {
   };
 };
 
-async function getWorkloadIntelligence({ firmId, workbasketId = null, candidateXIDs = null } = {}) {
+async function getWorkloadIntelligence({ firmId, workbasketId = null, candidateXIDs = null, workType = null, clientId = null } = {}) {
   if (!firmId) {
     throw new Error('firmId is required');
   }
@@ -401,8 +358,83 @@ async function getWorkloadIntelligence({ firmId, workbasketId = null, candidateX
   });
 
   const scoredMembers = [...memberMap.values()].map(scoreMember).sort((a, b) =>
-    (b.availabilityScore - a.availabilityScore) || String(a.name || '').localeCompare(String(b.name || ''))
+    (b.availabilityScore - a.availabilityScore) || String(a.name || '').localeCompare(String(a.name || ''))
   );
+
+  // Compute Work Type Expertise and Client Affinity for candidates
+  const targetWorkType = String(workType || '').trim();
+  const targetClientId = String(clientId || '').trim();
+
+  let expertiseMap = new Map();
+  let affinityMap = new Map();
+
+  if (targetWorkType) {
+    const rx = new RegExp(targetWorkType.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    const expertiseRows = await Case.aggregate([
+      {
+        $match: {
+          $or: [
+            { firmId: { $in: firmIdVariants } },
+            { firmId: String(firmId) },
+          ],
+          status: { $in: ['RESOLVED', 'CLOSED', 'FILED', 'Done', 'DONE'] },
+          $or: [
+            { workType: rx },
+            { title: rx },
+            { subcategory: rx },
+            { subcategoryId: rx },
+          ],
+        },
+      },
+      { $group: { _id: '$assignedToXID', count: { $sum: 1 } } },
+    ]);
+    expertiseRows.forEach((r) => {
+      if (r._id) expertiseMap.set(normalizeXID(r._id), r.count);
+    });
+  }
+
+  if (targetClientId) {
+    const affinityRows = await Case.aggregate([
+      {
+        $match: {
+          $or: [
+            { firmId: { $in: firmIdVariants } },
+            { firmId: String(firmId) },
+          ],
+          clientId: targetClientId,
+        },
+      },
+      { $group: { _id: '$assignedToXID', count: { $sum: 1 } } },
+    ]);
+    affinityRows.forEach((r) => {
+      if (r._id) affinityMap.set(normalizeXID(r._id), r.count);
+    });
+  }
+
+  // Calculate Capacity-Balanced Match Score for each member
+  scoredMembers.forEach((member) => {
+    const resolvedCount = expertiseMap.get(member.xID) || 0;
+    const clientHistoryCount = affinityMap.get(member.xID) || 0;
+
+    // Expertise score 0-100 based on resolved count (max out at 20 dockets = 100 score)
+    const expertiseScore = clampScore(Math.min(resolvedCount * 5, 100));
+    const affinityScore = clampScore(Math.min(clientHistoryCount * 20, 100));
+
+    // Capacity-Balanced Match Formula: Expertise * (Availability / 100)
+    // Suppress overloaded/busy members from getting high match scores
+    const capacityFactor = member.availabilityScore / 100;
+    const balancedMatchScore = clampScore(
+      (expertiseScore * 0.6 + affinityScore * 0.4 + member.availabilityScore * 0.2) * capacityFactor
+    );
+
+    member.intelligenceMatch = {
+      expertiseScore,
+      resolvedCount,
+      affinityScore,
+      clientHistoryCount,
+      balancedMatchScore,
+    };
+  });
 
   const summary = scoredMembers.reduce((acc, member) => {
     acc.totalMembers += 1;
@@ -418,6 +450,63 @@ async function getWorkloadIntelligence({ firmId, workbasketId = null, candidateX
     members: scoredMembers,
   };
 }
+
+const buildWorkloadRecommendations = (members = []) => {
+  const ranked = [...members].sort((a, b) =>
+    ((b.intelligenceMatch?.balancedMatchScore || b.availabilityScore) - (a.intelligenceMatch?.balancedMatchScore || a.availabilityScore)) ||
+    (b.availabilityScore - a.availabilityScore) ||
+    (a.metrics.overdue - b.metrics.overdue) ||
+    String(a.name || '').localeCompare(String(b.name || ''))
+  );
+
+  // Filter out Overloaded members (Availability < 25)
+  const bestAssignees = ranked
+    .filter((member) => member.availabilityScore >= 50)
+    .slice(0, 3)
+    .map((member) => ({
+      xID: member.xID,
+      name: member.name,
+      availabilityScore: member.availabilityScore,
+      availabilityLabel: member.availabilityLabel,
+      openDockets: member.metrics.openDockets,
+      overdue: member.metrics.overdue,
+      expertiseScore: member.intelligenceMatch?.expertiseScore || 0,
+      resolvedCount: member.intelligenceMatch?.resolvedCount || 0,
+      balancedMatchScore: member.intelligenceMatch?.balancedMatchScore || member.availabilityScore,
+    }));
+
+  // Identify Overloaded Expert Mentors (High expertise BUT overloaded)
+  const mentorSuggestions = members
+    .filter((m) => m.availabilityScore < 50 && (m.intelligenceMatch?.expertiseScore || 0) >= 50)
+    .slice(0, 2)
+    .map((m) => ({
+      xID: m.xID,
+      name: m.name,
+      expertiseScore: m.intelligenceMatch?.expertiseScore,
+      reason: `Senior expert in this work type (${m.intelligenceMatch?.resolvedCount} dockets completed). Paired as Senior Mentor to avoid execution overload.`,
+    }));
+
+  const avoidAssigning = ranked
+    .filter((member) => member.availabilityLabel === 'Overloaded' || (member.availabilityLabel === 'Busy' && member.metrics.overdue > 0))
+    .slice(0, 3)
+    .map((member) => ({
+      xID: member.xID,
+      name: member.name,
+      availabilityScore: member.availabilityScore,
+      availabilityLabel: member.availabilityLabel,
+      reason: member.availabilityLabel === 'Overloaded'
+        ? 'Overloaded with active work (New assignments suppressed to prevent burnout)'
+        : `${member.metrics.overdue} overdue docket(s) require attention`,
+    }));
+
+  return {
+    recommendedAssignee: bestAssignees[0] || null,
+    bestAssignees,
+    avoidAssigning,
+    mentorSuggestions,
+    explanation: 'Recommendations rank Capacity-Balanced Expertise first (Expertise x Availability), excluding overloaded team members.',
+  };
+};
 
 async function getWorkbasketCapacityIntelligence({
   firmId,
@@ -529,7 +618,7 @@ async function getDeadlineRiskIntelligence({ firmId } = {}) {
   const weekEnd = addDays(todayStart, 7);
 
   const dockets = await Case.find({ firmId: { $in: firmIdVariants } })
-    .select('_id caseInternalId caseId caseNumber title caseName status priority dueDate slaDueAt internal_due_date statutory_due_date assignedToXID workbasketId ownerTeamId routedToTeamId reviewer_xid approval_stage')
+    .select('_id caseInternalId caseId caseNumber title caseName status lifecycle pendingReason reopenAt workType priority dueDate slaDueAt internal_due_date statutory_due_date assignedToXID workbasketId ownerTeamId routedToTeamId reviewer_xid approval_stage expectedMinutes')
     .lean();
 
   const activeDockets = dockets.filter(isActiveDocket);
@@ -539,8 +628,62 @@ async function getDeadlineRiskIntelligence({ firmId } = {}) {
     if (mapped.caseId) affectedMap.set(String(mapped.caseId), mapped);
   };
 
+  // Calculate 10-State Lifecycle Bottlenecks & Predictive SLA Breaches
+  let pendStagnationCount = 0;
+  let qcBottleneckCount = 0;
+  let routedFrictionCount = 0;
+  let predictiveBreachCount = 0;
+
+  const now = new Date();
+
+  // Average historical effort per workType
+  const historicalEffortRows = await DocketEffort.aggregate([
+    {
+      $match: {
+        $or: [
+          { tenantId: String(firmId) },
+          ...(mongoose.Types.ObjectId.isValid(String(firmId)) ? [{ firmId: new mongoose.Types.ObjectId(String(firmId)) }] : []),
+        ],
+      },
+    },
+    { $group: { _id: '$workType', avgMinutes: { $avg: '$minutes' } } },
+  ]);
+  const avgEffortMap = new Map();
+  historicalEffortRows.forEach((r) => {
+    if (r._id) avgEffortMap.set(String(r._id).trim(), Math.max(Number(r.avgMinutes) || 120, 60));
+  });
+
   const counts = activeDockets.reduce((acc, docket) => {
     const dueDate = getPrimaryDueDate(docket);
+    const status = String(docket.status || '').toUpperCase();
+    const lifecycle = String(docket.lifecycle || '').toUpperCase();
+
+    // 10-State Lifecycle Radar
+    if (status === 'PENDING' || status === 'PEND' || lifecycle === 'WAITING') {
+      const pendedMs = docket.reopenAt ? new Date(docket.reopenAt).getTime() - now.getTime() : null;
+      if (pendedMs == null || pendedMs <= 0 || pendedMs < 5 * 24 * 60 * 60 * 1000) {
+        pendStagnationCount += 1;
+      }
+    }
+
+    if (status === 'QC_PENDING' || status === 'QC_WB' || status === 'QC_ASSIGNED') {
+      qcBottleneckCount += 1;
+    }
+
+    if (status === 'ROUTED' || status === 'ROUTED_ASSIGNED') {
+      routedFrictionCount += 1;
+    }
+
+    // Predictive SLA Breach Engine: remaining hours < avg historical effort hours
+    if (dueDate && dueDate.getTime() > now.getTime()) {
+      const remainingHours = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+      const avgEffortHours = (avgEffortMap.get(docket.workType) || 180) / 60;
+      if (remainingHours < avgEffortHours) {
+        predictiveBreachCount += 1;
+        addAffected(docket);
+      }
+    }
+
     if (dueDate) {
       if (dueDate.getTime() < todayStart.getTime()) {
         acc.overdueDockets += 1;
@@ -571,6 +714,11 @@ async function getDeadlineRiskIntelligence({ firmId } = {}) {
     reviewBottlenecks: 0,
   });
 
+  counts.pendStagnation = pendStagnationCount;
+  counts.qcBottlenecks = qcBottleneckCount;
+  counts.routedFriction = routedFrictionCount;
+  counts.predictiveSlaBreaches = predictiveBreachCount;
+
   const riskLevel = getDeadlineRiskLevel(counts);
   const recommendedAction = getDeadlineRecommendation(riskLevel, counts);
   const affectedDockets = [...affectedMap.values()].sort((left, right) => {
@@ -589,10 +737,136 @@ async function getDeadlineRiskIntelligence({ firmId } = {}) {
     radar: [
       { label: 'Overdue Dockets', value: counts.overdueDockets },
       { label: 'Due Today', value: counts.dueToday },
-      { label: 'Due This Week', value: counts.dueThisWeek },
-      { label: 'High Priority Due This Week', value: counts.highPriorityDueThisWeek },
-      { label: 'Review Bottlenecks', value: counts.reviewBottlenecks },
+      { label: 'Predictive SLA Breaches', value: counts.predictiveSlaBreaches },
+      { label: 'PEND Stagnation', value: counts.pendStagnation },
+      { label: 'QC Bottlenecks', value: counts.qcBottlenecks },
     ],
+  };
+}
+
+async function getClientComplianceRiskScores({ firmId } = {}) {
+  if (!firmId) throw new Error('firmId is required');
+  const firmIdVariants = getFirmIdVariants(firmId);
+
+  const dockets = await Case.find({ firmId: { $in: firmIdVariants } })
+    .select('clientId caseId status reopenAt createdAt statutory_due_date')
+    .lean();
+
+  const clientMap = new Map();
+  dockets.forEach((d) => {
+    if (!d.clientId) return;
+    if (!clientMap.has(d.clientId)) {
+      clientMap.set(d.clientId, { clientId: d.clientId, totalDockets: 0, pendedCount: 0, overdueCount: 0 });
+    }
+    const entry = clientMap.get(d.clientId);
+    entry.totalDockets += 1;
+    if (d.status === 'PENDING' || d.status === 'PEND') entry.pendedCount += 1;
+    if (d.statutory_due_date && new Date(d.statutory_due_date).getTime() < Date.now() && d.status !== 'RESOLVED') {
+      entry.overdueCount += 1;
+    }
+  });
+
+  const clients = [...clientMap.values()].map((entry) => {
+    const pendedRatio = entry.totalDockets ? entry.pendedCount / entry.totalDockets : 0;
+    let riskRating = 'Responsive';
+    if (pendedRatio > 0.4 || entry.overdueCount >= 3) riskRating = 'High Risk';
+    else if (pendedRatio > 0.2 || entry.overdueCount >= 1) riskRating = 'Sluggish';
+    else if (pendedRatio > 0.1) riskRating = 'Moderate';
+
+    return {
+      ...entry,
+      pendedRatio: Number((pendedRatio * 100).toFixed(1)),
+      riskRating,
+    };
+  }).sort((a, b) => b.pendedRatio - a.pendedRatio);
+
+  return { generatedAt: new Date().toISOString(), clients };
+}
+
+async function generateExecutiveAiBrief({ firmId } = {}) {
+  if (!firmId) throw new Error('firmId is required');
+
+  const [workload, deadlineRisk] = await Promise.all([
+    getWorkloadIntelligence({ firmId }),
+    getDeadlineRiskIntelligence({ firmId }),
+  ]);
+
+  const summary = workload.summary || {};
+  const counts = deadlineRisk.counts || {};
+  const best = workload.recommendations?.bestAssignees?.[0]?.name || 'Available team members';
+
+  const line1 = counts.overdueDockets > 0
+    ? `⚠️ Operational Warning: ${counts.overdueDockets} docket(s) are overdue and ${counts.predictiveSlaBreaches} at predictive SLA breach risk.`
+    : `✅ Operational Status: All statutory filing deadlines are currently on schedule.`;
+
+  const line2 = summary.overloaded > 0
+    ? `Capacity Alert: ${summary.overloaded} team member(s) are overloaded. Recommended to rebalance work to ${best}.`
+    : `Capacity Status: Team workload is balanced with ${summary.available} available member(s).`;
+
+  const line3 = counts.qcBottlenecks > 0
+    ? `Review Bottleneck: ${counts.qcBottlenecks} docket(s) are awaiting QC verification in the queue.`
+    : `Workflow Flow: No review bottlenecks detected.`;
+
+  return {
+    executiveBrief: `${line1} ${line2} ${line3}`,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+async function rebalanceWorkload({ firmId, execute = false } = {}) {
+  if (!firmId) throw new Error('firmId is required');
+
+  const workload = await getWorkloadIntelligence({ firmId });
+  const overloadedMembers = workload.members.filter((m) => m.availabilityLabel === 'Overloaded');
+  const availableMembers = workload.members.filter((m) => m.availabilityLabel === 'Available');
+
+  if (!overloadedMembers.length || !availableMembers.length) {
+    return {
+      rebalancedCount: 0,
+      message: 'No rebalancing needed. Workload is already balanced across available members.',
+      reassignedDockets: [],
+    };
+  }
+
+  const overloadedXIDs = overloadedMembers.map((m) => m.xID);
+  const firmIdVariants = getFirmIdVariants(firmId);
+
+  // Find unstarted dockets assigned to overloaded members
+  const candidateDockets = await Case.find({
+    firmId: { $in: firmIdVariants },
+    assignedToXID: { $in: overloadedXIDs },
+    status: { $in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] },
+  }).select('_id caseId title workType assignedToXID').lean();
+
+  const reassignedDockets = [];
+  let availableIdx = 0;
+
+  for (const docket of candidateDockets) {
+    const targetMember = availableMembers[availableIdx % availableMembers.length];
+    reassignedDockets.push({
+      caseId: docket.caseId,
+      title: docket.title,
+      fromXID: docket.assignedToXID,
+      toXID: targetMember.xID,
+      toName: targetMember.name,
+    });
+
+    if (execute) {
+      await Case.updateOne(
+        { _id: docket._id },
+        { $set: { assignedToXID: targetMember.xID, assignedTo: targetMember.name } }
+      );
+    }
+    availableIdx += 1;
+  }
+
+  return {
+    rebalancedCount: reassignedDockets.length,
+    execute,
+    message: execute
+      ? `Successfully reassigned ${reassignedDockets.length} docket(s) to available team members.`
+      : `Identified ${reassignedDockets.length} docket(s) ready for smart rebalancing.`,
+    reassignedDockets,
   };
 }
 
@@ -600,6 +874,9 @@ module.exports = {
   getWorkloadIntelligence,
   getWorkbasketCapacityIntelligence,
   getDeadlineRiskIntelligence,
+  getClientComplianceRiskScores,
+  generateExecutiveAiBrief,
+  rebalanceWorkload,
   buildWorkloadRecommendations,
   getAvailabilityLabel,
   getWorkbasketCapacityLabel,

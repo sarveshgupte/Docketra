@@ -1,17 +1,23 @@
-const Team = require('../models/Team.model');
-const Category = require('../models/Category.model');
+const Client = require('../models/Client.model');
 
 const ALLOWED_PRIORITIES = new Set(['low', 'medium', 'high']);
+const ALLOWED_STATUSES = new Set(['open', 'pending', 'resolved', 'in_progress', 'qc_pending', 'qc_failed', 'filed']);
 
 const normalizeString = (value) => String(value ?? '').trim();
 
 const normalizeBulkRow = (row = {}) => ({
-  title: normalizeString(row.title),
-  description: normalizeString(row.description),
-  workbasket: normalizeString(row.workbasket),
-  category: normalizeString(row.category),
-  subcategory: normalizeString(row.subcategory),
-  priority: normalizeString(row.priority).toLowerCase(),
+  title: normalizeString(row.title || row.docketTitle || row.summary),
+  description: normalizeString(row.description || row.notes),
+  workbasket: normalizeString(row.workbasket || row.team || row.workbasketName),
+  category: normalizeString(row.category || row.workType || row.categoryName),
+  subcategory: normalizeString(row.subcategory || row.subCategory || row.subcategoryName),
+  priority: normalizeString(row.priority || 'medium').toLowerCase(),
+  clientId: normalizeString(row.clientId || row.client_id || row.client || row.clientName),
+  status: normalizeString(row.status || 'RESOLVED').toUpperCase(),
+  startDate: normalizeString(row.startDate || row.start_date || row.createdAt),
+  completedDate: normalizeString(row.completedDate || row.completed_date || row.finishedAt),
+  assignedToEmail: normalizeString(row.assignedToEmail || row.assignedTo || row.assigned_to),
+  docketId: normalizeString(row.docketId || row.caseId || row.caseNumber),
 });
 
 const getTeamLookupKey = (team) => [
@@ -20,9 +26,10 @@ const getTeamLookupKey = (team) => [
 ].filter(Boolean);
 
 const buildValidationContext = async (firmId) => {
-  const [teams, categories] = await Promise.all([
+  const [teams, categories, clients] = await Promise.all([
     Team.find({ firmId, isActive: true }).select('_id name').lean(),
     Category.find({ firmId, isActive: true }).select('_id name subcategories').lean(),
+    Client.find({ firmId }).select('_id clientId businessName status').lean(),
   ]);
 
   const teamLookup = new Map();
@@ -36,17 +43,24 @@ const buildValidationContext = async (firmId) => {
     categoryLookup.set(normalizeString(category.name).toLowerCase(), category);
   });
 
+  const clientLookup = new Map();
+  clients.forEach((client) => {
+    if (client.clientId) clientLookup.set(client.clientId.toUpperCase(), client);
+    if (client.businessName) clientLookup.set(normalizeString(client.businessName).toLowerCase(), client);
+    if (client._id) clientLookup.set(String(client._id), client);
+  });
+
   const defaultCategory = categories.find(
     (category) => (category.subcategories || []).some((sub) => sub?.isActive),
   ) || null;
 
-  return { teamLookup, categoryLookup, defaultCategory };
+  return { teamLookup, categoryLookup, clientLookup, defaultCategory };
 };
 
 const mapValidationErrors = (validationRow = {}) => validationRow.errors || [];
 
 const validateBulkDockets = async (rows = [], firmId) => {
-  const { teamLookup, categoryLookup, defaultCategory } = await buildValidationContext(firmId);
+  const { teamLookup, categoryLookup, clientLookup, defaultCategory } = await buildValidationContext(firmId);
 
   return rows.map((row, index) => {
     const normalizedData = normalizeBulkRow(row);
@@ -101,13 +115,22 @@ const validateBulkDockets = async (rows = [], firmId) => {
       errors.push('Invalid priority. Allowed values: LOW, MEDIUM, HIGH');
     }
 
+    let resolvedClient = null;
+    if (normalizedData.clientId) {
+      resolvedClient = clientLookup.get(normalizedData.clientId.toUpperCase())
+        || clientLookup.get(normalizedData.clientId.toLowerCase());
+      if (!resolvedClient) {
+        errors.push(`Client "${normalizedData.clientId}" not found`);
+      }
+    }
+
     return {
       rowIndex: index + 1,
       isValid: errors.length === 0,
       normalizedData: errors.length === 0
         ? {
           title: normalizedData.title,
-          description: normalizedData.description || 'Bulk uploaded docket',
+          description: normalizedData.description || 'Bulk uploaded historical docket',
           workbasketId: String(resolvedTeam._id),
           workbasketName: resolvedTeam.name,
           categoryId: String(resolvedCategory._id),
@@ -115,6 +138,12 @@ const validateBulkDockets = async (rows = [], firmId) => {
           subcategoryId: String(resolvedSubcategory.id),
           subcategory: resolvedSubcategory.name,
           priority: normalizedData.priority || 'medium',
+          clientId: resolvedClient ? resolvedClient.clientId : undefined,
+          status: normalizedData.status || 'RESOLVED',
+          startDate: normalizedData.startDate || undefined,
+          completedDate: normalizedData.completedDate || undefined,
+          assignedTo: normalizedData.assignedToEmail || undefined,
+          isHistoricalImport: true,
         }
         : undefined,
       errors,

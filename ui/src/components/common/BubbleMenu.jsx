@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 
@@ -58,6 +58,8 @@ export default function BubbleMenu({
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
+  const generatedId = useId();
+  const menuId = `bubble-menu-${generatedId}`;
 
   const overlayRef = useRef(null);
   const bubblesRef = useRef([]);
@@ -184,10 +186,12 @@ export default function BubbleMenu({
 
           <button
             type="button"
-            className={`bubble toggle-bubble menu-btn ${isMenuOpen ? 'open' : ''}`}
+            className={`bubble toggle-bubble menu-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${isMenuOpen ? 'open' : ''}`}
             onClick={handleToggle}
             aria-label={menuAriaLabel}
             aria-pressed={isMenuOpen}
+            aria-expanded={isMenuOpen}
+            aria-controls={showOverlay ? menuId : undefined}
             style={{ background: menuBg }}
           >
             <span className="menu-line" style={{ background: menuContentColor }} />
@@ -197,6 +201,7 @@ export default function BubbleMenu({
       </nav>
       {showOverlay && (
         <div
+          id={menuId}
           ref={overlayRef}
           className={`bubble-menu-items ${useFixedPosition ? 'fixed' : 'absolute'}`}
           aria-hidden={!isMenuOpen}
@@ -209,7 +214,7 @@ export default function BubbleMenu({
                     role="menuitem"
                     href={item.href}
                     aria-label={item.ariaLabel || item.label}
-                    className="menu-card-link"
+                    className="menu-card-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                     style={{
                       '--item-rot': `${item.rotation ?? 0}deg`,
                       '--card-bg': menuBg,

@@ -15,7 +15,10 @@ import {
   usePlatformDeadlineRiskQuery,
   usePlatformWorkbasketCapacityQuery,
   usePlatformWorkloadIntelligenceQuery,
+  usePlatformExecutiveBriefQuery,
+  usePlatformClientRiskQuery,
 } from '../../hooks/usePlatformDataQueries';
+import { docketraIntelligenceApi } from '../../api/docketraIntelligence.api';
 
 const toNumber = (value) => {
   const numeric = Number(value);
@@ -83,6 +86,9 @@ const RankedAssigneeCard = ({ assignee, index, mode = 'best' }) => (
 
 export const DocketraIntelligencePage = () => {
   const { firmSlug } = useParams();
+  const [rebalanceMessage, setRebalanceMessage] = React.useState('');
+  const [rebalancing, setRebalancing] = React.useState(false);
+
   const {
     data = {},
     isLoading,
@@ -91,6 +97,7 @@ export const DocketraIntelligencePage = () => {
     error,
     refetch,
   } = usePlatformWorkloadIntelligenceQuery();
+
   const {
     data: capacityData = {},
     isLoading: capacityLoading,
@@ -99,6 +106,7 @@ export const DocketraIntelligencePage = () => {
     error: capacityQueryError,
     refetch: refetchCapacity,
   } = usePlatformWorkbasketCapacityQuery();
+
   const {
     data: deadlineRisk = {},
     isLoading: deadlineLoading,
@@ -107,6 +115,9 @@ export const DocketraIntelligencePage = () => {
     error: deadlineQueryError,
     refetch: refetchDeadlineRisk,
   } = usePlatformDeadlineRiskQuery();
+
+  const { data: briefData = {} } = usePlatformExecutiveBriefQuery();
+  const { data: clientRiskData = {} } = usePlatformClientRiskQuery();
 
   const summary = data.summary || {};
   const deadlineCounts = deadlineRisk.counts || {};
@@ -120,7 +131,22 @@ export const DocketraIntelligencePage = () => {
   const recommendedAssignee = recommendations.recommendedAssignee || null;
   const bestAssignees = Array.isArray(recommendations.bestAssignees) ? recommendations.bestAssignees : [];
   const avoidAssigning = Array.isArray(recommendations.avoidAssigning) ? recommendations.avoidAssigning : [];
+  const mentorSuggestions = Array.isArray(recommendations.mentorSuggestions) ? recommendations.mentorSuggestions : [];
+  const clients = Array.isArray(clientRiskData.clients) ? clientRiskData.clients : [];
   const hasMembers = sortedMembers.length > 0;
+
+  const handleRebalance = async () => {
+    try {
+      setRebalancing(true);
+      const res = await docketraIntelligenceApi.rebalanceWorkload(true);
+      setRebalanceMessage(res?.data?.message || 'Smart rebalancing completed.');
+      void refetch();
+    } catch (err) {
+      setRebalanceMessage(err?.message || 'Rebalancing failed.');
+    } finally {
+      setRebalancing(false);
+    }
+  };
 
   const overviewItems = [
     { label: 'Total Members', value: isLoading ? '...' : toNumber(summary.totalMembers) },
@@ -133,23 +159,44 @@ export const DocketraIntelligencePage = () => {
   return (
     <PlatformShell
       moduleLabel="Docketra Intelligence"
-      title="Docketra Intelligence"
-      subtitle="Manager view for team capacity, availability, and next-assignment guidance."
+      title="Docketra Intelligence 2.0"
+      subtitle="AI Operational Brain for team capacity, expertise matching, and proactive risk radar."
     >
+      {briefData?.executiveBrief && (
+        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50/60 p-4 text-xs leading-relaxed text-blue-900 shadow-sm flex items-start justify-between gap-4">
+          <div>
+            <p className="font-semibold text-blue-950 uppercase tracking-wider text-[10px] mb-1">⚡ Executive AI Brief</p>
+            <p>{briefData.executiveBrief}</p>
+          </div>
+          <button
+            type="button"
+            className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors whitespace-nowrap shadow-sm disabled:opacity-60"
+            onClick={handleRebalance}
+            disabled={rebalancing}
+          >
+            {rebalancing ? 'Rebalancing...' : '⚡ Smart Rebalance'}
+          </button>
+        </div>
+      )}
+
+      {rebalanceMessage && (
+        <div className="mb-4 rounded-md border border-green-200 bg-green-50 p-3 text-xs font-medium text-green-800">
+          {rebalanceMessage}
+        </div>
+      )}
+
       <StatusMessageStack
         messages={[
           { tone: 'error', message: isError ? error?.message || 'Unable to load workload intelligence.' : '' },
           { tone: 'error', message: capacityError ? capacityQueryError?.message || 'Unable to load workbasket capacity intelligence.' : '' },
           { tone: 'error', message: deadlineError ? deadlineQueryError?.message || 'Unable to load deadline risk intelligence.' : '' },
           { tone: 'info', message: isFetching && !isLoading ? 'Refreshing workload intelligence in the background...' : '' },
-          { tone: 'info', message: capacityFetching && !capacityLoading ? 'Refreshing workbasket health in the background...' : '' },
-          { tone: 'info', message: deadlineFetching && !deadlineLoading ? 'Refreshing deadline risk radar in the background...' : '' },
         ]}
       />
 
       <PageSection
         title="Team Capacity Overview"
-        description="Live availability buckets from workload intelligence."
+        description="Live capacity metrics weighted by capacity and work type experience."
         actions={(
           <button type="button" onClick={() => void refetch()} disabled={isFetching}>
             {isFetching ? 'Refreshing...' : 'Refresh'}
@@ -171,7 +218,7 @@ export const DocketraIntelligencePage = () => {
 
       <PageSection
         title="Deadline Risk Radar"
-        description="Deadline exposure across overdue work, near-term due dates, priority pressure, and review approvals."
+        description="Proactive radar for overdue dockets, predictive SLA breaches, PEND stagnation, and QC bottlenecks."
         actions={(
           <button type="button" onClick={() => void refetchDeadlineRisk()} disabled={deadlineFetching}>
             {deadlineFetching ? 'Refreshing...' : 'Refresh Radar'}
@@ -193,17 +240,13 @@ export const DocketraIntelligencePage = () => {
             <div>
               <span className="metric-label">Risk Level</span>
               <p className="intelligence-deadline-card__level">{deadlineRisk.riskLevel || 'Low Risk'}</p>
-              <p className="muted">
-                {toNumber(deadlineCounts.overdueDockets)} overdue dockets
-              </p>
-              <p className="muted">
-                {toNumber(deadlineCounts.reviewBottlenecks)} awaiting review approval
-              </p>
+              <p className="muted">{toNumber(deadlineCounts.overdueDockets)} overdue dockets</p>
+              <p className="muted">{toNumber(deadlineCounts.predictiveSlaBreaches)} predictive SLA breach risks</p>
             </div>
             <div className="intelligence-deadline-card__radar" aria-label="Deadline risk signals">
               <span>Due Today <strong>{toNumber(deadlineCounts.dueToday)}</strong></span>
-              <span>Due This Week <strong>{toNumber(deadlineCounts.dueThisWeek)}</strong></span>
-              <span>High Priority This Week <strong>{toNumber(deadlineCounts.highPriorityDueThisWeek)}</strong></span>
+              <span>PEND Stagnation <strong>{toNumber(deadlineCounts.pendStagnation)}</strong></span>
+              <span>QC Bottlenecks <strong>{toNumber(deadlineCounts.qcBottlenecks)}</strong></span>
               <span>Affected Dockets <strong>{toNumber(deadlineRisk.affectedDocketCount)}</strong></span>
             </div>
             <div className="intelligence-deadline-card__action">
@@ -214,6 +257,50 @@ export const DocketraIntelligencePage = () => {
           </article>
         )}
       </PageSection>
+
+      {mentorSuggestions.length > 0 && (
+        <PageSection
+          title="Senior Expert Mentor Suggestions"
+          description="Overloaded senior experts paired as Mentors to guide primary assignees without taking execution load."
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {mentorSuggestions.map((mentor) => (
+              <div key={mentor.xID} className="rounded-lg border border-purple-200 bg-purple-50/50 p-3 text-xs">
+                <p className="font-semibold text-purple-900">{mentor.name} ({mentor.xID})</p>
+                <p className="text-purple-700 mt-1">{mentor.reason}</p>
+              </div>
+            ))}
+          </div>
+        </PageSection>
+      )}
+
+      {clients.length > 0 && (
+        <PageSection
+          title="Client Compliance & Responsiveness Risk"
+          description="Client ranking based on document upload speed and pended request ratios."
+        >
+          <DataTable
+            columns={['Client ID', 'Total Dockets', 'Pended Count', 'Pended Ratio (%)', 'Overdue Count', 'Responsiveness Risk']}
+            rows={clients.slice(0, 10).map((c) => (
+              <tr key={c.clientId}>
+                <td><strong>{c.clientId}</strong></td>
+                <td>{c.totalDockets}</td>
+                <td>{c.pendedCount}</td>
+                <td>{c.pendedRatio}%</td>
+                <td>{c.overdueCount}</td>
+                <td>
+                  <StatusBadge
+                    status={c.riskRating === 'High Risk' ? 'error' : c.riskRating === 'Sluggish' ? 'warning' : 'active'}
+                    label={c.riskRating}
+                  />
+                </td>
+              </tr>
+            ))}
+            pageSize={10}
+            emptyLabel="No client risk records available."
+          />
+        </PageSection>
+      )}
 
       <PageSection
         title="Workbasket Health"
@@ -255,29 +342,38 @@ export const DocketraIntelligencePage = () => {
       </PageSection>
 
       <PageSection
-        title="Recommended Assignment Card"
-        description="Best person to receive the next assignment."
+        title="Capacity-Balanced Assignee Guidance"
+        description="Smart recommendations ranking capacity and expertise, protecting overloaded team members."
       >
         {isLoading ? (
-          <LoadingState label="Loading recommended assignee..." />
-        ) : recommendedAssignee ? (
-          <article className="panel intelligence-recommendation-card">
-            <div>
-              <span className="metric-label">Recommended Assignee</span>
-              <p className="intelligence-recommendation-card__name">{recommendedAssignee.name || recommendedAssignee.xID}</p>
-              <p className="muted">Best person to receive the next assignment</p>
-            </div>
-            <ScoreMeter score={recommendedAssignee.availabilityScore} />
-            <StatusBadge status={getAvailabilityStatus(recommendedAssignee.availabilityLabel)} label={recommendedAssignee.availabilityLabel} />
-          </article>
+          <LoadingState label="Loading assignment guidance..." />
+        ) : !hasMembers ? (
+          <EmptyState boxed title="No assignment guidance yet" body="Team guidance appears once there are active members to score." />
         ) : (
-          <EmptyState boxed title="No recommended assignee yet" body="Workload guidance appears after active team members are available in this firm." />
+          <div className="intelligence-guidance-grid">
+            <div>
+              <p className="section-title">Best Assignees (Capacity + Expertise)</p>
+              <div className="intelligence-rank-list">
+                {bestAssignees.length ? bestAssignees.map((assignee, index) => (
+                  <RankedAssigneeCard key={assignee.xID || assignee.name || index} assignee={assignee} index={index} />
+                )) : <EmptyState title="No best assignees available" />}
+              </div>
+            </div>
+            <div>
+              <p className="section-title">Avoid Assigning (Overloaded / Burnout Protection)</p>
+              <div className="intelligence-rank-list">
+                {avoidAssigning.length ? avoidAssigning.map((assignee, index) => (
+                  <RankedAssigneeCard key={assignee.xID || assignee.name || index} assignee={assignee} index={index} mode="avoid" />
+                )) : <EmptyState title="No avoid list" body="No overloaded assignees were flagged." />}
+              </div>
+            </div>
+          </div>
         )}
       </PageSection>
 
       <PageSection
-        title="Team Availability Table"
-        description="Sorted by availability score from highest to lowest."
+        title="Team Availability & Expertise Table"
+        description="Sorted by capacity-balanced score from highest to lowest."
       >
         <DataTable
           columns={[
@@ -316,36 +412,6 @@ export const DocketraIntelligencePage = () => {
           tableClassName="queue-table intelligence-table"
           pageSize={12}
         />
-      </PageSection>
-
-      <PageSection
-        title="Assignment Guidance"
-        description="Ranked recommendations for the next docket assignment."
-      >
-        {isLoading ? (
-          <LoadingState label="Loading assignment guidance..." />
-        ) : !hasMembers ? (
-          <EmptyState boxed title="No assignment guidance yet" body="Team guidance appears once there are active members to score." />
-        ) : (
-          <div className="intelligence-guidance-grid">
-            <div>
-              <p className="section-title">Best Assignees</p>
-              <div className="intelligence-rank-list">
-                {bestAssignees.length ? bestAssignees.map((assignee, index) => (
-                  <RankedAssigneeCard key={assignee.xID || assignee.name || index} assignee={assignee} index={index} />
-                )) : <EmptyState title="No best assignees available" />}
-              </div>
-            </div>
-            <div>
-              <p className="section-title">Avoid Assigning</p>
-              <div className="intelligence-rank-list">
-                {avoidAssigning.length ? avoidAssigning.map((assignee, index) => (
-                  <RankedAssigneeCard key={assignee.xID || assignee.name || index} assignee={assignee} index={index} mode="avoid" />
-                )) : <EmptyState title="No avoid list" body="No overloaded assignees were flagged." />}
-              </div>
-            </div>
-          </div>
-        )}
       </PageSection>
     </PlatformShell>
   );

@@ -17,7 +17,7 @@ const LIFECYCLE_TRANSITIONS = Object.freeze({
   OPEN: Object.freeze([CaseStatus.PENDING, CaseStatus.QC_PENDING, CaseStatus.RESOLVED, CaseStatus.FILED]),
   ACTIVE: Object.freeze([CaseStatus.PENDING, CaseStatus.QC_PENDING, CaseStatus.RESOLVED, CaseStatus.FILED]),
   IN_PROGRESS: Object.freeze([CaseStatus.PENDING, CaseStatus.QC_PENDING, CaseStatus.RESOLVED, CaseStatus.FILED]),
-  PENDING: Object.freeze([CaseStatus.OPEN]),
+  PENDING: Object.freeze([CaseStatus.OPEN, CaseStatus.ASSIGNED, CaseStatus.ROUTED, CaseStatus.UNASSIGNED]),
   QC_PENDING: Object.freeze([CaseStatus.RESOLVED, CaseStatus.OPEN]),
   RESOLVED: Object.freeze([]),
   FILED: Object.freeze([]),
@@ -414,6 +414,68 @@ const fileCase = async (firmId, caseId, comment, user, req = null) => {
       commentLength: comment.length,
     }
   );
+
+  // Broadcast in-app filing notification to team members, manager, and creator
+  try {
+    const User = require('../models/User.model');
+    const Team = require('../models/Team.model');
+    const { createNotification, NotificationTypes } = require('../domain/notifications');
+
+    const recipientXIDs = new Set();
+    if (caseData?.assignedToXID) recipientXIDs.add(String(caseData.assignedToXID).toUpperCase());
+    if (caseData?.createdByXID) recipientXIDs.add(String(caseData.createdByXID).toUpperCase());
+
+    const targetTeamId = caseData?.workbasketId || caseData?.ownerTeamId || caseData?.teamId;
+    if (targetTeamId) {
+      const [teamDoc, teamUsers] = await Promise.all([
+        Team.findOne({ _id: targetTeamId, firmId }).select('managerId').lean(),
+        User.find({ firmId, $or: [{ teamId: targetTeamId }, { teamIds: targetTeamId }], status: { $ne: 'deleted' } }).select('xID').lean(),
+      ]);
+
+      if (teamDoc?.managerId) {
+        const managerUser = await User.findById(teamDoc.managerId).select('xID').lean();
+        if (managerUser?.xID) recipientXIDs.add(String(managerUser.xID).toUpperCase());
+      }
+
+      if (Array.isArray(teamUsers)) {
+        teamUsers.forEach((u) => {
+          if (u.xID) recipientXIDs.add(String(u.xID).toUpperCase());
+        });
+      }
+    }
+
+    const actorXID = String(user?.xID || '').toUpperCase();
+    recipientXIDs.delete(actorXID);
+
+    const clientLabel = caseData?.client?.businessName || caseData?.client?.name || caseData?.clientName || 'Client';
+    const docketNumber = caseData?.caseNumber || caseData?.caseId;
+    const actorName = user?.name || user?.xID || 'Team Member';
+
+    await Promise.all(
+      [...recipientXIDs].map((xid) =>
+        createNotification({
+          firmId,
+          userId: xid,
+          type: NotificationTypes.STATUS_CHANGED,
+          docketId: docketNumber,
+          actor: { xID: user?.xID, role: user?.role, name: user?.name },
+          title: 'Docket Filed',
+          message: `Docket ${docketNumber} has been filed by ${actorName} (${user?.xID}) for ${clientLabel}.`,
+        })
+      )
+    );
+  } catch (notifErr) {
+    const log = require('../utils/log');
+    log.warn('BROADCAST_DOCKET_FILED_NOTIFICATION_FAILED', { error: notifErr.message, caseId });
+  }
+
+  // Sync client's docket history snapshot to BYOS storage in background
+  if (caseData?.clientId) {
+    try {
+      const { clientDocketHistoryStorageService } = require('./clientDocketHistoryStorage.service');
+      clientDocketHistoryStorageService.syncClientDocketHistory(firmId, caseData.clientId).catch(() => {});
+    } catch (_) {}
+  }
   
   return caseData;
 };
@@ -440,9 +502,21 @@ const unpendCase = async (firmId, caseId, comment, user, req = null) => {
     throw new Error('Case not found');
   }
 
+  const hasAssignee = caseData.assignedToXID && String(caseData.assignedToXID).trim() !== '';
+  const isRouted = caseData.routedToTeamId && String(caseData.routedToTeamId).trim() !== '';
+
+  let targetStatus;
+  if (hasAssignee) {
+    targetStatus = CaseStatus.ASSIGNED;
+  } else if (isRouted) {
+    targetStatus = CaseStatus.ROUTED;
+  } else {
+    targetStatus = CaseStatus.UNASSIGNED;
+  }
+
   assertLifecycleTransitionAllowed({
     currentStatus: caseData.status,
-    nextStatus: CaseStatus.OPEN,
+    nextStatus: targetStatus,
     actorRole: user?.role,
   });
   
@@ -450,7 +524,7 @@ const unpendCase = async (firmId, caseId, comment, user, req = null) => {
   const previousStatus = caseData.status;
   const previousPendingUntil = caseData.pendingUntil;
 
-  await CaseService.updateStatus(caseId, CaseStatus.OPEN, {
+  await CaseService.updateStatus(caseId, targetStatus, {
     tenantId: firmId,
     role: user.role,
     userId: user.xID,
@@ -518,10 +592,23 @@ const performAutoReopen = async (caseData) => {
   const previousStatus = caseData.status;
   const previousPendingUntil = caseData.pendingUntil;
   const now = new Date();
+
+  const hasAssignee = caseData.assignedToXID && String(caseData.assignedToXID).trim() !== '';
+  const isRouted = caseData.routedToTeamId && String(caseData.routedToTeamId).trim() !== '';
+
+  let targetStatus;
+  if (hasAssignee) {
+    targetStatus = CaseStatus.ASSIGNED;
+  } else if (isRouted) {
+    targetStatus = CaseStatus.ROUTED;
+  } else {
+    targetStatus = CaseStatus.UNASSIGNED;
+  }
+
   const session = await mongoose.startSession();
   try {
     await session.withTransaction(async () => {
-      await CaseService.updateStatus(caseData.caseId, CaseStatus.OPEN, {
+      await CaseService.updateStatus(caseData.caseId, targetStatus, {
         tenantId: caseData.firmId,
         role: 'Admin',
         userId: 'SYSTEM',
@@ -564,7 +651,7 @@ const performAutoReopen = async (caseData) => {
         'SYSTEM',
         {
           previousStatus,
-          newStatus: CaseStatus.OPEN,
+          newStatus: targetStatus,
           pendingUntil: previousPendingUntil,
           autoReopened: true,
           reason: 'pending_until elapsed',

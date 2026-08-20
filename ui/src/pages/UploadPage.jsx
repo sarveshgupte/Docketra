@@ -37,6 +37,7 @@ export const UploadPage = () => {
   const [pinHelpMessage, setPinHelpMessage] = useState('');
   const [requestChecklist, setRequestChecklist] = useState([]);
   const [selectedChecklistItemId, setSelectedChecklistItemId] = useState('');
+  const [docketMeta, setDocketMeta] = useState(null);
 
   const turnstileSiteKey = String(import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim();
   const isTurnstileConfigured = Boolean(turnstileSiteKey);
@@ -56,6 +57,7 @@ export const UploadPage = () => {
       setErrorMessage('');
       setPinHelpMessage('');
       setClientComment('');
+      setDocketMeta(null);
       try {
         const response = await fetch(`${uploadEndpoint}/meta`);
         const payload = await response.json();
@@ -73,6 +75,7 @@ export const UploadPage = () => {
 
         if (!isMounted) return;
         setRequiresPin(Boolean(payload?.data?.requiresPin));
+        setDocketMeta(payload?.data?.docket || null);
         const checklist = Array.isArray(payload?.data?.checklist) ? payload.data.checklist : [];
         setRequestChecklist(checklist);
         const firstPending = checklist.find((item) => ['requested', 'rejected'].includes(String(item?.status || '').toLowerCase()));
@@ -316,10 +319,44 @@ export const UploadPage = () => {
                   </div>
                 </div>
               ) : null}
-              <h1 style={{ fontSize: '20px', marginBottom: '10px' }}>Upload documents</h1>
-              <p style={{ marginBottom: '10px', color: 'var(--dt-text-secondary)', fontSize: '14px', fontWeight: 600 }}>
-                Secure upload • No login required
-              </p>
+              {docketMeta ? (
+                <div style={{ marginBottom: '18px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--dt-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Docket {docketMeta.docketNumber} • {docketMeta.workType}
+                  </div>
+                  <h1 style={{ fontSize: '20px', margin: '4px 0 6px 0', color: 'var(--dt-text)' }}>
+                    Upload documents
+                  </h1>
+                  <p style={{ margin: 0, color: 'var(--dt-text-secondary)', fontSize: '13px' }}>
+                    Prepared for <strong>{docketMeta.clientName}</strong> by <strong>{docketMeta.senderName}</strong>
+                  </p>
+
+                  {docketMeta.clientMessage ? (
+                    <div style={{
+                      marginTop: '14px',
+                      background: 'rgba(2, 132, 199, 0.08)',
+                      borderLeft: '4px solid #0284c7',
+                      borderRadius: '6px',
+                      padding: '12px 16px',
+                      textAlign: 'left',
+                    }}>
+                      <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#0284c7', letterSpacing: '0.05em' }}>
+                        Message from {docketMeta.senderName}:
+                      </div>
+                      <div style={{ marginTop: '4px', fontSize: '14px', lineHeight: 1.5, color: 'var(--dt-text)' }}>
+                        "{docketMeta.clientMessage}"
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <>
+                  <h1 style={{ fontSize: '20px', marginBottom: '10px' }}>Upload documents</h1>
+                  <p style={{ marginBottom: '10px', color: 'var(--dt-text-secondary)', fontSize: '14px', fontWeight: 600 }}>
+                    Secure upload • No login required
+                  </p>
+                </>
+              )}
               <div
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={(event) => {

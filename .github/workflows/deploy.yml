@@ -28,7 +28,7 @@ jobs:
         run: |
           cd ui
           npm ci
-          VITE_API_BASE_URL="https://docketra-api-1078507569854.us-central1.run.app/api" \
+          VITE_API_BASE_URL="https://api.docketra.in/api" \
           VITE_GOOGLE_CLIENT_ID="1078507569854-c24hg50jkar8p68ooumkdebr3qtrcoe5.apps.googleusercontent.com" \
           VITE_SUPPORT_EMAIL="sarveshgupte@gmail.com" \
           VITE_TURNSTILE_SITE_KEY="0x4AAAAAADUM0lvwvSX_G56o" \

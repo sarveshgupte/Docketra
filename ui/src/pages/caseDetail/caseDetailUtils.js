@@ -65,6 +65,7 @@ export const getBusinessLifecycleLabel = (caseInfo = {}) => {
   const rawLifecycle = normalizeToken(caseInfo?.lifecycle);
   const routed = isDocketRouted(caseInfo);
 
+  if (status === 'ROUTED_ASSIGNED') return 'Routed Assigned';
   if (status === 'PENDING' || state === 'PENDED' || rawLifecycle === 'PENDING' || rawLifecycle === 'PENDED' || lifecycle === 'WAITING') return 'Pend';
   if (status === 'FILED' || rawLifecycle === 'FILED' || lifecycle === 'ARCHIVED') return 'File';
   if (status === 'RESOLVED' || rawLifecycle === 'RESOLVED' || lifecycle === 'DONE' || lifecycle === 'COMPLETED') return 'Resolve';
@@ -79,6 +80,7 @@ export const getBusinessLifecycleTone = (label) => {
   if (normalized === 'FILE') return 'file';
   if (normalized === 'RESOLVE') return 'resolve';
   if (normalized === 'ROUTED') return 'routed';
+  if (normalized === 'ROUTED ASSIGNED' || normalized === 'ROUTED_ASSIGNED') return 'routed-assigned';
   if (normalized === 'SUBMITTED') return 'submitted';
   return 'active';
 };

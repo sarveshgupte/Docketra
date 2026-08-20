@@ -669,6 +669,7 @@ export const Layout = ({ children, title, subtitle }) => {
       </a>
       {/* Sidebar */}
       <aside
+        id="enterprise-sidebar"
         className={[
           'enterprise-sidebar',
           sidebarCollapsed ? 'enterprise-sidebar--collapsed' : '',
@@ -786,7 +787,9 @@ export const Layout = ({ children, title, subtitle }) => {
             className="enterprise-header__sidebar-toggle"
             onClick={handleSidebarToggle}
             aria-label={isMobileViewport ? 'Toggle sidebar' : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
+            title={isMobileViewport ? 'Toggle sidebar' : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
             aria-expanded={isMobileViewport ? mobileSidebarOpen : !sidebarCollapsed}
+            aria-controls="enterprise-sidebar"
           >
             <IconMenu />
           </button>
@@ -883,26 +886,26 @@ export const Layout = ({ children, title, subtitle }) => {
                               <button
                                 type="button"
                                 className="enterprise-header__notification-action-btn"
-                                aria-label="Mark notification as read"
                                 title="Mark as read"
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   void markNotificationRead(item.id);
                                 }}
                               >
-                                ✓
+                                <span aria-hidden="true">✓</span>
+                                <span className="sr-only">Mark notification "{item.title}" as read</span>
                               </button>
                               <button
                                 type="button"
                                 className="enterprise-header__notification-action-btn"
-                                aria-label="Clear notification"
                                 title="Clear"
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   clearNotification(item.id);
                                 }}
                               >
-                                ✕
+                                <span aria-hidden="true">✕</span>
+                                <span className="sr-only">Clear notification "{item.title}"</span>
                               </button>
                               {item.unread ? <span className="enterprise-header__notification-unread-badge">New</span> : null}
                             </div>

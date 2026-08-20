@@ -111,8 +111,45 @@ const getDeadlineRiskIntelligence = async (req, res) => {
   }
 };
 
+const getExecutiveBrief = async (req, res) => {
+  try {
+    assertFirmContext(req);
+    const data = await docketraIntelligenceService.generateExecutiveAiBrief({ firmId: req.user.firmId });
+    return res.json({ success: true, data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error?.message || 'Failed to load executive brief' });
+  }
+};
+
+const getClientRiskScores = async (req, res) => {
+  try {
+    assertFirmContext(req);
+    const data = await docketraIntelligenceService.getClientComplianceRiskScores({ firmId: req.user.firmId });
+    return res.json({ success: true, data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error?.message || 'Failed to load client risk scores' });
+  }
+};
+
+const rebalanceWorkloadAction = async (req, res) => {
+  try {
+    assertFirmContext(req);
+    if (!hasFirmRoleAtLeast(req.user, 'MANAGER')) {
+      return res.status(403).json({ success: false, message: 'Rebalance action is available for manager and above roles only' });
+    }
+    const execute = req.body?.execute === true;
+    const data = await docketraIntelligenceService.rebalanceWorkload({ firmId: req.user.firmId, execute });
+    return res.json({ success: true, data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error?.message || 'Failed to execute workload rebalance' });
+  }
+};
+
 module.exports = {
   getWorkloadIntelligence,
   getWorkbasketCapacityIntelligence,
   getDeadlineRiskIntelligence,
+  getExecutiveBrief,
+  getClientRiskScores,
+  rebalanceWorkloadAction,
 };
