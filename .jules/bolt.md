@@ -19,3 +19,6 @@
 ## 2024-11-20 - Group independent database queries concurrently
 **Learning:** Sequential database queries (like a `Case.find` following a `Promise.all` array of `Case.countDocuments`) create unnecessary network latency bottlenecks. Grouping independent queries together using `Promise.all()` executes them concurrently and eliminates sequential network roundtrips.
 **Action:** Identifying and eliminating unnecessary sequential database queries by grouping them into a single `Promise.all` array executes them concurrently, reducing overall network latency.
+## 2024-10-25 - Eliminate redundant sequential validation counts
+**Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
+**Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
