@@ -774,27 +774,28 @@ const updateRestrictedClients = async (req, res) => {
       });
     }
 
+    // Resolve the new clientAccess array
+    let newClientAccess = [];
     if (normalizedClientIds.length > 0) {
-      const firmClientCount = await Client.countDocuments({
-        firmId: admin.firmId,
-        clientId: { $in: normalizedClientIds },
-      });
-      if (firmClientCount !== normalizedClientIds.length) {
+      // ⚡ Bolt: Removed redundant Client.countDocuments() query and merged it into Client.find()
+      // 💡 What: Combined the firm validation check and the _id retrieval into a single find() query.
+      // 🎯 Why: Previously, countDocuments was used to validate ownership, immediately followed by find() to fetch the same documents' IDs. Doing both in one round-trip saves a database query.
+      // 📊 Impact: Eliminates 1 unnecessary sequential database query per update request.
+      const clientDocs = await Client
+        .find({ firmId: admin.firmId, clientId: { $in: normalizedClientIds } })
+        .select('_id clientId')
+        .lean();
+
+      if (clientDocs.length !== normalizedClientIds.length) {
         return res.status(400).json({
           success: false,
           message: 'All selected clients must belong to your firm',
         });
       }
-    }
 
-    // Resolve the new clientAccess array
-    let newClientAccess = [];
-    if (accessMode === 'SELECTED') {
-      const clientDocs = await Client
-        .find({ firmId: admin.firmId, clientId: { $in: normalizedClientIds } })
-        .select('_id')
-        .lean();
-      newClientAccess = clientDocs.map((doc) => doc._id);
+      if (accessMode === 'SELECTED') {
+        newClientAccess = clientDocs.map((doc) => doc._id);
+      }
     }
 
     // Use findOneAndUpdate to avoid Mongoose session-association conflicts

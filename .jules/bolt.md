@@ -16,3 +16,6 @@
 ## 2024-03-22 - Optimizing Boolean Checks with Mongoose
 **Learning:** When checking if at least one document matches a condition, using `exists()` is significantly faster than `countDocuments() > 0`. `countDocuments()` forces MongoDB to scan all matching index entries, while `exists()` returns early on the first match (O(1) time complexity).
 **Action:** Always prefer `Model.exists(query)` over `Model.countDocuments(query) > 0` when the exact count is not needed, such as when seeding initial data or checking boolean presence.
+## 2024-10-25 - Eliminate redundant sequential validation counts
+**Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
+**Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
