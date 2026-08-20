@@ -1,5 +1,6 @@
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const taskService = require('../services/task.service');
+const log = require('../utils/log');
 
 /**
  * Task Controller
@@ -20,10 +21,11 @@ const getTasks = async (req, res) => {
       pagination,
     });
   } catch (error) {
+    log.error('[task.controller] Error fetching tasks', { error });
     res.status(500).json({
       success: false,
       error: 'Error fetching tasks',
-      message: error.message,
+      message: 'An internal error occurred while fetching tasks',
     });
   }
 };
@@ -48,10 +50,11 @@ const getTaskById = async (req, res) => {
       data: task,
     });
   } catch (error) {
+    log.error('[task.controller] Error fetching task', { taskId: req.params.id, error });
     res.status(500).json({
       success: false,
       error: 'Error fetching task',
-      message: error.message,
+      message: 'An internal error occurred while fetching the task',
     });
   }
 };
@@ -70,10 +73,11 @@ const createTask = async (req, res) => {
       message: 'Task created successfully',
     });
   } catch (error) {
+    log.error('[task.controller] Error creating task', { error });
     res.status(400).json({
       success: false,
       error: 'Error creating task',
-      message: error.message,
+      message: 'An internal error occurred while creating the task',
     });
   }
 };
@@ -99,10 +103,11 @@ const updateTask = async (req, res) => {
       message: 'Task updated successfully',
     });
   } catch (error) {
+    log.error('[task.controller] Error updating task', { taskId: req.params.id, error });
     res.status(400).json({
       success: false,
       error: 'Error updating task',
-      message: error.message,
+      message: 'An internal error occurred while updating the task',
     });
   }
 };
@@ -127,10 +132,11 @@ const deleteTask = async (req, res) => {
       message: 'Task soft deleted successfully',
     });
   } catch (error) {
+    log.error('[task.controller] Error deleting task', { taskId: req.params.id, error });
     res.status(500).json({
       success: false,
       error: 'Error deleting task',
-      message: error.message,
+      message: 'An internal error occurred while deleting the task',
     });
   }
 };
@@ -151,10 +157,11 @@ const getTaskStats = async (req, res) => {
       },
     });
   } catch (error) {
+    log.error('[task.controller] Error fetching task statistics', { error });
     res.status(500).json({
       success: false,
       error: 'Error fetching task statistics',
-      message: error.message,
+      message: 'An internal error occurred while fetching task statistics',
     });
   }
 };

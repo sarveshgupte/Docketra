@@ -13,6 +13,10 @@ import { getFirmConfig, setFirmConfig } from '../utils/firmConfig';
 import { buildCsv } from '../utils/csv';
 import { formatDateTime } from '../utils/formatDateTime';
 import { ROUTES } from '../constants/routes';
+import { BulkUploadModal } from '../components/bulk/BulkUploadModal';
+import { DocketBulkUploadModal } from '../components/bulk/DocketBulkUploadModal';
+import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
 
 const enabledDisabledOptions = [
   { value: 'true', label: 'Enabled' },
@@ -45,6 +49,7 @@ const tabs = [
   { id: 'general', label: 'Defaults' },
   { id: 'calendar', label: 'Calendar' },
   { id: 'sla', label: 'SLA Rules' },
+  { id: 'import', label: 'Data Import' },
   { id: 'features', label: 'Views' },
   { id: 'audit', label: 'Audit' },
 ];
@@ -61,6 +66,10 @@ const tabMeta = {
   sla: {
     title: 'SLA overrides',
     description: 'Rules that override the default SLA for specific categories, subcategories, or workbaskets.',
+  },
+  import: {
+    title: 'Historical Data Import',
+    description: 'Import client records and multi-year historical docket work from CSV files for firm onboarding.',
   },
   features: {
     title: 'Workspace views',
@@ -273,7 +282,10 @@ export const FirmSettingsPage = () => {
   const [slaMessage, setSlaMessage] = useState({ type: '', text: '' });
   const [slaForm, setSlaForm] = useState(defaultSlaForm);
   const [holidayDateDraft, setHolidayDateDraft] = useState('');
-  const [workingDateDraft, setWorkingDateDraft] = useState('');
+  const { user } = useAuth();
+  const { showToast } = useToast();
+  const [showClientBulkModal, setShowClientBulkModal] = useState(false);
+  const [showDocketBulkModal, setShowDocketBulkModal] = useState(false);
   const [currentTab, setCurrentTab] = useState('general');
 
   const categoryOptions = useMemo(() => ([
@@ -677,8 +689,8 @@ export const FirmSettingsPage = () => {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2">
-              <div className="flex flex-wrap gap-2">
+            <div className="rounded-xl border border-slate-200/80 bg-slate-100/80 p-1.5 backdrop-blur-sm">
+              <div className="flex flex-wrap gap-1.5">
                 {tabs.map((tab) => {
                   const active = currentTab === tab.id;
                   return (
@@ -689,10 +701,10 @@ export const FirmSettingsPage = () => {
                         setCurrentTab(tab.id);
                         setSaveMessage((prev) => (prev.type === 'success' ? { type: '', text: '' } : prev));
                       }}
-                      className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+                      className={`rounded-lg px-4 py-2 text-sm font-medium transition-all duration-150 ${
                         active
-                          ? 'bg-white text-slate-950 shadow-sm'
-                          : 'text-slate-500 hover:bg-white/70 hover:text-slate-900'
+                          ? 'bg-white text-slate-900 shadow-sm border border-slate-200/60'
+                          : 'text-slate-600 hover:bg-white/60 hover:text-slate-900'
                       }`}
                     >
                       {tab.label}
@@ -1074,6 +1086,54 @@ export const FirmSettingsPage = () => {
               </div>
             )}
 
+            {currentTab === 'import' && (
+              <div className="grid gap-6 lg:grid-cols-[1.05fr_1.65fr]">
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-slate-900">Onboard Firm Data in Bulk</p>
+                  <div className="space-y-3 text-sm leading-6 text-slate-500">
+                    <p>Import client master records and multi-year historical docket work from CSV files.</p>
+                    <p>Download pre-filled templates, fill in past records, and upload to import into Docketra.</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-6">
+                  <Card className="border border-slate-200 bg-white p-5 shadow-none">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">1. Client Bulk Import</p>
+                        <p className="mt-1 text-sm text-slate-500">Import client master records (Business Name, Email, Phone, PAN, GST, etc.) from CSV.</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="primary"
+                        onClick={() => setShowClientBulkModal(true)}
+                        disabled={!(user?.role === 'PRIMARY_ADMIN' || Boolean(user?.isPrimaryAdmin))}
+                      >
+                        Import Clients
+                      </Button>
+                    </div>
+                  </Card>
+
+                  <Card className="border border-slate-200 bg-white p-5 shadow-none">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">2. Historical Docket Bulk Import</p>
+                        <p className="mt-1 text-sm text-slate-500">Download a template pre-filled with your firm's clients and upload past resolved/active dockets.</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="primary"
+                        onClick={() => setShowDocketBulkModal(true)}
+                        disabled={!(user?.role === 'PRIMARY_ADMIN' || Boolean(user?.isPrimaryAdmin))}
+                      >
+                        Import Dockets
+                      </Button>
+                    </div>
+                  </Card>
+                </div>
+              </div>
+            )}
+
             {currentTab === 'features' && (
               <div className="grid gap-6 lg:grid-cols-[1.05fr_1.65fr]">
                 <div className="space-y-3">
@@ -1205,6 +1265,18 @@ export const FirmSettingsPage = () => {
           </div>
         </Card>
       </div>
+      <BulkUploadModal
+        isOpen={showClientBulkModal}
+        onClose={() => setShowClientBulkModal(false)}
+        type="clients"
+        title="Bulk Upload Clients"
+        showToast={showToast}
+      />
+      <DocketBulkUploadModal
+        isOpen={showDocketBulkModal}
+        onClose={() => setShowDocketBulkModal(false)}
+        showToast={showToast}
+      />
     </PlatformShell>
   );
 };

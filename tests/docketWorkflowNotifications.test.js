@@ -7,6 +7,7 @@ require.cache[require.resolve('../src/domain/notifications')] = { exports: {
 }};
 require.cache[require.resolve('../src/services/docketAudit.service')] = { exports: { logDocketEvent: async()=>{}, createLog: async()=>{}, logStatusChange: async()=>{} } };
 require.cache[require.resolve('../src/services/docketEvents.service')] = { exports: { EVENT_NAMES:{PENDING_REOPEN:'PENDING_REOPEN',QC_FAILURE:'QC_FAILURE',QC_REQUEST:'QC_REQUEST',ASSIGNMENT:'ASSIGNMENT'}, emitDocketEvent:()=>{} } };
+require.cache[require.resolve('../src/models/Comment.model')] = { exports: { create: async (payload) => payload } };
 const Case = require('../src/models/Case.model');
 const Team = require('../src/models/Team.model');
 const User = require('../src/models/User.model');
@@ -34,7 +35,7 @@ const DocketRoute = require('../src/models/DocketRoute.model');
   // pending reopen keeps WB/GLOBAL and no notification without recipient
   const updates=[];
   Case.find = async () => ([{ _id:'1', caseId:'D3', firmId:'F1', assignedToXID:null }]);
-  Case.updateMany = async (_f,u)=>{updates.push(u); return {modifiedCount:1};};
+  Case.updateOne = async (_f,u)=>{updates.push(u); return {modifiedCount:1};};
   notifications.length=0;
   await wf.reopenDuePending();
   assert.equal(updates[0].$set.state, 'IN_WB');

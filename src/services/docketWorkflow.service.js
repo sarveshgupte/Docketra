@@ -844,25 +844,72 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
 
 async function reopenDuePending() {
   const now = new Date();
-  const dueCases = await Case.find({ status: toPersistenceState(DocketStatus.PENDING), reopenAt: { $lte: now } });
+  const pendingDueFilter = {
+    status: toPersistenceState(DocketStatus.PENDING),
+    $or: [
+      { reopenAt: { $lte: now } },
+      { pendingUntil: { $lte: now } },
+    ],
+  };
+  const dueCases = await Case.find(pendingDueFilter);
 
   if (!dueCases || dueCases.length === 0) {
     return { count: 0, docketIds: [] };
   }
 
-  const caseIdsForUpdate = [];
-  const writeAuditPromises = [];
+  const updatePromises = [];
   const docketIds = [];
 
   for (const docket of dueCases) {
-    caseIdsForUpdate.push(docket._id);
     docketIds.push(docket.caseId);
+    const hasAssignee = docket.assignedToXID && String(docket.assignedToXID).trim() !== '';
+    const isRouted = docket.routedToTeamId && String(docket.routedToTeamId).trim() !== '';
 
-    writeAuditPromises.push(
+    let toState;
+    let stateVal;
+    let queueTypeVal;
+
+    if (hasAssignee) {
+      toState = 'ASSIGNED';
+      stateVal = 'IN_PROGRESS';
+      queueTypeVal = 'PERSONAL';
+    } else if (isRouted) {
+      toState = 'ROUTED';
+      stateVal = 'IN_WB';
+      queueTypeVal = 'GLOBAL';
+    } else {
+      toState = 'UNASSIGNED';
+      stateVal = 'IN_WB';
+      queueTypeVal = 'GLOBAL';
+    }
+
+    const updateFields = {
+      lifecycle: DocketLifecycle.ACTIVE,
+      status: toState,
+      state: stateVal,
+      queueType: queueTypeVal,
+      qcOutcome: null,
+      reopenAt: null,
+      pendingUntil: null,
+      lastActionAt: now,
+      lastActionByXID: 'SYSTEM',
+      updatedAt: now,
+    };
+
+    if (!hasAssignee) {
+      updateFields.assignedToXID = null;
+      updateFields.assignedTo = null;
+    }
+
+    updatePromises.push(
+      Case.updateOne({ _id: docket._id }, { $set: updateFields })
+    );
+
+    updatePromises.push(
       writeAudit({
         docketId: docket.caseId,
         fromState: DocketStatus.PENDING,
-        toState: "AVAILABLE",
+        toState: toDocketState(toState),
         userId: 'SYSTEM',
         comment: 'Auto reopened',
         action: 'PENDING_REOPEN',
@@ -870,40 +917,19 @@ async function reopenDuePending() {
         changes: [{
           field: 'status',
           from: DocketStatus.PENDING,
-          to: "AVAILABLE",
+          to: toDocketState(toState),
         }],
         metadata: {
           reasonCode: REASON_CODES.AUTO_REOPEN_DUE,
           fromState: 'PEND',
-          toState: 'WL',
+          toState: hasAssignee ? 'WL' : 'WB',
         },
       })
     );
   }
 
   // Execute bulk DB updates and parallel writes simultaneously
-  await Promise.all([
-    Case.updateMany(
-      { _id: { $in: caseIdsForUpdate } },
-      {
-        $set: {
-          lifecycle: DocketLifecycle.ACTIVE,
-          status: toPersistenceState(DocketStatus.IN_PROGRESS),
-          state: 'IN_WB',
-          queueType: 'GLOBAL',
-          assignedToXID: null,
-          assignedTo: null,
-          qcOutcome: null,
-          reopenAt: null,
-          pendingUntil: null,
-          lastActionAt: now,
-          lastActionByXID: 'SYSTEM',
-          updatedAt: now,
-        },
-      }
-    ),
-    ...writeAuditPromises,
-  ]);
+  await Promise.all(updatePromises);
 
   // Safely emit events ONLY after persistence is complete
   for (const docket of dueCases) {
@@ -1080,6 +1106,187 @@ async function handleUserDeactivation({ firmId, userXID }) {
   return { moved, skipped, scanned, workbasketMoved: moved, pendingMoved: 0, qcPendingMoved: 0 };
 }
 
+function generateDocketEmailSignature(caseInternalId) {
+  if (!caseInternalId) return '';
+  const crypto = require('crypto');
+  const secret = process.env.SYSTEM_HASH_SECRET;
+  if (!secret) {
+    throw new Error('SYSTEM_HASH_SECRET is not configured');
+  }
+  return crypto.createHmac('sha256', secret)
+    .update(String(caseInternalId))
+    .digest('hex')
+    .substring(0, 6)
+    .toLowerCase();
+}
+
+async function reopenDocketFromClientEmail(caseId, firmId, senderEmail) {
+  const docket = await Case.findOne({
+    firmId: String(firmId),
+    $or: [{ caseId: String(caseId) }, { caseNumber: String(caseId) }],
+  });
+
+  if (!docket) {
+    throw new Error('Docket not found');
+  }
+
+  // Check if docket status is PENDING
+  if (docket.status !== toPersistenceState(DocketStatus.PENDING)) {
+    return { reopened: false, reason: 'Docket is not in PENDING status' };
+  }
+
+  const now = new Date();
+  const hasAssignee = docket.assignedToXID && String(docket.assignedToXID).trim() !== '';
+  const toState = hasAssignee ? DocketStatus.IN_PROGRESS : DocketStatus.AVAILABLE;
+  const persistenceState = toPersistenceState(toState);
+
+  const updateFields = {
+    lifecycle: DocketLifecycle.ACTIVE,
+    status: persistenceState,
+    state: hasAssignee ? 'IN_PROGRESS' : 'IN_WB',
+    queueType: hasAssignee ? 'PERSONAL' : 'GLOBAL',
+    qcOutcome: null,
+    reopenAt: null,
+    pendingUntil: null,
+    lastActionAt: now,
+    lastActionByXID: 'SYSTEM',
+    updatedAt: now,
+  };
+
+  if (!hasAssignee) {
+    updateFields.assignedToXID = null;
+    updateFields.assignedTo = null;
+  }
+
+  await Case.updateOne({ _id: docket._id }, { $set: updateFields });
+
+  await writeAudit({
+    docketId: docket.caseId,
+    fromState: DocketStatus.PENDING,
+    toState: toState,
+    userId: 'SYSTEM',
+    comment: `Auto reopened on client email from ${senderEmail}`,
+    action: 'PENDING_REOPEN',
+    firmId: docket.firmId,
+    changes: [{
+      field: 'status',
+      from: DocketStatus.PENDING,
+      to: toState,
+    }],
+    metadata: {
+      reasonCode: 'CLIENT_EMAIL_RECEIVED',
+      fromState: 'PEND',
+      toState: hasAssignee ? 'WL' : 'WB',
+    },
+  });
+
+  return { reopened: true, fromStatus: DocketStatus.PENDING, toStatus: toState };
+}
+
+async function processExpiredPendedDockets() {
+  const Comment = require('../models/Comment.model');
+  const Client = require('../models/Client.model');
+  const UploadSession = require('../models/UploadSession.model');
+  const { sendEmail } = require('./email.service');
+
+  const now = new Date();
+  const expiredSessions = await UploadSession.find({
+    isActive: true,
+    reopenAt: { $lte: now },
+  });
+
+  let processedCount = 0;
+
+  for (const session of expiredSessions) {
+    try {
+      const docket = await Case.findOne({
+        firmId: String(session.firmId),
+        $or: [{ caseId: String(session.docketId) }, { caseNumber: String(session.docketId) }],
+      });
+
+      if (!docket) {
+        await UploadSession.updateOne({ _id: session._id }, { $set: { isActive: false } });
+        continue;
+      }
+
+      let clientEmail = session.senderEmail;
+      if (!clientEmail && docket.clientId) {
+        const client = await Client.findOne({ clientId: docket.clientId, firmId: docket.firmId });
+        clientEmail = client?.businessEmail || client?.contactPersonEmailAddress || '';
+      }
+
+      // If reminder hasn't been sent yet, send automated reminder email
+      if (!session.reminderSent && clientEmail) {
+        const baseUrl = (process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:5173').replace(/\/+$/, '');
+        const uploadLink = `${baseUrl}/upload/${session.token}`;
+
+        await sendEmail({
+          to: clientEmail,
+          subject: `Reminder: Action required for Docket ${docket.caseNumber}`,
+          html: `
+            <p>Dear Client,</p>
+            <p>This is a reminder that information/documents are requested for <strong>Docket ${docket.caseNumber}</strong> (${docket.workType || 'Compliance'}).</p>
+            ${session.clientMessage ? `<blockquote style="background: #f8fafc; border-left: 4px solid #0284c7; padding: 12px; margin: 16px 0;"><strong>Message from Team:</strong><br/>${session.clientMessage}</blockquote>` : ''}
+            <p><a href="${uploadLink}" style="background-color: #0284c7; color: #ffffff; padding: 10px 18px; text-decoration: none; border-radius: 6px; display: inline-block;">Upload Documents & Respond &rarr;</a></p>
+          `,
+          text: `Reminder: Action required for Docket ${docket.caseNumber}. Please upload requested documents: ${uploadLink}`,
+        });
+
+        // Add automated system comment to the docket comment feed
+        await Comment.create({
+          caseId: docket.caseId || docket.caseNumber,
+          firmId: String(docket.firmId),
+          text: `Automated reminder email sent to client (${clientEmail}) for document request.`,
+          createdBy: 'SYSTEM',
+          createdByXID: 'SYSTEM',
+          createdByName: 'System Scheduler',
+        });
+      }
+
+      // Unpend docket if in PENDING status
+      if (docket.status === toPersistenceState(DocketStatus.PENDING)) {
+        const hasAssignee = docket.assignedToXID && String(docket.assignedToXID).trim() !== '';
+        const toState = hasAssignee ? DocketStatus.IN_PROGRESS : DocketStatus.AVAILABLE;
+        const persistenceState = toPersistenceState(toState);
+
+        await Case.updateOne(
+          { _id: docket._id },
+          {
+            $set: {
+              lifecycle: DocketLifecycle.ACTIVE,
+              status: persistenceState,
+              state: hasAssignee ? 'IN_PROGRESS' : 'IN_WB',
+              queueType: hasAssignee ? 'PERSONAL' : 'GLOBAL',
+              reopenAt: null,
+              pendingUntil: null,
+              lastActionAt: now,
+              lastActionByXID: 'SYSTEM',
+              updatedAt: now,
+            },
+          }
+        );
+
+        await writeAudit({
+          docketId: docket.caseId,
+          fromState: DocketStatus.PENDING,
+          toState: toState,
+          userId: 'SYSTEM',
+          comment: `Auto reopened on scheduled date (${now.toISOString().split('T')[0]})`,
+          action: 'PENDING_REOPEN',
+          firmId: docket.firmId,
+        });
+      }
+
+      await UploadSession.updateOne({ _id: session._id }, { $set: { isActive: false, reminderSent: true } });
+      processedCount += 1;
+    } catch (err) {
+      console.error(`Failed to process expired pended session ${session._id}:`, err);
+    }
+  }
+
+  return { processedCount };
+}
+
 module.exports = {
   DocketStatus,
   QC_DECISIONS,
@@ -1096,4 +1303,7 @@ module.exports = {
   reassign,
   handleUserDeactivation,
   resolveQcRoutingDecision,
+  generateDocketEmailSignature,
+  reopenDocketFromClientEmail,
+  processExpiredPendedDockets,
 };

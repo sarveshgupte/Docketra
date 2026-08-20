@@ -21,6 +21,26 @@ const uploadSessionSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  clientMessage: {
+    type: String,
+    default: null,
+  },
+  senderName: {
+    type: String,
+    default: null,
+  },
+  senderEmail: {
+    type: String,
+    default: null,
+  },
+  reopenAt: {
+    type: Date,
+    default: null,
+  },
+  reminderSent: {
+    type: Boolean,
+    default: false,
+  },
   expiresAt: {
     type: Date,
     required: true,

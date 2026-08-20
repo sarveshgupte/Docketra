@@ -3,7 +3,7 @@ const { applyRouteValidation } = require('../middleware/requestValidation.middle
 const routeSchemas = require('../schemas/case.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
-const { requireRole } = require('../middleware/rbac.middleware');
+const { requireRole, requirePrimaryAdmin } = require('../middleware/rbac.middleware');
 const {
   userReadLimiter,
   userWriteLimiter,
@@ -39,6 +39,7 @@ const {
   listClientCFSFilesForCase,
   downloadClientCFSFileForCase,
   getDocketSummaryPdf,
+  sendEmailToClient,
 } = require('../controllers/case.controller');
 const {
   generateUploadLink,
@@ -79,7 +80,7 @@ const {
 } = require('../controllers/docketAi.controller');
 
 const { getTimeline } = require('../controllers/docketActivity.controller');
-const { previewDocketBulkUpload, uploadDocketBulk } = require('../controllers/docketBulkUpload.controller');
+const { generateDocketImportTemplate, previewDocketBulkUpload, uploadDocketBulk } = require('../controllers/docketBulkUpload.controller');
 
 
 const {
@@ -137,8 +138,9 @@ const {
  */
 
 // ── Bulk upload (must come before /:caseId to avoid param matching) ──────────
-router.post('/bulk/preview', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, previewDocketBulkUpload);
-router.post('/bulk/upload', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, uploadDocketBulk);
+router.get('/bulk/template', requirePrimaryAdmin, authorizeFirmPermission('CASE_CREATE'), userReadLimiter, generateDocketImportTemplate);
+router.post('/bulk/preview', requirePrimaryAdmin, authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, previewDocketBulkUpload);
+router.post('/bulk/upload', requirePrimaryAdmin, authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, uploadDocketBulk);
 
 // ── Collection-level reads ────────────────────────────────────────────────────
 router.get('/', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, applyClientAccessFilter, getCases);
@@ -188,6 +190,7 @@ router.get('/:caseId/comments', authorizeFirmPermission('CASE_VIEW'), userReadLi
 router.post('/:caseId/upload-link', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, generateUploadLink);
 router.get('/:caseId/upload-link', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getUploadLinkStatus);
 router.post('/:caseId/upload-link/revoke', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, revokeUploadLink);
+router.post('/:caseId/send-client-email', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, sendEmailToClient);
 router.get('/:caseId/request-checklist', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getRequestChecklist);
 router.put('/:caseId/request-checklist', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, saveRequestChecklist);
 router.patch('/:caseId/request-checklist/:itemId/review', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, reviewChecklistItem);

@@ -38,21 +38,29 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
       // Dual check keeps atomic pull safe across legacy assignedTo and canonical assignedToXID migration states.
       assignedToXID: null,
       assignedTo: null,
-      status: CaseStatus.UNASSIGNED,
+      status: { $in: [CaseStatus.UNASSIGNED, CaseStatus.ROUTED] },
     },
-    {
-      $set: {
-        assignedToXID: normalizedUserId,
-        assignedAt,
-        assignedTo: assigneeObjectId || null,
-        assignedBy: assignerObjectId || assigneeObjectId || null,
-        status: CaseStatus.ASSIGNED,
-        queueType: 'PERSONAL',
-        lifecycle: DocketLifecycle.IN_WORKLIST,
-        state: 'IN_PROGRESS',
-        qcOutcome: null,
+    [
+      {
+        $set: {
+          assignedToXID: normalizedUserId,
+          assignedAt,
+          assignedTo: assigneeObjectId || null,
+          assignedBy: assignerObjectId || assigneeObjectId || null,
+          status: {
+            $cond: {
+              if: { $eq: ['$status', CaseStatus.ROUTED] },
+              then: CaseStatus.ROUTED_ASSIGNED,
+              else: CaseStatus.ASSIGNED,
+            },
+          },
+          queueType: 'PERSONAL',
+          lifecycle: DocketLifecycle.IN_WORKLIST,
+          state: 'IN_PROGRESS',
+          qcOutcome: null,
+        },
       },
-    },
+    ],
     {
       returnDocument: 'after',
       ...(session ? { session } : {}),
@@ -82,7 +90,7 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
         previousValue: null,
         newValue: normalizedUserId,
         fromStatus: CaseStatus.UNASSIGNED,
-        toStatus: CaseStatus.ASSIGNED,
+        toStatus: updatedCase.status,
         tenantId,
         timestamp: assignedAt,
       },
@@ -101,7 +109,7 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
       actorRole: 'USER',
       metadata: {
         fromStatus: CaseStatus.UNASSIGNED,
-        toStatus: CaseStatus.ASSIGNED,
+        toStatus: updatedCase.status,
         timestamp: assignedAt,
       }
     }).catch((error) => {
@@ -117,7 +125,7 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
     fromAssignee: null,
     toAssignee: normalizedUserId,
     fromStatus: CaseStatus.UNASSIGNED,
-    toStatus: CaseStatus.ASSIGNED,
+    toStatus: updatedCase.status,
     action: 'ASSIGNMENT',
     metadata: {
       source: 'caseAssignment.service.pullCaseFromWorkbasket',
@@ -127,7 +135,7 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
 
   return {
     success: true,
-    status: 'ASSIGNED',
+    status: updatedCase.status,
     caseId,
     assignedTo: normalizedUserId,
     assignedAt,
@@ -218,7 +226,7 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
       {
         firmId,
         caseId: { $in: caseIds },
-        status: CaseStatus.UNASSIGNED,
+        status: { $in: [CaseStatus.UNASSIGNED, CaseStatus.ROUTED] },
         assignedToXID: null,
         assignedTo: null,
         $or: [
@@ -226,21 +234,29 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
           { lockStatus: { $exists: false } },
         ],
       },
-      {
-        $set: {
-          assignedToXID: user.xID.toUpperCase(), // CANONICAL: Store xID in assignedToXID
-          assignedTo: user._id || null,
-          assignedBy: assignerObjectId || user._id || null,
-          assignedAt,
-          status: CaseStatus.ASSIGNED,
-          queueType: 'PERSONAL',
-          lifecycle: DocketLifecycle.IN_WORKLIST,
-        state: 'IN_PROGRESS',
-        qcOutcome: null,
-          lastActionByXID: user.xID.toUpperCase(),
-          lastActionAt: assignedAt,
+      [
+        {
+          $set: {
+            assignedToXID: user.xID.toUpperCase(), // CANONICAL: Store xID in assignedToXID
+            assignedTo: user._id || null,
+            assignedBy: assignerObjectId || user._id || null,
+            assignedAt,
+            status: {
+              $cond: {
+                if: { $eq: ['$status', CaseStatus.ROUTED] },
+                then: CaseStatus.ROUTED_ASSIGNED,
+                else: CaseStatus.ASSIGNED,
+              },
+            },
+            queueType: 'PERSONAL',
+            lifecycle: DocketLifecycle.IN_WORKLIST,
+            state: 'IN_PROGRESS',
+            qcOutcome: null,
+            lastActionByXID: user.xID.toUpperCase(),
+            lastActionAt: assignedAt,
+          },
         },
-      },
+      ],
       { session }
     );
 
@@ -381,9 +397,9 @@ const reassignCase = async (firmId, caseId, newUserXID, performedBy) => {
     throw new Error('Case not found');
   }
   
-  // Cannot reassign unassigned cases
-  if (caseData.status === CaseStatus.UNASSIGNED) {
-    throw new Error('Cannot reassign unassigned cases. Use assignment instead.');
+  // Cannot reassign unassigned/routed cases
+  if (caseData.status === CaseStatus.UNASSIGNED || caseData.status === CaseStatus.ROUTED) {
+    throw new Error('Cannot reassign unassigned/routed dockets. Use assignment instead.');
   }
   
   // Cannot reassign filed cases
@@ -461,21 +477,29 @@ const assignDocket = async ({ firmId, caseId, userXID, assigneeObjectId = null, 
       firmId,
       caseId,
       assignedToXID: null,
-      status: { $in: [CaseStatus.UNASSIGNED, CaseStatus.OPEN] },
+      status: { $in: [CaseStatus.UNASSIGNED, CaseStatus.OPEN, CaseStatus.ROUTED] },
     },
-    {
-      $set: {
-        assignedToXID: normalizedUserXID,
-        assignedTo: assigneeObjectId || null,
-        assignedBy: assignedByObjectId || assigneeObjectId || null,
-        assignedAt,
-        status: CaseStatus.ASSIGNED,
-        queueType: 'PERSONAL',
-        lifecycle: DocketLifecycle.IN_WORKLIST,
-        state: 'IN_PROGRESS',
-        qcOutcome: null,
+    [
+      {
+        $set: {
+          assignedToXID: normalizedUserXID,
+          assignedTo: assigneeObjectId || null,
+          assignedBy: assignedByObjectId || assigneeObjectId || null,
+          assignedAt,
+          status: {
+            $cond: {
+              if: { $eq: ['$status', CaseStatus.ROUTED] },
+              then: CaseStatus.ROUTED_ASSIGNED,
+              else: CaseStatus.ASSIGNED,
+            },
+          },
+          queueType: 'PERSONAL',
+          lifecycle: DocketLifecycle.IN_WORKLIST,
+          state: 'IN_PROGRESS',
+          qcOutcome: null,
+        },
       },
-    },
+    ],
     {
       new: true,
       ...(session ? { session } : {}),
@@ -495,19 +519,32 @@ const unassignDocket = async ({ firmId, caseId, session = null }) => {
       caseId,
       status: { $ne: CaseStatus.FILED },
     },
-    {
-      $set: {
-        assignedToXID: null,
-        assignedTo: null,
-        assignedBy: null,
-        assignedAt: null,
-        queueType: 'GLOBAL',
-        lifecycle: DocketLifecycle.CREATED,
-        status: CaseStatus.UNASSIGNED,
-        state: 'IN_WB',
-        qcOutcome: null,
+    [
+      {
+        $set: {
+          assignedToXID: null,
+          assignedTo: null,
+          assignedBy: null,
+          assignedAt: null,
+          queueType: 'GLOBAL',
+          lifecycle: DocketLifecycle.CREATED,
+          status: {
+            $cond: {
+              if: {
+                $and: [
+                  { $ne: [{ $ifNull: ['$routedToTeamId', null] }, null] },
+                  { $ne: [{ $ifNull: ['$routedToTeamId', ''] }, ''] },
+                ],
+              },
+              then: CaseStatus.ROUTED,
+              else: CaseStatus.UNASSIGNED,
+            },
+          },
+          state: 'IN_WB',
+          qcOutcome: null,
+        },
       },
-    },
+    ],
     {
       new: true,
       ...(session ? { session } : {}),

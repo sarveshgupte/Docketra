@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { parseBooleanQuery } = require('../utils/query.utils');
 const { logAuthEvent } = require('../services/audit.service');
+const { escapeRegExp } = require('../utils/regexp.utils');
 const log = require('../utils/log');
 const { validateCategoryMappedWorkbasket } = require('../services/categoryWorkbasketValidation.service');
 const { suggestDocketCategory } = require('../services/docketCategorySuggestion.service');
@@ -253,7 +254,7 @@ const createCategory = async (req, res) => {
     }
     
     // Check for duplicate name (case-insensitive)
-    const escapedName = name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapedName = escapeRegExp(name.trim());
     const existing = await Category.findOne({ 
       ...firmScope,
       name: { $regex: new RegExp(`^${escapedName}$`, 'i') }
@@ -329,7 +330,7 @@ const updateCategory = async (req, res) => {
     }
     
     // Check for duplicate name (case-insensitive), excluding current category
-    const escapedName = name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapedName = escapeRegExp(name.trim());
     const existing = await Category.findOne({ 
       _id: { $ne: id },
       ...firmScope,

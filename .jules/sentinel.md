@@ -40,3 +40,44 @@
 **Vulnerability:** Raw error messages (`error.message`) were being directly exposed to clients in API error responses (e.g., in `src/controllers/user.controller.js`).
 **Learning:** Exposing raw internal error details to the client can leak sensitive system information, configuration details, or underlying infrastructure state, which can be leveraged by attackers.
 **Prevention:** Always log the full error details server-side using the internal logger (`log.error`) and return generic, safe error messages to the client (e.g., "Unable to load profile").
+
+## 2026-06-21 - Prevent NoSQL Injection / ReDoS in Regex Query
+**Vulnerability:** Unescaped user input (`name`) was being passed directly into a regular expression constructor in a MongoDB `findOne` query in `src/controllers/documentItem.controller.js`.
+**Learning:** Passing user input directly to a regex constructor without escaping can lead to ReDoS and potential NoSQL injection attacks by allowing attackers to manipulate the regular expression behavior.
+**Prevention:** Always escape user-provided values used within dynamic regular expressions (e.g. using `escapeRegExp` from `src/utils/regexp.utils.js`).
+## 2024-05-28 - ReDoS Vulnerabilities in Regex Queries
+**Vulnerability:** Several dynamically constructed `new RegExp(...)` statements in Mongoose queries were found in the `src/controllers/documentItem.controller.js` and `src/controllers/knowledgeItem.controller.js` controllers, using unescaped user-supplied inputs to filter documents.
+**Learning:** Instantiating `new RegExp()` using unescaped inputs provides an attack vector for Regular Expression Denial of Service (ReDoS) by allowing maliciously crafted input strings to severely degrade performance or crash the service. There was a lack of consistent, centralized escaping for regex generation across the codebase.
+**Prevention:** Always use the centralized `escapeRegExp` utility from `src/utils/regexp.utils.js` to escape dynamic user inputs before passing them to `new RegExp()` or MongoDB `$regex` statements, ensuring inputs are treated strictly as literals rather than regular expression syntax.
+## 2024-05-22 - Mass Assignment and IDOR Vulnerability in Audit Fields
+**Vulnerability:** The application was trusting client-provided audit fields (`createdBy` and `updatedBy`) from `req.body` directly in the `user.controller.js` file, which allows mass assignment and IDOR vulnerabilities, enabling an attacker to manipulate audit records.
+**Learning:** This exposes the application to situations where attackers can modify user records and mask their actions or impersonate system/other users' operations.
+**Prevention:** To prevent Mass Assignment and IDOR vulnerabilities, never trust client-provided audit fields (e.g., `createdBy`, `updatedBy`, `performedBy`) from `req.body`. Always derive these values securely from server-side authenticated context like `req.user` (e.g., `req.user?._id || null`).
+
+## 2026-06-17 - Prevent ReDoS by Escaping Dynamic Regex Inputs in Controllers
+**Vulnerability:** Regular Expression Denial of Service (ReDoS) and NoSQL Regex Injection via unescaped variables passed to `new RegExp()` constructors in `documentItem.controller.js` and `knowledgeItem.controller.js`.
+**Learning:** Directly passing dynamic, user-controlled strings to the `RegExp` constructor allows attackers to construct potentially catastrophic patterns that drastically degrade performance or bypass exact match logic.
+**Prevention:** Always wrap dynamically generated string segments in the centralized `escapeRegExp` utility (`src/utils/regexp.utils.js`) before injecting them into a `RegExp` constructor.
+
+## 2024-10-27 - Hardcoded Fallback Secret in HMAC Generation
+**Vulnerability:** A hardcoded fallback secret (`docketra-system-default-secret-key-12345`) was used in `generateDocketEmailSignature` when the `SYSTEM_HASH_SECRET` environment variable was missing.
+**Learning:** Hardcoded cryptographic secrets are easily discovered in source code, allowing attackers to forge signatures and bypass security controls. In this case, an attacker could forge email signatures and manipulate workflows if the system was improperly configured.
+**Prevention:** Never use hardcoded strings as fallbacks for cryptographic secrets. Always fail securely (e.g., throw an error during initialization or execution) if a required secret is missing from the environment configuration.
+## 2025-02-14 - Prevent Mass Assignment in Compliance Template Controller
+**Vulnerability:** The Compliance Template Controller directly spread `req.body` into MongoDB create and update payloads without filtering out protected fields.
+**Learning:** Directly spreading `req.body` allows attackers to overwrite critical fields like `_id`, `firmId`, `createdByXID`, and `updatedByXID`, leading to IDOR and privilege escalation.
+**Prevention:** Always clone `req.body` and explicitly `delete` protected root-level fields before spreading it into a database payload.
+
+## 2026-08-16 - Mass Assignment and IDOR Vulnerability in Case Lock Middleware
+**Vulnerability:** The `checkCaseLock` middleware trusted client-provided fields (`req.body.performedBy`, `req.body.createdBy`, `req.body.clonedBy`) to determine the user identity (email) for lock operations.
+**Learning:** Trusting client-provided fields allows an attacker to bypass lock checks or perform operations under the guise of another user, leading to IDOR.
+**Prevention:** Always derive user identity securely from the authenticated server-side context (e.g., `req.user?.email`).
+## 2026-08-15 - Prevent Information Exposure via Error Stack Traces
+**Vulnerability:** Leaking `error.stack` details directly in `sendError` API responses within `src/controllers/inboundEmail.controller.js`.
+**Learning:** Including raw stack traces in client HTTP responses is an Information Exposure vulnerability (CWE-200), revealing internal filesystem paths, dependencies, and application topology to unauthenticated clients.
+**Prevention:** Only log stack traces server-side and ensure HTTP responses strictly return generic, safe operational error codes/messages without internal internals.
+
+## 2024-10-28 - IDOR Vulnerability in Case Workflow Controller
+**Vulnerability:** The Case Workflow Controller trusted client-provided `userEmail` from `req.body` directly when performing state transitions (e.g., `submitCase`, `closeCase`), which allows IDOR vulnerabilities by enabling an attacker to impersonate another user.
+**Learning:** This exposes the application to situations where attackers can manipulate case states under the guise of another user.
+**Prevention:** To prevent IDOR vulnerabilities, never trust client-provided identity fields (e.g., `userEmail`) from `req.body`. Always derive these values securely from server-side authenticated context like `req.user` (e.g., `req.user?.email`).

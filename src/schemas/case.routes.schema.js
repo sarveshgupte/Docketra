@@ -65,6 +65,9 @@ const cloneCaseBody = z.object({
 }).strict();
 
 module.exports = {
+  'GET /bulk/template': {
+    query: z.object({}).passthrough(),
+  },
   'POST /bulk/preview': {
     body: z.object({
       rows: z.array(z.record(z.string(), z.string())).max(1000).optional(),
@@ -244,7 +247,7 @@ module.exports = {
   'GET /:caseId/attachments/:attachmentId/view': { params: caseAndAttachmentParams, query: strictEmpty },
   'GET /:caseId/attachments/:attachmentId/download': { params: caseAndAttachmentParams, query: strictEmpty },
   'POST /:caseId/clone': { params: caseIdParams, body: cloneCaseBody },
-  'POST /:caseId/unpend': { params: caseIdParams, body: strictEmpty },
+  'POST /:caseId/unpend': { params: caseIdParams, body: z.object({ comment: nonEmptyString }).strict() },
   'PUT /:caseId/status': { params: caseIdParams, body: z.object({ status: nonEmptyString }).strict() },
   'POST /:caseId/lock': { params: caseIdParams, body: strictEmpty },
   'POST /:caseId/unlock': { params: caseIdParams, body: strictEmpty },
@@ -326,4 +329,12 @@ module.exports = {
   'POST /:caseId/apply-ai-routing': { params: caseIdParams, body: strictEmpty },
   'POST /:caseId/reject-ai-routing': { params: caseIdParams, body: strictEmpty },
   'POST /:caseId/manager-move': { params: caseIdParams, body: z.object({ targetTeamId: objectIdString.optional() }).passthrough() },
+  'POST /:caseId/send-client-email': {
+    params: caseIdParams,
+    body: z.object({
+      to: z.string().trim().email().optional().or(z.literal('')),
+      subject: nonEmptyString,
+      body: nonEmptyString,
+    }).strict(),
+  },
 };

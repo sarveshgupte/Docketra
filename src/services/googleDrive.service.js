@@ -61,6 +61,7 @@ class GoogleDriveService {
   async markStorageDisconnected(firmId, errorMessage = null) {
     const firm = await Firm.findById(firmId).select('storageConfig storage').lean();
     const current = this.decodeStorageCredentials(firm);
+    const existingRootFolderId = current.rootFolderId || firm?.storage?.google?.rootFolderId || null;
     const nextCredentials = {
       ...current,
       accessToken: null,
@@ -76,8 +77,7 @@ class GoogleDriveService {
       $set: {
         'storage.mode': 'firm_connected',
         'storage.provider': 'google_drive',
-        'storage.google.rootFolderId': null,
-        'storage.google.encryptedRefreshToken': null,
+        ...(existingRootFolderId ? { 'storage.google.rootFolderId': existingRootFolderId } : {}),
       },
     });
     await this.persistStorageCredentials(firmId, nextCredentials, 'google_drive');
@@ -98,17 +98,31 @@ class GoogleDriveService {
     );
   }
 
+  async handleTokenRefresh(firmId, tokens = {}) {
+    if (!firmId || (!tokens.access_token && !tokens.refresh_token)) return;
+    const firm = await Firm.findById(firmId).select('storageConfig storage').lean();
+    if (!firm) return;
+    const current = this.decodeStorageCredentials(firm);
+    const updatedCredentials = {
+      ...current,
+      ...(tokens.refresh_token ? { refreshToken: tokens.refresh_token } : {}),
+      ...(tokens.access_token ? { accessToken: tokens.access_token } : {}),
+      ...(tokens.expiry_date ? { expiryDate: tokens.expiry_date } : {}),
+      status: current.status === 'DISCONNECTED' ? 'ACTIVE' : (current.status || 'ACTIVE'),
+      lastCheckedAt: new Date().toISOString(),
+    };
+    await this.persistStorageCredentials(firmId, updatedCredentials, 'google_drive');
+  }
+
   async handleProviderError(firmId, error) {
     const message = (error?.message || '').toLowerCase();
     const isDisconnectedError = error?.status === 401
       || message.includes('invalid_grant')
       || message.includes('token has been expired')
+      || message.includes('token_expired')
       || message.includes('revoked');
-    const isPermissionError = error?.status === 403
-      || message.includes('insufficient permissions')
-      || message.includes('permission');
 
-    if (isDisconnectedError || isPermissionError) {
+    if (isDisconnectedError) {
       await this.markStorageDisconnected(firmId, error?.message || 'Storage token disconnected');
       log.error('[STORAGE]', {
         event: 'token_expired',
@@ -150,7 +164,16 @@ class GoogleDriveService {
     }
 
     const credentials = this.decodeStorageCredentials(firm);
-    const refreshToken = credentials.refreshToken || credentials.googleRefreshToken;
+    let legacyRefreshToken = null;
+    if (firm?.storage?.google?.encryptedRefreshToken) {
+      try {
+        legacyRefreshToken = decrypt(firm.storage.google.encryptedRefreshToken);
+      } catch (_err) {
+        legacyRefreshToken = null;
+      }
+    }
+
+    const refreshToken = credentials.refreshToken || credentials.googleRefreshToken || legacyRefreshToken;
     if (!refreshToken) {
       const error = new Error('Cloud storage must be connected');
       error.code = 'STORAGE_NOT_CONNECTED';
@@ -161,7 +184,14 @@ class GoogleDriveService {
     const oauthClient = this.getOAuthClient();
     oauthClient.setCredentials({
       refresh_token: refreshToken,
-      expiry_date: credentials.expiryDate || undefined,
+      ...(credentials.accessToken ? { access_token: credentials.accessToken } : {}),
+      ...(credentials.expiryDate ? { expiry_date: credentials.expiryDate } : {}),
+    });
+
+    oauthClient.on('tokens', (tokens) => {
+      this.handleTokenRefresh(firmId, tokens).catch((err) => {
+        log.error('[GoogleDriveService] Failed to auto-persist refreshed OAuth tokens', { firmId, message: err.message });
+      });
     });
 
     const rootFolderId = credentials.rootFolderId || firm?.storage?.google?.rootFolderId || null;

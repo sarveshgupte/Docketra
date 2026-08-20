@@ -14,7 +14,7 @@ const normalizeFeed = (input) => {
 
 const extractActivity = (response) => {
   const payload = response?.data || [];
-  return Array.isArray(payload) ? payload : (payload?.activity || payload?.events || []);
+  return Array.isArray(payload) ? payload : (payload?.history || payload?.activity || payload?.events || []);
 };
 
 export function ActivityTimeline({

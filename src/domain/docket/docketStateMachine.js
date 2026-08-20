@@ -1,7 +1,14 @@
 const DocketStatus = require('./docketStatus');
 
 const allowedTransitions = Object.freeze({
-  [DocketStatus.AVAILABLE]: Object.freeze([DocketStatus.ASSIGNED]),
+  [DocketStatus.AVAILABLE]: Object.freeze([DocketStatus.ASSIGNED, DocketStatus.ROUTED]),
+  [DocketStatus.ROUTED]: Object.freeze([DocketStatus.ASSIGNED, DocketStatus.ROUTED_ASSIGNED]),
+  [DocketStatus.ROUTED_ASSIGNED]: Object.freeze([
+    DocketStatus.PENDING,
+    DocketStatus.QC_PENDING,
+    DocketStatus.RESOLVED,
+    DocketStatus.FILED,
+  ]),
   [DocketStatus.ASSIGNED]: Object.freeze([DocketStatus.IN_PROGRESS]),
   [DocketStatus.IN_PROGRESS]: Object.freeze([
     DocketStatus.PENDING,
@@ -9,7 +16,13 @@ const allowedTransitions = Object.freeze({
     DocketStatus.RESOLVED,
     DocketStatus.FILED,
   ]),
-  [DocketStatus.PENDING]: Object.freeze([DocketStatus.IN_PROGRESS]),
+  [DocketStatus.PENDING]: Object.freeze([
+    DocketStatus.IN_PROGRESS,
+    DocketStatus.ASSIGNED,
+    DocketStatus.ROUTED,
+    DocketStatus.ROUTED_ASSIGNED,
+    DocketStatus.AVAILABLE,
+  ]),
   [DocketStatus.QC_PENDING]: Object.freeze([DocketStatus.ASSIGNED, DocketStatus.RESOLVED]),
   [DocketStatus.QC_FAILED]: Object.freeze([DocketStatus.IN_PROGRESS]),
   [DocketStatus.QC_CORRECTED]: Object.freeze([DocketStatus.RESOLVED]),
@@ -24,6 +37,8 @@ const persistenceToDocket = Object.freeze({
   ASSIGNED: DocketStatus.ASSIGNED,
   IN_PROGRESS: DocketStatus.IN_PROGRESS,
   PENDING: DocketStatus.PENDING,
+  ROUTED: DocketStatus.ROUTED,
+  ROUTED_ASSIGNED: DocketStatus.ROUTED_ASSIGNED,
   QC_PENDING: DocketStatus.QC_PENDING,
   QC_FAILED: DocketStatus.QC_FAILED,
   QC_CORRECTED: DocketStatus.QC_CORRECTED,
@@ -38,6 +53,8 @@ const docketToPersistence = Object.freeze({
   [DocketStatus.CREATED]: 'UNASSIGNED',
   [DocketStatus.AVAILABLE]: 'UNASSIGNED',
   [DocketStatus.ASSIGNED]: 'ASSIGNED',
+  [DocketStatus.ROUTED]: 'ROUTED',
+  [DocketStatus.ROUTED_ASSIGNED]: 'ROUTED_ASSIGNED',
   [DocketStatus.IN_PROGRESS]: 'IN_PROGRESS',
   [DocketStatus.PENDING]: 'PENDING',
   [DocketStatus.QC_PENDING]: 'QC_PENDING',

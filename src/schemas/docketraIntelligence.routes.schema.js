@@ -29,4 +29,15 @@ module.exports = {
   'GET /deadline-risk': {
     query: z.object({}).strict(),
   },
+  'GET /executive-brief': {
+    query: z.object({}).strict(),
+  },
+  'GET /client-risk': {
+    query: z.object({}).strict(),
+  },
+  'POST /rebalance': {
+    body: z.object({
+      execute: z.boolean().optional(),
+    }).strict(),
+  },
 };

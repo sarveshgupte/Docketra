@@ -11,7 +11,7 @@ async function buildUniqueToken() {
   throw new Error('Failed to generate a unique upload token');
 }
 
-async function createUploadSession({ docketId, firmId, requirePin, expiryHours }) {
+async function createUploadSession({ docketId, firmId, requirePin, expiryHours, clientMessage, senderName, senderEmail, reopenAt }) {
   const token = await buildUniqueToken();
 
   let pin = null;
@@ -34,6 +34,10 @@ async function createUploadSession({ docketId, firmId, requirePin, expiryHours }
     firmId,
     token,
     pinHash,
+    clientMessage: clientMessage || null,
+    senderName: senderName || null,
+    senderEmail: senderEmail || null,
+    reopenAt: reopenAt ? new Date(reopenAt) : null,
     expiresAt,
     isActive: true,
   });

@@ -90,7 +90,7 @@ const maskEmail = (email) => {
  * @param {Object} options - Email options { to, subject, html, text, attachments }
  * @returns {Promise<Object>} Result object with success status and messageId
  */
-const sendTransactionalEmail = async ({ to, subject, html, text, attachments }) => {
+const sendTransactionalEmail = async ({ to, subject, html, text, attachments, replyTo }) => {
   const apiKey = process.env.BREVO_API_KEY;
   const mailFrom = resolveMailFrom();
   
@@ -118,6 +118,10 @@ const sendTransactionalEmail = async ({ to, subject, html, text, attachments }) 
     htmlContent: html,
     textContent: text
   };
+
+  if (replyTo) {
+    payloadData.replyTo = replyTo;
+  }
 
   if (attachments && Array.isArray(attachments)) {
     payloadData.attachment = attachments;
@@ -196,7 +200,8 @@ const sendEmailNow = async (mailOptions) => {
         subject: mailOptions.subject,
         html: mailOptions.html,
         text: mailOptions.text,
-        attachments: mailOptions.attachments
+        attachments: mailOptions.attachments,
+        replyTo: mailOptions.replyTo
       });
       recordSuccess('smtp');
       log.info(`[EMAIL] Email sent successfully via Brevo: ${result.messageId || 'sent'}`);
@@ -1098,6 +1103,7 @@ const sendSignupOtpEmail = async ({
 module.exports = {
   sendEmail,
   sendEmailNow,
+  sendTransactionalEmail,
   generateSecureToken,
   hashToken,
   sendPasswordSetupEmail,

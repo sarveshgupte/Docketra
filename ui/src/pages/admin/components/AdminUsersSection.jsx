@@ -48,7 +48,25 @@ export const AdminUsersSection = ({
             {
               key: 'role',
               header: 'Role',
-              render: (u) => <span className="inline-flex items-center rounded-md bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-800">{getRoleBadgePresentation({ role: u.role, isPrimaryAdmin: u.isPrimaryAdmin, isSystem: u.isSystem }).label}</span>,
+              render: (u) => {
+                const badge = getRoleBadgePresentation({ role: u.role, isPrimaryAdmin: u.isPrimaryAdmin, isSystem: u.isSystem });
+                const isPrimary = u.isPrimaryAdmin || u.role === 'PRIMARY_ADMIN';
+                const isAdmin = u.role === 'ADMIN';
+                const isManager = u.role === 'MANAGER';
+                const badgeStyle = isPrimary
+                  ? 'bg-amber-50 text-amber-800 border border-amber-200/80 font-semibold'
+                  : isAdmin
+                    ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/80 font-medium'
+                    : isManager
+                      ? 'bg-blue-50 text-blue-700 border border-blue-200/80 font-medium'
+                      : 'bg-slate-100 text-slate-700 border border-slate-200/80 font-medium';
+
+                return (
+                  <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs ${badgeStyle}`}>
+                    {badge.label}
+                  </span>
+                );
+              },
             },
             { key: 'status', header: 'Status', render: (u) => <AdminStatusBadge status={u.status} /> },
             {

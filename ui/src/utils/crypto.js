@@ -1,22 +1,39 @@
 /**
  * Cryptographically secure random ID generation utilities for the frontend.
- * Replaces usage of Math.random() which can trigger SAST warnings.
+ * Centralizes browser crypto usage so callers do not need Math.random().
  */
 
-/**
- * Generates a cryptographically secure UUID v4.
- *
- * @returns {string} A standard UUID.
- */
-export const generateUUID = () => {
-  if (typeof window !== 'undefined' && window.crypto?.randomUUID) {
-    return window.crypto.randomUUID();
+let fallbackCounter = 0;
+
+const getBrowserCrypto = () => {
+  if (typeof globalThis !== 'undefined' && globalThis.crypto) {
+    return globalThis.crypto;
   }
 
-  // Fallback if randomUUID is not available but getRandomValues is
-  if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
+  return null;
+};
+
+const getFallbackId = (prefix = 'id') => {
+  fallbackCounter += 1;
+  return `${prefix}-${Date.now().toString(36)}-${fallbackCounter.toString(36)}`;
+};
+
+/**
+ * Generates a cryptographically secure UUID v4 when browser crypto is available.
+ * Falls back to a timestamp/counter ID only for non-browser or legacy runtimes.
+ *
+ * @returns {string} A UUID-compatible random ID where supported.
+ */
+export const generateUUID = () => {
+  const browserCrypto = getBrowserCrypto();
+
+  if (browserCrypto?.randomUUID) {
+    return browserCrypto.randomUUID();
+  }
+
+  if (browserCrypto?.getRandomValues) {
     const buffer = new Uint8Array(16);
-    window.crypto.getRandomValues(buffer);
+    browserCrypto.getRandomValues(buffer);
     buffer[6] = (buffer[6] & 0x0f) | 0x40;
     buffer[8] = (buffer[8] & 0x3f) | 0x80;
     const segments = [
@@ -29,27 +46,26 @@ export const generateUUID = () => {
     return segments.join('-');
   }
 
-  // Last resort fallback (should never happen in modern browsers)
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = (Date.now() + Math.random() * 16) % 16 | 0;
-    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-  });
+  return getFallbackId('uuid');
 };
 
 /**
- * Generates a cryptographically secure random alphanumeric string.
+ * Generates a cryptographically secure random alphanumeric string when browser
+ * crypto is available. Falls back to a timestamp/counter string for non-browser
+ * or legacy runtimes.
  *
  * @param {number} length - The desired length of the string.
  * @returns {string} Random string.
  */
 export const generateSecureRandomString = (length = 8) => {
-  if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
-    // Generate enough bytes to cover the requested length when hex-encoded
-    const buffer = new Uint8Array(Math.ceil(length / 2));
-    window.crypto.getRandomValues(buffer);
-    return Array.from(buffer).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, length);
+  const normalizedLength = Math.max(1, Number(length) || 8);
+  const browserCrypto = getBrowserCrypto();
+
+  if (browserCrypto?.getRandomValues) {
+    const buffer = new Uint8Array(Math.ceil(normalizedLength / 2));
+    browserCrypto.getRandomValues(buffer);
+    return Array.from(buffer).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, normalizedLength);
   }
 
-  // Fallback (should rarely hit this in modern browsers)
-  return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  return getFallbackId('random').replace(/[^a-z0-9]/gi, '').slice(0, normalizedLength);
 };

@@ -1,0 +1,23 @@
+{
+  "envelope": {
+    "to": "docket-CO202603080001-TOKEN_PLACEHOLDER@mail.docketra.in",
+    "from": "client@company.com",
+    "helo_domain": "mail.company.com",
+    "remote_ip": "127.0.0.1",
+    "spf": {
+      "result": "pass",
+      "domain": "company.com"
+    }
+  },
+  "headers": {
+    "from": "Test Client <client@company.com>",
+    "to": "docket-CO202603080001-TOKEN_PLACEHOLDER@mail.docketra.in",
+    "subject": "Plain Text Document Submission",
+    "date": "Thu, 02 Jul 2026 10:45:00 +0000",
+    "message_id": "<plain-text-msg-id@company.com>"
+  },
+  "body": {
+    "plain": "Hello, please find my submission details here in plain text. Thank you."
+  },
+  "attachments": []
+}
