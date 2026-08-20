@@ -43,7 +43,7 @@ class DocketFileStorageService {
     return caseRecord;
   }
 
-  async uploadFile({ file, fileName, fileType, docketId, firmId, uploadedBy, uploadedByName }) {
+  async uploadFile({ file, fileName, fileType, docketId, firmId, uploadedBy, uploadedByName, source, description }) {
     const provider = await this.assertFirmStorageConnected(firmId);
     const caseRecord = await this.assertDocketOwnership({ docketId, firmId });
     const normalizedDocketId = caseRecord.caseId;
@@ -83,7 +83,8 @@ class DocketFileStorageService {
       createdBy: `${uploadedBy || 'unknown'}@docketra.internal`,
       createdByXID: uploadedBy,
       createdByName: uploadedByName,
-      description: `Attachment uploaded to docket ${normalizedDocketId}`,
+      description: description || `Attachment uploaded to docket ${normalizedDocketId}`,
+      source: source || 'upload',
       uploadedAtReadable: createdAt.toISOString(),
       webViewLink: uploadResult.webViewLink || null,
       createdAt,

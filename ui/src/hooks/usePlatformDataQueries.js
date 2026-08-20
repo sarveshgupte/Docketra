@@ -126,3 +126,23 @@ export const usePlatformDeadlineRiskQuery = (queryOptions = {}) => useQuery({
   placeholderData: keepPreviousData,
   ...queryOptions,
 });
+
+export const usePlatformExecutiveBriefQuery = (queryOptions = {}) => useQuery({
+  queryKey: ['platform', 'docketra-intelligence', 'executive-brief'],
+  queryFn: () => trackAsync('platform.docketra-intelligence.executive-brief', 'platform:docketra-intelligence:executive-brief', () => docketraIntelligenceApi.getExecutiveBrief()),
+  select: (res) => res?.data || {},
+  staleTime: 60 * 1000,
+  gcTime: 15 * 60 * 1000,
+  placeholderData: keepPreviousData,
+  ...queryOptions,
+});
+
+export const usePlatformClientRiskQuery = (queryOptions = {}) => useQuery({
+  queryKey: ['platform', 'docketra-intelligence', 'client-risk'],
+  queryFn: () => trackAsync('platform.docketra-intelligence.client-risk', 'platform:docketra-intelligence:client-risk', () => docketraIntelligenceApi.getClientRisk()),
+  select: (res) => res?.data || {},
+  staleTime: 90 * 1000,
+  gcTime: 15 * 60 * 1000,
+  placeholderData: keepPreviousData,
+  ...queryOptions,
+});

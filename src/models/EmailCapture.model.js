@@ -73,6 +73,12 @@ const emailCaptureSchema = new mongoose.Schema(
       index: true,
       default: null,
     },
+    // Message ID for webhook idempotency checks
+    messageId: {
+      type: String,
+      index: true,
+      default: null,
+    },
     // Operational classification and follow-ups
     classification: {
       type: String,

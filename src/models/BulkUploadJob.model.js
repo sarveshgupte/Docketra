@@ -4,7 +4,7 @@ const bulkUploadJobSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['clients', 'categories', 'team'],
+    enum: ['clients', 'categories', 'team', 'dockets', 'files'],
     index: true,
   },
   status: {

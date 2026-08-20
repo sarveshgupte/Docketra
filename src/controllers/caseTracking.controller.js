@@ -340,10 +340,16 @@ const getCaseHistory = async (req, res) => {
       }
     }
     
-    // Fetch history entries
-    const history = await CaseHistory.find({ caseId, firmId: req.firmId })
-      .sort({ timestamp: -1 }) // Most recent first
-      .limit(200) // Reasonable limit
+    // Fetch history entries reliably across firmId representations
+    const targetFirmId = String(caseData?.firmId || req.firmId || req.user?.firmId || '').trim();
+    const historyQuery = { caseId };
+    if (targetFirmId) {
+      historyQuery.firmId = targetFirmId;
+    }
+
+    const history = await CaseHistory.find(historyQuery)
+      .sort({ createdAt: -1, timestamp: -1 })
+      .limit(300)
       .lean();
     
     // Transform for display

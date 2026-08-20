@@ -492,7 +492,6 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     'Alt+Shift+N new docket',
     'Alt+Shift+D dashboard',
   ].filter(Boolean).join(', ');
-
   const firmLabel = user?.firm?.name || firmSlug || 'Workspace';
   const firmInitials = firmLabel.substring(0, 2).toUpperCase();
   const userInitials = userName.split(' ').map((n) => n[0]).join('').toUpperCase().substring(0, 2) || userName.substring(0, 2).toUpperCase();
@@ -585,18 +584,22 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
 
       <div className="platform__main">
         <header className="platform__topbar">
-          <div className="platform__title-block">
-            {moduleLabel ? <span className="platform__module-label">{moduleLabel}</span> : null}
-            <h1>{title || currentNavItem?.label || "Workspace"}</h1>
-            {subtitle ? <p>{subtitle}</p> : null}
-            {showBreadcrumbs ? (
-              <div className="platform__breadcrumbs" aria-label="Breadcrumb">
-                <span className="platform__breadcrumb-root">{currentNavItem.label}</span>
-                <span aria-hidden="true">/</span>
-                <span>{title}</span>
-              </div>
-            ) : null}
-          </div>
+          {title !== null && title !== false && title !== '' ? (
+            <div className="platform__title-block">
+              {moduleLabel ? <span className="platform__module-label">{moduleLabel}</span> : null}
+              <h1>{title || currentNavItem?.label || "Workspace"}</h1>
+              {subtitle ? <p>{subtitle}</p> : null}
+              {showBreadcrumbs ? (
+                <div className="platform__breadcrumbs" aria-label="Breadcrumb">
+                  <span className="platform__breadcrumb-root">{currentNavItem.label}</span>
+                  <span aria-hidden="true">/</span>
+                  <span>{title}</span>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="platform__title-block platform__title-block--empty" />
+          )}
           <div className="platform__actions" role="toolbar" aria-label="Page actions">
             <div className="platform__action-search">
               <button

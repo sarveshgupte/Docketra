@@ -36,7 +36,7 @@ function inferLifecycleAfterStatusChange(existingCase, normalizedNewStatus, patc
 
   if (!assigned) return DocketLifecycle.CREATED;
 
-  if (ns === CaseStatus.ASSIGNED) return DocketLifecycle.IN_WORKLIST;
+  if (ns === CaseStatus.ASSIGNED || ns === CaseStatus.ROUTED_ASSIGNED) return DocketLifecycle.IN_WORKLIST;
   if ([CaseStatus.PENDING, CaseStatus.QC_PENDING].includes(ns)) {
     return DocketLifecycle.WAITING;
   }

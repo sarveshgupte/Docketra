@@ -69,6 +69,12 @@ async function getProviderForTenant(firmId) {
         process.env.GOOGLE_OAUTH_REDIRECT_URI
       );
       oauthClient.setCredentials({ refresh_token: refreshToken });
+      oauthClient.on('tokens', (tokens) => {
+        const { googleDriveService } = require('../googleDrive.service');
+        googleDriveService.handleTokenRefresh(firmId, tokens).catch((err) => {
+          log.error('[StorageProviderFactory] Failed to auto-persist refreshed OAuth tokens', { firmId, message: err.message });
+        });
+      });
       return new GoogleDriveProvider({ oauthClient, driveId: config.credentials.driveId || null, rootFolderId: config.credentials.rootFolderId || null });
     }
     case 'docketra_drive':

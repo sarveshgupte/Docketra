@@ -20,12 +20,18 @@ const parseCsv = (content = '') => {
   });
 
   return (parsed.data || []).map((row) => ({
-    title: row.title,
-    description: row.description,
-    category: row.category,
-    subcategory: row.subcategory,
-    workbasket: row.workbasket,
-    priority: row.priority,
+    docketId: row.docketId || row.caseId || row.caseNumber,
+    title: row.title || row.docketTitle || row.summary,
+    description: row.description || row.notes,
+    category: row.category || row.workType,
+    subcategory: row.subcategory || row.subCategory,
+    workbasket: row.workbasket || row.team,
+    priority: row.priority || 'medium',
+    clientId: row.clientId || row.client_id || row.client,
+    assignedToEmail: row.assignedToEmail || row.assignedTo,
+    startDate: row.startDate || row.start_date,
+    completedDate: row.completedDate || row.completed_date,
+    status: row.status || 'RESOLVED',
   }));
 };
 
@@ -48,16 +54,21 @@ export const DocketBulkUploadModal = ({ isOpen, onClose, showToast, onUploaded }
   const invalidRows = useMemo(() => (preview?.results || []).filter((entry) => !entry.isValid), [preview]);
   const validRows = useMemo(() => (preview?.results || []).filter((entry) => entry.isValid), [preview]);
 
-  const downloadTemplate = () => {
-    const blob = new Blob([TEMPLATE_CSV], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'dockets-bulk-template.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+  const downloadTemplate = async () => {
+    try {
+      const response = await docketBulkUploadApi.downloadTemplate();
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'Docketra_Historical_Dockets_Template.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      showToast(err?.response?.data?.message || 'Failed to download template', 'error');
+    }
   };
 
   const handlePreview = async (nextRows) => {

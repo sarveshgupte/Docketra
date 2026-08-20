@@ -712,6 +712,7 @@ export const CasesPage = () => {
               showPerformance={showPerformance}
               onTogglePerformance={() => setShowPerformance((v) => !v)}
               isAdmin={isAdmin}
+              isPrimaryAdmin={user?.role === 'PRIMARY_ADMIN' || Boolean(user?.isPrimaryAdmin)}
               onOpenBulkUpload={() => setShowDocketBulkUpload(true)}
               onCreateDocket={handleCreateCase}
               exportLabel="Export Dockets"
@@ -870,12 +871,6 @@ export const CasesPage = () => {
         </SectionCard>
       </div>
       <AuditTimelineDrawer isOpen={Boolean(timelineCaseId)} caseId={timelineCaseId} onClose={() => setTimelineCaseId(null)} />
-      <DocketBulkUploadModal
-        isOpen={showDocketBulkUpload}
-        onClose={() => setShowDocketBulkUpload(false)}
-        showToast={showToast}
-        onUploaded={refreshCases}
-      />
       {confirmModal && (
         <ActionConfirmModal
           isOpen={true}

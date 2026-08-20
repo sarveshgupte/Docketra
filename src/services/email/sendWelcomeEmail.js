@@ -23,7 +23,7 @@ const sendWelcomeEmail = async ({
   const settingsUrl = isAdminRole
     ? `${frontendUrl}/app/firm/${resolvedFirmId}/settings/firm`
     : `${frontendUrl}/app/firm/${resolvedFirmId}/profile`;
-  const supportEmail = String(process.env.MAIL_FROM || 'support@docketra.com').trim();
+  const supportEmail = String(process.env.MAIL_FROM || 'support@docketra.in').trim();
   const subject = 'Welcome to Docketra — Your Workspace is Ready';
   const roleLabel = isAdminRole ? 'Admin' : 'User';
   const roleChecklist = isAdminRole

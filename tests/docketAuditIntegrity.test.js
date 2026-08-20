@@ -41,23 +41,27 @@ async function testCanonicalAuditShape() {
 
 async function testReopenMovesToWorkbenchWithAudit() {
   const originalFind = Case.find;
-  const originalUpdateMany = Case.updateMany;
+  const originalUpdateOne = Case.updateOne;
   const originalLogDocketEvent = docketAuditService.logDocketEvent;
   const originalCreateLog = docketAuditService.createLog;
 
   let updatePayload = null;
+  let observedFindFilter = null;
   const observed = [];
 
   try {
-    Case.find = async () => ([{
-      _id: 'doc-1',
-      caseId: 'CASE-2',
-      firmId: 'FIRM-2',
-      status: 'PENDING',
-      reopenAt: new Date(Date.now() - 1000),
-    }]);
+    Case.find = async (filter) => {
+      observedFindFilter = filter;
+      return [{
+        _id: 'doc-1',
+        caseId: 'CASE-2',
+        firmId: 'FIRM-2',
+        status: 'PENDING',
+        pendingUntil: new Date(Date.now() - 1000),
+      }];
+    };
 
-    Case.updateMany = async (_filter, update) => {
+    Case.updateOne = async (_filter, update) => {
       updatePayload = update;
       return { acknowledged: true, modifiedCount: 1 };
     };
@@ -72,13 +76,16 @@ async function testReopenMovesToWorkbenchWithAudit() {
     };
 
     const result = await reopenDuePending();
+    assert.strictEqual(observedFindFilter?.status, 'PENDING');
+    assert.ok(observedFindFilter?.$or?.[0]?.reopenAt?.$lte instanceof Date);
+    assert.ok(observedFindFilter?.$or?.[1]?.pendingUntil?.$lte instanceof Date);
     assert.strictEqual(result.count, 1);
     assert.strictEqual(result.docketIds[0], 'CASE-2');
     assert.ok(updatePayload?.$set);
     assert.strictEqual(updatePayload.$set.state, 'IN_WB');
     assert.strictEqual(updatePayload.$set.queueType, 'GLOBAL');
     assert.strictEqual(updatePayload.$set.assignedToXID, null);
-    assert.strictEqual(updatePayload.$set.status, 'IN_PROGRESS');
+    assert.strictEqual(updatePayload.$set.status, 'UNASSIGNED');
     assert.strictEqual(updatePayload.$set.lifecycle, 'ACTIVE');
 
     const canonical = observed.find((entry) => entry.kind === 'canonical');
@@ -87,7 +94,7 @@ async function testReopenMovesToWorkbenchWithAudit() {
     assert.strictEqual(canonical.payload.metadata.reasonCode, REASON_CODES.AUTO_REOPEN_DUE);
   } finally {
     Case.find = originalFind;
-    Case.updateMany = originalUpdateMany;
+    Case.updateOne = originalUpdateOne;
     docketAuditService.logDocketEvent = originalLogDocketEvent;
     docketAuditService.createLog = originalCreateLog;
   }

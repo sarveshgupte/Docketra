@@ -734,18 +734,22 @@ export const ClientsPage = () => {
       subtitle="View and manage registered client workspaces, compliance notes, and attachments."
       actions={canManageClients ? (
           <div className="clients-page-actions flex items-center gap-2">
-            <Button variant="default" onClick={() => setShowBulkUpload(true)}>Bulk Upload</Button>
-            <Button variant="default" onClick={() => {
-              const blob = new Blob([buildTemplateCsv('clients')], { type: 'text/csv;charset=utf-8;' });
-              const url = window.URL.createObjectURL(blob);
-              const link = document.createElement('a');
-              link.href = url;
-              link.setAttribute('download', 'clients-bulk-template.csv');
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-              window.URL.revokeObjectURL(url);
-            }}>Download Template</Button>
+            {(user?.role === 'PRIMARY_ADMIN' || Boolean(user?.isPrimaryAdmin)) && (
+              <>
+                <Button variant="default" onClick={() => setShowBulkUpload(true)}>Bulk Upload</Button>
+                <Button variant="default" onClick={() => {
+                  const blob = new Blob([buildTemplateCsv('clients')], { type: 'text/csv;charset=utf-8;' });
+                  const url = window.URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.setAttribute('download', 'clients-bulk-template.csv');
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  window.URL.revokeObjectURL(url);
+                }}>Download Template</Button>
+              </>
+            )}
             <Button onClick={openCreateClientModal}>+ Add Client</Button>
           </div>
         ) : null}

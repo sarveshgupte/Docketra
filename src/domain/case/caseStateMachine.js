@@ -1,11 +1,10 @@
 const CaseStatus = require('./caseStatus');
 
 const STATUS_ALIASES = Object.freeze({
-  [CaseStatus.PENDING_LEGACY]: CaseStatus.PENDING,
-  [CaseStatus.OPEN_LEGACY]: CaseStatus.OPEN,
-  [CaseStatus.FILED_LEGACY]: CaseStatus.FILED,
-  [CaseStatus.REVIEWED]: CaseStatus.UNDER_REVIEW,
-  [CaseStatus.ARCHIVED]: CaseStatus.CLOSED,
+  [CaseStatus.PENDING_LEGACY]: 'PENDING',
+  [CaseStatus.OPEN_LEGACY]: 'OPEN',
+  [CaseStatus.FILED_LEGACY]: 'FILED',
+  [CaseStatus.ARCHIVED]: 'FILED',
 });
 
 function normalizeStatus(status) {
@@ -13,48 +12,87 @@ function normalizeStatus(status) {
 }
 
 const transitions = Object.freeze({
-  [CaseStatus.DRAFT]: Object.freeze([
-    CaseStatus.SUBMITTED,
+  DRAFT: Object.freeze([
+    'SUBMITTED',
   ]),
-  [CaseStatus.SUBMITTED]: Object.freeze([
-    CaseStatus.UNDER_REVIEW,
-    CaseStatus.REJECTED,
+  SUBMITTED: Object.freeze([
+    'UNDER_REVIEW',
+    'REJECTED',
   ]),
-  [CaseStatus.UNDER_REVIEW]: Object.freeze([
-    CaseStatus.APPROVED,
-    CaseStatus.REJECTED,
+  UNDER_REVIEW: Object.freeze([
+    'APPROVED',
+    'REJECTED',
   ]),
-  [CaseStatus.REJECTED]: Object.freeze([
-    CaseStatus.DRAFT,
-    CaseStatus.CLOSED,
+  REJECTED: Object.freeze([
+    'DRAFT',
+    'CLOSED',
   ]),
-  [CaseStatus.APPROVED]: Object.freeze([
-    CaseStatus.OPEN,
+  APPROVED: Object.freeze([
+    'OPEN',
   ]),
-  [CaseStatus.UNASSIGNED]: Object.freeze([
-    CaseStatus.ASSIGNED,
-  ]),
-  [CaseStatus.ASSIGNED]: Object.freeze([
-    CaseStatus.IN_PROGRESS,
-  ]),
-  [CaseStatus.IN_PROGRESS]: Object.freeze([
-    CaseStatus.OPEN,
-    CaseStatus.PENDING,
-    CaseStatus.FILED,
-    CaseStatus.RESOLVED,
+  UNASSIGNED: Object.freeze([
+    'ASSIGNED',
+    'ROUTED',
   ]),
   [CaseStatus.OPEN]: Object.freeze([
-    CaseStatus.PENDING,
+    CaseStatus.ASSIGNED,
+    'IN_PROGRESS',
+    'PENDING',
+    CaseStatus.PEND,
+    CaseStatus.RESOLVED,
+    CaseStatus.FILED,
+  ]),
+  [CaseStatus.ASSIGNED]: Object.freeze([
+    'IN_PROGRESS',
+    CaseStatus.PEND,
+    'PENDING',
+    CaseStatus.ROUTED,
+    CaseStatus.QC_WB,
+    CaseStatus.RESOLVED,
+    CaseStatus.FILED,
+  ]),
+  IN_PROGRESS: Object.freeze([
+    'OPEN',
+    'PENDING',
+    CaseStatus.PEND,
     CaseStatus.FILED,
     CaseStatus.RESOLVED,
   ]),
-  [CaseStatus.PENDING]: Object.freeze([
+  [CaseStatus.PEND]: Object.freeze([
     CaseStatus.OPEN,
-    CaseStatus.FILED,
+    CaseStatus.ASSIGNED,
+    'IN_PROGRESS',
+  ]),
+  PENDING: Object.freeze([
+    CaseStatus.OPEN,
+    CaseStatus.ASSIGNED,
+    'IN_PROGRESS',
+  ]),
+  [CaseStatus.ROUTED]: Object.freeze([
+    CaseStatus.ROUTED_ASSIGNED,
+  ]),
+  [CaseStatus.ROUTED_ASSIGNED]: Object.freeze([
+    CaseStatus.ROUTED_PEND,
+    CaseStatus.ROUTED_SUBMITTED,
+  ]),
+  [CaseStatus.ROUTED_PEND]: Object.freeze([
+    CaseStatus.ROUTED_ASSIGNED,
+  ]),
+  [CaseStatus.ROUTED_SUBMITTED]: Object.freeze([
+    CaseStatus.ASSIGNED,
+    'IN_PROGRESS',
+  ]),
+  [CaseStatus.QC_WB]: Object.freeze([
+    CaseStatus.QC_ASSIGNED,
+  ]),
+  [CaseStatus.QC_ASSIGNED]: Object.freeze([
+    CaseStatus.RESOLVED,
+    CaseStatus.ASSIGNED,
+    'IN_PROGRESS',
   ]),
   [CaseStatus.FILED]: Object.freeze([]),
   [CaseStatus.RESOLVED]: Object.freeze([]),
-  [CaseStatus.CLOSED]: Object.freeze([]),
+  CLOSED: Object.freeze([]),
 });
 
 function canTransition(from, to, _role = null) {

@@ -92,7 +92,7 @@ async function routeDocket({ docketId, actor, firmId, toTeamId, note }) {
   docket.routedByUserId = String(actor.xID || '').toUpperCase();
   docket.routedAt = new Date();
   docket.routingNote = String(note || '').trim();
-  docket.status = CaseStatus.UNASSIGNED || 'UNASSIGNED';
+  docket.status = CaseStatus.ROUTED || 'ROUTED';
   docket.state = 'IN_WB';
   docket.queueType = 'GLOBAL';
   docket.assignedToXID = null;

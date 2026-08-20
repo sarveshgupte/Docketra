@@ -5,7 +5,7 @@
  */
 
 import { lazy, Suspense, useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
@@ -24,7 +24,7 @@ import { extractErrorMessage } from '../services/apiResponse';
 import { getRecoveryPayload } from '../utils/errorRecovery';
 import { formatDateTime, getISODateInTimezone } from '../utils/formatDateTime';
 import { formatDocketId } from '../utils/formatters';
-import { CASE_DETAIL_TABS, VALID_CASE_DETAIL_TAB_NAMES } from '../utils/constants';
+import { CASE_DETAIL_TABS, VALID_CASE_DETAIL_TAB_NAMES, API_BASE_URL } from '../utils/constants';
 import { DocketSidebar } from '../components/docket/DocketSidebar';
 import { DocketComments } from '../components/docket/DocketComments';
 import { StickyTabs } from '../components/common/StickyTabs';
@@ -66,6 +66,7 @@ import {
 const CaseDetailAttachmentsPanel = lazy(() => import('./caseDetail/CaseDetailAttachmentsPanel').then((module) => ({ default: module.CaseDetailAttachmentsPanel })));
 const CaseDetailActivityPanel = lazy(() => import('./caseDetail/CaseDetailActivityPanel').then((module) => ({ default: module.CaseDetailActivityPanel })));
 const CaseDetailHistoryPanel = lazy(() => import('./caseDetail/CaseDetailHistoryPanel').then((module) => ({ default: module.CaseDetailHistoryPanel })));
+const CaseDetailEmailsPanel = lazy(() => import('./caseDetail/CaseDetailEmailsPanel').then((module) => ({ default: module.CaseDetailEmailsPanel })));
 import { useClientDocketHistory } from './caseDetail/useClientDocketHistory';
 // showFileAction={!routedTeamCannotResolve && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)}
 import {
@@ -299,6 +300,7 @@ export const CaseDetailPage = () => {
   });
   const docketTabs = useMemo(() => ([
     { name: CASE_DETAIL_TABS.OVERVIEW, label: '📋 Overview' },
+    { name: CASE_DETAIL_TABS.EMAIL_LOGS, label: '📧 Emails' },
     { name: CASE_DETAIL_TABS.KNOWLEDGE, label: '🧠 Linked Knowledge' },
   ]), []);
 
@@ -732,8 +734,8 @@ export const CaseDetailPage = () => {
       // Use sendBeacon for better reliability on page unload
       // Note: This is best-effort and may not work in all browsers/scenarios
       if (navigator.sendBeacon) {
-        const apiBaseUrl = window.location.origin;
-        const url = `${apiBaseUrl}/api/cases/${caseId}/track-exit`;
+        // Use API_BASE_URL from constants instead of window.location.origin which fails under cross-origin hosting
+        const url = `${API_BASE_URL}/cases/${caseId}/track-exit`;
         
         // Send beacon - note that sendBeacon doesn't support custom headers
         // The backend must handle authentication via cookies or accept the request
@@ -927,6 +929,20 @@ export const CaseDetailPage = () => {
     }
   }, [caseId, showError]);
 
+  const loadCaseHistory = useCallback(async () => {
+    if (!caseId) return;
+    try {
+      const response = await caseApi.getCaseHistory(caseId);
+      const rawEvents = response?.data?.history || response?.data?.events || response?.data || [];
+      const historyList = Array.isArray(rawEvents) ? rawEvents : [];
+      if (historyList.length > 0) {
+        setCaseData((prev) => mergeCaseData(prev, { history: historyList }, { source: 'history-fetch' }));
+      }
+    } catch (_err) {
+      // Best-effort history refresh
+    }
+  }, [caseId, mergeCaseData]);
+
   const openSidebar = (type) => {
     try {
       setSidebarType((previousType) => {
@@ -937,6 +953,8 @@ export const CaseDetailPage = () => {
         setSidebarOpen(true);
         if (type === 'cfs') {
           void loadClientFactSheet();
+        } else if (type === 'history') {
+          void loadCaseHistory();
         }
         return type;
       });
@@ -1210,7 +1228,7 @@ export const CaseDetailPage = () => {
 
   if (loading || (activeDocketId === caseId && isDocketLoading && !caseData)) {
     return (
-      <PlatformShell title="Docket details">
+      <PlatformShell title={null}>
         <Loading message="Loading docket..." />
       </PlatformShell>
     );
@@ -1231,7 +1249,7 @@ export const CaseDetailPage = () => {
 
   if (!caseData) {
     return (
-      <PlatformShell title="Docket details">
+      <PlatformShell title={null}>
         <div className="container">
           <Card>
             {loadError ? <p>{loadError}</p> : null}
@@ -1301,7 +1319,7 @@ export const CaseDetailPage = () => {
 
   return (
     <PlatformShell
-      title={formatDocketId(caseInfo?.caseId || caseId)}
+      title={null}
       actions={(
         <Button type="button" variant="primary" onClick={() => navigate(ROUTES.CREATE_CASE(firmSlug))}>
           + Create Docket
@@ -1325,13 +1343,42 @@ export const CaseDetailPage = () => {
             <div className="docket-detail-hero__identity">
               <p className="docket-detail-hero__eyebrow">Active docket</p>
               <h1>{formatDocketId(caseInfo?.caseId || caseId)}</h1>
-              <p>
-                {categoryLabel || 'Uncategorised'}
-                {subcategoryLabel ? <span> / {subcategoryLabel}</span> : null}
-              </p>
+              <div className="docket-detail-hero__tags">
+                <span className="docket-tag docket-tag--category">
+                  {categoryLabel || 'Uncategorised'}
+                </span>
+                {subcategoryLabel ? (
+                  <>
+                    <span className="docket-tag-separator">/</span>
+                    <span className="docket-tag docket-tag--subcategory">
+                      {subcategoryLabel}
+                    </span>
+                  </>
+                ) : null}
+              </div>
             </div>
 
             <div className="docket-detail-hero__metrics" aria-label="Docket summary">
+              <div>
+                <span>Client Name</span>
+                <strong>
+                  {isInternalWork ? (
+                    <span className="text-gray-500 font-normal">Internal Work</span>
+                  ) : (
+                    linkedClientRoute ? (
+                      <Link to={linkedClientRoute} className="case-detail-table__link font-semibold hover:underline">
+                        {clientName}
+                      </Link>
+                    ) : (
+                      clientName || '—'
+                    )
+                  )}
+                </strong>
+              </div>
+              <div>
+                <span>Client ID</span>
+                <strong>{clientIdLabel || '—'}</strong>
+              </div>
               <div>
                 <span>Lifecycle</span>
                 <strong>{displayLifecycleLabel || 'Active'}</strong>
@@ -1347,6 +1394,17 @@ export const CaseDetailPage = () => {
               <div>
                 <span>Due</span>
                 <strong>{dueDateLabel ? formatDateTime(dueDateLabel) : 'No date'}</strong>
+                {slaRemainingDays != null && (
+                  <span
+                    className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded mt-1"
+                    style={{
+                      background: Number(slaRemainingDays) < 0 ? '#fef2f2' : Number(slaRemainingDays) <= 3 ? '#fffbeb' : '#f0fdf4',
+                      color: Number(slaRemainingDays) < 0 ? '#dc2626' : Number(slaRemainingDays) <= 3 ? '#d97706' : '#16a34a',
+                    }}
+                  >
+                    {Number(slaRemainingDays) < 0 ? `${Math.abs(Number(slaRemainingDays))} days overdue` : `+${slaRemainingDays} days`}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -1489,6 +1547,14 @@ export const CaseDetailPage = () => {
                     caseChecklist={caseInfo?.checklist}
                     firmSlug={firmSlug}
                     canManageSettings={Boolean(permissions.isAdmin) || Boolean(user?.isPrimaryAdmin)}
+                  />
+                )}
+                {activeTab === CASE_DETAIL_TABS.EMAIL_LOGS && (
+                  <CaseDetailEmailsPanel
+                    caseId={caseId}
+                    caseInfo={caseInfo}
+                    clientEmail={linkedClientEmail}
+                    onRefreshCase={loadCase}
                   />
                 )}
               </Suspense>
@@ -1635,6 +1701,7 @@ export const CaseDetailPage = () => {
                   returnTo={returnTo}
                   fromClientRoute={fromClientRoute}
                   navigate={navigate}
+                  caseInfo={caseInfo}
                 />
               </Suspense>
             </div>
