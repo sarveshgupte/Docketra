@@ -2966,10 +2966,8 @@ const resendSetup = async (req, res) => {
   const user = await User.findOne(userQuery);
   if (!user) return res.json(genericResponse);
 
-  // ⚡ Bolt Performance Optimization:
-  // 💡 What: Replaced AuthAudit.countDocuments() with AuthAudit.find().select('_id').limit(3).lean()
-  // 🎯 Why: countDocuments forces a full index scan when we only need to know if 3 documents exist. find().limit(3) provides an O(1) early return upon reaching the limit.
-  // 📊 Impact: Avoids unbounded full index scans and provides O(1) early return performance.
+  // Fetch only enough audit IDs to enforce the hourly resend cap. Counting every
+  // matching audit entry is unnecessary once the rate-limit threshold is reached.
   const recentResends = await AuthAudit.find({
     userId: user._id,
     actionType: 'SetupLinkResent',
