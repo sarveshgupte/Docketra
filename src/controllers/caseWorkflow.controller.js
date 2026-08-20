@@ -24,7 +24,7 @@ const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const submitCase = async (req, res) => {
   try {
     const { caseId } = req.params;
-    const { userEmail } = req.body;
+    const userEmail = req.user?.email;
     
     if (!userEmail) {
       return res.status(400).json({
@@ -107,7 +107,7 @@ const submitCase = async (req, res) => {
 const moveToUnderReview = async (req, res) => {
   try {
     const { caseId } = req.params;
-    const { userEmail } = req.body;
+    const userEmail = req.user?.email;
     
     if (!userEmail) {
       return res.status(400).json({
@@ -178,7 +178,8 @@ const moveToUnderReview = async (req, res) => {
 const closeCase = async (req, res) => {
   try {
     const { caseId } = req.params;
-    const { userEmail, comment } = req.body;
+    const { comment } = req.body;
+    const userEmail = req.user?.email;
     
     if (!userEmail) {
       return res.status(400).json({
@@ -262,7 +263,8 @@ const closeCase = async (req, res) => {
 const reopenCase = async (req, res) => {
   try {
     const { caseId } = req.params;
-    const { userEmail, comment } = req.body;
+    const { comment } = req.body;
+    const userEmail = req.user?.email;
     
     if (!userEmail) {
       return res.status(400).json({
