@@ -12,7 +12,7 @@ export const CaseDetailHeader = ({ caseInfo, actions, statusBadges, onInfoClick 
           <StatusBadge status={caseInfo.status} />
           <button
             type="button"
-            className="case-detail-header__info-btn"
+            className="case-detail-header__info-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dt-focus)]/45"
             onClick={onInfoClick}
             aria-label="Open client fact sheet"
             title="Open Client Fact Sheet"
