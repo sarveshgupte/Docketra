@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useId } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import useStorageStatusSummary from '../../hooks/useStorageStatusSummary';
 import { ROUTES, hasValidFirmSlug } from '../../constants/routes';
@@ -17,6 +17,7 @@ export default function StorageStatusBadge() {
   const location = useLocation();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const popoverId = useId();
   const containerRef = useRef(null);
   const canViewStorageStatus = hasFirmRoleAtLeast(user, 'MANAGER');
   const canReadOwnershipSummary = isFirmAdminOrAbove(user);
@@ -63,7 +64,7 @@ export default function StorageStatusBadge() {
         className={`platform__storage-pill platform__storage-pill--${summary.badgeTone}`}
         aria-label={`Storage status: ${summary.badgeLabel}`}
         aria-expanded={open}
-        aria-controls="storage-status-popover"
+        aria-controls={`storage-status-popover-${popoverId}`}
         aria-haspopup="dialog"
         onClick={() => setOpen((value) => !value)}
         title={summary.helperText}
@@ -73,7 +74,7 @@ export default function StorageStatusBadge() {
         <span className="platform__storage-label-short">Storage</span>
       </button>
       {open ? (
-        <div id="storage-status-popover" className="platform__storage-popover" role="dialog" aria-label="Storage status details">
+        <div id={`storage-status-popover-${popoverId}`} className="platform__storage-popover" role="dialog" aria-label="Storage status details">
           <p className="platform__storage-helper">{summary.helperText}</p>
           <dl className="platform__storage-meta">
             <div><dt>Active provider</dt><dd>{summary.providerLabel}</dd></div>

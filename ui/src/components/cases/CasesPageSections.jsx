@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { Button } from '../common/Button';
 import { CASE_STATUS } from '../../utils/constants';
 
@@ -59,10 +60,12 @@ export const CasesSlaSummaryBar = ({ slaSummary, setStatusFilter, setActiveView,
   );
 };
 
-export const CasesSavedViews = ({ savedViews, savedViewsOpen, setSavedViewsOpen, handleLoadSavedView, removeView, saveViewName, setSaveViewName, handleSaveCurrentView }) => (
+export const CasesSavedViews = ({ savedViews, savedViewsOpen, setSavedViewsOpen, handleLoadSavedView, removeView, saveViewName, setSaveViewName, handleSaveCurrentView }) => {
+  const formId = useId();
+  return (
   <div className="cases-page__saved-views">
     <div className="cases-page__saved-views-row">
-      <button type="button" className="cases-page__saved-views-toggle" onClick={() => setSavedViewsOpen((v) => !v)} aria-expanded={savedViewsOpen} aria-controls="cases-saved-views-form">
+      <button type="button" className="cases-page__saved-views-toggle" onClick={() => setSavedViewsOpen((v) => !v)} aria-expanded={savedViewsOpen} aria-controls={`cases-saved-views-form-${formId}`}>
         ⭐ Saved Views {savedViews.length > 0 && `(${savedViews.length})`}
       </button>
       {savedViews.map((sv) => (
@@ -77,7 +80,7 @@ export const CasesSavedViews = ({ savedViews, savedViewsOpen, setSavedViewsOpen,
       ))}
     </div>
     {savedViewsOpen && (
-      <div id="cases-saved-views-form" className="cases-page__saved-views-form">
+      <div id={`cases-saved-views-form-${formId}`} className="cases-page__saved-views-form">
         <input
           type="text"
           className="cases-page__saved-views-input"
@@ -94,7 +97,7 @@ export const CasesSavedViews = ({ savedViews, savedViewsOpen, setSavedViewsOpen,
       </div>
     )}
   </div>
-);
+)};
 
 export const CasesFiltersCard = ({ statusFilter, setStatusFilter, workTypeFilter, setWorkTypeFilter, qcWorkbaskets, activeWorkbasketId, setActiveWorkbasketId, onClearFilters, }) => {
   const defaultQcWorkbasketId = qcWorkbaskets[0]?.id || '';
