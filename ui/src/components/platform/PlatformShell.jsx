@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, useId } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../constants/routes';
@@ -137,6 +137,7 @@ const NAV_ICONS = {
 export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuId = useId();
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -622,7 +623,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                 title={userName}
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
-                aria-controls="platform-account-menu"
+                aria-controls={`platform-account-menu-${menuId}`}
                 onClick={() => setMenuOpen((value) => !value)}
                 onKeyDown={(event) => {
                   if (event.key === 'Escape') setMenuOpen(false);
@@ -633,7 +634,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                 <svg className="platform__user-pill-chevron" width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
               {menuOpen ? (
-                <div id="platform-account-menu" className="platform__account-dropdown" role="menu" aria-label="Account menu">
+                <div id={`platform-account-menu-${menuId}`} className="platform__account-dropdown" role="menu" aria-label="Account menu">
                   <Link
                     to={ROUTES.PROFILE(firmSlug)}
                     className="platform__account-dropdown-item"
