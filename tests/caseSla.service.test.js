@@ -214,9 +214,15 @@ function testSlaStatusTrafficLight() {
 }
 
 async function testWeeklySlaSummary() {
-  const originalCountDocuments = Case.countDocuments;
-  const counts = [5, 2, 3, 4, 6, 1];
-  Case.countDocuments = async () => counts.shift();
+  const originalAggregate = Case.aggregate;
+  Case.aggregate = async () => [{
+    createdThisWeek: 5,
+    currentlyOverdue: 2,
+    dueSoon: 3,
+    onTrack: 4,
+    resolvedWithinSla: 6,
+    resolvedAfterBreach: 1,
+  }];
 
   try {
     const summary = await slaService.getWeeklySlaSummary('firm-a', { now: new Date('2026-03-06T12:00:00.000Z') });
@@ -227,7 +233,7 @@ async function testWeeklySlaSummary() {
     assert.strictEqual(summary.resolvedWithinSla, 6);
     assert.strictEqual(summary.resolvedAfterBreach, 1);
   } finally {
-    Case.countDocuments = originalCountDocuments;
+    Case.aggregate = originalAggregate;
   }
 }
 
