@@ -43,14 +43,18 @@ const listSecurityAlerts = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const filter = { actionType: 'SECURITY_ALERT' };
-    const [total, alerts] = await Promise.all([
-      AuthAudit.countDocuments(filter),
-      AuthAudit.find(filter)
-        .sort({ timestamp: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-    ]);
+
+    // ⚡ Bolt Performance Optimization:
+    // Replaced concurrent countDocuments() and find() queries with a single find() using limit(limit + 1).
+    const alertsWithExtra = await AuthAudit.find(filter)
+      .sort({ timestamp: -1 })
+      .skip(skip)
+      .limit(limit + 1)
+      .lean();
+
+    const hasMore = alertsWithExtra.length > limit;
+    const alerts = hasMore ? alertsWithExtra.slice(0, limit) : alertsWithExtra;
+    const total = hasMore ? skip + limit + 1 : skip + alerts.length;
 
     return res.json({
       success: true,
