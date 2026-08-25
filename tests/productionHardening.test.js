@@ -98,7 +98,7 @@ async function testAdminStatusNormalization() {
 
   const originalFirmFindById = Firm.findById;
   const originalUserFindOne = User.findOne;
-  const originalUserCountDocuments = User.countDocuments;
+  const originalUserFind = User.find;
   const originalSuperadminAuditCreate = SuperadminAudit.create;
 
   const savedAdmin = {
@@ -127,7 +127,13 @@ async function testAdminStatusNormalization() {
     }
     return savedAdmin;
   };
-  User.countDocuments = async () => 2;
+  User.find = () => ({
+    select: () => ({
+      limit: () => ({
+        lean: async () => [{ _id: '1' }, { _id: '2' }]
+      })
+    })
+  });
   SuperadminAudit.create = async () => ({});
 
   const req = {
@@ -168,7 +174,7 @@ async function testAdminStatusNormalization() {
 
   Firm.findById = originalFirmFindById;
   User.findOne = originalUserFindOne;
-  User.countDocuments = originalUserCountDocuments;
+  User.find = originalUserFind;
   SuperadminAudit.create = originalSuperadminAuditCreate;
   console.log('✓ superadmin admin lifecycle normalizes DISABLED status consistently');
 }

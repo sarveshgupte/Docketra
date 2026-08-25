@@ -1352,14 +1352,18 @@ const updateFirmAdminStatus = async (req, res) => {
   const oldStatus = admin.status;
   if (status === 'disabled' && normalizeAdminLifecycleStatus(admin.status) === 'active') {
     const session = getSession(req);
-    const activeAdminsCountQuery = User.countDocuments({
+    // ⚡ Bolt Performance Optimization:
+    // 💡 What: Replaced unbounded countDocuments() with find().limit(2) for a <= 1 threshold check.
+    // 🎯 Why: countDocuments forces a full index scan. Using find().limit(2).lean() prevents full scans and provides O(1) early return performance.
+    // 📊 Impact: O(1) early return performance for admin disabled checks.
+    const activeAdminsCountQuery = User.find({
       firmId: firm._id,
       role: { $in: ADMIN_ROLE_VALUES },
       status: 'active',
-    });
-    const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
+    }).select('_id').limit(2).lean();
+    const activeAdmins = await resolveSessionQuery(activeAdminsCountQuery, session);
 
-    if (activeAdminsCount <= 1) {
+    if (activeAdmins.length <= 1) {
       log.warn('[SUPERADMIN] Blocked disable: last active admin protection', {
         firmId: firm.firmId,
         adminXID: admin.xID,
@@ -1619,14 +1623,18 @@ const deleteFirmAdmin = async (req, res) => {
   }
 
   if (adminForDelete.status === 'active') {
-    const activeAdminsCountQuery = User.countDocuments({
+    // ⚡ Bolt Performance Optimization:
+    // 💡 What: Replaced unbounded countDocuments() with find().limit(2) for a <= 1 threshold check.
+    // 🎯 Why: countDocuments forces a full index scan. Using find().limit(2).lean() prevents full scans and provides O(1) early return performance.
+    // 📊 Impact: O(1) early return performance for admin delete checks.
+    const activeAdminsCountQuery = User.find({
       firmId: firm._id,
       role: { $in: ADMIN_ROLE_VALUES },
       status: 'active',
-    });
-    const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
+    }).select('_id').limit(2).lean();
+    const activeAdmins = await resolveSessionQuery(activeAdminsCountQuery, session);
 
-    if (activeAdminsCount <= 1) {
+    if (activeAdmins.length <= 1) {
       log.warn('[SUPERADMIN] Blocked delete: last active admin protection', {
         firmId: firm.firmId,
         adminXID: admin.xID,
