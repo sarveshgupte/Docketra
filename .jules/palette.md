@@ -11,3 +11,6 @@
 ## 2024-05-18 - Improve icon-only buttons with titles, add empty state, and focus indicators
 **Learning:** Sighted mouse users lack context when icon-only buttons only use aria-labels. Also empty states are an opportunity to delight. Keyboard navigation needs focus-visible states on menu links.
 **Action:** Add title tooltips alongside aria-labels for icon buttons. Always ensure empty states use positive, explanatory copy. Always apply focus-visible tailwind classes to interactive navigation elements.
+## 2024-05-20 - [ARIA state and duplicate attributes on complex inputs]
+**Learning:** React elements cannot possess duplicate props (e.g. `aria-controls` or `id`). This often happens when components evolve and `aria-expanded` and `aria-controls` bindings are duplicated accidentally, confusing screen readers. Additionally, `aria-activedescendant` must strictly reference a valid DOM ID, which frequently breaks if the referenced popup element has duplicate/conflicting IDs.
+**Action:** Always verify components do not duplicate props, and when utilizing complex input components like a custom combobox (mentions textarea), verify that `aria-activedescendant` targets the active item's exact ID, which requires the listbox itself to have a unified, single `id`.
