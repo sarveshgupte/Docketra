@@ -65,7 +65,17 @@ const getTaskById = async (req, res) => {
 const createTask = async (req, res) => {
   try {
     const firmId = req.firmId || req.user?.firmId;
-    const task = await taskService.createTask(firmId, req.body);
+    const safeBody = { ...req.body };
+    delete safeBody._id;
+    delete safeBody.firmId;
+    delete safeBody.createdBy;
+    delete safeBody.updatedBy;
+    const payload = {
+      ...safeBody,
+      createdBy: req.user?._id || null,
+      updatedBy: req.user?._id || null,
+    };
+    const task = await taskService.createTask(firmId, payload);
     
     res.status(201).json({
       success: true,
@@ -88,7 +98,16 @@ const createTask = async (req, res) => {
 const updateTask = async (req, res) => {
   try {
     const firmId = req.firmId || req.user?.firmId;
-    const task = await taskService.updateTask(firmId, req.params.id, req.body);
+    const safeBody = { ...req.body };
+    delete safeBody._id;
+    delete safeBody.firmId;
+    delete safeBody.createdBy;
+    delete safeBody.updatedBy;
+    const payload = {
+      ...safeBody,
+      updatedBy: req.user?._id || null,
+    };
+    const task = await taskService.updateTask(firmId, req.params.id, payload);
     
     if (!task) {
       return res.status(404).json({
