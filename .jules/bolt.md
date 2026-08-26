@@ -29,3 +29,9 @@
 ## 2024-10-25 - Eliminate redundant sequential validation counts
 **Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
 **Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
+## 2026-08-27 - Remove $facet aggregation for parallel metric counts
+**Learning:** Using `$facet` to group multiple independent counts or data slices into a single query forces MongoDB to pull all matching documents into memory, bypassing index scans and risking the 100MB aggregation memory limit.
+**Action:** When computing multiple distinct data slices (e.g. `totals`, `createdToday`, `resolvedToday`), execute concurrent `countDocuments` queries via `Promise.all()` to leverage fast index scans. Use `aggregate` only for true aggregations (like `$sum` and `$avg`) alongside the counts, instead of grouping them all in a complex `$facet`.
+## 2026-08-27 - Uppercase User Roles API Contract Frontend
+**Learning:** The frontend `CreateUserModal.jsx` was inadvertently passing lowercase or capitalized values for the user roles (e.g., `'Employee'` or `'Admin'`) instead of the correct backend uppercase standard constants (`'USER'`, `'ADMIN'`, `'MANAGER'`). This violates the API contract.
+**Action:** When defining user roles in the frontend forms (like `CreateUserModal`), map the role dropdown's underlying `value` to the backend-expected UPPERCASE constant (e.g., `'USER'`, `'ADMIN'`), while keeping the `label` human-readable (e.g., `'Employee'`, `'Admin'`).
