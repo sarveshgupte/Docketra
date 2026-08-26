@@ -493,6 +493,7 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
                       onClick={() => moveChecklistStep(index, -1)}
                       style={{ padding: '2px 6px', fontSize: '10px', height: '24px' }}
                       title="Move Up"
+                      aria-label="Move Up"
                     >
                       ↑
                     </button>
@@ -502,6 +503,7 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
                       onClick={() => moveChecklistStep(index, 1)}
                       style={{ padding: '2px 6px', fontSize: '10px', height: '24px' }}
                       title="Move Down"
+                      aria-label="Move Down"
                     >
                       ↓
                     </button>
@@ -509,6 +511,8 @@ const KnowledgeItemForm = ({ initial, onSave, onCancel, saving, saveError }) => 
                       type="button"
                       onClick={() => removeChecklistStep(index)}
                       style={{ padding: '2px 6px', fontSize: '10px', color: '#ef4444', borderColor: '#fee2e2', height: '24px' }}
+                      title="Delete Step"
+                      aria-label="Delete Step"
                     >
                       Delete
                     </button>
