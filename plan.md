@@ -1,29 +1,22 @@
 1. **Fix `adminSurfaceHardening.test.mjs` failure**
    - The test expects `{ value: 'USER', label: 'Employee' }` but the code has `{ value: 'Employee', label: 'Employee' }`.
-   - The test also expects `{ value: 'ADMIN', label: 'Admin' }`.
    - Update `ui/src/pages/admin/components/CreateUserModal.jsx` to match the expected format for roles.
    - Use `replace_with_git_merge_diff` to update the role values.
    ```
    <<<<<<< SEARCH
-         onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-         options={[
-           { value: '', label: 'Select Role', disabled: true },
-           { value: 'Admin', label: 'Admin' },
-           { value: 'Manager', label: 'Manager' },
-           { value: 'Employee', label: 'Employee' },
-         ]}
-         required
-       />
+           options={[
+             { value: '', label: 'Select Role', disabled: true },
+             { value: 'Admin', label: 'Admin' },
+             { value: 'Manager', label: 'Manager' },
+             { value: 'Employee', label: 'Employee' },
+           ]}
    =======
-         onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-         options={[
-           { value: '', label: 'Select Role', disabled: true },
-           { value: 'ADMIN', label: 'Admin' },
-           { value: 'MANAGER', label: 'Manager' },
-           { value: 'USER', label: 'Employee' },
-         ]}
-         required
-       />
+           options={[
+             { value: '', label: 'Select Role', disabled: true },
+             { value: 'ADMIN', label: 'Admin' },
+             { value: 'MANAGER', label: 'Manager' },
+             { value: 'USER', label: 'Employee' },
+           ]}
    >>>>>>> REPLACE
    ```
    - Verify by running `cat ui/src/pages/admin/components/CreateUserModal.jsx | grep -C 5 "Employee"`.
