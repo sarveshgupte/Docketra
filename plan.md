@@ -1,48 +1,111 @@
-1. **Analyze the performance bottleneck:**
-   In `src/controllers/docketWorkflow.controller.js`'s `moveDocket` function, queries to fetch `managerOwnedTeams` and `managedUsers` are executed unconditionally:
-   ```javascript
-   const managerOwnedTeams = await Team.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('_id').lean();
-   const managedUsers = await User.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('xID').lean();
+1. **Remove duplicated attributes in `ui/src/components/common/Textarea.jsx`**
+   - Use `replace_with_git_merge_diff` on `ui/src/components/common/Textarea.jsx`.
+   - The `<textarea>` element currently has duplicated `aria-autocomplete`, `aria-expanded`, and `aria-controls` attributes. I will remove the duplicates.
+   - The `<div role="listbox">` has two `id` attributes: `id={suggestionsListId}` and `id={listboxId}`. I will keep `id={suggestionsListId}` to match the `aria-controls` attribute and remove the duplicate `id={listboxId}`.
    ```
-   These queries are expensive and unnecessary if the user is a `PRIMARY_ADMIN` or `ADMIN`, because `canMoveDocketBetweenQueues` immediately returns `true` for these roles (bypassing the `managerScope` check entirely).
-
-2. **Implement the optimization:**
-   Modify `src/controllers/docketWorkflow.controller.js` to only fetch the `managerOwnedTeams` and `managedUsers` if the user is a `MANAGER`. We can check the user's role early.
-
-   ```javascript
-   let managerScope = {};
-   if (String(req.user?.role || '').trim().toUpperCase() === 'MANAGER') {
-     const [managerOwnedTeams, managedUsers] = await Promise.all([
-       Team.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('_id').lean(),
-       User.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('xID').lean()
-     ]);
-     managerScope = {
-       permittedTeamIds: [...new Set([
-         ...(Array.isArray(req.user?.teamIds) ? req.user.teamIds : []).map((id) => String(id)),
-         ...managerOwnedTeams.map((team) => String(team._id)),
-       ])],
-       permittedUserXids: [...new Set([
-         String(req.user?.xID || '').toUpperCase(),
-         ...managedUsers.map((user) => String(user.xID || '').toUpperCase()),
-       ])],
-     };
-   }
+   <<<<<<< SEARCH
+           role="combobox"
+           aria-autocomplete="list"
+           aria-expanded={showSuggestions && suggestions.length > 0}
+           aria-controls={showSuggestions && suggestions.length > 0 ? suggestionsListId : undefined}
+           aria-activedescendant={showSuggestions && suggestions.length > 0 ? `${suggestionsListId}-option-${selectedIndex}` : undefined}
+           aria-invalid={error ? 'true' : undefined}
+           aria-describedby={describedBy}
+           aria-required={required || undefined}
+           aria-autocomplete={enableMentions ? 'list' : undefined}
+           aria-expanded={showSuggestions && suggestions.length > 0}
+           aria-controls={showSuggestions && suggestions.length > 0 ? listboxId : undefined}
+           value={value}
+   =======
+           role="combobox"
+           aria-activedescendant={showSuggestions && suggestions.length > 0 ? `${suggestionsListId}-option-${selectedIndex}` : undefined}
+           aria-invalid={error ? 'true' : undefined}
+           aria-describedby={describedBy}
+           aria-required={required || undefined}
+           aria-autocomplete={enableMentions ? 'list' : undefined}
+           aria-expanded={showSuggestions && suggestions.length > 0}
+           aria-controls={showSuggestions && suggestions.length > 0 ? suggestionsListId : undefined}
+           value={value}
+   >>>>>>> REPLACE
    ```
-   *Also using `Promise.all` for concurrency in case they are needed for managers.*
+   ```
+   <<<<<<< SEARCH
+         {/* Mention suggestions popover */}
+         {showSuggestions && suggestions.length > 0 && (
+           <div
+             id={suggestionsListId}
+             ref={suggestionsRef}
+             id={listboxId}
+             className="absolute z-50 left-0 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-[var(--dt-border-whisper)] rounded-md shadow-lg py-1 text-xs"
+             role="listbox"
+             aria-label="Teammate mentions list"
+           >
+             <div className="px-3 py-1.5 border-b border-[var(--dt-border-whisper)] text-[var(--dt-text-muted)] font-semibold uppercase tracking-wider text-[10px]">
+   =======
+         {/* Mention suggestions popover */}
+         {showSuggestions && suggestions.length > 0 && (
+           <div
+             id={suggestionsListId}
+             ref={suggestionsRef}
+             className="absolute z-50 left-0 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-[var(--dt-border-whisper)] rounded-md shadow-lg py-1 text-xs"
+             role="listbox"
+             aria-label="Teammate mentions list"
+           >
+             <div className="px-3 py-1.5 border-b border-[var(--dt-border-whisper)] text-[var(--dt-text-muted)] font-semibold uppercase tracking-wider text-[10px]">
+   >>>>>>> REPLACE
+   ```
+   - Verify by running `cat ui/src/components/common/Textarea.jsx | grep -E "aria-expanded|listboxId|suggestionsListId"`.
 
-3. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
-   - Run linter and tests (`pnpm lint` and `pnpm test`).
-   - Create the journal entry for this learning.
-   - Run `pre_commit_instructions` tool to complete steps.
+2. **Add tooltips to icon-only buttons**
+   - Use `replace_with_git_merge_diff` on `ui/src/components/common/CommandPalette.jsx` to add tooltips.
+   ```
+   <<<<<<< SEARCH
+     return (
+       <>
+         <button type="button" className="command-palette__overlay" onClick={onClose} aria-label="Close command palette" />
+         <div className="command-palette" role="dialog" aria-modal="true" aria-label="Command center" onKeyDown={handleInputKeyDown}>
+   =======
+     return (
+       <>
+         <button type="button" className="command-palette__overlay" onClick={onClose} aria-label="Close command palette" title="Close command palette" />
+         <div className="command-palette" role="dialog" aria-modal="true" aria-label="Command center" onKeyDown={handleInputKeyDown}>
+   >>>>>>> REPLACE
+   ```
+   ```
+   <<<<<<< SEARCH
+               {query ? (
+                 <button type="button" className="command-palette__clear" onClick={() => setQuery('')} aria-label="Clear command search">
+                   Clear
+                 </button>
+               ) : null}
+             </div>
+             <button type="button" className="command-palette__close" onClick={onClose} aria-label="Close command center">
+               Esc
+             </button>
+   =======
+               {query ? (
+                 <button type="button" className="command-palette__clear" onClick={() => setQuery('')} aria-label="Clear command search" title="Clear command search">
+                   Clear
+                 </button>
+               ) : null}
+             </div>
+             <button type="button" className="command-palette__close" onClick={onClose} aria-label="Close command center" title="Close command center">
+               Esc
+             </button>
+   >>>>>>> REPLACE
+   ```
+   - Verify by running `cat ui/src/components/common/CommandPalette.jsx | grep -C 2 "title="`.
 
-4. **Submit PR:**
-   - Commit the changes and request PR approval with the title "⚡ Bolt: [performance improvement]" and necessary descriptions.
-1. **Optimize `getRiskBrief` in `src/services/dashboard.service.js`:**
-   - There are multiple independent asynchronous calls in `getRiskBrief` inside `src/services/dashboard.service.js`.
-   - Specifically, `Case.countDocuments` for `stalePending` is currently called *after* `Promise.all` which executes other concurrent queries like `atRiskEntities`, `waitingClient`, `awaitingApproval`, `overloadedAssigneesRaw`, and `blockedTaxonomyRaw`.
-   - I will merge the `stalePending` query into the single `Promise.all` block to execute all independent database queries concurrently, reducing overall latency.
+3. **Run Code Verification**
+   - Run `pnpm lint` and `cd ui && pnpm run test:ci` to verify changes.
 
-2. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
+4. **Run Pre-Commit Checks**
+   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
 
-3. **Submit PR:**
-   - Submit the PR with the title '⚡ Bolt: [performance improvement]' and include headers '💡 What:', '🎯 Why:', '📊 Impact:', and '🔬 Measurement:' describing the improvement.
+5. **Submit Pull Request**
+   - Create a Pull Request with the exact title `🎨 Palette: [UX improvement]`.
+   - The PR description should contain:
+     - 💡 What: Removed duplicate accessibility attributes from `Textarea.jsx` and added missing `title` attributes to icon-only buttons in `CommandPalette.jsx`.
+     - 🎯 Why: To improve the user experience for mouse users relying on tooltips and to ensure clean, semantic markup that doesn't conflict in screen readers.
+     - 📸 Before/After: N/A
+     - ♿ Accessibility: Cleaned up duplicated `aria-expanded` and `aria-controls` properties, and paired `aria-label` with `title` for buttons.
