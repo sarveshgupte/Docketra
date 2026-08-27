@@ -1,48 +1,36 @@
-1. **Analyze the performance bottleneck:**
-   In `src/controllers/docketWorkflow.controller.js`'s `moveDocket` function, queries to fetch `managerOwnedTeams` and `managedUsers` are executed unconditionally:
-   ```javascript
-   const managerOwnedTeams = await Team.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('_id').lean();
-   const managedUsers = await User.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('xID').lean();
+1. **Fix `adminSurfaceHardening.test.mjs` failure**
+   - The test expects `{ value: 'USER', label: 'Employee' }` but the code has `{ value: 'Employee', label: 'Employee' }`.
+   - Update `ui/src/pages/admin/components/CreateUserModal.jsx` to match the expected format for roles.
+   - Use `replace_with_git_merge_diff` to update the role values.
    ```
-   These queries are expensive and unnecessary if the user is a `PRIMARY_ADMIN` or `ADMIN`, because `canMoveDocketBetweenQueues` immediately returns `true` for these roles (bypassing the `managerScope` check entirely).
-
-2. **Implement the optimization:**
-   Modify `src/controllers/docketWorkflow.controller.js` to only fetch the `managerOwnedTeams` and `managedUsers` if the user is a `MANAGER`. We can check the user's role early.
-
-   ```javascript
-   let managerScope = {};
-   if (String(req.user?.role || '').trim().toUpperCase() === 'MANAGER') {
-     const [managerOwnedTeams, managedUsers] = await Promise.all([
-       Team.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('_id').lean(),
-       User.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('xID').lean()
-     ]);
-     managerScope = {
-       permittedTeamIds: [...new Set([
-         ...(Array.isArray(req.user?.teamIds) ? req.user.teamIds : []).map((id) => String(id)),
-         ...managerOwnedTeams.map((team) => String(team._id)),
-       ])],
-       permittedUserXids: [...new Set([
-         String(req.user?.xID || '').toUpperCase(),
-         ...managedUsers.map((user) => String(user.xID || '').toUpperCase()),
-       ])],
-     };
-   }
+   <<<<<<< SEARCH
+           options={[
+             { value: '', label: 'Select Role', disabled: true },
+             { value: 'Admin', label: 'Admin' },
+             { value: 'Manager', label: 'Manager' },
+             { value: 'Employee', label: 'Employee' },
+           ]}
+   =======
+           options={[
+             { value: '', label: 'Select Role', disabled: true },
+             { value: 'ADMIN', label: 'Admin' },
+             { value: 'MANAGER', label: 'Manager' },
+             { value: 'USER', label: 'Employee' },
+           ]}
+   >>>>>>> REPLACE
    ```
-   *Also using `Promise.all` for concurrency in case they are needed for managers.*
+   - Verify by running `cat ui/src/pages/admin/components/CreateUserModal.jsx | grep -C 5 "Employee"`.
 
-3. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
-   - Run linter and tests (`pnpm lint` and `pnpm test`).
-   - Create the journal entry for this learning.
-   - Run `pre_commit_instructions` tool to complete steps.
+2. **Run Code Verification**
+   - Run `pnpm lint` and `cd ui && pnpm run test:ci` to verify changes.
 
-4. **Submit PR:**
-   - Commit the changes and request PR approval with the title "⚡ Bolt: [performance improvement]" and necessary descriptions.
-1. **Optimize `getRiskBrief` in `src/services/dashboard.service.js`:**
-   - There are multiple independent asynchronous calls in `getRiskBrief` inside `src/services/dashboard.service.js`.
-   - Specifically, `Case.countDocuments` for `stalePending` is currently called *after* `Promise.all` which executes other concurrent queries like `atRiskEntities`, `waitingClient`, `awaitingApproval`, `overloadedAssigneesRaw`, and `blockedTaxonomyRaw`.
-   - I will merge the `stalePending` query into the single `Promise.all` block to execute all independent database queries concurrently, reducing overall latency.
+3. **Run Pre-Commit Checks**
+   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
 
-2. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
-
-3. **Submit PR:**
-   - Submit the PR with the title '⚡ Bolt: [performance improvement]' and include headers '💡 What:', '🎯 Why:', '📊 Impact:', and '🔬 Measurement:' describing the improvement.
+4. **Submit Pull Request**
+   - Create a Pull Request with the exact title `🎨 Palette: Accessibility cleanup for Textarea and CommandPalette`.
+   - The PR description should contain:
+     - 💡 What: Removed duplicate accessibility attributes from `Textarea.jsx`, added missing `title` attributes to icon-only buttons in `CommandPalette.jsx`, and fixed incorrect role values in `CreateUserModal.jsx` which was causing a test failure.
+     - 🎯 Why: To improve the user experience for mouse users relying on tooltips, to ensure clean semantic markup that doesn't conflict in screen readers, and to fix a broken CI test.
+     - 📸 Before/After: N/A
+     - ♿ Accessibility: Cleaned up duplicated `aria-expanded` and `aria-controls` properties in `Textarea.jsx`, and paired `aria-label` with `title` for buttons in `CommandPalette.jsx` to provide explicit hover tooltips.
