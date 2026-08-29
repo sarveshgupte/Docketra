@@ -735,6 +735,8 @@ export const Layout = ({ children, title, subtitle }) => {
             onClick={() => setSidebarCollapsed((value) => !value)}
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-expanded={!sidebarCollapsed}
+            aria-controls="enterprise-sidebar"
           >
             <span className="enterprise-sidebar__footer-toggle-icon" aria-hidden="true">
               {sidebarCollapsed ? <IconChevronRight /> : <IconChevronLeft />}
