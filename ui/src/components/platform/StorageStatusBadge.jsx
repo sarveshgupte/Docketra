@@ -65,6 +65,7 @@ export default function StorageStatusBadge() {
         aria-expanded={open}
         aria-controls="storage-status-popover"
         aria-haspopup="dialog"
+        aria-controls="storage-status-popover"
         onClick={() => setOpen((value) => !value)}
         title={summary.helperText}
       >
