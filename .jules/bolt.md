@@ -29,3 +29,6 @@
 ## 2024-10-25 - Eliminate redundant sequential validation counts
 **Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
 **Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
+## 2026-08-29 - Bolt: Optimize sequential capacity affinity checks
+**Learning:** Found sequential independent aggregations for expertise and affinity lookup inside `getWorkloadIntelligence`. Using `await Promise.all` to group these independent `Case.aggregate` pipelines reduces the database network round-trip time.
+**Action:** Always wrap independent database operations into `Promise.all` arrays instead of using separate sequential `await` statements.
