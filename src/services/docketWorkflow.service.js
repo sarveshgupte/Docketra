@@ -1197,12 +1197,31 @@ async function processExpiredPendedDockets() {
 
   let processedCount = 0;
 
+  // ⚡ Bolt: Prevent N+1 queries in expired pended dockets loop
+  // 💡 What: Pre-fetch Cases and Clients outside the loop using bulk $in queries.
+  // 🎯 Why: Replaces O(N) sequential database queries with O(1) batched queries.
+  // 📊 Impact: Eliminates significant network latency overhead for processing multiple expired sessions.
+  const sessionDocketIds = [...new Set(expiredSessions.map(s => String(s.docketId)))];
+  const sessionFirmIds = [...new Set(expiredSessions.map(s => String(s.firmId)))];
+
+  const dockets = await Case.find({
+    firmId: { $in: sessionFirmIds },
+    $or: [{ caseId: { $in: sessionDocketIds } }, { caseNumber: { $in: sessionDocketIds } }],
+  });
+
+  const docketMap = new Map();
+  for (const docket of dockets) {
+    docketMap.set(`${docket.firmId}:${docket.caseId}`, docket);
+    docketMap.set(`${docket.firmId}:${docket.caseNumber}`, docket);
+  }
+
+  const clientIds = [...new Set(dockets.map(d => d.clientId).filter(Boolean))];
+  const clients = await Client.find({ firmId: { $in: sessionFirmIds }, clientId: { $in: clientIds } });
+  const clientMap = new Map(clients.map(c => [`${c.firmId}:${c.clientId}`, c]));
+
   for (const session of expiredSessions) {
     try {
-      const docket = await Case.findOne({
-        firmId: String(session.firmId),
-        $or: [{ caseId: String(session.docketId) }, { caseNumber: String(session.docketId) }],
-      });
+      const docket = docketMap.get(`${session.firmId}:${session.docketId}`);
 
       if (!docket) {
         await UploadSession.updateOne({ _id: session._id }, { $set: { isActive: false } });
@@ -1211,7 +1230,7 @@ async function processExpiredPendedDockets() {
 
       let clientEmail = session.senderEmail;
       if (!clientEmail && docket.clientId) {
-        const client = await Client.findOne({ clientId: docket.clientId, firmId: docket.firmId });
+        const client = clientMap.get(`${docket.firmId}:${docket.clientId}`);
         clientEmail = client?.businessEmail || client?.contactPersonEmailAddress || '';
       }
 
