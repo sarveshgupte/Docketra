@@ -7,3 +7,6 @@
 ## 2026-08-13 - BubbleMenu Dropdown Accessibility
 **Learning:** Dropdowns and toggles with `aria-expanded` need a linked `aria-controls` pointing to a unique element ID to correctly announce state to screen readers. If there are multiple instances on a page, hardcoded IDs will conflict.
 **Action:** Use React's `useId()` to generate unique IDs for dropdown menus and bind them to the toggle button's `aria-controls`.
+## 2024-05-20 - Missing ARIA combobox attributes on global omnibar search
+**Learning:** Found the global omnibar search input (`Layout.jsx`) functioning as a combobox (triggering a popup dropdown of search results) but lacking the necessary combobox ARIA pattern attributes (`role="combobox"`, `aria-expanded`, `aria-autocomplete`, `aria-controls`), which left screen reader users without context about the popup.
+**Action:** Always apply the combobox ARIA pattern (`role="combobox"`, `aria-expanded`, `aria-autocomplete="list"`, `aria-controls="[listbox-id]"`) to text inputs that trigger popup suggestion lists, and ensure the corresponding dropdown is marked with `role="listbox"` and its items with `role="option"`.

@@ -802,6 +802,10 @@ export const Layout = ({ children, title, subtitle }) => {
             <input
               className="enterprise-header__omnibar-input"
               type="search"
+              role="combobox"
+              aria-expanded={searchQuery.trim().length >= 2 || searching}
+              aria-autocomplete="list"
+              aria-controls={(searchQuery.trim().length >= 2 || searching) ? "omnibar-search-results" : undefined}
               placeholder="Search clients, dockets, documents..."
               aria-label="Search clients, dockets, documents"
               value={searchQuery}
@@ -810,14 +814,16 @@ export const Layout = ({ children, title, subtitle }) => {
             />
             <kbd className="enterprise-header__omnibar-shortcut" aria-hidden="true">⌘K</kbd>
             {(searchQuery.trim().length >= 2 || searching) && (
-              <div className="dropdown-menu" style={{ display: 'block', top: 'calc(100% + 8px)', width: '100%' }}>
-                <div className="dropdown-item" style={{ pointerEvents: 'none', opacity: 0.7 }}>
+              <div id="omnibar-search-results" role="listbox" className="dropdown-menu" style={{ display: 'block', top: 'calc(100% + 8px)', width: '100%' }}>
+                <div role="option" aria-selected="false" className="dropdown-item" style={{ pointerEvents: 'none', opacity: 0.7 }}>
                   {searching ? 'Searching…' : `Dockets ${searchResults.cases.length} · Users ${searchResults.users.length} · Compliance Items ${searchResults.tasks.length}`}
                 </div>
                 {searchResults.cases.slice(0, 3).map((item) => (
                   <button
                     key={`case-${item.caseId}`}
                     className="dropdown-item"
+                    role="option"
+                    aria-selected="false"
                     onClick={() => openDocket({ caseId: item.caseId, navigate, to: safeRoute(ROUTES.CASE_DETAIL(currentFirmSlug, item.caseId), ROUTES.TASK_MANAGER(currentFirmSlug)) })}
                   >
                     Docket: {item.caseId} — {item.title}
