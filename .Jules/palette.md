@@ -7,3 +7,6 @@
 ## 2026-08-13 - BubbleMenu Dropdown Accessibility
 **Learning:** Dropdowns and toggles with `aria-expanded` need a linked `aria-controls` pointing to a unique element ID to correctly announce state to screen readers. If there are multiple instances on a page, hardcoded IDs will conflict.
 **Action:** Use React's `useId()` to generate unique IDs for dropdown menus and bind them to the toggle button's `aria-controls`.
+## 2026-08-14 - Aria-hidden for decorative literal icon characters
+**Learning:** Decorative icon characters like "×" inside buttons can be confusing for screen reader users when they are read literally (e.g. "times" or "multiplication X"), even when the button has an `aria-label`.
+**Action:** When buttons have an `aria-label`, literal characters used as icons (like "×" or "✕") should be wrapped in `<span aria-hidden="true">` to prevent screen reader clutter and confusing announcements.
