@@ -47,7 +47,6 @@ export const Textarea = ({
   const suggestionsListId = `${textareaId}-suggestions`;
   const errorId = `${textareaId}-error`;
   const helpId = `${textareaId}-help`;
-  const listboxId = `${textareaId}-listbox`;
   const describedBy = [
     rest['aria-describedby'],
     error ? errorId : null,
@@ -231,16 +230,13 @@ export const Textarea = ({
         style={{ minHeight: '100px', resize: 'vertical' }}
         required={required}
         role="combobox"
-        aria-autocomplete="list"
-        aria-expanded={showSuggestions && suggestions.length > 0}
-        aria-controls={showSuggestions && suggestions.length > 0 ? suggestionsListId : undefined}
         aria-activedescendant={showSuggestions && suggestions.length > 0 ? `${suggestionsListId}-option-${selectedIndex}` : undefined}
         aria-invalid={error ? 'true' : undefined}
         aria-describedby={describedBy}
         aria-required={required || undefined}
         aria-autocomplete={enableMentions ? 'list' : undefined}
         aria-expanded={showSuggestions && suggestions.length > 0}
-        aria-controls={showSuggestions && suggestions.length > 0 ? listboxId : undefined}
+        aria-controls={showSuggestions && suggestions.length > 0 ? suggestionsListId : undefined}
         value={value}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
@@ -252,7 +248,6 @@ export const Textarea = ({
         <div 
           id={suggestionsListId}
           ref={suggestionsRef}
-          id={listboxId}
           className="absolute z-50 left-0 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-[var(--dt-border-whisper)] rounded-md shadow-lg py-1 text-xs"
           role="listbox"
           aria-label="Teammate mentions list"
