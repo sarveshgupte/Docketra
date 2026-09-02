@@ -81,3 +81,8 @@
 **Vulnerability:** The Case Workflow Controller trusted client-provided `userEmail` from `req.body` directly when performing state transitions (e.g., `submitCase`, `closeCase`), which allows IDOR vulnerabilities by enabling an attacker to impersonate another user.
 **Learning:** This exposes the application to situations where attackers can manipulate case states under the guise of another user.
 **Prevention:** To prevent IDOR vulnerabilities, never trust client-provided identity fields (e.g., `userEmail`) from `req.body`. Always derive these values securely from server-side authenticated context like `req.user` (e.g., `req.user?.email`).
+
+## 2026-09-02 - Hardcoded Fallback Secret in Google Auth Service
+**Vulnerability:** A hardcoded fallback secret ('docketra-google-auth') was used for signing/verifying Google OAuth state tokens.
+**Learning:** Hardcoded cryptographic secrets are easily discovered in source code and undermine state validation, potentially leading to CSRF vulnerabilities in the OAuth flow.
+**Prevention:** Never use hardcoded strings as fallbacks for cryptographic secrets. Always fail securely if a required secret is missing from the environment.
