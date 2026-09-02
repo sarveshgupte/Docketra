@@ -29,3 +29,6 @@
 ## 2024-10-25 - Eliminate redundant sequential validation counts
 **Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
 **Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
+## 2026-09-02 - Bolt: Optimize unique firm slug generation to O(1)
+**Learning:** Generating unique strings (like firm slugs) using a loop containing sequential database queries results in an N+1 performance bottleneck.
+**Action:** Pre-generate all candidate unique strings in memory and use a single `$in` query to fetch collisions in O(1) time. Iterate in-memory to find the first available candidate.
