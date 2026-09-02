@@ -32,12 +32,21 @@ const resolveUserFirmScope = (req, res) => {
 
 const buildUniqueFirmSlug = async (firmName, session) => {
   const baseSlug = generateFirmSlug(firmName) || `firm-${Date.now()}`;
-  for (let index = 0; index < 20; index += 1) {
-    const candidate = index === 0 ? baseSlug : `${baseSlug}-${index}`;
-    // eslint-disable-next-line no-await-in-loop
-    const existing = await Firm.findOne({ firmSlug: candidate }).session(session);
-    if (!existing) return candidate;
-  }
+
+  // ⚡ Bolt: Prevent N+1 Query in bulk operations
+  // 💡 What: Pre-generate candidate slugs and use a single $in query.
+  // 🎯 Why: Avoid querying the database sequentially inside a loop.
+  const candidates = Array.from({ length: 20 }, (_, index) => (index === 0 ? baseSlug : `${baseSlug}-${index}`));
+  const existingFirms = await Firm.find({ firmSlug: { $in: candidates } })
+    .select('firmSlug')
+    .session(session)
+    .lean();
+
+  const existingSlugs = new Set(existingFirms.map((f) => f.firmSlug));
+  const availableCandidate = candidates.find((c) => !existingSlugs.has(c));
+
+  if (availableCandidate) return availableCandidate;
+
   throw new Error('FIRM_SLUG_GENERATION_FAILED');
 };
 
