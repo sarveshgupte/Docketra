@@ -43,6 +43,7 @@ export const NotificationBell = () => {
       type="button"
       className="platform__notification-bell"
       aria-label={ariaLabel}
+      title={ariaLabel}
       onFocus={refreshNotifications}
       onClick={() => {
         refreshNotifications();
