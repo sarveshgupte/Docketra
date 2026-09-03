@@ -242,7 +242,8 @@ const handleInboundEmail = async (req, res) => {
     });
 
   } catch (error) {
-    return sendError(res, 500, 'INTERNAL_SERVER_ERROR', 'EXCEPTION_CAUGHT', { message: error.message, reason: 'Failed to process inbound email.' }, reqId);
+    log.error(`[INBOUND_EMAIL] Unhandled exception: ${error.message}`, { stack: error.stack, reqId });
+    return sendError(res, 500, 'INTERNAL_SERVER_ERROR', 'EXCEPTION_CAUGHT', { message: 'An unexpected error occurred during email processing.', reason: 'Failed to process inbound email.' }, reqId);
   }
 };
 
