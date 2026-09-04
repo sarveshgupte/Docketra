@@ -29,6 +29,8 @@
 ## 2024-10-25 - Eliminate redundant sequential validation counts
 **Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
 **Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
-## 2026-09-04 - Optimize CFS Drive File Deletion
+
+
+## 2026-09-04 - Group independent database queries concurrently
 **Learning:** Sequential existence checks (e.g., `Attachment.exists` and `CaseFile.exists`) introduce unnecessary database roundtrips, increasing overall network latency for operations that only need to confirm reference counts before deletion.
 **Action:** Group independent database queries concurrently using `Promise.all` to reduce latency.
