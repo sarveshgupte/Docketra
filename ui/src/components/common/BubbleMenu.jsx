@@ -189,6 +189,7 @@ export default function BubbleMenu({
             className={`bubble toggle-bubble menu-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${isMenuOpen ? 'open' : ''}`}
             onClick={handleToggle}
             aria-label={menuAriaLabel}
+            title={menuAriaLabel}
             aria-pressed={isMenuOpen}
             aria-expanded={isMenuOpen}
             aria-controls={showOverlay ? menuId : undefined}
