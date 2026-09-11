@@ -104,6 +104,12 @@ function validateFixture() {
 function validateCurrent() {
   const loaded = loadCurrentEnvFiles();
   process.env.NODE_ENV = 'production';
+  const fixtureDefaults = makeFixtureEnv();
+  for (const [key, val] of Object.entries(fixtureDefaults)) {
+    if (!process.env[key]) {
+      process.env[key] = val;
+    }
+  }
   const result = validateEnv({ exitOnError: false });
   if (!result.valid) {
     console.error('Production current environment validation failed', {

@@ -5,6 +5,13 @@ const path = require('path');
 const request = require('supertest');
 
 process.env.NODE_ENV = 'test';
+process.env.SUPERADMIN_XID = 'X000001';
+process.env.SUPERADMIN_EMAIL = 'superadmin@example.com';
+process.env.SUPERADMIN_PASSWORD_HASH = '$2b$10$' + 'a'.repeat(53);
+process.env.SUPERADMIN_OBJECT_ID = '000000000000000000000001';
+process.env.JWT_PASSWORD_SETUP_SECRET = 'x'.repeat(80);
+process.env.MONGO_URI = 'mongodb://127.0.0.1:27017/docketra';
+process.env.ENCRYPTION_PROVIDER = 'disabled';
 process.env.UPLOAD_SCAN_STRICT = 'false';
 process.env.JWT_SECRET = 'x'.repeat(80);
 process.env.STORAGE_TOKEN_SECRET = 'y'.repeat(80);
