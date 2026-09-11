@@ -81,3 +81,8 @@
 **Vulnerability:** The Case Workflow Controller trusted client-provided `userEmail` from `req.body` directly when performing state transitions (e.g., `submitCase`, `closeCase`), which allows IDOR vulnerabilities by enabling an attacker to impersonate another user.
 **Learning:** This exposes the application to situations where attackers can manipulate case states under the guise of another user.
 **Prevention:** To prevent IDOR vulnerabilities, never trust client-provided identity fields (e.g., `userEmail`) from `req.body`. Always derive these values securely from server-side authenticated context like `req.user` (e.g., `req.user?.email`).
+
+## 2026-08-20 - Prevent Information Exposure in Docket Exception API
+**Vulnerability:** Raw error messages (`error.message`) were being directly exposed to clients in 500 API error responses within `src/controllers/docketException.controller.js`.
+**Learning:** Including raw internal error details in client HTTP responses is an Information Exposure vulnerability (CWE-200). It can leak sensitive system information or underlying infrastructure state to unauthenticated or unauthorized clients.
+**Prevention:** Only log detailed error messages server-side and ensure HTTP responses strictly return generic, safe operational error messages without internal details.

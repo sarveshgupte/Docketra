@@ -110,7 +110,7 @@ const createDocketException = async (req, res) => {
       data: docketException,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to create exception log' });
+    return res.status(500).json({ success: false, message: 'Failed to create exception log' });
   }
 };
 
@@ -164,7 +164,7 @@ const getDocketExceptions = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to fetch exception logs' });
+    return res.status(500).json({ success: false, message: 'Failed to fetch exception logs' });
   }
 };
 
@@ -254,7 +254,7 @@ const updateDocketException = async (req, res) => {
       data: docketException,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to update docket exception' });
+    return res.status(500).json({ success: false, message: 'Failed to update docket exception' });
   }
 };
 
@@ -363,7 +363,7 @@ const getExceptionDashboard = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to fetch exception dashboard' });
+    return res.status(500).json({ success: false, message: 'Failed to fetch exception dashboard' });
   }
 };
 
