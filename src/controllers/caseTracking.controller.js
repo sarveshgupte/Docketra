@@ -68,7 +68,7 @@ const trackCaseOpen = async (req, res) => {
     if (!caseData) {
       return res.status(404).json({
         success: false,
-        message: 'Case not found',
+        message: 'Docket not found',
       });
     }
     
@@ -76,7 +76,7 @@ const trackCaseOpen = async (req, res) => {
     if (!checkCaseAccess(caseData, user)) {
       return res.status(403).json({
         success: false,
-        message: 'Access denied: You do not have permission to access this case',
+        message: 'Access denied: You do not have permission to access this docket',
         code: 'CASE_ACCESS_DENIED',
       });
     }
@@ -149,7 +149,7 @@ const trackCaseView = async (req, res) => {
     if (!caseData) {
       return res.status(404).json({
         success: false,
-        message: 'Case not found',
+        message: 'Docket not found',
       });
     }
     
@@ -157,7 +157,7 @@ const trackCaseView = async (req, res) => {
     if (!checkCaseAccess(caseData, user)) {
       return res.status(403).json({
         success: false,
-        message: 'Access denied: You do not have permission to access this case',
+        message: 'Access denied: You do not have permission to access this docket',
         code: 'CASE_ACCESS_DENIED',
       });
     }
@@ -234,7 +234,7 @@ const trackCaseExit = async (req, res) => {
       if (!checkCaseAccess(caseData, user)) {
         return res.status(403).json({
           success: false,
-          message: 'Access denied: You do not have permission to access this case',
+          message: 'Access denied: You do not have permission to access this docket',
           code: 'CASE_ACCESS_DENIED',
         });
       }
@@ -304,7 +304,7 @@ const getCaseHistory = async (req, res) => {
     if (user.role === 'SUPER_ADMIN') {
       return res.status(403).json({
         success: false,
-        message: 'Superadmin cannot access case history',
+        message: 'Superadmin cannot access docket history',
       });
     }
     
@@ -317,7 +317,7 @@ const getCaseHistory = async (req, res) => {
     if (!caseData) {
       return res.status(404).json({
         success: false,
-        message: 'Case not found',
+        message: 'Docket not found',
       });
     }
     
@@ -325,7 +325,7 @@ const getCaseHistory = async (req, res) => {
     if (!checkCaseAccess(caseData, user)) {
       return res.status(403).json({
         success: false,
-        message: 'Access denied: You do not have permission to view this case history',
+        message: 'Access denied: You do not have permission to view this docket history',
         code: 'CASE_ACCESS_DENIED',
       });
     }
@@ -335,7 +335,7 @@ const getCaseHistory = async (req, res) => {
       if (caseData.firmId.toString() !== user.firmId.toString()) {
         return res.status(403).json({
           success: false,
-          message: 'Access denied: Case belongs to different firm',
+          message: 'Access denied: Docket belongs to different firm',
         });
       }
     }
@@ -378,7 +378,7 @@ const getCaseHistory = async (req, res) => {
     log.error('[TRACKING] Error fetching case history:', error);
     return res.status(500).json({
       success: false,
-      message: 'Failed to fetch case history',
+      message: 'Failed to fetch docket history',
     });
   }
 };
