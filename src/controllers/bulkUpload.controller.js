@@ -561,12 +561,14 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
 
         let categoryDoc = categoryCache.get(categoryKey);
         if (!categoryDoc) {
-          categoryDoc = await Category.create({
+          categoryDoc = {
+            _id: new mongoose.Types.ObjectId(),
             firmId: user.firmId,
             name: categoryName,
             isActive: true,
             subcategories: [],
-          });
+            isNew: true,
+          };
           categoryCache.set(categoryKey, categoryDoc);
         }
 
@@ -581,7 +583,7 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
               workbasketId: row.data.workbasketId || null,
               isActive: true,
             });
-            await categoryDoc.save();
+            categoryDoc.isModified = true;
           }
         }
       }
@@ -769,6 +771,39 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
         failureCount,
         results: results.slice(-200),
       });
+    }
+  }
+
+  if (type === 'categories' && categoryCache.size > 0) {
+    const categoryBulkOps = [];
+    for (const categoryDoc of categoryCache.values()) {
+      if (categoryDoc.isNew) {
+        categoryBulkOps.push({
+          insertOne: {
+            document: {
+              _id: categoryDoc._id,
+              firmId: categoryDoc.firmId,
+              name: categoryDoc.name,
+              isActive: categoryDoc.isActive,
+              subcategories: categoryDoc.subcategories,
+            }
+          }
+        });
+      } else if (categoryDoc.isModified) {
+        categoryBulkOps.push({
+          updateOne: {
+            filter: { _id: categoryDoc._id },
+            update: { $set: { subcategories: categoryDoc.subcategories } }
+          }
+        });
+      }
+    }
+    if (categoryBulkOps.length > 0) {
+      try {
+        await Category.bulkWrite(categoryBulkOps, { ordered: false });
+      } catch (error) {
+        log.error('[BULK_UPLOAD] Final bulkWrite failed for categories', error);
+      }
     }
   }
 
