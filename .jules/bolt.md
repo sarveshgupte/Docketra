@@ -29,3 +29,6 @@
 ## 2024-10-25 - Eliminate redundant sequential validation counts
 **Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
 **Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
+## 2024-11-25 - Group independent database queries in PDF generation
+**Learning:** Found sequential database operations (Client and Attachment fetches) following an initial case fetch in the `getDocketSummaryPdf` endpoint, creating an unnecessary latency bottleneck.
+**Action:** Grouping independent asynchronous database operations together into a single `Promise.all()` block parallelizes network roundtrips and significantly improves endpoint responsiveness for reports and document generation.
