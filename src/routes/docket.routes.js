@@ -91,6 +91,7 @@ const {
   reopenPendingDocket,
   runPendingReopen,
   moveDocket,
+  unpendDocket,
 } = require('../controllers/docketWorkflow.controller');
 
 const {
@@ -207,7 +208,7 @@ router.get('/:caseId/attachments/:attachmentId/download', requireStorageConnecte
 
 // ── Single docket — lifecycle actions ────────────────────────────────────────
 router.post('/:caseId/clone', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, checkCaseClientAccess, validateCaseAssignment, cloneCase);
-router.post('/:caseId/unpend', authorizeFirmPermission('CASE_ACTION'), userWriteLimiter, checkCaseClientAccess, unpendCase);
+router.post('/:caseId/unpend', authorizeFirmPermission('CASE_ACTION'), userWriteLimiter, checkCaseClientAccess, unpendDocket);
 router.put('/:caseId/status', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, updateCaseStatus);
 router.post('/:caseId/lock', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, lockCaseEndpoint);
 router.post('/:caseId/unlock', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, unlockCaseEndpoint);

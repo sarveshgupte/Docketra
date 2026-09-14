@@ -64,7 +64,8 @@ const mapToClientSafeStatus = (caseItem) => {
   if (
     complianceState === 'awaiting_client' ||
     pendingReason === 'waiting_client' ||
-    status === 'PENDING'
+    status === 'PENDING' ||
+    status === 'PENDED'
   ) {
     return 'requested_from_client';
   }

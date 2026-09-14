@@ -54,6 +54,7 @@ import {
   KnowledgeLibraryPage,
   PlatformSettingsPage,
   DocketraIntelligencePage,
+  PcsCommandCenter,
 } from './lazyPages';
 import { RouteSuspenseOutlet } from './RouteSuspenseOutlet';
 import { NotificationHistoryView } from '../../views/NotificationHistoryView';
@@ -252,6 +253,14 @@ export const ProtectedRoutes = () => (
           element={(
             <ProtectedRoute requireAssignedWorkbasket>
               <PlatformWorkbasketsPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="pcs-command-center"
+          element={(
+            <ProtectedRoute>
+              <PcsCommandCenter />
             </ProtectedRoute>
           )}
         />

@@ -53,7 +53,7 @@ function getNextStates(state) {
 function toLifecycleFromStatus(status) {
   const normalized = String(status || '').trim().toUpperCase();
 
-  if (normalized === 'PENDING' || normalized === 'QC_PENDING') {
+  if (normalized === 'PENDING' || normalized === 'QC_PENDING' || normalized === 'PENDED') {
     return 'WAITING';
   }
 
@@ -90,7 +90,7 @@ function deriveLifecycle({ lifecycle, assignedToXID, status } = {}) {
     return DocketLifecycle.WL;
   }
 
-  if (ns === CaseStatus.PENDING || ns === CaseStatus.QC_PENDING) {
+  if (ns === CaseStatus.PENDING || ns === CaseStatus.QC_PENDING || ns === 'PENDED' || ns === 'PENDING') {
     return DocketLifecycle.WAITING;
   }
 

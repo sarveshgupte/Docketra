@@ -289,6 +289,75 @@ async function moveDocket(req, res) {
   }
 }
 
+async function unpendDocket(req, res) {
+  try {
+    const docketId = req.params.id || req.params.caseId;
+    const { targetStatus, unpendNote, comment } = req.body || {};
+    const note = unpendNote || comment || 'Docket unpended';
+
+    const firmId = req.user?.firmId || req.firmId;
+    if (!firmId) {
+      return res.status(401).json({ success: false, message: 'Tenant context required' });
+    }
+
+    const query = makeDocketQuery(docketId, firmId);
+    const docket = await Case.findOne(query);
+    if (!docket) {
+      return res.status(404).json({ success: false, message: 'Docket not found' });
+    }
+
+    const currentStatus = String(docket.status || '').toUpperCase();
+    const currentState = String(docket.state || '').toUpperCase();
+    if (currentStatus !== 'PENDED' && currentStatus !== 'PENDING' && currentState !== 'PENDED') {
+      return res.status(400).json({ success: false, message: `Docket is not in PENDED status (current status: ${docket.status})` });
+    }
+
+    const resolvedTarget = targetStatus || docket.statusBeforePended || docket.previousStatus || (docket.assignedToXID ? 'IN_PROGRESS' : 'UNASSIGNED');
+
+    const { transitionFromPended } = require('../domain/docket/docketStateMachine');
+    transitionFromPended(docket, { targetStatus: resolvedTarget, unpendNote: note });
+
+    docket.lastActionByXID = req.user.xID;
+    docket.lastActionAt = new Date();
+    docket.updatedAt = new Date();
+
+    await docket.save();
+
+    const { writeAudit } = require('../services/docketWorkflow.service');
+    const { EVENT_NAMES, emitDocketEvent } = require('../services/docketEvents.service');
+
+    await writeAudit({
+      docketId: docket.caseId,
+      fromState: currentStatus,
+      toState: resolvedTarget,
+      userId: req.user.xID,
+      firmId,
+      comment: note,
+      action: 'DOCKET_UNPENDED',
+      changes: [
+        { field: 'status', from: currentStatus, to: resolvedTarget },
+        { field: 'pendedAt', from: docket.pendedAt, to: null },
+      ],
+      metadata: { unpendNote: note, targetStatus: resolvedTarget },
+    });
+
+    emitDocketEvent(EVENT_NAMES.PENDING_REOPEN || 'docket:unpended', {
+      docketId: docket.caseId,
+      firmId,
+      unpendedBy: req.user.xID,
+      targetStatus: resolvedTarget,
+    });
+
+    return res.json({
+      success: true,
+      data: ensureUpdatedAt(docket),
+      message: 'Docket unpended successfully',
+    });
+  } catch (error) {
+    return handleError(res, error);
+  }
+}
+
 module.exports = {
   isValidTransition,
   assignDocket,
@@ -298,4 +367,5 @@ module.exports = {
   reopenPendingDocket,
   runPendingReopen,
   moveDocket,
+  unpendDocket,
 };

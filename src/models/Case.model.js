@@ -474,6 +474,33 @@ const caseSchema = new mongoose.Schema({
   reopenAt: {
     type: Date,
   },
+  autoReopenAt: {
+    type: Date,
+    default: null,
+  },
+  statusBeforePended: {
+    type: String,
+    trim: true,
+    default: null,
+  },
+  previousStatus: {
+    type: String,
+    trim: true,
+    default: null,
+  },
+  pendedAt: {
+    type: Date,
+    default: null,
+  },
+  pendedReason: {
+    type: String,
+    trim: true,
+    default: null,
+  },
+  unpendedAt: {
+    type: Date,
+    default: null,
+  },
   duplicateOf: {
     type: String,
     trim: true,

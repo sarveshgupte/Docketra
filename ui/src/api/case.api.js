@@ -215,9 +215,20 @@ export const caseApi = {
     () => request((http) => http.post(`/dockets/${caseId}/resolve`, { comment }), 'Failed to resolve docket'),
   ),
 
-  unpendCase: (caseId, comment = '') => withCaseInvalidation(
+  unpendCase: (caseId, payload = '') => withCaseInvalidation(
     caseId,
-    () => request((http) => http.post(`/dockets/${caseId}/unpend`, { comment }), 'Failed to unpend docket'),
+    () => {
+      const body = typeof payload === 'string' ? { comment: payload, unpendNote: payload } : payload;
+      return request((http) => http.post(`/dockets/${caseId}/unpend`, body), 'Failed to unpend docket');
+    },
+  ),
+
+  unpendDocket: (caseId, payload = '') => withCaseInvalidation(
+    caseId,
+    () => {
+      const body = typeof payload === 'string' ? { comment: payload, unpendNote: payload } : payload;
+      return request((http) => http.post(`/dockets/${caseId}/unpend`, body), 'Failed to unpend docket');
+    },
   ),
 
   getMyResolvedCases: () => request((http) => http.get('/dockets/my-resolved'), 'Failed to load resolved dockets'),

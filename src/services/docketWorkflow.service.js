@@ -853,11 +853,14 @@ async function reopenDuePending() {
     'PEND',
     'Pending',
     'Pended',
+    'PENDED',
     toPersistenceState(DocketStatus.PENDING),
+    toPersistenceState(DocketStatus.PENDED),
   ];
   const pendingDueFilter = {
     status: { $in: [...new Set(pendingStatusVariants)] },
     $or: [
+      { autoReopenAt: { $lte: now } },
       { reopenAt: { $lte: now } },
       { pendingUntil: { $lte: now } },
     ],
@@ -876,23 +879,19 @@ async function reopenDuePending() {
     const hasAssignee = docket.assignedToXID && String(docket.assignedToXID).trim() !== '';
     const isRouted = docket.routedToTeamId && String(docket.routedToTeamId).trim() !== '';
 
-    let toState;
-    let stateVal;
-    let queueTypeVal;
-
-    if (hasAssignee) {
-      toState = 'IN_PROGRESS';
-      stateVal = 'IN_PROGRESS';
-      queueTypeVal = 'PERSONAL';
-    } else if (isRouted) {
-      toState = 'ROUTED';
-      stateVal = 'IN_WB';
-      queueTypeVal = 'GLOBAL';
-    } else {
-      toState = 'UNASSIGNED';
-      stateVal = 'IN_WB';
-      queueTypeVal = 'GLOBAL';
+    let toState = docket.statusBeforePended || docket.previousStatus;
+    if (!toState) {
+      if (hasAssignee) {
+        toState = 'IN_PROGRESS';
+      } else if (isRouted) {
+        toState = 'ROUTED';
+      } else {
+        toState = 'UNASSIGNED';
+      }
     }
+
+    const stateVal = toState === 'OPEN' || toState === 'IN_PROGRESS' || toState === 'ASSIGNED' ? 'IN_PROGRESS' : (toState === 'UNASSIGNED' || toState === 'AVAILABLE' ? 'IN_WB' : toState);
+    const queueTypeVal = hasAssignee ? 'PERSONAL' : 'GLOBAL';
 
     const updateFields = {
       lifecycle: DocketLifecycle.ACTIVE,
@@ -900,6 +899,11 @@ async function reopenDuePending() {
       state: stateVal,
       queueType: queueTypeVal,
       qcOutcome: null,
+      statusBeforePended: null,
+      pendedAt: null,
+      pendedReason: null,
+      autoReopenAt: null,
+      unpendedAt: now,
       reopenAt: null,
       pendingUntil: null,
       lastActionAt: now,
@@ -1141,14 +1145,14 @@ async function reopenDocketFromClientEmail(caseId, firmId, senderEmail) {
     throw new Error('Docket not found');
   }
 
-  // Check if docket status is PENDING
-  if (docket.status !== toPersistenceState(DocketStatus.PENDING)) {
-    return { reopened: false, reason: 'Docket is not in PENDING status' };
+  const currentStatus = String(docket.status || '').toUpperCase();
+  if (currentStatus !== 'PENDED' && currentStatus !== 'PENDING') {
+    return { reopened: false, reason: 'Docket is not in PENDED status' };
   }
 
   const now = new Date();
   const hasAssignee = docket.assignedToXID && String(docket.assignedToXID).trim() !== '';
-  const toState = hasAssignee ? DocketStatus.IN_PROGRESS : DocketStatus.AVAILABLE;
+  const toState = docket.statusBeforePended || docket.previousStatus || (hasAssignee ? DocketStatus.IN_PROGRESS : DocketStatus.AVAILABLE);
   const persistenceState = toPersistenceState(toState);
 
   const updateFields = {
@@ -1157,6 +1161,11 @@ async function reopenDocketFromClientEmail(caseId, firmId, senderEmail) {
     state: hasAssignee ? 'IN_PROGRESS' : 'IN_WB',
     queueType: hasAssignee ? 'PERSONAL' : 'GLOBAL',
     qcOutcome: null,
+    statusBeforePended: null,
+    pendedAt: null,
+    pendedReason: null,
+    autoReopenAt: null,
+    unpendedAt: now,
     reopenAt: null,
     pendingUntil: null,
     lastActionAt: now,
@@ -1173,7 +1182,7 @@ async function reopenDocketFromClientEmail(caseId, firmId, senderEmail) {
 
   await writeAudit({
     docketId: docket.caseId,
-    fromState: DocketStatus.PENDING,
+    fromState: currentStatus,
     toState: toState,
     userId: 'SYSTEM',
     comment: `Auto reopened on client email from ${senderEmail}`,
@@ -1181,17 +1190,17 @@ async function reopenDocketFromClientEmail(caseId, firmId, senderEmail) {
     firmId: docket.firmId,
     changes: [{
       field: 'status',
-      from: DocketStatus.PENDING,
+      from: currentStatus,
       to: toState,
     }],
     metadata: {
       reasonCode: 'CLIENT_EMAIL_RECEIVED',
-      fromState: 'PEND',
+      fromState: currentStatus,
       toState: hasAssignee ? 'WL' : 'WB',
     },
   });
 
-  return { reopened: true, fromStatus: DocketStatus.PENDING, toStatus: toState };
+  return { reopened: true, fromStatus: currentStatus, toStatus: toState };
 }
 
 async function processExpiredPendedDockets() {

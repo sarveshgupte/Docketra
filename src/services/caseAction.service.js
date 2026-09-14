@@ -265,6 +265,7 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user, req = null) =
   
   // Store previous status for audit
   const previousStatus = caseData.status;
+  const statusBeforePended = caseData.statusBeforePended || (previousStatus !== 'PENDED' && previousStatus !== 'PENDING' ? previousStatus : (caseData.previousStatus || 'IN_PROGRESS'));
   
   // Convert reopenDate to 8:00 AM IST and then to UTC
   const pendingUntil = DateTime
@@ -285,8 +286,11 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user, req = null) =
     req,
     reason: comment,
     statusPatch: {
+      statusBeforePended,
+      pendedAt: new Date(),
+      pendedReason: comment.trim(),
+      autoReopenAt: pendingUntil,
       pendedByXID: user.xID,
-      pendingReason: comment.trim(),
       pendingUntil,
       reopenAt: pendingUntil,
       lastActionByXID: user.xID,
@@ -294,6 +298,7 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user, req = null) =
     },
     auditMetadata: {
       reason: comment.trim(),
+      statusBeforePended,
       pendingUntil,
       reopenAt: pendingUntil,
       commentLength: comment.length,
@@ -483,7 +488,7 @@ const fileCase = async (firmId, caseId, comment, user, req = null) => {
 /**
  * Unpend a case (manual unpend)
  * 
- * Changes case status from PENDED/PENDING back to OPEN with mandatory comment.
+ * Changes case status from PENDED/PENDING back to active state with mandatory comment.
  * Allows users to manually unpend a case before the auto-reopen date.
  * 
  * @param {string} firmId - Firm ID from req.user.firmId (SECURITY: MUST be from authenticated user)
@@ -493,8 +498,9 @@ const fileCase = async (firmId, caseId, comment, user, req = null) => {
  * @returns {object} Updated case
  * @throws {Error} If comment is missing or case not found
  */
-const unpendCase = async (firmId, caseId, comment, user, req = null) => {
-  validateComment(comment);
+const unpendCase = async (firmId, caseId, comment, user, req = null, options = {}) => {
+  const note = (typeof comment === 'string' && comment.trim()) ? comment.trim() : (options?.unpendNote || options?.comment || 'Case unpended');
+  const reqTargetStatus = options?.targetStatus;
   
   let caseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
   
@@ -505,13 +511,15 @@ const unpendCase = async (firmId, caseId, comment, user, req = null) => {
   const hasAssignee = caseData.assignedToXID && String(caseData.assignedToXID).trim() !== '';
   const isRouted = caseData.routedToTeamId && String(caseData.routedToTeamId).trim() !== '';
 
-  let targetStatus;
-  if (hasAssignee) {
-    targetStatus = CaseStatus.ASSIGNED;
-  } else if (isRouted) {
-    targetStatus = CaseStatus.ROUTED;
-  } else {
-    targetStatus = CaseStatus.UNASSIGNED;
+  let targetStatus = reqTargetStatus || caseData.statusBeforePended || caseData.previousStatus;
+  if (!targetStatus) {
+    if (hasAssignee) {
+      targetStatus = CaseStatus.ASSIGNED;
+    } else if (isRouted) {
+      targetStatus = CaseStatus.ROUTED;
+    } else {
+      targetStatus = CaseStatus.UNASSIGNED;
+    }
   }
 
   assertLifecycleTransitionAllowed({
@@ -535,6 +543,11 @@ const unpendCase = async (firmId, caseId, comment, user, req = null) => {
     userAgent: req?.get?.('user-agent') || null,
     req,
     statusPatch: {
+      statusBeforePended: null,
+      pendedAt: null,
+      pendedReason: null,
+      autoReopenAt: null,
+      unpendedAt: new Date(),
       pendingUntil: null,
       reopenAt: null,
       pendedByXID: null,
@@ -544,38 +557,41 @@ const unpendCase = async (firmId, caseId, comment, user, req = null) => {
     auditMetadata: {
       previousPendingUntil,
       manualUnpend: true,
-      commentLength: comment.length,
+      unpendNote: note,
+      commentLength: note ? note.length : 0,
     },
   });
 
   caseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
   
-  // Add comment
-  await Comment.create({
-    caseId,
-    firmId,
-    text: comment,
-    createdBy: user.email.toLowerCase(),
-    createdByXID: user.xID,
-    createdByName: user.name,
-    note: 'Case unpend comment',
-  });
+  if (note) {
+    await Comment.create({
+      caseId,
+      firmId,
+      text: note,
+      createdBy: user.email.toLowerCase(),
+      createdByXID: user.xID,
+      createdByName: user.name,
+      note: 'Case unpend comment',
+    });
+  }
   
   // Record action in audit trail
   await recordAction(
     caseId,
     caseData.firmId,
     CASE_ACTION_TYPES.CASE_UNPENDED,
-    `Case manually unpended by ${user.xID}. Previous status: ${previousStatus}. Was pended until: ${previousPendingUntil || 'N/A'}`,
+    `Case manually unpended by ${user.xID}. Transitioned to ${targetStatus}. Previous status: ${previousStatus}. Was pended until: ${previousPendingUntil || 'N/A'}`,
     user.xID,
     user.email,
     user.role === 'Admin' ? 'ADMIN' : 'USER',
     {
       previousStatus,
-      newStatus: CaseStatus.OPEN,
+      newStatus: targetStatus,
       previousPendingUntil,
       manualUnpend: true,
-      commentLength: comment.length,
+      unpendNote: note,
+      commentLength: note ? note.length : 0,
     }
   );
   

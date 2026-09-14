@@ -247,7 +247,14 @@ module.exports = {
   'GET /:caseId/attachments/:attachmentId/view': { params: caseAndAttachmentParams, query: strictEmpty },
   'GET /:caseId/attachments/:attachmentId/download': { params: caseAndAttachmentParams, query: strictEmpty },
   'POST /:caseId/clone': { params: caseIdParams, body: cloneCaseBody },
-  'POST /:caseId/unpend': { params: caseIdParams, body: z.object({ comment: nonEmptyString }).strict() },
+  'POST /:caseId/unpend': {
+    params: caseIdParams,
+    body: z.object({
+      comment: z.string().trim().optional(),
+      unpendNote: z.string().trim().optional(),
+      targetStatus: z.string().trim().optional(),
+    }).passthrough(),
+  },
   'PUT /:caseId/status': { params: caseIdParams, body: z.object({ status: nonEmptyString }).strict() },
   'POST /:caseId/lock': { params: caseIdParams, body: strictEmpty },
   'POST /:caseId/unlock': { params: caseIdParams, body: strictEmpty },
