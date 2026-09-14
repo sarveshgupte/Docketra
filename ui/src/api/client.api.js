@@ -101,4 +101,34 @@ export const clientApi = {
   deleteFactSheetFile: (clientId, fileId) => request((http) => http.delete(`/clients/${clientId}/cfs/files/${fileId}`), 'Failed to delete file'),
   getClientFactSheetForCase: (caseId) => request((http) => http.get(`/cases/${caseId}/client-fact-sheet`), 'Failed to load client fact sheet'),
   getClientFactSheetFileViewUrl: (caseId, fileId) => `/cases/${caseId}/client-fact-sheet/files/${fileId}/view`,
+  getClientComplianceDueDates: (clientId, params = {}) =>
+    request(
+      (http) => http.get('/compliance/due-dates', { params: { clientId, ...params } }),
+      'Failed to load client compliance due dates'
+    ),
+  getClientHearings: (clientId, params = {}) =>
+    request(
+      (http) => http.get('/hearings', { params: { clientId, ...params } }),
+      'Failed to load client hearings'
+    ),
+  getClientFactSheetPdf: (clientId) =>
+    request(
+      (http) => http.get(`/clients/${clientId}/fact-sheet/pdf`),
+      'Failed to generate client fact sheet PDF'
+    ),
+  getClientPortalLink: (clientId) =>
+    request(
+      (http) => http.get(`/clients/${clientId}/portal-link`),
+      'Failed to get client portal link'
+    ),
+  updateClientSrn: (clientId, filingId, srn) =>
+    request(
+      (http) => http.patch(`/compliance/due-dates/${filingId}/srn`, { clientId, srn }),
+      'Failed to update filing SRN'
+    ),
+  addComplianceMatter: (clientId, payload) =>
+    request(
+      (http) => http.post(`/clients/${clientId}/compliance-matters`, payload),
+      'Failed to add compliance matter'
+    ),
 };

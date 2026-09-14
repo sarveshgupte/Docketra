@@ -10,6 +10,7 @@ import {
   AiSettingsPage,
   CaseDetailPage,
   ClientWorkspacePage,
+  ClientDetailPage,
   ComplianceCalendarPage,
   ClientsPage,
   CreateCasePage,
@@ -324,7 +325,7 @@ export const ProtectedRoutes = () => (
           path="clients/:clientId"
           element={(
             <ProtectedRoute>
-              <ClientWorkspacePage />
+              <ClientDetailPage />
             </ProtectedRoute>
           )}
         />
@@ -340,7 +341,7 @@ export const ProtectedRoutes = () => (
           path="clients/:clientId/compliance"
           element={(
             <ProtectedRoute>
-              <ClientWorkspacePage />
+              <ClientDetailPage />
             </ProtectedRoute>
           )}
         />

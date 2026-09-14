@@ -75,6 +75,7 @@ export const DetailedReports = lazyPage(() => import('../pages/reports/DetailedR
 export const CasesPage = lazyPage(() => import('../pages/CasesPage'), 'CasesPage');
 export const ClientsPage = lazyPage(() => import('../pages/ClientsPage'), 'ClientsPage');
 export const ClientWorkspacePage = lazyPage(() => import('../pages/ClientWorkspacePage'), 'ClientWorkspacePage');
+export const ClientDetailPage = lazyPage(() => import('../pages/clients/ClientDetailPage'), 'default');
 export const MarketingHomePage = lazyPage(() => import('../pages/marketing/HomePage'), 'HomePage');
 export const MarketingFeaturesPage = lazyPage(() => import('../pages/marketing/Features'), 'FeaturesPage');
 export const MarketingTermsPage = lazyPage(() => import('../pages/marketing/Terms'), 'TermsPage');
