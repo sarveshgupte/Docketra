@@ -8,169 +8,98 @@ import ComplianceVsGenericComparison from './ComplianceVsGenericComparison';
 import Container from '../layout/Container';
 
 const REVEAL = {
-  initial: { opacity: 0, y: 24 },
+  initial: { opacity: 0, y: 16 },
   whileInView: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
-  viewport: { once: true, amount: 0.1 },
+  transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] },
+  viewport: { once: true, amount: 0.08 },
 };
 
 const HERO_BADGES = [
-  {
-    label: 'Dockets',
-    desc: 'Structured matters',
-    icon: (
-      <svg className="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Worklists',
-    desc: 'Daily execution',
-    icon: (
-      <svg className="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Workbaskets',
-    desc: 'Zero-drop queues',
-    icon: (
-      <svg className="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Quality Control',
-    desc: 'Maker-checker gates',
-    icon: (
-      <svg className="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Reports',
-    desc: 'Partner visibility',
-    icon: (
-      <svg className="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10a2 2 0 01-2 2h-2a2 2 0 01-2-2zm9-1v-4a2 2 0 00-2-2h-2a2 2 0 00-2 2v4a2 2 0 002 2h2a2 2 0 002-2z" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Audit Trails',
-    desc: 'SHA-256 integrity',
-    icon: (
-      <svg className="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-  },
+  { label: 'Dockets', desc: 'Matters & Filings' },
+  { label: 'Worklists', desc: 'Daily Staff Tasks' },
+  { label: 'Workbaskets', desc: 'Team Queues' },
+  { label: 'Quality Control', desc: 'Partner Approvals' },
+  { label: 'Reports', desc: 'Firm Overview' },
+  { label: 'Audit Trails', desc: 'Activity History' },
 ];
 
 const HeroSection = ({ onOpenTour }) => (
-  <section className="relative overflow-hidden bg-gradient-to-b from-[#FFFDF9] via-[#FAF6EF] to-white pt-24 pb-20 md:pt-32 md:pb-28 border-b border-slate-200/70">
-    {/* Subtle 2026 Micro-Grid Background */}
-    <div className="absolute inset-0 bg-[linear-gradient(to_right,#E2E8F0_1px,transparent_1px),linear-gradient(to_bottom,#E2E8F0_1px,transparent_1px)] bg-[size:3.5rem_3.5rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-40 pointer-events-none" />
-
-    {/* Ambient Warm Golden Orb */}
-    <div className="absolute top-10 left-1/2 -translate-x-1/2 h-96 w-[48rem] rounded-full bg-amber-400/10 blur-[120px] pointer-events-none" />
-
+  <section className="relative overflow-hidden bg-gradient-to-b from-[#FFFDF9] via-[#FAF6EF] to-white pt-6 pb-10 md:pt-10 md:pb-14 border-b border-slate-200/80">
     <Container size="7xl" className="relative">
-      <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.25fr]">
-        <motion.div {...REVEAL} className="space-y-6">
-          {/* Micro Eyebrow Badge */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-bold text-amber-900 shadow-sm">
-            <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+      <div className="grid items-center gap-8 lg:grid-cols-[1fr_1.2fr]">
+        <motion.div {...REVEAL} className="space-y-4">
+          {/* Tag */}
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-0.5 text-xs font-bold text-amber-900">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-600" />
             <span>Built for Indian professional firms</span>
           </div>
 
-          {/* Primary H1 */}
-          <h1 className="text-4xl font-black leading-[1.08] tracking-tight text-slate-950 sm:text-5xl lg:text-[3.25rem]">
+          {/* Headline */}
+          <h1 className="text-3xl font-black leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-[2.75rem]">
             The Company Brain for{' '}
-            <span className="bg-gradient-to-r from-amber-700 via-amber-600 to-amber-800 bg-clip-text text-transparent">
-              Indian professional firms.
-            </span>
+            <span className="text-amber-700">Indian professional firms.</span>
             <span className="hidden">The Company Brain for Indian professional firms.</span>
           </h1>
 
-          {/* Subtitle & Value Proposition */}
-          <p className="max-w-xl text-base font-semibold leading-relaxed text-slate-700">
+          {/* Subtitle */}
+          <p className="text-sm sm:text-base font-medium leading-relaxed text-slate-700 max-w-xl">
             Docketra connects client memory, dockets, deadlines, QC, worklists, and reports in one firm workspace.
           </p>
 
-          <p className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-600" />
-            <span>For CS, CA, law, and compliance teams that cannot afford missing context.</span>
+          <p className="text-xs font-bold text-slate-800">
+            For CS, CA, law, and compliance teams that cannot afford missing context.
           </p>
 
-          {/* Double-Bezel Definition Callout */}
-          <div className="rounded-2xl border border-amber-200/80 bg-amber-50/40 p-1.5 shadow-sm max-w-xl">
-            <div className="rounded-[calc(1rem-2px)] border border-amber-200/60 bg-white/90 p-4 backdrop-blur text-xs font-medium leading-relaxed text-slate-700">
-              <span className="font-extrabold text-slate-950">What is Docketra?</span> A Company Brain and Work Execution OS that keeps client history, promises, documents, checklists, ownership, and review status attached to the work being done.
-            </div>
-          </div>
-
-          {/* CTA Action Bar */}
-          <div className="flex flex-col gap-3 sm:flex-row items-stretch sm:items-center pt-2">
+          {/* Simple CTA Action Group - Placed high so it's always above the fold */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1">
             <Link
               to="/signup"
-              className="group inline-flex h-12 items-center justify-between gap-3 rounded-xl bg-slate-950 px-6 text-xs font-black text-amber-400 shadow-xl transition-all hover:bg-slate-800 hover:scale-[1.01] active:scale-[0.98]"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 text-xs font-black text-amber-400 shadow-md transition-all hover:bg-slate-800 active:scale-[0.98]"
             >
               <span>Create workspace</span>
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400/20 text-amber-300 transition-transform group-hover:translate-x-0.5">
-                →
-              </span>
+              <span>→</span>
             </Link>
 
             <button
               type="button"
               onClick={onOpenTour}
-              className="inline-flex h-12 items-center justify-center gap-2.5 rounded-xl border border-slate-300 bg-white px-6 text-xs font-black text-slate-800 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-400 hover:scale-[1.01] active:scale-[0.98] cursor-pointer"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 text-xs font-bold text-slate-800 shadow-xs transition-all hover:bg-slate-50 hover:border-slate-400 active:scale-[0.98] cursor-pointer"
             >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/15 text-amber-700 font-black">
-                ▶
-              </span>
+              <span className="text-amber-600 text-xs">▶</span>
               <span>Take a product tour</span>
             </button>
           </div>
 
-          {/* Trust Guarantees */}
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-bold text-slate-500">
+          {/* Trust points */}
+          <p className="flex flex-wrap items-center gap-x-2 text-[11px] font-medium text-slate-500 pt-0.5">
             <span>No credit card required</span>
-            <span aria-hidden="true" className="text-slate-300">|</span>
-            <span>Pilot-friendly setup</span>
-            <span aria-hidden="true" className="text-slate-300">|</span>
-            <span>Zero-custody BYOS storage</span>
+            <span>•</span>
+            <span>2-minute setup</span>
+            <span>•</span>
+            <span>Files save to your Google Drive</span>
           </p>
 
-          {/* Wedge Grid Badges */}
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 max-w-xl pt-2">
+          {/* Compact Feature Tags */}
+          <div className="flex flex-wrap gap-1.5 pt-1">
             {HERO_BADGES.map((badge) => (
-              <div
+              <span
                 key={badge.label}
-                className="flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/90 px-3 py-2 shadow-xs transition-all hover:border-amber-300 hover:shadow-sm"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-800 shadow-2xs"
               >
-                {badge.icon}
-                <div className="min-w-0">
-                  <p className="text-xs font-black text-slate-800 leading-none">{badge.label}</p>
-                  <p className="text-[10px] text-slate-400 font-medium leading-none mt-1 truncate">{badge.desc}</p>
-                </div>
-              </div>
+                <span className="h-1 w-1 rounded-full bg-amber-500" />
+                <span>{badge.label}</span>
+              </span>
             ))}
           </div>
         </motion.div>
 
-        {/* Right Hero: Interactive Product Canvas */}
+        {/* Right Hero: Compact Interactive Canvas */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.97, x: 20 }}
-          whileInView={{ opacity: 1, scale: 1, x: 0 }}
-          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          initial={{ opacity: 0, scale: 0.98 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           viewport={{ once: true }}
-          className="relative lg:pl-4"
+          className="relative lg:pl-2"
         >
           <InteractiveProductCanvas />
         </motion.div>
@@ -180,35 +109,35 @@ const HeroSection = ({ onOpenTour }) => (
 );
 
 const SubHeroMetricsStrip = () => (
-  <section className="border-b border-slate-200/80 bg-white py-8">
+  <section className="border-b border-slate-200/80 bg-white py-6">
     <Container size="7xl">
-      <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {[
           {
-            stat: '100%',
-            label: 'Zero-Custody BYOS Storage',
-            desc: 'Files stay in your firm’s Google Drive / AWS S3',
+            stat: 'Google Drive',
+            label: 'Your Own Storage',
+            desc: 'Files stay in your firm’s folders',
           },
           {
-            stat: '36px',
-            label: 'High-Density Workspace',
-            desc: 'Monospace CIN, DIN, and SRN tabular precision',
+            stat: 'Due Dates',
+            label: 'Never Miss a Filing',
+            desc: 'MCA, GST, and Tax reminders',
           },
           {
-            stat: '2-Tier',
-            label: 'Maker-Checker QC Gate',
-            desc: 'Mandatory review gates before statutory MCA filing',
+            stat: 'Partner QC',
+            label: 'Check Before Filing',
+            desc: 'Review work to prevent mistakes',
           },
           {
-            stat: 'T-7',
-            label: 'Proactive Statutory Radar',
-            desc: 'Never miss compounding MCA / GST penalties',
+            stat: 'Team Worklists',
+            label: 'Clear Task Ownership',
+            desc: 'See who is doing what today',
           },
         ].map((item, idx) => (
-          <div key={idx} className="border-l-2 border-amber-500/40 pl-4 py-1">
-            <p className="font-mono text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">{item.stat}</p>
-            <p className="text-xs font-bold text-slate-900 mt-0.5">{item.label}</p>
-            <p className="text-[11px] font-medium text-slate-500 mt-0.5 leading-snug">{item.desc}</p>
+          <div key={idx} className="border-l-2 border-amber-500/50 pl-3.5 py-0.5">
+            <p className="text-base sm:text-lg font-black text-slate-900 leading-none">{item.stat}</p>
+            <p className="text-xs font-bold text-slate-800 mt-1">{item.label}</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">{item.desc}</p>
           </div>
         ))}
       </div>
@@ -217,108 +146,64 @@ const SubHeroMetricsStrip = () => (
 );
 
 const ProductPillarsSection = () => (
-  <section id="product" className="scroll-mt-16 bg-gradient-to-b from-slate-50/60 to-white py-24 border-b border-slate-200/80">
+  <section id="product" className="scroll-mt-16 bg-slate-50/70 py-14 border-b border-slate-200/80">
     <Container size="7xl">
-      <motion.div className="max-w-3xl" {...REVEAL}>
-        <div className="inline-flex items-center gap-2 rounded-md bg-amber-500/10 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-wider text-amber-900">
-          DOCKETRA PILLARS
-        </div>
-        <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+      <motion.div className="max-w-2xl" {...REVEAL}>
+        <span className="text-xs font-black uppercase tracking-wider text-amber-700">DOCKETRA PILLARS</span>
+        <h2 className="mt-1.5 text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
           One platform. Every professional workflow.
         </h2>
-        <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">
-          The structural foundation built to organize, execute, and safeguard critical Indian professional operations.
+        <p className="mt-2 text-xs sm:text-sm text-slate-600 font-medium">
+          Built specifically for Indian CS, CA, and legal firms. Simple tools to manage client work without chaos.
         </p>
       </motion.div>
 
-      <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-6">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {[
           {
             title: 'Client memory',
-            body: 'Client history, notes, documents, preferences, and prior work stay attached to the account and the active docket.',
+            body: 'Keep company details, CIN, PAN, director contacts, and past filings together so staff don’t have to ask the client twice.',
             solves: 'Solves scattered context',
-            className: 'lg:col-span-3',
-            badge: 'Entity Memory',
-            icon: (
-              <svg className="h-5 w-5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20H7a3 3 0 01-3-3V5a3 3 0 013-3h10a3 3 0 013 3v12a3 3 0 01-3 3z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8M8 11h8M8 15h5" />
-              </svg>
-            )
           },
           {
             title: 'Dockets',
-            body: 'Every engagement gets a structured home for scope, deadlines, owners, documents, activities, and dependencies.',
+            body: 'Every matter gets a clear folder with deadlines, assigned staff, documents, and status from start to finish.',
             solves: 'Solves ownership gaps',
-            className: 'lg:col-span-3',
-            badge: 'Matter Tracking',
-            icon: (
-              <svg className="h-5 w-5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-              </svg>
-            )
           },
           {
             title: 'Worklists and workbaskets',
-            body: 'Teams see exactly what to do next, what is waiting, what is due, and what needs a pull from the shared queue.',
+            body: 'Team members see their exact daily tasks. Managers can assign work or staff can pull from shared queues.',
             solves: 'Solves daily execution drift',
-            className: 'lg:col-span-2',
-            badge: 'Shared Queues',
-            icon: (
-              <svg className="h-5 w-5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l2 2 4-4" />
-              </svg>
-            )
           },
           {
             title: 'QC and exceptions',
-            body: 'Review gates, comments, approvals, and exceptions stay visible before filing, dispatch, or closure.',
+            body: 'Partners can review draft filings, check challans, and flag corrections before submitting to the government.',
             solves: 'Solves review uncertainty',
-            className: 'lg:col-span-2',
-            badge: 'Quality Control',
-            icon: (
-              <svg className="h-5 w-5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            )
           },
           {
             title: 'Reports and audit trails',
-            body: 'Partners see workload, overdue items, review queues, and operational history without rebuilding status from scratch.',
+            body: 'See how many filings are due this week, what is stuck, and full history of who did what and when.',
             solves: 'Solves partner blind spots',
-            className: 'lg:col-span-2',
-            badge: 'Governance',
-            icon: (
-              <svg className="h-5 w-5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10a2 2 0 01-2 2h-2a2 2 0 01-2-2zm9-1v-4a2 2 0 00-2-2h-2a2 2 0 00-2 2v4a2 2 0 002 2h2a2 2 0 002-2z" />
-              </svg>
-            )
-          }
+          },
+          {
+            title: 'Google Drive Storage',
+            body: 'Documents save directly into your own Google Drive. You maintain 100% control of your client records.',
+            solves: 'Zero vendor lock-in',
+          },
         ].map((pillar) => (
-          <motion.div
+          <div
             key={pillar.title}
-            className={`flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm transition-all hover:border-amber-400 hover:shadow-md ${pillar.className}`}
-            {...REVEAL}
+            className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs flex flex-col justify-between"
           >
             <div>
-              <div className="flex items-center justify-between">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20">
-                  {pillar.icon}
-                </span>
-                <span className="font-mono text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                  {pillar.badge}
-                </span>
-              </div>
-              <h3 className="mt-4 text-base font-black text-slate-950">{pillar.title}</h3>
-              <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-600">{pillar.body}</p>
+              <h3 className="text-sm font-black text-slate-900">{pillar.title}</h3>
+              <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">{pillar.body}</p>
             </div>
-            
-            <div className="mt-6 rounded-lg bg-amber-50/60 border border-amber-200/40 px-3 py-1.5 flex items-center gap-1.5">
-              <span className="text-amber-700 font-bold">✓</span>
-              <span className="text-[11px] font-black text-amber-900">{pillar.solves}</span>
+            <div className="mt-4 pt-2.5 border-t border-slate-100 flex items-center gap-1.5 text-[11px] font-bold text-amber-800">
+              <span>✓</span>
+              <span>{pillar.solves}</span>
             </div>
-          </motion.div>
+          </div>
         ))}
       </div>
     </Container>
@@ -326,64 +211,20 @@ const ProductPillarsSection = () => (
 );
 
 const ProblemSection = () => (
-  <section id="why" className="relative scroll-mt-16 bg-white py-24 border-b border-slate-200/80 overflow-hidden">
+  <section id="why" className="scroll-mt-16 bg-white py-14 border-b border-slate-200/80">
     <Container size="7xl">
-      <motion.div className="max-w-3xl" {...REVEAL}>
-        <div className="inline-flex items-center gap-2 rounded-md bg-rose-500/10 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-wider text-rose-800">
-          THE OPERATIONAL GAP
-        </div>
-        <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-          Where professional firms lose control
+      <motion.div className="max-w-2xl" {...REVEAL}>
+        <span className="text-xs font-black uppercase tracking-wider text-rose-700">THE PROBLEM</span>
+        <h2 className="mt-1.5 text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
+          Why Excel and generic apps fail professional firms
         </h2>
-        <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">
-          Generic project management tools (ClickUp, Asana, Trello) don’t understand Indian compliance reality. Spreadsheets and WhatsApp threads create single points of failure.
+        <p className="mt-2 text-xs sm:text-sm text-slate-600 font-medium">
+          Trello, Asana, and WhatsApp don't know what MCA forms or CIN numbers are. Here is how Docketra fixes that:
         </p>
       </motion.div>
 
-      {/* 3 Core Pain Points */}
-      <div className="mt-10 grid gap-6 md:grid-cols-3">
-        <div className="rounded-2xl border border-rose-200/70 bg-rose-50/30 p-6 space-y-3">
-          <span className="inline-block rounded-lg bg-rose-500/10 p-2.5 text-rose-600">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </span>
-          <h3 className="text-base font-black text-slate-900">Compounding MCA / Tax Fines</h3>
-          <p className="text-xs font-semibold leading-relaxed text-slate-600">
-            Missing an AOC-4 or MGT-7 deadline triggers ₹100/day penalties under Section 403 of the Companies Act. Generic calendars fail to warn when dependencies stall.
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-amber-200/70 bg-amber-50/30 p-6 space-y-3">
-          <span className="inline-block rounded-lg bg-amber-500/10 p-2.5 text-amber-700">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </span>
-          <h3 className="text-base font-black text-slate-900">Employee Churn Context Loss</h3>
-          <p className="text-xs font-semibold leading-relaxed text-slate-600">
-            When an associate resigns, client promises, filing drafts, and director DSC keys vanish in their email or local downloads. Docketra keeps context bound to the firm.
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-sky-200/70 bg-sky-50/30 p-6 space-y-3">
-          <span className="inline-block rounded-lg bg-sky-500/10 p-2.5 text-sky-700">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </span>
-          <h3 className="text-base font-black text-slate-900">Zero Maker-Checker Oversight</h3>
-          <p className="text-xs font-semibold leading-relaxed text-slate-600">
-            Filing with MCA or dispatching audit reports without formal partner QC creates massive legal liability. Docketra requires two-tier sign-off before docket closure.
-          </p>
-        </div>
-      </div>
-
-      {/* Comprehensive Operational Comparison Matrix */}
-      <div className="mt-14 space-y-4">
-        <h3 className="text-lg font-black text-slate-950">
-          How Docketra compares to legacy alternatives
-        </h3>
+      {/* Comparison Table */}
+      <div className="mt-6">
         <ComplianceVsGenericComparison />
       </div>
     </Container>
@@ -391,300 +232,150 @@ const ProblemSection = () => (
 );
 
 const HowItWorksSection = () => (
-  <section id="workflow" className="scroll-mt-16 bg-[#FAF9F5] py-24 border-b border-slate-200/80">
+  <section id="workflow" className="scroll-mt-16 bg-slate-50/70 py-14 border-b border-slate-200/80">
     <Container size="7xl">
-      <motion.div className="max-w-3xl" {...REVEAL}>
-        <div className="inline-flex items-center gap-2 rounded-md bg-purple-500/10 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-wider text-purple-900">
-          EXECUTION PIPELINE
-        </div>
-        <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-          From client instruction to certified filing
+      <motion.div className="max-w-2xl" {...REVEAL}>
+        <span className="text-xs font-black uppercase tracking-wider text-purple-700">HOW IT WORKS</span>
+        <h2 className="mt-1.5 text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
+          How work moves in Docketra
         </h2>
-        <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">
-          A deterministic 4-step workflow engineered so work moves with institutional memory at every handoff.
+        <p className="mt-2 text-xs sm:text-sm text-slate-600 font-medium">
+          A clear 4-step flow from the moment client work comes in to the final filing.
         </p>
       </motion.div>
 
-      <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
-            step: '01',
-            title: 'Intake & Binding',
-            summary: 'Client engagement arrives via mandate, email, or statutory calendar trigger.',
-            detail: 'Matter instantly links to Entity Master (CIN/PAN), setting statutory SLAs and compliance owners.',
+            step: '1',
+            title: 'Create Matter',
+            desc: 'A client calls or emails with a task. You create a docket linked to that client in 30 seconds.',
           },
           {
-            step: '02',
-            title: 'Workbasket Pool',
-            summary: 'Filing routes into practice queues instead of private email inboxes.',
-            detail: 'Managers allocate based on workload, or associates pull work when capacity allows.',
+            step: '2',
+            title: 'Assign to Team',
+            desc: 'Assign it to an associate with a due date. They see it immediately on their daily worklist.',
           },
           {
-            step: '03',
-            title: 'Execution & BYOS',
-            summary: 'Working papers, resolutions, and director DSC signatures are assembled.',
-            detail: 'All files stream directly into your firm’s Google Drive vault with SHA-256 checksums.',
+            step: '3',
+            title: 'Save to Google Drive',
+            desc: 'Staff prepare the filing, attach documents, and save directly into your firm’s Google Drive.',
           },
           {
-            step: '04',
-            title: 'Two-Tier QC Sign-off',
-            summary: 'Reviewer verifies attachments, fee challans, and MCA forms before submission.',
-            detail: 'Partner signs off, filing completes, and audit trail is permanently committed.',
+            step: '4',
+            title: 'Partner Review & File',
+            desc: 'Partner reviews the final forms, gives approval, and marks the filing complete.',
           },
-        ].map((item, idx) => (
-          <div
-            key={idx}
-            className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm flex flex-col justify-between"
-          >
-            <div>
-              <span className="font-mono text-2xl font-black text-amber-500">{item.step}</span>
-              <h3 className="mt-3 text-base font-black text-slate-900">{item.title}</h3>
-              <p className="mt-2 text-xs font-bold text-slate-700 leading-snug">{item.summary}</p>
-              <p className="mt-2 text-xs text-slate-500 leading-relaxed">{item.detail}</p>
-            </div>
-            <div className="mt-6 pt-3 border-t border-slate-100 flex items-center justify-between text-[10px] font-mono text-slate-400">
-              <span>Phase {item.step}</span>
-              <span className="text-amber-600 font-bold">Verified →</span>
-            </div>
+        ].map((item) => (
+          <div key={item.step} className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/15 text-amber-800 font-black text-xs font-mono">
+              {item.step}
+            </span>
+            <h3 className="mt-3 text-sm font-black text-slate-900">{item.title}</h3>
+            <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">{item.desc}</p>
           </div>
         ))}
-      </div>
-    </Container>
-  </section>
-);
-
-const WhyNotTaskManagerSection = () => (
-  <section className="bg-white py-20 border-b border-slate-200/80">
-    <Container size="7xl">
-      <div className="rounded-3xl border border-slate-800 bg-[#090D16] p-8 sm:p-12 text-white shadow-2xl">
-        <div className="grid lg:grid-cols-12 gap-8 items-center">
-          <div className="lg:col-span-7 space-y-4">
-            <span className="inline-block rounded bg-amber-400/20 border border-amber-400/30 px-2.5 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-amber-300">
-              The Architecture Difference
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Why professional firms cannot run on generic project software
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed">
-              Task managers treat a ₹50,000 corporate annual filing the same as a grocery checklist item. They lack Indian corporate identity structures, have no concept of Section 403 penalties, and store confidential client audit papers on third-party servers.
-            </p>
-            <div className="grid sm:grid-cols-2 gap-3 pt-2 text-xs font-semibold">
-              <div className="flex items-center gap-2 text-slate-200">
-                <span className="text-amber-400 font-bold">✦</span>
-                <span>21-digit CIN & DIN validation</span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-200">
-                <span className="text-amber-400 font-bold">✦</span>
-                <span>Google Drive Zero-Custody Storage</span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-200">
-                <span className="text-amber-400 font-bold">✦</span>
-                <span>MCA Form Due Date Calendars</span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-200">
-                <span className="text-amber-400 font-bold">✦</span>
-                <span>Two-Tier Maker-Checker Sign-off</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-5 rounded-2xl border border-slate-800 bg-[#06090F] p-6 shadow-inner space-y-4">
-            <p className="text-xs font-mono uppercase tracking-wider text-slate-400 font-bold">
-              Docketra Firm Operating System
-            </p>
-            <div className="space-y-2 text-xs">
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
-                <div>
-                  <p className="font-bold text-slate-200">Corporate Entity Context</p>
-                  <p className="text-[10px] text-slate-500 font-mono">CIN: U72200MH2021PTC368942</p>
-                </div>
-                <span className="text-emerald-400 font-mono text-[11px] font-bold">Connected</span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
-                <div>
-                  <p className="font-bold text-slate-200">Document Security</p>
-                  <p className="text-[10px] text-slate-500 font-mono">Google Drive Enterprise Vault</p>
-                </div>
-                <span className="text-amber-400 font-mono text-[11px] font-bold">Zero Custody</span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
-                <div>
-                  <p className="font-bold text-slate-200">Statutory Liability</p>
-                  <p className="text-[10px] text-slate-500 font-mono">T-7 Penalty Protection</p>
-                </div>
-                <span className="text-sky-400 font-mono text-[11px] font-bold">Active Radar</span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </Container>
   </section>
 );
 
 const TrustSection = () => (
-  <section id="trust" className="scroll-mt-16 bg-[#0B0F19] py-24 text-white border-b border-slate-800 overflow-hidden relative">
-    <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(217,119,6,0.15),rgba(255,255,255,0))]" />
-    
-    <Container size="7xl" className="relative">
-      <motion.div className="max-w-3xl" {...REVEAL}>
-        <div className="inline-flex items-center gap-2 rounded-md bg-amber-500/20 border border-amber-500/30 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-wider text-amber-300">
-          SECURITY & SOVEREIGNTY
-        </div>
-        <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">
-          Zero-Custody Architecture & Data Sovereignty
+  <section id="trust" className="scroll-mt-16 bg-[#0B0F19] py-14 text-white border-b border-slate-800">
+    <Container size="7xl">
+      <motion.div className="max-w-2xl" {...REVEAL}>
+        <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-400">YOUR DATA, YOUR CONTROL</span>
+        <h2 className="mt-1.5 text-2xl sm:text-3xl font-black tracking-tight text-white">
+          Your client files stay in your own Google Drive
         </h2>
-        <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-400">
-          Engineered so your firm’s confidential client financials, board resolutions, and tax filings never leave your perimeter.
+        <p className="mt-2 text-xs sm:text-sm text-slate-400 font-normal">
+          We believe professional firms should always own their data. Docketra connects to your Google Drive so confidential client documents never leave your firm.
         </p>
       </motion.div>
 
-      <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          {
-            title: 'Zero Custody Storage',
-            desc: 'Files stream directly to your firm’s Google Drive or AWS S3. Docketra never takes permanent custody of confidential records.',
-            badge: 'BYOS',
-          },
-          {
-            title: 'India-Hosted Posture',
-            desc: 'Low-latency India cloud deployment adhering strictly to statutory guidelines for professional practices.',
-            badge: 'India Residency',
-          },
-          {
-            title: 'Cryptographic Audit Trail',
-            desc: 'Every file upload, status transition, and QC review is timestamped and verified with SHA-256 checksums.',
-            badge: 'Tamper Evident',
-          },
-          {
-            title: 'Granular Access Roles',
-            desc: 'Multi-tenant database boundaries with strict role separation across Admin, Manager, and Employee access levels.',
-            badge: 'Role Isolation',
-          },
-        ].map((item, idx) => (
-          <div
-            key={idx}
-            className="rounded-2xl border border-slate-800 bg-[#070A11] p-6 shadow-sm flex flex-col justify-between"
-          >
-            <div>
-              <span className="font-mono text-[10px] font-bold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded">
-                {item.badge}
-              </span>
-              <h3 className="mt-4 text-base font-black text-white">{item.title}</h3>
-              <p className="mt-2 text-xs font-normal leading-relaxed text-slate-400">{item.desc}</p>
-            </div>
-            <div className="mt-6 pt-3 border-t border-slate-800/80 text-[10px] font-mono text-slate-500">
-              Enforced by platform runtime
-            </div>
-          </div>
-        ))}
+      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-slate-800 bg-slate-950 p-5 space-y-2">
+          <h3 className="text-sm font-bold text-white">100% Data Ownership</h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            All client working papers, balance sheets, and notices stay inside your Google Drive. We never lock you in.
+          </p>
+        </div>
+        <div className="rounded-xl border border-slate-800 bg-slate-950 p-5 space-y-2">
+          <h3 className="text-sm font-bold text-white">Staff Permissions</h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Admins, Managers, and Employees have different access levels so staff only see what they need to work on.
+          </p>
+        </div>
+        <div className="rounded-xl border border-slate-800 bg-slate-950 p-5 space-y-2">
+          <h3 className="text-sm font-bold text-white">Activity History</h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Docketra keeps a record of every status change and review sign-off so you always know who approved what.
+          </p>
+        </div>
       </div>
     </Container>
   </section>
 );
 
 const PilotReadinessSection = () => (
-  <section id="pilot-readiness" className="scroll-mt-16 bg-white py-24 border-b border-slate-200/80">
+  <section id="pilot-readiness" className="scroll-mt-16 bg-white py-14 border-b border-slate-200/80">
     <Container size="7xl">
-      <motion.div className="max-w-3xl" {...REVEAL}>
-        <div className="inline-flex items-center gap-2 rounded-md bg-emerald-500/10 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-wider text-emerald-800">
-          PILOT READY
+      <div className="rounded-2xl border border-amber-200/80 bg-[#FFFDF9] p-6 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="space-y-2 max-w-xl">
+          <span className="text-xs font-bold uppercase tracking-wider text-amber-700">TRY IT WITH YOUR TEAM</span>
+          <h2 className="text-2xl font-black text-slate-950 tracking-tight">
+            Start using Docketra for your firm in 5 minutes
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-600 font-medium">
+            Create your firm account, invite your team members, and manage your first 5 clients. No credit card required.
+          </p>
         </div>
-        <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-          Deploy across your firm in under 10 minutes
-        </h2>
-        <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">
-          No complex IT rollout or rip-and-replace required. Run Docketra alongside your existing workflow for your first 5 client engagements.
-        </p>
-      </motion.div>
 
-      <div className="mt-12 grid gap-6 sm:grid-cols-3">
-        {[
-          {
-            step: 'Step 1',
-            title: 'Create Firm Workspace',
-            time: '2 minutes',
-            desc: 'Sign up with your work email, set your firm legal practice name, and claim your vanity domain.',
-          },
-          {
-            step: 'Step 2',
-            title: 'Connect Storage (BYOS)',
-            time: '1 minute',
-            desc: 'Authenticate with Google Drive or use Docketra Secure Cloud with zero server setup.',
-          },
-          {
-            step: 'Step 3',
-            title: 'Invite Team & First Client',
-            time: '3 minutes',
-            desc: 'Invite your associates with granular roles (Admin, Manager, User) and add your first corporate entity.',
-          },
-        ].map((card, idx) => (
-          <div
-            key={idx}
-            className="rounded-2xl border border-slate-200/90 bg-[#FAF9F5] p-6 shadow-sm flex flex-col justify-between"
-          >
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-xs font-bold text-amber-700">{card.step}</span>
-                <span className="font-mono text-[10px] text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded">
-                  {card.time}
-                </span>
-              </div>
-              <h3 className="mt-4 text-base font-black text-slate-950">{card.title}</h3>
-              <p className="mt-2 text-xs text-slate-600 leading-relaxed font-medium">{card.desc}</p>
-            </div>
-            <div className="mt-6 pt-3 border-t border-slate-200/60 flex items-center justify-between text-[11px] font-bold text-amber-800">
-              <span>Ready for production</span>
-              <span>✓</span>
-            </div>
-          </div>
-        ))}
+        <Link
+          to="/signup"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-slate-950 px-8 text-xs font-black text-amber-400 shadow-md transition-all hover:bg-slate-800 shrink-0"
+        >
+          <span>Create workspace</span>
+          <span>→</span>
+        </Link>
       </div>
     </Container>
   </section>
 );
 
 const FinalCtaSection = () => (
-  <section className="relative bg-gradient-to-b from-[#FFFDF9] via-[#FAF6EF] to-slate-100 py-24 overflow-hidden">
-    <Container size="7xl" className="relative">
-      <motion.div className="mx-auto max-w-3xl text-center space-y-4" {...REVEAL}>
-        <h2 className="text-3xl font-black tracking-tight text-slate-950 sm:text-5xl leading-tight">
+  <section className="bg-slate-50 py-14 text-center">
+    <Container size="7xl">
+      <motion.div className="max-w-2xl mx-auto space-y-3" {...REVEAL}>
+        <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
           Give every docket a memory.
         </h2>
-        <h3 className="text-xl sm:text-2xl font-black tracking-tight text-amber-700">
+        <p className="text-base font-bold text-amber-700">
           For partners, managers, and execution teams.
-        </h3>
-        
-        <p className="mx-auto max-w-xl text-xs sm:text-sm font-semibold leading-relaxed text-slate-600">
-          Start with one workspace, one team, and a clearer way to run client work from intake to closure.
+        </p>
+        <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto">
+          Start with one workspace, your team, and an easier way to keep track of daily client work.
         </p>
 
-        <div className="pt-4 flex flex-col justify-center gap-3 sm:flex-row items-center max-w-md mx-auto">
+        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
             to="/signup"
-            className="group inline-flex h-12 w-full sm:w-auto items-center justify-center gap-2.5 rounded-xl bg-slate-950 px-8 text-xs font-black text-amber-400 shadow-xl transition-all hover:bg-slate-800 active:scale-[0.98]"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 text-xs font-black text-amber-400 shadow-md hover:bg-slate-800"
           >
             <span>Create workspace</span>
-            <span className="transition-transform group-hover:translate-x-0.5">→</span>
+            <span>→</span>
           </Link>
 
           <Link
             to="/find-workspace"
-            className="inline-flex h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 text-xs font-black text-slate-800 shadow-sm transition-colors hover:bg-slate-50"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 text-xs font-bold text-slate-700 hover:bg-slate-100"
           >
-            <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
             <span>Find workspace</span>
           </Link>
         </div>
 
-        <p className="pt-2 flex flex-wrap justify-center gap-3 text-[10px] font-bold text-slate-500">
-          <span>No credit card required</span>
-          <span aria-hidden="true">|</span>
-          <span>Cancel anytime</span>
-          <span aria-hidden="true">|</span>
-          <span>Pilot-friendly setup</span>
+        <p className="text-[11px] text-slate-400 pt-1">
+          No credit card required • Cancel anytime • Free pilot setup
         </p>
       </motion.div>
     </Container>
@@ -692,29 +383,20 @@ const FinalCtaSection = () => (
 );
 
 const MarketingFooter = () => (
-  <footer className="bg-slate-950 py-14 text-slate-300 border-t border-slate-800">
+  <footer className="bg-slate-950 py-10 text-slate-400 border-t border-slate-800 text-xs">
     <Container size="7xl">
-      <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
-        <div>
-          <Link to="/" className="text-lg font-extrabold text-white tracking-tight flex items-center gap-2.5">
-            <svg className="h-7 w-7 text-amber-500" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M25 15H50C69.33 15 85 30.67 85 50C85 69.33 69.33 85 50 85H25V15Z" stroke="currentColor" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <div className="flex flex-col leading-none text-left">
-              <span className="text-base font-black text-white tracking-tight">Docketra</span>
-              <span className="text-[8px] font-mono font-bold text-amber-400 uppercase mt-0.5">The Company Brain</span>
-            </div>
-          </Link>
-          <p className="mt-3 text-xs text-slate-400 max-w-sm leading-relaxed font-medium">
-            Firm operating system for Indian CS, CA, legal, and statutory compliance practices. Built around tenant isolation and operational visibility.
-          </p>
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-2 text-white font-bold">
+          <span className="text-amber-500 font-mono text-sm">✦</span>
+          <span>Docketra</span>
+          <span className="text-slate-500 text-[11px] font-normal font-mono">— The Company Brain for Indian Firms</span>
         </div>
 
-        <nav aria-label="Footer legal navigation" className="flex flex-wrap items-center gap-x-6 gap-y-3 font-semibold text-xs text-slate-400">
-          <Link to="/terms" className="transition-colors hover:text-white">Terms</Link>
-          <Link to="/privacy" className="transition-colors hover:text-white">Privacy</Link>
-          <Link to="/security" className="transition-colors hover:text-white">Security</Link>
-          <Link to="/acceptable-use" className="transition-colors hover:text-white">Acceptable Use</Link>
+        <nav aria-label="Footer legal navigation" className="flex items-center gap-5 font-medium">
+          <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
+          <Link to="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+          <Link to="/security" className="hover:text-white transition-colors">Security</Link>
+          <Link to="/acceptable-use" className="hover:text-white transition-colors">Acceptable Use</Link>
         </nav>
       </div>
     </Container>
@@ -776,7 +458,6 @@ export const LandingPageContent = () => {
       <ProductPillarsSection />
       <ProblemSection />
       <HowItWorksSection />
-      <WhyNotTaskManagerSection />
       <TrustSection />
       <PilotReadinessSection />
       <FinalCtaSection />

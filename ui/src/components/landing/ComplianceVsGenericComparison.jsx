@@ -2,80 +2,74 @@ import React from 'react';
 
 const COMPARISON_ROWS = [
   {
-    feature: 'Statutory Deadlines & Penalties',
-    docketra: 'Native Indian statutory calendar (MCA, Income Tax, GST, NCLT) with compounding penalty warnings.',
-    generic: 'Generic calendar dates with no knowledge of statutory forms, SRN, or compounding fines.',
-    spreadsheets: 'Manual color-coding easily broken when dates shift or filings are delayed.',
+    feature: 'Due Dates & Penalties',
+    docketra: 'Automatic tracking for MCA forms, Tax dates, and Court hearings. Warns you before late fees kick in.',
+    generic: 'Generic calendar dates. No built-in knowledge of MCA forms, tax due dates, or penalty rules.',
+    spreadsheets: 'Manual color-coding that easily gets outdated when dates change.',
   },
   {
-    feature: 'Entity Identifiers & Validation',
-    docketra: 'First-class support for 21-digit CIN, DIN, PAN, GSTIN, and SRN with 1-click clipboard copy.',
-    generic: 'Plain text fields with zero format validation or entity hierarchy awareness.',
-    spreadsheets: 'Scattered across columns; prone to copy-paste typos and duplicate records.',
+    feature: 'Client Details (CIN & PAN)',
+    docketra: 'Keeps CIN, PAN, and director details in one place with 1-click copy for fast government filings.',
+    generic: 'Just plain text fields with no company structure.',
+    spreadsheets: 'Buried in old Excel files; staff waste hours searching through folders.',
   },
   {
-    feature: 'Document Custody & Confidentiality',
-    docketra: 'Bring Your Own Storage (BYOS): Files stay in your Google Drive or AWS S3. Zero third-party custody.',
-    generic: 'Files stored on third-party multi-tenant servers outside your firm’s direct perimeter.',
-    spreadsheets: 'Local downloads or personal WhatsApp chats risking client confidentiality leaks.',
+    feature: 'Client Document Storage',
+    docketra: 'Saves files straight into your firm’s Google Drive. You own all client files with zero lock-in.',
+    generic: 'Files stored on third-party servers outside your own Google Drive.',
+    spreadsheets: 'Documents scattered across employee laptops and WhatsApp chats.',
   },
   {
-    feature: 'Maker-Checker Quality Control (QC)',
-    docketra: 'Mandatory two-tier review gate before filing with MCA or dispatching to client directors.',
-    generic: 'Basic checkbox tasks; anyone can mark a critical filing complete with no review gate.',
-    spreadsheets: 'Zero review trail; no accountability if an unverified balance sheet gets filed.',
+    feature: 'Checking Work Before Filing',
+    docketra: 'Partners can review and approve filings before staff submit them to the government.',
+    generic: 'Simple checkboxes where anyone can mark a task complete without any partner check.',
+    spreadsheets: 'No approval trail. You only find mistakes after the client complains.',
   },
   {
-    feature: 'Unified 3-Pane Client Memory',
-    docketra: 'Entity master, active litigation roadmap, and document vault visible side-by-side.',
-    generic: 'Tasks disconnected from company identity and legal context across multiple boards.',
-    spreadsheets: 'Dozens of disjointed Excel tabs per client with no central operational memory.',
-  },
-  {
-    feature: 'Workbaskets & Queue Oversight',
-    docketra: 'Shared intake queues allow team members to pull work without tasks slipping through cracks.',
-    generic: 'Manual manual assignment only; unassigned tickets get forgotten in backlogs.',
-    spreadsheets: 'Depends on verbal delegation; tasks lost when staff take leave or resign.',
+    feature: 'Staff Task Assignment',
+    docketra: 'Assign matters to specific associates and see live progress on every client engagement.',
+    generic: 'Generic project boards that get cluttered with hundreds of loose tickets.',
+    spreadsheets: 'Requires calling or messaging staff repeatedly to ask "What is the status?".',
   },
 ];
 
 export function ComplianceVsGenericComparison() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-50/80 text-xs font-mono uppercase tracking-wider text-slate-500">
-              <th className="py-4 px-5 font-bold w-1/4">Operational Capability</th>
-              <th className="py-4 px-5 font-bold w-1/3 bg-amber-500/5 text-amber-900 border-x border-amber-200/60">
-                <div className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-amber-500" />
-                  <span>Docketra Compliance OS</span>
+            <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700">
+              <th className="py-3 px-4 w-1/4">What You Need</th>
+              <th className="py-3 px-4 w-1/3 bg-amber-500/10 text-amber-900 border-x border-amber-200">
+                <div className="flex items-center gap-1.5 font-black">
+                  <span className="h-2 w-2 rounded-full bg-amber-600" />
+                  <span>Docketra</span>
                 </div>
               </th>
-              <th className="py-4 px-5 font-bold w-1/4">Generic Task Managers (Asana / ClickUp)</th>
-              <th className="py-4 px-5 font-bold w-1/6">Excel & WhatsApp</th>
+              <th className="py-3 px-4 w-1/4 text-slate-600 font-semibold">Trello / ClickUp / Asana</th>
+              <th className="py-3 px-4 w-1/6 text-slate-600 font-semibold">Excel & WhatsApp</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
             {COMPARISON_ROWS.map((row, idx) => (
-              <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                <td className="py-4 px-5 font-bold text-slate-900 leading-snug">
+              <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
+                <td className="py-3.5 px-4 font-bold text-slate-900">
                   {row.feature}
                 </td>
-                <td className="py-4 px-5 font-semibold text-slate-900 leading-relaxed bg-amber-500/[0.02] border-x border-amber-200/40">
+                <td className="py-3.5 px-4 font-semibold text-slate-900 bg-amber-500/[0.03] border-x border-amber-200/50">
                   <div className="flex items-start gap-2">
                     <span className="text-amber-600 font-bold shrink-0 mt-0.5">✓</span>
                     <span>{row.docketra}</span>
                   </div>
                 </td>
-                <td className="py-4 px-5 text-slate-500 leading-relaxed">
+                <td className="py-3.5 px-4 text-slate-500">
                   <div className="flex items-start gap-2">
                     <span className="text-slate-400 shrink-0 mt-0.5">✕</span>
                     <span>{row.generic}</span>
                   </div>
                 </td>
-                <td className="py-4 px-5 text-slate-500 leading-relaxed">
+                <td className="py-3.5 px-4 text-slate-500">
                   <div className="flex items-start gap-2">
                     <span className="text-rose-400 shrink-0 mt-0.5">✕</span>
                     <span>{row.spreadsheets}</span>
