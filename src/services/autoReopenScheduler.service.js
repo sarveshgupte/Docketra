@@ -1,4 +1,4 @@
-const { reopenDuePending } = require('./docketWorkflow.service');
+const { reopenDuePending, processExpiredPendedDockets } = require('./docketWorkflow.service');
 const log = require('../utils/log');
 
 /**
@@ -26,15 +26,21 @@ const runAutoReopenJob = async () => {
     log.info('[AutoReopen] Starting auto-reopen job...');
     
     const result = await reopenDuePending();
+    const expiredSessionsResult = await processExpiredPendedDockets().catch(err => {
+      log.error('[AutoReopen] Error processing expired pended upload sessions:', err);
+      return { processedCount: 0 };
+    });
     
-    if (result.count > 0) {
-      log.info(`[AutoReopen] Successfully reopened ${result.count} case(s)`);
-      log.info(`[AutoReopen] Case IDs: ${result.docketIds.join(', ')}`);
+    if (result.count > 0 || (expiredSessionsResult && expiredSessionsResult.processedCount > 0)) {
+      log.info(`[AutoReopen] Successfully reopened ${result.count} case(s), ${expiredSessionsResult?.processedCount || 0} upload session(s)`);
+      if (result.docketIds.length > 0) {
+        log.info(`[AutoReopen] Case IDs: ${result.docketIds.join(', ')}`);
+      }
     } else {
       log.info('[AutoReopen] No cases to reopen');
     }
     
-    return result;
+    return { ...result, expiredSessionsProcessed: expiredSessionsResult?.processedCount || 0 };
   } catch (error) {
     log.error('[AutoReopen] Error running auto-reopen job:', error);
     throw error;
@@ -49,11 +55,7 @@ const runAutoReopenJob = async () => {
  * 
  * @param {number} intervalMinutes - Interval in minutes (default: 60)
  */
-const startScheduler = (intervalMinutes = 60) => {
-  if (process.env.NODE_ENV === 'production') {
-    log.warn('[AutoReopen] Scheduler disabled in production to prevent background loops');
-    return;
-  }
+const startScheduler = (intervalMinutes = 15) => {
   log.info(`[AutoReopen] Scheduler started (runs every ${intervalMinutes} minutes)`);
   
   // Run immediately on startup

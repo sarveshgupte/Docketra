@@ -843,9 +843,20 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
 }
 
 async function reopenDuePending() {
+  if ((process.env.MONGODB_URI || process.env.MONGO_URI) && mongoose.connection && mongoose.connection.readyState === 0) {
+    return { count: 0, docketIds: [] };
+  }
+
   const now = new Date();
+  const pendingStatusVariants = [
+    'PENDING',
+    'PEND',
+    'Pending',
+    'Pended',
+    toPersistenceState(DocketStatus.PENDING),
+  ];
   const pendingDueFilter = {
-    status: toPersistenceState(DocketStatus.PENDING),
+    status: { $in: [...new Set(pendingStatusVariants)] },
     $or: [
       { reopenAt: { $lte: now } },
       { pendingUntil: { $lte: now } },
@@ -870,7 +881,7 @@ async function reopenDuePending() {
     let queueTypeVal;
 
     if (hasAssignee) {
-      toState = 'ASSIGNED';
+      toState = 'IN_PROGRESS';
       stateVal = 'IN_PROGRESS';
       queueTypeVal = 'PERSONAL';
     } else if (isRouted) {

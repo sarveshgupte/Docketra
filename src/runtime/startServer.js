@@ -2,6 +2,7 @@ const log = require('../utils/log');
 const connectDB = require('../config/database');
 const config = require('../config/config');
 const { runBootstrap } = require('../services/bootstrap.service');
+const { startScheduler } = require('../services/autoReopenScheduler.service');
 const { initNotificationSocket } = require('../services/notificationSocket.service');
 const { sanitizeErrorForLog } = require('../utils/pii');
 const { createApp } = require('../app/createApp');
@@ -37,6 +38,7 @@ const startServer = async () => {
   log.info('STARTUP_TRACE_RUN_BOOTSTRAP_BEGIN');
   await runBootstrap();
   log.info('STARTUP_TRACE_RUN_BOOTSTRAP_SUCCESS');
+  startScheduler(15);
 
   const PORT = config.port;
   log.info('STARTUP_TRACE_APP_LISTEN_BEGIN', { port: PORT });

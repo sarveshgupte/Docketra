@@ -9,6 +9,7 @@ const { enforceTenantScope } = require('../utils/tenantScope');
 const CaseStatus = require('../domain/case/caseStatus');
 const { logCaseListViewed } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
+const { reopenDuePending } = require('../services/docketWorkflow.service');
 const { canViewUserWorklist } = require('../services/worklistAccess.service');
 const log = require('../utils/log');
 const { logSlowEndpoint } = require('../utils/slowLog');
@@ -299,6 +300,7 @@ const globalSearch = async (req, res) => {
  */
 const categoryWorklist = async (req, res) => {
   try {
+    await reopenDuePending().catch(() => {});
     const { categoryId } = req.params;
     
     // Get authenticated user from req.user (set by auth middleware)
@@ -413,6 +415,7 @@ const categoryWorklist = async (req, res) => {
  */
 const employeeWorklist = async (req, res) => {
   try {
+    await reopenDuePending().catch(() => {});
     const startedAt = Date.now();
     const requestedPage = Number.parseInt(req.query?.page, 10);
     const requestedLimit = Number.parseInt(req.query?.limit, 10);
@@ -776,6 +779,7 @@ const employeeWorklist = async (req, res) => {
  */
 const globalWorklist = async (req, res) => {
   try {
+    await reopenDuePending().catch(() => {});
     const startedAt = Date.now();
     const {
       clientId,
