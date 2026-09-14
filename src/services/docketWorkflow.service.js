@@ -860,9 +860,9 @@ async function reopenDuePending() {
   const pendingDueFilter = {
     status: { $in: [...new Set(pendingStatusVariants)] },
     $or: [
-      { autoReopenAt: { $lte: now } },
       { reopenAt: { $lte: now } },
       { pendingUntil: { $lte: now } },
+      { autoReopenAt: { $lte: now } },
     ],
   };
   const dueCases = await Case.find(pendingDueFilter);
