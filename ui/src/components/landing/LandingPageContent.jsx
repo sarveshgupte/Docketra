@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PublicMarketingHeader from '../marketing/PublicMarketingHeader';
+import LandingProductTourModal from './LandingProductTourModal';
 import Container from '../layout/Container';
 import BubbleMenu from '../common/BubbleMenu';
 import ScrollFloat from '../common/ScrollFloat';
@@ -267,7 +268,7 @@ const IndianLandmarksSVG = () => (
   </svg>
 );
 
-const HeroSection = () => (
+const HeroSection = ({ onOpenTour }) => (
   <section className="relative overflow-hidden bg-gradient-to-b from-[#fffbf4]/80 via-white to-white py-16 md:py-24">
     {/* Grid Overlay Pattern */}
     <div className="absolute inset-0 bg-[linear-gradient(to_right,#f8fafc_1px,transparent_1px),linear-gradient(to_bottom,#f8fafc_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-80" />
@@ -323,7 +324,8 @@ const HeroSection = () => (
 
             <button
               type="button"
-              className="inline-flex h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-6 text-xs font-black text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+              onClick={onOpenTour}
+              className="inline-flex h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-6 text-xs font-black text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 hover:scale-[1.01] active:scale-[0.98] cursor-pointer"
             >
               <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
@@ -878,9 +880,17 @@ const MarketingFooter = () => (
 export const LandingPageContent = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [isTourOpen, setIsTourOpen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.location.hash === '#tour' || window.location.search.includes('tour=');
+  });
 
   useEffect(() => {
     if (!location.hash) return;
+    if (location.hash === '#tour') {
+      setIsTourOpen(true);
+      return;
+    }
 
     const id = location.hash.replace('#', '');
     const timer = window.setTimeout(() => {
@@ -916,7 +926,7 @@ export const LandingPageContent = () => {
     <div className="w-full bg-white text-slate-900 antialiased selection:bg-amber-500/25">
       <span className="hidden">Worklist Workbaskets QC Workbaskets</span>
       <PublicMarketingHeader />
-      <HeroSection />
+      <HeroSection onOpenTour={() => setIsTourOpen(true)} />
       <SubHeroStats />
       <ProblemSection />
       <ProductPillarsSection />
@@ -925,6 +935,11 @@ export const LandingPageContent = () => {
       <TrustSection />
       <FinalCtaSection />
       <MarketingFooter />
+      <LandingProductTourModal
+        isOpen={isTourOpen}
+        onClose={() => setIsTourOpen(false)}
+        onNavigateToSection={handleSectionNavigation}
+      />
     </div>
   );
 };
