@@ -23,6 +23,8 @@ const { canTransition, canResolve, canFile } = require('../src/utils/docketState
   assert.strictEqual(canTransition('PENDED', 'IN_WB'), true);
   assert.strictEqual(canTransition('IN_QC', 'RESOLVED'), true);
   assert.strictEqual(canTransition('IN_QC', 'IN_PROGRESS'), true);
+  assert.strictEqual(canTransition('IN_PROGRESS', 'FILED'), true);
+  assert.strictEqual(canTransition('IN_QC', 'FILED'), true);
   assert.strictEqual(canTransition('IN_WB', 'FILED'), false);
 
   assert.strictEqual(canResolve('IN_PROGRESS'), true);
