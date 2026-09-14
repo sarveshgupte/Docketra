@@ -42,7 +42,7 @@ const TOUR_STEPS = [
     badge: '3-Pane Entity Master',
     badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     title: 'Corporate Client Workspace',
-    subtitle: 'HubSpot-inspired 3-pane layout keeping context attached',
+    subtitle: '3-Pane Entity Workspace keeping all context attached',
     description:
       'Never lose client context across WhatsApp or email threads. Left pane anchors entity identity (CIN, PAN, ROC, capital, directors). Center pane switches between statutory filings and tribunal litigation. Right pane tracks Next Date of Hearing (NDOH) and documents.',
     highlights: [
@@ -379,7 +379,7 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
             {currentStep.previewType === 'client-workspace' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                  <span className="text-xs font-bold text-white">HubSpot 3-Pane Architecture</span>
+                  <span className="text-xs font-bold text-white">3-Pane Entity Architecture</span>
                   <span className="text-[10px] font-mono text-emerald-400">Zenith Infra Pvt Ltd</span>
                 </div>
 

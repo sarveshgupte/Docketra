@@ -47,7 +47,7 @@ export function ComplianceVsGenericComparison() {
                   <span>Docketra</span>
                 </div>
               </th>
-              <th className="py-3 px-4 w-1/4 text-slate-600 font-semibold">Trello / ClickUp / Asana</th>
+              <th className="py-3 px-4 w-1/4 text-slate-600 font-semibold">Generic Task Trackers</th>
               <th className="py-3 px-4 w-1/6 text-slate-600 font-semibold">Excel & WhatsApp</th>
             </tr>
           </thead>

@@ -47,7 +47,7 @@ const TOUR_STEPS = [
     category: 'Entity Master',
     icon: Building2,
     color: 'text-emerald-400',
-    description: 'HubSpot-inspired 3-pane client workspace. View entity master (CIN, PAN, authorized capital), key directors, active litigation timelines, and statutory due dates side-by-side.',
+    description: 'Comprehensive 3-pane client workspace. View entity master (CIN, PAN, authorized capital), key directors, active litigation timelines, and statutory due dates side-by-side.',
     tip: 'Click any CIN or SRN to copy directly to your clipboard.',
   },
   {

@@ -1683,7 +1683,7 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
-   HIGH-FIDELITY DOCKET VIEW OVERHAUL (NOTION/LINEAR ESTHETICS)
+   HIGH-FIDELITY DOCKET VIEW OVERHAUL (MINIMAL WORKSPACE AESTHETICS)
    ───────────────────────────────────────────────────────────── */
 
 /* Split layout grid refinements */
@@ -1742,7 +1742,7 @@
   color: #27272a !important;
 }
 
-/* SOP block styles (Notion callout style) */
+/* SOP block styles (Callout style) */
 #panel-overview section[aria-labelledby="sop-heading"] {
   background: #fafaf9 !important;
   border-left: 4px solid #6366f1 !important;

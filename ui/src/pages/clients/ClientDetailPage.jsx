@@ -696,7 +696,7 @@ export default function ClientDetailPage() {
         </div>
       </header>
 
-      {/* 2. HUBSPOT-GRADE 3-PANE ARCHITECTURE */}
+      {/* 2. 3-PANE ENTITY ARCHITECTURE */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
         {/* LEFT PANE (25%, col-span-3): Fixed Entity Identity & Governance Card */}
         <aside className="lg:col-span-3 space-y-3">

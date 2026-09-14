@@ -1,6 +1,6 @@
 /* ==========================================================================
    Docketra — Platform Shell CSS
-   Notion/HubSpot-inspired redesign
+   Enterprise workspace redesign
    Keeps ALL existing class names intact.
    ========================================================================== */
 
@@ -3150,7 +3150,7 @@ select:focus-visible {
   }
 }
 
-/* Bulk Action Bar (Notion/HubSpot Premium Style) */
+/* Bulk Action Bar (Premium Workspace Style) */
 .wb-bulk-bar {
   display: flex;
   align-items: center;

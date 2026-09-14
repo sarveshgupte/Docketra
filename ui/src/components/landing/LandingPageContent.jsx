@@ -219,7 +219,7 @@ const ProblemSection = () => (
           Why Excel and generic apps fail professional firms
         </h2>
         <p className="mt-2 text-xs sm:text-sm text-slate-600 font-medium">
-          Trello, Asana, and WhatsApp don't know what MCA forms or CIN numbers are. Here is how Docketra fixes that:
+          Generic task trackers and WhatsApp don't know what MCA forms or CIN numbers are. Here is how Docketra fixes that:
         </p>
       </motion.div>
 
