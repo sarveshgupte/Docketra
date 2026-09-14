@@ -26,7 +26,9 @@ function legacyCbcEncrypt(text) {
   assert.strictEqual(decrypt(legacyEncryptedToken), plainToken, 'legacy AES-CBC storage token blobs must remain readable during migration');
 
   const tamperedParts = encryptedToken.split(':');
-  tamperedParts[4] = `${tamperedParts[4].slice(0, -1)}${tamperedParts[4].endsWith('A') ? 'B' : 'A'}`;
+  const cipherBytes = Buffer.from(tamperedParts[4], 'base64url');
+  cipherBytes[0] ^= 1;
+  tamperedParts[4] = cipherBytes.toString('base64url');
   assert.throws(
     () => decrypt(tamperedParts.join(':')),
     /authenticate|Unsupported state|Invalid encrypted/i,

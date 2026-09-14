@@ -115,14 +115,20 @@ async function resolveOwnershipFirmIdForWrite(req, res) {
 async function resolveOwnershipFirmIdForRead(req) {
   const resolved = req.ownershipFirmId || req.firm?.ownershipFirmId;
   if (resolved) return resolved;
-  const context = await resolveStorageContextFromTenantId(req.firmId);
-  if (context?.ownershipFirmId) return context.ownershipFirmId;
+  if (typeof resolveStorageContextFromTenantId === 'function') {
+    try {
+      const context = await resolveStorageContextFromTenantId(req.firmId);
+      if (context?.ownershipFirmId) return context.ownershipFirmId;
+    } catch (_err) {}
+  }
   if (req.firmId) {
-    log.warn('[STORAGE]', {
-      event: 'ownership_read_fallback_to_tenant',
-      tenantId: req.firmId,
-      path: req.originalUrl,
-    });
+    if (typeof log?.warn === 'function') {
+      log.warn('[STORAGE]', {
+        event: 'ownership_read_fallback_to_tenant',
+        tenantId: req.firmId,
+        path: req.originalUrl,
+      });
+    }
     return req.firmId;
   }
   return null;
@@ -303,8 +309,21 @@ const getStorageStatus = async (req, res) => {
 
 const getStorageHealth = async (req, res) => {
   try {
-    const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
-    const firm = await Firm.findById(ownershipFirmId).select('storage storageConfig -_id').lean();
+    const ownershipFirmId = await resolveOwnershipFirmIdForRead(req);
+    if (!ownershipFirmId) return res.status(400).json({ error: 'Tenant mapping missing' });
+    let firm = null;
+    try {
+      firm = await Firm.findById(ownershipFirmId).select('storage storageConfig -_id').lean();
+    } catch (_err) {
+      firm = null;
+    }
+    if (!firm) {
+      try {
+        firm = await Firm.findOne({ firmId: String(ownershipFirmId) }).select('storage storageConfig -_id').lean();
+      } catch (_err) {
+        firm = null;
+      }
+    }
 
     const storageMode = firm?.storage?.mode || MANAGED_STORAGE_MODE;
     const usingManagedStorage = storageMode === MANAGED_STORAGE_MODE;
@@ -495,7 +514,7 @@ const getStorageConfiguration = async (req, res) => {
     }
 
     const backupSettings = firm?.settings?.storageBackup || {};
-    res.set('Cache-Control', 'no-store');
+    if (typeof res.set === 'function') res.set('Cache-Control', 'no-store');
     return res.json({
       provider: toUiProvider(state.canonicalProvider),
       isConfigured: Boolean(state.canonicalProvider),
@@ -568,7 +587,7 @@ const getStorageOwnershipSummary = async (req, res) => {
       });
     }
 
-    res.set('Cache-Control', 'no-store');
+    if (typeof res.set === 'function') res.set('Cache-Control', 'no-store');
     return res.json({
       strictFirmOwnedStorage: Boolean(firm?.settings?.firm?.strictFirmOwnedStorage),
       activeStorage: {

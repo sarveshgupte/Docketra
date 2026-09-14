@@ -33,15 +33,34 @@ class StorageService {
       return caseDoc.drive.attachmentsFolderId;
     }
 
+    let rootFolderId = null;
+    try {
+      const StorageConfiguration = require('../models/StorageConfiguration.model');
+      const activeConfig = await StorageConfiguration.findOne({ firmId, isActive: true }).lean();
+      if (activeConfig?.rootFolderId) {
+        rootFolderId = activeConfig.rootFolderId;
+      }
+    } catch (_err) {}
+
     const firm = await Firm.findById(firmId).select('name storageConfig').lean();
-    const storageCredentials = firm?.storageConfig?.credentials
-      ? JSON.parse(decrypt(firm.storageConfig.credentials))
-      : {};
-    const context = await googleDriveService.getClient(firmId);
-    const rootFolderId = storageCredentials?.rootFolderId || context.rootFolderId || null;
+    if (!rootFolderId && firm?.storageConfig?.credentials) {
+      try {
+        const storageCredentials = JSON.parse(decrypt(firm.storageConfig.credentials));
+        rootFolderId = storageCredentials?.rootFolderId || null;
+      } catch (_err) {}
+    }
+
+    if (!rootFolderId && typeof googleDriveService?.getClient === 'function') {
+      try {
+        const context = await googleDriveService.getClient(firmId);
+        rootFolderId = context?.rootFolderId || null;
+      } catch (_err) {}
+    }
+
     const firmName = (firm?.name || `Firm-${firmId}`).trim();
 
-    const firmFolderId = rootFolderId || await provider.getOrCreateFolder(null, firmName);
+    const docketraFolderId = await provider.getOrCreateFolder(rootFolderId, 'Docketra');
+    const firmFolderId = await provider.getOrCreateFolder(docketraFolderId, firmName);
     const casesFolderId = await provider.getOrCreateFolder(firmFolderId, 'Cases');
     const caseFolderId = await provider.getOrCreateFolder(casesFolderId, String(caseId));
     const attachmentsFolderId = await provider.getOrCreateFolder(caseFolderId, 'Attachments');

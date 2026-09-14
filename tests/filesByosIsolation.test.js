@@ -69,8 +69,8 @@ const originalLoad = Module._load;
 Module._load = function (request, parent, isMain) {
   if (request === '../models/Case.model') return mockCaseModel;
   if (request === '../models/File.model') return mockFileModel;
-  if (request === '../models/TenantStorageConfig.model') return mockTenantStorageConfig;
-  if (request === '../storage/StorageProviderFactory') return mockStorageFactory;
+  if (request.includes('TenantStorageConfig.model')) return mockTenantStorageConfig;
+  if (request.includes('StorageProviderFactory')) return mockStorageFactory;
   if (request === './storage.controller') return { mapProviderErrorToStatus: () => 'ERROR' };
   return originalLoad.apply(this, arguments);
 };

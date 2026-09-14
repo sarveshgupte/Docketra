@@ -13,7 +13,56 @@ const {
 const { resolveFirmStorageState } = require('./resolveFirmStorageState');
 
 async function getFirmStorageConfig(firmId) {
-  const firm = await Firm.findById(firmId).select('storageConfig storage').lean();
+  let firm = null;
+  try {
+    firm = await Firm.findById(firmId).select('storageConfig storage').lean();
+  } catch (_err) {
+    firm = null;
+  }
+  if (!firm && typeof Firm.findOne === 'function') {
+    try {
+      firm = await Firm.findOne({ firmId: String(firmId || '') }).select('storageConfig storage').lean();
+    } catch (_err) {
+      firm = null;
+    }
+  }
+  if (!firm) {
+    try {
+      const StorageConfiguration = require('../../models/StorageConfiguration.model');
+      const rawConfig = await StorageConfiguration.findOne({ firmId: String(firmId), isActive: true });
+      const config = rawConfig && typeof rawConfig.lean === 'function' ? await rawConfig.lean() : rawConfig;
+      if (config) {
+        return {
+          provider: config.provider,
+          credentials: {
+            refreshToken: config.refreshToken,
+            driveId: config.driveId,
+            rootFolderId: config.rootFolderId,
+          },
+          source: 'StorageConfiguration',
+          connectionStatus: config.status || 'ACTIVE',
+        };
+      }
+    } catch (_err) {}
+    try {
+      const TenantStorageConfig = require('../../models/TenantStorageConfig.model');
+      const rawTenantConfig = await TenantStorageConfig.findOne({ tenantId: String(firmId), isActive: true });
+      const tenantConfig = rawTenantConfig && typeof rawTenantConfig.lean === 'function' ? await rawTenantConfig.lean() : rawTenantConfig;
+      if (tenantConfig) {
+        return {
+          provider: tenantConfig.provider,
+          credentials: {
+            refreshToken: tenantConfig.encryptedRefreshToken,
+            driveId: tenantConfig.driveId,
+            rootFolderId: tenantConfig.rootFolderId,
+          },
+          source: 'TenantStorageConfig',
+          connectionStatus: tenantConfig.status || 'ACTIVE',
+        };
+      }
+    } catch (_err) {}
+  }
+
   if (!firm) throw new StorageConfigMissingError(firmId);
 
   const state = resolveFirmStorageState(firm, { includeCredentials: true });
@@ -43,7 +92,7 @@ async function getProviderForTenant(firmId) {
   try {
     config = await getFirmStorageConfig(firmId);
   } catch (error) {
-    if (!(error instanceof StorageConfigMissingError)) throw error;
+    if (error instanceof StorageConfigMissingError || error?.code === 'STORAGE_CONFIG_MISSING') throw error;
     throw new StorageAccessError('Cloud storage must be connected', firmId, error);
   }
   const provider = String(config.provider || '').toLowerCase();
@@ -69,12 +118,14 @@ async function getProviderForTenant(firmId) {
         process.env.GOOGLE_OAUTH_REDIRECT_URI
       );
       oauthClient.setCredentials({ refresh_token: refreshToken });
-      oauthClient.on('tokens', (tokens) => {
-        const { googleDriveService } = require('../googleDrive.service');
-        googleDriveService.handleTokenRefresh(firmId, tokens).catch((err) => {
-          log.error('[StorageProviderFactory] Failed to auto-persist refreshed OAuth tokens', { firmId, message: err.message });
+      if (typeof oauthClient.on === 'function') {
+        oauthClient.on('tokens', (tokens) => {
+          const { googleDriveService } = require('../googleDrive.service');
+          googleDriveService.handleTokenRefresh(firmId, tokens).catch((err) => {
+            log.error('[StorageProviderFactory] Failed to auto-persist refreshed OAuth tokens', { firmId, message: err.message });
+          });
         });
-      });
+      }
       return new GoogleDriveProvider({ oauthClient, driveId: config.credentials.driveId || null, rootFolderId: config.credentials.rootFolderId || null });
     }
     case 'docketra_drive':

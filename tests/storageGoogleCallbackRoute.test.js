@@ -55,6 +55,8 @@ function stub(modulePath, exportsValue) {
       storageHealthCheck: (_req, res) => res.status(200).json({ ok: true }),
       storageUsage: (_req, res) => res.status(200).json({ ok: true }),
       getStorageDataMap: (_req, res) => res.status(200).json({ ok: true }),
+      updateBackupSettings: (_req, res) => res.status(200).json({ ok: true }),
+      getStorageRootHealth: (_req, res) => res.status(200).json({ ok: true }),
     });
 
     stub(rbacPath, {

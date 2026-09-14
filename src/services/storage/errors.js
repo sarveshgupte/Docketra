@@ -1,6 +1,6 @@
 class StorageConfigMissingError extends Error {
   constructor(tenantId) {
-    super(`Active storage configuration not found for tenant ${tenantId}`);
+    super(`No active storage configuration found for tenant ${tenantId}`);
     this.name = 'StorageConfigMissingError';
     this.code = 'STORAGE_CONFIG_MISSING';
     this.statusCode = 404;
