@@ -65,13 +65,16 @@ const startScheduler = (intervalMinutes = 15) => {
   
   // Then run at specified intervals
   const intervalMs = intervalMinutes * 60 * 1000;
-  setInterval(async () => {
+  const timer = setInterval(async () => {
     try {
       await runAutoReopenJob();
     } catch (error) {
       log.error('[AutoReopen] Scheduled run failed:', error);
     }
   }, intervalMs);
+  if (timer && typeof timer.unref === 'function') {
+    timer.unref();
+  }
 };
 
 module.exports = {
