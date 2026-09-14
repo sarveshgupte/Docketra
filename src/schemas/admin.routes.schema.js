@@ -328,4 +328,11 @@ module.exports = {
     body: z.object({}).strict(),
   },
   'GET /retention-preview': { query: passthroughQuery },
+  'POST /setup-complete': {
+    body: z.object({
+      name: z.string().trim().max(120).optional(),
+      practiceType: z.string().trim().max(120).optional(),
+    }).strict(),
+  },
 };
+

@@ -1661,7 +1661,7 @@ const getProfile = async (req, res) => {
     // Always fetch a fresh DB user for profile hydration and consistency.
     // Never mutate/populate req.user (middleware snapshot).
     const dbUser = await User.findById(requestUser?._id)
-      .populate('firmId', 'firmId name firmSlug')
+      .populate('firmId', 'firmId name firmSlug isSetupComplete')
       .populate('reportsToUserId', 'name email xID role');
 
     if (!dbUser) {
@@ -1839,7 +1839,9 @@ const getProfile = async (req, res) => {
           firmId: firmCode,
           name: dbUser.firmId.name,
           firmSlug: dbUser.firmId.firmSlug || resolvedFirmSlug,
+          isSetupComplete: Boolean(dbUser.firmId.isSetupComplete),
         } : null,
+        isSetupComplete: Boolean(dbUser.firmId?.isSetupComplete),
         firmId: firmMongoId,
         firmCode,
         firmSlug: resolvedFirmSlug, // JWT-first: use token claim, fallback to DB

@@ -40,6 +40,7 @@ export const SetPasswordPage = lazyPage(() => import('../pages/SetPasswordPage')
 export const ForgotPasswordPage = lazyPage(() => import('../pages/ForgotPasswordPage'), 'ForgotPasswordPage');
 export const ResetPasswordPage = lazyPage(() => import('../pages/ResetPasswordPage'), 'ResetPasswordPage');
 export const CompleteProfile = lazyPage(() => import('../pages/CompleteProfile'), 'CompleteProfile');
+export const WorkspaceSetupPage = lazyPage(() => import('../pages/onboarding/WorkspaceSetupPage'), 'WorkspaceSetupPage');
 export const DashboardPage = lazyPage(() => import('../pages/Dashboard'), 'DashboardPage');
 export const PcsCommandCenter = lazyPage(() => import('../pages/dashboard/PcsCommandCenter'), 'default');
 export const WorklistPage = lazyPage(() => import('../pages/WorklistPage'), 'WorklistPage');

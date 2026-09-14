@@ -55,4 +55,6 @@ export const adminApi = {
   getStorageConfig: () => request((http) => http.get('/admin/storage'), 'Failed to load storage config'),
   updateStorageConfig: (payload) => request((http) => http.put('/admin/storage', payload), 'Failed to update storage config'),
   disconnectStorage: () => request((http) => http.post('/admin/storage/disconnect'), 'Failed to disconnect storage'),
+  completeFirmSetup: (payload = {}) => request((http) => http.post('/admin/setup-complete', payload), 'Failed to complete firm setup'),
 };
+

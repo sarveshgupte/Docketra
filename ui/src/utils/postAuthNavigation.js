@@ -61,6 +61,12 @@ export const getPostLoginWorkspaceDestination = (user, firmSlug, intendedPath = 
     return normalizedIntendedPath;
   }
 
+  const isPrimaryAdmin = user?.role === 'PRIMARY_ADMIN';
+  const isFirmSetupPending = user?.firm?.isSetupComplete === false || user?.isSetupComplete === false;
+  if (isPrimaryAdmin && isFirmSetupPending) {
+    return ROUTES.SETUP(firmSlug);
+  }
+
   const assignedWorkbasketId = readFirstValidId(user?.workbaskets);
   if (assignedWorkbasketId) {
     return `${ROUTES.WORKLIST(firmSlug)}?workbasketId=${encodeURIComponent(assignedWorkbasketId)}`;

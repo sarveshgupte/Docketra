@@ -299,8 +299,12 @@ export default function Signup() {
   };
 
   const handleLoginRedirect = () => {
-    const redirectPath = signupSuccessData?.redirectPath;
     const slug = signupSuccessData?.firmSlug;
+    if (slug) {
+      navigate(`/${slug}/login?returnTo=/app/firm/${slug}/setup`, { replace: true });
+      return;
+    }
+    const redirectPath = signupSuccessData?.redirectPath;
     const firmUrl = signupSuccessData?.firmUrl;
 
     if (redirectPath) {
@@ -312,13 +316,9 @@ export default function Signup() {
       window.location.assign(firmUrl);
       return;
     }
-
-    if (slug) {
-      navigate(`/${slug}/login`, { replace: true });
-      return;
-    }
     navigate('/', { replace: true });
   };
+
 
   if (signupSuccessData) {
     return (
@@ -372,7 +372,7 @@ export default function Signup() {
             </div>
             <div className={`mt-6 ${spacingClasses.formFieldSpacing}`}>
               <Button type="button" variant="primary" fullWidth onClick={handleLoginRedirect}>
-                Go to login
+                Continue to Workspace Setup →
               </Button>
               <Button type="button" variant="outline" fullWidth onClick={handleResendWelcomeEmail} disabled={loading}>
                 {loading ? 'Sending...' : 'Resend welcome email'}

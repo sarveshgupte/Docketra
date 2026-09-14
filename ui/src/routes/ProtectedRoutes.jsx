@@ -56,6 +56,7 @@ import {
   PlatformSettingsPage,
   DocketraIntelligencePage,
   PcsCommandCenter,
+  WorkspaceSetupPage,
 } from './lazyPages';
 import { RouteSuspenseOutlet } from './RouteSuspenseOutlet';
 import { NotificationHistoryView } from '../../views/NotificationHistoryView';
@@ -194,6 +195,24 @@ export const ProtectedRoutes = () => (
       element={(
         <ProtectedRoute>
           <StorageOAuthSuccessPage />
+        </ProtectedRoute>
+      )}
+    />
+
+    <Route
+      path="/:firmSlug/setup"
+      element={(
+        <ProtectedRoute>
+          <WorkspaceSetupPage />
+        </ProtectedRoute>
+      )}
+    />
+
+    <Route
+      path="/app/firm/:firmSlug/setup"
+      element={(
+        <ProtectedRoute>
+          <WorkspaceSetupPage />
         </ProtectedRoute>
       )}
     />

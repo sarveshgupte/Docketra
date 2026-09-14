@@ -6,6 +6,8 @@ export const ROUTES = {
   SUPERADMIN_FIRMS: '/app/superadmin/firms',
   FIRM_LOGIN: (firmSlug) => `/${firmSlug}/login`,
   FIRM_BASE: (firmSlug) => `/app/firm/${firmSlug}`,
+  SETUP: (firmSlug) => `/app/firm/${firmSlug}/setup`,
+  WORKSPACE_SETUP: (firmSlug) => `/${firmSlug}/setup`,
   DASHBOARD: (firmSlug) => `/app/firm/${firmSlug}/dashboard`,
   NOTIFICATIONS: (firmSlug) => `/app/firm/${firmSlug}/notifications`,
   NOTIFICATIONS_HISTORY: (firmSlug) => `/app/firm/${firmSlug}/notifications`, // legacy alias for NOTIFICATIONS
