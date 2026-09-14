@@ -265,6 +265,14 @@ export const ProtectedRoutes = () => (
           )}
         />
         <Route
+          path="compliance"
+          element={(
+            <ProtectedRoute>
+              <PcsCommandCenter />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
           path="docketra-intelligence"
           element={(
             <ProtectedRoute requireManagerOrAbove>
