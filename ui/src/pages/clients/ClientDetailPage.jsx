@@ -655,639 +655,537 @@ export default function ClientDetailPage() {
       )}
 
       {/* 1. ENTITY MASTER HEADER BAR */}
-      <header className="mb-6 border-b border-slate-200 dark:border-slate-800 pb-5">
-        {/* Top Breadcrumb */}
-        <div className="flex items-center space-x-2 text-xs font-mono text-slate-500 dark:text-slate-400 mb-2.5">
-          <Link
-            to={clientsRegisterUrl}
-            className="hover:text-slate-900 dark:hover:text-white flex items-center space-x-1"
-          >
-            <Icons.ArrowLeft className="w-3.5 h-3.5" />
-            <span>Clients</span>
-          </Link>
-          <span className="text-slate-400">/</span>
-          <span className="text-slate-800 dark:text-slate-200 font-semibold truncate max-w-sm">
-            {clientData.businessName}
-          </span>
-        </div>
-
-        {/* Primary Title & Actions Row */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                {clientData.businessName}
-              </h1>
-
-              {/* Status Badge */}
-              <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold border ${
-                  clientData.complianceStatus === 'ACTIVE COMPLIANCE'
-                    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                    : clientData.complianceStatus === 'DEFAULT RISK'
-                    ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                    : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                }`}
-              >
-                <Icons.ShieldCheck className="w-3.5 h-3.5 mr-1" />
-                {clientData.complianceStatus}
-              </span>
-            </div>
-
-            {/* Quick Meta Pill Strip (Monospace) */}
-            <div className="flex flex-wrap items-center gap-2 mt-2.5 text-xs font-mono tracking-tight">
-              {/* CIN with copy button */}
-              <button
-                onClick={handleCopyCin}
-                title="Click to copy CIN"
-                className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded bg-slate-100 dark:bg-[#111625] border border-slate-300 dark:border-slate-800 hover:border-sky-500 text-slate-700 dark:text-slate-300 transition-colors"
-              >
-                <span className="text-slate-400">CIN:</span>
-                <span className="font-bold tabular-nums text-slate-900 dark:text-slate-100">{clientData.cin}</span>
-                <Icons.Copy className="w-3 h-3 text-slate-400" />
-              </button>
-
-              {/* PAN */}
-              <div className="px-2.5 py-1 rounded bg-slate-100 dark:bg-[#111625] border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-300">
-                <span className="text-slate-400">PAN:</span>{' '}
-                <span className="font-bold tabular-nums text-slate-900 dark:text-slate-100">{clientData.pan}</span>
-              </div>
-
-              {/* Inc. Date */}
-              <div className="px-2.5 py-1 rounded bg-slate-100 dark:bg-[#111625] border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-300">
-                <span className="text-slate-400">Inc. Date:</span> {clientData.incDate}
-              </div>
-
-              {/* ROC Jurisdiction */}
-              <div className="px-2.5 py-1 rounded bg-slate-100 dark:bg-[#111625] border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-300">
-                <span className="text-slate-400">ROC:</span> {clientData.rocJurisdiction}
-              </div>
-
-              {/* Capital */}
-              <div className="px-2.5 py-1 rounded bg-slate-100 dark:bg-[#111625] border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-300">
-                <span className="text-slate-400">Capital:</span> Auth: {clientData.authCapital} | Paid-up: {clientData.paidUpCapital}
-              </div>
-            </div>
+      <header className="mb-3 border-b border-slate-200 dark:border-slate-800 pb-2.5">
+        {/* Top Breadcrumb & Quick Actions */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex items-center space-x-2 text-xs font-mono text-slate-500 dark:text-slate-400">
+            <Link
+              to={clientsRegisterUrl}
+              className="hover:text-slate-900 dark:hover:text-white flex items-center space-x-1"
+            >
+              <Icons.ArrowLeft className="w-3.5 h-3.5" />
+              <span>Clients</span>
+            </Link>
+            <span className="text-slate-400">/</span>
+            <span className="text-slate-800 dark:text-slate-200 font-semibold truncate max-w-sm">
+              {clientData.businessName}
+            </span>
           </div>
 
-          {/* Header Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Download Fact Sheet */}
-            <button
-              onClick={handleDownloadFactSheet}
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-mono font-medium rounded-lg bg-white dark:bg-[#111625] border border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700 text-slate-700 dark:text-slate-300 shadow-sm transition-all"
+          <div className="flex items-center gap-2">
+            <span
+              className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-semibold border ${
+                clientData.complianceStatus === 'ACTIVE COMPLIANCE'
+                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                  : clientData.complianceStatus === 'DEFAULT RISK'
+                  ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                  : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+              }`}
             >
-              <Icons.Download className="w-3.5 h-3.5 text-slate-500" />
-              <span>Download Fact Sheet</span>
-            </button>
-
-            {/* Client Portal Link */}
-            <button
-              onClick={handleCopyPortalLink}
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-mono font-medium rounded-lg bg-white dark:bg-[#111625] border border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700 text-slate-700 dark:text-slate-300 shadow-sm transition-all"
-            >
-              <Icons.ExternalLink className="w-3.5 h-3.5 text-sky-500" />
-              <span>Client Portal Link</span>
-            </button>
-
-            {/* + Add Compliance Matter */}
+              <Icons.ShieldCheck className="w-3 h-3 mr-1" />
+              {clientData.complianceStatus}
+            </span>
             <button
               onClick={() => setShowAddMatterModal(true)}
-              className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 text-xs font-mono font-semibold rounded-lg bg-sky-600 hover:bg-sky-500 text-white shadow-sm transition-all"
+              className="inline-flex items-center space-x-1 px-2.5 py-1 text-xs font-mono font-semibold rounded-md bg-sky-600 hover:bg-sky-500 text-white shadow-sm transition-all"
             >
-              <Icons.Plus className="w-3.5 h-3.5" />
-              <span>+ Add Compliance Matter</span>
+              <Icons.Plus className="w-3 h-3" />
+              <span>+ Add Matter</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* 2. THREE-TAB NAVIGATION BAR */}
-      <nav aria-label="Client Workspace Tabs" className="flex border-b border-slate-200 dark:border-slate-800 mb-6 space-x-6">
-        <button
-          onClick={() => setActiveTab('compliance')}
-          className={`pb-3 text-xs sm:text-sm font-semibold tracking-tight border-b-2 flex items-center space-x-2 transition-all ${
-            activeTab === 'compliance'
-              ? 'border-sky-500 text-sky-600 dark:text-sky-400'
-              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-          }`}
-        >
-          <Icons.FileText className="w-4 h-4" />
-          <span>Statutory Compliance Roadmap</span>
-          <span className="px-2 py-0.5 text-[10px] font-mono rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-            {annualFilings.filter((f) => f.status !== 'FILED').length} Pending
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('litigation')}
-          className={`pb-3 text-xs sm:text-sm font-semibold tracking-tight border-b-2 flex items-center space-x-2 transition-all ${
-            activeTab === 'litigation'
-              ? 'border-sky-500 text-sky-600 dark:text-sky-400'
-              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-          }`}
-        >
-          <Icons.Gavel className="w-4 h-4" />
-          <span>Quasi-Judicial & Litigation Timeline</span>
-          <span className="px-2 py-0.5 text-[10px] font-mono rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
-            NDOH: In 4d
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('vault')}
-          className={`pb-3 text-xs sm:text-sm font-semibold tracking-tight border-b-2 flex items-center space-x-2 transition-all ${
-            activeTab === 'vault'
-              ? 'border-sky-500 text-sky-600 dark:text-sky-400'
-              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-          }`}
-        >
-          <Icons.FolderOpen className="w-4 h-4" />
-          <span>Docket Vault & Working Papers</span>
-          <span className="px-2 py-0.5 text-[10px] font-mono rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-            {vaultFiles.length} Docs
-          </span>
-        </button>
-      </nav>
-
-      {/* 3. TAB 1: STATUTORY COMPLIANCE ROADMAP */}
-      {activeTab === 'compliance' && (
-        <div className="space-y-4">
-          {/* ACCORDION 1: ANNUAL MCA FILINGS */}
-          <div className="bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
-            <button
-              onClick={() => toggleAccordion('annual')}
-              className="w-full px-4 py-3 bg-slate-50/70 dark:bg-slate-900/40 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 text-left"
-            >
-              <div className="flex items-center space-x-3">
-                <span className="p-1 rounded bg-sky-500/10 text-sky-500">
-                  <Icons.FileText className="w-4 h-4" />
-                </span>
-                <span className="text-sm font-bold text-slate-900 dark:text-white">
-                  1. Annual MCA Filings (AOC-4, MGT-7, ADT-1, MSME-1)
-                </span>
-                <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-amber-500/10 text-amber-500 rounded border border-amber-500/20">
-                  {annualFilings.filter((f) => f.status === 'FILED').length}/{annualFilings.length} Completed
-                </span>
+      {/* 2. HUBSPOT-GRADE 3-PANE ARCHITECTURE */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        {/* LEFT PANE (25%, col-span-3): Fixed Entity Identity & Governance Card */}
+        <aside className="lg:col-span-3 space-y-3">
+          {/* Identity Card */}
+          <div className="bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-sm space-y-3">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white leading-snug">
+                {clientData.businessName}
+              </h2>
+              <div className="mt-1 flex items-center gap-1.5">
+                <button
+                  onClick={handleCopyCin}
+                  title="Click to copy CIN"
+                  className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:border-sky-500 text-slate-700 dark:text-slate-300 font-mono text-[10px] tabular-nums transition-colors"
+                >
+                  <span>CIN: {clientData.cin}</span>
+                  <Icons.Copy className="w-2.5 h-2.5 text-slate-400" />
+                </button>
               </div>
-              <Icons.ChevronDown
-                className={`w-4 h-4 text-slate-400 transition-transform ${accordionOpen.annual ? 'rotate-180' : ''}`}
-              />
-            </button>
+            </div>
 
-            {accordionOpen.annual && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-100/60 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 font-mono text-[11px] uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
-                      <th className="py-2.5 px-3">Form Code</th>
-                      <th className="py-2.5 px-3">Due Date</th>
-                      <th className="py-2.5 px-3">Extended Date</th>
-                      <th className="py-2.5 px-3">Status</th>
-                      <th className="py-2.5 px-3">MCA V3 SRN (Inline Editable)</th>
-                      <th className="py-2.5 px-3">Challan Status</th>
-                      <th className="py-2.5 px-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 font-mono">
-                    {annualFilings.map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                        <td className="py-2.5 px-3">
-                          <span className="font-bold text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700">
-                            {item.form}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 tabular-nums text-slate-800 dark:text-slate-200">
-                          {item.dueDate}
-                        </td>
-                        <td className="py-2.5 px-3 tabular-nums text-slate-500">
-                          {item.extendedDate}
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border ${
-                              item.status === 'FILED'
-                                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
-                                : item.status === 'READY_TO_FILE'
-                                ? 'bg-sky-500/10 text-sky-500 border-sky-500/30'
-                                : item.status === 'IN_REVIEW'
-                                ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
-                                : 'bg-rose-500/10 text-rose-500 border-rose-500/30'
-                            }`}
-                          >
-                            {item.status}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <input
-                            type="text"
-                            defaultValue={item.srn}
-                            placeholder="Enter SRN..."
-                            onBlur={(e) => {
-                              if (e.target.value !== item.srn) {
-                                handleInlineSrnSave(item.id, e.target.value);
-                              }
-                            }}
-                            className="px-2 py-1 text-xs font-mono bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-500 w-36"
-                          />
-                        </td>
-                        <td className="py-2.5 px-3">
-                          {item.challanStatus === 'Uploaded' ? (
-                            <span className="inline-flex items-center space-x-1 text-[11px] text-emerald-500">
-                              <Icons.Check className="w-3.5 h-3.5" />
-                              <span>Uploaded</span>
-                            </span>
-                          ) : (
-                            <span className="text-[11px] text-slate-400">Pending</span>
-                          )}
-                        </td>
-                        <td className="py-2.5 px-3 text-right">
-                          <div className="flex items-center justify-end space-x-2">
-                            <button
-                              onClick={() => {
-                                setActiveItem(item);
-                                setShowReminderModal(true);
-                              }}
-                              className="px-2 py-1 text-[11px] text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded border border-emerald-500/30 flex items-center space-x-1"
-                            >
-                              <Icons.Send className="w-3 h-3" />
-                              <span>Remind</span>
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setActiveItem(item);
-                                setFilingDetails((prev) => ({ ...prev, srn: item.srn || '' }));
-                                setShowMarkFiledModal(true);
-                              }}
-                              className="px-2 py-1 text-[11px] bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded flex items-center space-x-1"
-                            >
-                              <Icons.Check className="w-3 h-3 text-emerald-500" />
-                              <span>Mark Filed</span>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <div className="space-y-1.5 text-xs font-mono border-t border-slate-200 dark:border-slate-800 pt-2.5">
+              <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                <span className="text-slate-400">PAN</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">{clientData.pan}</span>
               </div>
-            )}
+              <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                <span className="text-slate-400">Inc. Date</span>
+                <span className="text-slate-800 dark:text-slate-200 tabular-nums">{clientData.incDate}</span>
+              </div>
+              <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                <span className="text-slate-400">ROC</span>
+                <span className="text-slate-800 dark:text-slate-200 truncate max-w-[140px] text-right">{clientData.rocJurisdiction}</span>
+              </div>
+              <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                <span className="text-slate-400">Auth Capital</span>
+                <span className="text-slate-800 dark:text-slate-200 tabular-nums">{clientData.authCapital}</span>
+              </div>
+              <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                <span className="text-slate-400">Paid-up</span>
+                <span className="text-slate-800 dark:text-slate-200 tabular-nums">{clientData.paidUpCapital}</span>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-1.5">
+              <button
+                onClick={handleDownloadFactSheet}
+                className="w-full inline-flex items-center justify-center space-x-1.5 px-2.5 py-1 text-xs font-mono rounded bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-700 dark:text-slate-300 transition-all"
+              >
+                <Icons.Download className="w-3 h-3 text-slate-500" />
+                <span>Download Fact Sheet</span>
+              </button>
+              <button
+                onClick={handleCopyPortalLink}
+                className="w-full inline-flex items-center justify-center space-x-1.5 px-2.5 py-1 text-xs font-mono rounded bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-700 dark:text-slate-300 transition-all"
+              >
+                <Icons.ExternalLink className="w-3 h-3 text-sky-500" />
+                <span>Client Portal Link</span>
+              </button>
+            </div>
           </div>
 
-          {/* ACCORDION 2: DIRECTOR KYC & GOVERNANCE (DIN TRACK) */}
-          <div className="bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
-            <button
-              onClick={() => toggleAccordion('din')}
-              className="w-full px-4 py-3 bg-slate-50/70 dark:bg-slate-900/40 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 text-left"
-            >
-              <div className="flex items-center space-x-3">
-                <span className="p-1 rounded bg-purple-500/10 text-purple-500">
-                  <Icons.UserCheck className="w-4 h-4" />
-                </span>
-                <span className="text-sm font-bold text-slate-900 dark:text-white">
-                  2. Director KYC & Governance (DIN Track & DSC Validity)
-                </span>
-                <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-purple-500/10 text-purple-500 rounded border border-purple-500/20">
-                  {directors.length} Directors on Record
-                </span>
+          {/* Directors & Governance Card */}
+          <div className="bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-sm space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-1.5 text-xs font-bold text-slate-900 dark:text-white">
+                <Icons.UserCheck className="w-3.5 h-3.5 text-purple-500" />
+                <span>Directors & DSC</span>
               </div>
-              <Icons.ChevronDown
-                className={`w-4 h-4 text-slate-400 transition-transform ${accordionOpen.din ? 'rotate-180' : ''}`}
-              />
-            </button>
+              <span className="px-1.5 py-0.2 text-[10px] font-mono font-bold bg-purple-500/10 text-purple-500 rounded border border-purple-500/20">
+                {directors.length}
+              </span>
+            </div>
 
-            {accordionOpen.din && (
-              <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                {directors.map((dir) => (
-                  <div
-                    key={dir.din}
-                    className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2.5 text-xs font-mono"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="font-bold text-slate-900 dark:text-slate-100 text-sm font-sans">
-                          {dir.name}
-                        </div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                          {dir.designation} • DIN: <span className="font-bold text-slate-800 dark:text-slate-200">{dir.din}</span>
-                        </div>
-                      </div>
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border ${
-                          dir.kycStatus === 'VERIFIED'
-                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                            : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                        }`}
-                      >
-                        {dir.kycStatus === 'VERIFIED' ? 'DIR-3 KYC Done' : 'KYC Pending OTP'}
-                      </span>
-                    </div>
-
-                    {/* DSC Expiry Alert */}
-                    <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                      <span className="text-[11px] text-slate-500">DSC Expiry:</span>
-                      <span className="tabular-nums font-semibold text-slate-800 dark:text-slate-200">
-                        {dir.dscExpiryDate}
-                      </span>
-                    </div>
-
-                    {dir.dscDaysRemaining <= 30 && (
-                      <div className="px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded text-[11px] text-amber-500 flex items-center space-x-1.5">
-                        <Icons.KeyRound className="w-3.5 h-3.5" />
-                        <span>Warning: DSC expires in {dir.dscDaysRemaining} days</span>
-                      </div>
-                    )}
-
-                    {/* Statutory Disqualification and MBP-1 checks */}
-                    <div className="space-y-1 pt-1 text-[10px] text-slate-500 dark:text-slate-400">
-                      <div className="flex items-center space-x-1.5 text-emerald-600 dark:text-emerald-400">
-                        <Icons.CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>{dir.dir8Status}</span>
-                      </div>
-                      <div className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300">
-                        <Icons.CheckCircle2 className="w-3.5 h-3.5 text-sky-500" />
-                        <span>{dir.mbp1Status}</span>
-                      </div>
-                    </div>
+            <div className="space-y-2 pt-1">
+              {directors.map((dir) => (
+                <div key={dir.din} className="p-2 rounded bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs font-mono space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900 dark:text-slate-100 truncate max-w-[140px] font-sans text-xs">
+                      {dir.name}
+                    </span>
+                    <span className={`text-[9px] px-1 py-0.2 rounded font-semibold border ${
+                      dir.kycStatus === 'VERIFIED'
+                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                        : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                    }`}>
+                      {dir.kycStatus === 'VERIFIED' ? 'KYC OK' : 'KYC PENDING'}
+                    </span>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* ACCORDION 3: EVENT-BASED FILINGS */}
-          <div className="bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
-            <button
-              onClick={() => toggleAccordion('events')}
-              className="w-full px-4 py-3 bg-slate-50/70 dark:bg-slate-900/40 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 text-left"
-            >
-              <div className="flex items-center space-x-3">
-                <span className="p-1 rounded bg-amber-500/10 text-amber-500">
-                  <Icons.Clock className="w-4 h-4" />
-                </span>
-                <span className="text-sm font-bold text-slate-900 dark:text-white">
-                  3. Event-Based Filings History (PAS-3, CHG-1/4, DIR-12, MGT-14)
-                </span>
-                <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded">
-                  {eventFilings.length} Filings on Record
-                </span>
-              </div>
-              <Icons.ChevronDown
-                className={`w-4 h-4 text-slate-400 transition-transform ${accordionOpen.events ? 'rotate-180' : ''}`}
-              />
-            </button>
-
-            {accordionOpen.events && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse font-mono">
-                  <thead>
-                    <tr className="bg-slate-100/60 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 text-[11px] uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
-                      <th className="py-2.5 px-3">Transaction / Corporate Event</th>
-                      <th className="py-2.5 px-3">Form</th>
-                      <th className="py-2.5 px-3">Filing Date</th>
-                      <th className="py-2.5 px-3">SRN</th>
-                      <th className="py-2.5 px-3">Status</th>
-                      <th className="py-2.5 px-3 text-right">Challan Ref</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
-                    {eventFilings.map((e) => (
-                      <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <td className="py-2.5 px-3 font-sans font-medium text-slate-900 dark:text-slate-100">
-                          {e.eventTitle}
-                        </td>
-                        <td className="py-2.5 px-3 font-bold text-slate-800 dark:text-slate-200">
-                          {e.form}
-                        </td>
-                        <td className="py-2.5 px-3 tabular-nums text-slate-600 dark:text-slate-400">
-                          {e.filingDate}
-                        </td>
-                        <td className="py-2.5 px-3 font-bold text-slate-900 dark:text-slate-100 tabular-nums">
-                          {e.srn}
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-semibold">
-                            {e.status}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-right text-slate-500">
-                          {e.challanRef}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* ACCORDION 4: GST RETURNS */}
-          <div className="bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
-            <button
-              onClick={() => toggleAccordion('gst')}
-              className="w-full px-4 py-3 bg-slate-50/70 dark:bg-slate-900/40 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 text-left"
-            >
-              <div className="flex items-center space-x-3">
-                <span className="p-1 rounded bg-emerald-500/10 text-emerald-500">
-                  <Icons.ShieldCheck className="w-4 h-4" />
-                </span>
-                <span className="text-sm font-bold text-slate-900 dark:text-white">
-                  4. GST Returns Matrix (GSTR-1 & GSTR-3B)
-                </span>
-                <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-500 rounded border border-emerald-500/20">
-                  Aug 2026 Cleared
-                </span>
-              </div>
-              <Icons.ChevronDown
-                className={`w-4 h-4 text-slate-400 transition-transform ${accordionOpen.gst ? 'rotate-180' : ''}`}
-              />
-            </button>
-
-            {accordionOpen.gst && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse font-mono">
-                  <thead>
-                    <tr className="bg-slate-100/60 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 text-[11px] uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
-                      <th className="py-2.5 px-3">Period</th>
-                      <th className="py-2.5 px-3">Return Form</th>
-                      <th className="py-2.5 px-3">Due Date</th>
-                      <th className="py-2.5 px-3">ARN Number</th>
-                      <th className="py-2.5 px-3">Status</th>
-                      <th className="py-2.5 px-3 text-right">Tax Liability</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
-                    {gstReturns.map((g, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <td className="py-2.5 px-3 font-bold text-slate-900 dark:text-slate-100">
-                          {g.period}
-                        </td>
-                        <td className="py-2.5 px-3 font-semibold text-slate-800 dark:text-slate-200">
-                          {g.form}
-                        </td>
-                        <td className="py-2.5 px-3 tabular-nums text-slate-600 dark:text-slate-400">
-                          {g.dueDate}
-                        </td>
-                        <td className="py-2.5 px-3 font-bold text-slate-900 dark:text-slate-100 tabular-nums">
-                          {g.arn}
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border ${
-                              g.status === 'FILED'
-                                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                                : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                            }`}
-                          >
-                            {g.status}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-right tabular-nums font-semibold text-slate-800 dark:text-slate-200">
-                          {g.taxLiability}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 4. TAB 2: QUASI-JUDICIAL & LITIGATION TIMELINE */}
-      {activeTab === 'litigation' && (
-        <div className="space-y-6">
-          {/* Next Action Banner */}
-          <div className="p-4 rounded-xl bg-gradient-to-r from-sky-500/10 via-sky-500/5 to-transparent border border-sky-500/30 shadow-sm relative overflow-hidden">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-              <div className="flex items-center space-x-2">
-                <span className="p-1 rounded bg-sky-500/20 text-sky-500">
-                  <Icons.Gavel className="w-4 h-4" />
-                </span>
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
-                  Next Date of Hearing (NDOH)
-                </span>
-                <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-sky-500 text-white shadow-sm">
-                  {litigationData.nextActionBanner.countdown}
-                </span>
-              </div>
-              <div className="font-mono text-xs text-slate-700 dark:text-slate-300 font-semibold">
-                {litigationData.nextActionBanner.ndoh}
-              </div>
-            </div>
-
-            <div className="font-bold text-sm text-slate-900 dark:text-white mb-1">
-              {litigationData.nextActionBanner.bench} • {litigationData.nextActionBanner.itemNo}
-            </div>
-            <p className="text-xs text-slate-600 dark:text-slate-300 font-medium mb-2">
-              {litigationData.nextActionBanner.caseTitle}
-            </p>
-            <div className="p-2.5 rounded bg-sky-500/10 border border-sky-500/20 text-xs font-mono text-sky-700 dark:text-sky-300">
-              {litigationData.nextActionBanner.directions}
-            </div>
-          </div>
-
-          {/* Chronological Vertical Timeline Feed */}
-          <div className="bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-6 tracking-tight flex items-center space-x-2">
-              <Icons.Clock className="w-4 h-4 text-sky-500" />
-              <span>Hearing History & Bench Orders Feed</span>
-            </h3>
-
-            <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
-              {litigationData.timeline.map((hearing) => (
-                <div key={hearing.id} className="relative group">
-                  {/* Timeline dot */}
-                  <div className="absolute -left-6 top-1.5 w-3.5 h-3.5 rounded-full bg-sky-500 border-4 border-white dark:border-[#111625]" />
-
-                  {/* Hearing Card */}
-                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all space-y-2.5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100 tabular-nums">
-                          {hearing.date}
-                        </span>
-                        <span className="text-slate-400">•</span>
-                        <span className="font-semibold text-xs text-slate-800 dark:text-slate-200">
-                          {hearing.bench}
-                        </span>
-                        <span className="text-[10px] font-mono text-amber-500 font-bold">
-                          {hearing.itemNo}
-                        </span>
-                      </div>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-sky-500/10 text-sky-500 border border-sky-500/20">
-                        {hearing.stage}
-                      </span>
-                    </div>
-
-                    <div className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                      Appearing Counsel: <span className="font-semibold text-slate-700 dark:text-slate-300">{hearing.counsel}</span>
-                    </div>
-
-                    <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-sans bg-white dark:bg-[#111625] p-3 rounded-lg border border-slate-200 dark:border-slate-800">
-                      "{hearing.summary}"
-                    </p>
-
-                    {/* Order Document Attachment */}
-                    <div className="pt-2 flex items-center justify-between">
-                      <button
-                        onClick={() => {
-                          setActiveItem(hearing);
-                          setShowOrderPdfModal(true);
-                        }}
-                        className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-500"
-                      >
-                        <Icons.FileText className="w-3.5 h-3.5" />
-                        <span>Preview Certified Order Copy (PDF)</span>
-                      </button>
-
-                      <span className="text-[11px] font-mono text-emerald-500 font-semibold flex items-center space-x-1">
-                        <Icons.Check className="w-3 h-3" />
-                        <span>Certified on File</span>
-                      </span>
-                    </div>
+                  <div className="text-[10px] text-slate-400">
+                    DIN: <span className="text-slate-300 font-bold">{dir.din}</span> • {dir.designation}
+                  </div>
+                  <div className="text-[10px] flex justify-between pt-0.5 border-t border-slate-200 dark:border-slate-800">
+                    <span className="text-slate-400">DSC Expiry:</span>
+                    <span className={`font-semibold tabular-nums ${dir.dscDaysRemaining <= 30 ? 'text-amber-500' : 'text-slate-300'}`}>
+                      {dir.dscExpiryDate} ({dir.dscDaysRemaining}d)
+                    </span>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-      )}
+        </aside>
 
-      {/* 5. TAB 3: DOCKET VAULT & WORKING PAPERS */}
-      {activeTab === 'vault' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Sub-Panel: Folder Navigation */}
-          <div className="lg:col-span-4 bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-4">
-            {/* Financial Year Selector */}
-            <div>
-              <label className="block text-[11px] font-mono uppercase text-slate-500 dark:text-slate-400 mb-1.5 font-semibold">
-                Financial Year Scope
-              </label>
-              <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800">
-                {['FY 2024-25', 'FY 2025-26', 'FY 2026-27'].map((fy) => (
-                  <button
-                    key={fy}
-                    onClick={() => setVaultFy(fy)}
-                    className={`py-1.5 text-xs font-mono font-semibold rounded transition-all ${
-                      vaultFy === fy
-                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    {fy}
-                  </button>
-                ))}
+        {/* CENTER PANE (50%, col-span-6): Active Timeline & Feed */}
+        <main className="lg:col-span-6 space-y-3">
+          {/* Segmented Timeline / Feed Switcher */}
+          <div className="flex items-center space-x-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+            <button
+              onClick={() => setActiveTab('compliance')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md flex items-center space-x-1.5 transition-all ${
+                activeTab === 'compliance'
+                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Icons.FileText className="w-3.5 h-3.5" />
+              <span>Statutory Compliance Roadmap</span>
+              <span className={`ml-1 px-1.5 py-0.2 text-[10px] font-mono rounded-full ${
+                activeTab === 'compliance' ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+              }`}>
+                {annualFilings.filter((f) => f.status !== 'FILED').length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('litigation')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md flex items-center space-x-1.5 transition-all ${
+                activeTab === 'litigation'
+                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Icons.Gavel className="w-3.5 h-3.5" />
+              <span>Litigation & Hearing Feed</span>
+              <span className="ml-1 px-1.5 py-0.2 text-[10px] font-mono rounded-full bg-sky-500/10 text-sky-500 border border-sky-500/20">
+                In 4d
+              </span>
+            </button>
+          </div>
+
+          {/* TAB 1: STATUTORY COMPLIANCE ROADMAP */}
+          {activeTab === 'compliance' && (
+            <div className="space-y-3">
+              {/* ACCORDION 1: ANNUAL MCA FILINGS */}
+              <div className="bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 rounded-lg shadow-sm overflow-hidden">
+                <button
+                  onClick={() => toggleAccordion('annual')}
+                  className="w-full px-3 py-2 bg-slate-50/70 dark:bg-slate-900/40 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 text-left"
+                >
+                  <div className="flex items-center space-x-2">
+                    <span className="p-1 rounded bg-sky-500/10 text-sky-500">
+                      <Icons.FileText className="w-3.5 h-3.5" />
+                    </span>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">
+                      1. Annual MCA Filings (AOC-4, MGT-7, ADT-1, MSME-1)
+                    </span>
+                    <span className="px-1.5 py-0.2 text-[9px] font-mono font-bold bg-amber-500/10 text-amber-500 rounded border border-amber-500/20">
+                      {annualFilings.filter((f) => f.status === 'FILED').length}/{annualFilings.length}
+                    </span>
+                  </div>
+                  <Icons.ChevronDown
+                    className={`w-3.5 h-3.5 text-slate-400 transition-transform ${accordionOpen.annual ? 'rotate-180' : ''}`}
+                  />
+                </button>
+
+                {accordionOpen.annual && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100/60 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 font-mono text-[10px] uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 h-8">
+                          <th className="py-1.5 px-2.5">Form</th>
+                          <th className="py-1.5 px-2.5">Due Date</th>
+                          <th className="py-1.5 px-2.5">Status</th>
+                          <th className="py-1.5 px-2.5">MCA V3 SRN</th>
+                          <th className="py-1.5 px-2.5 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 font-mono">
+                        {annualFilings.map((item) => (
+                          <tr key={item.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors h-9">
+                            <td className="py-1.5 px-2.5">
+                              <span className="font-bold text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-[11px]">
+                                {item.form}
+                              </span>
+                            </td>
+                            <td className="py-1.5 px-2.5 tabular-nums text-slate-800 dark:text-slate-200 text-xs">
+                              {item.dueDate}
+                            </td>
+                            <td className="py-1.5 px-2.5">
+                              <span
+                                className={`inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold border ${
+                                  item.status === 'FILED'
+                                    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
+                                    : item.status === 'READY_TO_FILE'
+                                    ? 'bg-sky-500/10 text-sky-500 border-sky-500/30'
+                                    : item.status === 'IN_REVIEW'
+                                    ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                                    : 'bg-rose-500/10 text-rose-500 border-rose-500/30'
+                                }`}
+                              >
+                                {item.status}
+                              </span>
+                            </td>
+                            <td className="py-1.5 px-2.5">
+                              <input
+                                type="text"
+                                defaultValue={item.srn}
+                                placeholder="Enter SRN..."
+                                onBlur={(e) => {
+                                  if (e.target.value !== item.srn) {
+                                    handleInlineSrnSave(item.id, e.target.value);
+                                  }
+                                }}
+                                className="px-1.5 py-0.5 text-xs font-mono bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-500 w-28"
+                              />
+                            </td>
+                            <td className="py-1.5 px-2.5 text-right">
+                              <div className="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => {
+                                    setActiveItem(item);
+                                    setShowReminderModal(true);
+                                  }}
+                                  className="px-1.5 py-0.5 text-[10px] text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded border border-emerald-500/30 flex items-center space-x-0.5"
+                                >
+                                  <Icons.Send className="w-2.5 h-2.5" />
+                                  <span>Remind</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setActiveItem(item);
+                                    setFilingDetails((prev) => ({ ...prev, srn: item.srn || '' }));
+                                    setShowMarkFiledModal(true);
+                                  }}
+                                  className="px-1.5 py-0.5 text-[10px] bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded flex items-center space-x-0.5"
+                                >
+                                  <Icons.Check className="w-2.5 h-2.5 text-emerald-500" />
+                                  <span>Filed</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* ACCORDION 2: EVENT-BASED FILINGS */}
+              <div className="bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 rounded-lg shadow-sm overflow-hidden">
+                <button
+                  onClick={() => toggleAccordion('events')}
+                  className="w-full px-3 py-2 bg-slate-50/70 dark:bg-slate-900/40 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 text-left"
+                >
+                  <div className="flex items-center space-x-2">
+                    <span className="p-1 rounded bg-amber-500/10 text-amber-500">
+                      <Icons.Clock className="w-3.5 h-3.5" />
+                    </span>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">
+                      2. Event-Based Filings (PAS-3, CHG-1/4, DIR-12)
+                    </span>
+                    <span className="px-1.5 py-0.2 text-[9px] font-mono font-bold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded">
+                      {eventFilings.length}
+                    </span>
+                  </div>
+                  <Icons.ChevronDown
+                    className={`w-3.5 h-3.5 text-slate-400 transition-transform ${accordionOpen.events ? 'rotate-180' : ''}`}
+                  />
+                </button>
+
+                {accordionOpen.events && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse font-mono">
+                      <thead>
+                        <tr className="bg-slate-100/60 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 text-[10px] uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 h-8">
+                          <th className="py-1.5 px-2.5">Event</th>
+                          <th className="py-1.5 px-2.5">Form</th>
+                          <th className="py-1.5 px-2.5">Date</th>
+                          <th className="py-1.5 px-2.5">SRN</th>
+                          <th className="py-1.5 px-2.5">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                        {eventFilings.map((e) => (
+                          <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 h-9">
+                            <td className="py-1.5 px-2.5 font-sans font-medium text-slate-900 dark:text-slate-100 text-xs">
+                              {e.eventTitle}
+                            </td>
+                            <td className="py-1.5 px-2.5 font-bold text-slate-800 dark:text-slate-200 text-xs">
+                              {e.form}
+                            </td>
+                            <td className="py-1.5 px-2.5 tabular-nums text-slate-600 dark:text-slate-400 text-xs">
+                              {e.filingDate}
+                            </td>
+                            <td className="py-1.5 px-2.5 font-bold text-slate-900 dark:text-slate-100 tabular-nums text-xs">
+                              {e.srn}
+                            </td>
+                            <td className="py-1.5 px-2.5">
+                              <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-semibold">
+                                {e.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* ACCORDION 3: GST RETURNS */}
+              <div className="bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 rounded-lg shadow-sm overflow-hidden">
+                <button
+                  onClick={() => toggleAccordion('gst')}
+                  className="w-full px-3 py-2 bg-slate-50/70 dark:bg-slate-900/40 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 text-left"
+                >
+                  <div className="flex items-center space-x-2">
+                    <span className="p-1 rounded bg-emerald-500/10 text-emerald-500">
+                      <Icons.ShieldCheck className="w-3.5 h-3.5" />
+                    </span>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">
+                      3. GST Returns Matrix (GSTR-1 & GSTR-3B)
+                    </span>
+                    <span className="px-1.5 py-0.2 text-[9px] font-mono font-bold bg-emerald-500/10 text-emerald-500 rounded border border-emerald-500/20">
+                      Cleared
+                    </span>
+                  </div>
+                  <Icons.ChevronDown
+                    className={`w-3.5 h-3.5 text-slate-400 transition-transform ${accordionOpen.gst ? 'rotate-180' : ''}`}
+                  />
+                </button>
+
+                {accordionOpen.gst && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse font-mono">
+                      <thead>
+                        <tr className="bg-slate-100/60 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 text-[10px] uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 h-8">
+                          <th className="py-1.5 px-2.5">Period</th>
+                          <th className="py-1.5 px-2.5">Form</th>
+                          <th className="py-1.5 px-2.5">Due Date</th>
+                          <th className="py-1.5 px-2.5">ARN</th>
+                          <th className="py-1.5 px-2.5">Status</th>
+                          <th className="py-1.5 px-2.5 text-right">Liability</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                        {gstReturns.map((g, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 h-9">
+                            <td className="py-1.5 px-2.5 font-bold text-slate-900 dark:text-slate-100 text-xs">
+                              {g.period}
+                            </td>
+                            <td className="py-1.5 px-2.5 font-semibold text-slate-800 dark:text-slate-200 text-xs">
+                              {g.form}
+                            </td>
+                            <td className="py-1.5 px-2.5 tabular-nums text-slate-600 dark:text-slate-400 text-xs">
+                              {g.dueDate}
+                            </td>
+                            <td className="py-1.5 px-2.5 font-bold text-slate-900 dark:text-slate-100 tabular-nums text-xs">
+                              {g.arn}
+                            </td>
+                            <td className="py-1.5 px-2.5">
+                              <span
+                                className={`inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold border ${
+                                  g.status === 'FILED'
+                                    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                    : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                }`}
+                              >
+                                {g.status}
+                              </span>
+                            </td>
+                            <td className="py-1.5 px-2.5 text-right tabular-nums font-semibold text-slate-800 dark:text-slate-200 text-xs">
+                              {g.taxLiability}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
+          )}
 
-            {/* Folder Directory */}
-            <div className="space-y-1.5">
-              <label className="block text-[11px] font-mono uppercase text-slate-500 dark:text-slate-400 font-semibold mb-1">
-                Vault Categories
-              </label>
+          {/* TAB 2: QUASI-JUDICIAL & LITIGATION TIMELINE */}
+          {activeTab === 'litigation' && (
+            <div className="space-y-3">
+              {/* Chronological Vertical Timeline Feed */}
+              <div className="bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-sm">
+                <h3 className="text-xs font-bold text-slate-900 dark:text-white mb-4 tracking-tight flex items-center space-x-1.5">
+                  <Icons.Clock className="w-3.5 h-3.5 text-sky-500" />
+                  <span>Hearing History & Bench Orders Feed</span>
+                </h3>
+
+                <div className="relative pl-5 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
+                  {litigationData.timeline.map((hearing) => (
+                    <div key={hearing.id} className="relative group">
+                      <div className="absolute -left-5 top-1 w-2.5 h-2.5 rounded-full bg-sky-500 border-2 border-white dark:border-[#111625]" />
+
+                      <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all space-y-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                          <div className="flex items-center space-x-1.5">
+                            <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100 tabular-nums">
+                              {hearing.date}
+                            </span>
+                            <span className="text-slate-400">•</span>
+                            <span className="font-semibold text-xs text-slate-800 dark:text-slate-200">
+                              {hearing.bench}
+                            </span>
+                            <span className="text-[10px] font-mono text-amber-500 font-bold">
+                              {hearing.itemNo}
+                            </span>
+                          </div>
+                          <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-mono font-semibold bg-sky-500/10 text-sky-500 border border-sky-500/20">
+                            {hearing.stage}
+                          </span>
+                        </div>
+
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                          Counsel: <span className="font-semibold text-slate-700 dark:text-slate-300">{hearing.counsel}</span>
+                        </div>
+
+                        <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-sans bg-white dark:bg-[#111625] p-2.5 rounded border border-slate-200 dark:border-slate-800">
+                          "{hearing.summary}"
+                        </p>
+
+                        <div className="pt-1 flex items-center justify-between">
+                          <button
+                            onClick={() => {
+                              setActiveItem(hearing);
+                              setShowOrderPdfModal(true);
+                            }}
+                            className="inline-flex items-center space-x-1 text-xs font-mono font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-500"
+                          >
+                            <Icons.FileText className="w-3 h-3" />
+                            <span>Preview Certified Order (PDF)</span>
+                          </button>
+                          <span className="text-[10px] font-mono text-emerald-500 font-semibold flex items-center space-x-1">
+                            <Icons.Check className="w-2.5 h-2.5" />
+                            <span>On File</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
+
+        {/* RIGHT PANE (25%, col-span-3): Context Panel (NDOH, Vault, Working Papers) */}
+        <aside className="lg:col-span-3 space-y-3">
+          {/* NDOH Action Card */}
+          <div className="p-3.5 rounded-lg bg-sky-500/10 border border-sky-500/30 shadow-sm space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400 flex items-center space-x-1">
+                <Icons.Gavel className="w-3 h-3 mr-1" />
+                <span>NDOH</span>
+              </span>
+              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-sky-500 text-white">
+                {litigationData.nextActionBanner.countdown}
+              </span>
+            </div>
+            <div className="font-bold text-xs text-slate-900 dark:text-white">
+              {litigationData.nextActionBanner.bench} • {litigationData.nextActionBanner.itemNo}
+            </div>
+            <div className="text-[11px] font-mono text-slate-600 dark:text-slate-300">
+              {litigationData.nextActionBanner.ndoh}
+            </div>
+            <div className="p-2 rounded bg-white/70 dark:bg-slate-900/70 border border-sky-500/20 text-[11px] font-mono text-sky-700 dark:text-sky-300">
+              {litigationData.nextActionBanner.directions}
+            </div>
+          </div>
+
+          {/* Docket Vault & Working Papers Card */}
+          <div className="bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-1.5 text-xs font-bold text-slate-900 dark:text-white">
+                <Icons.FolderOpen className="w-3.5 h-3.5 text-sky-500" />
+                <span>Working Papers Vault</span>
+              </div>
+              <span className="text-[10px] font-mono text-slate-400">{vaultFy}</span>
+            </div>
+
+            {/* Folder Selectors */}
+            <div className="flex flex-wrap gap-1">
               {DEFAULT_VAULT_FOLDERS.map((folder) => {
                 const count = vaultFiles.filter((f) => f.fy === vaultFy && f.folder === folder).length;
                 const isSelected = selectedFolder === folder;
@@ -1295,28 +1193,19 @@ export default function ClientDetailPage() {
                   <button
                     key={folder}
                     onClick={() => setSelectedFolder(folder)}
-                    className={`w-full p-2.5 rounded-lg flex items-center justify-between text-xs font-mono transition-all ${
+                    className={`px-2 py-0.5 rounded text-[10px] font-mono transition-all ${
                       isSelected
                         ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 font-bold'
-                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900/60'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900'
                     }`}
                   >
-                    <div className="flex items-center space-x-2">
-                      {isSelected ? <Icons.FolderOpen className="w-4 h-4 text-sky-500" /> : <Icons.Folder className="w-4 h-4 text-slate-400" />}
-                      <span className="truncate">{folder}</span>
-                    </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                      {count}
-                    </span>
+                    {folder} ({count})
                   </button>
                 );
               })}
             </div>
-          </div>
 
-          {/* Right Sub-Panel: Upload Zone & File Listing */}
-          <div className="lg:col-span-8 space-y-4">
-            {/* Drag and drop upload zone */}
+            {/* Compact Drag & Drop Upload Zone */}
             <div
               onDragOver={(e) => {
                 e.preventDefault();
@@ -1324,81 +1213,69 @@ export default function ClientDetailPage() {
               }}
               onDragLeave={() => setIsDragOver(false)}
               onDrop={handleFileDrop}
-              className={`p-6 border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-center transition-all ${
+              className={`p-3 border border-dashed rounded-md flex flex-col items-center justify-center text-center transition-all ${
                 isDragOver
                   ? 'border-sky-500 bg-sky-500/5'
-                  : 'border-slate-300 dark:border-slate-800 bg-white dark:bg-[#111625]'
+                  : 'border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40'
               }`}
             >
-              <Icons.Upload className="w-8 h-8 text-sky-500 mb-2" />
-              <div className="text-xs font-mono font-bold text-slate-900 dark:text-white">
-                Drag & drop statutory working papers into "{selectedFolder}"
+              <Icons.Upload className="w-4 h-4 text-sky-500 mb-1" />
+              <div className="text-[11px] font-mono text-slate-700 dark:text-slate-300">
+                Drop files into "{selectedFolder}"
               </div>
-              <p className="text-[11px] text-slate-400 mt-1 font-mono">
-                Supports PDF, XLSX, ZIP up to 50MB (BYOS Encrypted Storage)
-              </p>
-              <label className="mt-3 inline-flex items-center space-x-1 px-3 py-1.5 text-xs font-mono font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors border border-slate-300 dark:border-slate-700">
-                <span>Browse Files</span>
+              <label className="mt-1.5 inline-flex items-center space-x-1 px-2 py-0.5 text-[10px] font-mono font-semibold bg-white dark:bg-slate-800 hover:bg-slate-100 rounded cursor-pointer border border-slate-300 dark:border-slate-700">
+                <span>Browse</span>
                 <input type="file" onChange={handleFileInputChange} className="hidden" />
               </label>
             </div>
 
-            {/* File Listing Table */}
-            <div className="bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
-              <div className="px-4 py-3 bg-slate-50/70 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <span className="text-xs font-mono font-bold text-slate-900 dark:text-white">
-                  {selectedFolder} ({displayedVaultFiles.length} files)
-                </span>
-                <span className="text-[11px] font-mono text-slate-400">{vaultFy}</span>
-              </div>
-
+            {/* Vault File List */}
+            <div className="divide-y divide-slate-200 dark:divide-slate-800/60 font-mono text-xs max-h-[220px] overflow-y-auto">
               {displayedVaultFiles.length === 0 ? (
-                <div className="p-12 text-center text-xs font-mono text-slate-400">
-                  No documents in this folder for {vaultFy}. Upload your first file above.
+                <div className="py-4 text-center text-[11px] text-slate-400 font-mono">
+                  No files in "{selectedFolder}".
                 </div>
               ) : (
-                <div className="divide-y divide-slate-200 dark:divide-slate-800/60 font-mono text-xs">
-                  {displayedVaultFiles.map((file) => (
-                    <div
-                      key={file.id}
-                      className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 flex items-center justify-between transition-colors"
-                    >
-                      <div className="flex items-center space-x-3 truncate mr-4">
-                        <Icons.FileText className="w-4 h-4 text-sky-500 flex-shrink-0" />
-                        <div className="truncate">
-                          <div className="font-semibold text-slate-900 dark:text-slate-100 truncate">
-                            {file.name}
-                          </div>
-                          <div className="text-[11px] text-slate-400 mt-0.5">
-                            Uploaded {file.uploadedAt} • {file.size}
-                          </div>
+                displayedVaultFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    className="py-1.5 flex items-center justify-between transition-colors"
+                  >
+                    <div className="flex items-center space-x-1.5 truncate mr-2">
+                      <Icons.FileText className="w-3 h-3 text-sky-500 flex-shrink-0" />
+                      <div className="truncate">
+                        <div className="font-semibold text-slate-800 dark:text-slate-200 truncate text-[11px]">
+                          {file.name}
+                        </div>
+                        <div className="text-[9px] text-slate-400">
+                          {file.uploadedAt} • {file.size}
                         </div>
                       </div>
-
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => triggerToast(`Downloading ${file.name}...`)}
-                          className="p-1.5 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
-                          title="Download document"
-                        >
-                          <Icons.Download className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteVaultFile(file.id)}
-                          className="p-1.5 text-slate-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded"
-                          title="Delete file"
-                        >
-                          <Icons.Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
                     </div>
-                  ))}
-                </div>
+
+                    <div className="flex items-center space-x-1 flex-shrink-0">
+                      <button
+                        onClick={() => triggerToast(`Downloading ${file.name}...`)}
+                        className="p-1 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded"
+                        title="Download"
+                      >
+                        <Icons.Download className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteVaultFile(file.id)}
+                        className="p-1 text-slate-400 hover:text-rose-500 rounded"
+                        title="Delete"
+                      >
+                        <Icons.Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
           </div>
-        </div>
-      )}
+        </aside>
+      </div>
 
       {/* MODAL 1: + ADD COMPLIANCE MATTER MODAL */}
       {showAddMatterModal && (

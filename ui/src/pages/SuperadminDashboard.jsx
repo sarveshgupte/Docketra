@@ -331,11 +331,7 @@ export const SuperadminDashboard = () => {
                   ★ Owner & Founder Command Bridge
                 </span>
               </div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Platform Command Center</h1>
-              <h2 className="mt-0.5 text-lg font-semibold text-indigo-600">Welcome back, Sarvesh</h2>
-              <p className="mt-2.5 text-sm text-slate-500 max-w-xl">
-                Absolute platform view-control at your fingertips. Oversee client registrations, onboarding health, latency bounds, and tenant audit trails.
-              </p>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">Platform Command Center</h1>
             </div>
             
             {/* Dynamic System HUD Clock */}

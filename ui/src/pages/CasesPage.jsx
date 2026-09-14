@@ -805,7 +805,7 @@ export const CasesPage = () => {
         />
 
         {isAdmin && !onboardingDismissed && cases.length === 0 && categoryCount === 0 && (
-          <SectionCard title="Welcome to Docketra" subtitle="Start with these three steps to set up your firm operations.">
+          <SectionCard title="Firm Setup Checklist">
             <ol className="cases-page__onboarding-list">
               <li>Configure your SLA and operational thresholds.</li>
               <li>Create categories for your firm workflow.</li>

@@ -7,9 +7,9 @@
 /* ── CSS Custom Properties ─────────────────────────────────────────────── */
 
 :root {
-  --sidebar-width: 220px;
+  --sidebar-width: 200px;
   --sidebar-collapsed-width: 56px;
-  --topbar-height: 52px;
+  --topbar-height: 50px;
   --panel-radius: var(--dt-radius-card, 12px);
   --panel-border: var(--dt-border, #e5e7eb);
   --panel-padding: 14px 16px;
@@ -44,7 +44,7 @@
   --panel-border: var(--dt-border, #e8e6e0);
   --panel-padding: 14px 16px;
   --control-height: 30px;
-  --sidebar-width: 220px;
+  --sidebar-width: 200px;
   --sidebar-collapsed-width: 56px;
 }
 
@@ -497,6 +497,112 @@
   font-size: 10px;
   padding: 1px 5px;
   font-family: var(--dt-font-mono, ui-monospace, monospace);
+}
+
+/* ── Financial Year Toggle ──────────────────────────────────────────────── */
+.platform__fy-toggle {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 2px;
+  gap: 2px;
+  height: 32px;
+}
+
+.platform__fy-btn {
+  padding: 2px 8px !important;
+  font-size: 11px !important;
+  font-family: var(--dt-font-mono, ui-monospace, monospace) !important;
+  font-weight: 600 !important;
+  border-radius: 4px !important;
+  border: none !important;
+  background: transparent !important;
+  color: #64748b !important;
+  cursor: pointer;
+  height: 26px !important;
+  min-height: 26px !important;
+  line-height: 1 !important;
+  transition: all 0.12s ease;
+}
+
+.platform__fy-btn:hover {
+  color: #0f172a !important;
+}
+
+.platform__fy-btn.is-active {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* ── Quick + New Action Menu ───────────────────────────────────────────── */
+.platform__new-menu-container {
+  position: relative;
+  display: inline-block;
+}
+
+.platform__btn-new {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  height: 32px !important;
+  padding: 0 10px !important;
+  background: #0f172a !important;
+  color: #ffffff !important;
+  border: 1px solid #0f172a !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.platform__btn-new:hover {
+  background: #1e293b !important;
+  border-color: #1e293b !important;
+}
+
+.platform__btn-new-chevron {
+  opacity: 0.7;
+}
+
+.platform__new-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 50;
+  min-width: 190px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.platform__new-dropdown-item {
+  display: flex !important;
+  width: 100% !important;
+  text-align: left !important;
+  padding: 6px 10px !important;
+  border-radius: 5px !important;
+  border: none !important;
+  background: transparent !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #334155 !important;
+  cursor: pointer;
+  min-height: auto !important;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.platform__new-dropdown-item:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
 }
 
 /* ── User pill ─────────────────────────────────────────────────────────── */

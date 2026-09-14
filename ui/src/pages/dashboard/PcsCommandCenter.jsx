@@ -668,31 +668,28 @@ export default function PcsCommandCenter() {
       )}
 
       {/* 1. HEADER BAR */}
-      <header className="mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+      <header className="mb-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
         <div>
           <div className="flex items-center space-x-3">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white">
               PCS Command Center
             </h1>
             {/* docketra.in pill badge */}
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-slate-100 dark:bg-slate-800 text-sky-600 dark:text-sky-400 border border-slate-300 dark:border-slate-700 shadow-sm">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono font-medium bg-slate-100 dark:bg-slate-800 text-sky-600 dark:text-sky-400 border border-slate-300 dark:border-slate-700">
               docketra.in
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Real-time MCA V3 statutory filing matrix, GST return radar & NCLT cause list dispatcher
-          </p>
         </div>
 
         {/* Quick Filter & Action Bar */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           {/* Financial Year Toggle Switch */}
           <div className="inline-flex p-0.5 rounded-lg bg-slate-200/70 dark:bg-[#111625] border border-slate-300 dark:border-slate-800">
             {['FY 2025-26', 'FY 2026-27'].map((fy) => (
               <button
                 key={fy}
                 onClick={() => setFinancialYear(fy)}
-                className={`px-3 py-1.5 text-xs font-mono font-semibold rounded-md transition-all ${
+                className={`px-2.5 py-1 text-xs font-mono font-semibold rounded-md transition-all ${
                   financialYear === fy
                     ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -705,18 +702,18 @@ export default function PcsCommandCenter() {
 
           {/* Quick Search Input (CIN, Company Name, DIN, SRN) */}
           <div className="relative min-w-[240px] sm:min-w-[280px]">
-            <Icons.Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
+            <Icons.Search className="absolute left-3 top-2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search CIN, Company, DIN, SRN..."
-              className="w-full pl-9 pr-8 py-1.5 text-xs font-mono bg-white dark:bg-[#111625] text-slate-900 dark:text-slate-100 placeholder-slate-400 rounded-lg border border-slate-300 dark:border-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500 dark:focus:ring-sky-400"
+              className="w-full pl-8 pr-8 py-1 text-xs font-mono bg-white dark:bg-[#111625] text-slate-900 dark:text-slate-100 placeholder-slate-400 rounded-lg border border-slate-300 dark:border-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500 dark:focus:ring-sky-400"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                 aria-label="Clear search"
               >
                 <Icons.X className="w-3.5 h-3.5" />
@@ -729,126 +726,109 @@ export default function PcsCommandCenter() {
             onClick={() => loadData(true)}
             disabled={isRefreshing}
             title="Refresh Command Center Data"
-            className="p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-lg border border-slate-300 dark:border-slate-800 transition-colors disabled:opacity-50"
+            className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-lg border border-slate-300 dark:border-slate-800 transition-colors disabled:opacity-50"
             aria-label="Refresh data"
           >
-            <Icons.RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-sky-500' : ''}`} />
+            <Icons.RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-sky-500' : ''}`} />
           </button>
 
           {/* Primary Action Button: + Log Matter / Filing */}
           <button
             onClick={() => setShowLogMatterModal(true)}
-            className="inline-flex items-center space-x-2 px-3.5 py-1.5 text-xs font-medium text-white bg-sky-600 hover:bg-sky-500 dark:bg-sky-500 dark:hover:bg-sky-400 rounded-lg shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+            className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-white bg-sky-600 hover:bg-sky-500 dark:bg-sky-500 dark:hover:bg-sky-400 rounded-lg shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
           >
-            <Icons.Plus className="w-4 h-4" />
+            <Icons.Plus className="w-3.5 h-3.5" />
             <span>+ Log Matter / Filing</span>
           </button>
         </div>
       </header>
 
       {/* 2. URGENT ALERT BANNER (GRID OF 4 METRIC CARDS) */}
-      <section aria-label="Statutory Metric Alerts" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <section aria-label="Statutory Metric Alerts" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         {isLoading ? (
           // Explicit loading skeletons to ensure zero layout shift
           [1, 2, 3, 4].map((i) => (
-            <div key={i} className="p-4 rounded-xl bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 animate-pulse">
-              <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/2 mb-3"></div>
-              <div className="h-8 bg-slate-200 dark:bg-slate-800 rounded w-1/3 mb-2"></div>
-              <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-3/4"></div>
+            <div key={i} className="p-3 rounded-lg bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 animate-pulse">
+              <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-1/2 mb-2"></div>
+              <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-1/3 mb-1"></div>
             </div>
           ))
         ) : (
           <>
             {/* Card 1: Overdue Filings */}
-            <div className="p-4 rounded-xl bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-rose-500/40 transition-all">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <div className="p-3 rounded-lg bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-rose-500/50 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Overdue Filings
                 </span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30">
-                  <Icons.AlertTriangle className="w-3 h-3 mr-1" />
-                  Immediate Action
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                  <Icons.AlertTriangle className="w-2.5 h-2.5 mr-1" />
+                  OVERDUE
                 </span>
               </div>
-              <div className="flex items-baseline space-x-2">
-                <span className="text-2xl font-extrabold font-mono text-slate-900 dark:text-white tabular-nums tracking-tight">
-                  {metrics.overdueCount}
+              <div className="mt-2 flex items-baseline justify-between">
+                <span className="text-xl font-bold font-mono text-slate-900 dark:text-white tabular-nums tracking-tight">
+                  [ {String(metrics.overdueCount).padStart(2, '0')} ]
                 </span>
-                <span className="text-xs text-rose-500 dark:text-rose-400 font-medium">+3 since yesterday</span>
+                <span className="text-[10px] font-mono text-rose-500 font-semibold">Immediate Penalty Risk</span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 truncate font-mono">
-                Immediate AOC-4 & GSTR-3B penalty risk
-              </p>
-              <div className="absolute top-0 right-0 w-16 h-16 bg-rose-500/5 rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform" />
             </div>
 
             {/* Card 2: Filings Due in Next 7 Days */}
-            <div className="p-4 rounded-xl bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-amber-500/40 transition-all">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Due Next 7 Days
+            <div className="p-3 rounded-lg bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-amber-500/50 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  Due T-7d
                 </span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-                  <Icons.Clock className="w-3 h-3 mr-1" />
-                  MCA + GST
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                  <Icons.Clock className="w-2.5 h-2.5 mr-1" />
+                  MCA / GST
                 </span>
               </div>
-              <div className="flex items-baseline space-x-2">
-                <span className="text-2xl font-extrabold font-mono text-slate-900 dark:text-white tabular-nums tracking-tight">
-                  {metrics.dueSoonCount}
+              <div className="mt-2 flex items-baseline justify-between">
+                <span className="text-xl font-bold font-mono text-slate-900 dark:text-white tabular-nums tracking-tight">
+                  [ {String(metrics.dueSoonCount).padStart(2, '0')} ]
                 </span>
-                <span className="text-xs text-amber-500 dark:text-amber-400 font-medium">18 require DSC</span>
+                <span className="text-[10px] font-mono text-amber-500 font-semibold">Next 7 Days</span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 truncate font-mono">
-                MGT-7A & DIR-3 KYC statutory deadlines
-              </p>
-              <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/5 rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform" />
             </div>
 
             {/* Card 3: NCLT / RD Hearings This Week */}
-            <div className="p-4 rounded-xl bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-sky-500/40 transition-all">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Tribunal Hearings
+            <div className="p-3 rounded-lg bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-sky-500/50 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  Hearings
                 </span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/30">
-                  <Icons.Gavel className="w-3 h-3 mr-1" />
-                  This Week
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+                  <Icons.Gavel className="w-2.5 h-2.5 mr-1" />
+                  TRIBUNAL
                 </span>
               </div>
-              <div className="flex items-baseline space-x-2">
-                <span className="text-2xl font-extrabold font-mono text-slate-900 dark:text-white tabular-nums tracking-tight">
-                  {String(metrics.hearingsCount).padStart(2, '0')}
+              <div className="mt-2 flex items-baseline justify-between">
+                <span className="text-xl font-bold font-mono text-slate-900 dark:text-white tabular-nums tracking-tight">
+                  [ {String(metrics.hearingsCount).padStart(2, '0')} ]
                 </span>
-                <span className="text-xs text-sky-500 dark:text-sky-400 font-medium">NCLT Mum Ct III Next</span>
+                <span className="text-[10px] font-mono text-sky-500 font-semibold truncate max-w-[130px]">{metrics.nextHearingText}</span>
               </div>
-              <p className="text-[11px] text-sky-600 dark:text-sky-300 font-mono font-semibold mt-2 truncate">
-                {metrics.nextHearingText}
-              </p>
-              <div className="absolute top-0 right-0 w-16 h-16 bg-sky-500/5 rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform" />
             </div>
 
             {/* Card 4: Pending DSC Signatures / Client Approvals */}
-            <div className="p-4 rounded-xl bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-purple-500/40 transition-all">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Pending DSC Signatures
+            <div className="p-3 rounded-lg bg-white dark:bg-[#111625] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-purple-500/50 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  Pending Sign
                 </span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/30">
-                  <Icons.KeyRound className="w-3 h-3 mr-1" />
-                  Awaiting OTP/Sign
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                  <Icons.KeyRound className="w-2.5 h-2.5 mr-1" />
+                  DSC / OTP
                 </span>
               </div>
-              <div className="flex items-baseline space-x-2">
-                <span className="text-2xl font-extrabold font-mono text-slate-900 dark:text-white tabular-nums tracking-tight">
-                  {metrics.pendingDscCount}
+              <div className="mt-2 flex items-baseline justify-between">
+                <span className="text-xl font-bold font-mono text-slate-900 dark:text-white tabular-nums tracking-tight">
+                  [ {String(metrics.pendingDscCount).padStart(2, '0')} ]
                 </span>
-                <span className="text-xs text-purple-500 dark:text-purple-400 font-medium">12 Class-3 Tokens</span>
+                <span className="text-[10px] font-mono text-purple-500 font-semibold">Director Sign-off</span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 truncate font-mono">
-                Awaiting client director sign-off
-              </p>
-              <div className="absolute top-0 right-0 w-16 h-16 bg-purple-500/5 rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform" />
             </div>
           </>
         )}
@@ -914,8 +894,8 @@ export default function PcsCommandCenter() {
             <div className="overflow-x-auto flex-1">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-slate-100/70 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 font-mono text-[11px] uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
-                    <th className="py-2.5 px-3 w-8">
+                  <tr className="bg-slate-100/70 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 font-mono text-[10px] uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 h-8">
+                    <th className="py-1.5 px-2.5 w-8">
                       <input
                         type="checkbox"
                         checked={filteredDeadlines.length > 0 && filteredDeadlines.every((d) => d.selected)}
@@ -924,12 +904,12 @@ export default function PcsCommandCenter() {
                         aria-label="Select all deadlines"
                       />
                     </th>
-                    <th className="py-2.5 px-3">Client & CIN</th>
-                    <th className="py-2.5 px-3">Form Code</th>
-                    <th className="py-2.5 px-3">Due Date</th>
-                    <th className="py-2.5 px-3">Status</th>
-                    <th className="py-2.5 px-3">Assignee</th>
-                    <th className="py-2.5 px-3 text-right">Actions</th>
+                    <th className="py-1.5 px-2.5">Client & CIN</th>
+                    <th className="py-1.5 px-2.5">Form Code</th>
+                    <th className="py-1.5 px-2.5">Due Date</th>
+                    <th className="py-1.5 px-2.5">Status</th>
+                    <th className="py-1.5 px-2.5">Assignee</th>
+                    <th className="py-1.5 px-2.5 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
@@ -943,11 +923,11 @@ export default function PcsCommandCenter() {
                     filteredDeadlines.map((item) => (
                       <tr
                         key={item.id}
-                        className={`hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors ${
+                        className={`group hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors h-9 ${
                           item.selected ? 'bg-sky-50/50 dark:bg-sky-950/20' : ''
                         }`}
                       >
-                        <td className="py-2.5 px-3">
+                        <td className="py-1.5 px-2.5">
                           <input
                             type="checkbox"
                             checked={item.selected}
@@ -956,25 +936,25 @@ export default function PcsCommandCenter() {
                             aria-label={`Select ${item.clientName}`}
                           />
                         </td>
-                        <td className="py-2.5 px-3">
+                        <td className="py-1.5 px-2.5">
                           <div className="font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[200px] sm:max-w-[240px]">
                             {item.clientName}
                           </div>
-                          <div className="font-mono text-[11px] text-slate-400 dark:text-slate-500 tracking-tight tabular-nums">
+                          <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500 tracking-tight tabular-nums">
                             {item.cin} {item.din ? `• DIN:${item.din}` : ''}
                           </div>
                         </td>
-                        <td className="py-2.5 px-3">
-                          <span className="font-mono font-bold text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 tracking-tight">
+                        <td className="py-1.5 px-2.5">
+                          <span className="font-mono font-bold text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-700 tracking-tight text-[11px]">
                             {item.form}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 font-mono tabular-nums tracking-tight">
+                        <td className="py-1.5 px-2.5 font-mono tabular-nums tracking-tight">
                           <div className="text-slate-800 dark:text-slate-200 font-medium">
                             {item.dueDate}
                           </div>
                           <span
-                            className={`inline-block text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded ${
+                            className={`inline-block text-[9px] font-mono font-semibold px-1 py-0.2 rounded ${
                               item.daysRelative?.includes('overdue') || item.daysRelative?.includes('Overdue')
                                 ? 'text-rose-500 dark:text-rose-400 bg-rose-500/10'
                                 : 'text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/60'
@@ -983,12 +963,12 @@ export default function PcsCommandCenter() {
                             {item.daysRelative}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3">
+                        <td className="py-1.5 px-2.5">
                           {renderStatusBadge(item.status)}
                         </td>
-                        <td className="py-2.5 px-3">
-                          <div className="flex items-center space-x-2">
-                            <span className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-bold font-mono flex items-center justify-center border border-slate-300 dark:border-slate-700">
+                        <td className="py-1.5 px-2.5">
+                          <div className="flex items-center space-x-1.5">
+                            <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[9px] font-bold font-mono flex items-center justify-center border border-slate-300 dark:border-slate-700">
                               {item.assigneeAvatar}
                             </span>
                             <span className="text-slate-700 dark:text-slate-300 text-xs hidden sm:inline truncate max-w-[90px]">
@@ -996,8 +976,8 @@ export default function PcsCommandCenter() {
                             </span>
                           </div>
                         </td>
-                        <td className="py-2.5 px-3 text-right">
-                          <div className="flex items-center justify-end space-x-2">
+                        <td className="py-1.5 px-2.5 text-right">
+                          <div className="flex items-center justify-end space-x-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                             {/* 1-click Send Reminder */}
                             <button
                               onClick={() => {
@@ -1005,7 +985,7 @@ export default function PcsCommandCenter() {
                                 setShowReminderPreviewModal(true);
                               }}
                               title="Send WhatsApp / Email Reminder"
-                              className="px-2 py-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded border border-emerald-500/30 transition-colors flex items-center space-x-1"
+                              className="px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded border border-emerald-500/30 transition-colors flex items-center space-x-1"
                             >
                               <Icons.Send className="w-3 h-3" />
                               <span className="hidden md:inline">Remind</span>
@@ -1018,7 +998,7 @@ export default function PcsCommandCenter() {
                                 setFilingDetails((prev) => ({ ...prev, srn: '' }));
                                 setShowMarkFiledModal(true);
                               }}
-                              className="px-2 py-1 text-[11px] font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded transition-all flex items-center space-x-1"
+                              className="px-2 py-0.5 text-[11px] font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded transition-all flex items-center space-x-1"
                             >
                               <Icons.Check className="w-3 h-3 text-emerald-500" />
                               <span>Mark Filed</span>
@@ -1038,12 +1018,12 @@ export default function PcsCommandCenter() {
             <div className="overflow-x-auto flex-1">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-slate-100/70 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 font-mono text-[11px] uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
-                    <th className="py-2.5 px-3">Hearing Date & Time</th>
-                    <th className="py-2.5 px-3">Matter / Case No</th>
-                    <th className="py-2.5 px-3">Stage</th>
-                    <th className="py-2.5 px-3">Arguing Counsel</th>
-                    <th className="py-2.5 px-3 text-right">Actions</th>
+                  <tr className="bg-slate-100/70 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 font-mono text-[10px] uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 h-8">
+                    <th className="py-1.5 px-2.5">Hearing Date & Time</th>
+                    <th className="py-1.5 px-2.5">Matter / Case No</th>
+                    <th className="py-1.5 px-2.5">Stage</th>
+                    <th className="py-1.5 px-2.5">Arguing Counsel</th>
+                    <th className="py-1.5 px-2.5 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
@@ -1057,50 +1037,52 @@ export default function PcsCommandCenter() {
                     filteredCauseList.map((item) => (
                       <tr
                         key={item.id}
-                        className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                        className="group hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors h-9"
                       >
-                        <td className="py-2.5 px-3 font-mono tabular-nums tracking-tight">
+                        <td className="py-1.5 px-2.5 font-mono tabular-nums tracking-tight">
                           <div className="font-semibold text-slate-900 dark:text-slate-100">
                             {item.dateTime}
                           </div>
-                          <span className="inline-block text-[10px] font-mono text-sky-600 dark:text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20 mt-0.5">
+                          <span className="inline-block text-[10px] font-mono text-sky-600 dark:text-sky-400 bg-sky-500/10 px-1 py-0.2 rounded border border-sky-500/20">
                             {item.forumBench}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3">
+                        <td className="py-1.5 px-2.5">
                           <div className="font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[220px]">
                             {item.clientName}
                           </div>
-                          <div className="font-mono text-[11px] text-slate-400 dark:text-slate-500 tracking-tight tabular-nums">
+                          <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500 tracking-tight tabular-nums">
                             {item.itemNo} • {item.caseNo}
                           </div>
                         </td>
-                        <td className="py-2.5 px-3">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+                        <td className="py-1.5 px-2.5">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
                             {item.stage}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3">
+                        <td className="py-1.5 px-2.5">
                           <div className="text-slate-700 dark:text-slate-300 font-medium truncate max-w-[150px]">
                             {item.counsel}
                           </div>
                         </td>
-                        <td className="py-2.5 px-3 text-right">
-                          <button
-                            onClick={() => {
-                              setActiveItem(item);
-                              setOrderDetails({
-                                stage: item.stage || 'Final Arguments',
-                                nextHearingDate: '',
-                                orderSummary: '',
-                                certifiedCopyUrl: '',
-                              });
-                              setShowLogOrderModal(true);
-                            }}
-                            className="px-2.5 py-1 text-[11px] font-medium bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/40 dark:hover:bg-sky-900/60 text-sky-600 dark:text-sky-400 border border-sky-300 dark:border-sky-800 rounded transition-all"
-                          >
-                            Log Order
-                          </button>
+                        <td className="py-1.5 px-2.5 text-right">
+                          <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => {
+                                setActiveItem(item);
+                                setOrderDetails({
+                                  stage: item.stage || 'Final Arguments',
+                                  nextHearingDate: '',
+                                  orderSummary: '',
+                                  certifiedCopyUrl: '',
+                                });
+                                setShowLogOrderModal(true);
+                              }}
+                              className="px-2.5 py-1 text-[11px] font-medium bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/40 dark:hover:bg-sky-900/60 text-sky-600 dark:text-sky-400 border border-sky-300 dark:border-sky-800 rounded transition-all"
+                            >
+                              Log Order
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
