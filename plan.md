@@ -1,5 +1,10 @@
-1. **Optimize `countCategories` method in `src/repositories/category.repository.js`**
-   - The user instruction mentions "When optimizing boolean presence checks in MongoDB (e.g., count > 0), use `Model.exists(query)` instead of `Model.countDocuments(query)`".
-   - We will find instances of `countDocuments` that are used in `> 0` comparisons and replace them with `exists`.
-   - Let's look at `src/services/user.service.js` or `src/controllers/user.controller.js` and find a good candidate.
-   - Wait, `firmSetup.service.js` has `Category.countDocuments({ firmId }).session(activeSession) > 0`? No, let's search for `countDocuments` again.
+1. **Fix Secret Scanner Gitleaks Error**
+   - Address the gitleaks warning regarding hardcoded master encryption key. Replace `0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef` with a gitleaks-allowed placeholder, `<required-encryption-key-64-chars>`.
+
+2. **Verify Changes and Run Tests**
+   - Run tests to confirm the secret scanning passes and the tests aren't broken by the mocked encryption key change.
+
+3. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
+
+4. **Create PR**
+   - Submit the PR with the exact title `⚡ Bolt: [performance improvement]` and the exact headers `💡 What:`, `🎯 Why:`, `📊 Impact:`, and `🔬 Measurement:`.

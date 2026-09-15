@@ -1554,8 +1554,6 @@ caseSchema.index({ assignedToXID: 1 }); // CANONICAL - xID-based assignment quer
 caseSchema.index({ assignedTo: 1 }); // Assignment owner lookup
 caseSchema.index({ assignedBy: 1 }); // Assignment actor lookup
 caseSchema.index({ clientId: 1 });
-caseSchema.index({ isInternal: 1 });
-caseSchema.index({ workType: 1 });
 caseSchema.index({ status: 1 });
 caseSchema.index({ createdAt: -1 });
 caseSchema.index({ assignedToXID: 1, status: 1 }); // CANONICAL - xID-based worklist queries
@@ -1574,7 +1572,6 @@ caseSchema.index({ firmId: 1, assignedToXID: 1, caseSubCategory: 1, status: 1, c
 caseSchema.index({ firmId: 1, ownerTeamId: 1, routedToTeamId: 1, status: 1 });
 caseSchema.index({ firmId: 1, ownerTeamId: 1, status: 1, slaDueAt: 1, createdAt: -1 }); // Workbasket queue (owner) status + SLA/default sort
 caseSchema.index({ firmId: 1, routedToTeamId: 1, status: 1, slaDueAt: 1, createdAt: -1 }); // Workbasket queue (routed) status + SLA/default sort
-caseSchema.index({ firmId: 1, status: 1, createdAt: -1 });
 caseSchema.index({ firmId: 1, status: 1, dueDate: 1, slaDueAt: 1 });
 caseSchema.index({ firmId: 1, routedToTeamId: 1, status: 1 });
 caseSchema.index({ firmId: 1, dueDate: 1, status: 1 }); // Firm-scoped overdue metrics queries
@@ -1592,7 +1589,6 @@ caseSchema.index({ firmId: 1, createdAt: -1 });
 caseSchema.index({ firmId: 1, clientId: 1 });
 caseSchema.index({ firmId: 1, workType: 1, status: 1, createdAt: -1 }); // Firm-scoped list view filters with recency sort
 caseSchema.index({ firmId: 1, assignedToXID: 1, workType: 1, status: 1, createdAt: -1 }); // Assignee workload list with work-type filters
-caseSchema.index({ state: 1 }); // Canonical docket state reporting queries
 caseSchema.index({ qcOutcome: 1 }); // QC outcome reporting queries
 caseSchema.index({ firmId: 1, state: 1 }); // Firm-scoped canonical state analytics
 caseSchema.index({ firmId: 1, qcOutcome: 1 }); // Firm-scoped QC analytics
