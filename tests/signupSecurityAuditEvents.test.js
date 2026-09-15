@@ -109,7 +109,7 @@ async function testSignupAuditEventSafety() {
 
   const mkRes = () => ({ statusCode: 200, body: null, status(c){this.statusCode=c;return this;}, json(b){this.body=b; return this;} });
 
-  await service.signupInit({ body: { name: 'N', email: 'a@example.com', password: 'Secret1!', firmName: 'Acme', phone: '+1' }, method: 'POST', originalUrl: '/api/auth/signup/init', requestId: 'r1' }, mkRes());
+  await service.signupInit({ body: { name: 'N', email: 'a@example.com', password: 'Secret1!', firmName: 'Acme', phone: '+1', agreedToPilotTerms: true }, method: 'POST', originalUrl: '/api/auth/signup/init', requestId: 'r1' }, mkRes());
   await service.signupVerify({ body: { email: 'a@example.com', otp: '123456' }, method: 'POST', originalUrl: '/api/auth/signup/verify', requestId: 'r2' }, mkRes());
 
   assert(entries.some((e) => e.action === 'SIGNUP_INIT_ATTEMPT'));

@@ -275,11 +275,11 @@ export function NotificationHistoryView() {
             </div>
           ) : null}
 
-          {loading ? <LoadingState label="Hydrating notification feed..." /> : null}
+          {loading ? <LoadingState label="Loading notification history…" /> : null}
 
           {!loading && error ? (
             <ErrorState
-              title="Failed to load notifications"
+              title="Unable to load history"
               body="Please try reloading your notifications feed."
               actionLabel="Retry feed reload"
               onAction={loadNotifications}
@@ -289,7 +289,7 @@ export function NotificationHistoryView() {
 
           {!loading && !error && sortedItems.length === 0 ? (
             <EmptyState
-              title="No notifications"
+              title="No notification history"
               body="Updates and activity reports will be compiled and displayed here."
               boxed
             />

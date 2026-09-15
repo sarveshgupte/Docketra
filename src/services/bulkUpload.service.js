@@ -1,4 +1,6 @@
 const Client = require('../models/Client.model');
+const Category = require('../models/Category.model');
+const Team = require('../models/Team.model');
 
 const ALLOWED_PRIORITIES = new Set(['low', 'medium', 'high']);
 const ALLOWED_STATUSES = new Set(['open', 'pending', 'resolved', 'in_progress', 'qc_pending', 'qc_failed', 'filed']);

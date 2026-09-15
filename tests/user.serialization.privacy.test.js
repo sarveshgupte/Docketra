@@ -20,6 +20,8 @@ const SENSITIVE_PATHS = [
   'lastLoginIp',
   'lastLoginCountry',
   'deletedAuthSnapshot',
+  'legalConsent.ipAddress',
+  'legalConsent.userAgent',
 ];
 
 const getPath = (obj, path) => path.split('.').reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);
@@ -56,6 +58,14 @@ const assertNoSensitivePaths = (payload, label) => {
     lastLoginIp: '1.1.1.1',
     lastLoginCountry: 'US',
     deletedAuthSnapshot: { status: 'disabled', isActive: false },
+    legalConsent: {
+      agreedToPilotTerms: true,
+      agreedAt: new Date(),
+      ipAddress: '127.0.0.1',
+      userAgent: 'jest-user-agent',
+      termsVersion: 'v1.0_pilot_2026',
+      privacyVersion: 'v1.0_pilot_2026',
+    },
   });
 
   assertNoSensitivePaths(userDoc.toSafeObject(), 'toSafeObject');

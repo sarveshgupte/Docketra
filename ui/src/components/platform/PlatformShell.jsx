@@ -149,23 +149,8 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   const { user, logout } = useAuth();
   const { showError, showSuccess } = useToast();
   const menuRef = useRef(null);
-  const newMenuRef = useRef(null);
-  const [selectedFy, setSelectedFy] = useState('25-26');
-  const [newMenuOpen, setNewMenuOpen] = useState(false);
   const searchRequestIdRef = useRef(0);
   const searchCacheRef = useRef(new Map());
-
-  useEffect(() => {
-    const handleOutsideClick = (e) => {
-      if (newMenuRef.current && !newMenuRef.current.contains(e.target)) {
-        setNewMenuOpen(false);
-      }
-    };
-    if (newMenuOpen) {
-      document.addEventListener('mousedown', handleOutsideClick);
-      return () => document.removeEventListener('mousedown', handleOutsideClick);
-    }
-  }, [newMenuOpen]);
   const role = normalizeFirmRole(user?.role);
   const hasAdminAccess = hasFirmRoleAtLeast(role, 'ADMIN');
   const hasOperationsControlAccess = hasFirmRoleAtLeast(role, 'MANAGER');
@@ -624,87 +609,6 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                 <span className="platform__command-trigger-label">Search</span>
                 <kbd>Ctrl/⌘ K</kbd>
               </button>
-            </div>
-            <div className="platform__fy-toggle" role="group" aria-label="Financial Year">
-              <button
-                type="button"
-                className={`platform__fy-btn ${selectedFy === '25-26' ? 'is-active' : ''}`}
-                onClick={() => setSelectedFy('25-26')}
-              >
-                25-26
-              </button>
-              <button
-                type="button"
-                className={`platform__fy-btn ${selectedFy === '26-27' ? 'is-active' : ''}`}
-                onClick={() => setSelectedFy('26-27')}
-              >
-                26-27
-              </button>
-            </div>
-            <div className="platform__new-menu-container" ref={newMenuRef}>
-              <button
-                type="button"
-                className="platform__btn-new"
-                onClick={() => setNewMenuOpen((v) => !v)}
-                aria-expanded={newMenuOpen}
-                aria-haspopup="menu"
-                aria-label="Create new item"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                <span>New</span>
-                <svg className="platform__btn-new-chevron" width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </button>
-              {newMenuOpen ? (
-                <div className="platform__new-dropdown" role="menu" aria-label="New creation actions">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="platform__new-dropdown-item"
-                    onClick={() => {
-                      setNewMenuOpen(false);
-                      navigate(ROUTES.CREATE_CASE(firmSlug));
-                    }}
-                  >
-                    + Matter / Filing
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="platform__new-dropdown-item"
-                    onClick={() => {
-                      setNewMenuOpen(false);
-                      navigate(ROUTES.COMPLIANCE_CONTROL(firmSlug));
-                    }}
-                  >
-                    + Statutory Due Date
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="platform__new-dropdown-item"
-                    onClick={() => {
-                      setNewMenuOpen(false);
-                      navigate(ROUTES.COMPLIANCE_CALENDAR(firmSlug));
-                    }}
-                  >
-                    + Hearing / Listing
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="platform__new-dropdown-item"
-                    onClick={() => {
-                      setNewMenuOpen(false);
-                      navigate(ROUTES.CLIENTS(firmSlug));
-                    }}
-                  >
-                    + Upload Documents
-                  </button>
-                </div>
-              ) : null}
             </div>
             {actions ? <div className="platform__action-primary">{actions}</div> : null}
             <NotificationBell />

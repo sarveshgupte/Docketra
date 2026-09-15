@@ -217,7 +217,18 @@ export const AuthProvider = ({ children }) => {
     }
   }, [resetAuthState]);
 
-  const signup = useCallback(async ({ name, email, password, firmName, phone, turnstileToken }) => {
+  const signup = useCallback(async ({
+    name,
+    email,
+    password,
+    firmName,
+    phone,
+    turnstileToken,
+    agreedToPilotTerms,
+    agreedToTerms,
+    termsVersion,
+    privacyVersion,
+  }) => {
     return authService.signup({
       name,
       email,
@@ -225,6 +236,10 @@ export const AuthProvider = ({ children }) => {
       firmName,
       phone,
       turnstileToken,
+      agreedToPilotTerms,
+      agreedToTerms,
+      termsVersion,
+      privacyVersion,
     });
   }, []);
 

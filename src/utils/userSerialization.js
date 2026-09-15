@@ -17,6 +17,8 @@ const SENSITIVE_USER_PATHS = [
   'lastLoginIp',
   'lastLoginCountry',
   'deletedAuthSnapshot',
+  'legalConsent.ipAddress',
+  'legalConsent.userAgent',
 ];
 
 const removePath = (target, path) => {

@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const mongoose = require('mongoose');
 const ExcelJS = require('exceljs');
 const Client = require('../models/Client.model');
@@ -28,9 +29,14 @@ const TYPE_CONFIG = {
       'CIN',
       'TAN',
       'GST',
+      'city',
+      'state',
+      'pincode',
       'contactPersonName',
+      'contactPersonEmail',
+      'contactPersonPhone',
     ],
-    required: ['businessName', 'businessEmail', 'primaryContactNumber'],
+    required: ['businessName', 'businessEmail', 'primaryContactNumber', 'businessAddress', 'city', 'state', 'pincode', 'contactPersonName', 'contactPersonEmail', 'contactPersonPhone'],
     duplicateKey: 'businessEmail',
     permission: 'CLIENT_MANAGE',
   },
@@ -57,8 +63,13 @@ const HEADER_ALIASES = {
     businessName: ['businessname', 'name', 'client_name'],
     businessEmail: ['businessemail', 'email', 'client_email'],
     contactPersonName: ['contactpersonname', 'contact_name'],
+    contactPersonEmail: ['contactpersonemail', 'contact_email'],
+    contactPersonPhone: ['contactpersonphone', 'contact_phone'],
     primaryContactNumber: ['primarycontactnumber', 'phone', 'mobile'],
     businessAddress: ['businessaddress', 'address', 'client_address'],
+    city: ['city'],
+    state: ['state'],
+    pincode: ['pincode', 'pin', 'zip', 'zipcode'],
     PAN: ['pan', 'pan_number'],
     CIN: ['cin', 'cin_number'],
     TAN: ['tan', 'tan_number'],
@@ -535,6 +546,7 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
   const clientBulkOps = [];
   const teamBulkOps = [];
   const BATCH_SIZE = 500;
+  let nextClientNumericSeq = null;
 
   if (type === 'categories' && rows.length > 0) {
     const categoryNames = [...new Set(rows.map(r => String(r.data && r.data.category ? r.data.category : '').trim()).filter(Boolean))];
@@ -599,13 +611,21 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
                     businessAddress: row.data.businessAddress || 'N/A',
                     primaryContactNumber: row.data.primaryContactNumber || 'N/A',
                     businessEmail: row.data.businessEmail.trim().toLowerCase(),
+                    updatedAt: new Date(),
                   },
                 },
               }
             }
           });
         } else {
-          const clientId = await generateNextClientId(user.firmId);
+          let clientId;
+          if (nextClientNumericSeq === null) {
+            clientId = await generateNextClientId(user.firmId);
+            nextClientNumericSeq = parseInt(clientId.slice(1), 10);
+          } else {
+            nextClientNumericSeq += 1;
+            clientId = `C${String(nextClientNumericSeq).padStart(6, '0')}`;
+          }
           clientBulkOps.push({
             meta: { rowNumber: row.rowNumber, action: row.action, clientId, email: row.data.businessEmail.trim().toLowerCase() },
             op: {
@@ -623,6 +643,8 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
                   isActive: true,
                   status: 'ACTIVE',
                   previousBusinessNames: [],
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
                 }
               }
             }
@@ -645,6 +667,7 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
                     teamIds: row.data.teamIds || [],
                     teamId: Array.isArray(row.data.teamIds) && row.data.teamIds.length > 0 ? row.data.teamIds[0] : null,
                     restrictedClientIds: row.data.restrictedClientIds || [],
+                    updatedAt: new Date(),
                   },
                 },
               }
@@ -659,7 +682,9 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
               insertOne: {
                 document: {
                   _id: newUserId,
+                  id: crypto.randomUUID(),
                   xID,
+                  xid: xID,
                   name: row.data.name.trim(),
                   email: row.data.email.trim().toLowerCase(),
                   role: row.data.role,
@@ -675,6 +700,8 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
                   mustSetPassword: true,
                   passwordSet: false,
                   inviteSentAt: null,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
                 }
               }
             }
@@ -694,7 +721,7 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
     if (type === 'clients' && clientBulkOps.length >= BATCH_SIZE) {
       try {
         const ops = clientBulkOps.map(item => item.op);
-        const res = await Client.bulkWrite(ops, { ordered: false });
+        const res = await Client.collection.bulkWrite(ops, { ordered: false });
         // Since we map strictly 1:1, we will approximate success/failures.
         // In ordered: false, if there are errors, an exception is thrown with writeErrors.
         // Mongoose 6+ and Mongo driver 4+ return detailed results on success
@@ -732,7 +759,7 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
     if (type === 'team' && teamBulkOps.length >= BATCH_SIZE) {
       try {
         const ops = teamBulkOps.map(item => item.op);
-        const res = await User.bulkWrite(ops, { ordered: false });
+        const res = await User.collection.bulkWrite(ops, { ordered: false });
         successCount += (res.insertedCount || 0) + (res.modifiedCount || 0) + (res.upsertedCount || 0);
         teamBulkOps.forEach(item => {
            results.push({ row: item.meta.rowNumber, status: item.meta.action });
@@ -775,7 +802,7 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
   if (type === 'clients' && clientBulkOps.length > 0) {
     try {
       const ops = clientBulkOps.map(item => item.op);
-      const res = await Client.bulkWrite(ops, { ordered: false });
+      const res = await Client.collection.bulkWrite(ops, { ordered: false });
       successCount += (res.insertedCount || 0) + (res.modifiedCount || 0) + (res.upsertedCount || 0);
       clientBulkOps.forEach(item => {
          results.push({ row: item.meta.rowNumber, status: item.meta.action });
@@ -806,7 +833,7 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
   if (type === 'team' && teamBulkOps.length > 0) {
     try {
       const ops = teamBulkOps.map(item => item.op);
-      const res = await User.bulkWrite(ops, { ordered: false });
+      const res = await User.collection.bulkWrite(ops, { ordered: false });
       successCount += (res.insertedCount || 0) + (res.modifiedCount || 0) + (res.upsertedCount || 0);
       teamBulkOps.forEach(item => {
          results.push({ row: item.meta.rowNumber, status: item.meta.action });

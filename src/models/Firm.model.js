@@ -5,6 +5,16 @@ const featureFlagFirmStateSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 }, { _id: false });
 
+const legalConsentSchema = new mongoose.Schema({
+  agreedToPilotTerms: { type: Boolean, required: true, default: false },
+  agreedAt: { type: Date, required: true, default: Date.now },
+  ipAddress: { type: String, required: true },
+  userAgent: { type: String, required: true },
+  termsVersion: { type: String, required: true, default: 'v1.0_pilot_2026' },
+  privacyVersion: { type: String, required: true, default: 'v1.0_pilot_2026' },
+  agreementType: { type: String, default: 'PILOT_CLICKWRAP' },
+}, { _id: false });
+
 /**
  * Firm Model for Multi-Tenancy
  * 
@@ -477,6 +487,14 @@ const firmSchema = new mongoose.Schema({
     index: true,
   },
   
+  /**
+   * Immutable clickwrap legal consent audit record
+   */
+  legalConsent: {
+    type: legalConsentSchema,
+    default: null,
+  },
+
   /**
    * Audit trail for firm creation
    */

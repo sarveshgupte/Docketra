@@ -86,6 +86,9 @@ export const MarketingAcceptableUsePage = lazyPage(() => import('../pages/market
 export const MarketingAboutPage = lazyPage(() => import('../pages/marketing/About'), 'AboutPage');
 export const MarketingContactPage = lazyPage(() => import('../pages/marketing/Contact'), 'ContactPage');
 export const MarketingSignupPage = lazy(() => import('../pages/marketing/Signup'));
+export const MarketingCompareExcelWhatsAppPage = lazyPage(() => import('../pages/marketing/DocketraVsExcelWhatsAppPage'), 'DocketraVsExcelWhatsAppPage');
+export const MarketingCompanySecretariesPage = lazyPage(() => import('../pages/marketing/CompanySecretariesSolutionPage'), 'CompanySecretariesSolutionPage');
+export const MarketingCorporateLegalTeamsPage = lazyPage(() => import('../pages/marketing/CorporateLegalTeamsSolutionPage'), 'CorporateLegalTeamsSolutionPage');
 export const NotFoundPage = lazyPage(() => import('../pages/NotFoundPage'), 'NotFoundPage');
 export const OtpVerificationPage = lazyPage(() => import('../pages/OtpVerificationPage'), 'OtpVerificationPage');
 export const OAuthPostAuthPage = lazyPage(() => import('../pages/OAuthPostAuthPage'), 'OAuthPostAuthPage');

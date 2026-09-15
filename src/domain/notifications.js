@@ -20,6 +20,8 @@ const NotificationTypes = Object.freeze({
   PENDED_DOCKET_REOPENED: ServiceNotificationTypes.PENDED_DOCKET_REOPENED,
   DOCKET_DUE_SOON: ServiceNotificationTypes.DOCKET_DUE_SOON,
   DOCKET_OVERDUE: ServiceNotificationTypes.DOCKET_OVERDUE,
+  SLA_BREACHED: ServiceNotificationTypes.SLA_BREACHED,
+  FIRM_CALENDAR_REMINDER: ServiceNotificationTypes.FIRM_CALENDAR_REMINDER,
 });
 
 function assertNotificationType(type) {
@@ -65,6 +67,18 @@ function buildMessage({ type, docketId, actor }) {
   }
   if (type === NotificationTypes.DOCKET_OVERDUE) {
     return { title: 'Docket overdue', message: `Docket ${docketId} is overdue.` };
+  }
+  if (type === NotificationTypes.SLA_BREACHED) {
+    return {
+      title: 'SLA Breached',
+      message: `Docket ${docketId} has breached its SLA.`,
+    };
+  }
+  if (type === NotificationTypes.FIRM_CALENDAR_REMINDER) {
+    return {
+      title: actor?.calendarEntryType === 'birthday' ? 'Birthday reminder' : 'Important date reminder',
+      message: `${actor?.title || 'Reminder'} is on ${actor?.dueDateKey ? actor.dueDateKey.slice(0, 10) : 'schedule'}.`,
+    };
   }
   if (type === NotificationTypes.CLIENT_UPLOAD) {
     return {

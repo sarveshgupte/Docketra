@@ -7,6 +7,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../../utils/validators';
 import { spacingClasses } from '../../theme/tokens';
 import { ROUTES } from '../../constants/routes';
+import { PilotAgreementModal, PILOT_TERMS_VERSION } from '../../components/marketing/PilotAgreementModal';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^\d{10}$/;
@@ -80,6 +81,14 @@ export default function Signup() {
   const [cooldown, setCooldown] = useState(30);
   const [signupSuccessData, setSignupSuccessData] = useState(null);
   const [emailStatus, setEmailStatus] = useState('');
+  const [agreedToPilotTerms, setAgreedToPilotTerms] = useState(false);
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState('pilot');
+
+  const openLegalModal = (tab = 'pilot') => {
+    setLegalModalTab(tab);
+    setLegalModalOpen(true);
+  };
   const otpInputRef = useRef(null);
   const turnstileContainerRef = useRef(null);
   const turnstileWidgetIdRef = useRef(null);
@@ -183,6 +192,9 @@ export default function Signup() {
     else if (!validateStrongPassword(form.password)) nextErrors.password = STRONG_PASSWORD_MESSAGE;
     if (!form.firmName.trim()) nextErrors.firmName = 'Firm name is required';
     if (!phonePattern.test(form.phone.trim())) nextErrors.phone = 'Phone must be 10 digits';
+    if (!agreedToPilotTerms) {
+      nextErrors.agreedToPilotTerms = 'You must agree to the Docketra Pilot Evaluation Terms to proceed.';
+    }
 
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors);
@@ -205,6 +217,10 @@ export default function Signup() {
         firmName: form.firmName.trim(),
         phone: form.phone.trim(),
         turnstileToken: isTurnstileConfigured ? effectiveTurnstileToken : undefined,
+        agreedToPilotTerms: true,
+        agreedToTerms: true,
+        termsVersion: PILOT_TERMS_VERSION,
+        privacyVersion: PILOT_TERMS_VERSION,
       });
       setStep(2);
       setOtp('');
@@ -491,11 +507,62 @@ export default function Signup() {
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               🔑 {STRONG_PASSWORD_MESSAGE}
             </div>
+            <div className={`rounded-2xl border ${errors.agreedToPilotTerms ? 'border-rose-400 bg-rose-50/80' : 'border-slate-200 bg-slate-50'} p-4 transition-colors`}>
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  id="signup-terms-consent"
+                  type="checkbox"
+                  name="agreedToPilotTerms"
+                  checked={agreedToPilotTerms}
+                  onChange={(e) => {
+                    setAgreedToPilotTerms(e.target.checked);
+                    if (errors.agreedToPilotTerms) {
+                      setErrors((prev) => ({ ...prev, agreedToPilotTerms: '' }));
+                    }
+                  }}
+                  disabled={loading}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-slate-950 accent-slate-950"
+                  required
+                />
+                <span className="text-xs leading-5 text-slate-700">
+                  I agree to the{' '}
+                  <button
+                    type="button"
+                    onClick={() => openLegalModal('pilot')}
+                    className="font-bold text-slate-950 underline underline-offset-2 hover:text-amber-700"
+                  >
+                    Pilot Evaluation Agreement
+                  </button>
+                  ,{' '}
+                  <button
+                    type="button"
+                    onClick={() => openLegalModal('terms')}
+                    className="font-bold text-slate-950 underline underline-offset-2 hover:text-amber-700"
+                  >
+                    Terms of Service &amp; Disclaimers
+                  </button>
+                  , and{' '}
+                  <button
+                    type="button"
+                    onClick={() => openLegalModal('privacy')}
+                    className="font-bold text-slate-950 underline underline-offset-2 hover:text-amber-700"
+                  >
+                    Privacy Policy
+                  </button>{' '}
+                  (Operator: Sarvesh Gupte, Maharashtra, India). I acknowledge that Docketra is an evaluation workflow tool and does not provide legal, tax, or statutory compliance advice.
+                </span>
+              </label>
+              {errors.agreedToPilotTerms && (
+                <p className="mt-2 text-xs font-semibold text-rose-600">
+                  {errors.agreedToPilotTerms}
+                </p>
+              )}
+            </div>
             <Button
               type="submit"
               variant="primary"
               fullWidth
-              disabled={loading || (isTurnstileConfigured && !getEffectiveTurnstileToken())}
+              disabled={loading || !agreedToPilotTerms || (isTurnstileConfigured && !getEffectiveTurnstileToken())}
               loading={loading}
             >
               {loading ? 'Sending verification code...' : 'Send verification code'}
@@ -556,10 +623,20 @@ export default function Signup() {
           </form>
         )}
 
-        <p className="find-workspace-page__notice rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-          🛡️ By signing up, you agree to our <Link to="/terms" target="_blank" rel="noopener noreferrer" className="auth-public-page__inline-link">Terms &amp; Conditions</Link> and <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="auth-public-page__inline-link">Privacy Policy</Link>.
-        </p>
+        <div className="find-workspace-page__notice rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-xs text-slate-600">
+          🛡️ Explicit clickwrap consent recorded with IP &amp; timestamp audit trail. Review full legal terms via the links above.
+        </div>
         </Card>
+        <PilotAgreementModal
+          isOpen={legalModalOpen}
+          initialTab={legalModalTab}
+          onClose={() => setLegalModalOpen(false)}
+          onAccept={() => {
+            setAgreedToPilotTerms(true);
+            setErrors((prev) => ({ ...prev, agreedToPilotTerms: '' }));
+            setLegalModalOpen(false);
+          }}
+        />
     </SignupShell>
   );
 }

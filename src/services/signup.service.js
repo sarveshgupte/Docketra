@@ -138,6 +138,7 @@ const initiateSignup = async ({
   password,
   phone,
   firmName,
+  legalConsent = null,
   session = null,
   req = null,
 }) => {
@@ -195,6 +196,7 @@ const initiateSignup = async ({
     otpLastSentAt: new Date(),
     isVerified: false,
     consumedAt: null,
+    legalConsent: legalConsent || null,
   }, { session });
 
   // OTP delivery is auth-critical: fail fast when email cannot be dispatched.
@@ -299,6 +301,7 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
       firmName: record.firmName,
       passwordHash: record.passwordHash || null,
       phone: record.phone || null,
+      legalConsent: record.legalConsent || null,
       session,
       req,
     });
@@ -536,6 +539,7 @@ const createFirmAndAdmin = async ({
   phone = null,
   authProvider,
   googleSubject = null,
+  legalConsent = null,
   session = null,
   req = null,
 }) => {
@@ -556,6 +560,18 @@ const createFirmAndAdmin = async ({
   let firmSlug = null;
   let lastFirmCreateError = null;
 
+  const resolvedLegalConsent = legalConsent || (req ? {
+    agreedToPilotTerms: true,
+    agreedAt: new Date(),
+    ipAddress: req.headers?.['x-forwarded-for']
+      ? String(req.headers['x-forwarded-for']).split(',')[0].trim()
+      : (req.ip || req.socket?.remoteAddress || '127.0.0.1'),
+    userAgent: req.headers?.['user-agent'] || (typeof req.get === 'function' ? req.get('user-agent') : '') || 'System/Direct',
+    termsVersion: 'v1.0_pilot_2026',
+    privacyVersion: 'v1.0_pilot_2026',
+    agreementType: 'PILOT_CLICKWRAP',
+  } : null);
+
   for (let attempt = 0; attempt < MAX_SLUG_COLLISION_RETRIES; attempt += 1) {
     firmSlug = await generateUniqueSlug(normalizedFirmName, session, attempt);
     try {
@@ -568,6 +584,7 @@ const createFirmAndAdmin = async ({
         maxUsers: 10,
         status: 'active',
         bootstrapStatus: 'PENDING',
+        ...(resolvedLegalConsent ? { legalConsent: resolvedLegalConsent } : {}),
       }], { session });
       break;
     } catch (error) {
@@ -641,9 +658,10 @@ const createFirmAndAdmin = async ({
     verificationMethod: isGoogleAuth ? 'GOOGLE' : 'OTP',
     termsAccepted: true,
     termsAcceptedAt: now,
-    termsVersion: 'v1.0',
-    signupIP: req?.ip || null,
-    signupUserAgent: req?.headers?.['user-agent'] || null,
+    termsVersion: resolvedLegalConsent?.termsVersion || 'v1.0',
+    signupIP: req?.ip || resolvedLegalConsent?.ipAddress || null,
+    signupUserAgent: req?.headers?.['user-agent'] || resolvedLegalConsent?.userAgent || null,
+    ...(resolvedLegalConsent ? { legalConsent: resolvedLegalConsent } : {}),
     passwordSet: authProvider === 'password',
     passwordHash: passwordHash || null,
     mustSetPassword: authProvider !== 'password',
@@ -685,6 +703,7 @@ const createTenant = async ({
   firmName,
   passwordHash,
   phone,
+  legalConsent = null,
   session,
   req = null,
 }) => {
@@ -707,6 +726,7 @@ const createTenant = async ({
     passwordHash: passwordHash || null,
     phone: phone || null,
     authProvider: 'password',
+    legalConsent,
     session,
     req,
   });
@@ -754,6 +774,7 @@ const completeSignup = async ({ email, firmName, session, req = null }) => {
       passwordHash: record.passwordHash || null,
       phone: record.phone || null,
       authProvider: 'password',
+      legalConsent: record.legalConsent || null,
       session,
       req,
     });

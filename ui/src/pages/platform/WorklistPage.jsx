@@ -225,6 +225,8 @@ export const PlatformWorklistPage = () => {
       const matchesCategory = categoryFilter === 'ALL' || String(item.category || '') === categoryFilter;
       const matchesQuery = !needle || [
         formatDocketLabel(item),
+        item.title,
+        item.caseName,
         item.clientName,
         item.clientId,
         item.category,
@@ -308,27 +310,29 @@ export const PlatformWorklistPage = () => {
   return (
     <PlatformShell
       moduleLabel="Queues"
-      title={scopedWorkbasket ? `Worklist — ${scopedWorkbasket.name}` : 'My Worklist'}
+      title="My Worklist"
       subtitle="Active queue."
       actions={
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => void refetch()}
             disabled={isFetching}
-            className="inline-flex items-center gap-1.5 px-4 py-2 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 active:bg-gray-100 text-sm font-semibold text-gray-700 transition-all shadow-sm disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 active:scale-[0.97] active:bg-gray-100 text-xs font-semibold text-gray-700 transition-all shadow-xs disabled:opacity-50 min-w-[96px]"
+            title="Refresh worklist"
+            aria-label="Refresh worklist"
           >
             <svg
-              className={`w-4 h-4 text-gray-500 ${isFetching ? 'animate-spin' : ''}`}
+              className={`w-3.5 h-3.5 text-gray-500 transition-transform duration-500 ${isFetching ? 'animate-spin' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5" />
             </svg>
-            {isFetching ? 'Refreshing…' : 'Refresh'}
+            <span>{isFetching ? 'Refreshing…' : 'Refresh'}</span>
           </button>
-          <Link to={ROUTES.CREATE_CASE(firmSlug)} className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 rounded-lg shadow-sm hover:shadow">
+          <Link to={ROUTES.CREATE_CASE(firmSlug)} className="inline-flex items-center justify-center px-3.5 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 active:scale-[0.97] transition-all rounded-lg shadow-xs">
             New docket
           </Link>
         </div>

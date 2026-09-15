@@ -56,6 +56,9 @@ export const ROUTES = {
   KNOWLEDGE_LIBRARY: (firmSlug) => `/app/firm/${firmSlug}/knowledge`,
   TASK_MANAGER: (firmSlug) => `/app/firm/${firmSlug}/task-manager`,
   SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/settings`,
+  COMPARE_EXCEL_WHATSAPP: '/compare/docketra-vs-excel-whatsapp',
+  SOLUTIONS_COMPANY_SECRETARIES: '/solutions/company-secretaries',
+  SOLUTIONS_CORPORATE_LEGAL: '/solutions/corporate-legal-teams',
 };
 
 export const hasValidFirmSlug = (firmSlug) => Boolean(firmSlug && !String(firmSlug).includes('undefined'));

@@ -42,9 +42,8 @@ const notificationPreferenceSchema = new mongoose.Schema({
   timestamps: false,
 });
 
-notificationPreferenceSchema.pre('save', function setUpdatedAt(next) {
+notificationPreferenceSchema.pre('save', function setUpdatedAt() {
   this.updatedAt = new Date();
-  next();
 });
 
 notificationPreferenceSchema.index({ firmId: 1, userId: 1 }, { unique: true });

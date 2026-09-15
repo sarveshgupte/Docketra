@@ -13,6 +13,9 @@ import {
   MarketingContactPage,
   MarketingFeaturesPage,
   MarketingHomePage,
+  MarketingCompareExcelWhatsAppPage,
+  MarketingCompanySecretariesPage,
+  MarketingCorporateLegalTeamsPage,
   MarketingPrivacyPage,
   MarketingSecurityPage,
   MarketingAcceptableUsePage,
@@ -53,6 +56,9 @@ export const PublicRoutes = () => (
   <>
     <Route element={<RouteSuspenseOutlet />}>
       <Route path="/" element={<MarketingHomePage />} />
+      <Route path="/compare/docketra-vs-excel-whatsapp" element={<MarketingCompareExcelWhatsAppPage />} />
+      <Route path="/solutions/company-secretaries" element={<MarketingCompanySecretariesPage />} />
+      <Route path="/solutions/corporate-legal-teams" element={<MarketingCorporateLegalTeamsPage />} />
     </Route>
 
     <Route element={<MarketingLayout />}>

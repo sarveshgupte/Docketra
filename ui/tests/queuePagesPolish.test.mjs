@@ -21,7 +21,7 @@ assert.ok(workbaskets.includes('New docket'), 'Workbaskets should keep the prima
 assert.ok(workbaskets.includes('tableClassName="w-full text-left border-collapse"'), 'Workbaskets should keep the shared table styling.');
 assert.ok(workbaskets.includes('error=""'), 'Workbaskets should avoid duplicate top-level + table-level query errors.');
 
-assert.ok(worklist.includes("title={scopedWorkbasket ? `Worklist — ${scopedWorkbasket.name}` : 'My Worklist'}"), 'Worklist title should support scoped and fallback variants.');
+assert.ok(worklist.includes('title="My Worklist"'), 'Worklist title should be My Worklist.');
 assert.ok(worklist.includes('subtitle="Active queue."'), 'My Worklist should keep the header copy short.');
 assert.ok(worklist.includes('Show active dockets only'), 'My Worklist should keep the compact status toggle.');
 assert.ok(worklist.includes('error=""'), 'My Worklist should suppress duplicate table-level errors.');

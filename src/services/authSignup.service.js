@@ -28,6 +28,31 @@ const createAuthSignupService = (deps) => {
         return res.status(400).json({ success: false, message: 'name, email, password, firmName and phone are required' });
       }
 
+      const agreedToPilotTerms = req.body?.agreedToPilotTerms === true || req.body?.agreedToTerms === true;
+      if (!agreedToPilotTerms) {
+        return res.status(400).json({
+          success: false,
+          message: 'You must review and agree to the Docketra Pilot Evaluation Terms and Privacy Policy to register.',
+        });
+      }
+
+      const clientIp = req.headers?.['x-forwarded-for']
+        ? String(req.headers['x-forwarded-for']).split(',')[0].trim()
+        : (req.ip || req.socket?.remoteAddress || '127.0.0.1');
+      const userAgent = req.headers?.['user-agent'] || (typeof req.get === 'function' ? req.get('user-agent') : '') || 'Unknown';
+      const termsVersion = String(req.body?.termsVersion || 'v1.0_pilot_2026').trim();
+      const privacyVersion = String(req.body?.privacyVersion || 'v1.0_pilot_2026').trim();
+
+      const legalConsent = {
+        agreedToPilotTerms: true,
+        agreedAt: new Date(),
+        ipAddress: clientIp,
+        userAgent,
+        termsVersion,
+        privacyVersion,
+        agreementType: 'PILOT_CLICKWRAP',
+      };
+
       await logSecurityAuditEvent({
         req,
         action: SECURITY_AUDIT_ACTIONS.SIGNUP_INIT_ATTEMPT,
@@ -42,6 +67,7 @@ const createAuthSignupService = (deps) => {
         password,
         firmName,
         phone,
+        legalConsent,
         session: getSession(req),
         req,
       });

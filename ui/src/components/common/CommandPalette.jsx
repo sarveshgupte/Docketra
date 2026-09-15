@@ -57,11 +57,15 @@ export const CommandPalette = ({
       .map((section) => ({
         ...section,
         items: section.items.filter((command) => {
-          const haystack = [command.label, command.description, command.group]
+          const metaStrings = Array.isArray(command.meta)
+            ? command.meta.filter(Boolean).map(String)
+            : command.meta ? [String(command.meta)] : [];
+          const haystack = [command.label, command.description, command.group, ...metaStrings]
             .filter(Boolean)
             .join(' ')
             .toLowerCase();
-          return haystack.includes(needle);
+          const isDynamicSearchResult = section.id === 'dockets' || section.id === 'clients' || section.id === 'docket-id-match';
+          return haystack.includes(needle) || isDynamicSearchResult;
         }),
       }))
       .filter((section) => section.items.length > 0);

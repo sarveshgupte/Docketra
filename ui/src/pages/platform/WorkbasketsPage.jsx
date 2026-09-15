@@ -321,7 +321,7 @@ export const PlatformWorkbasketsPage = () => {
             </svg>
             {isFetching ? 'Refreshing…' : 'Refresh'}
           </button>
-          <Link to={ROUTES.CREATE_CASE(firmSlug)} className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 rounded-lg shadow-sm hover:shadow">
+          <Link to={ROUTES.CREATE_CASE(firmSlug)} className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 active:scale-[0.97] transition-all rounded-lg shadow-sm hover:shadow">
             New docket
           </Link>
         </div>

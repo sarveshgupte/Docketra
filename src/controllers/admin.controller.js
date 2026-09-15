@@ -916,7 +916,7 @@ const getFirmSettings = async (req, res) => {
     const ownershipFirmId = resolveOwnershipFirmIdOrReject(req, res);
     if (!ownershipFirmId) return;
 
-    const firm = await Firm.findById(ownershipFirmId).select('settings');
+    const firm = await Firm.findById(ownershipFirmId).select('settings legalConsent');
     if (!firm) {
       return res.status(404).json({ success: false, message: 'Firm not found' });
     }
@@ -926,6 +926,7 @@ const getFirmSettings = async (req, res) => {
       data: {
         firm: normalizeFirmSettings(firm.settings?.firm || {}),
         work: normalizeWorkSettings(firm.settings?.work || {}),
+        legalConsent: firm.legalConsent || null,
       },
     });
   } catch (error) {

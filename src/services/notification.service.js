@@ -24,9 +24,10 @@ async function resolveRecipientXid(payload = {}, firmId = '') {
   const recipientUserId = String(payload.recipientUserId || '').trim();
   if (!recipientUserId) return '';
 
+  const firmIdFilter = toObjectId(firmId) || firmId;
   const recipient = await User.findOne({
     _id: recipientUserId,
-    firmId,
+    firmId: firmIdFilter,
     status: { $ne: 'deleted' }
   }).select('xID').lean();
 
@@ -84,10 +85,10 @@ async function createNotification(payload) {
     const resolvedRecipientXid = await resolveRecipientXid(payload, String(payload?.firmId || '').trim());
     if (!resolvedRecipientXid) return null;
     const normalized = normalizePayload({ ...payload, recipientXID: resolvedRecipientXid });
+    const firmIdFilter = toObjectId(payload.firmId) || payload.firmId;
     const recipient = await User.findOne({
       xID: normalized.userId,
-      // User.firmId is ObjectId — must cast from the string in normalized.firmId
-      firmId: toObjectId(payload.firmId),
+      firmId: firmIdFilter,
       status: { $ne: 'deleted' }
     }).select('xID').lean();
     if (!recipient) {

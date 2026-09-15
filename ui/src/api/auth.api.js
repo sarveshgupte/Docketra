@@ -19,8 +19,19 @@ export const authApi = {
   exchangeGoogleAuth: ({ exchangeToken, firmSlug }) =>
     request((http) => http.post('/auth/google/exchange', { exchangeToken, firmSlug }), 'Google sign-in failed.'),
 
-  signupInit: ({ name, email, password, firmName, phone, turnstileToken }) =>
-    request((http) => http.post('/auth/signup/init', { name, email, password, firmName, phone, turnstileToken }), 'Signup failed.'),
+  signupInit: ({ name, email, password, firmName, phone, turnstileToken, agreedToPilotTerms, agreedToTerms, termsVersion, privacyVersion }) =>
+    request((http) => http.post('/auth/signup/init', {
+      name,
+      email,
+      password,
+      firmName,
+      phone,
+      turnstileToken,
+      agreedToPilotTerms,
+      agreedToTerms,
+      termsVersion,
+      privacyVersion,
+    }), 'Signup failed.'),
 
   signupVerify: ({ email, otp }) =>
     request((http) => http.post('/auth/signup/verify', { email, otp }), 'OTP verification failed.'),
