@@ -29,3 +29,6 @@
 ## 2024-10-25 - Eliminate redundant sequential validation counts
 **Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
 **Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
+## 2026-09-15 - Replaced pagination counts with limit+1 slice
+**Learning:** In offset-based pagination routes, running a concurrent `countDocuments` forces MongoDB to do a full index scan. Using `.limit(limit + 1)` on the main data query fetches exactly enough documents to verify if a 'next page' exists in an O(1) time slice, allowing us to safely omit the full index scan count.
+**Action:** Use the `limit(limit + 1)` technique when implementing or optimizing list endpoints where a strict numeric count isn't explicitly required by the frontend.
