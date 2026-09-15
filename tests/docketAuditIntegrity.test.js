@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 const assert = require('assert');
+const mongoose = require('mongoose');
 const DocketAudit = require('../src/models/DocketAudit.model');
 const docketAuditService = require('../src/services/docketAudit.service');
 const Case = require('../src/models/Case.model');
@@ -51,6 +52,7 @@ async function testReopenMovesToWorkbenchWithAudit() {
 
   try {
     Case.find = async (filter) => {
+      mongoose.connection.readyState = 1;
       observedFindFilter = filter;
       return [{
         _id: 'doc-1',
