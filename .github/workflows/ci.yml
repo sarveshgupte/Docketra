@@ -19,8 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NODE_ENV: test
-      JWT_SECRET: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-      JWT_PASSWORD_SETUP_SECRET: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      JWT_SECRET: cidefaultjwtsecretthatisverylong1234567890abcdefghijklmnopqrstuvwxyz
+      JWT_PASSWORD_SETUP_SECRET: cidefaultjwtpasswordsetupsecretthatisverylong1234567890abcdefghijklm
       SUPERADMIN_XID: X000001
       SUPERADMIN_EMAIL: superadmin@example.com
       # Test-only bcrypt hash placeholder ("password"). Never use in production.
@@ -32,8 +32,8 @@ jobs:
       ENABLE_EXTERNAL_STORAGE: "false"
       ENCRYPTION_PROVIDER: local
       MASTER_ENCRYPTION_KEY: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-      STORAGE_TOKEN_SECRET: cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-      METRICS_TOKEN: dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+      STORAGE_TOKEN_SECRET: cidefaultstoragetokensecretthatisverylong1234567890abcdefghijklmno
+      METRICS_TOKEN: cidefaultmetricstokensecretthatisverylong1234567890abcdefghijklmno
       UPLOAD_SCAN_STRICT: "true"
       AUTH_DEBUG_DIAGNOSTICS: "false"
       # CI-only placeholder values used exclusively by `validate:env:production`.
