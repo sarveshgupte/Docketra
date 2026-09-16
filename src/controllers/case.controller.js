@@ -1258,10 +1258,10 @@ const getDocketAudit = async (req, res) => {
       pagination: result.pagination,
     });
   } catch (error) {
+    log.error('GET_DOCKET_AUDIT_LOGS_ERROR', { message: error.message, stack: error.stack });
     return res.status(500).json({
       success: false,
       message: 'Error fetching docket audit logs',
-      error: error.message,
     });
   }
 };
@@ -1283,7 +1283,8 @@ const getDocketEligibleUsers = async (req, res) => {
       .lean();
     return res.json({ success: true, data: users });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Failed to load eligible users', error: error.message });
+    log.error('GET_ELIGIBLE_USERS_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to load eligible users' });
   }
 };
 
