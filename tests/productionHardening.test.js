@@ -169,6 +169,7 @@ async function testAdminStatusNormalization() {
 
   Firm.findById = originalFirmFindById;
   User.findOne = originalUserFindOne;
+  delete User.find;
   User.countDocuments = originalUserCountDocuments;
   SuperadminAudit.create = originalSuperadminAuditCreate;
   console.log('✓ superadmin admin lifecycle normalizes DISABLED status consistently');

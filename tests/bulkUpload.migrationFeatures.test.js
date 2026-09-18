@@ -21,7 +21,7 @@ process.env.SUPERADMIN_XID = process.env.SUPERADMIN_XID || 'X000000';
 process.env.SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'superadmin@docketra.com';
 process.env.SUPERADMIN_OBJECT_ID = process.env.SUPERADMIN_OBJECT_ID || '507f1f77bcf86cd799439011';
 process.env.ENCRYPTION_PROVIDER = 'disabled';
-process.env.MASTER_ENCRYPTION_KEY = 'a'.repeat(32);
+process.env.MASTER_ENCRYPTION_KEY = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');

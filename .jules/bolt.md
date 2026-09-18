@@ -29,3 +29,6 @@
 ## 2024-10-25 - Eliminate redundant sequential validation counts
 **Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
 **Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
+## 2024-10-24 - Optimize active admins count query in superadmin controller
+**Learning:** Found an unbounded `User.countDocuments` query in `src/controllers/superadmin.controller.js` for enforcing the "last active admin" protection rule during disable/delete ops. `countDocuments` performs a full index scan when we only care if the result is <= 1.
+**Action:** Replaced `User.countDocuments(...)` with `User.find(...).select('_id').limit(2).lean()` to provide an O(1) early return and significantly reduce database CPU and latency.
