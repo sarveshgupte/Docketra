@@ -127,6 +127,7 @@ async function testAdminStatusNormalization() {
     }
     return savedAdmin;
   };
+  User.find = () => ({ select: () => ({ limit: () => ({ lean: async () => [{ _id: "1" }, { _id: "2" }] }) }) });
   User.countDocuments = async () => 2;
   SuperadminAudit.create = async () => ({});
 
