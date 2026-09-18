@@ -1352,12 +1352,17 @@ const updateFirmAdminStatus = async (req, res) => {
   const oldStatus = admin.status;
   if (status === 'disabled' && normalizeAdminLifecycleStatus(admin.status) === 'active') {
     const session = getSession(req);
-    const activeAdminsCountQuery = User.countDocuments({
+    // ⚡ Bolt: Optimize threshold check for active admins
+    // 💡 What: Replaced User.countDocuments() with User.find().select('_id').limit(2).lean()
+    // 🎯 Why: countDocuments forces a full index scan. Using find with limit(2) provides an O(1) early return when we only need to know if the count is <= 1.
+    const activeAdminsCountQuery = User.find({
       firmId: firm._id,
       role: { $in: ADMIN_ROLE_VALUES },
       status: 'active',
-    });
-    const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
+    }).select('_id').limit(2).lean();
+
+    const activeAdminsRows = await resolveSessionQuery(activeAdminsCountQuery, session);
+    const activeAdminsCount = activeAdminsRows.length;
 
     if (activeAdminsCount <= 1) {
       log.warn('[SUPERADMIN] Blocked disable: last active admin protection', {
@@ -1619,12 +1624,17 @@ const deleteFirmAdmin = async (req, res) => {
   }
 
   if (adminForDelete.status === 'active') {
-    const activeAdminsCountQuery = User.countDocuments({
+    // ⚡ Bolt: Optimize threshold check for active admins
+    // 💡 What: Replaced User.countDocuments() with User.find().select('_id').limit(2).lean()
+    // 🎯 Why: countDocuments forces a full index scan. Using find with limit(2) provides an O(1) early return when we only need to know if the count is <= 1.
+    const activeAdminsCountQuery = User.find({
       firmId: firm._id,
       role: { $in: ADMIN_ROLE_VALUES },
       status: 'active',
-    });
-    const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
+    }).select('_id').limit(2).lean();
+
+    const activeAdminsRows = await resolveSessionQuery(activeAdminsCountQuery, session);
+    const activeAdminsCount = activeAdminsRows.length;
 
     if (activeAdminsCount <= 1) {
       log.warn('[SUPERADMIN] Blocked delete: last active admin protection', {
