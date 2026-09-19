@@ -234,18 +234,32 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
             {loading ? <p className="audit-drawer__meta text-indigo-600">Loading audit history...</p> : null}
           </div>
           <button type="button" className="audit-drawer__close" onClick={onClose} aria-label="Close audit history" title="Close audit history">
-            ×
+            <span aria-hidden="true">×</span>
           </button>
         </div>
 
         <div className="px-6 pt-3 pb-2 flex flex-col gap-2 border-b border-[var(--dt-border-whisper)] bg-[var(--dt-surface-muted)]/50">
-          <input
-            type="text"
-            placeholder="Search audit trail..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-md border border-[var(--dt-border)] bg-[var(--dt-surface)] px-3 py-1.5 text-xs text-[var(--dt-text)] focus:border-indigo-500 focus:outline-none"
-          />
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search audit trail..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search audit trail"
+              className="w-full rounded-md border border-[var(--dt-border)] bg-[var(--dt-surface)] px-3 py-1.5 text-xs text-[var(--dt-text)] focus:border-indigo-500 focus:outline-none pr-8"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--dt-text-muted)] hover:text-[var(--dt-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-sm flex items-center justify-center h-4 w-4"
+                aria-label="Clear search"
+                title="Clear search"
+              >
+                <span aria-hidden="true" className="text-sm leading-none">×</span>
+              </button>
+            )}
+          </div>
           <div className="flex flex-wrap gap-1">
             {[
               { id: 'ALL', label: 'All' },
@@ -258,7 +272,8 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveFilter(tab.id)}
-                className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                aria-pressed={activeFilter === tab.id}
+                className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 ${
                   activeFilter === tab.id
                     ? 'bg-indigo-600 text-white shadow-sm'
                     : 'bg-[var(--dt-surface)] text-[var(--dt-text-secondary)] border border-[var(--dt-border)] hover:bg-[var(--dt-surface-muted)]'

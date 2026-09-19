@@ -7,3 +7,6 @@
 ## 2026-08-13 - BubbleMenu Dropdown Accessibility
 **Learning:** Dropdowns and toggles with `aria-expanded` need a linked `aria-controls` pointing to a unique element ID to correctly announce state to screen readers. If there are multiple instances on a page, hardcoded IDs will conflict.
 **Action:** Use React's `useId()` to generate unique IDs for dropdown menus and bind them to the toggle button's `aria-controls`.
+## 2024-09-19 - Audit Timeline UX Polish
+**Learning:** The Audit Timeline Drawer lacked focus indicators on its filter buttons, an `aria-pressed` state to convey active filters, and an accessible clear button for its search input.
+**Action:** Always add `focus-visible` styles to custom toggle buttons, use `aria-pressed` for stateful buttons, and provide a clear affordance (with `aria-label`) for search inputs. Additionally, wrap decorative characters like "×" in `<span aria-hidden="true">`.
