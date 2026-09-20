@@ -19,8 +19,9 @@ export const Card = ({ children, className = '', onClick, interactive = false, a
       <motion.div
         className={cardClasses}
         onClick={onClick}
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={false}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
         transition={{ duration: 0.2 }}
         {...props}
       >

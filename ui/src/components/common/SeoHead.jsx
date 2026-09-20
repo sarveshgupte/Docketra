@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 
 const DEFAULT_ORIGIN = 'https://docketra.in';
 const DEFAULT_TITLE = 'Docketra — The Company Brain for Indian Professional Firms';
-const DEFAULT_DESC = 'Manage client dockets, deadlines, and task assignments in one place. Built for Indian CS, CA, and legal firms. Start free.';
+const DEFAULT_DESC = 'Streamline client dockets, MCA deadlines, and team tasks in one sovereign workspace. Purpose-built for Indian CS, CA, and legal firms. Start your free pilot.';
 const DEFAULT_IMAGE = 'https://docketra.in/og-image.png';
 
 const setMetaTag = (attrName, attrValue, content) => {

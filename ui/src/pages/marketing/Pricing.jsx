@@ -6,7 +6,7 @@ import { Section } from '../../components/layout/Section';
 import SeoHead from '../../components/common/SeoHead';
 
 const SECTION_REVEAL = {
-  initial: { opacity: 0, y: 20 },
+  initial: false,
   whileInView: { opacity: 1, y: 0 },
   transition: { duration: 0.5, ease: 'easeOut' },
   viewport: { once: true, amount: 0.1 },
@@ -67,11 +67,7 @@ export const PricingPage = () => (
           pricing simple and transparent until billing infrastructure is ready.
         </p>
         <p className="mt-6 text-sm text-gray-700">
-          Questions? Email{' '}
-          <a href={`mailto:${SUPPORT_EMAIL}`} className="underline">
-            {SUPPORT_EMAIL}
-          </a>
-          .
+          Questions? Email <a href={`mailto:${SUPPORT_EMAIL}`} className="underline">{SUPPORT_EMAIL}</a>.
         </p>
       </article>
     </motion.div>

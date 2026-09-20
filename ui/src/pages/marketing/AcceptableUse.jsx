@@ -37,14 +37,7 @@ export const AcceptableUsePage = () => (
     <section id="reporting">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">3. Reporting</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        To report abuse or suspicious activity, contact{' '}
-        <a
-          href={`mailto:${SUPPORT_EMAIL}`}
-          className="text-gray-700 underline hover:no-underline"
-        >
-          {SUPPORT_EMAIL}
-        </a>
-        .
+        To report abuse or suspicious activity, contact <a href={`mailto:${SUPPORT_EMAIL}`} className="text-gray-700 underline hover:no-underline">{SUPPORT_EMAIL}</a>.
       </p>
     </section>
   </LegalLayout>

@@ -174,10 +174,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
           </div>
 
           <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-white leading-tight">
-            The Hidden Cost of Managing Indian Compliance on{' '}
-            <span className="text-amber-400">
-              Excel & WhatsApp
-            </span>
+            The Hidden Cost of Managing Indian Compliance on <span className="text-amber-400">Excel & WhatsApp</span>
           </h1>
 
           <p className="mx-auto mt-6 max-w-3xl text-base sm:text-lg text-slate-300 leading-relaxed font-normal">

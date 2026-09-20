@@ -1,3 +1,21 @@
+/**
+ * Route Module Loading & Hydration Preload Strategy
+ *
+ * Why PRELOADED_MODULES exists:
+ * In build-time prerendered setups, public marketing routes have complete HTML in the initial
+ * response. When React 18 mounts with `hydrateRoot()`, wrapping an unresolved `React.lazy()`
+ * component in `<Suspense>` causes a hydration mismatch (Minified React Error #418/#423) because
+ * the client initially renders a fallback shell while the server DOM already contains full content.
+ *
+ * How it works:
+ * 1. Before `ReactDOM.hydrateRoot()` runs in `ui/src/index.jsx`, `preloadMatchingRoute()` resolves
+ *    the module for the current URL pathname and caches the component in `PRELOADED_MODULES`.
+ * 2. On initial mount, `lazyPage()` checks `PRELOADED_MODULES`. If cached, it renders the component
+ *    synchronously (and `RouteSuspenseOutlet` bypasses `<Suspense>`), ensuring a 100% clean DOM hydration.
+ * 3. Subsequent in-app navigations to other routes not yet loaded continue to use `React.lazy()`,
+ *    preserving dynamic bundle splitting and suspense loading shells across the SPA.
+ */
+
 import { lazy } from 'react';
 
 const importWithRetry = async (importer, attempts = 2) => {
@@ -22,16 +40,41 @@ const importWithRetry = async (importer, attempts = 2) => {
   throw lastError;
 };
 
-const lazyPage = (importer, exportName) => lazy(async () => {
+const PRELOADED_MODULES = new Map();
+
+export const preloadRoute = async (importer, exportName) => {
   const module = await importWithRetry(importer);
   const pageExport = module?.[exportName] ?? module?.default;
-
   if (!pageExport) {
     throw new Error(`Missing expected export "${exportName}" in lazy module.`);
   }
+  PRELOADED_MODULES.set(importer, pageExport);
+  return pageExport;
+};
 
-  return { default: pageExport };
-});
+const lazyPage = (importer, exportName) => {
+  const LazyComponent = lazy(async () => {
+    const module = await importWithRetry(importer);
+    const pageExport = module?.[exportName] ?? module?.default;
+    if (!pageExport) {
+      throw new Error(`Missing expected export "${exportName}" in lazy module.`);
+    }
+    PRELOADED_MODULES.set(importer, pageExport);
+    return { default: pageExport };
+  });
+
+  const RouteComponent = (props) => {
+    const preloaded = PRELOADED_MODULES.get(importer);
+    if (preloaded) {
+      const SyncComp = preloaded;
+      return <SyncComp {...props} />;
+    }
+    return <LazyComponent {...props} />;
+  };
+
+  RouteComponent.displayName = `Route(${exportName || 'Page'})`;
+  return RouteComponent;
+};
 
 export const LoginPage = lazyPage(() => import('../pages/LoginPage'), 'LoginPage');
 export const FirmLoginPage = lazyPage(() => import('../pages/FirmLoginPage'), 'FirmLoginPage');
@@ -77,20 +120,69 @@ export const CasesPage = lazyPage(() => import('../pages/CasesPage'), 'CasesPage
 export const ClientsPage = lazyPage(() => import('../pages/ClientsPage'), 'ClientsPage');
 export const ClientWorkspacePage = lazyPage(() => import('../pages/ClientWorkspacePage'), 'ClientWorkspacePage');
 export const ClientDetailPage = lazyPage(() => import('../pages/clients/ClientDetailPage'), 'default');
-export const MarketingHomePage = lazyPage(() => import('../pages/marketing/HomePage'), 'HomePage');
-export const MarketingFeaturesPage = lazyPage(() => import('../pages/marketing/Features'), 'FeaturesPage');
-export const MarketingPricingPage = lazyPage(() => import('../pages/marketing/Pricing'), 'PricingPage');
-export const MarketingTermsPage = lazyPage(() => import('../pages/marketing/Terms'), 'TermsPage');
-export const MarketingPrivacyPage = lazyPage(() => import('../pages/marketing/Privacy'), 'PrivacyPage');
-export const MarketingSecurityPage = lazyPage(() => import('../pages/marketing/Security'), 'SecurityPage');
-export const MarketingAcceptableUsePage = lazyPage(() => import('../pages/marketing/AcceptableUse'), 'AcceptableUsePage');
-export const MarketingAboutPage = lazyPage(() => import('../pages/marketing/About'), 'AboutPage');
-export const MarketingContactPage = lazyPage(() => import('../pages/marketing/Contact'), 'ContactPage');
-export const MarketingSignupPage = lazy(() => import('../pages/marketing/Signup'));
-export const MarketingCompareExcelWhatsAppPage = lazyPage(() => import('../pages/marketing/DocketraVsExcelWhatsAppPage'), 'DocketraVsExcelWhatsAppPage');
-export const MarketingCompanySecretariesPage = lazyPage(() => import('../pages/marketing/CompanySecretariesSolutionPage'), 'CompanySecretariesSolutionPage');
-export const MarketingCorporateLegalTeamsPage = lazyPage(() => import('../pages/marketing/CorporateLegalTeamsSolutionPage'), 'CorporateLegalTeamsSolutionPage');
-export const MarketingCharteredAccountantsPage = lazyPage(() => import('../pages/marketing/CharteredAccountantsSolutionPage'), 'CharteredAccountantsSolutionPage');
+const marketingHomeImporter = () => import('../pages/marketing/HomePage');
+const marketingFeaturesImporter = () => import('../pages/marketing/Features');
+const marketingPricingImporter = () => import('../pages/marketing/Pricing');
+const marketingTermsImporter = () => import('../pages/marketing/Terms');
+const marketingPrivacyImporter = () => import('../pages/marketing/Privacy');
+const marketingSecurityImporter = () => import('../pages/marketing/Security');
+const marketingAcceptableUseImporter = () => import('../pages/marketing/AcceptableUse');
+const marketingAboutImporter = () => import('../pages/marketing/About');
+const marketingContactImporter = () => import('../pages/marketing/Contact');
+const marketingSignupImporter = () => import('../pages/marketing/Signup');
+const marketingCompareImporter = () => import('../pages/marketing/DocketraVsExcelWhatsAppPage');
+const marketingCsImporter = () => import('../pages/marketing/CompanySecretariesSolutionPage');
+const marketingLegalImporter = () => import('../pages/marketing/CorporateLegalTeamsSolutionPage');
+const marketingCaImporter = () => import('../pages/marketing/CharteredAccountantsSolutionPage');
+
+export const MarketingHomePage = lazyPage(marketingHomeImporter, 'HomePage');
+export const MarketingFeaturesPage = lazyPage(marketingFeaturesImporter, 'FeaturesPage');
+export const MarketingPricingPage = lazyPage(marketingPricingImporter, 'PricingPage');
+export const MarketingTermsPage = lazyPage(marketingTermsImporter, 'TermsPage');
+export const MarketingPrivacyPage = lazyPage(marketingPrivacyImporter, 'PrivacyPage');
+export const MarketingSecurityPage = lazyPage(marketingSecurityImporter, 'SecurityPage');
+export const MarketingAcceptableUsePage = lazyPage(marketingAcceptableUseImporter, 'AcceptableUsePage');
+export const MarketingAboutPage = lazyPage(marketingAboutImporter, 'AboutPage');
+export const MarketingContactPage = lazyPage(marketingContactImporter, 'ContactPage');
+export const MarketingSignupPage = lazyPage(marketingSignupImporter, 'default');
+export const MarketingCompareExcelWhatsAppPage = lazyPage(marketingCompareImporter, 'DocketraVsExcelWhatsAppPage');
+export const MarketingCompanySecretariesPage = lazyPage(marketingCsImporter, 'CompanySecretariesSolutionPage');
+export const MarketingCorporateLegalTeamsPage = lazyPage(marketingLegalImporter, 'CorporateLegalTeamsSolutionPage');
+export const MarketingCharteredAccountantsPage = lazyPage(marketingCaImporter, 'CharteredAccountantsSolutionPage');
+
+const ROUTE_PRELOAD_MAP = {
+  '/': [marketingHomeImporter, 'HomePage'],
+  '/features': [marketingFeaturesImporter, 'FeaturesPage'],
+  '/pricing': [marketingPricingImporter, 'PricingPage'],
+  '/solutions/company-secretaries': [marketingCsImporter, 'CompanySecretariesSolutionPage'],
+  '/solutions/chartered-accountants': [marketingCaImporter, 'CharteredAccountantsSolutionPage'],
+  '/solutions/corporate-legal-teams': [marketingLegalImporter, 'CorporateLegalTeamsSolutionPage'],
+  '/compare/docketra-vs-excel-whatsapp': [marketingCompareImporter, 'DocketraVsExcelWhatsAppPage'],
+  '/about': [marketingAboutImporter, 'AboutPage'],
+  '/contact': [marketingContactImporter, 'ContactPage'],
+  '/security': [marketingSecurityImporter, 'SecurityPage'],
+  '/signup': [marketingSignupImporter, 'default'],
+  '/terms': [marketingTermsImporter, 'TermsPage'],
+  '/privacy': [marketingPrivacyImporter, 'PrivacyPage'],
+  '/acceptable-use': [marketingAcceptableUseImporter, 'AcceptableUsePage'],
+};
+
+export const preloadMatchingRoute = async (pathname = (typeof window !== 'undefined' ? window.location.pathname : '/')) => {
+  const normalized = (pathname || '/').replace(/\/+$/, '') || '/';
+  const entry = ROUTE_PRELOAD_MAP[normalized];
+  if (entry) {
+    const [importer, exportName] = entry;
+    await preloadRoute(importer, exportName);
+  }
+};
+
+export const isRoutePreloaded = (pathname = (typeof window !== 'undefined' ? window.location.pathname : '/')) => {
+  const normalized = (pathname || '/').replace(/\/+$/, '') || '/';
+  const entry = ROUTE_PRELOAD_MAP[normalized];
+  if (!entry) return false;
+  const [importer] = entry;
+  return PRELOADED_MODULES.has(importer);
+};
 export const NotFoundPage = lazyPage(() => import('../pages/NotFoundPage'), 'NotFoundPage');
 export const OtpVerificationPage = lazyPage(() => import('../pages/OtpVerificationPage'), 'OtpVerificationPage');
 export const OAuthPostAuthPage = lazyPage(() => import('../pages/OAuthPostAuthPage'), 'OAuthPostAuthPage');

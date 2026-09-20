@@ -48,8 +48,9 @@ export const FeaturesPage = () => (
         <motion.div
           key={title}
           className="flex h-full w-full flex-col rounded-2xl border border-gray-100 bg-white p-8 shadow-sm transition-shadow duration-300 hover:shadow-lg"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={false}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
           transition={{ duration: 0.3, delay: Math.min(index * 0.1, 0.4) }}
         >
           <div className="mb-6 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50">

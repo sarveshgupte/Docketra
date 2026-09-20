@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import SeoHead from '../../components/common/SeoHead';
 
 const FAQ_ITEMS = [
   {
@@ -132,64 +133,22 @@ const PILLARS = [
   },
 ];
 
+const FAQ_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ_ITEMS.map((item) => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: item.answer,
+    },
+  })),
+};
+
 export const CharteredAccountantsSolutionPage = () => {
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [activePreviewTab, setActivePreviewTab] = useState('tax');
-
-  useEffect(() => {
-    const originalTitle = document.title;
-    document.title = 'Practice Management Software for Chartered Accountants | Docketra';
-
-    let metaDesc = document.querySelector('meta[name="description"]');
-    let createdMeta = false;
-    if (!metaDesc) {
-      metaDesc = document.createElement('meta');
-      metaDesc.setAttribute('name', 'description');
-      document.head.appendChild(metaDesc);
-      createdMeta = true;
-    }
-    const originalDesc = metaDesc.getAttribute('content');
-    metaDesc.setAttribute(
-      'content',
-      'Purpose-built practice management for Indian CA firms. Streamline audit dockets, GST reconciliations, and tax reviews with zero spreadsheet chaos. Claim 3 months free.',
-    );
-
-    // Inject JSON-LD Schema
-    const scriptId = 'docketra-ca-faq-jsonld';
-    let scriptEl = document.getElementById(scriptId);
-    if (!scriptEl) {
-      scriptEl = document.createElement('script');
-      scriptEl.id = scriptId;
-      scriptEl.type = 'application/ld+json';
-      const schema = {
-        '@context': 'https://schema.org',
-        '@type': 'FAQPage',
-        mainEntity: FAQ_ITEMS.map((item) => ({
-          '@type': 'Question',
-          name: item.question,
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: item.answer,
-          },
-        })),
-      };
-      scriptEl.textContent = JSON.stringify(schema);
-      document.head.appendChild(scriptEl);
-    }
-
-    return () => {
-      document.title = originalTitle;
-      if (createdMeta && metaDesc?.parentNode) {
-        metaDesc.parentNode.removeChild(metaDesc);
-      } else if (metaDesc && originalDesc) {
-        metaDesc.setAttribute('content', originalDesc);
-      }
-      const existingScript = document.getElementById(scriptId);
-      if (existingScript && existingScript.parentNode) {
-        existingScript.parentNode.removeChild(existingScript);
-      }
-    };
-  }, []);
 
   const toggleFaq = (index) => {
     setOpenFaqIndex((prev) => (prev === index ? -1 : index));
@@ -197,6 +156,12 @@ export const CharteredAccountantsSolutionPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-amber-500/30 font-sans">
+      <SeoHead
+        canonicalPath="/solutions/chartered-accountants"
+        title="Practice Management Software for Chartered Accountants | Docketra"
+        description="Operating engine for high-velocity CA firms: tax filings, statutory audits, client dossiers, and automated task assignments. Claim 3 months free."
+        jsonLd={FAQ_SCHEMA}
+      />
       {/* Pilot Notification Eyebrow */}
       <div className="sticky top-0 z-50 border-b border-amber-500/20 bg-slate-900/90 backdrop-blur-md px-4 py-2.5 text-center text-xs sm:text-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 sm:gap-3 flex-wrap">
@@ -252,10 +217,7 @@ export const CharteredAccountantsSolutionPage = () => {
           </div>
 
           <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-white leading-tight">
-            The Operating Engine for{' '}
-            <span className="text-amber-400">
-              High-Velocity CA Practices
-            </span>
+            The Operating Engine for <span className="text-amber-400">High-Velocity CA Practices</span>
           </h1>
 
           <p className="mx-auto mt-6 max-w-3xl text-base sm:text-lg text-slate-300 leading-relaxed font-normal">
@@ -491,9 +453,9 @@ export const CharteredAccountantsSolutionPage = () => {
             <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 px-3 py-0.5 text-xs font-semibold text-amber-400 mb-3">
               Interactive Preview
             </div>
-            <h3 className="text-xl sm:text-3xl font-extrabold text-white">
+            <h2 className="text-xl sm:text-3xl font-extrabold text-white">
               The CA Partner Command Center
-            </h3>
+            </h2>
             <p className="mt-2 text-xs sm:text-sm text-slate-400">
               Live practice telemetry: direct tax dockets, 4-eye review queues, and audit working records.
             </p>
@@ -680,10 +642,10 @@ export const CharteredAccountantsSolutionPage = () => {
       <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-t border-slate-800/80 bg-slate-900/20">
         <div className="mx-auto max-w-5xl">
           <div className="text-center max-w-3xl mx-auto mb-12">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-amber-500">Official CA Pilot Cohort</h2>
-            <h3 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-500">Official CA Pilot Cohort</p>
+            <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
               Why Join the 3-Month Free Pilot?
-            </h3>
+            </h2>
             <p className="mt-3 text-sm sm:text-base text-slate-300">
               Partner with Docketra to eliminate spreadsheet anxiety and run an audit-proof, calm compliance practice.
             </p>
@@ -694,7 +656,7 @@ export const CharteredAccountantsSolutionPage = () => {
               <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold text-lg">
                 90d
               </div>
-              <h4 className="text-base font-bold text-white">100% Free Full Firm Workspace</h4>
+              <h3 className="text-base font-bold text-white">100% Free Full Firm Workspace</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                 90 days of unrestricted access for all partners, managers, article trainees, and paid assistants with unlimited clients and dockets.
               </p>
@@ -704,7 +666,7 @@ export const CharteredAccountantsSolutionPage = () => {
               <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold text-lg">
                 🤝
               </div>
-              <h4 className="text-base font-bold text-white">White-Glove Client Migration</h4>
+              <h3 className="text-base font-bold text-white">White-Glove Client Migration</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                 Our engineers validate and import your current Excel client lists, ongoing tax audit trackers, and staff assignments at zero cost.
               </p>
@@ -714,7 +676,7 @@ export const CharteredAccountantsSolutionPage = () => {
               <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold text-lg">
                 ⚡
               </div>
-              <h4 className="text-base font-bold text-white">Direct Founder & Product Hotline</h4>
+              <h3 className="text-base font-bold text-white">Direct Founder & Product Hotline</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                 Direct WhatsApp and Slack access to Docketra product engineers to request custom tax schedules, audit checklists, and practice reports.
               </p>
@@ -727,10 +689,10 @@ export const CharteredAccountantsSolutionPage = () => {
       <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-t border-slate-800/80">
         <div className="mx-auto max-w-4xl">
           <div className="text-center mb-12">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-amber-500">Frequently Asked Questions</h2>
-            <h3 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-500">Frequently Asked Questions</p>
+            <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
               Everything You Need to Know About the CA Pilot
-            </h3>
+            </h2>
           </div>
 
           <div className="space-y-4">
@@ -778,9 +740,9 @@ export const CharteredAccountantsSolutionPage = () => {
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-semibold text-amber-400 mb-4">
             Zero Financial Commitment • Limited Pilot Cohort
           </div>
-          <h3 className="text-2xl sm:text-4xl font-black text-white">
+          <h2 className="text-2xl sm:text-4xl font-black text-white">
             Upgrade Your CA Practice Ahead of the Next Filing Cycle
-          </h3>
+          </h2>
           <p className="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">
             Join forward-thinking CA practices running calm, audit-ready compliance. Start your 3-month pilot in under 5 minutes.
           </p>

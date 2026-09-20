@@ -155,9 +155,9 @@ export default function BubbleMenu({
   return (
     <>
       <nav className={containerClassName} style={style} aria-label="Main navigation">
-        <div className="bubble logo-bubble" aria-label="Logo" style={{ background: menuBg }}>
+        <div className="bubble logo-bubble" aria-label="Docketra Logo" style={{ background: menuBg }}>
           <span className="logo-content">
-            {typeof logo === 'string' ? <img src={logo} alt="Logo" className="bubble-logo" /> : logo}
+            {typeof logo === 'string' ? <img src={logo} alt="Docketra Logo" className="bubble-logo" /> : logo}
           </span>
         </div>
 

@@ -95,14 +95,7 @@ export const PrivacyPage = () => (
     <section id="contact">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">9. Contact</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Privacy questions can be sent to{' '}
-        <a
-          href={`mailto:${SUPPORT_EMAIL}`}
-          className="text-gray-700 underline hover:no-underline"
-        >
-          {SUPPORT_EMAIL}
-        </a>
-        .
+        Privacy questions can be sent to <a href={`mailto:${SUPPORT_EMAIL}`} className="text-gray-700 underline hover:no-underline">{SUPPORT_EMAIL}</a>.
       </p>
     </section>
   </LegalLayout>

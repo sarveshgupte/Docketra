@@ -70,10 +70,10 @@ export const LegalLayout = ({
               )}
               <div className="mt-6 flex flex-wrap gap-2">
                 <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800">
-                  Version {LEGAL_VERSION}
+                  {`Version ${LEGAL_VERSION}`}
                 </span>
                 <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-bold text-sky-800">
-                  Updated {LAST_UPDATED}
+                  {`Updated ${LAST_UPDATED}`}
                 </span>
                 <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800">
                   Plain-English preview
@@ -147,7 +147,7 @@ export const LegalLayout = ({
 
             <footer className="mt-12 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-xs text-slate-500">
               <p>Operated by <strong className="text-slate-800">{COMPANY_NAME}</strong></p>
-              <p className="mt-1">Legal Version {LEGAL_VERSION} &mdash; {LAST_UPDATED}</p>
+              <p className="mt-1">{`Legal Version ${LEGAL_VERSION} \u2014 ${LAST_UPDATED}`}</p>
             </footer>
           </main>
         </div>

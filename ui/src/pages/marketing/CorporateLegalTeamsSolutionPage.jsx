@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { SeoHead } from '../../components/common/SeoHead';
 
 const FAQ_ITEMS = [
   {
@@ -21,6 +22,19 @@ const FAQ_ITEMS = [
       'Migration takes minutes using Docketra\'s built-in Matter & Entity Importers. You can upload existing spreadsheets containing active litigation, regulatory show-cause notices, contract registries, and subsidiary entity profiles. The system runs pre-flight dry runs, checks statutory identifiers (CIN, DIN, PAN), and auto-populates matter dockets with historical dates and responsible counsel.',
   },
 ];
+
+const FAQ_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ_ITEMS.map((item) => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: item.answer,
+    },
+  })),
+};
 
 const REALITY_CHECK_MATRIX = [
   {
@@ -136,67 +150,18 @@ export const CorporateLegalTeamsSolutionPage = () => {
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [activePreviewTab, setActivePreviewTab] = useState('intake');
 
-  useEffect(() => {
-    const originalTitle = document.title;
-    document.title = 'Legal Operations & Matter Management for In-House Teams | Docketra';
-
-    let metaDesc = document.querySelector('meta[name="description"]');
-    let createdMeta = false;
-    if (!metaDesc) {
-      metaDesc = document.createElement('meta');
-      metaDesc.setAttribute('name', 'description');
-      document.head.appendChild(metaDesc);
-      createdMeta = true;
-    }
-    const originalDesc = metaDesc.getAttribute('content');
-    metaDesc.setAttribute(
-      'content',
-      'Streamline in-house legal intake, contract dockets, and subsidiary compliance. Purpose-built for Indian corporate legal departments with a 3-month free pilot.',
-    );
-
-    // Inject JSON-LD Schema
-    const scriptId = 'docketra-legal-faq-jsonld';
-    let scriptEl = document.getElementById(scriptId);
-    if (!scriptEl) {
-      scriptEl = document.createElement('script');
-      scriptEl.id = scriptId;
-      scriptEl.type = 'application/ld+json';
-      const schema = {
-        '@context': 'https://schema.org',
-        '@type': 'FAQPage',
-        mainEntity: FAQ_ITEMS.map((item) => ({
-          '@type': 'Question',
-          name: item.question,
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: item.answer,
-          },
-        })),
-      };
-      scriptEl.textContent = JSON.stringify(schema);
-      document.head.appendChild(scriptEl);
-    }
-
-    return () => {
-      document.title = originalTitle;
-      if (createdMeta && metaDesc?.parentNode) {
-        metaDesc.parentNode.removeChild(metaDesc);
-      } else if (metaDesc && originalDesc) {
-        metaDesc.setAttribute('content', originalDesc);
-      }
-      const existingScript = document.getElementById(scriptId);
-      if (existingScript && existingScript.parentNode) {
-        existingScript.parentNode.removeChild(existingScript);
-      }
-    };
-  }, []);
-
   const toggleFaq = (index) => {
     setOpenFaqIndex((prev) => (prev === index ? -1 : index));
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-amber-500/30 font-sans">
+      <SeoHead
+        title="Legal Operations & Matter Management for In-House Teams | Docketra"
+        description="Streamline in-house legal intake, contract dockets, and subsidiary compliance. Purpose-built for Indian corporate legal departments with a 3-month free pilot."
+        canonicalPath="/solutions/corporate-legal-teams"
+        jsonLd={FAQ_SCHEMA}
+      />
       {/* Pilot Notification Eyebrow */}
       <div className="sticky top-0 z-50 border-b border-amber-500/20 bg-slate-900/90 backdrop-blur-md px-4 py-2.5 text-center text-xs sm:text-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 sm:gap-3 flex-wrap">
@@ -252,10 +217,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
           </div>
 
           <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-white leading-tight">
-            Total Operational Clarity for{' '}
-            <span className="text-amber-400">
-              In-House Legal & Compliance
-            </span>
+            Total Operational Clarity for <span className="text-amber-400">In-House Legal & Compliance</span>
           </h1>
 
           <p className="mx-auto mt-6 max-w-3xl text-base sm:text-lg text-slate-300 leading-relaxed font-normal">
@@ -491,9 +453,9 @@ export const CorporateLegalTeamsSolutionPage = () => {
             <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 px-3 py-0.5 text-xs font-semibold text-amber-400 mb-3">
               Interactive Preview
             </div>
-            <h3 className="text-xl sm:text-3xl font-extrabold text-white">
+            <h2 className="text-xl sm:text-3xl font-extrabold text-white">
               The General Counsel Command Center
-            </h3>
+            </h2>
             <p className="mt-2 text-xs sm:text-sm text-slate-400">
               Live operational telemetry: see how Docketra organizes legal intake, group subsidiary records, and litigation dockets.
             </p>
@@ -689,10 +651,10 @@ export const CorporateLegalTeamsSolutionPage = () => {
       <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-t border-slate-800/80 bg-slate-900/20">
         <div className="mx-auto max-w-5xl">
           <div className="text-center max-w-3xl mx-auto mb-12">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-amber-500">Enterprise Pilot Cohort</h2>
-            <h3 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-500">Enterprise Pilot Cohort</p>
+            <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
               Why Join the In-House Legal Pilot?
-            </h3>
+            </h2>
             <p className="mt-3 text-sm sm:text-base text-slate-300">
               Partner with Docketra to build an institutional legal operating system customized to your enterprise governance workflows.
             </p>
@@ -703,7 +665,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
               <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold text-lg">
                 90d
               </div>
-              <h4 className="text-base font-bold text-white">100% Free Full Enterprise Workspace</h4>
+              <h3 className="text-base font-bold text-white">100% Free Full Enterprise Workspace</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                 90 days of unrestricted access for all in-house counsel, paralegals, and internal business requesters with unlimited matter dockets.
               </p>
@@ -713,7 +675,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
               <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold text-lg">
                 🤝
               </div>
-              <h4 className="text-base font-bold text-white">White-Glove Data Migration</h4>
+              <h3 className="text-base font-bold text-white">White-Glove Data Migration</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                 Our legal ops engineers assist in importing existing litigation logs, contract inventories, and group subsidiary registers from Excel.
               </p>
@@ -723,7 +685,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
               <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold text-lg">
                 ⚡
               </div>
-              <h4 className="text-base font-bold text-white">Dedicated Legal Ops Specialist</h4>
+              <h3 className="text-base font-bold text-white">Dedicated Legal Ops Specialist</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                 Direct Slack/Teams channel with Docketra product engineers to configure custom matter taxonomies and intake approval hierarchies.
               </p>
@@ -736,10 +698,10 @@ export const CorporateLegalTeamsSolutionPage = () => {
       <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-t border-slate-800/80">
         <div className="mx-auto max-w-4xl">
           <div className="text-center mb-12">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-amber-500">Frequently Asked Questions</h2>
-            <h3 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-500">Frequently Asked Questions</p>
+            <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
               Everything You Need to Know About the In-House Pilot
-            </h3>
+            </h2>
           </div>
 
           <div className="space-y-4">
@@ -787,9 +749,9 @@ export const CorporateLegalTeamsSolutionPage = () => {
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-semibold text-amber-400 mb-4">
             Zero Financial Commitment • Limited Enterprise Cohort
           </div>
-          <h3 className="text-2xl sm:text-4xl font-black text-white">
+          <h2 className="text-2xl sm:text-4xl font-black text-white">
             Bring Calm and Auditability to Your In-House Legal Ops
-          </h3>
+          </h2>
           <p className="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">
             Join legal leaders running high-velocity, risk-managed departments. Get full access for your entire legal team free for 90 days.
           </p>

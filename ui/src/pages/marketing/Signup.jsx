@@ -8,6 +8,7 @@ import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../../utils/val
 import { spacingClasses } from '../../theme/tokens';
 import { ROUTES } from '../../constants/routes';
 import { PilotAgreementModal, PILOT_TERMS_VERSION } from '../../components/marketing/PilotAgreementModal';
+import { SeoHead } from '../../components/common/SeoHead';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^\d{10}$/;
@@ -339,6 +340,11 @@ export default function Signup() {
   if (signupSuccessData) {
     return (
       <SignupShell mode="success">
+          <SeoHead
+            title="Create Workspace | Docketra"
+            description="Create your firm's Docketra workspace in 2 minutes. Free 3-month pilot, no credit card required."
+            canonicalPath="/signup"
+          />
           <section className="hidden lg:block" aria-label="Workspace signup success">
             <Link to="/" className="inline-flex items-center gap-2.5 text-lg font-extrabold tracking-tight text-slate-950">
               <svg className="h-9 w-9 text-amber-600 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -352,9 +358,9 @@ export default function Signup() {
               </div>
             </Link>
             <p className="mt-10 text-sm font-bold uppercase text-amber-700">🎉 Workspace created</p>
-            <h1 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
+            <h2 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
               Welcome to your firm&apos;s new command center.
-            </h1>
+            </h2>
             <p className="mt-4 max-w-lg text-base leading-7 text-slate-600">
               Your workspace is ready. Save the first-login details and continue to onboarding when you are ready.
             </p>
@@ -404,6 +410,11 @@ export default function Signup() {
 
   return (
     <SignupShell>
+        <SeoHead
+          title="Create Workspace | Docketra"
+          description="Create your firm's Docketra workspace in 2 minutes. Free 3-month pilot, no credit card required."
+          canonicalPath="/signup"
+        />
         <section className="hidden lg:block" aria-label="Workspace signup context">
           <Link to="/" className="inline-flex items-center gap-2.5 text-lg font-extrabold tracking-tight text-slate-950">
             <svg className="h-9 w-9 text-amber-600 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -417,9 +428,9 @@ export default function Signup() {
             </div>
           </Link>
           <p className="mt-10 text-sm font-bold uppercase text-amber-700">🚀 Workspace signup</p>
-          <h1 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
+          <h2 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
             Create the command center your firm will grow into.
-          </h1>
+          </h2>
           <p className="mt-4 max-w-lg text-base leading-7 text-slate-600">
             Start with secure firm identity, primary admin verification, and a workspace URL your team can remember.
           </p>
@@ -499,13 +510,13 @@ export default function Signup() {
               </div>
               <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
                 <p className="text-xs font-bold uppercase text-sky-700">URL preview</p>
-                <p className="mt-2 break-words font-black">docketra.in/{workspaceSlugPreview}</p>
+                <p className="mt-2 break-words font-black">{`docketra.in/${workspaceSlugPreview}`}</p>
                 <p className="mt-3 text-xs leading-5 text-sky-700">Final URL is confirmed after verification.</p>
               </div>
             </div>
             {isTurnstileConfigured ? <div ref={turnstileContainerRef} className="min-h-[65px]" /> : null}
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              🔑 {STRONG_PASSWORD_MESSAGE}
+              {`🔑 ${STRONG_PASSWORD_MESSAGE}`}
             </div>
             <div className={`rounded-2xl border ${errors.agreedToPilotTerms ? 'border-rose-400 bg-rose-50/80' : 'border-slate-200 bg-slate-50'} p-4 transition-colors`}>
               <label className="flex items-start gap-3 cursor-pointer select-none">
@@ -525,31 +536,25 @@ export default function Signup() {
                   required
                 />
                 <span className="text-xs leading-5 text-slate-700">
-                  I agree to the{' '}
-                  <button
+                  I agree to the <button
                     type="button"
                     onClick={() => openLegalModal('pilot')}
                     className="font-bold text-slate-950 underline underline-offset-2 hover:text-amber-700"
                   >
                     Pilot Evaluation Agreement
-                  </button>
-                  ,{' '}
-                  <button
+                  </button>, <button
                     type="button"
                     onClick={() => openLegalModal('terms')}
                     className="font-bold text-slate-950 underline underline-offset-2 hover:text-amber-700"
                   >
                     Terms of Service &amp; Disclaimers
-                  </button>
-                  , and{' '}
-                  <button
+                  </button>, and <button
                     type="button"
                     onClick={() => openLegalModal('privacy')}
                     className="font-bold text-slate-950 underline underline-offset-2 hover:text-amber-700"
                   >
                     Privacy Policy
-                  </button>{' '}
-                  (Operator: Sarvesh Gupte, Maharashtra, India). I acknowledge that Docketra is an evaluation workflow tool and does not provide legal, tax, or statutory compliance advice.
+                  </button> (Operator: Sarvesh Gupte, Maharashtra, India). I acknowledge that Docketra is an evaluation workflow tool and does not provide legal, tax, or statutory compliance advice.
                 </span>
               </label>
               {errors.agreedToPilotTerms && (

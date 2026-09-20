@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import SeoHead from '../../components/common/SeoHead';
 
 const FAQ_ITEMS = [
   {
@@ -120,64 +121,22 @@ const PILLARS = [
   },
 ];
 
+const FAQ_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ_ITEMS.map((item) => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: item.answer,
+    },
+  })),
+};
+
 export const CompanySecretariesSolutionPage = () => {
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [activePreviewTab, setActivePreviewTab] = useState('mca');
-
-  useEffect(() => {
-    const originalTitle = document.title;
-    document.title = 'Practice Management Software for Company Secretaries | Docketra';
-
-    let metaDesc = document.querySelector('meta[name="description"]');
-    let createdMeta = false;
-    if (!metaDesc) {
-      metaDesc = document.createElement('meta');
-      metaDesc.setAttribute('name', 'description');
-      document.head.appendChild(metaDesc);
-      createdMeta = true;
-    }
-    const originalDesc = metaDesc.getAttribute('content');
-    metaDesc.setAttribute(
-      'content',
-      'Purpose-built practice management for Indian Company Secretaries. Track MCA filings, board governance, and client records with zero spreadsheet anxiety. Claim 3 months free.',
-    );
-
-    // Inject JSON-LD Schema
-    const scriptId = 'docketra-cs-faq-jsonld';
-    let scriptEl = document.getElementById(scriptId);
-    if (!scriptEl) {
-      scriptEl = document.createElement('script');
-      scriptEl.id = scriptId;
-      scriptEl.type = 'application/ld+json';
-      const schema = {
-        '@context': 'https://schema.org',
-        '@type': 'FAQPage',
-        mainEntity: FAQ_ITEMS.map((item) => ({
-          '@type': 'Question',
-          name: item.question,
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: item.answer,
-          },
-        })),
-      };
-      scriptEl.textContent = JSON.stringify(schema);
-      document.head.appendChild(scriptEl);
-    }
-
-    return () => {
-      document.title = originalTitle;
-      if (createdMeta && metaDesc?.parentNode) {
-        metaDesc.parentNode.removeChild(metaDesc);
-      } else if (metaDesc && originalDesc) {
-        metaDesc.setAttribute('content', originalDesc);
-      }
-      const existingScript = document.getElementById(scriptId);
-      if (existingScript && existingScript.parentNode) {
-        existingScript.parentNode.removeChild(existingScript);
-      }
-    };
-  }, []);
 
   const toggleFaq = (index) => {
     setOpenFaqIndex((prev) => (prev === index ? -1 : index));
@@ -185,6 +144,12 @@ export const CompanySecretariesSolutionPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-amber-500/30 font-sans">
+      <SeoHead
+        canonicalPath="/solutions/company-secretaries"
+        title="Practice Management Software for Company Secretaries | Docketra"
+        description="Purpose-built secretarial practice management: MCA filings, ROC compliance calendar, 4-eye QC review, and automated client memory. Claim 3 months free."
+        jsonLd={FAQ_SCHEMA}
+      />
       {/* Pilot Notification Eyebrow */}
       <div className="sticky top-0 z-50 border-b border-amber-500/20 bg-slate-900/90 backdrop-blur-md px-4 py-2.5 text-center text-xs sm:text-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 sm:gap-3 flex-wrap">
@@ -240,10 +205,7 @@ export const CompanySecretariesSolutionPage = () => {
           </div>
 
           <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-white leading-tight">
-            The Operating System for Modern{' '}
-            <span className="text-amber-400">
-              Company Secretarial Practices
-            </span>
+            The Operating System for Modern <span className="text-amber-400">Company Secretarial Practices</span>
           </h1>
 
           <p className="mx-auto mt-6 max-w-3xl text-base sm:text-lg text-slate-300 leading-relaxed font-normal">
@@ -279,14 +241,14 @@ export const CompanySecretariesSolutionPage = () => {
               <svg className="h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              Instant onboarding with your firm's existing client list
+              {"Instant onboarding with your firm's existing client list"}
             </span>
             <span className="hidden sm:inline">•</span>
             <span className="flex items-center gap-1">
               <svg className="h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              Unrestricted seats for partners & trainees
+              Unrestricted seats for partners and trainees
             </span>
           </div>
         </div>
@@ -386,7 +348,7 @@ export const CompanySecretariesSolutionPage = () => {
                   <div className="p-6 bg-red-950/[0.04]">
                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-red-400 mb-2">
                       <span>✕</span>
-                      <span>The Old Way: {item.pain}</span>
+                      <span>{`The Old Way: ${item.pain}`}</span>
                     </div>
                     <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                       {item.painDescription}
@@ -396,7 +358,7 @@ export const CompanySecretariesSolutionPage = () => {
                   <div className="p-6 bg-amber-500/[0.02]">
                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400 mb-2">
                       <span>✓</span>
-                      <span>The Docketra Way: {item.solution}</span>
+                      <span>{`The Docketra Way: ${item.solution}`}</span>
                     </div>
                     <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-medium">
                       {item.solutionDescription}
@@ -470,9 +432,9 @@ export const CompanySecretariesSolutionPage = () => {
             <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 px-3 py-0.5 text-xs font-semibold text-amber-400 mb-3">
               Interactive Preview
             </div>
-            <h3 className="text-xl sm:text-3xl font-extrabold text-white">
+            <h2 className="text-xl sm:text-3xl font-extrabold text-white">
               The CS Practice Command Center
-            </h3>
+            </h2>
             <p className="mt-2 text-xs sm:text-sm text-slate-400">
               Live telemetry: see how Docketra organizes client entity memory, MCA statutory clocks, and board governance.
             </p>
@@ -575,7 +537,7 @@ export const CompanySecretariesSolutionPage = () => {
                       </div>
                       <div className="py-2.5 flex items-center justify-between flex-wrap gap-2">
                         <div>
-                          <span className="font-bold text-white">Heritage Textiles & Logistics Limited</span>
+                          <span className="font-bold text-white">Heritage Textiles and Logistics Limited</span>
                           <span className="ml-2 font-mono text-[10px] text-slate-400">CIN: L17120GJ1998PLC034567</span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -596,7 +558,7 @@ export const CompanySecretariesSolutionPage = () => {
                 <div className="space-y-3 text-xs">
                   <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-white text-sm">Board Meeting Governance & Resolution Vault</span>
+                      <span className="font-bold text-white text-sm">Board Meeting Governance and Resolution Vault</span>
                       <span className="text-emerald-400 font-mono text-[11px]">SS-1 Compliant</span>
                     </div>
                     <p className="text-slate-400 text-xs leading-relaxed mb-4">
@@ -659,10 +621,10 @@ export const CompanySecretariesSolutionPage = () => {
       <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-t border-slate-800/80 bg-slate-900/20">
         <div className="mx-auto max-w-5xl">
           <div className="text-center max-w-3xl mx-auto mb-12">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-amber-500">Official CS Pilot Cohort</h2>
-            <h3 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-500">Official CS Pilot Cohort</p>
+            <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
               Why Join the 3-Month Free Pilot?
-            </h3>
+            </h2>
             <p className="mt-3 text-sm sm:text-base text-slate-300">
               We are partnering with select Indian CS practices to establish the new gold standard for secretarial practice management.
             </p>
@@ -673,7 +635,7 @@ export const CompanySecretariesSolutionPage = () => {
               <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold text-lg">
                 90d
               </div>
-              <h4 className="text-base font-bold text-white">100% Free Full Firm Workspace</h4>
+              <h3 className="text-base font-bold text-white">100% Free Full Firm Workspace</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                 90 days of unrestricted firm access for all partners, associates, and CS trainees with unlimited corporate clients and dockets.
               </p>
@@ -683,7 +645,7 @@ export const CompanySecretariesSolutionPage = () => {
               <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold text-lg">
                 🤝
               </div>
-              <h4 className="text-base font-bold text-white">White-Glove Migration</h4>
+              <h3 className="text-base font-bold text-white">White-Glove Migration</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                 Our engineers personally validate and import your current client spreadsheets, DIN/DSC trackers, and historical dockets at zero cost.
               </p>
@@ -693,7 +655,7 @@ export const CompanySecretariesSolutionPage = () => {
               <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold text-lg">
                 ⚡
               </div>
-              <h4 className="text-base font-bold text-white">Direct Founder & Product Hotline</h4>
+              <h3 className="text-base font-bold text-white">Direct Founder & Product Hotline</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                 Direct WhatsApp and Slack access to Docketra product engineers to request custom compliance workflows and statutory form templates.
               </p>
@@ -706,10 +668,10 @@ export const CompanySecretariesSolutionPage = () => {
       <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-t border-slate-800/80">
         <div className="mx-auto max-w-4xl">
           <div className="text-center mb-12">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-amber-500">Frequently Asked Questions</h2>
-            <h3 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-500">Frequently Asked Questions</p>
+            <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
               Everything You Need to Know About the CS Pilot
-            </h3>
+            </h2>
           </div>
 
           <div className="space-y-4">
@@ -757,9 +719,9 @@ export const CompanySecretariesSolutionPage = () => {
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-semibold text-amber-400 mb-4">
             Zero Financial Commitment • Limited Pilot Cohort
           </div>
-          <h3 className="text-2xl sm:text-4xl font-black text-white">
+          <h2 className="text-2xl sm:text-4xl font-black text-white">
             Upgrade Your Secretarial Practice Today
-          </h3>
+          </h2>
           <p className="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">
             Join leading Indian PCS firms running modern, error-free corporate secretarial practices on Docketra.
           </p>

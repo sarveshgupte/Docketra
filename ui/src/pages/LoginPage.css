@@ -3,9 +3,6 @@
  * High-contrast, clean neutral surfaces for institutional professional firms.
  */
 
-/* Import Outfit font from Google Fonts for modern typography */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
-
 /* Apply modern typography and clean neutral background */
 .auth-wrapper {
   position: relative;

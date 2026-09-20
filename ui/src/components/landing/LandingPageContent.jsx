@@ -9,7 +9,7 @@ import Container from '../layout/Container';
 import SeoHead from '../common/SeoHead';
 
 const REVEAL = {
-  initial: { opacity: 0, y: 16 },
+  initial: false,
   whileInView: { opacity: 1, y: 0 },
   transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] },
   viewport: { once: true, amount: 0.08 },
@@ -192,7 +192,7 @@ const HeroSection = ({ onOpenTour }) => (
 
         {/* Right Hero: Compact Interactive Canvas */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
+          initial={false}
           whileInView={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
           viewport={{ once: true }}
@@ -559,7 +559,7 @@ export const LandingPageContent = () => {
       <SeoHead
         canonicalPath="/"
         title="Docketra — The Company Brain for Indian Professional Firms"
-        description="Manage client dockets, deadlines, and task assignments in one place. Built for Indian CS, CA, and legal firms. Start free."
+        description="Streamline client dockets, MCA deadlines, and team tasks in one sovereign workspace. Purpose-built for Indian CS, CA, and legal firms. Start your free pilot."
       />
       {/* Test Invariant Marker: Ensures strict CI compliance */}
       <span className="hidden">Worklist Workbaskets QC Workbaskets</span>
