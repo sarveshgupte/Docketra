@@ -268,13 +268,13 @@ const ProductPillarsSection = () => (
             solves: 'Solves ownership gaps',
           },
           {
-            title: 'Worklists and workbaskets',
-            body: 'Team members see their exact daily tasks. Managers can assign work or staff can pull from shared queues.',
+            title: 'Worklist & Workbaskets',
+            body: 'Team members see their exact daily tasks on their Worklist. Managers can route and assign work or staff can pull from shared Workbaskets.',
             solves: 'Solves daily execution drift',
           },
           {
-            title: 'QC and exceptions',
-            body: 'Partners can review draft filings, check challans, and flag corrections before submitting to the government.',
+            title: 'QC Workbaskets & review',
+            body: 'Partners can review draft filings, check challans in QC Workbaskets, and flag corrections before submitting to the government.',
             solves: 'Solves review uncertainty',
           },
           {
@@ -561,8 +561,6 @@ export const LandingPageContent = () => {
         title="Docketra — The Company Brain for Indian Professional Firms"
         description="Streamline client dockets, MCA deadlines, and team tasks in one sovereign workspace. Purpose-built for Indian CS, CA, and legal firms. Start your free pilot."
       />
-      {/* Test Invariant Marker: Ensures strict CI compliance */}
-      <span className="hidden">Worklist Workbaskets QC Workbaskets</span>
       <PublicMarketingHeader />
       <HeroSection onOpenTour={() => setIsTourOpen(true)} />
       <SubHeroMetricsStrip />
