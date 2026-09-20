@@ -708,10 +708,10 @@ export const DocketraVsExcelWhatsAppPage = () => {
       <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-t border-slate-800/80">
         <div className="mx-auto max-w-4xl">
           <div className="text-center mb-12">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-amber-500">Frequently Asked Questions</h2>
-            <h3 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-500">Frequently Asked Questions</p>
+            <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
               Everything You Need to Know About the Pilot
-            </h3>
+            </h2>
           </div>
 
           <div className="space-y-4">
@@ -759,9 +759,9 @@ export const DocketraVsExcelWhatsAppPage = () => {
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-semibold text-amber-400 mb-4">
             Zero Financial Commitment • Limited Pilot Cohort
           </div>
-          <h3 className="text-2xl sm:text-4xl font-black text-white">
+          <h2 className="text-2xl sm:text-4xl font-black text-white">
             Upgrade Your Firm’s Operating Engine Risk-Free
-          </h3>
+          </h2>
           <p className="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">
             Claim your 3-month pilot access today. Bring your spreadsheets over in minutes and experience calm,
             audit-ready practice management.
