@@ -36,9 +36,9 @@ const COMPARISON_ROWS = [
 export function ComplianceVsGenericComparison() {
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
-      <div className="md:hidden px-4 py-2 bg-slate-50 border-b border-slate-200 text-[11px] font-medium text-slate-500 flex items-center justify-between">
+      <div className="md:hidden px-4 py-2 bg-slate-50 border-b border-slate-200 text-[11px] font-medium text-slate-700 flex items-center justify-between">
         <span>Comparison Overview</span>
-        <span className="text-slate-400 font-mono text-[10px]">← Swipe to compare columns →</span>
+        <span className="text-slate-600 font-mono text-[10px]">← Swipe to compare columns →</span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] text-left border-collapse">
@@ -63,19 +63,19 @@ export function ComplianceVsGenericComparison() {
                 </td>
                 <td className="py-3.5 px-4 font-semibold text-slate-900 bg-amber-500/[0.03] border-x border-amber-200/50">
                   <div className="flex items-start gap-2">
-                    <span className="text-amber-600 font-bold shrink-0 mt-0.5">✓</span>
+                    <span className="text-amber-800 font-bold shrink-0 mt-0.5">✓</span>
                     <span>{row.docketra}</span>
                   </div>
                 </td>
-                <td className="py-3.5 px-4 text-slate-500">
+                <td className="py-3.5 px-4 text-slate-600">
                   <div className="flex items-start gap-2">
-                    <span className="text-slate-400 shrink-0 mt-0.5">✕</span>
+                    <span className="text-slate-600 font-bold shrink-0 mt-0.5">✕</span>
                     <span>{row.generic}</span>
                   </div>
                 </td>
-                <td className="py-3.5 px-4 text-slate-500">
+                <td className="py-3.5 px-4 text-slate-600">
                   <div className="flex items-start gap-2">
-                    <span className="text-rose-400 shrink-0 mt-0.5">✕</span>
+                    <span className="text-rose-700 font-bold shrink-0 mt-0.5">✕</span>
                     <span>{row.spreadsheets}</span>
                   </div>
                 </td>

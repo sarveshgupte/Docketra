@@ -109,28 +109,28 @@ const HeroSection = ({ onOpenTour }) => (
                 className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 font-bold text-slate-800 transition-all hover:bg-slate-50 hover:border-slate-300 shadow-2xs"
               >
                 <span>Company Secretaries (PCS)</span>
-                <span className="text-slate-400">→</span>
+                <span className="text-slate-600">→</span>
               </Link>
               <Link
                 to="/solutions/chartered-accountants"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 font-bold text-slate-800 transition-all hover:bg-slate-50 hover:border-slate-300 shadow-2xs"
               >
                 <span>Chartered Accountants (CA)</span>
-                <span className="text-slate-400">→</span>
+                <span className="text-slate-600">→</span>
               </Link>
               <Link
                 to="/solutions/corporate-legal-teams"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 font-bold text-slate-800 transition-all hover:bg-slate-50 hover:border-slate-300 shadow-2xs"
               >
                 <span>Corporate Legal Teams</span>
-                <span className="text-slate-400">→</span>
+                <span className="text-slate-600">→</span>
               </Link>
               <Link
                 to="/compare/docketra-vs-excel-whatsapp"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 font-bold text-slate-700 transition-all hover:bg-slate-50 hover:border-slate-300 shadow-2xs"
               >
                 <span>vs. Excel & WhatsApp</span>
-                <span className="text-slate-400">→</span>
+                <span className="text-slate-600">→</span>
               </Link>
             </div>
           </div>
@@ -486,12 +486,12 @@ const MarketingFooter = () => (
         <div className="flex items-center gap-2 text-white font-bold">
           <span className="h-2 w-2 rounded-full bg-amber-500" />
           <span>Docketra</span>
-          <span className="text-slate-500 text-[11px] font-normal font-mono">• The Company Brain for Indian Firms</span>
+          <span className="text-slate-400 text-[11px] font-normal font-mono">• The Company Brain for Indian Firms</span>
         </div>
 
         {/* Practice Solutions Navigation */}
         <nav aria-label="Practice Solutions Navigation" className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs">
-          <span className="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Solutions:</span>
+          <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Solutions:</span>
           <Link to="/solutions/company-secretaries" className="hover:text-amber-400 transition-colors">Company Secretaries</Link>
           <Link to="/solutions/chartered-accountants" className="hover:text-amber-400 transition-colors">Chartered Accountants</Link>
           <Link to="/solutions/corporate-legal-teams" className="hover:text-amber-400 transition-colors">Corporate Legal</Link>
