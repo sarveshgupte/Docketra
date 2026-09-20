@@ -46,6 +46,25 @@ const svc = require('../src/services/commentHistoryNarrativeStorage.service');
   const hHydrated = await svc.readJsonByRef({ firmId: 'f1', ref: { provider: 'google-drive', mode: 'firm_connected', fileId: 'history-file' } });
   assert.strictEqual(hHydrated.description, 'cloud history');
 
+  // Pre-caching verification on uploaded comment
+  const preCachedComment = await svc.readJsonByRef({ firmId: 'f1', ref: cRef });
+  assert.strictEqual(preCachedComment.text, 'hello', 'Uploaded comment should be pre-cached');
+
+  // Batch-read verification with bounded concurrency
+  const batchHydrated = await svc.readManyJsonByRef({
+    firmId: 'f1',
+    refs: [
+      { provider: 'google-drive', mode: 'firm_connected', fileId: 'comment-file' },
+      { provider: 'google-drive', mode: 'firm_connected', fileId: 'history-file' },
+      cRef,
+    ],
+    concurrency: 2,
+  });
+  assert.strictEqual(batchHydrated.length, 3);
+  assert.strictEqual(batchHydrated[0].text, 'cloud comment');
+  assert.strictEqual(batchHydrated[1].description, 'cloud history');
+  assert.strictEqual(batchHydrated[2].text, 'hello');
+
   let readFailed = false;
   try { await svc.readJsonByRef({ firmId: 'f1', ref: { provider: 'google-drive', mode: 'firm_connected', fileId: 'bad' } }); } catch (_e) { readFailed = true; }
   assert.ok(readFailed, 'cloud read failures should surface for caller warning handling');

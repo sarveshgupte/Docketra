@@ -38,6 +38,9 @@ export default defineConfig(({ mode }) => {
             if (id.includes('node_modules/framer-motion/') || id.includes('vendor/framer-motion')) {
               return 'motion';
             }
+            if (id.includes('node_modules/gsap/') || id.includes('vendor/gsap')) {
+              return 'gsap';
+            }
             if (id.includes('node_modules/lucide-react/')) {
               return 'icons';
             }

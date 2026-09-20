@@ -256,19 +256,56 @@ module.exports = (deps) => {
             storageMode: 1,
           },
         });
-        const comments = await Promise.all((payload.rows || []).map(async (comment) => {
+        const rows = payload.rows || [];
+        const hasBatchRead = typeof commentHistoryNarrativeStorage.readManyJsonByRef === 'function';
+
+        const hydratedMap = new Map();
+        if (hasBatchRead) {
+          const refsToFetch = rows.map((c) => c.commentRef).filter((r) => r?.provider);
+          if (refsToFetch.length > 0) {
+            try {
+              const batchResults = await withTimeout(
+                commentHistoryNarrativeStorage.readManyJsonByRef({ firmId: scopedFirmId, refs: refsToFetch, concurrency: 5 }),
+                CLOUD_NARRATIVE_READ_TIMEOUT_MS,
+                'batch comment narrative read'
+              );
+              refsToFetch.forEach((ref, idx) => {
+                const res = batchResults[idx];
+                if (res) {
+                  const key = ref.checksum || ref.fileId || ref.objectKey;
+                  if (key) hydratedMap.set(key, res);
+                }
+              });
+            } catch (_err) {
+              // Fall through to per-item hydration
+            }
+          }
+        }
+
+        const comments = await Promise.all(rows.map(async (comment) => {
           const mapped = { ...comment, text: sanitizeOutput(comment.text), note: comment.note ? sanitizeOutput(comment.note) : comment.note };
           if (comment.commentRef?.provider) {
-            try {
-              const hydrated = await withTimeout(
-                commentHistoryNarrativeStorage.readJsonByRef({ firmId: scopedFirmId, ref: comment.commentRef }),
-                CLOUD_NARRATIVE_READ_TIMEOUT_MS,
-                'comment narrative read'
-              );
-              mapped.text = sanitizeOutput(hydrated?.text || mapped.text);
-              mapped.note = hydrated?.note ? sanitizeOutput(hydrated.note) : mapped.note;
-            } catch (_err) {
-              mapped.commentWarning = 'comment_content_unavailable';
+            const key = comment.commentRef.checksum || comment.commentRef.fileId || comment.commentRef.objectKey;
+            const preHydrated = key ? hydratedMap.get(key) : null;
+            if (preHydrated) {
+              if (preHydrated.error) {
+                mapped.commentWarning = 'comment_content_unavailable';
+              } else {
+                mapped.text = sanitizeOutput(preHydrated.text || mapped.text);
+                mapped.note = preHydrated.note ? sanitizeOutput(preHydrated.note) : mapped.note;
+              }
+            } else {
+              try {
+                const hydrated = await withTimeout(
+                  commentHistoryNarrativeStorage.readJsonByRef({ firmId: scopedFirmId, ref: comment.commentRef }),
+                  CLOUD_NARRATIVE_READ_TIMEOUT_MS,
+                  'comment narrative read'
+                );
+                mapped.text = sanitizeOutput(hydrated?.text || mapped.text);
+                mapped.note = hydrated?.note ? sanitizeOutput(hydrated.note) : mapped.note;
+              } catch (_err) {
+                mapped.commentWarning = 'comment_content_unavailable';
+              }
             }
           }
           return mapped;
@@ -304,18 +341,54 @@ module.exports = (deps) => {
             storageMode: 1,
           },
         });
-        const history = await Promise.all((payload.rows || []).map(async (entry) => {
+        const rows = payload.rows || [];
+        const hasBatchRead = typeof commentHistoryNarrativeStorage.readManyJsonByRef === 'function';
+
+        const hydratedMap = new Map();
+        if (hasBatchRead) {
+          const refsToFetch = rows.map((h) => h.historyRef).filter((r) => r?.provider);
+          if (refsToFetch.length > 0) {
+            try {
+              const batchResults = await withTimeout(
+                commentHistoryNarrativeStorage.readManyJsonByRef({ firmId: scopedFirmId, refs: refsToFetch, concurrency: 5 }),
+                CLOUD_NARRATIVE_READ_TIMEOUT_MS,
+                'batch history narrative read'
+              );
+              refsToFetch.forEach((ref, idx) => {
+                const res = batchResults[idx];
+                if (res) {
+                  const key = ref.checksum || ref.fileId || ref.objectKey;
+                  if (key) hydratedMap.set(key, res);
+                }
+              });
+            } catch (_err) {
+              // Fall through to per-item hydration
+            }
+          }
+        }
+
+        const history = await Promise.all(rows.map(async (entry) => {
           const mapped = { ...entry };
           if (entry.historyRef?.provider) {
-            try {
-              const hydrated = await withTimeout(
-                commentHistoryNarrativeStorage.readJsonByRef({ firmId: scopedFirmId, ref: entry.historyRef }),
-                CLOUD_NARRATIVE_READ_TIMEOUT_MS,
-                'history narrative read'
-              );
-              if (hydrated?.description) mapped.description = hydrated.description;
-            } catch (_err) {
-              mapped.historyWarning = 'history_content_unavailable';
+            const key = entry.historyRef.checksum || entry.historyRef.fileId || entry.historyRef.objectKey;
+            const preHydrated = key ? hydratedMap.get(key) : null;
+            if (preHydrated) {
+              if (preHydrated.error) {
+                mapped.historyWarning = 'history_content_unavailable';
+              } else if (preHydrated.description) {
+                mapped.description = preHydrated.description;
+              }
+            } else {
+              try {
+                const hydrated = await withTimeout(
+                  commentHistoryNarrativeStorage.readJsonByRef({ firmId: scopedFirmId, ref: entry.historyRef }),
+                  CLOUD_NARRATIVE_READ_TIMEOUT_MS,
+                  'history narrative read'
+                );
+                if (hydrated?.description) mapped.description = hydrated.description;
+              } catch (_err) {
+                mapped.historyWarning = 'history_content_unavailable';
+              }
             }
           }
           return mapped;
