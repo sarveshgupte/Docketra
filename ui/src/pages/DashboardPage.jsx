@@ -9,6 +9,7 @@
 
 import { SUPPORT_EMAIL } from '../config/publicContact';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { Layout } from '../components/common/Layout';
@@ -134,8 +135,7 @@ export const DashboardPage = () => {
   const productTourSteps = useMemo(() => buildRoleTourSteps(onboardingRole, firmSlug), [onboardingRole, firmSlug]);
   const faqItems = FAQ_BY_ROLE[onboardingRole] || FAQ_BY_ROLE.user;
   
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
+  const DEFAULT_DASHBOARD_STATS = useMemo(() => ({
     myOpenCases: 0,
     myPendingCases: 0,
     myResolvedCases: 0,
@@ -149,20 +149,28 @@ export const DashboardPage = () => {
     awaitingPartnerReview: 0,
     totalOpenCases: 0,
     totalExecutedCases: 0,
-  });
-  const [recentCases, setRecentCases] = useState([]);
-  const [onboardingProgress, setOnboardingProgress] = useState(null);
-  const [recentCasesLoading, setRecentCasesLoading] = useState(true);
+  }), []);
+
+  const firmIdCandidates = useMemo(() => [
+    user?.firmId,
+    user?.firm?.id,
+    user?.firm?._id,
+  ]
+    .map((value) => (typeof value === 'string' ? value.trim() : value))
+    .filter(Boolean), [user?.firmId, user?.firm?.id, user?.firm?._id]);
+  const userFirmId = useMemo(() => [...new Set(firmIdCandidates)][0], [firmIdCandidates]);
+
+  const [liveOnboardingProgress, setLiveOnboardingProgress] = useState(null);
+  const [loadWarnings, setLoadWarnings] = useState([]);
   const [showBookmarkPrompt, setShowBookmarkPrompt] = useState(false);
   const [showProductTour, setShowProductTour] = useState(false);
   const [tourStepIndex, setTourStepIndex] = useState(0);
-  const [loadWarnings, setLoadWarnings] = useState([]);
-  const [hasLoadedDashboard, setHasLoadedDashboard] = useState(false);
   const onboardingRefreshTimerRef = useRef(null);
   const onboardingRefreshInFlightRef = useRef(false);
-  const reportLoadWarning = (message) => {
+
+  const reportLoadWarning = useCallback((message) => {
     setLoadWarnings((current) => (current.includes(message) ? current : [...current, message]));
-  };
+  }, []);
 
   const refreshOnboardingProgress = useCallback(async () => {
     if (!firmSlug || onboardingRefreshInFlightRef.current) return;
@@ -170,7 +178,7 @@ export const DashboardPage = () => {
     try {
       await loadOnboardingProgressSafely({
         fetchProgress: dashboardApi.getOnboardingProgress,
-        setProgress: setOnboardingProgress,
+        setProgress: setLiveOnboardingProgress,
         firmSlug,
         onWarning: (message) => console.warn('[Dashboard] Optional onboarding progress refresh failed', { message }),
       });
@@ -179,11 +187,206 @@ export const DashboardPage = () => {
     }
   }, [firmSlug]);
 
-  useEffect(() => {
-    if (user) {
-      loadDashboardData();
-    }
-  }, [user, isAdmin]);
+  const {
+    data: dashboardData,
+    isLoading,
+    isFetching,
+    refetch,
+  } = useQuery({
+    queryKey: ['dashboard', firmSlug, user?.role, userFirmId],
+    queryFn: async () => {
+      setLoadWarnings([]);
+
+      const fetchFirmMetrics = async (firmId) => {
+        if (!firmId) return {};
+        const candidates = [firmId, ...firmIdCandidates.filter((c) => c !== firmId)];
+        let lastError = null;
+        for (const candidateFirmId of candidates) {
+          try {
+            const res = await metricsApi.getFirmMetrics(candidateFirmId);
+            if (res.success) return res.data || {};
+          } catch (err) {
+            lastError = err;
+          }
+        }
+        if (lastError) throw lastError;
+        return {};
+      };
+
+      const fetchStatSafely = async (
+        request,
+        mapResponse,
+        errorMessage,
+        warningMessage,
+        { showWarning = false } = {},
+      ) => {
+        try {
+          const response = await request();
+          return mapResponse(response);
+        } catch (error) {
+          console.error(errorMessage, error);
+          if (showWarning) {
+            reportLoadWarning(warningMessage);
+          }
+          return {};
+        }
+      };
+
+      let initialOnboarding = null;
+
+      const recentCasesPromise = (async () => {
+        try {
+          if (isAdmin) {
+            const casesResponse = await caseApi.getCases({ limit: DASHBOARD_RECENT_CASES_LIMIT });
+            return casesResponse.success ? (casesResponse.data || []) : [];
+          }
+
+          const worklistResponse = await worklistApi.getEmployeeWorklist({ limit: DASHBOARD_RECENT_CASES_LIMIT });
+          if (!worklistResponse.success) return { cases: [], total: 0 };
+          return {
+            cases: worklistResponse.data || [],
+            total: worklistResponse.pagination?.total ?? (worklistResponse.data || []).length,
+          };
+        } catch (error) {
+          console.error(isAdmin ? 'Failed to load firm dockets:' : 'Failed to load worklist:', error);
+          reportLoadWarning('Recent dockets');
+          return isAdmin ? [] : { cases: [], total: 0 };
+        }
+      })();
+
+      const [
+        recentCasesResult,
+        metricsPatch,
+        openCasesPatch,
+        pendingCasesPatch,
+        resolvedCasesPatch,
+        unassignedCasesPatch,
+        adminPendingApprovalsPatch,
+        adminFiledCasesPatch,
+        adminResolvedCasesPatch,
+        activeClientsPatch,
+      ] = await Promise.all([
+        recentCasesPromise,
+        userFirmId
+          ? fetchStatSafely(
+            () => fetchFirmMetrics(userFirmId),
+            (metricsResponse) => metricsResponse,
+            'Failed to load firm metrics:',
+            'Firm metrics',
+            { showWarning: true },
+          )
+          : Promise.resolve({}),
+        isAdmin
+          ? fetchStatSafely(
+            () => worklistApi.getEmployeeWorklist(),
+            (worklistResponse) => (worklistResponse.success ? { myOpenCases: (worklistResponse.data || []).length } : {}),
+            'Failed to load open dockets count:',
+            'Open docket counts',
+          )
+          : recentCasesPromise.then((result) => ({ myOpenCases: result?.total ?? 0 })).catch(() => ({})),
+        fetchStatSafely(
+          () => caseApi.getMyPendingCases(),
+          (pendingResponse) => (pendingResponse.success ? { myPendingCases: (pendingResponse.data || []).length } : {}),
+          'Failed to load pending dockets:',
+          'Pending docket counts',
+        ),
+        fetchStatSafely(
+          () => caseApi.getMyResolvedCases(),
+          (resolvedResponse) => (resolvedResponse.success ? { myResolvedCases: (resolvedResponse.data || []).length } : {}),
+          'Failed to load resolved dockets:',
+          'Resolved docket counts',
+        ),
+        fetchStatSafely(
+          () => caseApi.getMyUnassignedCreatedCases(),
+          (unassignedCreatedResponse) => (
+            unassignedCreatedResponse.success
+              ? { myUnassignedCreatedCases: (unassignedCreatedResponse.data || []).length }
+              : {}
+          ),
+          'Failed to load unassigned created dockets:',
+          'Unassigned docket counts',
+        ),
+        isAdmin
+          ? fetchStatSafely(
+            () => adminApi.getPendingApprovals(),
+            (approvalsResponse) => (
+              approvalsResponse.success ? { adminPendingApprovals: approvalsResponse.data?.length || 0 } : {}
+            ),
+            'Failed to load pending approvals:',
+            'Pending approvals',
+          )
+          : Promise.resolve({}),
+        isAdmin
+          ? fetchStatSafely(
+            () => caseApi.getAdminFiledCases(),
+            (filedResponse) => (
+              filedResponse.success ? { adminFiledCases: filedResponse.pagination?.total || 0 } : {}
+            ),
+            'Failed to load filed dockets:',
+            'Filed dockets',
+          )
+          : Promise.resolve({}),
+        isAdmin
+          ? fetchStatSafely(
+            () => adminApi.getAllResolvedCases(),
+            (adminResolvedResponse) => (
+              adminResolvedResponse.success
+                ? { adminResolvedCases: adminResolvedResponse.pagination?.total || 0 }
+                : {}
+            ),
+            'Failed to load admin resolved dockets:',
+            'Resolved admin dockets',
+          )
+          : Promise.resolve({}),
+        isAdmin
+          ? fetchStatSafely(
+            () => clientApi.getClients(true),
+            (clientsResponse) => (clientsResponse.success ? { activeClients: (clientsResponse.data || []).length } : {}),
+            'Failed to load active clients:',
+            'Client counts',
+          )
+          : Promise.resolve({}),
+        loadOnboardingProgressSafely({
+          fetchProgress: dashboardApi.getOnboardingProgress,
+          setProgress: (progress) => { initialOnboarding = progress; },
+          firmSlug,
+          onWarning: (message) => console.warn('[Dashboard] Optional onboarding progress load failed', { message }),
+        }).catch(() => {}),
+      ]);
+
+      const casesToDisplay = Array.isArray(recentCasesResult) ? recentCasesResult : (recentCasesResult?.cases || []);
+      const statsPatch = {
+        ...DEFAULT_DASHBOARD_STATS,
+        ...metricsPatch,
+        ...openCasesPatch,
+        ...pendingCasesPatch,
+        ...resolvedCasesPatch,
+        ...unassignedCasesPatch,
+        ...adminPendingApprovalsPatch,
+        ...adminFiledCasesPatch,
+        ...adminResolvedCasesPatch,
+        ...activeClientsPatch,
+      };
+
+      return {
+        stats: statsPatch,
+        recentCases: getRecentCasesSnapshot(casesToDisplay),
+        onboardingProgress: initialOnboarding,
+      };
+    },
+    enabled: Boolean(user && firmSlug),
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+
+  const loading = isLoading || isFetching;
+  const recentCasesLoading = isLoading || isFetching;
+  const stats = dashboardData?.stats || DEFAULT_DASHBOARD_STATS;
+  const recentCases = dashboardData?.recentCases || [];
+  const onboardingProgress = liveOnboardingProgress ?? dashboardData?.onboardingProgress ?? null;
+  const loadDashboardData = useCallback(() => { refetch(); }, [refetch]);
 
   useEffect(() => {
     if (!user?.xID || !firmSlug) return undefined;
@@ -317,223 +520,6 @@ export const DashboardPage = () => {
     const route = productTourSteps[tourStepIndex]?.route;
     if (route) {
       navigate(route);
-    }
-  };
-
-  const loadDashboardData = async () => {
-    // Fix 4: always show the loading skeleton on every load/retry.
-    // Previously gated by hasLoadedDashboard, which meant refreshes and
-    // retries showed no visual feedback while data was in flight.
-    setLoading(true);
-    setRecentCasesLoading(true);
-    setLoadWarnings([]);
-    try {
-      const firmIdCandidates = [
-        user?.firmId,
-        user?.firm?.id,
-        user?.firm?._id,
-      ]
-        .map((value) => (typeof value === 'string' ? value.trim() : value))
-        .filter(Boolean);
-      const [userFirmId] = [...new Set(firmIdCandidates)];
-
-      const fetchFirmMetrics = async (firmId) => {
-        if (!firmId) {
-          return {};
-        }
-
-        const firmMetricsCandidates = [firmId, ...firmIdCandidates.filter((candidate) => candidate !== firmId)];
-        let lastError = null;
-
-        for (const candidateFirmId of firmMetricsCandidates) {
-          try {
-            const metricsResponse = await metricsApi.getFirmMetrics(candidateFirmId);
-            if (metricsResponse.success) {
-              return metricsResponse.data || {};
-            }
-          } catch (error) {
-            lastError = error;
-          }
-        }
-
-        if (lastError) {
-          throw lastError;
-        }
-
-        return {};
-      };
-
-      const fetchStatSafely = async (
-        request,
-        mapResponse,
-        errorMessage,
-        warningMessage,
-        { showWarning = false } = {},
-      ) => {
-        try {
-          const response = await request();
-          return mapResponse(response);
-        } catch (error) {
-          console.error(errorMessage, error);
-          if (showWarning) {
-            reportLoadWarning(warningMessage);
-          }
-          return {};
-        }
-      };
-
-      // For non-admin, return { cases, total } so the open-count stat can use
-      // pagination.total from the same response rather than counting the capped
-      // data slice (DASHBOARD_RECENT_CASES_LIMIT = 5).
-      const recentCasesPromise = (async () => {
-        try {
-          if (isAdmin) {
-            const casesResponse = await caseApi.getCases({ limit: DASHBOARD_RECENT_CASES_LIMIT });
-            return casesResponse.success ? (casesResponse.data || []) : [];
-          }
-
-          const worklistResponse = await worklistApi.getEmployeeWorklist({ limit: DASHBOARD_RECENT_CASES_LIMIT });
-          if (!worklistResponse.success) return { cases: [], total: 0 };
-          return {
-            cases: worklistResponse.data || [],
-            total: worklistResponse.pagination?.total ?? (worklistResponse.data || []).length,
-          };
-        } catch (error) {
-          console.error(isAdmin ? 'Failed to load firm dockets:' : 'Failed to load worklist:', error);
-          reportLoadWarning('Recent dockets');
-          return isAdmin ? [] : { cases: [], total: 0 };
-        }
-      })();
-
-      const [
-        recentCasesResult,
-        metricsPatch,
-        openCasesPatch,
-        pendingCasesPatch,
-        resolvedCasesPatch,
-        unassignedCasesPatch,
-        adminPendingApprovalsPatch,
-        adminFiledCasesPatch,
-        adminResolvedCasesPatch,
-        activeClientsPatch,
-      ] = await Promise.all([
-        recentCasesPromise,
-        userFirmId
-          ? fetchStatSafely(
-            () => fetchFirmMetrics(userFirmId),
-            (metricsResponse) => metricsResponse,
-            'Failed to load firm metrics:',
-            'Firm metrics',
-            { showWarning: true },
-          )
-          : Promise.resolve({}),
-        // Fix 2: non-admin reuses recentCasesPromise (already in flight).
-        // Uses pagination.total from the same response — accurate even though
-        // the data slice is capped at DASHBOARD_RECENT_CASES_LIMIT. Admin users
-        // still call getEmployeeWorklist() without a limit (recentCasesPromise
-        // uses getCases() for admin so there's no shared result to reuse).
-        isAdmin
-          ? fetchStatSafely(
-            () => worklistApi.getEmployeeWorklist(),
-            (worklistResponse) => (worklistResponse.success ? { myOpenCases: (worklistResponse.data || []).length } : {}),
-            'Failed to load open dockets count:',
-            'Open docket counts',
-          )
-          : recentCasesPromise.then((result) => ({ myOpenCases: result?.total ?? 0 })).catch(() => ({})),
-        fetchStatSafely(
-          () => caseApi.getMyPendingCases(),
-          (pendingResponse) => (pendingResponse.success ? { myPendingCases: (pendingResponse.data || []).length } : {}),
-          'Failed to load pending dockets:',
-          'Pending docket counts',
-        ),
-        fetchStatSafely(
-          () => caseApi.getMyResolvedCases(),
-          (resolvedResponse) => (resolvedResponse.success ? { myResolvedCases: (resolvedResponse.data || []).length } : {}),
-          'Failed to load resolved dockets:',
-          'Resolved docket counts',
-        ),
-        fetchStatSafely(
-          () => caseApi.getMyUnassignedCreatedCases(),
-          (unassignedCreatedResponse) => (
-            unassignedCreatedResponse.success
-              ? { myUnassignedCreatedCases: (unassignedCreatedResponse.data || []).length }
-              : {}
-          ),
-          'Failed to load unassigned created dockets:',
-          'Unassigned docket counts',
-        ),
-        isAdmin
-          ? fetchStatSafely(
-            () => adminApi.getPendingApprovals(),
-            (approvalsResponse) => (
-              approvalsResponse.success ? { adminPendingApprovals: approvalsResponse.data?.length || 0 } : {}
-            ),
-            'Failed to load pending approvals:',
-            'Pending approvals',
-          )
-          : Promise.resolve({}),
-        isAdmin
-          ? fetchStatSafely(
-            () => caseApi.getAdminFiledCases(),
-            (filedResponse) => (
-              filedResponse.success ? { adminFiledCases: filedResponse.pagination?.total || 0 } : {}
-            ),
-            'Failed to load filed dockets:',
-            'Filed dockets',
-          )
-          : Promise.resolve({}),
-        isAdmin
-          ? fetchStatSafely(
-            () => adminApi.getAllResolvedCases(),
-            (adminResolvedResponse) => (
-              adminResolvedResponse.success
-                ? { adminResolvedCases: adminResolvedResponse.pagination?.total || 0 }
-                : {}
-            ),
-            'Failed to load admin resolved dockets:',
-            'Resolved admin dockets',
-          )
-          : Promise.resolve({}),
-        isAdmin
-          ? fetchStatSafely(
-            () => clientApi.getClients(true),
-            (clientsResponse) => (clientsResponse.success ? { activeClients: (clientsResponse.data || []).length } : {}),
-            'Failed to load active clients:',
-            'Client counts',
-          )
-          : Promise.resolve({}),
-        // Fix 3: onboarding-progress runs in parallel with the rest of the batch
-        // instead of sequentially after Promise.all resolves.
-        loadOnboardingProgressSafely({
-          fetchProgress: dashboardApi.getOnboardingProgress,
-          setProgress: setOnboardingProgress,
-          firmSlug,
-          onWarning: (message) => console.warn('[Dashboard] Optional onboarding progress load failed', { message }),
-        }).catch(() => {}),
-      ]);
-
-      // Normalize: admin path returns a plain array; non-admin returns { cases, total }.
-      const casesToDisplay = Array.isArray(recentCasesResult) ? recentCasesResult : (recentCasesResult?.cases || []);
-      setRecentCases(getRecentCasesSnapshot(casesToDisplay));
-      const statsPatch = {
-        ...metricsPatch,
-        ...openCasesPatch,
-        ...pendingCasesPatch,
-        ...resolvedCasesPatch,
-        ...unassignedCasesPatch,
-        ...adminPendingApprovalsPatch,
-        ...adminFiledCasesPatch,
-        ...adminResolvedCasesPatch,
-        ...activeClientsPatch,
-      };
-      setStats((prev) => ({ ...prev, ...statsPatch }));
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error);
-      reportLoadWarning('Dashboard data');
-    } finally {
-      setRecentCasesLoading(false);
-      setLoading(false);
-      setHasLoadedDashboard(true);
     }
   };
 

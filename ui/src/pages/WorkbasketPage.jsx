@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
@@ -84,117 +84,22 @@ export const WorkbasketPage = () => {
   const { openDocket } = useActiveDocket();
   const { showSuccess, showError, showInfo } = useToast();
 
-  const isManagerOrAdmin = ['PRIMARY_ADMIN', 'ADMIN', 'MANAGER'].includes(String(user?.role || '').trim().toUpperCase());
-
-  const [capacityData, setCapacityData] = useState([]);
-  const [loadingCapacity, setLoadingCapacity] = useState(false);
-  const [rebalanceDockets, setRebalanceDockets] = useState([]);
-  const [loadingRebalanceDockets, setLoadingRebalanceDockets] = useState(false);
-  const [reassignToXID, setReassignToXID] = useState('');
-  const [reassigning, setReassigning] = useState(false);
-
-  const loadCapacity = async () => {
-    if (!activeWorkbasketId) return;
-    setLoadingCapacity(true);
-    try {
-      const res = await api.get(`/admin/workbaskets/${activeWorkbasketId}/capacity`);
-      if (res.data?.success) {
-        setCapacityData(res.data.data || []);
-      }
-    } catch (e) {
-      console.error('Failed to load capacity:', e);
-      showError('Failed to load teammate capacity details.');
-    } finally {
-      setLoadingCapacity(false);
-    }
-  };
-
-  const loadRebalanceDockets = async () => {
-    if (!activeWorkbasketId) return;
-    setLoadingRebalanceDockets(true);
-    try {
-      const res = await api.get(`/admin/workbaskets/${activeWorkbasketId}/dockets`, {
-        params: {
-          category: filters.category,
-          priority: filters.priority,
-          status: filters.status,
-          assignedToXID: filters.assignedToXID,
-        }
-      });
-      if (res.data?.success) {
-        setRebalanceDockets(res.data.data || []);
-      }
-    } catch (e) {
-      console.error('Failed to load rebalance dockets:', e);
-      showError('Failed to load dockets for rebalancing.');
-    } finally {
-      setLoadingRebalanceDockets(false);
-    }
-  };
-
-  const executeBulkReassign = async () => {
-    if (selectedCases.length === 0) {
-      showInfo('Please select at least one docket.');
-      return;
-    }
-    if (!reassignToXID) {
-      showInfo('Please select a teammate to reassign to.');
-      return;
-    }
-
-    setReassigning(true);
-    try {
-      const res = await api.post('/admin/workbaskets/reassign', {
-        caseIds: selectedCases,
-        assignedToXID: reassignToXID,
-      });
-
-      if (res.data?.success) {
-        showSuccess(res.data.message || 'Dockets successfully reassigned.');
-        setSelectedCases([]);
-        setReassignToXID('');
-        await Promise.all([loadCapacity(), loadRebalanceDockets()]);
-      }
-    } catch (e) {
-      showError(e.response?.data?.message || 'Failed to reassign dockets.');
-    } finally {
-      setReassigning(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'capacity') {
-      loadCapacity();
-    }
-  }, [activeTab, activeWorkbasketId]);
-
-  useEffect(() => {
-    if (activeTab === 'capacity') {
-      loadRebalanceDockets();
-    }
-  }, [activeTab, activeWorkbasketId, filters.category, filters.priority, filters.status, filters.assignedToXID]);
-  
-  const [loading, setLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-  const [cases, setCases] = useState([]);
-  const [filters, setFilters] = useState(() => ({ ...WORKBASKET_FILTER_DEFAULTS }));
-  const [pagination, setPagination] = useState(null);
-  const [pullingCase, setPullingCase] = useState(null);
-  const [selectedCases, setSelectedCases] = useState([]);
-  const [bulkPulling, setBulkPulling] = useState(false);
-  const [assignableUsers, setAssignableUsers] = useState([]);
-  const [assignTo, setAssignTo] = useState('');
-  const [confirmModal, setConfirmModal] = useState(null);
-  const [categories, setCategories] = useState([]);
-  const [activeTab, setActiveTab] = useState('own');
-  const [activeWorkbasketId, setActiveWorkbasketId] = useState('');
-  const [loadError, setLoadError] = useState('');
   const normalizedRole = String(user?.role || '').trim().toUpperCase();
   const isAdmin = ['PRIMARY_ADMIN', 'ADMIN'].includes(normalizedRole);
+  const isManagerOrAdmin = ['PRIMARY_ADMIN', 'ADMIN', 'MANAGER'].includes(normalizedRole);
+
+  const [activeTab, setActiveTab] = useState('own');
+  const [activeWorkbasketId, setActiveWorkbasketId] = useState('');
+  const [filters, setFilters] = useState(() => ({ ...WORKBASKET_FILTER_DEFAULTS }));
+  const [selectedCases, setSelectedCases] = useState([]);
+  const [reassignToXID, setReassignToXID] = useState('');
+  const [reassigning, setReassigning] = useState(false);
+  const [pullingCase, setPullingCase] = useState(null);
+  const [bulkPulling, setBulkPulling] = useState(false);
+  const [assignTo, setAssignTo] = useState('');
+  const [confirmModal, setConfirmModal] = useState(null);
   const queryClient = useQueryClient();
-  const allSelected = cases.length > 0 && selectedCases.length === cases.length;
-  const partiallySelected = selectedCases.length > 0 && !allSelected;
+
   const queryDefaults = useMemo(() => ({
     category: '',
     status: '',
@@ -208,6 +113,7 @@ export const WorkbasketPage = () => {
   }), []);
 
   const { query, setQuery } = useQueryState(queryDefaults);
+
   const accessibleWorkbaskets = useMemo(() => {
     const explicitWorkbaskets = Array.isArray(user?.workbaskets) ? user.workbaskets : [];
     if (explicitWorkbaskets.length > 0) {
@@ -241,10 +147,6 @@ export const WorkbasketPage = () => {
   }, [accessibleWorkbaskets]);
 
   useEffect(() => {
-    loadGlobalWorklist();
-  }, [filters, activeTab, activeWorkbasketId]);
-
-  useEffect(() => {
     const nextFilters = {
       ...WORKBASKET_FILTER_DEFAULTS,
       category: query.category || '',
@@ -265,67 +167,165 @@ export const WorkbasketPage = () => {
   }, [query]);
 
   useEffect(() => {
-    const loadUsers = async () => {
-      if (!isAdmin) return;
+    setSelectedCases([]);
+  }, [filters, activeTab, activeWorkbasketId]);
+
+  const { data: assignableUsers = [] } = useQuery({
+    queryKey: ['admin', 'users', firmSlug],
+    queryFn: async () => {
       try {
         const res = await api.get('/auth/admin/users');
         const users = Array.isArray(res.data?.data) ? res.data.data : [];
-        const teamMembers = users.filter((u) => {
-          const normalizedRole = String(u?.role || '').trim().toUpperCase();
-          const isFirmUser = normalizedRole === 'ADMIN' || normalizedRole === 'STAFF' || normalizedRole === 'EMPLOYEE';
+        return users.filter((u) => {
+          const role = String(u?.role || '').trim().toUpperCase();
+          const isFirmUser = role === 'ADMIN' || role === 'STAFF' || role === 'EMPLOYEE';
           const isActive = u?.isActive !== false && u?.status !== 'inactive' && u?.status !== 'deleted';
           return isFirmUser && isActive;
         });
-        setAssignableUsers(teamMembers);
       } catch (e) {
         console.warn('Failed to load employees for assignment', e);
+        return [];
       }
-    };
-    loadUsers();
-  }, [isAdmin]);
+    },
+    enabled: Boolean(isAdmin),
+    staleTime: 60 * 1000,
+  });
 
-  useEffect(() => {
-    const loadCategories = async () => {
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories', firmSlug],
+    queryFn: async () => {
       try {
         const response = await categoryService.getCategories(true);
         const rawCategories = response?.data || response?.categories || [];
         const names = rawCategories
           .map((item) => item?.name)
           .filter(Boolean);
-        setCategories(Array.from(new Set(names)).sort((a, b) => a.localeCompare(b)));
+        return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b));
       } catch (error) {
         console.warn('Failed to load categories for workbasket filters', error);
+        return [];
       }
-    };
-    loadCategories();
-  }, []);
+    },
+    staleTime: 60 * 1000,
+  });
 
-  const loadGlobalWorklist = async () => {
-    if (activeTab === 'capacity') return;
-    if (initialLoadComplete) {
-      setIsRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-    try {
+  const {
+    data: capacityData = [],
+    isLoading: loadingCapacity,
+    refetch: loadCapacity,
+  } = useQuery({
+    queryKey: ['workbasket', 'capacity', firmSlug, activeWorkbasketId],
+    queryFn: async () => {
+      if (!activeWorkbasketId) return [];
+      try {
+        const res = await api.get(`/admin/workbaskets/${activeWorkbasketId}/capacity`);
+        if (res.data?.success) {
+          return res.data.data || [];
+        }
+        return [];
+      } catch (e) {
+        console.error('Failed to load capacity:', e);
+        showError('Failed to load teammate capacity details.');
+        return [];
+      }
+    },
+    enabled: activeTab === 'capacity' && Boolean(activeWorkbasketId),
+    staleTime: 60 * 1000,
+  });
+
+  const {
+    data: rebalanceDockets = [],
+    isLoading: loadingRebalanceDockets,
+    refetch: loadRebalanceDockets,
+  } = useQuery({
+    queryKey: ['workbasket', 'rebalance', firmSlug, activeWorkbasketId, filters.category, filters.priority, filters.status, filters.assignedToXID],
+    queryFn: async () => {
+      if (!activeWorkbasketId) return [];
+      try {
+        const res = await api.get(`/admin/workbaskets/${activeWorkbasketId}/dockets`, {
+          params: {
+            category: filters.category,
+            priority: filters.priority,
+            status: filters.status,
+            assignedToXID: filters.assignedToXID,
+          },
+        });
+        if (res.data?.success) {
+          return res.data.data || [];
+        }
+        return [];
+      } catch (e) {
+        console.error('Failed to load rebalance dockets:', e);
+        showError('Failed to load dockets for rebalancing.');
+        return [];
+      }
+    },
+    enabled: activeTab === 'capacity' && Boolean(activeWorkbasketId),
+    staleTime: 60 * 1000,
+  });
+
+  const {
+    data: workbasketPayload,
+    isLoading: isWorkbasketLoading,
+    isFetching: isWorkbasketFetching,
+    error: workbasketQueryError,
+    refetch: refetchWorkbasket,
+  } = useQuery({
+    queryKey: ['workbasket', firmSlug, activeWorkbasketId, activeTab, filters],
+    queryFn: async () => {
       const response = await worklistApi.getGlobalWorklist({
         ...filters,
         tab: activeTab,
         ...(activeWorkbasketId ? { workbasketId: activeWorkbasketId } : {}),
       });
-      
-      if (response.success) {
-        setCases(response.data || []);
-        setPagination(response.pagination);
-        setSelectedCases([]); // Clear selection when reloading
+      return response;
+    },
+    enabled: activeTab !== 'capacity',
+    staleTime: 60 * 1000,
+  });
+
+  const cases = workbasketPayload?.data || [];
+  const pagination = workbasketPayload?.pagination || null;
+  const loadError = workbasketQueryError?.response?.data?.message || (workbasketQueryError ? 'Unable to load workbasket right now.' : '');
+  const loading = isWorkbasketLoading;
+  const isRefreshing = isWorkbasketFetching && !isWorkbasketLoading;
+
+  const loadGlobalWorklist = useCallback(() => {
+    setSelectedCases([]);
+    return refetchWorkbasket();
+  }, [refetchWorkbasket]);
+
+  const allSelected = cases.length > 0 && selectedCases.length === cases.length;
+  const partiallySelected = selectedCases.length > 0 && !allSelected;
+
+  const executeBulkReassign = async () => {
+    if (selectedCases.length === 0) {
+      showInfo('Please select at least one docket.');
+      return;
+    }
+    if (!reassignToXID) {
+      showInfo('Please select a teammate to reassign to.');
+      return;
+    }
+
+    setReassigning(true);
+    try {
+      const res = await api.post('/admin/workbaskets/reassign', {
+        caseIds: selectedCases,
+        assignedToXID: reassignToXID,
+      });
+
+      if (res.data?.success) {
+        showSuccess(res.data.message || 'Dockets successfully reassigned.');
+        setSelectedCases([]);
+        setReassignToXID('');
+        await Promise.all([loadCapacity(), loadRebalanceDockets()]);
+        queryClient.invalidateQueries({ queryKey: ['workbasket'] });
       }
-    } catch (error) {
-      console.error('Failed to load workbasket:', error);
-      setLoadError(error?.response?.data?.message || 'Unable to load workbasket right now.');
+    } catch (e) {
+      showError(e.response?.data?.message || 'Failed to reassign dockets.');
     } finally {
-      setLoading(false);
-      setIsRefreshing(false);
-      setInitialLoadComplete(true);
+      setReassigning(false);
     }
   };
 
@@ -377,6 +377,7 @@ export const WorkbasketPage = () => {
           ? `${response.pulled} of ${response.requested} dockets pulled. Some were already assigned.`
           : `All ${response.pulled} dockets pulled successfully!`;
         showSuccess(message);
+        queryClient.invalidateQueries({ queryKey: ['workbasket'] });
         loadGlobalWorklist();
       }
     } catch (error) {
@@ -411,11 +412,13 @@ export const WorkbasketPage = () => {
 
       if (response.success) {
         showSuccess(assignTo ? 'Docket assigned successfully.' : 'Docket pulled successfully.');
+        queryClient.invalidateQueries({ queryKey: ['workbasket'] });
         loadGlobalWorklist();
       }
     } catch (error) {
       if (error.response?.status === 409) {
         showInfo('Docket is no longer available (already assigned).');
+        queryClient.invalidateQueries({ queryKey: ['workbasket'] });
         loadGlobalWorklist(); // Refresh to remove it
       } else {
         showError(error.response?.data?.message || error.message || 'Failed to pull docket');
@@ -693,7 +696,7 @@ export const WorkbasketPage = () => {
     ? `${pagination.total} dockets found. Page ${pagination.page} of ${pagination.pages}.`
     : `${cases.length} dockets loaded.`;
 
-  if (!initialLoadComplete && loading && cases.length === 0) {
+  if (loading && cases.length === 0) {
     return (
       <Layout>
         <div className="global-worklist">

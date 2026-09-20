@@ -28,6 +28,19 @@ const getIdentifierCandidates = (value = '') => {
 
   return [normalized];
 };
+
+const getExactIdentifierCandidates = (value = '') => {
+  const raw = getIdentifierCandidates(value);
+  const set = new Set();
+  for (const c of raw) {
+    if (typeof c === 'string') {
+      set.add(c);
+      set.add(c.toUpperCase());
+      set.add(c.toLowerCase());
+    }
+  }
+  return Array.from(set);
+};
 /**
  * ⚠️ SECURITY: Case Repository - Firm-Scoped Data Access Layer ⚠️
  * 
@@ -423,15 +436,25 @@ const CaseRepository = {
       return null;
     }
     _guardSuperadmin(role);
-    const candidates = getIdentifierCandidates(caseNumber);
-    const identifierMatcher = candidates.map((candidate) => new RegExp(`^${escapeRegExp(candidate)}$`, 'i'));
-    const doc = await Case.findOne({
+    const exactCandidates = getExactIdentifierCandidates(caseNumber);
+    let doc = await Case.findOne({
       firmId,
       $or: [
-        { caseNumber: { $in: identifierMatcher } },
-        { caseId: { $in: identifierMatcher } },
+        { caseNumber: { $in: exactCandidates } },
+        { caseId: { $in: exactCandidates } },
       ],
     });
+    if (!doc) {
+      const candidates = getIdentifierCandidates(caseNumber);
+      const identifierMatcher = candidates.map((candidate) => new RegExp(`^${escapeRegExp(candidate)}$`, 'i'));
+      doc = await Case.findOne({
+        firmId,
+        $or: [
+          { caseNumber: { $in: identifierMatcher } },
+          { caseId: { $in: identifierMatcher } },
+        ],
+      });
+    }
     return _decryptCaseDoc(doc, firmId);
   },
 
@@ -449,22 +472,47 @@ const CaseRepository = {
       return null;
     }
     _guardSuperadmin(role);
-    const candidates = getIdentifierCandidates(caseId);
-    const identifierMatcher = candidates.map((candidate) => new RegExp(`^${escapeRegExp(candidate)}$`, 'i'));
+    const exactCandidates = getExactIdentifierCandidates(caseId);
+    const orClauses = [
+      { caseId: { $in: exactCandidates } },
+      { caseNumber: { $in: exactCandidates } },
+    ];
+    if (mongoose.Types.ObjectId.isValid(caseId)) {
+      const oid = new mongoose.Types.ObjectId(caseId);
+      orClauses.push({ _id: oid }, { caseInternalId: oid });
+    }
     const query = {
       firmId,
-      $or: [
-        { caseId: { $in: identifierMatcher } },
-        { caseNumber: { $in: identifierMatcher } },
-      ],
+      $or: orClauses,
     };
 
     if (options.includeClient) {
-      return this._findWithClient(query, firmId, role);
+      const res = await this._findWithClient(query, firmId, role);
+      if (res) return res;
+      const candidates = getIdentifierCandidates(caseId);
+      const identifierMatcher = candidates.map((candidate) => new RegExp(`^${escapeRegExp(candidate)}$`, 'i'));
+      return this._findWithClient({
+        firmId,
+        $or: [
+          { caseId: { $in: identifierMatcher } },
+          { caseNumber: { $in: identifierMatcher } },
+        ],
+      }, firmId, role);
     }
 
     // During transition, caseId = caseNumber
-    const doc = await Case.findOne(query);
+    let doc = await Case.findOne(query);
+    if (!doc) {
+      const candidates = getIdentifierCandidates(caseId);
+      const identifierMatcher = candidates.map((candidate) => new RegExp(`^${escapeRegExp(candidate)}$`, 'i'));
+      doc = await Case.findOne({
+        firmId,
+        $or: [
+          { caseId: { $in: identifierMatcher } },
+          { caseNumber: { $in: identifierMatcher } },
+        ],
+      });
+    }
     return _decryptCaseDoc(doc, firmId);
   },
 
@@ -583,13 +631,12 @@ const CaseRepository = {
       throw new Error('Case ID required');
     }
 
-    const candidates = getIdentifierCandidates(caseId);
-    const identifierMatcher = candidates.map((candidate) => new RegExp(`^${escapeRegExp(candidate)}$`, 'i'));
+    const exactCandidates = getExactIdentifierCandidates(caseId);
     const filter = {
       firmId,
       $or: [
-        { caseId: { $in: identifierMatcher } },
-        { caseNumber: { $in: identifierMatcher } },
+        { caseId: { $in: exactCandidates } },
+        { caseNumber: { $in: exactCandidates } },
       ],
     };
     if (expectedCurrentStatus) {
@@ -599,7 +646,7 @@ const CaseRepository = {
       filter.tatLastStartedAt = expectedTatLastStartedAt;
     }
 
-    const result = await Case.updateOne(
+    let result = await Case.updateOne(
       filter,
       {
         $set: {
@@ -609,6 +656,34 @@ const CaseRepository = {
       },
       session ? { session } : {}
     );
+
+    if (result.matchedCount === 0) {
+      const candidates = getIdentifierCandidates(caseId);
+      const identifierMatcher = candidates.map((candidate) => new RegExp(`^${escapeRegExp(candidate)}$`, 'i'));
+      const fallbackFilter = {
+        firmId,
+        $or: [
+          { caseId: { $in: identifierMatcher } },
+          { caseNumber: { $in: identifierMatcher } },
+        ],
+      };
+      if (expectedCurrentStatus) {
+        fallbackFilter.status = expectedCurrentStatus;
+      }
+      if (expectedTatLastStartedAt !== undefined) {
+        fallbackFilter.tatLastStartedAt = expectedTatLastStartedAt;
+      }
+      result = await Case.updateOne(
+        fallbackFilter,
+        {
+          $set: {
+            status,
+            ...extraFields,
+          },
+        },
+        session ? { session } : {}
+      );
+    }
 
     const matched = result?.matchedCount ?? result?.n ?? 0;
     if (matched === 0) {

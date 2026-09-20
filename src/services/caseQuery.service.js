@@ -172,6 +172,28 @@ module.exports = (deps) => {
       
       log.info(`[GET_CASE] Authorization passed for userXID=${req.user.xID}`);
 
+      // PR #45: Require authenticated user with xID for audit logging
+      if (!req.user?.email || !req.user?.xID) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+      }
+      
+      // PR #44: Runtime assertion - warn if xID is missing from auth context
+      if (!req.user.xID && !isProduction()) {
+        log.warn(`[xID Guardrail] Case accessed without xID in auth context`);
+        log.warn(`[xID Guardrail] Case: ${caseData.caseId}, User email: ${req.user.email}`);
+        log.warn(`[xID Guardrail] This should not happen - auth middleware should always provide xID`);
+      }
+
+      const caseObject =
+        typeof caseData.toObject === 'function'
+          ? caseData.toObject()
+          : caseData;
+      enforceDocketLifecycleDefault(caseObject);
+      caseObject.updatedAt = caseObject.updatedAt || new Date();
+
       // Get related data - use caseId from database (display number)
       const displayCaseId = caseData.caseId;
       const scopedCaseId = caseData.caseId;
@@ -182,9 +204,7 @@ module.exports = (deps) => {
       const activityPage = Number(req.query.activityPage || 1);
       const activityLimit = Math.min(100, Number(req.query.activityLimit || 25));
       const activitySkip = (activityPage - 1) * activityLimit;
-      // ⚡ Bolt Performance Optimization:
-      // Replaced memory-intensive $facet aggregation with concurrent find() and countDocuments() via Promise.all().
-      // Expected improvement: Reduces database memory overhead and allows MongoDB to use fast index scans for counts instead of pulling all matching documents into memory.
+
       const runPaginatedFacet = async ({
         model,
         match,
@@ -213,8 +233,11 @@ module.exports = (deps) => {
         };
       };
 
-      const [commentsResult, attachmentsResult, historyResult, auditResult] = await Promise.allSettled([
-        runPaginatedFacet({
+      // ⚡ Bolt Performance Optimization:
+      // Parallelize all independent database lookups and cloud narrative fetches concurrently
+      // instead of executing them in 6 sequential waterfall steps.
+      const commentsPromise = (async () => {
+        const payload = await runPaginatedFacet({
           model: Comment,
           match: enforceTenantScope({ caseId: scopedCaseId }, req, { source: 'case.getCase.comments' }),
           sort: { createdAt: 1 },
@@ -232,13 +255,39 @@ module.exports = (deps) => {
             commentRef: 1,
             storageMode: 1,
           },
-        }),
-        Attachment.find(enforceTenantScope({ caseId: scopedCaseId }, req, { source: 'case.getCase.attachments' }))
-          .select('_id fileName description createdAt uploadedAt uploadedBy createdByXID isAvailable uploadStatus')
-          .sort({ createdAt: 1 })
-          .maxTimeMS(8000)
-          .lean(),
-        runPaginatedFacet({
+        });
+        const comments = await Promise.all((payload.rows || []).map(async (comment) => {
+          const mapped = { ...comment, text: sanitizeOutput(comment.text), note: comment.note ? sanitizeOutput(comment.note) : comment.note };
+          if (comment.commentRef?.provider) {
+            try {
+              const hydrated = await withTimeout(
+                commentHistoryNarrativeStorage.readJsonByRef({ firmId: scopedFirmId, ref: comment.commentRef }),
+                CLOUD_NARRATIVE_READ_TIMEOUT_MS,
+                'comment narrative read'
+              );
+              mapped.text = sanitizeOutput(hydrated?.text || mapped.text);
+              mapped.note = hydrated?.note ? sanitizeOutput(hydrated.note) : mapped.note;
+            } catch (_err) {
+              mapped.commentWarning = 'comment_content_unavailable';
+            }
+          }
+          return mapped;
+        }));
+        return { ...payload, rows: comments };
+      })();
+
+      const attachmentsPromise = Attachment.find(enforceTenantScope({ caseId: scopedCaseId }, req, { source: 'case.getCase.attachments' }))
+        .select('_id fileName description createdAt uploadedAt uploadedBy createdByXID isAvailable uploadStatus')
+        .sort({ createdAt: 1 })
+        .maxTimeMS(8000)
+        .lean()
+        .then((items) => (items || []).map((attachment) => ({
+          ...attachment,
+          description: attachment.description ? sanitizeOutput(attachment.description) : attachment.description,
+        })));
+
+      const historyPromise = (async () => {
+        const payload = await runPaginatedFacet({
           model: CaseHistory,
           match: enforceTenantScope({ caseId: scopedCaseId }, req, { source: 'case.getCase.history' }),
           sort: { timestamp: -1 },
@@ -254,8 +303,28 @@ module.exports = (deps) => {
             historyRef: 1,
             storageMode: 1,
           },
-        }),
-        runPaginatedFacet({
+        });
+        const history = await Promise.all((payload.rows || []).map(async (entry) => {
+          const mapped = { ...entry };
+          if (entry.historyRef?.provider) {
+            try {
+              const hydrated = await withTimeout(
+                commentHistoryNarrativeStorage.readJsonByRef({ firmId: scopedFirmId, ref: entry.historyRef }),
+                CLOUD_NARRATIVE_READ_TIMEOUT_MS,
+                'history narrative read'
+              );
+              if (hydrated?.description) mapped.description = hydrated.description;
+            } catch (_err) {
+              mapped.historyWarning = 'history_content_unavailable';
+            }
+          }
+          return mapped;
+        }));
+        return { ...payload, rows: history };
+      })();
+
+      const auditPromise = (async () => {
+        const payload = await runPaginatedFacet({
           model: CaseAudit,
           match: enforceTenantScope({ caseId: scopedCaseId }, req, { source: 'case.getCase.audit' }),
           sort: { timestamp: -1 },
@@ -271,7 +340,91 @@ module.exports = (deps) => {
             storageMode: 1,
             metadata: 1,
           },
-        }),
+        });
+        let auditLog = payload.rows || [];
+        if (auditLog.length > 0) {
+          const auditXids = [...new Set(auditLog.map((entry) => entry.performedByXID).filter(Boolean))];
+          if (auditXids.length > 0) {
+            const users = await User.find({
+              xID: { $in: auditXids },
+              firmId: scopedFirmId,
+            }).select('xID name').maxTimeMS(8000).lean();
+            const namesByXid = new Map(users.map((user) => [user.xID, user.name]));
+            auditLog = auditLog.map((entry) => ({
+              ...entry,
+              performedByName: namesByXid.get(entry.performedByXID) || undefined,
+            }));
+          }
+        }
+        return { ...payload, rows: auditLog };
+      })();
+
+      const clientPromise = (async () => {
+        let client = caseData.client || null;
+        if (!client && caseData.clientId) {
+          try {
+            client = await ClientRepository.findByClientId(scopedFirmId, caseData.clientId, req.user.role);
+          } catch (error) {
+            log.warn('[GET_CASE] Failed to load fallback client', {
+              caseId: displayCaseId,
+              clientId: caseData.clientId,
+              message: error?.message,
+            });
+          }
+        }
+        return client;
+      })();
+
+      const docketNarrativePromise = (async () => {
+        if (!caseObject?.docketRef?.provider) return null;
+        try {
+          return await docketNarrativeStorage.readNarrative({ firmId: scopedFirmId, docketRef: caseObject.docketRef });
+        } catch (_error) {
+          return { error: 'docket_content_unavailable' };
+        }
+      })();
+
+      const assignedUserPromise = caseObject.assignedTo
+        ? User.findOne({ _id: caseObject.assignedTo, firmId: scopedFirmId }).select('_id name email xID').maxTimeMS(8000).lean()
+        : (caseObject.assignedToXID
+          ? User.findOne({ xID: caseObject.assignedToXID, firmId: scopedFirmId }).select('_id name email xID').maxTimeMS(8000).lean()
+          : Promise.resolve(null));
+
+      const ownerTeamPromise = caseObject.ownerTeamId
+        ? Team.findOne({ _id: caseObject.ownerTeamId, firmId: scopedFirmId }).select('_id name').maxTimeMS(8000).lean()
+        : Promise.resolve(null);
+
+      const routedTeamPromise = caseObject.routedToTeamId
+        ? Team.findOne({ _id: caseObject.routedToTeamId, firmId: scopedFirmId }).select('_id name').maxTimeMS(8000).lean()
+        : Promise.resolve(null);
+
+      const invoicesPromise = Invoice.find(
+        { firmId: scopedFirmId, docketId: caseData._id },
+        { amount: 1, status: 1, issuedAt: 1, paidAt: 1, clientId: 1, dealId: 1, createdAt: 1 }
+      ).sort({ createdAt: -1 }).maxTimeMS(8000).lean();
+
+      const [
+        commentsResult,
+        attachmentsResult,
+        historyResult,
+        auditResult,
+        clientResult,
+        docketNarrativeResult,
+        assignedUserResult,
+        ownerTeamResult,
+        routedTeamResult,
+        invoicesResult,
+      ] = await Promise.allSettled([
+        commentsPromise,
+        attachmentsPromise,
+        historyPromise,
+        auditPromise,
+        clientPromise,
+        docketNarrativePromise,
+        assignedUserPromise,
+        ownerTeamPromise,
+        routedTeamPromise,
+        invoicesPromise,
       ]);
 
       if (commentsResult.status === 'rejected' || attachmentsResult.status === 'rejected' || historyResult.status === 'rejected' || auditResult.status === 'rejected') {
@@ -282,139 +435,42 @@ module.exports = (deps) => {
           audit: auditResult.status,
         });
       }
-      const commentsPayload = commentsResult.status === 'fulfilled' ? commentsResult.value : { rows: [], hasMore: false, totalCount: 0 };
-      const historyPayload = historyResult.status === 'fulfilled' ? historyResult.value : { rows: [], hasMore: false, totalCount: 0 };
-      const auditPayload = auditResult.status === 'fulfilled' ? auditResult.value : { rows: [], hasMore: false, totalCount: 0 };
-      const comments = await Promise.all((commentsPayload.rows || []).map(async (comment) => {
-        const mapped = { ...comment, text: sanitizeOutput(comment.text), note: comment.note ? sanitizeOutput(comment.note) : comment.note };
-        if (comment.commentRef?.provider) {
-          try {
-            const hydrated = await withTimeout(
-              commentHistoryNarrativeStorage.readJsonByRef({ firmId: scopedFirmId, ref: comment.commentRef }),
-              CLOUD_NARRATIVE_READ_TIMEOUT_MS,
-              'comment narrative read'
-            );
-            mapped.text = sanitizeOutput(hydrated?.text || mapped.text);
-            mapped.note = hydrated?.note ? sanitizeOutput(hydrated.note) : mapped.note;
-          } catch (_err) {
-            mapped.commentWarning = 'comment_content_unavailable';
-          }
-        }
-        return mapped;
-      }));
-      const attachments = (attachmentsResult.status === 'fulfilled' ? attachmentsResult.value : []).map((attachment) => ({
-        ...attachment,
-        description: attachment.description ? sanitizeOutput(attachment.description) : attachment.description,
-      }));
-      const history = await Promise.all((historyPayload.rows || []).map(async (entry) => {
-        const mapped = { ...entry };
-        if (entry.historyRef?.provider) {
-          try {
-            const hydrated = await withTimeout(
-              commentHistoryNarrativeStorage.readJsonByRef({ firmId: scopedFirmId, ref: entry.historyRef }),
-              CLOUD_NARRATIVE_READ_TIMEOUT_MS,
-              'history narrative read'
-            );
-            if (hydrated?.description) mapped.description = hydrated.description;
-          } catch (_err) {
-            mapped.historyWarning = 'history_content_unavailable';
-          }
-        }
-        return mapped;
-      }));
-      let auditLog = auditPayload.rows || [];
-      if (auditLog.length > 0) {
-        const auditXids = [...new Set(auditLog.map((entry) => entry.performedByXID).filter(Boolean))];
-        if (auditXids.length > 0) {
-          const users = await User.find({
-            xID: { $in: auditXids },
-            firmId: scopedFirmId,
-          }).select('xID name').maxTimeMS(8000).lean();
-          const namesByXid = new Map(users.map((user) => [user.xID, user.name]));
-          auditLog = auditLog.map((entry) => ({
-            ...entry,
-            performedByName: namesByXid.get(entry.performedByXID) || undefined,
-          }));
-        }
-      }
-      
-      // Fetch current client details - with firm scoping
-      // PR: Client Lifecycle - fetch client regardless of status to display existing cases with inactive clients
-      // (Note: resolved via CaseRepository aggregation pipeline with $lookup)
-      let client = caseData.client || null;
-      if (!client && caseData.clientId) {
-        try {
-          client = await ClientRepository.findByClientId(scopedFirmId, caseData.clientId, req.user.role);
-        } catch (error) {
-          log.warn('[GET_CASE] Failed to load fallback client', {
-            caseId: displayCaseId,
-            clientId: caseData.clientId,
-            message: error?.message,
-          });
-        }
-      }
-      
-      // PR #45: Require authenticated user with xID for audit logging
-      if (!req.user?.email || !req.user?.xID) {
-        return res.status(401).json({
-          success: false,
-          message: 'Authentication required',
-        });
-      }
-      
-      // PR #44: Runtime assertion - warn if xID is missing from auth context
-      if (!req.user.xID && !isProduction()) {
-        log.warn(`[xID Guardrail] Case accessed without xID in auth context`);
-        log.warn(`[xID Guardrail] Case: ${displayCaseId}, User email: ${req.user.email}`);
-        log.warn(`[xID Guardrail] This should not happen - auth middleware should always provide xID`);
-      }
-      
-      // Docket open/view/exit audit is tracked by explicit tracking endpoints.
-      // Avoid duplicating timeline noise from every detail fetch/refetch.
 
-      const caseObject =
-        typeof caseData.toObject === 'function'
-          ? caseData.toObject()
-          : caseData;
-      enforceDocketLifecycleDefault(caseObject);
-      caseObject.updatedAt = caseObject.updatedAt || new Date();
+      const commentsPayload = commentsResult.status === 'fulfilled' ? commentsResult.value : { rows: [], hasMore: false, totalCount: 0 };
+      const comments = commentsPayload.rows || [];
+
+      const attachments = attachmentsResult.status === 'fulfilled' ? (attachmentsResult.value || []) : [];
+
+      const historyPayload = historyResult.status === 'fulfilled' ? historyResult.value : { rows: [], hasMore: false, totalCount: 0 };
+      const history = historyPayload.rows || [];
+
+      const auditPayload = auditResult.status === 'fulfilled' ? auditResult.value : { rows: [], hasMore: false, totalCount: 0 };
+      const auditLog = auditPayload.rows || [];
+
+      const client = clientResult.status === 'fulfilled' ? clientResult.value : (caseData.client || null);
+
       let docketWarning = null;
-      if (caseObject?.docketRef?.provider) {
-        try {
-          const hydrated = await docketNarrativeStorage.readNarrative({ firmId: scopedFirmId, docketRef: caseObject.docketRef });
-          const narrative = hydrated?.narrative || {};
+      if (docketNarrativeResult.status === 'fulfilled' && docketNarrativeResult.value) {
+        if (docketNarrativeResult.value.error) {
+          docketWarning = docketNarrativeResult.value.error;
+        } else {
+          const narrative = docketNarrativeResult.value?.narrative || {};
           if (Object.prototype.hasOwnProperty.call(narrative, 'description')) caseObject.description = narrative.description;
           if (Object.prototype.hasOwnProperty.call(narrative, 'clientSnapshot')) caseObject.clientSnapshot = narrative.clientSnapshot;
           if (Object.prototype.hasOwnProperty.call(narrative, 'sopSnapshot')) caseObject.sopSnapshot = narrative.sopSnapshot;
           if (Object.prototype.hasOwnProperty.call(narrative, 'checklist')) caseObject.checklist = narrative.checklist;
           caseObject.docketStorageMode = 'cloud_first';
-        } catch (_error) {
-          docketWarning = 'docket_content_unavailable';
         }
+      } else if (docketNarrativeResult.status === 'rejected' && caseObject?.docketRef?.provider) {
+        docketWarning = 'docket_content_unavailable';
       }
 
-      const lifecycle = normalizeLifecycle(caseObject.lifecycle);
+      const assignedUser = assignedUserResult.status === 'fulfilled' ? assignedUserResult.value : null;
+      const ownerTeam = ownerTeamResult.status === 'fulfilled' ? ownerTeamResult.value : null;
+      const routedTeam = routedTeamResult.status === 'fulfilled' ? routedTeamResult.value : null;
+      const docketInvoices = invoicesResult.status === 'fulfilled' ? invoicesResult.value : [];
 
-      // ⚡ Bolt Performance Optimization:
-      // Executed independent database queries (assignedUser, ownerTeam, routedTeam, invoices) concurrently instead of sequentially.
-      // Expected improvement: Reduces endpoint latency when fetching a single case.
-      const [assignedUser, ownerTeam, routedTeam, docketInvoices] = await Promise.all([
-        caseObject.assignedTo
-          ? User.findOne({ _id: caseObject.assignedTo, firmId: scopedFirmId }).select('_id name email xID').maxTimeMS(8000).lean()
-          : (caseObject.assignedToXID
-            ? User.findOne({ xID: caseObject.assignedToXID, firmId: scopedFirmId }).select('_id name email xID').maxTimeMS(8000).lean()
-            : null),
-        caseObject.ownerTeamId
-          ? Team.findOne({ _id: caseObject.ownerTeamId, firmId: scopedFirmId }).select('_id name').maxTimeMS(8000).lean()
-          : null,
-        caseObject.routedToTeamId
-          ? Team.findOne({ _id: caseObject.routedToTeamId, firmId: scopedFirmId }).select('_id name').maxTimeMS(8000).lean()
-          : null,
-        Invoice.find(
-          { firmId: scopedFirmId, docketId: caseData._id },
-          { amount: 1, status: 1, issuedAt: 1, paidAt: 1, clientId: 1, dealId: 1, createdAt: 1 }
-        ).sort({ createdAt: -1 }).maxTimeMS(8000).lean(),
-      ]);
+      const lifecycle = normalizeLifecycle(caseObject.lifecycle);
 
       log.info('STEP 2 after assignedUser');
 

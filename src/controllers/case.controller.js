@@ -67,19 +67,20 @@ const loadCaseRecordCoalesced = async ({ firmId, caseId, role }) => {
   }
 
   const promise = (async () => {
-    let caseData = await CaseRepository.findByCaseId(firmId, caseId, role, { includeClient: true });
-    if (!caseData) {
-      caseData = await CaseRepository.findByCaseId(firmId, caseId, role);
-    }
-
+    // ⚡ Fast path: single consolidated lookup with $lookup for client
+    const caseData = await CaseRepository.findByCaseId(firmId, caseId, role, { includeClient: true });
     if (caseData) return caseData;
 
-    const internalId = await resolveCaseIdentifier(firmId, caseId, role);
-    let resolvedCaseData = await CaseRepository.findByInternalId(firmId, internalId, role, { includeClient: true });
-    if (!resolvedCaseData) {
-      resolvedCaseData = await CaseRepository.findByInternalId(firmId, internalId, role);
+    // Resilient fallback for edge-case identifier formats
+    try {
+      const internalId = await resolveCaseIdentifier(firmId, caseId, role);
+      if (internalId) {
+        return await CaseRepository.findByInternalId(firmId, internalId, role, { includeClient: true });
+      }
+    } catch (_error) {
+      // Identifier resolution failure — return null
     }
-    return resolvedCaseData;
+    return null;
   })().finally(() => {
     inFlightCaseRecordLoads.delete(key);
   });
