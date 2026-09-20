@@ -111,7 +111,7 @@ export const CasesFiltersCard = ({ statusFilter, setStatusFilter, workTypeFilter
             <button
               key={workbasket.id}
               aria-pressed={activeWorkbasketId === workbasket.id}
-              className={`cases-page__view-tab${activeWorkbasketId === workbasket.id ? ' cases-page__view-tab--active' : ''}`}
+              className={`cases-page__view-tab${activeWorkbasketId === workbasket.id ? ' cases-page__view-tab--active' : ''} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dt-focus)]/45 focus-visible:ring-offset-1`}
               onClick={() => setActiveWorkbasketId(workbasket.id)}
               type="button"
             >

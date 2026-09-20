@@ -7,3 +7,6 @@
 ## 2026-08-13 - BubbleMenu Dropdown Accessibility
 **Learning:** Dropdowns and toggles with `aria-expanded` need a linked `aria-controls` pointing to a unique element ID to correctly announce state to screen readers. If there are multiple instances on a page, hardcoded IDs will conflict.
 **Action:** Use React's `useId()` to generate unique IDs for dropdown menus and bind them to the toggle button's `aria-controls`.
+## 2024-08-14 - Keyboard Accessibility for Toggle Buttons
+**Learning:** Toggle buttons (like filter chips or tabs) that use native `<button>` elements and act as radio buttons must include explicit focus styles (e.g., `focus-visible:ring-2`). Relying on native browser focus styling is often insufficient and creates accessibility barriers for keyboard users.
+**Action:** Always ensure custom toggle buttons and filter chips include `focus-visible` utility classes alongside `aria-pressed` attributes.
