@@ -15,8 +15,7 @@ For doc contribution standards, see [documentation-guidelines.md](documentation-
 | [../QUICK_START.md](../QUICK_START.md) | Install, configure, and run Docketra in 10 minutes |
 | [local-development.md](local-development.md) | Windows/Docker notes, Redis fallback behavior |
 | [deployment/environment-variables.md](deployment/environment-variables.md) | All environment variables, categories, and defaults |
-| [deployment/render-deployment.md](deployment/render-deployment.md) | Production deployment on Render |
-| [../DEPLOYMENT.md](../DEPLOYMENT.md) | Deployment guide (Render-first) |
+| [../DEPLOYMENT.md](../DEPLOYMENT.md) | Production deployment on GCP (Cloud Run + Firebase Hosting) |
 
 ---
 

@@ -321,10 +321,10 @@ export const DashboardPage = () => {
   };
 
   const loadDashboardData = async () => {
-    if (!hasLoadedDashboard) {
-      setLoading(true);
-    }
-
+    // Fix 4: always show the loading skeleton on every load/retry.
+    // Previously gated by hasLoadedDashboard, which meant refreshes and
+    // retries showed no visual feedback while data was in flight.
+    setLoading(true);
     setRecentCasesLoading(true);
     setLoadWarnings([]);
     try {
@@ -382,6 +382,9 @@ export const DashboardPage = () => {
         }
       };
 
+      // For non-admin, return { cases, total } so the open-count stat can use
+      // pagination.total from the same response rather than counting the capped
+      // data slice (DASHBOARD_RECENT_CASES_LIMIT = 5).
       const recentCasesPromise = (async () => {
         try {
           if (isAdmin) {
@@ -390,16 +393,20 @@ export const DashboardPage = () => {
           }
 
           const worklistResponse = await worklistApi.getEmployeeWorklist({ limit: DASHBOARD_RECENT_CASES_LIMIT });
-          return worklistResponse.success ? (worklistResponse.data || []) : [];
+          if (!worklistResponse.success) return { cases: [], total: 0 };
+          return {
+            cases: worklistResponse.data || [],
+            total: worklistResponse.pagination?.total ?? (worklistResponse.data || []).length,
+          };
         } catch (error) {
           console.error(isAdmin ? 'Failed to load firm dockets:' : 'Failed to load worklist:', error);
           reportLoadWarning('Recent dockets');
-          return [];
+          return isAdmin ? [] : { cases: [], total: 0 };
         }
       })();
 
       const [
-        casesToDisplay,
+        recentCasesResult,
         metricsPatch,
         openCasesPatch,
         pendingCasesPatch,
@@ -420,12 +427,19 @@ export const DashboardPage = () => {
             { showWarning: true },
           )
           : Promise.resolve({}),
-        fetchStatSafely(
-          () => worklistApi.getEmployeeWorklist(),
-          (worklistResponse) => (worklistResponse.success ? { myOpenCases: (worklistResponse.data || []).length } : {}),
-          'Failed to load open dockets count:',
-          'Open docket counts',
-        ),
+        // Fix 2: non-admin reuses recentCasesPromise (already in flight).
+        // Uses pagination.total from the same response — accurate even though
+        // the data slice is capped at DASHBOARD_RECENT_CASES_LIMIT. Admin users
+        // still call getEmployeeWorklist() without a limit (recentCasesPromise
+        // uses getCases() for admin so there's no shared result to reuse).
+        isAdmin
+          ? fetchStatSafely(
+            () => worklistApi.getEmployeeWorklist(),
+            (worklistResponse) => (worklistResponse.success ? { myOpenCases: (worklistResponse.data || []).length } : {}),
+            'Failed to load open dockets count:',
+            'Open docket counts',
+          )
+          : recentCasesPromise.then((result) => ({ myOpenCases: result?.total ?? 0 })).catch(() => ({})),
         fetchStatSafely(
           () => caseApi.getMyPendingCases(),
           (pendingResponse) => (pendingResponse.success ? { myPendingCases: (pendingResponse.data || []).length } : {}),
@@ -488,10 +502,18 @@ export const DashboardPage = () => {
             'Client counts',
           )
           : Promise.resolve({}),
+        // Fix 3: onboarding-progress runs in parallel with the rest of the batch
+        // instead of sequentially after Promise.all resolves.
+        loadOnboardingProgressSafely({
+          fetchProgress: dashboardApi.getOnboardingProgress,
+          setProgress: setOnboardingProgress,
+          firmSlug,
+          onWarning: (message) => console.warn('[Dashboard] Optional onboarding progress load failed', { message }),
+        }).catch(() => {}),
       ]);
 
-      await refreshOnboardingProgress();
-
+      // Normalize: admin path returns a plain array; non-admin returns { cases, total }.
+      const casesToDisplay = Array.isArray(recentCasesResult) ? recentCasesResult : (recentCasesResult?.cases || []);
       setRecentCases(getRecentCasesSnapshot(casesToDisplay));
       const statsPatch = {
         ...metricsPatch,

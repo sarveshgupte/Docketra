@@ -164,5 +164,4 @@ npm --prefix ui install
 - [docs/README.md](docs/README.md) — full documentation index
 - [docs/local-development.md](docs/local-development.md) — Windows/Docker notes
 - [docs/testing/local-testing.md](docs/testing/local-testing.md) — testing guide
-- [docs/deployment/render-deployment.md](docs/deployment/render-deployment.md) — production deploy on Render
-- [DEPLOYMENT.md](DEPLOYMENT.md) — deployment guide
+- [DEPLOYMENT.md](DEPLOYMENT.md) — production deployment on GCP (Cloud Run + Firebase Hosting)
