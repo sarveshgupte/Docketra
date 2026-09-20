@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import SeoHead from '../../components/common/SeoHead';
 
 const FAQ_ITEMS = [
   {
@@ -33,6 +34,19 @@ const FAQ_ITEMS = [
       'We operate on enterprise-grade Indian cloud infrastructure ensuring data sovereignty. Furthermore, Docketra supports Bring-Your-Own-Storage (BYOS), allowing your client documents to be stored directly inside your own firm’s Google Drive or AWS S3 account with client-level folder isolation and zero vendor lock-in.',
   },
 ];
+
+const FAQ_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ_ITEMS.map((item) => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: item.answer,
+    },
+  })),
+};
 
 const COMPARISON_ROWS = [
   {
@@ -93,67 +107,18 @@ export const DocketraVsExcelWhatsAppPage = () => {
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [activeSandboxTab, setActiveSandboxTab] = useState('memory');
 
-  useEffect(() => {
-    const originalTitle = document.title;
-    document.title = 'Docketra vs Excel & WhatsApp | 3-Month Free Pilot for Indian Compliance Firms';
-
-    let metaDesc = document.querySelector('meta[name="description"]');
-    let createdMeta = false;
-    if (!metaDesc) {
-      metaDesc = document.createElement('meta');
-      metaDesc.setAttribute('name', 'description');
-      document.head.appendChild(metaDesc);
-      createdMeta = true;
-    }
-    const originalDesc = metaDesc.getAttribute('content');
-    metaDesc.setAttribute(
-      'content',
-      'Outgrow spreadsheet chaos and lost WhatsApp files. Switch to Docketra in minutes with built-in Excel/CSV importers and claim a 3-month free pilot.',
-    );
-
-    // Inject JSON-LD Schema
-    const scriptId = 'docketra-faq-jsonld';
-    let scriptEl = document.getElementById(scriptId);
-    if (!scriptEl) {
-      scriptEl = document.createElement('script');
-      scriptEl.id = scriptId;
-      scriptEl.type = 'application/ld+json';
-      const schema = {
-        '@context': 'https://schema.org',
-        '@type': 'FAQPage',
-        mainEntity: FAQ_ITEMS.map((item) => ({
-          '@type': 'Question',
-          name: item.question,
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: item.answer,
-          },
-        })),
-      };
-      scriptEl.textContent = JSON.stringify(schema);
-      document.head.appendChild(scriptEl);
-    }
-
-    return () => {
-      document.title = originalTitle;
-      if (createdMeta && metaDesc?.parentNode) {
-        metaDesc.parentNode.removeChild(metaDesc);
-      } else if (metaDesc && originalDesc) {
-        metaDesc.setAttribute('content', originalDesc);
-      }
-      const existingScript = document.getElementById(scriptId);
-      if (existingScript && existingScript.parentNode) {
-        existingScript.parentNode.removeChild(existingScript);
-      }
-    };
-  }, []);
-
   const toggleFaq = (index) => {
     setOpenFaqIndex((prev) => (prev === index ? -1 : index));
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-amber-500/30 font-sans">
+      <SeoHead
+        canonicalPath="/compare/docketra-vs-excel-whatsapp"
+        title="Docketra vs Excel & WhatsApp | 3-Month Free Pilot for Indian Compliance Firms"
+        description="Outgrow spreadsheet chaos and lost WhatsApp files. Switch to Docketra in minutes with built-in Excel/CSV importers and claim a 3-month free pilot."
+        jsonLd={FAQ_SCHEMA}
+      />
       {/* Top Eyebrow Pilot Banner */}
       <div className="sticky top-0 z-50 border-b border-amber-500/20 bg-slate-900/95 backdrop-blur-md px-4 py-2.5 text-center text-xs sm:text-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 sm:gap-3 flex-wrap">
