@@ -1,7 +1,16 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { chromium } = require('playwright');
+let playwright;
+try {
+  playwright = require('playwright');
+} catch {
+  const resolvedPath = require.resolve('playwright', {
+    paths: [__dirname, path.resolve(__dirname, '../ui'), path.resolve(__dirname, '..')],
+  });
+  playwright = require(resolvedPath);
+}
+const { chromium } = playwright;
 
 const PUBLIC_ROUTES = [
   '/',

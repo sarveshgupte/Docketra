@@ -88,7 +88,9 @@ jobs:
           cache-dependency-path: ui/package-lock.json
 
       - name: Install frontend dependencies (dev included)
-        run: npm run ci:frontend:install
+        run: |
+          npm run ci:frontend:install
+          npx --prefix ui playwright install --with-deps chromium
 
       - name: Frontend build gate
         run: npm run ci:frontend:build
