@@ -448,9 +448,9 @@
   .find-workspace-page__heading {
     font-size: clamp(2rem, 4vw, 4.5rem);
     font-weight: 800;
-    line-height: 0.98;
+    line-height: 1.15;
     margin: 0;
-    letter-spacing: 0;
+    letter-spacing: -0.01em;
   }
 
   .find-workspace-page__intro {
@@ -471,22 +471,21 @@
   }
 
   .find-workspace-page__benefits li {
-    border: 1px solid rgba(255, 255, 255, 0.75);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
     padding: 0.7rem 0.85rem;
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
   }
 
   .find-workspace-page__card {
     width: 100%;
     max-width: 500px;
     justify-self: center;
-    border-radius: 28px;
-    border: 1px solid rgba(255, 255, 255, 0.82);
-    box-shadow: 0 30px 90px -45px rgba(15, 23, 42, 0.45);
-    background: rgba(255, 255, 255, 0.86);
-    backdrop-filter: blur(16px);
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.1);
+    background: #ffffff;
   }
 
   .find-workspace-page__card-header h2 {

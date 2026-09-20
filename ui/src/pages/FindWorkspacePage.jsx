@@ -11,9 +11,9 @@ const NOT_FOUND_MESSAGE = 'We could not find a workspace for that xID. Check the
 const LOOKUP_UNAVAILABLE_MESSAGE = 'Workspace lookup is temporarily unavailable. Please try again.';
 
 const WORKSPACE_PROMISES = [
-  '🔎 Finds the right firm URL for you',
-  '🔐 Keeps private workspace data hidden',
-  '⚡ Gets teams back to docket work faster',
+  'Finds the right firm URL for you',
+  'Keeps private workspace data hidden',
+  'Gets teams back to docket work faster',
 ];
 
 export const FindWorkspacePage = () => {
@@ -57,7 +57,7 @@ export const FindWorkspacePage = () => {
     <div className="auth-wrapper find-workspace-page">
       <div className="find-workspace-page__shell">
         <section className="find-workspace-page__context" aria-label="Workspace discovery context">
-          <p className="find-workspace-page__eyebrow">Workspace discovery ✨</p>
+          <p className="find-workspace-page__eyebrow">Workspace discovery</p>
           <h1 className="find-workspace-page__heading">Find your Docketra workspace</h1>
           <p className="find-workspace-page__intro">
             Enter your xID and we&apos;ll route you to your firm&apos;s secure login page without exposing private user details.

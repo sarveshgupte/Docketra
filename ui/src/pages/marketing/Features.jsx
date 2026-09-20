@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Section } from '../../components/layout/Section';
+import SeoHead from '../../components/common/SeoHead';
 
 const FEATURES = [
   {
@@ -31,6 +32,11 @@ const FEATURES = [
 
 export const FeaturesPage = () => (
   <Section>
+    <SeoHead
+      canonicalPath="/features"
+      title="Platform Features | Docketra — The Company Brain"
+      description="Explore Docketra features: centralized firm dashboard, granular access controls, automated audit trails, and Google Drive BYOS storage."
+    />
     <div className="mx-auto w-full max-w-3xl min-w-0 text-center">
       <h1 className="type-section text-gray-900">Platform Features</h1>
       <p className="mt-6 type-body text-lg text-gray-600">

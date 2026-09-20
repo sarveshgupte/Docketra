@@ -9,7 +9,13 @@ const allowedTransitions = Object.freeze({
     DocketStatus.RESOLVED,
     DocketStatus.FILED,
   ]),
-  [DocketStatus.ASSIGNED]: Object.freeze([DocketStatus.IN_PROGRESS]),
+  [DocketStatus.ASSIGNED]: Object.freeze([
+    DocketStatus.IN_PROGRESS,
+    DocketStatus.PENDING,
+    DocketStatus.QC_PENDING,
+    DocketStatus.RESOLVED,
+    DocketStatus.FILED,
+  ]),
   [DocketStatus.IN_PROGRESS]: Object.freeze([
     DocketStatus.PENDING,
     DocketStatus.QC_PENDING,

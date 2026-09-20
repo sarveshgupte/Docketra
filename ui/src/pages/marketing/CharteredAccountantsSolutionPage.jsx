@@ -3,142 +3,142 @@ import { Link } from 'react-router-dom';
 
 const FAQ_ITEMS = [
   {
-    id: 'rbac-permissions',
-    question: 'How do role-based permissions work for business teams submitting legal intake requests?',
+    id: 'trainee-permissions',
+    question: 'How do role-based permissions work for article trainees and audit staff?',
     answer:
-      'Docketra provides granular Role-Based Access Control (RBAC) separating internal business requesters from legal department counsel. Business users access a simplified intake portal where they can submit requests, upload contract drafts, and track progress without gaining visibility into confidential dispute dockets, executive employment matters, or board governance archives.',
+      'Docketra provides strict Role-Based Access Control (RBAC) designed specifically for CA firms. Partners can scope article assistants, paid assistants, and audit seniors strictly to assigned client entities or specific workbaskets (e.g., GST or Statutory Audit). Trainees cannot access confidential partner billing rates, other partners\' clients, or submit final filings without mandatory partner sign-off.',
   },
   {
-    id: 'sovereignty-dpdp',
-    question: "How does Docketra ensure data sovereignty and compliance with India's Digital Personal Data Protection (DPDP) Act?",
+    id: 'data-residency-sovereignty',
+    question: 'Where is client financial data stored and how is domestic data residency handled?',
     answer:
-      'Docketra enforces strict domestic data residency. All customer data and documents are stored exclusively on Tier-IV data center infrastructure located physically within India (Mumbai and Hyderabad). We employ TLS 1.3 encryption in transit, AES-256 encryption at rest, and zero third-party AI model training. In-house teams can also activate Bring-Your-Own-Storage (BYOS) to vault documents directly into their own enterprise AWS S3 or Google Drive buckets.',
+      'All client financial data, audit working papers, and tax documents are hosted exclusively on Tier-IV cloud infrastructure located physically within India (Mumbai and Hyderabad). We enforce TLS 1.3 encryption in transit, AES-256 encryption at rest, and zero third-party AI model training. Furthermore, Docketra supports Bring-Your-Own-Storage (BYOS)—allowing your firm to vault working papers directly into your own firm\'s Google Drive or AWS S3 account with zero vendor lock-in.',
   },
   {
-    id: 'excel-migration',
-    question: 'How straightforward is migrating ongoing litigation matters and contract repositories from Excel?',
+    id: 'unrestricted-data-export',
+    question: 'Can we export our firm\'s complete data if we choose not to renew after the 3-month free pilot?',
     answer:
-      'Migration takes minutes using Docketra\'s built-in Matter & Entity Importers. You can upload existing spreadsheets containing active litigation, regulatory show-cause notices, contract registries, and subsidiary entity profiles. The system runs pre-flight dry runs, checks statutory identifiers (CIN, DIN, PAN), and auto-populates matter dockets with historical dates and responsible counsel.',
+      'Yes, 100%. Docketra gives you complete data ownership with zero lock-in. You can export your entire client master list, historical docket audit trails, statutory registers, and work papers in clean Excel/CSV formats and organized ZIP archives anytime with a single click. We never hold your firm data hostage and charge zero export fees.',
   },
 ];
 
 const REALITY_CHECK_MATRIX = [
   {
-    title: 'Ad-Hoc Intake via Chat',
-    legacy: 'Drive-By Pings & Informal Threads',
+    title: 'Filing Deadlines Packed into Months',
+    legacy: 'Static Rows in Master Spreadsheets',
     legacyDetail:
-      'Business teams request contract reviews, NDA approvals, and advisory via Slack, WhatsApp, and fragmented email chains with no standardized briefing or SLA tracking.',
-    risk: 'Untracked Requests & Blown SLAs',
+      'Tax audit, GSTR-9/9C, and MCA due dates tracked in giant multi-tab spreadsheets where dates must be manually recalculated after government extensions.',
+    risk: 'Late Fees & Penalty Scrutiny',
     riskDetail:
-      'High-priority commercial contracts sit forgotten in inboxes. Deals stall, turnaround times become unpredictable, and counsel has zero paper trail when disputes arise.',
-    docketra: 'Structured Legal Front Door & Intake Baskets',
+      'Cells get accidentally overwritten. Critical client filings slip past statutory cutoffs, triggering hefty late fees, interest under 234A/B/C, and client escalations.',
+    docketra: 'Dynamic Statutory Timelines with Automated Alerts',
     docketraDetail:
-      'A unified legal front door. Business stakeholders submit standardized intake requests with contract metadata, automated routing to specialized counsel, and live status countdowns.',
-    badge: 'Zero Dropped Requests',
+      'Dynamic compliance calendar automatically maps Income Tax, GST, and ROC deadlines across all clients with escalating SLA alerts and auto-calculated late fee countdowns.',
+    badge: 'Zero Missed Filings',
   },
   {
-    title: 'Scattered Regulatory Notices',
-    legacy: 'Local Desktop Folders & Forwarded Mail',
+    title: 'Reviewing Tax Drafts on WhatsApp',
+    legacy: 'Buried Chat Messages & Forwarded Attachments',
     legacyDetail:
-      'Show-cause notices, labor inspection summons, and GST/ROC letters arrive across regional plants and branch offices, saved on individual laptops or lost in forwarded emails.',
-    risk: 'Missed Court/Tribunal Filing Windows',
+      'Computation sheets, GSTR-3B summaries, and draft audit reports pinged across WhatsApp groups and personal emails with zero formal review checkpoints.',
+    risk: 'Unreviewed Returns Filed on Portals',
     riskDetail:
-      'Statutory reply deadlines lapse without response. Ex-parte orders, contempt proceedings, and compounding penalties accumulate across decentralized subsidiaries.',
-    docketra: 'Centralized Matter Dockets with SLA Tracking',
+      'Article assistants file returns with unresolved reconciliation mismatches or incorrect turnover figures, leading to departmental defect notices and partner embarrassment.',
+    docketra: 'Structured 4-Eye QC Review Baskets',
     docketraDetail:
-      'Unified regulatory matter docketing. Every notice is timestamped, mapped to statutory reply windows, assigned to lead litigation counsel, and tracked with automated escalation alerts.',
-    badge: '100% Notice Defensibility',
+      'Mandatory review gates. Dockets cannot advance to portal submission until assigned audit managers or partners review draft computations, log notes, and grant immutable digital sign-offs.',
+    badge: '100% Quality Gate',
   },
   {
-    title: 'External Counsel Blind Spots',
-    legacy: 'Opaque Retainer Billing & Phone Check-ins',
+    title: 'Article Assistant Turnover',
+    legacy: 'Vanishing Working Papers & Local Downloads',
     legacyDetail:
-      'External law firms and designated advocates work on litigation and corporate opinions with minimal visibility between monthly billing cycles and informal phone calls.',
-    risk: 'Ballooning Legal Spend & Duplicated Effort',
+      'Article clerks rotate out every 2–3 years. Working papers, client trial balance notes, DSC PINs, and portal passwords remain trapped on personal laptops or private drives.',
+    risk: 'Institutional Brain Drain & Re-Work',
     riskDetail:
-      'Legal budgets spiral out of control. Outside counsel duplicates prior internal research, billable hours balloon without clear deliverable milestones, and budget overruns shock leadership.',
-    docketra: 'Milestone-Driven Docket Tracking',
+      'Every new trainee spends weeks re-requesting past filings, ledger summaries, and assessment orders from irritated clients, damaging firm credibility.',
+    docketra: 'Persistent Entity Client Memory',
     docketraDetail:
-      'Assign external law firms to scoped dockets with clear deliverable milestones, hearing dates, and spend tracking. Enforce transparency before invoices are approved.',
-    badge: 'Spend Accountability',
+      'Centralized permanent client workspace. Past computation sheets, scrutiny replies, signed balance sheets, and client correspondence stay permanently bound to the firm workspace.',
+    badge: 'Zero Knowledge Loss',
   },
   {
-    title: 'Executive Reporting Headaches',
-    legacy: 'Manual Slide Decks & Weekend Spreadsheet Merges',
+    title: '"Who is Working on What?" Panic',
+    legacy: 'Hours Lost in Daily Partner Status Syncs',
     legacyDetail:
-      'Before board meetings and audit committees, the General Counsel spends 3 days frantically chasing team members to compile matter spreadsheets into executive slide presentations.',
-    risk: 'Unprepared Board Updates & Reactive Posture',
+      'Partners spend the first 2 hours of every morning in September and October calling team members to ask: "Who is doing Acme Tax Audit? Did we file the GSTR-1 for Beta Corp?"',
+    risk: 'Capacity Blind Spots & Bottlenecks',
     riskDetail:
-      'Static slides are out of date before the board meeting begins. Legal leadership remains reactive, lacking real-time metrics on legal team velocity, litigation exposure, and risk posture.',
-    docketra: 'Real-Time GC Command Dashboard',
+      'Uneven workload distribution. Senior trainees burn out while junior staff sit idle, and partners discover stalled filings only days before statutory cutoffs.',
+    docketra: 'Live Firm Worklist Telemetry',
     docketraDetail:
-      'Instant executive telemetry on active litigation, contract turnaround times, subsidiary compliance health, and pending approvals. Export board-ready reports with one click.',
-    badge: 'Instant Board Telemetry',
+      'Real-time partner command center. View open dockets across all clients, track fee-earner capacity, identify review bottlenecks, and balance workload in seconds.',
+    badge: 'Real-Time Telemetry',
   },
 ];
 
 const PILLARS = [
   {
     number: '01',
-    title: 'Structured Legal Intake & Triage',
-    subtitle: 'Internal Front Door & Queue Routing',
+    title: 'Multi-Discipline Workbaskets',
+    subtitle: 'Direct Tax, GST, Audit & Corporate Advisory',
     description:
-      'Establish a single front door for commercial contracts, corporate advisory, and statutory sign-offs. Eliminate drive-by pings and centralize work in intelligent workbaskets.',
+      'Organize your firm into specialized, sovereign work queues. Route dockets automatically to Tax, GST, Statutory Audit, Transfer Pricing, and ROC teams without cross-department clutter.',
     features: [
-      'Standardized intake forms with contract type, commercial value, and urgency tagging',
-      'Automated triage routing to specialized counsel (Employment, IP, Commercial, Regulatory)',
-      'Real-time requester tracking portal with estimated turnaround countdowns',
-      'Configurable SLA tiers based on commercial priority and business unit',
+      'Pre-built practice workbaskets: Direct Tax, Indirect Tax (GST), Statutory Audit, MCA/ROC',
+      'Intelligent routing rules based on client group, turnover, and engagement type',
+      'Custom subcategories for Tax Audit (3CD), Transfer Pricing (3CEB), and Advance Tax',
+      'Stage-based pipelines with configurable milestone checkpoints and review stages',
     ],
   },
   {
     number: '02',
-    title: 'Entity & Subsidiary Governance',
-    subtitle: 'Group Corporate Records & Director Intelligence',
+    title: 'Client Memory & Working Records',
+    subtitle: 'Permanent Dossiers & Scrutiny Repository',
     description:
-      'Manage corporate records across holding companies, operating subsidiaries, and joint ventures in India and overseas. Keep group governance perfectly synchronized.',
+      'Give your practice an institutional brain. Centralize permanent client dossiers, PAN/GSTIN registries, past assessment orders, 26AS/AIS reconciliation notes, and representation letters.',
     features: [
-      '21-digit CIN validation, DIN tracking, and DSC expiration registries for all directors',
-      'Centralized repository for Articles, Memorandum, shareholding charts, and board minutes',
-      'Power of Attorney (PoA) and authorized signatory registry with validity dates',
-      'Automated statutory compliance dockets for annual filings and event-driven ROC forms',
+      'Permanent client files: MOA/AOA, Partnership Deeds, GST registration certificates, PAN/TAN',
+      'Historical scrutiny and assessment order archive with DIN/Notice tracking',
+      'Client contacts and authorized signatory registry with validity dates',
+      'Direct link to working papers stored securely in your firm’s Google Drive or AWS S3',
     ],
   },
   {
     number: '03',
-    title: '4-Eye QC Review Baskets',
-    subtitle: 'Risk Controls Before Dispatch',
+    title: '4-Eye QC Review Gates',
+    subtitle: 'Partner & Manager Quality Safeguards',
     description:
-      'Ensure high-stakes commercial agreements, court filings, and regulatory responses pass rigorous peer or GC review before execution or external submission.',
+      'Prevent unvetted returns and audit opinions from reaching government portals. Enforce multi-tier digital sign-offs between article trainees, audit managers, and signing partners.',
     features: [
-      'Mandatory approval gates for contracts exceeding custom monetary thresholds',
-      'Complete inline redline history, revision comments, and risk commentary',
-      'Immutable digital sign-off trail with counsel timestamp and role authentication',
-      'Configurable dual-counsel review gates for litigation replies and affidavit sign-offs',
+      'Mandatory review checkpoints before filing returns on IT, GST, or MCA portals',
+      'Inline review annotations, queries, and correction checklists for audit staff',
+      'Immutable audit trail recording reviewer identity, timestamp, and digital sign-off',
+      'Partner override controls with mandatory justification logging for urgent filings',
     ],
   },
   {
     number: '04',
-    title: 'Sovereign Domestic Infrastructure',
-    subtitle: 'Strict Legal Privilege & Indian Data Residency',
+    title: 'Zero-Friction Spreadsheet Migration',
+    subtitle: 'Migrate Your Entire Firm in 15 Minutes',
     description:
-      'Engineered specifically to preserve attorney-client privilege, data residency mandates, and compliance with the Digital Personal Data Protection (DPDP) Act, 2023.',
+      'Switch your entire client base and ongoing compliance matters from Excel, Tally, or legacy software with zero manual re-entry. High-speed bulk ingestion engines handle the rest.',
     features: [
-      'Hosted exclusively on Tier-IV cloud infrastructure within India (Mumbai / Hyderabad)',
-      'Zero training on third-party commercial LLMs—your enterprise legal data remains private',
-      'Optional Bring-Your-Own-Storage (BYOS) to firm AWS S3 or Google Drive accounts',
-      'Granular Role-Based Access Control (RBAC) with detailed immutable audit logging',
+      'Client Master Importer with dry-run validation for PAN, GSTIN, TAN, and CIN formats',
+      'Direct clipboard copy-paste from Excel or Google Sheets without downloading CSV files',
+      'Historical docket and pending compliance matter migration templates',
+      'Automated team role provisioning and associate workbasket assignment',
     ],
   },
 ];
 
-export const CorporateLegalTeamsSolutionPage = () => {
+export const CharteredAccountantsSolutionPage = () => {
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
-  const [activePreviewTab, setActivePreviewTab] = useState('intake');
+  const [activePreviewTab, setActivePreviewTab] = useState('tax');
 
   useEffect(() => {
     const originalTitle = document.title;
-    document.title = 'Legal Operations & Matter Management for In-House Teams | Docketra';
+    document.title = 'Practice Management Software for Chartered Accountants | Docketra';
 
     let metaDesc = document.querySelector('meta[name="description"]');
     let createdMeta = false;
@@ -151,11 +151,11 @@ export const CorporateLegalTeamsSolutionPage = () => {
     const originalDesc = metaDesc.getAttribute('content');
     metaDesc.setAttribute(
       'content',
-      'Streamline in-house legal intake, contract dockets, and subsidiary compliance. Purpose-built for Indian corporate legal departments with a 3-month free pilot.',
+      'Purpose-built practice management for Indian CA firms. Streamline audit dockets, GST reconciliations, and tax reviews with zero spreadsheet chaos. Claim 3 months free.',
     );
 
     // Inject JSON-LD Schema
-    const scriptId = 'docketra-legal-faq-jsonld';
+    const scriptId = 'docketra-ca-faq-jsonld';
     let scriptEl = document.getElementById(scriptId);
     if (!scriptEl) {
       scriptEl = document.createElement('script');
@@ -201,16 +201,16 @@ export const CorporateLegalTeamsSolutionPage = () => {
       <div className="sticky top-0 z-50 border-b border-amber-500/20 bg-slate-900/90 backdrop-blur-md px-4 py-2.5 text-center text-xs sm:text-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 sm:gap-3 flex-wrap">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 font-bold text-amber-400">
-            🚀 Docketra Enterprise Pilot Cohort
+            🚀 Docketra Pilot Cohort for CA Practices
           </span>
           <span className="text-slate-300 font-medium">
-            3 Months Unrestricted Free Access for In-House Legal Teams • Tier-IV Indian Data Residency
+            3 Months Unrestricted Free Access • Pre-configured with Tax, Audit & GST Workbaskets
           </span>
           <Link
             to="/signup"
             className="inline-flex items-center gap-1 rounded-md bg-amber-500 px-2.5 py-1 text-xs font-bold text-slate-950 hover:bg-amber-400 active:scale-[0.97] transition-all"
           >
-            Claim Enterprise Seat →
+            Claim CA Pilot Seat →
           </Link>
         </div>
       </div>
@@ -248,18 +248,18 @@ export const CorporateLegalTeamsSolutionPage = () => {
         <div className="mx-auto max-w-5xl text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-semibold text-amber-400 mb-6">
             <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-            Built for General Counsel, Legal Ops & Corporate Secretaries
+            Built for Managing Partners & Audit Practice Heads
           </div>
 
           <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-white leading-tight">
-            Total Operational Clarity for{' '}
+            The Operating Engine for{' '}
             <span className="text-amber-400">
-              In-House Legal & Compliance
+              High-Velocity CA Practices
             </span>
           </h1>
 
           <p className="mx-auto mt-6 max-w-3xl text-base sm:text-lg text-slate-300 leading-relaxed font-normal">
-            Replace fragmented email threads, forgotten advisory requests, and scattered contract dockets. Centralize internal legal intake, regulatory notices, and board governance inside a single sovereign workspace.
+            Stop managing audit working papers, GST reconciliations, and tax scrutiny deadlines across WhatsApp threads and fragile spreadsheets. Run your entire firm on a unified, sovereign compliance workspace.
           </p>
 
           {/* CTAs */}
@@ -291,19 +291,19 @@ export const CorporateLegalTeamsSolutionPage = () => {
               <svg className="h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              Full team access
+              Full practice access
             </span>
             <span className="hidden sm:inline">•</span>
             <span className="flex items-center gap-1">
               <svg className="h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              1-Click Excel matter migration
+              1-Click Excel client master import
             </span>
           </div>
         </div>
 
-        {/* Hero Visual Mockup: Legal Operations Command */}
+        {/* Hero Visual Mockup: CA Operations Engine */}
         <div className="mx-auto mt-12 max-w-5xl rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900/90 to-slate-950 p-4 sm:p-6 shadow-2xl">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* The Fragmented Way */}
@@ -311,51 +311,51 @@ export const CorporateLegalTeamsSolutionPage = () => {
               <div className="flex items-center justify-between border-b border-red-900/30 pb-3 mb-3">
                 <div className="flex items-center gap-2">
                   <span className="h-3 w-3 rounded-full bg-red-500/80" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-red-400">Spreadsheets & Slack</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-red-400">Spreadsheets & WhatsApp</span>
                 </div>
-                <span className="text-[11px] font-medium text-slate-400">Fragmented & Untracked</span>
+                <span className="text-[11px] font-medium text-slate-400">Tax Season Chaos</span>
               </div>
               <div className="space-y-2.5 text-xs text-slate-300">
                 <div className="rounded-lg bg-slate-900/80 p-2.5 border border-red-900/20 font-mono text-[11px]">
-                  <span className="text-red-400 font-bold">Unindexed Channel #legal-requests:</span> "Can someone review the vendor MSA? We signed it yesterday without indemnity clause."
+                  <span className="text-red-400 font-bold">September_TaxAudit_Master_v12.xlsx:</span> Form 3CD row 84 edited offline. Balance sheet variance unflagged.
                 </div>
                 <div className="rounded-lg bg-slate-900/80 p-2.5 border border-red-900/20">
-                  <p className="text-slate-400 text-[11px] font-semibold mb-1">Litigation_Tracker_2026_Final.xlsx:</p>
-                  <p className="italic text-slate-300">"Notice from NCLT Mumbai missing from folder. Hearing scheduled for tomorrow morning."</p>
+                  <p className="text-slate-400 text-[11px] font-semibold mb-1">Articleship Query (Unindexed):</p>
+                  <p className="italic text-slate-300">"Where did Rahul save the 26AS reconciliation for Apex Mills? He finished articleship yesterday and laptop is locked."</p>
                 </div>
                 <div className="rounded-lg bg-slate-900/80 p-2.5 border border-red-900/20 text-red-300 text-[11px]">
-                  Result: High-liability blind spots. Blown contractual SLAs. Ballooning outside counsel fees.
+                  Result: Missed filing cutoffs. Interest under 234A/B. Frantic partner firefighting.
                 </div>
               </div>
             </div>
 
-            {/* The Modern Way: Docketra Legal */}
+            {/* The Modern Way: Docketra CA */}
             <div className="rounded-xl border border-amber-500/40 bg-amber-500/[0.03] p-4 sm:p-5">
               <div className="flex items-center justify-between border-b border-amber-500/20 pb-3 mb-3">
                 <div className="flex items-center gap-2">
                   <span className="h-3 w-3 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-amber-400">The Docketra Legal Standard</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-400">The Docketra CA Standard</span>
                 </div>
-                <span className="text-[11px] font-bold text-amber-400">Enterprise Legal Ops</span>
+                <span className="text-[11px] font-bold text-amber-400">Firm Command Engine</span>
               </div>
               <div className="space-y-2.5 text-xs">
                 <div className="rounded-lg bg-slate-900/90 p-2.5 border border-amber-500/20">
                   <div className="flex items-center justify-between text-[11px] font-bold">
-                    <span className="text-amber-300">DOCKET-2026-LEG-088</span>
-                    <span className="rounded bg-emerald-950/80 text-emerald-400 px-1.5 py-0.5 border border-emerald-800 text-[10px]">GC Approved</span>
+                    <span className="text-amber-300">DOCKET-2026-TAX-094</span>
+                    <span className="rounded bg-emerald-950/80 text-emerald-400 px-1.5 py-0.5 border border-emerald-800 text-[10px]">Partner Signed Off</span>
                   </div>
-                  <p className="text-slate-300 text-[11px] mt-1 font-medium">Enterprise SaaS Agreement • ₹4.2 Cr Annual Contract</p>
-                  <p className="text-slate-400 text-[10px] mt-0.5">Commercial Legal Basket • Turnaround: 22h • 4-Eye Gate Passed</p>
+                  <p className="text-slate-300 text-[11px] mt-1 font-medium">Apex Mills Ltd • Form 3CD & ITR-6 Filing</p>
+                  <p className="text-slate-400 text-[10px] mt-0.5">PAN: AAACA1234F • Audit Workbasket • 4-Eye Gate Verified</p>
                 </div>
                 <div className="rounded-lg bg-slate-900/90 p-2.5 border border-amber-500/20 flex items-center justify-between">
                   <div>
-                    <p className="text-slate-300 text-[11px] font-semibold">NCLT Show-Cause Matter Vaulted</p>
-                    <p className="text-slate-400 text-[10px]">Assigned to Senior Counsel • Reply filed 4 days ahead of window</p>
+                    <p className="text-slate-300 text-[11px] font-semibold">26AS / AIS Working Papers Vaulted</p>
+                    <p className="text-slate-400 text-[10px]">Stored in Firm Google Drive • UDIN Generated & Bound</p>
                   </div>
-                  <span className="text-xs font-mono text-emerald-400 font-bold">100% Compliant</span>
+                  <span className="text-xs font-mono text-emerald-400 font-bold">100% Audit-Proof</span>
                 </div>
                 <div className="rounded-lg bg-emerald-950/20 p-2 border border-emerald-500/30 text-emerald-300 text-[11px]">
-                  ✅ Result: Zero dropped requests. Protected legal privilege. Executive audit readiness.
+                  ✅ Result: Zero missed deadlines. Absolute audit quality control. Calm practice growth.
                 </div>
               </div>
             </div>
@@ -368,13 +368,13 @@ export const CorporateLegalTeamsSolutionPage = () => {
         <div className="mx-auto max-w-6xl">
           <div className="text-center max-w-3xl mx-auto mb-14">
             <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-semibold text-amber-400 mb-3">
-              Spreadsheets & Slack vs. The Enterprise Risk vs. Docketra
+              Spreadsheets & WhatsApp vs. The Risk to the Firm vs. Docketra
             </div>
             <h2 className="text-2xl sm:text-4xl font-extrabold text-white">
               The Reality Check Matrix
             </h2>
             <p className="mt-3 text-sm sm:text-base text-slate-300">
-              Corporate legal teams cannot afford communication gaps or missed statutory windows. See how Docketra elevates your legal operations from reactive firefighting to strategic leadership.
+              Tax and audit compliance demand zero-error execution under severe statutory deadlines. See why spreadsheets fail at scale and how Docketra transforms CA practice operations.
             </p>
           </div>
 
@@ -394,31 +394,31 @@ export const CorporateLegalTeamsSolutionPage = () => {
                   </span>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-slate-800/80">
-                  {/* Legacy Spreadsheets & Slack */}
+                  {/* Legacy Spreadsheets & WhatsApp */}
                   <div className="p-5 bg-slate-950/60">
                     <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
                       <span className="text-slate-500">1.</span>
-                      <span>Spreadsheets & Slack</span>
+                      <span>Spreadsheets & WhatsApp</span>
                     </div>
                     <p className="text-xs font-semibold text-slate-200 mb-1">{item.legacy}</p>
                     <p className="text-xs text-slate-400 leading-relaxed">{item.legacyDetail}</p>
                   </div>
 
-                  {/* The Enterprise Risk */}
+                  {/* The Risk to the Firm */}
                   <div className="p-5 bg-red-950/[0.06]">
                     <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-red-400 mb-2">
                       <span>✕</span>
-                      <span>The Enterprise Risk</span>
+                      <span>The Risk to the Firm</span>
                     </div>
                     <p className="text-xs font-semibold text-red-300 mb-1">{item.risk}</p>
                     <p className="text-xs text-slate-300 leading-relaxed">{item.riskDetail}</p>
                   </div>
 
-                  {/* The Docketra Legal Standard */}
+                  {/* The Docketra CA Standard */}
                   <div className="p-5 bg-amber-500/[0.03]">
                     <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-400 mb-2">
                       <span>✓</span>
-                      <span>The Docketra Standard</span>
+                      <span>The Docketra CA Standard</span>
                     </div>
                     <p className="text-xs font-semibold text-white mb-1">{item.docketra}</p>
                     <p className="text-xs text-slate-200 leading-relaxed font-medium">{item.docketraDetail}</p>
@@ -435,13 +435,13 @@ export const CorporateLegalTeamsSolutionPage = () => {
         <div className="mx-auto max-w-6xl">
           <div className="text-center max-w-3xl mx-auto mb-14">
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1 text-xs font-semibold text-emerald-400 mb-3">
-              Enterprise Legal Architecture
+              CA Practice Architecture
             </div>
             <h2 className="text-2xl sm:text-4xl font-extrabold text-white">
-              Pillars of the Docketra In-House Platform
+              Pillars of the Docketra CA Platform
             </h2>
             <p className="mt-3 text-sm sm:text-base text-slate-300">
-              Purpose-engineered to manage legal velocity, enforce risk policies, and protect enterprise corporate governance across Indian corporate entities.
+              Purpose-engineered to handle intense Indian tax filing crunches, rigorous audit documentation, and multi-associate teams.
             </p>
           </div>
 
@@ -492,46 +492,46 @@ export const CorporateLegalTeamsSolutionPage = () => {
               Interactive Preview
             </div>
             <h3 className="text-xl sm:text-3xl font-extrabold text-white">
-              The General Counsel Command Center
+              The CA Partner Command Center
             </h3>
             <p className="mt-2 text-xs sm:text-sm text-slate-400">
-              Live operational telemetry: see how Docketra organizes legal intake, group subsidiary records, and litigation dockets.
+              Live practice telemetry: direct tax dockets, 4-eye review queues, and audit working records.
             </p>
 
             {/* Interactive Preview Tabs */}
             <div className="mt-6 flex flex-wrap sm:inline-flex justify-center rounded-xl bg-slate-900 p-1 border border-slate-800 text-xs gap-1 max-w-full">
               <button
                 type="button"
-                onClick={() => setActivePreviewTab('intake')}
+                onClick={() => setActivePreviewTab('tax')}
                 className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                  activePreviewTab === 'intake'
+                  activePreviewTab === 'tax'
                     ? 'bg-amber-500 text-slate-950 font-bold'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Intake & Triage Front Door
+                Tax & Audit Workbasket
               </button>
               <button
                 type="button"
-                onClick={() => setActivePreviewTab('governance')}
+                onClick={() => setActivePreviewTab('qc')}
                 className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                  activePreviewTab === 'governance'
+                  activePreviewTab === 'qc'
                     ? 'bg-amber-500 text-slate-950 font-bold'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Subsidiary Governance Master
+                4-Eye QC Gate
               </button>
               <button
                 type="button"
-                onClick={() => setActivePreviewTab('litigation')}
+                onClick={() => setActivePreviewTab('memory')}
                 className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                  activePreviewTab === 'litigation'
+                  activePreviewTab === 'memory'
                     ? 'bg-amber-500 text-slate-950 font-bold'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Litigation & Notice Dockets
+                Client Memory Dossier
               </button>
             </div>
           </div>
@@ -545,66 +545,66 @@ export const CorporateLegalTeamsSolutionPage = () => {
                   <span className="h-3 w-3 rounded-full bg-emerald-500/80" />
                 </div>
                 <span className="ml-1 sm:ml-2 font-mono text-[11px] text-slate-400 truncate max-w-[140px] sm:max-w-none">
-                  docketra.in/app/firm/titan-enterprises-legal
+                  docketra.in/app/firm/khanna-and-associates-ca
                 </span>
               </div>
               <span className="rounded bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-500/20 shrink-0 whitespace-nowrap">
-                Corporate Legal Workspace
+                Live CA Firm Workspace
               </span>
             </div>
 
             <div className="p-4 sm:p-6 space-y-4">
-              {activePreviewTab === 'intake' && (
+              {activePreviewTab === 'tax' && (
                 <div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                     <div className="rounded-xl border border-slate-800 bg-slate-950 p-3.5">
-                      <p className="text-[11px] text-slate-400">Active Requests in Queue</p>
-                      <p className="text-xl font-bold text-white mt-1">18 Open</p>
-                      <p className="text-[10px] text-emerald-400 mt-1">Avg SLA: 24h turnaround</p>
+                      <p className="text-[11px] text-slate-400">Tax Audit 3CD Matters</p>
+                      <p className="text-xl font-bold text-white mt-1">48 Engagements</p>
+                      <p className="text-[10px] text-emerald-400 mt-1">100% on schedule</p>
                     </div>
                     <div className="rounded-xl border border-slate-800 bg-slate-950 p-3.5">
-                      <p className="text-[11px] text-slate-400">4-Eye Approvals Pending</p>
-                      <p className="text-xl font-bold text-amber-400 mt-1">4 Contracts</p>
-                      <p className="text-[10px] text-amber-400 mt-1">GC review gate active</p>
+                      <p className="text-[11px] text-slate-400">Partner QC Sign-offs</p>
+                      <p className="text-xl font-bold text-amber-400 mt-1">7 Returns Pending</p>
+                      <p className="text-[10px] text-amber-400 mt-1">4-eye review gate active</p>
                     </div>
                     <div className="rounded-xl border border-slate-800 bg-slate-950 p-3.5">
-                      <p className="text-[11px] text-slate-400">SLA Compliance Rate</p>
-                      <p className="text-xl font-bold text-white mt-1">98.4%</p>
-                      <p className="text-[10px] text-emerald-400 mt-1">Top quartile velocity</p>
+                      <p className="text-[11px] text-slate-400">Upcoming GSTR-9 Due Dates</p>
+                      <p className="text-xl font-bold text-white mt-1">32 Clients</p>
+                      <p className="text-[10px] text-slate-400 mt-1">Auto-reconciliation ready</p>
                     </div>
                   </div>
 
                   <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
                     <div className="flex items-center justify-between text-xs font-bold text-slate-300 mb-3">
-                      <span>Internal Legal Intake Queue</span>
-                      <span className="text-amber-400 font-mono text-[11px]">Filter: High Priority Commercial</span>
+                      <span>Active CA Engagement Roster</span>
+                      <span className="text-amber-400 font-mono text-[11px]">Filter: Direct Tax & Audit Baskets</span>
                     </div>
                     <div className="divide-y divide-slate-800/80 text-xs">
                       <div className="py-2.5 flex items-center justify-between flex-wrap gap-2">
                         <div>
-                          <span className="font-bold text-white">Vendor Master Agreement (₹6.5 Cr Hardware Proc.)</span>
-                          <span className="ml-2 font-mono text-[10px] text-slate-400">Requester: Infrastructure Ops</span>
+                          <span className="font-bold text-white">Shree Ganesh Logistics Private Limited</span>
+                          <span className="ml-2 font-mono text-[10px] text-slate-400">PAN: AAGCS9281H • Lead: Rahul (Article Senior)</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="rounded bg-amber-500/10 text-amber-300 px-2 py-0.5 text-[10px] font-mono border border-amber-500/20">
-                            Commercial Contract
+                            Form 3CD + 3CA
                           </span>
                           <span className="rounded bg-emerald-950/80 text-emerald-400 px-2 py-0.5 text-[10px] font-bold border border-emerald-800">
-                            Counsel Assigned
+                            Manager QC Passed
                           </span>
                         </div>
                       </div>
                       <div className="py-2.5 flex items-center justify-between flex-wrap gap-2">
                         <div>
-                          <span className="font-bold text-white">Customer Data Processing Addendum (DPDP Alignment)</span>
-                          <span className="ml-2 font-mono text-[10px] text-slate-400">Requester: Product Engineering</span>
+                          <span className="font-bold text-white">Metropolis HealthCare Diagnostics LLP</span>
+                          <span className="ml-2 font-mono text-[10px] text-slate-400">GSTIN: 27AABCM8291F1Z8 • Lead: Priya (Associate)</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="rounded bg-amber-500/10 text-amber-300 px-2 py-0.5 text-[10px] font-mono border border-amber-500/20">
-                            Privacy & Regulatory
+                            GSTR-9C Reconciliation
                           </span>
                           <span className="rounded bg-slate-800 text-slate-300 px-2 py-0.5 text-[10px] font-mono">
-                            Under Review
+                            Working Papers Uploaded
                           </span>
                         </div>
                       </div>
@@ -613,33 +613,33 @@ export const CorporateLegalTeamsSolutionPage = () => {
                 </div>
               )}
 
-              {activePreviewTab === 'governance' && (
+              {activePreviewTab === 'qc' && (
                 <div className="space-y-3 text-xs">
                   <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-white text-sm">Group Entity & Subsidiary Roster</span>
-                      <span className="text-emerald-400 font-mono text-[11px]">14 Subsidiaries • All Compliant</span>
+                      <span className="font-bold text-white text-sm">4-Eye Partner QC Review Gate</span>
+                      <span className="text-amber-400 font-mono text-[11px]">Strict Enforcement Active</span>
                     </div>
                     <p className="text-slate-400 text-xs leading-relaxed mb-4">
-                      Direct synchronization of director DINs, DSC tokens, and corporate resolutions across holding and operating entities.
+                      Returns cannot be marked 'Filed' or uploaded to IT/GST portals without partner inspection and signed audit working papers.
                     </p>
                     <div className="space-y-2">
                       <div className="rounded-lg bg-slate-900 p-3 border border-slate-800 flex items-center justify-between">
                         <div>
-                          <p className="font-semibold text-slate-200">Titan Digital Technologies Private Limited</p>
-                          <p className="text-[11px] text-slate-400 font-mono">CIN: U72900MH2021PTC368291 • 4 Directors • PoA Registry Active</p>
+                          <p className="font-semibold text-slate-200">Reliance Polymers Ltd • ITR-6 Computation Review</p>
+                          <p className="text-[11px] text-slate-400">Turnover: ₹84 Cr • 80-IA deduction verified • UDIN ready</p>
                         </div>
-                        <span className="rounded bg-emerald-950 text-emerald-400 text-[10px] font-bold px-2 py-1 border border-emerald-800">
-                          100% Up-to-Date
+                        <span className="rounded bg-amber-500/10 text-amber-400 text-[10px] font-bold px-2 py-1 border border-amber-500/20">
+                          Awaiting Partner Sign-off
                         </span>
                       </div>
                       <div className="rounded-lg bg-slate-900 p-3 border border-slate-800 flex items-center justify-between">
                         <div>
-                          <p className="font-semibold text-slate-200">Titan Logistics & Supply Chain Limited</p>
-                          <p className="text-[11px] text-slate-400 font-mono">CIN: L63090KA2017PLC098765 • Board Meeting Notice Dispatched</p>
+                          <p className="font-semibold text-slate-200">Sunlight Engineering • GSTR-3B Aug 2026</p>
+                          <p className="text-[11px] text-slate-400">ITC 2B Mismatch reconciled (Variance: ₹0)</p>
                         </div>
-                        <span className="rounded bg-amber-500/10 text-amber-400 text-[10px] font-bold px-2 py-1 border border-amber-500/20">
-                          Board Meeting 24-Sep
+                        <span className="rounded bg-emerald-950 text-emerald-400 text-[10px] font-bold px-2 py-1 border border-emerald-800">
+                          Partner QC Signed
                         </span>
                       </div>
                     </div>
@@ -647,34 +647,25 @@ export const CorporateLegalTeamsSolutionPage = () => {
                 </div>
               )}
 
-              {activePreviewTab === 'litigation' && (
+              {activePreviewTab === 'memory' && (
                 <div className="space-y-3 text-xs">
                   <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-white text-sm">Regulatory Notice & Litigation Docketing</span>
-                      <span className="text-amber-400 font-mono text-[11px]">Statutory Clocks Active</span>
+                      <span className="font-bold text-white text-sm">Permanent Client Dossier & Working Papers</span>
+                      <span className="text-emerald-400 font-mono text-[11px]">Google Drive BYOS Connected</span>
                     </div>
                     <p className="text-slate-400 text-xs leading-relaxed mb-3">
-                      Track show-cause notices, tribunal hearings, outside counsel assignments, and statutory reply dates.
+                      Institutional memory preserved forever. When articles leave, past scrutiny orders, audit trails, and client files stay intact.
                     </p>
-                    <div className="space-y-2">
-                      <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
-                        <div>
-                          <span className="font-semibold text-white">NCLT Mumbai Bench: CP(IB) No. 412/MB/2026</span>
-                          <p className="text-[11px] text-slate-400">Designated Advocate: Senior Counsel Sh. M. Rao • Next Hearing: 14 Oct</p>
-                        </div>
-                        <span className="rounded bg-slate-800 text-slate-300 text-[10px] font-mono px-2 py-1">
-                          Counter Affidavit Filed
-                        </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 font-mono text-xs">
+                      <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+                        📁 AY 2024-25 Scrutiny (Sec 143(3))
                       </div>
-                      <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
-                        <div>
-                          <span className="font-semibold text-white">Regional GST Inspection Show-Cause Notice</span>
-                          <p className="text-[11px] text-slate-400">Section 73 Notice • Reply window: 16 days remaining</p>
-                        </div>
-                        <span className="rounded bg-amber-500/10 text-amber-400 text-[10px] font-bold px-2 py-1 border border-amber-500/20">
-                          Reply Draft in QC
-                        </span>
+                      <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+                        📁 26AS & AIS Audit Trails
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-emerald-950/20 border border-emerald-500/30 text-emerald-300">
+                        ✓ 100% Files in Firm Storage
                       </div>
                     </div>
                   </div>
@@ -689,12 +680,12 @@ export const CorporateLegalTeamsSolutionPage = () => {
       <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-t border-slate-800/80 bg-slate-900/20">
         <div className="mx-auto max-w-5xl">
           <div className="text-center max-w-3xl mx-auto mb-12">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-amber-500">Enterprise Pilot Cohort</h2>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-amber-500">Official CA Pilot Cohort</h2>
             <h3 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
-              Why Join the In-House Legal Pilot?
+              Why Join the 3-Month Free Pilot?
             </h3>
             <p className="mt-3 text-sm sm:text-base text-slate-300">
-              Partner with Docketra to build an institutional legal operating system customized to your enterprise governance workflows.
+              Partner with Docketra to eliminate spreadsheet anxiety and run an audit-proof, calm compliance practice.
             </p>
           </div>
 
@@ -703,9 +694,9 @@ export const CorporateLegalTeamsSolutionPage = () => {
               <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold text-lg">
                 90d
               </div>
-              <h4 className="text-base font-bold text-white">100% Free Full Enterprise Workspace</h4>
+              <h4 className="text-base font-bold text-white">100% Free Full Firm Workspace</h4>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                90 days of unrestricted access for all in-house counsel, paralegals, and internal business requesters with unlimited matter dockets.
+                90 days of unrestricted access for all partners, managers, article trainees, and paid assistants with unlimited clients and dockets.
               </p>
             </div>
 
@@ -713,9 +704,9 @@ export const CorporateLegalTeamsSolutionPage = () => {
               <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold text-lg">
                 🤝
               </div>
-              <h4 className="text-base font-bold text-white">White-Glove Data Migration</h4>
+              <h4 className="text-base font-bold text-white">White-Glove Client Migration</h4>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                Our legal ops engineers assist in importing existing litigation logs, contract inventories, and group subsidiary registers from Excel.
+                Our engineers validate and import your current Excel client lists, ongoing tax audit trackers, and staff assignments at zero cost.
               </p>
             </div>
 
@@ -723,9 +714,9 @@ export const CorporateLegalTeamsSolutionPage = () => {
               <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold text-lg">
                 ⚡
               </div>
-              <h4 className="text-base font-bold text-white">Dedicated Legal Ops Specialist</h4>
+              <h4 className="text-base font-bold text-white">Direct Founder & Product Hotline</h4>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                Direct Slack/Teams channel with Docketra product engineers to configure custom matter taxonomies and intake approval hierarchies.
+                Direct WhatsApp and Slack access to Docketra product engineers to request custom tax schedules, audit checklists, and practice reports.
               </p>
             </div>
           </div>
@@ -738,7 +729,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
           <div className="text-center mb-12">
             <h2 className="text-xs font-bold uppercase tracking-widest text-amber-500">Frequently Asked Questions</h2>
             <h3 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
-              Everything You Need to Know About the In-House Pilot
+              Everything You Need to Know About the CA Pilot
             </h3>
           </div>
 
@@ -785,13 +776,13 @@ export const CorporateLegalTeamsSolutionPage = () => {
       <section className="border-t border-slate-800/90 bg-gradient-to-b from-slate-900 to-slate-950 py-16 sm:py-20 px-4 sm:px-6 lg:px-8 text-center">
         <div className="mx-auto max-w-3xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-semibold text-amber-400 mb-4">
-            Zero Financial Commitment • Limited Enterprise Cohort
+            Zero Financial Commitment • Limited Pilot Cohort
           </div>
           <h3 className="text-2xl sm:text-4xl font-black text-white">
-            Bring Calm and Auditability to Your In-House Legal Ops
+            Upgrade Your CA Practice Ahead of the Next Filing Cycle
           </h3>
           <p className="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">
-            Join legal leaders running high-velocity, risk-managed departments. Get full access for your entire legal team free for 90 days.
+            Join forward-thinking CA practices running calm, audit-ready compliance. Start your 3-month pilot in under 5 minutes.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
@@ -802,7 +793,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
             </Link>
           </div>
           <p className="mt-3 text-xs text-slate-400">
-            90 Days Free • Zero Financial Commitment • Indian Cloud Sovereignty • Dedicated Legal Ops Onboarding
+            3 Months Free • Zero Financial Commitment • Instant Excel Import • Dedicated CA Onboarding Specialist
           </p>
         </div>
       </section>

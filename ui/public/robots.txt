@@ -1,7 +1,19 @@
 User-agent: *
 Allow: /
-Disallow: /admin
 Disallow: /dashboard
+Disallow: /app
+Disallow: /login
+Disallow: /admin
+Disallow: /superadmin
 Disallow: /api
+Disallow: /oauth
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /change-password
+Disallow: /setup-password
+Disallow: /complete-profile
+Disallow: /onboarding
+Disallow: /upload
+Disallow: /forms
 
 Sitemap: https://docketra.in/sitemap.xml

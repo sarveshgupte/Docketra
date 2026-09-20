@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LEGAL_VERSION, LAST_UPDATED, COMPANY_NAME } from '../../lib/legalVersion';
 import { PageContainer } from '../layout/PageContainer';
+import SeoHead from '../common/SeoHead';
 
 const LEGAL_LINKS = [
   { to: '/terms', label: 'Terms', icon: '📜' },
@@ -49,6 +50,11 @@ export const LegalLayout = ({
 
   return (
     <article className="bg-[linear-gradient(135deg,#fff8eb_0%,#ffffff_42%,#e0f2fe_100%)]">
+      <SeoHead
+        canonicalPath={location.pathname}
+        title={`${title} | Docketra`}
+        description={description}
+      />
       <PageContainer className="relative py-8 md:py-12" ref={containerRef}>
         <header className="overflow-hidden rounded-[2rem] border border-white/80 bg-white/80 p-6 shadow-[0_30px_90px_-50px_rgba(15,23,42,0.45)] backdrop-blur md:p-8 lg:p-10">
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">

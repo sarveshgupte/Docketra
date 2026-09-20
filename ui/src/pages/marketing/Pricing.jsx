@@ -3,6 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Section } from '../../components/layout/Section';
+import SeoHead from '../../components/common/SeoHead';
 
 const SECTION_REVEAL = {
   initial: { opacity: 0, y: 20 },
@@ -13,6 +14,11 @@ const SECTION_REVEAL = {
 
 export const PricingPage = () => (
   <Section>
+    <SeoHead
+      canonicalPath="/pricing"
+      title="Early Access Pricing | Docketra"
+      description="Docketra is currently free while in testing. Explore early access features with full workspace access and zero setup fees."
+    />
     <div className="mb-12">
       <h1 className="type-section text-gray-900">Early Access Pricing</h1>
       <p className="mt-4 type-body text-lg text-gray-600">
@@ -55,7 +61,7 @@ export const PricingPage = () => (
       </article>
 
       <article className="rounded-2xl border border-gray-200 bg-gray-50 p-8">
-        <h3 className="text-lg font-semibold text-gray-900">Future Pricing</h3>
+        <h2 className="text-xl font-bold text-gray-900">Future Pricing</h2>
         <p className="mt-3 text-sm text-gray-600 leading-relaxed">
           Commercial plans will be shared after testing milestones are complete. We are keeping
           pricing simple and transparent until billing infrastructure is ready.

@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const repoRoot = path.resolve('..');
-const uiRoot = path.resolve('.');
+// Handle running from either repo root or ui/ directory
+const isRepoRoot = fs.existsSync(path.resolve('ui'));
+const uiRoot = isRepoRoot ? path.resolve('ui') : path.resolve('.');
+const repoRoot = isRepoRoot ? path.resolve('.') : path.resolve('..');
 
 test('Compare Excel & WhatsApp route is properly configured in routes constants', () => {
   const routesPath = path.join(uiRoot, 'src', 'constants', 'routes.js');

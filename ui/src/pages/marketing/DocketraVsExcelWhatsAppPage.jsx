@@ -194,7 +194,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
               to="/signup"
               className="rounded-lg bg-amber-500 px-3.5 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 active:scale-[0.97] transition-all shadow-sm"
             >
-              Join Pilot (3 Months Free)
+              Join Pilot<span className="hidden sm:inline"> (3 Months Free)</span>
             </Link>
           </div>
         </div>
@@ -210,7 +210,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
 
           <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-white leading-tight">
             The Hidden Cost of Managing Indian Compliance on{' '}
-            <span className="bg-gradient-to-r from-red-400 via-amber-400 to-amber-200 bg-clip-text text-transparent">
+            <span className="text-amber-400">
               Excel & WhatsApp
             </span>
           </h1>
@@ -275,14 +275,14 @@ export const DocketraVsExcelWhatsAppPage = () => {
               </div>
               <div className="space-y-2.5 text-xs text-slate-300">
                 <div className="rounded-lg bg-slate-900/80 p-2.5 border border-red-900/20 font-mono text-[11px]">
-                  <span className="text-red-400 font-bold">❌ Client Tracker_v14_final.xlsx:</span> Row 48 cell edited 12 days ago without alert.
+                  <span className="text-red-400 font-bold">Client Tracker_v14_final.xlsx:</span> Row 48 cell edited 12 days ago without alert.
                 </div>
                 <div className="rounded-lg bg-slate-900/80 p-2.5 border border-red-900/20">
                   <p className="text-slate-400 text-[11px] font-semibold mb-1">WhatsApp Group "Acme Compliance":</p>
-                  <p className="italic text-slate-300">"Sir, where is the DIN KYC OTP? Did we file AOC-4 yesterday? Who has DSC PIN?"</p>
+                  <p className="italic text-slate-300">"Where is the DIN KYC OTP? Did we file AOC-4 yesterday? Who has DSC PIN?"</p>
                 </div>
                 <div className="rounded-lg bg-slate-900/80 p-2.5 border border-red-900/20 text-red-300 text-[11px]">
-                  ⚠️ Result: Partner spends 3 hours chasing files. Filing delayed. ROC late fees applied.
+                  Result: Partner spends 3 hours chasing files. Filing delayed. ROC late fees applied.
                 </div>
               </div>
             </div>
@@ -521,11 +521,11 @@ export const DocketraVsExcelWhatsAppPage = () => {
               Interactive preview: see how Docketra organizes client entity memory, review gates, and live workbaskets.
             </p>
             {/* Interactive Tab Switcher */}
-            <div className="mt-6 inline-flex items-center rounded-xl bg-slate-900 p-1 border border-slate-800 text-xs">
+            <div className="mt-6 flex flex-wrap sm:inline-flex justify-center rounded-xl bg-slate-900 p-1 border border-slate-800 text-xs gap-1 max-w-full">
               <button
                 type="button"
                 onClick={() => setActiveSandboxTab('memory')}
-                className={`px-3.5 py-1.5 rounded-lg font-semibold transition-all ${
+                className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
                   activeSandboxTab === 'memory' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -534,7 +534,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
               <button
                 type="button"
                 onClick={() => setActiveSandboxTab('qc')}
-                className={`px-3.5 py-1.5 rounded-lg font-semibold transition-all ${
+                className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
                   activeSandboxTab === 'qc' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -543,7 +543,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
               <button
                 type="button"
                 onClick={() => setActiveSandboxTab('importer')}
-                className={`px-3.5 py-1.5 rounded-lg font-semibold transition-all ${
+                className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
                   activeSandboxTab === 'importer' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -553,14 +553,18 @@ export const DocketraVsExcelWhatsAppPage = () => {
           </div>
 
           <div className="rounded-2xl border border-slate-800 bg-slate-900/80 overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3 bg-slate-950/60">
-              <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-red-500/80" />
-                <span className="h-3 w-3 rounded-full bg-yellow-500/80" />
-                <span className="h-3 w-3 rounded-full bg-emerald-500/80" />
-                <span className="ml-2 font-mono text-[11px] text-slate-400">docketra.in/app/firm/sharma-associates</span>
+            <div className="flex items-center justify-between border-b border-slate-800 px-3 sm:px-4 py-3 bg-slate-950/60 gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex gap-1.5 shrink-0">
+                  <span className="h-3 w-3 rounded-full bg-red-500/80" />
+                  <span className="h-3 w-3 rounded-full bg-yellow-500/80" />
+                  <span className="h-3 w-3 rounded-full bg-emerald-500/80" />
+                </div>
+                <span className="ml-1 sm:ml-2 font-mono text-[11px] text-slate-400 truncate max-w-[140px] sm:max-w-none">
+                  docketra.in/app/firm/sharma-associates
+                </span>
               </div>
-              <span className="rounded bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-500/20">
+              <span className="rounded bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-500/20 shrink-0 whitespace-nowrap">
                 Live Firm Workspace
               </span>
             </div>

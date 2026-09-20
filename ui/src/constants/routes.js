@@ -59,6 +59,9 @@ export const ROUTES = {
   COMPARE_EXCEL_WHATSAPP: '/compare/docketra-vs-excel-whatsapp',
   SOLUTIONS_COMPANY_SECRETARIES: '/solutions/company-secretaries',
   SOLUTIONS_CORPORATE_LEGAL: '/solutions/corporate-legal-teams',
+  SOLUTIONS_CHARTERED_ACCOUNTANTS: '/solutions/chartered-accountants',
+  PRICING: '/pricing',
+  FEATURES: '/features',
 };
 
 export const hasValidFirmSlug = (firmSlug) => Boolean(firmSlug && !String(firmSlug).includes('undefined'));

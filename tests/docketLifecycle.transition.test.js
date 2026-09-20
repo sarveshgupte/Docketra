@@ -16,6 +16,16 @@ assert.doesNotThrow(() => {
 });
 
 assert.strictEqual(
+  isValidTransition(DocketLifecycle.WL, DocketLifecycle.DONE),
+  true,
+  'Assigned worklist dockets should be resolvable/fileable directly from worklist.',
+);
+
+assert.doesNotThrow(() => {
+  assertValidLifecycleTransition(DocketLifecycle.WL, DocketLifecycle.DONE);
+});
+
+assert.strictEqual(
   isValidTransition(DocketLifecycle.WAITING, DocketLifecycle.WL),
   false,
   'Pending dockets should reopen back into active work, not jump straight to WL.',

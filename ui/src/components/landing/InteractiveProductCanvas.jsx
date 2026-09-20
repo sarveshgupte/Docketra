@@ -54,25 +54,25 @@ export function InteractiveProductCanvas({ className = '' }) {
       <div className="relative rounded-2xl border border-slate-800 bg-[#070A11] p-1.5 shadow-xl">
         <div className="rounded-xl border border-slate-800/90 bg-[#090D16] text-slate-100 overflow-hidden flex flex-col">
           {/* Window Top Bar */}
-          <div className="flex items-center justify-between border-b border-slate-800/80 bg-[#06090F] px-3.5 py-2 text-xs">
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1.5">
+          <div className="flex items-center justify-between border-b border-slate-800/80 bg-[#06090F] px-3 py-2 text-xs gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="flex gap-1.5 shrink-0">
                 <span className="h-2 w-2 rounded-full bg-rose-500/80 inline-block" />
                 <span className="h-2 w-2 rounded-full bg-amber-500/80 inline-block" />
                 <span className="h-2 w-2 rounded-full bg-emerald-500/80 inline-block" />
               </div>
-              <span className="text-[11px] font-mono text-slate-400 pl-1 font-semibold hidden sm:inline">
+              <span className="text-[11px] font-mono text-slate-400 pl-1 font-semibold hidden sm:inline truncate">
                 mehta-and-associates.docketra.in
               </span>
             </div>
 
-            <div className="flex items-center gap-2 font-mono text-[10px]">
-              <span className="rounded bg-slate-800 px-2 py-0.5 font-bold text-amber-400">
+            <div className="flex items-center gap-1.5 sm:gap-2 font-mono text-[10px] shrink-0">
+              <span className="rounded bg-slate-800 px-1.5 sm:px-2 py-0.5 font-bold text-amber-400 whitespace-nowrap">
                 FY 25-26
               </span>
-              <span className="flex items-center gap-1 text-emerald-400 font-semibold bg-emerald-950/50 px-2 py-0.5 rounded">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Google Drive Connected
+              <span className="flex items-center gap-1 text-emerald-400 font-semibold bg-emerald-950/50 px-1.5 sm:px-2 py-0.5 rounded whitespace-nowrap">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="hidden min-[400px]:inline">Google </span>Drive Connected
               </span>
             </div>
           </div>
@@ -99,7 +99,7 @@ export function InteractiveProductCanvas({ className = '' }) {
           </div>
 
           {/* Surface Content */}
-          <div className="p-3.5 sm:p-4 bg-gradient-to-b from-[#090D16] to-[#070A12] space-y-3">
+          <div className="p-3 sm:p-4 bg-gradient-to-b from-[#090D16] to-[#070A12] space-y-3">
             {/* 1. Due Dates */}
             {activeTab === 'radar' && (
               <div className="space-y-2.5">
@@ -107,61 +107,65 @@ export function InteractiveProductCanvas({ className = '' }) {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-2 text-left">
                     <span className="text-[10px] font-bold text-rose-300 uppercase">Overdue</span>
-                    <div className="font-mono text-xl font-black text-rose-400 mt-0.5">3 Filings</div>
+                    <div className="font-mono text-base sm:text-xl font-black text-rose-400 mt-0.5">3 Filings</div>
                   </div>
                   <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-2 text-left">
                     <span className="text-[10px] font-bold text-amber-300 uppercase">Due in 7 Days</span>
-                    <div className="font-mono text-xl font-black text-amber-400 mt-0.5">8 Filings</div>
+                    <div className="font-mono text-base sm:text-xl font-black text-amber-400 mt-0.5">8 Filings</div>
                   </div>
                   <div className="rounded-lg border border-sky-500/20 bg-sky-500/10 p-2 text-left">
                     <span className="text-[10px] font-bold text-sky-300 uppercase">Court / Tribunal</span>
-                    <div className="font-mono text-xl font-black text-sky-400 mt-0.5">2 Hearings</div>
+                    <div className="font-mono text-base sm:text-xl font-black text-sky-400 mt-0.5">2 Hearings</div>
                   </div>
                   <div className="rounded-lg border border-purple-500/20 bg-purple-500/10 p-2 text-left">
                     <span className="text-[10px] font-bold text-purple-300 uppercase">Need DSC Sign</span>
-                    <div className="font-mono text-xl font-black text-purple-400 mt-0.5">4 Clients</div>
+                    <div className="font-mono text-base sm:text-xl font-black text-purple-400 mt-0.5">4 Clients</div>
                   </div>
                 </div>
 
                 {/* Deadlines Table */}
                 <div className="rounded-lg border border-slate-800 bg-slate-950 overflow-hidden text-xs">
-                  <div className="grid grid-cols-12 bg-slate-900 px-3 py-1.5 font-mono text-[10px] text-slate-400 font-bold uppercase">
-                    <div className="col-span-5">Client Name & CIN</div>
-                    <div className="col-span-4">Filing / Form</div>
-                    <div className="col-span-3 text-right">Due Date</div>
-                  </div>
-                  <div className="divide-y divide-slate-800/80">
-                    <div className="grid grid-cols-12 items-center px-3 py-2">
-                      <div className="col-span-5 pr-2">
-                        <p className="font-bold text-slate-200 truncate">Zenith Infra Pvt Ltd</p>
-                        <div className="flex items-center gap-1 font-mono text-[9px] text-slate-400">
-                          <span>U72200MH2021PTC368942</span>
-                          <button
-                            type="button"
-                            onClick={() => handleCopy('U72200MH2021PTC368942')}
-                            className="text-amber-400 hover:underline"
-                          >
-                            {copiedText === 'U72200MH2021PTC368942' ? '✓' : 'copy'}
-                          </button>
+                  <div className="overflow-x-auto">
+                    <div className="min-w-[320px]">
+                      <div className="grid grid-cols-12 bg-slate-900 px-3 py-1.5 font-mono text-[10px] text-slate-400 font-bold uppercase">
+                        <div className="col-span-5">Client Name & CIN</div>
+                        <div className="col-span-4">Filing / Form</div>
+                        <div className="col-span-3 text-right">Due Date</div>
+                      </div>
+                      <div className="divide-y divide-slate-800/80">
+                        <div className="grid grid-cols-12 items-center px-3 py-2">
+                          <div className="col-span-5 pr-2">
+                            <p className="font-bold text-slate-200 truncate">Zenith Infra Pvt Ltd</p>
+                            <div className="flex items-center gap-1 font-mono text-[9px] text-slate-400">
+                              <span>U72200MH2021PTC368942</span>
+                              <button
+                                type="button"
+                                onClick={() => handleCopy('U72200MH2021PTC368942')}
+                                className="text-amber-400 hover:underline"
+                              >
+                                {copiedText === 'U72200MH2021PTC368942' ? '✓' : 'copy'}
+                              </button>
+                            </div>
+                          </div>
+                          <div className="col-span-4 text-slate-300 text-[11px] truncate">DIR-3 KYC (Director KYC)</div>
+                          <div className="col-span-3 text-right">
+                            <span className="rounded bg-rose-500/20 px-1.5 py-0.5 text-[9px] font-bold text-rose-300">
+                              Due Today
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                      <div className="col-span-4 text-slate-300 text-[11px] truncate">DIR-3 KYC (Director KYC)</div>
-                      <div className="col-span-3 text-right">
-                        <span className="rounded bg-rose-500/20 px-1.5 py-0.5 text-[9px] font-bold text-rose-300">
-                          Due Today
-                        </span>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-12 items-center px-3 py-2">
-                      <div className="col-span-5 pr-2">
-                        <p className="font-bold text-slate-200 truncate">Neo Retail Pvt Ltd</p>
-                        <p className="font-mono text-[9px] text-slate-400">U52100DL2019PTC345112</p>
-                      </div>
-                      <div className="col-span-4 text-slate-300 text-[11px] truncate">AOC-4 Balance Sheet</div>
-                      <div className="col-span-3 text-right">
-                        <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold text-amber-300">
-                          In 3 Days
-                        </span>
+                        <div className="grid grid-cols-12 items-center px-3 py-2">
+                          <div className="col-span-5 pr-2">
+                            <p className="font-bold text-slate-200 truncate">Neo Retail Pvt Ltd</p>
+                            <p className="font-mono text-[9px] text-slate-400">U52100DL2019PTC345112</p>
+                          </div>
+                          <div className="col-span-4 text-slate-300 text-[11px] truncate">AOC-4 Balance Sheet</div>
+                          <div className="col-span-3 text-right">
+                            <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold text-amber-300">
+                              In 3 Days
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -214,7 +218,7 @@ export function InteractiveProductCanvas({ className = '' }) {
                       Active Client
                     </span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-[10px] pt-1">
+                  <div className="grid grid-cols-1 min-[420px]:grid-cols-3 gap-2 text-[10px] pt-1">
                     <div className="p-2 rounded bg-slate-900">
                       <span className="text-slate-500">PAN</span>
                       <p className="font-mono text-slate-200 font-bold mt-0.5">AAACZ1234F</p>

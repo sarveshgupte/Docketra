@@ -79,6 +79,7 @@ export const ClientWorkspacePage = lazyPage(() => import('../pages/ClientWorkspa
 export const ClientDetailPage = lazyPage(() => import('../pages/clients/ClientDetailPage'), 'default');
 export const MarketingHomePage = lazyPage(() => import('../pages/marketing/HomePage'), 'HomePage');
 export const MarketingFeaturesPage = lazyPage(() => import('../pages/marketing/Features'), 'FeaturesPage');
+export const MarketingPricingPage = lazyPage(() => import('../pages/marketing/Pricing'), 'PricingPage');
 export const MarketingTermsPage = lazyPage(() => import('../pages/marketing/Terms'), 'TermsPage');
 export const MarketingPrivacyPage = lazyPage(() => import('../pages/marketing/Privacy'), 'PrivacyPage');
 export const MarketingSecurityPage = lazyPage(() => import('../pages/marketing/Security'), 'SecurityPage');
@@ -89,6 +90,7 @@ export const MarketingSignupPage = lazy(() => import('../pages/marketing/Signup'
 export const MarketingCompareExcelWhatsAppPage = lazyPage(() => import('../pages/marketing/DocketraVsExcelWhatsAppPage'), 'DocketraVsExcelWhatsAppPage');
 export const MarketingCompanySecretariesPage = lazyPage(() => import('../pages/marketing/CompanySecretariesSolutionPage'), 'CompanySecretariesSolutionPage');
 export const MarketingCorporateLegalTeamsPage = lazyPage(() => import('../pages/marketing/CorporateLegalTeamsSolutionPage'), 'CorporateLegalTeamsSolutionPage');
+export const MarketingCharteredAccountantsPage = lazyPage(() => import('../pages/marketing/CharteredAccountantsSolutionPage'), 'CharteredAccountantsSolutionPage');
 export const NotFoundPage = lazyPage(() => import('../pages/NotFoundPage'), 'NotFoundPage');
 export const OtpVerificationPage = lazyPage(() => import('../pages/OtpVerificationPage'), 'OtpVerificationPage');
 export const OAuthPostAuthPage = lazyPage(() => import('../pages/OAuthPostAuthPage'), 'OAuthPostAuthPage');

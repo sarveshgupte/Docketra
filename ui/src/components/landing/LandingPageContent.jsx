@@ -6,6 +6,7 @@ import LandingProductTourModal from './LandingProductTourModal';
 import InteractiveProductCanvas from './InteractiveProductCanvas';
 import ComplianceVsGenericComparison from './ComplianceVsGenericComparison';
 import Container from '../layout/Container';
+import SeoHead from '../common/SeoHead';
 
 const REVEAL = {
   initial: { opacity: 0, y: 16 },
@@ -72,7 +73,7 @@ const HERO_BADGES = [
 ];
 
 const HeroSection = ({ onOpenTour }) => (
-  <section className="relative overflow-hidden bg-gradient-to-b from-[#FFFDF9] via-[#FAF6EF] to-white pt-6 pb-10 md:pt-10 md:pb-14 border-b border-slate-200/80">
+  <section className="relative overflow-hidden bg-slate-50/50 pt-20 pb-10 sm:pt-24 md:pt-24 md:pb-14 border-b border-slate-200/80">
     <Container size="7xl" className="relative">
       <div className="grid items-center gap-8 lg:grid-cols-[1fr_1.2fr]">
         <motion.div {...REVEAL} className="space-y-4">
@@ -84,9 +85,7 @@ const HeroSection = ({ onOpenTour }) => (
 
           {/* Headline */}
           <h1 className="text-3xl font-black leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-[2.75rem]">
-            The Company Brain for{' '}
-            <span className="text-amber-700">Indian professional firms.</span>
-            <span className="hidden">The Company Brain for Indian professional firms.</span>
+            The Company Brain for Indian professional firms.
           </h1>
 
           {/* Subtitle */}
@@ -98,11 +97,49 @@ const HeroSection = ({ onOpenTour }) => (
             For CS, CA, law, and compliance teams that cannot afford missing context.
           </p>
 
+          {/* Dedicated Practice Solutions Navigator */}
+          <div className="pt-1 pb-1">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              <span>Tailored For Your Practice:</span>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <Link
+                to="/solutions/company-secretaries"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 font-bold text-slate-800 transition-all hover:bg-slate-50 hover:border-slate-300 shadow-2xs"
+              >
+                <span>Company Secretaries (PCS)</span>
+                <span className="text-slate-400">→</span>
+              </Link>
+              <Link
+                to="/solutions/chartered-accountants"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 font-bold text-slate-800 transition-all hover:bg-slate-50 hover:border-slate-300 shadow-2xs"
+              >
+                <span>Chartered Accountants (CA)</span>
+                <span className="text-slate-400">→</span>
+              </Link>
+              <Link
+                to="/solutions/corporate-legal-teams"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 font-bold text-slate-800 transition-all hover:bg-slate-50 hover:border-slate-300 shadow-2xs"
+              >
+                <span>Corporate Legal Teams</span>
+                <span className="text-slate-400">→</span>
+              </Link>
+              <Link
+                to="/compare/docketra-vs-excel-whatsapp"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 font-bold text-slate-700 transition-all hover:bg-slate-50 hover:border-slate-300 shadow-2xs"
+              >
+                <span>vs. Excel & WhatsApp</span>
+                <span className="text-slate-400">→</span>
+              </Link>
+            </div>
+          </div>
+
           {/* Simple CTA Action Group - Placed high so it's always above the fold */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1">
             <Link
               to="/signup"
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 text-xs font-black text-amber-400 shadow-md transition-all hover:bg-slate-800 active:scale-[0.98]"
+              className="inline-flex w-full sm:w-auto h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 text-xs font-black text-amber-400 shadow-md transition-all hover:bg-slate-800 active:scale-[0.98]"
             >
               <span>Create workspace</span>
               <span>→</span>
@@ -111,9 +148,12 @@ const HeroSection = ({ onOpenTour }) => (
             <button
               type="button"
               onClick={onOpenTour}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 text-xs font-bold text-slate-800 shadow-xs transition-all hover:bg-slate-50 hover:border-slate-400 active:scale-[0.98] cursor-pointer"
+              className="inline-flex w-full sm:w-auto h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 text-xs font-bold text-slate-800 shadow-xs transition-all hover:bg-slate-50 hover:border-slate-400 active:scale-[0.98] cursor-pointer"
             >
-              <span className="text-amber-600 text-xs">▶</span>
+              <svg className="h-3.5 w-3.5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               <span>Take a product tour</span>
             </button>
           </div>
@@ -127,14 +167,14 @@ const HeroSection = ({ onOpenTour }) => (
             <span>Files save to your Google Drive</span>
           </p>
 
-          {/* 6 Capabilities Pills - Clean, spacious 2-column grid */}
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3 pt-2">
+          {/* 6 Capabilities Pills - Clean, responsive grid */}
+          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2 sm:gap-2.5 pt-2">
             {HERO_BADGES.map((badge) => (
               <div
                 key={badge.label}
-                className="group flex items-center gap-2.5 rounded-full border border-slate-200/90 bg-white px-3.5 py-2 shadow-2xs transition-all hover:border-amber-400/80 hover:bg-amber-50/40 hover:shadow-xs"
+                className="group flex items-center gap-2.5 rounded-xl border border-slate-200/90 bg-white px-3 py-2 shadow-2xs transition-all hover:border-slate-300 hover:bg-slate-50/50"
               >
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-500/10 transition-colors group-hover:bg-amber-500/20">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 transition-colors">
                   {badge.icon}
                 </span>
                 <div className="min-w-0 pr-1">
@@ -154,7 +194,7 @@ const HeroSection = ({ onOpenTour }) => (
         <motion.div
           initial={{ opacity: 0, scale: 0.98 }}
           whileInView={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
           viewport={{ once: true }}
           className="relative lg:pl-2"
         >
@@ -168,7 +208,7 @@ const HeroSection = ({ onOpenTour }) => (
 const SubHeroMetricsStrip = () => (
   <section className="border-b border-slate-200/80 bg-white py-6">
     <Container size="7xl">
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 min-[440px]:grid-cols-2 md:grid-cols-4 gap-4">
         {[
           {
             stat: 'Google Drive',
@@ -377,7 +417,7 @@ const TrustSection = () => (
 const PilotReadinessSection = () => (
   <section id="pilot-readiness" className="scroll-mt-16 bg-white py-14 border-b border-slate-200/80">
     <Container size="7xl">
-      <div className="rounded-2xl border border-amber-200/80 bg-[#FFFDF9] p-6 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="space-y-2 max-w-xl">
           <span className="text-xs font-bold uppercase tracking-wider text-amber-700">TRY IT WITH YOUR TEAM</span>
           <h2 className="text-2xl font-black text-slate-950 tracking-tight">
@@ -390,7 +430,7 @@ const PilotReadinessSection = () => (
 
         <Link
           to="/signup"
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-slate-950 px-8 text-xs font-black text-amber-400 shadow-md transition-all hover:bg-slate-800 shrink-0"
+          className="inline-flex w-full sm:w-auto h-12 items-center justify-center gap-2 rounded-xl bg-slate-950 px-8 text-xs font-black text-amber-400 shadow-md transition-all hover:bg-slate-800 shrink-0"
         >
           <span>Create workspace</span>
           <span>→</span>
@@ -401,13 +441,13 @@ const PilotReadinessSection = () => (
 );
 
 const FinalCtaSection = () => (
-  <section className="bg-slate-50 py-14 text-center">
+  <section className="bg-slate-50/70 py-14 text-center">
     <Container size="7xl">
       <motion.div className="max-w-2xl mx-auto space-y-3" {...REVEAL}>
         <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
           Give every docket a memory.
         </h2>
-        <p className="text-base font-bold text-amber-700">
+        <p className="text-base font-bold text-slate-900">
           For partners, managers, and execution teams.
         </p>
         <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto">
@@ -417,7 +457,7 @@ const FinalCtaSection = () => (
         <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
             to="/signup"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 text-xs font-black text-amber-400 shadow-md hover:bg-slate-800"
+            className="inline-flex w-full sm:w-auto h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 text-xs font-black text-amber-400 shadow-md hover:bg-slate-800"
           >
             <span>Create workspace</span>
             <span>→</span>
@@ -425,13 +465,13 @@ const FinalCtaSection = () => (
 
           <Link
             to="/find-workspace"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 text-xs font-bold text-slate-700 hover:bg-slate-100"
+            className="inline-flex w-full sm:w-auto h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 text-xs font-bold text-slate-700 hover:bg-slate-100"
           >
             <span>Find workspace</span>
           </Link>
         </div>
 
-        <p className="text-[11px] text-slate-400 pt-1">
+        <p className="text-[11px] text-slate-500 pt-1">
           No credit card required • Cancel anytime • Free pilot setup
         </p>
       </motion.div>
@@ -442,12 +482,21 @@ const FinalCtaSection = () => (
 const MarketingFooter = () => (
   <footer className="bg-slate-950 py-10 text-slate-400 border-t border-slate-800 text-xs">
     <Container size="7xl">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-5">
         <div className="flex items-center gap-2 text-white font-bold">
-          <span className="text-amber-500 font-mono text-sm">✦</span>
+          <span className="h-2 w-2 rounded-full bg-amber-500" />
           <span>Docketra</span>
-          <span className="text-slate-500 text-[11px] font-normal font-mono">— The Company Brain for Indian Firms</span>
+          <span className="text-slate-500 text-[11px] font-normal font-mono">• The Company Brain for Indian Firms</span>
         </div>
+
+        {/* Practice Solutions Navigation */}
+        <nav aria-label="Practice Solutions Navigation" className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs">
+          <span className="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Solutions:</span>
+          <Link to="/solutions/company-secretaries" className="hover:text-amber-400 transition-colors">Company Secretaries</Link>
+          <Link to="/solutions/chartered-accountants" className="hover:text-amber-400 transition-colors">Chartered Accountants</Link>
+          <Link to="/solutions/corporate-legal-teams" className="hover:text-amber-400 transition-colors">Corporate Legal</Link>
+          <Link to="/compare/docketra-vs-excel-whatsapp" className="text-amber-400 hover:text-amber-300 font-semibold transition-colors">vs. Excel & WhatsApp</Link>
+        </nav>
 
         <nav aria-label="Footer legal navigation" className="flex items-center gap-5 font-medium">
           <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
@@ -507,6 +556,11 @@ export const LandingPageContent = () => {
 
   return (
     <div className="w-full bg-white text-slate-900 antialiased selection:bg-amber-500/25">
+      <SeoHead
+        canonicalPath="/"
+        title="Docketra — The Company Brain for Indian Professional Firms"
+        description="Manage client dockets, deadlines, and task assignments in one place. Built for Indian CS, CA, and legal firms. Start free."
+      />
       {/* Test Invariant Marker: Ensures strict CI compliance */}
       <span className="hidden">Worklist Workbaskets QC Workbaskets</span>
       <PublicMarketingHeader />

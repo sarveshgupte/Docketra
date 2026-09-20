@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 8px 2rem;
+  padding: 8px 1rem;
   pointer-events: auto;
   z-index: 99;
   background: rgba(255, 255, 255, 0.98);
@@ -246,11 +246,18 @@
 @media (max-width: 899px) {
   .bubble-menu-items {
     padding-top: 0;
-    align-items: center;
+    align-items: flex-start;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .menu-overlay-container {
+    padding: 72px 16px 40px;
   }
 
   .bubble-menu-items .menu-card-list {
-    row-gap: 12px;
+    row-gap: 8px;
+    padding: 0 4px;
   }
 
   .bubble-menu-items .menu-card-list .menu-card-col {
@@ -259,18 +266,19 @@
   }
 
   .bubble-menu-items .menu-card-link {
-    font-size: 1.25rem;
-    min-height: 70px;
-    padding: 16px;
+    font-size: 1.1rem;
+    min-height: 48px;
+    padding: 12px 16px;
+    border-radius: 12px;
   }
 
   .bubble-menu-items .menu-card-link:hover {
-    transform: scale(1.02);
+    transform: none;
     background: var(--hover-bg);
     color: var(--hover-color);
   }
 
   .bubble-menu-items .menu-card-link:active {
-    transform: scale(0.98);
+    transform: scale(0.99);
   }
 }

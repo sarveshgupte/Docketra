@@ -36,8 +36,12 @@ const COMPARISON_ROWS = [
 export function ComplianceVsGenericComparison() {
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="md:hidden px-4 py-2 bg-slate-50 border-b border-slate-200 text-[11px] font-medium text-slate-500 flex items-center justify-between">
+        <span>Comparison Overview</span>
+        <span className="text-slate-400 font-mono text-[10px]">← Swipe to compare columns →</span>
+      </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full min-w-[640px] text-left border-collapse">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700">
               <th className="py-3 px-4 w-1/4">What You Need</th>
