@@ -7,3 +7,6 @@
 ## 2026-08-13 - BubbleMenu Dropdown Accessibility
 **Learning:** Dropdowns and toggles with `aria-expanded` need a linked `aria-controls` pointing to a unique element ID to correctly announce state to screen readers. If there are multiple instances on a page, hardcoded IDs will conflict.
 **Action:** Use React's `useId()` to generate unique IDs for dropdown menus and bind them to the toggle button's `aria-controls`.
+## 2024-09-20 - Cases Page Saved Views Accessibility
+**Learning:** The cases page saved views toggle button uses a hardcoded `aria-controls="cases-saved-views-form"`. Since these components may be rendered in multiple places or evolve, hardcoded IDs risk DOM conflicts and screen reader failures.
+**Action:** Replaced the hardcoded ID with React's `useId()` hook to generate a unique ID for the toggle's `aria-controls` and the target form's `id`, ensuring robust accessibility.
