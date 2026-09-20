@@ -290,10 +290,10 @@ export const DocketraVsExcelWhatsAppPage = () => {
       <section className="border-t border-slate-800/90 bg-slate-900/40 py-16 sm:py-20 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
           <div className="text-center max-w-3xl mx-auto mb-12">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-amber-500">The Cold Reality</h2>
-            <h3 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-500">The Cold Reality</p>
+            <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
               Excel & WhatsApp vs. Docketra
-            </h3>
+            </h2>
             <p className="mt-3 text-sm sm:text-base text-slate-400">
               See why spreadsheets break as soon as your firm handles more than 25 corporate entities.
             </p>
@@ -313,19 +313,19 @@ export const DocketraVsExcelWhatsAppPage = () => {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/80 text-xs sm:text-sm">
+              <tbody className="divide-y divide-slate-800/60 text-xs sm:text-sm text-slate-300">
                 {COMPARISON_ROWS.map((row, idx) => (
                   <tr key={idx} className="hover:bg-slate-900/50 transition-colors">
                     <td className="py-4 px-6 font-bold text-white align-top">
                       {row.feature}
                     </td>
-                    <td className="py-4 px-6 text-slate-400 bg-red-950/[0.04] border-r border-slate-800 align-top leading-relaxed">
+                    <td className="py-4 px-6 align-top text-red-300 bg-red-950/5 border-r border-slate-800">
                       <div className="flex items-start gap-2">
-                        <span className="text-red-500 font-bold shrink-0 mt-0.5">✕</span>
-                        <span>{row.excel}</span>
+                        <span className="text-red-400 font-bold shrink-0 mt-0.5">✕</span>
+                        <span className="text-slate-300">{row.excel}</span>
                       </div>
                     </td>
-                    <td className="py-4 px-6 text-slate-200 bg-amber-500/[0.02] align-top leading-relaxed">
+                    <td className="py-4 px-6 align-top text-amber-300 bg-amber-500/[0.02]">
                       <div className="flex items-start gap-2">
                         <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                         <span className="font-medium text-slate-100">{row.docketra}</span>
@@ -341,9 +341,9 @@ export const DocketraVsExcelWhatsAppPage = () => {
           <div className="md:hidden space-y-4">
             {COMPARISON_ROWS.map((row, idx) => (
               <div key={idx} className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-3">
-                <h4 className="text-sm font-bold text-white border-b border-slate-800 pb-2">
+                <h3 className="text-sm font-bold text-white border-b border-slate-800 pb-2">
                   {row.feature}
-                </h4>
+                </h3>
                 <div className="rounded-lg bg-red-950/20 border border-red-900/30 p-3 text-xs text-red-200">
                   <p className="font-bold text-red-400 mb-1">Excel & WhatsApp:</p>
                   <p className="leading-relaxed">{row.excel}</p>
@@ -362,10 +362,10 @@ export const DocketraVsExcelWhatsAppPage = () => {
       <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-t border-slate-800/80">
         <div className="mx-auto max-w-6xl">
           <div className="text-center max-w-3xl mx-auto mb-14">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-amber-500">Root-Cause Analysis</h2>
-            <h3 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-500">Root-Cause Analysis</p>
+            <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
               The 4 Breaking Points of Unstructured Practice Operations
-            </h3>
+            </h2>
             <p className="mt-3 text-sm sm:text-base text-slate-400">
               Why adding more spreadsheets and WhatsApp groups only accelerates chaos.
             </p>
@@ -376,9 +376,9 @@ export const DocketraVsExcelWhatsAppPage = () => {
               <div className="inline-flex items-center gap-2 rounded-md bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-400 mb-4">
                 Feature: Client Memory
               </div>
-              <h4 className="text-lg sm:text-xl font-bold text-white mb-2">
+              <h3 className="text-lg sm:text-xl font-bold text-white mb-2">
                 1. "The Senior Partner Becomes an Internal Search Engine"
-              </h4>
+              </h3>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
                 When entity knowledge lives in chat threads, partners spend 30% of their workday answering associate questions:
                 <em className="text-slate-400 block mt-1">"Who is the authorized signatory for XYZ Corp? Did we file form DIR-12 last quarter? Where is the signed MOA?"</em>
@@ -392,9 +392,9 @@ export const DocketraVsExcelWhatsAppPage = () => {
               <div className="inline-flex items-center gap-2 rounded-md bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-400 mb-4">
                 Feature: Review Gates
               </div>
-              <h4 className="text-lg sm:text-xl font-bold text-white mb-2">
+              <h3 className="text-lg sm:text-xl font-bold text-white mb-2">
                 2. "QC Reviews Disappear into WhatsApp Noise"
-              </h4>
+              </h3>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
                 Draft forms, board resolutions, and tax returns are dropped into WhatsApp groups for review. Amid 80 other notifications, they get lost. Submissions occur without formal partner sign-off until an ROC defect notice or penalty letter arrives.
               </p>
@@ -407,9 +407,9 @@ export const DocketraVsExcelWhatsAppPage = () => {
               <div className="inline-flex items-center gap-2 rounded-md bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-400 mb-4">
                 Feature: Firm-Owned Worklists
               </div>
-              <h4 className="text-lg sm:text-xl font-bold text-white mb-2">
+              <h3 className="text-lg sm:text-xl font-bold text-white mb-2">
                 3. "Institutional Brain Drain on Staff Exit"
-              </h4>
+              </h3>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
                 Article assistants and junior associates rotate every 12 to 24 months. When an associate leaves, client draft files on their personal laptops, pending form checklists, and WhatsApp message context walk out the door with them.
               </p>
@@ -422,9 +422,9 @@ export const DocketraVsExcelWhatsAppPage = () => {
               <div className="inline-flex items-center gap-2 rounded-md bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-400 mb-4">
                 Feature: Fee-Earner Telemetry
               </div>
-              <h4 className="text-lg sm:text-xl font-bold text-white mb-2">
+              <h3 className="text-lg sm:text-xl font-bold text-white mb-2">
                 4. "Zero Real-Time Capacity Planning"
-              </h4>
+              </h3>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
                 During September and October annual filing crunches, partners have zero telemetry on who is overloaded and who has bandwidth. Spreadsheets show dates, but not work effort, queue bottlenecks, or SLA slip risk.
               </p>
@@ -443,9 +443,9 @@ export const DocketraVsExcelWhatsAppPage = () => {
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1 text-xs font-semibold text-emerald-400 mb-3">
               Zero-Friction Practice On-Ramp
             </div>
-            <h3 className="text-2xl sm:text-4xl font-extrabold text-white">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-white">
               Switching from Excel Takes Minutes
-            </h3>
+            </h2>
             <p className="mt-3 text-sm sm:text-base text-slate-300">
               You don’t have to manually re-type client data. Docketra is equipped with 4 automated spreadsheet ingestion engines built right into the platform.
             </p>
@@ -461,7 +461,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
                   <div className="h-10 w-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 font-bold mb-4">
                     {card.num}
                   </div>
-                  <h4 className="text-base font-bold text-white mb-2">{card.title}</h4>
+                  <h3 className="text-base font-bold text-white mb-2">{card.title}</h3>
                   <p className="text-xs text-slate-400 leading-relaxed mb-4">
                     {card.description}
                   </p>
@@ -479,9 +479,9 @@ export const DocketraVsExcelWhatsAppPage = () => {
       <section id="sandbox-preview" className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-t border-slate-800/80">
         <div className="mx-auto max-w-5xl rounded-3xl border border-slate-800 bg-slate-950 p-6 sm:p-10 shadow-2xl">
           <div className="text-center max-w-2xl mx-auto mb-8">
-            <h3 className="text-xl sm:text-3xl font-extrabold text-white">
+            <h2 className="text-xl sm:text-3xl font-extrabold text-white">
               Experience the Company Brain in Action
-            </h3>
+            </h2>
             <p className="mt-2 text-xs sm:text-sm text-slate-400">
               Interactive preview: see how Docketra organizes client entity memory, review gates, and live workbaskets.
             </p>
@@ -661,10 +661,10 @@ export const DocketraVsExcelWhatsAppPage = () => {
       <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-t border-slate-800/80 bg-slate-900/30">
         <div className="mx-auto max-w-5xl">
           <div className="text-center max-w-3xl mx-auto mb-12">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-amber-500">Official Pilot Cohort</h2>
-            <h3 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-500">Official Pilot Cohort</p>
+            <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
               Why Join the 3-Month Free Pilot?
-            </h3>
+            </h2>
             <p className="mt-3 text-sm sm:text-base text-slate-300">
               We are partnering with select Indian CS, CA, and corporate legal practices to build the definitive institutional practice operating system.
             </p>
@@ -675,7 +675,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
               <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold text-lg">
                 90d
               </div>
-              <h4 className="text-base font-bold text-white">100% Free Full Workspace</h4>
+              <h3 className="text-base font-bold text-white">100% Free Full Workspace</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                 90 days of unrestricted firm access for all partners, associates, and trainees with unlimited dockets, client entities, and storage.
               </p>
@@ -685,7 +685,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
               <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold text-lg">
                 🤝
               </div>
-              <h4 className="text-base font-bold text-white">White-Glove Migration</h4>
+              <h3 className="text-base font-bold text-white">White-Glove Migration</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                 Our engineering team personally assists your firm in importing your existing Excel client master files, setting up categories, and configuring workbaskets.
               </p>
@@ -695,7 +695,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
               <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold text-lg">
                 ⚡
               </div>
-              <h4 className="text-base font-bold text-white">Direct Founder Hotline</h4>
+              <h3 className="text-base font-bold text-white">Direct Founder Hotline</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                 Direct WhatsApp and Slack channels with Docketra’s core product engineering team to request custom compliance workflows and statutory form templates.
               </p>
