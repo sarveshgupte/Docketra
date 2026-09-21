@@ -715,6 +715,7 @@ export default function PcsCommandCenter() {
                 onClick={() => setSearchQuery('')}
                 className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                 aria-label="Clear search"
+                title="Clear search"
               >
                 <Icons.X className="w-3.5 h-3.5" />
               </button>
@@ -1233,6 +1234,7 @@ export default function PcsCommandCenter() {
                 onClick={() => setShowLogMatterModal(false)}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-white"
                 aria-label="Close modal"
+                title="Close modal"
               >
                 <Icons.X className="w-5 h-5" />
               </button>
@@ -1401,7 +1403,12 @@ export default function PcsCommandCenter() {
                   {activeItem.clientName}
                 </p>
               </div>
-              <button onClick={() => setShowMarkFiledModal(false)} className="text-slate-400 hover:text-white">
+              <button
+                onClick={() => setShowMarkFiledModal(false)}
+                className="text-slate-400 hover:text-white"
+                aria-label="Close modal"
+                title="Close modal"
+              >
                 <Icons.X className="w-4 h-4" />
               </button>
             </div>
@@ -1475,7 +1482,12 @@ export default function PcsCommandCenter() {
                   {activeItem.forumBench} • {activeItem.itemNo}
                 </p>
               </div>
-              <button onClick={() => setShowLogOrderModal(false)} className="text-slate-400 hover:text-white">
+              <button
+                onClick={() => setShowLogOrderModal(false)}
+                className="text-slate-400 hover:text-white"
+                aria-label="Close modal"
+                title="Close modal"
+              >
                 <Icons.X className="w-4 h-4" />
               </button>
             </div>
@@ -1562,7 +1574,12 @@ export default function PcsCommandCenter() {
                 <Icons.MessageSquare className="w-4 h-4 text-emerald-500" />
                 <span>WhatsApp / Email Reminder Dispatch</span>
               </h3>
-              <button onClick={() => setShowReminderPreviewModal(false)} className="text-slate-400 hover:text-white">
+              <button
+                onClick={() => setShowReminderPreviewModal(false)}
+                className="text-slate-400 hover:text-white"
+                aria-label="Close modal"
+                title="Close modal"
+              >
                 <Icons.X className="w-4 h-4" />
               </button>
             </div>
