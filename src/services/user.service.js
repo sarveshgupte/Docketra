@@ -61,15 +61,24 @@ const assertCanDeleteUser = (user) => {
 const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1, role = null }) => {
   const attachSession = (query) => (session ? query.session(session) : query);
 
-  const firm = await attachSession(Firm.findById(firmId));
+  const isCheckingAdmin = ['ADMIN', 'PRIMARY_ADMIN'].includes(String(role || '').toUpperCase()) && incrementBy > 0;
+
+  const [firm, count, adminCount] = await Promise.all([
+    attachSession(Firm.findById(firmId)),
+    attachSession(User.countDocuments({
+      firmId,
+      status: { $in: ['active', 'invited'] },
+    })),
+    isCheckingAdmin ? attachSession(User.countDocuments({
+      firmId,
+      role: { $in: ['ADMIN', 'PRIMARY_ADMIN'] },
+      status: { $in: ['active', 'invited'] },
+    })) : Promise.resolve(0)
+  ]);
+
   if (!firm) {
     throw new Error('Firm not found');
   }
-
-  const count = await attachSession(User.countDocuments({
-    firmId,
-    status: { $in: ['active', 'invited'] },
-  }));
 
   const normalizedPlan = String(firm.plan || 'starter').toLowerCase();
   const firmMaxUsers = Number.isFinite(Number(firm.maxUsers)) ? Number(firm.maxUsers) : null;
@@ -88,12 +97,7 @@ const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1, role =
   }
 
   if (normalizedPlan === 'starter') {
-    if (['ADMIN', 'PRIMARY_ADMIN'].includes(String(role || '').toUpperCase()) && incrementBy > 0) {
-      const adminCount = await attachSession(User.countDocuments({
-        firmId,
-        role: { $in: ['ADMIN', 'PRIMARY_ADMIN'] },
-        status: { $in: ['active', 'invited'] },
-      }));
+    if (isCheckingAdmin) {
 
       if ((adminCount + incrementBy) > 1) {
         log.warn('[PLAN_LIMIT] starter admin capacity exceeded', {
