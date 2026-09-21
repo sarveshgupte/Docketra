@@ -204,10 +204,11 @@ const createUser = async (req, res) => {
     });
   } catch (error) {
     if (error instanceof PlanLimitExceededError || error instanceof PlanAdminLimitExceededError) {
+      log.warn('Plan limit exceeded during user creation:', { reason: error.message });
       return res.status(403).json({
         success: false,
         error: error.code,
-        message: error.message,
+        message: 'Plan limit exceeded. Cannot create user.',
         ...responseMeta,
       });
     }
@@ -487,11 +488,17 @@ const completeProfile = async (req, res) => {
     const statusCode = error.message === 'USER_NOT_FOUND'
       ? 404
       : (error.message === 'USER_ALREADY_ONBOARDED' ? 409 : 400);
+
     if (statusCode === 400) {
       log.error('Error completing profile:', error);
       return res.status(statusCode).json({ success: false, message: 'Unable to complete profile' });
     }
-    return res.status(statusCode).json({ success: false, message: error.message });
+
+    log.warn('Profile completion failed:', { reason: error.message });
+    return res.status(statusCode).json({
+      success: false,
+      message: statusCode === 404 ? 'User not found' : 'User already onboarded'
+    });
   } finally {
     await session.endSession();
   }
