@@ -29,6 +29,3 @@
 ## 2024-10-25 - Eliminate redundant sequential validation counts
 **Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
 **Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
-## 2024-11-21 - Group independent user capability database queries concurrently
-**Learning:** Sequential database queries inside capacity and capability assert functions (like `assertFirmPlanCapacity` which awaited `Firm.findById` then multiple `User.countDocuments` based on role) create unnecessary network latency bottlenecks on hot paths.
-**Action:** Grouping these independent queries (firm fetch, user count, admin count) using `Promise.all()` executes them concurrently and eliminates sequential network roundtrips.
