@@ -29,3 +29,6 @@
 ## 2024-10-25 - Eliminate redundant sequential validation counts
 **Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
 **Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
+## 2026-09-22 - Optimizing Boolean Presence Checks in Pilot Readiness Endpoint
+**Learning:** Replaced memory-intensive `countDocuments` with `exists` for verifying audit readiness, converting an O(N) index scan into an O(1) check.
+**Action:** Always verify if a `countDocuments` result is strictly used for a boolean presence check (`> 0`). If so, use `Model.exists()` instead to prevent full index scans.
