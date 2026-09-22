@@ -1401,7 +1401,7 @@ export default function PcsCommandCenter() {
                   {activeItem.clientName}
                 </p>
               </div>
-              <button onClick={() => setShowMarkFiledModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowMarkFiledModal(false)} className="text-slate-400 hover:text-white" aria-label="Close modal">
                 <Icons.X className="w-4 h-4" />
               </button>
             </div>
@@ -1475,7 +1475,7 @@ export default function PcsCommandCenter() {
                   {activeItem.forumBench} • {activeItem.itemNo}
                 </p>
               </div>
-              <button onClick={() => setShowLogOrderModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowLogOrderModal(false)} className="text-slate-400 hover:text-white" aria-label="Close modal">
                 <Icons.X className="w-4 h-4" />
               </button>
             </div>
@@ -1562,7 +1562,7 @@ export default function PcsCommandCenter() {
                 <Icons.MessageSquare className="w-4 h-4 text-emerald-500" />
                 <span>WhatsApp / Email Reminder Dispatch</span>
               </h3>
-              <button onClick={() => setShowReminderPreviewModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowReminderPreviewModal(false)} className="text-slate-400 hover:text-white" aria-label="Close modal">
                 <Icons.X className="w-4 h-4" />
               </button>
             </div>
