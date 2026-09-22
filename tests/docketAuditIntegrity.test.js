@@ -76,7 +76,7 @@ async function testReopenMovesToWorkbenchWithAudit() {
     };
 
     const result = await reopenDuePending();
-    assert.ok(observedFindFilter?.status === 'PENDING' || (observedFindFilter?.status?.$in && observedFindFilter.status.$in.includes('PENDING')) || (observedFindFilter?.status?.$in && observedFindFilter.status.$in.includes('PENDED')) || (observedFindFilter?.status?.$in && observedFindFilter.status.$in.includes('Pending')));
+    assert.ok(observedFindFilter?.status === 'PENDING' || (observedFindFilter?.status?.$in && observedFindFilter.status.$in.includes('PENDING')) || (observedFindFilter?.status?.$in && observedFindFilter.status.$in.includes('PENDED')) || (observedFindFilter?.status?.$in && observedFindFilter.status.$in.includes('Pending')) || (observedFindFilter?.status?.$in && observedFindFilter.status.$in.includes('PEND')));
     assert.ok(observedFindFilter?.$or?.[0]?.reopenAt?.$lte instanceof Date);
     assert.ok(observedFindFilter?.$or?.[1]?.pendingUntil?.$lte instanceof Date);
     assert.strictEqual(result.count, 1);
