@@ -335,9 +335,9 @@ module.exports = (deps) => {
   const lockCaseEndpoint = async (req, res) => {
     try {
       const { caseId } = req.params;
-      const { userEmail } = req.body;
+      const userEmail = req.user?.email;
       
-      if (!validateRequiredFields({ userEmail }, ['userEmail']).isValid) {
+      if (!userEmail) {
         return sendErrorResponse(res, { statusCode: 400, message: 'User email is required' });
       }
       
@@ -453,9 +453,9 @@ module.exports = (deps) => {
   const unlockCaseEndpoint = async (req, res) => {
     try {
       const { caseId } = req.params;
-      const { userEmail } = req.body;
+      const userEmail = req.user?.email;
       
-      if (!validateRequiredFields({ userEmail }, ['userEmail']).isValid) {
+      if (!userEmail) {
         return sendErrorResponse(res, { statusCode: 400, message: 'User email is required' });
       }
       
