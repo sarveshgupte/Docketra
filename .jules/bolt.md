@@ -29,3 +29,4 @@
 ## 2024-10-25 - Eliminate redundant sequential validation counts
 **Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
 **Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
+## 2026-08-26 - Create User Modal Role Fix\n**Learning:** The create user modal failed because the 'Employee' option value was explicitly mapped to 'Employee' instead of the API contract 'USER'. This caused frontend tests asserting 'USER' presence to fail.\n**Action:** Replaced 'Employee' option value with 'USER', and aligned 'Admin' and 'Manager' values to their uppercase system counterparts ('ADMIN', 'MANAGER') for safety.
