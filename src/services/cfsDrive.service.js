@@ -455,19 +455,24 @@ class CFSDriveService {
       // 💡 What: Replaced Attachment.countDocuments() with Attachment.exists() and CaseFile.exists()
       // 🎯 Why: countDocuments forces a full index scan when we only need to know if at least one document exists. exists() provides an O(1) early return upon the first match.
       // 📊 Impact: Faster query execution for system initialization and validation checks.
-      const hasDuplicate = await Attachment.exists({
-        driveFileId: attachment.driveFileId,
-        _id: { $ne: attachment._id },
-      });
-
-      const hasCaseFile = await CaseFile.exists({
-        storageFileId: attachment.driveFileId,
-        $or: [
-          { deletedAt: null },
-          { deletedAt: { $exists: false } }
-        ],
-        isDeleted: { $ne: true }
-      });
+      // ⚡ Bolt: Group independent database queries concurrently
+      // 💡 What: Merged the sequential Attachment.exists and CaseFile.exists queries into a single Promise.all array.
+      // 🎯 Why: Identifying and eliminating unnecessary sequential database queries by grouping them into a single Promise.all array executes them concurrently, reducing overall network latency.
+      // 📊 Impact: Eliminates an extra sequential network roundtrip.
+      const [hasDuplicate, hasCaseFile] = await Promise.all([
+        Attachment.exists({
+          driveFileId: attachment.driveFileId,
+          _id: { $ne: attachment._id },
+        }),
+        CaseFile.exists({
+          storageFileId: attachment.driveFileId,
+          $or: [
+            { deletedAt: null },
+            { deletedAt: { $exists: false } }
+          ],
+          isDeleted: { $ne: true }
+        }),
+      ]);
 
       if (!hasDuplicate && !hasCaseFile) {
         try {
