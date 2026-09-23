@@ -29,3 +29,6 @@
 ## 2024-10-25 - Eliminate redundant sequential validation counts
 **Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
 **Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
+## 2024-05-18 - Optimize N+1 Query in Expired Pended Dockets Processing
+**Learning:** Found an N+1 query issue in `processExpiredPendedDockets` where `Case.findOne` and `Client.findOne` were being executed inside a loop for every expired session.
+**Action:** Lift the queries outside the loop and use `Case.find` and `Client.find` with `$in` to pre-fetch documents into in-memory maps, turning O(N) database operations into O(1).
