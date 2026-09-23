@@ -479,8 +479,9 @@ export const FirmsManagement = () => {
                     setFormData({ name: '', adminName: '', adminEmail: '' });
                     setIsSubmitting(false);
                   }}
+                  aria-label="Close create firm modal"
                 >
-                  ×
+                  <span aria-hidden="true">×</span>
                 </button>
               </div>
               <form onSubmit={handleCreateFirm} className="modal-form space-y-4">
@@ -549,8 +550,9 @@ export const FirmsManagement = () => {
                  <button
                    className="modal-close"
                    onClick={() => setAdminModal({ open: false, loading: false, firm: null, details: [], addForm: { name: '', email: '' } })}
+                   aria-label="Close admin management modal"
                  >
-                   ×
+                   <span aria-hidden="true">×</span>
                  </button>
                </div>
                 {adminModal.loading ? (
@@ -780,12 +782,14 @@ export const FirmsManagement = () => {
                                 className="firm-actions__menu-btn"
                                 title="More actions"
                                 aria-label="More actions"
+                                aria-expanded={openDropdownId === firm._id}
+                                aria-controls={openDropdownId === firm._id ? `firm-actions-dropdown-${firm._id}` : undefined}
                                 onClick={() => setOpenDropdownId(openDropdownId === firm._id ? null : firm._id)}
                               >
-                                ⋮
+                                <span aria-hidden="true">⋮</span>
                               </button>
                               {openDropdownId === firm._id && (
-                                <div className="firm-actions__dropdown">
+                                <div id={`firm-actions-dropdown-${firm._id}`} className="firm-actions__dropdown">
                                   <button
                                     className="firm-actions__dropdown-item"
                                     onClick={() => {
