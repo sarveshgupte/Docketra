@@ -133,6 +133,10 @@ export const SuperAdminLayout = ({ children }) => {
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Global search</p>
           <div className="mt-2 flex gap-2">
             <input
+              role="combobox"
+              aria-expanded={searchOpen}
+              aria-controls="global-search-results"
+              aria-autocomplete="list"
               aria-label="Global search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -150,7 +154,7 @@ export const SuperAdminLayout = ({ children }) => {
           </div>
           <p className="mt-2 text-xs text-gray-500">Search returns platform lifecycle/support metadata only. It does not search client records, dockets, tasks, attachments, or private client content.</p>
           {searchOpen ? (
-            <div className="mt-3 max-h-72 overflow-auto rounded-lg border border-gray-200 bg-gray-50 p-2 text-sm">
+            <div id="global-search-results" role="listbox" className="mt-3 max-h-72 overflow-auto rounded-lg border border-gray-200 bg-gray-50 p-2 text-sm">
               {searching ? <p className="text-gray-600">Searching...</p> : null}
               {!searching && searchError ? <p className="text-red-700">{searchError}</p> : null}
               {!searching && !searchError && searchQuery.trim().length === 1 ? <p className="text-gray-600">Enter at least 2 characters.</p> : null}
@@ -163,6 +167,7 @@ export const SuperAdminLayout = ({ children }) => {
                       {(rows || []).map((row) => (
                         <button
                           key={`${row.type}-${row.id}`}
+                          role="option"
                           type="button"
                           className="mt-1 w-full rounded px-2 py-1.5 text-left hover:bg-white"
                           onClick={() => {
