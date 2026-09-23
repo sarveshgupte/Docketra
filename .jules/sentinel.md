@@ -81,3 +81,7 @@
 **Vulnerability:** The Case Workflow Controller trusted client-provided `userEmail` from `req.body` directly when performing state transitions (e.g., `submitCase`, `closeCase`), which allows IDOR vulnerabilities by enabling an attacker to impersonate another user.
 **Learning:** This exposes the application to situations where attackers can manipulate case states under the guise of another user.
 **Prevention:** To prevent IDOR vulnerabilities, never trust client-provided identity fields (e.g., `userEmail`) from `req.body`. Always derive these values securely from server-side authenticated context like `req.user` (e.g., `req.user?.email`).
+## 2026-09-11 - Prevent Mass Assignment in Task Controller
+**Vulnerability:** The `createTask` method in `src/controllers/task.controller.js` directly spread `req.body` into the `Task` creation payload without filtering out sensitive administrative fields.
+**Learning:** Passing `req.body` directly to a service or repository method allows attackers to perform Mass Assignment, potentially overwriting protected fields like `_id`, `firmId`, `createdBy`, and `updatedBy`, leading to IDOR and privilege escalation.
+**Prevention:** Always clone `req.body` (e.g., using `{ ...req.body }`) and explicitly `delete` protected root-level fields before processing or spreading it into database payloads.
