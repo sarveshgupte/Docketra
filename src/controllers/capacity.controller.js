@@ -5,6 +5,7 @@ const CaseStatus = require('../domain/case/caseStatus');
 const { COMPLIANCE_STATES } = require('../domain/compliance/complianceStateMachine');
 const { reassignCase } = require('../services/caseAssignment.service');
 const mongoose = require('mongoose');
+const log = require('../utils/log');
 
 const getWorkbasketCapacity = async (req, res) => {
   try {
@@ -244,7 +245,8 @@ const getWorkbasketCapacity = async (req, res) => {
 
     return res.json({ success: true, data });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to fetch workbasket capacity' });
+    log.error('WORKBASKET_CAPACITY_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to fetch workbasket capacity' });
   }
 };
 
@@ -295,7 +297,8 @@ const getWorkbasketDockets = async (req, res) => {
       }))
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to fetch workbasket dockets' });
+    log.error('WORKBASKET_DOCKETS_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to fetch workbasket dockets' });
   }
 };
 
@@ -350,7 +353,8 @@ const bulkReassignDockets = async (req, res) => {
       }
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to reassign dockets' });
+    log.error('WORKBASKET_REASSIGN_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to reassign dockets' });
   }
 };
 
