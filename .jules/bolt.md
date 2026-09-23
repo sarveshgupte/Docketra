@@ -29,3 +29,6 @@
 ## 2024-10-25 - Eliminate redundant sequential validation counts
 **Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
 **Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
+## 2024-03-22 - Optimize unbounded countDocuments check
+**Learning:** When checking if a database count exceeds a specific threshold (e.g., `<= 1`), unbounded `countDocuments()` can be replaced with `find().select("_id").limit(2).lean()` and then checking the array length to prevent full index scans.
+**Action:** Use `limit(N+1)` instead of `countDocuments` for N threshold checks.
