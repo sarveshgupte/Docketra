@@ -29,3 +29,6 @@
 ## 2024-10-25 - Eliminate redundant sequential validation counts
 **Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
 **Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
+## 2024-11-20 - Optimize N+1 query loop for unique value generation
+**Learning:** The `buildUniqueFirmSlug` function in `src/controllers/user.controller.js` exhibited an N+1 query pattern by checking `Firm.findOne` inside a loop sequentially until a unique candidate was found.
+**Action:** Pre-generate all candidate values into an array, and perform a single `find` with the `$in` operator. Load the existing ones into an in-memory `Set` and identify the first available candidate to reduce query latency from O(N) to O(1).
