@@ -53,118 +53,58 @@ async function verifySummaryExplainUsesIndex(tenantId, fromDate, toDate) {
 async function computeTenantDailyMetrics(tenantId, dateInput) {
   const { start, end } = getDateBoundsUtc(dateInput);
 
-  const [result = {}] = await Case.aggregate([
-    {
-      $match: {
-        firmId: tenantId,
-        createdAt: { $lt: end },
-      },
-    },
-    {
-      $facet: {
-        totals: [
-          {
-            $group: {
-              _id: null,
-              totalCases: { $sum: 1 },
-              openCases: {
-                $sum: {
-                  $cond: [
-                    { $in: ['$status', [CaseStatus.OPEN, CaseStatus.PENDING, CaseStatus.FILED]] },
-                    1,
-                    0,
-                  ],
-                },
-              },
-              pendedCases: { $sum: { $cond: [{ $eq: ['$status', CaseStatus.PENDING] }, 1, 0] } },
-              filedCases: { $sum: { $cond: [{ $eq: ['$status', CaseStatus.FILED] }, 1, 0] } },
-              resolvedCases: { $sum: { $cond: [{ $eq: ['$status', CaseStatus.RESOLVED] }, 1, 0] } },
-              pendingApprovals: {
-                $sum: {
-                  $cond: [
-                    { $in: ['$status', [CaseStatus.REVIEWED, CaseStatus.UNDER_REVIEW]] },
-                    1,
-                    0,
-                  ],
-                },
-              },
-              overdueCases: {
-                $sum: {
-                  $cond: [
-                    {
-                      $and: [
-                        { $lt: ['$dueDate', end] },
-                        { $ne: ['$status', CaseStatus.RESOLVED] },
-                      ],
-                    },
-                    1,
-                    0,
-                  ],
-                },
-              },
-              avgResolutionTimeSeconds: {
-                $avg: {
-                  $cond: [
-                    {
-                      $and: [
-                        { $eq: ['$status', CaseStatus.RESOLVED] },
-                        { $ne: ['$resolvedAt', null] },
-                      ],
-                    },
-                    { $divide: [{ $subtract: ['$resolvedAt', '$createdAt'] }, 1000] },
-                    null,
-                  ],
-                },
-              },
-            },
-          },
-        ],
-        createdToday: [
-          { $match: { createdAt: { $gte: start, $lt: end } } },
-          { $count: 'count' },
-        ],
-        resolvedToday: [
-          {
-            $match: {
-              status: CaseStatus.RESOLVED,
-              resolvedAt: { $gte: start, $lt: end },
-            },
-          },
-          { $count: 'count' },
-        ],
-      },
-    },
-    {
-      $project: {
-        totalCases: { $ifNull: [{ $arrayElemAt: ['$totals.totalCases', 0] }, 0] },
-        openCases: { $ifNull: [{ $arrayElemAt: ['$totals.openCases', 0] }, 0] },
-        pendedCases: { $ifNull: [{ $arrayElemAt: ['$totals.pendedCases', 0] }, 0] },
-        filedCases: { $ifNull: [{ $arrayElemAt: ['$totals.filedCases', 0] }, 0] },
-        resolvedCases: { $ifNull: [{ $arrayElemAt: ['$totals.resolvedCases', 0] }, 0] },
-        pendingApprovals: { $ifNull: [{ $arrayElemAt: ['$totals.pendingApprovals', 0] }, 0] },
-        overdueCases: { $ifNull: [{ $arrayElemAt: ['$totals.overdueCases', 0] }, 0] },
-        avgResolutionTimeSeconds: {
-          $ifNull: [{ $arrayElemAt: ['$totals.avgResolutionTimeSeconds', 0] }, 0],
-        },
-        casesCreatedToday: { $ifNull: [{ $arrayElemAt: ['$createdToday.count', 0] }, 0] },
-        casesResolvedToday: { $ifNull: [{ $arrayElemAt: ['$resolvedToday.count', 0] }, 0] },
-      },
-    },
+  const baseQuery = { firmId: tenantId, createdAt: { $lt: end } };
+
+  // ⚡ Bolt Performance Optimization:
+  // 💡 What: Replaced memory-intensive $facet aggregation with concurrent Case.countDocuments() queries and a targeted aggregate() via Promise.all().
+  // 🎯 Why: $facet forces MongoDB to pull all matching documents into memory to evaluate sub-pipelines, bypassing indexes and risking the 100MB memory limit. Individual countDocuments queries can resolve using fast index scans.
+  const [
+    totalCases,
+    openCases,
+    pendedCases,
+    filedCases,
+    resolvedCases,
+    pendingApprovals,
+    overdueCases,
+    casesCreatedToday,
+    casesResolvedToday,
+    avgResult
+  ] = await Promise.all([
+    Case.countDocuments(baseQuery),
+    Case.countDocuments({ ...baseQuery, status: { $in: [CaseStatus.OPEN, CaseStatus.PENDING, CaseStatus.FILED] } }),
+    Case.countDocuments({ ...baseQuery, status: CaseStatus.PENDING }),
+    Case.countDocuments({ ...baseQuery, status: CaseStatus.FILED }),
+    Case.countDocuments({ ...baseQuery, status: CaseStatus.RESOLVED }),
+    Case.countDocuments({ ...baseQuery, status: { $in: [CaseStatus.REVIEWED, CaseStatus.UNDER_REVIEW] } }),
+    Case.countDocuments({ ...baseQuery, dueDate: { $lt: end }, status: { $ne: CaseStatus.RESOLVED } }),
+    Case.countDocuments({ firmId: tenantId, createdAt: { $gte: start, $lt: end } }),
+    Case.countDocuments({ firmId: tenantId, status: CaseStatus.RESOLVED, resolvedAt: { $gte: start, $lt: end } }),
+    Case.aggregate([
+      { $match: { ...baseQuery, status: CaseStatus.RESOLVED, resolvedAt: { $ne: null } } },
+      {
+        $group: {
+          _id: null,
+          avgResolutionTimeSeconds: {
+            $avg: { $divide: [{ $subtract: ['$resolvedAt', '$createdAt'] }, 1000] }
+          }
+        }
+      }
+    ])
   ]);
 
   return {
     tenantId,
     date: start,
-    totalCases: Number(result.totalCases || 0),
-    openCases: Number(result.openCases || 0),
-    pendedCases: Number(result.pendedCases || 0),
-    filedCases: Number(result.filedCases || 0),
-    resolvedCases: Number(result.resolvedCases || 0),
-    pendingApprovals: Number(result.pendingApprovals || 0),
-    overdueCases: Number(result.overdueCases || 0),
-    avgResolutionTimeSeconds: Number(result.avgResolutionTimeSeconds || 0),
-    casesCreatedToday: Number(result.casesCreatedToday || 0),
-    casesResolvedToday: Number(result.casesResolvedToday || 0),
+    totalCases,
+    openCases,
+    pendedCases,
+    filedCases,
+    resolvedCases,
+    pendingApprovals,
+    overdueCases,
+    avgResolutionTimeSeconds: Number(avgResult[0]?.avgResolutionTimeSeconds || 0),
+    casesCreatedToday,
+    casesResolvedToday,
   };
 }
 
