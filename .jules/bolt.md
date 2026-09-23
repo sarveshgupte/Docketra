@@ -29,3 +29,6 @@
 ## 2024-10-25 - Eliminate redundant sequential validation counts
 **Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
 **Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
+## 2026-08-24 - Bolt: Optimize SLA weekly summary queries
+**Learning:** Replaced 6 independent `Case.countDocuments` queries inside a `Promise.all` block with a single `Case.aggregate` pipeline using conditional sums (`` within ``) in `src/services/sla.service.js`.
+**Action:** When calculating multiple distinct counts on the same collection for the same entity, prefer a single aggregation pipeline with `` / `` over multiple independent count queries to reduce database network round-trips and latency.
