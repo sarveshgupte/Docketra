@@ -32,15 +32,21 @@ const getGoogleOAuthClient = (env = {}) => {
 };
 
 const signGoogleState = (payload) => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is required');
+  }
   const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const signature = crypto
-    .createHmac('sha256', process.env.JWT_SECRET || 'docketra-google-auth')
+    .createHmac('sha256', process.env.JWT_SECRET)
     .update(encodedPayload)
     .digest('base64url');
   return `${encodedPayload}.${signature}`;
 };
 
 const parseGoogleState = (rawState) => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is required');
+  }
   if (!rawState || typeof rawState !== 'string' || !rawState.includes('.')) {
     return null;
   }
@@ -51,7 +57,7 @@ const parseGoogleState = (rawState) => {
   }
 
   const expectedSig = crypto
-    .createHmac('sha256', process.env.JWT_SECRET || 'docketra-google-auth')
+    .createHmac('sha256', process.env.JWT_SECRET)
     .update(encodedPayload)
     .digest('base64url');
 
