@@ -7,7 +7,7 @@
  * This layout remains for legacy/non-firm pages until fully retired.
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useId } from 'react';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { useAuth } from '../../hooks/useAuth';
@@ -144,6 +144,9 @@ export const Layout = ({ children, title, subtitle }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const notificationDropdownId = useId();
+  const profileDropdownId = useId();
+  const sidebarId = useId();
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState({ cases: [], users: [], tasks: [] });
@@ -669,7 +672,7 @@ export const Layout = ({ children, title, subtitle }) => {
       </a>
       {/* Sidebar */}
       <aside
-        id="enterprise-sidebar"
+        id={`enterprise-sidebar-${sidebarId}`}
         className={[
           'enterprise-sidebar',
           sidebarCollapsed ? 'enterprise-sidebar--collapsed' : '',
@@ -789,7 +792,7 @@ export const Layout = ({ children, title, subtitle }) => {
             aria-label={isMobileViewport ? 'Toggle sidebar' : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
             title={isMobileViewport ? 'Toggle sidebar' : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
             aria-expanded={isMobileViewport ? mobileSidebarOpen : !sidebarCollapsed}
-            aria-controls="enterprise-sidebar"
+            aria-controls={`enterprise-sidebar-${sidebarId}`}
           >
             <IconMenu />
           </button>
@@ -846,7 +849,7 @@ export const Layout = ({ children, title, subtitle }) => {
                 aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : 'Notifications'}
                 title={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
                 aria-expanded={notificationOpen}
-                aria-controls="notification-dropdown-menu"
+                aria-controls={`notification-dropdown-${notificationDropdownId}`}
                 aria-haspopup="menu"
                 onClick={() => setNotificationOpen((v) => !v)}
               >
@@ -854,7 +857,7 @@ export const Layout = ({ children, title, subtitle }) => {
                 {unreadCount > 0 ? <span className="enterprise-header__notif-dot" aria-hidden="true">{unreadCount}</span> : null}
               </button>
               {notificationOpen ? (
-                <div id="notification-dropdown-menu" className="dropdown-menu dropdown-menu-right enterprise-header__notification-menu" role="menu">
+                <div id={`notification-dropdown-${notificationDropdownId}`} className="dropdown-menu dropdown-menu-right enterprise-header__notification-menu" role="menu">
                   <div className="enterprise-header__notification-header">
                     <span>Notifications</span>
                     <span className="enterprise-header__notification-count">{unreadCount} unread</span>
@@ -942,7 +945,7 @@ export const Layout = ({ children, title, subtitle }) => {
                 type="button"
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                 aria-expanded={profileDropdownOpen}
-                aria-controls="profile-dropdown-menu"
+                aria-controls={`profile-dropdown-${profileDropdownId}`}
                 aria-haspopup="true"
                 aria-label="User profile menu"
               >
@@ -951,7 +954,7 @@ export const Layout = ({ children, title, subtitle }) => {
                 <IconChevronDown />
               </button>
               {profileDropdownOpen && (
-                <div id="profile-dropdown-menu" className="dropdown-menu dropdown-menu-right" role="menu">
+                <div id={`profile-dropdown-${profileDropdownId}`} className="dropdown-menu dropdown-menu-right" role="menu">
                   <Link
                     to={ROUTES.PROFILE(currentFirmSlug)}
                     className="dropdown-item"
