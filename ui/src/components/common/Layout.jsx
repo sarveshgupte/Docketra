@@ -886,7 +886,7 @@ export const Layout = ({ children, title, subtitle }) => {
                               <button
                                 type="button"
                                 className="enterprise-header__notification-action-btn"
-                                title="Mark as read"
+                                title={`Mark notification "${item.title}" as read`}
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   void markNotificationRead(item.id);
@@ -898,7 +898,7 @@ export const Layout = ({ children, title, subtitle }) => {
                               <button
                                 type="button"
                                 className="enterprise-header__notification-action-btn"
-                                title="Clear"
+                                title={`Clear notification "${item.title}"`}
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   clearNotification(item.id);
