@@ -29,6 +29,7 @@ function testCaseSchemaSupportsResolvedAt() {
 
 async function testAggregationIdempotencyAndAccuracy() {
   const originalAggregate = Case.aggregate;
+  const originalCountDocuments = Case.countDocuments;
   const originalUpdateOne = TenantCaseMetricsDaily.updateOne;
   const updates = [];
 
@@ -41,9 +42,12 @@ async function testAggregationIdempotencyAndAccuracy() {
     pendingApprovals: 1,
     overdueCases: 3,
     avgResolutionTimeSeconds: 3600,
-    casesCreatedToday: 4,
-    casesResolvedToday: 2,
   }]);
+
+  Case.countDocuments = async (query) => {
+    if (query.status === 'RESOLVED') return 2;
+    return 4;
+  };
 
   TenantCaseMetricsDaily.updateOne = async (query, update, options) => {
     updates.push({ query, update, options });
@@ -62,6 +66,7 @@ async function testAggregationIdempotencyAndAccuracy() {
     assert.deepStrictEqual(updates[0].update.$set, updates[1].update.$set);
   } finally {
     Case.aggregate = originalAggregate;
+    Case.countDocuments = originalCountDocuments;
     TenantCaseMetricsDaily.updateOne = originalUpdateOne;
   }
 }
