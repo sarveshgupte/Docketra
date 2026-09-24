@@ -81,3 +81,8 @@
 **Vulnerability:** The Case Workflow Controller trusted client-provided `userEmail` from `req.body` directly when performing state transitions (e.g., `submitCase`, `closeCase`), which allows IDOR vulnerabilities by enabling an attacker to impersonate another user.
 **Learning:** This exposes the application to situations where attackers can manipulate case states under the guise of another user.
 **Prevention:** To prevent IDOR vulnerabilities, never trust client-provided identity fields (e.g., `userEmail`) from `req.body`. Always derive these values securely from server-side authenticated context like `req.user` (e.g., `req.user?.email`).
+
+## 2024-10-29 - IDOR Vulnerability in Case Lock and Activity Endpoints
+**Vulnerability:** The case update service (`lockCaseEndpoint`, `unlockCaseEndpoint`) and activity service (`updateCaseActivity`) trusted client-provided `userEmail` from `req.body` to identify the user performing the action, enabling IDOR and Mass Assignment vulnerabilities.
+**Learning:** Trusting client-provided identity fields (like `userEmail`, `userId`, `performedBy`) allows an attacker to impersonate other users by manipulating the request payload, bypassing lock controls and executing actions under another user identity.
+**Prevention:** To prevent IDOR vulnerabilities, never trust client-provided identity fields from `req.body`. Always derive these values securely from server-side authenticated context like `req.user` (e.g., `req.user?.email`).
