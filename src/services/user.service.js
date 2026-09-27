@@ -66,12 +66,33 @@ const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1, role =
     throw new Error('Firm not found');
   }
 
-  const count = await attachSession(User.countDocuments({
-    firmId,
-    status: { $in: ['active', 'invited'] },
-  }));
-
   const normalizedPlan = String(firm.plan || 'starter').toLowerCase();
+  const isAdminRole = ['ADMIN', 'PRIMARY_ADMIN'].includes(String(role || '').toUpperCase());
+  const needsAdminCount = normalizedPlan === 'starter' && isAdminRole && incrementBy > 0;
+
+  // ⚡ Bolt Performance Optimization:
+  // 💡 What: Grouped sequential `User.countDocuments()` queries into a concurrent `Promise.all`.
+  // 🎯 Why: Previously, the total user count and admin user count were awaited sequentially, creating unnecessary network latency. Fetching them concurrently reduces database latency bottlenecks.
+  // 📊 Impact: Eliminates sequential database network round-trip overhead when evaluating firm plan capacity for admin roles on the starter plan.
+  const countPromises = [
+    attachSession(User.countDocuments({
+      firmId,
+      status: { $in: ['active', 'invited'] },
+    }))
+  ];
+
+  if (needsAdminCount) {
+    countPromises.push(
+      attachSession(User.countDocuments({
+        firmId,
+        role: { $in: ['ADMIN', 'PRIMARY_ADMIN'] },
+        status: { $in: ['active', 'invited'] },
+      }))
+    );
+  }
+
+  const [count, adminCount] = await Promise.all(countPromises);
+
   const firmMaxUsers = Number.isFinite(Number(firm.maxUsers)) ? Number(firm.maxUsers) : null;
 
   if (firmMaxUsers != null && firmMaxUsers > 0) {
@@ -88,13 +109,7 @@ const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1, role =
   }
 
   if (normalizedPlan === 'starter') {
-    if (['ADMIN', 'PRIMARY_ADMIN'].includes(String(role || '').toUpperCase()) && incrementBy > 0) {
-      const adminCount = await attachSession(User.countDocuments({
-        firmId,
-        role: { $in: ['ADMIN', 'PRIMARY_ADMIN'] },
-        status: { $in: ['active', 'invited'] },
-      }));
-
+    if (needsAdminCount) {
       if ((adminCount + incrementBy) > 1) {
         log.warn('[PLAN_LIMIT] starter admin capacity exceeded', {
           firmId: firmId?.toString?.() || firmId,
