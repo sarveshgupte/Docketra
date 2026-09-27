@@ -310,10 +310,18 @@ const submitForm = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid submission' });
     }
 
+    const safeBody = { ...req.body };
+    delete safeBody._id;
+    delete safeBody.firmId;
+    delete safeBody.createdByXID;
+    delete safeBody.updatedByXID;
+    delete safeBody.createdBy;
+    delete safeBody.updatedBy;
+
     const result = await processCmsSubmission({
       firmId: form.firmId,
       payload: {
-        ...req.body,
+        ...safeBody,
         source: embedMode ? EMBEDDED_SOURCE : 'form',
         formSlug: form.slug || String(form._id),
         formId: String(form._id),

@@ -81,3 +81,8 @@
 **Vulnerability:** The Case Workflow Controller trusted client-provided `userEmail` from `req.body` directly when performing state transitions (e.g., `submitCase`, `closeCase`), which allows IDOR vulnerabilities by enabling an attacker to impersonate another user.
 **Learning:** This exposes the application to situations where attackers can manipulate case states under the guise of another user.
 **Prevention:** To prevent IDOR vulnerabilities, never trust client-provided identity fields (e.g., `userEmail`) from `req.body`. Always derive these values securely from server-side authenticated context like `req.user` (e.g., `req.user?.email`).
+
+## 2026-09-27 - Prevent Mass Assignment in Form Submission Controller
+**Vulnerability:** The Form Controller directly spread `req.body` into the payload passed to `processCmsSubmission`.
+**Learning:** Directly spreading `req.body` without filtering allows attackers to overwrite critical fields (such as `_id`, `firmId`, `createdBy`) in the payload, which could lead to IDOR and privilege escalation or data corruption downstream.
+**Prevention:** Always clone `req.body` and explicitly `delete` protected root-level fields (e.g. `_id`, `firmId`, `createdByXID`, `updatedByXID`, `createdBy`, `updatedBy`) before spreading it into a processing payload.

@@ -77,7 +77,7 @@ const caseSchema = new mongoose.Schema({
     required: true,
     trim: true,
     immutable: true,
-    index: true,
+
   },
   
   /**
@@ -101,7 +101,7 @@ const caseSchema = new mongoose.Schema({
   firmId: {
     type: String,
     required: [true, 'Firm ID is required'],
-    index: true,
+
   },
   
   /**
@@ -147,7 +147,7 @@ const caseSchema = new mongoose.Schema({
   isTemplate: {
     type: Boolean,
     default: false,
-    index: true,
+
   },
   
   /**
@@ -308,7 +308,7 @@ const caseSchema = new mongoose.Schema({
   isInternal: {
     type: Boolean,
     default: false,
-    index: true,
+
   },
 
   /**
@@ -319,7 +319,7 @@ const caseSchema = new mongoose.Schema({
     type: String,
     enum: ['client', 'internal'],
     default: 'client',
-    index: true,
+
   },
 
   /**
@@ -377,7 +377,7 @@ const caseSchema = new mongoose.Schema({
   state: {
     type: String,
     enum: ['IN_WB', 'IN_PROGRESS', 'IN_QC', 'PENDED', 'RESOLVED', 'FILED'],
-    index: true,
+
   },
   qcOutcome: {
     type: String,
@@ -451,7 +451,7 @@ const caseSchema = new mongoose.Schema({
   isHistoricalImport: {
     type: Boolean,
     default: false,
-    index: true,
+
   },
   importJobId: {
     type: String,
@@ -583,7 +583,7 @@ const caseSchema = new mongoose.Schema({
     type: String,
     enum: Object.values(COMPLIANCE_STATES),
     default: COMPLIANCE_STATES.NOT_STARTED,
-    index: true,
+
   },
   statutory_due_date: {
     type: Date,
@@ -605,7 +605,7 @@ const caseSchema = new mongoose.Schema({
     type: String,
     trim: true,
     default: null,
-    index: true,
+
   },
   obligation_period: {
     type: String,
@@ -654,7 +654,7 @@ const caseSchema = new mongoose.Schema({
       type: String,
       enum: ['pending', 'approved', 'rejected', 'cancelled', null],
       default: null,
-      index: true,
+
     },
     comments: {
       type: String,
@@ -712,7 +712,7 @@ const caseSchema = new mongoose.Schema({
     type: String,
     enum: ['low', 'medium', 'high', 'critical', null],
     default: 'medium',
-    index: true,
+
   },
   blocked_reason: {
     type: String,
@@ -803,13 +803,13 @@ const caseSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Team',
     default: null,
-    index: true,
+
   },
   routedToTeamId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Team',
     default: null,
-    index: true,
+
   },
   routedByUserId: {
     type: String,
@@ -825,7 +825,7 @@ const caseSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Team',
     default: null,
-    index: true,
+
   },
   routingNote: {
     type: String,
@@ -932,7 +932,7 @@ const caseSchema = new mongoose.Schema({
     trim: true,
     uppercase: true,
     default: null,
-    index: true,
+
   },
   employeeSnapshot: {
     xID: { type: String, trim: true, uppercase: true },
@@ -1117,7 +1117,7 @@ const caseSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'CrmClient',
     default: null,
-    index: true,
+
   },
 
   /**
@@ -1127,7 +1127,7 @@ const caseSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Deal',
     default: null,
-    index: true,
+
   },
   
   /**
@@ -1587,7 +1587,6 @@ caseSchema.index({ firmId: 1, 'approval_stage.status': 1, 'approval_stage.approv
 caseSchema.index({ firmId: 1, 'approval_stage.status': 1, 'approval_stage.approval_type': 1, 'approval_stage.due_at': 1 });
 caseSchema.index({ firmId: 1, resolvedAt: 1 }); // Firm-scoped resolution metrics queries
 caseSchema.index({ firmId: 1, createdAt: 1 }); // Firm-scoped daily creation metrics queries
-caseSchema.index({ firmId: 1, status: 1, createdAt: -1 }); // Firm-scoped status dashboards sorted by recency
 caseSchema.index({ firmId: 1, createdAt: -1 });
 caseSchema.index({ firmId: 1, clientId: 1 });
 caseSchema.index({ firmId: 1, workType: 1, status: 1, createdAt: -1 }); // Firm-scoped list view filters with recency sort
