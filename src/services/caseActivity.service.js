@@ -413,12 +413,12 @@ module.exports = (deps) => {
   const updateCaseActivity = async (req, res) => {
     try {
       const { caseId } = req.params;
-      const { userEmail } = req.body;
+      const userEmail = req.user?.email;
       
       if (!userEmail) {
         return res.status(400).json({
           success: false,
-          message: 'User email is required',
+          message: 'Authentication required - user email not found',
         });
       }
       
