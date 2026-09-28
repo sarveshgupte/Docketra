@@ -335,10 +335,10 @@ module.exports = (deps) => {
   const lockCaseEndpoint = async (req, res) => {
     try {
       const { caseId } = req.params;
-      const { userEmail } = req.body;
+      const userEmail = req.user?.email;
       
-      if (!validateRequiredFields({ userEmail }, ['userEmail']).isValid) {
-        return sendErrorResponse(res, { statusCode: 400, message: 'User email is required' });
+      if (!userEmail) {
+        return sendErrorResponse(res, { statusCode: 400, message: 'Authentication required - user email not found' });
       }
       
       // PR: Case Identifier Semantics - Resolve identifier to internal ID
@@ -453,10 +453,10 @@ module.exports = (deps) => {
   const unlockCaseEndpoint = async (req, res) => {
     try {
       const { caseId } = req.params;
-      const { userEmail } = req.body;
+      const userEmail = req.user?.email;
       
-      if (!validateRequiredFields({ userEmail }, ['userEmail']).isValid) {
-        return sendErrorResponse(res, { statusCode: 400, message: 'User email is required' });
+      if (!userEmail) {
+        return sendErrorResponse(res, { statusCode: 400, message: 'Authentication required - user email not found' });
       }
       
       // PR: Case Identifier Semantics - Resolve identifier to internal ID
