@@ -79,6 +79,7 @@ async function testReopenMovesToWorkbenchWithAudit() {
     assert.ok(observedFindFilter?.status === 'PENDING' || (observedFindFilter?.status?.$in && observedFindFilter.status.$in.includes('PENDING')));
     assert.ok(observedFindFilter?.$or?.[0]?.reopenAt?.$lte instanceof Date);
     assert.ok(observedFindFilter?.$or?.[1]?.pendingUntil?.$lte instanceof Date);
+    assert.ok(observedFindFilter?.$or?.[2]?.autoReopenAt?.$lte instanceof Date);
     assert.strictEqual(result.count, 1);
     assert.strictEqual(result.docketIds[0], 'CASE-2');
     assert.ok(updatePayload?.$set);
