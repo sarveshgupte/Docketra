@@ -7,3 +7,6 @@
 ## 2026-08-13 - BubbleMenu Dropdown Accessibility
 **Learning:** Dropdowns and toggles with `aria-expanded` need a linked `aria-controls` pointing to a unique element ID to correctly announce state to screen readers. If there are multiple instances on a page, hardcoded IDs will conflict.
 **Action:** Use React's `useId()` to generate unique IDs for dropdown menus and bind them to the toggle button's `aria-controls`.
+## 2024-09-28 - Stateful Toggle Buttons Accessibility
+**Learning:** Custom stateful toggle buttons (like filter chips) that use dynamic classes for active states lack semantic accessibility for screen readers and robust keyboard focus indicators.
+**Action:** Always add an `aria-pressed` attribute reflecting the active state and `focus-visible` utility classes (e.g. `focus-visible:ring-2`) to support robust keyboard navigation.
