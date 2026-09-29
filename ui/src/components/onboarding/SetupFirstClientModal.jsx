@@ -104,6 +104,8 @@ export function SetupFirstClientModal({ isOpen, onClose, firmSlug }) {
             type="button"
             onClick={onClose}
             className="p-1 rounded-lg text-slate-500 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            aria-label="Close"
+            title="Close"
           >
             <X className="h-4 w-4" />
           </button>
