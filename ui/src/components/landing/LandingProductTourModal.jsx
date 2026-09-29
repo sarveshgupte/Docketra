@@ -182,6 +182,7 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
             onClick={onClose}
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
             aria-label="Close tour"
+            title="Close tour"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

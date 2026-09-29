@@ -104,6 +104,7 @@ export function DocketraProductTour({ isOpen, onClose, onCompleteTour, onAddFirs
             type="button"
             onClick={handleSkip}
             className="p-1 rounded-lg text-slate-500 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            aria-label="Close Tour"
             title="Close Tour"
           >
             <X className="h-4 w-4" />
