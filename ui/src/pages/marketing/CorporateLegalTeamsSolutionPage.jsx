@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useId } from 'react';
 import { Link } from 'react-router-dom';
 import { SeoHead } from '../../components/common/SeoHead';
 
@@ -149,6 +149,7 @@ const PILLARS = [
 export const CorporateLegalTeamsSolutionPage = () => {
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [activePreviewTab, setActivePreviewTab] = useState('intake');
+  const faqIdBase = useId();
 
   const toggleFaq = (index) => {
     setOpenFaqIndex((prev) => (prev === index ? -1 : index));
@@ -719,6 +720,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
                     onClick={() => toggleFaq(idx)}
                     className="w-full text-left p-5 flex items-center justify-between text-sm sm:text-base font-bold text-white select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
                     aria-expanded={isOpen}
+                    aria-controls={`faq-${faqIdBase}-${idx}`}
                   >
                     <span>{item.question}</span>
                     <span
@@ -732,7 +734,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
                     </span>
                   </button>
                   {isOpen && (
-                    <div className="px-5 pb-5 text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-slate-800/60 pt-3">
+                    <div id={`faq-${faqIdBase}-${idx}`} className="px-5 pb-5 text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-slate-800/60 pt-3">
                       {item.answer}
                     </div>
                   )}
