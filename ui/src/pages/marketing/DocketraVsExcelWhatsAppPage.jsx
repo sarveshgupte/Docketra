@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useId } from 'react';
 import { Link } from 'react-router-dom';
 import SeoHead from '../../components/common/SeoHead';
 
@@ -106,6 +106,7 @@ const MIGRATION_CARDS = [
 export const DocketraVsExcelWhatsAppPage = () => {
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [activeSandboxTab, setActiveSandboxTab] = useState('memory');
+  const faqIdBase = useId();
 
   const toggleFaq = (index) => {
     setOpenFaqIndex((prev) => (prev === index ? -1 : index));
@@ -725,6 +726,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
                     type="button"
                     onClick={() => toggleFaq(idx)}
                     aria-expanded={isOpen}
+                    aria-controls={`faq-${faqIdBase}-${idx}`}
                     className="flex w-full items-center justify-between p-5 text-left text-sm sm:text-base font-bold text-white select-none"
                   >
                     <span>{item.question}</span>
@@ -739,7 +741,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
                     </span>
                   </button>
                   {isOpen && (
-                    <div className="px-5 pb-5 text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-slate-800/60 pt-3">
+                    <div id={`faq-${faqIdBase}-${idx}`} className="px-5 pb-5 text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-slate-800/60 pt-3">
                       {item.answer}
                     </div>
                   )}
