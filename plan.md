@@ -1,8 +1,6 @@
-1. **Remove Information Exposure from API Responses**
-   - We will modify `src/controllers/inboundEmail.controller.js` to avoid leaking internal error messages in the API response. We will use a generic error message in `sendError` to prevent information exposure, and we'll ensure that the original error is logged server-side.
-
-2. **Complete pre commit steps**
-   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
-
-3. **Submit the PR**
-   - Submit the PR with standard security description formatted appropriately for `🛡️ Sentinel`.
+1. **Fix Failing Docket Audit Integrity Test**
+   - The test `docketAuditIntegrity.test.js` is failing at `assert.ok(canonical);` because the `writeAudit` call inside `reopenDuePending` (in `src/services/docketWorkflow.service.js`) is using the legacy `action: 'PENDING_REOPEN'` and `metadata.reasonCode` but the test asserts against the canonical schema which maps it to `toState: 'AVAILABLE'` and requires `metadata.reasonCode` to be correctly logged.
+   - We need to modify `writeAudit` inside `reopenDuePending` to explicitly provide `toState: 'AVAILABLE'` (which is the mapped state from `UNASSIGNED`) or ensure the `toState` mapping aligns with what the test expects. Wait, the test checks `canonical.payload.toState === 'AVAILABLE'`.
+   - The `writeAudit` function inside `src/services/docketWorkflow.service.js` currently maps `toState` directly to the `payload.toState` in `logDocketEvent`. The test expects `toState: 'AVAILABLE'` when it transitions to `UNASSIGNED`. Let's check `toDocketState` for `UNASSIGNED`. `toDocketState` probably returns `UNASSIGNED` but `canonical.payload.toState` is `AVAILABLE` because `toState` in the test is actually checking the canonical state. Let's look closely at `docketWorkflow.service.js` line 927.
+   - Actually, `Case.find` in the test returns a case without an assignee. So `toState` becomes `'UNASSIGNED'`. `toDocketState('UNASSIGNED')` is probably `'UNASSIGNED'`. Wait, the test expects `canonical.payload.toState` to be `'AVAILABLE'`.
+   - Let's check `getCanonicalDocketState` and `writeAudit`. I'll run a quick script to find out exactly how `writeAudit` formats the payload.
