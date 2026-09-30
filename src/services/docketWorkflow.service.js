@@ -924,7 +924,7 @@ async function reopenDuePending() {
       writeAudit({
         docketId: docket.caseId,
         fromState: DocketStatus.PENDING,
-        toState: toDocketState(toState),
+        toState: toState === 'UNASSIGNED' ? 'AVAILABLE' : toDocketState(toState),
         userId: 'SYSTEM',
         comment: 'Auto reopened',
         action: 'PENDING_REOPEN',
@@ -932,7 +932,7 @@ async function reopenDuePending() {
         changes: [{
           field: 'status',
           from: DocketStatus.PENDING,
-          to: toDocketState(toState),
+          to: toState === 'UNASSIGNED' ? 'AVAILABLE' : toDocketState(toState),
         }],
         metadata: {
           reasonCode: REASON_CODES.AUTO_REOPEN_DUE,
