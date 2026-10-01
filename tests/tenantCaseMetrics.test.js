@@ -29,20 +29,24 @@ function testCaseSchemaSupportsResolvedAt() {
 
 async function testAggregationIdempotencyAndAccuracy() {
   const originalAggregate = Case.aggregate;
+  const originalCountDocuments = Case.countDocuments;
   const originalUpdateOne = TenantCaseMetricsDaily.updateOne;
   const updates = [];
 
+  Case.countDocuments = async (query) => {
+    if (query.status === 'PENDING') return 2;
+    if (query.status === 'FILED') return 1;
+    if (query.status === 'RESOLVED' && !query.resolvedAt) return 2;
+    if (query.status === 'RESOLVED' && query.resolvedAt) return 2;
+    if (query.dueDate) return 3; // overdue
+    if (query.status && query.status.$in && query.status.$in.includes('OPEN')) return 5;
+    if (query.status && query.status.$in && query.status.$in.includes('REVIEWED')) return 1;
+    if (query.createdAt && query.createdAt.$gte) return 4; // created today
+    return 10; // total
+  };
+
   Case.aggregate = async () => ([{
-    totalCases: 10,
-    openCases: 5,
-    pendedCases: 2,
-    filedCases: 1,
-    resolvedCases: 2,
-    pendingApprovals: 1,
-    overdueCases: 3,
-    avgResolutionTimeSeconds: 3600,
-    casesCreatedToday: 4,
-    casesResolvedToday: 2,
+    avgResolutionTimeSeconds: 3600
   }]);
 
   TenantCaseMetricsDaily.updateOne = async (query, update, options) => {
@@ -62,6 +66,7 @@ async function testAggregationIdempotencyAndAccuracy() {
     assert.deepStrictEqual(updates[0].update.$set, updates[1].update.$set);
   } finally {
     Case.aggregate = originalAggregate;
+    Case.countDocuments = originalCountDocuments;
     TenantCaseMetricsDaily.updateOne = originalUpdateOne;
   }
 }
