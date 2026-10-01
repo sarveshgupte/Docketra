@@ -887,25 +887,25 @@ export const Layout = ({ children, title, subtitle }) => {
                                 type="button"
                                 className="enterprise-header__notification-action-btn"
                                 title="Mark as read"
+                                aria-label={`Mark notification "${item.title}" as read`}
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   void markNotificationRead(item.id);
                                 }}
                               >
                                 <span aria-hidden="true">✓</span>
-                                <span className="sr-only">Mark notification "{item.title}" as read</span>
                               </button>
                               <button
                                 type="button"
                                 className="enterprise-header__notification-action-btn"
                                 title="Clear"
+                                aria-label={`Clear notification "${item.title}"`}
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   clearNotification(item.id);
                                 }}
                               >
                                 <span aria-hidden="true">✕</span>
-                                <span className="sr-only">Clear notification "{item.title}"</span>
                               </button>
                               {item.unread ? <span className="enterprise-header__notification-unread-badge">New</span> : null}
                             </div>
