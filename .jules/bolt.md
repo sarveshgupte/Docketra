@@ -29,3 +29,7 @@
 ## 2024-10-25 - Eliminate redundant sequential validation counts
 **Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
 **Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
+
+## 2026-10-01 - Revert $facet for simple counts
+**Learning:** Found a performance bottleneck in `tenantCaseMetrics.service.js` where a `$facet` aggregation was used for simple distinct counts (like openCases, pendedCases, etc). While `$facet` groups multiple count operations into a single network roundtrip, it is an anti-pattern for simple counts if the initial `$match` yields a large dataset. Individual `countDocuments` queries can be resolved entirely using fast index scans, whereas `$facet` forces MongoDB to pull all matching documents into memory to evaluate the sub-pipelines, bypassing indexes and risking the 100MB aggregation memory limit.
+**Action:** Replaced the memory-intensive `$facet` aggregation with concurrent `countDocuments()` queries via `Promise.all()`. This allows MongoDB to resolve counts via fast index scans. Keep a single, targeted `aggregate()` only for the `$avg` calculation.

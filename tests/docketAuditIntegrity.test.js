@@ -75,6 +75,13 @@ async function testReopenMovesToWorkbenchWithAudit() {
       return payload;
     };
 
+    const mongoose = require('mongoose');
+    if (!mongoose.connection) {
+       mongoose.connection = {};
+    }
+    mongoose.connection.readyState = 1; // force it to proceed
+    // We also need to mock Case.updateOne properly to reflect multiple docs correctly in the updatePayload.
+
     const result = await reopenDuePending();
     assert.ok(observedFindFilter?.status === 'PENDING' || (observedFindFilter?.status?.$in && observedFindFilter.status.$in.includes('PENDING')));
     assert.ok(observedFindFilter?.$or?.[0]?.reopenAt?.$lte instanceof Date);
