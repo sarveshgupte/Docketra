@@ -29,3 +29,6 @@
 ## 2024-10-25 - Eliminate redundant sequential validation counts
 **Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
 **Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
+## 2024-10-25 - Resolve N+1 query issue in processExpiredPendedDockets loop
+**Learning:** Identified sequential `Case.findOne` and `Client.findOne` operations inside a loop iterating over expired upload sessions in `src/services/docketWorkflow.service.js`. Iterating database operations over N records creates an O(N) performance bottleneck.
+**Action:** Lift the queries outside the loop, build batch conditions using an `$or` array for the target documents, fetch all cases and clients efficiently, and construct O(1) Map lookups to satisfy the logic synchronously inside the loop.
