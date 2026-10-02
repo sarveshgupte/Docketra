@@ -1217,12 +1217,46 @@ async function processExpiredPendedDockets() {
 
   let processedCount = 0;
 
+  // --- BEGIN N+1 OPTIMIZATION ---
+  // Pre-fetch related cases to eliminate N+1 query inside the loop
+  const caseQueries = expiredSessions.map(session => ({
+    firmId: String(session.firmId),
+    $or: [{ caseId: String(session.docketId) }, { caseNumber: String(session.docketId) }],
+  }));
+
+  let casesMap = new Map();
+  if (caseQueries.length > 0) {
+    const fetchedCases = await Case.find({ $or: caseQueries });
+    for (const c of fetchedCases) {
+      const firmStr = String(c.firmId);
+      if (c.caseId) casesMap.set(`${firmStr}:${c.caseId}`, c);
+      if (c.caseNumber) casesMap.set(`${firmStr}:${c.caseNumber}`, c);
+    }
+  }
+
+  // Collect client lookups needed
+  const clientLookupQueries = [];
+  for (const session of expiredSessions) {
+    if (!session.senderEmail) {
+      const docket = casesMap.get(`${session.firmId}:${session.docketId}`);
+      if (docket && docket.clientId) {
+        clientLookupQueries.push({ clientId: docket.clientId, firmId: docket.firmId });
+      }
+    }
+  }
+
+  let clientsMap = new Map();
+  if (clientLookupQueries.length > 0) {
+    const fetchedClients = await Client.find({ $or: clientLookupQueries });
+    for (const c of fetchedClients) {
+      clientsMap.set(`${String(c.firmId)}:${c.clientId}`, c);
+    }
+  }
+  // --- END N+1 OPTIMIZATION ---
+
   for (const session of expiredSessions) {
     try {
-      const docket = await Case.findOne({
-        firmId: String(session.firmId),
-        $or: [{ caseId: String(session.docketId) }, { caseNumber: String(session.docketId) }],
-      });
+      const docket = casesMap.get(`${session.firmId}:${session.docketId}`);
 
       if (!docket) {
         await UploadSession.updateOne({ _id: session._id }, { $set: { isActive: false } });
@@ -1231,7 +1265,7 @@ async function processExpiredPendedDockets() {
 
       let clientEmail = session.senderEmail;
       if (!clientEmail && docket.clientId) {
-        const client = await Client.findOne({ clientId: docket.clientId, firmId: docket.firmId });
+        const client = clientsMap.get(`${String(docket.firmId)}:${docket.clientId}`);
         clientEmail = client?.businessEmail || client?.contactPersonEmailAddress || '';
       }
 
