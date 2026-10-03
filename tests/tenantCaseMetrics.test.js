@@ -32,6 +32,19 @@ async function testAggregationIdempotencyAndAccuracy() {
   const originalUpdateOne = TenantCaseMetricsDaily.updateOne;
   const updates = [];
 
+  const originalCountDocuments = Case.countDocuments;
+  Case.countDocuments = async (query) => {
+    const qStr = JSON.stringify(query);
+    if (qStr.includes('OPEN')) return 5;
+    if (qStr.includes('PENDING') && !qStr.includes('OPEN')) return 2;
+    if (qStr.includes('FILED') && !qStr.includes('OPEN')) return 1;
+    if (qStr.includes('RESOLVED') && !qStr.includes('dueDate') && !qStr.includes('resolvedAt')) return 2;
+    if (qStr.includes('REVIEWED')) return 1;
+    if (qStr.includes('dueDate')) return 3;
+    if (qStr.includes('$gte') && !qStr.includes('RESOLVED')) return 4;
+    if (qStr.includes('resolvedAt')) return 2;
+    return 10;
+  };
   Case.aggregate = async () => ([{
     totalCases: 10,
     openCases: 5,
@@ -62,6 +75,7 @@ async function testAggregationIdempotencyAndAccuracy() {
     assert.deepStrictEqual(updates[0].update.$set, updates[1].update.$set);
   } finally {
     Case.aggregate = originalAggregate;
+    Case.countDocuments = originalCountDocuments;
     TenantCaseMetricsDaily.updateOne = originalUpdateOne;
   }
 }
