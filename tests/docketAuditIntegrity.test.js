@@ -57,6 +57,7 @@ async function testReopenMovesToWorkbenchWithAudit() {
         caseId: 'CASE-2',
         firmId: 'FIRM-2',
         status: 'PENDING',
+        statusBeforePended: 'AVAILABLE',
         pendingUntil: new Date(Date.now() - 1000),
       }];
     };
@@ -85,7 +86,7 @@ async function testReopenMovesToWorkbenchWithAudit() {
     assert.strictEqual(updatePayload.$set.state, 'IN_WB');
     assert.strictEqual(updatePayload.$set.queueType, 'GLOBAL');
     assert.strictEqual(updatePayload.$set.assignedToXID, null);
-    assert.strictEqual(updatePayload.$set.status, 'UNASSIGNED');
+    assert.strictEqual(updatePayload.$set.status, 'AVAILABLE');
     assert.strictEqual(updatePayload.$set.lifecycle, 'ACTIVE');
 
     const canonical = observed.find((entry) => entry.kind === 'canonical');
