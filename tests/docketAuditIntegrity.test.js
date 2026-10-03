@@ -44,6 +44,9 @@ async function testReopenMovesToWorkbenchWithAudit() {
   const originalUpdateOne = Case.updateOne;
   const originalLogDocketEvent = docketAuditService.logDocketEvent;
   const originalCreateLog = docketAuditService.createLog;
+  const mongoose = require('mongoose');
+  const originalReadyState = mongoose.connection.readyState;
+  mongoose.connection.readyState = 1;
 
   let updatePayload = null;
   let observedFindFilter = null;
@@ -65,6 +68,18 @@ async function testReopenMovesToWorkbenchWithAudit() {
       updatePayload = update;
       return { acknowledged: true, modifiedCount: 1 };
     };
+
+    const CaseHistory = require('../src/models/CaseHistory.model');
+    const DocketAudit = require('../src/models/DocketAudit.model');
+    const originalInsertMany = CaseHistory.insertMany;
+    const originalAuditInsertMany = DocketAudit.insertMany;
+    const originalAuditCreate = DocketAudit.create;
+    const originalHistoryCreate = CaseHistory.create;
+
+    CaseHistory.insertMany = async () => {};
+    DocketAudit.insertMany = async () => {};
+    DocketAudit.create = async () => {};
+    CaseHistory.create = async () => {};
 
     docketAuditService.logDocketEvent = async (payload) => {
       observed.push({ kind: 'canonical', payload });
@@ -97,6 +112,13 @@ async function testReopenMovesToWorkbenchWithAudit() {
     Case.updateOne = originalUpdateOne;
     docketAuditService.logDocketEvent = originalLogDocketEvent;
     docketAuditService.createLog = originalCreateLog;
+    const CaseHistory = require('../src/models/CaseHistory.model');
+    const DocketAudit = require('../src/models/DocketAudit.model');
+    if (typeof originalInsertMany !== 'undefined') CaseHistory.insertMany = originalInsertMany;
+    if (typeof originalAuditInsertMany !== 'undefined') DocketAudit.insertMany = originalAuditInsertMany;
+    if (typeof originalAuditCreate !== 'undefined') DocketAudit.create = originalAuditCreate;
+    if (typeof originalHistoryCreate !== 'undefined') CaseHistory.create = originalHistoryCreate;
+    mongoose.connection.readyState = originalReadyState;
   }
 }
 

@@ -126,19 +126,20 @@ export const useCasesTableColumns = ({
                   state: { sourceList: sortedCases.map((c) => c.caseId), index, returnTo },
                 });
               }}
+              title="View Docket"
             >
               <span aria-hidden="true">View Docket</span>
               <span className="sr-only">View Docket {formatCaseName(row.caseName)}</span>
             </button>
             {showQueueActions && !isAdmin && !isLocked && (
-              <button type="button" disabled={assigningCaseId === row.caseId} onClick={(event) => handleAssignToMe(row, event)}>
+              <button type="button" disabled={assigningCaseId === row.caseId} onClick={(event) => handleAssignToMe(row, event)} title={assigningCaseId === row.caseId ? "Assigning…" : "Assign to me"}>
                 <span aria-hidden="true">{assigningCaseId === row.caseId ? 'Assigning…' : 'Assign to me'}</span>
                 <span className="sr-only">
                   {assigningCaseId === row.caseId ? `Assigning ${formatCaseName(row.caseName)}…` : `Assign ${formatCaseName(row.caseName)} to me`}
                 </span>
               </button>
             )}
-            <button type="button" onClick={(event) => { event.stopPropagation(); setTimelineCaseId(row.caseId); }}>
+            <button type="button" onClick={(event) => { event.stopPropagation(); setTimelineCaseId(row.caseId); }} title="View Timeline">
               <span aria-hidden="true">View Timeline</span>
               <span className="sr-only">View Timeline for {formatCaseName(row.caseName)}</span>
             </button>
