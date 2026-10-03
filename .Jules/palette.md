@@ -10,3 +10,6 @@
 ## 2024-10-03 - Icon-only Button Tooltips
 **Learning:** Adding both `aria-label` and `title` to icon-only buttons is a small but critical micro-UX enhancement that improves context for both screen reader users and sighted users relying on hover states, ensuring a more inclusive interface.
 **Action:** Always pair `aria-label` with `title` on icon-only buttons.
+## 2024-10-03 - Fixing tests when introducing external deps or mock conflicts
+**Learning:** When making tests that hijack the internal `mongoose` mocks or the `process.env`, if an `insertMany` mock is hijacked in one place and breaks another test that isn't isolated correctly or properly mocking `insertMany`, we can use `typeof` checks to ensure mocks are properly restored without crashing if they weren't defined in the first place.
+**Action:** Be mindful of test contamination when writing tests.
