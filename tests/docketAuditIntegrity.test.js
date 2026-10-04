@@ -5,6 +5,7 @@ const docketAuditService = require('../src/services/docketAudit.service');
 const Case = require('../src/models/Case.model');
 const { reopenDuePending } = require('../src/services/docketWorkflow.service');
 const { REASON_CODES } = require('../src/services/pilotDiagnostics.service');
+const mongoose = require('mongoose');
 
 async function testCanonicalAuditShape() {
   const originalCreate = DocketAudit.create;
@@ -40,6 +41,8 @@ async function testCanonicalAuditShape() {
 }
 
 async function testReopenMovesToWorkbenchWithAudit() {
+  const origReadyState = mongoose.connection.readyState;
+  mongoose.connection.readyState = 1;
   const originalFind = Case.find;
   const originalUpdateOne = Case.updateOne;
   const originalLogDocketEvent = docketAuditService.logDocketEvent;
@@ -97,6 +100,7 @@ async function testReopenMovesToWorkbenchWithAudit() {
     Case.updateOne = originalUpdateOne;
     docketAuditService.logDocketEvent = originalLogDocketEvent;
     docketAuditService.createLog = originalCreateLog;
+    mongoose.connection.readyState = origReadyState;
   }
 }
 
