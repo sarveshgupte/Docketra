@@ -7,3 +7,6 @@
 ## 2026-08-13 - BubbleMenu Dropdown Accessibility
 **Learning:** Dropdowns and toggles with `aria-expanded` need a linked `aria-controls` pointing to a unique element ID to correctly announce state to screen readers. If there are multiple instances on a page, hardcoded IDs will conflict.
 **Action:** Use React's `useId()` to generate unique IDs for dropdown menus and bind them to the toggle button's `aria-controls`.
+## 2024-08-14 - Robust ARIA Labels on Icon Buttons
+**Learning:** Found that using an inner `<span className="sr-only">` inside a `<button>` alongside an `aria-hidden="true"` icon can sometimes result in less robust screen reader announcements compared to placing an `aria-label` directly on the parent `<button>`.
+**Action:** Always prefer using a parent `aria-label` over nesting an inner `sr-only` span for providing an accessible name to icon-only buttons.
