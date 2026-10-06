@@ -1120,8 +1120,10 @@ export function StorageSettingsPage() {
                   setRestoreOtpCode('');
                   setRestoreVerificationToken('');
                 }}
+                aria-label="Close modal"
+                title="Close modal"
               >
-                ×
+                <span aria-hidden="true">×</span>
               </button>
             </div>
             

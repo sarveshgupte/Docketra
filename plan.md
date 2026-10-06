@@ -1,48 +1,20 @@
-1. **Analyze the performance bottleneck:**
-   In `src/controllers/docketWorkflow.controller.js`'s `moveDocket` function, queries to fetch `managerOwnedTeams` and `managedUsers` are executed unconditionally:
-   ```javascript
-   const managerOwnedTeams = await Team.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('_id').lean();
-   const managedUsers = await User.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('xID').lean();
-   ```
-   These queries are expensive and unnecessary if the user is a `PRIMARY_ADMIN` or `ADMIN`, because `canMoveDocketBetweenQueues` immediately returns `true` for these roles (bypassing the `managerScope` check entirely).
+1. **Add tooltips to `CasesPageSections.jsx`**:
+   - `ui/src/components/cases/CasesPageSections.jsx`: The saved view remove button has an `aria-label` but lacks a tooltip (`title` attribute). I will add `title="Remove saved view"` or use the existing `aria-label` content as the `title` attribute for mouse users.
 
-2. **Implement the optimization:**
-   Modify `src/controllers/docketWorkflow.controller.js` to only fetch the `managerOwnedTeams` and `managedUsers` if the user is a `MANAGER`. We can check the user's role early.
+2. **Add tooltips to `FirmsManagement.jsx` modal close buttons**:
+   - The close buttons for the `Create Firm` and `Admin Management` modals have the character `×` but lack `aria-label` and `title`.
+   - Update `ui/src/pages/FirmsManagement.jsx` to add `aria-label="Close modal"` and `title="Close modal"`.
 
-   ```javascript
-   let managerScope = {};
-   if (String(req.user?.role || '').trim().toUpperCase() === 'MANAGER') {
-     const [managerOwnedTeams, managedUsers] = await Promise.all([
-       Team.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('_id').lean(),
-       User.find({ firmId: req.user.firmId, managerId: req.user._id, isActive: true }).select('xID').lean()
-     ]);
-     managerScope = {
-       permittedTeamIds: [...new Set([
-         ...(Array.isArray(req.user?.teamIds) ? req.user.teamIds : []).map((id) => String(id)),
-         ...managerOwnedTeams.map((team) => String(team._id)),
-       ])],
-       permittedUserXids: [...new Set([
-         String(req.user?.xID || '').toUpperCase(),
-         ...managedUsers.map((user) => String(user.xID || '').toUpperCase()),
-       ])],
-     };
-   }
-   ```
-   *Also using `Promise.all` for concurrency in case they are needed for managers.*
+3. **Add tooltips to `StorageSettingsPage.jsx` modal close button**:
+   - The close button in `ui/src/pages/StorageSettingsPage.jsx` at line 1124 lacks `aria-label` and `title`.
+   - Update it to have `aria-label="Close modal"` and `title="Close modal"`.
 
-3. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
-   - Run linter and tests (`pnpm lint` and `pnpm test`).
-   - Create the journal entry for this learning.
-   - Run `pre_commit_instructions` tool to complete steps.
+4. **Verify UI changes**
+   - Read the changed files to verify the `replace_with_git_merge_diff` steps were applied correctly.
 
-4. **Submit PR:**
-   - Commit the changes and request PR approval with the title "⚡ Bolt: [performance improvement]" and necessary descriptions.
-1. **Optimize `getRiskBrief` in `src/services/dashboard.service.js`:**
-   - There are multiple independent asynchronous calls in `getRiskBrief` inside `src/services/dashboard.service.js`.
-   - Specifically, `Case.countDocuments` for `stalePending` is currently called *after* `Promise.all` which executes other concurrent queries like `atRiskEntities`, `waitingClient`, `awaitingApproval`, `overloadedAssigneesRaw`, and `blockedTaxonomyRaw`.
-   - I will merge the `stalePending` query into the single `Promise.all` block to execute all independent database queries concurrently, reducing overall latency.
+5. **Pre-commit and Tests**:
+   - Run `pnpm lint` and `pnpm run test:ci` in `ui/`.
+   - Call `pre_commit_instructions` and follow steps.
 
-2. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
-
-3. **Submit PR:**
-   - Submit the PR with the title '⚡ Bolt: [performance improvement]' and include headers '💡 What:', '🎯 Why:', '📊 Impact:', and '🔬 Measurement:' describing the improvement.
+6. **Submit PR**:
+   - Submit the PR with "🎨 Palette: [UX improvement]".
