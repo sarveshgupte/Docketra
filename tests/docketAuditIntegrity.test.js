@@ -41,6 +41,9 @@ async function testCanonicalAuditShape() {
 
 async function testReopenMovesToWorkbenchWithAudit() {
   const originalFind = Case.find;
+  const mongoose = require('mongoose');
+  const originalReadyState = mongoose.connection.readyState;
+  mongoose.connection.readyState = 1;
   const originalUpdateOne = Case.updateOne;
   const originalLogDocketEvent = docketAuditService.logDocketEvent;
   const originalCreateLog = docketAuditService.createLog;
@@ -94,6 +97,7 @@ async function testReopenMovesToWorkbenchWithAudit() {
     assert.strictEqual(canonical.payload.metadata.reasonCode, REASON_CODES.AUTO_REOPEN_DUE);
   } finally {
     Case.find = originalFind;
+    mongoose.connection.readyState = originalReadyState;
     Case.updateOne = originalUpdateOne;
     docketAuditService.logDocketEvent = originalLogDocketEvent;
     docketAuditService.createLog = originalCreateLog;

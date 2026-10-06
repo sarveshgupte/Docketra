@@ -479,8 +479,10 @@ export const FirmsManagement = () => {
                     setFormData({ name: '', adminName: '', adminEmail: '' });
                     setIsSubmitting(false);
                   }}
+                  aria-label="Close modal"
+                  title="Close modal"
                 >
-                  ×
+                  <span aria-hidden="true">×</span>
                 </button>
               </div>
               <form onSubmit={handleCreateFirm} className="modal-form space-y-4">
@@ -549,8 +551,10 @@ export const FirmsManagement = () => {
                  <button
                    className="modal-close"
                    onClick={() => setAdminModal({ open: false, loading: false, firm: null, details: [], addForm: { name: '', email: '' } })}
+                  aria-label="Close modal"
+                  title="Close modal"
                  >
-                   ×
+                  <span aria-hidden="true">×</span>
                  </button>
                </div>
                 {adminModal.loading ? (
