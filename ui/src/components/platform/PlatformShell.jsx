@@ -605,6 +605,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                 className="platform__command-trigger"
                 onClick={() => setCommandPaletteOpen(true)}
                 aria-label="Open command center"
+                title="Open command center"
               >
                 <span className="platform__command-trigger-label">Search</span>
                 <kbd>Ctrl/⌘ K</kbd>
