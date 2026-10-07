@@ -76,7 +76,10 @@ async function testReopenMovesToWorkbenchWithAudit() {
     };
 
     const result = await reopenDuePending();
-    assert.ok(observedFindFilter?.status === 'PENDING' || (observedFindFilter?.status?.$in && observedFindFilter.status.$in.includes('PENDING')));
+    const hasPendingInFilter = observedFindFilter?.status === 'PENDING' ||
+      (observedFindFilter?.status?.$in && observedFindFilter.status.$in.includes('PENDING')) ||
+      (observedFindFilter?.status?.$in && observedFindFilter.status.$in.some(s => s === 'PENDING'));
+    assert.ok(hasPendingInFilter, 'Filter must include PENDING status');
     assert.ok(observedFindFilter?.$or?.[0]?.reopenAt?.$lte instanceof Date);
     assert.ok(observedFindFilter?.$or?.[1]?.pendingUntil?.$lte instanceof Date);
     assert.strictEqual(result.count, 1);
