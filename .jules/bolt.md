@@ -29,3 +29,6 @@
 ## 2024-10-25 - Eliminate redundant sequential validation counts
 **Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
 **Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
+## 2024-12-14 - Optimize getUsers pagination query
+**Learning:** Replaced concurrent execution of `User.find()` and `User.countDocuments()` with a single `User.find()` query using `limit(limit + 1)`.
+**Action:** Use `limit(limit + 1)` instead of `countDocuments` for pagination queries to eliminate an entire database count operation, reducing latency and DB load.
