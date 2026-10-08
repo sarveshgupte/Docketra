@@ -40,6 +40,11 @@ async function testCanonicalAuditShape() {
 }
 
 async function testReopenMovesToWorkbenchWithAudit() {
+  const originalMongoUri = process.env.MONGO_URI;
+  const originalMongodbUri = process.env.MONGODB_URI;
+  delete process.env.MONGO_URI;
+  delete process.env.MONGODB_URI;
+
   const originalFind = Case.find;
   const originalUpdateOne = Case.updateOne;
   const originalLogDocketEvent = docketAuditService.logDocketEvent;
@@ -93,6 +98,9 @@ async function testReopenMovesToWorkbenchWithAudit() {
     assert.strictEqual(canonical.payload.toState, 'AVAILABLE');
     assert.strictEqual(canonical.payload.metadata.reasonCode, REASON_CODES.AUTO_REOPEN_DUE);
   } finally {
+    if (originalMongoUri) process.env.MONGO_URI = originalMongoUri;
+    if (originalMongodbUri) process.env.MONGODB_URI = originalMongodbUri;
+
     Case.find = originalFind;
     Case.updateOne = originalUpdateOne;
     docketAuditService.logDocketEvent = originalLogDocketEvent;
