@@ -20,11 +20,13 @@ async function testAttachRequestContextBuildsStructuredContext() {
 
   assert.deepStrictEqual(req.context, {
     firmId: 'firm-1',
+    tenantId: 'firm-1',
     userId: 'user-1',
     userXID: 'X000001',
     dbSession: undefined,
     route: '/api/admin/clients',
     requestId: 'req-123',
+    correlationId: null,
   });
   console.log('✓ attachRequestContext adds structured request metadata');
 }

@@ -9,6 +9,7 @@ process.env.SUPERADMIN_PASSWORD_HASH = '$2b$10$wioLOkqqceK.iu9MZavNOua7yV2AzOpql
 process.env.ENCRYPTION_PROVIDER = 'disabled';
 process.env.REDIS_URL = '';
 process.env.ALLOW_REDIS_FALLBACK = 'true';
+process.env.MONGO_URI = 'mongodb://127.0.0.1:27017/docketra';
 
 const bcryptPath = require.resolve('bcrypt');
 require.cache[bcryptPath] = { id: bcryptPath, filename: bcryptPath, loaded: true, exports: { compare: async ()=>true, hash: async (v)=>v } };
@@ -59,7 +60,7 @@ function createRes(cookieJar) {
   try {
     const cookieJar = {};
     const loginRes = createRes(cookieJar);
-    await login({ body: { xID: 'X000001', password: 'AnyPass#123' }, ip: '127.0.0.1', get: () => 'test-agent', loginScope: 'superadmin' }, loginRes);
+    await login({ body: { xID: 'X000001', password: 'AnyPass#123' }, ip: '127.0.0.1', get: () => 'test-agent', loginScope: 'superadmin', skipTransaction: true }, loginRes);
     assert.strictEqual(loginRes.state.statusCode, 200);
     assert(cookieJar.accessToken && cookieJar.refreshToken);
 
@@ -69,11 +70,11 @@ function createRes(cookieJar) {
     assert.strictEqual(profileRes.state.statusCode, 200);
 
     const refreshRes = createRes(cookieJar);
-    await refreshAccessToken({ cookies: { refreshToken: cookieJar.refreshToken }, headers: { cookie: `refreshToken=${cookieJar.refreshToken}` }, ip: '127.0.0.1', get: () => 'test-agent', originalUrl: '/api/auth/refresh' }, refreshRes);
+    await refreshAccessToken({ cookies: { refreshToken: cookieJar.refreshToken }, headers: { cookie: `refreshToken=${cookieJar.refreshToken}` }, ip: '127.0.0.1', get: () => 'test-agent', originalUrl: '/api/auth/refresh', skipTransaction: true }, refreshRes);
     assert.strictEqual(refreshRes.state.statusCode, 200);
 
     const logoutRes = createRes(cookieJar);
-    await logout({ user: { role: 'SUPERADMIN' }, ip: '127.0.0.1', get: () => 'test-agent' }, logoutRes);
+    await logout({ user: { role: 'SUPERADMIN' }, ip: '127.0.0.1', get: () => 'test-agent', skipTransaction: true }, logoutRes);
     assert.strictEqual(logoutRes.state.statusCode, 200);
     assert(logoutRes.state.clearedCookies.some((c) => c.name === 'accessToken'));
     assert(logoutRes.state.clearedCookies.some((c) => c.name === 'refreshToken'));

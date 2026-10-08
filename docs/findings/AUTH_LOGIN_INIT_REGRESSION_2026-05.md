@@ -2,12 +2,11 @@
 
 ## Production symptom
 - Endpoint: `POST /api/auth/login/init`
-- Tenant example: `firmSlug=gupte-opc`, `xID=X000001`
-- Observed in Render logs:
-  - `AUTH_LOGIN_USER_CANDIDATES` logged, then request fails with `AUTH_LOGIN_SERVICE_FAILED`
-  - error message: `next is not a function`
-  - HTTP status: `500`
-- UI impact: `/gupte-opc/login` shows *"Sign in failed — Server is unavailable right now."*
+- Tenant example: `firmSlug=demo-firm`, `xID=X000001`
+- Server route affected: `POST /api/auth/login/init`
+- Observed response: `500 Internal Server Error` with `{"error":"Server error"}`
+- Server log signature: `ReferenceError: next is not defined`
+- UI impact: `/demo-firm/login` shows *"Sign in failed — Server is unavailable right now."*
 
 ## Root cause status
 Confirmed from production Render stack trace: `User.model.js` query middleware for hierarchy update validation used callback-style `next` in `pre('findOneAndUpdate')` / `pre('updateMany')`. During login-init failed-password accounting (`handlePasswordVerification` path), Mongoose executed the hook without a callback and the hook's `next()` call threw `TypeError: next is not a function`.

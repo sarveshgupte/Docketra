@@ -19,6 +19,11 @@ const Counter = require('../models/Counter.model');
 const User = require('../models/User.model');
 const log = require('../utils/log');
 
+const getSuperadminXid = () => {
+  const raw = process.env.SUPERADMIN_XID || null;
+  return raw ? String(raw).trim().toUpperCase() : null;
+};
+
 /**
  * Generate the next available xID using an atomic global counter.
  * 
@@ -39,7 +44,22 @@ const generateNextXID = async (_firmId = null, legacySession = null) => {
       }
     );
 
-    const xID = `X${String(counter.seq).padStart(6, '0')}`;
+    let xID = `X${String(counter.seq).padStart(6, '0')}`;
+    const superadminXid = getSuperadminXid();
+
+    // Prevent collision with reserved SuperAdmin xID (e.g. X000001)
+    if (superadminXid && xID === superadminXid) {
+      const nextCounter = await Counter.findOneAndUpdate(
+        { name: 'user_xid', firmId: 'GLOBAL' },
+        { $inc: { seq: 1 } },
+        {
+          returnDocument: 'after',
+          upsert: true,
+          setDefaultsOnInsert: true,
+        }
+      );
+      xID = `X${String(nextCounter.seq).padStart(6, '0')}`;
+    }
     
     log.info(`[xID Generator] Generated xID: ${xID}`);
     

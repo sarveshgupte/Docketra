@@ -222,10 +222,14 @@ const createUser = async (req, res) => {
 
 /**
  * Update user
+ *
+ * NOTE: Role modifications are strictly forbidden in this endpoint to prevent
+ * privilege escalation. Role changes must be performed exclusively via
+ * PATCH /api/users/:id/role (guarded by requirePrimaryAdmin).
  */
 const updateUser = async (req, res) => {
   try {
-    const { name, role, isActive } = req.body;
+    const { name, isActive } = req.body;
     const firmScope = resolveUserFirmScope(req, res);
     if (!firmScope) return;
     const user = await userRepository.findUserById(req.params.id, firmScope.firmId);
@@ -236,39 +240,27 @@ const updateUser = async (req, res) => {
         error: 'User not found',
       });
     }
-    
-    const previousRole = user.role;
+
     if (name) user.name = name;
-    if (role) user.role = role;
-    if (isActive !== undefined) user.isActive = isActive;
+    if (isActive !== undefined) {
+      if (isActive === false) {
+        try {
+          assertCanDeleteUser(user);
+        } catch (guardError) {
+          if (guardError instanceof PrimaryAdminActionError) {
+            return res.status(403).json({
+              success: false,
+              error: guardError.message,
+            });
+          }
+          throw guardError;
+        }
+      }
+      user.isActive = isActive;
+    }
     user.updatedBy = req.user?._id || null;
     
     await user.save();
-    if (role && role !== previousRole) {
-      await logSecurityAuditEvent({
-        req,
-        action: SECURITY_AUDIT_ACTIONS.ROLE_CHANGED,
-        resource: `users/${user._id.toString()}`,
-        userId: req.user?._id || null,
-        firmId: req.user?.firmId || null,
-        xID: req.user?.xID || null,
-        performedBy: req.user?.xID || req.user?._id?.toString?.() || 'SYSTEM',
-        metadata: {
-          targetUserId: user._id.toString(),
-          oldRole: previousRole,
-          newRole: role,
-        },
-        description: `User role changed from ${previousRole} to ${role}`,
-      }).catch(() => null);
-      await noteAdminPrivilegeChange({
-        req,
-        userId: req.user?._id?.toString?.() || null,
-        firmId: req.user?.firmId || null,
-        targetUserId: user._id.toString(),
-        oldRole: previousRole,
-        newRole: role,
-      });
-    }
     
     res.json({
       success: true,

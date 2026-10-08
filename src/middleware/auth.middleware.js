@@ -127,13 +127,13 @@ const authenticate = async (req, res, next) => {
     // ============================================================
     // SuperAdmin tokens have role: 'SuperAdmin' or 'SUPERADMIN' and userId: SUPERADMIN_OBJECT_ID
     // They never have firmId or defaultClientId
-    const superadminObjectId = env.SUPERADMIN_OBJECT_ID;
+    const superadminObjectId = env.SUPERADMIN_OBJECT_ID || process.env.SUPERADMIN_OBJECT_ID;
     if (decoded.userId === superadminObjectId && isSuperAdminRole(decoded.role)) {
       log.info('[AUTH][superadmin] SuperAdmin token authenticated');
       
       const normalizedRole = 'SuperAdmin';
-      const superadminXID = env.SUPERADMIN_XID_NORMALIZED;
-      const superadminEmail = env.SUPERADMIN_EMAIL_NORMALIZED;
+      const superadminXID = env.SUPERADMIN_XID_NORMALIZED || (process.env.SUPERADMIN_XID ? String(process.env.SUPERADMIN_XID).trim().toUpperCase() : null);
+      const superadminEmail = env.SUPERADMIN_EMAIL_NORMALIZED || (process.env.SUPERADMIN_EMAIL ? String(process.env.SUPERADMIN_EMAIL).trim().toLowerCase() : null);
       
       // Attach SuperAdmin pseudo-user to request
       req.user = {

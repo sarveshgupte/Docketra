@@ -442,10 +442,14 @@ const logAuthAudit = async (params, req = null) => {
 };
 
 const getSuperadminEnv = () => {
+  const currentEnv = loadEnv({ exitOnError: false }) || env || {};
+  const rawXID = currentEnv.SUPERADMIN_XID || process.env.SUPERADMIN_XID || null;
+  const normalizedXID = currentEnv.SUPERADMIN_XID_NORMALIZED || (rawXID ? String(rawXID).trim().toUpperCase() : null);
+  const email = currentEnv.SUPERADMIN_EMAIL_NORMALIZED || (process.env.SUPERADMIN_EMAIL ? String(process.env.SUPERADMIN_EMAIL).trim().toLowerCase() : null);
   return {
-    rawXID: env.SUPERADMIN_XID,
-    normalizedXID: env.SUPERADMIN_XID_NORMALIZED,
-    email: env.SUPERADMIN_EMAIL_NORMALIZED,
+    rawXID,
+    normalizedXID,
+    email,
   };
 };
 

@@ -20,6 +20,10 @@ const DEFAULT_CONTACT_NUMBER = '0000000000';
 const PASSWORD_SETUP_TOKEN_EXPIRY = '24h';
 const env = loadEnv({ exitOnError: false }) || {};
 
+const getSuperadminEmail = () => {
+  return env.SUPERADMIN_EMAIL_NORMALIZED || (process.env.SUPERADMIN_EMAIL ? process.env.SUPERADMIN_EMAIL.trim().toLowerCase() : null);
+};
+
 class FirmBootstrapError extends Error {
   constructor(message, statusCode = 500, meta = {}) {
     super(message);
@@ -161,7 +165,7 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
       isActive: true,
       status: 'ACTIVE',
       createdByXid: 'SUPERADMIN',
-      createdBy: env.SUPERADMIN_EMAIL_NORMALIZED,
+      createdBy: getSuperadminEmail() || 'system@docketra.com',
     }], { session });
 
     if (!defaultClient || !defaultClient._id) {
@@ -216,7 +220,7 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
   const { defaultClient, adminUser, adminXID, setupToken, firmSlug } = createdEntities;
 
   try {
-    const superadminEmail = env.SUPERADMIN_EMAIL_NORMALIZED;
+    const superadminEmail = getSuperadminEmail();
     if (superadminEmail) {
       await deps.emailService.sendFirmCreatedEmail(superadminEmail, {
         firmId: defaultClient.clientId,
