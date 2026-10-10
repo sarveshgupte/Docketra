@@ -39,6 +39,7 @@ const { disconnectUserSockets } = require('../services/notificationSocket.servic
 const {
   resolveCanonicalTenantFromFirmId,
   resolveCanonicalTenantForUser,
+  resolveTenantBySlug,
 } = require('../services/tenantIdentity.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { ensureGoogleAuthEnabled } = require('../services/featureGate.service');
@@ -4046,8 +4047,8 @@ const googleAuthCallback = async (req, res) => {
           });
         }
 
-        const userFirm = await Firm.findById(existingUser.firmId).select('_id firmSlug status');
-        if (userFirm && isActiveStatus(userFirm.status)) {
+        const tenantContext = await resolveCanonicalTenantForUser(existingUser);
+        if (tenantContext && isActiveStatus(tenantContext.status)) {
           if (!existingUser.authProviders?.google?.googleId) {
             existingUser.authProviders = {
               ...(existingUser.authProviders || {}),
@@ -4074,7 +4075,7 @@ const googleAuthCallback = async (req, res) => {
 
           return redirectGoogleResult(res, {
             exchangeToken,
-            firmSlug: userFirm.firmSlug,
+            firmSlug: tenantContext.firmSlug,
             mode: 'login',
           });
         }
@@ -4123,6 +4124,7 @@ const googleAuthCallback = async (req, res) => {
           xid: created.adminXID,
           firmName,
           firmSlug: created.firmSlug,
+          authProvider: 'google',
           req,
         });
 
@@ -4162,10 +4164,26 @@ const googleAuthCallback = async (req, res) => {
       });
     }
 
-    const firm = await Firm.findOne({ firmSlug: resolvedFirmSlug }).select('_id firmSlug status');
-    if (!firm || !isActiveStatus(firm.status)) {
+    const tenant = await resolveTenantBySlug(resolvedFirmSlug);
+    if (!tenant || !isActiveStatus(tenant.status)) {
       return redirectGoogleResult(res, { error: 'FIRM_INACTIVE', firmSlug: resolvedFirmSlug });
     }
+
+    const tenantCandidateIds = [
+      tenant.tenantId,
+      tenant.defaultClientId,
+      tenant.legacyFirmId,
+      tenant.ownershipFirmId,
+    ].filter(Boolean);
+
+    const tenantScopedUserQuery = {
+      email: googleEmail,
+      status: { $ne: 'deleted' },
+      $or: [
+        { firmId: { $in: tenantCandidateIds } },
+        { defaultClientId: { $in: tenantCandidateIds } },
+      ],
+    };
 
     let user = null;
 
@@ -4173,8 +4191,7 @@ const googleAuthCallback = async (req, res) => {
       const setupTokenHash = emailService.hashToken(String(state.setupToken || ''));
       const now = new Date();
       user = await User.findOne({
-        firmId: firm._id,
-        email: googleEmail,
+        ...tenantScopedUserQuery,
         setupTokenUsedAt: null,
         $or: [
           { setupTokenHash },
@@ -4210,23 +4227,34 @@ const googleAuthCallback = async (req, res) => {
       };
       await user.save();
 
-      await Firm.updateOne(
-        { _id: user.firmId, status: 'pending_setup' },
-        { $set: { status: 'active' } }
-      );
+      if (tenant.legacyFirmId) {
+        await Firm.updateOne(
+          { _id: tenant.legacyFirmId, status: 'pending_setup' },
+          { $set: { status: 'active' } }
+        );
+      }
+      if (tenant.tenantId) {
+        await Client.updateOne(
+          { _id: tenant.tenantId, status: { $in: ['pending_setup', 'PENDING'] } },
+          { $set: { status: 'ACTIVE' } }
+        );
+      }
     } else {
-      user = await User.findOne({
-        firmId: firm._id,
-        email: googleEmail,
-        status: { $ne: 'deleted' },
-      });
+      user = await User.findOne(tenantScopedUserQuery);
 
       if (!user || !isActiveStatus(user.status) || !user.isActive) {
         return redirectGoogleResult(res, { error: 'ACCOUNT_NOT_FOUND', firmSlug: resolvedFirmSlug });
       }
 
       if (user.lockedByAdmin) {
-        const primaryAdmin = await User.findOne({ firmId: firm._id, isPrimaryAdmin: true, status: { $ne: 'deleted' } }).select('email');
+        const primaryAdmin = await User.findOne({
+          $or: [
+            { firmId: { $in: tenantCandidateIds } },
+            { defaultClientId: { $in: tenantCandidateIds } },
+          ],
+          isPrimaryAdmin: true,
+          status: { $ne: 'deleted' },
+        }).select('email');
         return redirectGoogleResult(res, {
           error: 'ACCOUNT_LOCKED_BY_ADMIN',
           primaryAdminEmail: primaryAdmin?.email || '',
@@ -4354,6 +4382,7 @@ const completeGoogleSignup = async (req, res) => {
       xid: created.adminXID,
       firmName,
       firmSlug: created.firmSlug,
+      authProvider: 'google',
       req,
     });
 
@@ -4403,7 +4432,10 @@ const exchangeGoogleAuth = async (req, res) => {
 
     const user = await User.findOne({
       _id: session.userId,
-      firmId: session.firmId,
+      $or: [
+        { firmId: session.firmId },
+        { defaultClientId: session.firmId },
+      ],
       status: 'active',
       isActive: true,
     });

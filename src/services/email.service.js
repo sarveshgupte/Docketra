@@ -952,6 +952,7 @@ const sendFirmSetupEmail = async ({
   firmName,
   workspaceUrl,
   xid,
+  authProvider = 'password',
   context = null,
 }) => {
   const resolvedXid = String(xid || '').trim();
@@ -959,6 +960,10 @@ const sendFirmSetupEmail = async ({
   if (!resolvedXid || !resolvedLoginUrl) {
     throw new Error('Missing required signup credentials for setup email');
   }
+  const isGoogle = authProvider === 'google';
+  const loginInstruction = isGoogle
+    ? 'Use your Google account (or your xID) to sign in to your firm account.'
+    : 'Use your xID and password to sign in to your firm account.';
   const subject = 'Your Docketra firm account is ready';
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
@@ -967,11 +972,11 @@ const sendFirmSetupEmail = async ({
       <p><strong>Firm name:</strong> ${firmName}</p>
       <p><strong>User xID:</strong> ${resolvedXid}</p>
       <p><strong>Login URL:</strong> <a href="${resolvedLoginUrl}">${resolvedLoginUrl}</a></p>
-      <p>Use your xID and password to sign in to your firm account.</p>
+      <p>${loginInstruction}</p>
       <p>Best regards,<br/>Docketra Team</p>
     </div>
   `;
-  const text = `Welcome to Docketra, ${name}!\n\nYour firm account has been created successfully.\nFirm name: ${firmName}\nUser xID: ${resolvedXid}\nLogin URL: ${resolvedLoginUrl}\nUse your xID and password to sign in to your firm account.\n\nBest regards,\nDocketra Team`;
+  const text = `Welcome to Docketra, ${name}!\n\nYour firm account has been created successfully.\nFirm name: ${firmName}\nUser xID: ${resolvedXid}\nLogin URL: ${resolvedLoginUrl}\n${loginInstruction}\n\nBest regards,\nDocketra Team`;
 
   return sendDirectAuthEmail({ to: email, subject, html, text });
 };

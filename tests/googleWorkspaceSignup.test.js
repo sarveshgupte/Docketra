@@ -67,4 +67,14 @@ const authApiSource = fs.readFileSync(path.join(__dirname, '../ui/src/api/auth.a
 assert.ok(authApiSource.includes('completeGoogleSignup:'), 'auth.api.js must export completeGoogleSignup');
 assert.ok(authApiSource.includes('/auth/google/complete-signup'), 'auth.api.js must call /auth/google/complete-signup');
 
+// 6. Verify backend auth.controller.js uses canonical tenant resolution
+const authControllerSource = fs.readFileSync(path.join(__dirname, '../src/controllers/auth.controller.js'), 'utf8');
+assert.ok(authControllerSource.includes('resolveTenantBySlug(resolvedFirmSlug)'), 'auth.controller.js must resolve tenant by slug for Google login');
+assert.ok(authControllerSource.includes('resolveCanonicalTenantForUser(existingUser)'), 'auth.controller.js must resolve tenant for existing users during Google OAuth');
+assert.ok(authControllerSource.includes('tenantScopedUserQuery'), 'auth.controller.js must query user using tenant candidate IDs');
+
+// 7. Verify email.service.js customizes welcome email for Google OAuth users
+const emailServiceSource = fs.readFileSync(path.join(__dirname, '../src/services/email.service.js'), 'utf8');
+assert.ok(emailServiceSource.includes("authProvider === 'google'"), 'email.service.js must differentiate Google auth login instructions');
+
 console.log('✅ googleWorkspaceSignup.test.js passed successfully!');

@@ -492,6 +492,7 @@ const sendSignupWelcomeEmail = async ({
   firmName,
   xid,
   firmSlug,
+  authProvider = 'password',
   req = null,
 }) => {
   const workspaceUrl = buildFirmUrl(firmSlug);
@@ -501,6 +502,7 @@ const sendSignupWelcomeEmail = async ({
     xid,
     workspaceUrl,
     firmName,
+    authProvider,
     context: req,
   };
   try {
