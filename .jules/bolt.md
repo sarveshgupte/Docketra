@@ -29,3 +29,6 @@
 ## 2024-10-25 - Eliminate redundant sequential validation counts
 **Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
 **Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
+## 2024-10-26 - Bolt: Optimize threshold check for last active admin
+**Learning:** Checking if a firm has more than 1 active admin by using `User.countDocuments()` forces MongoDB to scan all index entries, which is inefficient. Using `find().limit(2)` allows an O(1) early return.
+**Action:** Replace `countDocuments()` with `find().select("_id").limit(2).lean()` for threshold checks (e.g., `<= 1`) and evaluate the length of the result array to save database CPU and latency.
