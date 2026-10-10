@@ -67,15 +67,21 @@ const getUsers = async (req, res) => {
     if (role) query.role = role;
     if (isActive !== undefined) query.isActive = isActive === 'true';
     
-    // PERFORMANCE: Execute independent queries concurrently
-    const [users, total] = await Promise.all([
-      User.find(query)
-        .select('-passwordHash -passwordSetupTokenHash -passwordHistory')
-        .limit(parseInt(limit))
-        .skip((parseInt(page) - 1) * parseInt(limit))
-        .sort({ createdAt: -1 }),
-      User.countDocuments(query)
-    ]);
+    // ⚡ Bolt Performance Optimization:
+    // Replaced concurrent countDocuments() and find() queries with a single find() using limit(limit + 1).
+    // Impact: Eliminates an entire database count operation, reducing latency and DB load.
+    const limitNum = parseInt(limit);
+    const skipNum = (parseInt(page) - 1) * limitNum;
+
+    const usersWithExtra = await User.find(query)
+      .select('-passwordHash -passwordSetupTokenHash -passwordHistory')
+      .skip(skipNum)
+      .limit(limitNum + 1)
+      .sort({ createdAt: -1 });
+
+    const hasMore = usersWithExtra.length > limitNum;
+    const users = hasMore ? usersWithExtra.slice(0, limitNum) : usersWithExtra;
+    const total = hasMore ? skipNum + limitNum + 1 : skipNum + users.length;
     
     res.json({
       success: true,
@@ -83,9 +89,9 @@ const getUsers = async (req, res) => {
       count: users.length,
       pagination: {
         page: parseInt(page),
-        limit: parseInt(limit),
+        limit: limitNum,
         total,
-        pages: Math.ceil(total / parseInt(limit)),
+        pages: Math.ceil(total / limitNum),
       },
     });
   } catch (error) {
