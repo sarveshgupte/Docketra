@@ -23,5 +23,5 @@ const normalizeStatus = (status) => {
 
 export const getStatusLabel = (status) => {
   const normalized = normalizeStatus(status);
-  return `${STATUS_EMOJI[normalized]} ${STATUS_COPY[normalized]}`;
+  return STATUS_COPY[normalized] || 'Open';
 };

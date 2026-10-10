@@ -151,11 +151,11 @@ export const CaseDetailDocumentPacksPanel = ({ caseId, caseInternalId, attachmen
 
   const getStatusBadgeClass = (status) => {
     const s = String(status).toLowerCase();
-    if (s === 'approved') return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-    if (s === 'under_review') return 'bg-amber-100 text-amber-800 border-amber-200';
-    if (s === 'filed') return 'bg-blue-100 text-blue-800 border-blue-200';
-    if (s === 'archived') return 'bg-rose-100 text-rose-800 border-rose-200';
-    return 'bg-gray-100 text-gray-800 border-gray-200'; // draft
+    if (s === 'approved') return 'bg-emerald-500/10 text-emerald-800 border-emerald-500/20';
+    if (s === 'under_review') return 'bg-amber-500/10 text-amber-800 border-amber-500/20';
+    if (s === 'filed') return 'bg-blue-500/10 text-blue-800 border-blue-500/20';
+    if (s === 'archived') return 'bg-rose-500/10 text-rose-800 border-rose-500/20';
+    return 'bg-slate-500/10 text-slate-700 border-slate-200'; // draft
   };
 
   const formatStatusText = (status) => {
@@ -190,12 +190,12 @@ export const CaseDetailDocumentPacksPanel = ({ caseId, caseInternalId, attachmen
             const fileRef = currentVersion?.fileReference;
             
             return (
-              <div key={doc._id} className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden hover:border-gray-300 transition-all duration-200">
-                <div className="p-4" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div key={doc._id} className="rounded-sm border-t border-slate-200 bg-white p-4 transition-colors">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                   <div style={{ flex: '1', minWidth: '200px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <h3 className="text-sm font-semibold text-gray-900">{doc.name}</h3>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${getStatusBadgeClass(doc.status)}`}>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-900">{doc.name}</h3>
+                      <span className={`text-[11px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded-sm border ${getStatusBadgeClass(doc.status)}`}>
                         {formatStatusText(doc.status)}
                       </span>
                     </div>

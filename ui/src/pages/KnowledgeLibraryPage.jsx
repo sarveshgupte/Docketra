@@ -80,10 +80,13 @@ const TYPE_COLORS = {
 
 const BADGE_BASE = {
   display: 'inline-block',
-  padding: '0.15em 0.55em',
-  borderRadius: '999px',
-  fontSize: '0.75rem',
+  padding: '1px 6px',
+  borderRadius: '2px',
+  fontSize: '11px',
   fontWeight: 600,
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+  fontFamily: 'ui-monospace, monospace',
   lineHeight: 1.4,
   whiteSpace: 'nowrap',
 };

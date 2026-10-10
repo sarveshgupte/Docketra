@@ -43,16 +43,17 @@
   --dt-info-subtle:    #eff6ff;
 
   /* ── Radius ──────────────────────────────────────────────────── */
-  --dt-radius-control: 8px;      /* rounded.md */
-  --dt-radius-card:    12px;     /* rounded.lg */
-  --dt-radius-panel:   16px;     /* rounded.xl */
-  --dt-radius-pill:    9999px;
+  --dt-radius-control: 2px;      /* subtle control radius */
+  --dt-radius-card:    2px;      /* subtle card/container radius */
+  --dt-radius-panel:   6px;      /* modal/dialog radius */
+  --dt-radius-pill:    2px;      /* replaced excessive pills with compact chip radius */
+  --dt-radius-dot:     9999px;   /* reserved strictly for status dots */
 
   /* ── Shadows ─────────────────────────────────────────────────── */
-  --dt-shadow-card:    0 1px 2px rgba(0, 0, 0, 0.05);
-  --dt-shadow-control: 0 1px 1px rgba(0, 0, 0, 0.03);
-  --dt-shadow-popover: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --dt-shadow-modal:   0 8px 32px rgba(0, 0, 0, 0.12);
+  --dt-shadow-card:    none;
+  --dt-shadow-control: none;
+  --dt-shadow-popover: 0 4px 12px rgba(15, 23, 42, 0.06);
+  --dt-shadow-modal:   0 16px 32px rgba(15, 23, 42, 0.1);
 
   /* ── Typography ──────────────────────────────────────────────── */
   --dt-font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -129,12 +130,12 @@
   --status-neutral-color:  #6b7280;
 
   /* ── Radius aliases ──────────────────────────────────────────── */
-  --radius-xs:   4px;
+  --radius-xs:   1px;
   --radius-sm:   var(--dt-radius-control);
   --radius-md:   var(--dt-radius-card);
   --radius-lg:   var(--dt-radius-panel);
-  --radius-xl:   16px;
-  --radius-pill: 9999px;
+  --radius-xl:   8px;
+  --radius-pill: 2px;
 
   /* ── Shadow aliases ──────────────────────────────────────────── */
   --shadow-xs: none;
