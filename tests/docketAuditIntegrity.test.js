@@ -2,6 +2,7 @@
 const assert = require('assert');
 const DocketAudit = require('../src/models/DocketAudit.model');
 const docketAuditService = require('../src/services/docketAudit.service');
+const mongoose = require('mongoose');
 const Case = require('../src/models/Case.model');
 const { reopenDuePending } = require('../src/services/docketWorkflow.service');
 const { REASON_CODES } = require('../src/services/pilotDiagnostics.service');
@@ -50,6 +51,7 @@ async function testReopenMovesToWorkbenchWithAudit() {
   const observed = [];
 
   try {
+    mongoose.connection.readyState = 1;
     Case.find = async (filter) => {
       observedFindFilter = filter;
       return [{
