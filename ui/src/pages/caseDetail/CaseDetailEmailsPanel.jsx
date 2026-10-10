@@ -293,7 +293,7 @@ export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefresh
           </div>
 
           <div>
-            <Textarea label="Email Content (Body) *" value={sendBody} onChange={e => setSendBody(e.target.value)} rows={6} required />
+            <Textarea label="Email Content (Body)" value={sendBody} onChange={e => setSendBody(e.target.value)} rows={6} required />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
             <Button type="button" variant="outline" onClick={handleCopyLinkOnly} disabled={sending}>

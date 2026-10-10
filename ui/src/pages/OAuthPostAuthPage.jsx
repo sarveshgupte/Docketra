@@ -159,7 +159,7 @@ export const OAuthPostAuthPage = () => {
               <p>Your firm name generates your permanent workspace URL.</p>
             </div>
 
-            <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-700 flex items-center justify-between">
+            <div className="mb-4 rounded-sm border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-700 flex items-center justify-between">
               <span className="font-semibold text-slate-900">Signed in as:</span>
               <span className="font-mono text-slate-800">{pendingEmail}</span>
             </div>
@@ -175,7 +175,7 @@ export const OAuthPostAuthPage = () => {
                 <Input
                   id="google-signup-firm"
                   type="text"
-                  label="Firm Name *"
+                  label="Firm Name"
                   placeholder="e.g. Apex Legal & Associates"
                   value={firmName}
                   onChange={(e) => setFirmName(e.target.value)}
@@ -185,9 +185,9 @@ export const OAuthPostAuthPage = () => {
                 />
               </div>
 
-              <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
-                <span className="font-bold uppercase tracking-wider text-sky-700 text-[10px] block">Workspace URL Preview</span>
-                <span className="font-mono font-bold text-sky-950 mt-1 block">
+              <div className="rounded-sm border border-slate-200 bg-slate-50 p-3 text-xs text-slate-800">
+                <span className="font-bold uppercase tracking-wider text-slate-600 text-[10px] block">Workspace URL Preview</span>
+                <span className="font-mono font-bold text-slate-950 mt-1 block">
                   docketra.in/{getWorkspaceSlugPreview(firmName)}
                 </span>
               </div>

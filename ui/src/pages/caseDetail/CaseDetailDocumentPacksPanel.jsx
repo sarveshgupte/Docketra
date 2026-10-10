@@ -370,7 +370,7 @@ export const CaseDetailDocumentPacksPanel = ({ caseId, caseInternalId, attachmen
                 <p className="text-[10px] text-gray-400 mt-1">If your file is not listed, upload it in the Attachments tab first.</p>
               </div>
               <div>
-                <Textarea label="What changed in this version? (Required) *" value={versionChangeNote} onChange={e => setVersionChangeNote(e.target.value)} placeholder="e.g. Fixed address mismatch on page 2, updated salary details" rows={3} required />
+                <Textarea label="What changed in this version? (Required)" value={versionChangeNote} onChange={e => setVersionChangeNote(e.target.value)} placeholder="e.g. Fixed address mismatch on page 2, updated salary details" rows={3} required />
               </div>
               <div style={{ display: 'flex', justifyContent: 'end', gap: '8px', marginTop: '8px' }}>
                 <Button type="button" variant="outline" onClick={() => setSelectedDocForVersion(null)} disabled={uploadingVersion}>

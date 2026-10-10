@@ -257,7 +257,7 @@ export const CaseDetailExceptionsPanel = ({ caseInternalId, onRefreshCase }) => 
             <input type="text" className="neo-input w-full text-sm mt-1" value={ticketNumber} onChange={e => setTicketNumber(e.target.value)} placeholder="e.g. GSTN-108395810, MCA-ACK-93284" />
           </div>
           <div>
-            <Textarea label="Blocker Description *" value={description} onChange={e => setDescription(e.target.value)} placeholder="Provide full details on what is blocking this filing, what active steps are being taken, or what exact documents are required from the client..." rows={4} required />
+            <Textarea label="Blocker Description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Provide full details on what is blocking this filing, what active steps are being taken, or what exact documents are required from the client..." rows={4} required />
           </div>
           <div style={{ display: 'flex', justifyContent: 'end', gap: '8px', marginTop: '8px' }}>
             <Button type="button" variant="outline" onClick={() => setShowLogModal(false)} disabled={logging}>
