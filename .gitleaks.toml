@@ -12,5 +12,7 @@ regexes = [
   '''<db-name>''',
   '''<redis-host>''',
   '''ci-placeholder-[a-z0-9-]+''',
-  '''[a-z0-9._%+-]+@example\.com'''
+  '''[a-z0-9._%+-]+@example\.com''',
+  '''test-secret-key-that-is-at-least-32-chars-long''',
+  '''test-jwt-secret-12345678901234567890'''
 ]
