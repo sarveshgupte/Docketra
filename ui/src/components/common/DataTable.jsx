@@ -4,7 +4,7 @@ import { Button } from './Button';
 
 const joinClasses = (...classes) => classes.filter(Boolean).join(' ');
 
-const filterChipClassName = 'inline-flex items-center gap-1 rounded-[var(--dt-radius-pill)] border border-[var(--dt-border-whisper)] bg-[var(--dt-surface-subtle)] px-2 py-1 text-xs text-[var(--dt-text-secondary)] transition-colors hover:border-[var(--dt-border)] hover:bg-[var(--dt-surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dt-focus)]/45';
+const filterChipClassName = 'inline-flex items-center gap-1 rounded-sm border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-900';
 
 const tableMessageClassName = 'px-6 py-8 text-center text-sm';
 

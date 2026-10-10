@@ -648,7 +648,7 @@ const createFirmAndAdmin = async ({
     phoneNumber: normalizePhone(phone) || null,
     firmId: defaultClient._id,
     defaultClientId: defaultClient._id,
-    isOnboarded: authProvider === 'password',
+    isOnboarded: authProvider === 'password' || isGoogleAuth,
     ...coercePrimaryAdminCreationFields({ role: 'PRIMARY_ADMIN' }),
     status: 'active',
     isActive: true,
@@ -664,7 +664,7 @@ const createFirmAndAdmin = async ({
     ...(resolvedLegalConsent ? { legalConsent: resolvedLegalConsent } : {}),
     passwordSet: authProvider === 'password',
     passwordHash: passwordHash || null,
-    mustSetPassword: authProvider !== 'password',
+    mustSetPassword: false,
     mustChangePassword: false,
     inviteSentAt: new Date(),
     authProviders: {
@@ -863,6 +863,7 @@ module.exports = {
   isEmailFirmOwner,
   buildFirmUrl,
   resendCredentialsEmail,
+  sendSignupWelcomeEmail,
   // Backward-compatible aliases
   initiateManualSignup: initiateSignup,
   verifySignupOtp: verifyOtp,

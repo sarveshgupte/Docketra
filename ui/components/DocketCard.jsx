@@ -3,14 +3,15 @@ import { LifecycleBadge } from './LifecycleBadge';
 import { formatCaseName, formatDate, formatDocketId } from '../src/utils/formatters';
 
 const cardStyle = {
-  border: '1px solid #e5e7eb',
-  borderRadius: 12,
-  padding: '16px 18px',
+  border: 'none',
+  borderTop: '1px solid #e2e8f0',
+  borderRadius: 2,
+  padding: '14px 16px',
   background: '#fff',
   cursor: 'pointer',
   textAlign: 'left',
   width: '100%',
-  transition: 'box-shadow 0.15s ease, border-color 0.15s ease, transform 0.1s ease, opacity 0.1s ease',
+  transition: 'background-color 0.15s ease',
 };
 
 export function DocketCard({

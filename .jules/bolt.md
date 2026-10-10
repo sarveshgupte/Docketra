@@ -32,3 +32,6 @@
 ## 2024-12-14 - Optimize getUsers pagination query
 **Learning:** Replaced concurrent execution of `User.find()` and `User.countDocuments()` with a single `User.find()` query using `limit(limit + 1)`.
 **Action:** Use `limit(limit + 1)` instead of `countDocuments` for pagination queries to eliminate an entire database count operation, reducing latency and DB load.
+## 2024-10-26 - Bolt: Optimize threshold check for last active admin
+**Learning:** Checking if a firm has more than 1 active admin by using `User.countDocuments()` forces MongoDB to scan all index entries, which is inefficient. Using `find().limit(2)` allows an O(1) early return.
+**Action:** Replace `countDocuments()` with `find().select("_id").limit(2).lean()` for threshold checks (e.g., `<= 1`) and evaluate the length of the result array to save database CPU and latency.

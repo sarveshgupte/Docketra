@@ -62,20 +62,20 @@ export const Button = ({
   const normalizedVariant = normalizeVariant(variant);
 
   const baseClassesBySize = {
-    xs: 'inline-flex min-h-7 items-center justify-center rounded-[var(--dt-radius-control)] border font-medium leading-4 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--dt-surface)] disabled:cursor-not-allowed disabled:opacity-60 text-xs px-2 py-1',
-    sm: 'inline-flex min-h-8 items-center justify-center rounded-[var(--dt-radius-control)] border font-medium leading-4 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--dt-surface)] disabled:cursor-not-allowed disabled:opacity-60 text-xs px-3 py-1.5',
-    md: 'inline-flex min-h-11 items-center justify-center rounded-[var(--dt-radius-control)] border font-medium leading-5 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--dt-surface)] disabled:cursor-not-allowed disabled:opacity-60 text-sm px-4 py-2.5',
-    lg: 'inline-flex min-h-12 items-center justify-center rounded-[var(--dt-radius-control)] border font-medium leading-5 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--dt-surface)] disabled:cursor-not-allowed disabled:opacity-60 text-base px-5 py-3',
+    xs: 'inline-flex min-h-6 items-center justify-center rounded-[var(--dt-radius-control)] font-medium leading-4 transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-900 disabled:cursor-not-allowed disabled:opacity-40 text-[11px] px-2 py-0.5',
+    sm: 'inline-flex min-h-7 items-center justify-center rounded-[var(--dt-radius-control)] font-medium leading-4 transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-900 disabled:cursor-not-allowed disabled:opacity-40 text-xs px-2.5 py-1',
+    md: 'inline-flex min-h-8 items-center justify-center rounded-[var(--dt-radius-control)] font-medium leading-5 transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-900 disabled:cursor-not-allowed disabled:opacity-40 text-xs px-3 py-1.5 active:scale-[0.99]',
+    lg: 'inline-flex min-h-9 items-center justify-center rounded-[var(--dt-radius-control)] font-medium leading-5 transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-900 disabled:cursor-not-allowed disabled:opacity-40 text-sm px-4 py-2 active:scale-[0.99]',
   };
 
   const variantClasses = {
-    primary: 'border-[var(--dt-accent)] bg-[var(--dt-accent)] text-[var(--dt-text-inverse)] hover:border-[var(--dt-accent-hover)] hover:bg-[var(--dt-accent-hover)] active:border-[var(--dt-accent-active)] active:bg-[var(--dt-accent-active)] focus-visible:ring-[var(--dt-focus)]',
+    primary: 'border-0 bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950 focus-visible:ring-slate-900 shadow-none',
     secondary:
-      'border-[var(--dt-border)] bg-[var(--dt-surface)] text-[var(--dt-text)] hover:bg-[var(--dt-surface-subtle)] active:bg-[var(--dt-surface-muted)] focus-visible:ring-[var(--dt-focus)]',
+      'border-0 bg-transparent text-slate-600 hover:text-slate-900 underline-offset-4 hover:underline focus-visible:ring-slate-900 shadow-none',
     outline:
-      'border-[var(--dt-border)] bg-transparent text-[var(--dt-text)] hover:bg-[var(--dt-surface-subtle)] active:bg-[var(--dt-surface-muted)] focus-visible:ring-[var(--dt-focus)]',
-    danger: 'border-[var(--dt-error)] bg-[var(--dt-error)] text-[var(--dt-text-inverse)] hover:brightness-105 active:brightness-95 focus-visible:ring-[var(--dt-error)]',
-    ghost: 'border-transparent bg-transparent text-[var(--dt-text)] hover:bg-[var(--dt-surface-muted)] active:bg-[var(--dt-surface-muted)] focus-visible:ring-[var(--dt-focus)]',
+      'border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 hover:border-slate-300 focus-visible:ring-slate-900 shadow-none',
+    danger: 'border-0 bg-transparent text-rose-600 hover:bg-rose-50 hover:text-rose-700 active:bg-rose-100 focus-visible:ring-rose-600 shadow-none',
+    ghost: 'border-0 bg-transparent text-slate-600 hover:bg-slate-100/70 hover:text-slate-900 focus-visible:ring-slate-900 shadow-none',
   };
 
   const isDisabled = disabled || loading;

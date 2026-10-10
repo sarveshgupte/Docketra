@@ -109,23 +109,23 @@ export const CaseDetailExceptionsPanel = ({ caseInternalId, onRefreshCase }) => 
 
   const getTypeBadgeClass = (type) => {
     const map = {
-      portal_issue: 'bg-rose-100 text-rose-800 border-rose-200',
-      query_raised: 'bg-amber-100 text-amber-800 border-amber-200',
-      DSC_authorisation_pending: 'bg-violet-100 text-violet-800 border-violet-200',
-      client_delay: 'bg-orange-100 text-orange-800 border-orange-200',
-      payment_pending: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      data_mismatch: 'bg-purple-100 text-purple-800 border-purple-200',
-      other: 'bg-gray-100 text-gray-800 border-gray-200',
+      portal_issue: 'bg-rose-500/10 text-rose-800 border-rose-500/20',
+      query_raised: 'bg-amber-500/10 text-amber-800 border-amber-500/20',
+      DSC_authorisation_pending: 'bg-slate-500/10 text-slate-800 border-slate-300',
+      client_delay: 'bg-amber-500/10 text-amber-800 border-amber-500/20',
+      payment_pending: 'bg-emerald-500/10 text-emerald-800 border-emerald-500/20',
+      data_mismatch: 'bg-rose-500/10 text-rose-800 border-rose-500/20',
+      other: 'bg-slate-500/10 text-slate-700 border-slate-200',
     };
-    return map[type] || 'bg-gray-100 text-gray-800 border-gray-200';
+    return map[type] || 'bg-slate-500/10 text-slate-700 border-slate-200';
   };
 
   const getStatusLabelClass = (status) => {
     const s = String(status).toLowerCase();
-    if (s === 'open') return 'text-red-700 bg-red-50 border-red-200';
-    if (s === 'monitoring') return 'text-amber-700 bg-amber-50 border-amber-200';
-    if (s === 'resolved') return 'text-emerald-700 bg-emerald-50 border-emerald-200';
-    return 'text-gray-700 bg-gray-50 border-gray-200'; // closed_no_action
+    if (s === 'open') return 'text-rose-800 bg-rose-500/10 border-rose-500/20 font-semibold';
+    if (s === 'monitoring') return 'text-amber-800 bg-amber-500/10 border-amber-500/20';
+    if (s === 'resolved') return 'text-emerald-800 bg-emerald-500/10 border-emerald-500/20';
+    return 'text-slate-700 bg-slate-500/10 border-slate-200'; // closed_no_action
   };
 
   const getEtaLabel = (eta) => {
@@ -168,14 +168,14 @@ export const CaseDetailExceptionsPanel = ({ caseInternalId, onRefreshCase }) => 
           {exceptions.map((exc) => {
             const isOpen = exc.status === 'open' || exc.status === 'monitoring';
             return (
-              <div key={exc._id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow transition-shadow">
+              <div key={exc._id} className="rounded-sm border-t border-slate-200 bg-white p-4">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getTypeBadgeClass(exc.exceptionType)}`}>
+                      <span className={`text-[11px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded-sm border ${getTypeBadgeClass(exc.exceptionType)}`}>
                         {formatTypeLabel(exc.exceptionType)}
                       </span>
-                      <span className={`text-[9px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded border ${getStatusLabelClass(exc.status)}`}>
+                      <span className={`text-[11px] uppercase tracking-wider font-semibold font-mono px-1.5 py-0.5 rounded-sm border ${getStatusLabelClass(exc.status)}`}>
                         {exc.status.replace('_', ' ')}
                       </span>
                     </div>

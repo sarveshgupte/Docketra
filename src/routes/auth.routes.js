@@ -60,6 +60,7 @@ const {
   startGoogleAuth,
   googleAuthCallback,
   exchangeGoogleAuth,
+  completeGoogleSignup,
   } = require('../controllers/auth.controller');
 
 let profileHitCount = 0;
@@ -122,7 +123,8 @@ router.post('/verify-otp', authBlockEnforcer, authLimiter, otpVerifyLimiter, ver
 router.post('/find-workspace', authBlockEnforcer, authLimiter, sensitiveLimiter, findWorkspaceByXid);
 router.get('/google/start', authBlockEnforcer, authLimiter, startGoogleAuth);
 router.get('/google/callback', authBlockEnforcer, authLimiter, googleAuthCallback);
-router.post('/google/exchange', authBlockEnforcer, authLimiter, attachFirmFromSlug, exchangeGoogleAuth);
+router.post('/google/exchange', authBlockEnforcer, authLimiter, attachOptionalFirmFromSlug, exchangeGoogleAuth);
+router.post('/google/complete-signup', authBlockEnforcer, authLimiter, completeGoogleSignup);
 // Protected authentication endpoints - require authentication
 router.post('/logout', sensitiveLimiter, authenticate, logout);
 router.post('/change-password', sensitiveLimiter, authenticate, changePassword);
