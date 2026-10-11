@@ -3906,35 +3906,76 @@ const findWorkspaceByXid = async (req, res) => {
     }
 
     const users = await User.find({
-      $or: [{ xID: xid }, { xid }],
-      role: { $ne: 'SUPER_ADMIN' },
-      isActive: true,
-    }).select('firmId').lean();
+      $and: [
+        { $or: [{ xID: xid }, { xid }] },
+        { role: { $ne: 'SUPER_ADMIN' } },
+        { $or: [{ status: 'active' }, { isActive: true }] },
+      ],
+    }).select('firmId defaultClientId xID xid status isActive').lean();
 
-    const firmRefs = [...new Set(users.map((u) => normalizeMongoId(u.firmId)).filter(Boolean))];
+    const userRefs = [
+      ...users.map((u) => normalizeMongoId(u.firmId)),
+      ...users.map((u) => normalizeMongoId(u.defaultClientId)),
+    ].filter(Boolean);
+
+    const firmRefs = [...new Set(userRefs)];
     if (!firmRefs.length) return res.status(200).json({ success: true, data: { workspaces: [] } });
 
     const objectIdRefs = firmRefs.filter((value) => mongoose.Types.ObjectId.isValid(value));
     const stringRefs = firmRefs.filter((value) => !mongoose.Types.ObjectId.isValid(value)).map((value) => String(value).toUpperCase());
 
-    const firms = await Firm.find({
-      $and: [
-        { $or: [{ status: 'active' }, { isActive: true }] },
-        {
-          $or: [
-            objectIdRefs.length ? { _id: { $in: objectIdRefs } } : null,
-            stringRefs.length ? { firmId: { $in: stringRefs } } : null,
-          ].filter(Boolean),
-        },
-      ],
-    }).select('firmSlug name').lean();
+    const [firms, clients] = await Promise.all([
+      Firm.find({
+        $and: [
+          { $or: [{ status: 'active' }, { isActive: true }] },
+          {
+            $or: [
+              objectIdRefs.length ? { _id: { $in: objectIdRefs } } : null,
+              objectIdRefs.length ? { defaultClientId: { $in: objectIdRefs } } : null,
+              stringRefs.length ? { firmId: { $in: stringRefs } } : null,
+            ].filter(Boolean),
+          },
+        ],
+      }).select('firmSlug name firmName defaultClientId').lean(),
+      objectIdRefs.length
+        ? Client.find({
+          _id: { $in: objectIdRefs },
+          isDefaultClient: true,
+          $or: [{ status: 'ACTIVE' }, { status: 'active' }, { isActive: true }],
+        }).select('firmSlug businessName firmId').lean()
+        : [],
+    ]);
 
-    const workspaces = firms
-      .map((firm) => ({
-        firmSlug: String(firm.firmSlug || '').trim(),
-        firmName: String(firm.name || firm.firmName || '').trim() || 'Workspace',
-      }))
-      .filter((firm) => firm.firmSlug);
+    const workspaceMap = new Map();
+
+    (firms || []).forEach((firm) => {
+      const slug = String(firm.firmSlug || '').trim();
+      const name = String(firm.name || firm.firmName || '').trim() || 'Workspace';
+      if (slug && !workspaceMap.has(slug)) {
+        workspaceMap.set(slug, { firmSlug: slug, firmName: name });
+      }
+    });
+
+    (clients || []).forEach((client) => {
+      const slug = String(client.firmSlug || '').trim();
+      const name = String(client.businessName || client.name || '').trim() || 'Workspace';
+      if (slug && !workspaceMap.has(slug)) {
+        workspaceMap.set(slug, { firmSlug: slug, firmName: name });
+      }
+    });
+
+    if (workspaceMap.size === 0) {
+      for (const u of users) {
+        const canonical = await resolveCanonicalTenantForUser(u);
+        const slug = String(canonical?.firmSlug || '').trim();
+        const name = String(canonical?.firmName || '').trim() || 'Workspace';
+        if (slug && !workspaceMap.has(slug)) {
+          workspaceMap.set(slug, { firmSlug: slug, firmName: name });
+        }
+      }
+    }
+
+    const workspaces = Array.from(workspaceMap.values());
 
     return res.status(200).json({ success: true, data: { workspaces } });
   } catch (err) {

@@ -76,7 +76,14 @@ export const FirmLoginPage = () => {
   const messageType = location.state?.messageType;
   const isPasswordResetSuccess = successMessage === 'Password reset successfully. Please sign in with your new password.';
 
-  const [xid, setXid] = useState(location.state?.xid || '');
+  const [xid, setXid] = useState(() => {
+    if (location.state?.xid) return location.state.xid;
+    try {
+      return sessionStorage.getItem('docketra_last_xid') || '';
+    } catch (_) {
+      return '';
+    }
+  });
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [loginToken, setLoginToken] = useState('');
