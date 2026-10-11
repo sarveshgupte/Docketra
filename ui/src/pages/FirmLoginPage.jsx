@@ -76,11 +76,17 @@ export const FirmLoginPage = () => {
   const messageType = location.state?.messageType;
   const isPasswordResetSuccess = successMessage === 'Password reset successfully. Please sign in with your new password.';
 
-  const [xid, setXid] = useState('');
+  const [xid, setXid] = useState(location.state?.xid || '');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [loginToken, setLoginToken] = useState('');
   const [step, setStep] = useState('credentials');
+
+  useEffect(() => {
+    if (location.state?.xid && !xid) {
+      setXid(location.state.xid);
+    }
+  }, [location.state?.xid]);
   const [otpHint, setOtpHint] = useState('');
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});

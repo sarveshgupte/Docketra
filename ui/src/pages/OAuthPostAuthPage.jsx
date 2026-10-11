@@ -38,8 +38,17 @@ export const OAuthPostAuthPage = () => {
   const [agreedToPilotTerms, setAgreedToPilotTerms] = useState(true);
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [createdWorkspace, setCreatedWorkspace] = useState(null);
 
   const initiatedRef = React.useRef(false);
+
+  useEffect(() => {
+    if (!createdWorkspace?.isSessionActive || !createdWorkspace?.route) return;
+    const timer = setTimeout(() => {
+      navigate(createdWorkspace.route, { replace: true });
+    }, 2200);
+    return () => clearTimeout(timer);
+  }, [createdWorkspace, navigate]);
 
   useEffect(() => {
     if (mode === 'signup_pending') return;
@@ -99,19 +108,33 @@ export const OAuthPostAuthPage = () => {
       const responseData = response?.data || {};
       const newExchangeToken = responseData?.exchangeToken;
       const newFirmSlug = responseData?.firmSlug;
+      const xid = responseData?.xid;
+
+      let sessionHydrated = false;
+      let targetRoute = null;
 
       if (newExchangeToken) {
-        const payload = await authApi.exchangeGoogleAuth({ exchangeToken: newExchangeToken, firmSlug: newFirmSlug });
-        authService.setSessionTokens(payload);
-        const profileResult = await fetchProfile({ force: true });
-        if (profileResult?.success && profileResult.data) {
-          navigate(resolvePostAuthRoute(profileResult.data), { replace: true });
-          return;
+        try {
+          const payload = await authApi.exchangeGoogleAuth({ exchangeToken: newExchangeToken, firmSlug: newFirmSlug });
+          authService.setSessionTokens(payload);
+          const profileResult = await fetchProfile({ force: true });
+          if (profileResult?.success && profileResult.data) {
+            sessionHydrated = true;
+            targetRoute = resolvePostAuthRoute(profileResult.data);
+          }
+        } catch (_authErr) {
+          // If profile/exchange fails, fallback to firm login route with clear notice
         }
       }
 
       if (newFirmSlug) {
-        navigate(`/${newFirmSlug}/login`, { replace: true });
+        setCreatedWorkspace({
+          firmName: firmName.trim(),
+          firmSlug: newFirmSlug,
+          xid: xid || '',
+          route: sessionHydrated && targetRoute ? targetRoute : `/${newFirmSlug}/login`,
+          isSessionActive: sessionHydrated,
+        });
         return;
       }
 
@@ -137,8 +160,98 @@ export const OAuthPostAuthPage = () => {
             ? 'This workspace is currently inactive. Please contact your admin.'
             : errorCode === 'ACCOUNT_LOCKED_BY_ADMIN'
               ? `This user has been locked by primary admin. Please contact your primary admin at ${primaryAdminEmail || 'their email'}.`
-              : 'Google sign-in failed. Please retry login. If the issue persists, contact your administrator.'
+              : 'Google sign-in completed, but we could not load your workspace profile. Please retry login or use your xID/password.'
   );
+
+  // If workspace was just created, render success confirmation card
+  if (createdWorkspace) {
+    return (
+      <div className="find-workspace-page auth-public-page">
+        <div className="find-workspace-page__shell">
+          <section className="find-workspace-page__context" aria-label="Workspace created successfully">
+            <p className="find-workspace-page__eyebrow">Docketra · Workspace activation</p>
+            <h1 className="find-workspace-page__heading">Workspace ready</h1>
+            <p className="find-workspace-page__intro">
+              Your firm workspace <strong>{createdWorkspace.firmName}</strong> has been created successfully.
+            </p>
+          </section>
+
+          <Card className="find-workspace-page__card auth-public-page__card">
+            <div className="find-workspace-page__card-header">
+              <h2>Workspace Details</h2>
+              <p>Your primary admin credentials and direct workspace link.</p>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              <div className="rounded-sm border border-emerald-200 bg-emerald-50/70 p-3 text-xs text-emerald-950 flex items-start gap-2.5">
+                <span className="text-emerald-700 text-sm leading-none mt-0.5">✓</span>
+                <div>
+                  <p className="font-semibold text-emerald-900">Firm account created successfully</p>
+                  <p className="text-emerald-800 text-[11px] mt-0.5">
+                    A confirmation email with your credentials has been sent to <strong>{pendingEmail}</strong>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-sm border border-slate-200 bg-slate-50 p-3 text-xs space-y-2">
+                <div className="flex justify-between items-center py-0.5 border-b border-slate-200/60 pb-1.5">
+                  <span className="text-slate-500 font-medium">Firm Name:</span>
+                  <span className="text-slate-900 font-semibold">{createdWorkspace.firmName}</span>
+                </div>
+                {createdWorkspace.xid && (
+                  <div className="flex justify-between items-center py-0.5 border-b border-slate-200/60 pb-1.5">
+                    <span className="text-slate-500 font-medium">Primary Admin xID:</span>
+                    <span className="font-mono font-bold text-slate-900">{createdWorkspace.xid}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center py-0.5 border-b border-slate-200/60 pb-1.5">
+                  <span className="text-slate-500 font-medium">Workspace URL:</span>
+                  <span className="font-mono text-slate-800 text-[11px]">docketra.in/{createdWorkspace.firmSlug}/login</span>
+                </div>
+                <div className="flex justify-between items-center py-0.5">
+                  <span className="text-slate-500 font-medium">Authentication:</span>
+                  <span className="font-medium text-emerald-700">Google Verified</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {createdWorkspace.isSessionActive ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    fullWidth
+                    onClick={() => navigate(createdWorkspace.route, { replace: true })}
+                  >
+                    Go to Workspace Dashboard
+                  </Button>
+                  <p className="text-center text-xs text-slate-500">
+                    Launching workspace dashboard...
+                  </p>
+                </>
+              ) : (
+                <Button
+                  type="button"
+                  variant="primary"
+                  fullWidth
+                  onClick={() => navigate(createdWorkspace.route, {
+                    replace: true,
+                    state: {
+                      message: `Workspace "${createdWorkspace.firmName}" created successfully! Please sign in with Google or your xID.`,
+                      xid: createdWorkspace.xid,
+                    },
+                  })}
+                >
+                  Continue to Workspace Sign-In
+                </Button>
+              )}
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   // If in pending signup mode, render workspace creation form
   if (mode === 'signup_pending' && googlePendingToken) {

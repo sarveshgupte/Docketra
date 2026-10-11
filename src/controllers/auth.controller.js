@@ -160,7 +160,7 @@ const ensureUserDefaultClientLink = async (user, req = null) => {
   const needsRepair = (
     !defaultClient
     || !defaultClient.isDefaultClient
-    || normalizeMongoId(defaultClient.firmId) !== firmMongoId
+    || (normalizeMongoId(defaultClient.firmId) !== firmMongoId && normalizeMongoId(defaultClient._id) !== firmMongoId)
   );
 
   if (needsRepair) {
@@ -1666,7 +1666,6 @@ const getProfile = async (req, res) => {
     // Always fetch a fresh DB user for profile hydration and consistency.
     // Never mutate/populate req.user (middleware snapshot).
     const dbUser = await User.findById(requestUser?._id)
-      .populate('firmId', 'firmId name firmSlug isSetupComplete')
       .populate('reportsToUserId', 'name email xID role');
 
     if (!dbUser) {
@@ -1676,12 +1675,22 @@ const getProfile = async (req, res) => {
       });
     }
 
-    const {
-      firmMongoId,
-      firmCode,
-      firmSlug: resolvedFirmSlug,
-      tenantId,
-    } = getUserFirmContext(dbUser, req.jwt);
+    const rawUserFirmId = dbUser.firmId;
+    const tenantContext = await resolveCanonicalTenantForUser(dbUser);
+    const ownershipFirmId = tenantContext?.ownershipFirmId || tenantContext?.legacyFirmId || normalizeMongoId(rawUserFirmId);
+
+    let firmDoc = null;
+    if (rawUserFirmId && typeof rawUserFirmId === 'object' && (rawUserFirmId.name || rawUserFirmId.firmSlug)) {
+      firmDoc = rawUserFirmId;
+    } else if (ownershipFirmId) {
+      firmDoc = await Firm.findById(ownershipFirmId).select('firmId name firmSlug isSetupComplete').lean();
+    }
+
+    const firmMongoId = normalizeMongoId(rawUserFirmId) || tenantContext?.tenantId || normalizeMongoId(firmDoc?._id);
+    const firmCode = firmDoc?.firmId || tenantContext?.firmIdString || req.jwt?.firmIdString || null;
+    const resolvedFirmSlug = req.jwt?.firmSlug || tenantContext?.firmSlug || firmDoc?.firmSlug || null;
+    const tenantId = tenantContext?.tenantId || req.jwt?.firmId || firmMongoId;
+
     if (!firmMongoId) {
       return res.status(401).json({
         success: false,
@@ -1708,7 +1717,7 @@ const getProfile = async (req, res) => {
         message: 'Workspace context could not be loaded. Please retry or contact support.',
       });
     }
-    const resolvedDefaultClientId = normalizeMongoId(req.jwt?.defaultClientId) || normalizeMongoId(dbUser.defaultClientId);
+    const resolvedDefaultClientId = normalizeMongoId(req.jwt?.defaultClientId) || normalizeMongoId(dbUser.defaultClientId) || normalizeMongoId(tenantContext?.defaultClientId);
     
     // Get profile info
     let profile = await UserProfile.findOne({ xID: dbUser.xID });
@@ -1839,14 +1848,14 @@ const getProfile = async (req, res) => {
         // OBJECTIVE 2: Include firm context (JWT-first approach)
         // Use JWT claims as primary source, DB as fallback for display
         // Firm metadata (read-only, admin-controlled)
-        firm: dbUser.firmId ? {
-          id: dbUser.firmId._id.toString(),
+        firm: (firmDoc || tenantContext || rawUserFirmId) ? {
+          id: firmMongoId,
           firmId: firmCode,
-          name: dbUser.firmId.name,
-          firmSlug: dbUser.firmId.firmSlug || resolvedFirmSlug,
-          isSetupComplete: Boolean(dbUser.firmId.isSetupComplete),
+          name: firmDoc?.name || tenantContext?.firmName || (typeof rawUserFirmId === 'object' ? rawUserFirmId?.name : null) || '',
+          firmSlug: resolvedFirmSlug,
+          isSetupComplete: Boolean(firmDoc?.isSetupComplete ?? true),
         } : null,
-        isSetupComplete: Boolean(dbUser.firmId?.isSetupComplete),
+        isSetupComplete: Boolean(firmDoc?.isSetupComplete ?? true),
         firmId: firmMongoId,
         firmCode,
         firmSlug: resolvedFirmSlug, // JWT-first: use token claim, fallback to DB
@@ -3638,16 +3647,29 @@ const getAllUsers = async (req, res) => {
     }
 
     // Get all users in same firm, excluding password-related fields
-    // Populate firm metadata for display
     const users = await User.find({
       firmId: adminFirmId,
       status: { $ne: 'deleted' },
     })
       .select('-passwordHash -passwordHistory -passwordSetupTokenHash -passwordResetTokenHash')
-      .populate('firmId', 'firmId name')
       .sort({ createdAt: -1 });
     
-    const normalizedUsers = users.map(mapUserResponse);
+    const tenantContext = await resolveCanonicalTenantFromFirmId(adminFirmId);
+    const ownershipFirmId = tenantContext?.ownershipFirmId || tenantContext?.legacyFirmId || adminFirmId;
+    const firmDoc = await Firm.findById(ownershipFirmId).select('firmId name').lean();
+    const fallbackFirm = firmDoc ? {
+      _id: adminFirmId,
+      firmId: firmDoc.firmId,
+      name: firmDoc.name || tenantContext?.firmName || null,
+    } : null;
+
+    const normalizedUsers = users.map((user) => {
+      const userObj = typeof user?.toObject === 'function' ? user.toObject() : { ...user };
+      if (fallbackFirm && (!userObj.firmId || typeof userObj.firmId !== 'object' || !userObj.firmId.name)) {
+        userObj.firmId = fallbackFirm;
+      }
+      return mapUserResponse(userObj);
+    });
     const requesterXid = String(req.user?.xID || '');
     const hasRequester = requesterXid && normalizedUsers.some((user) => String(user?.xID || '') === requesterXid);
     if (!hasRequester && requesterXid) {
