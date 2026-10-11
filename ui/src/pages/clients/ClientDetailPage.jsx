@@ -1285,7 +1285,7 @@ export default function ClientDetailPage() {
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                 + Add Compliance Matter — {clientData.businessName}
               </h3>
-              <button onClick={() => setShowAddMatterModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowAddMatterModal(false)} className="text-slate-400 hover:text-white" aria-label="Close modal" title="Close modal">
                 <Icons.X className="w-4 h-4" />
               </button>
             </div>
@@ -1365,7 +1365,7 @@ export default function ClientDetailPage() {
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                 Mark Filed — {activeItem.form}
               </h3>
-              <button onClick={() => setShowMarkFiledModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowMarkFiledModal(false)} className="text-slate-400 hover:text-white" aria-label="Close modal" title="Close modal">
                 <Icons.X className="w-4 h-4" />
               </button>
             </div>
@@ -1433,7 +1433,7 @@ export default function ClientDetailPage() {
                 <Icons.Send className="w-4 h-4 text-emerald-500" />
                 <span>Statutory Reminder Preview</span>
               </h3>
-              <button onClick={() => setShowReminderModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowReminderModal(false)} className="text-slate-400 hover:text-white" aria-label="Close modal" title="Close modal">
                 <Icons.X className="w-4 h-4" />
               </button>
             </div>
@@ -1482,7 +1482,7 @@ export default function ClientDetailPage() {
                   {activeItem.bench} • {activeItem.date}
                 </p>
               </div>
-              <button onClick={() => setShowOrderPdfModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowOrderPdfModal(false)} className="text-slate-400 hover:text-white" aria-label="Close modal" title="Close modal">
                 <Icons.X className="w-4 h-4" />
               </button>
             </div>
