@@ -5,7 +5,7 @@ const path = require('path');
 const { signGoogleState, parseGoogleState } = require('../src/services/authGoogle.service');
 const authRoutesSchema = require('../src/schemas/auth.routes.schema');
 
-process.env.JWT_SECRET = 'test-secret-key-that-is-at-least-32-chars-long';
+process.env.JWT_SECRET = 'ci-placeholder-test-secret-key-that-is-at-least-32-chars';
 
 // 1. Verify signGoogleState and parseGoogleState preserve workspace signup payload
 const statePayload = {

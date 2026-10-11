@@ -91,7 +91,7 @@
     "bullmq": "^5.70.0",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
-    "dotenv": "^17.4.0",
+    "dotenv": "^17.4.2",
     "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
