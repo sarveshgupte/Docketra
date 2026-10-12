@@ -1,75 +1,518 @@
-import { SUPPORT_EMAIL } from '../../config/publicContact';
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Section } from '../../components/layout/Section';
+import Container from '../../components/layout/Container';
 import SeoHead from '../../components/common/SeoHead';
+import { SUPPORT_EMAIL } from '../../config/publicContact';
 
-const SECTION_REVEAL = {
+const REVEAL = {
   initial: false,
   whileInView: { opacity: 1, y: 0 },
-  transition: { duration: 0.5, ease: 'easeOut' },
-  viewport: { once: true, amount: 0.1 },
+  transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] },
+  viewport: { once: true, amount: 0.08 },
 };
 
-export const PricingPage = () => (
-  <Section>
-    <SeoHead
-      canonicalPath="/pricing"
-      title="Early Access Pricing | Docketra"
-      description="Docketra is currently free while in testing. Explore early access features with full workspace access and zero setup fees."
-    />
-    <div className="mb-12">
-      <h1 className="type-section text-gray-900">Early Access Pricing</h1>
-      <p className="mt-4 type-body text-lg text-gray-600">
-        Docketra is currently free while in testing. Billing and subscriptions are not live yet.
-      </p>
-    </div>
+const COMPARISON_ROWS = [
+  {
+    feature: 'Storage & Document Custody',
+    docketra: 'Firm’s Own Google Drive (Sovereign BYOS)',
+    jamku: 'Centralized Proprietary Cloud',
+    excel: 'Local Hard Drives / Unencrypted WhatsApp',
+  },
+  {
+    feature: 'Mandatory Setup & Migration Fees',
+    docketra: '₹0 (Includes 24-Hr Concierge Migration)',
+    jamku: '₹3,000 to ₹15,000 Setup Surcharge',
+    excel: '₹0 (Manual typing)',
+  },
+  {
+    feature: 'Client Document Intake',
+    docketra: '1-Click Client Drop URL (Zero Login Required) + Inbound Email',
+    jamku: 'Requires Client Portal Registration',
+    excel: 'Unorganized WhatsApp Threads & Email Chaos',
+  },
+  {
+    feature: 'Out-of-the-box Statutory Blueprints',
+    docketra: '15+ Checklists (MCA, ROC, GST, Tax Audit 3CD)',
+    jamku: 'Generic Task Lists / Custom Setup Required',
+    excel: 'Static Outdated Spreadsheets',
+  },
+  {
+    feature: 'Maker-Checker Approval Hierarchy',
+    docketra: 'Native Trainee-Prepare / Partner-Sign-off',
+    jamku: 'Flat Task Re-assignment',
+    excel: 'Verbal / No Audit Trail',
+  },
+  {
+    feature: 'ICAI / ICSI Peer-Review Audit Trail',
+    docketra: 'Immutable, Timestamped SQC-1 Audit History',
+    jamku: 'Basic Change Log',
+    excel: 'None (Fails Peer-Review Standard)',
+  },
+];
 
-    <motion.div {...SECTION_REVEAL} className="grid w-full gap-8 lg:grid-cols-2">
-      <article className="relative flex h-full w-full flex-col rounded-2xl border-2 border-blue-500 p-8 bg-white shadow-xl">
-        <span className="absolute -top-3 left-6 rounded-full bg-blue-600 text-white px-3 py-1 text-xs font-bold uppercase tracking-wide">
-          Current phase
-        </span>
-        <div className="mb-10 mt-4">
-          <h2 className="text-xl font-bold text-gray-900">Early Access</h2>
-          <div className="mt-4 flex items-baseline text-4xl font-extrabold text-gray-900">
-            Free
+const FAQS = [
+  {
+    question: 'Can Docketra read our firm’s existing confidential tax returns in Google Drive?',
+    answer: 'No. When you connect Google Drive, Docketra creates its own dedicated firm folder. Docketra strictly only reads and manages the specific folder it created—nothing else. We have zero read, search, or index permissions for any of your firm’s pre-existing Drive folders, private client archives, or personal files.',
+  },
+  {
+    question: 'What happens to our client records if we cancel our subscription?',
+    answer: 'Because of Sovereign BYOS, 100% of your documents, folders, and organized filings live permanently inside your firm’s Google Drive. If you ever cancel, you keep everything. Zero data hostage, zero proprietary export fees.',
+  },
+  {
+    question: 'Our clients refuse to log into an external client portal. How do they submit files?',
+    answer: 'Your clients never have to register or remember a password. Docketra provides a 1-click Secure Client Upload URL for each docket. Clients simply open the link on their phone or desktop and drag-and-drop their bank statements, PAN cards, or invoices—which automatically attach to the docket and sync directly into your Google Drive. For email workflows, our upcoming Inbound Email bridge lets clients or clerks forward attachments directly to the docket.',
+  },
+  {
+    question: 'Our article clerks and trainees rotate every 2 to 3 years. How long does training take?',
+    answer: 'Zero days. Docketra ships with turnkey statutory checklists for MCA Annual Filings (MGT-7/AOC-4), DIR-3 KYC, GST, and Tax Audit Form 3CD. Fresh trainees follow step-by-step checklists on Day 1, while qualified partners maintain full maker-checker approval oversight.',
+  },
+  {
+    question: 'How does the Pioneer 30 Launch Cohort rate work?',
+    answer: 'The Pioneer rate (₹12,990 / year flat) is strictly limited to the first 30 verified Indian CA and CS practices. Once you activate your Pioneer Pass, your annual subscription rate is locked for life, protecting your firm from future price increases.',
+  },
+];
+
+export const PricingPage = () => {
+  const [isAnnual, setIsAnnual] = useState(true);
+  const [openFaq, setOpenFaq] = useState(null);
+
+  const toggleFaq = (index) => {
+    setOpenFaq(openFaq === index ? null : index);
+  };
+
+  return (
+    <div className="w-full bg-white text-slate-900 antialiased selection:bg-amber-500/25">
+      <SeoHead
+        canonicalPath="/pricing"
+        title="Transparent Practice Operations Pricing | Docketra"
+        description="Predictable, flat-rate pricing for Indian CA, CS, and compliance firms. Sovereign Google Drive BYOS, maker-checker QC, zero setup fees, and 30-day money-back guarantee."
+      />
+
+      {/* Header Section */}
+      <section className="relative overflow-hidden bg-slate-50/60 pt-20 pb-12 sm:pt-24 sm:pb-16 border-b border-slate-200/80">
+        <Container size="7xl" className="text-center">
+          <motion.div {...REVEAL} className="max-w-3xl mx-auto space-y-4">
+            <div className="inline-flex items-center gap-2 rounded-xs border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-mono font-semibold uppercase tracking-wider text-amber-800">
+              <span className="h-1.5 w-1.5 rounded-xs bg-amber-500" />
+              <span>Transparent Sovereign Pricing</span>
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
+              Predictable pricing for Indian CA & CS practices.
+            </h1>
+            <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
+              No hidden setup fees. No per-clerk penalties. Keep 100% of client working papers inside your firm’s own Google Drive with zero data lock-in.
+            </p>
+
+            {/* Annual / Monthly Toggle */}
+            <div className="pt-6 flex items-center justify-center gap-3">
+              <span className={`text-xs font-semibold ${!isAnnual ? 'text-slate-950' : 'text-slate-500'}`}>
+                Monthly Billing
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isAnnual}
+                onClick={() => setIsAnnual(!isAnnual)}
+                className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-slate-900 transition-colors duration-200 ease-in-out focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                    isAnnual ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-semibold ${isAnnual ? 'text-slate-950' : 'text-slate-500'}`}>
+                  Annual Billing
+                </span>
+                <span className="rounded-xs bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 uppercase tracking-wide">
+                  Save ₹5,000 + Lock Pioneer Rate
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        </Container>
+      </section>
+
+      {/* Pricing Cards Grid */}
+      <section className="py-16 bg-white border-b border-slate-200/80">
+        <Container size="7xl">
+          <div className="grid gap-8 lg:grid-cols-3 items-stretch">
+            {/* Free Sandbox */}
+            <motion.div
+              {...REVEAL}
+              className="flex flex-col rounded-sm border border-slate-200 bg-white p-7 hover:border-slate-300 transition-all shadow-xs"
+            >
+              <div className="border-b border-slate-100 pb-6">
+                <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Evaluation / Solo Practice
+                </span>
+                <h2 className="mt-2 text-xl font-bold text-slate-950">Free Sandbox</h2>
+                <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
+                  Test real statutory workflows with zero risk. Ideal for solo CAs and practice evaluation.
+                </p>
+                <div className="mt-6 flex items-baseline gap-1 text-slate-950">
+                  <span className="text-4xl font-extrabold tracking-tight">₹0</span>
+                  <span className="text-xs font-medium text-slate-500">/ forever</span>
+                </div>
+                <div className="mt-2 text-[11px] font-mono text-slate-500">
+                  Up to 2 team seats • Capped at 5 clients & 15 dockets
+                </div>
+              </div>
+
+              <div className="flex-1 py-6 space-y-3">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  What’s Included:
+                </span>
+                <ul className="space-y-2.5 text-xs text-slate-700">
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>1-Click Sovereign Google Drive (`drive.file` scope)</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>Native Maker-Checker review sign-offs</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>Statutory compliance calendar & reminders</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>Tamper-evident audit trail history</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>Drag-and-drop document dropzone</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100">
+                <Link
+                  to="/signup"
+                  className="inline-flex w-full h-10 items-center justify-center rounded-xs border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors"
+                >
+                  Start Free Sandbox
+                </Link>
+              </div>
+            </motion.div>
+
+            {/* Starter Tier - Featured Pioneer 30 */}
+            <motion.div
+              {...REVEAL}
+              className="relative flex flex-col rounded-sm border-2 border-blue-600 bg-white p-7 shadow-lg lg:-translate-y-2"
+            >
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3.5 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider text-white shadow-xs">
+                Pioneer 30 Cohort • 18 Spots Left
+              </div>
+
+              <div className="border-b border-slate-100 pb-6 pt-2">
+                <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-blue-700">
+                  Boutique Practices (2 to 5 staff)
+                </span>
+                <h2 className="mt-2 text-xl font-bold text-slate-950">Starter Tier</h2>
+                <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
+                  The complete operations OS for small firms. Replaces fragmented spreadsheets and WhatsApp groups.
+                </p>
+                <div className="mt-6 flex items-baseline gap-1 text-slate-950">
+                  {isAnnual ? (
+                    <>
+                      <span className="text-4xl font-extrabold tracking-tight text-blue-700">₹12,990</span>
+                      <span className="text-xs font-medium text-slate-500">/ year</span>
+                      <span className="ml-2 text-xs line-through text-slate-400">₹17,990</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-4xl font-extrabold tracking-tight text-slate-950">₹1,999</span>
+                      <span className="text-xs font-medium text-slate-500">/ month</span>
+                    </>
+                  )}
+                </div>
+                <div className="mt-2 text-[11px] font-mono text-blue-700 font-semibold">
+                  Up to 5 team seats • Up to 50 active clients • Unlimited dockets
+                </div>
+              </div>
+
+              <div className="flex-1 py-6 space-y-3.5">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-blue-700">
+                  Includes All 4 Grand Slam Bonuses:
+                </span>
+                <ul className="space-y-2.5 text-xs text-slate-700">
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-blue-600 font-bold">★</span>
+                    <span className="font-semibold text-slate-900">
+                      Bonus #1: Frictionless Client Drop Link & Inbound Email Bridge
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-blue-600 font-bold">★</span>
+                    <span className="font-semibold text-slate-900">
+                      Bonus #2: 15+ Turnkey Statutory Blueprints (MCA, ROC, GST, 3CD)
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-blue-600 font-bold">★</span>
+                    <span className="font-semibold text-slate-900">
+                      Bonus #3: 24-Hour Concierge Client Migration (Zero setup fees)
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-blue-600 font-bold">★</span>
+                    <span className="font-semibold text-slate-900">
+                      Bonus #4: Certified Zero-Access Drive Security Whitepaper
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2.5 pt-1 border-t border-slate-100">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>30-Day 100% Zero-Data-Lock-In Guarantee</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100">
+                <Link
+                  to="/signup"
+                  className="inline-flex w-full h-10 items-center justify-center rounded-xs bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors"
+                >
+                  Claim Pioneer Annual Pass (₹12,990/yr)
+                </Link>
+                <p className="mt-2 text-center text-[10px] font-mono text-slate-500">
+                  Rate locked for life • Zero setup surcharge
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Pro Tier */}
+            <motion.div
+              {...REVEAL}
+              className="flex flex-col rounded-sm border border-slate-200 bg-white p-7 hover:border-slate-300 transition-all shadow-xs"
+            >
+              <div className="border-b border-slate-100 pb-6">
+                <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Growing Practices (6 to 15+ staff)
+                </span>
+                <h2 className="mt-2 text-xl font-bold text-slate-950">Pro Tier</h2>
+                <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
+                  For expanding compliance and audit firms requiring departmental queues and custom controls.
+                </p>
+                <div className="mt-6 flex items-baseline gap-1 text-slate-950">
+                  {isAnnual ? (
+                    <>
+                      <span className="text-4xl font-extrabold tracking-tight">₹4,999</span>
+                      <span className="text-xs font-medium text-slate-500">/ mo billed annually</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-4xl font-extrabold tracking-tight">₹5,999</span>
+                      <span className="text-xs font-medium text-slate-500">/ month</span>
+                    </>
+                  )}
+                </div>
+                <div className="mt-2 text-[11px] font-mono text-slate-500">
+                  Up to 15 team seats • Unlimited active clients • Unlimited dockets
+                </div>
+              </div>
+
+              <div className="flex-1 py-6 space-y-3">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  Everything in Starter, plus:
+                </span>
+                <ul className="space-y-2.5 text-xs text-slate-700">
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>Multi-department queues (ROC, Direct Tax, GST, Legal)</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>Multi-partner DSC sign-off routing workflows</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>Priority SLA & direct concierge onboarding support</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>Dedicated firm onboarding & data migration engineer</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>Custom practice roles and granular staff permissions</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100">
+                <Link
+                  to="/signup"
+                  className="inline-flex w-full h-10 items-center justify-center rounded-xs border border-slate-950 bg-slate-950 px-4 text-xs font-semibold text-white hover:bg-slate-800 transition-colors"
+                >
+                  Onboard Pro Practice
+                </Link>
+              </div>
+            </motion.div>
           </div>
-          <p className="mt-3 text-sm text-gray-600">
-            Use Docketra during testing and help shape the product roadmap.
-          </p>
-        </div>
+        </Container>
+      </section>
 
-        <ul className="mb-10 flex-1 space-y-4">
-          {[
-            'No billing setup yet',
-            'No subscription checkout flow',
-            'Access to CMS + CRM + Tasks operating flow',
-            'Direct product feedback channel',
-          ].map((feature) => (
-            <li key={feature} className="flex items-start gap-3 text-sm text-gray-700">
-              <span className="text-green-500 font-bold">✓</span>
-              {feature}
-            </li>
-          ))}
-        </ul>
+      {/* 30-Day Zero-Risk Guarantee Banner */}
+      <section className="bg-slate-950 py-14 text-white border-b border-slate-800">
+        <Container size="7xl">
+          <div className="rounded-sm border border-slate-800 bg-slate-900/60 p-8 sm:p-10 flex flex-col md:flex-row items-center gap-8 justify-between">
+            <div className="space-y-2 max-w-2xl">
+              <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-amber-400">
+                The Sovereign Guarantee
+              </span>
+              <h2 className="text-2xl font-bold tracking-tight text-white">
+                30-Day Zero-Risk, Zero-Data-Lock-In Guarantee
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                Try Docketra for 30 days. If it doesn’t save your firm at least 10 hours a week on client follow-ups and review queues, email us for an instant 100% refund. Because 100% of your documents and organized client folders remain permanently inside your own Google Drive, you lose nothing and your files never leave your hands.
+              </p>
+            </div>
+            <div className="shrink-0 text-center">
+              <Link
+                to="/signup"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xs bg-amber-500 px-6 text-xs font-bold text-slate-950 transition-colors hover:bg-amber-400"
+              >
+                <span>Try Risk-Free for 30 Days</span>
+                <span>→</span>
+              </Link>
+              <div className="mt-2 text-[10px] font-mono text-slate-400">
+                Instant refund • Files stay in your Drive
+              </div>
+            </div>
+          </div>
+        </Container>
+      </section>
 
-        <Link to="/signup" className="w-full flex justify-center items-center rounded-xl px-4 py-3 text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors">
-          Request Early Access
-        </Link>
-      </article>
+      {/* Competitor Comparison Table */}
+      <section className="py-16 bg-slate-50/50 border-b border-slate-200/80">
+        <Container size="7xl">
+          <motion.div {...REVEAL} className="max-w-2xl mx-auto text-center space-y-2 mb-10">
+            <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              The Reality Check
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
+              How Docketra compares to legacy tools and Excel
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600">
+              Why leading Indian firms are abandoning centralized servers and messy spreadsheets.
+            </p>
+          </motion.div>
 
-      <article className="rounded-2xl border border-gray-200 bg-gray-50 p-8">
-        <h2 className="text-xl font-bold text-gray-900">Future Pricing</h2>
-        <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-          Commercial plans will be shared after testing milestones are complete. We are keeping
-          pricing simple and transparent until billing infrastructure is ready.
-        </p>
-        <p className="mt-6 text-sm text-gray-700">
-          Questions? Email <a href={`mailto:${SUPPORT_EMAIL}`} className="underline">{SUPPORT_EMAIL}</a>.
-        </p>
-      </article>
-    </motion.div>
-  </Section>
-);
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border border-slate-200 bg-white shadow-xs">
+              <thead className="bg-slate-100 text-slate-900 border-b border-slate-200 font-mono text-[11px] uppercase tracking-wider">
+                <tr>
+                  <th className="p-4 w-1/4">Operational Capability</th>
+                  <th className="p-4 w-1/4 bg-blue-50/80 text-blue-900 font-bold border-x border-blue-200">
+                    Docketra (Sovereign OS)
+                  </th>
+                  <th className="p-4 w-1/4 text-slate-700">Jamku / Legacy</th>
+                  <th className="p-4 w-1/4 text-slate-700">Excel + WhatsApp</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {COMPARISON_ROWS.map((row) => (
+                  <tr key={row.feature} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="p-4 font-semibold text-slate-900">{row.feature}</td>
+                    <td className="p-4 bg-blue-50/30 text-blue-950 font-medium border-x border-blue-200">
+                      <span className="text-emerald-600 font-bold mr-1.5">✓</span>
+                      {row.docketra}
+                    </td>
+                    <td className="p-4 text-slate-600">{row.jamku}</td>
+                    <td className="p-4 text-slate-600">{row.excel}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Container>
+      </section>
+
+      {/* FAQ Accordion */}
+      <section className="py-16 bg-white border-b border-slate-200/80">
+        <Container size="7xl">
+          <div className="max-w-3xl mx-auto space-y-8">
+            <div className="text-center space-y-2">
+              <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                Frequently Answered
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
+                Questions Managing Partners Ask Us
+              </h2>
+            </div>
+
+            <div className="divide-y divide-slate-200 border-y border-slate-200">
+              {FAQS.map((faq, idx) => (
+                <div key={faq.question} className="py-4">
+                  <button
+                    type="button"
+                    onClick={() => toggleFaq(idx)}
+                    className="flex w-full items-center justify-between text-left text-sm font-bold text-slate-950 hover:text-blue-600 transition-colors"
+                  >
+                    <span>{faq.question}</span>
+                    <span className="ml-4 font-mono text-base font-normal text-slate-400">
+                      {openFaq === idx ? '−' : '+'}
+                    </span>
+                  </button>
+                  {openFaq === idx && (
+                    <p className="mt-2.5 text-xs text-slate-600 leading-relaxed pr-8">
+                      {faq.answer}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-4 text-center text-xs text-slate-600">
+              Have a specific question about firm onboarding or custom roles? Reach our engineering team at{' '}
+              <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-blue-600 underline">
+                {SUPPORT_EMAIL}
+              </a>
+              .
+            </div>
+          </div>
+        </Container>
+      </section>
+
+      {/* Bottom CTA */}
+      <section className="bg-slate-50/60 py-16 text-center">
+        <Container size="7xl">
+          <motion.div {...REVEAL} className="max-w-2xl mx-auto space-y-4">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
+              Take sovereign control of your practice today.
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Join founding Indian CA & CS practices running audit-ready, zero-stress client operations.
+            </p>
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                to="/signup"
+                className="inline-flex w-full sm:w-auto h-10 items-center justify-center gap-2 rounded-xs bg-slate-950 px-6 text-xs font-semibold text-amber-400 hover:bg-slate-800 transition-colors"
+              >
+                <span>Start Free Sandbox (5 Clients)</span>
+                <span>→</span>
+              </Link>
+              <Link
+                to="/find-workspace"
+                className="inline-flex w-full sm:w-auto h-10 items-center justify-center rounded-xs border border-slate-300 bg-white px-5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                Find existing workspace
+              </Link>
+            </div>
+            <p className="text-[11px] font-mono text-slate-500 pt-1">
+              Zero setup fees • 1-Click Google Drive OAuth • 30-Day Money-Back Guarantee
+            </p>
+          </motion.div>
+        </Container>
+      </section>
+    </div>
+  );
+};
+
+export default PricingPage;

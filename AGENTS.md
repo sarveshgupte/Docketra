@@ -37,6 +37,16 @@ Before performing frontend work, review and apply relevant skills from:
 - .agents/skills/high-end-visual-design
 - .agents/skills/redesign-existing-projects
 - .agents/skills/stitch-design-taste
+- .agents/skills/better-interface
+- .agents/skills/better-ui
+- .agents/skills/better-typography
+- .agents/skills/better-colors
+- .agents/skills/better-accessibility
+- .agents/skills/better-layout
+- .agents/skills/better-writing
+- .agents/skills/build-design
+- .agents/skills/design-system-builder
+- .agents/skills/landing-page-scaffold
 
 Docketra is a premium B2B SaaS platform for:
 

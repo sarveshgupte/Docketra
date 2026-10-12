@@ -1,0 +1,13 @@
+{
+  "id": "P002",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "Even with restricted Google Drive permissions, letting any third-party tool connect to our client repository is too much of a confidentiality risk for sensitive ITR and ROC records. Furthermore, as a two-person practice with rotating article trainees, training them on new software is a waste of time when our manual folders suffice.",
+  "objection": "Granting third-party OAuth access to our firm's Google Drive creates an unacceptable risk of client data exposure or accidental corruption during peer reviews.",
+  "would_change_my_mind": "A verifiable zero-access security audit ensuring no external token access to file contents, coupled with an interface so effortless that fresh trainees require zero training.",
+  "price_too_cheap": 3500,
+  "price_cheap": 7500,
+  "price_expensive": 15000,
+  "price_too_expensive": 30000
+}

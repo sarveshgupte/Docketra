@@ -1,0 +1,13 @@
+{
+  "id": "P004",
+  "buys": true,
+  "purchases_first_month": 1,
+  "reason_code": "price",
+  "reason": "At ₹12,990 a year with no setup fees or per-user nickeling, it is affordable enough to fix my daily morning triage across 30 WhatsApp client groups while keeping files safe under restricted drive.file scope.",
+  "objection": "Will connecting my Google Drive give Docketra access to read all my firm's private files?",
+  "would_change_my_mind": "",
+  "price_too_cheap": 3000,
+  "price_cheap": 7000,
+  "price_expensive": 15000,
+  "price_too_expensive": 28000
+}

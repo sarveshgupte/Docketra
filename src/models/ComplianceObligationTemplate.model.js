@@ -33,7 +33,7 @@ const complianceObligationTemplateSchema = new mongoose.Schema({
   },
   obligationType: {
     type: String,
-    enum: ['GST', 'TDS', 'ROC', 'ANNUAL_FILING', 'OTHER'],
+    enum: ['GST', 'TDS', 'INCOME_TAX', 'ROC', 'COMPANIES_ACT', 'SEBI', 'FEMA', 'ANNUAL_FILING', 'OTHER'],
     required: true,
     default: 'OTHER',
     index: true,

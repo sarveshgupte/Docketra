@@ -1,0 +1,13 @@
+{
+  "id": "P006",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "convenience",
+  "reason": "I am eager to automate our morning WhatsApp document flood, but my article clerks rotate every couple of years and retraining them on a complex operating system is an ongoing drain. Until adoption is completely effortless for fresh trainees without partner handholding, I cannot justify paying for an annual subscription.",
+  "objection": "My article clerks rotate every 2-3 years; training them on complex software is a waste of time.",
+  "would_change_my_mind": "A zero-learning-curve interface that rotating article clerks can use on day one without any training, allowing WhatsApp dumps to triage directly into structured Drive folders.",
+  "price_too_cheap": 4000,
+  "price_cheap": 8000,
+  "price_expensive": 16000,
+  "price_too_expensive": 35000
+}

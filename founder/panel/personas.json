@@ -1,0 +1,222 @@
+[
+ {
+  "id": "P001",
+  "name": "Finn",
+  "age": 58,
+  "segment": "Mid-Sized Compliance Practice (6 to 20 staff)",
+  "income": 20596000,
+  "behaviour": "Deadline & peer-review panic",
+  "behaviour_how": "Stresses out during July ITR and October ROC filing rush; desperate for maker-checker accountability over article clerks.",
+  "objection": "My article clerks rotate every 2-3 years; training them on complex software is a waste of time.",
+  "habit": "you check 30 unread WhatsApp client groups every morning before tea"
+ },
+ {
+  "id": "P002",
+  "name": "Callum",
+  "age": 45,
+  "segment": "Solo Practitioner / 2-Person Practice",
+  "income": 1978000,
+  "behaviour": "Paranoid about client confidentiality",
+  "behaviour_how": "Terrified of data leaks; refused third-party cloud tools because they store ITR/PAN files in proprietary databases.",
+  "objection": "My article clerks rotate every 2-3 years; training them on complex software is a waste of time.",
+  "habit": "you do final review of ROC annual filing annexures at 10 PM during busy season"
+ },
+ {
+  "id": "P003",
+  "name": "Lina",
+  "age": 38,
+  "segment": "Small Partnership Firm (3 to 5 staff)",
+  "income": 2857000,
+  "behaviour": "Excel & WhatsApp diehard",
+  "behaviour_how": "Has run the practice on spreadsheets and WhatsApp groups for 10 years; deeply skeptical of new software unless dead simple.",
+  "objection": "I am a solo CA with one trainee—why should I ever upgrade beyond the free tier?",
+  "habit": "you spend 2 hours every Saturday reconciling which GST filings are still pending"
+ },
+ {
+  "id": "P004",
+  "name": "Hana",
+  "age": 26,
+  "segment": "Solo Practitioner / 2-Person Practice",
+  "income": 1639000,
+  "behaviour": "Frugal tool buyer",
+  "behaviour_how": "Wants flat, transparent pricing; hates per-user nickeling and hidden setup fees.",
+  "objection": "Will connecting my Google Drive give Docketra access to read all my firm's private files?",
+  "habit": "you check 30 unread WhatsApp client groups every morning before tea"
+ },
+ {
+  "id": "P005",
+  "name": "Aisha",
+  "age": 33,
+  "segment": "Small Partnership Firm (3 to 5 staff)",
+  "income": 6195000,
+  "behaviour": "Frugal tool buyer",
+  "behaviour_how": "Wants flat, transparent pricing; hates per-user nickeling and hidden setup fees.",
+  "objection": "I am a solo CA with one trainee—why should I ever upgrade beyond the free tier?",
+  "habit": "you get anxious when an article clerk leaves the firm with client data on their personal laptop"
+ },
+ {
+  "id": "P006",
+  "name": "Sana",
+  "age": 41,
+  "segment": "Small Partnership Firm (3 to 5 staff)",
+  "income": 2449000,
+  "behaviour": "Tech-forward modern practitioner",
+  "behaviour_how": "Active on LinkedIn, uses modern Mac/PC apps, eager to automate client intake and follow-ups.",
+  "objection": "My article clerks rotate every 2-3 years; training them on complex software is a waste of time.",
+  "habit": "you check 30 unread WhatsApp client groups every morning before tea"
+ },
+ {
+  "id": "P007",
+  "name": "Ezra",
+  "age": 31,
+  "segment": "Small Partnership Firm (3 to 5 staff)",
+  "income": 5347000,
+  "behaviour": "Excel & WhatsApp diehard",
+  "behaviour_how": "Has run the practice on spreadsheets and WhatsApp groups for 10 years; deeply skeptical of new software unless dead simple.",
+  "objection": "I am a solo CA with one trainee—why should I ever upgrade beyond the free tier?",
+  "habit": "you check 30 unread WhatsApp client groups every morning before tea"
+ },
+ {
+  "id": "P008",
+  "name": "Owen",
+  "age": 34,
+  "segment": "Mid-Sized Compliance Practice (6 to 20 staff)",
+  "income": 8875000,
+  "behaviour": "Frugal tool buyer",
+  "behaviour_how": "Wants flat, transparent pricing; hates per-user nickeling and hidden setup fees.",
+  "objection": "Will connecting my Google Drive give Docketra access to read all my firm's private files?",
+  "habit": "you do final review of ROC annual filing annexures at 10 PM during busy season"
+ },
+ {
+  "id": "P009",
+  "name": "Jordan",
+  "age": 36,
+  "segment": "Solo Practitioner / 2-Person Practice",
+  "income": 1171000,
+  "behaviour": "Paranoid about client confidentiality",
+  "behaviour_how": "Terrified of data leaks; refused third-party cloud tools because they store ITR/PAN files in proprietary databases.",
+  "objection": "I am a solo CA with one trainee—why should I ever upgrade beyond the free tier?",
+  "habit": "you do final review of ROC annual filing annexures at 10 PM during busy season"
+ },
+ {
+  "id": "P010",
+  "name": "Farah",
+  "age": 53,
+  "segment": "Small Partnership Firm (3 to 5 staff)",
+  "income": 6347000,
+  "behaviour": "Burned by legacy CA software",
+  "behaviour_how": "Tried Jamku or desktop ERP; found it cluttered, slow, or abandoned by staff after 2 months.",
+  "objection": "My article clerks rotate every 2-3 years; training them on complex software is a waste of time.",
+  "habit": "you spend 2 hours every Saturday reconciling which GST filings are still pending"
+ },
+ {
+  "id": "P011",
+  "name": "Rosa",
+  "age": 45,
+  "segment": "Mid-Sized Compliance Practice (6 to 20 staff)",
+  "income": 13881000,
+  "behaviour": "Excel & WhatsApp diehard",
+  "behaviour_how": "Has run the practice on spreadsheets and WhatsApp groups for 10 years; deeply skeptical of new software unless dead simple.",
+  "objection": "If files stay in our Google Drive, what happens if an assistant accidentally deletes or moves the folder?",
+  "habit": "you get anxious when an article clerk leaves the firm with client data on their personal laptop"
+ },
+ {
+  "id": "P012",
+  "name": "Sara",
+  "age": 54,
+  "segment": "Small Partnership Firm (3 to 5 staff)",
+  "income": 6068000,
+  "behaviour": "Excel & WhatsApp diehard",
+  "behaviour_how": "Has run the practice on spreadsheets and WhatsApp groups for 10 years; deeply skeptical of new software unless dead simple.",
+  "objection": "Will connecting my Google Drive give Docketra access to read all my firm's private files?",
+  "habit": "you check 30 unread WhatsApp client groups every morning before tea"
+ },
+ {
+  "id": "P013",
+  "name": "Sienna",
+  "age": 41,
+  "segment": "Solo Practitioner / 2-Person Practice",
+  "income": 1115000,
+  "behaviour": "Excel & WhatsApp diehard",
+  "behaviour_how": "Has run the practice on spreadsheets and WhatsApp groups for 10 years; deeply skeptical of new software unless dead simple.",
+  "objection": "Jamku charges only ₹6,500 a year—why is Docketra more expensive?",
+  "habit": "you check 30 unread WhatsApp client groups every morning before tea"
+ },
+ {
+  "id": "P014",
+  "name": "Luca",
+  "age": 40,
+  "segment": "Small Partnership Firm (3 to 5 staff)",
+  "income": 4730000,
+  "behaviour": "Frugal tool buyer",
+  "behaviour_how": "Wants flat, transparent pricing; hates per-user nickeling and hidden setup fees.",
+  "objection": "My clients will never use an intake portal—they just dump bills on WhatsApp.",
+  "habit": "you check 30 unread WhatsApp client groups every morning before tea"
+ },
+ {
+  "id": "P015",
+  "name": "Oscar",
+  "age": 29,
+  "segment": "Solo Practitioner / 2-Person Practice",
+  "income": 1121000,
+  "behaviour": "Deadline & peer-review panic",
+  "behaviour_how": "Stresses out during July ITR and October ROC filing rush; desperate for maker-checker accountability over article clerks.",
+  "objection": "My clients will never use an intake portal—they just dump bills on WhatsApp.",
+  "habit": "you get anxious when an article clerk leaves the firm with client data on their personal laptop"
+ },
+ {
+  "id": "P016",
+  "name": "Rohan",
+  "age": 30,
+  "segment": "Mid-Sized Compliance Practice (6 to 20 staff)",
+  "income": 16012000,
+  "behaviour": "Paranoid about client confidentiality",
+  "behaviour_how": "Terrified of data leaks; refused third-party cloud tools because they store ITR/PAN files in proprietary databases.",
+  "objection": "Jamku charges only ₹6,500 a year—why is Docketra more expensive?",
+  "habit": "you attend your local ICAI/ICSI study circle meet once a month"
+ },
+ {
+  "id": "P017",
+  "name": "Maya",
+  "age": 39,
+  "segment": "Solo Practitioner / 2-Person Practice",
+  "income": 1555000,
+  "behaviour": "Deadline & peer-review panic",
+  "behaviour_how": "Stresses out during July ITR and October ROC filing rush; desperate for maker-checker accountability over article clerks.",
+  "objection": "If files stay in our Google Drive, what happens if an assistant accidentally deletes or moves the folder?",
+  "habit": "you do final review of ROC annual filing annexures at 10 PM during busy season"
+ },
+ {
+  "id": "P018",
+  "name": "Pablo",
+  "age": 56,
+  "segment": "Solo Practitioner / 2-Person Practice",
+  "income": 1140000,
+  "behaviour": "Burned by legacy CA software",
+  "behaviour_how": "Tried Jamku or desktop ERP; found it cluttered, slow, or abandoned by staff after 2 months.",
+  "objection": "Will connecting my Google Drive give Docketra access to read all my firm's private files?",
+  "habit": "you attend your local ICAI/ICSI study circle meet once a month"
+ },
+ {
+  "id": "P019",
+  "name": "Marco",
+  "age": 38,
+  "segment": "Solo Practitioner / 2-Person Practice",
+  "income": 932000,
+  "behaviour": "Paranoid about client confidentiality",
+  "behaviour_how": "Terrified of data leaks; refused third-party cloud tools because they store ITR/PAN files in proprietary databases.",
+  "objection": "If files stay in our Google Drive, what happens if an assistant accidentally deletes or moves the folder?",
+  "habit": "you attend your local ICAI/ICSI study circle meet once a month"
+ },
+ {
+  "id": "P020",
+  "name": "Jasper",
+  "age": 48,
+  "segment": "Solo Practitioner / 2-Person Practice",
+  "income": 1393000,
+  "behaviour": "Tech-forward modern practitioner",
+  "behaviour_how": "Active on LinkedIn, uses modern Mac/PC apps, eager to automate client intake and follow-ups.",
+  "objection": "Will connecting my Google Drive give Docketra access to read all my firm's private files?",
+  "habit": "you check 30 unread WhatsApp client groups every morning before tea"
+ }
+]

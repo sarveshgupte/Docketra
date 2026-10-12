@@ -1,0 +1,13 @@
+{
+  "id": "P012",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "We have run our practice on spreadsheets and WhatsApp for ten years, and connecting third-party software to our Google Drive feels like handing over access to all our confidential client records. Until I am completely certain that an external tool cannot read or touch our existing firm folders, I will not pay for a subscription.",
+  "objection": "Will connecting my Google Drive give Docketra access to read all my firm's private files?",
+  "would_change_my_mind": "An independent security verification or live proof showing Docketra cannot access any of our existing private Google Drive folders.",
+  "price_too_cheap": 4000,
+  "price_cheap": 8000,
+  "price_expensive": 18000,
+  "price_too_expensive": 35000
+}

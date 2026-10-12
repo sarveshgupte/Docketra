@@ -417,24 +417,62 @@ const TrustSection = () => (
 const PilotReadinessSection = () => (
   <section id="pilot-readiness" className="scroll-mt-16 bg-white py-16 border-b border-slate-200/80">
     <Container size="7xl">
-      <div className="rounded-sm border border-slate-200/80 bg-slate-50/80 p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="space-y-1.5 max-w-xl">
-          <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-amber-700">Try It With Your Team</span>
-          <h2 className="text-2xl font-bold text-slate-950 tracking-tight">
-            Start using Docketra for your firm in 5 minutes
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-            Create your firm account, invite your team members, and manage your first 5 clients. No credit card required.
-          </p>
+      <div className="rounded-sm border border-slate-200/80 bg-slate-50/80 p-6 sm:p-8">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-slate-200/60">
+          <div className="space-y-1.5 max-w-xl">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-amber-700">Predictable Packaging</span>
+              <span className="rounded-xs bg-blue-100 px-2 py-0.5 text-[10px] font-mono font-bold text-blue-800 uppercase">Pioneer 30 Promo</span>
+            </div>
+            <h2 className="text-2xl font-bold text-slate-950 tracking-tight">
+              Start using Docketra for your firm in 5 minutes
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Create your firm account, invite your team members, and manage your first 5 clients for ₹0. No credit card required. Lock in the Pioneer 30 rate (₹12,990/yr flat) when you upgrade.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+            <Link
+              to="/signup"
+              className="inline-flex w-full sm:w-auto h-10 items-center justify-center gap-2 rounded-xs bg-slate-950 px-6 text-xs font-semibold text-amber-400 transition-colors hover:bg-slate-800 shrink-0"
+            >
+              <span>Create workspace</span>
+              <span>→</span>
+            </Link>
+            <Link
+              to="/pricing"
+              className="inline-flex w-full sm:w-auto h-10 items-center justify-center rounded-xs border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shrink-0"
+            >
+              <span>View all plans & bonuses</span>
+            </Link>
+          </div>
         </div>
 
-        <Link
-          to="/signup"
-          className="inline-flex w-full sm:w-auto h-10 items-center justify-center gap-2 rounded-xs bg-slate-950 px-6 text-xs font-semibold text-amber-400 transition-colors hover:bg-slate-800 shrink-0"
-        >
-          <span>Create workspace</span>
-          <span>→</span>
-        </Link>
+        {/* 3 Value Pillars */}
+        <div className="pt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+          <div className="flex items-start gap-2.5">
+            <span className="text-emerald-600 font-bold">✓</span>
+            <div>
+              <span className="font-bold text-slate-900">Free Sandbox (₹0/forever):</span>
+              <p className="text-slate-600 mt-0.5">Up to 2 seats, 5 clients, and full Sovereign Google Drive integration.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2.5">
+            <span className="text-blue-600 font-bold">✓</span>
+            <div>
+              <span className="font-bold text-slate-900">Pioneer 30 Pass (₹12,990/yr):</span>
+              <p className="text-slate-600 mt-0.5">Locked for life for first 30 firms. Zero setup fees (saves ₹15k vs. Jamku).</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2.5">
+            <span className="text-amber-600 font-bold">✓</span>
+            <div>
+              <span className="font-bold text-slate-900">30-Day Sovereign Guarantee:</span>
+              <p className="text-slate-600 mt-0.5">100% money-back guarantee. All client files remain permanently in your Drive.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </Container>
   </section>

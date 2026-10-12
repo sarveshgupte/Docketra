@@ -1,0 +1,13 @@
+{
+  "id": "P003",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "habit",
+  "reason": "I've run my practice on WhatsApp and Excel for ten years without paying a rupee, so getting my staff to adopt a new platform sounds like an uphill battle. If I test this at all, I'll stick to the free sandbox before I ever consider paying ₹12,990 a year.",
+  "objection": "I have run our practice on spreadsheets and WhatsApp groups for ten years for free; why should I ever upgrade beyond the free tier when our existing system works fine?",
+  "would_change_my_mind": "If it works seamlessly inside WhatsApp without making my staff learn a new interface, and automatically eliminates my two hours of Saturday GST reconciliation.",
+  "price_too_cheap": 3000,
+  "price_cheap": 6000,
+  "price_expensive": 13000,
+  "price_too_expensive": 25000
+}
