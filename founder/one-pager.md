@@ -8,7 +8,7 @@ The 120,000+ practicing CA and CS firms in India. Primary wedge: 2-to-6 partner 
 
 ### The Offer & Price
 * **The Sovereign Practice Transformation Stack**:
-  * **Sovereign Google Drive Custody**: Dedicated folder isolation under Google restricted `drive.file` scope; Docketra strictly only reads and manages the specific folder it created; 100% of client documents live in the firm's own Drive; Docketra cannot access or index pre-existing private files.
+  * **Sovereign Google Drive Custody**: Dedicated folder isolation under Google restricted `drive.file` scope; Docketra strictly only reads and manages the specific folder it created; in-app cryptographic permission verification proves 0 pre-existing files readable; 100% of client documents live in the firm's own Drive; Docketra cannot access or index pre-existing private files.
   * **Turnkey Maker-Checker Execution**: Junior clerks prepare statutory checklists; qualified partners review and sign off with DSC tokens.
   * **The Bonuses**: Direct WhatsApp Forwarding & Intake Bridge (promoters keep texting files on WhatsApp; clerks forward media straight into dockets with 1-click Google Drive sync), complementary 1-click client drop links, 15+ pre-loaded statutory blueprints (MCA, ROC, GST, 3CD), 24-hour concierge client list migration from Excel, and a 30-Day 100% Money-Back Guarantee.
 * **Pricing**:

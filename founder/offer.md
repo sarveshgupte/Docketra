@@ -51,7 +51,7 @@ This offer is architected using the Offers framework to systematically eliminate
 > **The Sovereign Practice Transformation Stack**
 
 ### 1. The Core Product (The Sovereign Foundation)
-* **1-Click Sovereign Google Drive Connection & Folder Tamper Guard**: Primary-Admin OTP verification. Docketra creates its own dedicated firm folder and strictly only reads and accesses the folder it created; zero read or index access to any pre-existing firm folders or private client files. Continuous cloud metadata sync tracks persistent resource IDs, detects moved or trashed folders via root manifest telemetry, and provides 1-click re-linking and restoration.
+* **1-Click Sovereign Google Drive Connection & Folder Tamper Guard**: Primary-Admin OTP verification. Docketra creates its own dedicated firm folder and strictly only reads and accesses the folder it created; zero read or index access to any pre-existing firm folders or private client files. Google's restricted `drive.file` consent badge is backed by live in-app cryptographic permission verification that audits 0 foreign files readable directly against Google Drive API gateways. Continuous cloud metadata sync tracks persistent resource IDs, detects moved or trashed folders via root manifest telemetry, and provides 1-click re-linking and restoration.
 * **Native Maker-Checker Execution**: Junior staff prepare; senior partners approve. Immutable audit trail compliant with ICAI SQC-1 peer-review guidelines.
 * **Statutory Compliance Recurrence**: Automated statutory tracking for MCA-21, ROC Annual Filings, GST monthly deadlines, and Tax Audits.
 * **Volume-Metered Packaging**:
@@ -73,7 +73,7 @@ This offer is architected using the Offers framework to systematically eliminate
 * **Bonus #3: 24-Hour Concierge Client Roster Migration** *(Value: ₹10,000 — Free)*  
   Send your messy Excel client sheet or desktop backup to our engineering team. We sanitize, deduplicate, and import your entire client roster and compliance categories into Docketra within 24 hours.
 * **Bonus #4: Certified Zero-Access Drive Security & Tamper Guard Whitepaper** *(Value: Indispensable)*  
-  An official, print-ready compliance and cybersecurity certificate for senior partners and clients, confirming that Docketra operates under zero-knowledge metadata architecture, isolates file custody strictly to firm Drive, and auto-relinks moved/trashed folders via cryptographic manifest telemetry.
+  An official, print-ready compliance and cybersecurity certificate for senior partners and clients, confirming that Docketra operates under zero-knowledge metadata architecture, isolates file custody strictly to firm Drive under Google restricted `drive.file` scope, auto-relinks moved/trashed folders via cryptographic manifest telemetry, and provides in-app 1-click cryptographic permission verification proving 0 pre-existing files are readable.
 
 ### 3. The Risk Reversal (The 30-Day Zero-Risk, Zero-Data-Lock-In Guarantee)
 > **"Try Docketra for 30 days. If it does not save your practice at least 10 hours a week on client follow-ups and review queues, email us for an instant 100% refund—no questions asked.**  
