@@ -26,14 +26,14 @@
  ],
  "by_behaviour": [
   [
-   "Frugal tool buyer",
-   4,
-   0.5
-  ],
-  [
    "Tech-forward modern practitioner",
    2,
-   0.5
+   1.0
+  ],
+  [
+   "Frugal tool buyer",
+   4,
+   0.25
   ],
   [
    "Deadline & peer-review panic",
@@ -76,22 +76,34 @@
  "why_not": [
   [
    "trust",
-   6,
+   5,
    [
-    "Even with restricted Google Drive permissions, letting any third-party tool connect to our client repository is too much of a confidentiality risk for sensitive ITR and ROC records. Furthermore, as a two-person practice with rotating article trainees, training them on new software is a waste of time when our manual folders suffice.",
-    "I have run our practice on spreadsheets and WhatsApp for ten years, and I cannot trust a setup where an assistant might accidentally move or delete our Google Drive folders. With a mid-sized team and rotating clerks, the risk of accidental deletions or misplaced client archives is too great to risk our operations on new software."
+    "While dedicated folder isolation is an improvement, connecting an external tool to our firm's Google Drive is still too much of a confidentiality risk for sensitive ITR and ROC files without an independent audit. In an ordinary week, I would only ever test the free sandbox on a few sample files rather than committing to a paid plan.",
+    "I have run this practice on spreadsheets and WhatsApp groups for ten years, and I cannot risk connecting an unfamiliar software to our Google Drive where confidential client archives could be exposed. Without absolute proof that our existing files are completely untouched and isolated, I will not pay for this."
    ],
    [
     "P002",
-    "P011"
+    "P012"
+   ]
+  ],
+  [
+   "habit",
+   5,
+   [
+    "We've run our practice smoothly on WhatsApp groups and Excel sheets for ten years without paying for software, and WhatsApp direct integration is only on their roadmap. If I test it at all, I'll just stay on the free tier rather than paying ₹12,990.",
+    "We have run our practice on spreadsheets and WhatsApp groups for a decade without spending a rupee on software. Moving my staff and clients away from WhatsApp to a new platform introduces friction we simply do not need."
+   ],
+   [
+    "P003",
+    "P007"
    ]
   ],
   [
    "price",
    4,
    [
-    "At ₹12,990 a year, it is still double the cost of Jamku, so as a frugal firm we would rather test the free sandbox with one trainee on 5 clients first before paying anything.",
-    "With 10 staff we exceed the 5-user Starter plan, and jumping straight to the Pro Tier at ₹4,999 a month billed annually forces an upfront commitment of nearly ₹60,000. That is far too steep for my frugal practice to risk without testing team adoption first."
+    "At ₹12,990 a year, it is a steep commitment for a frugal firm when we can just test the free sandbox with one trainee on 5 clients first before paying anything.",
+    "My firm has around 10 staff so we exceed the 5-seat Pioneer plan, and jumping straight to Pro at ₹4,999 to ₹5,999 a month is far too steep for my frugal budget. I will start on the free sandbox to test the Drive permissions with two trainees first rather than committing upfront."
    ],
    [
     "P005",
@@ -100,26 +112,14 @@
   ],
   [
    "convenience",
-   3,
+   2,
    [
-    "My article clerks rotate every couple of years, and I cannot spend precious billable hours training new batches on yet another software portal. In an ordinary week, if a tool requires onboarding effort, my staff will just revert to WhatsApp and the subscription will sit unused.",
-    "I am eager to automate our morning WhatsApp document flood, but my article clerks rotate every couple of years and retraining them on a complex operating system is an ongoing drain. Until adoption is completely effortless for fresh trainees without partner handholding, I cannot justify paying for an annual subscription."
+    "My article clerks rotate every couple of years, and getting a dozen trainees to adopt a new system without partner supervision is an uphill battle. In a normal week without deadline panic, I will stick to our existing routines and at most test the free sandbox before paying for an expensive Pro plan.",
+    "We already abandoned Jamku and desktop ERP because rotating article clerks refused to keep up with them, so I am not paying for another software tool that disrupts our daily workflow. Until a system proves my trainees will actually use it without me constantly supervising them, buying another platform is a waste of time."
    ],
    [
     "P001",
-    "P006"
-   ]
-  ],
-  [
-   "habit",
-   2,
-   [
-    "I've run my practice on WhatsApp and Excel for ten years without paying a rupee, so getting my staff to adopt a new platform sounds like an uphill battle. If I test this at all, I'll stick to the free sandbox before I ever consider paying ₹12,990 a year.",
-    "I have run our practice on spreadsheets and WhatsApp groups for ten years at zero software cost, and my team's habits are set in stone. Asking us to adopt a new system with a ₹12,990 annual commitment introduces friction we simply do not need when our current setup works fine."
-   ],
-   [
-    "P003",
-    "P007"
+    "P010"
    ]
   ],
   [
@@ -131,60 +131,50 @@
    [
     "P009"
    ]
-  ],
-  [
-   "timing",
-   1,
-   [
-    "In an ordinary week outside the July ITR or October ROC rush, I'm not going to spend ₹12,990 upfront when my clients just dump bills on WhatsApp anyway. I only pull the trigger on software when deadline panic or peer-review pressure forces my hand, so right now I would at most test the free sandbox."
-   ],
-   [
-    "P015"
-   ]
   ]
  ],
  "why_yes": [
   [
-   "price",
+   "convenience",
    2,
    [
-    "At ₹12,990 a year with no setup fees or per-user nickeling, it is affordable enough to fix my daily morning triage across 30 WhatsApp client groups while keeping files safe under restricted drive.file scope.",
-    "At ₹12,990 a year flat for up to 5 seats with no per-user fees or setup charges, it covers our whole 4-person team affordably, and letting clients keep dumping documents on WhatsApp without forcing them into a portal solves my morning triage across 30 client groups."
+    "The zero-training trainee kit with pre-loaded statutory blueprints directly addresses my clerk turnover problem, and 1-click drop links give me an immediate way to tame the morning document chaos across my 30 WhatsApp client groups.",
+    "As a tech-forward practitioner tired of triaging 30 unread WhatsApp groups every morning, the 1-click client drop links directly into our Google Drive give us the intake automation we need. The dedicated folder sandboxing addresses my privacy concerns enough to invest in the Pioneer pass under the 30-day guarantee."
    ],
    [
-    "P004",
-    "P014"
+    "P006",
+    "P020"
    ]
   ],
   [
-   "convenience",
+   "price",
    1,
    [
-    "Checking 30 WhatsApp client groups every morning before tea is my biggest operational bottleneck, and automating triage into structured dockets without forcing clients into a portal while keeping our Drive safe under restricted drive.file scope makes this an easy purchase."
+    "At ₹12,990 flat per year with no per-user fees or hidden setup costs, it's affordable enough to tame my morning 30-group WhatsApp triage while keeping my Google Drive strictly sandboxed."
    ],
    [
-    "P020"
+    "P004"
    ]
   ]
  ],
  "flip": [
-  "A zero-learning-curve interface where a new article clerk can handle maker-checker reviews on day one without any formal training.",
-  "A verifiable zero-access security audit ensuring no external token access to file contents, coupled with an interface so effortless that fresh trainees require zero training.",
-  "If it works seamlessly inside WhatsApp without making my staff learn a new interface, and automatically eliminates my two hours of Saturday GST reconciliation.",
+  "Live proof that fresh article trainees can complete maker-checker filings on day one without any supervision, along with direct WhatsApp group integration.",
+  "An independent third-party security certification confirming zero external access to file contents and strict folder isolation.",
+  "Direct native WhatsApp integration so neither clients nor staff have to adopt a new tool, plus completely automating my Saturday GST reconciliation.",
   "Pricing under ₹8,000 a year combined with endpoint download restrictions to stop article clerks from saving client files on personal laptops.",
-  "A zero-learning-curve interface that rotating article clerks can use on day one without any training, allowing WhatsApp dumps to triage directly into structured Drive folders.",
-  "Direct WhatsApp group ingestion that automatically routes documents into Drive folders without requiring my team to learn or maintain a new portal.",
-  "A mid-sized firm plan priced under ₹25,000 a year for up to 15 staff, or a monthly billing option for Pro, plus third-party verification of the drive.file restricted scope.",
+  "Direct WhatsApp group ingestion that automatically routes shared documents into our Google Drive folders without requiring clients to open external links.",
+  "A mid-sized firm tier around ₹20,000 to ₹25,000 a year covering 10 to 12 staff, plus verified proof during sandbox onboarding that Google Drive access is strictly limited to Docketra's folder.",
   "If our firm grows to three or more team members with over 20 active clients, backed by an independent security audit certifying zero external access to client files.",
-  "If it works seamlessly inside WhatsApp without making my staff learn a new interface, and automatically eliminates my two hours of Saturday GST reconciliation.",
-  "Enforced folder-lock permissions that make client structures in Google Drive undeletable and immovable by assistants, plus safeguards preventing clerks from downloading client files to personal laptops.",
-  "An independent security verification or live proof showing Docketra cannot access any of our existing private Google Drive folders.",
-  "Pricing matched to Jamku at ₹6,500 a year and clear proof that handling 30 client WhatsApp groups takes zero extra effort from my side.",
-  "A peak filing crunch where an automated WhatsApp-to-docket bridge proves it can enforce maker-checker review on my article clerk without client friction.",
-  "A competitive mid-sized firm plan under ₹15,000 a year for up to 15 seats, combined with an independent security audit certifying that client Drive files never leak.",
-  "A Drive permission lock or automated snapshot safeguard that makes client folders tamper-proof against accidental moves or deletions by assistants.",
-  "A live demonstration at my local ICAI study circle verifying that restricted drive.file scope cannot access existing firm folders, plus proof of sustained staff adoption.",
-  "A tamper-proof Drive permission lock and automated recovery safeguard ensuring assistants cannot move or delete client folders."
+  "If direct WhatsApp client collection is fully live and my trainees adopt it seamlessly without any training or abandonment after two months.",
+  "Foolproof delete and move protection on Google Drive folders so assistants cannot tamper with them, along with native WhatsApp integration so we don't have to change our ten-year routine.",
+  "Independent technical proof certifying zero access to existing private Drive folders, plus direct integration into WhatsApp so my 30 client groups don't have to change.",
+  "Pricing matched to Jamku at ₹6,500 a year and native WhatsApp integration so neither my clients nor I have to touch another interface.",
+  "A working direct WhatsApp integration that pulls attachments from client groups straight into their Drive dockets automatically.",
+  "Live native WhatsApp integration where client attachments sync directly into the docket Drive folder.",
+  "A mid-firm annual tier priced under ₹20,000 for up to 15 seats, plus verifiable proof that Docketra cannot read our confidential client files.",
+  "Guaranteed move and delete protection for Google Drive folders so assistants cannot tamper with them, plus deadline pressure during the October ROC rush requiring maker-checker audit trails.",
+  "A trusted peer recommendation from my local ICAI study circle and verifiable proof on Google's OAuth consent screen that permissions are strictly limited to files created by the app.",
+  "Guaranteed folder-protection mechanisms against accidental deletion in Google Drive and peer validation at my monthly study circle that client confidentiality is 100% airtight."
  ],
  "purchases_first_month_per_buyer": 1.0,
  "price_answers": 20

@@ -51,13 +51,14 @@ This offer is architected using the Offers framework to systematically eliminate
 > **The Sovereign Practice Transformation Stack**
 
 ### 1. The Core Product (The Sovereign Foundation)
-* **1-Click Sovereign Google Drive Connection**: Primary-Admin OTP verification. Docketra creates its own dedicated firm folder and strictly only reads and accesses the folder it created; zero read or index access to any pre-existing firm folders or private client files.
+* **1-Click Sovereign Google Drive Connection & Folder Tamper Guard**: Primary-Admin OTP verification. Docketra creates its own dedicated firm folder and strictly only reads and accesses the folder it created; zero read or index access to any pre-existing firm folders or private client files. Continuous cloud metadata sync tracks persistent resource IDs, detects moved or trashed folders via root manifest telemetry, and provides 1-click re-linking and restoration.
 * **Native Maker-Checker Execution**: Junior staff prepare; senior partners approve. Immutable audit trail compliant with ICAI SQC-1 peer-review guidelines.
 * **Statutory Compliance Recurrence**: Automated statutory tracking for MCA-21, ROC Annual Filings, GST monthly deadlines, and Tax Audits.
 * **Volume-Metered Packaging**:
   - *Free Sandbox*: 2 users, capped at 5 active clients / 15 dockets/mo.
   - *Starter*: Up to 5 users, 50 clients, unlimited dockets.
-  - *Pro*: Unlimited users, unlimited clients, department queues.
+  - *Growth*: Up to 12 users, 150 clients, shared department queues, +₹1,200/seat/yr add-ons.
+  - *Pro*: Up to 25 users, unlimited clients, multi-branch, DSC workflows.
 
 ### 2. The Bonuses (Killing Every Top Objection)
 * **Bonus #1: Frictionless Client Drop Link & Inbound Email Bridge** *(Value: ₹15,000 — Free)*  
@@ -67,12 +68,12 @@ This offer is architected using the Offers framework to systematically eliminate
   - MCA Annual Filing (MGT-7, AOC-4)
   - ROC Director KYC (DIR-3 KYC) & Company Incorporation
   - GSTR-3B & GSTR-1 Reconciliation
-  - Tax Audit Form 3CD & Transfer Pricing
+  - Tax Audit Form 3CD (44 Clauses) & Transfer Pricing
   Fresh article clerks follow standardized step-by-step audit steps on day one without senior partner micromanagement.
 * **Bonus #3: 24-Hour Concierge Client Roster Migration** *(Value: ₹10,000 — Free)*  
   Send your messy Excel client sheet or desktop backup to our engineering team. We sanitize, deduplicate, and import your entire client roster and compliance categories into Docketra within 24 hours.
-* **Bonus #4: Certified Zero-Access Drive Security Whitepaper** *(Value: Indispensable)*  
-  An official, print-ready compliance and cybersecurity certificate for senior partners and clients, confirming that Docketra operates under zero-knowledge metadata architecture and never stores client documents on external servers.
+* **Bonus #4: Certified Zero-Access Drive Security & Tamper Guard Whitepaper** *(Value: Indispensable)*  
+  An official, print-ready compliance and cybersecurity certificate for senior partners and clients, confirming that Docketra operates under zero-knowledge metadata architecture, isolates file custody strictly to firm Drive, and auto-relinks moved/trashed folders via cryptographic manifest telemetry.
 
 ### 3. The Risk Reversal (The 30-Day Zero-Risk, Zero-Data-Lock-In Guarantee)
 > **"Try Docketra for 30 days. If it does not save your practice at least 10 hours a week on client follow-ups and review queues, email us for an instant 100% refund—no questions asked.**  

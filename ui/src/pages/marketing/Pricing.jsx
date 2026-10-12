@@ -50,6 +50,12 @@ const COMPARISON_ROWS = [
     jamku: 'Basic Change Log',
     excel: 'None (Fails Peer-Review Standard)',
   },
+  {
+    feature: 'Accidental Deletion & Tamper Protection',
+    docketra: 'Cloud Metadata Sync (Auto-detects moved/deleted folders & 1-click re-links/restores)',
+    jamku: 'Proprietary Cloud Lock (Files held on external servers)',
+    excel: 'Zero Recovery (Accidental deletion permanently loses working papers)',
+  },
 ];
 
 const FAQS = [
@@ -72,6 +78,14 @@ const FAQS = [
   {
     question: 'How does the Pioneer 30 Launch Cohort rate work?',
     answer: 'The Pioneer rate (₹12,990 / year flat) is strictly limited to the first 30 verified Indian CA and CS practices. Once you activate your Pioneer Pass, your annual subscription rate is locked for life, protecting your firm from future price increases.',
+  },
+  {
+    question: 'Our firm has 6 to 12 staff. Which plan is right for us, and can we add extra seats?',
+    answer: 'Our Growth Tier (₹21,990 / year flat or ₹2,499 / month) is engineered specifically for expanding practices with 6 to 12 team members. It includes 12 seats, 150 active clients, and shared departmental workbaskets (ROC, GST, Direct Tax). Need more seats? You can add individual seats at just ₹1,200 / seat / year without being forced into an enterprise contract.',
+  },
+  {
+    question: 'What if an assistant or clerk accidentally deletes or moves a folder inside Google Drive?',
+    answer: 'Docketra maintains tamper-evident cloud metadata for every docket, client, and document. If an assistant moves or deletes a folder in Google Drive, Docketra detects the discrepancy, alerts the Primary Admin, and provides 1-click folder restoration and re-sync from version history.',
   },
 ];
 
@@ -140,11 +154,11 @@ export const PricingPage = () => {
       {/* Pricing Cards Grid */}
       <section className="py-16 bg-white border-b border-slate-200/80">
         <Container size="7xl">
-          <div className="grid gap-8 lg:grid-cols-3 items-stretch">
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4 items-stretch">
             {/* Free Sandbox */}
             <motion.div
               {...REVEAL}
-              className="flex flex-col rounded-sm border border-slate-200 bg-white p-7 hover:border-slate-300 transition-all shadow-xs"
+              className="flex flex-col rounded-sm border border-slate-200 bg-white p-6 sm:p-7 hover:border-slate-300 transition-all shadow-xs"
             >
               <div className="border-b border-slate-100 pb-6">
                 <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-500">
@@ -204,7 +218,7 @@ export const PricingPage = () => {
             {/* Starter Tier - Featured Pioneer 30 */}
             <motion.div
               {...REVEAL}
-              className="relative flex flex-col rounded-sm border-2 border-blue-600 bg-white p-7 shadow-lg lg:-translate-y-2"
+              className="relative flex flex-col rounded-sm border-2 border-blue-600 bg-white p-6 sm:p-7 shadow-lg xl:-translate-y-2"
             >
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3.5 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider text-white shadow-xs">
                 Pioneer 30 Cohort • 18 Spots Left
@@ -286,18 +300,94 @@ export const PricingPage = () => {
               </div>
             </motion.div>
 
+            {/* Growth Tier - Mid-Sized Practices (6 to 12 staff) */}
+            <motion.div
+              {...REVEAL}
+              className="flex flex-col rounded-sm border border-slate-300 bg-white p-6 sm:p-7 hover:border-slate-400 transition-all shadow-xs"
+            >
+              <div className="border-b border-slate-100 pb-6">
+                <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                  Mid-Sized Practices (6 to 12 staff)
+                </span>
+                <h2 className="mt-2 text-xl font-bold text-slate-950">Growth Tier</h2>
+                <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
+                  Engineered for expanding partnerships with rotating article clerks and departmental queues.
+                </p>
+                <div className="mt-6 flex items-baseline gap-1 text-slate-950">
+                  {isAnnual ? (
+                    <>
+                      <span className="text-4xl font-extrabold tracking-tight text-slate-950">₹21,990</span>
+                      <span className="text-xs font-medium text-slate-500">/ year</span>
+                      <span className="ml-2 text-xs line-through text-slate-400">₹27,990</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-4xl font-extrabold tracking-tight text-slate-950">₹2,499</span>
+                      <span className="text-xs font-medium text-slate-500">/ month</span>
+                    </>
+                  )}
+                </div>
+                <div className="mt-2 text-[11px] font-mono text-slate-700 font-semibold">
+                  Up to 12 team seats • Up to 150 active clients • Unlimited dockets
+                </div>
+                <div className="mt-1 text-[10px] font-mono text-slate-400">
+                  Extra seats: +₹1,200/seat/yr (+₹149/mo)
+                </div>
+              </div>
+
+              <div className="flex-1 py-6 space-y-3">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700">
+                  Everything in Starter, plus:
+                </span>
+                <ul className="space-y-2.5 text-xs text-slate-700">
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>Shared Department Queues (ROC, Taxation, SEBI)</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>Multi-clerk Maker-Checker sign-off review queues</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>Bulk client document dropzone & intake triage</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>Drive folder sync guard & recovery telemetry</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>Priority concierge onboarding & data migration</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100">
+                <Link
+                  to="/signup"
+                  className="inline-flex w-full h-10 items-center justify-center rounded-xs border border-slate-900 bg-white px-4 text-xs font-semibold text-slate-950 hover:bg-slate-50 transition-colors shadow-xs"
+                >
+                  Choose Growth Tier
+                </Link>
+                <p className="mt-2 text-center text-[10px] font-mono text-slate-500">
+                  30-day money-back guarantee • No setup surcharge
+                </p>
+              </div>
+            </motion.div>
+
             {/* Pro Tier */}
             <motion.div
               {...REVEAL}
-              className="flex flex-col rounded-sm border border-slate-200 bg-white p-7 hover:border-slate-300 transition-all shadow-xs"
+              className="flex flex-col rounded-sm border border-slate-200 bg-white p-6 sm:p-7 hover:border-slate-300 transition-all shadow-xs"
             >
               <div className="border-b border-slate-100 pb-6">
                 <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  Growing Practices (6 to 15+ staff)
+                  Corporate & Multi-Branch (15+ staff)
                 </span>
                 <h2 className="mt-2 text-xl font-bold text-slate-950">Pro Tier</h2>
                 <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
-                  For expanding compliance and audit firms requiring departmental queues and custom controls.
+                  For expanding compliance and audit firms requiring multi-branch controls and partner DSC workflows.
                 </p>
                 <div className="mt-6 flex items-baseline gap-1 text-slate-950">
                   {isAnnual ? (
@@ -313,13 +403,13 @@ export const PricingPage = () => {
                   )}
                 </div>
                 <div className="mt-2 text-[11px] font-mono text-slate-500">
-                  Up to 15 team seats • Unlimited active clients • Unlimited dockets
+                  Up to 25 team seats • Unlimited active clients • Unlimited dockets
                 </div>
               </div>
 
               <div className="flex-1 py-6 space-y-3">
                 <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  Everything in Starter, plus:
+                  Everything in Growth, plus:
                 </span>
                 <ul className="space-y-2.5 text-xs text-slate-700">
                   <li className="flex items-start gap-2.5">
@@ -370,7 +460,7 @@ export const PricingPage = () => {
                 30-Day Zero-Risk, Zero-Data-Lock-In Guarantee
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Try Docketra for 30 days. If it doesn’t save your firm at least 10 hours a week on client follow-ups and review queues, email us for an instant 100% refund. Because 100% of your documents and organized client folders remain permanently inside your own Google Drive, you lose nothing and your files never leave your hands.
+                Try Docketra for 30 days. If it doesn’t save your firm at least 10 hours a week on client follow-ups and review queues, email us for an instant 100% refund. Because 100% of your documents and organized client folders remain permanently inside your own Google Drive, you lose nothing and your files never leave your hands. Even if an assistant moves, renames, or trashes a folder in Google Drive, Docketra’s cloud metadata sync automatically detects and re-links it without disrupting your practice.
               </p>
             </div>
             <div className="shrink-0 text-center">

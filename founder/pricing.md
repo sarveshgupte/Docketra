@@ -28,8 +28,15 @@ The consumer panel proved that an unrestricted 2-user free tier causes **100% co
 | Tier | Target Firm | Team Size | Active Clients & Dockets | Price (Monthly / Annual) | Core Inclusions |
 |---|---|---|---|---|---|
 | **Free Sandbox** *(Trial & Micro)* | Solo CAs, new practitioners, evaluation | **Up to 2 users** | **Capped at 5 Active Clients** & **15 Dockets / month** | **₹0 forever** | Full feature parity: 1-click Google Drive BYOS, Maker-Checker QC, statutory calendar, audit log. |
-| **Starter** *(Most Popular)* | 3 to 5 person partnership practices | **Up to 5 users** | **Up to 50 Active Clients** & **Unlimited Dockets** | **₹1,999 / mo** (Monthly)<br>**₹1,499 / mo** (₹17,990/yr Annual) | Full feature access, unlimited BYOS storage in firm's Drive, zero setup fee, WhatsApp triage inbox, email support. |
-| **Pro** *(Growth / Multi-Partner)* | 6+ person firms, multi-branch practices | **Unlimited users** | **Unlimited Clients** & **Unlimited Dockets** | **₹5,999 / mo** (Monthly)<br>**₹4,999 / mo** (₹59,990/yr Annual) | Everything in Starter + Department queues (Tax, Audit, ROC), custom maker-checker roles, priority phone/SLA support. |
+| **Starter** *(Boutique)* | 2 to 5 person partnership practices | **Up to 5 users** | **Up to 50 Active Clients** & **Unlimited Dockets** | **₹1,999 / mo** (Monthly)<br>**₹1,499 / mo** (₹17,990/yr Annual)<br>*(Promo: ₹12,990/yr Pioneer)* | Full feature access, unlimited BYOS storage in firm's Drive, zero setup fee, 1-click client drop links, email support. |
+| **Growth** *(Mid-Sized / Expanding)* | 6 to 12 person firms, rotating article clerks | **Up to 12 users** *(+₹1,200/seat/yr)* | **Up to 150 Active Clients** & **Unlimited Dockets** | **₹2,499 / mo** (Monthly)<br>**₹1,832 / mo** (₹21,990/yr Annual) | Everything in Starter + Shared department queues (ROC, Tax, SEBI), trainee maker-checker workflows, bulk dropzone, Drive sync recovery. |
+| **Pro** *(Growth / Multi-Partner)* | 15+ person firms, multi-branch practices | **Up to 25 users** | **Unlimited Clients** & **Unlimited Dockets** | **₹5,999 / mo** (Monthly)<br>**₹4,999 / mo** (₹59,990/yr Annual) | Everything in Growth + Multi-partner DSC sign-off routing workflows, custom roles, priority SLA & dedicated migration engineer. |
+
+### Why the Growth Tier Bridges the 4.6x Mid-Sized Practice Cliff:
+1. **Eliminates the Cliff**: Previously, firms with 6 to 12 staff had to jump from ₹12,990/yr directly to ₹59,990/yr (a 4.6x jump), causing 100% of mid-sized practices to pass in the consumer panel (P008, P016).
+2. **Matches Willingness to Pay**: At **₹21,990/year flat** (~₹1,832/mo), it lands directly within the ₹20,000–₹25,000 annual budget reported by mid-sized managing partners.
+3. **Economies of Scale**: Effective cost per seat drops to **₹1,832 / seat / year** (compared to ₹2,598 on Starter), rewarding growing practices while maintaining an **86.4% gross contribution margin** for Docketra.
+4. **Flexible Expansion**: Teams needing 13 or 14 seats can add individual seats at ₹1,200/seat/year (+₹149/mo) without an immediate leap to enterprise Pro.
 
 ### Why This Free-Tier Cap Works:
 1. **Frictionless Evaluation**: A firm can sign up in 60 seconds, connect their Google Drive, and run 5 real client matters without entering credit card details.

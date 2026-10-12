@@ -150,7 +150,7 @@ const firmSchema = new mongoose.Schema({
   plan: {
     type: String,
     lowercase: true,
-    enum: ['pilot', 'starter', 'professional', 'enterprise', 'PILOT', 'STARTER', 'PROFESSIONAL', 'ENTERPRISE'],
+    enum: ['pilot', 'starter', 'growth', 'professional', 'enterprise', 'PILOT', 'STARTER', 'GROWTH', 'PROFESSIONAL', 'ENTERPRISE'],
     default: 'pilot',
     index: true,
   },

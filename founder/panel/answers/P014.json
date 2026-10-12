@@ -1,13 +1,13 @@
 {
   "id": "P014",
-  "buys": true,
-  "purchases_first_month": 1,
-  "reason_code": "price",
-  "reason": "At ₹12,990 a year flat for up to 5 seats with no per-user fees or setup charges, it covers our whole 4-person team affordably, and letting clients keep dumping documents on WhatsApp without forcing them into a portal solves my morning triage across 30 client groups.",
-  "objection": "My clients will never use an intake portal—they just dump bills on WhatsApp.",
-  "would_change_my_mind": "",
-  "price_too_cheap": 3500,
-  "price_cheap": 7500,
-  "price_expensive": 16000,
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "habit",
+  "reason": "No matter how simple a 1-click link is, my clients are habituated to dumping unorganized bills straight into WhatsApp groups and will ignore any external upload link. Until direct WhatsApp integration is live rather than just on a roadmap, this doesn't fix my daily morning bottleneck.",
+  "objection": "My clients will never use an intake portal or upload link—they just dump bills on WhatsApp.",
+  "would_change_my_mind": "A working direct WhatsApp integration that pulls attachments from client groups straight into their Drive dockets automatically.",
+  "price_too_cheap": 4000,
+  "price_cheap": 9000,
+  "price_expensive": 18000,
   "price_too_expensive": 30000
 }

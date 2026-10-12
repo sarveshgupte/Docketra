@@ -3,11 +3,11 @@
   "buys": false,
   "purchases_first_month": 0,
   "reason_code": "trust",
-  "reason": "I desperately need maker-checker accountability for ROC filing reviews at 10 PM, but if files live in our Google Drive, an assistant could easily move or delete an entire folder by mistake. Without ironclad protection against staff trashing or misplacing client folders, I cannot trust this with our compliance records.",
+  "reason": "In a normal week without filing deadline panic, I will not pay for software when I worry an assistant might accidentally delete or move our client folders directly in Google Drive. For my two-person practice, I would at most test the free sandbox rather than committing to a paid annual plan.",
   "objection": "If files stay in our Google Drive, what happens if an assistant accidentally deletes or moves the folder?",
-  "would_change_my_mind": "A Drive permission lock or automated snapshot safeguard that makes client folders tamper-proof against accidental moves or deletions by assistants.",
-  "price_too_cheap": 3500,
-  "price_cheap": 7500,
+  "would_change_my_mind": "Guaranteed move and delete protection for Google Drive folders so assistants cannot tamper with them, plus deadline pressure during the October ROC rush requiring maker-checker audit trails.",
+  "price_too_cheap": 3000,
+  "price_cheap": 7000,
   "price_expensive": 15000,
-  "price_too_expensive": 30000
+  "price_too_expensive": 28000
 }

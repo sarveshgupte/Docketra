@@ -1,11 +1,11 @@
 # Docketra · Business plan
 
-**Verdict: Profitable**
+**Verdict: Not yet**
 
 - ✓ Each firm-month earns $1349.00 before fixed costs (90% contribution).
 - ✓ Year 1 operating profit: $129,348.
 - ✓ Break-even is 3 firm-months a day against a capacity of 20.0.
-- ✓ 3 of 20 simulated buyers buy (15%, the bar is 15%).
+- ✗ 3 of 20 simulated buyers buy (15%, the bar is 25%).
 
 | key number | |
 | --- | ---: |
@@ -32,27 +32,38 @@
 
 ## Summary
 
-Docketra is a sovereign practice operations platform for Indian Chartered Accountants (CAs), Company Secretaries (CSs), and corporate compliance firms. It turns disorganized client document intake into audit-ready dockets via 1-click client drop links (zero portal login needed) with automated Maker-Checker review and pre-loaded statutory checklists, storing 100% of client documents inside the firm's own Google Drive.
+Docketra is a sovereign practice operations platform built specifically for Indian Chartered Accountants (CAs), Company Secretaries (CSs), and corporate tax compliance practices. It orchestrates messy client document collection into audit-ready dockets with automated Maker-Checker review sign-offs and pre-loaded statutory blueprints (Companies Act, MCA, GST, Tax Audit Form 3CD), storing 100% of client records inside the firm's own Google Drive.
 
-#### The Verdict: Profitable
-* **Contribution Margin**: **90%** (earns **₹1,349** on every ₹1,499 firm-month before fixed overheads; BYOS architecture means zero marginal file storage bills).
+#### The Verdict: Not yet
+
+Docketra passes all core financial unit-economics and capacity hurdles with exceptional margins, but fails the simulated consumer panel adoption hurdle:
+
+* **Failing Check**: **3 of 20 simulated buyers buy (15%, below the 25% hurdle)**.
+* **Implemented Solution for Mid-Sized Practices**: 
+  * **Growth Tier Active**: Introduced the **Growth Tier at ₹21,990 / year flat** (~₹1,832/mo) or ₹2,499/mo monthly for up to 12 seats, 150 active clients, and shared department queues with `+₹1,200/seat/yr` add-ons. This successfully bridges the 4.6x cliff between Starter and Pro, providing mid-sized firms with economies of scale (₹1,832/seat/yr vs ₹2,598 on Starter).
+* **Next Obstacle to Resolve**: 
+  * **WhatsApp Intake Reality**: Enable direct WhatsApp forwarding/intake bridge so staff can dump client WhatsApp media files straight into dockets without requiring clients to click web URLs.
+* **Skills That Change This**: `/founder-pricing` (restructures the mid-sized tier) and `/founder-offer` (packages the WhatsApp ingestion bridge and Google Drive accidental-deletion recovery guarantee).
+
+#### The Three Passing Financial Numbers
+* **Contribution Margin**: **90%** (earns **₹1,349** on every ₹1,499 firm-month before fixed overheads; BYOS architecture eliminates third-party cloud storage costs).
 * **Operating Break-Even**: **3 firm-months a day** (63 active firms covers all ₹85,000/mo cloud infrastructure, monitoring, and founder stipends).
 * **Year 1 Operating Profit**: **₹1,29,348** (growing to ₹32.3 Lakhs annual recurring revenue at 99 firms by Month 12).
 
 #### Board & Consumer Panel Alignment
-* **Where They Agreed**: Both the Founder Board and the 20-member Consumer Panel identified client confidentiality paranoia and intake friction as the two primary concerns. Both confirmed that a loose, uncapped free tier would cannibalize solo CAs and destroy revenue.
-* **Where They Disagreed**: The initial board worried about enterprise sales complexity; however, the consumer panel proved that small boutique practices (2–5 staff) convert rapidly (50% in tech-forward and frugal segments) when offered the "Pioneer 30" flat rate (₹12,990/yr) with zero setup fees, 1-click client drop links, and turnkey statutory blueprints.
+* **Where They Agreed**: Both the Founder Board and the 20-member Consumer Panel pinpointed client confidentiality paranoia, article clerk turnover, and WhatsApp workflow habits as the critical hurdles. Both confirmed an uncapped free tier would cause 100% commercial cannibalization among solo practitioners.
+* **Where They Disagreed**: The initial board worried about long enterprise sales cycles; however, the consumer panel demonstrated 100% conversion among tech-forward practitioners when presented with pre-loaded statutory blueprints and 1-click drop links at the ₹12,990 Pioneer rate.
 
 #### The Biggest Risk & Mitigation
-* **The Risk**: Partner anxiety over third-party access to confidential client files in Google Drive.
-* **The Plan**: Dedicated folder isolation—Docketra strictly only reads and accesses the folder it created, with zero read access to existing private Drive records. Storage credentials are locked exclusively to the Primary Admin via OTP verification, with proactive token telemetry and 1-click re-authorization.
+* **The Risk**: Partner anxiety over third-party API exposure to confidential client files in Google Drive, and fear of assistants accidentally moving or deleting synchronized Drive folders.
+* **The Plan**: Dedicated folder isolation under Google's restricted `drive.file` scope (zero read access to pre-existing private firm folders), Primary-Admin OTP credentials lock, and automatic cloud metadata sync that restores and re-links any accidentally moved Drive folders.
 
 #### What the Founders Need to Start
-* **Cash Needed**: **₹1,55,274** maximum cumulative cash draw (covering ₹50,000 startup spend and the initial operating ramp before cash-flow positive Month 5).
+* **Cash Needed**: **₹1,55,274** maximum cumulative cash draw (covering ₹50,000 initial startup spend and the operating ramp before cash-flow positive Month 5).
 * **Pre-Launch Reality Check**: Secure 5 paid founding firm commitment deposits (₹2,500 refundable deposit locking ₹12,990/yr for life) from 25 warm CA/CS contacts within 14 days before signing long-term supplier contracts.
 
 #### The One Thing to Do This Week
-* Deliver the 20-minute **"SQC-1 Defensibility & Digital Audit Trails on Google Drive"** presentation to the convenor of the first ICAI Study Circle and secure the first 5 Pioneer Cohort deposits.
+* Deliver the 20-minute **"SQC-1 Defensibility & Digital Audit Trails on Google Drive"** demonstration to the convenor of the first local ICAI Study Circle and secure the first 5 Pioneer Cohort deposits.
 
 ## What the board said
 
@@ -280,8 +291,8 @@ These are simulated buyers, not customers. Use this to find objections and weak 
 
 | group | buyers | buy rate |
 | --- | ---: | ---: |
-| Frugal tool buyer | 4 | 50%  (thin) |
-| Tech-forward modern practitioner | 2 | 50%  (thin) |
+| Tech-forward modern practitioner | 2 | 100%  (thin) |
+| Frugal tool buyer | 4 | 25%  (thin) |
 | Deadline & peer-review panic | 3 | 0%  (thin) |
 | Paranoid about client confidentiality | 4 | 0%  (thin) |
 | Excel & WhatsApp diehard | 5 | 0%  (thin) |
@@ -299,34 +310,33 @@ These are simulated buyers, not customers. Use this to find objections and weak 
 
 | reason | buyers | in their words |
 | --- | ---: | --- |
-| trust | 6 | "Even with restricted Google Drive permissions, letting any third-party tool connect to our client repository is too much of a confidentiality risk for sensitive ITR and ROC records. Furthermore, as a two-person practice with rotating article trainees, training them on new software is a waste of time when our manual folders suffice." (P002) · "I have run our practice on spreadsheets and WhatsApp for ten years, and I cannot trust a setup where an assistant might accidentally move or delete our Google Drive folders. With a mid-sized team and rotating clerks, the risk of accidental deletions or misplaced client archives is too great to risk our operations on new software." (P011) |
-| price | 4 | "At ₹12,990 a year, it is still double the cost of Jamku, so as a frugal firm we would rather test the free sandbox with one trainee on 5 clients first before paying anything." (P005) · "With 10 staff we exceed the 5-user Starter plan, and jumping straight to the Pro Tier at ₹4,999 a month billed annually forces an upfront commitment of nearly ₹60,000. That is far too steep for my frugal practice to risk without testing team adoption first." (P008) |
-| convenience | 3 | "My article clerks rotate every couple of years, and I cannot spend precious billable hours training new batches on yet another software portal. In an ordinary week, if a tool requires onboarding effort, my staff will just revert to WhatsApp and the subscription will sit unused." (P001) · "I am eager to automate our morning WhatsApp document flood, but my article clerks rotate every couple of years and retraining them on a complex operating system is an ongoing drain. Until adoption is completely effortless for fresh trainees without partner handholding, I cannot justify paying for an annual subscription." (P006) |
-| habit | 2 | "I've run my practice on WhatsApp and Excel for ten years without paying a rupee, so getting my staff to adopt a new platform sounds like an uphill battle. If I test this at all, I'll stick to the free sandbox before I ever consider paying ₹12,990 a year." (P003) · "I have run our practice on spreadsheets and WhatsApp groups for ten years at zero software cost, and my team's habits are set in stone. Asking us to adopt a new system with a ₹12,990 annual commitment introduces friction we simply do not need when our current setup works fine." (P007) |
+| trust | 5 | "While dedicated folder isolation is an improvement, connecting an external tool to our firm's Google Drive is still too much of a confidentiality risk for sensitive ITR and ROC files without an independent audit. In an ordinary week, I would only ever test the free sandbox on a few sample files rather than committing to a paid plan." (P002) · "I have run this practice on spreadsheets and WhatsApp groups for ten years, and I cannot risk connecting an unfamiliar software to our Google Drive where confidential client archives could be exposed. Without absolute proof that our existing files are completely untouched and isolated, I will not pay for this." (P012) |
+| habit | 5 | "We've run our practice smoothly on WhatsApp groups and Excel sheets for ten years without paying for software, and WhatsApp direct integration is only on their roadmap. If I test it at all, I'll just stay on the free tier rather than paying ₹12,990." (P003) · "We have run our practice on spreadsheets and WhatsApp groups for a decade without spending a rupee on software. Moving my staff and clients away from WhatsApp to a new platform introduces friction we simply do not need." (P007) |
+| price | 4 | "At ₹12,990 a year, it is a steep commitment for a frugal firm when we can just test the free sandbox with one trainee on 5 clients first before paying anything." (P005) · "My firm has around 10 staff so we exceed the 5-seat Pioneer plan, and jumping straight to Pro at ₹4,999 to ₹5,999 a month is far too steep for my frugal budget. I will start on the free sandbox to test the Drive permissions with two trainees first rather than committing upfront." (P008) |
+| convenience | 2 | "My article clerks rotate every couple of years, and getting a dozen trainees to adopt a new system without partner supervision is an uphill battle. In a normal week without deadline panic, I will stick to our existing routines and at most test the free sandbox before paying for an expensive Pro plan." (P001) · "We already abandoned Jamku and desktop ERP because rotating article clerks refused to keep up with them, so I am not paying for another software tool that disrupts our daily workflow. Until a system proves my trainees will actually use it without me constantly supervising them, buying another platform is a waste of time." (P010) |
 | need | 1 | "As a solo CA with just one trainee, our workload fits within manual routines and the free sandbox; I have no operational need to spend ₹12,990 a year on a 5-user plan." (P009) |
-| timing | 1 | "In an ordinary week outside the July ITR or October ROC rush, I'm not going to spend ₹12,990 upfront when my clients just dump bills on WhatsApp anyway. I only pull the trigger on software when deadline panic or peer-review pressure forces my hand, so right now I would at most test the free sandbox." (P015) |
 
 ### Why they buy
 
 | reason | buyers | in their words |
 | --- | ---: | --- |
-| price | 2 | "At ₹12,990 a year with no setup fees or per-user nickeling, it is affordable enough to fix my daily morning triage across 30 WhatsApp client groups while keeping files safe under restricted drive.file scope." (P004) · "At ₹12,990 a year flat for up to 5 seats with no per-user fees or setup charges, it covers our whole 4-person team affordably, and letting clients keep dumping documents on WhatsApp without forcing them into a portal solves my morning triage across 30 client groups." (P014) |
-| convenience | 1 | "Checking 30 WhatsApp client groups every morning before tea is my biggest operational bottleneck, and automating triage into structured dockets without forcing clients into a portal while keeping our Drive safe under restricted drive.file scope makes this an easy purchase." (P020) |
+| convenience | 2 | "The zero-training trainee kit with pre-loaded statutory blueprints directly addresses my clerk turnover problem, and 1-click drop links give me an immediate way to tame the morning document chaos across my 30 WhatsApp client groups." (P006) · "As a tech-forward practitioner tired of triaging 30 unread WhatsApp groups every morning, the 1-click client drop links directly into our Google Drive give us the intake automation we need. The dedicated folder sandboxing addresses my privacy concerns enough to invest in the Pioneer pass under the 30-day guarantee." (P020) |
+| price | 1 | "At ₹12,990 flat per year with no per-user fees or hidden setup costs, it's affordable enough to tame my morning 30-group WhatsApp triage while keeping my Google Drive strictly sandboxed." (P004) |
 
 ### What would flip a no
 
-- A zero-learning-curve interface where a new article clerk can handle maker-checker reviews on day one without any formal training.
-- A verifiable zero-access security audit ensuring no external token access to file contents, coupled with an interface so effortless that fresh trainees require zero training.
-- If it works seamlessly inside WhatsApp without making my staff learn a new interface, and automatically eliminates my two hours of Saturday GST reconciliation.
+- Live proof that fresh article trainees can complete maker-checker filings on day one without any supervision, along with direct WhatsApp group integration.
+- An independent third-party security certification confirming zero external access to file contents and strict folder isolation.
+- Direct native WhatsApp integration so neither clients nor staff have to adopt a new tool, plus completely automating my Saturday GST reconciliation.
 - Pricing under ₹8,000 a year combined with endpoint download restrictions to stop article clerks from saving client files on personal laptops.
-- A zero-learning-curve interface that rotating article clerks can use on day one without any training, allowing WhatsApp dumps to triage directly into structured Drive folders.
-- Direct WhatsApp group ingestion that automatically routes documents into Drive folders without requiring my team to learn or maintain a new portal.
-- A mid-sized firm plan priced under ₹25,000 a year for up to 15 staff, or a monthly billing option for Pro, plus third-party verification of the drive.file restricted scope.
+- Direct WhatsApp group ingestion that automatically routes shared documents into our Google Drive folders without requiring clients to open external links.
+- A mid-sized firm tier around ₹20,000 to ₹25,000 a year covering 10 to 12 staff, plus verified proof during sandbox onboarding that Google Drive access is strictly limited to Docketra's folder.
 - If our firm grows to three or more team members with over 20 active clients, backed by an independent security audit certifying zero external access to client files.
-- If it works seamlessly inside WhatsApp without making my staff learn a new interface, and automatically eliminates my two hours of Saturday GST reconciliation.
-- Enforced folder-lock permissions that make client structures in Google Drive undeletable and immovable by assistants, plus safeguards preventing clerks from downloading client files to personal laptops.
-- An independent security verification or live proof showing Docketra cannot access any of our existing private Google Drive folders.
-- Pricing matched to Jamku at ₹6,500 a year and clear proof that handling 30 client WhatsApp groups takes zero extra effort from my side.
+- If direct WhatsApp client collection is fully live and my trainees adopt it seamlessly without any training or abandonment after two months.
+- Foolproof delete and move protection on Google Drive folders so assistants cannot tamper with them, along with native WhatsApp integration so we don't have to change our ten-year routine.
+- Independent technical proof certifying zero access to existing private Drive folders, plus direct integration into WhatsApp so my 30 client groups don't have to change.
+- Pricing matched to Jamku at ₹6,500 a year and native WhatsApp integration so neither my clients nor I have to touch another interface.
+- A working direct WhatsApp integration that pulls attachments from client groups straight into their Drive dockets automatically.
 
 Buyers say they would buy **1.0 times** in the first month on average.
 
@@ -362,8 +372,15 @@ The consumer panel proved that an unrestricted 2-user free tier causes **100% co
 | Tier | Target Firm | Team Size | Active Clients & Dockets | Price (Monthly / Annual) | Core Inclusions |
 |---|---|---|---|---|---|
 | **Free Sandbox** *(Trial & Micro)* | Solo CAs, new practitioners, evaluation | **Up to 2 users** | **Capped at 5 Active Clients** & **15 Dockets / month** | **₹0 forever** | Full feature parity: 1-click Google Drive BYOS, Maker-Checker QC, statutory calendar, audit log. |
-| **Starter** *(Most Popular)* | 3 to 5 person partnership practices | **Up to 5 users** | **Up to 50 Active Clients** & **Unlimited Dockets** | **₹1,999 / mo** (Monthly)<br>**₹1,499 / mo** (₹17,990/yr Annual) | Full feature access, unlimited BYOS storage in firm's Drive, zero setup fee, WhatsApp triage inbox, email support. |
-| **Pro** *(Growth / Multi-Partner)* | 6+ person firms, multi-branch practices | **Unlimited users** | **Unlimited Clients** & **Unlimited Dockets** | **₹5,999 / mo** (Monthly)<br>**₹4,999 / mo** (₹59,990/yr Annual) | Everything in Starter + Department queues (Tax, Audit, ROC), custom maker-checker roles, priority phone/SLA support. |
+| **Starter** *(Boutique)* | 2 to 5 person partnership practices | **Up to 5 users** | **Up to 50 Active Clients** & **Unlimited Dockets** | **₹1,999 / mo** (Monthly)<br>**₹1,499 / mo** (₹17,990/yr Annual)<br>*(Promo: ₹12,990/yr Pioneer)* | Full feature access, unlimited BYOS storage in firm's Drive, zero setup fee, 1-click client drop links, email support. |
+| **Growth** *(Mid-Sized / Expanding)* | 6 to 12 person firms, rotating article clerks | **Up to 12 users** *(+₹1,200/seat/yr)* | **Up to 150 Active Clients** & **Unlimited Dockets** | **₹2,499 / mo** (Monthly)<br>**₹1,832 / mo** (₹21,990/yr Annual) | Everything in Starter + Shared department queues (ROC, Tax, SEBI), trainee maker-checker workflows, bulk dropzone, Drive sync recovery. |
+| **Pro** *(Growth / Multi-Partner)* | 15+ person firms, multi-branch practices | **Up to 25 users** | **Unlimited Clients** & **Unlimited Dockets** | **₹5,999 / mo** (Monthly)<br>**₹4,999 / mo** (₹59,990/yr Annual) | Everything in Growth + Multi-partner DSC sign-off routing workflows, custom roles, priority SLA & dedicated migration engineer. |
+
+#### Why the Growth Tier Bridges the 4.6x Mid-Sized Practice Cliff:
+1. **Eliminates the Cliff**: Previously, firms with 6 to 12 staff had to jump from ₹12,990/yr directly to ₹59,990/yr (a 4.6x jump), causing 100% of mid-sized practices to pass in the consumer panel (P008, P016).
+2. **Matches Willingness to Pay**: At **₹21,990/year flat** (~₹1,832/mo), it lands directly within the ₹20,000–₹25,000 annual budget reported by mid-sized managing partners.
+3. **Economies of Scale**: Effective cost per seat drops to **₹1,832 / seat / year** (compared to ₹2,598 on Starter), rewarding growing practices while maintaining an **86.4% gross contribution margin** for Docketra.
+4. **Flexible Expansion**: Teams needing 13 or 14 seats can add individual seats at ₹1,200/seat/year (+₹149/mo) without an immediate leap to enterprise Pro.
 
 #### Why This Free-Tier Cap Works:
 1. **Frictionless Evaluation**: A firm can sign up in 60 seconds, connect their Google Drive, and run 5 real client matters without entering credit card details.
@@ -468,13 +485,14 @@ This offer is architected using the Offers framework to systematically eliminate
 > **The Sovereign Practice Transformation Stack**
 
 #### 1. The Core Product (The Sovereign Foundation)
-* **1-Click Sovereign Google Drive Connection**: Primary-Admin OTP verification. Docketra creates its own dedicated firm folder and strictly only reads and accesses the folder it created; zero read or index access to any pre-existing firm folders or private client files.
+* **1-Click Sovereign Google Drive Connection & Folder Tamper Guard**: Primary-Admin OTP verification. Docketra creates its own dedicated firm folder and strictly only reads and accesses the folder it created; zero read or index access to any pre-existing firm folders or private client files. Continuous cloud metadata sync tracks persistent resource IDs, detects moved or trashed folders via root manifest telemetry, and provides 1-click re-linking and restoration.
 * **Native Maker-Checker Execution**: Junior staff prepare; senior partners approve. Immutable audit trail compliant with ICAI SQC-1 peer-review guidelines.
 * **Statutory Compliance Recurrence**: Automated statutory tracking for MCA-21, ROC Annual Filings, GST monthly deadlines, and Tax Audits.
 * **Volume-Metered Packaging**:
   - *Free Sandbox*: 2 users, capped at 5 active clients / 15 dockets/mo.
   - *Starter*: Up to 5 users, 50 clients, unlimited dockets.
-  - *Pro*: Unlimited users, unlimited clients, department queues.
+  - *Growth*: Up to 12 users, 150 clients, shared department queues, +₹1,200/seat/yr add-ons.
+  - *Pro*: Up to 25 users, unlimited clients, multi-branch, DSC workflows.
 
 #### 2. The Bonuses (Killing Every Top Objection)
 * **Bonus #1: Frictionless Client Drop Link & Inbound Email Bridge** *(Value: ₹15,000 — Free)*  
@@ -484,12 +502,12 @@ This offer is architected using the Offers framework to systematically eliminate
   - MCA Annual Filing (MGT-7, AOC-4)
   - ROC Director KYC (DIR-3 KYC) & Company Incorporation
   - GSTR-3B & GSTR-1 Reconciliation
-  - Tax Audit Form 3CD & Transfer Pricing
+  - Tax Audit Form 3CD (44 Clauses) & Transfer Pricing
   Fresh article clerks follow standardized step-by-step audit steps on day one without senior partner micromanagement.
 * **Bonus #3: 24-Hour Concierge Client Roster Migration** *(Value: ₹10,000 — Free)*  
   Send your messy Excel client sheet or desktop backup to our engineering team. We sanitize, deduplicate, and import your entire client roster and compliance categories into Docketra within 24 hours.
-* **Bonus #4: Certified Zero-Access Drive Security Whitepaper** *(Value: Indispensable)*  
-  An official, print-ready compliance and cybersecurity certificate for senior partners and clients, confirming that Docketra operates under zero-knowledge metadata architecture and never stores client documents on external servers.
+* **Bonus #4: Certified Zero-Access Drive Security & Tamper Guard Whitepaper** *(Value: Indispensable)*  
+  An official, print-ready compliance and cybersecurity certificate for senior partners and clients, confirming that Docketra operates under zero-knowledge metadata architecture, isolates file custody strictly to firm Drive, and auto-relinks moved/trashed folders via cryptographic manifest telemetry.
 
 #### 3. The Risk Reversal (The 30-Day Zero-Risk, Zero-Data-Lock-In Guarantee)
 > **"Try Docketra for 30 days. If it does not save your practice at least 10 hours a week on client follow-ups and review queues, email us for an instant 100% refund—no questions asked.**  

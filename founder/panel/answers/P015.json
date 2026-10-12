@@ -2,12 +2,12 @@
   "id": "P015",
   "buys": false,
   "purchases_first_month": 0,
-  "reason_code": "timing",
-  "reason": "In an ordinary week outside the July ITR or October ROC rush, I'm not going to spend ₹12,990 upfront when my clients just dump bills on WhatsApp anyway. I only pull the trigger on software when deadline panic or peer-review pressure forces my hand, so right now I would at most test the free sandbox.",
-  "objection": "My clients will never use an intake portal—they just dump bills on WhatsApp.",
-  "would_change_my_mind": "A peak filing crunch where an automated WhatsApp-to-docket bridge proves it can enforce maker-checker review on my article clerk without client friction.",
+  "reason_code": "habit",
+  "reason": "In a normal week outside the July or October tax rush, I will just stick to the free 2-seat tier; my clients dump everything into WhatsApp chats anyway, and native WhatsApp integration is only on the roadmap.",
+  "objection": "My clients will never use an intake link when they are used to dumping bills on WhatsApp, so my collection chaos won't actually be fixed yet.",
+  "would_change_my_mind": "Live native WhatsApp integration where client attachments sync directly into the docket Drive folder.",
   "price_too_cheap": 3000,
-  "price_cheap": 6000,
-  "price_expensive": 14000,
+  "price_cheap": 8000,
+  "price_expensive": 16000,
   "price_too_expensive": 25000
 }
