@@ -32,11 +32,15 @@ const HeroSection = ({ onOpenTour }) => (
 
           {/* Subtitle */}
           <p className="text-sm sm:text-base font-normal leading-relaxed text-slate-600 max-w-xl">
-            Connected workspace for client memory, statutory dockets, team worklists, and partner QC.
+            Keep all your client files, ROC and tax due dates, staff worklists, and partner reviews in one clean workspace.
           </p>
 
           <p className="text-xs font-medium text-slate-900">
-            For CS, CA, law, and compliance teams that cannot afford missing context.
+            Built for CS, CA, law, and compliance teams so work never gets delayed.
+          </p>
+
+          <p className="text-xs text-amber-600 font-mono tracking-tight">
+            Every filing checked. Your files in your Drive. Zero missed due dates.
           </p>
 
           {/* Practice Solutions Navigation */}
@@ -106,7 +110,7 @@ const HeroSection = ({ onOpenTour }) => (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-mono text-slate-500 pt-1">
             <span>No credit card required</span>
             <span>Files save to your Google Drive</span>
-            <span>Cancel anytime</span>
+            <span>Free for up to 5 clients</span>
           </div>
         </motion.div>
 
@@ -132,23 +136,23 @@ const SubHeroMetricsStrip = () => (
         {[
           {
             stat: 'Google Drive',
-            label: 'Sovereign Storage',
-            desc: 'Files save straight to your firm folder',
+            label: 'Your Own Storage',
+            desc: 'Files stay safely in your firm’s Drive',
           },
           {
             stat: 'Due Dates',
-            label: 'Statutory Radar',
-            desc: 'MCA, GST, and Tax cutoffs tracked',
+            label: 'Never Miss a Filing',
+            desc: 'ROC, GST, and Tax reminders before late fees',
           },
           {
-            stat: 'Partner QC',
-            label: 'Sign-off Gates',
-            desc: 'Check work before government submission',
+            stat: 'Partner Review',
+            label: 'Check Before Filing',
+            desc: 'Partner approves before staff file on portal',
           },
           {
-            stat: 'Team Worklists',
-            label: 'Clear Task Ownership',
-            desc: 'Direct allocation across staff',
+            stat: 'Daily Worklists',
+            label: 'Clear Staff Tasks',
+            desc: 'See who is working on what today',
           },
         ].map((item, idx) => (
           <div key={idx} className="border-l border-slate-200 pl-4 py-1">
@@ -166,12 +170,12 @@ const ProductPillarsSection = () => (
   <section id="product" className="scroll-mt-16 bg-slate-50/40 py-16 border-b border-slate-200">
     <Container size="7xl">
       <motion.div className="max-w-2xl" {...REVEAL}>
-        <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">Architecture</div>
+        <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">What Docketra Does</div>
         <h2 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
-          One platform. Every professional workflow.
+          Everything your firm needs in one place
         </h2>
         <p className="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-          Operational structure built specifically for Indian CS, CA, and legal firms.
+          Simple, practical tools designed for Indian CA, CS, and legal practices.
         </p>
       </motion.div>
 
@@ -179,33 +183,33 @@ const ProductPillarsSection = () => (
         {[
           {
             title: 'Client memory',
-            body: 'Centralized company master records, CIN, PAN, and director contacts accessible firm-wide.',
-            tag: 'Zero Context Loss',
+            body: 'Keep company details, CIN, PAN, and director contacts together so staff don’t have to ask the client twice.',
+            tag: 'No Missing Info',
           },
           {
-            title: 'Dockets',
-            body: 'Structured matter containers tracking deadlines, documents, and ownership from start to finish.',
-            tag: 'Ownership Visibility',
+            title: 'Client Upload Link',
+            body: 'Send clients a simple link to upload bank statements and bills without creating an account or logging in.',
+            tag: 'No Client Login Needed',
           },
           {
             title: 'Worklist & Workbaskets',
-            body: 'Individual staff task queues paired with shared firm workbaskets for balanced intake.',
-            tag: 'Execution Flow',
+            body: 'Team members see their exact daily tasks on their Worklist, while managers can route work through shared Workbaskets.',
+            tag: 'Daily Worklist',
           },
           {
             title: 'QC Workbaskets & review',
-            body: 'Two-tier verification where partners check draft forms and challans before final filing.',
+            body: 'Partners can check draft forms and challans in QC Workbaskets before anything is submitted to the portal.',
             tag: 'Partner Sign-off',
           },
           {
-            title: 'Reports and audit trails',
-            body: 'Real-time visibility into pending filings, bottlenecks, and immutable timestamped actions.',
-            tag: 'Audit Readiness',
+            title: 'Ready Checklists & Reports',
+            body: 'Pre-loaded steps for MCA, ROC, GST, and Tax Audit so work runs smoothly even when article clerks rotate.',
+            tag: 'Trainee Checklists',
           },
           {
             title: 'Google Drive Storage',
-            body: 'Documents save directly into your firm’s private Google Drive with 100% data custody.',
-            tag: 'Sovereign Control',
+            body: 'All client files save directly into your firm’s own Google Drive. We only touch the folder we create.',
+            tag: 'Your Own Drive',
           },
         ].map((pillar) => (
           <div
@@ -231,12 +235,12 @@ const ProblemSection = () => (
   <section id="why" className="scroll-mt-16 bg-white py-16 border-b border-slate-200">
     <Container size="7xl">
       <motion.div className="max-w-2xl" {...REVEAL}>
-        <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">System Comparison</div>
+        <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">Why Switch</div>
         <h2 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
-          Why Excel and generic apps fail professional firms
+          Why Excel and WhatsApp fail busy firms
         </h2>
         <p className="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-          Spreadsheets lack statutory logic. Generic issue trackers lack firm compliance workflows.
+          WhatsApp mixes personal chats with client files. Excel cannot track MCA due dates or partner approvals.
         </p>
       </motion.div>
 
@@ -251,12 +255,12 @@ const HowItWorksSection = () => (
   <section id="workflow" className="scroll-mt-16 bg-slate-50/40 py-16 border-b border-slate-200">
     <Container size="7xl">
       <motion.div className="max-w-2xl" {...REVEAL}>
-        <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">Execution Lifecycle</div>
+        <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">How It Works</div>
         <h2 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
-          How work moves in Docketra
+          How work gets done in Docketra
         </h2>
         <p className="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-          Four disciplined stages from client mandate to completed statutory filing.
+          Four simple steps from getting client work to the final filing.
         </p>
       </motion.div>
 
@@ -264,23 +268,23 @@ const HowItWorksSection = () => (
         {[
           {
             step: '01',
-            title: 'Intake Matter',
-            desc: 'Create a docket linked to client memory in 30 seconds.',
+            title: 'Create Matter',
+            desc: 'Open a client docket in 30 seconds when new work arrives.',
           },
           {
             step: '02',
-            title: 'Assign to Worklist',
-            desc: 'Assign to an associate with statutory deadline dates.',
+            title: 'Assign to Staff',
+            desc: 'Give tasks to an associate or article clerk with clear due dates.',
           },
           {
             step: '03',
-            title: 'Drive Working Papers',
-            desc: 'Working documents save directly into your Google Drive.',
+            title: 'Prepare in Drive',
+            desc: 'Staff prepare forms and save working papers directly into your Google Drive.',
           },
           {
             step: '04',
-            title: 'Partner QC & Filing',
-            desc: 'Partner verifies challans, approves, and marks complete.',
+            title: 'Partner Check',
+            desc: 'Partner verifies challans, gives approval, and marks the filing complete.',
           },
         ].map((item) => (
           <div key={item.step} className="border border-slate-200 bg-white p-5 hover:border-slate-400 transition-colors">
@@ -300,32 +304,32 @@ const TrustSection = () => (
   <section id="trust" className="scroll-mt-16 bg-[#080C14] py-16 text-white border-b border-slate-800">
     <Container size="7xl">
       <motion.div className="max-w-2xl" {...REVEAL}>
-        <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-amber-400">Data Sovereignty</div>
+        <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-amber-400">Data Safety</div>
         <h2 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight text-white">
           Your client files stay in your own Google Drive
         </h2>
         <p className="mt-1.5 text-xs sm:text-sm text-slate-400 leading-relaxed">
-          Docketra connects directly to your Google Drive. Confidential client documents never leave your firm.
+          Docketra manages the work status. All confidential client documents stay inside your firm’s private Drive.
         </p>
       </motion.div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
         <div className="border border-slate-800 bg-slate-900/60 p-5 space-y-1.5 hover:border-slate-700 transition-colors">
-          <h3 className="text-sm font-bold text-white">100% Data Ownership</h3>
+          <h3 className="text-sm font-bold text-white">We Only Open Our Folder</h3>
           <p className="text-xs text-slate-400 leading-relaxed">
-            Client working papers and financial statements stay in your Google Drive with zero proprietary lock-in.
+            Docketra only accesses the specific folder it creates. It cannot read, search, or touch your other client files or personal folders.
           </p>
         </div>
         <div className="border border-slate-800 bg-slate-900/60 p-5 space-y-1.5 hover:border-slate-700 transition-colors">
-          <h3 className="text-sm font-bold text-white">Firm Role Boundaries</h3>
+          <h3 className="text-sm font-bold text-white">100% Your Own Files</h3>
           <p className="text-xs text-slate-400 leading-relaxed">
-            Explicit access boundaries ensure associates and managers only access authorized client matters.
+            Client papers and balance sheets stay in your Drive. Even if you leave Docketra, you keep every single file.
           </p>
         </div>
         <div className="border border-slate-800 bg-slate-900/60 p-5 space-y-1.5 hover:border-slate-700 transition-colors">
-          <h3 className="text-sm font-bold text-white">Immutable Audit Trail</h3>
+          <h3 className="text-sm font-bold text-white">Clear Record for Peer Review</h3>
           <p className="text-xs text-slate-400 leading-relaxed">
-            Complete record of every status transition, review sign-off, and filing timestamp.
+            A complete record of who prepared the work and who approved it, ready whenever peer review comes up.
           </p>
         </div>
       </div>
@@ -340,13 +344,13 @@ const PilotReadinessSection = () => (
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-slate-200">
           <div className="space-y-1 max-w-xl">
             <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-              Packaging & Pilot
+              Get Started
             </div>
             <h2 className="text-2xl font-bold text-slate-950 tracking-tight">
               Start using Docketra for your firm in 5 minutes
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Create your firm workspace, invite your team, and manage your first 5 clients for ₹0. Pioneer 30 launch pass available for scaling practices.
+              Create your firm workspace, invite your team, and manage your first 5 clients for ₹0. Pioneer 30 pass available for growing practices.
             </p>
           </div>
 
@@ -373,21 +377,21 @@ const PilotReadinessSection = () => (
             <span className="text-amber-600 font-bold">✓</span>
             <div>
               <span className="font-bold text-slate-900">Free Sandbox (₹0 forever):</span>
-              <p className="text-slate-600 mt-0.5">Up to 2 seats, 5 clients, and full sovereign Google Drive integration.</p>
+              <p className="text-slate-600 mt-0.5">Up to 2 seats, 5 clients, and full Google Drive connection.</p>
             </div>
           </div>
           <div className="flex items-start gap-2.5">
             <span className="text-amber-600 font-bold">✓</span>
             <div>
-              <span className="font-bold text-slate-900">Pioneer 30 Pass (₹12,990/yr):</span>
-              <p className="text-slate-600 mt-0.5">Grandfathered rate locked for life for first 30 firms. Zero setup fees.</p>
+              <span className="font-bold text-slate-900">Pioneer 30 Pass (₹12,990/year):</span>
+              <p className="text-slate-600 mt-0.5">Special flat rate locked for life for first 30 firms. Zero setup charges.</p>
             </div>
           </div>
           <div className="flex items-start gap-2.5">
             <span className="text-amber-600 font-bold">✓</span>
             <div>
-              <span className="font-bold text-slate-900">30-Day Sovereign Guarantee:</span>
-              <p className="text-slate-600 mt-0.5">100% money-back guarantee. All client files remain permanently in your Drive.</p>
+              <span className="font-bold text-slate-900">30-Day Money-Back Guarantee:</span>
+              <p className="text-slate-600 mt-0.5">100% refund if it does not help your firm. All files stay in your Drive.</p>
             </div>
           </div>
         </div>
@@ -407,7 +411,7 @@ const FinalCtaSection = () => (
           For partners, managers, and execution teams.
         </p>
         <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-          Start with one workspace, invite your associates, and eliminate scattered client operations.
+          Start with one workspace, invite your team, and eliminate scattered WhatsApp client files.
         </p>
 
         <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -429,8 +433,8 @@ const FinalCtaSection = () => (
 
         <div className="font-mono text-[11px] text-slate-400 pt-2 flex items-center justify-center gap-4">
           <span>No credit card required</span>
-          <span>Cancel anytime</span>
-          <span>Free pilot setup</span>
+          <span>Connect your own Google Drive</span>
+          <span>2-minute setup</span>
         </div>
       </motion.div>
     </Container>

@@ -48,7 +48,18 @@ export const CaseDetailAttachmentsPanel = ({
       <ul className="mt-4 space-y-3">
         {attachments.map((attachment, index) => (
           <li key={attachment.id || attachment._id || index} className="rounded-xl border border-gray-200 bg-white p-3">
-            <p className="text-sm font-medium text-gray-900">{attachment.fileName || attachment.filename || 'Attachment'}</p>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-medium text-gray-900">{attachment.fileName || attachment.filename || 'Attachment'}</p>
+              {(String(attachment.source || '').toUpperCase() === 'WHATSAPP_FORWARD' || String(attachment.source || '').toLowerCase() === 'whatsapp_intake') ? (
+                <span className="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                  WhatsApp
+                </span>
+              ) : String(attachment.source || '').toUpperCase() === 'CLIENT_UPLOAD' ? (
+                <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                  Client Portal
+                </span>
+              ) : null}
+            </div>
             <p className="mt-1 text-xs text-gray-500">Uploaded {formatDateTime(attachment.createdAt || attachment.uploadedAt)}</p>
             <p className="mt-1 text-xs text-gray-500">By {attachment.createdByName || attachment.createdByXID || attachment.uploadedBy || attachment.createdBy || 'System'}</p>
             {attachment.description ? <p className="mt-1 text-xs text-gray-500">Comment: {attachment.description}</p> : null}

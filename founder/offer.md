@@ -61,8 +61,8 @@ This offer is architected using the Offers framework to systematically eliminate
   - *Pro*: Up to 25 users, unlimited clients, multi-branch, DSC workflows.
 
 ### 2. The Bonuses (Killing Every Top Objection)
-* **Bonus #1: Frictionless Client Drop Link & Inbound Email Bridge** *(Value: ₹15,000 — Free)*  
-  Clients never have to register, remember passwords, or log into an external portal. For each active docket, clerks send a 1-click Secure Client Upload Link. Clients simply open the link on phone or desktop to drag-and-drop bank statements, bills, or notices directly into the docket in 30 seconds, automatically syncing into your Google Drive folder. (Inbound email bridge upcoming; direct WhatsApp integration on roadmap).
+* **Bonus #1: The WhatsApp Forwarding & Intake Bridge ("Zero Client Retraining")** *(Value: ₹15,000 — Free)*  
+  Clients never have to register, remember passwords, or open unfamiliar web URLs. Promoters and business clients continue texting their bank statements, challans, PAN cards, and notices directly into WhatsApp as they have always done. Article clerks and assistants forward or drop incoming WhatsApp media directly into dockets via the 1-click WhatsApp Intake Bridge. Docketra auto-syncs the document into the client's Google Drive folder, logs the client WhatsApp message and sender on the docket audit feed, and checks off compliance requirements—giving the firm structured compliance without forcing clients to change their habits. (Complementary 1-click web drop links also included for clients who prefer browser drops).
 * **Bonus #2: Turnkey Statutory Workflow Blueprints ("The Zero-Training Clerk Kit")** *(Value: ₹25,000 — Free)*  
   15+ pre-loaded, battle-tested compliance checklists covering:
   - MCA Annual Filing (MGT-7, AOC-4)

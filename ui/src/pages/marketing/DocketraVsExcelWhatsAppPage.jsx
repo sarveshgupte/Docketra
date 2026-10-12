@@ -25,7 +25,7 @@ const FAQ_ITEMS = [
     id: 'vs-generic-tools',
     question: 'How does Docketra compare to generic tools like ClickUp, Notion, or Asana?',
     answer:
-      'Generic tools lack Indian statutory semantics—they have no concept of a CIN, 4-eye partner sign-offs, statutory filing penalties, or MCA compliance calendars. Setting them up requires months of custom consulting. Docketra is purpose-built and ready on day one with compliance workbaskets, client memory, and audit trails tailored for Indian CA and CS practices.',
+      'Generic tools lack Indian statutory semantics: they have no concept of a CIN, 4-eye partner sign-offs, statutory filing penalties, or MCA compliance calendars. Setting them up requires months of custom consulting. Docketra is purpose-built and ready on day one with compliance workbaskets, client memory, and audit trails tailored for Indian CA and CS practices.',
   },
   {
     id: 'security-sovereignty',
@@ -73,6 +73,11 @@ const COMPARISON_ROWS = [
     feature: 'Data Sovereignty & Security',
     excel: 'Unencrypted client PANs, DSC PINs, and draft resolutions shared in casual WhatsApp groups with zero access controls.',
     docketra: 'Tier-IV Indian Cloud Infrastructure with RBAC, immutable audit logging, and BYOS (Bring Your Own Storage) into firm Google Drive.',
+  },
+  {
+    feature: 'Client Intake & WhatsApp Friction',
+    excel: 'Clients refuse external portals and dump unstructured bills/challans into WhatsApp chats; clerks spend hours digging through message threads.',
+    docketra: 'Direct WhatsApp Forwarding Bridge. Clients continue sending files on WhatsApp as usual; clerks bridge media straight into dockets with 1-click Google Drive sync.',
   },
 ];
 
@@ -178,7 +183,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
           </h1>
 
           <p className="mx-auto mt-6 max-w-3xl text-base sm:text-lg text-slate-300 leading-relaxed font-normal">
-            Why leading corporate secretarial and legal practices outgrow spreadsheets—and how modern firms build an
+            Why leading corporate secretarial and legal practices outgrow spreadsheets, and how modern firms build an
             institutional brain that never forgets a statutory deadline or client document.
           </p>
 
@@ -783,7 +788,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
           <div className="flex items-center gap-2 text-slate-300 font-bold">
             <span className="text-amber-500">✦</span>
             <span>Docketra</span>
-            <span className="text-slate-500 font-normal">— The Company Brain for Indian Firms</span>
+            <span className="text-slate-500 font-normal">| The Company Brain for Indian Firms</span>
           </div>
           <div className="flex items-center gap-4 text-slate-400">
             <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>

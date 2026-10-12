@@ -28,7 +28,7 @@ const COMPARISON_ROWS = [
   },
   {
     feature: 'Client Document Intake',
-    docketra: '1-Click Client Drop URL (Zero Login Required) + Inbound Email',
+    docketra: '1-Click Drop URL + Direct WhatsApp Forwarding Bridge (Clients stay on WhatsApp)',
     jamku: 'Requires Client Portal Registration',
     excel: 'Unorganized WhatsApp Threads & Email Chaos',
   },
@@ -61,15 +61,15 @@ const COMPARISON_ROWS = [
 const FAQS = [
   {
     question: 'Can Docketra read our firm’s existing confidential tax returns in Google Drive?',
-    answer: 'No. When you connect Google Drive, Docketra creates its own dedicated firm folder. Docketra strictly only reads and manages the specific folder it created—nothing else. We have zero read, search, or index permissions for any of your firm’s pre-existing Drive folders, private client archives, or personal files.',
+    answer: 'No. When you connect Google Drive, Docketra creates its own dedicated firm folder. Docketra strictly only reads and manages the specific folder it created (nothing else). We have zero read, search, or index permissions for any of your firm’s pre-existing Drive folders, private client archives, or personal files.',
   },
   {
     question: 'What happens to our client records if we cancel our subscription?',
     answer: 'Because of Sovereign BYOS, 100% of your documents, folders, and organized filings live permanently inside your firm’s Google Drive. If you ever cancel, you keep everything. Zero data hostage, zero proprietary export fees.',
   },
   {
-    question: 'Our clients refuse to log into an external client portal. How do they submit files?',
-    answer: 'Your clients never have to register or remember a password. Docketra provides a 1-click Secure Client Upload URL for each docket. Clients simply open the link on their phone or desktop and drag-and-drop their bank statements, PAN cards, or invoices—which automatically attach to the docket and sync directly into your Google Drive. For email workflows, our upcoming Inbound Email bridge lets clients or clerks forward attachments directly to the docket.',
+    question: 'Our clients refuse to open web links and only dump files in WhatsApp. How does Docketra handle this?',
+    answer: 'Docketra includes a built-in WhatsApp Forwarding & Intake Bridge specifically designed for this reality. Your clients never have to click external links, open web portals, or change their habits: they keep texting files on WhatsApp as usual. Your article clerks simply drop or forward the WhatsApp media directly into the docket in 1-click. Docketra automatically files the document into the client’s Google Drive folder, logs the WhatsApp sender and message notes on the docket feed, and marks checklist requirements complete.',
   },
   {
     question: 'Our article clerks and trainees rotate every 2 to 3 years. How long does training take?',
@@ -259,7 +259,7 @@ export const PricingPage = () => {
                   <li className="flex items-start gap-2.5">
                     <span className="text-blue-600 font-bold">★</span>
                     <span className="font-semibold text-slate-900">
-                      Bonus #1: Frictionless Client Drop Link & Inbound Email Bridge
+                      Bonus #1: WhatsApp Forwarding Bridge & Frictionless Client Drop Link
                     </span>
                   </li>
                   <li className="flex items-start gap-2.5">

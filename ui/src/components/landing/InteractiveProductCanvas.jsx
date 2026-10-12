@@ -3,33 +3,33 @@ import React, { useState } from 'react';
 const CANVAS_TABS = [
   {
     id: 'radar',
-    label: 'Deadlines',
+    label: 'Due Dates',
     badge: '3 Overdue',
-    description: 'Upcoming MCA, Tax, and NCLT statutory cutoffs with late fee tracking.',
+    description: 'Upcoming MCA, Tax, and NCLT due dates with late fee alerts.',
   },
   {
     id: 'workbaskets',
-    label: 'Worklist',
-    badge: '8 Active',
-    description: 'Direct task allocation by associate, matter, and statutory form.',
+    label: 'Staff Worklist',
+    badge: '8 Tasks',
+    description: 'Daily tasks assigned to team members and article clerks.',
   },
   {
     id: 'clients',
-    label: 'Client Memory',
-    badge: '42 Entities',
-    description: 'Centralized CIN, PAN, director records, and historical filings.',
+    label: 'Client Details',
+    badge: '42 Clients',
+    description: 'All company details, CIN, PAN, and director records in one place.',
   },
   {
     id: 'storage',
     label: 'Google Drive',
-    badge: 'Sovereign',
-    description: 'Direct client folder hierarchy saved in your firm’s private storage.',
+    badge: 'Connected',
+    description: 'Files save directly into your firm’s own Google Drive folders.',
   },
   {
     id: 'qc',
-    label: 'QC Workbaskets',
+    label: 'Partner Review',
     badge: '2 Pending',
-    description: 'Partner review and DSC sign-off before government portal submission.',
+    description: 'Partner checks forms and challans before final filing on government portal.',
   },
 ];
 
@@ -53,10 +53,10 @@ export function InteractiveProductCanvas({ className = '' }) {
             <div className="flex items-center gap-2.5 min-w-0">
               <span className="h-1.5 w-1.5 bg-amber-500 shrink-0" />
               <span className="font-mono text-[11px] font-semibold text-slate-300 truncate">
-                docketra / mehta-associates
+                docketra / mehta-and-associates
               </span>
               <span className="hidden sm:inline border border-slate-800 px-1.5 py-0.2 font-mono text-[10px] text-slate-400">
-                PROD
+                ACTIVE
               </span>
             </div>
 
@@ -66,7 +66,7 @@ export function InteractiveProductCanvas({ className = '' }) {
               </span>
               <span className="flex items-center gap-1.5 border border-emerald-900/60 bg-emerald-950/40 px-2 py-0.5 text-emerald-400 font-semibold">
                 <span className="h-1.5 w-1.5 bg-emerald-400 shrink-0" />
-                <span>Drive Mounted</span>
+                <span>Drive Connected</span>
               </span>
             </div>
           </div>
@@ -101,7 +101,7 @@ export function InteractiveProductCanvas({ className = '' }) {
 
           {/* Tab Content Canvas */}
           <div className="p-3.5 sm:p-4 bg-[#090D16] space-y-3">
-            {/* 1. Deadlines & Statutory Radar */}
+            {/* 1. Due Dates */}
             {activeTab === 'radar' && (
               <div className="space-y-2.5">
                 {/* Metric Summary Strip */}
@@ -124,12 +124,12 @@ export function InteractiveProductCanvas({ className = '' }) {
                   </div>
                 </div>
 
-                {/* Statutory Filings Table */}
+                {/* Due Dates Table */}
                 <div className="border border-slate-800 bg-slate-950 overflow-hidden text-xs">
                   <div className="grid grid-cols-12 bg-slate-900/90 px-3 py-1.5 font-mono text-[10px] text-slate-400 font-bold uppercase border-b border-slate-800">
-                    <div className="col-span-5">Entity & Identifier</div>
-                    <div className="col-span-4">Statutory Form</div>
-                    <div className="col-span-3 text-right">Cutoff</div>
+                    <div className="col-span-5">Client & CIN</div>
+                    <div className="col-span-4">Filing / Form</div>
+                    <div className="col-span-3 text-right">Due Date</div>
                   </div>
                   <div className="divide-y divide-slate-800/80">
                     <div className="grid grid-cols-12 items-center px-3 py-2">
@@ -175,8 +175,8 @@ export function InteractiveProductCanvas({ className = '' }) {
               <div className="space-y-2.5">
                 <div className="border border-slate-800 bg-slate-950 p-3 space-y-2.5">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="text-xs font-semibold text-white">Daily Execution Queue</span>
-                    <span className="text-[10px] text-slate-400 font-mono uppercase tracking-wider">Assigned to Associates</span>
+                    <span className="text-xs font-semibold text-white">Daily Assigned Tasks</span>
+                    <span className="text-[10px] text-slate-400 font-mono uppercase tracking-wider">Assigned to Staff</span>
                   </div>
                   <div className="space-y-1.5 text-xs">
                     <div className="p-2 border border-slate-800/80 bg-slate-900/60 flex items-center justify-between">
@@ -190,8 +190,8 @@ export function InteractiveProductCanvas({ className = '' }) {
                     </div>
                     <div className="p-2 border border-slate-800/80 bg-slate-900/60 flex items-center justify-between">
                       <div>
-                        <p className="font-semibold text-slate-200">ROC Name Reservation (RUN Form)</p>
-                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">Assigned: Rahul | Apex Advisors</p>
+                        <p className="font-semibold text-slate-200">ROC Name Approval (RUN Form)</p>
+                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">Assigned: Rahul (Trainee) | Apex Advisors</p>
                       </div>
                       <span className="border border-sky-500/40 bg-sky-500/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase text-sky-300">
                         Ready to File
@@ -202,7 +202,7 @@ export function InteractiveProductCanvas({ className = '' }) {
               </div>
             )}
 
-            {/* 3. Client Memory */}
+            {/* 3. Client Details */}
             {activeTab === 'clients' && (
               <div className="space-y-2.5">
                 <div className="border border-slate-800 bg-slate-950 p-3 space-y-2.5 text-xs">
@@ -217,7 +217,7 @@ export function InteractiveProductCanvas({ className = '' }) {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] pt-1">
                     <div className="p-2 border border-slate-800/80 bg-slate-900/60">
-                      <span className="text-slate-500 font-mono uppercase text-[9px]">PAN Record</span>
+                      <span className="text-slate-500 font-mono uppercase text-[9px]">PAN Number</span>
                       <p className="font-mono text-slate-200 font-bold mt-0.5">AAACZ1234F</p>
                     </div>
                     <div className="p-2 border border-slate-800/80 bg-slate-900/60">
@@ -233,42 +233,38 @@ export function InteractiveProductCanvas({ className = '' }) {
               </div>
             )}
 
-            {/* 4. Google Drive Sovereign Storage */}
+            {/* 4. Google Drive */}
             {activeTab === 'storage' && (
               <div className="space-y-2.5">
                 <div className="border border-slate-800 bg-slate-950 p-3 space-y-2.5 text-xs">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-bold text-white">Sovereign Google Drive Integration</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">Documents stay inside your firm’s private Google Workspace</p>
+                      <p className="font-bold text-white">Your Firm's Google Drive</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">All client papers save directly into your own Drive folders</p>
                     </div>
                     <span className="border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase text-emerald-300">
                       Connected
                     </span>
                   </div>
                   <div className="p-2.5 border border-slate-800/80 bg-slate-900/60 font-mono text-[10px] text-slate-300 space-y-1">
-                    <p className="text-slate-500">Automated Folder Hierarchy:</p>
+                    <p className="text-slate-500">Auto-Created Folder Path:</p>
                     <p className="text-amber-400">/Google Drive/Mehta & Associates/Clients/Zenith Infra/2026 Filings/</p>
                   </div>
-                  <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
-                    <span className="text-amber-400">🛡️</span>
-                    <span>Tamper Guard: Persistent IDs auto-detect moved/trashed folders &amp; re-link instantly.</span>
-                  </div>
                   <p className="text-[10px] text-slate-400 leading-normal">
-                    Confidential client documents never enter third-party proprietary storage. Zero vendor lock-in.
+                    Confidential client files never leave your Drive. Even if you leave Docketra, your files stay with you.
                   </p>
                 </div>
               </div>
             )}
 
-            {/* 5. QC Workbaskets */}
+            {/* 5. Partner Review */}
             {activeTab === 'qc' && (
               <div className="space-y-2.5">
                 <div className="border border-slate-800 bg-slate-950 p-3 space-y-2.5 text-xs">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-bold text-white">Partner Sign-off: Form AOC-4</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">Prepared by Associate | Pending Partner Approval</p>
+                      <p className="font-bold text-white">Partner Check: Form AOC-4</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Prepared by associate | Ready for partner review</p>
                     </div>
                     <span className="border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase text-amber-300">
                       Pending Review
@@ -277,16 +273,16 @@ export function InteractiveProductCanvas({ className = '' }) {
                   <div className="space-y-1 text-[11px]">
                     <div className="flex justify-between p-2 border border-slate-800/80 bg-slate-900/60 text-slate-300">
                       <span>Balance sheet and audit notes attached</span>
-                      <span className="text-emerald-400 font-mono text-[10px]">VERIFIED</span>
+                      <span className="text-emerald-400 font-mono text-[10px]">CHECKED</span>
                     </div>
                     <div className="flex justify-between p-2 border border-slate-800/80 bg-slate-900/60 text-slate-300">
-                      <span>Director DSC signature validated</span>
-                      <span className="text-emerald-400 font-mono text-[10px]">VERIFIED</span>
+                      <span>Director DSC signature verified</span>
+                      <span className="text-emerald-400 font-mono text-[10px]">CHECKED</span>
                     </div>
                   </div>
                   <div className="pt-1 flex justify-end">
                     <span className="border border-emerald-600 bg-emerald-500 px-3 py-1 text-slate-950 font-bold text-xs tracking-tight">
-                      Approve & Sign →
+                      Approve & Mark Filed →
                     </span>
                   </div>
                 </div>
@@ -298,7 +294,7 @@ export function InteractiveProductCanvas({ className = '' }) {
               <span className="text-slate-300">
                 {CANVAS_TABS.find((t) => t.id === activeTab)?.description}
               </span>
-              <span className="font-mono text-[10px] text-slate-500 hidden sm:inline">2026 ARCHITECTURE</span>
+              <span className="font-mono text-[10px] text-slate-500 hidden sm:inline">2026 WORKSPACE</span>
             </div>
           </div>
         </div>

@@ -39,27 +39,36 @@ export const useDocketAttachments = ({ caseId, user, showSuccess, showError, sho
     };
   }, [caseId]);
 
-  const handleUploadFile = useCallback(async (e) => {
+  const handleUploadFile = useCallback(async (e, options = {}) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (!selectedFile || !fileDescription.trim()) {
+    const fileToUpload = options?.file || selectedFile;
+    const descToUse = (options?.description !== undefined ? options.description : fileDescription).trim();
+    if (!fileToUpload || !descToUse) {
       showWarning('Please select a file and provide a description');
       return;
     }
     setUploadingFile(true);
     setUploadProgress(0);
     try {
-      const uploadedFile = selectedFile;
-      const description = fileDescription.trim();
-      await caseApi.addAttachment(caseId, uploadedFile, description, ({ percent }) => setUploadProgress(percent));
+      const uploadedFile = fileToUpload;
+      const description = descToUse;
+      const source = options?.source || 'upload';
+      const note = options?.note;
+      await caseApi.addAttachment(caseId, uploadedFile, description, ({ percent }) => setUploadProgress(percent), { source, note });
       const newFileObj = {
         _id: Date.now().toString(), fileName: uploadedFile.name, filename: uploadedFile.name, description,
         uploadedBy: user?.email || 'System', createdBy: user?.email || 'System', createdByName: user?.name || null,
         createdByXID: user?.xID || null, uploadedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
+        source,
       };
       setCaseData((prev) => ({ ...prev, attachments: [...(prev?.attachments || []), newFileObj] }));
-      setSelectedFile(null);
-      setFileDescription('');
-      const message = `Attachment added to docket ${caseId} • ${formatDateTime()}`;
+      if (!options?.file) {
+        setSelectedFile(null);
+        setFileDescription('');
+      }
+      const message = (source === 'WHATSAPP_FORWARD' || source === 'whatsapp_forward')
+        ? `WhatsApp document bridged to docket ${caseId} • ${formatDateTime()}`
+        : `Attachment added to docket ${caseId} • ${formatDateTime()}`;
       showSuccess(message);
       setActionConfirmation(message);
       setActionError(null);

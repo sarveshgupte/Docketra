@@ -37,8 +37,13 @@ export const DocketSidebar = ({
   const sidebarPanelRef = useRef(null);
   const lastFocusedElementRef = useRef(null);
   const attachmentFileInputRef = useRef(null);
+  const waFileInputRef = useRef(null);
   const [requestPanelOpen, setRequestPanelOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('upload');
+  const [waSender, setWaSender] = useState('');
+  const [waNote, setWaNote] = useState('');
+  const [waFile, setWaFile] = useState(null);
+  const [waCopiedTag, setWaCopiedTag] = useState(false);
   const [requestClientMessage, setRequestClientMessage] = useState('');
   const [requestInternalComment, setRequestInternalComment] = useState('');
   const [requestExpiry, setRequestExpiry] = useState('24h');
@@ -272,71 +277,188 @@ export const DocketSidebar = ({
         };
 
         return (
-          <div className="space-y-4 flex flex-col h-full">
-            {/* Clean Upload Form */}
-            <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3">
-              <input
-                ref={attachmentFileInputRef}
-                type="file"
-                className="hidden"
-                onChange={(event) => onAttachmentFileChange?.(event.target.files?.[0] || null)}
-                disabled={uploadingAttachment}
-              />
-              
-              {/* Clean Clickable Upload Dropzone Box */}
-              <div
-                onClick={() => !uploadingAttachment && attachmentFileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all ${
-                  selectedAttachmentFile
-                    ? 'border-blue-500 bg-blue-50/20'
-                    : 'border-gray-300 hover:border-blue-400 bg-gray-50/50 hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex flex-col items-center justify-center">
-                  <svg
-                    className={`w-6 h-6 mb-1.5 ${
-                      selectedAttachmentFile ? 'text-blue-500 animate-pulse' : 'text-gray-400'
-                    }`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                    />
-                  </svg>
-                  <p className="text-xs font-semibold text-gray-700 max-w-[200px] truncate">
-                    {selectedAttachmentFile ? selectedAttachmentFile.name : 'Click to select or drag a file'}
-                  </p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">
-                    {selectedAttachmentFile ? 'File attached successfully' : 'Compulsory comment required'}
-                  </p>
-                </div>
-              </div>
-
-              <textarea
-                className="w-full rounded-md border border-gray-300 p-2 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                rows={2}
-                value={attachmentComment}
-                onChange={(event) => onAttachmentCommentChange?.(event.target.value)}
-                placeholder="Add compulsory comment for this attachment"
-                disabled={uploadingAttachment}
-              />
-
+          <div className="space-y-3 flex flex-col h-full">
+            {/* Intake Mode Switcher */}
+            <div className="flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs font-medium shrink-0">
               <button
                 type="button"
-                className="w-full inline-flex items-center justify-center rounded-md bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-                onClick={onUploadAttachment}
-                disabled={uploadingAttachment || !selectedAttachmentFile || !attachmentComment?.trim()}
+                onClick={() => setActiveTab('upload')}
+                className={`flex-1 rounded-md py-1 text-center transition-all ${
+                  activeTab === 'upload'
+                    ? 'bg-white text-gray-900 shadow-xs font-semibold'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
               >
-                {uploadingAttachment
-                  ? `Uploading${uploadProgress ? ` ${uploadProgress}%` : '...'}`
-                  : 'Upload Attachment'}
+                Standard Upload
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('whatsapp')}
+                className={`flex-1 rounded-md py-1 text-center transition-all flex items-center justify-center gap-1.5 ${
+                  activeTab === 'whatsapp'
+                    ? 'bg-emerald-600 text-white shadow-xs font-semibold'
+                    : 'text-emerald-700 hover:text-emerald-900'
+                }`}
+              >
+                <span>WhatsApp Bridge</span>
+                <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-emerald-700/40 text-white font-mono font-bold">Bridge</span>
               </button>
             </div>
+
+            {/* Standard Upload Form */}
+            {activeTab === 'upload' ? (
+              <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3">
+                <input
+                  ref={attachmentFileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={(event) => onAttachmentFileChange?.(event.target.files?.[0] || null)}
+                  disabled={uploadingAttachment}
+                />
+                
+                {/* Clean Clickable Upload Dropzone Box */}
+                <div
+                  onClick={() => !uploadingAttachment && attachmentFileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all ${
+                    selectedAttachmentFile
+                      ? 'border-blue-500 bg-blue-50/20'
+                      : 'border-gray-300 hover:border-blue-400 bg-gray-50/50 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex flex-col items-center justify-center">
+                    <svg
+                      className={`w-6 h-6 mb-1.5 ${
+                        selectedAttachmentFile ? 'text-blue-500 animate-pulse' : 'text-gray-400'
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                      />
+                    </svg>
+                    <p className="text-xs font-semibold text-gray-700 max-w-[200px] truncate">
+                      {selectedAttachmentFile ? selectedAttachmentFile.name : 'Click to select or drag a file'}
+                    </p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">
+                      {selectedAttachmentFile ? 'File attached successfully' : 'Compulsory comment required'}
+                    </p>
+                  </div>
+                </div>
+
+                <textarea
+                  className="w-full rounded-md border border-gray-300 p-2 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  rows={2}
+                  value={attachmentComment}
+                  onChange={(event) => onAttachmentCommentChange?.(event.target.value)}
+                  placeholder="Add compulsory comment for this attachment"
+                  disabled={uploadingAttachment}
+                />
+
+                <button
+                  type="button"
+                  className="w-full inline-flex items-center justify-center rounded-md bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={onUploadAttachment}
+                  disabled={uploadingAttachment || !selectedAttachmentFile || !attachmentComment?.trim()}
+                >
+                  {uploadingAttachment
+                    ? `Uploading${uploadProgress ? ` ${uploadProgress}%` : '...'}`
+                    : 'Upload Attachment'}
+                </button>
+              </div>
+            ) : (
+              /* WhatsApp Forwarding Bridge Form */
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/20 p-3 space-y-2.5">
+                <div className="flex items-center justify-between pb-1.5 border-b border-emerald-100">
+                  <div className="text-[11px] font-semibold text-emerald-900">
+                    Forward WhatsApp Media to Docket
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const tag = `#${caseInfo?.caseNumber || caseInfo?.caseId || 'DOCKET'}`;
+                      navigator.clipboard?.writeText(tag);
+                      setWaCopiedTag(true);
+                      setTimeout(() => setWaCopiedTag(false), 2000);
+                    }}
+                    className="font-mono text-[10px] px-2 py-0.5 rounded border border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-50 font-semibold"
+                  >
+                    {waCopiedTag ? 'Copied #' : `Copy Tag #${caseInfo?.caseNumber || caseInfo?.caseId || 'DOCKET'}`}
+                  </button>
+                </div>
+                <p className="text-[10px] text-emerald-700 leading-tight">
+                  Clients dump files in WhatsApp? Drop the media here with sender details. Docketra syncs it into Google Drive without forcing clients onto a web portal.
+                </p>
+
+                <input
+                  ref={waFileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={(event) => setWaFile(event.target.files?.[0] || null)}
+                  disabled={uploadingAttachment}
+                />
+
+                <div
+                  onClick={() => !uploadingAttachment && waFileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg p-3 text-center cursor-pointer transition-all ${
+                    waFile
+                      ? 'border-emerald-500 bg-emerald-50/50'
+                      : 'border-emerald-300 hover:border-emerald-400 bg-white hover:bg-emerald-50/30'
+                  }`}
+                >
+                  <p className="text-xs font-semibold text-emerald-950 truncate">
+                    {waFile ? waFile.name : 'Select or drop WhatsApp media'}
+                  </p>
+                  <p className="text-[10px] text-emerald-600 mt-0.5">
+                    {waFile ? `${(waFile.size / 1024).toFixed(1)} KB ready` : 'PDF, Screenshot, Bank Challan, or Photo'}
+                  </p>
+                </div>
+
+                <input
+                  type="text"
+                  className="w-full rounded-md border border-gray-300 bg-white p-2 text-xs focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  value={waSender}
+                  onChange={(event) => setWaSender(event.target.value)}
+                  placeholder="WhatsApp Sender (e.g. +91 98200 12345 / Director)"
+                  disabled={uploadingAttachment}
+                />
+
+                <textarea
+                  className="w-full rounded-md border border-gray-300 bg-white p-2 text-xs focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  rows={2}
+                  value={waNote}
+                  onChange={(event) => setWaNote(event.target.value)}
+                  placeholder="Client WhatsApp message/caption (e.g. 'Paid advance tax challan')"
+                  disabled={uploadingAttachment}
+                />
+
+                <button
+                  type="button"
+                  className="w-full inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60 shadow-xs"
+                  onClick={(e) => {
+                    const desc = waSender.trim()
+                      ? `Forwarded from WhatsApp (${waSender.trim()})`
+                      : 'Forwarded via WhatsApp Bridge';
+                    onUploadAttachment?.(e, {
+                      file: waFile,
+                      description: desc,
+                      note: waNote.trim() || undefined,
+                      source: 'WHATSAPP_FORWARD',
+                    });
+                    setWaFile(null);
+                    setWaSender('');
+                    setWaNote('');
+                  }}
+                  disabled={uploadingAttachment || !waFile}
+                >
+                  <span>{uploadingAttachment ? `Bridging${uploadProgress ? ` ${uploadProgress}%` : '...'}` : 'Bridge WhatsApp Media to Drive →'}</span>
+                </button>
+              </div>
+            )}
 
             {/* Scrollable attachments list at the bottom */}
             <div className="border-t border-gray-200 pt-3 flex flex-col flex-1 min-h-[160px]">
@@ -364,11 +486,15 @@ export const DocketSidebar = ({
                         >
                           {attachment.fileName || attachment.filename || 'Attachment'}
                         </p>
-                        {String(attachment.source || '').toUpperCase() === 'CLIENT_UPLOAD' && (
+                        {(String(attachment.source || '').toUpperCase() === 'WHATSAPP_FORWARD' || String(attachment.source || '').toLowerCase() === 'whatsapp_intake') ? (
+                          <span className="bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded text-[9px] font-bold whitespace-nowrap">
+                            WhatsApp
+                          </span>
+                        ) : String(attachment.source || '').toUpperCase() === 'CLIENT_UPLOAD' ? (
                           <span className="bg-blue-100 text-blue-700 px-1.5 py-0.2 rounded text-[9px] font-bold whitespace-nowrap">
                             Client
                           </span>
-                        )}
+                        ) : null}
                       </div>
                       <p className="text-[10px] text-gray-500 mt-0.5">
                         {formatDateTime(attachment.createdAt || attachment.uploadedAt)} • {uploaderLabel(attachment)}

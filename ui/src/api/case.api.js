@@ -134,13 +134,15 @@ export const caseApi = {
     () => request((http) => http.post(caseRoute.comments(caseId), { text: commentText }), 'Failed to add comment'),
   ),
 
-  addAttachment: async (caseId, file, description, onProgress) => {
+  addAttachment: async (caseId, file, description, onProgress, options = {}) => {
     const intentResponse = await request(
       (http) => http.post(caseRoute.attachmentIntent(caseId), {
         fileName: file.name,
         mimeType: file.type || 'application/octet-stream',
         size: file.size,
         description,
+        source: options?.source || 'upload',
+        note: options?.note || undefined,
       }),
       'Failed to create attachment upload intent',
     );
