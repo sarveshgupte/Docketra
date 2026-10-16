@@ -18,6 +18,10 @@ const {
   updateUserHierarchy,
   updateRestrictedClients,
   updateQcSamplingRate,
+  sendTraineeShieldOtp,
+  updateUserTraineeShield,
+  exportWeeklyAuditCsv,
+  triggerWeeklyAuditDigest,
   getFirmSettings,
   getFirmSettingsActivity,
   getSettingsAudit,
@@ -35,6 +39,8 @@ const {
   restoreTask,
   getRetentionPreview,
   getAdminAuditLogs,
+  getFirmPlan,
+  upgradeFirmPlan,
 } = require('../controllers/admin.controller');
 const {
   getAllUsers,
@@ -126,12 +132,18 @@ router.post('/users/:xID/reset-password', ...adminBaseAccess, authorizeFirmPermi
 
 router.patch('/users/:xID/restrict-clients', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateRestrictedClients);
 router.patch('/users/:xID/qc-sampling-rate', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateQcSamplingRate);
+router.post('/users/:xID/trainee-shield/otp', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('USER_MANAGE'), sensitiveLimiter, sendTraineeShieldOtp);
+router.patch('/users/:xID/trainee-shield', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('USER_MANAGE'), sensitiveLimiter, updateUserTraineeShield);
 router.patch('/users/:xID/workbaskets', ...adminBaseAccess, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, updateUserWorkbaskets);
 router.patch('/users/:id/hierarchy', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateUserHierarchy);
+router.get('/audit-logs/weekly-csv', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('USER_VIEW'), userReadLimiter, exportWeeklyAuditCsv);
+router.post('/audit-logs/send-weekly-digest', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission(['FIRM_SETTINGS_MANAGE', 'ADMIN_STATS']), sensitiveLimiter, triggerWeeklyAuditDigest);
 router.get('/firm-settings', ...adminBaseAccess, authorizeFirmPermission(['FIRM_SETTINGS_MANAGE', 'ADMIN_STATS']), userReadLimiter, getFirmSettings);
 router.get('/firm-settings/activity', ...adminBaseAccess, authorizeFirmPermission(['FIRM_SETTINGS_MANAGE', 'ADMIN_STATS']), userReadLimiter, getFirmSettingsActivity);
 router.get('/settings/audit', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getSettingsAudit);
 router.put('/firm-settings', ...adminBaseAccess, authorizeFirmPermission(['FIRM_SETTINGS_MANAGE', 'ADMIN_STATS']), userWriteLimiter, updateFirmSettings);
+router.get('/firm-plan', ...adminBaseAccess, authorizeFirmPermission(['FIRM_SETTINGS_MANAGE', 'ADMIN_STATS']), userReadLimiter, getFirmPlan);
+router.post('/upgrade-plan', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission(['FIRM_SETTINGS_MANAGE']), sensitiveLimiter, upgradeFirmPlan);
 router.post('/setup-complete', ...adminBaseAccess, authorizeFirmPermission(['FIRM_SETTINGS_MANAGE', 'ADMIN_STATS']), userWriteLimiter, completeFirmSetup);
 router.get('/cms-intake-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getCmsIntakeSettings);
 router.put('/cms-intake-settings', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('ADMIN_STATS'), userWriteLimiter, updateCmsIntakeSettings);

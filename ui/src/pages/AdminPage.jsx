@@ -40,6 +40,7 @@ import {
 import { AdminUsersSection } from './admin/components/AdminUsersSection';
 import { CreateUserModal } from './admin/components/CreateUserModal';
 import { UserAccessModal } from './admin/components/UserAccessModal';
+import { TraineeShieldOtpModal } from './admin/components/TraineeShieldOtpModal';
 import { AdminClientsSection } from './admin/components/AdminClientsSection';
 import { AdminCategoriesSection } from './admin/components/AdminCategoriesSection';
 import { AdminBulkPasteModal } from './admin/components/AdminBulkPasteModal';
@@ -175,6 +176,11 @@ export const AdminPage = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedUserForAccess, setSelectedUserForAccess] = useState(null);
+  const [traineeShieldDraft, setTraineeShieldDraft] = useState(null);
+  const [showTraineeShieldOtpModal, setShowTraineeShieldOtpModal] = useState(false);
+  const [pendingShieldTarget, setPendingShieldTarget] = useState(null);
+  const [sendingShieldOtp, setSendingShieldOtp] = useState(false);
+  const [verifyingShieldOtp, setVerifyingShieldOtp] = useState(false);
   const [creatingUser, setCreatingUser] = useState(false);
   const [savingUserAccess, setSavingUserAccess] = useState(false);
   const [actionLoadingByUser, setActionLoadingByUser] = useState({});
@@ -645,6 +651,7 @@ export const AdminPage = () => {
     }
 
     setSelectedUserForAccess(user);
+    setTraineeShieldDraft(user.traineeLaptopShield !== undefined ? user.traineeLaptopShield : null);
     setQcSamplingRateDraft(user.qcSamplingRate !== undefined && user.qcSamplingRate !== null ? user.qcSamplingRate : null);
     const userClientAccess = Array.isArray(user.clientAccess) ? user.clientAccess.map((id) => String(id)) : [];
     const selectedClientIds = loadedClients
@@ -671,10 +678,10 @@ export const AdminPage = () => {
     ));
   };
 
-  const handleSaveUserAccess = async () => {
-    if (!selectedUserForAccess) return;
+  const executeSaveUserAccessRemaining = async (targetUser = selectedUserForAccess) => {
+    if (!targetUser) return;
     const canManageClientAccess = isPrimaryAdminActor || String(loggedInUser?.role || '').trim().toUpperCase() === 'ADMIN';
-    const isPrimaryAdminTarget = String(selectedUserForAccess?.role || '').trim().toUpperCase() === 'PRIMARY_ADMIN';
+    const isPrimaryAdminTarget = String(targetUser?.role || '').trim().toUpperCase() === 'PRIMARY_ADMIN';
 
     if (canManageClientAccess && !isPrimaryAdminTarget && clientAccessModeDraft === 'SELECTED' && restrictedClientDraft.length === 0) {
       showToast('Select at least one client for Selected clients only mode.', 'error');
@@ -684,7 +691,7 @@ export const AdminPage = () => {
     try {
       if (canManageClientAccess && !isPrimaryAdminTarget) {
         const response = await adminApi.updateRestrictedClients(
-          selectedUserForAccess.xID,
+          targetUser.xID,
           clientAccessModeDraft === 'ALL' ? { accessMode: 'ALL' } : { accessMode: 'SELECTED', clientIds: restrictedClientDraft },
         );
         if (!response?.success) {
@@ -695,7 +702,7 @@ export const AdminPage = () => {
 
       try {
         const selectedQcIds = selectedWorkbasketDraft.filter((teamId) => qcOnlyWorkbaskets.some((wb) => String(wb?._id) === String(teamId)));
-        const wbResponse = await adminApi.updateUserWorkbaskets(selectedUserForAccess.xID, {
+        const wbResponse = await adminApi.updateUserWorkbaskets(targetUser.xID, {
           teamIds: selectedWorkbasketDraft,
           assignQcWorkbaskets: selectedQcIds.length > 0,
         });
@@ -709,7 +716,7 @@ export const AdminPage = () => {
       }
 
       try {
-        const qcResponse = await adminApi.updateQcSamplingRate(selectedUserForAccess.xID, {
+        const qcResponse = await adminApi.updateQcSamplingRate(targetUser.xID, {
           qcSamplingRate: qcSamplingRateDraft,
         });
         if (!qcResponse?.success) {
@@ -721,9 +728,10 @@ export const AdminPage = () => {
         return;
       }
 
-      showToast('User client docket access updated', 'success');
+      showToast('User settings and access updated successfully', 'success');
       setShowAccessModal(false);
       setSelectedUserForAccess(null);
+      setTraineeShieldDraft(null);
       setSelectedWorkbasketDraft([]);
       setClientAccessModeDraft('ALL');
       setQcSamplingRateDraft(null);
@@ -732,6 +740,70 @@ export const AdminPage = () => {
       showToast(saveAccessError.response?.data?.message || 'Failed to update user access', 'error');
     } finally {
       setSavingUserAccess(false);
+    }
+  };
+
+  const handleSaveUserAccess = async () => {
+    if (!selectedUserForAccess) return;
+
+    const isShieldChanged = traineeShieldDraft !== (selectedUserForAccess.traineeLaptopShield ?? null);
+    if (isShieldChanged) {
+      if (!isPrimaryAdminActor) {
+        showToast('Only the Primary Admin can change Trainee Laptop Shield settings.', 'error');
+        return;
+      }
+      setSendingShieldOtp(true);
+      try {
+        await adminApi.sendTraineeShieldOtp(selectedUserForAccess.xID);
+        setPendingShieldTarget({
+          user: selectedUserForAccess,
+          targetSetting: traineeShieldDraft,
+          targetSettingLabel: traineeShieldDraft === true
+            ? 'Active (Downloads Blocked)'
+            : (traineeShieldDraft === false ? 'Exempt (Downloads Allowed)' : 'Inherit Firm Default'),
+        });
+        setShowTraineeShieldOtpModal(true);
+        showToast('Authorization OTP sent to your partner email', 'info');
+      } catch (otpErr) {
+        showToast(otpErr.response?.data?.message || 'Failed to send OTP for Trainee Shield', 'error');
+      } finally {
+        setSendingShieldOtp(false);
+      }
+      return;
+    }
+
+    await executeSaveUserAccessRemaining(selectedUserForAccess);
+  };
+
+  const handleVerifyTraineeShieldOtp = async (otpCode) => {
+    if (!pendingShieldTarget) return;
+    setVerifyingShieldOtp(true);
+    try {
+      const shieldRes = await adminApi.updateTraineeShield(pendingShieldTarget.user.xID, {
+        enabled: pendingShieldTarget.targetSetting,
+        otp: otpCode,
+      });
+      if (!shieldRes?.success) {
+        throw new Error(shieldRes?.message || 'Failed to update shield');
+      }
+      showToast('Trainee Laptop Shield setting saved successfully', 'success');
+      const targetUser = pendingShieldTarget.user;
+      setShowTraineeShieldOtpModal(false);
+      setPendingShieldTarget(null);
+      await executeSaveUserAccessRemaining(targetUser);
+    } finally {
+      setVerifyingShieldOtp(false);
+    }
+  };
+
+  const handleResendTraineeShieldOtp = async () => {
+    if (!pendingShieldTarget) return;
+    setSendingShieldOtp(true);
+    try {
+      await adminApi.sendTraineeShieldOtp(pendingShieldTarget.user.xID);
+      showToast('A fresh OTP has been sent to your registered partner email', 'success');
+    } finally {
+      setSendingShieldOtp(false);
     }
   };
   
@@ -1758,6 +1830,9 @@ export const AdminPage = () => {
         setSelectedWorkbasketDraft={setSelectedWorkbasketDraft}
         qcSamplingRateDraft={qcSamplingRateDraft}
         setQcSamplingRateDraft={setQcSamplingRateDraft}
+        traineeShieldDraft={traineeShieldDraft}
+        setTraineeShieldDraft={setTraineeShieldDraft}
+        isPrimaryAdminActor={isPrimaryAdminActor}
         clients={clients}
         restrictedClientDraft={restrictedClientDraft}
         clientAccessModeDraft={clientAccessModeDraft}
@@ -1767,8 +1842,23 @@ export const AdminPage = () => {
         isClientAllowedForDraft={isClientAllowedForDraft}
         onToggleClientAccess={handleToggleClientAccess}
         onSave={handleSaveUserAccess}
-        saving={savingUserAccess}
+        saving={savingUserAccess || sendingShieldOtp}
         workbasketLoadWarning={workbasketLoadWarning}
+      />
+
+      <TraineeShieldOtpModal
+        isOpen={showTraineeShieldOtpModal}
+        onClose={() => {
+          setShowTraineeShieldOtpModal(false);
+          setPendingShieldTarget(null);
+        }}
+        userName={pendingShieldTarget?.user?.name || 'Staff Member'}
+        userXid={pendingShieldTarget?.user?.xID || ''}
+        targetSettingLabel={pendingShieldTarget?.targetSettingLabel || ''}
+        onVerify={handleVerifyTraineeShieldOtp}
+        onResendOtp={handleResendTraineeShieldOtp}
+        loading={verifyingShieldOtp}
+        resending={sendingShieldOtp}
       />
 
       <ActionConfirmModal

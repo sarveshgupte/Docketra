@@ -4,6 +4,7 @@ const routeSchemas = require('../schemas/case.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const { requireRole } = require('../middleware/rbac.middleware');
+const { restrictTraineeDownload } = require('../middleware/downloadShield.middleware');
 const {
   userReadLimiter,
   userWriteLimiter,
@@ -197,7 +198,7 @@ router.post('/:caseId/attachments', requireStorageConnected, authorizeFirmPermis
 router.get('/:caseId/attachments/:attachmentId/view', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, viewAttachment);
 
 // GET /api/cases/:caseId/attachments/:attachmentId/download - Download attachment
-router.get('/:caseId/attachments/:attachmentId/download', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, downloadAttachment);
+router.get('/:caseId/attachments/:attachmentId/download', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, restrictTraineeDownload, downloadAttachment);
 
 // POST /api/cases/:caseId/clone - Clone case with comments and attachments
 // PR #44: Apply xID validation for assignment fields
@@ -274,6 +275,6 @@ router.get('/:caseId/client-fact-sheet/files/:fileId/view', requireStorageConnec
 router.get('/:caseId/client-cfs/files', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, listClientCFSFilesForCase);
 
 // GET /api/cases/:caseId/client-cfs/files/:attachmentId/download - Download client CFS file
-router.get('/:caseId/client-cfs/files/:attachmentId/download', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, downloadClientCFSFileForCase);
+router.get('/:caseId/client-cfs/files/:attachmentId/download', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, restrictTraineeDownload, downloadClientCFSFileForCase);
 
 module.exports = router;
