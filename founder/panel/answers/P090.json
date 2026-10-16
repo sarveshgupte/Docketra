@@ -1,0 +1,13 @@
+{
+  "id": "P090",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "As a frugal solo practitioner, I won't pay ₹12,990 upfront until I test the free pilot and verify that an assistant accidentally moving or deleting our Google Drive folder won't cause permanent data loss. I'd rather run the two-seat pilot first and discuss it at my monthly study circle meet before spending any money.",
+  "objection": "If files stay in our Google Drive, what happens if an assistant accidentally deletes or moves the folder?",
+  "would_change_my_mind": "Verifying on the free pilot that an accidentally deleted or moved Google Drive folder is detected instantly and restored in one click without corrupted client files.",
+  "price_too_cheap": 3000,
+  "price_cheap": 6000,
+  "price_expensive": 13000,
+  "price_too_expensive": 25000
+}

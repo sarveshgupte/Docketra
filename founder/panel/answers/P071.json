@@ -1,0 +1,13 @@
+{
+  "id": "P071",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "convenience",
+  "reason": "Having seen Jamku and desktop ERP get abandoned by my staff after two months, I am not paying ₹12,990 upfront for another system when article clerks rotate every two to three years and training them feels like wasted effort. In a normal week, I would only test the two-seat free pilot to see if it actually cuts my Saturday GST reconciliation without adding training overhead.",
+  "objection": "My article clerks rotate every 2-3 years; training them on complex software is a waste of time if they end up abandoning it after two months.",
+  "would_change_my_mind": "Seeing a fresh article clerk pick up the statutory blueprints from day one without any training from me, while completely eliminating my two hours of Saturday GST reconciliation.",
+  "price_too_cheap": 3000,
+  "price_cheap": 6500,
+  "price_expensive": 13000,
+  "price_too_expensive": 25000
+}

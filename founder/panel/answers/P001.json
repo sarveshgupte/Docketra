@@ -1,13 +1,13 @@
 {
   "id": "P001",
-  "buys": false,
-  "purchases_first_month": 0,
+  "buys": true,
+  "purchases_first_month": 1,
   "reason_code": "convenience",
-  "reason": "My article clerks rotate every couple of years, and getting a dozen trainees to adopt a new system without partner supervision is an uphill battle. In a normal week without deadline panic, I will stick to our existing routines and at most test the free sandbox before paying for an expensive Pro plan.",
-  "objection": "My article clerks rotate every 2-3 years; training them on complex software is a waste of time.",
-  "would_change_my_mind": "Live proof that fresh article trainees can complete maker-checker filings on day one without any supervision, along with direct WhatsApp group integration.",
-  "price_too_cheap": 5000,
+  "reason": "The Growth Tier at ₹21,990 per year covers my 12-person team affordably, and having pre-loaded statutory blueprints for Tax Audit Form 3CD and MCA filings gives me the maker-checker sign-off trail I desperately need for peer reviews without wasting weeks training rotating article clerks.",
+  "objection": "My biggest worry is whether fresh clerks will actually remember to forward incoming client WhatsApp documents into the dockets consistently during peak July and October filing rushes without constant supervision.",
+  "would_change_my_mind": "",
+  "price_too_cheap": 6000,
   "price_cheap": 15000,
-  "price_expensive": 35000,
-  "price_too_expensive": 60000
+  "price_expensive": 28000,
+  "price_too_expensive": 55000
 }

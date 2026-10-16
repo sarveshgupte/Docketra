@@ -1,0 +1,13 @@
+{
+  "id": "P031",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "I have strictly avoided third-party cloud tools because client confidentiality is paramount, so I will not pay for any software until I verify that Google Drive access is truly quarantined. Furthermore, with article clerks rotating every two to three years, I refuse to invest money in a system if training them turns into an administrative headache.",
+  "objection": "Connecting any third-party tool to our Google Drive makes me anxious about data leaks, and I doubt whether their laptop shield can genuinely stop rotating article clerks from saving sensitive client files to personal laptops.",
+  "would_change_my_mind": "Clear, verifiable technical proof during the free pilot that Docketra cannot touch files outside its dedicated folder and that article clerks are completely blocked from downloading client documents to personal machines.",
+  "price_too_cheap": 3500,
+  "price_cheap": 7000,
+  "price_expensive": 15000,
+  "price_too_expensive": 28000
+}

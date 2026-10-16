@@ -1,0 +1,13 @@
+{
+  "id": "P061",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "I cannot risk paying for software that connects to our Google Drive until I have absolute proof that it cannot view or read our existing private client files. As a frugal two-person practice, I will only test the free pilot on dummy files first rather than locking into a ₹12,990 annual subscription.",
+  "objection": "Will connecting my Google Drive give Docketra access to read all my firm's private files?",
+  "would_change_my_mind": "Verifiable technical confirmation that Docketra's OAuth scope is strictly sandboxed to its own folder, plus seeing it actually automate my Saturday GST reconciliation during the free pilot.",
+  "price_too_cheap": 3000,
+  "price_cheap": 6500,
+  "price_expensive": 14000,
+  "price_too_expensive": 25000
+}
