@@ -14,6 +14,8 @@ const DEFAULT_FIRM_CONFIG = {
   enableEscalationView: true,
   enableBulkActions: true,
   brandLogoUrl: '',
+  strictFirmOwnedStorage: false,
+  restrictTraineeDownloads: false,
   featureFlags: { ...FEATURE_FLAGS },
 };
 

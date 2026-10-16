@@ -328,15 +328,31 @@ export const caseApi = {
   },
 
   downloadAttachment: async (caseId, attachmentId, filename) => {
-    const response = await api.get(`/dockets/${caseId}/attachments/${attachmentId}/download`, { responseType: 'blob' });
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
+    try {
+      const response = await api.get(`/dockets/${caseId}/attachments/${attachmentId}/download`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      if (error?.response?.data instanceof Blob) {
+        try {
+          const text = await error.response.data.text();
+          const json = JSON.parse(text);
+          const err = new Error(json.message || 'Download failed');
+          err.code = json.code;
+          err.response = error.response;
+          throw err;
+        } catch (parseError) {
+          if (parseError.code) throw parseError;
+        }
+      }
+      throw error;
+    }
   },
 
   trackCaseOpen: async (caseId) => {

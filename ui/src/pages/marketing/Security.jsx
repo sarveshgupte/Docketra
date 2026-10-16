@@ -19,7 +19,7 @@ export const SecurityPage = () => (
     title="Data & Security Overview"
     description="A practical overview of how Docketra thinks about firm-owned data, storage direction, AI controls, and authenticated access."
     sections={SECTIONS}
-    kicker="🔐 Trust architecture"
+    kicker="Trust architecture"
     highlights={['Firm-owned data model', 'BYOS and BYOAI direction', 'Role-based access controls']}
   >
     <section id="about-this-page">

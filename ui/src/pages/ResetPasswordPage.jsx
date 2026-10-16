@@ -75,10 +75,14 @@ export const ResetPasswordPage = () => {
       <div className="grid w-full max-w-6xl items-center gap-8 lg:grid-cols-[0.9fr_1.1fr]">
         <section className="hidden lg:block" aria-label="Reset password context">
           <Link to="/" className="inline-flex items-center gap-2 text-lg font-extrabold text-slate-950">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-white" aria-hidden="true">✨</span>
+            <svg className="h-9 w-9 text-amber-600 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M25 15H50C69.33 15 85 30.67 85 50C85 69.33 69.33 85 50 85H25V15Z" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M40 30H50C61.05 30 70 38.95 70 50C70 61.05 61.05 70 50 70H40V30Z" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
+            </svg>
             Docketra
           </Link>
-          <p className="mt-10 text-sm font-bold uppercase text-amber-700">🔐 Password reset</p>
+          <p className="mt-10 text-sm font-bold uppercase text-amber-700">Password reset</p>
           <h1 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
             Give your workspace account a clean new lock.
           </h1>
@@ -86,7 +90,7 @@ export const ResetPasswordPage = () => {
             Use a strong password, then return to login with the reset confirmed.
           </p>
           <div className="mt-8 grid gap-3">
-            {['✅ Token checked before reset', '🔑 Strong password required', '↩️ Returns you to login'].map((item) => (
+            {['Token checked before reset', 'Strong password required', 'Returns you to login'].map((item) => (
               <div key={item} className="rounded-2xl border border-white/80 bg-white/75 px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
                 {item}
               </div>
@@ -96,7 +100,11 @@ export const ResetPasswordPage = () => {
 
         <Card className="auth-card w-full max-w-none rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.45)] backdrop-blur md:p-8">
           <Link to="/" className="mb-5 inline-flex items-center gap-2 text-base font-extrabold text-slate-950 lg:hidden">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-950 text-white" aria-hidden="true">✨</span>
+            <svg className="h-8 w-8 text-amber-600 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M25 15H50C69.33 15 85 30.67 85 50C85 69.33 69.33 85 50 85H25V15Z" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M40 30H50C61.05 30 70 38.95 70 50C70 61.05 61.05 70 50 70H40V30Z" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
+            </svg>
             Docketra
           </Link>
           <div className="auth-header text-center">
@@ -107,7 +115,7 @@ export const ResetPasswordPage = () => {
 
           <form onSubmit={handleSubmit} noValidate className={spacingClasses.formFieldSpacing}>
             <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
-              <p className="mb-3 text-sm font-black text-slate-950">🔑 New password</p>
+              <p className="mb-3 text-sm font-black text-slate-950">New password</p>
               <Input
                 label="New Password"
                 type="password"

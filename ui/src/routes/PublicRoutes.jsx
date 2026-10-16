@@ -58,7 +58,9 @@ export const PublicRoutes = () => (
   <>
     <Route element={<RouteSuspenseOutlet />}>
       <Route path="/" element={<MarketingHomePage />} />
+      <Route path="/compare" element={<Navigate to="/compare/docketra-vs-excel-whatsapp" replace />} />
       <Route path="/compare/docketra-vs-excel-whatsapp" element={<MarketingCompareExcelWhatsAppPage />} />
+      <Route path="/solutions" element={<Navigate to="/solutions/company-secretaries" replace />} />
       <Route path="/solutions/company-secretaries" element={<MarketingCompanySecretariesPage />} />
       <Route path="/solutions/corporate-legal-teams" element={<MarketingCorporateLegalTeamsPage />} />
       <Route path="/solutions/chartered-accountants" element={<MarketingCharteredAccountantsPage />} />

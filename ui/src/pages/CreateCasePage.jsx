@@ -27,7 +27,7 @@ export const CreateCasePage = () => {
           onCancel={() => navigate(ROUTES.TASK_MANAGER(firmSlug))}
           onCreated={(response, wbName) => {
             const docketId = response?.data?.docketId || response?.data?.caseId;
-            showSuccess(`✅ Docket ${docketId || 'created'} created successfully. This docket has been moved to ${wbName || 'general'} wb.`);
+            showSuccess(`Docket ${docketId || 'created'} created successfully. This docket has been moved to ${wbName || 'general'} wb.`);
           }}
         />
       </div>
