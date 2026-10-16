@@ -886,6 +886,7 @@ export const Layout = ({ children, title, subtitle }) => {
                               <button
                                 type="button"
                                 className="enterprise-header__notification-action-btn"
+                                aria-label={`Mark notification "${item.title}" as read`}
                                 title="Mark as read"
                                 onClick={(event) => {
                                   event.stopPropagation();
@@ -893,11 +894,11 @@ export const Layout = ({ children, title, subtitle }) => {
                                 }}
                               >
                                 <span aria-hidden="true">✓</span>
-                                <span className="sr-only">Mark notification "{item.title}" as read</span>
                               </button>
                               <button
                                 type="button"
                                 className="enterprise-header__notification-action-btn"
+                                aria-label={`Clear notification "${item.title}"`}
                                 title="Clear"
                                 onClick={(event) => {
                                   event.stopPropagation();
@@ -905,7 +906,6 @@ export const Layout = ({ children, title, subtitle }) => {
                                 }}
                               >
                                 <span aria-hidden="true">✕</span>
-                                <span className="sr-only">Clear notification "{item.title}"</span>
                               </button>
                               {item.unread ? <span className="enterprise-header__notification-unread-badge">New</span> : null}
                             </div>
