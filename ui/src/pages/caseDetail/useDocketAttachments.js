@@ -84,14 +84,17 @@ export const useDocketAttachments = ({ caseId, user, showSuccess, showError, sho
   }, [caseId, fileDescription, selectedFile, setActionConfirmation, setActionError, setCaseData, showError, showSuccess, showWarning, user?.email, user?.name, user?.xID]);
 
   const handleGenerateUploadLink = useCallback(async (payload) => {
-    if (!caseId) return;
+    if (!caseId) return null;
     setUploadLinkGenerating(true);
     try {
       const response = await caseApi.generateUploadLink(caseId, payload);
-      setUploadLinkResult(response?.data || null);
+      const data = response?.data || null;
+      setUploadLinkResult(data);
       showSuccess('Document request link generated.');
+      return data;
     } catch (error) {
       showError(extractErrorMessage(error, 'Unable to generate document request link.'));
+      return null;
     } finally {
       setUploadLinkGenerating(false);
     }
