@@ -6,6 +6,7 @@ const Client = require('../models/Client.model');
 const ComplianceObligationTemplate = require('../models/ComplianceObligationTemplate.model');
 const { resolveFirmMemoryScope } = require('../services/firmMemoryScope.service');
 const { logAuditEvent } = require('../services/adminActionAudit.service');
+const log = require('../utils/log');
 
 const { KNOWLEDGE_ITEM_TYPES, KNOWLEDGE_ITEM_STATUSES } = KnowledgeItem;
 
@@ -236,8 +237,8 @@ const listKnowledgeItems = async (req, res) => {
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
   } catch (error) {
-    console.error('listKnowledgeItems error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to list knowledge items: ' + error.message });
+    log.error('KNOWLEDGE_ITEMS_LIST_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to list knowledge items' });
   }
 };
 
@@ -504,7 +505,8 @@ const getWorkspaceAssets = async (req, res) => {
 
     return res.json({ success: true, data: assets });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to retrieve workspace assets' });
+    log.error('WORKSPACE_ASSETS_RETRIEVE_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to retrieve workspace assets' });
   }
 };
 
@@ -575,7 +577,8 @@ const getFirmMemoryReports = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to generate firm memory reports' });
+    log.error('FIRM_MEMORY_REPORTS_GENERATE_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to generate firm memory reports' });
   }
 };
 

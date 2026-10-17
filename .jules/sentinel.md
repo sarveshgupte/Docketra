@@ -85,3 +85,8 @@
 **Vulnerability:** Information Disclosure where \`error.message\` was directly exposed to clients in 500 error responses across the DocketException API.
 **Learning:** Returning raw error messages can leak sensitive internal workings. Our custom logger (\`utils/log.js\`) expects a metadata object with \`{ message: error.message, stack: error.stack }\`.
 **Prevention:** Avoid passing raw \`error.message\` to \`res.status(500).json(...)\`. Instead, use \`log.error('EVENT_NAME', { message: error.message, stack: error.stack })\` and return a generic, safe string in the response.
+
+## 2024-10-29 - Prevent Information Disclosure via Error Messages in Controllers
+**Vulnerability:** Information Disclosure where `error.message` was directly exposed to clients in 500 error responses across multiple controllers (`capacity.controller.js`, `documentItem.controller.js`, `knowledgeItem.controller.js`, `clientPortal.controller.js`, `docketEffort.controller.js`).
+**Learning:** Returning raw error messages can leak sensitive internal workings, configuration details, or underlying infrastructure state, which can be leveraged by attackers.
+**Prevention:** Avoid passing raw `error.message` to `res.status(500).json(...)`. Instead, use `log.error('EVENT_NAME', { message: error.message, stack: error.stack })` and return a generic, safe string in the response.
