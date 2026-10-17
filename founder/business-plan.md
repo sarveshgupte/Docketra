@@ -929,7 +929,7 @@ Docketra’s internal daily operations cycle:
 | Time (IST) | Internal Step | Description | Customer Visible? |
 |---|---|---|:---:|
 | **08:30** | **Health & Queue Check** | Inspect Render API health, MongoDB Atlas connection pools, Redis queue latency, and background worker status. | No |
-| **09:00** | **Inbound Support & Triage** | Review support inbox (`support@docketra.in`) and WhatsApp Concierge channel for firm admin questions. | **Yes** |
+| **09:00** | **Inbound Support & Triage** | Review support inbox (`help@docketra.in`) and WhatsApp Concierge channel for firm admin questions. | **Yes** |
 | **10:00** | **Concierge Migration Processing** | Ingest client roster spreadsheets submitted overnight by new firms; run deduplication scripts and import into firm databases within the 24-hr guarantee window. | **Yes** (Notification on completion) |
 | **12:00** | **Google OAuth Telemetry Audit** | Check Google Drive API rate-limit headroom and expired refresh-token error counts to proactively alert partners whose Google Workspace credentials need re-linking. | No |
 | **14:00** | **Onboarding Demo / Concierge Call** | 20-minute live screen-share walkthrough with newly signed Managing Partners: connecting Drive, inviting trainees, and generating first statutory compliance dockets. | **Yes** |
