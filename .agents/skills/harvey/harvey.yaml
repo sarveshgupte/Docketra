@@ -57,14 +57,14 @@ icp:
 
 channels:
   email:
-    enabled: true
+    enabled: false
     provider: "gmail"
     require_approval: true
-    max_daily_sends: 50
+    max_daily_sends: 0
   linkedin:
     enabled: false
-    max_daily_connections: 20
-    max_daily_messages: 10
+    max_daily_connections: 0
+    max_daily_messages: 0
 
 usage:
   max_daily_claude_percent: 80
