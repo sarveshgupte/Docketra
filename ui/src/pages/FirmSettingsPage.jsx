@@ -17,6 +17,8 @@ import { BulkUploadModal } from '../components/bulk/BulkUploadModal';
 import { DocketBulkUploadModal } from '../components/bulk/DocketBulkUploadModal';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
+import { UpiCheckoutModal } from '../components/billing/UpiCheckoutModal';
+import { subscriptionService } from '../services/subscriptionService';
 
 const enabledDisabledOptions = [
   { value: 'true', label: 'Enabled' },
@@ -302,6 +304,14 @@ export const FirmSettingsPage = () => {
   const [planData, setPlanData] = useState(null);
   const [loadingPlan, setLoadingPlan] = useState(false);
   const [upgradingPlan, setUpgradingPlan] = useState(false);
+  const [checkoutOrder, setCheckoutOrder] = useState(null);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+
+  useEffect(() => {
+    if (requestedTab && validTabs.includes(requestedTab) && requestedTab !== currentTab) {
+      setCurrentTab(requestedTab);
+    }
+  }, [requestedTab, currentTab]);
 
   const categoryOptions = useMemo(() => ([
     { value: '', label: 'All categories' },
@@ -524,11 +534,18 @@ export const FirmSettingsPage = () => {
   const handleUpgradePlan = async (targetPlan) => {
     setUpgradingPlan(true);
     try {
-      const res = await adminApi.upgradeFirmPlan(targetPlan);
-      showToast(res?.message || 'Workspace plan upgraded successfully!', 'success');
-      await loadPlanData();
+      const res = await subscriptionService.createSubscriptionOrder({
+        plan: targetPlan,
+        billingCycle: 'annual',
+      });
+      if (res?.success && res?.data) {
+        setCheckoutOrder(res.data);
+        setShowCheckoutModal(true);
+      } else {
+        throw new Error(res?.message || 'Could not initiate payment session');
+      }
     } catch (error) {
-      showToast(error?.data?.message || error?.message || 'Failed to upgrade plan. Please try again.', 'error');
+      showToast(error?.response?.data?.message || error?.message || 'Failed to initiate checkout.', 'error');
     } finally {
       setUpgradingPlan(false);
     }
@@ -1395,7 +1412,7 @@ export const FirmSettingsPage = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Pioneer 30 Card */}
                     <div className={`relative flex flex-col justify-between rounded-2xl border p-6 transition ${
                       planData?.plan === 'starter'
@@ -1523,13 +1540,78 @@ export const FirmSettingsPage = () => {
                           type="button"
                           variant={planData?.plan === 'growth' ? 'outline' : 'primary'}
                           className="w-full"
-                          disabled={planData?.plan === 'growth' || planData?.plan === 'professional' || upgradingPlan}
+                          disabled={planData?.plan === 'growth' || planData?.plan === 'pro' || planData?.plan === 'professional' || upgradingPlan}
                           loading={upgradingPlan}
                           onClick={() => void handleUpgradePlan('growth')}
                         >
                           {planData?.plan === 'growth'
                             ? 'Current Active Plan'
-                            : (planData?.plan === 'professional' ? 'Included in Higher Plan' : 'Upgrade to Growth Tier')}
+                            : (planData?.plan === 'pro' || planData?.plan === 'professional' ? 'Included in Higher Plan' : 'Upgrade to Growth Tier')}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Pro Tier Card */}
+                    <div className={`relative flex flex-col justify-between rounded-2xl border p-6 transition ${
+                      planData?.plan === 'pro' || planData?.plan === 'professional'
+                        ? 'border-indigo-600 bg-indigo-50/20 ring-2 ring-indigo-600'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800">
+                            Corporate & Multi-Branch
+                          </span>
+                          <span className="text-xs font-medium text-slate-500">15+ staff</span>
+                        </div>
+                        <div>
+                          <h4 className="text-xl font-bold text-slate-900">Pro Tier</h4>
+                          <p className="mt-1 text-sm text-slate-500">For multi-partner firms requiring DSC routing, custom roles, and priority support.</p>
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-3xl font-extrabold text-slate-900">₹59,990</span>
+                          <span className="text-sm text-slate-500">/ year</span>
+                          <span className="ml-2 text-xs text-slate-500">(₹4,999 / month)</span>
+                        </div>
+                        <ul className="space-y-2.5 text-sm text-slate-600 border-t border-slate-100 pt-4">
+                          <li className="flex items-center gap-2">
+                            <span className="text-emerald-600 font-bold">✓</span>
+                            <span><strong>Up to 25 staff seats</strong></span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-emerald-600 font-bold">✓</span>
+                            <span><strong>Unlimited active clients & dockets</strong></span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-emerald-600 font-bold">✓</span>
+                            <span>Multi-department queues (ROC, Tax, GST, Legal)</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-emerald-600 font-bold">✓</span>
+                            <span>Multi-partner DSC sign-off routing workflows</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-emerald-600 font-bold">✓</span>
+                            <span>Dedicated onboarding & migration engineer</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-emerald-600 font-bold">✓</span>
+                            <span>Custom practice roles & granular permissions</span>
+                          </li>
+                        </ul>
+                      </div>
+                      <div className="mt-6 pt-4 border-t border-slate-100">
+                        <Button
+                          type="button"
+                          variant={planData?.plan === 'pro' || planData?.plan === 'professional' ? 'outline' : 'primary'}
+                          className="w-full"
+                          disabled={planData?.plan === 'pro' || planData?.plan === 'professional' || upgradingPlan}
+                          loading={upgradingPlan}
+                          onClick={() => void handleUpgradePlan('pro')}
+                        >
+                          {planData?.plan === 'pro' || planData?.plan === 'professional'
+                            ? 'Current Active Plan'
+                            : 'Upgrade to Pro Tier'}
                         </Button>
                       </div>
                     </div>
@@ -1730,6 +1812,15 @@ export const FirmSettingsPage = () => {
         isOpen={showDocketBulkModal}
         onClose={() => setShowDocketBulkModal(false)}
         showToast={showToast}
+      />
+      <UpiCheckoutModal
+        isOpen={showCheckoutModal}
+        onClose={() => setShowCheckoutModal(false)}
+        order={checkoutOrder}
+        onSuccess={async () => {
+          showToast('Plan upgraded successfully!', 'success');
+          await loadPlanData();
+        }}
       />
     </PlatformShell>
   );

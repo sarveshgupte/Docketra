@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { useAuth } from '../../hooks/useAuth';
@@ -10,13 +11,16 @@ import { DocketraProductTour } from './DocketraProductTour';
 import { SetupFirstClientModal } from './SetupFirstClientModal';
 
 export const FirstLoginExperience = () => {
+  const location = useLocation();
   const { user, isAuthResolved, isAuthenticated, updateUser } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [showFirstClientModal, setShowFirstClientModal] = useState(false);
 
   const serverShowTutorial = Boolean(user?.welcomeTutorial?.show);
-  const isTourQuery = typeof window !== 'undefined' && window.location.search.includes('tour=start');
+  const isTourQuery = Boolean(
+    location?.search && new URLSearchParams(location.search).get('tour') === 'start'
+  ) || (typeof window !== 'undefined' && window.location.search.includes('tour=start'));
   const showTutorial = Boolean(serverShowTutorial || manualOpen || isTourQuery);
   const isFirstLoginTutorial = Boolean(serverShowTutorial);
   const showWhatsNew = !showTutorial && Boolean(user?.whatsNew?.show && user?.whatsNew?.update?._id);

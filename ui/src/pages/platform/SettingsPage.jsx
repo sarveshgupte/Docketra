@@ -22,6 +22,13 @@ export const PlatformSettingsPage = () => {
       minRole: 'ADMIN',
     },
     {
+      title: 'Plans & Billing',
+      description: 'Subscription tier, seat capacity, invoices, and UPI payment renewal.',
+      to: `${ROUTES.FIRM_SETTINGS(firmSlug)}?tab=plan`,
+      action: 'Upgrade',
+      minRole: 'ADMIN',
+    },
+    {
       title: 'Users & Team',
       description: 'Users, roles, access controls, and account safety actions.',
       to: ROUTES.ADMIN(firmSlug),

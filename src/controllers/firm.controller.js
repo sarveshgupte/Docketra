@@ -1,19 +1,38 @@
+const mongoose = require('mongoose');
 const Firm = require('../models/Firm.model');
+
+const resolveFirmId = (req) => {
+  const candidate = req.ownershipFirmId || req.tenant?.ownershipFirmId || req.firm?.id || req.user?.firmId || req.firmId;
+  return candidate ? String(candidate).trim() : null;
+};
+
+const findFirmByAnyIdentifier = async (identifier) => {
+  if (!identifier) return null;
+  if (mongoose.Types.ObjectId.isValid(identifier)) {
+    const byId = await Firm.findById(identifier);
+    if (byId) return byId;
+  }
+  return await Firm.findOne({
+    $or: [
+      { firmId: identifier },
+      { firmSlug: identifier },
+      { slug: identifier },
+    ],
+  });
+};
 
 const getFirmSetupStatus = async (req, res) => {
   try {
-    const firmId = req.user?.firmId;
+    const rawFirmId = resolveFirmId(req);
 
-    if (!firmId) {
+    if (!rawFirmId) {
       return res.status(403).json({
         success: false,
         message: 'Firm context is required',
       });
     }
 
-    const firm = await Firm.findById(firmId)
-      .select('isSetupComplete setupMetadata')
-      .lean();
+    const firm = await findFirmByAnyIdentifier(rawFirmId);
 
     return res.json({
       success: true,
@@ -36,16 +55,16 @@ const getFirmSetupStatus = async (req, res) => {
 
 const completeFirmSetup = async (req, res) => {
   try {
-    const firmId = req.user?.firmId || req.firmId;
+    const rawFirmId = resolveFirmId(req);
 
-    if (!firmId) {
+    if (!rawFirmId) {
       return res.status(403).json({
         success: false,
         message: 'Firm context is required',
       });
     }
 
-    const firm = await Firm.findById(firmId);
+    const firm = await findFirmByAnyIdentifier(rawFirmId);
     if (!firm) {
       return res.status(404).json({
         success: false,
@@ -83,6 +102,7 @@ const completeFirmSetup = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Unable to complete firm setup',
+      error: error.message,
     });
   }
 };
@@ -91,4 +111,5 @@ module.exports = {
   getFirmSetupStatus,
   completeFirmSetup,
 };
+
 

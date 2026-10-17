@@ -16,11 +16,18 @@ import {
   ExternalLink,
   Lock,
   Cloud,
+  RefreshCw,
 } from '../../components/onboarding/OnboardingIcons';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { adminApi } from '../../api/admin.api';
-import { connectGoogleDrive, getStorageConfiguration, verifyStorageBoundary } from '../../services/storageService';
+import {
+  connectGoogleDrive,
+  disconnectStorage,
+  getStorageConfiguration,
+  verifyStorageBoundary,
+} from '../../services/storageService';
+import { ROUTES } from '../../constants/routes';
 
 const PRACTICE_TYPES = [
   { id: 'PCS', label: 'Company Secretary (PCS)', desc: 'MCA, ROC filings, secretarial audits, board resolutions' },
@@ -51,6 +58,7 @@ export function WorkspaceSetupPage() {
 
   // Step 1 Form: Firm Identity
   const [firmName, setFirmName] = useState(user?.firm?.name || user?.firmName || '');
+  const [isEditingFirmName, setIsEditingFirmName] = useState(false);
   const [practiceType, setPracticeType] = useState('PCS');
 
   // Step 2 Form: BYOS Storage
@@ -61,10 +69,13 @@ export function WorkspaceSetupPage() {
   // Step 3 Form: Employee Invitations
   const [invites, setInvites] = useState([
     { email: '', name: '', role: 'MANAGER' },
-    { email: '', name: '', role: 'USER' },
   ]);
+  const [sentInvitesCount, setSentInvitesCount] = useState(0);
   const [workbaskets, setWorkbaskets] = useState([]);
   const [inviteStatus, setInviteStatus] = useState('');
+
+  // Step 4: Tour toggle
+  const [startTour, setStartTour] = useState(true);
 
   // Sync initial user details when profile resolves
   useEffect(() => {
@@ -74,34 +85,44 @@ export function WorkspaceSetupPage() {
   }, [user?.firm?.name, firmName]);
 
   // Load storage state and workbaskets
-  useEffect(() => {
-    let mounted = true;
-    async function loadInitialData() {
-      try {
-        const [storageRes, wbRes] = await Promise.allSettled([
-          getStorageConfiguration(),
-          adminApi.listWorkbaskets(),
-        ]);
-        if (mounted && storageRes.status === 'fulfilled') {
-          const cfg = storageRes.value?.data || storageRes.value;
-          setStorageConfig(cfg);
-          if (cfg?.isConfigured) {
-            verifyStorageBoundary().then((bRes) => {
-              if (mounted) setBoundaryReport(bRes);
-            }).catch(() => {});
-          }
+  const refreshStorageAndWorkbaskets = async () => {
+    try {
+      const [storageRes, wbRes] = await Promise.allSettled([
+        getStorageConfiguration(),
+        adminApi.listWorkbaskets(),
+      ]);
+      if (storageRes.status === 'fulfilled') {
+        const cfg = storageRes.value?.data || storageRes.value;
+        setStorageConfig(cfg);
+        const isDrive = Boolean(
+          (cfg?.provider === 'google-drive' || cfg?.provider === 'google_drive') &&
+          (cfg?.status === 'ACTIVE_BYOS' || cfg?.status === 'connected' || cfg?.connectedEmail)
+        );
+        if (isDrive) {
+          verifyStorageBoundary().then((bRes) => {
+            setBoundaryReport(bRes);
+          }).catch(() => {});
         }
-        if (mounted && wbRes.status === 'fulfilled') {
-          const wbList = wbRes.value?.data || wbRes.value || [];
-          setWorkbaskets(Array.isArray(wbList) ? wbList : []);
-        }
-      } catch (_err) {
-        // Safe fallback
       }
+      if (wbRes.status === 'fulfilled') {
+        const wbList = wbRes.value?.data || wbRes.value || [];
+        setWorkbaskets(Array.isArray(wbList) ? wbList : []);
+      }
+    } catch (_err) {
+      // Safe fallback
     }
-    loadInitialData();
-    return () => { mounted = false; };
+  };
+
+  useEffect(() => {
+    refreshStorageAndWorkbaskets();
   }, [firmSlug]);
+
+  // Notify if user just returned from Google OAuth
+  useEffect(() => {
+    if (searchParams.get('connected') === '1') {
+      showSuccess('Google Drive successfully connected (Zero-Custody BYOS)!');
+    }
+  }, [searchParams, showSuccess]);
 
   const workspaceUrl = useMemo(() => {
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://docketra.in';
@@ -116,6 +137,15 @@ export function WorkspaceSetupPage() {
       showSuccess('Workspace URL copied to clipboard');
     }
   };
+
+  const isGoogleDriveConnected = Boolean(
+    (storageConfig?.provider === 'google-drive' || storageConfig?.provider === 'google_drive') &&
+    (storageConfig?.status === 'ACTIVE_BYOS' || storageConfig?.status === 'connected' || Boolean(storageConfig?.connectedEmail))
+  );
+
+  const validInvites = useMemo(() => {
+    return invites.filter((inv) => inv.email.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inv.email.trim()));
+  }, [invites]);
 
   // Step 1 Submit: Save Firm Name & Identity
   const handleStep1Submit = async (e) => {
@@ -132,7 +162,7 @@ export function WorkspaceSetupPage() {
           practiceType,
         },
       });
-      showSuccess('Firm details saved');
+      showSuccess('Firm specialization saved');
       setCurrentStep(2);
     } catch (_err) {
       // Non-blocking: proceed to next step
@@ -142,9 +172,24 @@ export function WorkspaceSetupPage() {
     }
   };
 
-  // Step 2 Action: Connect Google Drive
+  // Step 2 Action: Connect Google Drive with returnTo
   const handleConnectGoogleDrive = () => {
-    connectGoogleDrive();
+    const returnPath = `/app/firm/${firmSlug}/setup?step=2`;
+    connectGoogleDrive(returnPath);
+  };
+
+  const handleDisconnectStorage = async () => {
+    setLoading(true);
+    try {
+      await disconnectStorage();
+      showSuccess('Google Drive disconnected. Storage reverted to Docketra Encrypted Cloud.');
+      await refreshStorageAndWorkbaskets();
+      setBoundaryReport(null);
+    } catch (_err) {
+      showError('Failed to disconnect Google Drive');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleVerifyBoundary = async () => {
@@ -178,8 +223,8 @@ export function WorkspaceSetupPage() {
   };
 
   const handleSendInvitesAndContinue = async () => {
-    const validInvites = invites.filter((inv) => inv.email.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inv.email.trim()));
     if (validInvites.length === 0) {
+      setSentInvitesCount(0);
       setCurrentStep(4);
       return;
     }
@@ -203,17 +248,49 @@ export function WorkspaceSetupPage() {
       }
     }
 
+    setSentInvitesCount(sentCount);
     setLoading(false);
     showSuccess(`Sent ${sentCount} invitation(s)`);
     setCurrentStep(4);
+  };
+
+  // Exit directly to workspace (bypassing remaining steps safely)
+  const handleExitToWorkspace = async () => {
+    try {
+      if (typeof window !== 'undefined' && firmSlug) {
+        window.localStorage?.setItem(`setupDismissed:${firmSlug}`, 'true');
+      }
+      await adminApi.completeFirmSetup({
+        name: firmName.trim() || user?.firm?.name || 'Firm',
+        practiceType,
+      });
+      const refreshed = await fetchProfile();
+      if (refreshed?.data) {
+        updateUser({
+          ...refreshed.data,
+          isSetupComplete: true,
+          firm: {
+            ...(refreshed.data.firm || {}),
+            isSetupComplete: true,
+          },
+        });
+      }
+    } catch (_err) {
+      // Non-blocking
+    } finally {
+      navigate(ROUTES.WORKLIST(firmSlug), { replace: true });
+    }
   };
 
   // Step 4 Finish: Complete Setup and Enter WebApp
   const handleEnterWorkspace = async () => {
     setLoading(true);
     try {
+      if (typeof window !== 'undefined' && firmSlug) {
+        window.localStorage?.setItem(`setupDismissed:${firmSlug}`, 'true');
+      }
       await adminApi.completeFirmSetup({
-        name: firmName.trim(),
+        name: firmName.trim() || user?.firm?.name || 'Firm',
         practiceType,
       });
       const refreshed = await fetchProfile();
@@ -231,21 +308,17 @@ export function WorkspaceSetupPage() {
       // Non-blocking
     } finally {
       setLoading(false);
-      navigate(`/${firmSlug}/dashboard?tour=start`, { replace: true });
+      const destination = `${ROUTES.WORKLIST(firmSlug)}${startTour ? '?tour=start' : ''}`;
+      navigate(destination, { replace: true });
     }
   };
 
-  const isDriveConnected = Boolean(
-    storageConfig?.isConfigured ||
-    storageConfig?.status === 'connected' ||
-    storageConfig?.connectionStatus === 'ACTIVE_BYOS' ||
-    storageConfig?.mode === 'firm_connected'
-  );
+  const selectedPractice = PRACTICE_TYPES.find((p) => p.id === practiceType) || PRACTICE_TYPES[0];
 
   return (
     <div className="min-h-screen bg-slate-50/60 text-slate-900 flex flex-col font-sans selection:bg-amber-500/20 selection:text-amber-900">
       {/* Top Header Bar */}
-      <header className="h-14 border-b border-slate-200/90 px-6 flex items-center justify-between bg-white/95 backdrop-blur sticky top-0 z-30 shadow-2xs">
+      <header className="h-14 border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between bg-white/95 backdrop-blur sticky top-0 z-30 shadow-2xs">
         <div className="flex items-center gap-3">
           <Link to="/" className="inline-flex items-center gap-2 text-slate-950 hover:opacity-90 transition-opacity">
             <svg className="h-6 w-6 text-amber-600 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -260,42 +333,53 @@ export function WorkspaceSetupPage() {
           </span>
         </div>
 
-        {/* Step Indicator */}
-        <div className="flex items-center gap-1.5 sm:gap-2" aria-label={`Setup Step ${currentStep} of 4`}>
-          {[
-            { step: 1, label: 'Firm Identity' },
-            { step: 2, label: 'Storage' },
-            { step: 3, label: 'Team' },
-            { step: 4, label: 'Welcome' },
-          ].map((item) => {
-            const isActive = currentStep === item.step;
-            const isDone = currentStep > item.step;
-            return (
-              <div
-                key={item.step}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs transition-colors font-mono ${
-                  isActive
-                    ? 'bg-slate-950 text-white font-semibold shadow-xs'
-                    : isDone
-                    ? 'bg-emerald-50 border border-emerald-200 text-emerald-800 font-medium'
-                    : 'bg-white border border-slate-200 text-slate-400'
-                }`}
-              >
-                {isDone ? (
-                  <Check className="h-3 w-3 text-emerald-600" />
-                ) : (
-                  <span className="text-[10px] font-mono">{item.step}</span>
-                )}
-                <span className="hidden md:inline">{item.label}</span>
-              </div>
-            );
-          })}
+        {/* Step Indicator & Exit */}
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1 sm:gap-1.5" aria-label={`Setup Step ${currentStep} of 4`}>
+            {[
+              { step: 1, label: 'Firm Identity' },
+              { step: 2, label: 'Storage' },
+              { step: 3, label: 'Team' },
+              { step: 4, label: 'Welcome' },
+            ].map((item) => {
+              const isActive = currentStep === item.step;
+              const isDone = currentStep > item.step;
+              return (
+                <div
+                  key={item.step}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs transition-colors font-mono ${
+                    isActive
+                      ? 'bg-slate-950 text-white font-semibold shadow-xs'
+                      : isDone
+                      ? 'bg-emerald-50 border border-emerald-200 text-emerald-800 font-medium'
+                      : 'bg-white border border-slate-200 text-slate-400'
+                  }`}
+                >
+                  {isDone ? (
+                    <Check className="h-3 w-3 text-emerald-600" />
+                  ) : (
+                    <span className="text-[10px] font-mono">{item.step}</span>
+                  )}
+                  <span className="hidden md:inline">{item.label}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleExitToWorkspace}
+            className="text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors px-2 py-1 rounded hover:bg-slate-100 cursor-pointer"
+            title="Skip remaining steps and enter workspace"
+          >
+            Exit to Workspace
+          </button>
         </div>
       </header>
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col justify-center">
-        {/* STEP 1: FIRM NAME & IDENTITY */}
+        {/* STEP 1: FIRM NAME & PRACTICE TYPE */}
         {currentStep === 1 && (
           <div className="bg-white border border-slate-200/90 rounded-lg p-6 sm:p-8 shadow-xs space-y-6">
             <div className="space-y-1.5">
@@ -304,45 +388,77 @@ export function WorkspaceSetupPage() {
                 Step 1: Firm Workspace Identity
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
-                Set up your firm&apos;s master profile
+                Confirm practice identity &amp; specialization
               </h1>
               <p className="text-sm text-slate-600">
-                Establish the legal identity, practice specialization, and firm URL for your practice.
+                Your firm details were registered during signup. Select your specialization to tailor compliance calendars and statutory workflows.
               </p>
             </div>
 
             <form onSubmit={handleStep1Submit} className="space-y-6">
-              {/* Firm Name */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-700">
-                  Legal Firm / Practice Name <span className="text-amber-600">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={firmName}
-                  onChange={(e) => setFirmName(e.target.value)}
-                  placeholder="e.g. M/s. Gupte & Associates"
-                  required
-                  className="w-full bg-white border border-slate-300 rounded-md px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950 transition-colors"
-                />
-              </div>
+              {/* Confirmed Firm Identity Card */}
+              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono uppercase font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-600" /> Confirmed at Signup
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-950 tracking-tight">
+                    {firmName || user?.firm?.name || 'Your Legal Practice'}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-mono">
+                    Workspace URL: <span className="text-slate-800 font-semibold">{workspaceUrl}</span>
+                  </p>
+                </div>
 
-              {/* Workspace URL Preview */}
-              <div className="p-3.5 rounded-md bg-slate-50 border border-slate-200 space-y-1">
-                <span className="text-[11px] font-mono uppercase text-slate-500">Dedicated Workspace URL</span>
-                <div className="flex items-center justify-between text-xs font-mono text-slate-900">
-                  <span className="font-bold">{workspaceUrl}</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-sm bg-amber-100/70 border border-amber-300 text-amber-900 font-semibold">
-                    Active Tenant Slug
-                  </span>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={handleCopyUrl}
+                    className="px-2.5 py-1.5 rounded bg-white hover:bg-slate-100 border border-slate-200 text-xs font-mono text-slate-700 inline-flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                  >
+                    {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 text-slate-500" />}
+                    {copied ? 'Copied' : 'Copy URL'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingFirmName(!isEditingFirmName)}
+                    className="px-2.5 py-1.5 rounded bg-white hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 cursor-pointer shadow-xs transition-colors"
+                  >
+                    {isEditingFirmName ? 'Done' : 'Edit name'}
+                  </button>
                 </div>
               </div>
 
+              {/* Optional Inline Firm Name Input */}
+              {isEditingFirmName && (
+                <div className="space-y-2 p-3.5 rounded-lg border border-amber-200 bg-amber-50/40 animate-in fade-in duration-150">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-700">
+                    Edit Legal Firm / Practice Name
+                  </label>
+                  <input
+                    type="text"
+                    value={firmName}
+                    onChange={(e) => setFirmName(e.target.value)}
+                    placeholder="e.g. M/s. Gupte & Associates"
+                    required
+                    className="w-full bg-white border border-slate-300 rounded-md px-3.5 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950 transition-colors"
+                  />
+                  <p className="text-[11px] text-slate-500">
+                    Adjust here if you noticed any typo during initial registration.
+                  </p>
+                </div>
+              )}
+
               {/* Practice Category Selection */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-700">
-                  Practice Specialization
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-700">
+                    Practice Specialization
+                  </label>
+                  <span className="text-[11px] text-slate-500">Configures statutory radars &amp; calendars</span>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {PRACTICE_TYPES.map((type) => {
                     const isSelected = practiceType === type.id;
@@ -372,7 +488,7 @@ export function WorkspaceSetupPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-md bg-slate-950 hover:bg-slate-800 text-white font-bold text-sm shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-md bg-slate-950 hover:bg-slate-800 text-white font-bold text-sm shadow-xs transition-colors cursor-pointer active:scale-[0.98] disabled:opacity-50"
                 >
                   {loading ? 'Saving...' : 'Continue to Storage (BYOS)'}
                   <ArrowRight className="h-4 w-4" />
@@ -394,15 +510,15 @@ export function WorkspaceSetupPage() {
                 Zero-Custody Cloud Storage
               </h1>
               <p className="text-sm text-slate-600">
-                Connect your firm&apos;s own cloud drive. All secretarial filings, ROC challans, and dockets remain in your custody.
+                Connect your firm&apos;s own cloud drive. All secretarial filings, ROC challans, and client dockets remain in your custody.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Option 1: Google Drive */}
+              {/* Option 1: Google Drive BYOS */}
               <div
                 className={`p-5 rounded-lg border flex flex-col justify-between transition-all ${
-                  isDriveConnected
+                  isGoogleDriveConnected
                     ? 'bg-emerald-50/40 border-emerald-300 shadow-xs ring-1 ring-emerald-300'
                     : 'bg-white border-slate-200 shadow-xs'
                 }`}
@@ -418,7 +534,7 @@ export function WorkspaceSetupPage() {
                         <p className="text-[11px] text-slate-500">Recommended for CS / CA Practices</p>
                       </div>
                     </div>
-                    {isDriveConnected ? (
+                    {isGoogleDriveConnected ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-mono font-semibold bg-emerald-50 border border-emerald-200 text-emerald-800">
                         <Check className="h-3 w-3" /> Connected
                       </span>
@@ -430,13 +546,13 @@ export function WorkspaceSetupPage() {
                   </div>
 
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Automatically organizes dockets under:
+                    Automatically organizes filings under:
                     <span className="block font-mono text-[11px] text-slate-800 mt-1 bg-slate-50 p-2 rounded-sm border border-slate-200">
                       Google Drive &gt; Docketra &gt; {firmName || 'Firm'} &gt; Cases
                     </span>
                   </p>
 
-                  {/* Google drive.file Restricted Consent & Zero-Access Guarantee */}
+                  {/* Official Restricted Scope Guarantee */}
                   <div className="p-3 rounded-md bg-sky-50/70 border border-sky-200 space-y-1.5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 text-sky-900 font-semibold text-xs">
@@ -451,11 +567,12 @@ export function WorkspaceSetupPage() {
                       Official Google Policy: <em className="text-slate-700">&ldquo;See, edit, create, and delete only the specific Google Drive files you use with this app.&rdquo;</em>
                     </p>
                     <p className="text-[11px] text-slate-600 leading-snug">
-                      Docketra cannot read, search, or access any of your firm's existing tax returns or private files outside <code className="text-amber-800 text-[10px] bg-amber-50 px-1 py-0.5 rounded border border-amber-200">/Docketra/</code>.
+                      Docketra cannot read, search, or access any other files on your Google Drive.
                     </p>
                   </div>
 
-                  {isDriveConnected && (
+                  {/* Connected Isolation Proof */}
+                  {isGoogleDriveConnected && (
                     <div className="p-3 rounded-md bg-emerald-50/60 border border-emerald-200 space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 text-emerald-900 font-semibold text-xs">
@@ -478,36 +595,50 @@ export function WorkspaceSetupPage() {
                         </div>
                         <div className="bg-white p-2 rounded-sm border border-emerald-200/80">
                           <span className="text-slate-500 block text-[9px] uppercase font-semibold">Scope Enforcement</span>
-                          <span className="text-emerald-700 font-bold">Google drive.file Gateways</span>
+                          <span className="text-emerald-700 font-bold">Google drive.file</span>
                         </div>
                         <div className="bg-white p-2 rounded-sm border border-emerald-200/80">
-                          <span className="text-slate-500 block text-[9px] uppercase font-semibold">Junior Laptop Shield</span>
-                          <span className="text-emerald-700 font-bold">Active (Downloads Blocked)</span>
+                          <span className="text-slate-500 block text-[9px] uppercase font-semibold">Laptop Download Shield</span>
+                          <span className="text-emerald-700 font-bold">Active</span>
                         </div>
                       </div>
-                      {boundaryReport?.boundaryAudit?.cryptographicProofHash && (
-                        <div className="text-[9px] font-mono text-slate-500 truncate">
-                          Digest: <span className="text-slate-700">{boundaryReport.boundaryAudit.cryptographicProofHash}</span>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
 
-                <div className="pt-4 mt-2 border-t border-slate-100">
-                  {isDriveConnected ? (
-                    <div className="text-xs text-emerald-800 font-mono flex items-center gap-1.5 font-semibold">
-                      <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                      Active: {storageConfig?.connectedEmail || 'Firm Google Drive'}
+                <div className="pt-4 mt-2 border-t border-slate-100 space-y-2">
+                  {isGoogleDriveConnected ? (
+                    <div className="space-y-2">
+                      <div className="text-xs text-emerald-800 font-mono flex items-center gap-1.5 font-semibold">
+                        <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                        <span className="truncate">Active: {storageConfig?.connectedEmail || 'Firm Google Drive'}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleConnectGoogleDrive}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded bg-white hover:bg-slate-50 border border-slate-300 text-xs font-semibold text-slate-700 cursor-pointer shadow-xs transition-colors"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5 text-slate-500" /> Switch Account
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDisconnectStorage}
+                          disabled={loading}
+                          className="px-3 py-1.5 rounded bg-white hover:bg-rose-50 border border-slate-300 hover:border-rose-300 text-xs font-semibold text-rose-700 cursor-pointer shadow-xs transition-colors"
+                        >
+                          Disconnect
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <button
                       type="button"
                       onClick={handleConnectGoogleDrive}
-                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-colors cursor-pointer shadow-xs"
+                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-colors cursor-pointer shadow-xs active:scale-[0.98]"
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
-                      Connect Firm Google Drive
+                      Sign in with Google Drive
                     </button>
                   )}
                 </div>
@@ -527,18 +658,21 @@ export function WorkspaceSetupPage() {
                       </div>
                     </div>
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-mono font-semibold bg-sky-50 border border-sky-200 text-sky-800">
-                      AES-256
+                      Default Active
                     </span>
                   </div>
 
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Zero-configuration fallback. Your files are isolated by tenant key with client-side hash verification. You can migrate to BYOS at any time.
+                    Zero-configuration fallback. Your files are isolated by tenant key with AES-256 client-side hash verification.
+                  </p>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    If you choose not to connect Google Drive right now, all filings will be securely kept here. You can connect your Google Drive anytime from Firm Settings.
                   </p>
                 </div>
 
                 <div className="pt-4 mt-2 border-t border-slate-200/60">
-                  <span className="text-[11px] text-slate-600 inline-flex items-center gap-1">
-                    <Lock className="h-3 w-3 text-emerald-600" /> Available as instant default
+                  <span className="text-[11px] text-slate-600 inline-flex items-center gap-1 font-medium">
+                    <Lock className="h-3 w-3 text-emerald-600" /> Instant ready · Zero setup required
                   </span>
                 </div>
               </div>
@@ -564,7 +698,7 @@ export function WorkspaceSetupPage() {
                 <button
                   type="button"
                   onClick={() => setCurrentStep(3)}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-md bg-slate-950 hover:bg-slate-800 text-white font-bold text-sm shadow-xs transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-md bg-slate-950 hover:bg-slate-800 text-white font-bold text-sm shadow-xs transition-colors cursor-pointer active:scale-[0.98]"
                 >
                   Continue to Team Invites
                   <ArrowRight className="h-4 w-4" />
@@ -580,13 +714,13 @@ export function WorkspaceSetupPage() {
             <div className="space-y-1.5">
               <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-sm bg-purple-50 border border-purple-200 text-purple-900 text-xs font-mono font-semibold uppercase">
                 <Users className="h-3.5 w-3.5 text-purple-700" />
-                Step 3: Team Roster & Role Assignment
+                Step 3: Team Roster &amp; Role Assignment
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
                 Invite your firm&apos;s team
               </h1>
               <p className="text-sm text-slate-600">
-                Add administrators, workbasket managers, and filing executives. Each user receives their secure xID credentials.
+                Add administrators, workbasket managers, and filing executives. Each user receives their secure xID credentials via email.
               </p>
             </div>
 
@@ -683,22 +817,41 @@ export function WorkspaceSetupPage() {
               </button>
 
               <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setCurrentStep(4)}
-                  className="px-4 py-2 rounded-md text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  Skip for now
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSendInvitesAndContinue}
-                  disabled={loading}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-md bg-slate-950 hover:bg-slate-800 text-white font-bold text-sm shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  {loading ? 'Sending Invites...' : 'Send Invites & Welcome'}
-                  <ArrowRight className="h-4 w-4" />
-                </button>
+                {validInvites.length > 0 ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSentInvitesCount(0);
+                        setCurrentStep(4);
+                      }}
+                      className="px-4 py-2 rounded-md text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                    >
+                      Skip for now
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSendInvitesAndContinue}
+                      disabled={loading}
+                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-md bg-slate-950 hover:bg-slate-800 text-white font-bold text-sm shadow-xs transition-colors cursor-pointer active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {loading ? 'Sending Invites...' : `Send ${validInvites.length} Invite(s) & Continue`}
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSentInvitesCount(0);
+                      setCurrentStep(4);
+                    }}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-md bg-slate-950 hover:bg-slate-800 text-white font-bold text-sm shadow-xs transition-colors cursor-pointer active:scale-[0.98]"
+                  >
+                    Skip for now &amp; Continue
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -715,7 +868,7 @@ export function WorkspaceSetupPage() {
                 Welcome to Docketra
               </h1>
               <p className="text-sm text-slate-600">
-                Workspace <span className="text-slate-950 font-bold">{firmName || 'Your Firm'}</span> is fully configured and ready for daily operations.
+                Workspace <span className="text-slate-950 font-bold">{firmName || 'Your Practice'}</span> is configured and ready for daily operations.
               </p>
             </div>
 
@@ -735,20 +888,64 @@ export function WorkspaceSetupPage() {
               </button>
             </div>
 
-            {/* Milestone Badges */}
-            <div className="max-w-md mx-auto grid grid-cols-3 gap-2 text-center text-xs font-mono">
-              <div className="p-2.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 space-y-1">
-                <CheckCircle2 className="h-4 w-4 mx-auto text-emerald-600" />
-                <span className="block text-[11px] font-semibold">Firm Ready</span>
+            {/* Honest Dynamic Milestone Badges */}
+            <div className="max-w-lg mx-auto grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-left text-xs">
+              {/* Milestone 1: Firm Profile */}
+              <div className="p-3 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-950 space-y-1">
+                <div className="flex items-center gap-1.5 text-emerald-800 font-bold">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                  <span>Firm Configured</span>
+                </div>
+                <p className="text-[11px] text-emerald-800 truncate">
+                  {selectedPractice.label}
+                </p>
               </div>
-              <div className="p-2.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 space-y-1">
-                <ShieldCheck className="h-4 w-4 mx-auto text-emerald-600" />
-                <span className="block text-[11px] font-semibold">Storage Active</span>
-              </div>
-              <div className="p-2.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 space-y-1">
-                <Users className="h-4 w-4 mx-auto text-emerald-600" />
-                <span className="block text-[11px] font-semibold">Team Configured</span>
-              </div>
+
+              {/* Milestone 2: Document Storage */}
+              {isGoogleDriveConnected ? (
+                <div className="p-3 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-950 space-y-1">
+                  <div className="flex items-center gap-1.5 text-emerald-800 font-bold">
+                    <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600" />
+                    <span>Google Drive Active</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-800 truncate" title={storageConfig?.connectedEmail || 'Zero-Custody Cloud'}>
+                    {storageConfig?.connectedEmail || 'Zero-Custody BYOS'}
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3 rounded-md bg-sky-50 border border-sky-200 text-sky-950 space-y-1">
+                  <div className="flex items-center gap-1.5 text-sky-800 font-bold">
+                    <Cloud className="h-4 w-4 shrink-0 text-sky-600" />
+                    <span>Docketra Cloud</span>
+                  </div>
+                  <p className="text-[11px] text-sky-800">
+                    Default Active · BYOS optional
+                  </p>
+                </div>
+              )}
+
+              {/* Milestone 3: Team Roster */}
+              {sentInvitesCount > 0 ? (
+                <div className="p-3 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-950 space-y-1">
+                  <div className="flex items-center gap-1.5 text-emerald-800 font-bold">
+                    <Users className="h-4 w-4 shrink-0 text-emerald-600" />
+                    <span>Team Configured</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-800">
+                    {sentInvitesCount} colleague(s) invited
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3 rounded-md bg-slate-50 border border-slate-200 text-slate-800 space-y-1">
+                  <div className="flex items-center gap-1.5 text-slate-700 font-bold">
+                    <Users className="h-4 w-4 shrink-0 text-slate-500" />
+                    <span>Solo Admin Mode</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600">
+                    Invite team anytime in Settings
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Sovereign Pilot Active Banner */}
@@ -759,19 +956,29 @@ export function WorkspaceSetupPage() {
               </span>
             </div>
 
-            {/* Launch CTA */}
-            <div className="pt-2 max-w-sm mx-auto">
+            {/* Product Walkthrough Option & Launch CTA */}
+            <div className="pt-2 max-w-sm mx-auto space-y-3">
+              <label className="flex items-center justify-center gap-2 text-xs text-slate-700 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={startTour}
+                  onChange={(e) => setStartTour(e.target.checked)}
+                  className="rounded border-slate-300 text-slate-950 focus:ring-slate-950"
+                />
+                <span>Start interactive product tour upon entering</span>
+              </label>
+
               <button
                 type="button"
                 onClick={handleEnterWorkspace}
                 disabled={loading}
-                className="w-full inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-md bg-slate-950 hover:bg-slate-800 text-white font-bold text-sm tracking-wide shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                className="w-full inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-md bg-slate-950 hover:bg-slate-800 text-white font-bold text-sm tracking-wide shadow-xs transition-colors cursor-pointer active:scale-[0.98] disabled:opacity-50"
               >
-                {loading ? 'Entering Command Center...' : 'Enter Workspace & Start Tour'}
+                {loading ? 'Entering Command Center...' : 'Enter Workspace Command Center'}
                 <ArrowRight className="h-4 w-4" />
               </button>
-              <p className="text-[11px] text-slate-500 mt-2 font-mono">
-                Step 5 (Interactive Product Walkthrough) starts on your dashboard.
+              <p className="text-[11px] text-slate-500 font-mono">
+                Opens your statutory radar and worklist directly.
               </p>
             </div>
           </div>
