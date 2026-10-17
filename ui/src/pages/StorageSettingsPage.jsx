@@ -35,6 +35,7 @@ import { SupportContext } from '../components/feedback/SupportContext';
 import { StatusMessageStack } from './platform/PlatformShared';
 import { ROUTES } from '../constants/routes';
 import { invalidateStorageStatusSummaryCache } from '../hooks/useStorageStatusSummary';
+import { DriveIsolationCertificateModal } from '../components/storage/DriveIsolationCertificateModal';
 
 const PAGE_SUBTITLE = 'Docketra-managed storage works by default. You can optionally connect your firm’s own cloud storage bucket or drive.';
 
@@ -153,6 +154,7 @@ export function StorageSettingsPage() {
   const [notificationRecipients, setNotificationRecipients] = useState('');
   const [retentionDays, setRetentionDays] = useState(30);
   const [savingBackupSettings, setSavingBackupSettings] = useState(false);
+  const [certificateModalOpen, setCertificateModalOpen] = useState(false);
 
   const loadStorageUsage = async () => {
     setUsageLoading(true);
@@ -532,6 +534,13 @@ export function StorageSettingsPage() {
     }
   };
 
+  const handleOpenCertificate = async () => {
+    if (!boundaryReport) {
+      await onVerifyBoundary();
+    }
+    setCertificateModalOpen(true);
+  };
+
   const statusMessages = [
     loadError ? { tone: 'error', message: loadError } : null,
     statusMessage.text ? { tone: statusMessage.type === 'error' ? 'error' : 'success', message: statusMessage.text } : null,
@@ -612,28 +621,44 @@ export function StorageSettingsPage() {
             </div>
 
             {boundaryReport?.boundaryAudit && (
-              <div className="bg-emerald-50/70 rounded-xl p-4 border border-emerald-200/60 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-                <div className="flex items-start gap-2.5 text-emerald-900">
-                  <ShieldIcon className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <div className="font-bold text-sm text-emerald-950 flex items-center gap-2">
-                      <span>Google Drive Safety Check: Verified</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-200/60 text-emerald-900 font-mono font-bold uppercase">
-                        Google drive.file
-                      </span>
+              <div className="bg-emerald-50/70 rounded-xl p-4 border border-emerald-200/60 flex flex-col gap-3 text-xs">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div className="flex items-start gap-2.5 text-emerald-900">
+                    <ShieldIcon className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-bold text-sm text-emerald-950 flex items-center gap-2">
+                        <span>Google Drive Safety Check: Verified</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-200/60 text-emerald-900 font-mono font-bold uppercase">
+                          Google drive.file
+                        </span>
+                      </div>
+                      <p className="text-emerald-800 mt-0.5 leading-relaxed">
+                        Docketra can only access files created inside this app.
+                        <strong> 0 external files readable.</strong> Personal drives, existing client folders, and tax returns outside <code className="bg-emerald-100/70 px-1 py-0.5 rounded text-[11px]">/Docketra/</code> cannot be seen or opened.
+                      </p>
                     </div>
-                    <p className="text-emerald-800 mt-0.5 leading-relaxed">
-                      Docketra can only access files created inside this app.
-                      <strong> 0 external files readable.</strong> Personal drives, existing client folders, and tax returns outside <code className="bg-emerald-100/70 px-1 py-0.5 rounded text-[11px]">/Docketra/</code> cannot be seen or opened.
-                    </p>
                   </div>
+                  {boundaryReport.boundaryAudit.cryptographicProofHash && (
+                    <div className="bg-white/80 p-2 rounded-lg border border-emerald-200/50 font-mono text-[10px] text-emerald-800 shrink-0 self-start md:self-center">
+                      <span className="text-slate-500 block text-[9px] uppercase">Proof Hash</span>
+                      <span>{boundaryReport.boundaryAudit.cryptographicProofHash.substring(0, 20)}…</span>
+                    </div>
+                  )}
                 </div>
-                {boundaryReport.boundaryAudit.cryptographicProofHash && (
-                  <div className="bg-white/80 p-2 rounded-lg border border-emerald-200/50 font-mono text-[10px] text-emerald-800 shrink-0 self-start md:self-center">
-                    <span className="text-slate-500 block text-[9px] uppercase">Proof Hash</span>
-                    <span>{boundaryReport.boundaryAudit.cryptographicProofHash.substring(0, 20)}…</span>
-                  </div>
-                )}
+
+                <div className="pt-2.5 border-t border-emerald-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <span className="text-[11px] text-emerald-800">
+                    Proof certificate for senior partners, enterprise clients, and peer review compliance.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleOpenCertificate}
+                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-950 bg-white border border-emerald-300 hover:bg-emerald-100/70 transition-colors shadow-2xs focus-visible:outline-2 focus-visible:outline-emerald-600 motion-safe:enabled:active:scale-[0.96] shrink-0"
+                  >
+                    <ShieldIcon className="h-3.5 w-3.5 text-emerald-700" />
+                    <span>Print Isolation Certificate</span>
+                  </button>
+                </div>
               </div>
             )}
 
@@ -669,6 +694,9 @@ export function StorageSettingsPage() {
                   )}
                   <Button type="button" variant="outline" onClick={onVerifyBoundary} disabled={verifyingBoundary}>
                     {verifyingBoundary ? 'Auditing Boundary…' : 'Audit Zero-Access Boundary'}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={handleOpenCertificate}>
+                    Isolation Certificate
                   </Button>
                   <Button type="button" variant="outline" onClick={loadConfiguration} disabled={loading}>Recheck Storage Status</Button>
                   <Button type="button" variant="outline" onClick={onTestConnection} disabled={testing}>{testing ? 'Testing Connection…' : 'Test Credentials'}</Button>
@@ -1414,6 +1442,16 @@ export function StorageSettingsPage() {
           </div>
         </div>
       )}
+
+      <DriveIsolationCertificateModal
+        isOpen={certificateModalOpen}
+        onClose={() => setCertificateModalOpen(false)}
+        firmName={user?.firm?.name || user?.firmName || 'Practice'}
+        firmSlug={firmSlug}
+        user={user}
+        config={config}
+        boundaryReport={boundaryReport}
+      />
     </PlatformShell>
   );
 }

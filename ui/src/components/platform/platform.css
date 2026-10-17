@@ -3966,3 +3966,39 @@ select:focus-visible {
   font-weight: 500;
   animation: slideDown 0.2s ease;
 }
+
+/* ── Cloud Isolation Certificate Print Styles ────────────────────────────── */
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+  }
+
+  header,
+  footer,
+  nav,
+  .platform__sidebar,
+  .platform__header,
+  .no-print {
+    display: none !important;
+  }
+
+  .isolation-certificate-sheet {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    border: 2px solid #0f172a !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    page-break-inside: avoid !important;
+  }
+}
+
