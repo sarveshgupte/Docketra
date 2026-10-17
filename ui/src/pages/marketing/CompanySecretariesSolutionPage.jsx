@@ -179,8 +179,15 @@ export const CompanySecretariesSolutionPage = () => {
       <section className="relative overflow-hidden bg-slate-50/40 pt-16 pb-12 sm:pt-20 sm:pb-16 border-b border-slate-200">
         <Container size="7xl">
           <div className="mx-auto max-w-4xl text-center space-y-4">
-            <div className="font-mono text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
-              Built for Practicing Company Secretaries (PCS) & Governance Teams
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <div className="font-mono text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
+                Built for Practicing Company Secretaries (PCS) & Governance Teams
+              </div>
+              <span className="text-slate-300">•</span>
+              <div className="inline-flex items-center gap-1.5 border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-mono font-medium text-emerald-800">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                <span>Zero File Leakage • 100% Partner Review</span>
+              </div>
             </div>
 
             <h1 className="text-3xl font-bold leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
@@ -188,7 +195,7 @@ export const CompanySecretariesSolutionPage = () => {
             </h1>
 
             <p className="text-sm sm:text-base font-normal leading-relaxed text-slate-600 max-w-2xl mx-auto">
-              Eliminate spreadsheet chaos across 200+ corporate clients. Centralize MCA deadlines, board resolutions, DIN/DSC registries, and statutory registers in one bulletproof workspace.
+              Run your practice from your own Google Drive. Zero file leakage, 100% partner review. Eliminate spreadsheet chaos across corporate clients and centralize MCA deadlines in one reliable workspace.
             </p>
 
             {/* CTAs */}

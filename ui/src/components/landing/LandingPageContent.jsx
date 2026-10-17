@@ -21,8 +21,15 @@ const HeroSection = ({ onOpenTour }) => (
       <div className="grid items-center gap-10 lg:grid-cols-[1fr_1.2fr]">
         <motion.div {...REVEAL} className="space-y-4">
           {/* Eyebrow Kicker */}
-          <div className="font-mono text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
-            Built for Indian professional firms
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="font-mono text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
+              Built for Indian professional firms
+            </div>
+            <span className="text-slate-300">•</span>
+            <div className="inline-flex items-center gap-1.5 border border-emerald-200 bg-emerald-50/80 px-2 py-0.5 text-[11px] font-mono font-medium text-emerald-800">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+              <span>Zero File Leakage • 100% Partner Review</span>
+            </div>
           </div>
 
           {/* Headline */}
@@ -39,8 +46,8 @@ const HeroSection = ({ onOpenTour }) => (
             Built for CS, CA, law, and compliance teams so work never gets delayed.
           </p>
 
-          <p className="text-xs text-amber-600 font-mono tracking-tight">
-            Every filing checked. Your files in your Drive. Zero missed due dates.
+          <p className="text-xs text-amber-600 font-mono tracking-tight font-semibold">
+            Run your practice from your own Google Drive. Zero file leakage, 100% partner review.
           </p>
 
           {/* Practice Solutions Navigation */}
@@ -136,18 +143,18 @@ const SubHeroMetricsStrip = () => (
         {[
           {
             stat: 'Google Drive',
-            label: 'Your Own Storage',
-            desc: 'Files stay safely in your firm’s Drive',
+            label: 'Zero File Leakage',
+            desc: 'Files stay safely in your firm’s own Google Drive',
+          },
+          {
+            stat: 'Partner Review',
+            label: '100% Partner Sign-off',
+            desc: 'Partner approves draft before filing on portal',
           },
           {
             stat: 'Due Dates',
             label: 'Never Miss a Filing',
             desc: 'ROC, GST, and Tax reminders before late fees',
-          },
-          {
-            stat: 'Partner Review',
-            label: 'Check Before Filing',
-            desc: 'Partner approves before staff file on portal',
           },
           {
             stat: 'Daily Worklists',
@@ -418,10 +425,10 @@ const FinalCtaSection = () => (
     <Container size="7xl">
       <motion.div className="max-w-2xl mx-auto space-y-3" {...REVEAL}>
         <h2 className="text-2xl sm:text-3xl font-bold text-slate-950 tracking-tight">
-          Give every docket a memory.
+          Run your practice from your own Google Drive.
         </h2>
         <p className="text-sm font-semibold text-slate-900">
-          For partners, managers, and execution teams.
+          Zero file leakage, 100% partner review.
         </p>
         <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
           Start with one workspace, invite your team, and eliminate scattered WhatsApp client files.
