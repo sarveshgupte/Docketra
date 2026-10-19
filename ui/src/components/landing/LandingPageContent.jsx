@@ -63,7 +63,7 @@ const PRACTICE_PILLARS = [
 const HeroSection = ({ onOpenTour }) => (
   <section className="relative overflow-hidden bg-slate-50/60 pt-20 pb-14 sm:pt-24 sm:pb-16 md:pt-24 md:pb-20 border-b border-slate-200">
     <Container size="7xl" className="relative">
-      <div className="grid items-center gap-10 lg:grid-cols-[1fr_1.18fr]">
+      <div className="grid items-center gap-8 lg:gap-10 lg:grid-cols-2">
         <motion.div {...REVEAL} className="space-y-4">
           {/* Eyebrow Kicker */}
           <div className="flex flex-wrap items-center gap-2">
@@ -79,7 +79,7 @@ const HeroSection = ({ onOpenTour }) => (
           </div>
 
           {/* Headline */}
-          <h1 className="text-3xl font-extrabold leading-[1.12] tracking-tight text-slate-950 sm:text-4xl lg:text-[2.85rem]">
+          <h1 className="text-3xl font-extrabold leading-[1.14] tracking-tight text-slate-950 sm:text-4xl lg:text-[2.75rem]">
             The Sovereign Practice OS for Indian Professional Firms.
           </h1>
 
@@ -131,10 +131,10 @@ const HeroSection = ({ onOpenTour }) => (
           </div>
 
           {/* Primary Action Cluster */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+          <div className="flex flex-wrap items-center gap-2.5 pt-2">
             <Link
               to="/signup"
-              className="inline-flex w-full sm:w-auto h-11 items-center justify-center gap-2 bg-slate-950 px-6 text-xs font-bold text-amber-400 transition-colors hover:bg-slate-800 shadow-sm"
+              className="inline-flex h-11 items-center justify-center gap-2 bg-slate-950 px-5 text-xs font-bold text-amber-400 whitespace-nowrap transition-colors hover:bg-slate-800 shadow-sm shrink-0"
             >
               <span>Create firm workspace</span>
               <span>→</span>
@@ -142,7 +142,7 @@ const HeroSection = ({ onOpenTour }) => (
 
             <Link
               to="/find-workspace"
-              className="inline-flex w-full sm:w-auto h-11 items-center justify-center gap-2 border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-800 hover:bg-slate-50 hover:border-slate-400 transition-colors shadow-2xs"
+              className="inline-flex h-11 items-center justify-center gap-2 border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-800 whitespace-nowrap hover:bg-slate-50 hover:border-slate-400 transition-colors shadow-2xs shrink-0"
             >
               <span>Find workspace</span>
             </Link>
@@ -150,7 +150,7 @@ const HeroSection = ({ onOpenTour }) => (
             <button
               type="button"
               onClick={onOpenTour}
-              className="inline-flex w-full sm:w-auto h-11 items-center justify-center gap-2 border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-800 hover:bg-slate-50 hover:border-slate-400 transition-colors shadow-2xs cursor-pointer"
+              className="inline-flex h-11 items-center justify-center gap-2 border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-800 whitespace-nowrap hover:bg-slate-50 hover:border-slate-400 transition-colors shadow-2xs shrink-0 cursor-pointer"
             >
               <span>Interactive product tour</span>
             </button>
@@ -179,7 +179,7 @@ const HeroSection = ({ onOpenTour }) => (
           whileInView={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
           viewport={{ once: true }}
-          className="relative lg:pl-2"
+          className="relative w-full max-w-full"
         >
           <InteractiveProductCanvas />
         </motion.div>
