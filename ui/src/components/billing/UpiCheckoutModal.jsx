@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { generateUpiQrSvg } from '../../utils/qrCodeGenerator';
@@ -167,9 +168,10 @@ export const UpiCheckoutModal = ({
 
           {/* QR Code Container */}
           <div className="flex flex-col items-center justify-center p-4 bg-white border border-slate-200 rounded-sm shadow-xs">
+            {/* SECURITY: Sanitize SVG payload before injecting to prevent XSS via malformed Intent URIs */}
             <div
               className="w-56 h-56 flex items-center justify-center"
-              dangerouslySetInnerHTML={{ __html: qrSvg || '' }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(qrSvg || '') }}
             />
             <p className="mt-2 text-[11px] font-medium text-slate-500 text-center">
               Scan with any UPI App (GPay, PhonePe, Paytm, BHIM, CRED)
