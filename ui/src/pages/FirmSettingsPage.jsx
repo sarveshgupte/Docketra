@@ -18,6 +18,7 @@ import { DocketBulkUploadModal } from '../components/bulk/DocketBulkUploadModal'
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { UpiCheckoutModal } from '../components/billing/UpiCheckoutModal';
+import { SubscriptionInvoiceModal } from '../components/billing/SubscriptionInvoiceModal';
 import { subscriptionService } from '../services/subscriptionService';
 
 const enabledDisabledOptions = [
@@ -306,6 +307,10 @@ export const FirmSettingsPage = () => {
   const [upgradingPlan, setUpgradingPlan] = useState(false);
   const [checkoutOrder, setCheckoutOrder] = useState(null);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [subscriptionOrders, setSubscriptionOrders] = useState([]);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [loadingInvoiceId, setLoadingInvoiceId] = useState(null);
 
   useEffect(() => {
     if (requestedTab && validTabs.includes(requestedTab) && requestedTab !== currentTab) {
@@ -520,9 +525,15 @@ export const FirmSettingsPage = () => {
   const loadPlanData = useCallback(async () => {
     setLoadingPlan(true);
     try {
-      const response = await adminApi.getFirmPlan();
-      if (response?.data) {
-        setPlanData(response.data);
+      const [planRes, subRes] = await Promise.allSettled([
+        adminApi.getFirmPlan(),
+        subscriptionService.getSubscriptionOverview(),
+      ]);
+      if (planRes.status === 'fulfilled' && planRes.value?.data) {
+        setPlanData(planRes.value.data);
+      }
+      if (subRes.status === 'fulfilled' && subRes.value?.data?.recentOrders) {
+        setSubscriptionOrders(subRes.value.data.recentOrders);
       }
     } catch {
       // ignore
@@ -530,6 +541,28 @@ export const FirmSettingsPage = () => {
       setLoadingPlan(false);
     }
   }, []);
+
+  const handleViewInvoice = async (orderId) => {
+    setLoadingInvoiceId(orderId);
+    try {
+      const res = await subscriptionService.getInvoice(orderId);
+      if (res?.success && res?.data) {
+        setSelectedInvoice(res.data);
+        setShowInvoiceModal(true);
+      } else {
+        throw new Error(res?.message || 'Invoice not found');
+      }
+    } catch (err) {
+      showToast(err?.response?.data?.message || err?.message || 'Failed to load invoice.', 'error');
+    } finally {
+      setLoadingInvoiceId(null);
+    }
+  };
+
+  const handleResumePayment = (order) => {
+    setCheckoutOrder(order);
+    setShowCheckoutModal(true);
+  };
 
   const handleUpgradePlan = async (targetPlan) => {
     setUpgradingPlan(true);
@@ -1647,6 +1680,126 @@ export const FirmSettingsPage = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Payment & Invoice History */}
+                <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-3">
+                    <div>
+                      <h4 className="text-base font-semibold text-slate-900">Payment & Invoice History</h4>
+                      <p className="text-xs text-slate-500">
+                        Official tax invoices and payment receipts for your firm’s Docketra subscriptions.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void loadPlanData()}
+                      className="text-xs"
+                    >
+                      Refresh History
+                    </Button>
+                  </div>
+
+                  {subscriptionOrders.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-slate-200 p-6 text-center">
+                      <p className="text-xs font-medium text-slate-600">No payment history yet</p>
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        When you upgrade your plan, payment records and downloadable invoices will appear here.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-lg border border-slate-100">
+                      <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
+                        <thead className="bg-slate-50">
+                          <tr>
+                            <th scope="col" className="px-3.5 py-2.5 font-semibold text-slate-600">Date & Order ID</th>
+                            <th scope="col" className="px-3.5 py-2.5 font-semibold text-slate-600">Plan & Cycle</th>
+                            <th scope="col" className="px-3.5 py-2.5 font-semibold text-slate-600">Amount</th>
+                            <th scope="col" className="px-3.5 py-2.5 font-semibold text-slate-600">Bank UTR</th>
+                            <th scope="col" className="px-3.5 py-2.5 font-semibold text-slate-600">Status</th>
+                            <th scope="col" className="px-3.5 py-2.5 text-right font-semibold text-slate-600">Invoice</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                          {subscriptionOrders.map((ord) => {
+                            const isPaid = ord.status === 'COMPLETED';
+                            const isPending = ord.status === 'PENDING';
+                            const createdDate = ord.createdAt
+                              ? new Date(ord.createdAt).toLocaleDateString('en-IN', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric',
+                                })
+                              : '—';
+                            return (
+                              <tr key={ord.orderId} className="hover:bg-slate-50/50">
+                                <td className="px-3.5 py-3">
+                                  <p className="font-mono font-medium text-slate-900">{ord.orderId}</p>
+                                  <p className="text-[11px] text-slate-400">{createdDate}</p>
+                                </td>
+                                <td className="px-3.5 py-3 capitalize text-slate-700">
+                                  <span className="font-medium">{ord.plan}</span> ({ord.billingCycle || 'annual'})
+                                </td>
+                                <td className="px-3.5 py-3 font-semibold text-slate-900">
+                                  ₹{Number(ord.amount || 0).toLocaleString('en-IN')}
+                                </td>
+                                <td className="px-3.5 py-3">
+                                  {ord.utr ? (
+                                    <span className="font-mono text-xs text-slate-800">{ord.utr}</span>
+                                  ) : (
+                                    <span className="text-slate-400 text-[11px]">Awaiting UTR</span>
+                                  )}
+                                </td>
+                                <td className="px-3.5 py-3">
+                                  {isPaid ? (
+                                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                                      PAID
+                                    </span>
+                                  ) : isPending ? (
+                                    <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                                      PENDING
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                                      {ord.status}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-3.5 py-3 text-right">
+                                  {isPaid ? (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      loading={loadingInvoiceId === ord.orderId}
+                                      onClick={() => void handleViewInvoice(ord.orderId)}
+                                      className="text-xs py-1 px-2.5 h-auto"
+                                    >
+                                      View Invoice
+                                    </Button>
+                                  ) : isPending ? (
+                                    <Button
+                                      type="button"
+                                      variant="primary"
+                                      size="sm"
+                                      onClick={() => handleResumePayment(ord)}
+                                      className="text-xs py-1 px-2.5 h-auto"
+                                    >
+                                      Complete Pay
+                                    </Button>
+                                  ) : (
+                                    <span className="text-slate-400 text-xs">—</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -1822,6 +1975,13 @@ export const FirmSettingsPage = () => {
           await loadPlanData();
         }}
       />
+      {showInvoiceModal && selectedInvoice && (
+        <SubscriptionInvoiceModal
+          isOpen={showInvoiceModal}
+          onClose={() => setShowInvoiceModal(false)}
+          invoice={selectedInvoice}
+        />
+      )}
     </PlatformShell>
   );
 };

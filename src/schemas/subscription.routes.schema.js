@@ -13,6 +13,11 @@ module.exports = {
       orderId: nonEmptyString,
     }),
   },
+  'GET /orders/:orderId/invoice': {
+    params: z.object({
+      orderId: nonEmptyString,
+    }),
+  },
   'POST /orders/:orderId/verify-utr': {
     params: z.object({
       orderId: nonEmptyString,

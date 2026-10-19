@@ -30,9 +30,11 @@ Benchmarking total annual cost for a 5-member compliance practice:
 - **Lowest (Software)**: ₹5,999/year (Finexo) to ₹7,200/year (QwikCA at ₹120/user/mo).
 - **Median**: ~₹8,000 – ₹9,500/year (Jamku with base plan + initial setup amortized; SimplifyPractice).
 - **Highest (Cloud Suites)**: ₹35,400/year (Zoho Practice standalone at ₹2,950/mo); ~₹36,000/year (ClickUp / Asana at $7/user/mo).
-- **Docketra Proposed Packaging**:
-  - *Starter*: ₹2,499/month (₹24,990/year billed annually for 5 users)
-  - *Pro*: ₹6,999/month (₹69,990/year for unlimited users)
+- **Docketra Packaging & Price Ladder**:
+  - *Proof of Sovereign Isolation Sandbox*: ₹0 forever (capped at 2 seats, 5 clients, 15 dockets/mo)
+  - *Starter*: ₹1,499/month (₹17,990/year billed annually for up to 5 seats & 50 clients; promotional ₹12,990/yr Pioneer Cohort rate)
+  - *Growth*: ₹1,832/month (₹21,990/year flat for up to 12 seats & 150 clients with shared department queues)
+  - *Pro*: ₹4,999/month (₹59,990/year for up to 25 seats & unlimited clients)
 
 *Pricing Insight*: Docketra sits at a premium compared to low-end task utilities (QwikCA/Jamku base at ₹6k–₹9k/yr) and at a discount compared to enterprise suites (Zoho Practice at ₹35k/yr). Because Docketra includes **100% feature parity** and sovereign BYOS without storage add-on surcharges, its annual price is justified only if it delivers clear compliance defense, maker-checker QC, and client intake that low-cost tools omit.
 

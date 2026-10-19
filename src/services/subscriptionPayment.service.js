@@ -331,10 +331,76 @@ const handleGatewayWebhook = async ({ orderId, utr, amount }) => {
   return { success: true, orderId: order.orderId, status: order.status };
 };
 
+/**
+ * Generate a formal tax/payment receipt invoice for a completed or valid subscription order.
+ */
+const generateSubscriptionInvoice = async ({ orderId, firmId }) => {
+  const query = { orderId };
+  if (firmId) {
+    query.firmId = firmId;
+  }
+  const order = await SubscriptionOrder.findOne(query).lean();
+  if (!order) {
+    throw new Error('Order not found');
+  }
+
+  const firm = await Firm.findById(order.firmId).lean();
+  const planConfig = SUBSCRIPTION_PLANS[order.plan] || {
+    id: order.plan,
+    name: order.plan.toUpperCase(),
+    maxUsers: 5,
+    maxClients: 50,
+  };
+
+  const invoiceNumber = `INV-${order.orderId.replace(/^ORD-/, '')}`;
+  const issueDate = order.paidAt || order.createdAt;
+
+  return {
+    invoiceNumber,
+    orderId: order.orderId,
+    status: order.status === 'COMPLETED' ? 'PAID' : order.status,
+    issuedAt: issueDate,
+    paidAt: order.paidAt || null,
+    seller: {
+      name: 'Docketra Technologies',
+      merchantName: PAYMENT_GATEWAY_CONFIG.defaultPayeeName,
+      vpa: PAYMENT_GATEWAY_CONFIG.defaultUpiVpa,
+      mcc: PAYMENT_GATEWAY_CONFIG.merchantCategoryCode,
+      currency: 'INR',
+      email: 'billing@docketra.com',
+      support: 'support@docketra.com',
+    },
+    buyer: {
+      firmId: firm?._id || order.firmId,
+      firmName: firm?.name || 'Practicing Professional Firm',
+      firmSlug: firm?.firmSlug || 'firm',
+      planAssigned: firm?.plan || order.plan,
+    },
+    lineItems: [
+      {
+        description: `Docketra ${planConfig.name} (${order.billingCycle === 'annual' ? '12 Months' : '1 Month'})`,
+        details: `${planConfig.maxUsers || 5} Team Seats, ${planConfig.maxClients ? planConfig.maxClients + ' Clients' : 'Unlimited Clients'}, Unlimited Dockets, Google Drive BYOS`,
+        cycle: order.billingCycle,
+        amount: order.amount,
+      },
+    ],
+    totalAmount: order.amount,
+    currency: 'INR',
+    paymentDetails: {
+      gateway: 'Zero-Fee Direct UPI (NPCI)',
+      payeeVpa: PAYMENT_GATEWAY_CONFIG.defaultUpiVpa,
+      utr: order.utr || null,
+      orderExpiresAt: order.expiresAt,
+    },
+  };
+};
+
 module.exports = {
   getCurrentSubscription,
   createSubscriptionOrder,
   getOrderStatus,
   verifyUtrAndActivate,
   handleGatewayWebhook,
+  generateSubscriptionInvoice,
 };
+

@@ -87,3 +87,5 @@ graphify-out/
 __pycache__/
 *.pyc
 YouPI-PG/
+.claude/
+agent/

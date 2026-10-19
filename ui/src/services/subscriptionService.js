@@ -20,6 +20,11 @@ export const subscriptionService = {
     const response = await api.post(`/subscriptions/orders/${encodeURIComponent(orderId)}/verify-utr`, { utr });
     return response.data;
   },
+
+  getInvoice: async (orderId) => {
+    const response = await api.get(`/subscriptions/orders/${encodeURIComponent(orderId)}/invoice`);
+    return response.data;
+  },
 };
 
 export default subscriptionService;

@@ -93,6 +93,25 @@ const verifyUtr = async (req, res, next) => {
   }
 };
 
+const getInvoice = async (req, res, next) => {
+  try {
+    const firmId = req.firmId || req.user?.firmId;
+    const { orderId } = req.params;
+
+    const invoice = await subscriptionService.generateSubscriptionInvoice({ orderId, firmId });
+    return res.status(200).json({
+      success: true,
+      data: invoice,
+    });
+  } catch (error) {
+    log.error('[SUBSCRIPTION_GET_INVOICE_ERROR]', error);
+    return res.status(404).json({
+      success: false,
+      message: error.message || 'Invoice not found',
+    });
+  }
+};
+
 const webhook = async (req, res, next) => {
   try {
     const { orderId, utr, amount } = req.body;
@@ -124,6 +143,8 @@ module.exports = {
   getSubscriptionOverview,
   createOrder,
   getOrder,
+  getInvoice,
   verifyUtr,
   webhook,
 };
+

@@ -67,16 +67,22 @@ Module._load = function (request, parent, isMain) {
         mockOrders.set(data.orderId, doc);
         return doc;
       },
-      findOne: async (query) => {
+      findOne: (query) => {
+        let result = null;
         if (query.utr && query.status === 'COMPLETED') {
           for (const ord of mockOrders.values()) {
             if (ord.utr === query.utr && ord.status === 'COMPLETED' && ord.orderId !== query.orderId?.$ne) {
-              return ord;
+              result = ord;
+              break;
             }
           }
-          return null;
+        } else {
+          result = mockOrders.get(query.orderId) || null;
         }
-        return mockOrders.get(query.orderId) || null;
+        return {
+          lean: async () => result,
+          then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
+        };
       },
       find: () => ({
         sort: () => ({
@@ -161,6 +167,17 @@ const subscriptionService = require('../src/services/subscriptionPayment.service
     },
     /already been claimed/
   );
+
+  // Test G: Generate subscription invoice for completed order
+  const invoice = await subscriptionService.generateSubscriptionInvoice({
+    orderId: order.orderId,
+    firmId: mockFirm._id,
+  });
+  assert.strictEqual(invoice.status, 'PAID');
+  assert.strictEqual(invoice.totalAmount, 12990);
+  assert.strictEqual(invoice.seller.vpa, 'sarveshgupte@oksbi');
+  assert.strictEqual(invoice.paymentDetails.utr, '428819283741');
+  assert.ok(invoice.invoiceNumber.startsWith('INV-'));
 
   console.log('✓ All subscription pure tests passed successfully!');
   process.exit(0);

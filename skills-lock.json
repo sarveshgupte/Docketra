@@ -7,6 +7,12 @@
       "skillPath": "skills/api-and-interface-design/SKILL.md",
       "computedHash": "8bdbf1fca81bef9258d7e0d9726f933f25677ec8537792e084a3fb7c54acf2ba"
     },
+    "awwwards": {
+      "source": "juliobsz/skills",
+      "sourceType": "github",
+      "skillPath": "awwwards/SKILL.md",
+      "computedHash": "498e1bdcce8e890cbf9404d8cd584fc46e4f2b178b110790a33f4db9683e02a0"
+    },
     "better-accessibility": {
       "source": "jakubkrehel/skills",
       "sourceType": "github",
@@ -330,6 +336,12 @@
       "sourceType": "github",
       "skillPath": "skills/interview-me/SKILL.md",
       "computedHash": "4229002dd862e6e037c8a01c3e31d9af097465c58b2c3611912edb2af005f303"
+    },
+    "jury": {
+      "source": "juliobsz/skills",
+      "sourceType": "github",
+      "skillPath": "jury/SKILL.md",
+      "computedHash": "edc11bd1ce7d25fc136492eda7ba936572d4679d84cb605f3ae451be908316ba"
     },
     "landing-page-scaffold": {
       "source": "null0xxx/atlas-orchestrator",
