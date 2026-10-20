@@ -31,31 +31,7 @@ assert.deepStrictEqual(payload, {
   dueDate: undefined,
   eventDate: undefined,
   relatedEmployeeUserId: undefined,
-  checklist: undefined,
 });
-
-const payloadWithChecklist = buildCreateDocketPayload({
-  title: 'Statutory filing',
-  categoryId: 'cat-1',
-  subcategoryId: 'sub-1',
-  workbasketId: 'wb-1',
-  checklist: [
-    { id: 'step-1', title: 'Verify ledger', required: true, dueOffsetDays: 3 },
-    { title: 'Draft annexures', required: false },
-    { title: '' }, // empty title should be filtered out
-  ],
-});
-assert.strictEqual(payloadWithChecklist.checklist.length, 2, 'Should include valid checklist items');
-assert.deepStrictEqual(payloadWithChecklist.checklist[0], {
-  id: 'step-1',
-  title: 'Verify ledger',
-  description: '',
-  required: true,
-  sortOrder: 0,
-  dueOffsetDays: 3,
-});
-assert.strictEqual(payloadWithChecklist.checklist[1].id, 'chk-2');
-assert.strictEqual(payloadWithChecklist.checklist[1].required, false);
 
 const noEmployeePayload = buildCreateDocketPayload({
   title: 'No employee docket',

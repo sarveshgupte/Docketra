@@ -155,109 +155,107 @@ export default function BubbleMenu({
   return (
     <>
       <nav className={containerClassName} style={style} aria-label="Main navigation">
-        <div className="w-full max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-between">
-          <div className="bubble logo-bubble" aria-label="Docketra Logo" style={{ background: menuBg }}>
-            <span className="logo-content">
-              {typeof logo === 'string' ? <img src={logo} alt="Docketra Logo" className="bubble-logo" /> : logo}
-            </span>
-          </div>
+        <div className="bubble logo-bubble" aria-label="Docketra Logo" style={{ background: menuBg }}>
+          <span className="logo-content">
+            {typeof logo === 'string' ? <img src={logo} alt="Docketra Logo" className="bubble-logo" /> : logo}
+          </span>
+        </div>
 
-          <div className="flex items-center gap-3 pointer-events-auto">
-            {/* Desktop action buttons */}
-            <div className="hidden md:flex items-center gap-2.5">
-              {/* Solutions Dropdown */}
-              <div className="relative group">
-                <button
-                  type="button"
-                  className="inline-flex h-9 items-center justify-center gap-1 rounded-xs border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:border-slate-300"
+        <div className="flex items-center gap-3 pointer-events-auto">
+          {/* Desktop action buttons */}
+          <div className="hidden md:flex items-center gap-2.5">
+            {/* Solutions Dropdown */}
+            <div className="relative group">
+              <button
+                type="button"
+                className="inline-flex h-9 items-center justify-center gap-1 rounded-xs border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:border-slate-300"
+              >
+                <span>Solutions</span>
+                <svg className="h-3.5 w-3.5 text-slate-400 group-hover:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div className="absolute right-0 top-full mt-1 w-64 rounded-sm border border-slate-200 bg-white p-1.5 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                <div className="px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Practice Solutions</div>
+                <Link
+                  to="/solutions/company-secretaries"
+                  className="flex items-center gap-2 rounded-xs px-2 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-50 transition-colors"
                 >
-                  <span>Solutions</span>
-                  <svg className="h-3.5 w-3.5 text-slate-400 group-hover:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                <div className="absolute right-0 top-full mt-1 w-64 rounded-sm border border-slate-200 bg-white p-1.5 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                  <div className="px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Practice Solutions</div>
-                  <Link
-                    to="/solutions/company-secretaries"
-                    className="flex items-center gap-2 rounded-xs px-2 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-50 transition-colors"
-                  >
-                    <span className="h-1.5 w-1.5 rounded-xs bg-amber-500 shrink-0" />
-                    <div>
-                      <p className="font-bold leading-none text-slate-900">Company Secretaries</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">MCA V3, ROC & Governance</p>
-                    </div>
-                  </Link>
-                  <Link
-                    to="/solutions/chartered-accountants"
-                    className="flex items-center gap-2 rounded-xs px-2 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-50 transition-colors"
-                  >
-                    <span className="h-1.5 w-1.5 rounded-xs bg-blue-500 shrink-0" />
-                    <div>
-                      <p className="font-bold leading-none text-slate-900">Chartered Accountants</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">Tax Audit, GST & Workbaskets</p>
-                    </div>
-                  </Link>
-                  <Link
-                    to="/solutions/corporate-legal-teams"
-                    className="flex items-center gap-2 rounded-xs px-2 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-50 transition-colors"
-                  >
-                    <span className="h-1.5 w-1.5 rounded-xs bg-purple-500 shrink-0" />
-                    <div>
-                      <p className="font-bold leading-none text-slate-900">Corporate Legal Teams</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">Intake, Subsidiaries & Litigation</p>
-                    </div>
-                  </Link>
-                  <div className="my-1 border-t border-slate-100" />
-                  <Link
-                    to="/compare/docketra-vs-excel-whatsapp"
-                    className="flex items-center gap-2 rounded-xs px-2 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-50 transition-colors"
-                  >
-                    <span className="h-1.5 w-1.5 rounded-xs bg-slate-400 shrink-0" />
-                    <div>
-                      <p className="font-bold leading-none text-slate-900">vs. Excel & WhatsApp</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">Why firms switch to Docketra</p>
-                    </div>
-                  </Link>
-                </div>
+                  <span className="h-1.5 w-1.5 rounded-xs bg-amber-500 shrink-0" />
+                  <div>
+                    <p className="font-bold leading-none text-slate-900">Company Secretaries</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">MCA V3, ROC & Governance</p>
+                  </div>
+                </Link>
+                <Link
+                  to="/solutions/chartered-accountants"
+                  className="flex items-center gap-2 rounded-xs px-2 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-50 transition-colors"
+                >
+                  <span className="h-1.5 w-1.5 rounded-xs bg-blue-500 shrink-0" />
+                  <div>
+                    <p className="font-bold leading-none text-slate-900">Chartered Accountants</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Tax Audit, GST & Workbaskets</p>
+                  </div>
+                </Link>
+                <Link
+                  to="/solutions/corporate-legal-teams"
+                  className="flex items-center gap-2 rounded-xs px-2 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-50 transition-colors"
+                >
+                  <span className="h-1.5 w-1.5 rounded-xs bg-purple-500 shrink-0" />
+                  <div>
+                    <p className="font-bold leading-none text-slate-900">Corporate Legal Teams</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Intake, Subsidiaries & Litigation</p>
+                  </div>
+                </Link>
+                <div className="my-1 border-t border-slate-100" />
+                <Link
+                  to="/compare/docketra-vs-excel-whatsapp"
+                  className="flex items-center gap-2 rounded-xs px-2 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-50 transition-colors"
+                >
+                  <span className="h-1.5 w-1.5 rounded-xs bg-slate-400 shrink-0" />
+                  <div>
+                    <p className="font-bold leading-none text-slate-900">vs. Excel & WhatsApp</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Why firms switch to Docketra</p>
+                  </div>
+                </Link>
               </div>
-
-              <Link
-                to="/find-workspace"
-                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xs border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:border-slate-300"
-              >
-                <svg className="h-3 w-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <span>Find workspace</span>
-              </Link>
-
-              <Link
-                to="/signup"
-                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xs bg-slate-950 px-3.5 text-xs font-semibold text-amber-400 shadow-xs transition-colors hover:bg-slate-800"
-              >
-                <svg className="h-3.5 w-3.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                </svg>
-                <span>Create workspace</span>
-              </Link>
             </div>
 
-            <button
-              type="button"
-              className={`bubble toggle-bubble menu-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${isMenuOpen ? 'open' : ''}`}
-              onClick={handleToggle}
-              aria-label={menuAriaLabel}
-              title={menuAriaLabel}
-              aria-pressed={isMenuOpen}
-              aria-expanded={isMenuOpen}
-              aria-controls={showOverlay ? menuId : undefined}
-              style={{ background: menuBg }}
+            <Link
+              to="/find-workspace"
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xs border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:border-slate-300"
             >
-              <span className="menu-line" style={{ background: menuContentColor }} />
-              <span className="menu-line short" style={{ background: menuContentColor }} />
-            </button>
+              <svg className="h-3 w-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <span>Find workspace</span>
+            </Link>
+
+            <Link
+              to="/signup"
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xs bg-slate-950 px-3.5 text-xs font-semibold text-amber-400 shadow-xs transition-colors hover:bg-slate-800"
+            >
+              <svg className="h-3.5 w-3.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+              </svg>
+              <span>Create workspace</span>
+            </Link>
           </div>
+
+          <button
+            type="button"
+            className={`bubble toggle-bubble menu-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${isMenuOpen ? 'open' : ''}`}
+            onClick={handleToggle}
+            aria-label={menuAriaLabel}
+            title={menuAriaLabel}
+            aria-pressed={isMenuOpen}
+            aria-expanded={isMenuOpen}
+            aria-controls={showOverlay ? menuId : undefined}
+            style={{ background: menuBg }}
+          >
+            <span className="menu-line" style={{ background: menuContentColor }} />
+            <span className="menu-line short" style={{ background: menuContentColor }} />
+          </button>
         </div>
       </nav>
       {showOverlay && (

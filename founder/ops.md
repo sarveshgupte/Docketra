@@ -15,7 +15,7 @@ Docketra’s internal daily operations cycle:
 | Time (IST) | Internal Step | Description | Customer Visible? |
 |---|---|---|:---:|
 | **08:30** | **Health & Queue Check** | Inspect Render API health, MongoDB Atlas connection pools, Redis queue latency, and background worker status. | No |
-| **09:00** | **Inbound Support & Triage** | Review support inbox (`help@docketra.in`) and WhatsApp Concierge channel for firm admin questions. | **Yes** |
+| **09:00** | **Inbound Support & Triage** | Review support inbox (`support@docketra.in`) and WhatsApp Concierge channel for firm admin questions. | **Yes** |
 | **10:00** | **Concierge Migration Processing** | Ingest client roster spreadsheets submitted overnight by new firms; run deduplication scripts and import into firm databases within the 24-hr guarantee window. | **Yes** (Notification on completion) |
 | **12:00** | **Google OAuth Telemetry Audit** | Check Google Drive API rate-limit headroom and expired refresh-token error counts to proactively alert partners whose Google Workspace credentials need re-linking. | No |
 | **14:00** | **Onboarding Demo / Concierge Call** | 20-minute live screen-share walkthrough with newly signed Managing Partners: connecting Drive, inviting trainees, and generating first statutory compliance dockets. | **Yes** |
@@ -34,8 +34,8 @@ Every external component in Docketra's operations stack has verified public pric
 | **[Render](https://render.com/pricing)** | Web Service & API Hosting | $25/mo (~₹2,100/mo) for Standard Web Service (2 GB RAM, 1 CPU) | Credit Card, Monthly post-paid | Immediate (Instant deploy) | [DigitalOcean App Platform](https://www.digitalocean.com/pricing/app-platform) ($24/mo) |
 | **[MongoDB Atlas](https://www.mongodb.com/pricing)** | Managed Multi-Tenant Database | $57/mo (~₹4,750/mo) for M10 Dedicated Cluster (10 GB storage, RAM allocated) | Credit Card, Monthly post-paid | Immediate | Self-hosted MongoDB on Hetzner / AWS |
 | **[Upstash](https://upstash.com/pricing)** | Serverless Redis (Rate limiting & queues) | $10/mo (~₹850/mo) for 100k daily commands | Credit Card, Monthly post-paid | Immediate | [Redis Cloud](https://redis.io/pricing/) ($7/mo) |
-| **[Brevo](https://www.brevo.com/pricing/)** | Transactional Email & Auth OTPs (`help@docketra.in`) | Free tier (300/day), then $25/mo (~₹2,100/mo) for 20k emails | Credit Card, Monthly post-paid | Immediate | [AWS SES](https://aws.amazon.com/ses/pricing/) ($0.10 / 1,000 emails) |
-| **Razorpay / Sovereign UPI** | Indian Payment Gateway (UPI, Cards, Netbanking) | 0% on Sovereign UPI (Direct to Bank) / 2.0% on PG gateway | T+0 instant / T+2 PG settlement into current account | Immediate for UPI / 3–5 days PG KYC | [Cashfree](https://www.cashfree.com/pricing/) (1.95%) or [Stripe India](https://stripe.com/in) |
+| **[Resend](https://resend.com/pricing)** | Transactional Email & Auth OTPs | Free tier (3,000/mo), then $20/mo (~₹1,700/mo) for 50k emails | Credit Card, Monthly post-paid | Immediate | [AWS SES](https://aws.amazon.com/ses/pricing/) ($0.10 / 1,000 emails) |
+| **[Razorpay](https://razorpay.com/pricing/)** | Indian Payment Gateway (Cards, UPI, Netbanking) | 2.0% per transaction + 18% GST (Standard domestic) | T+2 settlement into firm current account | 3–5 business days for merchant KYC | [Cashfree](https://www.cashfree.com/pricing/) (1.95%) or [Stripe India](https://stripe.com/in) |
 | **[Google Cloud Platform](https://cloud.google.com/)** | Google Drive API & OAuth 2.0 | Free tier (Drive API is free within user quota; firm users use own Workspace storage) | Nil for Drive API queries | Verification: 2–3 weeks for brand review | Microsoft Graph API (OneDrive) |
 | **[Zoho Books](https://www.zoho.com/in/books/pricing/)** | Indian GST Invoicing & Accounting | ₹749/mo (billed annually ₹8,988/yr) for Standard | UPI / Credit Card, Annual | Immediate | [TallyPrime](https://tallysolutions.com/) |
 
@@ -137,7 +137,7 @@ Because Docketra operates on Bring Your Own Storage (BYOS) where all dockets and
 | **Render Web Service** | API server execution | $25.00 (~₹2,100) | Zero-DevOps Git push deployments with built-in SSL, DDoS protection, and health checks. |
 | **MongoDB Atlas (M10)** | Multi-tenant database | $57.00 (~₹4,750) | Automated backups, encrypted storage at rest, SOC-2 compliant, VPC peering. |
 | **Upstash Redis** | Caching, session rate limits | $10.00 (~₹850) | True serverless billing, REST API compatibility, zero cluster management. |
-| **Brevo** | Transactional emails & OTPs (`help@docketra.in`) | $25.00 (~₹2,100) | Exceptional deliverability to corporate Gmail/Workspace inboxes; dedicated sender branding. |
+| **Resend / AWS SES** | Transactional emails & OTPs | $20.00 (~₹1,700) | Exceptional deliverability to corporate Gmail/Workspace inboxes; built-in DKIM/SPF verification. |
 | **Sentry Developer** | Error monitoring & performance | $26.00 (~₹2,200) | Instant stack-trace capture for frontend React and backend Express exceptions. |
 | **Cloudflare (Free)** | DNS, SSL, WAF, Edge Caching | ₹0.00 | Free enterprise-grade DDoS mitigation, HTTP/3, and fast DNS propagation for `docketra.in`. |
 | **Google Workspace (2 Seats)** | Admin email & internal ops | ₹500 (~₹250/user/mo) | Professional `@docketra.in` email identity for customer communications. |

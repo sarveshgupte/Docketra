@@ -6,12 +6,9 @@ export async function getStorageConfiguration() {
   return response.data;
 }
 
-export async function connectGoogleDrive(returnTo = '') {
-  const connectUrl = new URL('storage/google/connect', `${API_BASE_URL}/`);
-  if (returnTo && typeof returnTo === 'string') {
-    connectUrl.searchParams.set('returnTo', returnTo);
-  }
-  window.location.assign(connectUrl.toString());
+export async function connectGoogleDrive() {
+  const connectUrl = new URL('storage/google/connect', `${API_BASE_URL}/`).toString();
+  window.location.assign(connectUrl);
 }
 
 export async function testStorageConnection() {

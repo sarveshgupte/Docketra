@@ -1683,18 +1683,7 @@ const getProfile = async (req, res) => {
     if (rawUserFirmId && typeof rawUserFirmId === 'object' && (rawUserFirmId.name || rawUserFirmId.firmSlug)) {
       firmDoc = rawUserFirmId;
     } else if (ownershipFirmId) {
-      if (mongoose.Types.ObjectId.isValid(ownershipFirmId)) {
-        firmDoc = await Firm.findById(ownershipFirmId).select('firmId name firmSlug isSetupComplete').lean();
-      }
-      if (!firmDoc) {
-        firmDoc = await Firm.findOne({
-          $or: [
-            { firmId: ownershipFirmId },
-            { firmSlug: ownershipFirmId },
-            { slug: ownershipFirmId },
-          ],
-        }).select('firmId name firmSlug isSetupComplete').lean();
-      }
+      firmDoc = await Firm.findById(ownershipFirmId).select('firmId name firmSlug isSetupComplete').lean();
     }
 
     const firmMongoId = normalizeMongoId(rawUserFirmId) || tenantContext?.tenantId || normalizeMongoId(firmDoc?._id);

@@ -462,7 +462,7 @@ This JWT authentication implementation successfully addresses all identified sec
 ## Appendix: Security Contacts
 
 ### Reporting Security Issues
-- Email: help@docketra.in
+- Email: security@docketra.com
 - Response Time: 24 hours
 - Severity Levels: Critical, High, Medium, Low
 

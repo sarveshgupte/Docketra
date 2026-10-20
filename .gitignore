@@ -86,6 +86,3 @@ graphify-out/
 .codex-calendar-check.png
 __pycache__/
 *.pyc
-YouPI-PG/
-.claude/
-agent/
