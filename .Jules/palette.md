@@ -7,6 +7,9 @@
 ## 2026-08-13 - BubbleMenu Dropdown Accessibility
 **Learning:** Dropdowns and toggles with `aria-expanded` need a linked `aria-controls` pointing to a unique element ID to correctly announce state to screen readers. If there are multiple instances on a page, hardcoded IDs will conflict.
 **Action:** Use React's `useId()` to generate unique IDs for dropdown menus and bind them to the toggle button's `aria-controls`.
+## 2026-08-14 - Keyboard Access for CSS Hover Dropdowns
+**Learning:** Dropdown menus that rely solely on CSS pseudo-classes like `group-hover:visible` are completely inaccessible to keyboard users because hover state cannot be triggered by keyboard tabbing.
+**Action:** Always pair `group-hover` visibility classes with `group-focus-within` equivalents (e.g., `group-focus-within:visible`) and ensure the trigger button and menu links have `focus-visible` styles so keyboard users can navigate them naturally.
 ## 2024-08-13 - Redundant sr-only usage in icon buttons
 **Learning:** Found several notification icon buttons in `Layout.jsx` containing both an `aria-hidden="true"` icon span and an adjacent `.sr-only` span containing the accessible text. This pattern can sometimes create slightly confusing or redundant DOM structures for some screen readers.
 **Action:** A more robust, standard pattern for icon-only buttons is to place the accessible text directly in the parent button's `aria-label` attribute, instead of nesting `.sr-only` spans. This is cleaner HTML and more universally supported across AT. Always accompany this with a native `title` attribute for mouse users.
