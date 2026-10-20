@@ -142,14 +142,14 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 sm:p-6 overflow-y-auto overscroll-contain animate-in fade-in duration-200"
       role="dialog"
       aria-modal="true"
       aria-labelledby="tour-modal-title"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-4xl rounded-lg border border-slate-200/90 bg-white text-slate-900 shadow-2xl overflow-hidden flex flex-col my-auto"
+        className="relative w-full max-w-4xl rounded-xl border border-slate-200/90 bg-white text-slate-900 shadow-2xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,780px)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Accent Line */}

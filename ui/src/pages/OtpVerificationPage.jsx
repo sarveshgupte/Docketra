@@ -127,8 +127,8 @@ export const OtpVerificationPage = () => {
   };
 
   return (
-    <div className="auth-wrapper min-h-screen bg-[linear-gradient(135deg,#fff8eb_0%,#ffffff_44%,#e0f2fe_100%)] px-4 py-8">
-      <div className="grid w-full max-w-6xl items-center gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+    <div className="auth-wrapper min-h-screen bg-[linear-gradient(135deg,#fff8eb_0%,#ffffff_44%,#e0f2fe_100%)] px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+      <div className="grid w-full max-w-7xl items-center gap-8 lg:grid-cols-[0.9fr_1.1fr]">
         <section className="hidden lg:block" aria-label="OTP verification context">
           <p className="text-sm font-bold uppercase text-amber-700">Email verification</p>
           <h1 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">

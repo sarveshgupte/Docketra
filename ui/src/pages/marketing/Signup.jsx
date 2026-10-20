@@ -54,7 +54,7 @@ const SignupStepDots = ({ step }) => (
 );
 
 const SignupShell = ({ children, mode = 'default' }) => (
-  <div className="auth-wrapper min-h-screen bg-[linear-gradient(135deg,#fff8eb_0%,#ffffff_42%,#e0f2fe_100%)] px-4 py-6 md:px-6 md:py-8">
+  <div className="auth-wrapper min-h-screen bg-[linear-gradient(135deg,#fff8eb_0%,#ffffff_42%,#e0f2fe_100%)] px-4 sm:px-6 lg:px-8 py-6 md:py-10">
     <div className={`grid w-full max-w-7xl items-center gap-6 ${mode === 'success' ? 'lg:grid-cols-[0.85fr_1.15fr]' : 'lg:grid-cols-[0.92fr_1.08fr]'}`}>
       {children}
     </div>

@@ -84,8 +84,8 @@ export function SetupFirstClientModal({ isOpen, onClose, firmSlug }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white border border-slate-200/90 rounded-lg max-w-xl w-full p-6 sm:p-7 shadow-2xl text-slate-900 space-y-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs overflow-y-auto overscroll-contain animate-in fade-in duration-150">
+      <div className="bg-white border border-slate-200/90 rounded-xl max-w-xl w-full p-6 sm:p-7 shadow-2xl text-slate-900 space-y-5 my-auto max-h-[90vh] overflow-y-auto overscroll-contain">
         {/* Modal Header */}
         <div className="flex items-start justify-between">
           <div className="space-y-1">

@@ -234,7 +234,10 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
             {loading ? <p className="audit-drawer__meta text-indigo-600">Loading audit history...</p> : null}
           </div>
           <button type="button" className="audit-drawer__close" onClick={onClose} aria-label="Close audit history" title="Close audit history">
-            ×
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
 
@@ -281,7 +284,7 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
           </button>
         </div>
 
-        <div className="audit-drawer__body overflow-y-auto">
+        <div className="audit-drawer__body overflow-y-auto overscroll-contain">
           {!filteredEvents.length && !loading ? (
             <div className="py-8 text-center text-xs text-[var(--dt-text-muted)]">
               No audit entries found matching the selected filter.

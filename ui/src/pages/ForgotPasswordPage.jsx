@@ -284,8 +284,8 @@ export const ForgotPasswordPage = () => {
   const stepCopy = getStepCopy(step);
 
   return (
-    <div className="auth-wrapper min-h-screen bg-[linear-gradient(135deg,#fff8eb_0%,#ffffff_44%,#e0f2fe_100%)] px-4 py-8">
-      <div className="grid w-full max-w-6xl items-center gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+    <div className="auth-wrapper min-h-screen bg-[linear-gradient(135deg,#fff8eb_0%,#ffffff_44%,#e0f2fe_100%)] px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+      <div className="grid w-full max-w-7xl items-center gap-8 lg:grid-cols-[0.9fr_1.1fr]">
         <section className="hidden lg:block" aria-label="Password recovery context">
           <Link to="/" className="inline-flex items-center gap-2 text-lg font-extrabold text-slate-950">
             <svg className="h-9 w-9 text-amber-600 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">

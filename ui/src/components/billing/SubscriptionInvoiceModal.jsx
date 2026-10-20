@@ -25,12 +25,12 @@ export const SubscriptionInvoiceModal = ({ isOpen, onClose, invoice }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs overflow-y-auto overscroll-contain"
       role="dialog"
       aria-modal="true"
       aria-labelledby="invoice-modal-title"
     >
-      <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden my-8">
+      <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col">
         {/* Modal Controls Header (Hidden during print) */}
         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-6 py-4 print:hidden">
           <div className="flex items-center gap-2">
@@ -66,7 +66,7 @@ export const SubscriptionInvoiceModal = ({ isOpen, onClose, invoice }) => {
         </div>
 
         {/* Printable Invoice Document */}
-        <div ref={printAreaRef} className="p-8 space-y-6 text-slate-900 bg-white">
+        <div ref={printAreaRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-6 sm:p-8 space-y-6 text-slate-900 bg-white">
           {/* Brand & Invoice Details Header */}
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-slate-200 pb-6">
             <div>

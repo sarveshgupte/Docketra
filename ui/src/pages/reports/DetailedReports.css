@@ -3,9 +3,10 @@
  */
 
 .detailed-reports {
+  width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  padding: var(--spacing-xl);
+  padding: 0 0 2rem;
 }
 
 .detailed-reports__header {

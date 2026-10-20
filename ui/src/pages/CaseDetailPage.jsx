@@ -1247,7 +1247,7 @@ export const CaseDetailPage = () => {
   if (isAccessDenied) {
     return (
       <PlatformShell title="Access restricted">
-        <div className="container p-6">
+        <div className="w-full max-w-7xl mx-auto py-6">
           <AccessDeniedState supportContext={recovery.supportContext} />
         </div>
       </PlatformShell>
@@ -1257,7 +1257,7 @@ export const CaseDetailPage = () => {
   if (!caseData) {
     return (
       <PlatformShell title={null}>
-        <div className="container">
+        <div className="w-full max-w-7xl mx-auto py-6">
           <Card>
             {loadError ? <p>{loadError}</p> : null}
             <p>Docket not found</p>

@@ -1,6 +1,6 @@
 .cases-page {
   width: 100%;
-  padding: 1.25rem 1.5rem;
+  padding: 0 0 2rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;

@@ -94,7 +94,7 @@ export const DataTable = ({
         <p className="text-xs text-[var(--dt-text-muted)]" role="status" aria-live="polite">{refreshingMessage}</p>
       ) : null}
 
-      <Table loading={loading} loadingMessage={loadingMessage} className="max-h-[70vh] overflow-auto">
+      <Table loading={loading} loadingMessage={loadingMessage} className="max-h-[70vh] overflow-auto overscroll-contain">
         <TableHead className="sticky top-0 z-10">
           <TableRow>
             {columns.map((col) => {
@@ -107,7 +107,8 @@ export const DataTable = ({
                   key={String(col.key)}
                   className={joinClasses(
                     headerPaddingClass,
-                    'text-left text-xs font-semibold text-[var(--dt-text-muted)] uppercase tracking-wider whitespace-nowrap bg-[var(--dt-surface-subtle)]',
+                    col.align === 'right' ? 'text-right' : 'text-left',
+                    'text-xs font-semibold text-[var(--dt-text-muted)] uppercase tracking-wider whitespace-nowrap bg-[var(--dt-surface-subtle)]',
                     col.headerClassName,
                   )}
                   style={{ width: col.width }}
