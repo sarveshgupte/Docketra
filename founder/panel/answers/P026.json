@@ -1,0 +1,13 @@
+{
+  "id": "P026",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "habit",
+  "reason": "I have run my practice on Excel and WhatsApp for ten years without paying for software, and with just one trainee I see no reason to commit ₹12,990 upfront. At most I would test the free pilot, but breaking our established routine requires software to be dead simple.",
+  "objection": "I am a solo CA with one trainee—why should I ever upgrade beyond the free tier?",
+  "would_change_my_mind": "If using the free pilot proves dead simple and saves several hours of weekly manual coordination without breaking my WhatsApp workflow.",
+  "price_too_cheap": 3000,
+  "price_cheap": 6500,
+  "price_expensive": 13000,
+  "price_too_expensive": 25000
+}

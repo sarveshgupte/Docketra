@@ -32,6 +32,7 @@ const { resolveFirmMemoryScope } = require('../services/firmMemoryScope.service'
 const { ensureTenantKey, resolveTenantKeyTenantId, resolveTenantKeyCandidates } = require('../security/encryption.service');
 const { sendOtp: sendCentralOtp, verifyOtp: verifyCentralOtp } = require('../services/otp.service');
 const { logAuthEvent } = require('../services/audit.service');
+const { logAuditEvent } = require('../services/adminActionAudit.service');
 const jwt = require('jsonwebtoken');
 
 const usedClientStatusOtpJti = new Map();
@@ -639,6 +640,27 @@ const createClient = async (req, res) => {
         message: 'User must belong to a firm to create clients',
       });
     }
+
+    // Check Sovereign Isolation Pilot client volume limit (5 active clients)
+    try {
+      const firmDoc = await Firm.findById(userFirmId).select('plan').lean();
+      if (firmDoc && String(firmDoc.plan || 'pilot').toLowerCase() === 'pilot') {
+        const activeCount = await ClientRepository.count(userFirmId, {
+          isActive: true,
+          isSystemClient: { $ne: true },
+          isDefaultClient: { $ne: true },
+        });
+        if (activeCount >= 5) {
+          return res.status(403).json({
+            success: false,
+            code: 'PILOT_CLIENT_LIMIT_REACHED',
+            message: 'You have reached the 5-client limit on the Proof of Sovereign Isolation Pilot. Upgrade to Pioneer 30 or Growth Tier for expanded client retainers and unlimited dockets with zero data migration.',
+          });
+        }
+      }
+    } catch (_planCheckErr) {
+      // Non-blocking fallback
+    }
     
     // STEP 7-9: Perform transactional writes only
     const client = await executeWrite(req, async () => {
@@ -703,6 +725,17 @@ const createClient = async (req, res) => {
 
     const createdClient = await ClientRepository.findByClientId(userFirmId, client.clientId, req.user?.role, {
       logContext: buildClientLogContext(req, { model: 'Client', clientId: client.clientId }),
+    });
+
+    await logAuditEvent({
+      firmId: userFirmId,
+      actorId: req.user?._id,
+      targetId: client._id,
+      action: 'CLIENT_CREATED',
+      metadata: {
+        clientId: client.clientId,
+        businessName: client.businessName,
+      },
     });
 
     const hydratedCreatedClient = await hydrateClientFromProfileIfAvailable(userFirmId, createdClient || client);
@@ -797,6 +830,17 @@ const updateClient = async (req, res) => {
 
     const hydrated = await hydrateClientFromProfileIfAvailable(accessContext.firmId, client);
     
+    await logAuditEvent({
+      firmId: accessContext.firmId,
+      actorId: req.user?._id,
+      targetId: client._id,
+      action: 'CLIENT_UPDATED',
+      metadata: {
+        clientId: client.clientId,
+        businessName: client.businessName,
+      },
+    });
+
     res.json({
       success: true,
       data: mapClientResponse(hydrated),
@@ -1013,6 +1057,18 @@ const toggleClientStatus = async (req, res) => {
         nextStatus: client.status,
         previousIsActive,
         nextIsActive: client.isActive,
+      },
+    });
+
+    await logAuditEvent({
+      firmId: accessContext.firmId,
+      actorId: req.user?._id,
+      targetId: client._id,
+      action: isActive ? 'CLIENT_ACTIVATED' : 'CLIENT_DEACTIVATED',
+      metadata: {
+        clientId,
+        businessName: client.businessName,
+        isActive,
       },
     });
     

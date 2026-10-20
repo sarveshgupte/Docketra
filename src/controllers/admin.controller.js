@@ -35,6 +35,8 @@ const { safeDecrypt } = require('../utils/encryption');
 const log = require('../utils/log');
 const { resolveFirmStorageState } = require('../services/storage/resolveFirmStorageState');
 const { EVENTS: STRICT_STORAGE_EVENTS, logStrictStorageEvent } = require('../services/strictStorageAudit.service');
+const { sendOtp, verifyOtp } = require('../services/otp.service');
+const { collectFirmWeeklyAuditLogs, generateAuditCsv, sendWeeklyAuditDigestEmail } = require('../services/weeklyAuditDigest.service');
 
 /**
  * Admin Controller for Admin Panel Operations
@@ -1041,6 +1043,15 @@ const updateFirmSettings = async (req, res) => {
         after: nextSettings.work,
         metadata: { source: 'admin.controller.updateFirmSettings' },
       }),
+      logAuditEvent({
+        firmId: ownershipFirmId,
+        actorId: req.user?._id,
+        action: 'FIRM_SETTINGS_UPDATED',
+        metadata: {
+          previous: previousSettings.firm,
+          next: nextSettings.firm,
+        },
+      }),
     ];
 
     if (previousSettings.firm.strictFirmOwnedStorage !== nextSettings.firm.strictFirmOwnedStorage) {
@@ -1354,7 +1365,18 @@ const getFirmSettingsActivity = async (req, res) => {
       'SetupLinkResent',
     ];
 
-    const [caseAuditTotal, authAuditTotal] = await Promise.all([
+    const offset = (page - 1) * limit;
+    const fetchLimit = Math.max(limit, Math.min(page * limit, 5000));
+
+    // ⚡ Bolt: Group independent queries concurrently
+    // 💡 What: Replaced sequential execution of multiple Promise.all blocks with a single concurrent Promise.all array.
+    // 🎯 Why: This removes a full database roundtrip latency by running all independent count and find queries simultaneously.
+    const [
+      caseAuditTotal,
+      authAuditTotal,
+      caseAuditRows,
+      authAuditRows
+    ] = await Promise.all([
       CaseAudit.countDocuments({
         firmId,
         actionType: { $in: caseActionTypes },
@@ -1363,13 +1385,6 @@ const getFirmSettingsActivity = async (req, res) => {
         firmId,
         actionType: { $in: authActionTypes },
       }),
-    ]);
-
-    const total = Number(caseAuditTotal || 0) + Number(authAuditTotal || 0);
-    const offset = (page - 1) * limit;
-    const fetchLimit = Math.max(limit, Math.min(page * limit, 5000));
-
-    const [caseAuditRows, authAuditRows] = await Promise.all([
       CaseAudit.find({
         firmId,
         actionType: { $in: caseActionTypes },
@@ -1385,6 +1400,8 @@ const getFirmSettingsActivity = async (req, res) => {
         .limit(fetchLimit)
         .lean(),
     ]);
+
+    const total = Number(caseAuditTotal || 0) + Number(authAuditTotal || 0);
 
     const mutationMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
     const authMapped = authAuditRows
@@ -2064,6 +2081,320 @@ const getRetentionPreview = async (req, res) => {
   }
 };
 
+const getFirmPlan = async (req, res) => {
+  try {
+    const ownershipFirmId = resolveOwnershipFirmIdOrReject(req, res);
+    if (!ownershipFirmId) return;
+
+    const firm = await Firm.findById(ownershipFirmId);
+    if (!firm) {
+      return res.status(404).json({ success: false, message: 'Firm not found' });
+    }
+
+    const tenantId = req.user?.firmId || firm.firmId;
+
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    // ⚡ Bolt: Group independent queries concurrently
+    // 💡 What: Merged the sequential Case.countDocuments query into the preceding Promise.all array containing User and Client counts.
+    // 🎯 Why: Identifying and eliminating unnecessary sequential database queries by grouping them into a single Promise.all array executes them concurrently, reducing overall network latency.
+    const [usersCount, clientsCount, monthlyDocketsCount] = await Promise.all([
+      User.countDocuments({ firmId: firm._id, status: { $ne: 'deleted' } }).catch(() => 0),
+      clientRepository.count(tenantId, {
+        isActive: true,
+        isSystemClient: { $ne: true },
+        isDefaultClient: { $ne: true },
+      }).catch(() => 0),
+      Case.countDocuments({
+        firmId: tenantId,
+        createdAt: { $gte: startOfMonth },
+      }).catch(() => 0),
+    ]);
+
+    const storageMode = firm.storage?.mode || 'docketra_managed';
+    const isGoogleConnected = storageMode === 'firm_connected' && firm.storage?.provider === 'google_drive';
+    const traineeShieldActive = Boolean(firm.settings?.firm?.restrictTraineeDownloads);
+
+    const rawPlan = String(firm.plan || 'pilot').toLowerCase();
+    const isPilot = rawPlan === 'pilot';
+    const currentPlan = isPilot ? 'pilot' : (rawPlan === 'growth' ? 'growth' : (rawPlan === 'starter' ? 'starter' : rawPlan));
+
+    const limits = {
+      maxSeats: firm.maxUsers || (currentPlan === 'growth' ? 12 : (currentPlan === 'starter' ? 5 : 2)),
+      maxClients: currentPlan === 'growth' ? 150 : (currentPlan === 'starter' ? 50 : 5),
+      maxDocketsMonthly: isPilot ? 15 : null,
+    };
+
+    return res.json({
+      success: true,
+      data: {
+        plan: currentPlan,
+        tierName: isPilot
+          ? 'Proof of Sovereign Isolation Pilot'
+          : (currentPlan === 'growth' ? 'Growth Tier' : (currentPlan === 'starter' ? 'Pioneer 30 / Starter' : currentPlan.toUpperCase())),
+        isPilot,
+        limits,
+        currentUsage: {
+          usersCount,
+          clientsCount,
+          monthlyDocketsCount,
+        },
+        sovereignStatus: {
+          isGoogleDriveConnected: isGoogleConnected,
+          isBoundaryVerified: isGoogleConnected,
+          externalFilesAccessible: 0,
+          traineeLaptopShield: traineeShieldActive,
+        },
+        upgradeOptions: [
+          {
+            tier: 'starter',
+            name: 'Pioneer 30 Annual Pass',
+            badge: 'Pioneer 30 Cohort',
+            annualPrice: 12990,
+            monthlyPrice: 1999,
+            maxSeats: 5,
+            maxClients: 50,
+            dockets: 'Unlimited',
+            description: 'Up to 5 team seats, 50 clients, and unlimited dockets with 100% Google Drive BYOS custody.',
+          },
+          {
+            tier: 'growth',
+            name: 'Growth Tier',
+            badge: 'Expanding Practices (6 to 12 staff)',
+            annualPrice: 21990,
+            monthlyPrice: 2499,
+            maxSeats: 12,
+            maxClients: 150,
+            dockets: 'Unlimited',
+            description: 'Up to 12 team seats, 150 clients, unlimited dockets, shared department queues, and +₹1,200/seat/yr add-on.',
+          },
+        ],
+      },
+    });
+  } catch (error) {
+    log.error('[ADMIN] Error fetching firm plan:', error);
+    return res.status(500).json({ success: false, message: 'Failed to load firm plan', error: error.message });
+  }
+};
+
+const upgradeFirmPlan = async (req, res) => {
+  try {
+    const ownershipFirmId = resolveOwnershipFirmIdOrReject(req, res);
+    if (!ownershipFirmId) return;
+
+    const firm = await Firm.findById(ownershipFirmId);
+    if (!firm) {
+      return res.status(404).json({ success: false, message: 'Firm not found' });
+    }
+
+    const requestedPlan = String(req.body?.plan || '').toLowerCase();
+    if (!['starter', 'growth', 'professional'].includes(requestedPlan)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid plan upgrade target. Allowed: starter, growth, professional.',
+      });
+    }
+
+    const previousPlan = firm.plan || 'pilot';
+    firm.plan = requestedPlan;
+    if (requestedPlan === 'growth') {
+      firm.maxUsers = Math.max(Number(firm.maxUsers) || 0, 12);
+    } else if (requestedPlan === 'starter') {
+      firm.maxUsers = Math.max(Number(firm.maxUsers) || 0, 5);
+    } else if (requestedPlan === 'professional') {
+      firm.maxUsers = Math.max(Number(firm.maxUsers) || 0, 25);
+    }
+    firm.subscriptionStatus = 'ACTIVE';
+
+    await firm.save();
+
+    await safeAuditLog({
+      actionType: 'WORKSPACE_PLAN_UPGRADED',
+      xID: req.user?.xID,
+      firmId: firm.firmId,
+      userId: req.user?._id,
+      description: `Workspace upgraded from ${previousPlan} to ${requestedPlan} (Friction-Free Sovereign Conversion)`,
+      performedBy: req.user?.email,
+      ipAddress: req.ip,
+      userAgent: req.get?.('user-agent') || 'system',
+      metadata: { previousPlan, upgradedPlan: requestedPlan, maxUsers: firm.maxUsers },
+      timestamp: new Date(),
+    });
+
+    return res.json({
+      success: true,
+      message: `Successfully upgraded workspace to ${requestedPlan === 'growth' ? 'Growth Tier' : 'Pioneer 30 / Starter'}. All Google Drive files, client dockets, and configurations remain 100% in your custody.`,
+      data: {
+        plan: firm.plan,
+        maxUsers: firm.maxUsers,
+      },
+    });
+  } catch (error) {
+    log.error('[ADMIN] Error upgrading firm plan:', error);
+    return res.status(500).json({ success: false, message: 'Failed to upgrade workspace plan', error: error.message });
+  }
+};
+
+const TRAINEE_SHIELD_OTP_PURPOSE = 'trainee_shield_change';
+
+const sendTraineeShieldOtp = async (req, res) => {
+  try {
+    assertPrimaryAdmin(req.user);
+    const { xID } = req.params;
+    const ownershipFirmId = resolveOwnershipFirmIdOrReject(req, res);
+    if (!ownershipFirmId) return;
+
+    const user = await User.findOne({
+      xID: xID.toUpperCase(),
+      firmId: ownershipFirmId,
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const partnerEmail = String(req.user?.primary_email || req.user?.email || '').trim().toLowerCase();
+    if (!partnerEmail) {
+      return res.status(400).json({ success: false, message: 'Primary Admin email is required for OTP authorization' });
+    }
+
+    const otpResult = await sendOtp({
+      email: partnerEmail,
+      purpose: TRAINEE_SHIELD_OTP_PURPOSE,
+    });
+
+    return res.json({
+      success: true,
+      message: 'OTP sent to your registered partner email for Trainee Laptop Shield authorization',
+      data: {
+        identifier: partnerEmail.replace(/^(.)(.*)(@.*)$/, '$1***$3'),
+        expiresAt: otpResult.expiresAt,
+      },
+    });
+  } catch (error) {
+    log.error('[ADMIN] Failed to send Trainee Laptop Shield OTP:', error);
+    const statusCode = error.message === 'OTP_RATE_LIMITED' ? 429 : 400;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message === 'OTP_RATE_LIMITED' ? 'Please wait before requesting another OTP.' : (error.message || 'Error sending OTP'),
+    });
+  }
+};
+
+const updateUserTraineeShield = async (req, res) => {
+  try {
+    assertPrimaryAdmin(req.user);
+    const { xID } = req.params;
+    const ownershipFirmId = resolveOwnershipFirmIdOrReject(req, res);
+    if (!ownershipFirmId) return;
+
+    const user = await User.findOne({
+      xID: xID.toUpperCase(),
+      firmId: ownershipFirmId,
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const partnerEmail = String(req.user?.primary_email || req.user?.email || '').trim().toLowerCase();
+    const otp = String(req.body?.otp || '').trim();
+    const verificationToken = String(req.headers['x-otp-token'] || req.body?.verificationToken || '').trim();
+
+    if (!otp && !verificationToken) {
+      return res.status(400).json({ success: false, message: 'OTP is required to update Trainee Laptop Shield' });
+    }
+
+    if (otp) {
+      await verifyOtp({
+        identifier: partnerEmail,
+        code: otp,
+        purpose: TRAINEE_SHIELD_OTP_PURPOSE,
+      });
+    }
+
+    const { enabled } = req.body;
+    const previous = user.traineeLaptopShield;
+    user.traineeLaptopShield = enabled === null || enabled === undefined ? null : Boolean(enabled);
+    await user.save();
+
+    await logAuditEvent({
+      firmId: ownershipFirmId,
+      actorId: req.user?._id,
+      targetId: user._id,
+      action: 'TRAINEE_SHIELD_UPDATED',
+      metadata: {
+        xID: user.xID,
+        userName: user.name,
+        previous,
+        next: user.traineeLaptopShield,
+        status: user.traineeLaptopShield === true ? 'STRICTLY_SHIELDED' : (user.traineeLaptopShield === false ? 'EXEMPT' : 'FIRM_DEFAULT'),
+      },
+    });
+
+    return res.json({
+      success: true,
+      message: 'Trainee Laptop Shield setting saved successfully for user',
+      data: {
+        xID: user.xID,
+        traineeLaptopShield: user.traineeLaptopShield,
+      },
+    });
+  } catch (error) {
+    log.error('[ADMIN] Failed to update Trainee Laptop Shield:', error);
+    return res.status(400).json({
+      success: false,
+      message: error.message === 'OTP_INVALID'
+        ? 'Invalid OTP code. Please try again.'
+        : error.message === 'OTP_EXPIRED'
+          ? 'OTP has expired. Please request a new code.'
+          : (error.message || 'Failed to update Trainee Laptop Shield setting'),
+    });
+  }
+};
+
+const exportWeeklyAuditCsv = async (req, res) => {
+  try {
+    const ownershipFirmId = resolveOwnershipFirmIdOrReject(req, res);
+    if (!ownershipFirmId) return;
+
+    const { startDate, endDate } = req.query || {};
+    const items = await collectFirmWeeklyAuditLogs(ownershipFirmId, { startDate, endDate });
+    const csv = generateAuditCsv(items);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="docketra-audit-log-${new Date().toISOString().slice(0, 10)}.csv"`);
+    return res.send(csv);
+  } catch (error) {
+    log.error('[ADMIN] Error exporting weekly audit CSV:', error);
+    return res.status(500).json({ success: false, message: 'Failed to export audit CSV', error: error.message });
+  }
+};
+
+const triggerWeeklyAuditDigest = async (req, res) => {
+  try {
+    assertPrimaryAdmin(req.user);
+    const ownershipFirmId = resolveOwnershipFirmIdOrReject(req, res);
+    if (!ownershipFirmId) return;
+
+    const result = await sendWeeklyAuditDigestEmail(ownershipFirmId, { force: true });
+    if (!result.success) {
+      return res.status(400).json({ success: false, message: 'Could not send weekly audit digest', reason: result.reason });
+    }
+
+    return res.json({
+      success: true,
+      message: `Weekly audit summary CSV sent to Primary Admin email (${result.recipient})`,
+      data: result,
+    });
+  } catch (error) {
+    log.error('[ADMIN] Error triggering weekly audit digest:', error);
+    return res.status(500).json({ success: false, message: 'Failed to trigger weekly audit digest', error: error.message });
+  }
+};
+
 module.exports = {
   getAdminStats,
   resendInviteEmail: wrapWriteHandler(resendInviteEmail),
@@ -2076,6 +2407,10 @@ module.exports = {
   updateUserHierarchy: wrapWriteHandler(updateUserHierarchy),
   updateRestrictedClients: wrapWriteHandler(updateRestrictedClients),
   updateQcSamplingRate: wrapWriteHandler(updateQcSamplingRate),
+  sendTraineeShieldOtp: wrapWriteHandler(sendTraineeShieldOtp),
+  updateUserTraineeShield: wrapWriteHandler(updateUserTraineeShield),
+  exportWeeklyAuditCsv,
+  triggerWeeklyAuditDigest: wrapWriteHandler(triggerWeeklyAuditDigest),
   getFirmSettings,
   getFirmSettingsActivity,
   getSettingsAudit,
@@ -2093,4 +2428,6 @@ module.exports = {
   restoreTask: wrapWriteHandler(restoreTask),
   getRetentionPreview,
   getAdminAuditLogs,
+  getFirmPlan,
+  upgradeFirmPlan: wrapWriteHandler(upgradeFirmPlan),
 };

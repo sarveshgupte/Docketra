@@ -1,0 +1,13 @@
+{
+  "id": "P054",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "price",
+  "reason": "Jamku charges only ₹6,500 a year, so paying ₹12,990 for Docketra when my 3 to 5 staff have run fine on spreadsheets and WhatsApp groups for ten years feels unjustified. At 58, I am deeply skeptical of paying double for software unless it proves dead simple and completely effortless on the free pilot first.",
+  "objection": "Jamku charges only ₹6,500 a year—why is Docketra more expensive, and will it truly be dead simple for my staff without disrupting our daily WhatsApp routine?",
+  "would_change_my_mind": "Pricing competitive with Jamku around ₹7,000 a year, or seeing my staff easily handle our 30 client WhatsApp groups on the free pilot with zero learning curve.",
+  "price_too_cheap": 3500,
+  "price_cheap": 6500,
+  "price_expensive": 13000,
+  "price_too_expensive": 25000
+}

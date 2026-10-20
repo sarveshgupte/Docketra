@@ -109,6 +109,8 @@ const documentItemRoutes = require('../routes/documentItem.routes');
 const clientPortalRoutes = require('../routes/clientPortal.routes');
 const docketExceptionRoutes = require('../routes/docketException.routes');
 const docketEffortRoutes = require('../routes/docketEffort.routes');
+const subscriptionRoutes = require('../routes/subscription.routes');
+const whatsappWebhookRoutes = require('../routes/whatsappWebhook.routes');
 const tenantResolver = require('../middleware/tenantResolver');
 const { RESERVED_FIRM_SLUGS, firmSlugGuard } = require('../middleware/firmSlugGuard.middleware');
 const { login } = require('../controllers/auth.controller');
@@ -344,6 +346,7 @@ const createApp = () => {
     superadminRoutes,
     firmRoutes,
     securityRoutes,
+    whatsappWebhookRoutes,
     tenantScopedApiAccess,
     adminTenantScopedApiAccess,
     loginLimiter,
@@ -424,6 +427,7 @@ const createApp = () => {
     clientPortalRoutes,
     docketExceptionRoutes,
     docketEffortRoutes,
+    subscriptionRoutes,
   });
 
 

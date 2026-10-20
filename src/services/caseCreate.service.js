@@ -204,9 +204,11 @@ module.exports = (deps) => {
       .filter((item) => String(item?.title || '').trim().length > 0)
       .map((item, index) => {
       const dueOffsetDays = item?.dueOffsetDays;
-      const dueDate = Number.isFinite(Number(dueOffsetDays))
-        ? new Date(new Date(createdAt).getTime() + (Number(dueOffsetDays) * 24 * 60 * 60 * 1000))
-        : null;
+      const dueDate = item?.dueDate
+        ? new Date(item.dueDate)
+        : (Number.isFinite(Number(dueOffsetDays))
+          ? new Date(new Date(createdAt).getTime() + (Number(dueOffsetDays) * 24 * 60 * 60 * 1000))
+          : null);
       return {
         id: String(item?.id || randomUUID()),
         templateItemId: item?.id ? String(item.id) : null,
@@ -219,6 +221,9 @@ module.exports = (deps) => {
         assignedToXID: item?.defaultAssigneeXID ? String(item.defaultAssigneeXID).trim() : null,
         dueDate,
         sortOrder: Number.isFinite(Number(item?.sortOrder)) ? Number(item.sortOrder) : index,
+        status: ['requested', 'submitted', 'accepted', 'rejected', 'waived'].includes(item?.status)
+          ? item.status
+          : 'requested',
       };
     });
   };
@@ -838,7 +843,9 @@ module.exports = (deps) => {
             createdAt,
           }),
           checklist: buildChecklistSnapshot({
-            checklistTemplate: subcategoryDoc?.checklistTemplate || [],
+            checklistTemplate: (Array.isArray(req.body.checklist) && req.body.checklist.length > 0)
+              ? req.body.checklist
+              : (subcategoryDoc?.checklistTemplate || []),
             createdAt,
           }),
           compliance_state: normalizedComplianceState,

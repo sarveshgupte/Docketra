@@ -226,7 +226,7 @@ All frontend variables **must be prefixed with `VITE_`** — they are bundled in
 | Variable | Required | Default | Notes |
 |----------|----------|---------|-------|
 | `VITE_API_BASE_URL` | Yes | `http://localhost:5000/api` | Backend API base URL |
-| `VITE_SUPPORT_EMAIL` | No | `support@docketra.com` | Support email shown in UI |
+| `VITE_SUPPORT_EMAIL` | No | `help@docketra.in` | Support email shown in UI |
 | `VITE_ENABLE_PROD_SOURCEMAPS` | No | `false` | Enable production source maps |
 | `VITE_ENABLE_GOOGLE_LOGIN` | No | `false` | Show Google login option |
 

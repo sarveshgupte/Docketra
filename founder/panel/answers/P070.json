@@ -1,0 +1,13 @@
+{
+  "id": "P070",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "convenience",
+  "reason": "In a normal week without deadline panic, I am not paying ₹12,990 upfront for software when my article clerks rotate every two to three years and training them feels like a waste of time. Even though the Trainee Laptop Shield addresses my constant anxiety about client data leaving on personal laptops, I would only test the free pilot first to see if the checklists truly run without supervision.",
+  "objection": "My article clerks rotate every 2-3 years; training them on complex software is a waste of time unless the statutory blueprints work straight out of the box with zero handholding.",
+  "would_change_my_mind": "Hands-on proof during the free pilot that a fresh article clerk can complete statutory filings with zero onboarding while the laptop shield reliably blocks client file downloads.",
+  "price_too_cheap": 3500,
+  "price_cheap": 7000,
+  "price_expensive": 15000,
+  "price_too_expensive": 28000
+}

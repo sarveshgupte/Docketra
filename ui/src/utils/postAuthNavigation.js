@@ -62,7 +62,13 @@ export const getPostLoginWorkspaceDestination = (user, firmSlug, intendedPath = 
   }
 
   const isPrimaryAdmin = user?.role === 'PRIMARY_ADMIN';
-  const isFirmSetupPending = user?.firm?.isSetupComplete === false || user?.isSetupComplete === false;
+  const setupDismissedKey = firmSlug ? `setupDismissed:${firmSlug}` : '';
+  const isSetupDismissed = Boolean(
+    setupDismissedKey
+    && typeof window !== 'undefined'
+    && window.localStorage?.getItem(setupDismissedKey) === 'true'
+  );
+  const isFirmSetupPending = !isSetupDismissed && (user?.firm?.isSetupComplete === false || user?.isSetupComplete === false);
   if (isPrimaryAdmin && isFirmSetupPending) {
     return ROUTES.SETUP(firmSlug);
   }

@@ -57,6 +57,17 @@ const createCaseBody = z.object({
   idempotencyKey: z.string().trim().min(1).optional(),
   expectedMinutes: z.number().int().min(0).optional(),
   estimatedBudget: z.number().min(0).optional(),
+  checklist: z.array(z.object({
+    id: z.string().trim().optional(),
+    title: z.string().trim().min(1).max(200),
+    description: z.string().trim().max(1000).optional(),
+    required: z.boolean().optional(),
+    sortOrder: z.number().int().min(0).optional(),
+    defaultAssigneeXID: xidString.optional(),
+    dueOffsetDays: z.number().min(0).optional(),
+    dueDate: z.coerce.date().optional(),
+    status: z.enum(['requested', 'submitted', 'accepted', 'rejected', 'waived']).optional(),
+  }).strict()).optional(),
 }).strict();
 
 const cloneCaseBody = z.object({

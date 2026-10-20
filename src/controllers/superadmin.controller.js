@@ -1929,7 +1929,7 @@ const activateFirm = async (req, res, next) => {
   }
 };
 
-const PLAN_VALUES = ['pilot', 'starter', 'professional', 'enterprise'];
+const PLAN_VALUES = ['pilot', 'starter', 'growth', 'professional', 'enterprise'];
 
 const buildPlanCapacityMetadata = (firm, userCount = 0) => {
   const maxUsers = Number.isFinite(Number(firm?.maxUsers)) ? Number(firm.maxUsers) : 0;

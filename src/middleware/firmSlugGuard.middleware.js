@@ -42,6 +42,8 @@ const RESERVED_FIRM_SLUGS = [
   'work-types',
   'sla',
   'docket-efforts',
+  'subscriptions',
+  'webhooks',
 ];
 
 const FIRM_SLUG_PATTERN = /^[a-z0-9-]+$/;

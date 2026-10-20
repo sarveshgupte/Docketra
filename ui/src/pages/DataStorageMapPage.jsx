@@ -211,7 +211,7 @@ export function DataStorageMapPage() {
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                     </span>
-                    <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">
+                    <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-xs">
                       Connected & Active
                     </span>
                   </div>
@@ -233,15 +233,15 @@ export function DataStorageMapPage() {
                 {/* Storage Capacity Slider */}
                 {dataMap.activeStorage?.storageCapacity ? (
                   <div className="mt-5 pt-4 border-t border-slate-100">
-                    <div className="flex justify-between items-center mb-1.5 text-xs">
+                    <div className="flex justify-between items-center mb-1.5 text-xs font-mono tabular-nums">
                       <span className="font-semibold text-slate-500">Connected Storage Quota</span>
                       <span className="font-bold text-slate-700">
                         {dataMap.activeStorage.storageCapacity.displayUsed} of {dataMap.activeStorage.storageCapacity.displayTotal} ({dataMap.activeStorage.storageCapacity.usagePercent}%)
                       </span>
                     </div>
-                    <div className="w-full bg-slate-100 border border-slate-200/40 rounded-full h-2.5 overflow-hidden">
+                    <div className="w-full bg-slate-100 border border-slate-200/40 rounded-xs h-2 overflow-hidden">
                       <div 
-                        className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-500" 
+                        className="bg-emerald-600 h-full rounded-xs transition-all duration-500" 
                         style={{ width: `${Math.min(100, Math.max(0, dataMap.activeStorage.storageCapacity.usagePercent))}%` }}
                       />
                     </div>
@@ -374,7 +374,7 @@ export function DataStorageMapPage() {
                       className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-600 hover:text-slate-800 transition-all shadow-sm"
                     >
                       <span className="flex items-center gap-2">
-                        📄
+                        <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
                         Download residency report
                       </span>
                       <span className="text-[10px] font-bold text-slate-400 bg-slate-200/60 border border-slate-300/40 px-1.5 py-0.5 rounded uppercase">TEXT</span>
@@ -390,7 +390,7 @@ export function DataStorageMapPage() {
                       className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-600 hover:text-slate-800 transition-all shadow-sm"
                     >
                       <span className="flex items-center gap-2">
-                        🛡️
+                        <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
                         View data residency policy
                       </span>
                       <ExternalLinkIcon className="w-3.5 h-3.5 text-slate-400" />

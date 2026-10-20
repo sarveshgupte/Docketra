@@ -18,7 +18,9 @@ const normalizeAction = (value) => {
 
 const deriveModuleFromAction = (action) => {
   if (!action) return 'admin';
-  if (action.startsWith('USER_') || action.startsWith('ROLE_') || action.includes('HIERARCHY')) return 'users';
+  if (action.startsWith('USER_') || action.startsWith('ROLE_') || action.includes('HIERARCHY') || action.includes('TRAINEE_SHIELD')) return 'users';
+  if (action.includes('CLIENT')) return 'clients';
+  if (action.includes('SETTINGS') || action.includes('STORAGE')) return 'settings';
   if (action.includes('CATEGORY')) return 'categories';
   if (action.includes('WORKBENCH')) return 'workbench';
   return 'admin';
@@ -47,7 +49,7 @@ const sanitizeMetadata = (metadata = {}) => {
 const buildSummary = (entry) => {
   const actorLabel = entry?.actorId?.name || entry?.actorId?.email || entry?.actorId?.xID || 'An admin';
   const action = String(entry?.action || 'ACTION').replace(/_/g, ' ').toLowerCase();
-  const targetLabel = entry?.targetId?.name || entry?.targetId?.email || entry?.targetId?.xID || null;
+  const targetLabel = entry?.metadata?.businessName || entry?.metadata?.userName || entry?.targetId?.name || entry?.targetId?.email || entry?.targetId?.xID || entry?.metadata?.clientId || entry?.metadata?.xID || null;
   if (targetLabel) {
     return `${actorLabel} ${action} for ${targetLabel}`;
   }

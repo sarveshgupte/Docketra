@@ -4,6 +4,7 @@ const routeSchemas = require('../schemas/case.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const { requireRole, requirePrimaryAdmin } = require('../middleware/rbac.middleware');
+const { restrictTraineeDownload } = require('../middleware/downloadShield.middleware');
 const {
   userReadLimiter,
   userWriteLimiter,
@@ -204,7 +205,7 @@ router.post('/:caseId/attachments/upload-intent', authorizeFirmPermission('CASE_
 router.post('/:caseId/attachments/finalize', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, fileUploadLimiter, checkCaseClientAccess, finalizeAttachmentUpload);
 router.post('/:caseId/attachments', requireStorageConnected, authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, fileUploadLimiter, checkCaseClientAccess, addAttachment);
 router.get('/:caseId/attachments/:attachmentId/view', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, viewAttachment);
-router.get('/:caseId/attachments/:attachmentId/download', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, downloadAttachment);
+router.get('/:caseId/attachments/:attachmentId/download', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, restrictTraineeDownload, downloadAttachment);
 
 // ── Single docket — lifecycle actions ────────────────────────────────────────
 router.post('/:caseId/clone', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, checkCaseClientAccess, validateCaseAssignment, cloneCase);
@@ -243,6 +244,6 @@ router.post('/:caseId/manager-move', requireRole(['MANAGER']), userWriteLimiter,
 router.get('/:caseId/client-fact-sheet', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getClientFactSheetForCase);
 router.get('/:caseId/client-fact-sheet/files/:fileId/view', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, viewClientFactSheetFile);
 router.get('/:caseId/client-cfs/files', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, listClientCFSFilesForCase);
-router.get('/:caseId/client-cfs/files/:attachmentId/download', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, downloadClientCFSFileForCase);
+router.get('/:caseId/client-cfs/files/:attachmentId/download', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, restrictTraineeDownload, downloadClientCFSFileForCase);
 
 module.exports = router;

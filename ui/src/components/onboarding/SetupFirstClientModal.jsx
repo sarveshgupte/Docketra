@@ -84,26 +84,27 @@ export function SetupFirstClientModal({ isOpen, onClose, firmSlug }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-[#0B0F19] border border-[#1E293B] rounded-2xl max-w-xl w-full p-6 sm:p-7 shadow-[0_25px_60px_rgba(0,0,0,0.8)] text-slate-100 space-y-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="bg-white border border-slate-200/90 rounded-lg max-w-xl w-full p-6 sm:p-7 shadow-2xl text-slate-900 space-y-5">
         {/* Modal Header */}
         <div className="flex items-start justify-between">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-mono uppercase font-semibold">
-              <Building2 className="h-3 w-3" />
+            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-mono uppercase font-semibold">
+              <Building2 className="h-3 w-3 text-emerald-700" />
               Step 6: First Client
             </div>
-            <h2 className="text-xl font-bold tracking-tight text-white">
+            <h2 className="text-xl font-bold tracking-tight text-slate-950">
               Add your firm&apos;s first corporate client
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-600">
               Activate your compliance roadmap, statutory due dates, and secretarial registers.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-500 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-label="Close modal"
           >
             <X className="h-4 w-4" />
           </button>
@@ -113,8 +114,8 @@ export function SetupFirstClientModal({ isOpen, onClose, firmSlug }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Entity Name */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-              Client / Corporate Entity Name <span className="text-amber-400">*</span>
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-700">
+              Client / Corporate Entity Name <span className="text-amber-700">*</span>
             </label>
             <input
               type="text"
@@ -123,20 +124,20 @@ export function SetupFirstClientModal({ isOpen, onClose, firmSlug }) {
               placeholder="e.g. Acme Technologies Private Limited"
               required
               autoFocus
-              className="w-full bg-[#070A11] border border-[#1E293B] rounded-xl px-3.5 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 transition-colors"
+              className="w-full bg-white border border-slate-300 rounded-md px-3.5 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950 transition-colors"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Entity Type */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-700">
                 Entity Structure
               </label>
               <select
                 value={form.entityType}
                 onChange={(e) => handleChange('entityType', e.target.value)}
-                className="w-full bg-[#070A11] border border-[#1E293B] rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
+                className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950"
               >
                 {ENTITY_TYPES.map((type) => (
                   <option key={type} value={type}>{type}</option>
@@ -146,7 +147,7 @@ export function SetupFirstClientModal({ isOpen, onClose, firmSlug }) {
 
             {/* CIN / LLPIN */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-700">
                 CIN / LLPIN (Optional)
               </label>
               <input
@@ -154,7 +155,7 @@ export function SetupFirstClientModal({ isOpen, onClose, firmSlug }) {
                 value={form.CIN}
                 onChange={(e) => handleChange('CIN', e.target.value)}
                 placeholder="e.g. U72200MH2020PTC123456"
-                className="w-full bg-[#070A11] border border-[#1E293B] rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-600 font-mono focus:outline-none focus:border-amber-500 uppercase"
+                className="w-full bg-white border border-slate-300 rounded-md px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 font-mono focus:outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950 uppercase"
               />
             </div>
           </div>
@@ -162,7 +163,7 @@ export function SetupFirstClientModal({ isOpen, onClose, firmSlug }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Contact Person */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-700">
                 Primary Contact / Director
               </label>
               <input
@@ -170,13 +171,13 @@ export function SetupFirstClientModal({ isOpen, onClose, firmSlug }) {
                 value={form.contactPersonName}
                 onChange={(e) => handleChange('contactPersonName', e.target.value)}
                 placeholder="e.g. Vikram Mehta"
-                className="w-full bg-[#070A11] border border-[#1E293B] rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
+                className="w-full bg-white border border-slate-300 rounded-md px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950"
               />
             </div>
 
             {/* Email */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-700">
                 Client Email
               </label>
               <input
@@ -184,7 +185,7 @@ export function SetupFirstClientModal({ isOpen, onClose, firmSlug }) {
                 value={form.businessEmail}
                 onChange={(e) => handleChange('businessEmail', e.target.value)}
                 placeholder="contact@client.com"
-                className="w-full bg-[#070A11] border border-[#1E293B] rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-600 font-mono focus:outline-none focus:border-amber-500"
+                className="w-full bg-white border border-slate-300 rounded-md px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 font-mono focus:outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950"
               />
             </div>
           </div>
@@ -192,7 +193,7 @@ export function SetupFirstClientModal({ isOpen, onClose, firmSlug }) {
           {/* City / State */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-700">
                 City / Jurisdiction
               </label>
               <input
@@ -200,12 +201,12 @@ export function SetupFirstClientModal({ isOpen, onClose, firmSlug }) {
                 value={form.city}
                 onChange={(e) => handleChange('city', e.target.value)}
                 placeholder="e.g. Mumbai"
-                className="w-full bg-[#070A11] border border-[#1E293B] rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
+                className="w-full bg-white border border-slate-300 rounded-md px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-700">
                 State
               </label>
               <input
@@ -213,17 +214,17 @@ export function SetupFirstClientModal({ isOpen, onClose, firmSlug }) {
                 value={form.state}
                 onChange={(e) => handleChange('state', e.target.value)}
                 placeholder="e.g. Maharashtra"
-                className="w-full bg-[#070A11] border border-[#1E293B] rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
+                className="w-full bg-white border border-slate-300 rounded-md px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950"
               />
             </div>
           </div>
 
           {/* Modal Actions */}
-          <div className="pt-3 border-t border-[#1E293B] flex items-center justify-between">
+          <div className="pt-3 border-t border-slate-200 flex items-center justify-between">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
             >
               I&apos;ll do this later
             </button>
@@ -231,7 +232,7 @@ export function SetupFirstClientModal({ isOpen, onClose, firmSlug }) {
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 transition-all cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
             >
               {loading ? 'Creating Client...' : 'Create Client & Open Profile'}
               <ArrowRight className="h-3.5 w-3.5" />

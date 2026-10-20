@@ -15,6 +15,7 @@ import { buildCreateDocketPayload, validateCreateDocketPayload } from './createD
 import { ROUTES } from '../../constants/routes';
 import { generateSecureRandomString } from '../../utils/crypto';
 import { isFirmAdminOrAbove } from '../../utils/roleHierarchy';
+import { STATUTORY_BLUEPRINTS, matchBlueprintToCategories, getBlueprintById } from './statutoryBlueprints';
 
 const createSubmissionKey = () => `docket-create-${Date.now()}-${generateSecureRandomString(8)}`;
 
@@ -73,6 +74,9 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   const [setupChecklistCollapsed, setSetupChecklistCollapsed] = useState(true);
   const [suggestion, setSuggestion] = useState(null);
   const [manualClassification, setManualClassification] = useState(false);
+  const [selectedBlueprintId, setSelectedBlueprintId] = useState('');
+  const [showBlueprintSteps, setShowBlueprintSteps] = useState(false);
+  const [blueprintMatchInfo, setBlueprintMatchInfo] = useState(null);
   const latestSuggestionRequestRef = useRef(0);
   const fileInputRef = useRef(null);
 
@@ -86,7 +90,8 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
     || formData.relatedEmployeeUserId
     || formData.employeeXID
     || selectedFiles.length
-  ), [formData, selectedFiles.length]);
+    || selectedBlueprintId
+  ), [formData, selectedFiles.length, selectedBlueprintId]);
 
   const { confirmLeaveIfDirty } = useUnsavedChangesPrompt({
     isDirty,
@@ -268,6 +273,56 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
     setSubmitError('');
   };
 
+  useEffect(() => {
+    if (!selectedBlueprintId || categories.length === 0) return;
+    const bp = getBlueprintById(selectedBlueprintId);
+    if (!bp) return;
+    const match = matchBlueprintToCategories(categories, bp);
+    setBlueprintMatchInfo(match);
+    if (match.categoryId && !formData.categoryId) {
+      setFormData((prev) => ({
+        ...prev,
+        categoryId: match.categoryId,
+        subcategoryId: match.subcategoryId || prev.subcategoryId,
+      }));
+    }
+  }, [categories, selectedBlueprintId]);
+
+  const selectedBlueprint = useMemo(() => getBlueprintById(selectedBlueprintId), [selectedBlueprintId]);
+
+  const handleToggleBlueprint = (blueprint) => {
+    if (selectedBlueprintId === blueprint.id) {
+      handleClearBlueprint();
+      return;
+    }
+
+    setSelectedBlueprintId(blueprint.id);
+    const match = matchBlueprintToCategories(categories, blueprint);
+    setBlueprintMatchInfo(match);
+
+    setFormData((prev) => ({
+      ...prev,
+      title: blueprint.defaultTitle,
+      description: blueprint.defaultDescription,
+      priority: blueprint.defaultPriority || 'medium',
+      categoryId: match.categoryId || prev.categoryId,
+      subcategoryId: match.subcategoryId || (match.categoryId ? '' : prev.subcategoryId),
+      checklist: blueprint.checklist,
+    }));
+    setManualClassification(true);
+    setErrors((prev) => ({ ...prev, title: '', categoryId: '', subcategoryId: '' }));
+  };
+
+  const handleClearBlueprint = () => {
+    setSelectedBlueprintId('');
+    setBlueprintMatchInfo(null);
+    setShowBlueprintSteps(false);
+    setFormData((prev) => ({
+      ...prev,
+      checklist: undefined,
+    }));
+  };
+
   const handleCancel = () => {
     if (!confirmLeaveIfDirty()) return;
     onCancel?.();
@@ -338,6 +393,9 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
       if (fileInputRef.current) fileInputRef.current.value = '';
       setSuggestion(null);
       setManualClassification(false);
+      setSelectedBlueprintId('');
+      setBlueprintMatchInfo(null);
+      setShowBlueprintSteps(false);
       setErrors({});
 
       if (selectedFiles.length > 0) {
@@ -410,6 +468,84 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
                 <h2>Classification</h2>
                 <p>Category and subcategory decide routing, workbasket placement, and SLA.</p>
               </div>
+            </div>
+
+            <div className="statutory-blueprints-card">
+              <div className="statutory-blueprints-card__header">
+                <div className="statutory-blueprints-card__title-wrap">
+                  <span className="statutory-blueprints-card__tag">Statutory Blueprints</span>
+                  <p className="statutory-blueprints-card__hint">Standard filings with pre-loaded statutory compliance steps.</p>
+                </div>
+                {selectedBlueprint ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleClearBlueprint}
+                  >
+                    Clear blueprint
+                  </Button>
+                ) : null}
+              </div>
+
+              <div className="statutory-blueprints-chips" role="radiogroup" aria-label="Statutory blueprints">
+                {STATUTORY_BLUEPRINTS.map((bp) => {
+                  const isSelected = selectedBlueprintId === bp.id;
+                  return (
+                    <button
+                      key={bp.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      className={`statutory-blueprint-chip ${isSelected ? 'statutory-blueprint-chip--selected' : ''}`}
+                      onClick={() => handleToggleBlueprint(bp)}
+                    >
+                      <span className="statutory-blueprint-chip__name">{bp.shortName}</span>
+                      <span className="statutory-blueprint-chip__authority">{bp.authority}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {selectedBlueprint ? (
+                <div className="statutory-blueprint-details">
+                  <div className="statutory-blueprint-details__info">
+                    <span className="statutory-blueprint-details__count">
+                      ✓ {selectedBlueprint.checklist.length} statutory steps attached
+                    </span>
+                    {blueprintMatchInfo?.matchedCategory ? (
+                      <span className="statutory-blueprint-details__routing">
+                        Mapped to: <strong>{blueprintMatchInfo.matchedCategory.name}</strong>
+                        {blueprintMatchInfo.matchedSubcategory ? ` / ${blueprintMatchInfo.matchedSubcategory.name}` : ' (select subcategory below)'}
+                      </span>
+                    ) : (
+                      <span className="statutory-blueprint-details__routing">
+                        Please select a category below to route to a workbasket
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowBlueprintSteps((prev) => !prev)}
+                  >
+                    {showBlueprintSteps ? 'Hide checklist steps' : `Preview checklist (${selectedBlueprint.checklist.length} steps)`}
+                  </Button>
+                  {showBlueprintSteps ? (
+                    <ol className="statutory-blueprint-steps-list">
+                      {selectedBlueprint.checklist.map((step, idx) => (
+                        <li key={step.id || idx}>
+                          <span className="statutory-blueprint-step__title">{step.title}</span>
+                          {step.required ? (
+                            <span className="statutory-blueprint-step__badge">Mandatory</span>
+                          ) : (
+                            <span className="statutory-blueprint-step__badge statutory-blueprint-step__badge--optional">Optional</span>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
 
             {suggestion ? (

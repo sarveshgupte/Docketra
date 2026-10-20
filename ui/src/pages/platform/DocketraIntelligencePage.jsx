@@ -165,7 +165,7 @@ export const DocketraIntelligencePage = () => {
       {briefData?.executiveBrief && (
         <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50/60 p-4 text-xs leading-relaxed text-blue-900 shadow-sm flex items-start justify-between gap-4">
           <div>
-            <p className="font-semibold text-blue-950 uppercase tracking-wider text-[10px] mb-1">⚡ Executive AI Brief</p>
+            <p className="font-semibold text-blue-950 uppercase tracking-wider text-[10px] mb-1">Executive AI Brief</p>
             <p>{briefData.executiveBrief}</p>
           </div>
           <button
@@ -174,7 +174,7 @@ export const DocketraIntelligencePage = () => {
             onClick={handleRebalance}
             disabled={rebalancing}
           >
-            {rebalancing ? 'Rebalancing...' : '⚡ Smart Rebalance'}
+            {rebalancing ? 'Rebalancing...' : 'Smart Rebalance'}
           </button>
         </div>
       )}

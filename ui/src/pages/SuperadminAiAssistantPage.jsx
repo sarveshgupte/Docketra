@@ -8,7 +8,7 @@ import { generateUUID } from '../utils/crypto';
 const ADVISOR_MODES = [
   {
     name: 'Product Advisor',
-    icon: '🎯',
+    icon: 'task',
     tagline: 'Prioritize roadmap, MVP scope, and solo-launch workflows.',
     description: 'Use this mode to validate product scope, focus on launch readiness, map high-impact features, and avoid overengineering.',
     suggestions: [
@@ -19,7 +19,7 @@ const ADVISOR_MODES = [
   },
   {
     name: 'Developer Advisor',
-    icon: '💻',
+    icon: 'system',
     tagline: 'Architect, plan tests, plan safe PRs, and review security.',
     description: 'Use this mode to plan small safe PRs, plan integrations, structure security bounds, and draft code review guidelines.',
     suggestions: [
@@ -30,7 +30,7 @@ const ADVISOR_MODES = [
   },
   {
     name: 'Marketing Advisor',
-    icon: '📢',
+    icon: 'comms',
     tagline: 'Position, draft outreach, and scale Indian professional services.',
     description: 'Use this mode to refine website copy, draft cold outreach scripts, and map growth campaigns targeting CS/law/CA firms.',
     suggestions: [
@@ -229,7 +229,7 @@ export const SuperadminAiAssistantPage = () => {
                         {/* Advisor Disclaimer footer */}
                         {!isUser && (
                           <div className="mt-4 pt-3 border-t border-slate-200/50 text-[10px] text-slate-500 flex items-start gap-1">
-                            <span className="font-semibold text-slate-600">⚠️ Advice Only:</span>
+                            <span className="font-semibold text-slate-600">Advice Only:</span>
                             <span>This response is an AI draft. docketra does not authorize autonomous executions. Verify logic independently.</span>
                           </div>
                         )}
@@ -262,7 +262,7 @@ export const SuperadminAiAssistantPage = () => {
             {error && (
               <div className="border border-red-200 bg-red-50 text-red-700 p-4 rounded-xl text-sm flex flex-col gap-2 max-w-3xl">
                 <div className="font-bold flex items-center gap-1.5">
-                  <span>❌</span> Request Error
+                  Request Error
                 </div>
                 <div>{error}</div>
                 <Button variant="secondary" size="sm" onClick={() => handleSendMessage()} className="self-start text-xs bg-white hover:bg-slate-100 text-red-700 border-red-200 mt-1">

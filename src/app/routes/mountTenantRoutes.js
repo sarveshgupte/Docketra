@@ -48,6 +48,7 @@ const mountTenantRoutes = (app, deps) => {
     clientPortalRoutes,
     docketExceptionRoutes,
     docketEffortRoutes,
+    subscriptionRoutes,
   } = deps;
 
   app.use('/api/users', ...tenantScopedApiAccess, writeGuardChain, userRoutes);
@@ -85,6 +86,7 @@ const mountTenantRoutes = (app, deps) => {
   app.use('/api/client-portal', ...tenantScopedApiAccess, writeGuardChain, clientPortalRoutes);
   app.use('/api/docket-exceptions', ...tenantScopedApiAccess, writeGuardChain, docketExceptionRoutes);
   app.use('/api/docket-efforts', ...tenantScopedApiAccess, writeGuardChain, docketEffortRoutes);
+  app.use('/api/subscriptions', ...tenantScopedApiAccess, writeGuardChain, subscriptionRoutes);
   app.use('/api', authLimiter, ...tenantScopedApiAccess, writeGuardChain, docketFileStorageRoutes);
 };
 

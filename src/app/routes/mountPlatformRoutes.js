@@ -15,6 +15,7 @@ const mountPlatformRoutes = (app, deps) => {
     superadminRoutes,
     firmRoutes,
     securityRoutes,
+    whatsappWebhookRoutes,
     tenantScopedApiAccess,
     adminTenantScopedApiAccess,
     loginLimiter,
@@ -63,6 +64,10 @@ const mountPlatformRoutes = (app, deps) => {
   app.use('/public', publicLimiter, publicSignupRoutes);
   app.use('/api/contact', contactLimiter, contactRoutes);
   app.post('/api/cms/submit', contactLimiter, (_req, res) => res.status(410).json({ success: false, code: 'ROUTE_DEPRECATED', message: 'Legacy endpoint removed. Use POST /api/public/cms/:firmSlug/intake.' }));
+  if (whatsappWebhookRoutes) {
+    app.use('/api/webhooks/whatsapp', publicLimiter, whatsappWebhookRoutes);
+    app.use('/api/v1/webhooks/whatsapp', publicLimiter, whatsappWebhookRoutes);
+  }
 
   app.use('/api/categories', writeGuardChain, categoryRoutes);
   app.use('/api/work-types', ...tenantScopedApiAccess, writeGuardChain, workTypeRoutes);

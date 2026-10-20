@@ -42,7 +42,7 @@ const log = require('../utils/log');
 async function generateUploadLink(req, res) {
   try {
     const { caseId } = req.params;
-    const { requirePin = false, expiry = '24h', sendEmail: shouldSendEmail = false, clientMessage, internalComment, reopenAt, to, customSubject, customBody, autoPend = false } = req.body;
+    const { requirePin = false, expiry = '24h', sendEmail: shouldSendEmail = false, clientMessage, internalComment, reopenAt, to, customSubject, customBody, autoPend = false, channel } = req.body;
 
     const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
     const caseData = await CaseRepository.findByInternalId(
@@ -62,6 +62,16 @@ async function generateUploadLink(req, res) {
         caseId: caseData.caseId || caseData.caseNumber,
         firmId: String(req.user.firmId),
         text: internalComment.trim(),
+        createdBy: req.user.email,
+        createdByXID: req.user.xID,
+        createdByName: req.user.name,
+      });
+    } else if (String(channel || '').toUpperCase() === 'WHATSAPP') {
+      const recipientText = to && String(to).trim() ? ` to ${String(to).trim()}` : '';
+      await Comment.create({
+        caseId: caseData.caseId || caseData.caseNumber,
+        firmId: String(req.user.firmId),
+        text: `Generated document request link for WhatsApp share${recipientText}`,
         createdBy: req.user.email,
         createdByXID: req.user.xID,
         createdByName: req.user.name,

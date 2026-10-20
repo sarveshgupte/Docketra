@@ -1,0 +1,13 @@
+{
+  "id": "P023",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "convenience",
+  "reason": "In a normal week without deadline panic, I am not paying ₹12,990 upfront for software when my article clerks rotate every two to three years and training them feels like a waste of time. I would rather test the free pilot on a couple of filings to see if the checklists actually enforce maker-checker discipline without extra overhead.",
+  "objection": "My article clerks rotate every 2-3 years; training them on complex software is a waste of time unless the checklists truly require zero onboarding.",
+  "would_change_my_mind": "Seeing a fresh article clerk complete an AOC-4 or Tax Audit filing checklist on the free pilot without needing any training or handholding from me.",
+  "price_too_cheap": 3500,
+  "price_cheap": 7000,
+  "price_expensive": 15000,
+  "price_too_expensive": 28000
+}
