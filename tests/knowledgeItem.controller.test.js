@@ -111,7 +111,7 @@ const makeReqRes = ({ body = {}, params = {}, query = {}, firmId = FIRM_A } = {}
     body,
     params,
     query,
-    user: { firmId, xid: 'X000001' },
+    user: { firmId, xid: 'X000001', role: 'ADMIN' },
   };
   const res = {
     statusCode: 200,

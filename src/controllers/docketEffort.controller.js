@@ -4,6 +4,7 @@ const Case = require('../models/Case.model');
 const Client = require('../models/Client.model');
 const Comment = require('../models/Comment.model');
 const CaseHistory = require('../models/CaseHistory.model');
+const log = require('../utils/log');
 
 // Helper to check if a client is restricted for the current user
 const isClientRestricted = (user, clientDisplayId) => {
@@ -104,7 +105,8 @@ const createDocketEffort = async (req, res) => {
       data: effort,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to create effort log' });
+    log.error('DOCKET_EFFORT_CREATE_FAILED', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to create effort log' });
   }
 };
 
@@ -157,7 +159,8 @@ const getDocketEfforts = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to list effort entries' });
+    log.error('DOCKET_EFFORTS_FETCH_FAILED', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to list effort entries' });
   }
 };
 
@@ -214,7 +217,8 @@ const deleteDocketEffort = async (req, res) => {
 
     return res.json({ success: true, message: 'Effort entry deleted successfully' });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to delete effort entry' });
+    log.error('DOCKET_EFFORT_DELETE_FAILED', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to delete effort entry' });
   }
 };
 
@@ -280,7 +284,8 @@ const updateDocketBudget = async (req, res) => {
       data: targetCase,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to update docket budget profile' });
+    log.error('DOCKET_BUDGET_UPDATE_FAILED', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to update docket budget profile' });
   }
 };
 
@@ -396,7 +401,8 @@ const getProfitabilityReports = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to fetch profitability analytics reports' });
+    log.error('PROFITABILITY_REPORTS_FETCH_FAILED', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to fetch profitability analytics reports' });
   }
 };
 
