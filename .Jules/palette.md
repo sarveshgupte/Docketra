@@ -7,3 +7,6 @@
 ## 2026-08-13 - BubbleMenu Dropdown Accessibility
 **Learning:** Dropdowns and toggles with `aria-expanded` need a linked `aria-controls` pointing to a unique element ID to correctly announce state to screen readers. If there are multiple instances on a page, hardcoded IDs will conflict.
 **Action:** Use React's `useId()` to generate unique IDs for dropdown menus and bind them to the toggle button's `aria-controls`.
+## 2024-10-12 - Icon-only password toggle tooltip
+**Learning:** Found an icon-only password toggle button without a `title` attribute. Adding `title` paired with `aria-label` improves accessibility and provides clear hover context for sighted users, as they may not understand what the eye icon means.
+**Action:** Add native HTML `title` attributes matching the `aria-label` on all icon-only buttons to give clear tooltip context.
