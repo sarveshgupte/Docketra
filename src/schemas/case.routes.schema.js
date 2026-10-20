@@ -231,6 +231,7 @@ module.exports = {
       description: z.string().trim().min(1).max(500),
       note: z.string().trim().min(1).max(500).optional(),
       checksum: z.string().trim().optional(),
+      source: z.enum(['upload', 'whatsapp_forward', 'WHATSAPP_FORWARD', 'whatsapp_intake', 'client_cfs']).optional(),
     }).strict(),
   },
   'POST /:caseId/attachments/finalize': {

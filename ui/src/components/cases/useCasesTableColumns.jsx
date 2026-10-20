@@ -115,7 +115,7 @@ export const useCasesTableColumns = ({
             {(row.assignedToName || row.assignedToXID || row.assignedTo) && (
               <div className="cases-page__row-menu-info">Assigned: {row.assignedToName || row.assignedToXID || row.assignedTo}</div>
             )}
-            {isLocked && (<div className="cases-page__row-menu-info cases-page__row-menu-info--locked">🔒 Docket Locked</div>)}
+            {isLocked && (<div className="cases-page__row-menu-info cases-page__row-menu-info--locked">Docket Locked</div>)}
             <button
               type="button"
               onClick={(event) => {

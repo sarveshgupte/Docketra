@@ -177,16 +177,16 @@ export const CaseDetailEffortPanel = ({ caseId, caseInternalId, caseInfo, user, 
 
       {/* Progress Bar */}
       {targetMinutes > 0 && (
-        <div className="mt-4 bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div className="mt-4 bg-white border border-gray-200 rounded-md p-4 shadow-xs">
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }} className="text-xs font-semibold">
             <span className="text-gray-600">Filing Time Budget Utilization</span>
             <span className={isOverBudget ? 'text-rose-600 font-bold' : 'text-indigo-600'}>
               {percentUtilized}% Utilized {isOverBudget && '• Target Exceeded!'}
             </span>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+          <div className="w-full bg-gray-100 rounded-xs h-2 overflow-hidden">
             <div 
-              className={`h-full rounded-full transition-all duration-300 ${isOverBudget ? 'bg-rose-500' : 'bg-indigo-600'}`} 
+              className={`h-full rounded-xs transition-all duration-300 ${isOverBudget ? 'bg-rose-500' : 'bg-indigo-600'}`} 
               style={{ width: `${Math.min(100, percentUtilized)}%` }} 
             />
           </div>
@@ -290,7 +290,7 @@ export const CaseDetailEffortPanel = ({ caseId, caseInternalId, caseInfo, user, 
 
         {/* Logs Timeline */}
         <div className="lg:col-span-2">
-          <h3 className="text-sm font-bold text-gray-900 mb-3">🕒 Time Entry Audit Logs</h3>
+          <h3 className="text-sm font-bold text-gray-900 mb-3">Time Entry Audit Logs</h3>
           {loading ? (
             <p className="case-detail__empty-note">Loading effort entries…</p>
           ) : efforts.length === 0 ? (
@@ -326,7 +326,7 @@ export const CaseDetailEffortPanel = ({ caseId, caseInternalId, caseInfo, user, 
                           className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors text-xs font-bold"
                           title="Delete entry"
                         >
-                          🗑️
+                          <svg className="h-3.5 w-3.5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
                       )}
                     </div>

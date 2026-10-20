@@ -4,6 +4,7 @@ const Case = require('../models/Case.model');
 const Client = require('../models/Client.model');
 const Comment = require('../models/Comment.model');
 const CaseHistory = require('../models/CaseHistory.model');
+const log = require('../utils/log');
 
 // Helper to check if a client display ID is restricted for the current user
 const isClientRestricted = (user, clientDisplayId) => {
@@ -110,7 +111,8 @@ const createDocketException = async (req, res) => {
       data: docketException,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to create exception log' });
+    log.error('DOCKET_EXCEPTION_CREATE_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to create exception log' });
   }
 };
 
@@ -164,7 +166,8 @@ const getDocketExceptions = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to fetch exception logs' });
+    log.error('DOCKET_EXCEPTION_FETCH_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to fetch exception logs' });
   }
 };
 
@@ -254,7 +257,8 @@ const updateDocketException = async (req, res) => {
       data: docketException,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to update docket exception' });
+    log.error('DOCKET_EXCEPTION_UPDATE_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to update docket exception' });
   }
 };
 
@@ -363,7 +367,8 @@ const getExceptionDashboard = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'Failed to fetch exception dashboard' });
+    log.error('DOCKET_EXCEPTION_DASHBOARD_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to fetch exception dashboard' });
   }
 };
 

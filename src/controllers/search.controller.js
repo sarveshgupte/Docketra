@@ -162,45 +162,30 @@ const globalSearch = async (req, res) => {
       };
     }
     
-    const casesFromDirectSearch = await Case.find(enforceTenantScope(caseQuery, req, { source: 'search.global.direct' }))
-      .select('caseId title status category clientId clientName createdAt createdBy')
-      .lean();
-    
-    // Search in comments using text index
-    let commentsWithMatches = [];
-    try {
-      commentsWithMatches = await Comment.find(
+    // 💡 What: Replaced sequential database queries with concurrent execution using Promise.all().
+    // 🎯 Why: Mitigates compounding latency from independent collection searches (Cases, Comments, Attachments).
+    // 📊 Impact: O(1) concurrent latency instead of O(N) sequential DB query latency.
+    const [casesFromDirectSearch, commentsWithMatches, attachmentsWithMatches] = await Promise.all([
+      Case.find(enforceTenantScope(caseQuery, req, { source: 'search.global.direct' }))
+        .select('caseId title status category clientId clientName createdAt createdBy')
+        .lean(),
+      Comment.find(
         enforceTenantScope({ $text: { $search: searchTerm } }, req, { source: 'search.comments.text' }),
         { score: { $meta: 'textScore' } }
-      )
-        .select('caseId')
-        .lean();
-    } catch (error) {
-      // Text index might not be ready yet, fallback to regex
-      commentsWithMatches = await Comment.find(
-        enforceTenantScope({ text: { $regex: escapedSearchTerm, $options: 'i' } }, req, { source: 'search.comments.regex' })
-      )
-        .select('caseId')
-        .lean();
-    }
-    
-    // Search in attachments using text index
-    let attachmentsWithMatches = [];
-    try {
-      attachmentsWithMatches = await Attachment.find(
+      ).select('caseId').lean().catch(() =>
+        Comment.find(
+          enforceTenantScope({ text: { $regex: escapedSearchTerm, $options: 'i' } }, req, { source: 'search.comments.regex' })
+        ).select('caseId').lean()
+      ),
+      Attachment.find(
         enforceTenantScope({ $text: { $search: searchTerm } }, req, { source: 'search.attachments.text' }),
         { score: { $meta: 'textScore' } }
+      ).select('caseId').lean().catch(() =>
+        Attachment.find(
+          enforceTenantScope({ fileName: { $regex: escapedSearchTerm, $options: 'i' } }, req, { source: 'search.attachments.regex' })
+        ).select('caseId').lean()
       )
-        .select('caseId')
-        .lean();
-    } catch (error) {
-      // Text index might not be ready yet, fallback to regex
-      attachmentsWithMatches = await Attachment.find(
-        enforceTenantScope({ fileName: { $regex: escapedSearchTerm, $options: 'i' } }, req, { source: 'search.attachments.regex' })
-      )
-        .select('caseId')
-        .lean();
-    }
+    ]);
     
     // Collect unique caseIds from comments and attachments
     const caseIdsFromComments = [...new Set(commentsWithMatches.map(c => c.caseId))];

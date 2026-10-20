@@ -90,8 +90,8 @@ Example valid active payload:
 {
   "success": true,
   "data": {
-    "firmSlug": "gupte-opc",
-    "name": "Gupte OPC",
+    "firmSlug": "demo-firm",
+    "name": "Demo Firm",
     "status": "ACTIVE",
     "isActive": true
   }

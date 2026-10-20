@@ -1,0 +1,13 @@
+{
+  "id": "P016",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "price",
+  "reason": "At ₹21,990 a year for the Growth tier, Docketra costs more than three times what Jamku charges, which is a steep premium for our practice. Even with Google Drive isolation, I am not paying that much upfront for an unverified tool before thoroughly testing the free sandbox on dummy files.",
+  "objection": "Jamku charges only ₹6,500 a year—why is Docketra more expensive?",
+  "would_change_my_mind": "Pricing under ₹15,000 a year for mid-sized firms, paired with trusted peer recommendations from my monthly ICAI study circle confirming that Drive permissions are truly leakproof.",
+  "price_too_cheap": 3500,
+  "price_cheap": 6500,
+  "price_expensive": 15000,
+  "price_too_expensive": 30000
+}

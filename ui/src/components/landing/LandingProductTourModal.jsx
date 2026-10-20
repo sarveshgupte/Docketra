@@ -149,16 +149,16 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-4xl rounded-2xl border border-slate-800 bg-[#0B0F19] text-slate-100 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col my-auto"
+        className="relative w-full max-w-4xl rounded-sm border border-slate-800 bg-[#0B0F19] text-slate-100 shadow-2xl overflow-hidden flex flex-col my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Accent Line */}
-        <div className="h-1 w-full bg-gradient-to-r from-amber-500 via-sky-500 to-emerald-500" />
+        <div className="h-px w-full bg-amber-500/40" />
 
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-slate-800/80 px-6 py-4 bg-[#090D16]">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xs bg-amber-500/10 border border-amber-500/20 text-amber-400">
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -166,8 +166,8 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black tracking-tight text-white">Docketra Product Tour</span>
-                <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-mono font-bold text-amber-300">
+                <span className="text-xs font-bold tracking-tight text-white">Docketra Product Tour</span>
+                <span className="rounded-xs border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-mono font-medium uppercase text-amber-300">
                   Interactive
                 </span>
               </div>
@@ -180,7 +180,7 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-xs border border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
             aria-label="Close tour"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -190,7 +190,7 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
         </div>
 
         {/* Step Indicator Navigation Tabs */}
-        <div className="flex border-b border-slate-800/80 bg-slate-950/50 px-6 py-2.5 overflow-x-auto gap-2 no-scrollbar">
+        <div className="flex border-b border-slate-800/80 bg-slate-950/50 px-6 py-2 overflow-x-auto gap-1.5 no-scrollbar">
           {TOUR_STEPS.map((step, idx) => {
             const isActive = idx === stepIndex;
             const isCompleted = idx < stepIndex;
@@ -199,16 +199,16 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
                 key={step.id}
                 type="button"
                 onClick={() => setStepIndex(idx)}
-                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-all ${
+                className={`flex items-center gap-1.5 rounded-xs px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors ${
                   isActive
-                    ? 'bg-slate-800 text-amber-400 border border-slate-700 shadow-sm'
+                    ? 'bg-slate-800 text-amber-400 border border-slate-700'
                     : isCompleted
                     ? 'text-slate-300 hover:text-white hover:bg-slate-900'
                     : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900'
                 }`}
               >
                 <span
-                  className={`flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-mono font-bold ${
+                  className={`flex h-4 w-4 items-center justify-center rounded-xs text-[10px] font-mono font-bold ${
                     isActive
                       ? 'bg-amber-400 text-slate-950'
                       : isCompleted
@@ -264,41 +264,41 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
           </div>
 
           {/* Right Column: High-Density Interactive Simulated View (7 cols) */}
-          <div className="lg:col-span-7 rounded-xl border border-slate-800 bg-[#090D16] p-4 shadow-inner">
+          <div className="lg:col-span-7 rounded-sm border border-slate-800 bg-[#090D16] p-4">
             {currentStep.previewType === 'command-center' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                    <span className="text-xs font-bold text-white">Morning Statutory Radar</span>
+                    <span className="h-1.5 w-1.5 rounded-xs bg-emerald-400" />
+                    <span className="text-xs font-semibold text-white">Morning Statutory Radar</span>
                   </div>
-                  <span className="font-mono text-[10px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">
+                  <span className="font-mono text-[10px] text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded-xs border border-amber-400/20 uppercase">
                     FY 25-26
                   </span>
                 </div>
 
                 {/* 4 KPI Blocks */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-2 text-left">
-                    <div className="font-mono text-lg font-black text-rose-400">14</div>
-                    <div className="text-[9px] font-bold text-rose-300 uppercase tracking-tight leading-tight mt-0.5">Overdue Filings</div>
+                  <div className="rounded-xs border border-rose-500/20 bg-rose-500/10 p-2 text-left">
+                    <div className="font-mono text-lg font-bold text-rose-400">14</div>
+                    <div className="text-[9px] font-mono uppercase text-rose-300 tracking-tight leading-tight mt-0.5">Overdue Filings</div>
                   </div>
-                  <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-2 text-left">
-                    <div className="font-mono text-lg font-black text-amber-400">28</div>
-                    <div className="text-[9px] font-bold text-amber-300 uppercase tracking-tight leading-tight mt-0.5">T-7 Deadlines</div>
+                  <div className="rounded-xs border border-amber-500/20 bg-amber-500/10 p-2 text-left">
+                    <div className="font-mono text-lg font-bold text-amber-400">28</div>
+                    <div className="text-[9px] font-mono uppercase text-amber-300 tracking-tight leading-tight mt-0.5">T-7 Deadlines</div>
                   </div>
-                  <div className="rounded-lg border border-sky-500/20 bg-sky-500/10 p-2 text-left">
-                    <div className="font-mono text-lg font-black text-sky-400">05</div>
-                    <div className="text-[9px] font-bold text-sky-300 uppercase tracking-tight leading-tight mt-0.5">Tribunal Hearings</div>
+                  <div className="rounded-xs border border-sky-500/20 bg-sky-500/10 p-2 text-left">
+                    <div className="font-mono text-lg font-bold text-sky-400">05</div>
+                    <div className="text-[9px] font-mono uppercase text-sky-300 tracking-tight leading-tight mt-0.5">Tribunal Hearings</div>
                   </div>
-                  <div className="rounded-lg border border-purple-500/20 bg-purple-500/10 p-2 text-left">
-                    <div className="font-mono text-lg font-black text-purple-400">19</div>
-                    <div className="text-[9px] font-bold text-purple-300 uppercase tracking-tight leading-tight mt-0.5">DSC Signatures</div>
+                  <div className="rounded-xs border border-purple-500/20 bg-purple-500/10 p-2 text-left">
+                    <div className="font-mono text-lg font-bold text-purple-400">19</div>
+                    <div className="text-[9px] font-mono uppercase text-purple-300 tracking-tight leading-tight mt-0.5">DSC Signatures</div>
                   </div>
                 </div>
 
                 {/* Sample Radar Table */}
-                <div className="rounded-lg border border-slate-800 bg-slate-950 overflow-hidden text-[11px]">
+                <div className="rounded-xs border border-slate-800 bg-slate-950 overflow-hidden text-[11px]">
                   <div className="grid grid-cols-12 bg-slate-900/80 px-2.5 py-1.5 font-mono text-[10px] text-slate-400 border-b border-slate-800">
                     <div className="col-span-5">CLIENT & CIN</div>
                     <div className="col-span-3">DUE DATE</div>
@@ -312,7 +312,7 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
                       </div>
                       <div className="col-span-3 font-mono text-rose-400 text-[10px]">Overdue · -2d</div>
                       <div className="col-span-4 text-right">
-                        <span className="rounded bg-rose-500/20 px-1.5 py-0.5 text-[9px] font-bold text-rose-400 border border-rose-500/30">
+                        <span className="rounded-xs border border-rose-500/30 bg-rose-500/10 px-1.5 py-0.5 text-[9px] font-mono uppercase text-rose-300">
                           DIR-3 KYC
                         </span>
                       </div>
@@ -324,7 +324,7 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
                       </div>
                       <div className="col-span-3 font-mono text-amber-400 text-[10px]">T-3 Days</div>
                       <div className="col-span-4 text-right">
-                        <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold text-amber-400 border border-amber-500/30">
+                        <span className="rounded-xs border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-mono uppercase text-amber-300">
                           AOC-4 XBRL
                         </span>
                       </div>
@@ -337,40 +337,40 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
             {currentStep.previewType === 'workbaskets' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                  <span className="text-xs font-bold text-white">Execution Pipeline</span>
-                  <span className="text-[10px] font-mono text-purple-400">Queue Architecture</span>
+                  <span className="text-xs font-semibold text-white">Execution Pipeline</span>
+                  <span className="text-[10px] font-mono text-purple-400 uppercase tracking-wider">Queue Architecture</span>
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-slate-800 text-[10px] font-mono text-amber-400 font-bold">1</span>
+                  <div className="flex items-center gap-2 p-2.5 rounded-xs bg-slate-950 border border-slate-800">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-xs bg-slate-800 text-[10px] font-mono text-amber-400 font-bold">1</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] font-bold text-slate-200">Shared Workbasket</p>
                       <p className="text-[10px] text-slate-400 truncate">ROC Filings Queue (8 unassigned matters)</p>
                     </div>
-                    <span className="text-[10px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded">Pool</span>
+                    <span className="text-[10px] font-mono text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded-xs uppercase">Pool</span>
                   </div>
 
                   <div className="flex justify-center text-slate-600 text-xs leading-none">↓ pull / allocate</div>
 
-                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-purple-950/20 border border-purple-800/40">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-purple-900/60 text-[10px] font-mono text-purple-300 font-bold">2</span>
+                  <div className="flex items-center gap-2 p-2.5 rounded-xs bg-purple-950/20 border border-purple-800/40">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-xs bg-purple-900/60 text-[10px] font-mono text-purple-300 font-bold">2</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] font-bold text-purple-200">Personal Worklist</p>
                       <p className="text-[10px] text-purple-400/80 truncate">Assigned to: Senior Associate (Arjun M.)</p>
                     </div>
-                    <span className="text-[10px] font-mono text-purple-300 bg-purple-900/40 px-2 py-0.5 rounded">Active</span>
+                    <span className="text-[10px] font-mono text-purple-300 bg-purple-900/40 px-1.5 py-0.5 rounded-xs uppercase">Active</span>
                   </div>
 
                   <div className="flex justify-center text-slate-600 text-xs leading-none">↓ review gate</div>
 
-                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-slate-800 text-[10px] font-mono text-emerald-400 font-bold">3</span>
+                  <div className="flex items-center gap-2 p-2.5 rounded-xs bg-slate-950 border border-slate-800">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-xs bg-slate-800 text-[10px] font-mono text-emerald-400 font-bold">3</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] font-bold text-slate-200">Quality Control (QC)</p>
                       <p className="text-[10px] text-slate-400 truncate">Two-tier sign-off before MCA submission</p>
                     </div>
-                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded">Gate</span>
+                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/40 px-1.5 py-0.5 rounded-xs uppercase">Gate</span>
                   </div>
                 </div>
               </div>
@@ -379,13 +379,13 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
             {currentStep.previewType === 'client-workspace' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                  <span className="text-xs font-bold text-white">3-Pane Entity Architecture</span>
+                  <span className="text-xs font-semibold text-white">3-Pane Entity Architecture</span>
                   <span className="text-[10px] font-mono text-emerald-400">Zenith Infra Pvt Ltd</span>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 text-[10px]">
                   {/* Left Pane */}
-                  <div className="rounded-lg border border-slate-800 bg-slate-950 p-2 space-y-1.5">
+                  <div className="rounded-xs border border-slate-800 bg-slate-950 p-2 space-y-1.5">
                     <div className="font-mono text-[9px] text-slate-500 uppercase font-bold">Pane 1: Entity Master</div>
                     <div className="font-bold text-slate-200">CIN Copy</div>
                     <div className="font-mono text-[9px] text-amber-400 break-all">U72200MH2021PTC368942</div>
@@ -396,22 +396,22 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
                   </div>
 
                   {/* Center Pane */}
-                  <div className="rounded-lg border border-emerald-900/40 bg-emerald-950/10 p-2 space-y-1.5">
+                  <div className="rounded-xs border border-emerald-900/40 bg-emerald-950/10 p-2 space-y-1.5">
                     <div className="font-mono text-[9px] text-emerald-400 uppercase font-bold">Pane 2: Roadmap</div>
                     <div className="font-bold text-slate-200">Dual Timeline</div>
-                    <div className="rounded bg-slate-900 p-1 text-[9px] text-slate-300">
+                    <div className="rounded-xs bg-slate-900 p-1 text-[9px] text-slate-300">
                       <span className="text-emerald-400">●</span> MGT-7 Annual Return
                     </div>
-                    <div className="rounded bg-slate-900 p-1 text-[9px] text-slate-300">
+                    <div className="rounded-xs bg-slate-900 p-1 text-[9px] text-slate-300">
                       <span className="text-sky-400">●</span> NCLT Oppression Pet.
                     </div>
                   </div>
 
                   {/* Right Pane */}
-                  <div className="rounded-lg border border-slate-800 bg-slate-950 p-2 space-y-1.5">
+                  <div className="rounded-xs border border-slate-800 bg-slate-950 p-2 space-y-1.5">
                     <div className="font-mono text-[9px] text-slate-500 uppercase font-bold">Pane 3: Vault</div>
                     <div className="font-bold text-slate-200">Next Hearing</div>
-                    <div className="rounded bg-rose-950/40 border border-rose-800/40 p-1 text-[9px] text-rose-300 font-mono">
+                    <div className="rounded-xs bg-rose-950/40 border border-rose-800/40 p-1 text-[9px] text-rose-300 font-mono">
                       NDOH: 28-Sep-26
                     </div>
                     <div className="text-[9px] text-slate-400">Google Drive: 14 Docs</div>
@@ -423,14 +423,14 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
             {currentStep.previewType === 'byos' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                  <span className="text-xs font-bold text-white">Bring Your Own Storage (BYOS)</span>
-                  <span className="text-[10px] font-mono text-amber-400">Zero Custody</span>
+                  <span className="text-xs font-semibold text-white">Bring Your Own Storage (BYOS)</span>
+                  <span className="text-[10px] font-mono text-amber-400 uppercase tracking-wider">Zero Custody</span>
                 </div>
 
-                <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 space-y-2">
+                <div className="rounded-xs border border-amber-500/20 bg-amber-500/5 p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="h-6 w-6 rounded bg-white flex items-center justify-center text-xs font-black text-slate-900">
+                      <div className="h-6 w-6 rounded-xs bg-white flex items-center justify-center text-xs font-mono font-bold text-slate-900">
                         G
                       </div>
                       <div>
@@ -438,13 +438,13 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
                         <p className="text-[10px] text-slate-400">Direct OAuth / Service Account</p>
                       </div>
                     </div>
-                    <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 text-[9px] font-mono text-emerald-400">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="flex items-center gap-1.5 rounded-xs bg-emerald-500/20 border border-emerald-500/30 px-1.5 py-0.5 text-[9px] font-mono text-emerald-400 uppercase">
+                      <span className="h-1.5 w-1.5 rounded-xs bg-emerald-400" />
                       CONNECTED
                     </span>
                   </div>
 
-                  <div className="rounded bg-slate-950 p-2 font-mono text-[10px] text-slate-400 border border-slate-800/60">
+                  <div className="rounded-xs bg-slate-950 p-2 font-mono text-[10px] text-slate-400 border border-slate-800/60">
                     <div className="text-slate-500"># Deterministic storage hierarchy</div>
                     <div className="text-amber-300">/Firm Drive/Docketra/Zenith_Infra/MCA_Filings/2026/</div>
                   </div>
@@ -459,31 +459,31 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
             {currentStep.previewType === 'qc' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                  <span className="text-xs font-bold text-white">Quality Control & Audit Trail</span>
-                  <span className="text-[10px] font-mono text-rose-400">Safety Gate</span>
+                  <span className="text-xs font-semibold text-white">Quality Control & Audit Trail</span>
+                  <span className="text-[10px] font-mono text-rose-400 uppercase tracking-wider">Safety Gate</span>
                 </div>
 
-                <div className="rounded-lg border border-slate-800 bg-slate-950 p-3 space-y-2">
+                <div className="rounded-xs border border-slate-800 bg-slate-950 p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs font-bold text-slate-200">AOC-4 XBRL Filing Sign-off</p>
                       <p className="text-[10px] font-mono text-slate-500">Docket #DKT-2026-0842</p>
                     </div>
-                    <span className="rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 text-[9px] font-bold">
+                    <span className="rounded-xs bg-purple-500/20 text-purple-300 border border-purple-500/30 px-1.5 py-0.5 text-[9px] font-mono uppercase">
                       QC Pending
                     </span>
                   </div>
 
                   <div className="space-y-1.5 pt-1 text-[10px]">
-                    <div className="flex items-center justify-between rounded bg-slate-900 px-2 py-1 text-slate-300">
+                    <div className="flex items-center justify-between rounded-xs bg-slate-900 px-2 py-1 text-slate-300">
                       <span>✓ Director DSC Signature verified</span>
                       <span className="font-mono text-[9px] text-emerald-400">Valid till 2027</span>
                     </div>
-                    <div className="flex items-center justify-between rounded bg-slate-900 px-2 py-1 text-slate-300">
+                    <div className="flex items-center justify-between rounded-xs bg-slate-900 px-2 py-1 text-slate-300">
                       <span>✓ Board Resolution & Notice attached</span>
                       <span className="font-mono text-[9px] text-emerald-400">Google Drive</span>
                     </div>
-                    <div className="flex items-center justify-between rounded bg-slate-900 px-2 py-1 text-slate-300">
+                    <div className="flex items-center justify-between rounded-xs bg-slate-900 px-2 py-1 text-slate-300">
                       <span>✓ MCA Challan calculation verified</span>
                       <span className="font-mono text-[9px] text-emerald-400">₹600 Fee</span>
                     </div>
@@ -500,13 +500,13 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
         </div>
 
         {/* Modal Footer Controls */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-800/80 bg-[#090D16] px-6 py-4">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-800/80 bg-[#090D16] px-6 py-3.5">
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={handlePrev}
               disabled={stepIndex === 0}
-              className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 px-3.5 text-xs font-bold text-slate-300 transition-colors hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="inline-flex h-8 items-center justify-center rounded-xs border border-slate-800 bg-slate-900 px-3 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed"
             >
               ← Back
             </button>
@@ -514,7 +514,7 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
             <button
               type="button"
               onClick={handleNext}
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-amber-500 px-4 text-xs font-black text-slate-950 shadow-md transition-all hover:bg-amber-400 active:scale-95"
+              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-xs bg-amber-500 px-3.5 text-xs font-semibold text-slate-950 transition-colors hover:bg-amber-400"
             >
               <span>{isLastStep ? 'Complete Tour & Get Started' : 'Next Step'}</span>
               <span>→</span>
@@ -525,7 +525,7 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
             <button
               type="button"
               onClick={() => handleScrollToSection('product')}
-              className="text-slate-400 hover:text-amber-400 transition-colors text-[11px] font-semibold underline underline-offset-4"
+              className="text-slate-400 hover:text-amber-400 transition-colors text-[11px] font-medium underline underline-offset-4"
             >
               Explore feature architecture below ↓
             </button>
@@ -536,7 +536,7 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
                 onClose();
                 navigate('/signup');
               }}
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-slate-800 border border-slate-700 px-4 text-xs font-bold text-white transition-colors hover:bg-slate-700"
+              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-xs bg-slate-800 border border-slate-700 px-3 text-xs font-medium text-white transition-colors hover:bg-slate-700"
             >
               Create workspace
             </button>

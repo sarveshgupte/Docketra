@@ -184,7 +184,7 @@ export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefresh
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <Button onClick={() => setShowSendModal(true)} variant="primary">
-            ✉ Request Documents & Send Email
+            Request Documents & Send Email
           </Button>
         </div>
       </div>
@@ -193,7 +193,7 @@ export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefresh
         <p className="case-detail__empty-note mt-3">Loading email communications…</p>
       ) : emails.length === 0 ? (
         <div className="text-center py-6 bg-gray-50/50 rounded-xl border border-dashed border-gray-200 mt-3">
-          <span className="text-3xl">📧</span>
+          <svg className="mx-auto h-8 w-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
           <p className="mt-2 text-sm text-gray-500 font-medium">No email communications logged for this docket yet.</p>
           <p className="text-xs text-gray-400 mt-1">Send a document request email to start tracking communications with the client.</p>
         </div>
@@ -217,14 +217,14 @@ export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefresh
                   {formatDateTime(email.receivedAt)}
                 </span>
               </div>
-              <hr style={{ border: '0', borderTop: '1px solid #f3f4f6', margin: '10px 0' }} />
-              <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 text-xs text-gray-700 whitespace-pre-wrap font-mono max-h-48 overflow-y-auto leading-relaxed">
+              <hr className="border-0 border-t border-gray-100 my-2.5" />
+              <div className="bg-gray-50 p-3 rounded-md border border-gray-100 text-xs text-gray-700 whitespace-pre-wrap font-mono max-h-48 overflow-y-auto leading-relaxed">
                 {email.bodyExcerpt || email.body}
               </div>
               {email.classification && (
                 <div className="mt-3 flex gap-2 items-center">
                   <span className="text-xs font-semibold text-gray-500">Classification:</span>
-                  <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${
+                  <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-xs ${
                     email.classification === 'actionable' ? 'bg-indigo-100 text-indigo-800' :
                     email.classification === 'awaiting_reply' ? 'bg-amber-100 text-amber-800' :
                     'bg-gray-100 text-gray-800'
@@ -293,18 +293,18 @@ export const CaseDetailEmailsPanel = ({ caseId, caseInfo, clientEmail, onRefresh
           </div>
 
           <div>
-            <Textarea label="Email Content (Body) *" value={sendBody} onChange={e => setSendBody(e.target.value)} rows={6} required />
+            <Textarea label="Email Content (Body)" value={sendBody} onChange={e => setSendBody(e.target.value)} rows={6} required />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
             <Button type="button" variant="outline" onClick={handleCopyLinkOnly} disabled={sending}>
-              📋 Copy Link Only
+              Copy Link Only
             </Button>
             <div style={{ display: 'flex', gap: '8px' }}>
               <Button type="button" variant="outline" onClick={() => setShowSendModal(false)} disabled={sending}>
                 Cancel
               </Button>
               <Button type="submit" variant="primary" disabled={sending}>
-                {sending ? 'Sending...' : '✉ Send Email & Generate Link'}
+                {sending ? 'Sending...' : 'Send Email & Generate Link'}
               </Button>
             </div>
           </div>

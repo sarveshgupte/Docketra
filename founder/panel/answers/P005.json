@@ -1,0 +1,13 @@
+{
+  "id": "P005",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "price",
+  "reason": "At ₹12,990 a year, it is a steep commitment for a frugal firm when we can just test the free sandbox with one trainee on 5 clients first before paying anything.",
+  "objection": "I want to prevent trainees from keeping client data on their personal laptops, but why pay ₹12,990 upfront when I can test the free tier first to see if the Trainee Laptop Shield actually works?",
+  "would_change_my_mind": "Pricing under ₹8,000 a year combined with endpoint download restrictions to stop article clerks from saving client files on personal laptops.",
+  "price_too_cheap": 3000,
+  "price_cheap": 7000,
+  "price_expensive": 13000,
+  "price_too_expensive": 24000
+}

@@ -1,0 +1,13 @@
+{
+  "id": "P063",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "Having managed my partnership on Excel and WhatsApp for ten years, I am deeply skeptical of granting third-party software access to our Google Drive where confidential client records live. Even though the Trainee Laptop Shield addresses my anxiety about clerks taking data home, I will not pay ₹12,990 upfront until I verify on the free tier that our private folders cannot be touched.",
+  "objection": "Will connecting my Google Drive give Docketra access to read all my firm's private files, and is it truly simple enough not to disrupt our established ten-year spreadsheet routine?",
+  "would_change_my_mind": "Hands-on verification using the Free Pilot that Docketra strictly cannot access any file outside its dedicated folder, plus confirming that the Trainee Laptop Shield reliably blocks downloads on clerks' personal laptops without complex setup.",
+  "price_too_cheap": 3000,
+  "price_cheap": 6500,
+  "price_expensive": 14000,
+  "price_too_expensive": 28000
+}

@@ -150,7 +150,7 @@ const firmSchema = new mongoose.Schema({
   plan: {
     type: String,
     lowercase: true,
-    enum: ['pilot', 'starter', 'professional', 'enterprise', 'PILOT', 'STARTER', 'PROFESSIONAL', 'ENTERPRISE'],
+    enum: ['pilot', 'starter', 'growth', 'professional', 'enterprise', 'PILOT', 'STARTER', 'GROWTH', 'PROFESSIONAL', 'ENTERPRISE'],
     default: 'pilot',
     index: true,
   },
@@ -398,6 +398,14 @@ const firmSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
       },
+      restrictTraineeDownloads: {
+        type: Boolean,
+        default: false,
+      },
+      weeklyAuditDigestEnabled: {
+        type: Boolean,
+        default: true,
+      },
     },
     work: {
       assignmentStrategy: {
@@ -479,6 +487,10 @@ const firmSchema = new mongoose.Schema({
     workbaskets: { type: Number, default: 0 },
     templateKey: { type: String, default: null, trim: true },
     completedAt: { type: Date, default: null },
+  },
+  lastWeeklyAuditDigestSentAt: {
+    type: Date,
+    default: null,
   },
   bootstrapStatus: {
     type: String,

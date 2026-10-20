@@ -256,7 +256,8 @@ const createIntent = async ({
 
   let folderId = null;
   const requireFolder = backend.providerName !== 'docketra_managed';
-  if (source === 'upload') {
+  const isCaseUpload = source === 'upload' || source === 'whatsapp_forward' || source === 'WHATSAPP_FORWARD' || source === 'whatsapp_intake';
+  if (isCaseUpload) {
     ({ folderId } = await resolveCaseContext({ firmId, caseId, role, requireFolder }));
     if (!folderId && backend.providerName === 'docketra_managed') {
       folderId = await ensureManagedFolderForSource({ provider, firmId: String(firmId), source, caseId, clientId, fileType });
@@ -505,8 +506,28 @@ const finalizeIntent = async ({ uploadId, firmId, user, completion = {}, checksu
       size: uploadRecord.size,
       mimeType: uploadRecord.mimeType,
       version,
+      source: uploadRecord.source,
     }
   });
+
+  const isWhatsAppSource = ['WHATSAPP_FORWARD', 'whatsapp_forward', 'whatsapp_intake'].includes(String(uploadRecord.source || ''));
+  if (isWhatsAppSource) {
+    try {
+      const Comment = require('../models/Comment.model');
+      await Comment.create({
+        caseId: uploadRecord.caseId,
+        firmId: String(firmId),
+        text: `Received document via WhatsApp Forwarding Bridge: "${uploadRecord.originalName}"` +
+          (uploadRecord.note ? `\nWhatsApp Message: "${uploadRecord.note}"` : '') +
+          (uploadRecord.description && uploadRecord.description !== 'Attachment upload' ? `\nContext: ${uploadRecord.description}` : ''),
+        createdBy: actor.createdBy,
+        createdByXID: actor.createdByXID,
+        createdByName: actor.createdByName,
+      });
+    } catch (_commentErr) {
+      // Non-blocking for upload completion
+    }
+  }
 
   await markUploadSessionStatus(uploadRecord, 'verified', {
     storageFileId: canonicalStorageId,

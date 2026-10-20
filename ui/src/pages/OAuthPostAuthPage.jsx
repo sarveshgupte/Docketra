@@ -4,9 +4,19 @@ import { useAuth } from '../hooks/useAuth';
 import { authApi } from '../api/auth.api';
 import { authService } from '../services/authService';
 import { Card } from '../components/common/Card';
+import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { Button } from '../components/common/Button';
 
+const getWorkspaceSlugPreview = (firmName) => {
+  const slug = String(firmName || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 32);
+  return slug || 'your-firm';
+};
 
 export const OAuthPostAuthPage = () => {
   const [searchParams] = useSearchParams();
@@ -17,10 +27,31 @@ export const OAuthPostAuthPage = () => {
   const errorCode = searchParams.get('error');
   const exchangeToken = searchParams.get('exchangeToken');
   const firmSlug = searchParams.get('firmSlug');
+  const mode = searchParams.get('mode');
+  const googlePendingToken = searchParams.get('googlePendingToken');
+  const pendingName = searchParams.get('name') || '';
+  const pendingEmail = searchParams.get('email') || '';
+
+  // Pending signup form state
+  const [firmName, setFirmName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [agreedToPilotTerms, setAgreedToPilotTerms] = useState(true);
+  const [formError, setFormError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [createdWorkspace, setCreatedWorkspace] = useState(null);
 
   const initiatedRef = React.useRef(false);
 
   useEffect(() => {
+    if (!createdWorkspace?.isSessionActive || !createdWorkspace?.route) return;
+    const timer = setTimeout(() => {
+      navigate(createdWorkspace.route, { replace: true });
+    }, 2200);
+    return () => clearTimeout(timer);
+  }, [createdWorkspace, navigate]);
+
+  useEffect(() => {
+    if (mode === 'signup_pending') return;
     if (errorCode || !exchangeToken) return;
     if (initiatedRef.current) return;
     initiatedRef.current = true;
@@ -48,10 +79,74 @@ export const OAuthPostAuthPage = () => {
     };
 
     completeGoogleAuth();
-  }, [errorCode, exchangeToken, firmSlug, fetchProfile, navigate, resolvePostAuthRoute]);
+  }, [errorCode, exchangeToken, firmSlug, mode, fetchProfile, navigate, resolvePostAuthRoute]);
+
+  const handleCompleteGoogleSignup = async (e) => {
+    e.preventDefault();
+    if (submitting) return;
+
+    if (!firmName.trim()) {
+      setFormError('Firm name is required');
+      return;
+    }
+    if (!agreedToPilotTerms) {
+      setFormError('You must agree to the Docketra Pilot Evaluation Terms to proceed.');
+      return;
+    }
+
+    setSubmitting(true);
+    setFormError('');
+
+    try {
+      const response = await authApi.completeGoogleSignup({
+        googlePendingToken,
+        firmName: firmName.trim(),
+        phone: phone.trim(),
+        agreedToPilotTerms: true,
+      });
+
+      const responseData = response?.data || {};
+      const newExchangeToken = responseData?.exchangeToken;
+      const newFirmSlug = responseData?.firmSlug;
+      const xid = responseData?.xid;
+
+      let sessionHydrated = false;
+      let targetRoute = null;
+
+      if (newExchangeToken) {
+        try {
+          const payload = await authApi.exchangeGoogleAuth({ exchangeToken: newExchangeToken, firmSlug: newFirmSlug });
+          authService.setSessionTokens(payload);
+          const profileResult = await fetchProfile({ force: true });
+          if (profileResult?.success && profileResult.data) {
+            sessionHydrated = true;
+            targetRoute = resolvePostAuthRoute(profileResult.data);
+          }
+        } catch (_authErr) {
+          // If profile/exchange fails, fallback to firm login route with clear notice
+        }
+      }
+
+      if (newFirmSlug) {
+        setCreatedWorkspace({
+          firmName: firmName.trim(),
+          firmSlug: newFirmSlug,
+          xid: xid || '',
+          route: sessionHydrated && targetRoute ? targetRoute : `/${newFirmSlug}/login`,
+          isSessionActive: sessionHydrated,
+        });
+        return;
+      }
+
+      navigate('/', { replace: true });
+    } catch (err) {
+      setFormError(err?.message || 'Unable to create workspace. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const loginPath = firmSlug ? `/${firmSlug}/login` : '/';
-
   const primaryAdminEmail = searchParams.get('primaryAdminEmail') || '';
 
   const resolvedError = error || (
@@ -65,8 +160,192 @@ export const OAuthPostAuthPage = () => {
             ? 'This workspace is currently inactive. Please contact your admin.'
             : errorCode === 'ACCOUNT_LOCKED_BY_ADMIN'
               ? `This user has been locked by primary admin. Please contact your primary admin at ${primaryAdminEmail || 'their email'}.`
-              : 'Google sign-in failed. Please retry login. If the issue persists, contact your administrator.'
+              : 'Google sign-in completed, but we could not load your workspace profile. Please retry login or use your xID/password.'
   );
+
+  // If workspace was just created, render success confirmation card
+  if (createdWorkspace) {
+    return (
+      <div className="find-workspace-page auth-public-page">
+        <div className="find-workspace-page__shell">
+          <section className="find-workspace-page__context" aria-label="Workspace created successfully">
+            <p className="find-workspace-page__eyebrow">Docketra · Workspace activation</p>
+            <h1 className="find-workspace-page__heading">Workspace ready</h1>
+            <p className="find-workspace-page__intro">
+              Your firm workspace <strong>{createdWorkspace.firmName}</strong> has been created successfully.
+            </p>
+          </section>
+
+          <Card className="find-workspace-page__card auth-public-page__card">
+            <div className="find-workspace-page__card-header">
+              <h2>Workspace Details</h2>
+              <p>Your primary admin credentials and direct workspace link.</p>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              <div className="rounded-sm border border-emerald-200 bg-emerald-50/70 p-3 text-xs text-emerald-950 flex items-start gap-2.5">
+                <span className="text-emerald-700 text-sm leading-none mt-0.5">✓</span>
+                <div>
+                  <p className="font-semibold text-emerald-900">Firm account created successfully</p>
+                  <p className="text-emerald-800 text-[11px] mt-0.5">
+                    A confirmation email with your credentials has been sent to <strong>{pendingEmail}</strong>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-sm border border-slate-200 bg-slate-50 p-3 text-xs space-y-2">
+                <div className="flex justify-between items-center py-0.5 border-b border-slate-200/60 pb-1.5">
+                  <span className="text-slate-500 font-medium">Firm Name:</span>
+                  <span className="text-slate-900 font-semibold">{createdWorkspace.firmName}</span>
+                </div>
+                {createdWorkspace.xid && (
+                  <div className="flex justify-between items-center py-0.5 border-b border-slate-200/60 pb-1.5">
+                    <span className="text-slate-500 font-medium">Primary Admin xID:</span>
+                    <span className="font-mono font-bold text-slate-900">{createdWorkspace.xid}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center py-0.5 border-b border-slate-200/60 pb-1.5">
+                  <span className="text-slate-500 font-medium">Workspace URL:</span>
+                  <span className="font-mono text-slate-800 text-[11px]">docketra.in/{createdWorkspace.firmSlug}/login</span>
+                </div>
+                <div className="flex justify-between items-center py-0.5">
+                  <span className="text-slate-500 font-medium">Authentication:</span>
+                  <span className="font-medium text-emerald-700">Google Verified</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {createdWorkspace.isSessionActive ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    fullWidth
+                    onClick={() => navigate(createdWorkspace.route, { replace: true })}
+                  >
+                    Go to Workspace Dashboard
+                  </Button>
+                  <p className="text-center text-xs text-slate-500">
+                    Launching workspace dashboard...
+                  </p>
+                </>
+              ) : (
+                <Button
+                  type="button"
+                  variant="primary"
+                  fullWidth
+                  onClick={() => navigate(createdWorkspace.route, {
+                    replace: true,
+                    state: {
+                      message: `Workspace "${createdWorkspace.firmName}" created successfully! Please sign in with Google or your xID.`,
+                      xid: createdWorkspace.xid,
+                    },
+                  })}
+                >
+                  Continue to Workspace Sign-In
+                </Button>
+              )}
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // If in pending signup mode, render workspace creation form
+  if (mode === 'signup_pending' && googlePendingToken) {
+    return (
+      <div className="find-workspace-page auth-public-page">
+        <div className="find-workspace-page__shell">
+          <section className="find-workspace-page__context" aria-label="Google workspace setup">
+            <p className="find-workspace-page__eyebrow">Docketra · Secure workspace setup</p>
+            <h1 className="find-workspace-page__heading">Name your workspace</h1>
+            <p className="find-workspace-page__intro">
+              Welcome{pendingName ? `, ${pendingName}` : ''}! You are authenticating with Google ({pendingEmail}). Enter your firm name to activate your command center.
+            </p>
+          </section>
+
+          <Card className="find-workspace-page__card auth-public-page__card">
+            <div className="find-workspace-page__card-header">
+              <h2>Firm Details</h2>
+              <p>Your firm name generates your permanent workspace URL.</p>
+            </div>
+
+            <div className="mb-4 rounded-sm border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-700 flex items-center justify-between">
+              <span className="font-semibold text-slate-900">Signed in as:</span>
+              <span className="font-mono text-slate-800">{pendingEmail}</span>
+            </div>
+
+            {formError && (
+              <div className="auth-public-page__error mb-4" role="alert">
+                {formError}
+              </div>
+            )}
+
+            <form onSubmit={handleCompleteGoogleSignup} noValidate className="space-y-4">
+              <div>
+                <Input
+                  id="google-signup-firm"
+                  type="text"
+                  label="Firm Name"
+                  placeholder="e.g. Apex Legal & Associates"
+                  value={firmName}
+                  onChange={(e) => setFirmName(e.target.value)}
+                  disabled={submitting}
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div className="rounded-sm border border-slate-200 bg-slate-50 p-3 text-xs text-slate-800">
+                <span className="font-bold uppercase tracking-wider text-slate-600 text-[10px] block">Workspace URL Preview</span>
+                <span className="font-mono font-bold text-slate-950 mt-1 block">
+                  docketra.in/{getWorkspaceSlugPreview(firmName)}
+                </span>
+              </div>
+
+              <div>
+                <Input
+                  id="google-signup-phone"
+                  type="text"
+                  label="Phone Number (optional)"
+                  placeholder="10-digit mobile number"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  disabled={submitting}
+                />
+              </div>
+
+              <div className="pt-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  fullWidth
+                  disabled={submitting || !firmName.trim()}
+                  loading={submitting}
+                >
+                  {submitting ? 'Creating workspace...' : 'Create & launch workspace'}
+                </Button>
+              </div>
+
+              <div className="pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  fullWidth
+                  disabled={submitting}
+                  onClick={() => navigate('/signup')}
+                >
+                  Back to signup
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   if (!errorCode && !error) {
     return (
@@ -109,6 +388,14 @@ export const OAuthPostAuthPage = () => {
               onClick={() => navigate(loginPath)}
             >
               Return to login
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              fullWidth
+              onClick={() => navigate('/signup')}
+            >
+              Return to signup
             </Button>
           </div>
         </Card>

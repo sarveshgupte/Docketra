@@ -39,6 +39,7 @@ const { disconnectUserSockets } = require('../services/notificationSocket.servic
 const {
   resolveCanonicalTenantFromFirmId,
   resolveCanonicalTenantForUser,
+  resolveTenantBySlug,
 } = require('../services/tenantIdentity.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { ensureGoogleAuthEnabled } = require('../services/featureGate.service');
@@ -159,7 +160,7 @@ const ensureUserDefaultClientLink = async (user, req = null) => {
   const needsRepair = (
     !defaultClient
     || !defaultClient.isDefaultClient
-    || normalizeMongoId(defaultClient.firmId) !== firmMongoId
+    || (normalizeMongoId(defaultClient.firmId) !== firmMongoId && normalizeMongoId(defaultClient._id) !== firmMongoId)
   );
 
   if (needsRepair) {
@@ -442,10 +443,14 @@ const logAuthAudit = async (params, req = null) => {
 };
 
 const getSuperadminEnv = () => {
+  const currentEnv = loadEnv({ exitOnError: false }) || env || {};
+  const rawXID = currentEnv.SUPERADMIN_XID || process.env.SUPERADMIN_XID || null;
+  const normalizedXID = currentEnv.SUPERADMIN_XID_NORMALIZED || (rawXID ? String(rawXID).trim().toUpperCase() : null);
+  const email = currentEnv.SUPERADMIN_EMAIL_NORMALIZED || (process.env.SUPERADMIN_EMAIL ? String(process.env.SUPERADMIN_EMAIL).trim().toLowerCase() : null);
   return {
-    rawXID: env.SUPERADMIN_XID,
-    normalizedXID: env.SUPERADMIN_XID_NORMALIZED,
-    email: env.SUPERADMIN_EMAIL_NORMALIZED,
+    rawXID,
+    normalizedXID,
+    email,
   };
 };
 
@@ -1661,7 +1666,6 @@ const getProfile = async (req, res) => {
     // Always fetch a fresh DB user for profile hydration and consistency.
     // Never mutate/populate req.user (middleware snapshot).
     const dbUser = await User.findById(requestUser?._id)
-      .populate('firmId', 'firmId name firmSlug isSetupComplete')
       .populate('reportsToUserId', 'name email xID role');
 
     if (!dbUser) {
@@ -1671,12 +1675,22 @@ const getProfile = async (req, res) => {
       });
     }
 
-    const {
-      firmMongoId,
-      firmCode,
-      firmSlug: resolvedFirmSlug,
-      tenantId,
-    } = getUserFirmContext(dbUser, req.jwt);
+    const rawUserFirmId = dbUser.firmId;
+    const tenantContext = await resolveCanonicalTenantForUser(dbUser);
+    const ownershipFirmId = tenantContext?.ownershipFirmId || tenantContext?.legacyFirmId || normalizeMongoId(rawUserFirmId);
+
+    let firmDoc = null;
+    if (rawUserFirmId && typeof rawUserFirmId === 'object' && (rawUserFirmId.name || rawUserFirmId.firmSlug)) {
+      firmDoc = rawUserFirmId;
+    } else if (ownershipFirmId) {
+      firmDoc = await Firm.findById(ownershipFirmId).select('firmId name firmSlug isSetupComplete').lean();
+    }
+
+    const firmMongoId = normalizeMongoId(rawUserFirmId) || tenantContext?.tenantId || normalizeMongoId(firmDoc?._id);
+    const firmCode = firmDoc?.firmId || tenantContext?.firmIdString || req.jwt?.firmIdString || null;
+    const resolvedFirmSlug = req.jwt?.firmSlug || tenantContext?.firmSlug || firmDoc?.firmSlug || null;
+    const tenantId = tenantContext?.tenantId || req.jwt?.firmId || firmMongoId;
+
     if (!firmMongoId) {
       return res.status(401).json({
         success: false,
@@ -1703,7 +1717,7 @@ const getProfile = async (req, res) => {
         message: 'Workspace context could not be loaded. Please retry or contact support.',
       });
     }
-    const resolvedDefaultClientId = normalizeMongoId(req.jwt?.defaultClientId) || normalizeMongoId(dbUser.defaultClientId);
+    const resolvedDefaultClientId = normalizeMongoId(req.jwt?.defaultClientId) || normalizeMongoId(dbUser.defaultClientId) || normalizeMongoId(tenantContext?.defaultClientId);
     
     // Get profile info
     let profile = await UserProfile.findOne({ xID: dbUser.xID });
@@ -1834,14 +1848,14 @@ const getProfile = async (req, res) => {
         // OBJECTIVE 2: Include firm context (JWT-first approach)
         // Use JWT claims as primary source, DB as fallback for display
         // Firm metadata (read-only, admin-controlled)
-        firm: dbUser.firmId ? {
-          id: dbUser.firmId._id.toString(),
+        firm: (firmDoc || tenantContext || rawUserFirmId) ? {
+          id: firmMongoId,
           firmId: firmCode,
-          name: dbUser.firmId.name,
-          firmSlug: dbUser.firmId.firmSlug || resolvedFirmSlug,
-          isSetupComplete: Boolean(dbUser.firmId.isSetupComplete),
+          name: firmDoc?.name || tenantContext?.firmName || (typeof rawUserFirmId === 'object' ? rawUserFirmId?.name : null) || '',
+          firmSlug: resolvedFirmSlug,
+          isSetupComplete: Boolean(firmDoc?.isSetupComplete ?? true),
         } : null,
-        isSetupComplete: Boolean(dbUser.firmId?.isSetupComplete),
+        isSetupComplete: Boolean(firmDoc?.isSetupComplete ?? true),
         firmId: firmMongoId,
         firmCode,
         firmSlug: resolvedFirmSlug, // JWT-first: use token claim, fallback to DB
@@ -3633,16 +3647,29 @@ const getAllUsers = async (req, res) => {
     }
 
     // Get all users in same firm, excluding password-related fields
-    // Populate firm metadata for display
     const users = await User.find({
       firmId: adminFirmId,
       status: { $ne: 'deleted' },
     })
       .select('-passwordHash -passwordHistory -passwordSetupTokenHash -passwordResetTokenHash')
-      .populate('firmId', 'firmId name')
       .sort({ createdAt: -1 });
     
-    const normalizedUsers = users.map(mapUserResponse);
+    const tenantContext = await resolveCanonicalTenantFromFirmId(adminFirmId);
+    const ownershipFirmId = tenantContext?.ownershipFirmId || tenantContext?.legacyFirmId || adminFirmId;
+    const firmDoc = await Firm.findById(ownershipFirmId).select('firmId name').lean();
+    const fallbackFirm = firmDoc ? {
+      _id: adminFirmId,
+      firmId: firmDoc.firmId,
+      name: firmDoc.name || tenantContext?.firmName || null,
+    } : null;
+
+    const normalizedUsers = users.map((user) => {
+      const userObj = typeof user?.toObject === 'function' ? user.toObject() : { ...user };
+      if (fallbackFirm && (!userObj.firmId || typeof userObj.firmId !== 'object' || !userObj.firmId.name)) {
+        userObj.firmId = fallbackFirm;
+      }
+      return mapUserResponse(userObj);
+    });
     const requesterXid = String(req.user?.xID || '');
     const hasRequester = requesterXid && normalizedUsers.some((user) => String(user?.xID || '') === requesterXid);
     if (!hasRequester && requesterXid) {
@@ -3879,35 +3906,76 @@ const findWorkspaceByXid = async (req, res) => {
     }
 
     const users = await User.find({
-      $or: [{ xID: xid }, { xid }],
-      role: { $ne: 'SUPER_ADMIN' },
-      isActive: true,
-    }).select('firmId').lean();
+      $and: [
+        { $or: [{ xID: xid }, { xid }] },
+        { role: { $ne: 'SUPER_ADMIN' } },
+        { $or: [{ status: 'active' }, { isActive: true }] },
+      ],
+    }).select('firmId defaultClientId xID xid status isActive').lean();
 
-    const firmRefs = [...new Set(users.map((u) => normalizeMongoId(u.firmId)).filter(Boolean))];
+    const userRefs = [
+      ...users.map((u) => normalizeMongoId(u.firmId)),
+      ...users.map((u) => normalizeMongoId(u.defaultClientId)),
+    ].filter(Boolean);
+
+    const firmRefs = [...new Set(userRefs)];
     if (!firmRefs.length) return res.status(200).json({ success: true, data: { workspaces: [] } });
 
     const objectIdRefs = firmRefs.filter((value) => mongoose.Types.ObjectId.isValid(value));
     const stringRefs = firmRefs.filter((value) => !mongoose.Types.ObjectId.isValid(value)).map((value) => String(value).toUpperCase());
 
-    const firms = await Firm.find({
-      $and: [
-        { $or: [{ status: 'active' }, { isActive: true }] },
-        {
-          $or: [
-            objectIdRefs.length ? { _id: { $in: objectIdRefs } } : null,
-            stringRefs.length ? { firmId: { $in: stringRefs } } : null,
-          ].filter(Boolean),
-        },
-      ],
-    }).select('firmSlug name').lean();
+    const [firms, clients] = await Promise.all([
+      Firm.find({
+        $and: [
+          { $or: [{ status: 'active' }, { isActive: true }] },
+          {
+            $or: [
+              objectIdRefs.length ? { _id: { $in: objectIdRefs } } : null,
+              objectIdRefs.length ? { defaultClientId: { $in: objectIdRefs } } : null,
+              stringRefs.length ? { firmId: { $in: stringRefs } } : null,
+            ].filter(Boolean),
+          },
+        ],
+      }).select('firmSlug name firmName defaultClientId').lean(),
+      objectIdRefs.length
+        ? Client.find({
+          _id: { $in: objectIdRefs },
+          isDefaultClient: true,
+          $or: [{ status: 'ACTIVE' }, { status: 'active' }, { isActive: true }],
+        }).select('firmSlug businessName firmId').lean()
+        : [],
+    ]);
 
-    const workspaces = firms
-      .map((firm) => ({
-        firmSlug: String(firm.firmSlug || '').trim(),
-        firmName: String(firm.name || firm.firmName || '').trim() || 'Workspace',
-      }))
-      .filter((firm) => firm.firmSlug);
+    const workspaceMap = new Map();
+
+    (firms || []).forEach((firm) => {
+      const slug = String(firm.firmSlug || '').trim();
+      const name = String(firm.name || firm.firmName || '').trim() || 'Workspace';
+      if (slug && !workspaceMap.has(slug)) {
+        workspaceMap.set(slug, { firmSlug: slug, firmName: name });
+      }
+    });
+
+    (clients || []).forEach((client) => {
+      const slug = String(client.firmSlug || '').trim();
+      const name = String(client.businessName || client.name || '').trim() || 'Workspace';
+      if (slug && !workspaceMap.has(slug)) {
+        workspaceMap.set(slug, { firmSlug: slug, firmName: name });
+      }
+    });
+
+    if (workspaceMap.size === 0) {
+      for (const u of users) {
+        const canonical = await resolveCanonicalTenantForUser(u);
+        const slug = String(canonical?.firmSlug || '').trim();
+        const name = String(canonical?.firmName || '').trim() || 'Workspace';
+        if (slug && !workspaceMap.has(slug)) {
+          workspaceMap.set(slug, { firmSlug: slug, firmName: name });
+        }
+      }
+    }
+
+    const workspaces = Array.from(workspaceMap.values());
 
     return res.status(200).json({ success: true, data: { workspaces } });
   } catch (err) {
@@ -3937,23 +4005,34 @@ const startGoogleAuth = async (req, res) => {
     const intent = String(req.query?.intent || 'login').trim().toLowerCase();
     const firmSlug = normalizeFirmSlug(req.query?.firmSlug || '');
     const setupToken = String(req.query?.setupToken || '').trim();
+    const firmName = String(req.query?.firmName || '').trim();
+    const phone = String(req.query?.phone || '').trim();
+    const agreedToPilotTerms = req.query?.agreedToPilotTerms === 'true' || req.query?.agreedToPilotTerms === true;
 
     if (!['login', 'signup'].includes(intent)) {
       return res.status(400).json({ success: false, message: 'Invalid Google auth intent.' });
     }
-    if (!firmSlug) {
+
+    if (intent === 'login' && !firmSlug) {
       return res.status(400).json({ success: false, message: 'firmSlug is required for Google auth.' });
     }
-    if (intent === 'signup' && !setupToken) {
-      return res.status(400).json({ success: false, message: 'setupToken is required for signup flow.' });
+
+    if (intent === 'signup' && setupToken && !firmSlug) {
+      return res.status(400).json({ success: false, message: 'firmSlug is required for setup flow.' });
     }
+
+    const isWorkspaceSignup = intent === 'signup' && !setupToken;
 
     const oauthClient = getGoogleOAuthClient(env);
     const state = signGoogleState({
       nonce: crypto.randomUUID(),
       intent,
-      firmSlug,
-      setupToken: intent === 'signup' ? setupToken : null,
+      mode: isWorkspaceSignup ? 'workspace_signup' : (setupToken ? 'invite_setup' : 'login'),
+      firmSlug: firmSlug || null,
+      setupToken: setupToken || null,
+      firmName: firmName || null,
+      phone: phone || null,
+      agreedToPilotTerms,
       issuedAt: Date.now(),
     });
 
@@ -3990,7 +4069,9 @@ const googleAuthCallback = async (req, res) => {
 
     const intent = String(state.intent || '').toLowerCase();
     resolvedFirmSlug = normalizeFirmSlug(state.firmSlug || '');
-    if (!['login', 'signup'].includes(intent) || !resolvedFirmSlug) {
+    const isWorkspaceSignup = intent === 'signup' && !state.setupToken;
+
+    if (!isWorkspaceSignup && (!['login', 'signup'].includes(intent) || !resolvedFirmSlug)) {
       return redirectGoogleResult(res, { error: 'INVALID_REQUEST' });
     }
 
@@ -4005,16 +4086,167 @@ const googleAuthCallback = async (req, res) => {
     const profile = ticket.getPayload();
     const googleSub = String(profile?.sub || '').trim();
     const googleEmail = String(profile?.email || '').trim().toLowerCase();
+    const googleName = String(profile?.name || profile?.given_name || '').trim();
     const emailVerified = profile?.email_verified === true;
 
     if (!googleSub || !googleEmail || !emailVerified) {
       return redirectGoogleResult(res, { error: 'GOOGLE_IDENTITY_INVALID', firmSlug: resolvedFirmSlug });
     }
 
-    const firm = await Firm.findOne({ firmSlug: resolvedFirmSlug }).select('_id firmSlug status');
-    if (!firm || !isActiveStatus(firm.status)) {
+    if (isWorkspaceSignup) {
+      // 1. Check if an account already exists for this email
+      const existingUser = await User.findOne({
+        email: googleEmail,
+        status: { $ne: 'deleted' },
+      });
+
+      if (existingUser) {
+        if (existingUser.lockedByAdmin) {
+          const primaryAdmin = await User.findOne({ firmId: existingUser.firmId, isPrimaryAdmin: true, status: { $ne: 'deleted' } }).select('email');
+          return redirectGoogleResult(res, {
+            error: 'ACCOUNT_LOCKED_BY_ADMIN',
+            primaryAdminEmail: primaryAdmin?.email || '',
+            firmSlug: resolvedFirmSlug,
+          });
+        }
+
+        const tenantContext = await resolveCanonicalTenantForUser(existingUser);
+        if (tenantContext && isActiveStatus(tenantContext.status)) {
+          if (!existingUser.authProviders?.google?.googleId) {
+            existingUser.authProviders = {
+              ...(existingUser.authProviders || {}),
+              google: {
+                ...((existingUser.authProviders || {}).google || {}),
+                googleId: googleSub,
+                linkedAt: new Date(),
+              },
+            };
+            await existingUser.save();
+          }
+
+          await ensureCanonicalXid(existingUser);
+          const exchangeToken = generateLoginSessionToken();
+          await LoginSession.deleteMany({ userId: existingUser._id, consumedAt: null });
+          await LoginSession.create({
+            tokenHash: hashLoginSessionToken(exchangeToken),
+            userId: existingUser._id,
+            firmId: existingUser.firmId,
+            xID: existingUser.xID || existingUser.xid,
+            expiresAt: new Date(Date.now() + GOOGLE_EXCHANGE_TOKEN_TTL_MINUTES * 60 * 1000),
+            consumedAt: null,
+          });
+
+          return redirectGoogleResult(res, {
+            exchangeToken,
+            firmSlug: tenantContext.firmSlug,
+            mode: 'login',
+          });
+        }
+      }
+
+      // 2. New user: if firmName provided, create immediately!
+      const firmName = String(state.firmName || '').trim();
+      if (firmName) {
+        const session = await mongoose.startSession();
+        let created = null;
+        try {
+          await session.withTransaction(async () => {
+            created = await signupService.createFirmAndAdmin({
+              name: googleName || 'Primary Admin',
+              email: googleEmail,
+              firmName,
+              phone: state.phone || null,
+              authProvider: 'google',
+              googleSubject: googleSub,
+              legalConsent: {
+                agreedToPilotTerms: true,
+                agreedAt: new Date(),
+                ipAddress: req.headers?.['x-forwarded-for']
+                  ? String(req.headers['x-forwarded-for']).split(',')[0].trim()
+                  : (req.ip || '127.0.0.1'),
+                userAgent: req.headers?.['user-agent'] || 'Google OAuth',
+                termsVersion: 'v1.0_pilot_2026',
+                privacyVersion: 'v1.0_pilot_2026',
+                agreementType: 'PILOT_CLICKWRAP',
+              },
+              session,
+              req,
+            });
+          });
+        } finally {
+          await session.endSession();
+        }
+
+        if (!created) {
+          return redirectGoogleResult(res, { error: 'SIGNUP_FAILED' });
+        }
+
+        await signupService.sendSignupWelcomeEmail({
+          name: googleName || 'Primary Admin',
+          email: googleEmail,
+          xid: created.adminXID,
+          firmName,
+          firmSlug: created.firmSlug,
+          authProvider: 'google',
+          req,
+        });
+
+        const exchangeToken = generateLoginSessionToken();
+        await LoginSession.deleteMany({ userId: created.userId, consumedAt: null });
+        await LoginSession.create({
+          tokenHash: hashLoginSessionToken(exchangeToken),
+          userId: created.userId,
+          firmId: created.firmId,
+          xID: created.adminXID,
+          expiresAt: new Date(Date.now() + GOOGLE_EXCHANGE_TOKEN_TTL_MINUTES * 60 * 1000),
+          consumedAt: null,
+        });
+
+        return redirectGoogleResult(res, {
+          exchangeToken,
+          firmSlug: created.firmSlug,
+          mode: 'signup',
+        });
+      }
+
+      // 3. New user without pre-filled firmName: return pending token for firm name prompt
+      const googlePendingToken = signGoogleState({
+        googleSub,
+        googleEmail,
+        googleName: googleName || '',
+        phone: state.phone || '',
+        purpose: 'google_workspace_signup',
+        issuedAt: Date.now(),
+      });
+
+      return redirectGoogleResult(res, {
+        mode: 'signup_pending',
+        googlePendingToken,
+        name: googleName || '',
+        email: googleEmail,
+      });
+    }
+
+    const tenant = await resolveTenantBySlug(resolvedFirmSlug);
+    if (!tenant || !isActiveStatus(tenant.status)) {
       return redirectGoogleResult(res, { error: 'FIRM_INACTIVE', firmSlug: resolvedFirmSlug });
     }
+
+    const tenantCandidateIds = [
+      tenant.tenantId,
+      tenant.defaultClientId,
+      tenant.legacyFirmId,
+      tenant.ownershipFirmId,
+    ].filter(Boolean);
+
+    const tenantScopedUserQuery = {
+      email: googleEmail,
+      status: { $ne: 'deleted' },
+      $or: [
+        { firmId: { $in: tenantCandidateIds } },
+        { defaultClientId: { $in: tenantCandidateIds } },
+      ],
+    };
 
     let user = null;
 
@@ -4022,8 +4254,7 @@ const googleAuthCallback = async (req, res) => {
       const setupTokenHash = emailService.hashToken(String(state.setupToken || ''));
       const now = new Date();
       user = await User.findOne({
-        firmId: firm._id,
-        email: googleEmail,
+        ...tenantScopedUserQuery,
         setupTokenUsedAt: null,
         $or: [
           { setupTokenHash },
@@ -4059,23 +4290,34 @@ const googleAuthCallback = async (req, res) => {
       };
       await user.save();
 
-      await Firm.updateOne(
-        { _id: user.firmId, status: 'pending_setup' },
-        { $set: { status: 'active' } }
-      );
+      if (tenant.legacyFirmId) {
+        await Firm.updateOne(
+          { _id: tenant.legacyFirmId, status: 'pending_setup' },
+          { $set: { status: 'active' } }
+        );
+      }
+      if (tenant.tenantId) {
+        await Client.updateOne(
+          { _id: tenant.tenantId, status: { $in: ['pending_setup', 'PENDING'] } },
+          { $set: { status: 'ACTIVE' } }
+        );
+      }
     } else {
-      user = await User.findOne({
-        firmId: firm._id,
-        email: googleEmail,
-        status: { $ne: 'deleted' },
-      });
+      user = await User.findOne(tenantScopedUserQuery);
 
       if (!user || !isActiveStatus(user.status) || !user.isActive) {
         return redirectGoogleResult(res, { error: 'ACCOUNT_NOT_FOUND', firmSlug: resolvedFirmSlug });
       }
 
       if (user.lockedByAdmin) {
-        const primaryAdmin = await User.findOne({ firmId: firm._id, isPrimaryAdmin: true, status: { $ne: 'deleted' } }).select('email');
+        const primaryAdmin = await User.findOne({
+          $or: [
+            { firmId: { $in: tenantCandidateIds } },
+            { defaultClientId: { $in: tenantCandidateIds } },
+          ],
+          isPrimaryAdmin: true,
+          status: { $ne: 'deleted' },
+        }).select('email');
         return redirectGoogleResult(res, {
           error: 'ACCOUNT_LOCKED_BY_ADMIN',
           primaryAdminEmail: primaryAdmin?.email || '',
@@ -4123,6 +4365,117 @@ const googleAuthCallback = async (req, res) => {
   }
 };
 
+const completeGoogleSignup = async (req, res) => {
+  try {
+    ensureGoogleAuthEnabled();
+    const googlePendingToken = String(req.body?.googlePendingToken || '').trim();
+    const firmName = String(req.body?.firmName || '').trim();
+    const phone = String(req.body?.phone || '').trim();
+
+    if (!googlePendingToken) {
+      return res.status(400).json({ success: false, message: 'googlePendingToken is required.' });
+    }
+    if (!firmName) {
+      return res.status(400).json({ success: false, message: 'Firm name is required.' });
+    }
+
+    const payload = parseGoogleState(googlePendingToken);
+    if (!payload || payload.purpose !== 'google_workspace_signup') {
+      return res.status(400).json({ success: false, message: 'Invalid or expired Google signup session. Please try again.' });
+    }
+
+    if (!payload.issuedAt || (Date.now() - Number(payload.issuedAt)) > GOOGLE_AUTH_STATE_TTL_MS) {
+      return res.status(400).json({ success: false, message: 'Google signup session expired. Please sign in with Google again.' });
+    }
+
+    const googleEmail = String(payload.googleEmail || '').trim().toLowerCase();
+    const googleSub = String(payload.googleSub || '').trim();
+    const googleName = String(payload.googleName || '').trim();
+    const resolvedPhone = phone || String(payload.phone || '').trim() || null;
+
+    if (!googleEmail || !googleSub) {
+      return res.status(400).json({ success: false, message: 'Invalid Google identity in session.' });
+    }
+
+    const existing = await User.findOne({
+      email: googleEmail,
+      status: { $ne: 'deleted' },
+    });
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'An account with this Google email already exists.' });
+    }
+
+    const session = await mongoose.startSession();
+    let created = null;
+    try {
+      await session.withTransaction(async () => {
+        created = await signupService.createFirmAndAdmin({
+          name: googleName || 'Primary Admin',
+          email: googleEmail,
+          firmName,
+          phone: resolvedPhone,
+          authProvider: 'google',
+          googleSubject: googleSub,
+          legalConsent: {
+            agreedToPilotTerms: true,
+            agreedAt: new Date(),
+            ipAddress: req.headers?.['x-forwarded-for']
+              ? String(req.headers['x-forwarded-for']).split(',')[0].trim()
+              : (req.ip || '127.0.0.1'),
+            userAgent: req.headers?.['user-agent'] || 'Google OAuth',
+            termsVersion: 'v1.0_pilot_2026',
+            privacyVersion: 'v1.0_pilot_2026',
+            agreementType: 'PILOT_CLICKWRAP',
+          },
+          session,
+          req,
+        });
+      });
+    } finally {
+      await session.endSession();
+    }
+
+    if (!created) {
+      return res.status(500).json({ success: false, message: 'Failed to create firm and admin.' });
+    }
+
+    await signupService.sendSignupWelcomeEmail({
+      name: googleName || 'Primary Admin',
+      email: googleEmail,
+      xid: created.adminXID,
+      firmName,
+      firmSlug: created.firmSlug,
+      authProvider: 'google',
+      req,
+    });
+
+    const exchangeToken = generateLoginSessionToken();
+    await LoginSession.deleteMany({ userId: created.userId, consumedAt: null });
+    await LoginSession.create({
+      tokenHash: hashLoginSessionToken(exchangeToken),
+      userId: created.userId,
+      firmId: created.firmId,
+      xID: created.adminXID,
+      expiresAt: new Date(Date.now() + GOOGLE_EXCHANGE_TOKEN_TTL_MINUTES * 60 * 1000),
+      consumedAt: null,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Workspace created successfully with Google authentication.',
+      data: {
+        exchangeToken,
+        firmSlug: created.firmSlug,
+        firmUrl: created.firmUrl,
+        xid: created.adminXID,
+      },
+    });
+  } catch (error) {
+    log.error('[AUTH][completeGoogleSignup] Error completing Google signup', error);
+    return res.status(500).json({ success: false, message: 'Unable to complete workspace setup right now.' });
+  }
+};
+
 const exchangeGoogleAuth = async (req, res) => {
   try {
     const exchangeToken = String(req.body?.exchangeToken || '').trim();
@@ -4142,7 +4495,10 @@ const exchangeGoogleAuth = async (req, res) => {
 
     const user = await User.findOne({
       _id: session.userId,
-      firmId: session.firmId,
+      $or: [
+        { firmId: session.firmId },
+        { defaultClientId: session.firmId },
+      ],
       status: 'active',
       isActive: true,
     });
@@ -4225,4 +4581,5 @@ module.exports = {
   startGoogleAuth,
   googleAuthCallback,
   exchangeGoogleAuth: wrapWriteHandler(exchangeGoogleAuth),
+  completeGoogleSignup: wrapWriteHandler(completeGoogleSignup),
 };

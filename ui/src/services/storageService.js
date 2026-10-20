@@ -105,3 +105,8 @@ export async function updateBackupSettings(payload) {
   return response.data;
 }
 
+export async function verifyStorageBoundary() {
+  const response = await api.get('/storage/verify-boundary');
+  return response.data;
+}
+

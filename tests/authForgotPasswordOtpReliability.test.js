@@ -8,7 +8,7 @@ const createMockRes = () => ({ statusCode: 200, body: null, status(code){ this.s
 
 const createHarness = ({ failForgotOtpSend = false, throwOnVerify = false } = {}) => {
   const firms = [
-    { _id: 'root-firm', name: 'Root Firm', firmSlug: 'gupte-opc', status: 'active', defaultClientId: 'workspace-firm', legacyFirmId: 'root-firm' },
+    { _id: 'root-firm', name: 'Root Firm', firmSlug: 'demo-firm', status: 'active', defaultClientId: 'workspace-firm', legacyFirmId: 'root-firm' },
     { _id: 'workspace-firm', name: 'Workspace Firm', firmSlug: 'workspace-firm', status: 'active', defaultClientId: 'workspace-firm', legacyFirmId: 'root-firm' },
     { _id: 'other-firm', name: 'Other Firm', firmSlug: 'other-firm', status: 'active', defaultClientId: 'other-workspace', legacyFirmId: 'other-firm' },
   ];
@@ -51,7 +51,7 @@ const reqFor = (body) => ({ body, ip: '127.0.0.1', get: () => 'test-agent', head
 (async () => {
   const { service, users, sentForgotPasswordOtps } = createHarness();
   const initRes = createMockRes();
-  await service.forgotPasswordInit(reqFor({ identifier: 'X000001', firmSlug: 'gupte-opc' }), initRes);
+  await service.forgotPasswordInit(reqFor({ identifier: 'X000001', firmSlug: 'demo-firm' }), initRes);
   assert.strictEqual(initRes.statusCode, 200);
   assert.strictEqual(initRes.body.message, GENERIC_INIT_MESSAGE);
   assert.strictEqual(sentForgotPasswordOtps.length, 1);
@@ -60,60 +60,60 @@ const reqFor = (body) => ({ body, ip: '127.0.0.1', get: () => 'test-agent', head
   assert.ok(users[0].forgotPasswordOtpLastSentAt);
 
   const verifyGoodRes = createMockRes();
-  await service.forgotPasswordVerify(reqFor({ identifier: 'X000001', firmSlug: 'gupte-opc', otp: '123456' }), verifyGoodRes);
+  await service.forgotPasswordVerify(reqFor({ identifier: 'X000001', firmSlug: 'demo-firm', otp: '123456' }), verifyGoodRes);
   assert.strictEqual(verifyGoodRes.statusCode, 200);
   const resetToken = verifyGoodRes.body.resetToken;
 
   const unknownRes = createMockRes();
-  await service.forgotPasswordInit(reqFor({ identifier: 'unknown@example.com', firmSlug: 'gupte-opc' }), unknownRes);
+  await service.forgotPasswordInit(reqFor({ identifier: 'unknown@example.com', firmSlug: 'demo-firm' }), unknownRes);
   assert.strictEqual(unknownRes.statusCode, 200);
   assert.strictEqual(sentForgotPasswordOtps.length, 1);
 
   const resetOkRes = createMockRes();
-  await service.forgotPasswordResetWithOtp(reqFor({ identifier: 'X000001', firmSlug: 'gupte-opc', resetToken, password: 'Strong#1234' }), resetOkRes);
+  await service.forgotPasswordResetWithOtp(reqFor({ identifier: 'X000001', firmSlug: 'demo-firm', resetToken, password: 'Strong#1234' }), resetOkRes);
   assert.strictEqual(resetOkRes.statusCode, 200);
   assert.strictEqual(users[0].forgotPasswordOtpHash, null);
   const resetReuseRes = createMockRes();
-  await service.forgotPasswordResetWithOtp(reqFor({ identifier: 'X000001', firmSlug: 'gupte-opc', resetToken, password: 'Strong#1234' }), resetReuseRes);
+  await service.forgotPasswordResetWithOtp(reqFor({ identifier: 'X000001', firmSlug: 'demo-firm', resetToken, password: 'Strong#1234' }), resetReuseRes);
   assert.strictEqual(resetReuseRes.statusCode, 401);
 
-  await service.forgotPasswordInit(reqFor({ identifier: 'X000001', firmSlug: 'gupte-opc' }), createMockRes());
+  await service.forgotPasswordInit(reqFor({ identifier: 'X000001', firmSlug: 'demo-firm' }), createMockRes());
   const otpReuseVerifyRes = createMockRes();
-  await service.forgotPasswordVerify(reqFor({ identifier: 'X000001', firmSlug: 'gupte-opc', otp: '123456' }), otpReuseVerifyRes);
+  await service.forgotPasswordVerify(reqFor({ identifier: 'X000001', firmSlug: 'demo-firm', otp: '123456' }), otpReuseVerifyRes);
   const crossToken = otpReuseVerifyRes.body.resetToken;
   const crossResetRes = createMockRes();
   await service.forgotPasswordResetWithOtp(reqFor({ identifier: 'X000001', firmSlug: 'other-firm', resetToken: crossToken, password: 'Strong#1234' }), crossResetRes);
   assert.strictEqual(crossResetRes.statusCode, 401);
 
-  await service.forgotPasswordInit(reqFor({ identifier: 'alpha@example.com', firmSlug: 'gupte-opc' }), createMockRes());
+  await service.forgotPasswordInit(reqFor({ identifier: 'alpha@example.com', firmSlug: 'demo-firm' }), createMockRes());
   users[0].forgotPasswordOtpExpiresAt = new Date(Date.now() - 1000);
   const expiredOtpRes = createMockRes();
-  await service.forgotPasswordVerify(reqFor({ identifier: 'alpha@example.com', firmSlug: 'gupte-opc', otp: '123456' }), expiredOtpRes);
+  await service.forgotPasswordVerify(reqFor({ identifier: 'alpha@example.com', firmSlug: 'demo-firm', otp: '123456' }), expiredOtpRes);
   assert.strictEqual(expiredOtpRes.statusCode, 401);
 
-  await service.forgotPasswordInit(reqFor({ identifier: 'alpha@example.com', firmSlug: 'gupte-opc' }), createMockRes());
+  await service.forgotPasswordInit(reqFor({ identifier: 'alpha@example.com', firmSlug: 'demo-firm' }), createMockRes());
   const verifyForExpTokenRes = createMockRes();
-  await service.forgotPasswordVerify(reqFor({ identifier: 'alpha@example.com', firmSlug: 'gupte-opc', otp: '123456' }), verifyForExpTokenRes);
+  await service.forgotPasswordVerify(reqFor({ identifier: 'alpha@example.com', firmSlug: 'demo-firm', otp: '123456' }), verifyForExpTokenRes);
   users[0].forgotPasswordResetTokenExpiresAt = new Date(Date.now() - 1000);
   const expiredResetRes = createMockRes();
-  await service.forgotPasswordResetWithOtp(reqFor({ identifier: 'alpha@example.com', firmSlug: 'gupte-opc', resetToken: verifyForExpTokenRes.body.resetToken, password: 'Strong#1234' }), expiredResetRes);
+  await service.forgotPasswordResetWithOtp(reqFor({ identifier: 'alpha@example.com', firmSlug: 'demo-firm', resetToken: verifyForExpTokenRes.body.resetToken, password: 'Strong#1234' }), expiredResetRes);
   assert.strictEqual(expiredResetRes.statusCode, 401);
 
-  await service.forgotPasswordInit(reqFor({ identifier: 'alpha@example.com', firmSlug: 'gupte-opc' }), createMockRes());
+  await service.forgotPasswordInit(reqFor({ identifier: 'alpha@example.com', firmSlug: 'demo-firm' }), createMockRes());
   users[0].forgotPasswordOtpAttempts = 5;
   const lockedRes = createMockRes();
-  await service.forgotPasswordVerify(reqFor({ identifier: 'alpha@example.com', firmSlug: 'gupte-opc', otp: '123456' }), lockedRes);
+  await service.forgotPasswordVerify(reqFor({ identifier: 'alpha@example.com', firmSlug: 'demo-firm', otp: '123456' }), lockedRes);
   assert.strictEqual(lockedRes.statusCode, 429);
 
   const { service: providerFailService } = createHarness({ failForgotOtpSend: true });
   const providerFailRes = createMockRes();
-  await providerFailService.forgotPasswordInit(reqFor({ identifier: 'X000001', firmSlug: 'gupte-opc' }), providerFailRes);
+  await providerFailService.forgotPasswordInit(reqFor({ identifier: 'X000001', firmSlug: 'demo-firm' }), providerFailRes);
   assert.strictEqual(providerFailRes.statusCode, 200);
 
   const { service: verifyThrowService } = createHarness({ throwOnVerify: true });
-  await verifyThrowService.forgotPasswordInit(reqFor({ identifier: 'X000001', firmSlug: 'gupte-opc' }), createMockRes());
+  await verifyThrowService.forgotPasswordInit(reqFor({ identifier: 'X000001', firmSlug: 'demo-firm' }), createMockRes());
   const verifyThrowRes = createMockRes();
-  await verifyThrowService.forgotPasswordVerify(reqFor({ identifier: 'X000001', firmSlug: 'gupte-opc', otp: '123456' }), verifyThrowRes);
+  await verifyThrowService.forgotPasswordVerify(reqFor({ identifier: 'X000001', firmSlug: 'demo-firm', otp: '123456' }), verifyThrowRes);
   assert.strictEqual(verifyThrowRes.statusCode, 401);
 
   console.log('All auth forgot-password OTP reliability tests passed.');

@@ -59,9 +59,9 @@ const getWorkspaceStatusMessage = (status) => {
 };
 
 const getFirmLoginPromises = (firmSlug, step) => [
-  `✅ Step ${step === 'credentials' ? '1' : '2'} of 2`,
-  `🏢 Firm URL: /${firmSlug}/login`,
-  '🔐 Workspace data stays locked until sign-in',
+  `Step ${step === 'credentials' ? '1' : '2'} of 2`,
+  `Firm URL: /${firmSlug}/login`,
+  'Workspace data stays locked until sign-in',
 ];
 
 export const FirmLoginPage = () => {
@@ -76,11 +76,24 @@ export const FirmLoginPage = () => {
   const messageType = location.state?.messageType;
   const isPasswordResetSuccess = successMessage === 'Password reset successfully. Please sign in with your new password.';
 
-  const [xid, setXid] = useState('');
+  const [xid, setXid] = useState(() => {
+    if (location.state?.xid) return location.state.xid;
+    try {
+      return sessionStorage.getItem('docketra_last_xid') || '';
+    } catch (_) {
+      return '';
+    }
+  });
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [loginToken, setLoginToken] = useState('');
   const [step, setStep] = useState('credentials');
+
+  useEffect(() => {
+    if (location.state?.xid && !xid) {
+      setXid(location.state.xid);
+    }
+  }, [location.state?.xid]);
   const [otpHint, setOtpHint] = useState('');
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
@@ -310,7 +323,7 @@ export const FirmLoginPage = () => {
     }
 
     clearPendingLoginState();
-    showSuccess('✅ Signed in successfully. Redirecting to your workspace.');
+    showSuccess('Signed in successfully. Redirecting to your workspace.');
     navigate(nextRoute, { replace: true });
   };
 
@@ -479,21 +492,30 @@ export const FirmLoginPage = () => {
     <div className="auth-wrapper find-workspace-page auth-public-page">
       <div className="find-workspace-page__shell">
         <section className="find-workspace-page__context" aria-label="Firm login context">
-          <p className="find-workspace-page__eyebrow">Workspace login 🔐</p>
+          <p className="find-workspace-page__eyebrow">Workspace login</p>
           <h1 className="find-workspace-page__heading">{firmData.name}</h1>
           <p className="find-workspace-page__intro">
             {step === 'credentials' ? 'Sign in to your firm workspace and get back to execution.' : 'Enter the 6-digit verification code sent to your email.'}
           </p>
-          <ul className="find-workspace-page__benefits">
+          <ul className="find-workspace-page__benefits" role="list">
             {getFirmLoginPromises(firmSlug, step).map((promise) => (
-              <li key={promise}>{promise}</li>
+              <li key={promise}>
+                <svg className="find-workspace-page__benefit-check" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                </svg>
+                <span>{promise}</span>
+              </li>
             ))}
           </ul>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {['OTP ready', 'Google option', 'Role-safe route', 'Firm-branded'].map((label) => (
-              <div key={label} className="rounded-2xl border border-white/70 bg-white/70 px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
-                {label}
-              </div>
+          <div className="find-workspace-page__trust-strip">
+            {['OTP ready', 'Google option', 'Role-safe route', 'Firm-branded'].map((label, index) => (
+              <React.Fragment key={label}>
+                {index > 0 && <span className="find-workspace-page__trust-sep" aria-hidden="true">/</span>}
+                <div className="find-workspace-page__trust-item">
+                  <span className="find-workspace-page__trust-dot" aria-hidden="true" />
+                  <span>{label}</span>
+                </div>
+              </React.Fragment>
             ))}
           </div>
         </section>

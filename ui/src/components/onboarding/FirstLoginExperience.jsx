@@ -125,7 +125,7 @@ export const FirstLoginExperience = () => {
       <Modal
         isOpen={showWhatsNew}
         onClose={handleDismissWhatsNew}
-        title="What’s New 🚀"
+        title="What’s New"
         actions={(
           <Button variant="primary" onClick={handleDismissWhatsNew} disabled={submitting}>
             Got it

@@ -309,7 +309,6 @@ export const Textarea = ({
                         key={wbIdx}
                         className="inline-flex items-center gap-0.5 text-[10px] text-[var(--dt-text-muted)] bg-[var(--dt-surface-subtle)] border border-[var(--dt-border-whisper)] rounded px-1.5 py-0.5 font-medium"
                       >
-                        <span style={{ fontSize: '9px' }}>💼</span>
                         {wbName}
                       </span>
                     ))}

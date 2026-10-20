@@ -63,6 +63,24 @@ Module._load = function(request, parent, isMain) {
       validateRootFolder: async () => ({ valid: true, folderName: 'Docketra — firm' }),
       buildCanonicalFirmFolderName: () => 'Docketra — firm',
       getOAuthClient: () => ({ setCredentials() {} }),
+      verifyPermissionBoundary: async () => ({
+        verified: true,
+        provider: 'google_drive',
+        status: 'CRYPTOGRAPHICALLY_CONFINED',
+        scope: 'https://www.googleapis.com/auth/drive.file',
+        googleConsentBadge: {
+          scopeName: 'drive.file',
+          badgeLabel: 'Google drive.file Restricted Scope',
+          consentScreenText: 'See, edit, create, and delete only the specific Google Drive files you use with this app',
+        },
+        boundaryAudit: {
+          externalFilesAccessible: 0,
+          personalFilesAccessible: 0,
+          preExistingFoldersAccessible: 0,
+          confinedToAppRoot: true,
+          cryptographicProofHash: 'sha256:1234abcd',
+        },
+      }),
     },
     PROVIDER_TYPES: { USER_GOOGLE_DRIVE: 'google_drive' },
   };
@@ -196,6 +214,18 @@ async function testStorageUsageSanitizedQuota() {
   console.log('  ✓ storageUsage returns sanitized usage payload');
 }
 
+async function testVerifyStorageBoundary() {
+  const req = { firmId: 'FIRM1', ownershipFirmId: 'FIRM1', user: { role: 'PRIMARY_ADMIN' } };
+  const res = createRes();
+  await controller.verifyStorageBoundary(req, res);
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(res.body.success, true);
+  assert.strictEqual(res.body.verified, true);
+  assert.strictEqual(res.body.status, 'CRYPTOGRAPHICALLY_CONFINED');
+  assert.strictEqual(res.body.boundaryAudit.externalFilesAccessible, 0);
+  assert.strictEqual(res.body.boundaryAudit.personalFilesAccessible, 0);
+  console.log('  ✓ verifyStorageBoundary returns cryptographic zero-access proof');
+}
 
 async function run() {
   console.log('Running storageController tests...');
@@ -204,6 +234,7 @@ async function run() {
     await testGoogleConnectAdminOnly();
     await testDisconnectStorage();
     await testStorageUsageSanitizedQuota();
+    await testVerifyStorageBoundary();
     await testOauthLimiter();
     console.log('All storageController tests passed.');
   } catch (error) {

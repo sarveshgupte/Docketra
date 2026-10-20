@@ -20,7 +20,7 @@ const sopLinkSchema = z.object({
 
 const complianceTemplateBodySchema = z.object({
   name: z.string().trim().min(1).max(180),
-  obligationType: z.enum(['GST', 'TDS', 'ROC', 'ANNUAL_FILING', 'OTHER']),
+  obligationType: z.enum(['GST', 'TDS', 'INCOME_TAX', 'ROC', 'COMPANIES_ACT', 'SEBI', 'FEMA', 'ANNUAL_FILING', 'OTHER']),
   applicableEntityTypes: z.array(z.string().trim().min(1).max(120)).max(30).optional(),
   recurrencePattern: z.object({
     frequency: z.enum(['monthly', 'quarterly', 'yearly']),

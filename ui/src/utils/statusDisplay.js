@@ -1,10 +1,3 @@
-const STATUS_EMOJI = {
-  OPEN: '🟢',
-  IN_PROGRESS: '🟡',
-  RESOLVED: '🔵',
-  CLOSED: '⚫',
-};
-
 const STATUS_COPY = {
   OPEN: 'Open',
   IN_PROGRESS: 'In Progress',
@@ -23,5 +16,5 @@ const normalizeStatus = (status) => {
 
 export const getStatusLabel = (status) => {
   const normalized = normalizeStatus(status);
-  return `${STATUS_EMOJI[normalized]} ${STATUS_COPY[normalized]}`;
+  return STATUS_COPY[normalized] || 'Open';
 };

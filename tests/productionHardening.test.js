@@ -128,6 +128,13 @@ async function testAdminStatusNormalization() {
     return savedAdmin;
   };
   User.countDocuments = async () => 2;
+  User.find = () => ({
+    select: () => ({
+      limit: () => ({
+        lean: async () => [{}, {}],
+      }),
+    }),
+  });
   SuperadminAudit.create = async () => ({});
 
   const req = {

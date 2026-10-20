@@ -16,6 +16,7 @@ const {
   getStorageOwnershipSummary,
   getStorageFolderLink,
   getStorageRootHealth,
+  verifyStorageBoundary,
   testStorageConnection,
   exportFirmStorage,
   downloadFirmStorageExport,
@@ -42,6 +43,7 @@ router.post('/backup-settings', userWriteLimiter, requirePrimaryAdmin, updateBac
 router.get('/ownership-summary', userReadLimiter, getStorageOwnershipSummary);
 router.get('/folder-link', userReadLimiter, requirePrimaryAdmin, getStorageFolderLink);
 router.get('/root-health', userReadLimiter, requirePrimaryAdmin, getStorageRootHealth);
+router.get('/verify-boundary', userReadLimiter, verifyStorageBoundary);
 router.post('/test-connection', userReadLimiter, requirePrimaryAdmin, testStorageConnection);
 router.get('/health-check', userReadLimiter, storageHealthCheck);
 router.get('/usage', userReadLimiter, storageUsage);

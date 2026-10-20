@@ -1,0 +1,13 @@
+{
+  "id": "P019",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "Even with restricted Drive permissions, I cannot risk client tax records on unproven software until I verify that an assistant accidentally moving or deleting a folder won't orphan our files. In a normal week, I would only test the free sandbox on dummy dockets rather than paying ₹12,990 upfront.",
+  "objection": "If files stay in our Google Drive, what happens if an assistant accidentally deletes or moves the folder?",
+  "would_change_my_mind": "Guaranteed folder-protection mechanisms against accidental deletion in Google Drive and peer validation at my monthly study circle that client confidentiality is 100% airtight.",
+  "price_too_cheap": 3000,
+  "price_cheap": 6000,
+  "price_expensive": 13000,
+  "price_too_expensive": 25000
+}

@@ -1,0 +1,13 @@
+{
+  "id": "P041",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "I have strictly refused third-party cloud tools because client confidentiality is non-negotiable, and when Excel and WhatsApp are completely free without any data leak risk, I cannot justify paying ₹12,990 upfront. I would need to test the free pilot on dummy files first to verify that Google Drive access is strictly quarantined before spending a single rupee.",
+  "objection": "Connecting any third-party software to our Google Drive creates an unacceptable risk of confidential PAN, ITR, and ROC filing records leaking, and our current free Excel workflow carries zero data risk.",
+  "would_change_my_mind": "Verifiable in-app proof that Docketra cannot access files outside its dedicated folder, plus a smooth test on the free pilot that meaningfully speeds up my 10 PM ROC filing reviews without compromising client data.",
+  "price_too_cheap": 3500,
+  "price_cheap": 7000,
+  "price_expensive": 15000,
+  "price_too_expensive": 28000
+}

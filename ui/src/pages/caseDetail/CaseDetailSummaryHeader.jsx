@@ -28,8 +28,8 @@ export const CaseDetailSummaryHeader = ({
     return (
   <section className="case-card" aria-label="Docket summary header">
     <div className="case-card__heading">
-      <h2>{formatDocketId(caseInfo?.caseId || caseId)}</h2>
-      <div className="flex flex-wrap items-center gap-2">
+      <h2 className="text-base font-semibold font-mono tracking-tight text-slate-900">{formatDocketId(caseInfo?.caseId || caseId)}</h2>
+      <div className="flex flex-wrap items-center gap-1.5">
         <Badge variant="info">{docketStatusLabel}</Badge>
         {locationBadges.map((badge) => <Badge key={badge} variant="secondary">{badge}</Badge>)}
         {caseInfo?.qc?.status || caseInfo?.qcStatus ? (
@@ -39,7 +39,7 @@ export const CaseDetailSummaryHeader = ({
         ) : null}
       </div>
     </div>
-    <p className="mt-2 text-sm text-gray-700">{caseInfo?.title || caseInfo?.caseName || 'Untitled docket'}</p>
+    <p className="mt-1 text-xs text-slate-600 font-normal">{caseInfo?.title || caseInfo?.caseName || 'Untitled docket'}</p>
     <div className="field-grid mt-4">
       <div className="field-group min-w-0"><span className="field-label">Category</span><span className="field-value text-sm">{categoryLabel}</span></div>
       <div className="field-group min-w-0"><span className="field-label">Subcategory</span><span className="field-value text-sm">{subcategoryLabel}</span></div>

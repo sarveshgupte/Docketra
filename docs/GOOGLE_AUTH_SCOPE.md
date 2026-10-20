@@ -1,68 +1,40 @@
 # Google Auth Scope in Docketra
 
-## Status (April 20, 2026)
+## Status (May 2026)
 
-Google OAuth is now **restricted to BYOS storage connection only**.
+Google OAuth is active for **Workspace Signup & Authentication** as well as **BYOS Storage Connection**:
 
-- **Removed:** Google OAuth for public **sign in / sign up**.
-- **Kept:** Google OAuth for **Google Drive BYOS** connection and token refresh.
+- **Active:** Google OAuth for workspace signup (`/signup`), firm login (`/:firmSlug/login`), and invite setup.
+- **Active:** Google OAuth for **Google Drive BYOS** connection and token refresh.
 
-## What was removed
+## Auth Routes
 
-### Retired auth routes (user login/signup)
+The following canonical routes handle Google authentication:
 
-- `GET /api/auth/google/start`
-- `GET /api/auth/google/callback`
-- `POST /api/auth/google/exchange`
+- `GET /api/auth/google/start` — Initiates Google OAuth consent for login or workspace signup.
+- `GET /api/auth/google/callback` — Handles Google OAuth code redirection, verifies Google ID token, and either generates session or redirects with pending signup state.
+- `POST /api/auth/google/exchange` — Exchanges one-time Google exchangeToken for authenticated JWT session.
+- `POST /api/auth/google/complete-signup` — Completes workspace creation for Google-authenticated users by naming their firm.
 
-### Retired frontend auth flow
+## Frontend Auth Flows
 
-- `/oauth/post-auth` public route
-- `OAuthPostAuthPage`
-- Google login CTA on firm login page
-- Google signup CTA on setup-password page
+- `/signup` (`Signup.jsx`): Exposes "Create account with Google" alongside traditional credentials setup.
+- `/oauth/post-auth` (`OAuthPostAuthPage.jsx`): Handles callback token exchange and provides workspace naming flow for new signups.
+- `/:firmSlug/login` (`FirmLoginPage.jsx`): Exposes "Continue with Google" for firm members.
 
-## What remains active (BYOS)
+## Active Storage Routes (BYOS)
 
-These routes/services still power Google Drive integration for storage:
-
-### Active storage routes
+These routes and services power Google Drive integration for storage:
 
 - `GET /api/storage/google/connect`
 - `GET /api/storage/google/callback`
 - `POST /api/storage/google/confirm-drive`
 
-### Active backend services and controllers
-
-- `src/controllers/storage.controller.js`
-- `src/services/googleDrive.service.js`
-- storage provider wiring under `src/services/storage/**`
-
-### Active frontend entry points
-
-- Storage settings UI connect/refresh actions
-- `ui/src/services/storageService.js` (connect redirect)
-
-## Environment variables
-
-### Still required for Google Drive BYOS
+## Environment Variables
 
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
-- `GOOGLE_OAUTH_REDIRECT_URI`
+- `GOOGLE_AUTH_REDIRECT_URI` (or `GOOGLE_CALLBACK_URL`)
+- `GOOGLE_OAUTH_REDIRECT_URI` (for BYOS Drive)
+- `DISABLE_GOOGLE_AUTH` (optional feature flag to disable Google auth)
 
-### No longer used for login/signup OAuth
-
-- `GOOGLE_AUTH_REDIRECT_URI`
-- `GOOGLE_CALLBACK_URL`
-- `DISABLE_GOOGLE_AUTH`
-- `VITE_ENABLE_GOOGLE_LOGIN`
-- `VITE_GOOGLE_CLIENT_ID`
-
-## Contributor guidance
-
-When changing auth, keep the boundary explicit:
-
-1. **User authentication** is xID/password + OTP flows (no Google login).
-2. **Google OAuth** is only for Drive authorization in BYOS storage settings.
-3. Do not reintroduce login/signup Google CTAs or `/api/auth/google/*` routes without a product/security review.

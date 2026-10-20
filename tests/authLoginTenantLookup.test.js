@@ -46,8 +46,8 @@ const baseDeps = (users, preconditionResult = false) => ({
 const makeReq = () => ({
   loginScope: 'tenant',
   body: { xID: 'X000001', password: 'pw' },
-  params: { firmSlug: 'gupte-opc' },
-  firmSlug: 'gupte-opc',
+  params: { firmSlug: 'demo-firm' },
+  firmSlug: 'demo-firm',
   firmId: 'canonical-1',
   firm: { legacyFirmId: 'legacy-1', defaultClientId: 'canonical-1' },
 });

@@ -18,17 +18,17 @@ export const spacingClasses = {
 };
 
 export const formClasses = {
-  label: 'mb-1.5 block text-sm font-medium text-[var(--dt-text-secondary)]',
+  label: 'mb-1 block text-xs font-semibold uppercase tracking-wider text-[var(--dt-text-secondary)]',
   inputBase:
-    'min-h-11 w-full rounded-[var(--dt-radius-control)] border border-[var(--dt-border)] bg-[var(--dt-surface)] px-3.5 py-2.5 text-sm leading-5 text-[var(--dt-text)] shadow-[var(--dt-shadow-control)] transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-[var(--dt-text-muted)] hover:border-[var(--dt-border-strong)] focus:border-[var(--dt-focus)] focus:bg-[var(--dt-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--dt-focus)]/20 disabled:cursor-not-allowed disabled:border-[var(--dt-border-whisper)] disabled:bg-[var(--dt-surface-muted)] disabled:text-[var(--dt-text-disabled)]',
+    'min-h-9 w-full rounded-[var(--dt-radius-control)] border border-[var(--dt-border)] bg-[var(--dt-surface)] px-3 py-1.5 text-xs leading-5 text-[var(--dt-text)] shadow-none transition-colors duration-150 placeholder:text-[var(--dt-text-muted)] hover:border-[var(--dt-border-strong)] focus:border-[var(--dt-focus)] focus:bg-[var(--dt-surface)] focus:outline-none disabled:cursor-not-allowed disabled:border-[var(--dt-border-whisper)] disabled:bg-[var(--dt-surface-muted)] disabled:text-[var(--dt-text-disabled)]',
   inputError:
-    'border-[var(--dt-error)] bg-[var(--dt-error-subtle)] text-[var(--dt-error)] placeholder:text-[var(--dt-error)]/70 focus:border-[var(--dt-error)] focus:ring-[var(--dt-error)]/20',
+    'border-[var(--dt-error)] bg-[var(--dt-error-subtle)] text-[var(--dt-error)] placeholder:text-[var(--dt-error)]/70 focus:border-[var(--dt-error)]',
   inputSuccess:
-    'border-[var(--dt-success)] bg-[var(--dt-success-subtle)] text-[var(--dt-success)] focus:border-[var(--dt-success)] focus:ring-[var(--dt-success)]/20',
+    'border-[var(--dt-success)] bg-[var(--dt-success-subtle)] text-[var(--dt-success)] focus:border-[var(--dt-success)]',
   textareaBase:
-    'w-full rounded-[var(--dt-radius-control)] border border-[var(--dt-border)] bg-[var(--dt-surface)] px-3.5 py-2.5 text-sm leading-5 text-[var(--dt-text)] shadow-[var(--dt-shadow-control)] transition-colors hover:border-[var(--dt-border-strong)] focus:border-[var(--dt-focus)] focus:outline-none focus:ring-2 focus:ring-[var(--dt-focus)]/20 disabled:cursor-not-allowed disabled:bg-[var(--dt-surface-muted)] disabled:text-[var(--dt-text-disabled)]',
-  errorText: `${spacingClasses.formMessageSpacing} text-sm text-[var(--dt-error)]`,
-  successText: `${spacingClasses.formMessageSpacing} flex items-center gap-1 text-sm text-[var(--dt-success)]`,
+    'w-full rounded-[var(--dt-radius-control)] border border-[var(--dt-border)] bg-[var(--dt-surface)] px-3 py-2 text-xs leading-5 text-[var(--dt-text)] shadow-none transition-colors hover:border-[var(--dt-border-strong)] focus:border-[var(--dt-focus)] focus:outline-none disabled:cursor-not-allowed disabled:bg-[var(--dt-surface-muted)] disabled:text-[var(--dt-text-disabled)]',
+  errorText: `${spacingClasses.formMessageSpacing} text-xs text-[var(--dt-error)]`,
+  successText: `${spacingClasses.formMessageSpacing} flex items-center gap-1 text-xs text-[var(--dt-success)]`,
   helpText: `${spacingClasses.formMessageSpacing} text-xs leading-5 text-[var(--dt-text-muted)]`,
 };
 
@@ -59,6 +59,6 @@ export const colors = {
 };
 
 export const surfaceClasses = {
-  card: `bg-[var(--dt-surface)] border border-[var(--dt-border-whisper)] rounded-[var(--dt-radius-card)] shadow-[var(--dt-shadow-card)] overflow-hidden ${spacingClasses.cardPadding}`,
-  tableWrapper: 'bg-[var(--dt-surface)] border border-[var(--dt-border-whisper)] rounded-[var(--dt-radius-card)] overflow-hidden shadow-[var(--dt-shadow-card)]',
+  card: `bg-[var(--dt-surface)] border-t border-[var(--dt-border)] rounded-[var(--dt-radius-card)] shadow-none overflow-hidden ${spacingClasses.cardPadding}`,
+  tableWrapper: 'bg-[var(--dt-surface)] border-y border-[var(--dt-border)] sm:border sm:border-[var(--dt-border)] rounded-[var(--dt-radius-card)] overflow-hidden shadow-none',
 };

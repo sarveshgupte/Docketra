@@ -25,6 +25,10 @@ const FEATURES = [
     description: 'Keep client files attached directly to their specific dockets. Ensure document hygiene with version control and secure retrieval.',
   },
   {
+    title: 'WhatsApp Forwarding & Intake Bridge',
+    description: 'Clients dump files on WhatsApp? Assistants can forward or drop WhatsApp media directly into dockets, auto-syncing files into client Google Drive folders without forcing clients onto web links.',
+  },
+  {
     title: 'Real-Time Operational Metrics',
     description: 'Primary Admins, Admins, and Managers get a bird\'s-eye view of firm performance. Identify bottlenecks, track overdue items, and monitor team workload instantly.',
   },
@@ -34,7 +38,7 @@ export const FeaturesPage = () => (
   <Section>
     <SeoHead
       canonicalPath="/features"
-      title="Platform Features | Docketra — The Company Brain"
+      title="Platform Features | Docketra - The Company Brain"
       description="Explore Docketra features: centralized firm dashboard, granular access controls, automated audit trails, and Google Drive BYOS storage."
     />
     <div className="mx-auto w-full max-w-3xl min-w-0 text-center">

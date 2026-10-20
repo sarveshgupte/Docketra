@@ -98,7 +98,7 @@ Superadmin must **not** require firm/workspace context.
 
 ### Tenant firm-slug OTP flow
 1. Clear cookies/storage.
-2. Open `/:firmSlug/login` (example `/gupte-opc/login`).
+2. Open `/:firmSlug/login` (example `/demo-firm/login`).
 3. Verify firm lookup success from `/api/public/firms/:firmSlug`.
 4. Submit login init and verify OTP challenge response.
 5. Complete OTP verify and check response sets both auth cookies.

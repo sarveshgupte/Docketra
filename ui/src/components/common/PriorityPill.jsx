@@ -4,10 +4,10 @@ import { isEscalatedCase, CASE_VIEWS } from '../../hooks/useCaseView';
 import { Badge } from './Badge';
 
 const PRIORITY_META = {
-  ESCALATED: { label: 'Escalated', variant: 'warning', className: 'bg-purple-50 text-purple-700 border border-purple-200' },
-  OVERDUE: { label: 'SLA Overdue', variant: 'danger', className: '' },
-  DUE_TODAY: { label: 'Due Today', variant: 'warning', className: '' },
-  NORMAL: { label: 'Normal', variant: 'neutral', className: '' },
+  ESCALATED: { label: 'ESCALATED', variant: 'danger', className: 'text-rose-700 font-mono font-semibold' },
+  OVERDUE: { label: 'SLA OVERDUE', variant: 'danger', className: 'text-rose-700 font-mono font-semibold' },
+  DUE_TODAY: { label: 'DUE TODAY', variant: 'warning', className: 'text-amber-800 font-mono font-medium' },
+  NORMAL: { label: 'NORMAL', variant: 'neutral', className: 'text-slate-500 font-mono' },
 };
 
 const getPriorityState = (caseRecord, inactivityThresholdHours) => {
@@ -27,7 +27,7 @@ const getPriorityState = (caseRecord, inactivityThresholdHours) => {
 export const PriorityPill = ({ caseRecord, inactivityThresholdHours, className = '' }) => {
   const priority = PRIORITY_META[getPriorityState(caseRecord, inactivityThresholdHours)];
   return (
-    <Badge variant={priority.variant} className={`font-semibold px-2 py-0.5 rounded-full ${priority.className} ${className}`.trim()}>
+    <Badge variant={priority.variant} className={`font-mono text-[11px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm ${priority.className} ${className}`.trim()}>
       {priority.label}
     </Badge>
   );

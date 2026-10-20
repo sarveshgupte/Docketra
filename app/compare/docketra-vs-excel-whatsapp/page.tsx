@@ -25,7 +25,7 @@ const FAQ_ITEMS = [
   {
     question: 'How does Docketra compare to generic tools like ClickUp, Notion, or Asana?',
     answer:
-      'Generic tools lack Indian statutory semantics—they have no concept of a CIN, 4-eye partner sign-offs, statutory filing penalties, or MCA compliance calendars. Setting them up requires months of custom consulting. Docketra is purpose-built and ready on day one with compliance workbaskets, client memory, and audit trails tailored for Indian CA and CS practices.',
+      'Generic tools lack Indian statutory semantics: they have no concept of a CIN, 4-eye partner sign-offs, statutory filing penalties, or MCA compliance calendars. Setting them up requires months of custom consulting. Docketra is purpose-built and ready on day one with compliance workbaskets, client memory, and audit trails tailored for Indian CA and CS practices.',
   },
   {
     question: 'Where is our client data stored and how is it secured?',
@@ -146,7 +146,7 @@ export default function DocketraVsExcelWhatsAppPage() {
           </h1>
 
           <p className="mx-auto mt-6 max-w-3xl text-base sm:text-lg text-slate-300 leading-relaxed font-normal">
-            Why leading corporate secretarial and legal practices outgrow spreadsheets—and how modern firms build an
+            Why leading corporate secretarial and legal practices outgrow spreadsheets, and how modern firms build an
             institutional brain that never forgets a statutory deadline or client document.
           </p>
 
@@ -664,7 +664,7 @@ export default function DocketraVsExcelWhatsAppPage() {
           <div className="flex items-center gap-2 text-slate-300 font-bold">
             <span className="text-amber-500">✦</span>
             <span>Docketra</span>
-            <span className="text-slate-500 font-normal">— The Company Brain for Indian Firms</span>
+            <span className="text-slate-500 font-normal">| The Company Brain for Indian Firms</span>
           </div>
           <div className="flex items-center gap-4 text-slate-400">
             <a href="/terms" className="hover:text-white transition-colors">Terms</a>

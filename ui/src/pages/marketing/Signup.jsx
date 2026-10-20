@@ -9,6 +9,7 @@ import { spacingClasses } from '../../theme/tokens';
 import { ROUTES } from '../../constants/routes';
 import { PilotAgreementModal, PILOT_TERMS_VERSION } from '../../components/marketing/PilotAgreementModal';
 import { SeoHead } from '../../components/common/SeoHead';
+import { API_BASE_URL } from '../../utils/constants';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^\d{10}$/;
@@ -16,9 +17,9 @@ const getOrigin = () => (typeof window !== 'undefined' ? window.location.origin 
 const buildFallbackFirmLoginUrl = (firmSlug) => (firmSlug ? `${getOrigin()}/${firmSlug}/login` : '');
 
 const SETUP_PROMISES = [
-  '🧠 Company Brain starts with clean firm identity',
-  '✅ OTP verification before workspace activation',
-  '🔐 Admin access, firm URL, and xID stay explicit',
+  'Company Brain starts with clean firm identity',
+  'OTP verification before workspace activation',
+  'Admin access, firm URL, and xID stay explicit',
 ];
 
 const TRUST_BADGES = ['No card required', 'Role-safe setup', 'Email verified'];
@@ -181,6 +182,25 @@ export default function Signup() {
     return () => window.clearInterval(timer);
   }, [isTurnstileConfigured, step, turnstileSiteKey]);
 
+
+  const handleGoogleSignup = () => {
+    if (loading) return;
+    const params = new URLSearchParams({
+      intent: 'signup',
+    });
+    if (form.firmName.trim()) {
+      params.set('firmName', form.firmName.trim());
+    }
+    if (form.phone.trim()) {
+      params.set('phone', form.phone.trim());
+    }
+    if (agreedToPilotTerms) {
+      params.set('agreedToPilotTerms', 'true');
+    }
+
+    const targetUrl = new URL(`${API_BASE_URL}/auth/google/start?${params.toString()}`, window.location.origin).toString();
+    window.location.assign(targetUrl);
+  };
 
   const submitStepOne = async (event) => {
     event.preventDefault();
@@ -357,7 +377,7 @@ export default function Signup() {
                 <span className="text-[8px] font-bold text-amber-700 tracking-wider uppercase mt-0.5">The Company Brain</span>
               </div>
             </Link>
-            <p className="mt-10 text-sm font-bold uppercase text-amber-700">🎉 Workspace created</p>
+            <p className="mt-10 text-sm font-bold uppercase text-amber-700">Workspace created</p>
             <h2 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
               Welcome to your firm&apos;s new command center.
             </h2>
@@ -365,7 +385,7 @@ export default function Signup() {
               Your workspace is ready. Save the first-login details and continue to onboarding when you are ready.
             </p>
             <div className="mt-8 grid gap-3">
-              {['✅ Firm workspace is active', '🔐 Primary admin identity verified', '📬 Welcome credentials can be resent anytime'].map((item) => (
+              {['Firm workspace is active', 'Primary admin identity verified', 'Welcome credentials can be resent anytime'].map((item) => (
                 <div key={item} className="rounded-2xl border border-white/80 bg-white/75 px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
                   {item}
                 </div>
@@ -390,7 +410,7 @@ export default function Signup() {
               </div>
             </div>
             <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              💡 Keep this URL and xID with your onboarding notes. Your team will use the firm URL for future logins.
+              Keep this URL and xID with your onboarding notes. Your team will use the firm URL for future logins.
             </div>
             <div className={`mt-6 ${spacingClasses.formFieldSpacing}`}>
               <Button type="button" variant="primary" fullWidth onClick={handleLoginRedirect}>
@@ -427,7 +447,7 @@ export default function Signup() {
               <span className="text-[8px] font-bold text-amber-700 tracking-wider uppercase mt-0.5">The Company Brain</span>
             </div>
           </Link>
-          <p className="mt-10 text-sm font-bold uppercase text-amber-700">🚀 Workspace signup</p>
+          <p className="mt-10 text-sm font-bold uppercase text-amber-700">Workspace signup</p>
           <h2 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
             Create the command center your firm will grow into.
           </h2>
@@ -489,10 +509,38 @@ export default function Signup() {
         {apiError && <div role="alert" className="auth-public-page__error auth-alert">{apiError}</div>}
 
         {step === 1 ? (
-          <form className={`mt-6 ${spacingClasses.formFieldSpacing} w-full`} onSubmit={submitStepOne} noValidate>
+          <>
+            <div className="google-container mt-6 w-full">
+              <Button
+                type="button"
+                variant="outline"
+                fullWidth
+                disabled={loading}
+                onClick={handleGoogleSignup}
+                className="flex items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900 focus:ring-2 focus:ring-slate-950 focus:ring-offset-1"
+              >
+                <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+                  <g transform="matrix(1, 0, 0, 1, 0, 0)">
+                    <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.6h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.4c0,-0.74 -0.07,-1.4 -0.33,-2z" fill="#4285F4" />
+                    <path d="M12,20.6c2.43,0 4.47,-0.8 5.96,-2.2l-3.3,-2.6c-0.9,0.6 -2.07,0.98 -3.3,0.98 -2.34,0 -4.33,-1.58 -5.04,-3.7H3v2.6c1.5,3 4.5,4.92 8,4.92z" fill="#34A853" />
+                    <path d="M6.96,13.08a5.1,5.1 0 0,1 0,-2.16V8.32H3a8.6,8.6 0 0,0 0,7.36l3.96,-2.6z" fill="#FBBC05" />
+                    <path d="M12,7.2c1.32,0 2.5,0.45 3.44,1.35l2.58,-2.58C16.46,4.4 14.43,3.6 12,3.6c-3.5,0 -6.5,1.92 -8,4.92l3.96,3.08c0.71,-2.12 2.7,-3.7 5.04,-3.7z" fill="#EA4335" />
+                  </g>
+                </svg>
+                Create account with Google
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-3 my-5 w-full">
+              <div className="h-px flex-1 bg-slate-200" />
+              <span className="text-[11px] font-bold tracking-wider text-slate-400 uppercase">or set up with credentials</span>
+              <div className="h-px flex-1 bg-slate-200" />
+            </div>
+
+            <form className={`${spacingClasses.formFieldSpacing} w-full`} onSubmit={submitStepOne} noValidate>
             <div className="grid gap-4 rounded-3xl border border-slate-200 bg-slate-50/80 p-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <p className="text-sm font-black text-slate-950">👤 Primary admin</p>
+                <p className="text-sm font-black text-slate-950">Primary admin</p>
                 <p className="mt-1 text-xs leading-5 text-slate-500">This person receives OTP, xID, and first-login instructions.</p>
               </div>
               <Input id="signup-name" type="text" name="name" label="Primary Admin Name" className="w-full" value={form.name} onChange={onFormChange} disabled={loading} error={errors.name} required />
@@ -502,7 +550,7 @@ export default function Signup() {
             </div>
             <div className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-4 md:grid-cols-[1fr_220px]">
               <div>
-                <p className="text-sm font-black text-slate-950">🏢 Firm workspace</p>
+                <p className="text-sm font-black text-slate-950">Firm workspace</p>
                 <p className="mt-1 text-xs leading-5 text-slate-500">Your firm name becomes the memorable workspace URL.</p>
                 <div className="mt-4">
                   <Input id="signup-firm" type="text" name="firmName" label="Firm Name" className="w-full" value={form.firmName} onChange={onFormChange} disabled={loading} error={errors.firmName} required />
@@ -516,7 +564,7 @@ export default function Signup() {
             </div>
             {isTurnstileConfigured ? <div ref={turnstileContainerRef} className="min-h-[65px]" /> : null}
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              {`🔑 ${STRONG_PASSWORD_MESSAGE}`}
+              {`${STRONG_PASSWORD_MESSAGE}`}
             </div>
             <div className={`rounded-2xl border ${errors.agreedToPilotTerms ? 'border-rose-400 bg-rose-50/80' : 'border-slate-200 bg-slate-50'} p-4 transition-colors`}>
               <label className="flex items-start gap-3 cursor-pointer select-none">
@@ -573,10 +621,11 @@ export default function Signup() {
               {loading ? 'Sending verification code...' : 'Send verification code'}
             </Button>
           </form>
+        </>
         ) : (
           <form className={`mt-6 ${spacingClasses.formFieldSpacing} w-full`} onSubmit={submitOtp} noValidate>
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              {otpInfo && <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">📬 {otpInfo}</p>}
+              {otpInfo && <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">{otpInfo}</p>}
               <div className="mt-4">
                 <Input
                   ref={otpInputRef}
@@ -629,7 +678,7 @@ export default function Signup() {
         )}
 
         <div className="find-workspace-page__notice rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-xs text-slate-600">
-          🛡️ Explicit clickwrap consent recorded with IP &amp; timestamp audit trail. Review full legal terms via the links above.
+          Explicit clickwrap consent recorded with IP &amp; timestamp audit trail. Review full legal terms via the links above.
         </div>
         </Card>
         <PilotAgreementModal

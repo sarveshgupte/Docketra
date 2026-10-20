@@ -58,25 +58,25 @@ const buildReq = (password) => ({
   method: 'POST',
   originalUrl: '/api/auth/login/init',
   body: {
-    firmSlug: 'gupte-opc',
+    firmSlug: 'demo-firm',
     xID: 'X000001',
     password,
   },
-  params: { firmSlug: 'gupte-opc' },
+  params: { firmSlug: 'demo-firm' },
   firmId: '507f1f77bcf86cd799439022',
   firmIdString: '507f1f77bcf86cd799439022',
-  firmSlug: 'gupte-opc',
-  firmName: 'Gupte OPC',
+  firmSlug: 'demo-firm',
+  firmName: 'Demo Firm',
   firm: {
     _id: '507f1f77bcf86cd799439022',
     id: '507f1f77bcf86cd799439022',
-    firmSlug: 'gupte-opc',
-    name: 'Gupte OPC',
+    firmSlug: 'demo-firm',
+    name: 'Demo Firm',
     status: 'active',
   },
   context: {
     firmId: '507f1f77bcf86cd799439022',
-    firmSlug: 'gupte-opc',
+    firmSlug: 'demo-firm',
   },
   loginScope: 'tenant',
   skipTransaction: true,
@@ -89,6 +89,7 @@ const withPatchedAuthDeps = async (fn) => {
     userFindOne: User.findOne,
     userFindOneAndUpdate: User.findOneAndUpdate,
     firmCountDocuments: Firm.countDocuments,
+    firmExists: Firm.exists,
     loginSessionDeleteMany: LoginSession.deleteMany,
     loginSessionCreate: LoginSession.create,
     authAuditCreate: AuthAudit.create,
@@ -98,6 +99,7 @@ const withPatchedAuthDeps = async (fn) => {
 
   try {
     Firm.countDocuments = async () => 1;
+    Firm.exists = async () => ({ _id: '507f1f77bcf86cd799439022' });
     AuthAudit.create = async () => ({});
     AuditLog.create = async () => ({});
     await fn();
@@ -105,6 +107,7 @@ const withPatchedAuthDeps = async (fn) => {
     User.findOne = originals.userFindOne;
     User.findOneAndUpdate = originals.userFindOneAndUpdate;
     Firm.countDocuments = originals.firmCountDocuments;
+    Firm.exists = originals.firmExists;
     LoginSession.deleteMany = originals.loginSessionDeleteMany;
     LoginSession.create = originals.loginSessionCreate;
     AuthAudit.create = originals.authAuditCreate;
@@ -194,8 +197,8 @@ async function shouldAttachPrimitiveCanonicalFirmIdFromSlug() {
             return {
               tenantId: '507f1f77bcf86cd799439022',
               firmIdString: 'FIRM001',
-              firmSlug: 'gupte-opc',
-              firmName: 'Gupte OPC',
+              firmSlug: 'demo-firm',
+              firmName: 'Demo Firm',
               status: 'active',
               legacyFirmId: '507f1f77bcf86cd799439099',
             };
@@ -208,14 +211,14 @@ async function shouldAttachPrimitiveCanonicalFirmIdFromSlug() {
     const { attachFirmFromSlug } = require('../src/middleware/attachFirmFromSlug.middleware');
     Module._load = originalModuleLoad;
 
-    const req = { body: { firmSlug: 'Gupte-OPC' }, params: {}, context: {} };
+    const req = { body: { firmSlug: 'Demo-Firm' }, params: {}, context: {} };
     const res = createMockRes().res;
     let nextCalled = false;
     await attachFirmFromSlug(req, res, () => {
       nextCalled = true;
     });
 
-    assert.strictEqual(capturedSlug, 'gupte-opc');
+    assert.strictEqual(capturedSlug, 'demo-firm');
     assert.strictEqual(nextCalled, true);
     assert.strictEqual(req.firmId, '507f1f77bcf86cd799439022');
     assert.strictEqual(typeof req.firmId, 'string', 'req.firmId should be a primitive ID string');

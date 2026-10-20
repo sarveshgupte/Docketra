@@ -1,0 +1,13 @@
+{
+  "id": "P049",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "Client confidentiality is everything in my practice, so I cannot risk paying for software until I have absolute certainty that connecting our Google Drive won't expose all our private tax and audit files. Even though I am desperate for maker-checker accountability over my article clerks, I will only test the free pilot before committing any firm money.",
+  "objection": "Will connecting my Google Drive give Docketra access to read all my firm's private files outside the dedicated folder, compromising confidential client data?",
+  "would_change_my_mind": "Technical, verifiable proof during the free pilot that zero external Drive files can be accessed, along with seamless maker-checker audit sign-offs that don't add friction to my morning WhatsApp routines.",
+  "price_too_cheap": 4000,
+  "price_cheap": 8000,
+  "price_expensive": 16000,
+  "price_too_expensive": 30000
+}

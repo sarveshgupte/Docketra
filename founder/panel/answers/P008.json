@@ -1,0 +1,13 @@
+{
+  "id": "P008",
+  "buys": true,
+  "purchases_first_month": 1,
+  "reason_code": "price",
+  "reason": "The new Growth Tier at ₹21,990 flat per year covers my entire 10-person team without per-user penalties, and the restricted drive.file OAuth with live permission audit directly solves my Google Drive privacy concerns.",
+  "objection": "I will want to verify that restricted Google consent badge on Day 1 to ensure article trainees can never download client files or compromise our Drive structure during the ROC rush.",
+  "would_change_my_mind": "",
+  "price_too_cheap": 500,
+  "price_cheap": 1200,
+  "price_expensive": 2500,
+  "price_too_expensive": 5000
+}

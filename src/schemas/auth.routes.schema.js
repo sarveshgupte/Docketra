@@ -68,8 +68,11 @@ module.exports = {
   'GET /google/start': {
     query: z.object({
       intent: z.enum(['login', 'signup']).optional(),
-      firmSlug: nonEmptyString,
+      firmSlug: z.string().trim().optional(),
       setupToken: z.string().trim().optional(),
+      firmName: z.string().trim().optional(),
+      phone: z.string().trim().optional(),
+      agreedToPilotTerms: z.string().trim().optional(),
     }).strip(),
   },
   'GET /google/callback': {
@@ -83,6 +86,14 @@ module.exports = {
     body: z.object({
       exchangeToken: nonEmptyString,
       firmSlug: nonEmptyString.optional(),
+    }).strip(),
+  },
+  'POST /google/complete-signup': {
+    body: z.object({
+      googlePendingToken: nonEmptyString,
+      firmName: nonEmptyString,
+      phone: z.string().trim().optional(),
+      agreedToPilotTerms: z.boolean().optional(),
     }).strip(),
   },
   'POST /resend-credentials': {

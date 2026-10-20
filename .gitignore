@@ -84,4 +84,5 @@ env.yaml
 scratch/
 graphify-out/
 .codex-calendar-check.png
-
+__pycache__/
+*.pyc

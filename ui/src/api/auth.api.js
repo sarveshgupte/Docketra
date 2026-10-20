@@ -19,6 +19,14 @@ export const authApi = {
   exchangeGoogleAuth: ({ exchangeToken, firmSlug }) =>
     request((http) => http.post('/auth/google/exchange', { exchangeToken, firmSlug }), 'Google sign-in failed.'),
 
+  completeGoogleSignup: ({ googlePendingToken, firmName, phone, agreedToPilotTerms }) =>
+    request((http) => http.post('/auth/google/complete-signup', {
+      googlePendingToken,
+      firmName,
+      phone,
+      agreedToPilotTerms,
+    }), 'Unable to complete Google workspace setup.'),
+
   signupInit: ({ name, email, password, firmName, phone, turnstileToken, agreedToPilotTerms, agreedToTerms, termsVersion, privacyVersion }) =>
     request((http) => http.post('/auth/signup/init', {
       name,

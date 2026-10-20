@@ -12,12 +12,56 @@ const SYSTEM_DEFAULT_TEMPLATE = {
   key: DEFAULT_FIRM_SETUP_TEMPLATE_KEY,
   name: 'Default Firm Setup',
   workbaskets: [
+    { name: 'Corporate Law & ROC', type: 'PRIMARY' },
+    { name: 'Taxation & Audit', type: 'PRIMARY' },
+    { name: 'Corporate Compliance & SEBI', type: 'PRIMARY' },
     { name: 'HR', type: 'PRIMARY' },
     { name: 'Finance', type: 'PRIMARY' },
     { name: 'Accounts', type: 'PRIMARY' },
     { name: 'Operations', type: 'PRIMARY' },
   ],
   categories: [
+    {
+      name: 'Companies Act & ROC',
+      subcategories: [
+        { name: 'Annual ROC Filing (AOC-4 / MGT-7)', workbasket: 'Corporate Law & ROC', employeeContextEnabled: false },
+        { name: 'Director KYC & DIN (DIR-3 KYC)', workbasket: 'Corporate Law & ROC', employeeContextEnabled: false },
+        { name: 'Secretarial Audit & Resolutions', workbasket: 'Corporate Law & ROC', employeeContextEnabled: false },
+        { name: 'Company Incorporation & Filings', workbasket: 'Corporate Law & ROC', employeeContextEnabled: false },
+      ],
+    },
+    {
+      name: 'SEBI & Capital Markets',
+      subcategories: [
+        { name: 'LODR Disclosures (Reg 30 / Reg 33)', workbasket: 'Corporate Compliance & SEBI', employeeContextEnabled: false },
+        { name: 'PIT & Structured Digital Database (SDD)', workbasket: 'Corporate Compliance & SEBI', employeeContextEnabled: false },
+        { name: 'Secretarial Compliance Report (ASCR)', workbasket: 'Corporate Compliance & SEBI', employeeContextEnabled: false },
+      ],
+    },
+    {
+      name: 'GST & Indirect Tax',
+      subcategories: [
+        { name: 'Monthly GSTR-1 & GSTR-3B', workbasket: 'Taxation & Audit', employeeContextEnabled: false },
+        { name: 'Annual GSTR-9 / 9C Reconciliation', workbasket: 'Taxation & Audit', employeeContextEnabled: false },
+        { name: 'GST Notice & Audit Response', workbasket: 'Taxation & Audit', employeeContextEnabled: false },
+      ],
+    },
+    {
+      name: 'Income Tax & Audit',
+      subcategories: [
+        { name: 'Tax Audit Form 3CD (44 Clauses)', workbasket: 'Taxation & Audit', employeeContextEnabled: false },
+        { name: 'TDS / TCS Quarterly Filing (24Q/26Q)', workbasket: 'Taxation & Audit', employeeContextEnabled: false },
+        { name: 'Advance Tax & Annual ITR', workbasket: 'Taxation & Audit', employeeContextEnabled: false },
+      ],
+    },
+    {
+      name: 'FEMA & RBI',
+      subcategories: [
+        { name: 'FDI / FC-GPR & FC-TRS Filings', workbasket: 'Corporate Compliance & SEBI', employeeContextEnabled: false },
+        { name: 'Foreign Liabilities & Assets (FLA Return)', workbasket: 'Corporate Compliance & SEBI', employeeContextEnabled: false },
+        { name: 'ECB & Overseas Direct Investment', workbasket: 'Corporate Compliance & SEBI', employeeContextEnabled: false },
+      ],
+    },
     {
       name: 'HR',
       subcategories: [

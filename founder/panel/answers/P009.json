@@ -1,0 +1,13 @@
+{
+  "id": "P009",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "need",
+  "reason": "As a solo CA with just one trainee, our workload fits within manual routines and the free sandbox; I have no operational need to spend ₹12,990 a year on a 5-user plan.",
+  "objection": "I am a solo CA with one trainee—why should I ever upgrade beyond the free tier?",
+  "would_change_my_mind": "If our firm grows to three or more team members with over 20 active clients, backed by an independent security audit certifying zero external access to client files.",
+  "price_too_cheap": 3000,
+  "price_cheap": 6000,
+  "price_expensive": 12000,
+  "price_too_expensive": 25000
+}

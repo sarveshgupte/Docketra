@@ -952,6 +952,7 @@ const sendFirmSetupEmail = async ({
   firmName,
   workspaceUrl,
   xid,
+  authProvider = 'password',
   context = null,
 }) => {
   const resolvedXid = String(xid || '').trim();
@@ -959,6 +960,10 @@ const sendFirmSetupEmail = async ({
   if (!resolvedXid || !resolvedLoginUrl) {
     throw new Error('Missing required signup credentials for setup email');
   }
+  const isGoogle = authProvider === 'google';
+  const loginInstruction = isGoogle
+    ? 'Use your Google account (or your xID) to sign in to your firm account.'
+    : 'Use your xID and password to sign in to your firm account.';
   const subject = 'Your Docketra firm account is ready';
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
@@ -967,11 +972,11 @@ const sendFirmSetupEmail = async ({
       <p><strong>Firm name:</strong> ${firmName}</p>
       <p><strong>User xID:</strong> ${resolvedXid}</p>
       <p><strong>Login URL:</strong> <a href="${resolvedLoginUrl}">${resolvedLoginUrl}</a></p>
-      <p>Use your xID and password to sign in to your firm account.</p>
+      <p>${loginInstruction}</p>
       <p>Best regards,<br/>Docketra Team</p>
     </div>
   `;
-  const text = `Welcome to Docketra, ${name}!\n\nYour firm account has been created successfully.\nFirm name: ${firmName}\nUser xID: ${resolvedXid}\nLogin URL: ${resolvedLoginUrl}\nUse your xID and password to sign in to your firm account.\n\nBest regards,\nDocketra Team`;
+  const text = `Welcome to Docketra, ${name}!\n\nYour firm account has been created successfully.\nFirm name: ${firmName}\nUser xID: ${resolvedXid}\nLogin URL: ${resolvedLoginUrl}\n${loginInstruction}\n\nBest regards,\nDocketra Team`;
 
   return sendDirectAuthEmail({ to: email, subject, html, text });
 };
@@ -1003,6 +1008,42 @@ const sendLoginOtpEmail = async ({
     </div>
   `;
   const text = `Hello ${greetingName},\n\nYour one-time login code is:\n\n${resolvedOtp}\n\nThis code expires in ${expiryMinutes} minutes.\n\nIf you did not request this login, please ignore this email.\n\nBest regards,\nDocketra Team`;
+
+  return sendDirectAuthEmail({
+    to: email,
+    subject,
+    html,
+    text,
+    otp: true,
+  });
+};
+
+const sendSecurityAuthorizationOtpEmail = async ({
+  email,
+  name,
+  otp,
+  actionDescription = 'update Trainee Laptop Shield security settings',
+  expiryMinutes = 5,
+}) => {
+  const resolvedOtp = String(otp || '').trim();
+  if (!email || !resolvedOtp) {
+    throw new Error('Email and OTP are required to send security authorization email');
+  }
+
+  const greetingName = String(name || '').trim() || 'Partner';
+  const subject = '[Docketra] Security Verification Code';
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; line-height: 1.6; color: #1e293b;">
+      <h2 style="color: #0f172a;">Hello ${greetingName},</h2>
+      <p>A request was made to <strong>${actionDescription}</strong> for your firm.</p>
+      <p>Your one-time authorization code is:</p>
+      <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #2563eb; margin: 20px 0;">${resolvedOtp}</p>
+      <p>This code expires in ${expiryMinutes} minutes.</p>
+      <p>If you did not initiate this change, please check your firm security settings immediately.</p>
+      <p style="margin-top: 24px; color: #64748b;">Warm regards,<br/>Docketra Security</p>
+    </div>
+  `;
+  const text = `Hello ${greetingName},\n\nA request was made to ${actionDescription} for your firm.\n\nYour one-time authorization code is:\n\n${resolvedOtp}\n\nThis code expires in ${expiryMinutes} minutes.\n\nIf you did not initiate this change, please check your firm security settings immediately.\n\nWarm regards,\nDocketra Security`;
 
   return sendDirectAuthEmail({
     to: email,
@@ -1113,6 +1154,7 @@ module.exports = {
   sendAdminPasswordResetEmail,
   sendFirmSetupEmail,
   sendLoginOtpEmail,
+  sendSecurityAuthorizationOtpEmail,
   sendForgotPasswordOtpEmail,
   sendSignupOtpEmail,
   sendEnterpriseInquiryNotification,

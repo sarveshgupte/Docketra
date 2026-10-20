@@ -1,0 +1,13 @@
+{
+  "id": "P010",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "convenience",
+  "reason": "We already abandoned Jamku and desktop ERP because rotating article clerks refused to keep up with them, so I am not paying for another software tool that disrupts our daily workflow. Until a system proves my trainees will actually use it without me constantly supervising them, buying another platform is a waste of time.",
+  "objection": "My article clerks rotate every 2-3 years; training them on complex software is a waste of time.",
+  "would_change_my_mind": "If direct WhatsApp client collection is fully live and my trainees adopt it seamlessly without any training or abandonment after two months.",
+  "price_too_cheap": 3000,
+  "price_cheap": 6500,
+  "price_expensive": 15000,
+  "price_too_expensive": 25000
+}

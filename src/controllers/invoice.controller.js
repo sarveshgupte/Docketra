@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const Invoice = require('../models/Invoice.model');
 const Deal = require('../models/Deal.model');
 const Case = require('../models/Case.model');
+const Client = require('../models/Client.model');
+const CrmClient = require('../models/CrmClient.model');
 const { resolveClientAndLegacyCrm } = require('../services/crmClientMapping.service');
 
 const ALLOWED_STATUSES = new Set(['unpaid', 'paid']);
@@ -12,6 +14,35 @@ const parsePagination = (query = {}) => {
   const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 100) : 50;
   const skip = Number.isFinite(rawSkip) ? Math.max(rawSkip, 0) : 0;
   return { limit, skip };
+};
+
+const resolveRestrictedCrmClientIds = async (firmId, userRestrictedDisplayIds) => {
+  if (!Array.isArray(userRestrictedDisplayIds) || userRestrictedDisplayIds.length === 0) {
+    return [];
+  }
+
+  const restrictedClients = await Client.find({
+    firmId,
+    clientId: { $in: userRestrictedDisplayIds },
+  }).select('_id legacyCrmClientId').lean();
+
+  const canonicalIds = restrictedClients.map((c) => c._id);
+  const legacyIds = restrictedClients.map((c) => c.legacyCrmClientId).filter(Boolean);
+
+  const crmClients = await CrmClient.find({
+    firmId,
+    $or: [
+      { _id: { $in: legacyIds } },
+      { canonicalClientId: { $in: canonicalIds } },
+    ],
+  }).select('_id').lean();
+
+  const allIds = new Set([
+    ...legacyIds.map((id) => String(id)),
+    ...crmClients.map((c) => String(c._id)),
+  ]);
+
+  return Array.from(allIds).map((id) => new mongoose.Types.ObjectId(id));
 };
 
 const createInvoice = async (req, res) => {
@@ -41,6 +72,19 @@ const createInvoice = async (req, res) => {
     const resolvedCrmClientId = crmClient?._id || client?.legacyCrmClientId;
     if (!resolvedCrmClientId) {
       return res.status(400).json({ success: false, message: 'Client not found' });
+    }
+
+    const userRestrictedDisplayIds = req.user?.restrictedClientIds;
+    if (Array.isArray(userRestrictedDisplayIds) && userRestrictedDisplayIds.length > 0) {
+      const isRestricted = (client && userRestrictedDisplayIds.includes(client.clientId))
+        || userRestrictedDisplayIds.includes(String(clientId));
+      if (isRestricted) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You do not have permission to access this client',
+          code: 'CLIENT_ACCESS_RESTRICTED',
+        });
+      }
     }
 
     let resolvedDealId = null;
@@ -82,6 +126,15 @@ const createInvoice = async (req, res) => {
       if (!docket) {
         return res.status(400).json({ success: false, message: 'Docket not found' });
       }
+      if (Array.isArray(userRestrictedDisplayIds) && userRestrictedDisplayIds.length > 0) {
+        if (docket.clientId && userRestrictedDisplayIds.includes(docket.clientId)) {
+          return res.status(403).json({
+            success: false,
+            message: 'Access denied: You do not have permission to access cases for this client',
+            code: 'CLIENT_ACCESS_RESTRICTED',
+          });
+        }
+      }
       resolvedDocketId = docketId;
     }
 
@@ -105,11 +158,38 @@ const listInvoices = async (req, res) => {
     const { limit, skip } = parsePagination(req.query);
     const query = { firmId };
 
+    const userRestrictedDisplayIds = req.user?.restrictedClientIds;
+    const restrictedCrmIds = await resolveRestrictedCrmClientIds(firmId, userRestrictedDisplayIds);
+
     if (req.query.clientId) {
       if (!mongoose.Types.ObjectId.isValid(req.query.clientId)) {
         return res.status(400).json({ success: false, message: 'Invalid clientId' });
       }
-      query.clientId = new mongoose.Types.ObjectId(req.query.clientId);
+      const targetClientId = req.query.clientId;
+      if (restrictedCrmIds.some((id) => String(id) === String(targetClientId))) {
+        return res.json({ success: true, data: [] });
+      }
+
+      const { client, crmClient } = await resolveClientAndLegacyCrm({
+        firmId,
+        inputId: targetClientId,
+      });
+
+      if (client && Array.isArray(userRestrictedDisplayIds) && userRestrictedDisplayIds.includes(client.clientId)) {
+        return res.json({ success: true, data: [] });
+      }
+
+      const resolvedCrmId = crmClient?._id || client?.legacyCrmClientId;
+      if (resolvedCrmId) {
+        if (restrictedCrmIds.some((id) => String(id) === String(resolvedCrmId))) {
+          return res.json({ success: true, data: [] });
+        }
+        query.clientId = new mongoose.Types.ObjectId(resolvedCrmId);
+      } else {
+        query.clientId = new mongoose.Types.ObjectId(targetClientId);
+      }
+    } else if (restrictedCrmIds.length > 0) {
+      query.clientId = { $nin: restrictedCrmIds };
     }
 
     if (req.query.dealId) {
@@ -148,6 +228,24 @@ const markAsPaid = async (req, res) => {
     const invoice = await Invoice.findOne({ _id: id, firmId: req.user.firmId });
     if (!invoice) {
       return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
+    const userRestrictedDisplayIds = req.user?.restrictedClientIds;
+    if (Array.isArray(userRestrictedDisplayIds) && userRestrictedDisplayIds.length > 0) {
+      const crmClient = await CrmClient.findOne({ _id: invoice.clientId, firmId: req.user.firmId }).lean();
+      if (crmClient) {
+        const client = await Client.findOne({
+          firmId: req.user.firmId,
+          $or: [{ _id: crmClient.canonicalClientId }, { legacyCrmClientId: crmClient._id }],
+        }).lean();
+        if (client && userRestrictedDisplayIds.includes(client.clientId)) {
+          return res.status(403).json({
+            success: false,
+            message: 'Access denied: You do not have permission to access this client',
+            code: 'CLIENT_ACCESS_RESTRICTED',
+          });
+        }
+      }
     }
 
     if (invoice.status === 'paid') {

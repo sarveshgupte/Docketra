@@ -230,6 +230,15 @@ const userSchema = new mongoose.Schema({
     max: 100,
     default: null,
   },
+
+  // Trainee Laptop Shield override for this specific user
+  // null = inherit firm-level restrictTraineeDownloads default
+  // true = strictly shielded (block file downloads to personal device)
+  // false = exempt / permitted (allow raw file downloads)
+  traineeLaptopShield: {
+    type: Boolean,
+    default: null,
+  },
   
   // Soft delete mechanism; allows disabling users without removing data
   // Also called 'active' in some contexts

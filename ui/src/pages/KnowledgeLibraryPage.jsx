@@ -80,10 +80,13 @@ const TYPE_COLORS = {
 
 const BADGE_BASE = {
   display: 'inline-block',
-  padding: '0.15em 0.55em',
-  borderRadius: '999px',
-  fontSize: '0.75rem',
+  padding: '1px 6px',
+  borderRadius: '2px',
+  fontSize: '11px',
   fontWeight: 600,
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+  fontFamily: 'ui-monospace, monospace',
   lineHeight: 1.4,
   whiteSpace: 'nowrap',
 };
@@ -1106,13 +1109,13 @@ export const KnowledgeLibraryPage = () => {
           {hasLinks ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
               {item.linkedWorkType ? (
-                <span style={{ color: '#2563eb', fontWeight: 500 }}>⚙ {formatLabel(item.linkedWorkType)}</span>
+                <span style={{ color: '#2563eb', fontWeight: 500 }}>{formatLabel(item.linkedWorkType)}</span>
               ) : null}
               {item.linkedClientId ? (
-                <span style={{ color: '#059669', fontWeight: 500 }}>👤 {item.linkedClientId}</span>
+                <span style={{ color: '#059669', fontWeight: 500 }}>Client: {item.linkedClientId}</span>
               ) : null}
               {item.linkedDocketId ? (
-                <span style={{ color: '#4f46e5', fontWeight: 500 }}>📁 {item.linkedDocketId}</span>
+                <span style={{ color: '#4f46e5', fontWeight: 500 }}>Docket: {item.linkedDocketId}</span>
               ) : null}
             </div>
           ) : (
@@ -1265,12 +1268,12 @@ export const KnowledgeLibraryPage = () => {
         marginBottom: '1rem'
       }}>
         {[
-          { label: 'Total Records', value: totalCount, icon: '📂', accent: '#4f46e5' },
-          { label: 'Active SOPs', value: activeCount, icon: '✅', accent: '#10b981' },
-          { label: 'Drafts', value: draftCount, icon: '📝', accent: '#f59e0b' },
-          { label: 'Review Due', value: reviewDueCount, icon: '⚠️', accent: '#ef4444', color: reviewDueCount > 0 ? '#ef4444' : '#1a1916' },
-          { label: 'Checklists', value: checklistCount, icon: '📋', accent: '#8b5cf6' },
-          { label: 'Unlinked', value: unlinkedCount, icon: '🔗', accent: '#ec4899' },
+          { label: 'Total Records', value: totalCount, accent: '#4f46e5' },
+          { label: 'Active SOPs', value: activeCount, accent: '#10b981' },
+          { label: 'Drafts', value: draftCount, accent: '#f59e0b' },
+          { label: 'Review Due', value: reviewDueCount, accent: '#ef4444', color: reviewDueCount > 0 ? '#ef4444' : '#1a1916' },
+          { label: 'Checklists', value: checklistCount, accent: '#8b5cf6' },
+          { label: 'Unlinked', value: unlinkedCount, accent: '#ec4899' },
         ].map((stat) => (
           <div
             key={stat.label}
@@ -1290,7 +1293,7 @@ export const KnowledgeLibraryPage = () => {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '10.5px', color: '#7a7870', fontWeight: 650, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{stat.label}</span>
-              <span style={{ fontSize: '1.05rem' }}>{stat.icon}</span>
+              
             </div>
             <span style={{ fontSize: '1.55rem', fontWeight: 800, color: stat.color || '#1a1916', marginTop: '0.25rem' }}>
               {loading ? '…' : stat.value}
@@ -1327,7 +1330,7 @@ export const KnowledgeLibraryPage = () => {
           }}
           className={activeTab !== 'directory' ? 'tab-btn' : ''}
         >
-          📚 Knowledge Directory
+          Knowledge Directory
         </button>
         <button
           type="button"
@@ -1346,7 +1349,7 @@ export const KnowledgeLibraryPage = () => {
           }}
           className={activeTab !== 'audit' ? 'tab-btn' : ''}
         >
-          📜 Audit Trails
+          Audit Trails
         </button>
       </div>
 
@@ -1457,7 +1460,7 @@ export const KnowledgeLibraryPage = () => {
               textAlign: 'center',
               color: '#7a7870'
             }}>
-              📂 No audit events recorded for Knowledge Items.
+              No audit events recorded for Knowledge Items.
             </div>
           ) : (
             <div style={{ background: '#ffffff', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '1.5rem' }}>
@@ -1465,7 +1468,7 @@ export const KnowledgeLibraryPage = () => {
                 {auditLogs.map((entry) => {
                   let dotColor = '#3b82f6';
                   let dotBg = '#eff5ff';
-                  let dotChar = '✏️';
+                  let dotChar = '•';
 
                   if (entry.action === 'KNOWLEDGE_ITEM_CREATED') {
                     dotColor = '#10b981';
@@ -1474,7 +1477,7 @@ export const KnowledgeLibraryPage = () => {
                   } else if (entry.action === 'KNOWLEDGE_ITEM_ARCHIVED') {
                     dotColor = '#ef4444';
                     dotBg = '#fee2e2';
-                    dotChar = '📥';
+                    dotChar = '↓';
                   }
 
                   return (
@@ -1598,7 +1601,7 @@ export const KnowledgeLibraryPage = () => {
               background: '#ffffff'
             }}>
               <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#1a1916' }}>
-                {formMode === 'create' ? '📋 New Knowledge Item' : '✏️ Edit Knowledge Item'}
+                {formMode === 'create' ? 'New Knowledge Item' : 'Edit Knowledge Item'}
               </h2>
               <button
                 type="button"

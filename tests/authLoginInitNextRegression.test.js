@@ -20,7 +20,7 @@ const createAuthLoginService = require('../src/services/authLogin.service');
     },
   });
 
-  const req = { method: 'POST', originalUrl: '/api/auth/login/init', body: { xid: 'X000001', password: 'pw' }, firmId: 'f1', firmSlug: 'gupte-opc', get: () => 'ua' };
+  const req = { method: 'POST', originalUrl: '/api/auth/login/init', body: { xid: 'X000001', password: 'pw' }, firmId: 'f1', firmSlug: 'demo-firm', get: () => 'ua' };
   const result = await service.login({ req });
 
   assert.strictEqual(result.statusCode, 200);

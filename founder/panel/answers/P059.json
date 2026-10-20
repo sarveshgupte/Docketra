@@ -1,0 +1,13 @@
+{
+  "id": "P059",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "While I appreciate the transparent flat pricing of ₹12,990 with no per-user fees, as a partner managing confidential client audits I cannot risk paying upfront until I verify that connecting Google Drive won't expose our firm's existing private files. I would only test the free pilot first to inspect the permissions before spending any money.",
+  "objection": "Will connecting my Google Drive give Docketra access to read all my firm's private files outside the dedicated folder?",
+  "would_change_my_mind": "Verifiable proof during the free pilot showing that Google OAuth permissions physically isolate Docketra to only the /Docketra/ folder with zero access to our private files.",
+  "price_too_cheap": 3500,
+  "price_cheap": 7500,
+  "price_expensive": 16000,
+  "price_too_expensive": 28000
+}

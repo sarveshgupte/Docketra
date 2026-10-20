@@ -505,30 +505,34 @@ const runBootstrap = async () => {
   let session = null;
 
   try {
-    session = await mongoose.startSession();
-    log.info('BOOTSTRAP_STARTED');
-    log.info('🔧 Running system bootstrap...');
-    session.startTransaction();
+    try {
+      session = await mongoose.startSession();
+      session.startTransaction();
+      log.info('BOOTSTRAP_STARTED');
+      log.info('🔧 Running system bootstrap (transactional)...');
 
-    // Run preflight data validation checks
-    // Validates existing firms for integrity violations
-    // Does NOT auto-create firms or auto-heal data
-    // Supports empty database (no firms) as a valid state
-    await runPreflightChecks({ session });
-    await seedPlans({ session });
+      await runPreflightChecks({ session });
+      await seedPlans({ session });
 
-    await session.commitTransaction();
-
-    log.info('BOOTSTRAP_COMPLETED');
-    log.info('✓ Bootstrap completed successfully');
-  } catch (error) {
-    if (session?.inTransaction()) {
-      await session.abortTransaction();
+      await session.commitTransaction();
+      log.info('BOOTSTRAP_COMPLETED');
+      log.info('✓ Bootstrap completed successfully');
+    } catch (txError) {
+      if (session?.inTransaction()) {
+        await session.abortTransaction();
+      }
+      log.warn('BOOTSTRAP_TX_UNAVAILABLE_FALLBACK', {
+        reason: txError?.message || 'Transaction unsupported',
+      });
+      log.info('🔧 Running system bootstrap (standalone fallback)...');
+      await runPreflightChecks();
+      await seedPlans();
+      log.info('BOOTSTRAP_COMPLETED');
+      log.info('✓ Bootstrap completed successfully (non-transactional fallback)');
     }
+  } catch (error) {
     log.error('BOOTSTRAP_FAILED', { message: error.message });
     log.error('✗ Bootstrap failed:', error.message);
-    // Don't exit process - let server continue but log the error
-    // This allows investigation without blocking startup
     log.error('⚠ Server will continue to run but system may be partially initialized');
   } finally {
     session?.endSession();

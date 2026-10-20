@@ -17,6 +17,9 @@ export const UserAccessModal = ({
   setSelectedWorkbasketDraft,
   qcSamplingRateDraft,
   setQcSamplingRateDraft,
+  traineeShieldDraft,
+  setTraineeShieldDraft,
+  isPrimaryAdminActor,
   clients,
   restrictedClientDraft,
   clientAccessModeDraft,
@@ -104,6 +107,75 @@ export const UserAccessModal = ({
               <Badge status={isClientAllowedForDraft(client.clientId) ? 'Approved' : 'Pending'}>{isClientAllowedForDraft(client.clientId) ? 'Selected' : 'Not selected'}</Badge>
             </label>
           ))
+        )}
+      </div>
+
+      <div className="space-y-2 pt-3 border-t border-gray-200">
+        <div className="flex items-center justify-between">
+          <FormLabel>Trainee Laptop Shield (Download Restrictions)</FormLabel>
+          <Badge
+            status={
+              traineeShieldDraft === true
+                ? 'Error'
+                : traineeShieldDraft === false
+                  ? 'Approved'
+                  : 'Pending'
+            }
+          >
+            {traineeShieldDraft === true
+              ? 'Downloads Blocked'
+              : traineeShieldDraft === false
+                ? 'Downloads Allowed'
+                : 'Inherit Firm Default'}
+          </Badge>
+        </div>
+        <p className="text-xs text-gray-500">
+          Prevents article assistants from downloading raw client files to personal laptops. In-app document preview is always allowed.
+        </p>
+
+        {!isPrimaryAdminActor ? (
+          <div className="text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
+            Only the Primary Admin can change Trainee Laptop Shield settings for a user.
+          </div>
+        ) : null}
+
+        <div className="space-y-2">
+          <label className="admin__client-access-item">
+            <input
+              type="radio"
+              name="trainee-shield-setting"
+              checked={traineeShieldDraft === null || traineeShieldDraft === undefined}
+              disabled={!isPrimaryAdminActor || isPrimaryAdminTarget}
+              onChange={() => setTraineeShieldDraft(null)}
+            />
+            <span>Inherit firm default setting</span>
+          </label>
+          <label className="admin__client-access-item">
+            <input
+              type="radio"
+              name="trainee-shield-setting"
+              checked={traineeShieldDraft === true}
+              disabled={!isPrimaryAdminActor || isPrimaryAdminTarget}
+              onChange={() => setTraineeShieldDraft(true)}
+            />
+            <span><strong>Shield Active (Block Downloads)</strong> — Prevent raw file downloads on personal laptop</span>
+          </label>
+          <label className="admin__client-access-item">
+            <input
+              type="radio"
+              name="trainee-shield-setting"
+              checked={traineeShieldDraft === false}
+              disabled={!isPrimaryAdminActor || isPrimaryAdminTarget}
+              onChange={() => setTraineeShieldDraft(false)}
+            />
+            <span><strong>Shield Exempt (Allow Downloads)</strong> — Permit file downloads for this staff</span>
+          </label>
+        </div>
+
+        {isPrimaryAdminActor && (
+          <p className="text-[11px] text-indigo-700 font-medium">
+            Note: Changing this setting will ask for a 6-digit email OTP verification before saving.
+          </p>
         )}
       </div>
 

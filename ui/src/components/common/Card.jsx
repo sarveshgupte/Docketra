@@ -43,8 +43,8 @@ export const Card = ({ children, className = '', onClick, interactive = false, a
 
 export const CardHeader = ({ title, action, children, className = '' }) => {
   return (
-    <div className={`card-header ${className}`}>
-      {title && <h2 className="card-title">{title}</h2>}
+    <div className={`card-header flex items-center justify-between pb-3 mb-3 border-b border-[var(--dt-border-whisper)] ${className}`}>
+      {title && <h2 className="card-title text-xs font-semibold uppercase tracking-wider text-[var(--dt-text)]">{title}</h2>}
       {children}
       {action && <div className="card-action">{action}</div>}
     </div>
@@ -56,5 +56,5 @@ export const CardBody = ({ children, className = '' }) => {
 };
 
 export const CardFooter = ({ children, className = '' }) => {
-  return <div className={`card-footer border-t border-[var(--dt-border-whisper)] pt-4 mt-4 ${className}`}>{children}</div>;
+  return <div className={`card-footer border-t border-[var(--dt-border-whisper)] pt-3 mt-3 ${className}`}>{children}</div>;
 };

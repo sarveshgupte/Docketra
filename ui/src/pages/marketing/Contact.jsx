@@ -54,13 +54,13 @@ export const ContactPage = () => {
       title="Contact"
       description="Request early access, ask a security question, or tell us what your firm needs from a Company Brain + Work Execution OS."
       sections={SECTIONS}
-      kicker="👋 Talk to Docketra"
+      kicker="Talk to Docketra"
       highlights={['Early access requests', 'Security questions', 'Firm workflow discovery']}
     >
       <section id="contact-form" className="max-w-3xl">
         <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">Early Access Contact</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {['🧠 Company Brain setup', '⚙️ Workflow migration', '🔐 Data questions'].map((item) => (
+          {['Company Brain setup', 'Workflow migration', 'Data questions'].map((item) => (
             <div key={item} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
               {item}
             </div>
@@ -68,7 +68,7 @@ export const ContactPage = () => {
         </div>
         <p className="mt-5 text-sm text-gray-600">Prefer email? Reach us directly at <a className="underline" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.</p>
         {status === 'success' ? (
-          <div className="mt-8 rounded-2xl border border-green-200 bg-green-50 p-5 text-sm font-medium text-green-800">✅ Inquiry received. We will get back to you soon.</div>
+          <div className="mt-8 rounded-2xl border border-green-200 bg-green-50 p-5 text-sm font-medium text-green-800">Inquiry received. We will get back to you soon.</div>
         ) : (
           <form onSubmit={handleSubmit} className={`mt-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6 ${spacingClasses.formFieldSpacing}`} aria-label="Contact form">
             <div className="grid gap-4 md:grid-cols-2">

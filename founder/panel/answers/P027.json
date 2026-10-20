@@ -1,0 +1,13 @@
+{
+  "id": "P027",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "habit",
+  "reason": "I have run our practice on spreadsheets and WhatsApp groups for ten years and see no reason to pay ₹12,990 upfront for unfamiliar software. Until a tool proves it is dead simple and won't disrupt our established routine, I would only ever test the free pilot.",
+  "objection": "If files stay in our Google Drive, what happens if an assistant accidentally deletes or moves the folder, and will learning another platform just add more hassle than my Saturday spreadsheets?",
+  "would_change_my_mind": "Testing the free pilot and seeing it eliminate my 2-hour Saturday GST reconciliation while proving that assistants cannot accidentally delete or displace Drive folders.",
+  "price_too_cheap": 3500,
+  "price_cheap": 7000,
+  "price_expensive": 15000,
+  "price_too_expensive": 28000
+}

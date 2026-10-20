@@ -151,11 +151,11 @@ export const CaseDetailDocumentPacksPanel = ({ caseId, caseInternalId, attachmen
 
   const getStatusBadgeClass = (status) => {
     const s = String(status).toLowerCase();
-    if (s === 'approved') return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-    if (s === 'under_review') return 'bg-amber-100 text-amber-800 border-amber-200';
-    if (s === 'filed') return 'bg-blue-100 text-blue-800 border-blue-200';
-    if (s === 'archived') return 'bg-rose-100 text-rose-800 border-rose-200';
-    return 'bg-gray-100 text-gray-800 border-gray-200'; // draft
+    if (s === 'approved') return 'bg-emerald-500/10 text-emerald-800 border-emerald-500/20';
+    if (s === 'under_review') return 'bg-amber-500/10 text-amber-800 border-amber-500/20';
+    if (s === 'filed') return 'bg-blue-500/10 text-blue-800 border-blue-500/20';
+    if (s === 'archived') return 'bg-rose-500/10 text-rose-800 border-rose-500/20';
+    return 'bg-slate-500/10 text-slate-700 border-slate-200'; // draft
   };
 
   const formatStatusText = (status) => {
@@ -178,7 +178,9 @@ export const CaseDetailDocumentPacksPanel = ({ caseId, caseInternalId, attachmen
         <p className="case-detail__empty-note mt-3">Loading document packs…</p>
       ) : documents.length === 0 ? (
         <div className="text-center py-8 bg-gray-50/50 rounded-xl border border-dashed border-gray-200 mt-3">
-          <span className="text-3xl">🗂️</span>
+          <svg className="mx-auto h-8 w-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+          </svg>
           <p className="mt-2 text-sm text-gray-500 font-medium">No version-controlled document packs in this compliance docket yet.</p>
           <p className="text-xs text-gray-400 mt-1">Upload a normal attachment first, then click "Ingest Document Pack" to configure version tracking.</p>
         </div>
@@ -190,12 +192,12 @@ export const CaseDetailDocumentPacksPanel = ({ caseId, caseInternalId, attachmen
             const fileRef = currentVersion?.fileReference;
             
             return (
-              <div key={doc._id} className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden hover:border-gray-300 transition-all duration-200">
-                <div className="p-4" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div key={doc._id} className="rounded-sm border-t border-slate-200 bg-white p-4 transition-colors">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                   <div style={{ flex: '1', minWidth: '200px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <h3 className="text-sm font-semibold text-gray-900">{doc.name}</h3>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${getStatusBadgeClass(doc.status)}`}>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-900">{doc.name}</h3>
+                      <span className={`text-[11px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded-sm border ${getStatusBadgeClass(doc.status)}`}>
                         {formatStatusText(doc.status)}
                       </span>
                     </div>
@@ -208,7 +210,7 @@ export const CaseDetailDocumentPacksPanel = ({ caseId, caseInternalId, attachmen
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     {fileRef && (
                       <Button variant="outline" size="small" onClick={() => downloadFile(fileRef)}>
-                        📥 Download Active (v{doc.currentVersionNumber})
+                        Download Active (v{doc.currentVersionNumber})
                       </Button>
                     )}
                     <select
@@ -244,7 +246,7 @@ export const CaseDetailDocumentPacksPanel = ({ caseId, caseInternalId, attachmen
                         
                         return (
                           <div key={ver.versionNumber} className="relative pl-6">
-                            <span className={`absolute left-0 top-1.5 -translate-x-1/2 w-2.5 h-2.5 rounded-full border-2 ${
+                            <span className={`absolute left-0 top-1.5 -translate-x-1/2 w-2.5 h-2.5 rounded-xs border-2 ${
                               isCurrentActive ? 'bg-indigo-600 border-indigo-600 ring-4 ring-indigo-100' : 'bg-gray-300 border-white'
                             }`} />
                             <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-inner text-xs">
@@ -270,12 +272,12 @@ export const CaseDetailDocumentPacksPanel = ({ caseId, caseInternalId, attachmen
                               <div className="mt-2.5 flex gap-2">
                                 {vFileRef && (
                                   <Button variant="outline" size="small" onClick={() => downloadFile(vFileRef)}>
-                                    📥 Download (v{ver.versionNumber})
+                                    Download (v{ver.versionNumber})
                                   </Button>
                                 )}
                                 {!isCurrentActive && (
                                   <Button variant="outline" size="small" onClick={() => handleSelectActiveVersion(doc._id, ver.versionNumber)}>
-                                    ⭐ Make current active
+                                    Make current active
                                   </Button>
                                 )}
                               </div>
@@ -370,7 +372,7 @@ export const CaseDetailDocumentPacksPanel = ({ caseId, caseInternalId, attachmen
                 <p className="text-[10px] text-gray-400 mt-1">If your file is not listed, upload it in the Attachments tab first.</p>
               </div>
               <div>
-                <Textarea label="What changed in this version? (Required) *" value={versionChangeNote} onChange={e => setVersionChangeNote(e.target.value)} placeholder="e.g. Fixed address mismatch on page 2, updated salary details" rows={3} required />
+                <Textarea label="What changed in this version? (Required)" value={versionChangeNote} onChange={e => setVersionChangeNote(e.target.value)} placeholder="e.g. Fixed address mismatch on page 2, updated salary details" rows={3} required />
               </div>
               <div style={{ display: 'flex', justifyContent: 'end', gap: '8px', marginTop: '8px' }}>
                 <Button type="button" variant="outline" onClick={() => setSelectedDocForVersion(null)} disabled={uploadingVersion}>
