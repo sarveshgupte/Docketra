@@ -1,0 +1,13 @@
+{
+  "id": "P088",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "habit",
+  "reason": "Why pay over ₹21,000 a year for software when Excel and WhatsApp are completely free and have run our practice for ten years? Even though I get anxious about article clerks leaving with client data on personal laptops, I am deeply skeptical of new tools and would only test the free pilot before paying to disrupt our routine.",
+  "objection": "Why pay for software when Excel and WhatsApp are completely free, and will the Trainee Laptop Shield really stop article clerks from downloading confidential client data to personal laptops without adding operational friction?",
+  "would_change_my_mind": "Proof during the free pilot that the Trainee Laptop Shield reliably blocks article clerks from downloading raw client files to personal laptops while keeping our daily workflow dead simple.",
+  "price_too_cheap": 5000,
+  "price_cheap": 12000,
+  "price_expensive": 22000,
+  "price_too_expensive": 40000
+}

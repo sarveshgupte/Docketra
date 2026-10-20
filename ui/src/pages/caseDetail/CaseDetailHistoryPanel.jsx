@@ -109,10 +109,10 @@ export const CaseDetailHistoryPanel = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
         <div>
           <div className="flex items-center gap-2">
-            <h2 id="past-dockets-heading" className="text-lg font-bold text-slate-900">
-              Client Docket History
-            </h2>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+            <div id="past-dockets-heading" className="text-lg font-bold text-slate-900">
+              <h2>Change History</h2>
+            </div>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700">
               {counts.total} {counts.total === 1 ? 'Matter' : 'Matters'}
             </span>
           </div>

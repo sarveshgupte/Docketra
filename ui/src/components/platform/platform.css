@@ -90,27 +90,29 @@
 .platform__brand {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 12px 12px 10px;
-  border-bottom: 1px solid #e8e6e0;
-  min-height: 52px;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  min-height: 54px;
   flex-shrink: 0;
+  background: #ffffff;
 }
 
 .platform__firm-badge {
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  background: #1a1916;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #0f172a;
   color: #ffffff;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.02em;
   display: flex;
   align-items: center;
   justify-content: center;
   user-select: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.15);
 }
 
 .platform__firm-info {
@@ -123,40 +125,63 @@
 
 .platform__firm-name {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #1a1916;
+  color: #0f172a;
+  letter-spacing: -0.01em;
 }
 
 .platform__firm-sub {
   font-size: 11px;
-  color: #7a7870;
+  color: #64748b;
   line-height: 1.2;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 500;
+}
+
+.platform__presence-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.platform__presence-dot--avatar {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid #ffffff;
 }
 
 .platform__collapse {
   flex-shrink: 0;
   margin-left: auto;
-  width: 22px;
-  height: 22px;
-  border: 1px solid #e8e6e0;
-  background: #fafaf8;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
   border-radius: 5px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #b0aea8;
+  color: #64748b;
   cursor: pointer;
   transition: background 0.13s, border-color 0.13s, color 0.13s;
 }
 
 .platform__collapse:hover {
-  background: #f3f2ef;
-  border-color: #ddd9d0;
-  color: #7a7870;
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
 }
 
 .platform__sidebar--collapsed .platform__brand {
@@ -168,8 +193,8 @@
 }
 
 .platform__sidebar--collapsed .platform__firm-badge {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
 }
 
 .platform__sidebar--collapsed .platform__collapse {
@@ -278,10 +303,10 @@
 }
 
 .platform__nav-link.is-active {
-  background: #f8fafc;
-  color: #0f172a;
+  background: #eef2ff;
+  color: #4338ca;
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), inset 0 0 0 1px rgba(226, 232, 240, 0.8);
+  box-shadow: 0 1px 2px rgba(67, 56, 202, 0.05), inset 0 0 0 1px rgba(199, 210, 254, 0.6);
 }
 
 .platform__nav-link.is-active::before {
@@ -292,11 +317,11 @@
   bottom: 6px;
   width: 3px;
   border-radius: 0 3px 3px 0;
-  background: #2563eb;
+  background: #4f46e5;
 }
 
 .platform__nav-link.is-active .platform__nav-link-icon {
-  color: #2563eb;
+  color: #4f46e5;
 }
 
 .platform__nav-link:focus-visible {
@@ -352,40 +377,49 @@
   top: 0;
   z-index: 30;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  min-height: 60px;
-  padding: 8px 20px;
-  border-bottom: 1px solid #e8e6e0;
-  background: rgba(255, 255, 255, 0.97);
+  min-height: 52px;
+  height: 52px;
+  padding: 0 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .platform__title-block {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
-  flex: 1;
-  max-width: min(640px, 55vw);
+  flex: 0 1 auto;
+  max-width: min(320px, 30vw);
 }
 
 .platform__topbar h1 {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   line-height: 1.25;
   margin: 0;
-  color: #1a1916;
+  color: #0f172a;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .platform__topbar p {
   margin: 0;
-  font-size: 12px;
-  color: #7a7870;
-  line-height: 1.45;
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.4;
   max-width: 70ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .platform__breadcrumbs {
@@ -394,7 +428,8 @@
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: #7a7870;
+  font-weight: 500;
+  color: #64748b;
 }
 
 /* Module label */
@@ -403,7 +438,7 @@
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #b0aea8;
+  color: #94a3b8;
   font-weight: 700;
 }
 
@@ -419,9 +454,10 @@
 }
 
 .platform__action-search {
-  min-width: 220px;
+  min-width: 200px;
   flex: 1 1 auto;
-  max-width: 320px;
+  max-width: 440px;
+  margin: 0 12px;
 }
 
 .platform__action-primary {
@@ -441,44 +477,70 @@
 
 .platform__actions button,
 .platform__actions a {
-  border: 1px solid #e8e6e0;
+  border: 1px solid #e2e8f0;
   background: #ffffff;
-  min-height: var(--control-height);
-  padding: 5px 10px;
-  border-radius: 5px;
+  min-height: 32px;
+  padding: 5px 11px;
+  border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
   text-decoration: none;
-  color: #3d3c38;
-  transition: background 0.1s, border-color 0.1s;
+  color: #334155;
+  transition: all 0.15s ease;
 }
 
 .platform__actions button:hover,
 .platform__actions a:hover {
-  background: #f7f7f5;
-  border-color: #ddd9d0;
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
 }
 
-/* ── Command trigger (search pill) ─────────────────────────────────────── */
+.platform__action-primary button,
+.platform__action-primary a {
+  background: #4f46e5 !important;
+  color: #ffffff !important;
+  border-color: #4338ca !important;
+  font-weight: 600 !important;
+  box-shadow: 0 1px 2px rgba(79, 70, 229, 0.15) !important;
+}
+
+.platform__action-primary button:hover,
+.platform__action-primary a:hover {
+  background: #4338ca !important;
+}
+
+/* ── Command trigger (Slack / Linear search omnibar) ───────────────────── */
 
 .platform__command-trigger {
   min-width: 220px;
+  width: 100%;
   justify-content: space-between;
   align-items: center;
   display: inline-flex;
   gap: 8px;
-  border: 1px solid #e8e6e0!important;
-  border-radius: 7px !important;
-  background: #fafaf8 !important;
-  color: #7a7870 !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  background: #f8fafc !important;
+  color: #64748b !important;
   font-size: 12px;
-  height: 32px;
-  padding: 0 10px !important;
+  height: 34px;
+  padding: 0 12px !important;
+  transition: all 0.15s ease;
+  cursor: pointer;
 }
 
 .platform__command-trigger:hover {
-  border-color: #ddd9d0 !important;
-  background: #f3f2ef !important;
+  border-color: #cbd5e1 !important;
+  background: #f1f5f9 !important;
+  color: #1e293b !important;
+}
+
+.platform__command-trigger-icon {
+  display: flex;
+  align-items: center;
+  color: #94a3b8;
+  flex-shrink: 0;
 }
 
 .platform__command-trigger-label {
@@ -487,16 +549,21 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
+  flex: 1;
+  text-align: left;
 }
 
 .platform__command-trigger kbd {
-  border: 1px solid #e8e6e0;
-  border-radius: 3px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
   background: #ffffff;
-  color: #b0aea8;
+  color: #64748b;
   font-size: 10px;
+  font-weight: 600;
   padding: 1px 5px;
   font-family: var(--dt-font-mono, ui-monospace, monospace);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+  flex-shrink: 0;
 }
 
 /* ── Financial Year Toggle ──────────────────────────────────────────────── */
@@ -608,12 +675,12 @@
 /* ── User pill ─────────────────────────────────────────────────────────── */
 
 .platform__user-pill {
-  border: 1px solid #e8e6e0;
-  border-radius: 999px;
-  background: #fafaf8;
-  padding: 3px 9px 3px 3px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 3px 8px 3px 4px;
   font-size: 12px;
-  color: #3d3c38;
+  color: #1e293b;
   height: 32px;
 }
 
@@ -626,8 +693,8 @@
 }
 
 .platform__user-pill--button:hover {
-  background: #f3f2ef;
-  border-color: #ddd9d0;
+  background: #f8fafc;
+  border-color: #cbd5e1;
 }
 
 .platform__user-pill--button:focus-visible {
@@ -636,11 +703,11 @@
 }
 
 .platform__user-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  background: var(--color-surface-muted, #f5f5f5);
-  color: var(--color-ink, #111111);
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: #0f172a;
+  color: #ffffff;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -649,6 +716,7 @@
   justify-content: center;
   flex-shrink: 0;
   user-select: none;
+  position: relative;
 }
 
 .platform__user-name {

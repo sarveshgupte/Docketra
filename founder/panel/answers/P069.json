@@ -1,0 +1,13 @@
+{
+  "id": "P069",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "habit",
+  "reason": "My clients will never use an intake portal—they just dump bills on WhatsApp, and expecting my assistant to manually forward every single file creates extra clerical overhead. In a normal week outside of peak filing panic, I would stick to my regular routine and only test the free pilot before paying ₹12,990 for software.",
+  "objection": "My clients will never use an intake portal—they just dump bills on WhatsApp, and having to manually forward every file into Docketra adds extra clerical work for a two-person firm.",
+  "would_change_my_mind": "Verifying on the free pilot that the WhatsApp forwarding bridge and maker-checker checklists completely eliminate my 2-hour Saturday GST reconciliation without adding manual forwarding overhead.",
+  "price_too_cheap": 3000,
+  "price_cheap": 6500,
+  "price_expensive": 13000,
+  "price_too_expensive": 25000
+}

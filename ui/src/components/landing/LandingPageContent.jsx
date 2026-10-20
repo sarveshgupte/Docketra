@@ -304,32 +304,38 @@ const TrustSection = () => (
   <section id="trust" className="scroll-mt-16 bg-[#080C14] py-16 text-white border-b border-slate-800">
     <Container size="7xl">
       <motion.div className="max-w-2xl" {...REVEAL}>
-        <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-amber-400">Data Safety</div>
+        <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-amber-400">Data Safety & Sovereignty</div>
         <h2 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight text-white">
-          Your client files stay in your own Google Drive
+          Your client files stay in your firm’s own Google Drive
         </h2>
         <p className="mt-1.5 text-xs sm:text-sm text-slate-400 leading-relaxed">
-          Docketra manages the work status. All confidential client documents stay inside your firm’s private Drive.
+          No shared cloud servers. Docketra manages the workflow status while 100% of confidential client documents stay inside your private Drive.
         </p>
       </motion.div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="border border-slate-800 bg-slate-900/60 p-5 space-y-1.5 hover:border-slate-700 transition-colors">
-          <h3 className="text-sm font-bold text-white">We Only Open Our Folder</h3>
+          <h3 className="text-sm font-bold text-white">Google Drive Isolation</h3>
           <p className="text-xs text-slate-400 leading-relaxed">
-            Docketra only accesses the specific folder it creates. It cannot read, search, or touch your other client files or personal folders.
+            Docketra strictly uses Google’s restricted <code className="text-amber-300 text-[11px]">drive.file</code> scope. It can only open the specific /Docketra/ folder it created, with zero access to your existing files.
           </p>
         </div>
         <div className="border border-slate-800 bg-slate-900/60 p-5 space-y-1.5 hover:border-slate-700 transition-colors">
-          <h3 className="text-sm font-bold text-white">100% Your Own Files</h3>
+          <h3 className="text-sm font-bold text-white">Trainee Laptop Shield</h3>
           <p className="text-xs text-slate-400 leading-relaxed">
-            Client papers and balance sheets stay in your Drive. Even if you leave Docketra, you keep every single file.
+            Article assistants view working papers inside Docketra’s protected viewer. Direct downloads of client PAN, ITR, and financial files to personal laptops are blocked.
           </p>
         </div>
         <div className="border border-slate-800 bg-slate-900/60 p-5 space-y-1.5 hover:border-slate-700 transition-colors">
-          <h3 className="text-sm font-bold text-white">Clear Record for Peer Review</h3>
+          <h3 className="text-sm font-bold text-white">Drive Tamper Guard</h3>
           <p className="text-xs text-slate-400 leading-relaxed">
-            A complete record of who prepared the work and who approved it, ready whenever peer review comes up.
+            If a clerk accidentally moves or trashes a folder inside Google Drive, Docketra detects it instantly and restores the folder and file links in 1 click.
+          </p>
+        </div>
+        <div className="border border-slate-800 bg-slate-900/60 p-5 space-y-1.5 hover:border-slate-700 transition-colors">
+          <h3 className="text-sm font-bold text-white">Peer-Review Audit Trail</h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Complete SQC-1 maker-checker audit log. Shows exactly who prepared the filing and when the partner signed off, ready for ICAI/ICSI reviews.
           </p>
         </div>
       </div>
@@ -350,7 +356,7 @@ const PilotReadinessSection = () => (
               Start using Docketra for your firm in 5 minutes
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Create your firm workspace, invite your team, and manage your first 5 clients for ₹0. Pioneer 30 pass available for growing practices.
+              Create your firm workspace, invite your team, and manage your first 5 clients for ₹0. Upgrade to Pioneer or Growth in 1 click whenever you expand.
             </p>
           </div>
 
@@ -371,27 +377,34 @@ const PilotReadinessSection = () => (
           </div>
         </div>
 
-        {/* 3 Value Pillars */}
-        <div className="pt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+        {/* 4 Value Pillars */}
+        <div className="pt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
           <div className="flex items-start gap-2.5">
             <span className="text-amber-600 font-bold">✓</span>
             <div>
-              <span className="font-bold text-slate-900">Free Sandbox (₹0 forever):</span>
-              <p className="text-slate-600 mt-0.5">Up to 2 seats, 5 clients, and full Google Drive connection.</p>
+              <span className="font-bold text-slate-900">Free Pilot (₹0 forever):</span>
+              <p className="text-slate-600 mt-0.5">2 seats, 5 clients. Official sandbox for Google Drive safety & junior download blocks.</p>
             </div>
           </div>
           <div className="flex items-start gap-2.5">
             <span className="text-amber-600 font-bold">✓</span>
             <div>
-              <span className="font-bold text-slate-900">Pioneer 30 Pass (₹12,990/year):</span>
-              <p className="text-slate-600 mt-0.5">Special flat rate locked for life for first 30 firms. Zero setup charges.</p>
+              <span className="font-bold text-slate-900">Pioneer 30 (₹12,990/year):</span>
+              <p className="text-slate-600 mt-0.5">Up to 5 seats, 50 clients. Flat rate locked for life for founding practices.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2.5">
+            <span className="text-indigo-600 font-bold">★</span>
+            <div>
+              <span className="font-bold text-slate-900">Growth Tier (₹21,990/year):</span>
+              <p className="text-slate-600 mt-0.5">12 seats, 150 clients. Pre-loaded statutory blueprints and department queues. 25% firm choice.</p>
             </div>
           </div>
           <div className="flex items-start gap-2.5">
             <span className="text-amber-600 font-bold">✓</span>
             <div>
-              <span className="font-bold text-slate-900">30-Day Money-Back Guarantee:</span>
-              <p className="text-slate-600 mt-0.5">100% refund if it does not help your firm. All files stay in your Drive.</p>
+              <span className="font-bold text-slate-900">30-Day Guarantee:</span>
+              <p className="text-slate-600 mt-0.5">100% refund if it does not save 10 hours a week. All files stay in your Drive.</p>
             </div>
           </div>
         </div>
@@ -441,7 +454,7 @@ const FinalCtaSection = () => (
   </section>
 );
 
-const MarketingFooter = () => (
+export const MarketingFooter = () => (
   <footer className="bg-slate-950 py-10 text-slate-400 border-t border-slate-800 text-xs">
     <Container size="7xl">
       <div className="flex flex-col md:flex-row items-center justify-between gap-5">

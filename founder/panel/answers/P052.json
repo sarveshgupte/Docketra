@@ -1,0 +1,13 @@
+{
+  "id": "P052",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "need",
+  "reason": "As a solo CA with just one trainee, our small office fits entirely within the two-seat free pilot, so I have no need to pay ₹12,990 upfront. Given my strict confidentiality standards and past refusal of cloud databases, I would only ever test the free tier before committing a single rupee.",
+  "objection": "I am a solo CA with one trainee—why should I ever upgrade beyond the free tier?",
+  "would_change_my_mind": "If our firm expands beyond two people with a higher client volume, backed by verifiable proof that client ITR, PAN, and ROC files remain 100% leakproof in our own Drive.",
+  "price_too_cheap": 3000,
+  "price_cheap": 6500,
+  "price_expensive": 13000,
+  "price_too_expensive": 25000
+}

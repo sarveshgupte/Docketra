@@ -1,0 +1,13 @@
+{
+  "id": "P024",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "price",
+  "reason": "As a frugal practitioner running a two-person practice, committing ₹12,990 upfront makes no sense when Docketra has a ₹0 Free Pilot for two seats that lets me test if the WhatsApp forwarding bridge actually cuts my Saturday GST reconciliation time.",
+  "objection": "My clients will never use an intake portal—they just dump bills on WhatsApp, and having my team manually forward messages into Docketra might just add another tedious chore to our week.",
+  "would_change_my_mind": "Proving during the free pilot that the WhatsApp forwarding bridge seamlessly updates checklists and eliminates my two-hour Saturday GST reconciliation without adding manual overhead.",
+  "price_too_cheap": 3000,
+  "price_cheap": 6500,
+  "price_expensive": 13500,
+  "price_too_expensive": 25000
+}

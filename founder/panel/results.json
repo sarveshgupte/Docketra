@@ -1,84 +1,84 @@
 {
  "business": "Docketra (B2B Practice Operations Platform for Indian CAs & CSs)",
- "seed": 42,
- "dealt": 20,
- "answered": 20,
+ "seed": 90977,
+ "dealt": 100,
+ "answered": 100,
  "skipped": [],
- "buys": 3,
- "passes": 17,
- "buy_rate": 0.15,
+ "buys": 16,
+ "passes": 84,
+ "buy_rate": 0.16,
  "by_segment": [
   [
-   "Solo Practitioner / 2-Person Practice",
-   9,
-   0.2222222222222222
+   "Mid-Sized Compliance Practice (6 to 20 staff)",
+   20,
+   0.25
   ],
   [
    "Small Partnership Firm (3 to 5 staff)",
-   7,
-   0.14285714285714285
+   35,
+   0.17142857142857143
   ],
   [
-   "Mid-Sized Compliance Practice (6 to 20 staff)",
-   4,
-   0.0
+   "Solo Practitioner / 2-Person Practice",
+   45,
+   0.1111111111111111
   ]
  ],
  "by_behaviour": [
   [
    "Tech-forward modern practitioner",
-   2,
-   1.0
+   12,
+   0.5833333333333334
   ],
   [
    "Frugal tool buyer",
-   4,
-   0.25
-  ],
-  [
-   "Deadline & peer-review panic",
-   3,
-   0.0
-  ],
-  [
-   "Paranoid about client confidentiality",
-   4,
-   0.0
+   18,
+   0.16666666666666666
   ],
   [
    "Excel & WhatsApp diehard",
-   5,
-   0.0
+   25,
+   0.12
+  ],
+  [
+   "Paranoid about client confidentiality",
+   20,
+   0.1
+  ],
+  [
+   "Deadline & peer-review panic",
+   15,
+   0.06666666666666667
   ],
   [
    "Burned by legacy CA software",
-   2,
+   10,
    0.0
   ]
  ],
  "by_income": [
   [
-   "$1,555,000 to $6,068,000",
-   7,
-   0.2857142857142857
+   "$1,830,000 to $4,819,000",
+   33,
+   0.18181818181818182
   ],
   [
-   "under $1,555,000",
-   6,
-   0.16666666666666666
+   "$4,819,000 and up",
+   34,
+   0.17647058823529413
   ],
   [
-   "$6,068,000 and up",
-   7,
-   0.0
+   "under $1,830,000",
+   33,
+   0.12121212121212122
   ]
  ],
  "why_not": [
   [
    "trust",
-   5,
+   28,
    [
-    "While dedicated folder isolation is an improvement, connecting an external tool to our firm's Google Drive is still too much of a confidentiality risk for sensitive ITR and ROC files without an independent audit. In an ordinary week, I would only ever test the free sandbox on a few sample files rather than committing to a paid plan.",
+    "The Trainee Laptop Shield and Google Drive isolation are strong features, but having avoided cloud platforms for years over confidentiality fears, I will not pay for an annual subscription until I independently audit the restricted OAuth permissions on the free tier.",
     "I have run this practice on spreadsheets and WhatsApp groups for ten years, and I cannot risk connecting an unfamiliar software to our Google Drive where confidential client archives could be exposed. Without absolute proof that our existing files are completely untouched and isolated, I will not pay for this."
    ],
    [
@@ -88,10 +88,10 @@
   ],
   [
    "habit",
-   5,
+   27,
    [
-    "We've run our practice smoothly on WhatsApp groups and Excel sheets for ten years without paying for software, and WhatsApp direct integration is only on their roadmap. If I test it at all, I'll just stay on the free tier rather than paying ₹12,990.",
-    "We have run our practice on spreadsheets and WhatsApp groups for a decade without spending a rupee on software. Moving my staff and clients away from WhatsApp to a new platform introduces friction we simply do not need."
+    "We have run our practice on spreadsheets and WhatsApp groups for ten years without paying for software, and changing our established routine for an unfamiliar platform isn't worth the friction. If I test it at all, I'll just stay on the free tier rather than paying ₹12,990 upfront.",
+    "We have run our practice on spreadsheets and WhatsApp groups for a decade without spending a rupee on software. Having article clerks manually forward WhatsApp attachments into another tool is an extra chore on top of an established routine that already works."
    ],
    [
     "P003",
@@ -100,82 +100,165 @@
   ],
   [
    "price",
-   4,
+   17,
    [
     "At ₹12,990 a year, it is a steep commitment for a frugal firm when we can just test the free sandbox with one trainee on 5 clients first before paying anything.",
-    "My firm has around 10 staff so we exceed the 5-seat Pioneer plan, and jumping straight to Pro at ₹4,999 to ₹5,999 a month is far too steep for my frugal budget. I will start on the free sandbox to test the Drive permissions with two trainees first rather than committing upfront."
+    "Jamku charges only ₹6,500 a year, so paying ₹12,990 for Docketra when our two-person practice runs fine on spreadsheets and WhatsApp feels unjustified. I cannot see why I should pay nearly double for software when my existing routine costs nothing."
    ],
    [
     "P005",
-    "P008"
-   ]
-  ],
-  [
-   "convenience",
-   2,
-   [
-    "My article clerks rotate every couple of years, and getting a dozen trainees to adopt a new system without partner supervision is an uphill battle. In a normal week without deadline panic, I will stick to our existing routines and at most test the free sandbox before paying for an expensive Pro plan.",
-    "We already abandoned Jamku and desktop ERP because rotating article clerks refused to keep up with them, so I am not paying for another software tool that disrupts our daily workflow. Until a system proves my trainees will actually use it without me constantly supervising them, buying another platform is a waste of time."
-   ],
-   [
-    "P001",
-    "P010"
+    "P013"
    ]
   ],
   [
    "need",
-   1,
+   6,
    [
-    "As a solo CA with just one trainee, our workload fits within manual routines and the free sandbox; I have no operational need to spend ₹12,990 a year on a 5-user plan."
+    "As a solo CA with just one trainee, our workload fits within manual routines and the free sandbox; I have no operational need to spend ₹12,990 a year on a 5-user plan.",
+    "As a solo CA with just one trainee, the two-seat free pilot already covers us, so I have no need to pay ₹12,990 upfront for seats I will not use. Having watched Jamku and desktop ERP get cluttered and abandoned after two months, I would never pay before a tool proves our trainee will actually stick with it."
    ],
    [
-    "P009"
+    "P009",
+    "P033"
+   ]
+  ],
+  [
+   "convenience",
+   6,
+   [
+    "We already abandoned Jamku and desktop ERP because rotating article clerks refused to keep up with them, so I am not paying for another software tool that disrupts our daily workflow. Until a system proves my trainees will actually use it without me constantly supervising them, buying another platform is a waste of time.",
+    "In a normal week without deadline panic, I am not paying ₹12,990 upfront for software when my article clerks rotate every two to three years and training them feels like a waste of time. I would rather test the free pilot on a couple of filings to see if the checklists actually enforce maker-checker discipline without extra overhead."
+   ],
+   [
+    "P010",
+    "P023"
    ]
   ]
  ],
  "why_yes": [
   [
    "convenience",
-   2,
+   10,
    [
-    "The zero-training trainee kit with pre-loaded statutory blueprints directly addresses my clerk turnover problem, and 1-click drop links give me an immediate way to tame the morning document chaos across my 30 WhatsApp client groups.",
-    "As a tech-forward practitioner tired of triaging 30 unread WhatsApp groups every morning, the 1-click client drop links directly into our Google Drive give us the intake automation we need. The dedicated folder sandboxing addresses my privacy concerns enough to invest in the Pioneer pass under the 30-day guarantee."
+    "The Growth Tier at ₹21,990 per year covers my 12-person team affordably, and having pre-loaded statutory blueprints for Tax Audit Form 3CD and MCA filings gives me the maker-checker sign-off trail I desperately need for peer reviews without wasting weeks training rotating article clerks.",
+    "The zero-training trainee kit with pre-loaded statutory blueprints directly solves my article turnover problem, and the WhatsApp forwarding bridge tames the morning document chaos across my 30 client groups."
    ],
    [
-    "P006",
-    "P020"
+    "P001",
+    "P006"
    ]
   ],
   [
    "price",
-   1,
+   4,
    [
-    "At ₹12,990 flat per year with no per-user fees or hidden setup costs, it's affordable enough to tame my morning 30-group WhatsApp triage while keeping my Google Drive strictly sandboxed."
+    "At ₹12,990 flat per year with no per-user fees or hidden setup costs, it is affordable enough to tame my morning 30-group WhatsApp triage while keeping my Google Drive strictly sandboxed.",
+    "The new Growth Tier at ₹21,990 flat per year covers my entire 10-person team without per-user penalties, and the restricted drive.file OAuth with live permission audit directly solves my Google Drive privacy concerns."
    ],
    [
-    "P004"
+    "P004",
+    "P008"
+   ]
+  ],
+  [
+   "need",
+   2,
+   [
+    "The automatic detection and restore for moved or trashed folders resolves my main fear about Google Drive safety, while the statutory blueprints give me the immutable maker-checker sign-off trail I desperately need for peer reviews. At ₹12,990 per year with the 30-day guarantee, it is well worth securing before the next ROC filing rush.",
+    "The Growth Tier at ₹21,990 per year gives me the maker-checker sign-off trail I desperately need for peer reviews to manage rotating article clerks, while the 1-click restore resolves my anxiety about assistants accidentally moving or deleting Google Drive folders."
+   ],
+   [
+    "P017",
+    "P048"
    ]
   ]
  ],
  "flip": [
-  "Live proof that fresh article trainees can complete maker-checker filings on day one without any supervision, along with direct WhatsApp group integration.",
-  "An independent third-party security certification confirming zero external access to file contents and strict folder isolation.",
+  "Verifying the restricted drive.file scope on the free sandbox with zero data leakage and having my trainee handle ROC filing annexures with zero handholding.",
   "Direct native WhatsApp integration so neither clients nor staff have to adopt a new tool, plus completely automating my Saturday GST reconciliation.",
   "Pricing under ₹8,000 a year combined with endpoint download restrictions to stop article clerks from saving client files on personal laptops.",
-  "Direct WhatsApp group ingestion that automatically routes shared documents into our Google Drive folders without requiring clients to open external links.",
-  "A mid-sized firm tier around ₹20,000 to ₹25,000 a year covering 10 to 12 staff, plus verified proof during sandbox onboarding that Google Drive access is strictly limited to Docketra's folder.",
+  "Direct automated WhatsApp group ingestion that routes incoming client documents straight to Google Drive without requiring staff to forward or drop files.",
   "If our firm grows to three or more team members with over 20 active clients, backed by an independent security audit certifying zero external access to client files.",
   "If direct WhatsApp client collection is fully live and my trainees adopt it seamlessly without any training or abandonment after two months.",
   "Foolproof delete and move protection on Google Drive folders so assistants cannot tamper with them, along with native WhatsApp integration so we don't have to change our ten-year routine.",
   "Independent technical proof certifying zero access to existing private Drive folders, plus direct integration into WhatsApp so my 30 client groups don't have to change.",
   "Pricing matched to Jamku at ₹6,500 a year and native WhatsApp integration so neither my clients nor I have to touch another interface.",
-  "A working direct WhatsApp integration that pulls attachments from client groups straight into their Drive dockets automatically.",
-  "Live native WhatsApp integration where client attachments sync directly into the docket Drive folder.",
-  "A mid-firm annual tier priced under ₹20,000 for up to 15 seats, plus verifiable proof that Docketra cannot read our confidential client files.",
-  "Guaranteed move and delete protection for Google Drive folders so assistants cannot tamper with them, plus deadline pressure during the October ROC rush requiring maker-checker audit trails.",
+  "A direct WhatsApp integration that automatically pulls client attachments and bank statements straight into Google Drive dockets without requiring staff to manually forward them.",
+  "Pricing under ₹15,000 a year for mid-sized firms, paired with trusted peer recommendations from my monthly ICAI study circle confirming that Drive permissions are truly leakproof.",
   "A trusted peer recommendation from my local ICAI study circle and verifiable proof on Google's OAuth consent screen that permissions are strictly limited to files created by the app.",
-  "Guaranteed folder-protection mechanisms against accidental deletion in Google Drive and peer validation at my monthly study circle that client confidentiality is 100% airtight."
+  "Guaranteed folder-protection mechanisms against accidental deletion in Google Drive and peer validation at my monthly study circle that client confidentiality is 100% airtight.",
+  "Direct automated ingestion from WhatsApp groups directly into Drive folders without anyone on my team having to manually forward files.",
+  "If testing the free pilot completely eliminates my two-hour Saturday GST reconciliation and proves my article clerks consistently follow maker-checker checklists without my supervision.",
+  "Seeing a fresh article clerk complete an AOC-4 or Tax Audit filing checklist on the free pilot without needing any training or handholding from me.",
+  "Proving during the free pilot that the WhatsApp forwarding bridge seamlessly updates checklists and eliminates my two-hour Saturday GST reconciliation without adding manual overhead.",
+  "Proving through the free pilot that accidental folder deletions restore cleanly in one click and that article assistants are strictly blocked from downloading client documents to personal laptops.",
+  "If using the free pilot proves dead simple and saves several hours of weekly manual coordination without breaking my WhatsApp workflow.",
+  "Testing the free pilot and seeing it eliminate my 2-hour Saturday GST reconciliation while proving that assistants cannot accidentally delete or displace Drive folders.",
+  "If the Free Pilot proves it saves me an hour every morning triaging those 30 WhatsApp groups without adding extra administrative work.",
+  "Verifying on the free pilot that the Trainee Laptop Shield completely blocks file downloads to personal laptops and that WhatsApp forwarding requires zero extra manual overhead.",
+  "Independently verifying on the free pilot that Docketra is strictly quarantined to its own folder with zero access to outside files, and seeing foolproof proof that article assistants cannot download raw client documents.",
+  "Clear, verifiable technical proof during the free pilot that Docketra cannot touch files outside its dedicated folder and that article clerks are completely blocked from downloading client documents to personal machines.",
+  "Verifying on the free pilot that accidental folder deletion or moving in Google Drive is immediately detected and restored with one click, without corrupting client files.",
+  "If the free pilot automates my two hours of Saturday GST reconciliation and my trainee actually sticks with it past two months without abandoning it.",
+  "If testing the free 2-seat pilot during a filing rush proves that the maker-checker audit trail eliminates my panic over article clerk mistakes before ICAI/ICSI peer reviews.",
+  "If the software is so dead simple that fresh article clerks can follow ROC filing checklists on day one with zero training, without adding extra manual forwarding steps.",
+  "Proving on the free pilot that new clerks can execute filing checklists on day one with zero training, while noticeably cutting down the time I spend triaging 30 WhatsApp groups every morning.",
+  "Testing the free pilot and seeing firsthand that 1-click Google Drive folder recovery works seamlessly and that the WhatsApp forwarding bridge actually saves time on morning client messages without adding administrative friction.",
+  "Proven in-app cryptographic proof of zero external Drive access plus completely hands-off WhatsApp file ingestion directly into Drive without manual forwarding.",
+  "Verifying on the free pilot that the Trainee Laptop Shield completely stops article clerks from saving client data to personal laptops while keeping the daily workflow dead simple.",
+  "Clear technical proof during the free pilot that zero external Drive files are accessible, plus seeing my assistant actively use it daily for 60 days without complaint.",
+  "Verifiable in-app proof that Docketra cannot access files outside its dedicated folder, plus a smooth test on the free pilot that meaningfully speeds up my 10 PM ROC filing reviews without compromising client data.",
+  "Testing the free pilot and seeing firsthand that the Trainee Laptop Shield reliably blocks article clerks from downloading client data to personal laptops without disrupting our daily workflow.",
+  "True automated WhatsApp intake and follow-ups that eliminate my morning routine of checking 30 unread client groups before tea.",
+  "Proof during the free pilot that new article clerks can execute ROC filing checklists from Day 1 with zero training, combined with verified zero-access isolation outside the dedicated Drive folder and an airtight trainee download block.",
+  "Pricing closer to Jamku around ₹7,000 to ₹8,000 a year, or concrete proof during the free pilot that the Trainee Laptop Shield completely blocks file downloads and eliminates my peer-review panic.",
+  "Technical, verifiable proof during the free pilot that zero external Drive files can be accessed, along with seamless maker-checker audit sign-offs that don't add friction to my morning WhatsApp routines.",
+  "Independent technical certification or Google OAuth restricted scope proof demonstrating Docketra physically cannot access anything outside the /Docketra/ folder, tested thoroughly on the free pilot.",
+  "Testing the free pilot and seeing it genuinely eliminate my two hours of Saturday GST reconciliation without creating manual forwarding overhead.",
+  "If our firm expands beyond two people with a higher client volume, backed by verifiable proof that client ITR, PAN, and ROC files remain 100% leakproof in our own Drive.",
+  "Pricing competitive with Jamku around ₹7,000 a year, or seeing my staff easily handle our 30 client WhatsApp groups on the free pilot with zero learning curve.",
+  "Pricing competitive with Jamku around ₹7,000 to ₹8,000 a year, or hands-on proof during the free pilot that the WhatsApp bridge and auto-filing seamlessly automate our intake without extra manual work.",
+  "A solo practitioner plan priced closer to Jamku's ₹6,500, combined with verified proof that Google Drive permissions can never leak confidential files and that it solves my Saturday GST tracking.",
+  "Pricing closer to Jamku around ₹7,000 to ₹8,000 a year, combined with undeniable proof during the free pilot that our confidential client files remain strictly isolated and leakproof in our own Google Drive.",
+  "Verifying on the free pilot that Docketra is strictly quarantined with zero access to outside Drive files, paired with ready-made checklists that new article clerks can follow without any training from me.",
+  "Verifiable proof during the free pilot showing that Google OAuth permissions physically isolate Docketra to only the /Docketra/ folder with zero access to our private files.",
+  "Verifiable technical confirmation that Docketra's OAuth scope is strictly sandboxed to its own folder, plus seeing it actually automate my Saturday GST reconciliation during the free pilot.",
+  "Verifiable technical proof that Docketra's OAuth access is strictly sandboxed to the /Docketra/ folder, alongside positive peer feedback from my monthly ICAI study circle.",
+  "Hands-on verification using the Free Pilot that Docketra strictly cannot access any file outside its dedicated folder, plus confirming that the Trainee Laptop Shield reliably blocks downloads on clerks' personal laptops without complex setup.",
+  "If testing the free pilot during the October ROC rush proves that the maker-checker audit trail eliminates article clerk filing mistakes and spares me from 10 PM annexure reviews.",
+  "Pricing matched to Jamku around ₹6,500 a year, or proof during busy season that the WhatsApp bridge and checklists genuinely save me hours of late-night ROC review with zero learning curve.",
+  "Testing the free pilot on actual client files to prove that assistants cannot tamper with Drive folders and that it genuinely eliminates my Saturday GST reconciliation without added complexity.",
+  "A starter tier priced closer to Jamku around ₹6,500 to ₹8,000 a year, alongside verified proof on the free pilot that trainees cannot extract client files to personal machines.",
+  "Proof on the free pilot that a fresh article clerk can follow the statutory checklists and forward WhatsApp files with zero training or handholding from me.",
+  "Verifying on the free pilot that the WhatsApp forwarding bridge and maker-checker checklists completely eliminate my 2-hour Saturday GST reconciliation without adding manual forwarding overhead.",
+  "Hands-on proof during the free pilot that a fresh article clerk can complete statutory filings with zero onboarding while the laptop shield reliably blocks client file downloads.",
+  "Seeing a fresh article clerk pick up the statutory blueprints from day one without any training from me, while completely eliminating my two hours of Saturday GST reconciliation.",
+  "If a raw article clerk can handle filings from day one using the statutory blueprints with zero handholding, saving my two hours of Saturday GST reconciliation consistently across a full quarterly cycle.",
+  "Verifying on the free pilot that OAuth permissions are strictly confined to the /Docketra/ folder without any access to the rest of my Drive, and seeing it genuinely help my 10 PM ROC reviews.",
+  "Proving on the free pilot that my staff actively adopt it without resistance and that it saves my two hours of Saturday GST reconciliation.",
+  "Positive feedback from colleagues at my monthly ICAI study circle and proof during the free pilot that my assistant actively uses it past two months without friction.",
+  "Technical proof on the Google OAuth consent screen confirming strict drive.file scope isolation with zero access to existing drive folders, verified during a free trial.",
+  "Hands-on proof during the free pilot that the WhatsApp forwarding bridge is dead simple and genuinely eliminates my two hours of Saturday GST reconciliation.",
+  "A verifiable technical guarantee and permission audit proving that the Google OAuth connection is strictly confined to the /Docketra/ folder with zero ability to read or scan any preexisting client files in our Drive.",
+  "A successful test of the free pilot with verified restricted-scope OAuth permissions proving zero access to my existing Drive files and guaranteed local data custody.",
+  "A flat annual price under ₹12,000 that covers all 20 of our staff with no per-user fees, combined with clear proof that it eliminates my weekend GST tracking.",
+  "Hands-on proof during the free pilot demonstrating that 1-click folder restoration works when an assistant tampers with Drive folders, alongside verifiable proof that zero files outside the /Docketra/ folder are accessible.",
+  "Testing the free pilot and seeing it eliminate my two hours of Saturday GST reconciliation while proving that accidental folder moves or deletions in Drive are restored effortlessly.",
+  "If testing the free 2-seat pilot during the October ROC rush proves that the maker-checker audit trail catches trainee errors and eliminates my late-night annexure reviews.",
+  "Proof during the free pilot that the Trainee Laptop Shield reliably blocks article clerks from downloading raw client files to personal laptops while keeping our daily workflow dead simple.",
+  "Proving during the free pilot that the Trainee Laptop Shield genuinely blocks clerks from downloading client data to personal laptops and that my team actually adopts it consistently.",
+  "Verifying on the free pilot that an accidentally deleted or moved Google Drive folder is detected instantly and restored in one click without corrupted client files.",
+  "Hearing fellow practitioners at my monthly ICAI study circle vouch for it and seeing my staff test the free pilot for 60 days without abandoning it.",
+  "If the free pilot reliably eliminates my two hours of Saturday GST reconciliation and my trainee actively uses it past the two-month mark without abandoning it.",
+  "Pricing competitive with Jamku around ₹6,500 to ₹7,000 a year, or peers at my local study circle confirming it is dead simple and effortlessly saves hours.",
+  "If testing the free pilot proves dead simple, completely eliminates my two-hour Saturday GST reconciliation, and integrates into our WhatsApp workflow without staff friction.",
+  "Verifying on the free pilot that Google OAuth strictly isolates Docketra to its own folder without any permission to access external firm files.",
+  "If our client list grows beyond 5 clients and the platform reliably eliminates my 2-hour Saturday GST reconciliation while giving me ironclad maker-checker audit sign-offs.",
+  "If the software requires zero onboarding so fresh trainees can follow checklists immediately without my supervision, while eliminating my two hours of Saturday GST reconciliation.",
+  "If our client base grows beyond 5 active clients and real-world testing on the free pilot proves the Trainee Laptop Shield reliably stops my article clerk from saving client data on their personal laptop.",
+  "Extensively testing the free pilot to independently verify that Docketra is strictly quarantined to its folder and that accidental folder deletions or moves can be flawlessly recovered without risking client confidentiality.",
+  "Independent technical verification during the free pilot proving that OAuth permissions strictly restrict Docketra to the /Docketra/ folder with zero read access to any existing client files."
  ],
  "purchases_first_month_per_buyer": 1.0,
- "price_answers": 20
+ "price_answers": 100
 }

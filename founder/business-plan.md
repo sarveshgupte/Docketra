@@ -39,7 +39,7 @@ Docketra is a sovereign practice operations platform built specifically for Indi
 Docketra passes all core financial unit-economics and capacity hurdles with exceptional margins, but fails the simulated consumer panel adoption hurdle:
 
 * **Failing Check**: **3 of 20 simulated buyers buy (15%, below the 25% hurdle)**.
-* **Implemented Solutions**: 
+* **Implemented Solutions**:
   * **Growth Tier Active**: Introduced the **Growth Tier at ₹21,990 / year flat** (~₹1,832/mo) or ₹2,499/mo monthly for up to 12 seats, 150 active clients, and shared department queues with `+₹1,200/seat/yr` add-ons. Bridges the 4.6x cliff between Starter and Pro.
   * **WhatsApp Intake Bridge Packaged**: Built-in WhatsApp Forwarding & Intake Bridge allows assistants to forward/drop client WhatsApp media straight into dockets with 1-click Google Drive sync and audit trail logging—clients never have to click external web URLs.
   * **Google Drive Tamper & Deletion Guard**: Persistent resource IDs, root manifest verification, and automated trashed folder telemetry ensure 0 data loss if an assistant moves or deletes folders in Google Drive.
@@ -356,9 +356,9 @@ This strategy is derived from the consumer panel's Van Westendorp price sensitiv
 - **Point of Marginal Expensiveness (PME)**: ₹4,966 / month (upper resistance ceiling).
 
 #### The Decision:
-* **Starter Annual (The Core Driver)**: **₹1,499 / month** (₹17,990 / year billed annually)  
+* **Starter Annual (The Core Driver)**: **₹1,499 / month** (₹17,990 / year billed annually)
   *Lands almost precisely on the panel's Optimal Price Point (OPP = ₹1,527/mo)*. It provides the path of least resistance for conservative partnership firms.
-* **Starter Monthly (Flexibility Tier)**: **₹1,999 / month** (billed monthly)  
+* **Starter Monthly (Flexibility Tier)**: **₹1,999 / month** (billed monthly)
   *Positioned between OPP (₹1,527) and IPP (₹2,467)*, rewarding annual commitments with a 25% discount.
 * **Economics**: At ₹1,499–₹1,999/month, Docketra maintains a **92% contribution margin** (variable compute/email/gateway cost is only ~₹160/firm-month). Fixed costs break even at just **46 paying firms**.
 

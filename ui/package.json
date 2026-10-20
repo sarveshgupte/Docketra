@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.99.0",
+    "@types/trusted-types": "^2.0.7",
     "axios": "^1.17.0",
     "dayjs": "^1.11.13",
+    "dompurify": "^3.4.17",
     "framer-motion": "file:vendor/framer-motion",
     "gsap": "^3.15.0",
     "react": "^18.2.0",

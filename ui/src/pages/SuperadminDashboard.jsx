@@ -328,7 +328,7 @@ export const SuperadminDashboard = () => {
             <div>
               <div className="flex items-center gap-2 mb-1.5">
                 <span className="inline-flex items-center rounded-full bg-indigo-500/10 px-2.5 py-0.5 text-xs font-semibold text-indigo-600 border border-indigo-500/20 shadow-sm">
-                  ★ Owner & Founder Command Bridge
+                  Owner & Founder Command Bridge
                 </span>
               </div>
               <h1 className="text-2xl font-bold tracking-tight text-slate-900">Platform Command Center</h1>
@@ -366,11 +366,11 @@ export const SuperadminDashboard = () => {
         {/* 2. THE TELEMETRY VIEW CONTROLLER (HUD INTERACTIVE TAB SELECTORS) */}
         <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 pb-1 z-10 relative">
           {[
-            { id: 'vitals', label: '📊 Ecosystem Vitals' },
-            { id: 'security', label: '🛡️ Security Audits' },
-            { id: 'performance', label: '⚡ Performance Traces' },
-            { id: 'launch', label: '🚀 Launch Checklist' },
-            { id: 'flags', label: '⚙️ Feature Flags' },
+            { id: 'vitals', label: 'Ecosystem Vitals' },
+            { id: 'security', label: 'Security Audits' },
+            { id: 'performance', label: 'Performance Traces' },
+            { id: 'launch', label: 'Launch Checklist' },
+            { id: 'flags', label: 'Feature Flags' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -688,28 +688,28 @@ export const SuperadminDashboard = () => {
                           <span className="font-semibold text-slate-700">Pilot firms allocation</span>
                           <span className="font-mono text-slate-600 font-semibold">{plans?.totals?.pilot ?? 0}</span>
                         </div>
-                        <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                          <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${Math.min(100, plans?.totals?.pilot ? (plans.totals.pilot / (totalFirms || 1)) * 100 : 0)}%` }} />
+                        <div className="h-2 w-full rounded-xs bg-slate-100 overflow-hidden">
+                          <div className="h-full bg-indigo-500 rounded-xs" style={{ width: `${Math.min(100, plans?.totals?.pilot ? (plans.totals.pilot / (totalFirms || 1)) * 100 : 0)}%` }} />
                         </div>
                       </div>
 
                       <div>
                         <div className="flex items-center justify-between text-xs mb-1">
                           <span className="font-semibold text-slate-700">Near capacity limits</span>
-                          <span className="font-mono text-amber-600 font-bold">{plans?.totals?.nearCapacity ?? 0}</span>
+                          <span className="font-mono tabular-nums text-amber-600 font-bold">{plans?.totals?.nearCapacity ?? 0}</span>
                         </div>
-                        <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                          <div className="h-full bg-amber-400 rounded-full" style={{ width: `${Math.min(100, plans?.totals?.nearCapacity ? (plans.totals.nearCapacity / (totalFirms || 1)) * 100 : 0)}%` }} />
+                        <div className="h-2 w-full rounded-xs bg-slate-100 overflow-hidden">
+                          <div className="h-full bg-amber-400 rounded-xs" style={{ width: `${Math.min(100, plans?.totals?.nearCapacity ? (plans.totals.nearCapacity / (totalFirms || 1)) * 100 : 0)}%` }} />
                         </div>
                       </div>
 
                       <div>
                         <div className="flex items-center justify-between text-xs mb-1">
                           <span className="font-semibold text-slate-700">Over capacity boundaries</span>
-                          <span className="font-mono text-rose-500 font-bold">{plans?.totals?.overCapacity ?? 0}</span>
+                          <span className="font-mono tabular-nums text-rose-500 font-bold">{plans?.totals?.overCapacity ?? 0}</span>
                         </div>
-                        <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                          <div className={`h-full rounded-full ${plans?.totals?.overCapacity > 0 ? 'bg-rose-500 animate-pulse' : 'bg-slate-300'}`} style={{ width: `${Math.min(100, plans?.totals?.overCapacity ? (plans.totals.overCapacity / (totalFirms || 1)) * 100 : 0)}%` }} />
+                        <div className="h-2 w-full rounded-xs bg-slate-100 overflow-hidden">
+                          <div className={`h-full rounded-xs ${plans?.totals?.overCapacity > 0 ? 'bg-rose-500 animate-pulse' : 'bg-slate-300'}`} style={{ width: `${Math.min(100, plans?.totals?.overCapacity ? (plans.totals.overCapacity / (totalFirms || 1)) * 100 : 0)}%` }} />
                         </div>
                       </div>
                     </div>
@@ -980,7 +980,7 @@ export const SuperadminDashboard = () => {
 
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold border uppercase tracking-wider ${
+                      <span className={`inline-flex rounded-xs px-2 py-0.5 text-xs font-bold border uppercase tracking-wider ${
                         pilotReadySummary.overall === 'READY' 
                           ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/25 animate-pulse' 
                           : 'bg-amber-500/10 text-amber-500 border-amber-500/25'
@@ -1223,7 +1223,7 @@ export const SuperadminDashboard = () => {
               <span className="inline-flex h-2.5 w-2.5 rounded-full bg-indigo-500 animate-pulse" />
               <h2 className="text-lg font-bold text-slate-900">Product Updates Publisher</h2>
             </div>
-            <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600 border border-slate-200">
+            <span className="inline-flex rounded-xs bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 border border-slate-200">
               Release Sentinel
             </span>
           </div>

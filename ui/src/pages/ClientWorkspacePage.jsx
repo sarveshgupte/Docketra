@@ -344,7 +344,7 @@ export const ClientWorkspacePage = () => {
           {currentTab === 'activity' && (
             <Card>
               <div style={{ marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '1px solid #e8e6e0' }}>
-                <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1a1916', margin: 0 }}>📜 Audit Trail</h2>
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1a1916', margin: 0 }}>Audit Trail</h2>
                 <p style={{ fontSize: '0.8rem', color: '#7a7870', margin: '0.25rem 0 0 0' }}>
                   Immutable record of all changes, uploads, and views of this client's fact sheet.
                 </p>
@@ -356,14 +356,14 @@ export const ClientWorkspacePage = () => {
                   color: '#7a7870',
                   fontSize: '0.85rem'
                 }}>
-                  📂 No audit events recorded for this client.
+                  No audit events recorded for this client.
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', marginTop: '0.5rem' }}>
                   {activity.map((entry, index) => {
                     let dotColor = '#3b82f6';
                     let dotBg = '#eff5ff';
-                    let dotChar = '✏️';
+                    let dotChar = '•';
 
                     if (entry.actionType === 'CLIENT_FACT_SHEET_CREATED') {
                       dotColor = '#10b981';
@@ -372,7 +372,7 @@ export const ClientWorkspacePage = () => {
                     } else if (entry.actionType === 'CLIENT_FACT_SHEET_FILE_ADDED' || entry.actionType === 'CLIENT_CFS_ATTACHMENT_ADDED') {
                       dotColor = '#6366f1';
                       dotBg = '#e0e7ff';
-                      dotChar = '📎';
+                      dotChar = '⧉';
                     } else if (entry.actionType === 'CLIENT_FACT_SHEET_FILE_REMOVED') {
                       dotColor = '#ef4444';
                       dotBg = '#fee2e2';
@@ -380,11 +380,11 @@ export const ClientWorkspacePage = () => {
                     } else if (entry.actionType === 'CLIENT_FACT_SHEET_VIEWED') {
                       dotColor = '#6b7280';
                       dotBg = '#f3f4f6';
-                      dotChar = '👁️';
+                      dotChar = '○';
                     } else if (entry.actionType === 'CLIENT_CFS_COMMENT_ADDED') {
                       dotColor = '#8b5cf6';
                       dotBg = '#ede9fe';
-                      dotChar = '💬';
+                      dotChar = '▪';
                     }
 
                     return (
@@ -424,17 +424,17 @@ export const ClientWorkspacePage = () => {
                           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.15rem' }}>
                             {entry.performedByXID && (
                               <span style={{ fontSize: '0.72rem', background: '#fafaf8', border: '1px solid #e8e6e0', padding: '1px 6px', borderRadius: '4px', color: '#3d3c38', fontWeight: 600 }}>
-                                👤 User: {entry.performedByXID}
+                                User: {entry.performedByXID}
                               </span>
                             )}
                             {entry.impersonationActive && (
                               <span style={{ fontSize: '0.72rem', background: '#fee2e2', border: '1px solid #fecaca', padding: '1px 6px', borderRadius: '4px', color: '#dc2626', fontWeight: 600 }}>
-                                🕵️ Impersonated
+                                Impersonated
                               </span>
                             )}
                             {entry.metadata?.fileName && (
                               <span style={{ fontSize: '0.72rem', background: '#f0f9ff', border: '1px solid #bae6fd', padding: '1px 6px', borderRadius: '4px', color: '#0369a1' }}>
-                                📄 File: {entry.metadata.fileName}
+                                File: {entry.metadata.fileName}
                               </span>
                             )}
                           </div>

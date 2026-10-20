@@ -16,19 +16,25 @@ const REVEAL = {
 const COMPARISON_ROWS = [
   {
     feature: 'Storage & Document Custody',
-    docketra: 'Firm’s Own Google Drive (Sovereign BYOS)',
-    jamku: 'Centralized Proprietary Cloud',
+    docketra: 'Your Firm’s Own Google Drive (100% private custody)',
+    jamku: 'Centralized Shared Cloud Database',
     excel: 'Local Hard Drives / Unencrypted WhatsApp',
   },
   {
+    feature: 'Trainee Laptop Shield (Endpoint Leak Protection)',
+    docketra: 'Active (Blocks junior staff from downloading client files to personal laptops)',
+    jamku: 'None (Unrestricted file downloads to personal devices)',
+    excel: 'None (Client files scatter across personal folders)',
+  },
+  {
     feature: 'Mandatory Setup & Migration Fees',
-    docketra: '₹0 (Includes 24-Hr Concierge Migration)',
+    docketra: '₹0 (Free assisted migration)',
     jamku: '₹3,000 to ₹15,000 Setup Surcharge',
     excel: '₹0 (Manual typing)',
   },
   {
     feature: 'Client Document Intake',
-    docketra: '1-Click Drop URL + Direct WhatsApp Forwarding Bridge (Clients stay on WhatsApp)',
+    docketra: '1-Click Drop Link + WhatsApp Forwarding (Clients stay on WhatsApp)',
     jamku: 'Requires Client Portal Registration',
     excel: 'Unorganized WhatsApp Threads & Email Chaos',
   },
@@ -52,7 +58,7 @@ const COMPARISON_ROWS = [
   },
   {
     feature: 'Accidental Deletion & Tamper Protection',
-    docketra: 'Cloud Metadata Sync (Auto-detects moved/deleted folders & 1-click re-links/restores)',
+    docketra: 'Folder Tamper Guard (Auto-detects moved folders & 1-click restore)',
     jamku: 'Proprietary Cloud Lock (Files held on external servers)',
     excel: 'Zero Recovery (Accidental deletion permanently loses working papers)',
   },
@@ -60,20 +66,20 @@ const COMPARISON_ROWS = [
 
 const FAQS = [
   {
-    question: 'Can Docketra read our firm’s existing confidential tax returns in Google Drive?',
-    answer: 'No. When you connect Google Drive, Docketra creates its own dedicated firm folder. Docketra strictly only reads and manages the specific folder it created (nothing else). We have zero read, search, or index permissions for any of your firm’s pre-existing Drive folders, private client archives, or personal files.',
+    question: 'Can Docketra read our firm’s existing confidential files in Google Drive?',
+    answer: 'No. When you connect Google Drive, Docketra uses Google’s restricted drive.file permission. It only accesses the specific /Docketra/ folder it created. We have zero access to read, search, or index any of your pre-existing client files, PAN copies, or private archives.',
   },
   {
     question: 'What happens to our client records if we cancel our subscription?',
-    answer: 'Because of Sovereign BYOS, 100% of your documents, folders, and organized filings live permanently inside your firm’s Google Drive. If you ever cancel, you keep everything. Zero data hostage, zero proprietary export fees.',
+    answer: '100% of your client files and organized folders stay inside your firm’s own Google Drive. If you ever cancel, you keep everything. No lock-in, no export delays, and no charges.',
   },
   {
     question: 'Our clients refuse to open web links and only dump files in WhatsApp. How does Docketra handle this?',
-    answer: 'Docketra includes a built-in WhatsApp Forwarding & Intake Bridge specifically designed for this reality. Your clients never have to click external links, open web portals, or change their habits: they keep texting files on WhatsApp as usual. Your article clerks simply drop or forward the WhatsApp media directly into the docket in 1-click. Docketra automatically files the document into the client’s Google Drive folder, logs the WhatsApp sender and message notes on the docket feed, and marks checklist requirements complete.',
+    answer: 'Clients do not need to register on any portal or click links. They can keep texting documents on WhatsApp as usual. Your team simply forwards or drops the WhatsApp file into Docketra with 1 click. Docketra saves it directly to the client’s Google Drive folder, notes the message details, and checks off the pending task.',
   },
   {
     question: 'Our article clerks and trainees rotate every 2 to 3 years. How long does training take?',
-    answer: 'Zero days. Docketra ships with turnkey statutory checklists for MCA Annual Filings (MGT-7/AOC-4), DIR-3 KYC, GST, and Tax Audit Form 3CD. Fresh trainees follow step-by-step checklists on Day 1, while qualified partners maintain full maker-checker approval oversight.',
+    answer: 'Zero days. Docketra comes with ready-made statutory checklists for MCA filings (MGT-7/AOC-4), DIR-3 KYC, GST returns, and Tax Audit Form 3CD. Fresh article assistants can follow the steps from Day 1, and partners review and sign off before final submission.',
   },
   {
     question: 'How does the Pioneer 30 Launch Cohort rate work?',
@@ -81,11 +87,19 @@ const FAQS = [
   },
   {
     question: 'Our firm has 6 to 12 staff. Which plan is right for us, and can we add extra seats?',
-    answer: 'Our Growth Tier (₹21,990 / year flat or ₹2,499 / month) is engineered specifically for expanding practices with 6 to 12 team members. It includes 12 seats, 150 active clients, and shared departmental workbaskets (ROC, GST, Direct Tax). Need more seats? You can add individual seats at just ₹1,200 / seat / year without being forced into an enterprise contract.',
+    answer: 'Our Growth Tier (₹21,990 / year flat or ₹2,499 / month) is the top choice for expanding practices with 6 to 12 team members (selected by 25% of practices in our panel). It includes 12 seats, 150 active clients, department queues (ROC, GST, Direct Tax), and Trainee Laptop Shield. Need more seats? You can add individual seats at just ₹1,200 / seat / year without an enterprise contract.',
+  },
+  {
+    question: 'Why is Docketra priced at ₹12,990/yr when basic tools like Jamku advertise ₹6,500?',
+    answer: 'Jamku stores files on shared third-party servers with unrestricted junior downloads. Docketra keeps 100% of your client documents inside your own Google Drive, blocks junior trainees from downloading client PAN/ITR files to personal laptops, and provides SQC-1 maker-checker audit sign-offs for peer review. Protecting client confidentiality and passing peer review is worth far more than saving a few rupees on a basic task tracker.',
+  },
+  {
+    question: 'What is the Free Pilot, and how do we upgrade?',
+    answer: 'The Free Pilot is our official Proof of Sovereign Isolation sandbox for 2 seats and 5 clients (₹0 forever). You can test live filings, check that Docketra cannot read your private Drive files, and verify that trainee download blocks work. When your firm needs more seats or clients, upgrade to Pioneer 30 or Growth Tier in 1 click. All existing files stay in your Drive with zero migration.',
   },
   {
     question: 'What if an assistant or clerk accidentally deletes or moves a folder inside Google Drive?',
-    answer: 'Docketra maintains tamper-evident cloud metadata for every docket, client, and document. If an assistant moves or deletes a folder in Google Drive, Docketra detects the discrepancy, alerts the Primary Admin, and provides 1-click folder restoration and re-sync from version history.',
+    answer: 'If an assistant accidentally moves or deletes a folder in Google Drive, Docketra detects it immediately, alerts the partner or admin, and restores or re-links the folder in 1 click.',
   },
 ];
 
@@ -130,10 +144,10 @@ export const PricingPage = () => {
                 role="switch"
                 aria-checked={isAnnual}
                 onClick={() => setIsAnnual(!isAnnual)}
-                className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-slate-900 transition-colors duration-200 ease-in-out focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+                className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-sm border-2 border-transparent bg-slate-900 transition-colors duration-200 ease-in-out focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
               >
                 <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-xs bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
                     isAnnual ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
@@ -155,25 +169,25 @@ export const PricingPage = () => {
       <section className="py-16 bg-white border-b border-slate-200/80">
         <Container size="7xl">
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4 items-stretch">
-            {/* Free Sandbox */}
+            {/* Free Pilot */}
             <motion.div
               {...REVEAL}
               className="flex flex-col rounded-sm border border-slate-200 bg-white p-6 sm:p-7 hover:border-slate-300 transition-all shadow-xs"
             >
               <div className="border-b border-slate-100 pb-6">
                 <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  Evaluation / Solo Practice
+                  Proof of Sovereign Isolation • ₹0 Forever
                 </span>
-                <h2 className="mt-2 text-xl font-bold text-slate-950">Free Sandbox</h2>
+                <h2 className="mt-2 text-xl font-bold text-slate-950">Free Pilot</h2>
                 <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
-                  Test real statutory workflows with zero risk. Ideal for solo CAs and practice evaluation.
+                  Test Google Drive safety and junior laptop download blocks on 2 seats and 5 clients. ₹0 forever. Upgrade to Pioneer or Growth in 1 click whenever you need more seats or clients.
                 </p>
                 <div className="mt-6 flex items-baseline gap-1 text-slate-950">
                   <span className="text-4xl font-extrabold tracking-tight">₹0</span>
                   <span className="text-xs font-medium text-slate-500">/ forever</span>
                 </div>
                 <div className="mt-2 text-[11px] font-mono text-slate-500">
-                  Up to 2 team seats • Capped at 5 clients & 15 dockets
+                  Up to 2 team seats • Capped at 5 clients & 15 dockets • Full feature access
                 </div>
               </div>
 
@@ -184,23 +198,27 @@ export const PricingPage = () => {
                 <ul className="space-y-2.5 text-xs text-slate-700">
                   <li className="flex items-start gap-2.5">
                     <span className="text-emerald-600 font-bold">✓</span>
-                    <span>1-Click Sovereign Google Drive (`drive.file` scope)</span>
+                    <span>Connect your own Google Drive (<code className="text-[11px]">drive.file</code> scope)</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="text-emerald-600 font-bold">✓</span>
-                    <span>Native Maker-Checker review sign-offs</span>
+                    <span>In-app Google Drive safety check (0 external files accessible)</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="text-emerald-600 font-bold">✓</span>
-                    <span>Statutory compliance calendar & reminders</span>
+                    <span>Google Drive Folder Tamper Guard & Auto-Restore</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="text-emerald-600 font-bold">✓</span>
-                    <span>Tamper-evident audit trail history</span>
+                    <span>Trainee Laptop Shield (blocks file downloads to personal laptops)</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="text-emerald-600 font-bold">✓</span>
-                    <span>Drag-and-drop document dropzone</span>
+                    <span>Maker-Checker partner sign-offs and MCA/GST checklists</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-blue-600 font-bold">★</span>
+                    <span className="font-semibold text-blue-900">1-Click Upgrade to Pioneer or Growth (Keep all your data)</span>
                   </li>
                 </ul>
               </div>
@@ -210,7 +228,7 @@ export const PricingPage = () => {
                   to="/signup"
                   className="inline-flex w-full h-10 items-center justify-center rounded-xs border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors"
                 >
-                  Start Free Sandbox
+                  Start Free Pilot (₹0)
                 </Link>
               </div>
             </motion.div>
@@ -220,7 +238,7 @@ export const PricingPage = () => {
               {...REVEAL}
               className="relative flex flex-col rounded-sm border-2 border-blue-600 bg-white p-6 sm:p-7 shadow-lg xl:-translate-y-2"
             >
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3.5 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider text-white shadow-xs">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-xs bg-blue-600 px-3.5 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider text-white shadow-xs">
                 Pioneer 30 Cohort • 18 Spots Left
               </div>
 
@@ -230,18 +248,18 @@ export const PricingPage = () => {
                 </span>
                 <h2 className="mt-2 text-xl font-bold text-slate-950">Starter Tier</h2>
                 <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
-                  The complete operations OS for small firms. Replaces fragmented spreadsheets and WhatsApp groups.
+                  Complete practice OS for small firms. Replaces messy WhatsApp groups and Excel trackers.
                 </p>
                 <div className="mt-6 flex items-baseline gap-1 text-slate-950">
                   {isAnnual ? (
                     <>
-                      <span className="text-4xl font-extrabold tracking-tight text-blue-700">₹12,990</span>
+                      <span className="text-4xl font-extrabold tracking-tight text-blue-700 tabular-nums font-mono">₹12,990</span>
                       <span className="text-xs font-medium text-slate-500">/ year</span>
-                      <span className="ml-2 text-xs line-through text-slate-400">₹17,990</span>
+                      <span className="ml-2 text-xs line-through text-slate-400 tabular-nums font-mono">₹17,990</span>
                     </>
                   ) : (
                     <>
-                      <span className="text-4xl font-extrabold tracking-tight text-slate-950">₹1,999</span>
+                      <span className="text-4xl font-extrabold tracking-tight text-slate-950 tabular-nums font-mono">₹1,999</span>
                       <span className="text-xs font-medium text-slate-500">/ month</span>
                     </>
                   )}
@@ -253,36 +271,36 @@ export const PricingPage = () => {
 
               <div className="flex-1 py-6 space-y-3.5">
                 <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-blue-700">
-                  Includes All 4 Grand Slam Bonuses:
+                  Includes All 4 Pioneer Bonuses:
                 </span>
                 <ul className="space-y-2.5 text-xs text-slate-700">
                   <li className="flex items-start gap-2.5">
                     <span className="text-blue-600 font-bold">★</span>
                     <span className="font-semibold text-slate-900">
-                      Bonus #1: WhatsApp Forwarding Bridge & Frictionless Client Drop Link
+                      Bonus #1: WhatsApp Forwarding Bridge & Client Document Drop Link
                     </span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="text-blue-600 font-bold">★</span>
                     <span className="font-semibold text-slate-900">
-                      Bonus #2: 15+ Turnkey Statutory Blueprints (MCA, ROC, GST, 3CD)
+                      Bonus #2: 15+ Statutory Checklists (MCA, ROC, GST, Tax Audit)
                     </span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="text-blue-600 font-bold">★</span>
                     <span className="font-semibold text-slate-900">
-                      Bonus #3: 24-Hour Concierge Client Migration (Zero setup fees)
+                      Bonus #3: Free Assisted Client Migration (We help you import data)
                     </span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="text-blue-600 font-bold">★</span>
                     <span className="font-semibold text-slate-900">
-                      Bonus #4: Certified Zero-Access Drive Security Whitepaper
+                      Bonus #4: Drive Security & Zero-Leakage Compliance Guide
                     </span>
                   </li>
                   <li className="flex items-start gap-2.5 pt-1 border-t border-slate-100">
                     <span className="text-emerald-600 font-bold">✓</span>
-                    <span>30-Day 100% Zero-Data-Lock-In Guarantee</span>
+                    <span>30-Day Money-Back Guarantee (All files stay in your Drive)</span>
                   </li>
                 </ul>
               </div>
@@ -295,7 +313,7 @@ export const PricingPage = () => {
                   Claim Pioneer Annual Pass (₹12,990/yr)
                 </Link>
                 <p className="mt-2 text-center text-[10px] font-mono text-slate-500">
-                  Rate locked for life • Zero setup surcharge
+                  Rate locked for life • Zero setup fees
                 </p>
               </div>
             </motion.div>
@@ -303,31 +321,35 @@ export const PricingPage = () => {
             {/* Growth Tier - Mid-Sized Practices (6 to 12 staff) */}
             <motion.div
               {...REVEAL}
-              className="flex flex-col rounded-sm border border-slate-300 bg-white p-6 sm:p-7 hover:border-slate-400 transition-all shadow-xs"
+              className="relative flex flex-col rounded-sm border-2 border-indigo-600 bg-white p-6 sm:p-7 shadow-lg xl:-translate-y-2"
             >
-              <div className="border-b border-slate-100 pb-6">
-                <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-700">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-xs bg-indigo-600 px-3.5 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider text-white shadow-xs">
+                Top Choice for 6 to 12 Staff • 25% Practice Selection
+              </div>
+
+              <div className="border-b border-slate-100 pb-6 pt-2">
+                <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-indigo-700">
                   Mid-Sized Practices (6 to 12 staff)
                 </span>
                 <h2 className="mt-2 text-xl font-bold text-slate-950">Growth Tier</h2>
                 <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
-                  Engineered for expanding partnerships with rotating article clerks and departmental queues.
+                  Flat-rate practice OS for mid-sized firms. Pre-loaded statutory blueprints, department queues, and trainee download security.
                 </p>
                 <div className="mt-6 flex items-baseline gap-1 text-slate-950">
                   {isAnnual ? (
                     <>
-                      <span className="text-4xl font-extrabold tracking-tight text-slate-950">₹21,990</span>
+                      <span className="text-4xl font-extrabold tracking-tight text-indigo-700 tabular-nums font-mono">₹21,990</span>
                       <span className="text-xs font-medium text-slate-500">/ year</span>
-                      <span className="ml-2 text-xs line-through text-slate-400">₹27,990</span>
+                      <span className="ml-2 text-xs line-through text-slate-400 tabular-nums font-mono">₹27,990</span>
                     </>
                   ) : (
                     <>
-                      <span className="text-4xl font-extrabold tracking-tight text-slate-950">₹2,499</span>
+                      <span className="text-4xl font-extrabold tracking-tight text-slate-950 tabular-nums font-mono">₹2,499</span>
                       <span className="text-xs font-medium text-slate-500">/ month</span>
                     </>
                   )}
                 </div>
-                <div className="mt-2 text-[11px] font-mono text-slate-700 font-semibold">
+                <div className="mt-2 text-[11px] font-mono text-indigo-700 font-semibold">
                   Up to 12 team seats • Up to 150 active clients • Unlimited dockets
                 </div>
                 <div className="mt-1 text-[10px] font-mono text-slate-400">
@@ -336,29 +358,33 @@ export const PricingPage = () => {
               </div>
 
               <div className="flex-1 py-6 space-y-3">
-                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-indigo-700">
                   Everything in Starter, plus:
                 </span>
                 <ul className="space-y-2.5 text-xs text-slate-700">
                   <li className="flex items-start gap-2.5">
                     <span className="text-emerald-600 font-bold">✓</span>
-                    <span>Shared Department Queues (ROC, Taxation, SEBI)</span>
+                    <span><strong>Pre-loaded blueprints:</strong> Tax Audit Form 3CD, MCA, and GST</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="text-emerald-600 font-bold">✓</span>
-                    <span>Multi-clerk Maker-Checker sign-off review queues</span>
+                    <span><strong>SQC-1 maker-checker review:</strong> Peer-review ready partner sign-offs</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="text-emerald-600 font-bold">✓</span>
-                    <span>Bulk client document dropzone & intake triage</span>
+                    <span><strong>Trainee Laptop Shield:</strong> Junior staff cannot download raw client files</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="text-emerald-600 font-bold">✓</span>
-                    <span>Drive folder sync guard & recovery telemetry</span>
+                    <span><strong>Drive Tamper Guard:</strong> Auto-detects moved/deleted folders with 1-click restore</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="text-emerald-600 font-bold">✓</span>
-                    <span>Priority concierge onboarding & data migration</span>
+                    <span><strong>Department queues:</strong> ROC, Income Tax, GST, and Audit workbaskets</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span><strong>Priority onboarding:</strong> Assisted client migration and zero setup fee</span>
                   </li>
                 </ul>
               </div>
@@ -366,12 +392,12 @@ export const PricingPage = () => {
               <div className="pt-4 border-t border-slate-100">
                 <Link
                   to="/signup"
-                  className="inline-flex w-full h-10 items-center justify-center rounded-xs border border-slate-900 bg-white px-4 text-xs font-semibold text-slate-950 hover:bg-slate-50 transition-colors shadow-xs"
+                  className="inline-flex w-full h-10 items-center justify-center rounded-xs bg-indigo-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
                 >
-                  Choose Growth Tier
+                  Choose Growth Tier (₹21,990/yr)
                 </Link>
                 <p className="mt-2 text-center text-[10px] font-mono text-slate-500">
-                  30-day money-back guarantee • No setup surcharge
+                  30-day money-back guarantee • No setup fees
                 </p>
               </div>
             </motion.div>
@@ -457,10 +483,10 @@ export const PricingPage = () => {
                 The Sovereign Guarantee
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-white">
-                30-Day Zero-Risk, Zero-Data-Lock-In Guarantee
+                30-Day Money-Back Guarantee
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Try Docketra for 30 days. If it doesn’t save your firm at least 10 hours a week on client follow-ups and review queues, email us for an instant 100% refund. Because 100% of your documents and organized client folders remain permanently inside your own Google Drive, you lose nothing and your files never leave your hands. Even if an assistant moves, renames, or trashes a folder in Google Drive, Docketra’s cloud metadata sync automatically detects and re-links it without disrupting your practice.
+                Try Docketra for 30 days. If it does not save your team at least 10 hours a week on client follow-ups and review queues, write to us for an instant 100% refund. All your documents and folders stay safely inside your firm’s own Google Drive, so your client data never leaves your hands.
               </p>
             </div>
             <div className="shrink-0 text-center">
@@ -585,7 +611,7 @@ export const PricingPage = () => {
                 to="/signup"
                 className="inline-flex w-full sm:w-auto h-10 items-center justify-center gap-2 rounded-xs bg-slate-950 px-6 text-xs font-semibold text-amber-400 hover:bg-slate-800 transition-colors"
               >
-                <span>Start Free Sandbox (5 Clients)</span>
+                <span>Start Free Pilot (₹0)</span>
                 <span>→</span>
               </Link>
               <Link
