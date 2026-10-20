@@ -1,8 +1,13 @@
 import React from 'react';
-import { Navigate, Route, useParams } from 'react-router-dom';
+import { Navigate, Route, useParams, useLocation } from 'react-router-dom';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 import { TASK_MANAGER_MVP_ENABLED, isPilotFirmRouteEnabled } from '../constants/pilotSurface';
 import { FirmLayout } from '../components/routing/FirmLayout';
+
+const FirmDashboardRedirect = () => {
+  const location = useLocation();
+  return <Navigate to={`../worklist${location.search || ''}`} replace />;
+};
 import { RouteErrorBoundary } from '../components/routing/RouteErrorBoundary';
 import {
   AdminPage,
@@ -232,7 +237,7 @@ export const ProtectedRoutes = () => (
           path="dashboard"
           element={(
             <ProtectedRoute>
-              <Navigate to="../worklist" replace />
+              <FirmDashboardRedirect />
             </ProtectedRoute>
           )}
         />

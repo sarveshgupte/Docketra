@@ -1365,7 +1365,18 @@ const getFirmSettingsActivity = async (req, res) => {
       'SetupLinkResent',
     ];
 
-    const [caseAuditTotal, authAuditTotal] = await Promise.all([
+    const offset = (page - 1) * limit;
+    const fetchLimit = Math.max(limit, Math.min(page * limit, 5000));
+
+    // ⚡ Bolt: Group independent queries concurrently
+    // 💡 What: Replaced sequential execution of multiple Promise.all blocks with a single concurrent Promise.all array.
+    // 🎯 Why: This removes a full database roundtrip latency by running all independent count and find queries simultaneously.
+    const [
+      caseAuditTotal,
+      authAuditTotal,
+      caseAuditRows,
+      authAuditRows
+    ] = await Promise.all([
       CaseAudit.countDocuments({
         firmId,
         actionType: { $in: caseActionTypes },
@@ -1374,13 +1385,6 @@ const getFirmSettingsActivity = async (req, res) => {
         firmId,
         actionType: { $in: authActionTypes },
       }),
-    ]);
-
-    const total = Number(caseAuditTotal || 0) + Number(authAuditTotal || 0);
-    const offset = (page - 1) * limit;
-    const fetchLimit = Math.max(limit, Math.min(page * limit, 5000));
-
-    const [caseAuditRows, authAuditRows] = await Promise.all([
       CaseAudit.find({
         firmId,
         actionType: { $in: caseActionTypes },
@@ -1396,6 +1400,8 @@ const getFirmSettingsActivity = async (req, res) => {
         .limit(fetchLimit)
         .lean(),
     ]);
+
+    const total = Number(caseAuditTotal || 0) + Number(authAuditTotal || 0);
 
     const mutationMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
     const authMapped = authAuditRows
@@ -2086,22 +2092,26 @@ const getFirmPlan = async (req, res) => {
     }
 
     const tenantId = req.user?.firmId || firm.firmId;
-    const [usersCount, clientsCount] = await Promise.all([
+
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    // ⚡ Bolt: Group independent queries concurrently
+    // 💡 What: Merged the sequential Case.countDocuments query into the preceding Promise.all array containing User and Client counts.
+    // 🎯 Why: Identifying and eliminating unnecessary sequential database queries by grouping them into a single Promise.all array executes them concurrently, reducing overall network latency.
+    const [usersCount, clientsCount, monthlyDocketsCount] = await Promise.all([
       User.countDocuments({ firmId: firm._id, status: { $ne: 'deleted' } }).catch(() => 0),
       clientRepository.count(tenantId, {
         isActive: true,
         isSystemClient: { $ne: true },
         isDefaultClient: { $ne: true },
       }).catch(() => 0),
+      Case.countDocuments({
+        firmId: tenantId,
+        createdAt: { $gte: startOfMonth },
+      }).catch(() => 0),
     ]);
-
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-    const monthlyDocketsCount = await Case.countDocuments({
-      firmId: tenantId,
-      createdAt: { $gte: startOfMonth },
-    }).catch(() => 0);
 
     const storageMode = firm.storage?.mode || 'docketra_managed';
     const isGoogleConnected = storageMode === 'firm_connected' && firm.storage?.provider === 'google_drive';

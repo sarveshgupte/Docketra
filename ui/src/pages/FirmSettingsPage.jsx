@@ -17,6 +17,9 @@ import { BulkUploadModal } from '../components/bulk/BulkUploadModal';
 import { DocketBulkUploadModal } from '../components/bulk/DocketBulkUploadModal';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
+import { UpiCheckoutModal } from '../components/billing/UpiCheckoutModal';
+import { SubscriptionInvoiceModal } from '../components/billing/SubscriptionInvoiceModal';
+import { subscriptionService } from '../services/subscriptionService';
 
 const enabledDisabledOptions = [
   { value: 'true', label: 'Enabled' },
@@ -302,6 +305,18 @@ export const FirmSettingsPage = () => {
   const [planData, setPlanData] = useState(null);
   const [loadingPlan, setLoadingPlan] = useState(false);
   const [upgradingPlan, setUpgradingPlan] = useState(false);
+  const [checkoutOrder, setCheckoutOrder] = useState(null);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [subscriptionOrders, setSubscriptionOrders] = useState([]);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [loadingInvoiceId, setLoadingInvoiceId] = useState(null);
+
+  useEffect(() => {
+    if (requestedTab && validTabs.includes(requestedTab) && requestedTab !== currentTab) {
+      setCurrentTab(requestedTab);
+    }
+  }, [requestedTab, currentTab]);
 
   const categoryOptions = useMemo(() => ([
     { value: '', label: 'All categories' },
@@ -510,9 +525,15 @@ export const FirmSettingsPage = () => {
   const loadPlanData = useCallback(async () => {
     setLoadingPlan(true);
     try {
-      const response = await adminApi.getFirmPlan();
-      if (response?.data) {
-        setPlanData(response.data);
+      const [planRes, subRes] = await Promise.allSettled([
+        adminApi.getFirmPlan(),
+        subscriptionService.getSubscriptionOverview(),
+      ]);
+      if (planRes.status === 'fulfilled' && planRes.value?.data) {
+        setPlanData(planRes.value.data);
+      }
+      if (subRes.status === 'fulfilled' && subRes.value?.data?.recentOrders) {
+        setSubscriptionOrders(subRes.value.data.recentOrders);
       }
     } catch {
       // ignore
@@ -521,14 +542,43 @@ export const FirmSettingsPage = () => {
     }
   }, []);
 
+  const handleViewInvoice = async (orderId) => {
+    setLoadingInvoiceId(orderId);
+    try {
+      const res = await subscriptionService.getInvoice(orderId);
+      if (res?.success && res?.data) {
+        setSelectedInvoice(res.data);
+        setShowInvoiceModal(true);
+      } else {
+        throw new Error(res?.message || 'Invoice not found');
+      }
+    } catch (err) {
+      showToast(err?.response?.data?.message || err?.message || 'Failed to load invoice.', 'error');
+    } finally {
+      setLoadingInvoiceId(null);
+    }
+  };
+
+  const handleResumePayment = (order) => {
+    setCheckoutOrder(order);
+    setShowCheckoutModal(true);
+  };
+
   const handleUpgradePlan = async (targetPlan) => {
     setUpgradingPlan(true);
     try {
-      const res = await adminApi.upgradeFirmPlan(targetPlan);
-      showToast(res?.message || 'Workspace plan upgraded successfully!', 'success');
-      await loadPlanData();
+      const res = await subscriptionService.createSubscriptionOrder({
+        plan: targetPlan,
+        billingCycle: 'annual',
+      });
+      if (res?.success && res?.data) {
+        setCheckoutOrder(res.data);
+        setShowCheckoutModal(true);
+      } else {
+        throw new Error(res?.message || 'Could not initiate payment session');
+      }
     } catch (error) {
-      showToast(error?.data?.message || error?.message || 'Failed to upgrade plan. Please try again.', 'error');
+      showToast(error?.response?.data?.message || error?.message || 'Failed to initiate checkout.', 'error');
     } finally {
       setUpgradingPlan(false);
     }
@@ -1395,7 +1445,7 @@ export const FirmSettingsPage = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Pioneer 30 Card */}
                     <div className={`relative flex flex-col justify-between rounded-2xl border p-6 transition ${
                       planData?.plan === 'starter'
@@ -1523,13 +1573,78 @@ export const FirmSettingsPage = () => {
                           type="button"
                           variant={planData?.plan === 'growth' ? 'outline' : 'primary'}
                           className="w-full"
-                          disabled={planData?.plan === 'growth' || planData?.plan === 'professional' || upgradingPlan}
+                          disabled={planData?.plan === 'growth' || planData?.plan === 'pro' || planData?.plan === 'professional' || upgradingPlan}
                           loading={upgradingPlan}
                           onClick={() => void handleUpgradePlan('growth')}
                         >
                           {planData?.plan === 'growth'
                             ? 'Current Active Plan'
-                            : (planData?.plan === 'professional' ? 'Included in Higher Plan' : 'Upgrade to Growth Tier')}
+                            : (planData?.plan === 'pro' || planData?.plan === 'professional' ? 'Included in Higher Plan' : 'Upgrade to Growth Tier')}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Pro Tier Card */}
+                    <div className={`relative flex flex-col justify-between rounded-2xl border p-6 transition ${
+                      planData?.plan === 'pro' || planData?.plan === 'professional'
+                        ? 'border-indigo-600 bg-indigo-50/20 ring-2 ring-indigo-600'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800">
+                            Corporate & Multi-Branch
+                          </span>
+                          <span className="text-xs font-medium text-slate-500">15+ staff</span>
+                        </div>
+                        <div>
+                          <h4 className="text-xl font-bold text-slate-900">Pro Tier</h4>
+                          <p className="mt-1 text-sm text-slate-500">For multi-partner firms requiring DSC routing, custom roles, and priority support.</p>
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-3xl font-extrabold text-slate-900">₹59,990</span>
+                          <span className="text-sm text-slate-500">/ year</span>
+                          <span className="ml-2 text-xs text-slate-500">(₹4,999 / month)</span>
+                        </div>
+                        <ul className="space-y-2.5 text-sm text-slate-600 border-t border-slate-100 pt-4">
+                          <li className="flex items-center gap-2">
+                            <span className="text-emerald-600 font-bold">✓</span>
+                            <span><strong>Up to 25 staff seats</strong></span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-emerald-600 font-bold">✓</span>
+                            <span><strong>Unlimited active clients & dockets</strong></span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-emerald-600 font-bold">✓</span>
+                            <span>Multi-department queues (ROC, Tax, GST, Legal)</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-emerald-600 font-bold">✓</span>
+                            <span>Multi-partner DSC sign-off routing workflows</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-emerald-600 font-bold">✓</span>
+                            <span>Dedicated onboarding & migration engineer</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-emerald-600 font-bold">✓</span>
+                            <span>Custom practice roles & granular permissions</span>
+                          </li>
+                        </ul>
+                      </div>
+                      <div className="mt-6 pt-4 border-t border-slate-100">
+                        <Button
+                          type="button"
+                          variant={planData?.plan === 'pro' || planData?.plan === 'professional' ? 'outline' : 'primary'}
+                          className="w-full"
+                          disabled={planData?.plan === 'pro' || planData?.plan === 'professional' || upgradingPlan}
+                          loading={upgradingPlan}
+                          onClick={() => void handleUpgradePlan('pro')}
+                        >
+                          {planData?.plan === 'pro' || planData?.plan === 'professional'
+                            ? 'Current Active Plan'
+                            : 'Upgrade to Pro Tier'}
                         </Button>
                       </div>
                     </div>
@@ -1564,6 +1679,126 @@ export const FirmSettingsPage = () => {
                       </p>
                     </div>
                   </div>
+                </div>
+
+                {/* Payment & Invoice History */}
+                <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-3">
+                    <div>
+                      <h4 className="text-base font-semibold text-slate-900">Payment & Invoice History</h4>
+                      <p className="text-xs text-slate-500">
+                        Official tax invoices and payment receipts for your firm’s Docketra subscriptions.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void loadPlanData()}
+                      className="text-xs"
+                    >
+                      Refresh History
+                    </Button>
+                  </div>
+
+                  {subscriptionOrders.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-slate-200 p-6 text-center">
+                      <p className="text-xs font-medium text-slate-600">No payment history yet</p>
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        When you upgrade your plan, payment records and downloadable invoices will appear here.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-lg border border-slate-100">
+                      <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
+                        <thead className="bg-slate-50">
+                          <tr>
+                            <th scope="col" className="px-3.5 py-2.5 font-semibold text-slate-600">Date & Order ID</th>
+                            <th scope="col" className="px-3.5 py-2.5 font-semibold text-slate-600">Plan & Cycle</th>
+                            <th scope="col" className="px-3.5 py-2.5 font-semibold text-slate-600">Amount</th>
+                            <th scope="col" className="px-3.5 py-2.5 font-semibold text-slate-600">Bank UTR</th>
+                            <th scope="col" className="px-3.5 py-2.5 font-semibold text-slate-600">Status</th>
+                            <th scope="col" className="px-3.5 py-2.5 text-right font-semibold text-slate-600">Invoice</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                          {subscriptionOrders.map((ord) => {
+                            const isPaid = ord.status === 'COMPLETED';
+                            const isPending = ord.status === 'PENDING';
+                            const createdDate = ord.createdAt
+                              ? new Date(ord.createdAt).toLocaleDateString('en-IN', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric',
+                                })
+                              : '—';
+                            return (
+                              <tr key={ord.orderId} className="hover:bg-slate-50/50">
+                                <td className="px-3.5 py-3">
+                                  <p className="font-mono font-medium text-slate-900">{ord.orderId}</p>
+                                  <p className="text-[11px] text-slate-400">{createdDate}</p>
+                                </td>
+                                <td className="px-3.5 py-3 capitalize text-slate-700">
+                                  <span className="font-medium">{ord.plan}</span> ({ord.billingCycle || 'annual'})
+                                </td>
+                                <td className="px-3.5 py-3 font-semibold text-slate-900">
+                                  ₹{Number(ord.amount || 0).toLocaleString('en-IN')}
+                                </td>
+                                <td className="px-3.5 py-3">
+                                  {ord.utr ? (
+                                    <span className="font-mono text-xs text-slate-800">{ord.utr}</span>
+                                  ) : (
+                                    <span className="text-slate-400 text-[11px]">Awaiting UTR</span>
+                                  )}
+                                </td>
+                                <td className="px-3.5 py-3">
+                                  {isPaid ? (
+                                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                                      PAID
+                                    </span>
+                                  ) : isPending ? (
+                                    <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                                      PENDING
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                                      {ord.status}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-3.5 py-3 text-right">
+                                  {isPaid ? (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      loading={loadingInvoiceId === ord.orderId}
+                                      onClick={() => void handleViewInvoice(ord.orderId)}
+                                      className="text-xs py-1 px-2.5 h-auto"
+                                    >
+                                      View Invoice
+                                    </Button>
+                                  ) : isPending ? (
+                                    <Button
+                                      type="button"
+                                      variant="primary"
+                                      size="sm"
+                                      onClick={() => handleResumePayment(ord)}
+                                      className="text-xs py-1 px-2.5 h-auto"
+                                    >
+                                      Complete Pay
+                                    </Button>
+                                  ) : (
+                                    <span className="text-slate-400 text-xs">—</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1731,6 +1966,22 @@ export const FirmSettingsPage = () => {
         onClose={() => setShowDocketBulkModal(false)}
         showToast={showToast}
       />
+      <UpiCheckoutModal
+        isOpen={showCheckoutModal}
+        onClose={() => setShowCheckoutModal(false)}
+        order={checkoutOrder}
+        onSuccess={async () => {
+          showToast('Plan upgraded successfully!', 'success');
+          await loadPlanData();
+        }}
+      />
+      {showInvoiceModal && selectedInvoice && (
+        <SubscriptionInvoiceModal
+          isOpen={showInvoiceModal}
+          onClose={() => setShowInvoiceModal(false)}
+          invoice={selectedInvoice}
+        />
+      )}
     </PlatformShell>
   );
 };

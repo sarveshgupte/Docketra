@@ -40,7 +40,7 @@ The landing footer is intentionally compact and secondary.
 - Privacy (`/privacy`)
 - Security (`/security`)
 - Acceptable Use (`/acceptable-use`)
-- hello@docketra.com
+- help@docketra.in
 
 ### Brand text
 - Docketra

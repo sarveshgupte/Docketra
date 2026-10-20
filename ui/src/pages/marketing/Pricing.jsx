@@ -123,15 +123,15 @@ export const PricingPage = () => {
       <section className="relative overflow-hidden bg-slate-50/60 pt-20 pb-12 sm:pt-24 sm:pb-16 border-b border-slate-200/80">
         <Container size="7xl" className="text-center">
           <motion.div {...REVEAL} className="max-w-3xl mx-auto space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-xs border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-mono font-semibold uppercase tracking-wider text-amber-800">
-              <span className="h-1.5 w-1.5 rounded-xs bg-amber-500" />
-              <span>Transparent Sovereign Pricing</span>
+            <div className="inline-flex items-center gap-2 rounded-xs border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-mono font-semibold uppercase tracking-wider text-emerald-800">
+              <span className="h-1.5 w-1.5 rounded-xs bg-emerald-600" />
+              <span>Zero File Leakage • 100% Partner Review</span>
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
-              Predictable pricing for Indian CA & CS practices.
+              Run your practice from your own Google Drive.
             </h1>
             <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
-              No hidden setup fees. No per-clerk penalties. Keep 100% of client working papers inside your firm’s own Google Drive with zero data lock-in.
+              Predictable pricing for Indian CA & CS practices. Zero file leakage, 100% partner review, and zero per-user penalties for rotating trainees.
             </p>
 
             {/* Annual / Monthly Toggle */}

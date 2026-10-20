@@ -85,3 +85,7 @@
 **Vulnerability:** Information Disclosure where \`error.message\` was directly exposed to clients in 500 error responses across the DocketException API.
 **Learning:** Returning raw error messages can leak sensitive internal workings. Our custom logger (\`utils/log.js\`) expects a metadata object with \`{ message: error.message, stack: error.stack }\`.
 **Prevention:** Avoid passing raw \`error.message\` to \`res.status(500).json(...)\`. Instead, use \`log.error('EVENT_NAME', { message: error.message, stack: error.stack })\` and return a generic, safe string in the response.
+## 2026-10-19 - XSS Vulnerability in dangerouslySetInnerHTML
+**Vulnerability:** Found unsanitized input rendered using `dangerouslySetInnerHTML` in UpiCheckoutModal.jsx, potentially leading to Cross-Site Scripting (XSS).
+**Learning:** Even if data seems safe (like a generated SVG), it should always be sanitized before being injected directly into the DOM to maintain a strong defense-in-depth posture.
+**Prevention:** Always use `DOMPurify.sanitize()` or similar libraries when rendering raw HTML using `dangerouslySetInnerHTML`.
