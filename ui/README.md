@@ -67,7 +67,7 @@ npm --prefix ui run preview
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `VITE_API_BASE_URL` | Backend API base URL | `http://localhost:5000/api` |
-| `VITE_SUPPORT_EMAIL` | Support email shown in help UI | `help@docketra.in` |
+| `VITE_SUPPORT_EMAIL` | Support email shown in help UI | `support@docketra.com` |
 | `VITE_ENABLE_PROD_SOURCEMAPS` | Enable production source maps | `false` |
 | `VITE_ENABLE_GOOGLE_LOGIN` | Show Google login option | `false` |
 

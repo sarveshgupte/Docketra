@@ -4,12 +4,6 @@ import { caseApi } from '../../api/case.api';
 import { useAuth } from '../../hooks/useAuth';
 import { isFirmManagerOrAbove } from '../../utils/permissions';
 import { getFirmConfig } from '../../utils/firmConfig';
-import {
-  formatIndianPhoneNumber,
-  buildWhatsAppShareUrl,
-  buildWhatsAppDocumentRequestMessage,
-  getValidityLabel,
-} from '../../utils/whatsapp';
 
 const TITLES = {
   cfs: 'Client Fact Sheet',
@@ -42,30 +36,23 @@ export const DocketSidebar = ({
   onGenerateUploadLink,
   uploadLinkGenerating = false,
   uploadLinkResult = null,
-  clientPhone = '',
-  clientName = '',
   clientEmail = '',
 }) => {
   const sidebarPanelRef = useRef(null);
   const lastFocusedElementRef = useRef(null);
   const attachmentFileInputRef = useRef(null);
   const waFileInputRef = useRef(null);
-  const copyFeedbackTimeoutRef = useRef(null);
-  const [copyStatus, setCopyStatus] = useState('idle');
   const [requestPanelOpen, setRequestPanelOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('upload');
   const [waSender, setWaSender] = useState('');
   const [waNote, setWaNote] = useState('');
   const [waFile, setWaFile] = useState(null);
   const [waCopiedTag, setWaCopiedTag] = useState(false);
-  const [requestPhone, setRequestPhone] = useState(clientPhone || '');
   const [requestClientMessage, setRequestClientMessage] = useState('');
   const [requestInternalComment, setRequestInternalComment] = useState('');
-  const [requestExpiry, setRequestExpiry] = useState('7d');
+  const [requestExpiry, setRequestExpiry] = useState('24h');
   const [requestRequirePin, setRequestRequirePin] = useState(false);
-  const [requestAutoPend, setRequestAutoPend] = useState(true);
   const [requestSendEmail, setRequestSendEmail] = useState(true);
-  const [requestFeedback, setRequestFeedback] = useState('');
   const [showGeneratedPin, setShowGeneratedPin] = useState(false);
   const { user } = useAuth();
   const firmConfig = getFirmConfig();
@@ -73,13 +60,6 @@ export const DocketSidebar = ({
   const isTraineeShieldActive = Boolean(firmConfig.restrictTraineeDownloads) && !isManagerOrAbove;
   const [downloadingAttachmentId, setDownloadingAttachmentId] = useState(null);
   const [downloadErrorNotice, setDownloadErrorNotice] = useState('');
-
-  useEffect(() => {
-    const candidatePhone = clientPhone || cfsData?.basicInfo?.phone || '';
-    if (candidatePhone && candidatePhone !== '—' && !requestPhone) {
-      setRequestPhone(candidatePhone);
-    }
-  }, [clientPhone, cfsData?.basicInfo?.phone, requestPhone]);
 
   const handleViewAttachment = (attachment) => {
     const caseId = caseInfo?.caseId || caseInfo?.internalId || caseInfo?._id;
@@ -199,81 +179,13 @@ export const DocketSidebar = ({
     try {
       await navigator.clipboard.writeText(uploadLinkResult.link);
       setCopyStatus('success');
-      setRequestFeedback('Upload link copied to clipboard.');
     } catch (error) {
       setCopyStatus('error');
     }
 
     copyFeedbackTimeoutRef.current = setTimeout(() => {
       setCopyStatus('idle');
-      setRequestFeedback('');
     }, 2000);
-  };
-
-  const handleShareOnWhatsApp = async () => {
-    if (!onGenerateUploadLink) return;
-    const cleanPhone = formatIndianPhoneNumber(requestPhone);
-    const payload = {
-      sendEmail: false,
-      expiry: requestExpiry,
-      requirePin: requestRequirePin,
-      autoPend: requestAutoPend,
-      channel: 'WHATSAPP',
-      to: cleanPhone || undefined,
-    };
-    try {
-      const result = await onGenerateUploadLink(payload);
-      const generatedLink = result?.link || uploadLinkResult?.link;
-      const generatedPin = result?.pin || uploadLinkResult?.pin;
-      if (generatedLink) {
-        const fullMessage = buildWhatsAppDocumentRequestMessage({
-          clientName: clientName || cfsData?.basicInfo?.clientName || caseInfo?.clientName,
-          docketTitle: caseInfo?.title || caseInfo?.caseCategory,
-          docketNumber: caseInfo?.caseNumber || caseInfo?.caseId,
-          uploadLink: generatedLink,
-          validity: requestExpiry,
-          pin: generatedPin || null,
-          firmName: firmConfig?.name || user?.firmName || 'Our Firm',
-        });
-        const textToSend = requestCustomNote.trim()
-          ? `${requestCustomNote.trim()}\n\n${fullMessage}`
-          : fullMessage;
-
-        if (navigator?.clipboard?.writeText) {
-          try {
-            await navigator.clipboard.writeText(textToSend);
-          } catch (_e) {}
-        }
-        const waUrl = buildWhatsAppShareUrl({ phone: cleanPhone, text: textToSend });
-        window.open(waUrl, '_blank', 'noopener,noreferrer');
-        setRequestFeedback('Upload link copied to clipboard.');
-        setTimeout(() => setRequestFeedback(''), 3000);
-      }
-    } catch (_err) {
-      setRequestFeedback('Failed to generate request link.');
-      setTimeout(() => setRequestFeedback(''), 3000);
-    }
-  };
-
-  const handleCopyRequestLinkOnly = async () => {
-    let linkToCopy = uploadLinkResult?.link;
-    if (!linkToCopy && onGenerateUploadLink) {
-      const cleanPhone = formatIndianPhoneNumber(requestPhone);
-      const result = await onGenerateUploadLink({
-        sendEmail: false,
-        expiry: requestExpiry,
-        requirePin: requestRequirePin,
-        autoPend: requestAutoPend,
-        channel: 'WHATSAPP',
-        to: cleanPhone || undefined,
-      });
-      linkToCopy = result?.link;
-    }
-    if (linkToCopy && navigator?.clipboard?.writeText) {
-      await navigator.clipboard.writeText(linkToCopy);
-      setRequestFeedback('Upload link copied to clipboard.');
-      setTimeout(() => setRequestFeedback(''), 3000);
-    }
   };
 
   useEffect(() => {
@@ -419,34 +331,24 @@ export const DocketSidebar = ({
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                Upload
+                Standard Upload
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('whatsapp')}
-                className={`flex-1 rounded-md py-1 text-center transition-all flex items-center justify-center gap-1 ${
+                className={`flex-1 rounded-md py-1 text-center transition-all flex items-center justify-center gap-1.5 ${
                   activeTab === 'whatsapp'
                     ? 'bg-emerald-600 text-white shadow-xs font-semibold'
                     : 'text-emerald-700 hover:text-emerald-900'
                 }`}
               >
-                <span>WhatsApp Drop</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('request')}
-                className={`flex-1 rounded-md py-1 text-center transition-all flex items-center justify-center gap-1 ${
-                  activeTab === 'request'
-                    ? 'bg-blue-600 text-white shadow-xs font-semibold'
-                    : 'text-blue-700 hover:text-blue-900'
-                }`}
-              >
-                <span>Request Files</span>
+                <span>WhatsApp Bridge</span>
+                <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-emerald-700/40 text-white font-mono font-bold">Bridge</span>
               </button>
             </div>
 
-            {/* Tab 1: Standard Upload Form */}
-            {activeTab === 'upload' && (
+            {/* Standard Upload Form */}
+            {activeTab === 'upload' ? (
               <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3">
                 <input
                   ref={attachmentFileInputRef}
@@ -510,10 +412,8 @@ export const DocketSidebar = ({
                     : 'Upload Attachment'}
                 </button>
               </div>
-            )}
-
-            {/* Tab 2: WhatsApp Forwarding Bridge Form */}
-            {activeTab === 'whatsapp' && (
+            ) : (
+              /* WhatsApp Forwarding Bridge Form */
               <div className="rounded-xl border border-emerald-200 bg-emerald-50/20 p-3 space-y-2.5">
                 <div className="flex items-center justify-between pb-1.5 border-b border-emerald-100">
                   <div className="text-[11px] font-semibold text-emerald-900">
@@ -602,113 +502,6 @@ export const DocketSidebar = ({
               </div>
             )}
 
-            {/* Tab 3: 1-Click WhatsApp Document Request Form */}
-            {activeTab === 'request' && (
-              <div className="rounded-xl border border-blue-200 bg-blue-50/20 p-3 space-y-2.5">
-                <div className="flex items-center justify-between pb-1.5 border-b border-blue-100">
-                  <div className="text-[11px] font-semibold text-blue-950">
-                    Request Documents via WhatsApp
-                  </div>
-                  <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-bold">
-                    1-Click Drop
-                  </span>
-                </div>
-                <p className="text-[10px] text-blue-800 leading-tight">
-                  Generates a secure drop link and opens WhatsApp with a pre-filled message for your client.
-                </p>
-
-                <div>
-                  <label className="block text-[10px] font-semibold text-gray-700 mb-0.5">Client WhatsApp Phone</label>
-                  <input
-                    type="tel"
-                    className="w-full rounded-md border border-gray-300 bg-white p-1.5 text-xs focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                    value={requestPhone}
-                    onChange={(e) => setRequestPhone(e.target.value)}
-                    placeholder="e.g. 9820012345 (Leave empty to choose in WhatsApp)"
-                  />
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="flex-1">
-                    <label className="block text-[10px] font-semibold text-gray-700 mb-0.5">Link Validity</label>
-                    <select
-                      className="w-full rounded-md border border-gray-300 bg-white p-1.5 text-xs"
-                      value={requestExpiry}
-                      onChange={(e) => setRequestExpiry(e.target.value)}
-                    >
-                      <option value="24h">24 Hours</option>
-                      <option value="48h">48 Hours</option>
-                      <option value="7d">7 Days</option>
-                      <option value="14d">14 Days</option>
-                      <option value="30d">30 Days</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-1 pt-0.5">
-                  <label className="flex items-center gap-1.5 text-[11px] text-gray-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={requestAutoPend}
-                      onChange={(e) => setRequestAutoPend(e.target.checked)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span>Auto-set docket to Waiting / Pending</span>
-                  </label>
-                  <label className="flex items-center gap-1.5 text-[11px] text-gray-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={requestRequirePin}
-                      onChange={(e) => setRequestRequirePin(e.target.checked)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span>Require 4-digit PIN for upload</span>
-                  </label>
-                </div>
-
-                {/* Message Preview */}
-                <div className="rounded border border-gray-200 bg-white p-2 text-[10px] text-gray-600 leading-relaxed font-sans max-h-24 overflow-y-auto">
-                  {buildWhatsAppDocumentRequestMessage({
-                    clientName: clientName || cfsData?.basicInfo?.clientName || caseInfo?.clientName,
-                    docketTitle: caseInfo?.title || caseInfo?.caseCategory,
-                    docketNumber: caseInfo?.caseNumber || caseInfo?.caseId,
-                    uploadLink: uploadLinkResult?.link || 'https://docketra.in/upload/[link]',
-                    validity: requestExpiry,
-                    pin: uploadLinkResult?.pin || (requestRequirePin ? '••••' : null),
-                    firmName: firmConfig?.name || user?.firmName || 'Our Firm',
-                  })}
-                </div>
-
-                {requestFeedback && (
-                  <div className="p-1.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-medium text-center">
-                    {requestFeedback}
-                  </div>
-                )}
-
-                <div className="flex gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={handleShareOnWhatsApp}
-                    disabled={uploadLinkGenerating}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors shadow-xs disabled:opacity-60"
-                  >
-                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                      <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.634.054-1.748-.415-1.424-.601-2.336-2.038-2.408-2.133-.07-.095-.572-.76-.572-1.448 0-.689.362-1.028.49-1.168.129-.14.282-.175.376-.175.093 0 .188.001.27.005.087.004.204-.033.32.244.119.288.406.993.442 1.065.035.072.059.156.012.25-.047.094-.07.153-.14.235-.07.082-.148.184-.211.247-.07.07-.144.146-.062.287.082.141.365.602.784.975.54.48 1.002.628 1.144.698.141.07.225.059.308-.036.083-.095.355-.413.45-.554.094-.141.189-.118.318-.07.129.047.822.388.963.458.141.07.235.106.27.165.035.059.035.341-.109.746z"/>
-                    </svg>
-                    <span>{uploadLinkGenerating ? 'Opening…' : 'Share on WhatsApp →'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCopyRequestLinkOnly}
-                    disabled={uploadLinkGenerating}
-                    className="px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 text-xs font-semibold"
-                  >
-                    Copy Link
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Scrollable attachments list at the bottom */}
             <div className="border-t border-gray-200 pt-3 flex flex-col flex-1 min-h-[160px]">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 flex items-center justify-between">
@@ -720,7 +513,7 @@ export const DocketSidebar = ({
               {downloadErrorNotice && (
                 <div className="mb-2 p-2 rounded bg-amber-50 border border-amber-200 text-amber-800 text-[11px] leading-tight flex items-start justify-between gap-1">
                   <span>{downloadErrorNotice}</span>
-                  <button type="button" onClick={() => setDownloadErrorNotice('')} className="text-amber-500 hover:text-amber-700 ml-1 font-bold">×</button>
+                  <button type="button" onClick={() => setDownloadErrorNotice('')} className="text-amber-500 hover:text-amber-700 ml-1 font-bold" aria-label="Dismiss error notice" title="Dismiss error notice"><span aria-hidden="true">×</span></button>
                 </div>
               )}
               {!attachments.length ? (

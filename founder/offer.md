@@ -126,10 +126,3 @@ The Grand Slam Offer was re-tested against the same 20 simulated buyer personas 
 > *"Checking 30 WhatsApp client groups every morning before tea is my biggest operational bottleneck, and automating triage into structured dockets without forcing clients into a portal while keeping our Drive safe under restricted drive.file scope makes this an easy purchase."* — **Jasper (P020, Small Firm Partner)**  
 > *"At ₹12,990 a year with no setup fees or per-user nickeling, it is affordable enough to fix my daily morning triage across 30 WhatsApp client groups while keeping files safe under restricted drive.file scope."* — **Hana (P004, Solo Practice)**
 
-### 100-Member Panel Validation (Seed 90977)
-When scaled to the 100-persona panel with the **Growth Tier (₹21,990/yr flat for 12 seats)** and **Google Drive Tamper Guard** included:
-- **16 buys · 84 passes (16% overall buy rate)**.
-- **Tech-Forward Modern Practitioners reached 58% buy rate (7 of 12 bought)**.
-- **Mid-Sized Compliance Practices (6–20 staff) hit 25% buy rate (5 of 20 bought)**, proving the Growth Tier successfully bridges the mid-sized practice cliff.
-- The remaining blockers among passes are deeply entrenched habits and unverified security paranoia: 28 cited Google Drive trust/confidentiality fears (solvable via the verifiable sandbox isolation test) and 27 cited 10-year WhatsApp routine inertia.
-

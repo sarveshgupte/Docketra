@@ -6,22 +6,18 @@ This strategy is derived from the consumer panel's Van Westendorp price sensitiv
 
 ## 1. The Core Price & Economic Rationale
 
-### Van Westendorp Benchmarks (From 100 Simulated CA/CS Buyers)
-- **Point of Marginal Cheapness (PMC)**: **₹5,892.19 / year** (~₹491/mo). Below this, practitioners suspect shoddy engineering or data insecurity.
-- **Optimal Price Point (OPP)**: **₹5,974.00 / year** (~₹498/mo). The point of minimum resistance where as many say too cheap as too expensive.
-- **Indifference Price Point (IPP)**: **₹13,012.00 / year** (~₹1,084/mo). Where as many call it a bargain as call it expensive.
-- **Point of Marginal Expensiveness (PME)**: **₹24,002.50 / year** (~₹2,000/mo). The resistance ceiling above which too many refuse to buy.
-- **Acceptable Annual Range**: **₹5,892.19 to ₹24,002.50 / year**.
-- **Median Answers**: Too cheap ₹3,500/yr, A bargain ₹7,000/yr, Getting expensive ₹14,000/yr, Too expensive ₹26,000/yr.
+### Van Westendorp Benchmarks (From 20 Simulated CA/CS Buyers)
+- **Point of Marginal Cheapness (PMC)**: ₹1,021 / month (below this, practitioners suspect data insecurity or shoddy engineering).
+- **Optimal Price Point (OPP)**: **₹1,527 / month** (the price with minimum resistance either way).
+- **Indifference Price Point (IPP)**: **₹2,467 / month** (where equal numbers call it a bargain vs. expensive).
+- **Point of Marginal Expensiveness (PME)**: ₹4,966 / month (upper resistance ceiling).
 
 ### The Decision:
-* **Starter Annual (Regular)**: **₹1,499 / month** (₹17,990 / year billed annually).  
-  *Lands comfortably inside the acceptable annual range (₹5,892 – ₹24,002)*, rewarding annual commitments with full feature parity.
-* **Pioneer 30 Promotional Cohort**: **₹12,990 / year locked for life** (~₹1,082/mo).  
-  *Lands almost precisely on the Indifference Price Point (IPP = ₹13,012/yr)*, making the launch offer an immediate no-brainer bargain for early adopter firms.
-* **Growth Tier (Mid-Sized Practices)**: **₹21,990 / year flat** (~₹1,832/mo).  
-  *Positioned right below the PME ceiling (₹24,002/yr)*, solving the mid-sized practice cliff for 6–12 staff without exceeding budget tolerance.
-* **Economics**: At ₹1,499/month, Docketra maintains a **90% gross contribution margin** (variable compute/email/gateway cost is only ~₹150/firm-month). Fixed costs break even at **63 paying firms** (3 firm-months a day).
+* **Starter Annual (The Core Driver)**: **₹1,499 / month** (₹17,990 / year billed annually)
+  *Lands almost precisely on the panel's Optimal Price Point (OPP = ₹1,527/mo)*. It provides the path of least resistance for conservative partnership firms.
+* **Starter Monthly (Flexibility Tier)**: **₹1,999 / month** (billed monthly)
+  *Positioned between OPP (₹1,527) and IPP (₹2,467)*, rewarding annual commitments with a 25% discount.
+* **Economics**: At ₹1,499–₹1,999/month, Docketra maintains a **92% contribution margin** (variable compute/email/gateway cost is only ~₹160/firm-month). Fixed costs break even at just **46 paying firms**.
 
 ---
 

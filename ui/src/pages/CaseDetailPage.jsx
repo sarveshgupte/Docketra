@@ -345,13 +345,6 @@ export const CaseDetailPage = () => {
     || caseInfo?.client?.contactPersonName
     || caseInfo?.client?.primaryContactNumber
     || '—';
-  const linkedClientPhone = caseData?.client?.primaryContactNumber
-    || caseData?.client?.contactPersonPhoneNumber
-    || caseData?.client?.clientFactSheet?.basicInfo?.phone
-    || caseInfo?.client?.primaryContactNumber
-    || caseInfo?.client?.phone
-    || caseInfo?.clientPhone
-    || '';
   const linkedClientRoute = linkedClientId ? ROUTES.CLIENT_WORKSPACE(firmSlug, linkedClientId) : '';
   const isInternalWork = Boolean(caseInfo?.isInternal || caseInfo?.workType === 'internal');
   const fromClientRoute = location.state?.fromClientRoute || '';
@@ -1465,8 +1458,6 @@ export const CaseDetailPage = () => {
                 <button
                   type="button"
                   onClick={() => runGuardedAction(() => openSidebar('cfs'), 'Unable to open CFS panel right now.')}
-                  aria-label="Open client fact sheet"
-                  title="Open Client Fact Sheet"
                   className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors cursor-pointer"
                 >
                   <span>ⓘ</span> CFS Sheet
@@ -1637,8 +1628,6 @@ export const CaseDetailPage = () => {
                   caseId={caseId}
                   caseInfo={caseInfo}
                   clientEmail={linkedClientEmail}
-                  clientPhone={linkedClientPhone}
-                  clientName={clientName}
                   onRefreshCase={loadCase}
                 />
               )}
@@ -1813,8 +1802,6 @@ export const CaseDetailPage = () => {
           onGenerateUploadLink={handleGenerateUploadLink}
           uploadLinkGenerating={uploadLinkGenerating}
           uploadLinkResult={uploadLinkResult}
-          clientPhone={linkedClientPhone}
-          clientName={clientName}
           clientEmail={
             caseInfo?.clientEmail
             || caseInfo?.client?.email

@@ -33,7 +33,7 @@ The 120,000+ practicing CA and CS firms in India. Primary wedge: 2-to-6 partner 
 | Capital Payback Period | **Month 11** |
 
 ### The Evidence
-* **Consumer Panel (Seed 90977)**: Tested across 100 simulated Indian CA/CS personas (16 buy · 84 pass, 16% buy rate vs 25% hurdle). Achieved 58% conversion in Tech-Forward Modern Practitioners and 25% in Mid-Sized Compliance Practices (6–20 staff). Top objections identified: Google Drive confidentiality paranoia (28), WhatsApp habit inertia (27), and Jamku price anchoring (17).
+* **Consumer Panel (Seed 42)**: Tested across 20 diverse Indian CA/CS personas (3 buy · 17 pass, 15% buy rate). Achieved 100% conversion in tech-forward practices. Identified the two key adoption blockers: a 4.6x price cliff for mid-sized firms (6–12 staff) and the need for a direct WhatsApp media forwarding flow for diehard clients.
 * **Competitor Gap & Anti-Jamku Stance**: Jamku advertises ₹6,500/yr but charges ₹3,000–₹15,000 mandatory setup fees and hosts files on shared cloud servers where article assistants can copy confidential returns. Docketra refuses to race to the bottom on price. We position as sovereign practice infrastructure: *Sovereign BYOS + ICAI SQC-1 Peer-Review Defensibility + Trainee Laptop Shield*.
 
 ### The Ask & Startup Capital Use
