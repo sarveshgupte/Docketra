@@ -169,14 +169,15 @@ export default function BubbleMenu({
               <div className="relative group">
                 <button
                   type="button"
-                  className="inline-flex h-9 items-center justify-center gap-1 rounded-xs border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:border-slate-300"
+                  aria-haspopup="true"
+                  className="inline-flex h-9 items-center justify-center gap-1 rounded-xs border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
                   <span>Solutions</span>
-                  <svg className="h-3.5 w-3.5 text-slate-400 group-hover:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-3.5 w-3.5 text-slate-400 group-hover:rotate-180 group-focus-within:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                <div className="absolute right-0 top-full mt-1 w-64 rounded-sm border border-slate-200 bg-white p-1.5 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                <div className="absolute right-0 top-full mt-1 w-64 rounded-sm border border-slate-200 bg-white p-1.5 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all z-50">
                   <div className="px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Practice Solutions</div>
                   <Link
                     to="/solutions/company-secretaries"
