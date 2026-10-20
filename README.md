@@ -132,6 +132,21 @@ npm --prefix ui run test:ci
 npm run ci:release-gate
 ```
 
+### Secret scanning (gitleaks)
+```bash
+npm run security:secrets
+```
+
+Example scanner finding format:
+```text
+Finding:     "export BUNDLE_ENTERPRISE__CONTRIBSYS__COM=ci-placeholder-cafebabe:ci-placeholder-deadbeef",
+Secret:      ci-placeholder-cafebabe:ci-placeholder-deadbeef
+RuleID:      sidekiq-secret
+Entropy:     2.609850
+File:        cmd/generate/config/rules/sidekiq.go
+Line:        23
+```
+
 ## Deployment notes
 
 - Production deploy targets are documented in `docs/deployment/render-deployment.md`.
