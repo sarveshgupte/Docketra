@@ -54,11 +54,20 @@ const sendOtp = async ({ email, xid, xID, XID, identifier, purpose }) => {
     is_used: false,
   });
 
-  await emailService.sendLoginOtpEmail({
-    email: resolvedIdentifier,
-    otp: code,
-    expiryMinutes: OTP_EXPIRY_MINUTES,
-  });
+  if (purpose === 'trainee_shield_change' || purpose?.startsWith('security_')) {
+    await emailService.sendSecurityAuthorizationOtpEmail({
+      email: resolvedIdentifier,
+      otp: code,
+      actionDescription: 'update Trainee Laptop Shield security settings',
+      expiryMinutes: OTP_EXPIRY_MINUTES,
+    });
+  } else {
+    await emailService.sendLoginOtpEmail({
+      email: resolvedIdentifier,
+      otp: code,
+      expiryMinutes: OTP_EXPIRY_MINUTES,
+    });
+  }
 
   return {
     identifier: resolvedIdentifier,

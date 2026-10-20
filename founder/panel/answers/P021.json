@@ -1,0 +1,13 @@
+{
+  "id": "P021",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "habit",
+  "reason": "We have run our two-person practice on spreadsheets and WhatsApp groups for ten years without spending money on software, and manually forwarding bills from 30 client groups into another platform just creates extra work. Our routine works well enough for free, so I would only ever test the free pilot before paying ₹12,990 upfront.",
+  "objection": "My clients will never use an intake portal—they just dump bills on WhatsApp, and having us manually forward everything into Docketra is an extra step.",
+  "would_change_my_mind": "Direct automated ingestion from WhatsApp groups directly into Drive folders without anyone on my team having to manually forward files.",
+  "price_too_cheap": 3000,
+  "price_cheap": 6000,
+  "price_expensive": 13000,
+  "price_too_expensive": 25000
+}

@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { formatDateOnly, formatDateTime, formatTimeOnly } from '../../utils/formatDateTime';
+import { caseApi } from '../../api/case.api';
+import { useAuth } from '../../hooks/useAuth';
+import { isFirmManagerOrAbove } from '../../utils/permissions';
+import { getFirmConfig } from '../../utils/firmConfig';
 
 const TITLES = {
   cfs: 'Client Fact Sheet',
@@ -50,8 +54,46 @@ export const DocketSidebar = ({
   const [requestRequirePin, setRequestRequirePin] = useState(false);
   const [requestSendEmail, setRequestSendEmail] = useState(true);
   const [showGeneratedPin, setShowGeneratedPin] = useState(false);
-  const [copyStatus, setCopyStatus] = useState('idle');
-  const copyFeedbackTimeoutRef = useRef(null);
+  const { user } = useAuth();
+  const firmConfig = getFirmConfig();
+  const isManagerOrAbove = isFirmManagerOrAbove(user);
+  const isTraineeShieldActive = Boolean(firmConfig.restrictTraineeDownloads) && !isManagerOrAbove;
+  const [downloadingAttachmentId, setDownloadingAttachmentId] = useState(null);
+  const [downloadErrorNotice, setDownloadErrorNotice] = useState('');
+
+  const handleViewAttachment = (attachment) => {
+    const caseId = caseInfo?.caseId || caseInfo?.internalId || caseInfo?._id;
+    const attachmentId = attachment?.id || attachment?._id;
+    if (!caseId || !attachmentId) return;
+    caseApi.viewAttachment(caseId, attachmentId);
+  };
+
+  const handleDownloadAttachment = async (attachment) => {
+    const caseId = caseInfo?.caseId || caseInfo?.internalId || caseInfo?._id;
+    const attachmentId = attachment?.id || attachment?._id;
+    const filename = attachment?.fileName || attachment?.filename || 'attachment';
+    if (!caseId || !attachmentId) return;
+
+    if (isTraineeShieldActive) {
+      setDownloadErrorNotice('Trainee Laptop Shield is active for your firm. File downloads to personal devices are restricted for junior staff. Please use in-app document preview.');
+      return;
+    }
+
+    try {
+      setDownloadingAttachmentId(attachmentId);
+      setDownloadErrorNotice('');
+      await caseApi.downloadAttachment(caseId, attachmentId, filename);
+    } catch (err) {
+      if (err?.code === 'TRAINEE_DOWNLOAD_RESTRICTED' || err?.message?.includes('Trainee Laptop Shield')) {
+        setDownloadErrorNotice('Trainee Laptop Shield is active: Raw file downloads to local devices are restricted for junior staff. Please use in-app document preview.');
+      } else {
+        setDownloadErrorNotice(err?.message || 'Download failed');
+      }
+    } finally {
+      setDownloadingAttachmentId(null);
+    }
+  };
+
   const expiryLabel = useMemo(() => (requestExpiry === '7d' ? '7 days' : '24 hours'), [requestExpiry]);
   const formatDatePart = (value) => {
     const formatted = formatDateOnly(value);
@@ -75,35 +117,35 @@ export const DocketSidebar = ({
     const particulars = String(event?.description || event?.actionLabel || '').toLowerCase();
     
     // Default
-    let icon = '📝';
+    let icon = '•';
     let typeClass = 'docket-sidebar__timeline-icon--default';
     
     if (actionType.includes('VIEW') || actionType.includes('OPEN') || actionType.includes('EXIT')) {
-      icon = '🔍';
+      icon = '○';
       typeClass = 'docket-sidebar__timeline-icon--view';
     } else if (actionType.includes('COMMENT')) {
-      icon = '💬';
+      icon = '▪';
       typeClass = 'docket-sidebar__timeline-icon--comment';
     } else if (actionType.includes('FILE') || actionType.includes('ATTACHMENT')) {
-      icon = '📎';
+      icon = '⧉';
       typeClass = 'docket-sidebar__timeline-icon--attachment';
     } else if (actionType.includes('PENDED') || actionType.includes('PEND')) {
-      icon = '📅';
+      icon = '⏱';
       typeClass = 'docket-sidebar__timeline-icon--lifecycle';
     } else if (actionType.includes('RESOLVED')) {
-      icon = '✅';
+      icon = '✓';
       typeClass = 'docket-sidebar__timeline-icon--lifecycle';
     } else if (actionType.includes('FILED')) {
-      icon = '📁';
+      icon = '↓';
       typeClass = 'docket-sidebar__timeline-icon--lifecycle';
     } else if (actionType.includes('ASSIGNED') || actionType.includes('PULLED') || actionType.includes('UNASSIGNED')) {
-      icon = '👤';
+      icon = '→';
       typeClass = 'docket-sidebar__timeline-icon--routing';
     } else if (actionType.includes('ROUTE') || actionType.includes('MOVE')) {
-      icon = '➡️';
+      icon = '⇲';
       typeClass = 'docket-sidebar__timeline-icon--routing';
     } else if (actionType.includes('CREATED') || actionType.includes('CLONED')) {
-      icon = '✨';
+      icon = '+';
       typeClass = 'docket-sidebar__timeline-icon--lifecycle';
     }
     
@@ -464,10 +506,16 @@ export const DocketSidebar = ({
             <div className="border-t border-gray-200 pt-3 flex flex-col flex-1 min-h-[160px]">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 flex items-center justify-between">
                 <span>Attached Files</span>
-                <span className="bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full text-[10px] font-bold">
+                <span className="bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-xs tabular-nums text-[10px] font-bold font-mono">
                   {attachments.length}
                 </span>
               </p>
+              {downloadErrorNotice && (
+                <div className="mb-2 p-2 rounded bg-amber-50 border border-amber-200 text-amber-800 text-[11px] leading-tight flex items-start justify-between gap-1">
+                  <span>{downloadErrorNotice}</span>
+                  <button type="button" onClick={() => setDownloadErrorNotice('')} className="text-amber-500 hover:text-amber-700 ml-1 font-bold" aria-label="Dismiss error notice" title="Dismiss error notice"><span aria-hidden="true">×</span></button>
+                </div>
+              )}
               {!attachments.length ? (
                 <p className="docket-sidebar__empty py-8 text-center text-xs text-gray-400">
                   {EMPTY_STATES.attachments}
@@ -504,6 +552,29 @@ export const DocketSidebar = ({
                           Comment: {attachment.description}
                         </p>
                       )}
+                      <div className="flex items-center gap-2 mt-2 pt-1.5 border-t border-gray-200/60">
+                        <button
+                          type="button"
+                          onClick={() => handleViewAttachment(attachment)}
+                          className="text-[10px] font-medium text-blue-600 hover:text-blue-800 transition-colors inline-flex items-center gap-0.5"
+                        >
+                          Preview in-app
+                        </button>
+                        <span className="text-gray-300 text-[10px]">•</span>
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadAttachment(attachment)}
+                          disabled={downloadingAttachmentId === (attachment.id || attachment._id)}
+                          className={`text-[10px] font-medium transition-colors ${
+                            isTraineeShieldActive
+                              ? 'text-gray-400 cursor-not-allowed'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                          title={isTraineeShieldActive ? 'Download restricted by Trainee Laptop Shield' : 'Download raw file'}
+                        >
+                          {downloadingAttachmentId === (attachment.id || attachment._id) ? 'Downloading…' : isTraineeShieldActive ? 'Download restricted' : 'Download'}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

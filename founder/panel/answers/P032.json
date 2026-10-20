@@ -1,0 +1,13 @@
+{
+  "id": "P032",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "As a frugal solo practitioner, I am not paying ₹12,990 upfront until I see with my own eyes that an assistant accidentally deleting or moving a Drive folder won't destroy our files. In a normal week, I would only ever test the ₹0 free pilot first to verify that Google Drive restoration works and that it actually cuts down my Saturday GST reconciliation time.",
+  "objection": "If files stay in our Google Drive, what happens if an assistant accidentally deletes or moves the folder, and can Docketra really restore it seamlessly without data loss?",
+  "would_change_my_mind": "Verifying on the free pilot that accidental folder deletion or moving in Google Drive is immediately detected and restored with one click, without corrupting client files.",
+  "price_too_cheap": 3000,
+  "price_cheap": 6000,
+  "price_expensive": 13000,
+  "price_too_expensive": 25000
+}

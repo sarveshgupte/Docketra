@@ -17,7 +17,6 @@ const adminAuditLogSchema = new mongoose.Schema({
   },
   targetId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
     default: null,
     index: true,
     immutable: true,
@@ -39,6 +38,14 @@ const adminAuditLogSchema = new mongoose.Schema({
       'USER_PASSWORD_RESET',
       'WORKBENCH_CONFIG_UPDATED',
       'CATEGORY_CONFIG_UPDATED',
+      'TRAINEE_SHIELD_UPDATED',
+      'FIRM_SETTINGS_UPDATED',
+      'CLIENT_CREATED',
+      'CLIENT_UPDATED',
+      'CLIENT_ACTIVATED',
+      'CLIENT_DEACTIVATED',
+      'WORKFLOW_SETTINGS_UPDATED',
+      'STORAGE_CONFIG_UPDATED',
     ],
   },
   metadata: {

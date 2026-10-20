@@ -15,10 +15,14 @@ const phonePattern = /^\d{10}$/;
 const OnboardingAside = () => (
   <section className="hidden lg:block" aria-label="Workspace onboarding context">
     <Link to="/" className="inline-flex items-center gap-2 text-lg font-extrabold text-slate-950">
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-white" aria-hidden="true">✨</span>
+      <svg className="h-9 w-9 text-amber-600 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M25 15H50C69.33 15 85 30.67 85 50C85 69.33 69.33 85 50 85H25V15Z" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M40 30H50C61.05 30 70 38.95 70 50C70 61.05 61.05 70 50 70H40V30Z" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
+            </svg>
       Docketra
     </Link>
-    <p className="mt-10 text-sm font-bold uppercase text-amber-700">🏁 Final setup</p>
+    <p className="mt-10 text-sm font-bold uppercase text-amber-700">Final setup</p>
     <h1 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
       Finish the workspace profile before the real work begins.
     </h1>
@@ -26,7 +30,7 @@ const OnboardingAside = () => (
       A clean firm profile helps Docketra route users, dashboards, and workspace context correctly from day one.
     </p>
     <div className="mt-8 grid gap-3">
-      {['🏢 Firm identity', '📞 Admin contact', '✅ Workspace route ready'].map((item) => (
+      {['Firm identity', 'Admin contact', 'Workspace route ready'].map((item) => (
         <div key={item} className="rounded-2xl border border-white/80 bg-white/75 px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
           {item}
         </div>
@@ -187,15 +191,15 @@ export function CompleteProfile() {
           <h1 className="text-3xl font-black text-slate-950 md:text-4xl">Complete your workspace setup</h1>
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">Step 2 of 2: add your workspace details.</p>
           <div className="mt-5 flex justify-center gap-2" aria-hidden="true">
-            <span className="h-2 w-8 rounded-full bg-slate-300" />
-            <span className="h-2 w-10 rounded-full bg-slate-950" />
+            <span className="h-2 w-8 rounded-sm bg-slate-300" />
+            <span className="h-2 w-10 rounded-sm bg-slate-950" />
           </div>
         </div>
 
         <form className={`mt-6 ${spacingClasses.formFieldSpacing}`} onSubmit={handleSubmit}>
           <div className="grid gap-4 rounded-3xl border border-slate-200 bg-slate-50/80 p-4 md:grid-cols-2">
             <div className="md:col-span-2">
-              <p className="text-sm font-black text-slate-950">👤 Admin profile</p>
+              <p className="text-sm font-black text-slate-950">Admin profile</p>
               <p className="mt-1 text-xs leading-5 text-slate-500">Confirm the person who will own the first workspace setup.</p>
             </div>
             <Input
@@ -218,7 +222,7 @@ export function CompleteProfile() {
           </div>
           <div className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-4 md:grid-cols-2">
             <div className="md:col-span-2">
-              <p className="text-sm font-black text-slate-950">🏢 Workspace details</p>
+              <p className="text-sm font-black text-slate-950">Workspace details</p>
               <p className="mt-1 text-xs leading-5 text-slate-500">These details help firm routing and support stay explicit.</p>
             </div>
             <Input

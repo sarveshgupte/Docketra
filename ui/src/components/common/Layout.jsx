@@ -7,7 +7,7 @@
  * This layout remains for legacy/non-firm pages until fully retired.
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useId } from 'react';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { useAuth } from '../../hooks/useAuth';
@@ -134,6 +134,8 @@ const IconPlus = () => (
 const sortNotificationsLatestFirst = (items) => [...items].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
 export const Layout = ({ children, title, subtitle }) => {
+  const notificationMenuId = `notification-menu-${useId()}`;
+  const profileMenuId = `profile-menu-${useId()}`;
   const { user, logout } = useAuth();
   const { openDocket } = useActiveDocket();
   const { showSuccess } = useToast();
@@ -846,7 +848,7 @@ export const Layout = ({ children, title, subtitle }) => {
                 aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : 'Notifications'}
                 title={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
                 aria-expanded={notificationOpen}
-                aria-controls="notification-dropdown-menu"
+              aria-controls={notificationMenuId}
                 aria-haspopup="menu"
                 onClick={() => setNotificationOpen((v) => !v)}
               >
@@ -854,7 +856,7 @@ export const Layout = ({ children, title, subtitle }) => {
                 {unreadCount > 0 ? <span className="enterprise-header__notif-dot" aria-hidden="true">{unreadCount}</span> : null}
               </button>
               {notificationOpen ? (
-                <div id="notification-dropdown-menu" className="dropdown-menu dropdown-menu-right enterprise-header__notification-menu" role="menu">
+              <div id={notificationMenuId} className="dropdown-menu dropdown-menu-right enterprise-header__notification-menu" role="menu">
                   <div className="enterprise-header__notification-header">
                     <span>Notifications</span>
                     <span className="enterprise-header__notification-count">{unreadCount} unread</span>
@@ -942,7 +944,7 @@ export const Layout = ({ children, title, subtitle }) => {
                 type="button"
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                 aria-expanded={profileDropdownOpen}
-                aria-controls="profile-dropdown-menu"
+              aria-controls={profileMenuId}
                 aria-haspopup="true"
                 aria-label="User profile menu"
               >
@@ -951,7 +953,7 @@ export const Layout = ({ children, title, subtitle }) => {
                 <IconChevronDown />
               </button>
               {profileDropdownOpen && (
-                <div id="profile-dropdown-menu" className="dropdown-menu dropdown-menu-right" role="menu">
+              <div id={profileMenuId} className="dropdown-menu dropdown-menu-right" role="menu">
                   <Link
                     to={ROUTES.PROFILE(currentFirmSlug)}
                     className="dropdown-item"

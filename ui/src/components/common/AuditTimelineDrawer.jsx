@@ -20,28 +20,28 @@ const IRREVERSIBLE_ACTIONS = new Set(['RESOLVED', 'FILED', 'CASE_RESOLVED', 'CAS
 const ACTION_ICONS = {
   RESOLVED: '✓',
   CASE_RESOLVED: '✓',
-  FILED: '📤',
-  CASE_FILED: '📤',
-  PENDING: '⏳',
-  CASE_PENDED: '⏳',
-  UNPENDED: '🔁',
-  CASE_UNPENDED: '🔁',
-  CASE_REOPENED: '🔁',
-  CREATED: '📋',
-  CASE_CREATED: '📋',
-  OPENED: '👁',
-  DOCKET_OPENED: '👁',
-  DOCKET_VIEWED: '👁',
-  DOCKET_EXITED: '🚪',
-  ASSIGNED: '👤',
-  CASE_ASSIGNED: '👤',
-  PULLED: '👤',
+  FILED: '↓',
+  CASE_FILED: '↓',
+  PENDING: '⏱',
+  CASE_PENDED: '⏱',
+  UNPENDED: '↺',
+  CASE_UNPENDED: '↺',
+  CASE_REOPENED: '↺',
+  CREATED: '+',
+  CASE_CREATED: '+',
+  OPENED: '○',
+  DOCKET_OPENED: '○',
+  DOCKET_VIEWED: '○',
+  DOCKET_EXITED: '—',
+  ASSIGNED: '→',
+  CASE_ASSIGNED: '→',
+  PULLED: '→',
   UNASSIGNED: '↩',
   CASE_UNASSIGNED: '↩',
   MOVED_TO_GLOBAL: '↩',
-  CASE_COMMENT_ADDED: '💬',
-  CASE_FILE_ATTACHED: '📎',
-  CASE_ATTACHMENT_ADDED: '📎',
+  CASE_COMMENT_ADDED: '▪',
+  CASE_FILE_ATTACHED: '⧉',
+  CASE_ATTACHMENT_ADDED: '⧉',
   CASE_CLONED: '⧉',
   CLONED_FROM_OLD_DOCKET: '⧉',
 };
@@ -258,9 +258,9 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveFilter(tab.id)}
-                className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                className={`rounded-xs px-2.5 py-1 text-[11px] font-medium transition-colors ${
                   activeFilter === tab.id
-                    ? 'bg-indigo-600 text-white shadow-sm'
+                    ? 'bg-indigo-600 text-white shadow-xs'
                     : 'bg-[var(--dt-surface)] text-[var(--dt-text-secondary)] border border-[var(--dt-border)] hover:bg-[var(--dt-surface-muted)]'
                 }`}
               >

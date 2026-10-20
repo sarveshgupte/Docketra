@@ -14,6 +14,8 @@ const DEFAULT_FIRM_SETTINGS = {
   enableBulkActions: true,
   brandLogoUrl: '',
   strictFirmOwnedStorage: false,
+  restrictTraineeDownloads: false,
+  weeklyAuditDigestEnabled: true,
 };
 
 const normalizeIsoDateList = (values = []) => {
@@ -90,6 +92,8 @@ const normalizeFirmSettings = (raw = {}) => ({
   enableBulkActions: raw.enableBulkActions !== false,
   brandLogoUrl: typeof raw.brandLogoUrl === 'string' ? raw.brandLogoUrl.trim() : DEFAULT_FIRM_SETTINGS.brandLogoUrl,
   strictFirmOwnedStorage: Boolean(raw.strictFirmOwnedStorage),
+  restrictTraineeDownloads: Boolean(raw.restrictTraineeDownloads ?? raw.traineeLaptopShield),
+  weeklyAuditDigestEnabled: raw.weeklyAuditDigestEnabled !== false,
 });
 
 const normalizeWorkSettings = (raw = {}) => ({

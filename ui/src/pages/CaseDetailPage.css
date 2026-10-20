@@ -1970,26 +1970,24 @@ button.btn--outline:hover:not(:disabled) {
    ───────────────────────────────────────────────────────────── */
 
 .docket-detail-redesign {
-  --docket-ink: #171717;
-  --docket-muted: #6f6d66;
-  --docket-faint: #9a968c;
-  --docket-line: rgba(39, 37, 31, 0.09);
-  --docket-line-strong: rgba(39, 37, 31, 0.14);
-  --docket-panel: rgba(255, 255, 255, 0.82);
+  --docket-ink: #0f172a;
+  --docket-muted: #64748b;
+  --docket-faint: #94a3b8;
+  --docket-line: #e2e8f0;
+  --docket-line-strong: #cbd5e1;
+  --docket-panel: #ffffff;
   --docket-panel-solid: #ffffff;
-  --docket-wash: #f3f1eb;
-  background:
-    radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 28rem),
-    linear-gradient(180deg, #f8f7f3 0%, #f3f1eb 100%) !important;
+  --docket-wash: #f8fafc;
+  background: #f8fafc !important;
   gap: 16px !important;
-  padding: 20px 24px 28px !important;
+  padding: 16px 20px 24px !important;
 }
 
 .docket-detail-redesign .case-detail__confirmation,
 .docket-detail-redesign .case-detail__alert,
 .docket-detail-redesign .case-detail__inactivity-warning,
 .docket-detail-redesign .case-detail__lifecycle-warnings {
-  max-width: 1360px;
+  max-width: 1440px;
   width: 100% !important;
   margin-inline: auto !important;
 }
@@ -1998,22 +1996,20 @@ button.btn--outline:hover:not(:disabled) {
 .docket-detail-tabs-wrap,
 .docket-detail-redesign .case-detail-layout-grid {
   width: 100% !important;
-  max-width: 1360px !important;
+  max-width: 1440px !important;
   margin-inline: auto !important;
 }
 
 .docket-detail-hero {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 16px 18px 18px;
+  gap: 14px;
+  padding: 14px 18px;
   margin-top: 0 !important;
-  border: 1px solid var(--docket-line);
-  border-radius: 22px;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.74)),
-    linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(22, 163, 74, 0.04));
-  box-shadow: 0 18px 42px rgba(31, 41, 55, 0.06);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .docket-detail-hero__topline,
@@ -2031,32 +2027,32 @@ button.btn--outline:hover:not(:disabled) {
 
 .docket-detail-hero__badges {
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
 .docket-soft-chip {
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--docket-line);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
-  color: var(--docket-muted);
+  min-height: 22px;
+  padding: 2px 7px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #475569;
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .docket-detail-hero__main {
   justify-content: space-between;
-  gap: 18px;
+  gap: 16px;
   align-items: stretch;
 }
 
 .docket-detail-hero__identity {
-  min-width: 220px;
+  min-width: 200px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -2066,25 +2062,26 @@ button.btn--outline:hover:not(:disabled) {
 .docket-section-kicker {
   margin: 0 0 4px;
   font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.13em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--docket-faint);
+  color: #94a3b8;
 }
 
 .docket-detail-hero__identity h1 {
   margin: 0;
-  color: var(--docket-ink);
-  font-size: clamp(20px, 2vw, 28px);
-  line-height: 1.05;
-  letter-spacing: -0.045em;
+  color: #0f172a;
+  font-size: clamp(18px, 1.8vw, 24px);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  font-weight: 700;
 }
 
 .docket-detail-hero__identity p {
-  margin: 8px 0 0;
-  color: var(--docket-muted);
-  font-size: 13px;
-  font-weight: 600;
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .docket-detail-hero__metrics {
@@ -2093,38 +2090,38 @@ button.btn--outline:hover:not(:disabled) {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 1px;
   overflow: hidden;
-  border: 1px solid var(--docket-line);
-  border-radius: 18px;
-  background: var(--docket-line);
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #e2e8f0;
 }
 
 .docket-detail-hero__metrics > div {
   min-width: 0;
-  padding: 13px 14px;
-  background: rgba(255, 255, 255, 0.82);
+  padding: 10px 12px;
+  background: #ffffff;
 }
 
 .docket-detail-hero__metrics span {
   display: block;
-  color: var(--docket-faint);
+  color: #94a3b8;
   font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .docket-detail-hero__metrics strong {
   display: block;
-  margin-top: 5px;
-  color: var(--docket-ink);
-  font-size: 13px;
-  font-weight: 750;
+  margin-top: 4px;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 600;
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
 
 .docket-detail-hero__tags {
-  margin-top: 8px;
+  margin-top: 6px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -2135,30 +2132,30 @@ button.btn--outline:hover:not(:disabled) {
   display: inline-flex;
   align-items: center;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1;
-  padding: 4px 10px;
-  border-radius: 6px;
-  background: var(--docket-wash);
-  border: 1px solid var(--docket-line);
-  color: var(--docket-muted);
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
   letter-spacing: 0.01em;
 }
 
 .docket-tag--category {
-  background: rgba(37, 99, 235, 0.05);
-  border-color: rgba(37, 99, 235, 0.15);
-  color: #1d4ed8;
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #4338ca;
 }
 
 .docket-tag--subcategory {
-  background: rgba(75, 85, 99, 0.05);
-  border-color: rgba(75, 85, 99, 0.15);
-  color: #374151;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #334155;
 }
 
 .docket-tag-separator {
-  color: var(--docket-faint);
+  color: #94a3b8;
   font-size: 12px;
   font-weight: 500;
 }
@@ -2166,10 +2163,10 @@ button.btn--outline:hover:not(:disabled) {
 /* Guidance alerts */
 .docket-guidance-banner {
   padding: 10px 14px;
-  border-radius: 10px;
-  font-size: 12.5px;
-  font-weight: 600;
-  line-height: 1.4;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
   border: 1px solid transparent;
 }
 
@@ -2186,29 +2183,27 @@ button.btn--outline:hover:not(:disabled) {
 }
 
 .docket-guidance-banner--neutral {
-  background: #f9fafb;
-  border-color: #e5e7eb;
-  color: #4b5563;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #475569;
 }
 
 .docket-detail-tabs-wrap {
   position: sticky;
-  top: 0;
+  top: 52px;
   z-index: 18;
   padding-top: 2px;
-  background: linear-gradient(180deg, rgba(248, 247, 243, 0.98), rgba(248, 247, 243, 0.76));
-  backdrop-filter: blur(10px);
+  background: #f8fafc;
 }
 
 .docket-detail-redesign .sticky-tabs {
   margin: 0 !important;
-  padding: 4px !important;
-  border: 1px solid rgba(226, 232, 240, 0.9) !important;
-  border-radius: 14px !important;
-  background: rgba(248, 250, 252, 0.85) !important;
-  backdrop-filter: blur(12px) !important;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03), 0 2px 8px rgba(0, 0, 0, 0.02) !important;
-  gap: 4px !important;
+  padding: 3px !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+  gap: 3px !important;
 }
 
 .docket-detail-redesign .sticky-tabs__item {
@@ -2216,54 +2211,53 @@ button.btn--outline:hover:not(:disabled) {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  min-height: 36px !important;
-  padding: 6px 18px !important;
-  border-radius: 10px !important;
+  min-height: 32px !important;
+  padding: 4px 14px !important;
+  border-radius: 5px !important;
   border: 1px solid transparent !important;
   color: #64748b !important;
-  font-size: 13px !important;
-  font-weight: 600 !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
   letter-spacing: -0.01em !important;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: all 0.15s ease !important;
   cursor: pointer !important;
 }
 
 .docket-detail-redesign .sticky-tabs__item:hover {
   color: #0f172a !important;
-  background: rgba(255, 255, 255, 0.55) !important;
+  background: #f8fafc !important;
 }
 
 .docket-detail-redesign .sticky-tabs__item.active {
-  background: #ffffff !important;
-  color: #0284c7 !important;
-  font-weight: 700 !important;
-  border-color: rgba(226, 232, 240, 0.9) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
-  transform: translateY(-0.5px) !important;
+  background: #eef2ff !important;
+  color: #4338ca !important;
+  font-weight: 600 !important;
+  border-color: #c7d2fe !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 .docket-detail-redesign .sticky-tabs__item:active {
-  transform: scale(0.98) !important;
+  transform: scale(0.99) !important;
 }
 
 .docket-detail-redesign .case-detail-layout-grid {
-  padding: 0 0 26px !important;
+  padding: 0 0 24px !important;
 }
 
 .docket-detail-redesign .case-card {
-  border: none !important;
-  border-top: 1px solid var(--docket-line, #e2e8f0) !important;
-  border-radius: 2px !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
   background: #ffffff !important;
-  box-shadow: none !important;
-  padding: 18px !important;
-  transition: none !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+  padding: 16px !important;
+  transition: border-color 0.15s ease !important;
 }
 
 .docket-detail-redesign .case-card:hover {
   transform: none;
-  border-color: var(--docket-line, #e2e8f0) !important;
-  box-shadow: none !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
 }
 
 .docket-detail-redesign .case-card__heading,
@@ -2271,32 +2265,32 @@ button.btn--outline:hover:not(:disabled) {
   display: flex !important;
   justify-content: space-between !important;
   align-items: flex-start !important;
-  gap: 14px !important;
-  padding: 0 0 12px !important;
-  margin: 0 0 14px !important;
-  border-bottom: 1px solid var(--docket-line) !important;
+  gap: 12px !important;
+  padding: 0 0 10px !important;
+  margin: 0 0 12px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
 }
 
 .docket-detail-redesign .case-card__heading h2,
 .docket-section-heading h2 {
   margin: 0 !important;
-  color: var(--docket-ink) !important;
-  font-size: 15px !important;
-  font-weight: 800 !important;
-  letter-spacing: -0.02em !important;
+  color: #0f172a !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.015em !important;
 }
 
 .docket-section-count {
   display: inline-flex;
   align-items: center;
-  min-height: 26px;
-  padding: 0 9px;
-  border: 1px solid var(--docket-line);
-  border-radius: 999px;
-  color: var(--docket-muted);
-  background: rgba(255, 255, 255, 0.66);
-  font-size: 11px;
-  font-weight: 750;
+  min-height: 20px;
+  padding: 1px 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  color: #475569;
+  background: #f8fafc;
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .docket-overview-panel {
@@ -2312,52 +2306,53 @@ button.btn--outline:hover:not(:disabled) {
 }
 
 .docket-overview-panel__badges {
-  margin-top: 9px;
+  margin-top: 6px;
 }
 
 .docket-icon-cluster {
   justify-content: flex-end;
-  padding: 5px;
-  border: 1px solid var(--docket-line);
-  border-radius: 15px;
-  background: rgba(255, 255, 255, 0.58);
+  padding: 2px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
 }
 
 .docket-icon-cluster button {
-  height: 34px !important;
-  width: 34px !important;
-  border-radius: 11px !important;
+  height: 28px !important;
+  width: 28px !important;
+  border-radius: 4px !important;
   box-shadow: none !important;
 }
 
 .docket-detail-redesign .docket-field-grid,
 .docket-detail-redesign .field-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  gap: 0 !important;
-  border: 1px solid var(--docket-line);
-  border-radius: 18px;
+  gap: 1px !important;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
   overflow: hidden;
-  background: var(--docket-line);
+  background: #e2e8f0;
 }
 
 .docket-detail-redesign .field-group {
-  gap: 6px !important;
-  padding: 14px !important;
-  background: rgba(255, 255, 255, 0.72);
-  min-height: 76px;
+  gap: 4px !important;
+  padding: 10px 12px !important;
+  background: #ffffff;
+  min-height: 64px;
 }
 
 .docket-detail-redesign .field-label {
-  color: var(--docket-faint) !important;
+  color: #94a3b8 !important;
   font-size: 10px !important;
-  font-weight: 850 !important;
-  letter-spacing: 0.08em !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase;
 }
 
 .docket-detail-redesign .field-value {
-  color: var(--docket-ink) !important;
-  font-size: 13px !important;
-  font-weight: 700 !important;
+  color: #0f172a !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
 }
 
 .docket-detail-redesign .docket-field-grid .field-group:last-child {
@@ -2366,29 +2361,33 @@ button.btn--outline:hover:not(:disabled) {
 
 .docket-description-panel .case-detail__description-text {
   display: block;
-  padding: 14px 15px;
-  border: 1px solid var(--docket-line);
-  border-radius: 15px;
-  background: rgba(255, 255, 255, 0.66);
-  color: #34312b !important;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1e293b !important;
   font-size: 13px !important;
-  line-height: 1.65 !important;
+  line-height: 1.6 !important;
 }
 
 .docket-side-rail {
   position: sticky;
-  top: 78px;
+  top: 68px;
 }
 
 .docket-action-panel {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.78)),
-    radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 14rem) !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
 }
 
 .docket-action-panel .btn,
 .docket-action-panel button {
-  min-height: 40px;
+  min-height: 36px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .docket-action-panel .grid {
@@ -2396,108 +2395,114 @@ button.btn--outline:hover:not(:disabled) {
 }
 
 .docket-comments-panel .case-detail__add-comment {
-  border: 1px solid var(--docket-line) !important;
-  background: rgba(255, 255, 255, 0.62) !important;
-  border-radius: 16px !important;
-  padding: 14px !important;
+  border: 1px solid #e2e8f0 !important;
+  background: #f8fafc !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
 }
 
 .docket-detail-redesign .docket-comments {
-  padding-left: 12px !important;
+  padding-left: 10px !important;
 }
 
 .docket-detail-redesign .docket-comments__rail {
   left: 5px !important;
-  background: rgba(37, 99, 235, 0.13) !important;
+  background: #e2e8f0 !important;
 }
 
 .docket-detail-redesign .docket-comments__item {
-  padding-left: 18px !important;
-  gap: 10px !important;
+  padding-left: 16px !important;
+  gap: 8px !important;
 }
 
 .docket-detail-redesign .docket-comments__bubble {
-  border-color: var(--docket-line) !important;
-  background: rgba(255, 255, 255, 0.72) !important;
-  border-radius: 16px !important;
-  box-shadow: none !important;
+  border: 1px solid #e2e8f0 !important;
+  background: #ffffff !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+  padding: 10px 12px !important;
 }
 
 .docket-history-panel .case-card {
-  background: rgba(255, 255, 255, 0.72) !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
 }
 
 .docket-detail-redesign .case-detail-table-wrap {
-  border: 1px solid var(--docket-line);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
   overflow: auto;
 }
 
 .docket-detail-redesign .case-detail-table th {
-  background: rgba(247, 245, 239, 0.88) !important;
-  color: var(--docket-faint) !important;
+  background: #f8fafc !important;
+  color: #64748b !important;
   font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .docket-detail-redesign .case-detail-table th,
 .docket-detail-redesign .case-detail-table td {
-  padding: 13px 14px !important;
+  padding: 10px 12px !important;
 }
 
 .docket-detail-redesign .case-detail-table tbody tr:hover {
-  background: rgba(37, 99, 235, 0.035);
+  background: #f8fafc;
 }
 
 .docket-detail-redesign .docket-lifecycle-pill {
   display: inline-flex;
   width: fit-content;
   align-items: center;
-  gap: 6px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.32);
-  background: rgba(255, 255, 255, 0.74);
-  color: var(--docket-ink);
-  font-size: 12px;
-  font-weight: 700;
+  gap: 5px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 11px;
+  font-weight: 600;
   line-height: 1;
-  padding: 7px 11px;
+  padding: 3px 8px;
   white-space: nowrap;
 }
 
 .docket-detail-redesign .docket-lifecycle-pill::before {
   content: "";
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
   background: currentColor;
   opacity: 0.8;
 }
 
 .docket-detail-redesign .docket-lifecycle-pill--active {
-  background: rgba(239, 246, 255, 0.78);
-  border-color: rgba(147, 197, 253, 0.72);
+  background: #eff6ff;
+  border-color: #bfdbfe;
   color: #1d4ed8;
 }
 
 .docket-detail-redesign .docket-lifecycle-pill--pend {
-  background: rgba(255, 251, 235, 0.82);
-  border-color: rgba(252, 211, 77, 0.72);
+  background: #fffbeb;
+  border-color: #fde68a;
   color: #b45309;
 }
 
 .docket-detail-redesign .docket-lifecycle-pill--routed,
 .docket-detail-redesign .docket-lifecycle-pill--routed-assigned,
 .docket-detail-redesign .docket-lifecycle-pill--submitted {
-  background: rgba(238, 242, 255, 0.84);
-  border-color: rgba(165, 180, 252, 0.72);
+  background: #eef2ff;
+  border-color: #c7d2fe;
   color: #4338ca;
 }
 
 .docket-detail-redesign .docket-lifecycle-pill--resolve,
 .docket-detail-redesign .docket-lifecycle-pill--file {
-  background: rgba(236, 253, 245, 0.82);
-  border-color: rgba(110, 231, 183, 0.72);
+  background: #ecfdf5;
+  border-color: #a7f3d0;
   color: #047857;
 }
 

@@ -1,0 +1,13 @@
+{
+  "id": "P047",
+  "buys": true,
+  "purchases_first_month": 1,
+  "reason_code": "convenience",
+  "reason": "As a tech-forward practitioner managing a 6 to 20 person team, the 1-click restore for moved or deleted Google Drive folders directly resolves my biggest operational worry, while the GST department queue and WhatsApp bridge will easily eliminate the two hours I waste every Saturday reconciling pending filings.",
+  "objection": "If files stay in our Google Drive, what happens if an assistant accidentally deletes or moves the folder, and can Docketra truly detect and restore it immediately without causing sync conflicts or lost work during peak filing deadlines?",
+  "would_change_my_mind": "",
+  "price_too_cheap": 6000,
+  "price_cheap": 15000,
+  "price_expensive": 30000,
+  "price_too_expensive": 60000
+}

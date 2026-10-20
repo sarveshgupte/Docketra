@@ -1,0 +1,13 @@
+{
+  "id": "P100",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "I have refused third-party cloud tools for years because storing confidential ITR and PAN documents in external databases is an unacceptable liability. Even though Docketra keeps files in Google Drive, I will not pay a single rupee until I personally verify that connecting Drive will not grant Docketra access to read the rest of my firm's private files.",
+  "objection": "Will connecting my Google Drive give Docketra access to read all my firm's private files?",
+  "would_change_my_mind": "Independent technical verification during the free pilot proving that OAuth permissions strictly restrict Docketra to the /Docketra/ folder with zero read access to any existing client files.",
+  "price_too_cheap": 5000,
+  "price_cheap": 15000,
+  "price_expensive": 30000,
+  "price_too_expensive": 55000
+}

@@ -1,0 +1,13 @@
+{
+  "id": "P029",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "price",
+  "reason": "As a frugal practitioner running a two-person office, paying ₹12,990 upfront makes no sense when Docketra offers a ₹0 Free Pilot for two seats that lets me test the Trainee Laptop Shield and WhatsApp bridge first.",
+  "objection": "My clients will never use an intake portal—they just dump bills on WhatsApp, and I must be certain the Trainee Laptop Shield actually stops clerks from taking client data home on personal laptops before I spend any money.",
+  "would_change_my_mind": "Verifying on the free pilot that the Trainee Laptop Shield completely blocks file downloads to personal laptops and that WhatsApp forwarding requires zero extra manual overhead.",
+  "price_too_cheap": 3000,
+  "price_cheap": 7000,
+  "price_expensive": 14000,
+  "price_too_expensive": 26000
+}

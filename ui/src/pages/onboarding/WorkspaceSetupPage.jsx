@@ -269,7 +269,7 @@ export function WorkspaceSetupPage() {
             return (
               <div
                 key={item.step}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-all font-mono ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xs text-xs transition-all font-mono ${
                   isActive
                     ? 'bg-amber-500/15 border border-amber-500/40 text-amber-300 font-semibold'
                     : isDone
@@ -447,7 +447,7 @@ export function WorkspaceSetupPage() {
                       Official Google Policy: <em className="text-slate-300">&ldquo;See, edit, create, and delete only the specific Google Drive files you use with this app.&rdquo;</em>
                     </p>
                     <p className="text-[11px] text-slate-400 leading-snug">
-                      Docketra is cryptographically barred from reading, searching, or indexing any pre-existing partner tax returns, personal folders, or firm records outside <code className="text-amber-300 text-[10px]">/Docketra/</code>.
+                      Docketra cannot read, search, or access any of your firm's existing tax returns or private files outside <code className="text-amber-300 text-[10px]">/Docketra/</code>.
                     </p>
                   </div>
 
@@ -456,7 +456,7 @@ export function WorkspaceSetupPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 text-emerald-400 font-semibold text-xs">
                           <ShieldCheck className="h-4 w-4 shrink-0" />
-                          <span>Cryptographic Sandbox Verified</span>
+                          <span>Google Drive Isolation Verified</span>
                         </div>
                         <button
                           type="button"
@@ -467,14 +467,18 @@ export function WorkspaceSetupPage() {
                           {verifyingBoundary ? 'Auditing…' : 'Re-run Audit'}
                         </button>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] font-mono">
                         <div className="bg-black/40 p-1.5 rounded border border-emerald-500/10">
                           <span className="text-slate-500 block text-[9px] uppercase">External Files Readable</span>
                           <span className="text-emerald-400 font-bold">{boundaryReport?.boundaryAudit?.externalFilesAccessible ?? 0} (Zero Access)</span>
                         </div>
                         <div className="bg-black/40 p-1.5 rounded border border-emerald-500/10">
                           <span className="text-slate-500 block text-[9px] uppercase">Scope Enforcement</span>
-                          <span className="text-emerald-400 font-bold">Google API Gateways</span>
+                          <span className="text-emerald-400 font-bold">Google drive.file Gateways</span>
+                        </div>
+                        <div className="bg-black/40 p-1.5 rounded border border-emerald-500/10">
+                          <span className="text-slate-500 block text-[9px] uppercase">Junior Laptop Shield</span>
+                          <span className="text-emerald-400 font-bold">Active (Downloads Blocked)</span>
                         </div>
                       </div>
                       {boundaryReport?.boundaryAudit?.cryptographicProofHash && (
@@ -741,6 +745,14 @@ export function WorkspaceSetupPage() {
                 <Users className="h-4 w-4 mx-auto" />
                 <span className="block text-[11px]">Team Configured</span>
               </div>
+            </div>
+
+            {/* Sovereign Pilot Active Banner */}
+            <div className="max-w-md mx-auto rounded-xl bg-slate-900/80 border border-slate-800 p-3 text-xs text-slate-300 font-mono text-center">
+              Active Tier: <span className="text-amber-400 font-bold">Free Sovereign Pilot</span> (2 Seats • 5 Clients • ₹0 Forever)
+              <span className="block text-[11px] text-slate-500 mt-1">
+                Upgrade to Pioneer 30 or Growth Tier anytime with 1 click from Firm Settings.
+              </span>
             </div>
 
             {/* Launch CTA */}

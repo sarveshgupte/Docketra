@@ -1,0 +1,13 @@
+{
+  "id": "P058",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "I have refused third-party cloud tools for years because client confidentiality is paramount, and I will not pay for any platform before independently verifying that connecting Google Drive cannot compromise our confidential files. Moreover, my article clerks rotate every 2 to 3 years, so I cannot risk paying for complex software that requires constant training.",
+  "objection": "My article clerks rotate every 2-3 years; training them on complex software is a waste of time, and connecting our firm's Google Drive risks leaking confidential client ITR and PAN documents.",
+  "would_change_my_mind": "Verifying on the free pilot that Docketra is strictly quarantined with zero access to outside Drive files, paired with ready-made checklists that new article clerks can follow without any training from me.",
+  "price_too_cheap": 3500,
+  "price_cheap": 7500,
+  "price_expensive": 16000,
+  "price_too_expensive": 28000
+}

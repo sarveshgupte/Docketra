@@ -22,6 +22,22 @@ export const adminApi = {
     (http) => http.patch(`/admin/users/${xID}/qc-sampling-rate`, payload),
     'Failed to update user QC sampling rate'
   ),
+  sendTraineeShieldOtp: (xID) => request(
+    (http) => http.post(`/admin/users/${xID}/trainee-shield/otp`),
+    'Failed to send authorization OTP'
+  ),
+  updateTraineeShield: (xID, payload = { enabled: null, otp: '' }) => request(
+    (http) => http.patch(`/admin/users/${xID}/trainee-shield`, payload),
+    'Failed to update Trainee Laptop Shield'
+  ),
+  exportWeeklyAuditCsv: (params = {}) => request(
+    (http) => http.get('/admin/audit-logs/weekly-csv', { params, responseType: 'blob' }),
+    'Failed to export weekly audit CSV'
+  ),
+  triggerWeeklyAuditDigest: () => request(
+    (http) => http.post('/admin/audit-logs/send-weekly-digest'),
+    'Failed to send weekly audit summary email'
+  ),
   updateUserWorkbaskets: (xID, payload = { teamIds: [] }) => request(
     (http) => http.patch(`/admin/users/${xID}/workbaskets`, payload),
     'Failed to update user workbasket access'
@@ -56,5 +72,7 @@ export const adminApi = {
   updateStorageConfig: (payload) => request((http) => http.put('/admin/storage', payload), 'Failed to update storage config'),
   disconnectStorage: () => request((http) => http.post('/admin/storage/disconnect'), 'Failed to disconnect storage'),
   completeFirmSetup: (payload = {}) => request((http) => http.post('/admin/setup-complete', payload), 'Failed to complete firm setup'),
+  getFirmPlan: () => request((http) => http.get('/admin/firm-plan'), 'Failed to load firm plan details'),
+  upgradeFirmPlan: (plan) => request((http) => http.post('/admin/upgrade-plan', { plan }), 'Failed to upgrade workspace plan'),
 };
 
