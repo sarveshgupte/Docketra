@@ -29,9 +29,16 @@
 ## 2024-10-25 - Eliminate redundant sequential validation counts
 **Learning:** When validating an array of IDs and immediately fetching their internal ObjectIds, performing `countDocuments()` followed by `find()` causes a redundant database roundtrip.
 **Action:** Merge the sequential queries into a single `find().lean()` call, and validate by checking if `fetchedDocs.length === requestedIds.length` before mapping the results.
+
+## 2026-10-25 - Replace $facet with concurrent countDocuments in tenant case metrics
+**Learning:** In `tenantCaseMetrics.service.js`, an expensive query fetching firm summary metrics was relying on `$facet` which doesn't utilize indexes properly and can cause memory limitations since it pulls all matches into memory to evaluate sub-pipelines.
+**Action:** Reverted the memory-intensive `$facet` pipeline back to independent concurrent `Case.countDocuments()` queries utilizing `Promise.all()`, allowing MongoDB to use fast index scans instead of a massive memory buffer.
 ## 2024-12-14 - Optimize getUsers pagination query
 **Learning:** Replaced concurrent execution of `User.find()` and `User.countDocuments()` with a single `User.find()` query using `limit(limit + 1)`.
 **Action:** Use `limit(limit + 1)` instead of `countDocuments` for pagination queries to eliminate an entire database count operation, reducing latency and DB load.
 ## 2024-10-26 - Bolt: Optimize threshold check for last active admin
 **Learning:** Checking if a firm has more than 1 active admin by using `User.countDocuments()` forces MongoDB to scan all index entries, which is inefficient. Using `find().limit(2)` allows an O(1) early return.
 **Action:** Replace `countDocuments()` with `find().select("_id").limit(2).lean()` for threshold checks (e.g., `<= 1`) and evaluate the length of the result array to save database CPU and latency.
+## 2024-10-27 - Optimize plan capacity threshold checks
+**Learning:** Using `User.countDocuments()` to check if user count exceeds a firm's plan capacity forces MongoDB to evaluate all matches. Since the capacity check only requires a boolean outcome, calculating the exact total is an unnecessary O(N) database operation.
+**Action:** Replace `countDocuments()` with `find().select('_id').limit(threshold + 1).lean()` and check if the returned array length exceeds the threshold. Furthermore, evaluate these counts lazily only when the corresponding limit condition is reached to avoid redundant queries.

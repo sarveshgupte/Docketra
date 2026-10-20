@@ -75,6 +75,7 @@ export const DataTable = ({
                     onClick={() => onRemoveFilter?.(f.key)}
                     className={filterChipClassName}
                     aria-label={`Remove filter: ${f.label} ${f.value}`}
+                    title={`Remove filter: ${f.label} ${f.value}`}
                   >
                     <span className="font-medium">{f.label}:</span> {f.value}
                     <span aria-hidden className="ml-0.5 text-[var(--dt-text-muted)]">&times;</span>

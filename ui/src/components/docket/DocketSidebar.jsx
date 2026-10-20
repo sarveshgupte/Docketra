@@ -720,7 +720,7 @@ export const DocketSidebar = ({
               {downloadErrorNotice && (
                 <div className="mb-2 p-2 rounded bg-amber-50 border border-amber-200 text-amber-800 text-[11px] leading-tight flex items-start justify-between gap-1">
                   <span>{downloadErrorNotice}</span>
-                  <button type="button" onClick={() => setDownloadErrorNotice('')} className="text-amber-500 hover:text-amber-700 ml-1 font-bold">×</button>
+                  <button type="button" onClick={() => setDownloadErrorNotice('')} className="text-amber-500 hover:text-amber-700 ml-1 font-bold" aria-label="Dismiss error notice" title="Dismiss error notice"><span aria-hidden="true">×</span></button>
                 </div>
               )}
               {!attachments.length ? (

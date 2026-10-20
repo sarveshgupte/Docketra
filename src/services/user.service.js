@@ -66,21 +66,24 @@ const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1, role =
     throw new Error('Firm not found');
   }
 
-  const count = await attachSession(User.countDocuments({
-    firmId,
-    status: { $in: ['active', 'invited'] },
-  }));
+  const checkLimitExceeded = async (queryFilters, threshold) => {
+    if (incrementBy > threshold) return true;
+    const limitToFetch = threshold - incrementBy + 1;
+    const docs = await attachSession(User.find({ firmId, ...queryFilters }).select('_id').limit(limitToFetch).lean());
+    return docs.length >= limitToFetch;
+  };
+
+  const userFilters = { status: { $in: ['active', 'invited'] } };
 
   const normalizedPlan = String(firm.plan || 'starter').toLowerCase();
   const firmMaxUsers = Number.isFinite(Number(firm.maxUsers)) ? Number(firm.maxUsers) : null;
 
   if (firmMaxUsers != null && firmMaxUsers > 0) {
-    if ((count + incrementBy) > firmMaxUsers) {
+    if (await checkLimitExceeded(userFilters, firmMaxUsers)) {
       log.warn('[PLAN_LIMIT] firm capacity exceeded', {
         firmId: firmId?.toString?.() || firmId,
         plan: normalizedPlan,
         maxUsers: firmMaxUsers,
-        currentCount: count,
         incrementBy,
       });
       throw new PlanLimitExceededError(firmMaxUsers);
@@ -89,17 +92,11 @@ const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1, role =
 
   if (normalizedPlan === 'starter') {
     if (['ADMIN', 'PRIMARY_ADMIN'].includes(String(role || '').toUpperCase()) && incrementBy > 0) {
-      const adminCount = await attachSession(User.countDocuments({
-        firmId,
-        role: { $in: ['ADMIN', 'PRIMARY_ADMIN'] },
-        status: { $in: ['active', 'invited'] },
-      }));
-
-      if ((adminCount + incrementBy) > 1) {
+      const adminFilters = { role: { $in: ['ADMIN', 'PRIMARY_ADMIN'] }, status: { $in: ['active', 'invited'] } };
+      if (await checkLimitExceeded(adminFilters, 1)) {
         log.warn('[PLAN_LIMIT] starter admin capacity exceeded', {
           firmId: firmId?.toString?.() || firmId,
           adminLimit: 1,
-          currentCount: adminCount,
           incrementBy,
         });
         throw new PlanAdminLimitExceededError(1);
@@ -113,8 +110,8 @@ const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1, role =
   const plan = await attachSession(Plan.findById(firm.planId));
   if (!plan || plan.maxUsers == null) return;
 
-  if ((count + incrementBy) > plan.maxUsers) {
-    log.warn('[PLAN_LIMIT] capacity exceeded', { firmId: firmId?.toString?.() || firmId, planId: plan._id?.toString?.() || plan._id, maxUsers: plan.maxUsers, currentCount: count, incrementBy });
+  if (await checkLimitExceeded(userFilters, plan.maxUsers)) {
+    log.warn('[PLAN_LIMIT] capacity exceeded', { firmId: firmId?.toString?.() || firmId, planId: plan._id?.toString?.() || plan._id, maxUsers: plan.maxUsers, incrementBy });
     throw new PlanLimitExceededError(plan.maxUsers);
   }
 };
