@@ -304,7 +304,7 @@ export const LinkedKnowledgeSection = ({
                 {checklistItems.map((item, index) => (
                   <li key={item?.id || `${item?.title || 'checklist-item'}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50/80 p-3">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-xs bg-slate-900 px-2 text-xs font-semibold text-white">
+                      <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-slate-900 px-2 text-xs font-semibold text-white">
                         {index + 1}
                       </span>
                       <span className="text-sm font-semibold text-slate-900">{item?.title || 'Untitled step'}</span>

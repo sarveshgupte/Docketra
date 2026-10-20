@@ -82,8 +82,6 @@ const firmSettingsBody = z.object({
     enableBulkActions: z.boolean().optional(),
     brandLogoUrl: z.string().trim().max(2048).optional(),
     strictFirmOwnedStorage: z.boolean().optional(),
-    restrictTraineeDownloads: z.boolean().optional(),
-    traineeLaptopShield: z.boolean().optional(),
   }).strict().optional(),
   work: z.object({
     assignmentStrategy: z.enum(['manual', 'balanced']).optional(),
@@ -247,33 +245,12 @@ module.exports = {
     params: z.object({ xID: xidString }),
     body: z.object({ qcSamplingRate: z.coerce.number().int().min(0).max(100).nullable().optional() }).strict(),
   },
-  'POST /users/:xID/trainee-shield/otp': {
-    params: z.object({ xID: xidString }),
-    body: z.object({}).passthrough(),
-  },
-  'PATCH /users/:xID/trainee-shield': {
-    params: z.object({ xID: xidString }),
-    body: z.object({
-      enabled: z.boolean().nullable().optional(),
-      otp: z.string().trim().min(6).max(8).optional(),
-      verificationToken: z.string().trim().optional(),
-    }).strict(),
-  },
   'PATCH /users/:id/hierarchy': {
     params: z.object({ id: objectIdOrString }),
     body: z.object({
       adminId: objectIdOrString.nullish(),
       managerId: objectIdOrString.nullish(),
     }).strict(),
-  },
-  'GET /audit-logs/weekly-csv': {
-    query: z.object({
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-    }).passthrough(),
-  },
-  'POST /audit-logs/send-weekly-digest': {
-    body: z.object({}).passthrough(),
   },
   'GET /firm-settings': { query: passthroughQuery },
   'GET /firm-settings/activity': { query: passthroughQuery },
@@ -351,12 +328,6 @@ module.exports = {
     body: z.object({}).strict(),
   },
   'GET /retention-preview': { query: passthroughQuery },
-  'GET /firm-plan': { query: passthroughQuery },
-  'POST /upgrade-plan': {
-    body: z.object({
-      plan: z.enum(['starter', 'growth', 'professional']),
-    }).strict(),
-  },
   'POST /setup-complete': {
     body: z.object({
       name: z.string().trim().max(120).optional(),

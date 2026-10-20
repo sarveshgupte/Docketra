@@ -194,13 +194,13 @@ export const CaseDetailExceptionsPanel = ({ caseInternalId, onRefreshCase }) => 
                   
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'end', gap: '8px' }}>
                     <div className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-100">
-                      ETA: {getEtaLabel(exc.revisedETA)}
+                      📅 {getEtaLabel(exc.revisedETA)}
                     </div>
                     {isOpen && (
                       <div style={{ display: 'flex', gap: '6px' }}>
                         {exc.status === 'open' && (
                           <Button variant="outline" size="small" onClick={() => handleResolveException(exc._id, 'monitoring')}>
-                            Monitor Blocker
+                            🔍 Monitor Blocker
                           </Button>
                         )}
                         <Button variant="outline" size="small" onClick={() => handleResolveException(exc._id, 'resolved')}>

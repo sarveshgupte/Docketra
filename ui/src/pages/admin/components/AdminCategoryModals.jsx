@@ -494,7 +494,7 @@ export const AdminCategoryModals = ({
                             ) : (
                               <span className="text-sm font-semibold text-slate-800 break-all">{file?.fileName || 'Knowledge file'}</span>
                             )}
-                            <span className="rounded-xs bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 border border-slate-200/60">File</span>
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">File</span>
                           </div>
                           <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
                             {file?.mimeType ? <span>{file.mimeType}</span> : null}

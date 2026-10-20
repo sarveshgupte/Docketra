@@ -815,7 +815,7 @@ export default function ClientDetailPage() {
             >
               <Icons.FileText className="w-3.5 h-3.5" />
               <span>Statutory Compliance Roadmap</span>
-              <span className={`ml-1 px-1.5 py-0.2 text-[10px] font-mono tabular-nums rounded-xs ${
+              <span className={`ml-1 px-1.5 py-0.2 text-[10px] font-mono rounded-full ${
                 activeTab === 'compliance' ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
               }`}>
                 {annualFilings.filter((f) => f.status !== 'FILED').length}
@@ -832,7 +832,7 @@ export default function ClientDetailPage() {
             >
               <Icons.Gavel className="w-3.5 h-3.5" />
               <span>Litigation & Hearing Feed</span>
-              <span className="ml-1 px-1.5 py-0.2 text-[10px] font-mono tabular-nums rounded-xs bg-sky-500/10 text-sky-500 border border-sky-500/20">
+              <span className="ml-1 px-1.5 py-0.2 text-[10px] font-mono rounded-full bg-sky-500/10 text-sky-500 border border-sky-500/20">
                 In 4d
               </span>
             </button>

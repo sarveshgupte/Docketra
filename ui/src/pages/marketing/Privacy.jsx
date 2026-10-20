@@ -19,7 +19,7 @@ export const PrivacyPage = () => (
     title="Privacy Policy"
     description="How Docketra handles account, workspace, and operational data while the product is in early-stage testing."
     sections={SECTIONS}
-    kicker="Privacy with practical edges"
+    kicker="🛡️ Privacy with practical edges"
     highlights={['No data selling', 'Firm-controlled workspace data', 'Essential cookies only']}
   >
     <section id="data-collected">

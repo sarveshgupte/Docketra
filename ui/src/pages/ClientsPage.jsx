@@ -911,12 +911,12 @@ export const ClientsPage = () => {
               return (
                 <div
                   key={resolvedClientId}
-                  className={`bg-white border border-slate-200 rounded-md p-5 shadow-xs hover:border-indigo-300 transition-all flex flex-col justify-between h-full group`}
+                  className={`bg-white/70 backdrop-blur-md border border-slate-200/60 rounded-2xl p-6 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between h-full group hover:border-indigo-300`}
                 >
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-sm bg-slate-900 text-white font-bold flex items-center justify-center border border-slate-800 shadow-xs">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white font-bold flex items-center justify-center shadow-sm">
                           {initials}
                         </div>
                         <div>
@@ -925,7 +925,7 @@ export const ClientsPage = () => {
                           </h3>
                           <p className="text-xs font-semibold text-slate-400 mt-0.5">ID: {resolvedClientId}</p>
                           {client.isDefaultClient ? (
-                            <span className="mt-2 inline-flex w-fit items-center rounded-xs bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-indigo-700 border border-indigo-100">
+                            <span className="mt-2 inline-flex w-fit items-center rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-indigo-700">
                               Firm-owned default client
                             </span>
                           ) : null}
@@ -1244,9 +1244,7 @@ export const ClientsPage = () => {
                     onClick={() => fileInputRef.current?.click()}
                     onKeyDown={(event) => event.key === 'Enter' && fileInputRef.current?.click()}
                   >
-                    <svg className="mx-auto h-8 w-8 text-slate-400 group-hover:text-indigo-600 transition-colors duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.373L8.552 18.32a1.5 1.5 0 01-2.121-2.121l9.873-9.874" />
-                    </svg>
+                    <span className="text-3xl block group-hover:scale-110 transition-transform duration-200">📎</span>
                     <span className="block text-sm font-semibold text-slate-700 mt-2">Click to upload a document</span>
                     <span className="block text-xs text-slate-400 mt-1">PDF, DOCX, XLSX, or images up to 25MB</span>
                     <input

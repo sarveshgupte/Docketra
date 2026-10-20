@@ -125,7 +125,7 @@ export const PlatformReportsPage = () => {
 
       {isAdmin && profitabilityReport && (
         <PageSection
-          title="Firm Effort & Profitability Analytics (Admin-Only)"
+          title="💰 Firm Effort & Profitability Analytics (Admin-Only)"
           description="Detailed visual analysis comparing time logged against target budgets, client effort footprint, and variance."
         >
           {/* Sub Tab Navigation for Analytics */}
@@ -144,7 +144,7 @@ export const PlatformReportsPage = () => {
                 cursor: 'pointer'
               }}
             >
-              Budget vs Actual
+              📅 Budget vs Actual
             </button>
             <button
               type="button"
@@ -160,7 +160,7 @@ export const PlatformReportsPage = () => {
                 cursor: 'pointer'
               }}
             >
-              Client Footprint
+              👥 Client Footprint
             </button>
             <button
               type="button"
@@ -176,7 +176,7 @@ export const PlatformReportsPage = () => {
                 cursor: 'pointer'
               }}
             >
-              Service-Line Variance
+              📊 Service-Line Variance
             </button>
           </div>
 

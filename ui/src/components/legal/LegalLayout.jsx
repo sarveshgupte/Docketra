@@ -5,11 +5,11 @@ import { PageContainer } from '../layout/PageContainer';
 import SeoHead from '../common/SeoHead';
 
 const LEGAL_LINKS = [
-  { to: '/terms', label: 'Terms' },
-  { to: '/privacy', label: 'Privacy' },
-  { to: '/security', label: 'Security' },
-  { to: '/acceptable-use', label: 'Use Policy' },
-  { to: '/contact', label: 'Contact' },
+  { to: '/terms', label: 'Terms', icon: '📜' },
+  { to: '/privacy', label: 'Privacy', icon: '🛡️' },
+  { to: '/security', label: 'Security', icon: '🔐' },
+  { to: '/acceptable-use', label: 'Use Policy', icon: '✅' },
+  { to: '/contact', label: 'Contact', icon: '👋' },
 ];
 
 export const LegalLayout = ({
@@ -69,19 +69,19 @@ export const LegalLayout = ({
                 </p>
               )}
               <div className="mt-6 flex flex-wrap gap-2">
-                <span className="rounded-xs border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800">
                   {`Version ${LEGAL_VERSION}`}
                 </span>
-                <span className="rounded-xs border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800">
+                <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-bold text-sky-800">
                   {`Updated ${LAST_UPDATED}`}
                 </span>
-                <span className="rounded-xs border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800">
                   Plain-English preview
                 </span>
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-800 bg-slate-950 p-5 text-white shadow-md">
+            <div className="rounded-3xl border border-slate-200 bg-slate-950 p-5 text-white shadow-2xl">
               <p className="text-sm font-semibold text-sky-200">Quick orientation</p>
               <div className="mt-4 grid gap-3">
                 {(highlights.length ? highlights : ['Policy scope', 'Firm-owned data', 'Support contact']).map((item) => (
@@ -106,6 +106,7 @@ export const LegalLayout = ({
                       : 'border-white/80 bg-white/70 text-slate-700 hover:border-slate-300 hover:bg-white'
                   }`}
                 >
+                  <span className="mr-2" aria-hidden="true">{item.icon}</span>
                   {item.label}
                 </Link>
               );

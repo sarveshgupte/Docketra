@@ -738,9 +738,9 @@ export const WorkbasketPage = () => {
                   type="button"
                   key={workbasket.id}
                   onClick={() => { setActiveWorkbasketId(workbasket.id); setFilters((prev) => ({ ...prev, page: 1 })); }}
-                  className={`rounded-sm px-3 py-1.5 text-xs font-semibold border transition-all ${
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-bold border transition-all ${
                     activeWorkbasketId === workbasket.id
-                      ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-bold shadow-xs'
+                      ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-black shadow-sm'
                       : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800'
                   }`}
                 >

@@ -88,7 +88,7 @@ export const SuperAdminLayout = ({ children }) => {
         <div className="flex items-start justify-between gap-3 md:block">
           <div>
             <h1 className="text-lg font-semibold text-gray-900">Docketra Platform</h1>
-            <span className="mt-2 inline-flex rounded-xs bg-gray-900 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
+            <span className="mt-2 inline-flex rounded-full bg-gray-900 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-white">
               SuperAdmin
             </span>
           </div>

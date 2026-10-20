@@ -22,7 +22,7 @@ Frontend-only marketing import into `/` landing surface. No backend code, auth l
 ## CTA routes and behavior
 - `Request early access` → `/signup`
 - `View product overview` → in-page section navigation (`#why`)
-- `Contact` → `mailto:help@docketra.in`
+- `Contact` → `mailto:hello@docketra.com`
 - `Login` → `/login`
 
 No placeholder `href="#"` links are used.

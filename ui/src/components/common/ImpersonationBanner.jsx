@@ -17,7 +17,7 @@ export const ImpersonationBanner = ({ firmName, mode, onExit }) => {
       aria-label={ariaLabel}
     >
       <span className="text-sm font-medium text-amber-800" aria-hidden="true">
-        {modeLabel}
+        {isReadOnly ? '👁' : '✏️'} {modeLabel}
       </span>
       <span className="text-sm font-medium text-amber-800">
         Impersonating <strong>{firmName}</strong>

@@ -68,7 +68,7 @@ const swap = (modulePath, exportsValue) => {
   await request(app).get('/api/users');
   assert.strictEqual(tenantResolverCalls, beforeUsers, '/api/users must not be handled as /api/:firmSlug');
 
-  const nonCapturePaths = ['/api/clients', '/api/reports/case-metrics', '/api/storage/configuration', '/api/ai/configuration', '/api/webhooks/whatsapp'];
+  const nonCapturePaths = ['/api/clients', '/api/reports/case-metrics', '/api/storage/configuration', '/api/ai/configuration'];
   for (const apiPath of nonCapturePaths) {
     const before = tenantResolverCalls;
     const res = await request(app).get(apiPath);
@@ -76,8 +76,13 @@ const swap = (modulePath, exportsValue) => {
   }
 
   console.log('routeMountOrderContract.test.js passed');
-  process.exit(0);
 })().catch((error) => {
   console.error(error);
   process.exit(1);
+}).finally(() => {
+  for (const { modulePath, original } of restore) {
+    delete require.cache[modulePath];
+    if (original) require.cache[modulePath] = original;
+  }
+  delete require.cache[createAppModulePath];
 });

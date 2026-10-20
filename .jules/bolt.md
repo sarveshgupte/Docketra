@@ -35,6 +35,3 @@
 ## 2024-10-26 - Bolt: Optimize threshold check for last active admin
 **Learning:** Checking if a firm has more than 1 active admin by using `User.countDocuments()` forces MongoDB to scan all index entries, which is inefficient. Using `find().limit(2)` allows an O(1) early return.
 **Action:** Replace `countDocuments()` with `find().select("_id").limit(2).lean()` for threshold checks (e.g., `<= 1`) and evaluate the length of the result array to save database CPU and latency.
-## 2024-11-20 - Optimize Threshold Capacity Checks
-**Learning:** Unconditional \`countDocuments\` for threshold limits forces full O(N) index scans even when only evaluating \`limit\` violations. Mongoose capacity checks can be deferred and transformed into O(1) operations.
-**Action:** Use conditional logic to only execute threshold checks if limits apply. Replace \`Model.countDocuments()\` with \`Model.find().select("_id").limit(maxAllowed + 1).lean()\`.

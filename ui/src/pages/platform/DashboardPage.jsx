@@ -202,7 +202,7 @@ export const PlatformDashboardPage = () => {
           description="Quick manager/admin view: risk, blockers, approvals, and capacity hotspots."
         >
           <StatGrid items={riskCards} />
-          <div className="layout-two-col mt-3">
+          <div className="layout-two-col" style={{ marginTop: 12 }}>
             <article className="panel">
               <p className="section-title">Top blocked reasons</p>
               {blockerRows.length ? (
@@ -236,7 +236,7 @@ export const PlatformDashboardPage = () => {
           </div>
 
           {exceptionDashboard ? (
-            <div className="panel mt-4">
+            <div className="panel" style={{ marginTop: 16 }}>
               <div className="section-header">
                 <div>
                   <p className="section-title">Exceptions and blockers</p>

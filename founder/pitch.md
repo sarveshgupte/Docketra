@@ -1,15 +1,10 @@
-Docketra: Practice Management Software for Indian CA, CS, and Compliance Firms.
-
-1. Your Firm's Own Google Drive: Connect your Google Drive in 1 click. Docketra creates a dedicated /Docketra/ folder and can only access files inside that folder. In-app verification proves 0 external files are accessible. If an assistant moves or deletes a folder in Drive, Docketra detects it and restores it in 1 click. 100% of your client files stay in your own Drive forever.
-2. WhatsApp Forwarding Bridge: Clients don't want to log into portals? They can keep sending files on WhatsApp as usual. Your team forwards or drops the WhatsApp documents directly into Docketra in 1 click, auto-filing them to Google Drive and updating task checklists.
-3. Article Assistant Blueprints & Maker-Checker: Fresh article assistants follow ready-made checklists for MCA filings (AOC-4/MGT-7), GST, and Tax Audit Form 3CD from Day 1. Partners review and sign off before final submission with full ICAI/ICSI peer-review audit trails. Trainee Laptop Shield stops article assistants from downloading raw client files to personal laptops.
-
-Pricing & Plans:
-- Free Pilot: ₹0 forever for 2 seats and 5 clients. Test Google Drive safety and trainee download blocks on real work. Upgrade to Pioneer or Growth with 1 click when ready.
-- Pioneer 30 Pass (Starter): ₹12,990/year flat (~₹1,082/month) for up to 5 seats, 50 clients, unlimited dockets, free assisted client migration, and ₹0 setup fee. Locked for life for the first 30 firms.
-- Growth Tier: ₹21,990/year flat (~₹1,832/month) for up to 12 seats, 150 clients, unlimited dockets, and department work queues (ROC, Income Tax, GST, Audit). Extra seats at ₹1,200/seat/year.
-- Pro Tier: ₹4,999/month billed annually for 25 seats, multi-branch, DSC routing, and priority support.
-
-30-Day Money-Back Guarantee: 100% refund if it doesn't save your firm 10 hours a week. All files stay safely in your Google Drive even if you cancel.
-
-Why Docketra over cheap tools like Jamku: We refuse to compromise on client data security. You get 100% Google Drive custody (no shared servers), Trainee Laptop Shield (no data leakage on personal laptops), and ICAI/ICSI SQC-1 maker-checker audit trails.
+Docketra: The Sovereign Practice Operating System for Indian CA, CS, and Compliance Firms.
+Primary-Admin Sovereign Security & Tamper Guard: Connect your firm's Google Drive via Primary-Admin OTP under restricted drive.file OAuth. Docketra creates its own dedicated firm folder and strictly ONLY reads and accesses the folder it created—zero ability to touch pre-existing firm folders, archives, or client files. In-app cryptographic permission verification audits 0 foreign files accessible with live Google restricted consent badge on screen. Cloud metadata sync automatically tracks persistent folder IDs, detects moved or trashed folders, and restores/re-links them seamlessly; staff cannot alter Drive credentials; 100% of records remain permanently in your Drive.
+Direct WhatsApp Forwarding Bridge & Frictionless Intake: Clients refuse external portals? Promoters and business clients continue texting bank statements, challans, and notices directly in WhatsApp as usual. Article clerks forward or drop incoming WhatsApp media straight into dockets with 1-click Google Drive sync, capturing sender info and audit notes without forcing clients onto a web link. Complementary 1-click client drop links also available for browser drops.
+The Zero-Training Trainee Kit & Maker-Checker: Turn rotating CA/CS article clerks into productive preparers on Day 1 with pre-loaded statutory blueprints (Companies Act AOC-4/MGT-7, SEBI SDD/LODR, GST, Tax Audit Form 3CD with 44 clauses, FEMA), producing an immutable sign-off audit trail for ICAI/ICSI peer reviews.
+Transparent Packaging & Bonuses:
+- Free Sandbox: ₹0 forever for up to 2 seats, 5 active clients, 15 dockets/mo.
+- Pioneer 30 Annual Pass: ₹12,990/yr flat (~₹1,082/mo) or ₹1,999/mo for up to 5 seats, 50 clients, unlimited dockets, including free 24-hr concierge Excel client migration and zero setup fees.
+- Growth Tier: ₹21,990/yr flat (~₹1,832/mo) or ₹2,499/mo for up to 12 seats, 150 clients, unlimited dockets, shared department queues, and +₹1,200/seat/yr add-on.
+- Pro Tier: ₹4,999/mo annual (or ₹5,999/mo monthly) for 25 seats, multi-branch, DSC routing, and priority support.
+30-Day Sovereign Guarantee: 100% refund if it does not save you 10 hours a week—plus all client folders, organized dockets, and statutory blueprints remain permanently in your Google Drive even if you cancel.

@@ -21,9 +21,9 @@ const getForgotPasswordErrorMessage = (errorData, defaultMessage) => (
 );
 
 const RECOVERY_STEPS = [
-  { id: 1, label: 'Find account', icon: '' },
-  { id: 2, label: 'Verify OTP', icon: '' },
-  { id: 3, label: 'New password', icon: '' },
+  { id: 1, label: 'Find account', icon: '🔎' },
+  { id: 2, label: 'Verify OTP', icon: '📬' },
+  { id: 3, label: 'New password', icon: '🔐' },
 ];
 
 const getStepCopy = (step) => {
@@ -288,14 +288,10 @@ export const ForgotPasswordPage = () => {
       <div className="grid w-full max-w-6xl items-center gap-8 lg:grid-cols-[0.9fr_1.1fr]">
         <section className="hidden lg:block" aria-label="Password recovery context">
           <Link to="/" className="inline-flex items-center gap-2 text-lg font-extrabold text-slate-950">
-            <svg className="h-9 w-9 text-amber-600 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M25 15H50C69.33 15 85 30.67 85 50C85 69.33 69.33 85 50 85H25V15Z" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M40 30H50C61.05 30 70 38.95 70 50C70 61.05 61.05 70 50 70H40V30Z" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
-            </svg>
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-white" aria-hidden="true">✨</span>
             Docketra
           </Link>
-          <p className="mt-10 text-sm font-bold uppercase text-amber-700">Account recovery</p>
+          <p className="mt-10 text-sm font-bold uppercase text-amber-700">🛟 Account recovery</p>
           <h1 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
             Get back into the right workspace safely.
           </h1>
@@ -318,11 +314,7 @@ export const ForgotPasswordPage = () => {
 
         <Card className="auth-card w-full max-w-none rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.45)] backdrop-blur md:p-8">
           <Link to="/" className="mb-5 inline-flex items-center gap-2 text-base font-extrabold text-slate-950 lg:hidden">
-            <svg className="h-8 w-8 text-amber-600 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M25 15H50C69.33 15 85 30.67 85 50C85 69.33 69.33 85 50 85H25V15Z" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M40 30H50C61.05 30 70 38.95 70 50C70 61.05 61.05 70 50 70H40V30Z" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
-            </svg>
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-950 text-white" aria-hidden="true">✨</span>
             Docketra
           </Link>
           <div className="auth-header text-center">
@@ -349,7 +341,7 @@ export const ForgotPasswordPage = () => {
           <form onSubmit={step === 1 ? handleInit : step === 2 ? handleVerifyOtp : handleReset} noValidate className={spacingClasses.formFieldSpacing}>
             {step === 1 && (
               <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
-                <p className="mb-3 text-sm font-black text-slate-950">Account lookup</p>
+                <p className="mb-3 text-sm font-black text-slate-950">🔎 Account lookup</p>
                 <Input
                   label="xID or Email"
                   type="text"
@@ -372,7 +364,7 @@ export const ForgotPasswordPage = () => {
             {step === 1 && isTurnstileConfigured ? <div ref={turnstileContainerRef} className="min-h-[65px]" /> : null}
             {step === 2 && (
               <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
-                <p className="mb-3 text-sm font-black text-slate-950">Email OTP</p>
+                <p className="mb-3 text-sm font-black text-slate-950">📬 Email OTP</p>
                 <Input
                   label="OTP"
                   type="text"
@@ -390,7 +382,7 @@ export const ForgotPasswordPage = () => {
             )}
             {step === 3 && <>
               <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
-                <p className="mb-3 text-sm font-black text-slate-950">New password</p>
+                <p className="mb-3 text-sm font-black text-slate-950">🔐 New password</p>
                 <Input
                   label="New Password"
                   type="password"
@@ -418,7 +410,7 @@ export const ForgotPasswordPage = () => {
 
             {success && (
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800" role="status" aria-live="polite">
-                {success}
+                ✅ {success}
               </div>
             )}
 

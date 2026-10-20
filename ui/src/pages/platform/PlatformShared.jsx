@@ -284,6 +284,7 @@ export const DataTable = ({
               <th 
                 key={definition.key || definition.label} 
                 className={definition.widthClass || ''}
+                style={definition.width ? { width: definition.width } : undefined}
               >
                 {definition.sortable && onSortChange ? (
                   <button

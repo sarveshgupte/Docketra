@@ -677,11 +677,7 @@ export const FirmsManagement = () => {
         {/* Firms Table */}
         {firms.length === 0 ? (
           <Card className="empty-state center-card">
-            <div className="empty-state__icon">
-              <svg className="w-12 h-12 text-slate-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            </div>
+            <div className="empty-state__icon">🏢</div>
             <h2>No firms exist yet</h2>
             <p>This is expected for a new platform. Create your firm or join an existing one.</p>
             <Button onClick={() => setShowCreateModal(true)}>
@@ -797,7 +793,7 @@ export const FirmsManagement = () => {
                                       openAdminModal(firm);
                                     }}
                                   >
-                                     Manage Admins
+                                     👤 Manage Admins
                                   </button>
                                   <button
                                     className="firm-actions__dropdown-item"
@@ -806,7 +802,7 @@ export const FirmsManagement = () => {
                                       setResendConfirm({ open: true, firm });
                                     }}
                                   >
-                                    Resend Admin Access Email
+                                    ✉ Resend Admin Access Email
                                   </button>
                                   <button
                                     className="firm-actions__dropdown-item"
@@ -815,7 +811,7 @@ export const FirmsManagement = () => {
                                       await handleForceReset(firm);
                                     }}
                                   >
-                                    Force Password Reset
+                                    🔒 Force Password Reset
                                   </button>
                                   <button
                                     className="firm-actions__dropdown-item"
@@ -824,7 +820,7 @@ export const FirmsManagement = () => {
                                       await handleSetDefaultAdminStatus(firm, 'DISABLED');
                                     }}
                                   >
-                                    Disable Admin
+                                    ⛔ Disable Admin
                                   </button>
                                 </div>
                               )}

@@ -573,7 +573,7 @@ export const PlatformCmsPage = () => {
                   {sourceDetail ? <div className="muted">From: {sourceDetail}</div> : null}
                   {outcome.warnings.length > 0 ? (
                     <div style={{ color: '#92400E' }}>
-                      {outcome.warnings[0]}
+                      ⚠️ {outcome.warnings[0]}
                       {outcome.warningDetails[0]?.code ? <span className="muted"> ({outcome.warningDetails[0].code})</span> : null}
                       {outcome.warningDetails[0]?.recovery ? <div className="muted">Recovery: {outcome.warningDetails[0].recovery}</div> : null}
                     </div>

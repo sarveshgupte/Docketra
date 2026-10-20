@@ -1018,42 +1018,6 @@ const sendLoginOtpEmail = async ({
   });
 };
 
-const sendSecurityAuthorizationOtpEmail = async ({
-  email,
-  name,
-  otp,
-  actionDescription = 'update Trainee Laptop Shield security settings',
-  expiryMinutes = 5,
-}) => {
-  const resolvedOtp = String(otp || '').trim();
-  if (!email || !resolvedOtp) {
-    throw new Error('Email and OTP are required to send security authorization email');
-  }
-
-  const greetingName = String(name || '').trim() || 'Partner';
-  const subject = '[Docketra] Security Verification Code';
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; line-height: 1.6; color: #1e293b;">
-      <h2 style="color: #0f172a;">Hello ${greetingName},</h2>
-      <p>A request was made to <strong>${actionDescription}</strong> for your firm.</p>
-      <p>Your one-time authorization code is:</p>
-      <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #2563eb; margin: 20px 0;">${resolvedOtp}</p>
-      <p>This code expires in ${expiryMinutes} minutes.</p>
-      <p>If you did not initiate this change, please check your firm security settings immediately.</p>
-      <p style="margin-top: 24px; color: #64748b;">Warm regards,<br/>Docketra Security</p>
-    </div>
-  `;
-  const text = `Hello ${greetingName},\n\nA request was made to ${actionDescription} for your firm.\n\nYour one-time authorization code is:\n\n${resolvedOtp}\n\nThis code expires in ${expiryMinutes} minutes.\n\nIf you did not initiate this change, please check your firm security settings immediately.\n\nWarm regards,\nDocketra Security`;
-
-  return sendDirectAuthEmail({
-    to: email,
-    subject,
-    html,
-    text,
-    otp: true,
-  });
-};
-
 const sendForgotPasswordOtpEmail = async ({
   email,
   name,
@@ -1154,7 +1118,6 @@ module.exports = {
   sendAdminPasswordResetEmail,
   sendFirmSetupEmail,
   sendLoginOtpEmail,
-  sendSecurityAuthorizationOtpEmail,
   sendForgotPasswordOtpEmail,
   sendSignupOtpEmail,
   sendEnterpriseInquiryNotification,

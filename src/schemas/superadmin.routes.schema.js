@@ -77,7 +77,7 @@ module.exports = {
   'PATCH /firms/:firmId/plan-capacity': {
     params: firmIdParams2,
     body: z.object({
-      plan: z.enum(['pilot', 'starter', 'growth', 'professional', 'enterprise']).optional(),
+      plan: z.enum(['pilot', 'starter', 'professional', 'enterprise']).optional(),
       maxUsers: z.coerce.number().int().min(1).max(500).optional(),
       subscriptionStatus: z.string().trim().max(100).nullable().optional(),
       billingStatus: z.string().trim().max(100).nullable().optional(),

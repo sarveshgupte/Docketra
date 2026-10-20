@@ -13,7 +13,7 @@ export const AcceptableUsePage = () => (
     title="Acceptable Use Policy"
     description="Simple rules that keep Docketra safe, lawful, and reliable for firms using it to run real operations."
     sections={SECTIONS}
-    kicker="Keep the workspace healthy"
+    kicker="✅ Keep the workspace healthy"
     highlights={['No illegal activity', 'No harmful files', 'Report suspicious use']}
   >
     <section id="prohibited-activity">

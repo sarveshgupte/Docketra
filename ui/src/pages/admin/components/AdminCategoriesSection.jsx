@@ -152,18 +152,18 @@ export const AdminCategoriesSection = ({
           {categories.map((category) => (
             <div 
               key={category._id} 
-              className="bg-white rounded-md border border-slate-200 shadow-xs hover:border-slate-300 transition-all overflow-hidden"
+              className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden"
             >
               {/* Category Header Bar */}
               <div className="bg-slate-50/50 border-b border-slate-100 px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3.5">
-                  <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-sm">
+                  <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
                     <CategoryIcon />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-bold text-slate-800 leading-none">{category.name}</h3>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-xs text-2xs font-bold uppercase tracking-wider ${
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-2xs font-bold uppercase tracking-wider ${
                         category.isActive 
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
                           : 'bg-slate-100 text-slate-600 border border-slate-200'
@@ -258,7 +258,7 @@ export const AdminCategoriesSection = ({
                                 <td className="px-4 py-3.5 whitespace-nowrap">
                                   {linkedWorkbasketName ? (
                                     <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200">
-                                      {linkedWorkbasketName}
+                                      🧺 {linkedWorkbasketName}
                                     </span>
                                   ) : (
                                     <span className="text-slate-400 text-xs font-medium">—</span>
@@ -267,7 +267,7 @@ export const AdminCategoriesSection = ({
                                 <td className="px-4 py-3.5 whitespace-nowrap">
                                   <div className="flex flex-col">
                                     <span className="text-sm font-semibold text-slate-600">
-                                      {sla.days} working day{Number(sla.days) === 1 ? '' : 's'}
+                                      ⏱️ {sla.days} working day{Number(sla.days) === 1 ? '' : 's'}
                                     </span>
                                     <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                                       {sla.source === 'subcategory' ? 'Subcategory' : sla.source === 'category' ? 'Category fallback' : 'System default'}
@@ -278,7 +278,7 @@ export const AdminCategoriesSection = ({
                                   {qc.percent > 0 ? (
                                     <div className="flex flex-col">
                                       <span className="text-sm font-semibold text-slate-600">
-                                        {qc.percent}% to QC
+                                        🔎 {qc.percent}% to QC
                                       </span>
                                       <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                                         {qc.source === 'forced' ? 'Forced review' : qc.source === 'subcategory' ? 'Subcategory' : 'Category fallback'}

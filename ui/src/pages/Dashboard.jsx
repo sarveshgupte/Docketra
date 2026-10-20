@@ -162,14 +162,14 @@ export const DashboardPage = () => {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <DashboardCard title="Leads">
+          <DashboardCard title="Leads" emoji="📊">
             <ul className="space-y-2 text-sm text-gray-700">
               <li className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2"><span>New</span><strong>{leadSummary.new}</strong></li>
               <li className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2"><span>Contacted</span><strong>{leadSummary.contacted}</strong></li>
             </ul>
           </DashboardCard>
 
-          <DashboardCard title="Tasks">
+          <DashboardCard title="Tasks" emoji="📌">
             <ul className="space-y-2 text-sm text-gray-700">
               <li className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2"><span>Open</span><strong>{taskSummary.open}</strong></li>
               <li className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2"><span>QC</span><strong>{taskSummary.qc}</strong></li>
@@ -196,7 +196,7 @@ export const DashboardPage = () => {
             />
           </DashboardCard>
 
-          <DashboardCard title="Recent Activity" actions={<Button variant="outline" onClick={() => navigate(ROUTES.TASK_MANAGER(firmSlug))}>View All</Button>}>
+          <DashboardCard title="Recent Activity" emoji="📌" actions={<Button variant="outline" onClick={() => navigate(ROUTES.TASK_MANAGER(firmSlug))}>View All</Button>}>
             <DocketList
               items={recentDockets?.items || []}
               loading={dashboardSummaryQuery.isFetching}
@@ -229,7 +229,7 @@ export const DashboardPage = () => {
         {!loading && !myDockets?.items?.length && !recentDockets?.items?.length ? (
           <EmptyState
             title="No dockets yet"
-            description="No dockets yet. Create your first task to activate the dashboard."
+            description="📂 No dockets yet. Create your first task to activate the dashboard."
             actionLabel="Create Docket"
             onAction={() => navigate(ROUTES.CREATE_CASE(firmSlug))}
           />

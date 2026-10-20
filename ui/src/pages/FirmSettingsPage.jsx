@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -17,9 +17,6 @@ import { BulkUploadModal } from '../components/bulk/BulkUploadModal';
 import { DocketBulkUploadModal } from '../components/bulk/DocketBulkUploadModal';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
-import { UpiCheckoutModal } from '../components/billing/UpiCheckoutModal';
-import { SubscriptionInvoiceModal } from '../components/billing/SubscriptionInvoiceModal';
-import { subscriptionService } from '../services/subscriptionService';
 
 const enabledDisabledOptions = [
   { value: 'true', label: 'Enabled' },
@@ -54,7 +51,6 @@ const tabs = [
   { id: 'sla', label: 'SLA Rules' },
   { id: 'import', label: 'Data Import' },
   { id: 'features', label: 'Views' },
-  { id: 'plan', label: 'Subscription & Pilot' },
   { id: 'audit', label: 'Audit' },
 ];
 
@@ -79,10 +75,6 @@ const tabMeta = {
     title: 'Workspace views',
     description: 'Turn advanced operational views on or off without changing the underlying workflow data.',
   },
-  plan: {
-    title: 'Subscription & Pilot',
-    description: 'View your firm capacity, check Google Drive security, and upgrade in 1 click.',
-  },
   audit: {
     title: 'Audit history',
     description: 'Recent administrative activity for this workspace, paged at 25 records with CSV export.',
@@ -104,11 +96,6 @@ const featureRows = [
     name: 'enableBulkActions',
     label: 'Bulk actions',
     helpText: 'Batch reassignment and worklist actions for supervisors.',
-  },
-  {
-    name: 'restrictTraineeDownloads',
-    label: 'Trainee Laptop Shield',
-    helpText: 'Stops article assistants from downloading client files to personal laptops or pendrives. In-app document preview stays active.',
   },
 ];
 
@@ -221,7 +208,7 @@ const DateChip = ({ value, onRemove, tone = 'neutral' }) => {
     ? 'border-rose-200 bg-rose-50 text-rose-700'
     : 'border-sky-200 bg-sky-50 text-sky-700';
   return (
-    <span className={`inline-flex items-center gap-2 rounded-xs border px-2.5 py-0.5 text-xs font-medium ${toneClasses}`}>
+    <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${toneClasses}`}>
       <span>{value}</span>
       <button
         type="button"
@@ -245,12 +232,12 @@ const FeatureToggle = ({ label, helpText, checked, onChange, name }) => (
       role="switch"
       aria-checked={checked}
       onClick={() => onChange({ target: { name, value: checked ? 'false' : 'true' } })}
-      className={`relative inline-flex h-7 w-12 shrink-0 rounded-sm border transition ${
+      className={`relative inline-flex h-7 w-12 shrink-0 rounded-full border transition ${
         checked ? 'border-slate-900 bg-slate-900' : 'border-slate-300 bg-slate-200'
       }`}
     >
       <span
-        className={`absolute top-0.5 h-5.5 w-5.5 rounded-xs bg-white transition ${
+        className={`absolute top-0.5 h-5.5 w-5.5 rounded-full bg-white transition ${
           checked ? 'left-6' : 'left-0.5'
         }`}
       />
@@ -298,25 +285,8 @@ export const FirmSettingsPage = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [showClientBulkModal, setShowClientBulkModal] = useState(false);
-  const [searchParams] = useSearchParams();
-  const requestedTab = searchParams.get('tab');
-  const validTabs = ['general', 'calendar', 'sla', 'import', 'features', 'plan', 'audit'];
-  const [currentTab, setCurrentTab] = useState(validTabs.includes(requestedTab) ? requestedTab : 'general');
-  const [planData, setPlanData] = useState(null);
-  const [loadingPlan, setLoadingPlan] = useState(false);
-  const [upgradingPlan, setUpgradingPlan] = useState(false);
-  const [checkoutOrder, setCheckoutOrder] = useState(null);
-  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
-  const [subscriptionOrders, setSubscriptionOrders] = useState([]);
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-  const [loadingInvoiceId, setLoadingInvoiceId] = useState(null);
-
-  useEffect(() => {
-    if (requestedTab && validTabs.includes(requestedTab) && requestedTab !== currentTab) {
-      setCurrentTab(requestedTab);
-    }
-  }, [requestedTab, currentTab]);
+  const [showDocketBulkModal, setShowDocketBulkModal] = useState(false);
+  const [currentTab, setCurrentTab] = useState('general');
 
   const categoryOptions = useMemo(() => ([
     { value: '', label: 'All categories' },
@@ -444,45 +414,6 @@ export const FirmSettingsPage = () => {
     }
   }, []);
 
-  const [downloadingWeeklyCsv, setDownloadingWeeklyCsv] = useState(false);
-  const [triggeringWeeklyDigest, setTriggeringWeeklyDigest] = useState(false);
-  const [weeklyDigestNotice, setWeeklyDigestNotice] = useState(null);
-
-  const downloadWeeklyAuditCsv = async () => {
-    setDownloadingWeeklyCsv(true);
-    setWeeklyDigestNotice(null);
-    try {
-      const response = await adminApi.exportWeeklyAuditCsv();
-      const blob = new Blob([response?.data || response], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `docketra-weekly-audit-${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-      setWeeklyDigestNotice({ type: 'success', text: 'Weekly audit log CSV downloaded.' });
-    } catch (err) {
-      setWeeklyDigestNotice({ type: 'error', text: err?.response?.data?.message || err?.message || 'Failed to download weekly audit CSV.' });
-    } finally {
-      setDownloadingWeeklyCsv(false);
-    }
-  };
-
-  const triggerWeeklyAuditDigestNow = async () => {
-    setTriggeringWeeklyDigest(true);
-    setWeeklyDigestNotice(null);
-    try {
-      const res = await adminApi.triggerWeeklyAuditDigest();
-      setWeeklyDigestNotice({ type: 'success', text: res?.message || 'Weekly audit summary CSV sent to Primary Admin email.' });
-    } catch (err) {
-      setWeeklyDigestNotice({ type: 'error', text: err?.response?.data?.message || err?.message || 'Failed to send weekly audit digest email.' });
-    } finally {
-      setTriggeringWeeklyDigest(false);
-    }
-  };
-
   const loadSlaData = async () => {
     setLoadingSlaData(true);
     setSlaMessage({ type: '', text: '' });
@@ -522,80 +453,11 @@ export const FirmSettingsPage = () => {
     }
   };
 
-  const loadPlanData = useCallback(async () => {
-    setLoadingPlan(true);
-    try {
-      const [planRes, subRes] = await Promise.allSettled([
-        adminApi.getFirmPlan(),
-        subscriptionService.getSubscriptionOverview(),
-      ]);
-      if (planRes.status === 'fulfilled' && planRes.value?.data) {
-        setPlanData(planRes.value.data);
-      }
-      if (subRes.status === 'fulfilled' && subRes.value?.data?.recentOrders) {
-        setSubscriptionOrders(subRes.value.data.recentOrders);
-      }
-    } catch {
-      // ignore
-    } finally {
-      setLoadingPlan(false);
-    }
-  }, []);
-
-  const handleViewInvoice = async (orderId) => {
-    setLoadingInvoiceId(orderId);
-    try {
-      const res = await subscriptionService.getInvoice(orderId);
-      if (res?.success && res?.data) {
-        setSelectedInvoice(res.data);
-        setShowInvoiceModal(true);
-      } else {
-        throw new Error(res?.message || 'Invoice not found');
-      }
-    } catch (err) {
-      showToast(err?.response?.data?.message || err?.message || 'Failed to load invoice.', 'error');
-    } finally {
-      setLoadingInvoiceId(null);
-    }
-  };
-
-  const handleResumePayment = (order) => {
-    setCheckoutOrder(order);
-    setShowCheckoutModal(true);
-  };
-
-  const handleUpgradePlan = async (targetPlan) => {
-    setUpgradingPlan(true);
-    try {
-      const res = await subscriptionService.createSubscriptionOrder({
-        plan: targetPlan,
-        billingCycle: 'annual',
-      });
-      if (res?.success && res?.data) {
-        setCheckoutOrder(res.data);
-        setShowCheckoutModal(true);
-      } else {
-        throw new Error(res?.message || 'Could not initiate payment session');
-      }
-    } catch (error) {
-      showToast(error?.response?.data?.message || error?.message || 'Failed to initiate checkout.', 'error');
-    } finally {
-      setUpgradingPlan(false);
-    }
-  };
-
   useEffect(() => {
     void loadActivity(1);
     void loadFirmSettings();
     void loadSlaData();
-    void loadPlanData();
-  }, [loadActivity, loadPlanData]);
-
-  useEffect(() => {
-    if (currentTab === 'plan' && !planData && !loadingPlan) {
-      void loadPlanData();
-    }
-  }, [currentTab, planData, loadingPlan, loadPlanData]);
+  }, [loadActivity]);
 
   const handleNumberChange = (event) => {
     const { name, value } = event.target;
@@ -675,7 +537,6 @@ export const FirmSettingsPage = () => {
       enableBulkActions: Boolean(config.enableBulkActions),
       brandLogoUrl: typeof config.brandLogoUrl === 'string' ? config.brandLogoUrl.trim() : '',
       strictFirmOwnedStorage: Boolean(config.strictFirmOwnedStorage),
-      restrictTraineeDownloads: Boolean(config.restrictTraineeDownloads),
     };
 
     try {
@@ -1190,7 +1051,7 @@ export const FirmSettingsPage = () => {
                                     </p>
                                   </div>
                                   <div className="flex flex-wrap items-center gap-2">
-                                    <span className={`rounded-xs px-2.5 py-0.5 text-xs font-medium ${
+                                    <span className={`rounded-full px-3 py-1 text-xs font-medium ${
                                       rule.isActive === false ? 'bg-slate-200 text-slate-600' : 'bg-emerald-100 text-emerald-700'
                                     }`}>
                                       {rule.isActive === false ? 'Inactive' : 'Active'}
@@ -1298,563 +1159,13 @@ export const FirmSettingsPage = () => {
               </div>
             )}
 
-            {currentTab === 'plan' && (
-              <div className="space-y-6">
-                {/* Sovereign Foundation Banner */}
-                <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-indigo-600 p-2 text-white shrink-0">
-                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                      </svg>
-                    </div>
-                    <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
-                      <strong>Client files stay in your firm’s Google Drive.</strong> Article assistants cannot download files to personal laptops, and every sign-off is logged for ICAI/ICSI peer review.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Current Active Tier & Boundary Verification */}
-                <Card className="border border-slate-200 bg-white p-5 sm:p-6 shadow-none">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 pb-5">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 rounded-xs bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
-                          <span className="h-2 w-2 rounded-xs bg-emerald-500 animate-pulse" />
-                          {planData?.tierName || (planData?.isPilot ? 'Free Pilot' : 'Active Plan')}
-                        </span>
-                        {planData?.isPilot && (
-                          <span className="rounded-xs bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 border border-slate-200/60">
-                            ₹0 forever
-                          </span>
-                        )}
-                      </div>
-                      <h2 className="mt-2 text-xl font-bold text-slate-900">
-                        {planData?.isPilot
-                          ? 'Free Pilot (Proof of Sovereign Isolation)'
-                          : `${planData?.tierName || 'Current Plan'}`}
-                      </h2>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {planData?.isPilot
-                          ? 'Test with up to 5 clients and 2 seats. Verify Google Drive safety and trainee laptop download blocks before upgrading.'
-                          : 'Active plan with Google Drive storage and unlimited dockets.'}
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void loadPlanData()}
-                      loading={loadingPlan}
-                    >
-                      <RefreshIcon />
-                      <span className="ml-1.5">Refresh Status</span>
-                    </Button>
-                  </div>
-
-                  {/* Capacity Usage Meters */}
-                  <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="rounded-md border border-slate-200 bg-slate-50 p-4 shadow-xs">
-                      <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Staff Seats</p>
-                      <p className="mt-1 text-2xl font-bold text-slate-900 tabular-nums font-mono">
-                        {planData?.currentUsage?.usersCount ?? 1} / {planData?.limits?.maxSeats ?? 2}
-                      </p>
-                      <div className="mt-2 h-1.5 w-full rounded-xs bg-slate-200 overflow-hidden">
-                        <div
-                          className="h-full bg-indigo-600 rounded-xs transition-all duration-300"
-                          style={{
-                            width: `${Math.min(100, (((planData?.currentUsage?.usersCount ?? 1) / (planData?.limits?.maxSeats ?? 2)) * 100))}%`,
-                          }}
-                        />
-                      </div>
-                      <p className="mt-2 text-xs text-slate-500">Article assistants, clerks & partners</p>
-                    </div>
-
-                    <div className="rounded-md border border-slate-200 bg-slate-50 p-4 shadow-xs">
-                      <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Active Clients</p>
-                      <p className="mt-1 text-2xl font-bold text-slate-900 tabular-nums font-mono">
-                        {planData?.currentUsage?.clientsCount ?? 0} / {planData?.limits?.maxClients ?? 5}
-                      </p>
-                      <div className="mt-2 h-1.5 w-full rounded-xs bg-slate-200 overflow-hidden">
-                        <div
-                          className="h-full bg-emerald-600 rounded-xs transition-all duration-300"
-                          style={{
-                            width: `${Math.min(100, (((planData?.currentUsage?.clientsCount ?? 0) / (planData?.limits?.maxClients ?? 5)) * 100))}%`,
-                          }}
-                        />
-                      </div>
-                      <p className="mt-2 text-xs text-slate-500">Active client master records</p>
-                    </div>
-
-                    <div className="rounded-md border border-slate-200 bg-slate-50 p-4 shadow-xs">
-                      <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Monthly Dockets</p>
-                      <p className="mt-1 text-2xl font-bold text-slate-900 tabular-nums font-mono">
-                        {planData?.currentUsage?.monthlyDocketsCount ?? 0} / {planData?.limits?.maxDocketsMonthly ? `${planData.limits.maxDocketsMonthly}` : 'Unlimited'}
-                      </p>
-                      <div className="mt-2 h-1.5 w-full rounded-xs bg-slate-200 overflow-hidden">
-                        <div
-                          className="h-full bg-sky-600 rounded-xs transition-all duration-300"
-                          style={{
-                            width: planData?.limits?.maxDocketsMonthly
-                              ? `${Math.min(100, (((planData?.currentUsage?.monthlyDocketsCount ?? 0) / planData.limits.maxDocketsMonthly) * 100))}%`
-                              : '100%',
-                          }}
-                        />
-                      </div>
-                      <p className="mt-2 text-xs text-slate-500">Active compliance workflows</p>
-                    </div>
-                  </div>
-
-                  {/* Live Security Verification Checks */}
-                  <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">Security & Compliance Checks</p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">✓</span>
-                        <div>
-                          <p className="text-xs font-semibold text-slate-900">Google Drive Connected</p>
-                          <p className="text-[11px] text-slate-500">Files saved to your Drive. Pre-existing files cannot be read.</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">0</span>
-                        <div>
-                          <p className="text-xs font-semibold text-slate-900">Zero Outside Access</p>
-                          <p className="text-[11px] text-slate-500">0 outside files readable. Tested and verified.</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">✓</span>
-                        <div>
-                          <p className="text-xs font-semibold text-slate-900">Trainee Laptop Shield</p>
-                          <p className="text-[11px] text-slate-500">Raw downloads blocked on junior laptops. In-app preview only.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-
-                {/* 1-Click Friction-Free Upgrade Cards */}
-                <div className="space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                    <div>
-                      <h3 className="text-base font-semibold text-slate-900">Upgrade your plan</h3>
-                      <p className="text-sm text-slate-500">
-                        Zero file transfer needed. All your client folders and dockets stay in your Drive.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Pioneer 30 Card */}
-                    <div className={`relative flex flex-col justify-between rounded-2xl border p-6 transition ${
-                      planData?.plan === 'starter'
-                        ? 'border-indigo-600 bg-indigo-50/20 ring-2 ring-indigo-600'
-                        : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-                            Pioneer 30 Cohort
-                          </span>
-                          <span className="text-xs font-medium text-slate-500">Locked Rate for Life</span>
-                        </div>
-                        <div>
-                          <h4 className="text-xl font-bold text-slate-900">Pioneer 30 Annual Pass</h4>
-                          <p className="mt-1 text-sm text-slate-500">For boutique CA and CS firms with up to 5 team members.</p>
-                        </div>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-3xl font-extrabold text-slate-900">₹12,990</span>
-                          <span className="text-sm text-slate-500">/ year</span>
-                          <span className="ml-2 text-xs text-slate-400 line-through">₹17,990</span>
-                        </div>
-                        <ul className="space-y-2.5 text-sm text-slate-600 border-t border-slate-100 pt-4">
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span><strong>Up to 5 staff seats</strong></span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span><strong>50 active clients</strong></span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span><strong>Unlimited dockets</strong> (MCA, ROC, GST, ITR)</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span>Client files in your own Google Drive</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span>Trainee Laptop Shield enabled</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span>WhatsApp Forwarding Bridge for quick drops</span>
-                          </li>
-                        </ul>
-                      </div>
-                      <div className="mt-6 pt-4 border-t border-slate-100">
-                        <Button
-                          type="button"
-                          variant={planData?.plan === 'starter' ? 'outline' : 'primary'}
-                          className="w-full"
-                          disabled={planData?.plan === 'starter' || planData?.plan === 'growth' || planData?.plan === 'professional' || upgradingPlan}
-                          loading={upgradingPlan}
-                          onClick={() => void handleUpgradePlan('starter')}
-                        >
-                          {planData?.plan === 'starter'
-                            ? 'Current Active Plan'
-                            : (planData?.plan === 'growth' || planData?.plan === 'professional' ? 'Included in Higher Plan' : 'Upgrade to Pioneer 30')}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Growth Tier Card */}
-                    <div className={`relative flex flex-col justify-between rounded-2xl border p-6 transition ${
-                      planData?.plan === 'growth'
-                        ? 'border-indigo-600 bg-indigo-50/20 ring-2 ring-indigo-600'
-                        : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800">
-                            Top Choice for 6 to 12 Staff • 25% Practice Selection
-                          </span>
-                          <span className="text-xs font-medium text-slate-500">6 to 12 staff</span>
-                        </div>
-                        <div>
-                          <h4 className="text-xl font-bold text-slate-900">Growth Tier</h4>
-                          <p className="mt-1 text-sm text-slate-500">For mid-sized firms requiring department queues, trainee shields & multi-partner review.</p>
-                        </div>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-3xl font-extrabold text-slate-900">₹21,990</span>
-                          <span className="text-sm text-slate-500">/ year</span>
-                          <span className="ml-2 text-xs text-slate-500">(₹1,832 / month)</span>
-                        </div>
-                        <ul className="space-y-2.5 text-sm text-slate-600 border-t border-slate-100 pt-4">
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span><strong>Up to 12 staff seats</strong> (+₹1,200/seat/yr add-on)</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span><strong>150 active clients</strong></span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span><strong>Pre-loaded blueprints:</strong> Form 3CD, MCA, and GST checklists</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span><strong>Trainee Laptop Shield:</strong> Blocks raw downloads to personal laptops</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span><strong>Drive Tamper Guard:</strong> Auto-detects moved/deleted folders with 1-click restore</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span><strong>Department queues:</strong> ROC, Tax, Corporate & Audit workbaskets</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span><strong>SQC-1 maker-checker review:</strong> Peer-review ready partner sign-offs</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span>Priority phone & WhatsApp onboarding support</span>
-                          </li>
-                        </ul>
-                      </div>
-                      <div className="mt-6 pt-4 border-t border-slate-100">
-                        <Button
-                          type="button"
-                          variant={planData?.plan === 'growth' ? 'outline' : 'primary'}
-                          className="w-full"
-                          disabled={planData?.plan === 'growth' || planData?.plan === 'pro' || planData?.plan === 'professional' || upgradingPlan}
-                          loading={upgradingPlan}
-                          onClick={() => void handleUpgradePlan('growth')}
-                        >
-                          {planData?.plan === 'growth'
-                            ? 'Current Active Plan'
-                            : (planData?.plan === 'pro' || planData?.plan === 'professional' ? 'Included in Higher Plan' : 'Upgrade to Growth Tier')}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Pro Tier Card */}
-                    <div className={`relative flex flex-col justify-between rounded-2xl border p-6 transition ${
-                      planData?.plan === 'pro' || planData?.plan === 'professional'
-                        ? 'border-indigo-600 bg-indigo-50/20 ring-2 ring-indigo-600'
-                        : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800">
-                            Corporate & Multi-Branch
-                          </span>
-                          <span className="text-xs font-medium text-slate-500">15+ staff</span>
-                        </div>
-                        <div>
-                          <h4 className="text-xl font-bold text-slate-900">Pro Tier</h4>
-                          <p className="mt-1 text-sm text-slate-500">For multi-partner firms requiring DSC routing, custom roles, and priority support.</p>
-                        </div>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-3xl font-extrabold text-slate-900">₹59,990</span>
-                          <span className="text-sm text-slate-500">/ year</span>
-                          <span className="ml-2 text-xs text-slate-500">(₹4,999 / month)</span>
-                        </div>
-                        <ul className="space-y-2.5 text-sm text-slate-600 border-t border-slate-100 pt-4">
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span><strong>Up to 25 staff seats</strong></span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span><strong>Unlimited active clients & dockets</strong></span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span>Multi-department queues (ROC, Tax, GST, Legal)</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span>Multi-partner DSC sign-off routing workflows</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span>Dedicated onboarding & migration engineer</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span>Custom practice roles & granular permissions</span>
-                          </li>
-                        </ul>
-                      </div>
-                      <div className="mt-6 pt-4 border-t border-slate-100">
-                        <Button
-                          type="button"
-                          variant={planData?.plan === 'pro' || planData?.plan === 'professional' ? 'outline' : 'primary'}
-                          className="w-full"
-                          disabled={planData?.plan === 'pro' || planData?.plan === 'professional' || upgradingPlan}
-                          loading={upgradingPlan}
-                          onClick={() => void handleUpgradePlan('pro')}
-                        >
-                          {planData?.plan === 'pro' || planData?.plan === 'professional'
-                            ? 'Current Active Plan'
-                            : 'Upgrade to Pro Tier'}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Anti-Jamku Stance Callout */}
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 space-y-3">
-                  <h4 className="text-base font-semibold text-slate-900">
-                    Why Docketra does not offer ₹6,500 generic task tracker rates
-                  </h4>
-                  <p className="text-sm leading-6 text-slate-600">
-                    Generic office tools store client data on shared servers without download controls or maker-checker audit logs. Docketra gives you full custody and compliance:
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
-                    <div className="rounded-lg border border-slate-200 bg-white p-3.5 space-y-1">
-                      <p className="text-xs font-semibold text-slate-900">1. Your Drive, your custody</p>
-                      <p className="text-xs leading-5 text-slate-500">
-                        Files stay in your firm’s Google Drive. Even if you leave Docketra, your documents remain with you.
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-slate-200 bg-white p-3.5 space-y-1">
-                      <p className="text-xs font-semibold text-slate-900">2. Peer-review ready</p>
-                      <p className="text-xs leading-5 text-slate-500">
-                        ICAI/ICSI SQC-1 maker-checker audit trail. Every note, checklist, and partner approval is logged with timestamps.
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-slate-200 bg-white p-3.5 space-y-1">
-                      <p className="text-xs font-semibold text-slate-900">3. Trainee Laptop Shield</p>
-                      <p className="text-xs leading-5 text-slate-500">
-                        Article assistants view files inside Docketra without saving client returns to personal pendrives or laptops.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Payment & Invoice History */}
-                <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-3">
-                    <div>
-                      <h4 className="text-base font-semibold text-slate-900">Payment & Invoice History</h4>
-                      <p className="text-xs text-slate-500">
-                        Official tax invoices and payment receipts for your firm’s Docketra subscriptions.
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void loadPlanData()}
-                      className="text-xs"
-                    >
-                      Refresh History
-                    </Button>
-                  </div>
-
-                  {subscriptionOrders.length === 0 ? (
-                    <div className="rounded-lg border border-dashed border-slate-200 p-6 text-center">
-                      <p className="text-xs font-medium text-slate-600">No payment history yet</p>
-                      <p className="mt-1 text-[11px] text-slate-400">
-                        When you upgrade your plan, payment records and downloadable invoices will appear here.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto rounded-lg border border-slate-100">
-                      <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
-                        <thead className="bg-slate-50">
-                          <tr>
-                            <th scope="col" className="px-3.5 py-2.5 font-semibold text-slate-600">Date & Order ID</th>
-                            <th scope="col" className="px-3.5 py-2.5 font-semibold text-slate-600">Plan & Cycle</th>
-                            <th scope="col" className="px-3.5 py-2.5 font-semibold text-slate-600">Amount</th>
-                            <th scope="col" className="px-3.5 py-2.5 font-semibold text-slate-600">Bank UTR</th>
-                            <th scope="col" className="px-3.5 py-2.5 font-semibold text-slate-600">Status</th>
-                            <th scope="col" className="px-3.5 py-2.5 text-right font-semibold text-slate-600">Invoice</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 bg-white">
-                          {subscriptionOrders.map((ord) => {
-                            const isPaid = ord.status === 'COMPLETED';
-                            const isPending = ord.status === 'PENDING';
-                            const createdDate = ord.createdAt
-                              ? new Date(ord.createdAt).toLocaleDateString('en-IN', {
-                                  day: '2-digit',
-                                  month: 'short',
-                                  year: 'numeric',
-                                })
-                              : '—';
-                            return (
-                              <tr key={ord.orderId} className="hover:bg-slate-50/50">
-                                <td className="px-3.5 py-3">
-                                  <p className="font-mono font-medium text-slate-900">{ord.orderId}</p>
-                                  <p className="text-[11px] text-slate-400">{createdDate}</p>
-                                </td>
-                                <td className="px-3.5 py-3 capitalize text-slate-700">
-                                  <span className="font-medium">{ord.plan}</span> ({ord.billingCycle || 'annual'})
-                                </td>
-                                <td className="px-3.5 py-3 font-semibold text-slate-900">
-                                  ₹{Number(ord.amount || 0).toLocaleString('en-IN')}
-                                </td>
-                                <td className="px-3.5 py-3">
-                                  {ord.utr ? (
-                                    <span className="font-mono text-xs text-slate-800">{ord.utr}</span>
-                                  ) : (
-                                    <span className="text-slate-400 text-[11px]">Awaiting UTR</span>
-                                  )}
-                                </td>
-                                <td className="px-3.5 py-3">
-                                  {isPaid ? (
-                                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
-                                      PAID
-                                    </span>
-                                  ) : isPending ? (
-                                    <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
-                                      PENDING
-                                    </span>
-                                  ) : (
-                                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-                                      {ord.status}
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="px-3.5 py-3 text-right">
-                                  {isPaid ? (
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      loading={loadingInvoiceId === ord.orderId}
-                                      onClick={() => void handleViewInvoice(ord.orderId)}
-                                      className="text-xs py-1 px-2.5 h-auto"
-                                    >
-                                      View Invoice
-                                    </Button>
-                                  ) : isPending ? (
-                                    <Button
-                                      type="button"
-                                      variant="primary"
-                                      size="sm"
-                                      onClick={() => handleResumePayment(ord)}
-                                      className="text-xs py-1 px-2.5 h-auto"
-                                    >
-                                      Complete Pay
-                                    </Button>
-                                  ) : (
-                                    <span className="text-slate-400 text-xs">—</span>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
             {currentTab === 'audit' && (
               <div className="grid gap-6 lg:grid-cols-[1.05fr_1.65fr]">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-slate-900">Latest workspace activity</p>
-                    <div className="space-y-2 text-sm leading-6 text-slate-500">
-                      <p>The latest entries load here. CSV export pulls the full available history from the same paged feed.</p>
-                      <p>Use this to verify settings changes, user actions, client updates, and general firm administration events.</p>
-                    </div>
-                  </div>
-
-                  {/* Weekly Practice Audit Summary Box */}
-                  <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-slate-900">Weekly Audit Digest</p>
-                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
-                        Active by Default
-                      </span>
-                    </div>
-                    <p className="text-xs leading-relaxed text-slate-600">
-                      Every week, a complete CSV summary of all firm settings changed, clients added or disabled, and team members added or deactivated is automatically emailed to the Primary Admin.
-                    </p>
-
-                    {weeklyDigestNotice && (
-                      <div className={`text-xs p-2 rounded border ${weeklyDigestNotice.type === 'error' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'}`}>
-                        {weeklyDigestNotice.text}
-                      </div>
-                    )}
-
-                    <div className="flex flex-col gap-2 pt-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={downloadWeeklyAuditCsv}
-                        loading={downloadingWeeklyCsv}
-                        className="w-full justify-center bg-white text-xs font-medium"
-                      >
-                        <span className="mr-2 inline-flex"><DownloadIcon /></span>
-                        Download Past 7 Days CSV
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={triggerWeeklyAuditDigestNow}
-                        loading={triggeringWeeklyDigest}
-                        className="w-full justify-center text-xs text-indigo-700 hover:text-indigo-800 hover:bg-indigo-100/50"
-                      >
-                        Email Weekly Summary to Partner Now
-                      </Button>
-                    </div>
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-slate-900">Latest workspace activity</p>
+                  <div className="space-y-3 text-sm leading-6 text-slate-500">
+                    <p>The latest 25 entries load here. CSV export pulls the full available history from the same paged feed.</p>
+                    <p>Use this to verify settings changes, user actions, and general firm administration events.</p>
                   </div>
                 </div>
 
@@ -1966,22 +1277,6 @@ export const FirmSettingsPage = () => {
         onClose={() => setShowDocketBulkModal(false)}
         showToast={showToast}
       />
-      <UpiCheckoutModal
-        isOpen={showCheckoutModal}
-        onClose={() => setShowCheckoutModal(false)}
-        order={checkoutOrder}
-        onSuccess={async () => {
-          showToast('Plan upgraded successfully!', 'success');
-          await loadPlanData();
-        }}
-      />
-      {showInvoiceModal && selectedInvoice && (
-        <SubscriptionInvoiceModal
-          isOpen={showInvoiceModal}
-          onClose={() => setShowInvoiceModal(false)}
-          invoice={selectedInvoice}
-        />
-      )}
     </PlatformShell>
   );
 };

@@ -1,3 +1,10 @@
+const STATUS_EMOJI = {
+  OPEN: '🟢',
+  IN_PROGRESS: '🟡',
+  RESOLVED: '🔵',
+  CLOSED: '⚫',
+};
+
 const STATUS_COPY = {
   OPEN: 'Open',
   IN_PROGRESS: 'In Progress',

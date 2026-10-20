@@ -5,7 +5,6 @@ const routeSchemas = require('../schemas/docketFileStorage.routes.schema');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const { requireCaseAccess } = require('../middleware/authorization.middleware');
 const { requireStorageConnected } = require('../middleware/requireStorageConnected');
-const { restrictTraineeDownload } = require('../middleware/downloadShield.middleware');
 const { uploadDocketFile, listDocketAttachments, getDocketFile } = require('../controllers/docketFileStorage.controller');
 
 const router = applyRouteValidation(express.Router(), routeSchemas);
@@ -33,7 +32,6 @@ router.get(
   '/attachments/:attachmentId/download',
   requireStorageConnected,
   authorizeFirmPermission('CASE_VIEW'),
-  restrictTraineeDownload,
   getDocketFile
 );
 

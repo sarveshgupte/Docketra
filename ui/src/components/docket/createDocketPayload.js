@@ -16,17 +16,6 @@ export const buildCreateDocketPayload = (formData = {}) => {
   const eventDate = ensureCanonicalId(formData.eventDate);
   const relatedEmployeeUserId = ensureCanonicalId(formData.relatedEmployeeUserId);
 
-  const checklist = Array.isArray(formData.checklist) && formData.checklist.length > 0
-    ? formData.checklist.map((item, index) => ({
-        id: item?.id ? String(item.id).trim() : `chk-${index + 1}`,
-        title: String(item?.title || '').trim(),
-        description: typeof item?.description === 'string' ? item.description.trim() : '',
-        required: item?.required !== false,
-        sortOrder: Number.isFinite(Number(item?.sortOrder)) ? Number(item.sortOrder) : index,
-        dueOffsetDays: Number.isFinite(Number(item?.dueOffsetDays)) ? Number(item.dueOffsetDays) : undefined,
-      })).filter((item) => item.title.length > 0)
-    : undefined;
-
   return {
     title,
     description,
@@ -43,7 +32,6 @@ export const buildCreateDocketPayload = (formData = {}) => {
     dueDate: dueDate || undefined,
     eventDate: eventDate || undefined,
     relatedEmployeeUserId: relatedEmployeeUserId || undefined,
-    checklist: (checklist && checklist.length > 0) ? checklist : undefined,
   };
 };
 

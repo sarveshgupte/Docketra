@@ -199,10 +199,8 @@ export const WorkSettingsPage = () => {
               )}
 
               {!loadingWorkbaskets && primaryWorkbaskets.length === 0 && (
-                <div className="rounded-md border border-dashed border-slate-200 p-8 text-center space-y-4 bg-slate-50/50">
-                  <div className="h-12 w-12 rounded-sm bg-slate-100 border border-slate-200 flex items-center justify-center mx-auto text-slate-500">
-                    <WorkbasketIcon className="h-6 w-6 text-slate-500" />
-                  </div>
+                <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center space-y-4 bg-slate-50/50">
+                  <div className="h-12 w-12 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto text-xl">📁</div>
                   <div className="space-y-1">
                     <p className="text-sm font-bold text-slate-700">No active workbaskets configured</p>
                     <p className="text-xs text-slate-400">Create a workbasket above or trigger default routing to start.</p>
@@ -232,7 +230,7 @@ export const WorkSettingsPage = () => {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <h4 className="font-bold text-slate-800 text-sm">{workbasket.name}</h4>
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-xs text-[10px] font-bold uppercase ${
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                             workbasket.isActive 
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
                               : 'bg-slate-100 text-slate-600 border border-slate-200'

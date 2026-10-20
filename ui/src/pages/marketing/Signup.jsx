@@ -17,9 +17,9 @@ const getOrigin = () => (typeof window !== 'undefined' ? window.location.origin 
 const buildFallbackFirmLoginUrl = (firmSlug) => (firmSlug ? `${getOrigin()}/${firmSlug}/login` : '');
 
 const SETUP_PROMISES = [
-  'Company Brain starts with clean firm identity',
-  'OTP verification before workspace activation',
-  'Admin access, firm URL, and xID stay explicit',
+  '🧠 Company Brain starts with clean firm identity',
+  '✅ OTP verification before workspace activation',
+  '🔐 Admin access, firm URL, and xID stay explicit',
 ];
 
 const TRUST_BADGES = ['No card required', 'Role-safe setup', 'Email verified'];
@@ -377,7 +377,7 @@ export default function Signup() {
                 <span className="text-[8px] font-bold text-amber-700 tracking-wider uppercase mt-0.5">The Company Brain</span>
               </div>
             </Link>
-            <p className="mt-10 text-sm font-bold uppercase text-amber-700">Workspace created</p>
+            <p className="mt-10 text-sm font-bold uppercase text-amber-700">🎉 Workspace created</p>
             <h2 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
               Welcome to your firm&apos;s new command center.
             </h2>
@@ -385,7 +385,7 @@ export default function Signup() {
               Your workspace is ready. Save the first-login details and continue to onboarding when you are ready.
             </p>
             <div className="mt-8 grid gap-3">
-              {['Firm workspace is active', 'Primary admin identity verified', 'Welcome credentials can be resent anytime'].map((item) => (
+              {['✅ Firm workspace is active', '🔐 Primary admin identity verified', '📬 Welcome credentials can be resent anytime'].map((item) => (
                 <div key={item} className="rounded-2xl border border-white/80 bg-white/75 px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
                   {item}
                 </div>
@@ -410,7 +410,7 @@ export default function Signup() {
               </div>
             </div>
             <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              Keep this URL and xID with your onboarding notes. Your team will use the firm URL for future logins.
+              💡 Keep this URL and xID with your onboarding notes. Your team will use the firm URL for future logins.
             </div>
             <div className={`mt-6 ${spacingClasses.formFieldSpacing}`}>
               <Button type="button" variant="primary" fullWidth onClick={handleLoginRedirect}>
@@ -447,7 +447,7 @@ export default function Signup() {
               <span className="text-[8px] font-bold text-amber-700 tracking-wider uppercase mt-0.5">The Company Brain</span>
             </div>
           </Link>
-          <p className="mt-10 text-sm font-bold uppercase text-amber-700">Workspace signup</p>
+          <p className="mt-10 text-sm font-bold uppercase text-amber-700">🚀 Workspace signup</p>
           <h2 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
             Create the command center your firm will grow into.
           </h2>
@@ -540,7 +540,7 @@ export default function Signup() {
             <form className={`${spacingClasses.formFieldSpacing} w-full`} onSubmit={submitStepOne} noValidate>
             <div className="grid gap-4 rounded-3xl border border-slate-200 bg-slate-50/80 p-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <p className="text-sm font-black text-slate-950">Primary admin</p>
+                <p className="text-sm font-black text-slate-950">👤 Primary admin</p>
                 <p className="mt-1 text-xs leading-5 text-slate-500">This person receives OTP, xID, and first-login instructions.</p>
               </div>
               <Input id="signup-name" type="text" name="name" label="Primary Admin Name" className="w-full" value={form.name} onChange={onFormChange} disabled={loading} error={errors.name} required />
@@ -550,7 +550,7 @@ export default function Signup() {
             </div>
             <div className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-4 md:grid-cols-[1fr_220px]">
               <div>
-                <p className="text-sm font-black text-slate-950">Firm workspace</p>
+                <p className="text-sm font-black text-slate-950">🏢 Firm workspace</p>
                 <p className="mt-1 text-xs leading-5 text-slate-500">Your firm name becomes the memorable workspace URL.</p>
                 <div className="mt-4">
                   <Input id="signup-firm" type="text" name="firmName" label="Firm Name" className="w-full" value={form.firmName} onChange={onFormChange} disabled={loading} error={errors.firmName} required />
@@ -564,7 +564,7 @@ export default function Signup() {
             </div>
             {isTurnstileConfigured ? <div ref={turnstileContainerRef} className="min-h-[65px]" /> : null}
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              {`${STRONG_PASSWORD_MESSAGE}`}
+              {`🔑 ${STRONG_PASSWORD_MESSAGE}`}
             </div>
             <div className={`rounded-2xl border ${errors.agreedToPilotTerms ? 'border-rose-400 bg-rose-50/80' : 'border-slate-200 bg-slate-50'} p-4 transition-colors`}>
               <label className="flex items-start gap-3 cursor-pointer select-none">
@@ -625,7 +625,7 @@ export default function Signup() {
         ) : (
           <form className={`mt-6 ${spacingClasses.formFieldSpacing} w-full`} onSubmit={submitOtp} noValidate>
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              {otpInfo && <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">{otpInfo}</p>}
+              {otpInfo && <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">📬 {otpInfo}</p>}
               <div className="mt-4">
                 <Input
                   ref={otpInputRef}
@@ -678,7 +678,7 @@ export default function Signup() {
         )}
 
         <div className="find-workspace-page__notice rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-xs text-slate-600">
-          Explicit clickwrap consent recorded with IP &amp; timestamp audit trail. Review full legal terms via the links above.
+          🛡️ Explicit clickwrap consent recorded with IP &amp; timestamp audit trail. Review full legal terms via the links above.
         </div>
         </Card>
         <PilotAgreementModal

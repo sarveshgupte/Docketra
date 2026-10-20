@@ -299,9 +299,9 @@ export const CaseDetailPage = () => {
     sortedTimelineEvents,
   });
   const docketTabs = useMemo(() => ([
-    { name: CASE_DETAIL_TABS.OVERVIEW, label: 'Overview' },
-    { name: CASE_DETAIL_TABS.EMAIL_LOGS, label: 'Emails' },
-    { name: CASE_DETAIL_TABS.KNOWLEDGE, label: 'Linked Knowledge' },
+    { name: CASE_DETAIL_TABS.OVERVIEW, label: '📋 Overview' },
+    { name: CASE_DETAIL_TABS.EMAIL_LOGS, label: '📧 Emails' },
+    { name: CASE_DETAIL_TABS.KNOWLEDGE, label: '🧠 Linked Knowledge' },
   ]), []);
 
   const visibleComments = useMemo(() => {
@@ -345,13 +345,6 @@ export const CaseDetailPage = () => {
     || caseInfo?.client?.contactPersonName
     || caseInfo?.client?.primaryContactNumber
     || '—';
-  const linkedClientPhone = caseData?.client?.primaryContactNumber
-    || caseData?.client?.contactPersonPhoneNumber
-    || caseData?.client?.clientFactSheet?.basicInfo?.phone
-    || caseInfo?.client?.primaryContactNumber
-    || caseInfo?.client?.phone
-    || caseInfo?.clientPhone
-    || '';
   const linkedClientRoute = linkedClientId ? ROUTES.CLIENT_WORKSPACE(firmSlug, linkedClientId) : '';
   const isInternalWork = Boolean(caseInfo?.isInternal || caseInfo?.workType === 'internal');
   const fromClientRoute = location.state?.fromClientRoute || '';
@@ -1277,7 +1270,7 @@ export const CaseDetailPage = () => {
       <div className="docket-section-heading">
         <div>
           <p className="docket-section-kicker">Collaboration</p>
-          <h2>Comments</h2>
+          <h2>💬 Comments</h2>
         </div>
         <span className="docket-section-count">{comments.length} total</span>
       </div>
@@ -1439,88 +1432,13 @@ export const CaseDetailPage = () => {
           <StickyTabs tabs={docketTabs} defaultTab={CASE_DETAIL_TABS.OVERVIEW} />
         </div>
 
-        {/* HubSpot-style 3-Column Workstation Layout */}
-        <div className="case-detail-layout-grid docket-detail-layout grid grid-cols-1 xl:grid-cols-12 gap-5 w-full items-start">
-          {/* Column 1: Left Column (Properties / About this Record) */}
-          <div className="xl:col-span-3 lg:col-span-4 flex flex-col gap-4 w-full order-1">
-            <CaseDetailSummaryHeader
-              caseInfo={caseInfo}
-              caseId={caseId}
-              docketStatusLabel={displayLifecycleLabel || 'Active'}
-              categoryLabel={categoryLabel}
-              subcategoryLabel={subcategoryLabel}
-              linkedClientRoute={linkedClientRoute}
-              clientName={clientName}
-              isInternalWork={isInternalWork}
-              assigneeLabel={displayAssigneeLabel || 'Unassigned'}
-              queueLabel={queueLabel || '—'}
-              locationBadges={locationBadges}
-              slaDaysLabel={slaDaysLabel}
-            />
-
-            {/* Quick Tools & Shortcuts */}
-            <div className="case-card rounded-md border border-slate-200/90 p-3 bg-white shadow-xs flex flex-col gap-2.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Quick Access</span>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => runGuardedAction(() => openSidebar('cfs'), 'Unable to open CFS panel right now.')}
-                  aria-label="Open client fact sheet"
-                  title="Open Client Fact Sheet"
-                  className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors cursor-pointer"
-                >
-                  <span>ⓘ</span> CFS Sheet
-                </button>
-                <button
-                  type="button"
-                  onClick={() => runGuardedAction(() => openSidebar('attachments'), 'Unable to open Attachments panel right now.')}
-                  className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors cursor-pointer"
-                >
-                  Files
-                </button>
-                <button
-                  type="button"
-                  onClick={() => runGuardedAction(() => openSidebar('history'), 'Unable to open Audit History panel right now.')}
-                  className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors cursor-pointer"
-                >
-                  Audit Log
-                </button>
-                {canCloneDocket ? (
-                  <button
-                    type="button"
-                    onClick={() => runGuardedAction(() => setCloneModalOpen(true), 'Unable to open clone docket right now.')}
-                    className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors cursor-pointer"
-                  >
-                    <span>⧉</span> Clone
-                  </button>
-                ) : null}
-              </div>
-            </div>
-          </div>
-
-          {/* Column 2: Center Column (Workspace & Activity Stream) */}
-          <div className={activeTab !== CASE_DETAIL_TABS.ACTIVITY ? "xl:col-span-6 lg:col-span-8 flex flex-col gap-4 w-full order-2" : "xl:col-span-9 lg:col-span-8 flex flex-col gap-4 w-full order-2"}>
-            {actionConfirmation ? <div className="case-detail__confirmation">{actionConfirmation}</div> : null}
-            <CaseDetailAlerts
-              actionError={actionError}
-              caseInfo={caseInfo}
-              caseId={caseId}
-              user={user}
-              isViewOnlyMode={isViewOnlyMode}
-              canAdminMoveAssignedDocket={canAdminMoveAssignedDocket}
-              isMoveLockedByAnotherUser={isMoveLockedByAnotherUser}
-              lockOwnerLabel={lockOwnerLabel}
-              assigningCase={assigningCase}
-              onOpenAssignModal={() => setShowAssignModal(true)}
-              onMoveToWorkbasket={handleMoveToWorkbasket}
-              onViewUserWorklist={handleViewUserWorklist}
-              docketSlaStatus={docketSlaStatus}
-            />
-
-            {/* Conditional Active Tab Panel Rendering */}
-            <Suspense fallback={<CaseDetailPanelSkeleton />}>
-              {activeTab === CASE_DETAIL_TABS.OVERVIEW && (
-                <>
+        {/* Clean Dashboard Layout Container */}
+        <div className="case-detail-layout-grid docket-detail-layout flex w-full flex-col gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start w-full">
+            <div className={activeTab !== CASE_DETAIL_TABS.ACTIVITY ? "lg:col-span-8 flex flex-col gap-5 w-full" : "lg:col-span-12 flex flex-col gap-5 w-full"}>
+              {/* Conditional Active Tab Panel Rendering */}
+              <Suspense fallback={<CaseDetailPanelSkeleton />}>
+                {activeTab === CASE_DETAIL_TABS.OVERVIEW && (
                   <CaseDetailOverviewPanel
                     caseInfo={caseInfo}
                     firmSlug={firmSlug}
@@ -1566,86 +1484,213 @@ export const CaseDetailPage = () => {
                     locationBadges={locationBadges}
                     displayLifecycleLabel={displayLifecycleLabel}
                   />
-                  {commentsSection}
-                </>
-              )}
-              {activeTab === CASE_DETAIL_TABS.ATTACHMENTS && (
-                <CaseDetailAttachmentsPanel
-                  caseId={caseId}
-                  attachments={attachments}
-                  accessMode={accessMode}
-                  permissions={permissions}
-                  caseData={caseData}
-                  lifecycleStatus={lifecycleStatus}
-                  actionInFlight={actionInFlight}
-                  isViewOnlyMode={isViewOnlyMode}
-                  routedTeamCannotResolve={routedTeamCannotResolve}
-                  isQcContext={isQcContext}
-                  isUnassignedWorkbasket={isUnassignedWorkbasket}
-                  onOpenFileModal={() => { setFileComment(''); setShowFileModal(true); }}
-                  onRefreshCase={loadCase}
-                  sectionLoading={sectionLoading.attachments}
-                  selectedFile={selectedFile}
-                  uploadingFile={uploadingFile}
-                  uploadProgress={uploadProgress}
-                  fileDescription={fileDescription}
-                  onUploadFile={handleUploadFile}
-                  onFileSelect={handleFileSelect}
-                  onFileDescriptionChange={setFileDescription}
-                />
-              )}
-              {activeTab === CASE_DETAIL_TABS.ACTIVITY && (
-                <CaseDetailActivityPanel
-                  timelineFilter={timelineFilter}
-                  onTimelineFilterChange={setTimelineFilter}
-                  timelineLoading={timelineLoading}
-                  mergedTimelineEvents={mergedTimelineEvents}
-                  timelinePage={timelinePage}
-                  timelineHasNextPage={timelineHasNextPage}
-                  onPrevTimelinePage={() => setTimelinePage((p) => Math.max(1, p - 1))}
-                  onNextTimelinePage={() => setTimelinePage((p) => p + 1)}
-                  sectionLoading={sectionLoading.comments}
-                  commentsListRef={commentsListRef}
-                  visibleComments={visibleComments}
-                  comments={comments}
-                  onLoadOlderComments={() => setCommentWindowSize((size) => size + INITIAL_VIRTUAL_WINDOW)}
-                  initialVirtualWindow={INITIAL_VIRTUAL_WINDOW}
-                  accessMode={accessMode}
-                  permissions={permissions}
-                  caseData={caseData}
-                  commentComposerId={commentComposerId}
-                  newComment={newComment}
-                  onNewCommentChange={setNewComment}
-                  onAddComment={handleAddComment}
-                  submitting={submitting}
-                />
-              )}
-              {activeTab === CASE_DETAIL_TABS.KNOWLEDGE && (
-                <LinkedKnowledgeSection
-                  categoryId={caseData?.categoryId || caseData?.docketDetail?.category?.id || caseInfo?.category?.id || ''}
-                  subcategoryId={caseData?.subcategoryId || caseData?.docketDetail?.subcategory?.id || caseInfo?.subcategory?.id || ''}
-                  categoryLabel={categoryLabel}
-                  subcategoryLabel={subcategoryLabel}
-                  caseSop={caseInfo?.sop}
-                  caseChecklist={caseInfo?.checklist}
-                  firmSlug={firmSlug}
-                  canManageSettings={Boolean(permissions.isAdmin) || Boolean(user?.isPrimaryAdmin)}
-                />
-              )}
-              {activeTab === CASE_DETAIL_TABS.EMAIL_LOGS && (
-                <CaseDetailEmailsPanel
-                  caseId={caseId}
-                  caseInfo={caseInfo}
-                  clientEmail={linkedClientEmail}
-                  clientPhone={linkedClientPhone}
-                  clientName={clientName}
-                  onRefreshCase={loadCase}
-                />
-              )}
-            </Suspense>
+                )}
+                {activeTab === CASE_DETAIL_TABS.OVERVIEW ? commentsSection : null}
+                {activeTab === CASE_DETAIL_TABS.ATTACHMENTS && (
+                  <CaseDetailAttachmentsPanel
+                    caseId={caseId}
+                    attachments={attachments}
+                    accessMode={accessMode}
+                    permissions={permissions}
+                    caseData={caseData}
+                    lifecycleStatus={lifecycleStatus}
+                    actionInFlight={actionInFlight}
+                    isViewOnlyMode={isViewOnlyMode}
+                    routedTeamCannotResolve={routedTeamCannotResolve}
+                    isQcContext={isQcContext}
+                    isUnassignedWorkbasket={isUnassignedWorkbasket}
+                    onOpenFileModal={() => { setFileComment(''); setShowFileModal(true); }}
+                    onRefreshCase={loadCase}
+                    sectionLoading={sectionLoading.attachments}
+                    selectedFile={selectedFile}
+                    uploadingFile={uploadingFile}
+                    uploadProgress={uploadProgress}
+                    fileDescription={fileDescription}
+                    onUploadFile={handleUploadFile}
+                    onFileSelect={handleFileSelect}
+                    onFileDescriptionChange={setFileDescription}
+                  />
+                )}
+                {activeTab === CASE_DETAIL_TABS.ACTIVITY && (
+                  <CaseDetailActivityPanel
+                    timelineFilter={timelineFilter}
+                    onTimelineFilterChange={setTimelineFilter}
+                    timelineLoading={timelineLoading}
+                    mergedTimelineEvents={mergedTimelineEvents}
+                    timelinePage={timelinePage}
+                    timelineHasNextPage={timelineHasNextPage}
+                    onPrevTimelinePage={() => setTimelinePage((p) => Math.max(1, p - 1))}
+                    onNextTimelinePage={() => setTimelinePage((p) => p + 1)}
+                    sectionLoading={sectionLoading.comments}
+                    commentsListRef={commentsListRef}
+                    visibleComments={visibleComments}
+                    comments={comments}
+                    onLoadOlderComments={() => setCommentWindowSize((size) => size + INITIAL_VIRTUAL_WINDOW)}
+                    initialVirtualWindow={INITIAL_VIRTUAL_WINDOW}
+                    accessMode={accessMode}
+                    permissions={permissions}
+                    caseData={caseData}
+                    commentComposerId={commentComposerId}
+                    newComment={newComment}
+                    onNewCommentChange={setNewComment}
+                    onAddComment={handleAddComment}
+                    submitting={submitting}
+                  />
+                )}
+                {activeTab === CASE_DETAIL_TABS.KNOWLEDGE && (
+                  <LinkedKnowledgeSection
+                    categoryId={caseData?.categoryId || caseData?.docketDetail?.category?.id || caseInfo?.category?.id || ''}
+                    subcategoryId={caseData?.subcategoryId || caseData?.docketDetail?.subcategory?.id || caseInfo?.subcategory?.id || ''}
+                    categoryLabel={categoryLabel}
+                    subcategoryLabel={subcategoryLabel}
+                    caseSop={caseInfo?.sop}
+                    caseChecklist={caseInfo?.checklist}
+                    firmSlug={firmSlug}
+                    canManageSettings={Boolean(permissions.isAdmin) || Boolean(user?.isPrimaryAdmin)}
+                  />
+                )}
+                {activeTab === CASE_DETAIL_TABS.EMAIL_LOGS && (
+                  <CaseDetailEmailsPanel
+                    caseId={caseId}
+                    caseInfo={caseInfo}
+                    clientEmail={linkedClientEmail}
+                    onRefreshCase={loadCase}
+                  />
+                )}
+              </Suspense>
+            </div>
 
-            {/* Client Change History Section */}
-            <div className="docket-history-panel mt-2">
+            {/* Right Column: Workflow Actions */}
+            {activeTab !== CASE_DETAIL_TABS.ACTIVITY && (
+              <div className="lg:col-span-4 flex flex-col gap-5 w-full docket-side-rail">
+                {/* Workflow Actions Card */}
+                {shouldShowActions ? (
+                  <section className="case-card docket-action-panel">
+                    <div className="docket-section-heading">
+                      <div>
+                        <p className="docket-section-kicker">Next step</p>
+                        <h2>⚡ Workflow</h2>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-3">
+                      {/* Primary Actions (Resolve / Submit, Resume / Unpend) */}
+                      <div className="flex flex-col gap-2">
+                        {canPerformLifecycleActions && lifecycleQuickActions.some((action) => ['resolve', 'submit'].includes(action.key)) && (
+                          <Button
+                            variant="primary"
+                            onClick={() => openActionModal('resolve')}
+                            disabled={actionInFlight}
+                            className="w-full justify-center shadow-sm hover:shadow"
+                          >
+                            {routedTeamCannotResolve ? 'Submit Routed Docket' : 'Resolve Docket'}
+                          </Button>
+                        )}
+                        {canPerformLifecycleActions && lifecycleQuickActions.some((action) => action.key === 'unpend') && (
+                          <Button
+                            variant="primary"
+                            onClick={() => setShowUnpendModal(true)}
+                            disabled={actionInFlight}
+                            className="w-full justify-center shadow-sm hover:shadow"
+                          >
+                            Resume Docket
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Secondary Actions (Pend, Route, File) */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {canPerformLifecycleActions && lifecycleQuickActions.some((action) => action.key === 'pend') && (
+                          <Button
+                            variant="secondary"
+                            onClick={() => openActionModal('pend')}
+                            disabled={actionInFlight}
+                            className="w-full justify-center shadow-sm hover:shadow"
+                          >
+                            Pend
+                          </Button>
+                        )}
+                        {canRouteDocket && (
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowRouteModal(true)}
+                            disabled={actionInFlight}
+                            className="w-full justify-center shadow-sm hover:shadow"
+                          >
+                            Route
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        {!isViewOnlyMode && !isRouted && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus) && (
+                          <Button
+                            variant="secondary"
+                            onClick={() => { setFileComment(''); setShowFileModal(true); }}
+                            disabled={actionInFlight}
+                            className="w-full justify-center shadow-sm hover:shadow"
+                          >
+                            File
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Admin Worklist Movement (if permitted) */}
+                      {canAdminMoveAssignedDocket && (
+                        <div className="border-t pt-3 mt-1 flex flex-col gap-2">
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Admin Controls</span>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button variant="outline" size="small" onClick={() => setShowAssignModal(true)} disabled={isMoveLockedByAnotherUser || assigningCase} className="w-full justify-center text-xs">
+                              Move WL
+                            </Button>
+                            <Button variant="outline" size="small" onClick={handleMoveToWorkbasket} disabled={isMoveLockedByAnotherUser || assigningCase} className="w-full justify-center text-xs">
+                              Move WB
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Force QC Review Checkbox */}
+                      {canPerformLifecycleActions && (
+                        <div className="border-t pt-3 mt-1">
+                          <label className="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={forceQcReview}
+                              onChange={(e) => setForceQcReview(e.target.checked)}
+                              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                            />
+                            Force QC Review
+                          </label>
+                        </div>
+                      )}
+
+                      {/* Warnings for QC/Unassigned Workbasket */}
+                      {isUnassignedWorkbasket && (
+                        <div className="mt-2 text-xs text-amber-600 bg-amber-50/50 border border-amber-200/60 rounded-xl p-3">
+                          This docket is currently unassigned in a workbasket. Pull/Assign it from Workbasket flow before personal worklist actions.
+                        </div>
+                      )}
+                      {isQcContext && (
+                        <div className="mt-2 text-xs text-blue-600 bg-blue-50/50 border border-blue-200/60 rounded-xl p-3">
+                          QC context active. Use QC workbasket actions where appropriate.
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                ) : (
+                  <section className="case-card docket-action-panel">
+                    <p className="text-xs text-gray-500 italic text-center">
+                      {isViewOnlyMode ? 'View-only mode. Workflow actions are hidden.' : `This docket is in a terminal state (${lifecycleStatus}). Actions are locked.`}
+                    </p>
+                  </section>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Section: Client history */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 w-full">
+            <div className="lg:col-span-12 flex flex-col gap-5 w-full docket-history-panel">
               <Suspense fallback={<CaseDetailPanelSkeleton />}>
                 <CaseDetailHistoryPanel
                   loadingClientDockets={loadingClientDockets}
@@ -1661,133 +1706,6 @@ export const CaseDetailPage = () => {
               </Suspense>
             </div>
           </div>
-
-          {/* Column 3: Right Column (Workflow & Actions) */}
-          {activeTab !== CASE_DETAIL_TABS.ACTIVITY && (
-            <div className="xl:col-span-3 lg:col-span-12 flex flex-col gap-4 w-full order-3 docket-side-rail">
-              {/* Workflow Actions Card */}
-              {shouldShowActions ? (
-                <section className="case-card docket-action-panel">
-                  <div className="docket-section-heading">
-                    <div>
-                      <p className="docket-section-kicker">Next step</p>
-                      <h2>⚡ Workflow</h2>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    {/* Primary Actions (Resolve / Submit, Resume / Unpend) */}
-                    <div className="flex flex-col gap-2">
-                      {canPerformLifecycleActions && lifecycleQuickActions.some((action) => ['resolve', 'submit'].includes(action.key)) && (
-                        <Button
-                          variant="primary"
-                          onClick={() => openActionModal('resolve')}
-                          disabled={actionInFlight}
-                          className="w-full justify-center shadow-sm hover:shadow"
-                        >
-                          {routedTeamCannotResolve ? 'Submit Routed Docket' : 'Resolve Docket'}
-                        </Button>
-                      )}
-                      {canPerformLifecycleActions && lifecycleQuickActions.some((action) => action.key === 'unpend') && (
-                        <Button
-                          variant="primary"
-                          onClick={() => setShowUnpendModal(true)}
-                          disabled={actionInFlight}
-                          className="w-full justify-center shadow-sm hover:shadow"
-                        >
-                          Resume Docket
-                        </Button>
-                      )}
-                    </div>
-
-                    {/* Secondary Actions (Pend, Route, File) */}
-                    <div className="grid grid-cols-2 gap-2">
-                      {canPerformLifecycleActions && lifecycleQuickActions.some((action) => action.key === 'pend') && (
-                        <Button
-                          variant="secondary"
-                          onClick={() => openActionModal('pend')}
-                          disabled={actionInFlight}
-                          className="w-full justify-center shadow-sm hover:shadow"
-                        >
-                          Pend
-                        </Button>
-                      )}
-                      {canRouteDocket && (
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowRouteModal(true)}
-                          disabled={actionInFlight}
-                          className="w-full justify-center shadow-sm hover:shadow"
-                        >
-                          Route
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      {showFileAction && (
-                        <Button
-                          variant="secondary"
-                          onClick={() => { setFileComment(''); setShowFileModal(true); }}
-                          disabled={actionInFlight}
-                          className="w-full justify-center shadow-sm hover:shadow"
-                        >
-                          File
-                        </Button>
-                      )}
-                    </div>
-
-                    {/* Admin Worklist Movement (if permitted) */}
-                    {canAdminMoveAssignedDocket && (
-                      <div className="border-t pt-3 mt-1 flex flex-col gap-2">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Admin Controls</span>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Button variant="outline" size="small" onClick={() => setShowAssignModal(true)} disabled={isMoveLockedByAnotherUser || assigningCase} className="w-full justify-center text-xs">
-                            Move WL
-                          </Button>
-                          <Button variant="outline" size="small" onClick={handleMoveToWorkbasket} disabled={isMoveLockedByAnotherUser || assigningCase} className="w-full justify-center text-xs">
-                            Move WB
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Force QC Review Checkbox */}
-                    {canPerformLifecycleActions && (
-                      <div className="border-t pt-3 mt-1">
-                        <label className="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={forceQcReview}
-                            onChange={(e) => setForceQcReview(e.target.checked)}
-                            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
-                          />
-                          Force QC Review
-                        </label>
-                      </div>
-                    )}
-
-                    {/* Warnings for QC/Unassigned Workbasket */}
-                    {isUnassignedWorkbasket && (
-                      <div className="mt-2 text-xs text-amber-700 bg-amber-50/70 border border-amber-200/80 rounded-md p-2.5">
-                        This docket is currently unassigned in a workbasket. Pull/Assign it from Workbasket flow before personal worklist actions.
-                      </div>
-                    )}
-                    {isQcContext && (
-                      <div className="mt-2 text-xs text-blue-700 bg-blue-50/70 border border-blue-200/80 rounded-md p-2.5">
-                        QC context active. Use QC workbasket actions where appropriate.
-                      </div>
-                    )}
-                  </div>
-                </section>
-              ) : (
-                <section className="case-card docket-action-panel">
-                  <p className="text-xs text-gray-500 italic text-center">
-                    {isViewOnlyMode ? 'View-only mode. Workflow actions are hidden.' : `This docket is in a terminal state (${lifecycleStatus}). Actions are locked.`}
-                  </p>
-                </section>
-              )}
-            </div>
-          )}
         </div>
 
         <DocketSidebar
@@ -1813,8 +1731,6 @@ export const CaseDetailPage = () => {
           onGenerateUploadLink={handleGenerateUploadLink}
           uploadLinkGenerating={uploadLinkGenerating}
           uploadLinkResult={uploadLinkResult}
-          clientPhone={linkedClientPhone}
-          clientName={clientName}
           clientEmail={
             caseInfo?.clientEmail
             || caseInfo?.client?.email

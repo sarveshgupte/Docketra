@@ -3,7 +3,6 @@ const { applyRouteValidation } = require('../middleware/requestValidation.middle
 const routeSchemas = require('../schemas/client.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
-const { restrictTraineeDownload } = require('../middleware/downloadShield.middleware');
 const {
   userReadLimiter,
   userWriteLimiter,
@@ -83,6 +82,6 @@ router.post('/:clientId/cfs/files', authorizeFirmPermission('CLIENT_MANAGE'), se
 router.delete('/:clientId/cfs/files/:attachmentId', authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, deleteClientCFSFile);
 // All authenticated users: List and download (read-only)
 router.get('/:clientId/cfs/files', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, listClientCFSFiles);
-router.get('/:clientId/cfs/files/:attachmentId/download', authorizeFirmPermission('CLIENT_VIEW'), attachmentLimiter, restrictTraineeDownload, downloadClientCFSFile);
+router.get('/:clientId/cfs/files/:attachmentId/download', authorizeFirmPermission('CLIENT_VIEW'), attachmentLimiter, downloadClientCFSFile);
 
 module.exports = router;

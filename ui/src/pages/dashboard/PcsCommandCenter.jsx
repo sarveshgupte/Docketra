@@ -674,8 +674,8 @@ export default function PcsCommandCenter() {
             <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white">
               PCS Command Center
             </h1>
-            {/* docketra.in enterprise badge */}
-            <span className="inline-flex items-center px-2 py-0.5 rounded-xs text-[11px] font-mono font-medium bg-slate-100 dark:bg-slate-800 text-sky-600 dark:text-sky-400 border border-slate-300 dark:border-slate-700">
+            {/* docketra.in pill badge */}
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono font-medium bg-slate-100 dark:bg-slate-800 text-sky-600 dark:text-sky-400 border border-slate-300 dark:border-slate-700">
               docketra.in
             </span>
           </div>
@@ -851,7 +851,7 @@ export default function PcsCommandCenter() {
               >
                 <Icons.FileText className="w-4 h-4" />
                 <span>Statutory Filings (MCA & GST)</span>
-                <span className="ml-1 px-2 py-0.5 text-[10px] font-mono tabular-nums rounded-xs bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                <span className="ml-1 px-2 py-0.5 text-[10px] font-mono rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                   {filteredDeadlines.length}
                 </span>
               </button>
@@ -866,7 +866,7 @@ export default function PcsCommandCenter() {
               >
                 <Icons.Gavel className="w-4 h-4" />
                 <span>NCLT / RD Cause List</span>
-                <span className="ml-1 px-2 py-0.5 text-[10px] font-mono tabular-nums rounded-xs bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                <span className="ml-1 px-2 py-0.5 text-[10px] font-mono rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                   {filteredCauseList.length}
                 </span>
               </button>
@@ -968,7 +968,7 @@ export default function PcsCommandCenter() {
                         </td>
                         <td className="py-1.5 px-2.5">
                           <div className="flex items-center space-x-1.5">
-                            <span className="w-5 h-5 rounded-xs bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[9px] font-bold font-mono flex items-center justify-center border border-slate-300 dark:border-slate-700">
+                            <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[9px] font-bold font-mono flex items-center justify-center border border-slate-300 dark:border-slate-700">
                               {item.assigneeAvatar}
                             </span>
                             <span className="text-slate-700 dark:text-slate-300 text-xs hidden sm:inline truncate max-w-[90px]">

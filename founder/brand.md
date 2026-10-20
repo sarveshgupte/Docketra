@@ -66,12 +66,12 @@ We shortlist the top 3 candidates: **Docketra** (frontrunner), **KaryaDesk**, an
 ## 4. Voice and Promise
 
 ### The One-Line Promise
-> **"Run your practice from your own Google Drive. Zero file leakage, 100% partner review."**
+> **"Every filing reviewed, every record sovereign, zero deadlines missed."**
 
-### Tagline
-* **Primary (Adopted)**: *"Run your practice from your own Google Drive. Zero file leakage, 100% partner review."*
-* **Alternative (Operational)**: *"From WhatsApp intake to partner sign-off. Built for Indian CAs & CSs."*
-* **Alternative (Compact)**: *"Disciplined compliance. Sovereign data."*
+### Tagline Options
+1. **The Executive Tagline**: *"The Sovereign Operations OS for Indian Compliance Practices."* (Best for website hero and investor briefs).
+2. **The Operational Tagline**: *"From WhatsApp Intake to Maker-Checker Sign-off."* (Best for ICAI/ICSI study circle presentations).
+3. **The Risk-Reversal Tagline**: *"Keep your files in your Drive. Run your practice in Docketra."* (Best for direct LinkedIn outreach).
 
 ### The Brand Voice in 3 Adjectives
 

@@ -182,7 +182,7 @@ export const AdminClientModals = ({
                         marginBottom: '0.5rem',
                       }}
                     >
-                      <span style={{ fontSize: '0.9rem' }}>{file.fileName}</span>
+                      <span style={{ fontSize: '0.9rem' }}>📄 {file.fileName}</span>
                       <Button
                         variant="default"
                         onClick={() => handleDeleteFactSheetFile(file.fileId)}

@@ -130,7 +130,7 @@ export const OtpVerificationPage = () => {
     <div className="auth-wrapper min-h-screen bg-[linear-gradient(135deg,#fff8eb_0%,#ffffff_44%,#e0f2fe_100%)] px-4 py-8">
       <div className="grid w-full max-w-6xl items-center gap-8 lg:grid-cols-[0.9fr_1.1fr]">
         <section className="hidden lg:block" aria-label="OTP verification context">
-          <p className="text-sm font-bold uppercase text-amber-700">Email verification</p>
+          <p className="text-sm font-bold uppercase text-amber-700">📬 Email verification</p>
           <h1 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
             One code before the workspace opens.
           </h1>
@@ -138,7 +138,7 @@ export const OtpVerificationPage = () => {
             OTP keeps login and signup handoffs explicit without exposing workspace data before authentication.
           </p>
           <div className="mt-8 grid gap-3">
-            {['Login token checked', 'Latest 6-digit code only', 'Restart path stays available'].map((item) => (
+            {['🔐 Login token checked', '📬 Latest 6-digit code only', '↩️ Restart path stays available'].map((item) => (
               <div key={item} className="rounded-2xl border border-white/80 bg-white/75 px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
                 {item}
               </div>
@@ -162,7 +162,7 @@ export const OtpVerificationPage = () => {
           <form onSubmit={onSubmit} className={`mt-6 ${spacingClasses.formFieldSpacing}`} noValidate>
             {firmSlug ? <p className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-center text-xs font-bold text-sky-900">{`Firm login URL: /${firmSlug}/login`}</p> : null}
             <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
-              <p className="text-sm font-black text-slate-950">Email OTP <span className="text-red-500">*</span></p>
+              <p className="text-sm font-black text-slate-950">📬 Email OTP <span className="text-red-500">*</span></p>
               <div className="mt-3 grid grid-cols-6 gap-2 sm:gap-3" onPaste={handleOtpPaste}>
                 {otpDigits.map((digit, index) => (
                   <Input
@@ -190,7 +190,7 @@ export const OtpVerificationPage = () => {
             </div>
 
             {error && (<ErrorState title="OTP verification failed" description={error} />)}
-            {info ? <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">{info}</p> : null}
+            {info ? <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">✅ {info}</p> : null}
 
             <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || !isOtpValid}>
               {loading ? 'Verifying...' : 'Verify OTP'}

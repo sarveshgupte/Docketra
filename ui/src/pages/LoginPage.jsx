@@ -14,9 +14,9 @@ import { resolvePostAuthNavigation } from '../utils/postAuthNavigation';
 import { SESSION_KEYS, STORAGE_KEYS } from '../utils/constants';
 
 const PLATFORM_PROMISES = [
-  'Platform oversight without clutter',
-  'Role-aware access for admins',
-  'No sensitive workspace data before login',
+  '🧭 Platform oversight without clutter',
+  '🔐 Role-aware access for admins',
+  '✅ No sensitive workspace data before login',
 ];
 
 export const LoginPage = () => {
@@ -102,7 +102,7 @@ export const LoginPage = () => {
           resolvePostAuthRoute,
         });
 
-        showSuccess('Login successful. Redirecting to your workspace.');
+        showSuccess('✅ Login successful. Redirecting to your workspace.');
         navigate(nextRoute, { replace: true });
       }
     } catch (err) {
@@ -132,23 +132,18 @@ export const LoginPage = () => {
     <div className="auth-wrapper find-workspace-page auth-public-page">
       <div className="find-workspace-page__shell">
         <section className="find-workspace-page__context" aria-label="Superadmin login context">
-          <p className="find-workspace-page__eyebrow">Platform access</p>
+          <p className="find-workspace-page__eyebrow">Platform access 🧠</p>
           <h1 className="find-workspace-page__heading">Sign in to Docketra</h1>
           <p className="find-workspace-page__intro">
             Secure access for platform oversight, firm setup, and the operational controls that keep Docketra tidy.
           </p>
-          <ul className="find-workspace-page__benefits" role="list">
+          <ul className="find-workspace-page__benefits">
             {PLATFORM_PROMISES.map((promise) => (
-              <li key={promise}>
-                <svg className="find-workspace-page__benefit-check" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                </svg>
-                <span>{promise}</span>
-              </li>
+              <li key={promise}>{promise}</li>
             ))}
           </ul>
-          <div className="mt-8 border-t border-slate-200/80 pt-5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Admin command center</p>
+          <div className="mt-6 rounded-3xl border border-white/70 bg-white/70 p-4 shadow-sm">
+            <p className="text-sm font-semibold text-slate-900">Admin command center</p>
             <p className="mt-1 text-sm leading-6 text-slate-600">
               Built for crisp handoffs from login to dashboards, reports, and workspace controls.
             </p>

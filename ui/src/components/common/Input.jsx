@@ -75,7 +75,6 @@ export const Input = forwardRef(({
             onClick={() => setShowPassword((prev) => !prev)}
             aria-pressed={showPassword}
             aria-label={showPassword ? 'Hide password' : 'Show password'}
-            title={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? (
               <svg

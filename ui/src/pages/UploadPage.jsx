@@ -250,7 +250,7 @@ export const UploadPage = () => {
 
         {status === 'success' ? (
           <div style={{ color: 'var(--dt-success)', margin: 0 }}>
-            <p style={{ margin: 0, fontWeight: 600 }}>Documents received</p>
+            <p style={{ margin: 0, fontWeight: 600 }}>✅ Documents received</p>
             <p style={{ marginTop: '8px' }}>Our team will review your documents and get back to you.</p>
           </div>
         ) : null}

@@ -398,14 +398,6 @@ const firmSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
       },
-      restrictTraineeDownloads: {
-        type: Boolean,
-        default: false,
-      },
-      weeklyAuditDigestEnabled: {
-        type: Boolean,
-        default: true,
-      },
     },
     work: {
       assignmentStrategy: {
@@ -487,10 +479,6 @@ const firmSchema = new mongoose.Schema({
     workbaskets: { type: Number, default: 0 },
     templateKey: { type: String, default: null, trim: true },
     completedAt: { type: Date, default: null },
-  },
-  lastWeeklyAuditDigestSentAt: {
-    type: Date,
-    default: null,
   },
   bootstrapStatus: {
     type: String,

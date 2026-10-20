@@ -73,8 +73,6 @@ const startBackgroundSchedules = () => {
   }, 6 * 60 * 60 * 1000);
 
   storageBackupService.scheduleNightlyBackups();
-  const { scheduleWeeklyAuditDigest } = require('./weeklyAuditDigest.service');
-  scheduleWeeklyAuditDigest();
   const { processDocketDueNotifications, processFirmCalendarReminders } = require('./docketDueNotification.service');
   const dueNotificationsIntervalMs = Math.max(5 * 60 * 1000, Number(process.env.DOCKET_DUE_NOTIFICATION_INTERVAL_MS || 60 * 60 * 1000));
   setInterval(() => {

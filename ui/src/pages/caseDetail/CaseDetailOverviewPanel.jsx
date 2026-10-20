@@ -1,19 +1,10 @@
-import { Link } from 'react-router-dom';
 import { Badge } from '../../components/common/Badge';
 import { formatDateTime } from '../../utils/formatDateTime';
-import { ROUTES } from '../../constants/routes';
-import { formatDocketId } from '../../utils/formatters';
 
 export const CaseDetailOverviewPanel = ({
   caseInfo,
-  firmSlug,
   linkedClientEmail,
   linkedClientContact,
-  linkedClientId,
-  isInternalWork = false,
-  loadingClientDockets = false,
-  clientDockets = [],
-  navigate,
   descriptionContent,
   lifecycleStatus,
   isQcContext = false,
@@ -80,7 +71,7 @@ export const CaseDetailOverviewPanel = ({
             className="h-8 w-8 rounded-lg flex items-center justify-center text-sm hover:bg-gray-100 text-gray-600 hover:text-indigo-600 transition-all border border-gray-200 cursor-pointer bg-white shadow-xs"
             aria-label="Open attachments panel"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.373L8.552 18.32a1.5 1.5 0 01-2.121-2.121l9.873-9.874" /></svg>
+            📎
           </button>
           <button
             type="button"
@@ -89,7 +80,7 @@ export const CaseDetailOverviewPanel = ({
             className="h-8 w-8 rounded-lg flex items-center justify-center text-sm hover:bg-gray-100 text-gray-600 hover:text-indigo-600 transition-all border border-gray-200 cursor-pointer bg-white shadow-xs"
             aria-label="Open audit history"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            🕒
           </button>
         </div>
       </div>
@@ -130,7 +121,7 @@ export const CaseDetailOverviewPanel = ({
         )}
       </div>
 
-      {/* Client Contact Details (Only shown if contact info exists) */}
+      {/* Client Contact Details Pill Bar (Only shown if contact info exists) */}
       {hasContactInfo && (
         <div className="mt-4 pt-3 border-t border-gray-100 flex flex-wrap items-center gap-4 text-xs text-gray-600">
           {linkedClientEmail && linkedClientEmail !== '—' && (
@@ -145,75 +136,6 @@ export const CaseDetailOverviewPanel = ({
               <span className="font-medium text-gray-800">{linkedClientContact}</span>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Compact Recent Dockets Card */}
-      {!isInternalWork && (
-        <div className="mt-5 pt-4 border-t border-gray-100" aria-labelledby="recent-dockets-heading">
-          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-            <div>
-              <p className="docket-section-kicker">Client Activity</p>
-              <h3 id="recent-dockets-heading" className="text-sm font-semibold text-gray-900">Recent dockets</h3>
-            </div>
-            {linkedClientId && navigate && (
-              <button
-                type="button"
-                onClick={() => navigate('?tab=history')}
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer"
-              >
-                View all in History
-              </button>
-            )}
-          </div>
-
-          <div>
-            {loadingClientDockets ? (
-              <p className="text-xs text-gray-500 italic">Loading client dockets...</p>
-            ) : clientDockets && clientDockets.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-gray-900 border-collapse">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="py-2 font-semibold uppercase tracking-wider text-gray-500 text-[10px]">Docket ID</th>
-                      <th className="py-2 font-semibold uppercase tracking-wider text-gray-500 text-[10px]">Category</th>
-                      <th className="py-2 font-semibold uppercase tracking-wider text-gray-500 text-[10px]">Status</th>
-                      <th className="py-2 font-semibold uppercase tracking-wider text-gray-500 text-[10px] text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {clientDockets.slice(0, 3).map((docket) => (
-                      <tr key={docket.caseId} className="hover:bg-gray-50/50">
-                        <td className="py-2 font-semibold text-indigo-600">
-                          <Link to={ROUTES.CASE_DETAIL(firmSlug, docket.caseId)} className="hover:underline">
-                            {formatDocketId(docket.caseId)}
-                          </Link>
-                        </td>
-                        <td className="py-2 text-gray-600">
-                          {docket.category} {docket.subcategory ? `• ${docket.subcategory}` : ''}
-                        </td>
-                        <td className="py-2">
-                          <span className="inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded bg-gray-100 text-gray-800">
-                            {docket.lifecycle || docket.status || 'Active'}
-                          </span>
-                        </td>
-                        <td className="py-2 text-right">
-                          <Link
-                            to={ROUTES.CASE_DETAIL(firmSlug, docket.caseId)}
-                            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800"
-                          >
-                            View
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-xs text-gray-500 italic">No related dockets.</p>
-            )}
-          </div>
         </div>
       )}
     </section>

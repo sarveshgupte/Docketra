@@ -508,10 +508,6 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
           {!collapsed && (
             <div className="platform__firm-info">
               <strong className="platform__firm-name" title={firmLabel}>{firmLabel}</strong>
-              <span className="platform__firm-sub">
-                <span className="platform__presence-dot" aria-hidden="true" />
-                {role || 'Workspace'}
-              </span>
             </div>
           )}
           <button
@@ -610,10 +606,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                 onClick={() => setCommandPaletteOpen(true)}
                 aria-label="Open command center"
               >
-                <span className="platform__command-trigger-icon" aria-hidden="true">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                </span>
-                <span className="platform__command-trigger-label">Search dockets, clients, or jump to…</span>
+                <span className="platform__command-trigger-label">Search</span>
                 <kbd>Ctrl/⌘ K</kbd>
               </button>
             </div>
@@ -633,10 +626,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                   if (event.key === 'Escape') setMenuOpen(false);
                 }}
               >
-                <span className="platform__user-avatar" aria-hidden="true">
-                  {userInitials}
-                  <span className="platform__presence-dot platform__presence-dot--avatar" aria-hidden="true" />
-                </span>
+                <span className="platform__user-avatar" aria-hidden="true">{userInitials}</span>
                 <span className="platform__user-name">{userName}</span>
                 <svg className="platform__user-pill-chevron" width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>

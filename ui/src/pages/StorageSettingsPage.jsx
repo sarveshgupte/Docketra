@@ -35,7 +35,6 @@ import { SupportContext } from '../components/feedback/SupportContext';
 import { StatusMessageStack } from './platform/PlatformShared';
 import { ROUTES } from '../constants/routes';
 import { invalidateStorageStatusSummaryCache } from '../hooks/useStorageStatusSummary';
-import { DriveIsolationCertificateModal } from '../components/storage/DriveIsolationCertificateModal';
 
 const PAGE_SUBTITLE = 'Docketra-managed storage works by default. You can optionally connect your firm’s own cloud storage bucket or drive.';
 
@@ -154,7 +153,6 @@ export function StorageSettingsPage() {
   const [notificationRecipients, setNotificationRecipients] = useState('');
   const [retentionDays, setRetentionDays] = useState(30);
   const [savingBackupSettings, setSavingBackupSettings] = useState(false);
-  const [certificateModalOpen, setCertificateModalOpen] = useState(false);
 
   const loadStorageUsage = async () => {
     setUsageLoading(true);
@@ -524,21 +522,14 @@ export function StorageSettingsPage() {
     try {
       const res = await verifyStorageBoundary();
       setBoundaryReport(res);
-      setStatusMessage({ type: 'success', text: 'Google Drive safety verified: 0 external files accessible.' });
-      toast?.showSuccess?.('Google Drive safety check passed.');
+      setStatusMessage({ type: 'success', text: 'Zero-Access cryptographic boundary verified: 0 foreign files accessible.' });
+      toast?.showSuccess?.('Permission boundary verified.');
     } catch {
-      setStatusMessage({ type: 'error', text: 'Safety verification check failed.' });
-      toast?.showError?.('Safety verification failed.');
+      setStatusMessage({ type: 'error', text: 'Boundary verification check failed.' });
+      toast?.showError?.('Boundary verification failed.');
     } finally {
       setVerifyingBoundary(false);
     }
-  };
-
-  const handleOpenCertificate = async () => {
-    if (!boundaryReport) {
-      await onVerifyBoundary();
-    }
-    setCertificateModalOpen(true);
   };
 
   const statusMessages = [
@@ -621,66 +612,28 @@ export function StorageSettingsPage() {
             </div>
 
             {boundaryReport?.boundaryAudit && (
-              <div className="bg-emerald-50/70 rounded-xl p-4 border border-emerald-200/60 flex flex-col gap-3 text-xs">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                  <div className="flex items-start gap-2.5 text-emerald-900">
-                    <ShieldIcon className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-bold text-sm text-emerald-950 flex items-center gap-2">
-                        <span>Google Drive Safety Check: Verified</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-200/60 text-emerald-900 font-mono font-bold uppercase">
-                          Google drive.file
-                        </span>
-                      </div>
-                      <p className="text-emerald-800 mt-0.5 leading-relaxed">
-                        Docketra can only access files created inside this app.
-                        <strong> 0 external files readable.</strong> Personal drives, existing client folders, and tax returns outside <code className="bg-emerald-100/70 px-1 py-0.5 rounded text-[11px]">/Docketra/</code> cannot be seen or opened.
-                      </p>
+              <div className="bg-emerald-50/70 rounded-xl p-4 border border-emerald-200/60 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+                <div className="flex items-start gap-2.5 text-emerald-900">
+                  <ShieldIcon className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-sm text-emerald-950 flex items-center gap-2">
+                      <span>Zero-Access Cryptographic Sandbox Verified</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-200/60 text-emerald-900 font-mono font-bold uppercase">
+                        Google drive.file
+                      </span>
                     </div>
+                    <p className="text-emerald-800 mt-0.5 leading-relaxed">
+                      Google&apos;s API gateway cryptographically confines Docketra to only Docketra-created files.
+                      <strong> 0 external files readable.</strong> Personal drives, pre-existing firm folders, and private tax returns outside <code className="bg-emerald-100/70 px-1 py-0.5 rounded text-[11px]">/Docketra/</code> are 100% inaccessible.
+                    </p>
                   </div>
-                  {boundaryReport.boundaryAudit.cryptographicProofHash && (
-                    <div className="bg-white/80 p-2 rounded-lg border border-emerald-200/50 font-mono text-[10px] text-emerald-800 shrink-0 self-start md:self-center">
-                      <span className="text-slate-500 block text-[9px] uppercase">Proof Hash</span>
-                      <span>{boundaryReport.boundaryAudit.cryptographicProofHash.substring(0, 20)}…</span>
-                    </div>
-                  )}
                 </div>
-
-                <div className="pt-2.5 border-t border-emerald-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                  <span className="text-[11px] text-emerald-800">
-                    Proof certificate for senior partners, enterprise clients, and peer review compliance.
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleOpenCertificate}
-                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-950 bg-white border border-emerald-300 hover:bg-emerald-100/70 transition-colors shadow-2xs focus-visible:outline-2 focus-visible:outline-emerald-600 motion-safe:enabled:active:scale-[0.96] shrink-0"
-                  >
-                    <ShieldIcon className="h-3.5 w-3.5 text-emerald-700" />
-                    <span>Print Isolation Certificate</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {boundaryReport?.boundaryAudit && (
-              <div className="bg-blue-50/70 rounded-xl p-4 border border-blue-200/60 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs">
-                <div className="space-y-1">
-                  <div className="font-bold text-sm text-blue-950 flex items-center gap-2">
-                    <span>Google Drive Isolation: Verified</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-mono font-bold">
-                      ₹0 Pilot Active
-                    </span>
+                {boundaryReport.boundaryAudit.cryptographicProofHash && (
+                  <div className="bg-white/80 p-2 rounded-lg border border-emerald-200/50 font-mono text-[10px] text-emerald-800 shrink-0 self-start md:self-center">
+                    <span className="text-slate-500 block text-[9px] uppercase">Proof Hash</span>
+                    <span>{boundaryReport.boundaryAudit.cryptographicProofHash.substring(0, 20)}…</span>
                   </div>
-                  <p className="text-blue-900 leading-relaxed">
-                    0 outside files accessible. Ready to add more team members or clients? Upgrade anytime with 1 click. All your existing files remain safely in your Drive.
-                  </p>
-                </div>
-                <Link
-                  to={`/${firmSlug}/settings/firm?tab=plan`}
-                  className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs whitespace-nowrap shadow-xs transition-colors shrink-0"
-                >
-                  View Plans →
-                </Link>
+                )}
               </div>
             )}
 
@@ -695,9 +648,6 @@ export function StorageSettingsPage() {
                   <Button type="button" variant="outline" onClick={onVerifyBoundary} disabled={verifyingBoundary}>
                     {verifyingBoundary ? 'Auditing Boundary…' : 'Audit Zero-Access Boundary'}
                   </Button>
-                  <Button type="button" variant="outline" onClick={handleOpenCertificate}>
-                    Isolation Certificate
-                  </Button>
                   <Button type="button" variant="outline" onClick={loadConfiguration} disabled={loading}>Recheck Storage Status</Button>
                   <Button type="button" variant="outline" onClick={onTestConnection} disabled={testing}>{testing ? 'Testing Connection…' : 'Test Credentials'}</Button>
                   <Button type="button" variant="outline" onClick={onDisconnectGoogle} disabled={disconnecting}>{disconnecting ? 'Disconnecting…' : 'Disconnect Storage Connection'}</Button>
@@ -711,7 +661,7 @@ export function StorageSettingsPage() {
             </div>
 
             {!folderLinkAvailable && normalizedProvider === 'google-drive' && (
-              <p className="text-xs text-rose-500 font-medium">Connection error: administrative folder link is temporarily unreachable.</p>
+              <p className="text-xs text-rose-500 font-medium">⚠️ Connection error: administrative folder link is temporarily unreachable.</p>
             )}
             {rootNeedsAttention && (
               <p className="text-xs text-amber-700 font-semibold">
@@ -844,7 +794,7 @@ export function StorageSettingsPage() {
                         &ldquo;See, edit, create, and delete only the specific Google Drive files you use with this app.&rdquo;
                       </blockquote>
                       <p className="text-[11px] text-slate-500 pt-1">
-                        Google blocks Docketra from seeing, searching, or downloading any personal Drive folders, client tax returns, or private files outside <code className="bg-blue-100/60 px-1 py-0.5 rounded text-[11px]">/Docketra/</code>.
+                        Google&apos;s authorization server cryptographically forbids Docketra from seeing, searching, or downloading any pre-existing private firm folders, partner personal drives, or client tax archives outside <code className="bg-blue-100/60 px-1 py-0.5 rounded text-[11px]">/Docketra/</code>.
                       </p>
                     </div>
 
@@ -999,7 +949,7 @@ export function StorageSettingsPage() {
                 <p className="text-xs opacity-90 leading-relaxed">{rootHealthMessage}</p>
                 {strictFirmOwnedStorage && !rootHealthOk && (
                   <p className="text-xs text-rose-700 font-semibold mt-1">
-                    CRITICAL: Strict Mode is active. Business-content writes are currently blocked until Google Drive storage is fully recovered.
+                    ⚠️ CRITICAL: Strict Mode is active. Business-content writes are currently blocked until Google Drive storage is fully recovered.
                   </p>
                 )}
               </div>
@@ -1029,7 +979,7 @@ export function StorageSettingsPage() {
                 </div>
               </div>
               {!config?.isConfigured && (
-                <p className="text-xs text-amber-600 font-semibold">Connect your firm cloud storage adapter first before activating strict enforcement.</p>
+                <p className="text-xs text-amber-600 font-semibold">⚠️ Connect your firm cloud storage adapter first before activating strict enforcement.</p>
               )}
             </div>
           )}
@@ -1053,7 +1003,7 @@ export function StorageSettingsPage() {
               </div>
             ) : usage?.managedFallback ? (
               <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 text-indigo-900 text-sm leading-relaxed">
-                Docketra-managed high-performance default cloud sandbox is active. Space capacity and bandwidth quotas are fully optimized and managed by Docketra automatically.
+                🚀 Docketra-managed high-performance default cloud sandbox is active. Space capacity and bandwidth quotas are fully optimized and managed by Docketra automatically.
               </div>
             ) : usage?.quotaAvailable ? (
               <div className="space-y-4">
@@ -1093,8 +1043,8 @@ export function StorageSettingsPage() {
                   </div>
                 </div>
 
-                {usagePercent >= 95 && <p className="text-xs text-rose-600 font-semibold">Critical: Your storage is almost full. Subsequent file uploads might fail.</p>}
-                {usagePercent >= 85 && usagePercent < 95 && <p className="text-xs text-amber-600 font-medium">Warning: Storage is highly utilized. Consider cleaning up or upgrading capacity soon.</p>}
+                {usagePercent >= 95 && <p className="text-xs text-rose-600 font-semibold">⚠️ Critical: Your storage is almost full. Subsequent file uploads might fail.</p>}
+                {usagePercent >= 85 && usagePercent < 95 && <p className="text-xs text-amber-600 font-medium">⚠️ Warning: Storage is highly utilized. Consider cleaning up or upgrading capacity soon.</p>}
                 
                 <p className="text-[10px] text-slate-400">Capacity metric computed at: {formatDateTime(usage.lastCheckedAt)}</p>
               </div>
@@ -1160,22 +1110,26 @@ export function StorageSettingsPage() {
           </div>
 
           {/* Backup & Disaster Recovery Card */}
-          <div className="bg-white border border-slate-200/90 text-slate-900 rounded-lg shadow-2xs p-6 md:p-8 space-y-6">
-            <div className="space-y-2">
-              <span className="text-[10px] uppercase font-bold tracking-widest text-slate-700 bg-slate-100 px-2 py-0.5 rounded-sm border border-slate-200 inline-block font-mono">Enterprise Resilience Suite</span>
-              <h3 className="font-bold text-xl sm:text-2xl text-slate-950 tracking-tight">Disaster Recovery & Nightly Backups</h3>
-              <p className="text-slate-600 text-sm max-w-2xl leading-relaxed">
+          <div className="bg-slate-900 text-white rounded-3xl shadow-xl p-6 md:p-8 space-y-6 relative overflow-hidden">
+            {/* Background decoration */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none" />
+
+            <div className="space-y-2 relative">
+              <span className="text-[10px] uppercase font-bold tracking-widest text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-full border border-indigo-500/20 inline-block">Enterprise Resilience Suite</span>
+              <h3 className="font-extrabold text-2xl tracking-tight">Disaster Recovery & Nightly Backups</h3>
+              <p className="text-slate-400 text-sm max-w-2xl leading-relaxed">
                 Nightly backups package all system directories into secure AES-256-GCM encrypted ZIP archives. 
                 In case of administrative workspace failures, you can seamlessly deploy recovery restorations.
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-3 pt-2">
+            <div className="flex flex-wrap gap-3 pt-2 relative">
               <Button 
                 type="button" 
                 variant="primary" 
                 allowUnsafeClassName={true}
-                className="!bg-slate-950 hover:!bg-slate-800 !border-none !text-white font-bold rounded-md shadow-xs" 
+                className="!bg-indigo-600 hover:!bg-indigo-700 !border-none !text-white font-bold"
                 onClick={onGenerateExport} 
                 disabled={exporting}
               >
@@ -1185,33 +1139,33 @@ export function StorageSettingsPage() {
                 type="button" 
                 variant="outline" 
                 allowUnsafeClassName={true}
-                className="!border-slate-300 !text-slate-700 hover:!bg-slate-100 font-semibold transition-all duration-200 rounded-md" 
+                className="!border-slate-700 !text-slate-200 hover:!bg-slate-800 hover:!text-white font-semibold transition-all duration-200"
                 onClick={() => setShowRestoreModal(true)}
               >
                 Open Restore Wizard
               </Button>
             </div>
 
-            <form onSubmit={onSaveBackupSettings} className="space-y-4 pt-4 border-t border-slate-200">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">Automated Backup Settings</h4>
+            <form onSubmit={onSaveBackupSettings} className="space-y-4 pt-4 border-t border-slate-800 relative">
+              <h4 className="text-sm font-bold uppercase tracking-wider text-indigo-400">Automated Backup Settings</h4>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3">
                   <label className="flex items-center space-x-3 cursor-pointer">
                     <input 
                       type="checkbox" 
-                      className="rounded-sm border-slate-300 bg-white text-slate-950 focus:ring-slate-950 h-4 w-4"
+                      className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900 h-4 w-4"
                       checked={backupEnabled}
                       onChange={(e) => setBackupEnabled(e.target.checked)}
                     />
-                    <span className="text-sm font-semibold text-slate-800">Enable Automated Scheduled Backups</span>
+                    <span className="text-sm font-semibold text-slate-200">Enable Automated Scheduled Backups</span>
                   </label>
 
                   {backupEnabled && (
                     <div className="space-y-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                      <label className="block text-xs font-bold text-slate-700 uppercase">Backup Frequency</label>
+                      <label className="block text-xs font-bold text-slate-400 uppercase">Backup Frequency</label>
                       <select
-                        className="w-full rounded-md border border-slate-300 bg-white text-slate-900 py-2 px-3 text-sm focus:border-slate-950 focus:ring-1 focus:ring-slate-950"
+                        className="w-full rounded-xl border border-slate-700 bg-slate-800 text-slate-200 py-2 px-3 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                         value={backupFrequency}
                         onChange={(e) => setBackupFrequency(e.target.value)}
                       >
@@ -1225,9 +1179,9 @@ export function StorageSettingsPage() {
 
                 <div className="space-y-3">
                   <div className="space-y-1">
-                    <label className="block text-xs font-bold text-slate-700 uppercase">Delivery Policy</label>
+                    <label className="block text-xs font-bold text-slate-400 uppercase">Delivery Policy</label>
                     <select
-                      className="w-full rounded-md border border-slate-300 bg-white text-slate-900 py-2 px-3 text-sm focus:border-slate-950 focus:ring-1 focus:ring-slate-950"
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 text-slate-200 py-2 px-3 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                       value={deliveryPolicy}
                       onChange={(e) => setDeliveryPolicy(e.target.value)}
                     >
@@ -1240,10 +1194,10 @@ export function StorageSettingsPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="block text-xs font-bold text-slate-700 uppercase">Notification Recipients (comma-separated)</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase">Notification Recipients (comma-separated)</label>
                   <input
                     type="text"
-                    className="w-full rounded-md border border-slate-300 bg-white text-slate-900 py-2 px-3 text-sm placeholder-slate-400 focus:border-slate-950 focus:ring-1 focus:ring-slate-950"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-800 text-slate-200 py-2 px-3 text-sm placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                     placeholder="e.g. admin@firm.com, backup@firm.com"
                     value={notificationRecipients}
                     onChange={(e) => setNotificationRecipients(e.target.value)}
@@ -1251,12 +1205,12 @@ export function StorageSettingsPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block text-xs font-bold text-slate-700 uppercase">Retention Days ({retentionDays} days)</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase">Retention Days ({retentionDays} days)</label>
                   <input
                     type="range"
                     min="1"
                     max="365"
-                    className="w-full accent-slate-950 bg-slate-200 h-2 rounded-sm cursor-pointer"
+                    className="w-full accent-indigo-500 bg-slate-800 h-2 rounded-lg cursor-pointer"
                     value={retentionDays}
                     onChange={(e) => setRetentionDays(e.target.value)}
                   />
@@ -1268,7 +1222,7 @@ export function StorageSettingsPage() {
                   type="submit"
                   variant="primary"
                   allowUnsafeClassName={true}
-                  className="!bg-slate-950 hover:!bg-slate-800 !border-none !text-white font-bold text-xs py-2 px-4 rounded-md shadow-xs"
+                  className="!bg-indigo-600 hover:!bg-indigo-700 !border-none !text-white font-bold text-xs py-2 px-4"
                   disabled={savingBackupSettings}
                 >
                   {savingBackupSettings ? 'Saving Settings...' : 'Save Backup Settings'}
@@ -1276,23 +1230,23 @@ export function StorageSettingsPage() {
               </div>
             </form>
 
-            {exportWarning && <p className="text-xs text-rose-600 font-medium">{exportWarning}</p>}
+            {exportWarning && <p className="text-xs text-rose-400 font-medium relative">⚠️ {exportWarning}</p>}
           </div>
         </div>
       </div>
 
-      {/* Modern Restore Wizard Modal */}
+      {/* Modern Glassmorphic Restore Wizard Modal */}
       {showRestoreModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-2xl border border-slate-200/90 w-full max-w-lg overflow-hidden animate-in fade-in duration-200">
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div>
-                <h2 className="text-base font-bold text-slate-950">Storage Restore Wizard</h2>
+                <h2 className="text-lg font-bold text-slate-800">Storage Restore Wizard</h2>
                 <p className="text-xs text-slate-500">Secure AES-256-GCM Decrypter Engine</p>
               </div>
               <button
                 type="button"
-                className="text-slate-400 hover:text-slate-700 text-xl font-semibold h-7 w-7 rounded-md hover:bg-slate-100 flex items-center justify-center transition"
+                className="text-slate-400 hover:text-slate-600 text-2xl font-semibold h-8 w-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition"
                 onClick={() => {
                   if (restoreLoading) return;
                   setShowRestoreModal(false);
@@ -1304,7 +1258,6 @@ export function StorageSettingsPage() {
                   setRestoreOtpCode('');
                   setRestoreVerificationToken('');
                 }}
-                aria-label="Close modal"
               >
                 ×
               </button>
@@ -1313,14 +1266,14 @@ export function StorageSettingsPage() {
             <div className="p-6 space-y-6">
               {restoreStatus === 'completed' ? (
                 <div className="space-y-5 text-center py-6">
-                  <div className="h-12 w-12 rounded-md bg-emerald-50 border border-emerald-300 text-emerald-700 flex items-center justify-center mx-auto text-2xl font-bold">✓</div>
+                  <div className="h-16 w-16 rounded-full bg-emerald-50 border-2 border-emerald-400 text-emerald-600 flex items-center justify-center mx-auto text-3xl font-extrabold animate-bounce">✓</div>
                   <div className="space-y-2">
-                    <h3 className="font-bold text-lg text-slate-950">Restoration Completed Successfully</h3>
-                    <p className="text-sm text-slate-600 max-w-sm mx-auto leading-relaxed">
+                    <h3 className="font-extrabold text-xl text-slate-800">Restoration Completed Successfully</h3>
+                    <p className="text-sm text-slate-500 max-w-sm mx-auto leading-relaxed">
                       All files have been decrypted, verified for checksum parity, and re-uploaded back into your active cloud storage bucket. Mappings are fully recovered!
                     </p>
                   </div>
-                  <Button type="button" variant="primary" fullWidth className="py-2.5 font-bold rounded-md !bg-slate-950 hover:!bg-slate-800" onClick={() => {
+                  <Button type="button" variant="primary" fullWidth className="py-3 font-bold" onClick={() => {
                     setShowRestoreModal(false);
                     loadConfiguration();
                   }}>
@@ -1329,14 +1282,14 @@ export function StorageSettingsPage() {
                 </div>
               ) : restoreStatus === 'failed' ? (
                 <div className="space-y-5 text-center py-6">
-                  <div className="h-12 w-12 rounded-md bg-rose-50 border border-rose-300 text-rose-700 flex items-center justify-center mx-auto text-2xl font-bold">!</div>
+                  <div className="h-16 w-16 rounded-full bg-rose-50 border-2 border-rose-400 text-rose-600 flex items-center justify-center mx-auto text-3xl font-extrabold animate-pulse">!</div>
                   <div className="space-y-2">
-                    <h3 className="font-bold text-lg text-rose-600">Restoration Failed</h3>
-                    <p className="text-sm text-rose-700/80 bg-rose-50 p-3 rounded-md max-w-sm mx-auto text-xs leading-relaxed font-semibold border border-rose-200">
+                    <h3 className="font-extrabold text-xl text-rose-600">Restoration Failed</h3>
+                    <p className="text-sm text-rose-700/80 bg-rose-50 p-3 rounded-2xl max-w-sm mx-auto text-xs leading-relaxed font-semibold border border-rose-100">
                       {restoreErrorMsg || 'Unable to complete stream decrypt or re-upload.'}
                     </p>
                   </div>
-                  <Button type="button" variant="primary" fullWidth className="py-2.5 font-bold rounded-md !bg-slate-950 hover:!bg-slate-800" onClick={() => {
+                  <Button type="button" variant="primary" fullWidth className="py-3 font-bold" onClick={() => {
                     setRestoreStatus('');
                     setRestoreProgress(0);
                   }}>
@@ -1346,43 +1299,43 @@ export function StorageSettingsPage() {
               ) : restoreJobId ? (
                 <div className="space-y-5 py-6 text-center">
                   <div className="flex justify-between items-center text-sm font-semibold text-slate-700 px-1">
-                    <span>Active Decryption Stream Upload: <span className="capitalize text-slate-950 font-bold">{restoreStatus || 'Processing...'}</span></span>
+                    <span>Active Decryption Stream Upload: <span className="capitalize text-indigo-600 font-bold">{restoreStatus || 'Processing...'}</span></span>
                     <span>{restoreProgress}%</span>
                   </div>
                   
-                  {/* Progress tracks - zero pills */}
-                  <div className="h-2 w-full rounded-xs bg-slate-100 overflow-hidden border border-slate-200 p-0.5">
+                  {/* Custom animated progress tracks */}
+                  <div className="h-3.5 w-full rounded-full bg-slate-100 overflow-hidden border border-slate-200/50 p-0.5">
                     <div
-                      className="h-full rounded-xs bg-slate-950 transition-all duration-300"
+                      className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500 transition-all duration-300"
                       style={{ width: `${restoreProgress}%` }}
                     />
                   </div>
 
-                  <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+                  <p className="text-xs text-slate-400 max-w-xs mx-auto animate-pulse leading-relaxed">
                     Docketra decrypters are streaming raw decrypted streams directly back to active bucket endpoints. Do not navigate away from this page.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-5">
-                  <p className="text-xs text-slate-700 leading-relaxed bg-amber-50 p-3 rounded-md border border-amber-200 font-medium">
-                    <strong>Security Step-Up Policy:</strong> Disaster recovery requires dynamic verification. Confirm your primary admin identity below.
+                  <p className="text-xs text-slate-500 leading-relaxed bg-indigo-50 p-3 rounded-xl border border-indigo-100 font-medium">
+                    🔑 <strong>Security Step-Up Policy:</strong> Disaster recovery requires dynamic verification. Confirm your primary admin identity below.
                   </p>
                   
-                  <div className="bg-slate-50 p-4 rounded-md border border-slate-200 space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">1. Verification Step-up</h3>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">1. Verification Step-up</h3>
                     <div className="flex flex-col sm:flex-row gap-3 items-end">
                       <div className="flex-1 w-full">
                         <Input label="OTP Verification Code" placeholder="Enter code" value={restoreOtpCode} onChange={(event) => setRestoreOtpCode(event.target.value)} />
                       </div>
                       <div className="flex gap-2 w-full sm:w-auto">
-                        <Button type="button" variant="outline" className="rounded-md" onClick={onSendRestoreOtp}>Send</Button>
-                        <Button type="button" variant="outline" className="rounded-md" onClick={onVerifyRestoreOtp}>Verify</Button>
+                        <Button type="button" variant="outline" onClick={onSendRestoreOtp}>Send</Button>
+                        <Button type="button" variant="outline" onClick={onVerifyRestoreOtp}>Verify</Button>
                       </div>
                     </div>
                   </div>
                   
                   <div className="space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">2. Select Recovery Source</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">2. Select Recovery Source</h3>
                     
                     <Select
                       label="Select Mode"
@@ -1402,7 +1355,7 @@ export function StorageSettingsPage() {
                         onChange={(e) => setRestoreExportId(e.target.value)}
                       />
                     ) : (
-                      <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 rounded-md hover:bg-slate-50/50 hover:border-slate-400 transition-all cursor-pointer relative group">
+                      <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 rounded-2xl hover:bg-slate-50/50 hover:border-indigo-500 transition-all cursor-pointer relative group">
                         <input
                           type="file"
                           accept=".zip,.enc,.zip.enc"
@@ -1414,11 +1367,11 @@ export function StorageSettingsPage() {
                           }}
                         />
                         <div className="text-center space-y-2">
-                          <span className="text-2xl font-extrabold text-slate-400 group-hover:text-slate-900 transition block mb-1">↑</span>
-                          <p className="text-sm font-bold text-slate-700">
+                          <span className="text-3xl font-extrabold text-slate-400 group-hover:text-indigo-500 transition block mb-1">↑</span>
+                          <p className="text-sm font-bold text-slate-600">
                             {restoreFile ? `Selected: ${restoreFile.name}` : 'Click or Drag & Drop Backup here'}
                           </p>
-                          <p className="text-xs text-slate-500">Encrypted .zip.enc packages up to 50MB</p>
+                          <p className="text-xs text-slate-400">Encrypted .zip.enc packages up to 50MB</p>
                         </div>
                       </div>
                     )}
@@ -1429,7 +1382,7 @@ export function StorageSettingsPage() {
                       type="button"
                       variant="primary"
                       fullWidth
-                      className="py-2.5 font-bold rounded-md !bg-slate-950 hover:!bg-slate-800"
+                      className="py-3 font-bold"
                       disabled={!restoreVerificationToken || (restoreSourceMode === 'past_job' ? !restoreExportId : !restoreFile) || restoreLoading}
                       onClick={onExecuteRestore}
                     >
@@ -1442,16 +1395,6 @@ export function StorageSettingsPage() {
           </div>
         </div>
       )}
-
-      <DriveIsolationCertificateModal
-        isOpen={certificateModalOpen}
-        onClose={() => setCertificateModalOpen(false)}
-        firmName={user?.firm?.name || user?.firmName || 'Practice'}
-        firmSlug={firmSlug}
-        user={user}
-        config={config}
-        boundaryReport={boundaryReport}
-      />
     </PlatformShell>
   );
 }
