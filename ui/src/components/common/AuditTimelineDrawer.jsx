@@ -260,8 +260,9 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
               <button
                 key={tab.id}
                 type="button"
+                aria-pressed={activeFilter === tab.id}
                 onClick={() => setActiveFilter(tab.id)}
-                className={`rounded-xs px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                className={`rounded-xs px-2.5 py-1 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 ${
                   activeFilter === tab.id
                     ? 'bg-indigo-600 text-white shadow-xs'
                     : 'bg-[var(--dt-surface)] text-[var(--dt-text-secondary)] border border-[var(--dt-border)] hover:bg-[var(--dt-surface-muted)]'

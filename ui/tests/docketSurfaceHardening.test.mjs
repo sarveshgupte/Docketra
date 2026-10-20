@@ -22,4 +22,8 @@ const workflowModals = read('src/pages/caseDetail/CaseWorkflowModals.jsx');
 assert.ok(workflowModals.includes('Route Docket to Workbasket'), 'Workflow modal component should include route action UI.');
 assert.ok(workflowModals.includes('Submit QC Action'), 'Workflow modal component should preserve QC action UI.');
 
+const timelineDrawer = read('src/components/common/AuditTimelineDrawer.jsx');
+assert.ok(timelineDrawer.includes('aria-pressed={activeFilter === tab.id}'), 'Audit timeline drawer filter buttons should include aria-pressed attribute.');
+assert.ok(timelineDrawer.includes('focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1'), 'Audit timeline drawer filter buttons should include focus-visible utility classes.');
+
 console.log('docketSurfaceHardening.test.mjs passed');
