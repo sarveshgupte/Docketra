@@ -669,7 +669,6 @@ const viewAttachment = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error viewing attachment',
-      error: error.message,
     });
   }
 };
@@ -755,7 +754,6 @@ const downloadAttachment = async (req, res) => {
         return res.status(500).json({
           success: false,
           message: 'Error downloading file from Google Drive',
-          error: error.message,
         });
       }
     } else {
@@ -769,7 +767,6 @@ const downloadAttachment = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error downloading attachment',
-      error: error.message,
     });
   }
 };
@@ -979,7 +976,6 @@ const getClientFactSheetForCase = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error retrieving client fact sheet',
-      error: error.message,
     });
   }
 };
@@ -1068,7 +1064,6 @@ const viewClientFactSheetFile = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error viewing file',
-      error: error.message,
     });
   }
 };
@@ -1139,7 +1134,6 @@ const listClientCFSFilesForCase = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error listing client CFS files',
-      error: error.message,
     });
   }
 };
@@ -1223,7 +1217,6 @@ const downloadClientCFSFileForCase = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error downloading file from client CFS',
-      error: error.message,
     });
   }
 };
@@ -1262,7 +1255,6 @@ const getDocketAudit = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error fetching docket audit logs',
-      error: error.message,
     });
   }
 };
@@ -1284,7 +1276,7 @@ const getDocketEligibleUsers = async (req, res) => {
       .lean();
     return res.json({ success: true, data: users });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Failed to load eligible users', error: error.message });
+    return res.status(500).json({ success: false, message: 'Failed to load eligible users' });
   }
 };
 
