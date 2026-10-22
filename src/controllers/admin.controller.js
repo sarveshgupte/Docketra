@@ -1365,7 +1365,10 @@ const getFirmSettingsActivity = async (req, res) => {
       'SetupLinkResent',
     ];
 
-    const [caseAuditTotal, authAuditTotal] = await Promise.all([
+    const offset = (page - 1) * limit;
+    const fetchLimit = Math.max(limit, Math.min(page * limit, 5000));
+
+    const [caseAuditTotal, authAuditTotal, caseAuditRows, authAuditRows] = await Promise.all([
       CaseAudit.countDocuments({
         firmId,
         actionType: { $in: caseActionTypes },
@@ -1374,13 +1377,6 @@ const getFirmSettingsActivity = async (req, res) => {
         firmId,
         actionType: { $in: authActionTypes },
       }),
-    ]);
-
-    const total = Number(caseAuditTotal || 0) + Number(authAuditTotal || 0);
-    const offset = (page - 1) * limit;
-    const fetchLimit = Math.max(limit, Math.min(page * limit, 5000));
-
-    const [caseAuditRows, authAuditRows] = await Promise.all([
       CaseAudit.find({
         firmId,
         actionType: { $in: caseActionTypes },
@@ -1396,6 +1392,8 @@ const getFirmSettingsActivity = async (req, res) => {
         .limit(fetchLimit)
         .lean(),
     ]);
+
+    const total = Number(caseAuditTotal || 0) + Number(authAuditTotal || 0);
 
     const mutationMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
     const authMapped = authAuditRows
@@ -2086,22 +2084,22 @@ const getFirmPlan = async (req, res) => {
     }
 
     const tenantId = req.user?.firmId || firm.firmId;
-    const [usersCount, clientsCount] = await Promise.all([
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const [usersCount, clientsCount, monthlyDocketsCount] = await Promise.all([
       User.countDocuments({ firmId: firm._id, status: { $ne: 'deleted' } }).catch(() => 0),
       clientRepository.count(tenantId, {
         isActive: true,
         isSystemClient: { $ne: true },
         isDefaultClient: { $ne: true },
       }).catch(() => 0),
+      Case.countDocuments({
+        firmId: tenantId,
+        createdAt: { $gte: startOfMonth },
+      }).catch(() => 0),
     ]);
-
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-    const monthlyDocketsCount = await Case.countDocuments({
-      firmId: tenantId,
-      createdAt: { $gte: startOfMonth },
-    }).catch(() => 0);
 
     const storageMode = firm.storage?.mode || 'docketra_managed';
     const isGoogleConnected = storageMode === 'firm_connected' && firm.storage?.provider === 'google_drive';
