@@ -154,7 +154,7 @@ export const CommandPalette = ({
 
   return (
     <>
-      <button type="button" className="command-palette__overlay" onClick={onClose} aria-label="Close command palette" />
+      <button type="button" className="command-palette__overlay" onClick={onClose} aria-label="Close command palette" title="Close command palette" />
       <div className="command-palette" role="dialog" aria-modal="true" aria-label="Command center" onKeyDown={handleInputKeyDown}>
         <div className="command-palette__header">
           <div className="command-palette__input-shell">
@@ -181,7 +181,7 @@ export const CommandPalette = ({
               </button>
             ) : null}
           </div>
-          <button type="button" className="command-palette__close" onClick={onClose} aria-label="Close command center">
+          <button type="button" className="command-palette__close" onClick={onClose} aria-label="Close command center" title="Close command center">
             Esc
           </button>
         </div>
