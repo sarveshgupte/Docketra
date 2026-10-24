@@ -42,3 +42,6 @@
 ## 2024-10-27 - Optimize plan capacity threshold checks
 **Learning:** Using `User.countDocuments()` to check if user count exceeds a firm's plan capacity forces MongoDB to evaluate all matches. Since the capacity check only requires a boolean outcome, calculating the exact total is an unnecessary O(N) database operation.
 **Action:** Replace `countDocuments()` with `find().select('_id').limit(threshold + 1).lean()` and check if the returned array length exceeds the threshold. Furthermore, evaluate these counts lazily only when the corresponding limit condition is reached to avoid redundant queries.
+## 2026-10-24 - Replace $group with concurrent countDocuments in firm metrics
+**Learning:** Replaced a single complex `Case.aggregate()` `$group` pipeline that computed multiple counts with independent, concurrent `Case.countDocuments()` queries. While the `$group` pipeline reduced network round-trips, it acts as a database anti-optimization by forcing MongoDB to evaluate conditions in memory and risk hitting the 100MB aggregation limit, preventing the use of targeted index scans for individual counts.
+**Action:** When computing multiple distinct counts on the same collection for the same entity, prefer concurrent `countDocuments` queries via `Promise.all()` over a single complex `$group` pipeline to allow fast index scans.
