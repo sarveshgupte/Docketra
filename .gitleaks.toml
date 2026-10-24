@@ -16,3 +16,7 @@ regexes = [
   '''test-secret-key-that-is-at-least-32-chars-long''',
   '''test-jwt-secret-12345678901234567890'''
 ]
+paths = [
+  '''README\.md''',
+  '''docs/operations/cloudmailin_inbound_integration\.md'''
+]
