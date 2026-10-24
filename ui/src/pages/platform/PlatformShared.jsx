@@ -82,6 +82,7 @@ export const FilterBar = ({ children, onClear, clearLabel = 'Clear filters', cle
         className="filter-bar__clear"
         disabled={clearDisabled}
         aria-label={clearLabel}
+        title={clearLabel}
       >
         {clearLabel}
       </button>
