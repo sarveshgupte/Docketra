@@ -42,3 +42,9 @@
 ## 2024-10-27 - Optimize plan capacity threshold checks
 **Learning:** Using `User.countDocuments()` to check if user count exceeds a firm's plan capacity forces MongoDB to evaluate all matches. Since the capacity check only requires a boolean outcome, calculating the exact total is an unnecessary O(N) database operation.
 **Action:** Replace `countDocuments()` with `find().select('_id').limit(threshold + 1).lean()` and check if the returned array length exceeds the threshold. Furthermore, evaluate these counts lazily only when the corresponding limit condition is reached to avoid redundant queries.
+## 2024-11-20 - Optimize audit logs pagination query
+**Learning:** Sequential or concurrent execution of `find()` and `countDocuments()` for simple pagination endpoints using only `hasMore` is an anti-pattern. `countDocuments` forces a full index scan over all matching documents which degrades performance.
+**Action:** Replaced the concurrent `countDocuments` query with a single `find().limit(limit + 1)` approach to eliminate the unnecessary database tally while correctly computing `hasMore`.
+## 2024-11-20 - Optimize pilot readiness audit check with exists
+**Learning:** Checking for boolean presence using `countDocuments()` is a performance anti-pattern as it forces a full index scan to tally all matches.
+**Action:** Use `exists()` which returns an O(1) early return upon finding the first match.
