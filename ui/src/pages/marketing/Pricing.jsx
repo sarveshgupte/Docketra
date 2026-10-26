@@ -116,7 +116,7 @@ export const PricingPage = () => {
       <SeoHead
         canonicalPath="/pricing"
         title="Transparent Practice Operations Pricing | Docketra"
-        description="Predictable, flat-rate pricing for Indian CA, CS, and compliance firms. Sovereign Google Drive BYOS, maker-checker QC, zero setup fees, and 30-day money-back guarantee."
+        description="Predictable, flat-rate pricing for Indian CA, CS, and compliance firms. Sovereign Google Drive BYOS, maker-checker QC, zero setup fees, and transparent yearly plans."
       />
 
       {/* Header Section */}
@@ -300,7 +300,7 @@ export const PricingPage = () => {
                   </li>
                   <li className="flex items-start gap-2.5 pt-1 border-t border-slate-100">
                     <span className="text-emerald-600 font-bold">✓</span>
-                    <span>30-Day Money-Back Guarantee (All files stay in your Drive)</span>
+                    <span>100% Data Sovereignty (All files stay in your Drive)</span>
                   </li>
                 </ul>
               </div>
@@ -397,7 +397,7 @@ export const PricingPage = () => {
                   Choose Growth Tier (₹21,990/yr)
                 </Link>
                 <p className="mt-2 text-center text-[10px] font-mono text-slate-500">
-                  30-day money-back guarantee • No setup fees
+                  No setup fees • Free pilot tier available
                 </p>
               </div>
             </motion.div>
@@ -474,19 +474,19 @@ export const PricingPage = () => {
         </Container>
       </section>
 
-      {/* 30-Day Zero-Risk Guarantee Banner */}
+      {/* Sovereign Data Promise Banner */}
       <section className="bg-slate-950 py-14 text-white border-b border-slate-800">
         <Container size="7xl">
           <div className="rounded-sm border border-slate-800 bg-slate-900/60 p-8 sm:p-10 flex flex-col md:flex-row items-center gap-8 justify-between">
             <div className="space-y-2 max-w-2xl">
               <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-amber-400">
-                The Sovereign Guarantee
+                The Sovereign Data Promise
               </span>
               <h2 className="text-2xl font-bold tracking-tight text-white">
-                30-Day Money-Back Guarantee
+                100% In Your Firm’s <span className="whitespace-nowrap">Google Drive</span>
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Try Docketra for 30 days. If it does not save your team at least 10 hours a week on client follow-ups and review queues, write to us for an instant 100% refund. All your documents and folders stay safely inside your firm’s own Google Drive, so your client data never leaves your hands.
+                Start with our Free Pilot for up to 5 clients. All your documents, working papers, and client files stay safely inside your firm’s own Google Drive with zero vendor lock-in. Your client data never leaves your hands.
               </p>
             </div>
             <div className="shrink-0 text-center">
@@ -494,11 +494,11 @@ export const PricingPage = () => {
                 to="/signup"
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-xs bg-amber-500 px-6 text-xs font-bold text-slate-950 transition-colors hover:bg-amber-400"
               >
-                <span>Try Risk-Free for 30 Days</span>
+                <span>Start Free Pilot</span>
                 <span>→</span>
               </Link>
               <div className="mt-2 text-[10px] font-mono text-slate-400">
-                Instant refund • Files stay in your Drive
+                No credit card required • Files stay in your Drive
               </div>
             </div>
           </div>
@@ -520,28 +520,30 @@ export const PricingPage = () => {
             </p>
           </motion.div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border border-slate-200 bg-white shadow-xs">
-              <thead className="bg-slate-100 text-slate-900 border-b border-slate-200 font-mono text-[11px] uppercase tracking-wider">
+          <div className="overflow-x-auto rounded-md border border-slate-200 bg-white shadow-xs">
+            <table className="w-full table-fixed text-left text-xs border-collapse">
+              <thead className="bg-slate-50 text-slate-900 border-b border-slate-200 font-mono text-[11px] uppercase tracking-wider">
                 <tr>
-                  <th className="p-4 w-1/4">Operational Capability</th>
-                  <th className="p-4 w-1/4 bg-blue-50/80 text-blue-900 font-bold border-x border-blue-200">
+                  <th scope="col" className="p-4 w-1/4 font-semibold text-slate-900">Operational Capability</th>
+                  <th scope="col" className="p-4 w-1/4 bg-blue-50/60 text-blue-950 font-bold border-x border-blue-200">
                     Docketra (Sovereign OS)
                   </th>
-                  <th className="p-4 w-1/4 text-slate-700">Jamku / Legacy</th>
-                  <th className="p-4 w-1/4 text-slate-700">Excel + WhatsApp</th>
+                  <th scope="col" className="p-4 w-1/4 text-slate-700 font-medium">Jamku / Legacy</th>
+                  <th scope="col" className="p-4 w-1/4 text-slate-700 font-medium">Excel + WhatsApp</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-200/80">
                 {COMPARISON_ROWS.map((row) => (
-                  <tr key={row.feature} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="p-4 font-semibold text-slate-900">{row.feature}</td>
-                    <td className="p-4 bg-blue-50/30 text-blue-950 font-medium border-x border-blue-200">
-                      <span className="text-emerald-600 font-bold mr-1.5">✓</span>
-                      {row.docketra}
+                  <tr key={row.feature} className="hover:bg-slate-50/50 transition-[background-color]">
+                    <td className="p-4 font-semibold text-slate-950 align-top">{row.feature}</td>
+                    <td className="p-4 bg-blue-50/20 text-blue-950 font-medium border-x border-blue-100 align-top">
+                      <div className="flex items-start gap-2">
+                        <span className="inline-flex items-center justify-center h-4 w-4 rounded-xs bg-emerald-100 text-emerald-800 font-bold shrink-0 mt-0.5 text-[11px] leading-none" aria-hidden="true">✓</span>
+                        <span className="leading-relaxed">{row.docketra}</span>
+                      </div>
                     </td>
-                    <td className="p-4 text-slate-600">{row.jamku}</td>
-                    <td className="p-4 text-slate-600">{row.excel}</td>
+                    <td className="p-4 text-slate-600 align-top leading-relaxed">{row.jamku}</td>
+                    <td className="p-4 text-slate-600 align-top leading-relaxed">{row.excel}</td>
                   </tr>
                 ))}
               </tbody>
@@ -622,7 +624,7 @@ export const PricingPage = () => {
               </Link>
             </div>
             <p className="text-[11px] font-mono text-slate-500 pt-1">
-              Zero setup fees • 1-Click Google Drive OAuth • 30-Day Money-Back Guarantee
+              Zero setup fees • 1-Click <span className="whitespace-nowrap">Google Drive</span> OAuth • Free Pilot Tier Available
             </p>
           </motion.div>
         </Container>

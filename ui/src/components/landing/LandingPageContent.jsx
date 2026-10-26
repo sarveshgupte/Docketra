@@ -96,7 +96,7 @@ const HeroSection = ({ onOpenTour }) => (
           {/* Tailored Practice Selector */}
           <div className="pt-1 pb-1">
             <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-2">
-              Practice Enclaves:
+              Tailored For Your Practice:
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <Link
@@ -397,13 +397,13 @@ const HowItWorksSection = () => (
     <Container size="7xl">
       <motion.div className="max-w-2xl" {...REVEAL}>
         <div className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-          Statutory Lifecycle
+          How It Works
         </div>
         <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950">
           How Work Moves Through Docketra
         </h2>
         <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
-          A disciplined 4-stage pipeline designed around the Indian statutory maker-checker standard.
+          A clear 4-step workflow built for the maker-checker standard: staff prepares, partners review, and files stay in your firm’s private Google Drive.
         </p>
       </motion.div>
 
@@ -411,27 +411,27 @@ const HowItWorksSection = () => (
         {[
           {
             step: '01',
-            title: 'Intake & Docket Opening',
-            desc: 'Open a client docket in 30 seconds. The sandboxed Google Drive folder is provisioned instantly.',
-            detail: 'Restricted drive.file isolation',
+            title: 'Create the Docket',
+            desc: 'Open a client matter in seconds. A dedicated folder is created automatically in your firm’s Google Drive.',
+            detail: 'Private folder in your own Drive',
           },
           {
             step: '02',
-            title: 'Trainee Workbasket',
-            desc: 'Assign filing steps to associates or article clerks with pre-loaded statutory checklists and cutoffs.',
-            detail: 'Download Shield prevents local dumps',
+            title: 'Assign to Staff',
+            desc: 'Assign filing steps to associates or article clerks with pre-loaded statutory checklists and clear deadlines.',
+            detail: 'Prevents file downloads to personal laptops',
           },
           {
             step: '03',
-            title: 'Drive Working Papers',
-            desc: 'Working papers and draft forms save directly into your private Drive. Clients upload via zero-login links.',
+            title: 'Collect & Prepare',
+            desc: 'Clients upload documents via secure, no-login links. All drafts and working papers save directly into your Drive.',
             detail: 'Zero files touch external servers',
           },
           {
             step: '04',
-            title: 'Partner SQC-1 Sign-off',
-            desc: 'Managing partner verifies draft challans, applies the audit seal, and marks the matter complete for portal submission.',
-            detail: 'ICAI/ICSI inspection-ready audit log',
+            title: 'Partner Sign-Off',
+            desc: 'Partners verify draft challans and working papers, sign off with one click, and prepare the matter for portal submission.',
+            detail: 'Audit trail ready for ICAI & ICSI reviews',
           },
         ].map((item) => (
           <div key={item.step} className="border border-slate-200 bg-white p-5 hover:border-slate-400 transition-colors rounded shadow-2xs">
@@ -455,51 +455,51 @@ const TrustSection = () => (
     <Container size="7xl">
       <motion.div className="max-w-2xl" {...REVEAL}>
         <div className="font-mono text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-1">
-          Data Sovereignty & Security Fortress
+          Security & Privacy
         </div>
         <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-          Your Client Files Stay in Your Firm’s Own Google Drive
+          Your Client Files Stay in Your Firm’s Own <span className="whitespace-nowrap">Google Drive</span>
         </h2>
         <p className="mt-2 text-xs sm:text-sm text-slate-400 leading-relaxed">
-          Docketra never stores client documents on multi-tenant third-party servers. We manage the workflow metadata while 100% of confidential files remain inside your Google perimeter.
+          Docketra never stores client documents on our servers. Your files stay 100% inside your firm’s private Google Drive — we only manage compliance deadlines and workflows.
         </p>
       </motion.div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="border border-slate-800 bg-slate-900/60 p-5 space-y-2 hover:border-slate-700 transition-colors rounded">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white">Google Drive Isolation</h3>
-            <span className="font-mono text-[9px] text-emerald-400 bg-emerald-950 px-1.5 py-0.2 rounded border border-emerald-800">RESTRICTED</span>
+            <h3 className="text-sm font-bold text-white">Zero Personal File Access</h3>
+            <span className="font-mono text-[9px] text-emerald-400 bg-emerald-950 px-1.5 py-0.2 rounded border border-emerald-800">VERIFIED PRIVATE</span>
           </div>
           <p className="text-xs text-slate-400 leading-relaxed">
-            Docketra strictly uses Google’s restricted <code className="text-amber-300 text-[11px]">drive.file</code> scope. It can only open the specific /Docketra/ folder it created, with zero access to your existing personal files.
+            Docketra can only open the specific folders it creates for your dockets. It has zero access to your firm’s existing emails, documents, or personal Drive files.
           </p>
         </div>
         <div className="border border-slate-800 bg-slate-900/60 p-5 space-y-2 hover:border-slate-700 transition-colors rounded">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white">Trainee Laptop Shield</h3>
-            <span className="font-mono text-[9px] text-amber-400 bg-amber-950 px-1.5 py-0.2 rounded border border-amber-800">ANTI-THEFT</span>
+            <h3 className="text-sm font-bold text-white">Prevent Local Downloads</h3>
+            <span className="font-mono text-[9px] text-amber-400 bg-amber-950 px-1.5 py-0.2 rounded border border-amber-800">LEAK PROTECTION</span>
           </div>
           <p className="text-xs text-slate-400 leading-relaxed">
-            Article assistants view working papers inside Docketra’s protected viewer. Direct downloads of client PAN, ITR, and financial files to personal laptops are blocked.
+            Article clerks and junior staff view files securely in their browser. Downloading confidential PANs, tax returns, or bank statements to personal laptops is blocked.
           </p>
         </div>
         <div className="border border-slate-800 bg-slate-900/60 p-5 space-y-2 hover:border-slate-700 transition-colors rounded">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white">Drive Tamper Guard</h3>
-            <span className="font-mono text-[9px] text-sky-400 bg-sky-950 px-1.5 py-0.2 rounded border border-sky-800">SELF-HEALING</span>
+            <h3 className="text-sm font-bold text-white">Automatic Folder Recovery</h3>
+            <span className="font-mono text-[9px] text-sky-400 bg-sky-950 px-1.5 py-0.2 rounded border border-sky-800">AUTO-RECOVERY</span>
           </div>
           <p className="text-xs text-slate-400 leading-relaxed">
-            If a clerk accidentally moves or trashes a folder inside Google Drive, Docketra detects it instantly and restores the folder and file links in 1 click with 0 data loss.
+            If someone accidentally moves, renames, or deletes a folder in Google Drive, Docketra detects it immediately and restores the links with zero data loss.
           </p>
         </div>
         <div className="border border-slate-800 bg-slate-900/60 p-5 space-y-2 hover:border-slate-700 transition-colors rounded">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white">SQC-1 Peer-Review Trail</h3>
-            <span className="font-mono text-[9px] text-purple-400 bg-purple-950 px-1.5 py-0.2 rounded border border-purple-800">ICAI / ICSI</span>
+            <h3 className="text-sm font-bold text-white">Peer-Review Audit Trail</h3>
+            <span className="font-mono text-[9px] text-purple-400 bg-purple-950 px-1.5 py-0.2 rounded border border-purple-800">ICAI / ICSI READY</span>
           </div>
           <p className="text-xs text-slate-400 leading-relaxed">
-            Complete 4-eye maker-checker audit log. Shows exactly who prepared the filing and when the partner signed off, ready for peer review inspections.
+            An uneditable audit log records every action: who prepared the filing, what changed, and when the partner signed off. Ready for ICAI and ICSI peer reviews.
           </p>
         </div>
       </div>
@@ -518,7 +518,7 @@ const PilotReadinessSection = () => (
               <span>Pilot Readiness & Transparent Pricing</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">
-              Start Using Docketra for Your Firm in 5 Minutes
+              Start Using Docketra for Your Firm <span className="whitespace-nowrap">in 5 Minutes</span>
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               Create your firm workspace, invite your team, and manage your first 5 clients for ₹0. Upgrade to Pioneer or Growth whenever you expand.
@@ -542,8 +542,8 @@ const PilotReadinessSection = () => (
           </div>
         </div>
 
-        {/* 4 Value Pillars */}
-        <div className="pt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+        {/* 3 Value Pillars */}
+        <div className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
           <div className="flex items-start gap-2.5 p-3 bg-white border border-slate-200 rounded">
             <span className="text-emerald-600 font-extrabold text-sm">✓</span>
             <div>
@@ -565,13 +565,6 @@ const PilotReadinessSection = () => (
               <p className="text-slate-600 mt-0.5 leading-relaxed">12 seats, 150 clients. Pre-loaded statutory blueprints and department queues.</p>
             </div>
           </div>
-          <div className="flex items-start gap-2.5 p-3 bg-white border border-slate-200 rounded">
-            <span className="text-emerald-600 font-extrabold text-sm">✓</span>
-            <div>
-              <span className="font-bold text-slate-900 block">30-Day Guarantee:</span>
-              <p className="text-slate-600 mt-0.5 leading-relaxed">100% refund if it does not save 10 hours a week. All files stay in your Drive.</p>
-            </div>
-          </div>
         </div>
       </div>
     </Container>
@@ -584,16 +577,13 @@ const FinalCtaSection = () => (
       <motion.div className="max-w-2xl mx-auto space-y-4" {...REVEAL}>
         <div className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-wider text-slate-500">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          <span>Sovereign Practice Management</span>
+          <span>Simple & Secure Setup</span>
         </div>
-        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-950 tracking-tight">
-          Run your practice from your own Google Drive.
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-950 tracking-tight [text-wrap:balance]">
+          Run your practice from your own <span className="whitespace-nowrap">Google Drive</span>.
         </h2>
-        <p className="text-sm font-semibold text-slate-900">
-          Zero file leakage, 100% partner review.
-        </p>
-        <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-          Start with one workspace, invite your team, and eliminate scattered WhatsApp client files today.
+        <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto leading-relaxed [text-wrap:pretty]">
+          Zero file leakage to staff laptops and 100% partner review. Keep every client docket organized in one private workspace.
         </p>
 
         <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -615,9 +605,9 @@ const FinalCtaSection = () => (
 
         <div className="font-mono text-[11px] text-slate-500 pt-3 flex flex-wrap items-center justify-center gap-4">
           <span>No credit card required</span>
-          <span>•</span>
-          <span>Connect your own Google Drive</span>
-          <span>•</span>
+          <span aria-hidden="true">•</span>
+          <span>Connect your own <span className="whitespace-nowrap">Google Drive</span></span>
+          <span aria-hidden="true">•</span>
           <span>2-minute setup</span>
         </div>
       </motion.div>
@@ -628,27 +618,49 @@ const FinalCtaSection = () => (
 export const MarketingFooter = () => (
   <footer className="bg-slate-950 py-12 text-slate-400 border-t border-slate-800 text-xs">
     <Container size="7xl">
-      <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex items-center gap-2.5 text-white font-semibold">
-          <span className="h-2 w-2 rounded-full bg-amber-500" />
-          <span className="text-sm font-bold tracking-tight">Docketra</span>
-          <span className="text-slate-500 text-[11px] font-mono">| The Sovereign Practice OS for Indian Professional Firms</span>
+      {/* Top Tier: Brand & Solutions Navigation */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-8 border-b border-slate-900">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-white font-semibold">
+            <span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
+            <span className="text-base font-bold tracking-tight">Docketra</span>
+          </div>
+          <p className="text-slate-400 text-xs leading-relaxed max-w-sm">
+            Practice management for Indian CAs, CSs &amp; compliance practices.
+          </p>
         </div>
 
         {/* Practice Solutions Navigation */}
-        <nav aria-label="Practice Solutions Navigation" className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs">
-          <span className="text-slate-500 font-mono font-bold uppercase tracking-wider text-[10px]">Solutions:</span>
-          <Link to="/solutions/company-secretaries" className="hover:text-amber-400 transition-colors">Company Secretaries</Link>
-          <Link to="/solutions/chartered-accountants" className="hover:text-amber-400 transition-colors">Chartered Accountants</Link>
-          <Link to="/solutions/corporate-legal-teams" className="hover:text-amber-400 transition-colors">Corporate Legal</Link>
-          <Link to="/compare/docketra-vs-excel-whatsapp" className="text-amber-400 hover:text-amber-300 font-medium transition-colors">vs. Excel & WhatsApp</Link>
+        <nav aria-label="Practice Solutions Navigation" className="flex flex-wrap items-center gap-x-6 gap-y-2.5 text-xs">
+          <span className="text-slate-500 font-mono font-bold uppercase tracking-wider text-[10px] shrink-0">
+            Solutions:
+          </span>
+          <Link to="/solutions/company-secretaries" className="hover:text-amber-400 transition-colors whitespace-nowrap">
+            Company Secretaries
+          </Link>
+          <Link to="/solutions/chartered-accountants" className="hover:text-amber-400 transition-colors whitespace-nowrap">
+            Chartered Accountants
+          </Link>
+          <Link to="/solutions/corporate-legal-teams" className="hover:text-amber-400 transition-colors whitespace-nowrap">
+            Corporate Legal
+          </Link>
+          <Link to="/compare/docketra-vs-excel-whatsapp" className="text-amber-400 hover:text-amber-300 font-semibold transition-colors whitespace-nowrap">
+            vs. Excel &amp; WhatsApp
+          </Link>
         </nav>
+      </div>
 
-        <nav aria-label="Footer legal navigation" className="flex items-center gap-5 font-medium">
-          <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
-          <Link to="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-          <Link to="/security" className="hover:text-white transition-colors">Security</Link>
-          <Link to="/acceptable-use" className="hover:text-white transition-colors">Acceptable Use</Link>
+      {/* Bottom Tier: Copyright, Drive Sovereign Promise, and Legal Links */}
+      <div className="pt-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-[11px] text-slate-500">
+        <p className="leading-relaxed">
+          &copy; {new Date().getFullYear()} Docketra. 100% of client files stay safely inside your firm’s private Google Drive.
+        </p>
+
+        <nav aria-label="Footer legal navigation" className="flex flex-wrap items-center gap-x-6 gap-y-1 font-medium">
+          <Link to="/terms" className="hover:text-slate-300 transition-colors whitespace-nowrap">Terms</Link>
+          <Link to="/privacy" className="hover:text-slate-300 transition-colors whitespace-nowrap">Privacy</Link>
+          <Link to="/security" className="hover:text-slate-300 transition-colors whitespace-nowrap">Security</Link>
+          <Link to="/acceptable-use" className="hover:text-slate-300 transition-colors whitespace-nowrap">Acceptable Use</Link>
         </nav>
       </div>
     </Container>

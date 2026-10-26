@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 
+const CATEGORIES = ['ALL', 'Regulatory', 'Security', 'Compliance', 'Operations'];
+
 const COMPARISON_ROWS = [
   {
     feature: 'Statutory Due Dates & Penalties',
@@ -31,21 +33,21 @@ const COMPARISON_ROWS = [
   },
   {
     feature: 'Accidental Deletion & Drive Tamper Guard',
-    category: 'Safety',
+    category: 'Security',
     docketra: 'Detects accidental folder moves or deletions inside Google Drive and re-anchors pointers in under 1 second.',
     generic: 'File paths break permanently if an associate renames or moves a folder on the shared drive.',
     spreadsheets: 'Files deleted or overwritten by accident with zero recovery mechanism.',
   },
   {
     feature: 'Client Memory (CIN, PAN, DIN, DSC)',
-    category: 'Productivity',
+    category: 'Operations',
     docketra: '1-click copy for CIN, PAN, DIN, and authorized signatories directly into MCA V3 and Income Tax filing portals.',
     generic: 'Plain text notes scattered across separate tasks; no company master structure.',
     spreadsheets: 'Staff search through old folders or ask the client for the same PAN/CIN every quarter.',
   },
   {
     feature: 'Daily Staff Worklists & Workbaskets',
-    category: 'Management',
+    category: 'Operations',
     docketra: 'Team members see their exact prioritized daily queue. Partners monitor firm throughput without micromanaging.',
     generic: 'Cluttered kanban boards with hundreds of loose tickets that don’t reflect statutory urgency.',
     spreadsheets: 'Partners must phone or WhatsApp staff daily: "Did you file the return? What is the status?".',
@@ -60,81 +62,126 @@ export function ComplianceVsGenericComparison() {
     : COMPARISON_ROWS.filter((r) => r.category === filterCategory);
 
   return (
-    <div className="overflow-hidden border border-slate-300 bg-white rounded-lg shadow-sm">
+    <div className="overflow-hidden border border-slate-200 bg-white rounded-md shadow-xs">
       {/* Table Subheader / Filter Bar */}
-      <div className="px-4 py-3 bg-slate-900 border-b border-slate-800 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="px-4 py-3 sm:px-5 sm:py-3.5 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-amber-400" />
-          <span className="font-bold text-xs sm:text-sm tracking-tight">Practice Architecture Comparison</span>
-          <span className="text-slate-400 font-mono text-[11px] hidden md:inline">| Indian Regulatory Standards</span>
+          <span className="h-2 w-2 rounded-xs bg-amber-500 shrink-0" aria-hidden="true" />
+          <span className="font-bold text-xs sm:text-sm tracking-tight text-slate-900">
+            Practice Architecture Comparison
+          </span>
+          <span className="text-slate-400 font-mono text-[11px] hidden md:inline">
+            | Indian Regulatory Standards
+          </span>
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar font-mono text-[10px]">
-          {['ALL', 'Regulatory', 'Security', 'Compliance', 'Operations'].map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setFilterCategory(cat)}
-              className={`px-2.5 py-1 rounded-xs transition-colors cursor-pointer ${
-                filterCategory === cat
-                  ? 'bg-amber-400 text-slate-950 font-bold'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+        <div
+          className="flex items-center gap-1.5 overflow-x-auto no-scrollbar font-mono text-[10px]"
+          role="tablist"
+          aria-label="Comparison categories"
+        >
+          {CATEGORIES.map((cat) => {
+            const isActive = filterCategory === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setFilterCategory(cat)}
+                className={`px-2.5 py-1 rounded-xs font-mono font-medium transition-[background-color,color,border-color] cursor-pointer text-[10px] uppercase tracking-wider ${
+                  isActive
+                    ? 'bg-slate-950 text-white font-semibold shadow-xs'
+                    : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 hover:border-slate-300'
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[700px] text-left border-collapse">
+        <table className="w-full min-w-[820px] table-fixed text-left border-collapse">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-100/90 text-xs font-bold text-slate-800">
-              <th className="py-3 px-4 w-1/4">Practice Requirement</th>
-              <th className="py-3 px-4 w-5/12 bg-emerald-50/50 text-slate-950 border-x border-emerald-200">
-                <div className="flex items-center justify-between">
-                  <span className="text-emerald-950 font-extrabold">Docketra Sovereign OS</span>
-                  <span className="border border-emerald-300 bg-emerald-100 text-emerald-800 text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-xs">
+            <tr className="border-b border-slate-200 bg-slate-50 text-xs text-slate-800">
+              <th scope="col" className="py-3.5 px-4 sm:px-5 w-[24%] font-bold text-xs text-slate-900 tracking-tight">
+                Practice Requirement
+              </th>
+              <th scope="col" className="py-3.5 px-4 sm:px-5 w-[32%] bg-emerald-50/50 text-slate-950 border-x border-emerald-200/90 text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <span className="text-slate-950 font-bold tracking-tight block">Docketra Sovereign OS</span>
+                    <span className="font-mono text-[10px] text-emerald-800 font-medium block mt-0.5">Firm Google Drive Perimeter</span>
+                  </div>
+                  <span className="shrink-0 border border-emerald-300 bg-emerald-100 text-emerald-800 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider">
                     PURPOSE-BUILT
                   </span>
                 </div>
               </th>
-              <th className="py-3 px-4 w-1/4 text-slate-600 font-semibold">
-                Generic Task Trackers
-                <span className="block font-mono text-[10px] text-slate-400 font-normal">Asana / Monday / ClickUp</span>
+              <th scope="col" className="py-3.5 px-4 sm:px-5 w-[22%] text-slate-700 text-xs font-semibold">
+                <div>
+                  <span className="text-slate-900 font-semibold block">Generic Task Trackers</span>
+                  <span className="font-mono text-[10px] text-slate-500 font-normal block mt-0.5">Asana / Monday / ClickUp</span>
+                </div>
               </th>
-              <th className="py-3 px-4 w-1/6 text-slate-600 font-semibold">
-                Excel & WhatsApp
-                <span className="block font-mono text-[10px] text-slate-400 font-normal">Unstructured Ad-hoc</span>
+              <th scope="col" className="py-3.5 px-4 sm:px-5 w-[22%] text-slate-700 text-xs font-semibold">
+                <div>
+                  <span className="text-slate-900 font-semibold block">Excel & WhatsApp</span>
+                  <span className="font-mono text-[10px] text-slate-500 font-normal block mt-0.5">Unstructured Ad-hoc</span>
+                </div>
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+          <tbody className="divide-y divide-slate-200/80 text-xs">
             {filteredRows.map((row, idx) => (
-              <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
-                <td className="py-3.5 px-4 font-semibold text-slate-900">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-mono text-[9px] text-slate-400 uppercase">[{row.category}]</span>
-                  </div>
-                  <div className="mt-0.5 text-slate-950 font-bold">{row.feature}</div>
-                </td>
-                <td className="py-3.5 px-4 font-medium text-slate-950 bg-emerald-50/20 border-x border-emerald-100">
-                  <div className="flex items-start gap-2">
-                    <span className="text-emerald-600 font-bold shrink-0 mt-0.5 text-sm">✓</span>
-                    <span className="leading-relaxed">{row.docketra}</span>
+              <tr key={idx} className="hover:bg-slate-50/60 transition-[background-color]">
+                <td className="py-3.5 px-4 sm:px-5 align-top">
+                  <span className="inline-block font-mono text-[9px] text-slate-600 font-semibold uppercase tracking-wider bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-xs">
+                    {row.category}
+                  </span>
+                  <div className="mt-1 font-semibold text-xs text-slate-950 leading-snug">
+                    {row.feature}
                   </div>
                 </td>
-                <td className="py-3.5 px-4 text-slate-500">
-                  <div className="flex items-start gap-2">
-                    <span className="text-rose-400 font-normal shrink-0 mt-0.5 text-sm">✕</span>
-                    <span className="leading-relaxed">{row.generic}</span>
+                <td className="py-3.5 px-4 sm:px-5 align-top bg-emerald-50/20 border-x border-emerald-100/80">
+                  <div className="flex items-start gap-2.5">
+                    <span
+                      className="inline-flex items-center justify-center h-4 w-4 rounded-xs bg-emerald-100 text-emerald-800 font-bold shrink-0 mt-0.5 text-[11px] leading-none"
+                      aria-hidden="true"
+                    >
+                      ✓
+                    </span>
+                    <span className="text-xs font-medium text-slate-900 leading-relaxed">
+                      {row.docketra}
+                    </span>
                   </div>
                 </td>
-                <td className="py-3.5 px-4 text-slate-500">
-                  <div className="flex items-start gap-2">
-                    <span className="text-rose-400 font-normal shrink-0 mt-0.5 text-sm">✕</span>
-                    <span className="leading-relaxed">{row.spreadsheets}</span>
+                <td className="py-3.5 px-4 sm:px-5 align-top text-slate-600">
+                  <div className="flex items-start gap-2.5">
+                    <span
+                      className="inline-flex items-center justify-center h-4 w-4 rounded-xs bg-slate-100 text-slate-500 font-semibold shrink-0 mt-0.5 text-[10px] leading-none"
+                      aria-hidden="true"
+                    >
+                      ✕
+                    </span>
+                    <span className="text-xs text-slate-600 leading-relaxed">
+                      {row.generic}
+                    </span>
+                  </div>
+                </td>
+                <td className="py-3.5 px-4 sm:px-5 align-top text-slate-600">
+                  <div className="flex items-start gap-2.5">
+                    <span
+                      className="inline-flex items-center justify-center h-4 w-4 rounded-xs bg-rose-50 text-rose-600 font-semibold shrink-0 mt-0.5 text-[10px] leading-none border border-rose-200/60"
+                      aria-hidden="true"
+                    >
+                      ✕
+                    </span>
+                    <span className="text-xs text-slate-600 leading-relaxed">
+                      {row.spreadsheets}
+                    </span>
                   </div>
                 </td>
               </tr>
@@ -144,9 +191,14 @@ export function ComplianceVsGenericComparison() {
       </div>
 
       {/* Footer notice */}
-      <div className="p-3 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between text-[11px] text-slate-500 gap-2">
-        <span>Designed specifically for Chartered Accountants (CA), Company Secretaries (CS), and Indian Corporate Legal Counsels.</span>
-        <span className="font-mono text-emerald-800 font-semibold shrink-0">100% Google Drive BYOS Perimeter</span>
+      <div className="px-4 py-3 sm:px-5 bg-slate-50/70 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between text-[11px] text-slate-600 gap-2">
+        <span className="leading-normal">
+          Designed specifically for Chartered Accountants (CA), Company Secretaries (CS), and Indian Corporate Legal Counsels.
+        </span>
+        <span className="inline-flex items-center gap-1.5 font-mono text-emerald-800 font-semibold shrink-0 text-[11px]">
+          <span className="h-1.5 w-1.5 rounded-xs bg-emerald-600 shrink-0" aria-hidden="true" />
+          100% Google Drive BYOS Perimeter
+        </span>
       </div>
     </div>
   );

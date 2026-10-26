@@ -289,34 +289,44 @@ export const DocketraVsExcelWhatsAppPage = () => {
 
           {/* Desktop Table */}
           <div className="hidden md:block overflow-hidden rounded-md border border-slate-200 bg-white shadow-xs">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full table-fixed text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold">
-                  <th className="py-3.5 px-5 text-slate-700 w-1/4">Practice Area</th>
-                  <th className="py-3.5 px-5 text-rose-800 w-3/8 bg-rose-50/40 border-r border-slate-200">
+                  <th scope="col" className="py-3.5 px-5 text-slate-900 w-[26%]">Practice Area</th>
+                  <th scope="col" className="py-3.5 px-5 text-rose-900 w-[37%] bg-rose-50/40 border-r border-slate-200">
                     Excel & WhatsApp (The Fragile Stack)
                   </th>
-                  <th className="py-3.5 px-5 text-slate-900 w-3/8 bg-slate-50/70">
+                  <th scope="col" className="py-3.5 px-5 text-slate-900 w-[37%] bg-emerald-50/40">
                     Docketra (The Company Brain)
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-xs sm:text-sm text-slate-700">
+              <tbody className="divide-y divide-slate-200/80 text-xs sm:text-sm text-slate-700">
                 {COMPARISON_ROWS.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
+                  <tr key={idx} className="hover:bg-slate-50/60 transition-[background-color]">
                     <td className="py-3.5 px-5 font-bold text-slate-950 align-top">
                       {row.feature}
                     </td>
                     <td className="py-3.5 px-5 align-top text-slate-600 bg-rose-50/20 border-r border-slate-200">
-                      <div className="flex items-start gap-2">
-                        <span className="text-rose-600 font-bold shrink-0 mt-0.5">✕</span>
-                        <span className="text-slate-600">{row.excel}</span>
+                      <div className="flex items-start gap-2.5">
+                        <span
+                          className="inline-flex items-center justify-center h-4 w-4 rounded-xs bg-rose-50 text-rose-600 font-semibold shrink-0 mt-0.5 text-[10px] leading-none border border-rose-200/60"
+                          aria-hidden="true"
+                        >
+                          ✕
+                        </span>
+                        <span className="text-slate-600 leading-relaxed text-xs">{row.excel}</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-5 align-top bg-emerald-50/15">
-                      <div className="flex items-start gap-2">
-                        <span className="text-emerald-700 font-bold shrink-0 mt-0.5">✓</span>
-                        <span className="font-medium text-slate-900">{row.docketra}</span>
+                      <div className="flex items-start gap-2.5">
+                        <span
+                          className="inline-flex items-center justify-center h-4 w-4 rounded-xs bg-emerald-100 text-emerald-800 font-bold shrink-0 mt-0.5 text-[11px] leading-none"
+                          aria-hidden="true"
+                        >
+                          ✓
+                        </span>
+                        <span className="font-medium text-slate-900 leading-relaxed text-xs">{row.docketra}</span>
                       </div>
                     </td>
                   </tr>
