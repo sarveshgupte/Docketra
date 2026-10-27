@@ -42,3 +42,6 @@
 ## 2024-10-27 - Optimize plan capacity threshold checks
 **Learning:** Using `User.countDocuments()` to check if user count exceeds a firm's plan capacity forces MongoDB to evaluate all matches. Since the capacity check only requires a boolean outcome, calculating the exact total is an unnecessary O(N) database operation.
 **Action:** Replace `countDocuments()` with `find().select('_id').limit(threshold + 1).lean()` and check if the returned array length exceeds the threshold. Furthermore, evaluate these counts lazily only when the corresponding limit condition is reached to avoid redundant queries.
+## 2026-11-20 - Eliminate redundant countDocuments in listSecurityAlerts
+**Learning:** Replaced sequential execution of `countDocuments` and `find` with a single `find` query using `limit(limit + 1)`.
+**Action:** Use `limit(limit + 1)` instead of `countDocuments` for pagination queries to eliminate an entire database count operation, reducing latency and DB load.

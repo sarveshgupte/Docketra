@@ -640,7 +640,7 @@ async function testSecurityAlertsAndSummaryEndpointsRequireSuperadmin() {
       .expect(200);
 
     assert.strictEqual(queryState.skip, 1, 'Pagination should calculate skip from page and limit');
-    assert.strictEqual(queryState.limit, 1, 'Pagination should cap query by requested limit');
+    assert.strictEqual(queryState.limit, 2, 'Pagination should cap query by requested limit + 1');
     assert.strictEqual(allowed.body.data[0].event, 'suspicious_login_pattern');
     assert.strictEqual(allowed.body.data[0].requestId, 'req-alert-1');
     assert.strictEqual(allowed.body.data[0].severity, 'low');
