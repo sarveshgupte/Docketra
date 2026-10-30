@@ -2086,27 +2086,22 @@ const getFirmPlan = async (req, res) => {
     }
 
     const tenantId = req.user?.firmId || firm.firmId;
-
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    // ⚡ Bolt: Execute independent queries concurrently
-    // 💡 What: Merged the sequential monthlyDocketsCount query into the preceding Promise.all array.
-    // 🎯 Why: Identifying and eliminating unnecessary sequential database queries by grouping them into a single Promise.all array executes them concurrently, reducing overall network latency.
-    // 📊 Impact: Eliminates an extra sequential network roundtrip and reduces the total latency of this admin controller operation.
-    const [usersCount, clientsCount, monthlyDocketsCount] = await Promise.all([
+    const [usersCount, clientsCount] = await Promise.all([
       User.countDocuments({ firmId: firm._id, status: { $ne: 'deleted' } }).catch(() => 0),
       clientRepository.count(tenantId, {
         isActive: true,
         isSystemClient: { $ne: true },
         isDefaultClient: { $ne: true },
       }).catch(() => 0),
-      Case.countDocuments({
-        firmId: tenantId,
-        createdAt: { $gte: startOfMonth },
-      }).catch(() => 0),
     ]);
+
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    const monthlyDocketsCount = await Case.countDocuments({
+      firmId: tenantId,
+      createdAt: { $gte: startOfMonth },
+    }).catch(() => 0);
 
     const storageMode = firm.storage?.mode || 'docketra_managed';
     const isGoogleConnected = storageMode === 'firm_connected' && firm.storage?.provider === 'google_drive';
