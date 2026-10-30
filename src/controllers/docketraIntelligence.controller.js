@@ -1,6 +1,7 @@
 const { assertFirmContext } = require('../utils/tenantGuard');
 const { hasFirmRoleAtLeast } = require('../utils/role.utils');
 const docketraIntelligenceService = require('../services/docketraIntelligence.service');
+const log = require('../utils/log');
 
 const getWorkloadIntelligence = async (req, res) => {
   try {
@@ -22,10 +23,11 @@ const getWorkloadIntelligence = async (req, res) => {
 
     return res.json({ success: true, data });
   } catch (error) {
+    log.error('WORKLOAD_INTELLIGENCE_LOAD_FAILED', { message: error.message, stack: error.stack });
     const statusCode = Number(error?.statusCode || 500);
     return res.status(statusCode).json({
       success: false,
-      message: error?.message || 'Failed to load workload intelligence',
+      message: 'Failed to load workload intelligence',
       data: {
         summary: { totalMembers: 0, available: 0, moderate: 0, busy: 0, overloaded: 0 },
         recommendations: { recommendedAssignee: null, bestAssignees: [], avoidAssigning: [] },
@@ -58,10 +60,11 @@ const getWorkbasketCapacityIntelligence = async (req, res) => {
 
     return res.json({ success: true, data });
   } catch (error) {
+    log.error('WORKBASKET_CAPACITY_INTELLIGENCE_LOAD_FAILED', { message: error.message, stack: error.stack });
     const statusCode = Number(error?.statusCode || 500);
     return res.status(statusCode).json({
       success: false,
-      message: error?.message || 'Failed to load workbasket capacity intelligence',
+      message: 'Failed to load workbasket capacity intelligence',
       data: {
         thresholds: docketraIntelligenceService.normalizeCapacityThresholds(),
         summary: { totalWorkbaskets: 0, healthy: 0, busy: 0, overloaded: 0 },
@@ -89,10 +92,11 @@ const getDeadlineRiskIntelligence = async (req, res) => {
 
     return res.json({ success: true, data });
   } catch (error) {
+    log.error('DEADLINE_RISK_INTELLIGENCE_LOAD_FAILED', { message: error.message, stack: error.stack });
     const statusCode = Number(error?.statusCode || 500);
     return res.status(statusCode).json({
       success: false,
-      message: error?.message || 'Failed to load deadline risk intelligence',
+      message: 'Failed to load deadline risk intelligence',
       data: {
         riskLevel: 'Low Risk',
         recommendedAction: 'No immediate action required.',
@@ -117,7 +121,8 @@ const getExecutiveBrief = async (req, res) => {
     const data = await docketraIntelligenceService.generateExecutiveAiBrief({ firmId: req.user.firmId });
     return res.json({ success: true, data });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error?.message || 'Failed to load executive brief' });
+    log.error('EXECUTIVE_BRIEF_LOAD_FAILED', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to load executive brief' });
   }
 };
 
@@ -127,7 +132,8 @@ const getClientRiskScores = async (req, res) => {
     const data = await docketraIntelligenceService.getClientComplianceRiskScores({ firmId: req.user.firmId });
     return res.json({ success: true, data });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error?.message || 'Failed to load client risk scores' });
+    log.error('CLIENT_RISK_SCORES_LOAD_FAILED', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to load client risk scores' });
   }
 };
 
@@ -141,7 +147,8 @@ const rebalanceWorkloadAction = async (req, res) => {
     const data = await docketraIntelligenceService.rebalanceWorkload({ firmId: req.user.firmId, execute });
     return res.json({ success: true, data });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error?.message || 'Failed to execute workload rebalance' });
+    log.error('WORKLOAD_REBALANCE_FAILED', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to execute workload rebalance' });
   }
 };
 

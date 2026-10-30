@@ -1,6 +1,7 @@
 const ComplianceObligationTemplate = require('../models/ComplianceObligationTemplate.model');
 const complianceTemplateGenerationService = require('../services/complianceTemplateGeneration.service');
 const { assertFirmContext } = require('../utils/tenantGuard');
+const log = require('../utils/log');
 
 const ROLE_RANK = {
   EMPLOYEE: 1,
@@ -34,7 +35,8 @@ const listComplianceTemplates = async (req, res) => {
     });
     return res.json({ success: true, data: templates });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error?.message || 'Failed to load compliance templates' });
+    log.error('COMPLIANCE_TEMPLATES_LOAD_FAILED', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to load compliance templates' });
   }
 };
 
@@ -56,7 +58,8 @@ const createComplianceTemplate = async (req, res) => {
     const created = await ComplianceObligationTemplate.create(payload);
     return res.status(201).json({ success: true, data: created });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error?.message || 'Failed to create compliance template' });
+    log.error('COMPLIANCE_TEMPLATE_CREATE_FAILED', { message: error.message, stack: error.stack });
+    return res.status(400).json({ success: false, message: 'Failed to create compliance template' });
   }
 };
 
@@ -84,7 +87,8 @@ const updateComplianceTemplate = async (req, res) => {
     }
     return res.json({ success: true, data: updated });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error?.message || 'Failed to update compliance template' });
+    log.error('COMPLIANCE_TEMPLATE_UPDATE_FAILED', { message: error.message, stack: error.stack });
+    return res.status(400).json({ success: false, message: 'Failed to update compliance template' });
   }
 };
 
@@ -98,7 +102,8 @@ const seedSampleComplianceTemplates = async (req, res) => {
     });
     return res.json({ success: true, data: result });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error?.message || 'Failed to seed sample compliance templates' });
+    log.error('SAMPLE_COMPLIANCE_TEMPLATES_SEED_FAILED', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to seed sample compliance templates' });
   }
 };
 
@@ -117,7 +122,8 @@ const previewComplianceGeneration = async (req, res) => {
     });
     return res.json({ success: true, data });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error?.message || 'Failed to preview compliance generation' });
+    log.error('COMPLIANCE_GENERATION_PREVIEW_FAILED', { message: error.message, stack: error.stack });
+    return res.status(400).json({ success: false, message: 'Failed to preview compliance generation' });
   }
 };
 
@@ -136,7 +142,8 @@ const runComplianceGeneration = async (req, res) => {
     });
     return res.json({ success: true, data });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error?.message || 'Failed to run compliance generation' });
+    log.error('COMPLIANCE_GENERATION_FAILED', { message: error.message, stack: error.stack });
+    return res.status(400).json({ success: false, message: 'Failed to run compliance generation' });
   }
 };
 

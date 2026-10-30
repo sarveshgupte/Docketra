@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Case = require('../models/Case.model');
 const { requestApproval, decideApproval } = require('../services/docketApproval.service');
+const log = require('../utils/log');
 
 const getCaseNumberCandidates = (id) => {
   if (!id) return [];
@@ -53,7 +54,8 @@ const getDocketApprovalStage = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error?.message || 'Failed to load approval stage' });
+    log.error('APPROVAL_STAGE_LOAD_FAILED', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to load approval stage' });
   }
 };
 
@@ -80,7 +82,8 @@ const requestDocketApproval = async (req, res) => {
       message: 'Approval requested',
     });
   } catch (error) {
-    return res.status(Number(error?.statusCode || 400)).json({ success: false, message: error?.message || 'Failed to request approval' });
+    log.error('APPROVAL_REQUEST_FAILED', { message: error.message, stack: error.stack });
+    return res.status(Number(error?.statusCode || 400)).json({ success: false, message: 'Failed to request approval' });
   }
 };
 
@@ -103,7 +106,8 @@ const decideDocketApproval = async (req, res) => {
       message: `Approval ${String(req.body?.decision || '').toLowerCase()}`,
     });
   } catch (error) {
-    return res.status(Number(error?.statusCode || 400)).json({ success: false, message: error?.message || 'Failed to update approval decision' });
+    log.error('APPROVAL_DECISION_UPDATE_FAILED', { message: error.message, stack: error.stack });
+    return res.status(Number(error?.statusCode || 400)).json({ success: false, message: 'Failed to update approval decision' });
   }
 };
 
