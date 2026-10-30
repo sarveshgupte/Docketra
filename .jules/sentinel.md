@@ -85,3 +85,8 @@
 **Vulnerability:** Information Disclosure where \`error.message\` was directly exposed to clients in 500 error responses across the DocketException API.
 **Learning:** Returning raw error messages can leak sensitive internal workings. Our custom logger (\`utils/log.js\`) expects a metadata object with \`{ message: error.message, stack: error.stack }\`.
 **Prevention:** Avoid passing raw \`error.message\` to \`res.status(500).json(...)\`. Instead, use \`log.error('EVENT_NAME', { message: error.message, stack: error.stack })\` and return a generic, safe string in the response.
+
+## 2026-10-30 - Prevent Information Exposure via Error Messages
+**Vulnerability:** Leaking `error.message` details directly in `res.status(500).json` API responses within `src/controllers/case.controller.js`.
+**Learning:** Including raw error messages in client HTTP 500 responses is an Information Exposure vulnerability (CWE-200), revealing internal system workings, configurations, or data to unauthenticated clients.
+**Prevention:** Only log detailed error messages and stack traces server-side via `log.error` and ensure HTTP 500 responses strictly return generic, safe operational error messages without internal internals.
