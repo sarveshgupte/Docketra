@@ -16,7 +16,7 @@ concurrency:
 jobs:
   backend-release-gate:
     name: Backend release gate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       NODE_ENV: test
       JWT_SECRET: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -77,7 +77,7 @@ jobs:
 
   frontend-release-gate:
     name: Frontend release gate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
