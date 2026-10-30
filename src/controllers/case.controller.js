@@ -1284,7 +1284,8 @@ const getDocketEligibleUsers = async (req, res) => {
       .lean();
     return res.json({ success: true, data: users });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Failed to load eligible users', error: error.message });
+    log.error('ELIGIBLE_USERS_FETCH_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to load eligible users' });
   }
 };
 
@@ -1391,7 +1392,8 @@ const sendEmailToClient = async (req, res) => {
 
     return res.json({ success: true, message: 'Email sent successfully to client.', data: { recipientEmail, uniqueEmail } });
   } catch (error) {
-    return res.status(error.status || 500).json({ success: false, message: error.message || 'Failed to send email to client' });
+    log.error('SEND_EMAIL_CLIENT_ERROR', { message: error.message, stack: error.stack });
+    return res.status(error.status || 500).json({ success: false, message: 'Failed to send email to client' });
   }
 };
 
