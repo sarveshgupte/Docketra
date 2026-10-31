@@ -1424,8 +1424,8 @@ const updateBackupSettings = async (req, res) => {
 
     return res.json({ success: true, message: 'Backup settings updated successfully.' });
   } catch (error) {
-    log.error('[STORAGE]', { event: 'update_backup_settings_failed', message: error.message });
-    return res.status(500).json({ success: false, error: 'update_backup_settings_failed', message: error.message });
+    log.error('STORAGE_UPDATE_BACKUP_SETTINGS_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, error: 'update_backup_settings_failed', message: 'Failed to update backup settings.' });
   }
 };
 

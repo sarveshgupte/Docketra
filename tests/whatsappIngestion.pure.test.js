@@ -98,6 +98,12 @@ test('WhatsApp Ingestion - HMAC-SHA256 Signature Verification (POST)', () => {
     verifySignature({ rawBody, signatureHeader: '', appSecret }),
     false
   );
+
+  // Fail-closed when appSecret is missing
+  assert.strictEqual(
+    verifySignature({ rawBody, signatureHeader: validHeader, appSecret: '' }),
+    false
+  );
 });
 
 test('WhatsApp Ingestion - Extract Incoming Media Items from Meta Webhook Payload', () => {

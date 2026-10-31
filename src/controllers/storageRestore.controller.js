@@ -44,11 +44,10 @@ const initiateStorageRestore = async (req, res) => {
       message: 'Restore job initiated successfully. Progress is being tracked.',
     });
   } catch (error) {
-    log.error('[RESTORE] Restore initiation failed', { firmId: req.firmId, message: error.message });
+    log.error('STORAGE_RESTORE_INITIATION_ERROR', { firmId: req.firmId, message: error.message, stack: error.stack });
     return res.status(500).json({
       success: false,
       message: 'Unable to initiate restore job.',
-      error: error.message,
     });
   }
 };

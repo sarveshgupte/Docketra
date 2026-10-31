@@ -1,6 +1,7 @@
 const { assertFirmContext } = require('../utils/tenantGuard');
 const { hasFirmRoleAtLeast } = require('../utils/role.utils');
 const docketraIntelligenceService = require('../services/docketraIntelligence.service');
+const log = require('../utils/log');
 
 const getWorkloadIntelligence = async (req, res) => {
   try {

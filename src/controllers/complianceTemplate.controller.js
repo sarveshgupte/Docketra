@@ -1,6 +1,7 @@
 const ComplianceObligationTemplate = require('../models/ComplianceObligationTemplate.model');
 const complianceTemplateGenerationService = require('../services/complianceTemplateGeneration.service');
 const { assertFirmContext } = require('../utils/tenantGuard');
+const log = require('../utils/log');
 
 const ROLE_RANK = {
   EMPLOYEE: 1,
@@ -34,7 +35,8 @@ const listComplianceTemplates = async (req, res) => {
     });
     return res.json({ success: true, data: templates });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error?.message || 'Failed to load compliance templates' });
+    log.error('COMPLIANCE_TEMPLATE_LIST_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to load compliance templates' });
   }
 };
 
@@ -98,7 +100,8 @@ const seedSampleComplianceTemplates = async (req, res) => {
     });
     return res.json({ success: true, data: result });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error?.message || 'Failed to seed sample compliance templates' });
+    log.error('COMPLIANCE_TEMPLATE_SEED_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to seed sample compliance templates' });
   }
 };
 

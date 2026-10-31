@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Case = require('../models/Case.model');
 const { requestApproval, decideApproval } = require('../services/docketApproval.service');
+const log = require('../utils/log');
 
 const getCaseNumberCandidates = (id) => {
   if (!id) return [];
@@ -53,7 +54,8 @@ const getDocketApprovalStage = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error?.message || 'Failed to load approval stage' });
+    log.error('DOCKET_GET_APPROVAL_STAGE_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to load approval stage' });
   }
 };
 

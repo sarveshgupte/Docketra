@@ -36,7 +36,11 @@ function normalizePhoneNumber(rawPhone) {
  * hub.verify_token === WHATSAPP_VERIFY_TOKEN
  */
 function verifyWebhookHandshake({ mode, token, challenge, expectedToken }) {
-  const secretToken = expectedToken || process.env.WHATSAPP_VERIFY_TOKEN || 'docketra_webhook_verify';
+  const secretToken = expectedToken || process.env.WHATSAPP_VERIFY_TOKEN;
+  if (!secretToken) {
+    log.warn('WHATSAPP_HANDSHAKE_FAILED_NO_SECRET_TOKEN');
+    return { valid: false, challenge: null };
+  }
   if (mode === 'subscribe' && token === secretToken) {
     return { valid: true, challenge };
   }
@@ -49,8 +53,8 @@ function verifyWebhookHandshake({ mode, token, challenge, expectedToken }) {
 function verifySignature({ rawBody, signatureHeader, appSecret }) {
   const secret = appSecret || process.env.WHATSAPP_APP_SECRET;
   if (!secret) {
-    // If no secret configured in test/dev, allow
-    return true;
+    log.warn('WHATSAPP_SIGNATURE_VERIFY_FAILED_NO_SECRET');
+    return false;
   }
   if (!signatureHeader || !signatureHeader.startsWith('sha256=')) {
     return false;
@@ -212,7 +216,22 @@ async function resolveClientAndDocket({ senderPhone, caption = '', firmId = null
     query.firmId = firmId;
   }
 
-  const client = await Client.findOne(query).select('clientId firmId name businessEmail primaryContactNumber');
+  let client = null;
+  if (firmId) {
+    client = await Client.findOne(query).select('clientId firmId name businessEmail primaryContactNumber');
+  } else {
+    // Defend against ambiguous cross-tenant resolution if the phone number exists in multiple firms
+    const candidateClients = await Client.find(query).select('clientId firmId name businessEmail primaryContactNumber').limit(2);
+    if (candidateClients.length > 1) {
+      log.warn('WHATSAPP_INGESTION_AMBIGUOUS_MULTI_TENANT_PHONE', {
+        matchCount: candidateClients.length,
+        senderPhone,
+      });
+      return { client: null, targetCase: null, allOpenCases: [] };
+    }
+    client = candidateClients[0] || null;
+  }
+
   if (!client) {
     return { client: null, targetCase: null, allOpenCases: [] };
   }

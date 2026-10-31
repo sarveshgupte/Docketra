@@ -2164,8 +2164,8 @@ const getFirmPlan = async (req, res) => {
       },
     });
   } catch (error) {
-    log.error('[ADMIN] Error fetching firm plan:', error);
-    return res.status(500).json({ success: false, message: 'Failed to load firm plan', error: error.message });
+    log.error('ADMIN_FETCH_FIRM_PLAN_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to load firm plan' });
   }
 };
 
@@ -2222,8 +2222,8 @@ const upgradeFirmPlan = async (req, res) => {
       },
     });
   } catch (error) {
-    log.error('[ADMIN] Error upgrading firm plan:', error);
-    return res.status(500).json({ success: false, message: 'Failed to upgrade workspace plan', error: error.message });
+    log.error('ADMIN_UPGRADE_FIRM_PLAN_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to upgrade workspace plan' });
   }
 };
 
@@ -2358,8 +2358,8 @@ const exportWeeklyAuditCsv = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="docketra-audit-log-${new Date().toISOString().slice(0, 10)}.csv"`);
     return res.send(csv);
   } catch (error) {
-    log.error('[ADMIN] Error exporting weekly audit CSV:', error);
-    return res.status(500).json({ success: false, message: 'Failed to export audit CSV', error: error.message });
+    log.error('ADMIN_EXPORT_AUDIT_CSV_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to export audit CSV' });
   }
 };
 
@@ -2380,8 +2380,8 @@ const triggerWeeklyAuditDigest = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    log.error('[ADMIN] Error triggering weekly audit digest:', error);
-    return res.status(500).json({ success: false, message: 'Failed to trigger weekly audit digest', error: error.message });
+    log.error('ADMIN_TRIGGER_WEEKLY_AUDIT_DIGEST_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to trigger weekly audit digest' });
   }
 };
 
