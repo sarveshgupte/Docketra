@@ -95,7 +95,7 @@ export const TermsPage = () => (
     <section id="contact">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">8. Contact</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Questions about these Terms can be sent to <a href={`mailto:${SUPPORT_EMAIL}`} className="text-gray-700 underline hover:no-underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-900 rounded-xs">{SUPPORT_EMAIL}</a>.
+        Questions about these Terms can be sent to <a href={`mailto:${SUPPORT_EMAIL}`} className="text-gray-700 underline hover:no-underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-900 active:text-gray-950 rounded-xs">{SUPPORT_EMAIL}</a>.
       </p>
     </section>
   </LegalLayout>

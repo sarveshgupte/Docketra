@@ -4,124 +4,126 @@ const CANVAS_TABS = [
   {
     id: 'radar',
     label: 'Statutory Radar',
-    badge: '3 Due',
-    badgeStyle: 'bg-rose-50 text-rose-800 border-rose-200 font-bold',
-    description: 'Real-time MCA V3, Tax Audit, and NCLT court hearings with automatic late fee radars.',
+    badge: '3 Due Today',
+    badgeStyle: 'bg-rose-50 text-rose-800 border-rose-200',
+    description: 'Tracks MCA V3, Tax Audit, and NCLT hearings with automatic penalty warnings before late fees apply.',
   },
   {
     id: 'shield',
     label: 'Trainee Shield',
-    badge: 'Blocked',
-    badgeStyle: 'bg-emerald-50 text-emerald-800 border-emerald-200 font-semibold',
-    description: 'Trainees view working papers in watermarked browser sandbox; raw local disk downloads are blocked.',
+    badge: 'Active Enclave',
+    badgeStyle: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    description: 'Junior staff view files in a watermarked browser viewer. Raw downloads to personal laptops are blocked.',
   },
   {
     id: 'qc',
-    label: 'SQC-1 Sign-off',
-    badge: 'Partner',
-    badgeStyle: 'bg-amber-50 text-amber-800 border-amber-200 font-bold',
-    description: 'Mandatory 4-eye maker-checker approval before final filing on MCA or Income Tax portal.',
+    label: 'Maker-Checker QC',
+    badge: 'SQC-1 Required',
+    badgeStyle: 'bg-amber-50 text-amber-800 border-amber-200',
+    description: 'Partners review and approve every filing before it reaches government portals.',
   },
   {
     id: 'storage',
     label: 'Drive Vault',
-    badge: 'BYOS',
-    badgeStyle: 'bg-slate-100 text-slate-800 border-slate-300 font-medium',
-    description: 'Restricted drive.file isolation. Docketra touches only its dedicated folder inside your private Drive.',
+    badge: 'Private BYOS',
+    badgeStyle: 'bg-slate-100 text-slate-800 border-slate-300',
+    description: 'All working papers stay inside your private Google Drive. Docketra never indexes pre-existing files.',
   },
   {
     id: 'clients',
     label: 'Client Memory',
-    badge: '42 Dockets',
-    badgeStyle: 'bg-slate-100 text-slate-700 border-slate-200',
-    description: 'Master directory of CIN, PAN, DIN, and authorized signatories with 1-click portal copy.',
+    badge: 'Master Registry',
+    badgeStyle: 'bg-slate-100 text-slate-800 border-slate-300',
+    description: 'Central registry for CIN, PAN, DIN, and authorized signatories with one-click copy.',
   },
 ];
 
 export function InteractiveProductCanvas({ className = '' }) {
   const [activeTab, setActiveTab] = useState('radar');
-  const [copiedText, setCopiedText] = useState(null);
-  const [shieldTestState, setShieldTestState] = useState('idle'); // 'idle' | 'testing' | 'blocked'
+  const [copiedKey, setCopiedKey] = useState(null);
+  const [shieldState, setShieldState] = useState('idle'); // 'idle' | 'testing' | 'blocked'
   const [partnerApproved, setPartnerApproved] = useState(false);
   const [driveRecoveryState, setDriveRecoveryState] = useState('intact'); // 'intact' | 'recovering' | 'recovered'
 
-  const handleCopy = (text) => {
-    navigator.clipboard?.writeText(text);
-    setCopiedText(text);
-    setTimeout(() => setCopiedText(null), 1800);
+  const handleCopy = (key, text) => {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text);
+    }
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  const runShieldSimulation = () => {
-    setShieldTestState('testing');
+  const handleSimulateDownload = () => {
+    setShieldState('testing');
     setTimeout(() => {
-      setShieldTestState('blocked');
-    }, 450);
+      setShieldState('blocked');
+    }, 400);
   };
 
-  const runPartnerApproval = () => {
+  const handlePartnerSignoff = () => {
     setPartnerApproved(true);
   };
 
-  const runDriveRecovery = () => {
+  const handleDriveRecovery = () => {
     setDriveRecoveryState('recovering');
     setTimeout(() => {
       setDriveRecoveryState('recovered');
-    }, 600);
+    }, 500);
   };
 
   return (
     <div className={`relative ${className}`}>
-      {/* Outer Shell: Precision workstation window */}
-      <div className="relative rounded-lg border border-slate-300/80 bg-white shadow-2xl overflow-hidden font-sans text-slate-900 transition-colors">
-        {/* Workspace Window Titlebar */}
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-900 px-3.5 py-2.5 text-xs text-white">
-          <div className="flex items-center gap-2.5 min-w-0">
-            {/* Window Traffic Dots */}
-            <div className="flex items-center gap-1.5 mr-1" aria-hidden="true">
-              <span className="h-2.5 w-2.5 rounded-full bg-rose-500/80 inline-block" />
-              <span className="h-2.5 w-2.5 rounded-full bg-amber-500/80 inline-block" />
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/80 inline-block" />
-            </div>
-            <span className="font-mono text-[11px] font-semibold text-slate-200 truncate">
-              docketra // mehta-and-associates-ca
+      {/* Outer Shell: Precision workstation surface */}
+      <div className="relative rounded-lg border border-slate-300 bg-white shadow-sm overflow-hidden text-slate-900">
+        {/* Workspace Toolbar: Clean, authoritative, no fake browser chrome */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-900 px-4 py-3 text-xs text-white">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true" />
+            <span className="font-medium text-slate-100 truncate">
+              Mehta & Associates, Chartered Accountants
             </span>
-            <span className="hidden sm:inline border border-emerald-500/40 bg-emerald-950/60 px-1.5 py-0.2 font-mono text-[10px] text-emerald-400 font-semibold rounded-xs">
-              SOVEREIGN ENCLAVE
+            <span className="hidden sm:inline border border-emerald-500/30 bg-emerald-950/60 px-2 py-0.5 text-[11px] text-emerald-300 font-medium rounded-xs">
+              Google Drive Connected
             </span>
           </div>
 
-          <div className="flex items-center gap-2 font-mono text-[10px] shrink-0">
-            <span className="border border-slate-700 bg-slate-800 px-2 py-0.5 text-slate-300 font-semibold rounded-xs">
+          <div className="flex items-center gap-2 text-[11px] shrink-0">
+            <span className="border border-slate-700 bg-slate-800 px-2.5 py-0.5 text-slate-300 font-medium rounded-xs">
               FY 2025-26
             </span>
-            <span className="flex items-center gap-1.5 border border-emerald-500/30 bg-emerald-950/50 px-2 py-0.5 text-emerald-400 font-semibold rounded-xs">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 motion-safe:animate-pulse shrink-0" />
-              <span>Drive Perimeter Active</span>
+            <span className="border border-emerald-500/30 bg-emerald-950/40 px-2.5 py-0.5 text-emerald-300 font-medium rounded-xs">
+              Drive Perimeter Active
             </span>
           </div>
         </div>
 
-        {/* Interactive Navigation Tabs */}
-        <div className="flex border-b border-slate-200 bg-slate-100/90 px-2 gap-1 overflow-x-auto no-scrollbar">
+        {/* Tab Navigation Strip */}
+        <div
+          role="tablist"
+          aria-label="Interactive Product Capabilities"
+          className="flex border-b border-slate-200 bg-slate-50/90 px-3 gap-1 overflow-x-auto"
+        >
           {CANVAS_TABS.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
+                role="tab"
+                id={`canvas-tab-${tab.id}`}
+                aria-selected={isActive}
+                aria-controls={`canvas-panel-${tab.id}`}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-3 py-2 text-xs font-semibold whitespace-nowrap transition-colors border-b-2 cursor-pointer flex items-center gap-2 ${
+                className={`px-3.5 py-2.5 text-xs font-medium whitespace-nowrap transition-colors border-b-2 flex items-center gap-2 cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-100 ${
                   isActive
-                    ? 'border-slate-950 text-slate-950 bg-white shadow-2xs font-bold'
-                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                    ? 'border-slate-950 text-slate-950 bg-white font-semibold'
+                    : 'border-transparent text-slate-600 hover:text-slate-950 hover:bg-slate-100'
                 }`}
               >
                 <span>{tab.label}</span>
                 <span
-                  className={`text-[9px] font-mono px-1.5 py-0.5 rounded-xs border ${
-                    isActive
-                      ? 'border-slate-300 bg-slate-50 text-slate-900 font-bold'
-                      : tab.badgeStyle
+                  className={`text-[10px] px-1.5 py-0.5 rounded-xs border ${
+                    isActive ? 'border-slate-300 bg-slate-100 text-slate-900 font-semibold' : tab.badgeStyle
                   }`}
                 >
                   {tab.badge}
@@ -131,92 +133,105 @@ export function InteractiveProductCanvas({ className = '' }) {
           })}
         </div>
 
-        {/* Tab Content Canvas */}
-        <div className="p-3.5 sm:p-4 bg-slate-50/70 space-y-3 min-h-[300px]">
-          {/* 1. Statutory Due Dates Radar */}
+        {/* Panel Viewport */}
+        <div
+          id={`canvas-panel-${activeTab}`}
+          role="tabpanel"
+          aria-labelledby={`canvas-tab-${activeTab}`}
+          className="p-4 sm:p-5 bg-white min-h-[340px] space-y-4"
+        >
+          {/* Tab 1: Statutory Radar */}
           {activeTab === 'radar' && (
-            <div className="space-y-2.5">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div className="border border-rose-300 bg-rose-50/60 p-2.5 rounded-md">
-                  <span className="text-xs font-semibold text-rose-700">Overdue alert</span>
-                  <div className="font-mono text-base sm:text-lg font-bold text-slate-950 mt-0.5">3 Filings</div>
-                  <span className="text-[10px] text-rose-600 font-mono">₹100/day penalty</span>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="border border-rose-200 bg-rose-50/50 p-3 rounded-md">
+                  <span className="text-xs font-medium text-rose-800">Overdue filings</span>
+                  <div className="text-xl font-bold text-slate-950 mt-1">3 Dockets</div>
+                  <span className="text-xs text-rose-700">₹100/day penalty</span>
                 </div>
-                <div className="border border-amber-300 bg-amber-50/60 p-2.5 rounded-md">
-                  <span className="text-xs font-semibold text-amber-800">Next 7 days</span>
-                  <div className="font-mono text-base sm:text-lg font-bold text-slate-950 mt-0.5">8 Filings</div>
-                  <span className="text-[10px] text-amber-700 font-mono">Form 3CD + AOC-4</span>
+                <div className="border border-amber-200 bg-amber-50/50 p-3 rounded-md">
+                  <span className="text-xs font-medium text-amber-800">Next 7 days</span>
+                  <div className="text-xl font-bold text-slate-950 mt-1">8 Dockets</div>
+                  <span className="text-xs text-amber-700">Form 3CD & AOC-4</span>
                 </div>
-                <div className="border border-sky-300 bg-sky-50/60 p-2.5 rounded-md">
-                  <span className="text-xs font-semibold text-sky-800">Court / NCLT</span>
-                  <div className="font-mono text-base sm:text-lg font-bold text-slate-950 mt-0.5">2 Hearings</div>
-                  <span className="text-[10px] text-sky-700 font-mono">Bench 2 Mumbai</span>
+                <div className="border border-slate-200 bg-slate-50 p-3 rounded-md">
+                  <span className="text-xs font-medium text-slate-700">Court / NCLT</span>
+                  <div className="text-xl font-bold text-slate-950 mt-1">2 Hearings</div>
+                  <span className="text-xs text-slate-600">Mumbai Bench</span>
                 </div>
-                <div className="border border-purple-300 bg-purple-50/60 p-2.5 rounded-md">
-                  <span className="text-xs font-semibold text-purple-800">Partner sign</span>
-                  <div className="font-mono text-base sm:text-lg font-bold text-slate-950 mt-0.5">4 In Queue</div>
-                  <span className="text-[10px] text-purple-700 font-mono">SQC-1 4-Eye Review</span>
+                <div className="border border-slate-200 bg-slate-50 p-3 rounded-md">
+                  <span className="text-xs font-medium text-slate-700">Partner QC queue</span>
+                  <div className="text-xl font-bold text-slate-950 mt-1">4 In review</div>
+                  <span className="text-xs text-slate-600">SQC-1 4-eye check</span>
                 </div>
               </div>
 
-              {/* Dockets Ledger Table */}
-              <div className="border border-slate-200 bg-white rounded-md overflow-hidden text-xs shadow-2xs">
-                <div className="grid grid-cols-12 bg-slate-100 px-3 py-1.5 text-xs text-slate-700 font-semibold border-b border-slate-200">
-                  <div className="col-span-5">Client & CIN</div>
+              {/* Dockets Table */}
+              <div className="border border-slate-200 rounded-md overflow-hidden text-xs">
+                <div className="grid grid-cols-12 bg-slate-100/80 px-3 py-2 font-medium text-slate-700 border-b border-slate-200">
+                  <div className="col-span-5">Client & Identifier</div>
                   <div className="col-span-4">Statutory Docket</div>
-                  <div className="col-span-3 text-right">Cutoff / Action</div>
+                  <div className="col-span-3 text-right">Cutoff & Status</div>
                 </div>
                 <div className="divide-y divide-slate-100">
-                  <div className="grid grid-cols-12 items-center px-3 py-2 hover:bg-slate-50 transition-colors">
+                  <div className="grid grid-cols-12 items-center px-3 py-2.5 hover:bg-slate-50 transition-colors">
                     <div className="col-span-5 pr-2">
-                      <p className="font-semibold text-slate-950 truncate">Zenith Infra Pvt Ltd</p>
-                      <div className="flex items-center gap-1 font-mono text-[9px] text-slate-500">
-                        <span>U72200MH2021PTC368942</span>
+                      <p className="font-semibold text-slate-950 truncate">Zenith Logistics Pvt Ltd</p>
+                      <div className="flex items-center gap-2 text-slate-500 text-[11px] mt-0.5">
+                        <span className="font-mono">U72200MH2021PTC368942</span>
                         <button
                           type="button"
-                          onClick={() => handleCopy('U72200MH2021PTC368942')}
-                          className="text-amber-700 hover:text-amber-900 font-mono font-bold cursor-pointer"
+                          onClick={() => handleCopy('cin1', 'U72200MH2021PTC368942')}
+                          className="text-amber-800 hover:text-amber-950 font-medium cursor-pointer underline focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-slate-950 active:opacity-75"
                         >
-                          [{copiedText === 'U72200MH2021PTC368942' ? 'COPIED' : 'COPY'}]
+                          {copiedKey === 'cin1' ? 'Copied' : 'Copy'}
                         </button>
                       </div>
                     </div>
-                    <div className="col-span-4 text-slate-800 text-[11px] truncate">DIR-3 KYC (Director KYC)</div>
+                    <div className="col-span-4 text-slate-800">
+                      <span>DIR-3 KYC (Director KYC)</span>
+                    </div>
                     <div className="col-span-3 text-right">
-                      <span className="border border-rose-300 bg-rose-50 px-1.5 py-0.5 text-xs font-semibold text-rose-800 rounded-xs">
+                      <span className="inline-block border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-800 rounded-xs">
                         Due today
                       </span>
                     </div>
                   </div>
-                  <div className="grid grid-cols-12 items-center px-3 py-2 hover:bg-slate-50 transition-colors">
+
+                  <div className="grid grid-cols-12 items-center px-3 py-2.5 hover:bg-slate-50 transition-colors">
                     <div className="col-span-5 pr-2">
                       <p className="font-semibold text-slate-950 truncate">Neo Retail Solutions Pvt Ltd</p>
-                      <div className="flex items-center gap-1 font-mono text-[9px] text-slate-500">
-                        <span>U52100DL2019PTC345112</span>
+                      <div className="flex items-center gap-2 text-slate-500 text-[11px] mt-0.5">
+                        <span className="font-mono">U52100DL2019PTC345112</span>
                         <button
                           type="button"
-                          onClick={() => handleCopy('U52100DL2019PTC345112')}
-                          className="text-amber-700 hover:text-amber-900 font-mono font-bold cursor-pointer"
+                          onClick={() => handleCopy('cin2', 'U52100DL2019PTC345112')}
+                          className="text-amber-800 hover:text-amber-950 font-medium cursor-pointer underline focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-slate-950 active:opacity-75"
                         >
-                          [{copiedText === 'U52100DL2019PTC345112' ? 'COPIED' : 'COPY'}]
+                          {copiedKey === 'cin2' ? 'Copied' : 'Copy'}
                         </button>
                       </div>
                     </div>
-                    <div className="col-span-4 text-slate-800 text-[11px] truncate">AOC-4 Balance Sheet & Notes</div>
+                    <div className="col-span-4 text-slate-800">
+                      <span>AOC-4 Balance Sheet & Notes</span>
+                    </div>
                     <div className="col-span-3 text-right">
-                      <span className="border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-xs font-semibold text-amber-800 rounded-xs">
+                      <span className="inline-block border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 rounded-xs">
                         In 3 days
                       </span>
                     </div>
                   </div>
-                  <div className="grid grid-cols-12 items-center px-3 py-2 hover:bg-slate-50 transition-colors">
+
+                  <div className="grid grid-cols-12 items-center px-3 py-2.5 hover:bg-slate-50 transition-colors">
                     <div className="col-span-5 pr-2">
                       <p className="font-semibold text-slate-950 truncate">Apex Bio-Tech India LLP</p>
-                      <p className="font-mono text-[9px] text-slate-500">AAX-9981 (ROC Bangalore)</p>
+                      <p className="font-mono text-[11px] text-slate-500 mt-0.5">AAX-9981 (ROC Bangalore)</p>
                     </div>
-                    <div className="col-span-4 text-slate-800 text-[11px] truncate">Tax Audit Form 3CD</div>
+                    <div className="col-span-4 text-slate-800">
+                      <span>Tax Audit Form 3CD</span>
+                    </div>
                     <div className="col-span-3 text-right">
-                      <span className="border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-xs font-semibold text-emerald-800 rounded-xs">
+                      <span className="inline-block border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 rounded-xs">
                         Ready for QC
                       </span>
                     </div>
@@ -226,67 +241,60 @@ export function InteractiveProductCanvas({ className = '' }) {
             </div>
           )}
 
-          {/* 2. Trainee Laptop Shield (Interactive Live Proof) */}
+          {/* Tab 2: Trainee Laptop Shield */}
           {activeTab === 'shield' && (
-            <div className="space-y-3">
-              <div className="border border-slate-200 bg-white rounded-md p-3.5 space-y-3 text-xs shadow-2xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+            <div className="space-y-4">
+              <div className="border border-slate-200 bg-white rounded-md p-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <h4 className="font-bold text-slate-950 text-sm">Trainee Laptop Perimeter Guard</h4>
-                    </div>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      Articles & trainees view files inside protected web viewer. Direct downloads to personal drives or disks are blocked.
+                    <h3 className="text-sm font-semibold text-slate-950">Trainee Laptop Protection</h3>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      Articles and junior trainees view client ledgers inside a watermarked web reader. Direct downloads to personal disks are blocked.
                     </p>
                   </div>
-                  <span className="border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 rounded-xs self-start sm:self-auto">
+                  <span className="border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800 rounded-xs self-start sm:self-auto">
                     Shield active
                   </span>
                 </div>
 
-                {/* Simulated Trainee Session */}
-                <div className="p-3 border border-slate-200 bg-slate-50 rounded-md space-y-2">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-mono text-slate-700 font-semibold">Trainee Session: Rohan V. (Article Clerk)</span>
-                    <span className="font-mono text-[10px] text-slate-500">Device: Personal Laptop (BYOD)</span>
-                  </div>
-                  <div className="p-2.5 bg-white border border-slate-200 rounded text-slate-800 flex items-center justify-between">
-                    <div className="flex items-center gap-2 truncate">
-                      <span className="text-amber-600 font-mono font-bold">[PDF]</span>
-                      <span className="font-medium truncate">Zenith_FY25_Audited_Financials_Confidential.pdf</span>
-                    </div>
-                    <span className="font-mono text-[10px] text-slate-400 shrink-0">4.8 MB</span>
+                <div className="p-3 border border-slate-200 bg-slate-50 rounded-md space-y-3">
+                  <div className="flex flex-wrap items-center justify-between text-xs text-slate-600 gap-2">
+                    <span className="font-medium text-slate-800">Staff Session: Rohan V. (Article Assistant)</span>
+                    <span className="text-slate-500">Device: Personal Laptop</span>
                   </div>
 
-                  {/* Interactive Trigger Button */}
-                  <div className="pt-1 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <div className="p-3 bg-white border border-slate-200 rounded flex items-center justify-between">
+                    <div className="truncate">
+                      <p className="font-medium text-slate-950 truncate">Zenith_FY25_Audited_Financial_Ledgers.pdf</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Confidential client working papers, 4.8 MB</p>
+                    </div>
+                    <span className="text-xs font-medium text-slate-600 shrink-0">Protected</span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                     <button
                       type="button"
-                      onClick={runShieldSimulation}
-                      className="inline-flex items-center px-3 py-1.5 bg-slate-950 text-white text-xs font-semibold rounded-xs hover:bg-slate-800 transition-colors cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-900"
+                      onClick={handleSimulateDownload}
+                      className="px-3.5 py-2 bg-slate-950 text-white text-xs font-medium rounded-xs hover:bg-slate-800 transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <span>Simulate Clerk Attempting Download</span>
-
+                      Simulate staff download attempt
                     </button>
-                    <span className="text-[10px] text-slate-500 font-mono">Click to test live security policy</span>
+                    <span className="text-xs text-slate-500">Test how Docketra prevents local data theft</span>
                   </div>
 
-                  {/* Live Simulation Feedback */}
-                  {shieldTestState === 'testing' && (
-                    <div className="p-2 border border-amber-200 bg-amber-50 rounded text-amber-800 font-mono text-[10px] flex items-center gap-2 animate-pulse">
-                      <span>Intercepting download stream...</span>
+                  {shieldState === 'testing' && (
+                    <div className="p-3 border border-amber-200 bg-amber-50 rounded text-amber-800 text-xs">
+                      Intercepting file export stream…
                     </div>
                   )}
 
-                  {shieldTestState === 'blocked' && (
-                    <div className="p-2.5 border border-rose-300 bg-rose-50 rounded text-rose-900 font-mono text-[10px] space-y-1">
-                      <div className="flex items-center gap-1.5 font-bold text-rose-800">
-                        <span className="inline-flex items-center justify-center h-4 w-4 rounded-xs bg-rose-600 text-white font-bold text-[10px]">✕</span>
-                        <span>DOWNLOAD BLOCKED: Trainee Laptop Shield Intercepted File</span>
-                      </div>
-                      <p className="text-[10px] text-rose-700 leading-normal">
-                        Policy ENCLAVE-301: Trainee accounts cannot save client financials to local disks. In-browser watermarked preview active with clerk IP: 103.21.244.12. Zero file leakage.
+                  {shieldState === 'blocked' && (
+                    <div className="p-3 border border-rose-200 bg-rose-50 rounded text-rose-900 text-xs space-y-1">
+                      <p className="font-semibold text-rose-800">
+                        Download blocked: Trainee Shield intercepted export attempt
+                      </p>
+                      <p className="text-rose-700 leading-relaxed">
+                        Firm Enclave Rule #4: Article accounts cannot dump client ledgers onto personal hard drives. In-browser watermarked preview active with assistant ID TR-0842.
                       </p>
                     </div>
                   )}
@@ -295,62 +303,62 @@ export function InteractiveProductCanvas({ className = '' }) {
             </div>
           )}
 
-          {/* 3. Partner SQC-1 Sign-off */}
+          {/* Tab 3: Maker-Checker QC */}
           {activeTab === 'qc' && (
-            <div className="space-y-3">
-              <div className="border border-slate-200 bg-white rounded-md p-3.5 space-y-3 text-xs shadow-2xs">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div className="space-y-4">
+              <div className="border border-slate-200 bg-white rounded-md p-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                   <div>
-                    <h4 className="font-bold text-slate-950 text-sm">Partner Review: Form AOC-4 (Financial Statements)</h4>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Prepared by Associate Sneha • Ready for Partner Final Signature</p>
+                    <h3 className="text-sm font-semibold text-slate-950">Partner Review: Form AOC-4 Financial Statements</h3>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      Prepared by Associate Sneha · Awaiting Managing Partner Approval
+                    </p>
                   </div>
-                  <span className={`border px-2 py-0.5 text-xs font-semibold rounded-xs ${
-                    partnerApproved
-                      ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-                      : 'border-amber-300 bg-amber-50 text-amber-800'
-                  }`}>
-                    {partnerApproved ? 'Sealed & filed' : 'Pending partner sign'}
+                  <span
+                    className={`border px-2.5 py-0.5 text-xs font-medium rounded-xs ${
+                      partnerApproved
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                        : 'border-amber-200 bg-amber-50 text-amber-800'
+                    }`}
+                  >
+                    {partnerApproved ? 'Approved & Sealed' : 'Pending Partner Approval'}
                   </span>
                 </div>
 
-                {/* Statutory Checklist Items */}
-                <div className="space-y-1.5 text-[11px]">
-                  <div className="flex justify-between items-center p-2 border border-slate-200 bg-slate-50 rounded-sm text-slate-800">
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between items-center p-2.5 border border-slate-200 bg-slate-50 rounded text-slate-800">
                     <span>Balance sheet and audit notes attached from Drive</span>
-                    <span className="text-emerald-700 font-mono text-[10px] font-bold">VERIFIED</span>
+                    <span className="text-emerald-700 font-medium">Verified</span>
                   </div>
-                  <div className="flex justify-between items-center p-2 border border-slate-200 bg-slate-50 rounded-sm text-slate-800">
-                    <span>Director DSC signature token status confirmed</span>
-                    <span className="text-emerald-700 font-mono text-[10px] font-bold">VALID (EXP: 2027)</span>
+                  <div className="flex justify-between items-center p-2.5 border border-slate-200 bg-slate-50 rounded text-slate-800">
+                    <span>Director DSC token validity verified</span>
+                    <span className="text-emerald-700 font-medium">Valid through 2027</span>
                   </div>
-                  <div className="flex justify-between items-center p-2 border border-slate-200 bg-slate-50 rounded-sm text-slate-800">
-                    <span>MCA V3 pre-scrutiny checks completed with 0 errors</span>
-                    <span className="text-emerald-700 font-mono text-[10px] font-bold">PASSED</span>
+                  <div className="flex justify-between items-center p-2.5 border border-slate-200 bg-slate-50 rounded text-slate-800">
+                    <span>MCA V3 pre-scrutiny checks completed</span>
+                    <span className="text-emerald-700 font-medium">0 Errors</span>
                   </div>
                 </div>
 
-                {/* Partner Action Area */}
-                <div className="pt-1 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-t border-slate-100">
+                <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
                   {!partnerApproved ? (
                     <>
-                      <span className="text-[10px] text-slate-500 font-mono">Role: CA Rajesh Mehta (Managing Partner)</span>
+                      <span className="text-xs text-slate-500">Sign-off by CA Rajesh Mehta (Managing Partner)</span>
                       <button
                         type="button"
-                        onClick={runPartnerApproval}
-                        className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-950 text-amber-400 font-bold text-xs rounded-xs hover:bg-slate-800 transition-colors shadow-xs cursor-pointer"
+                        onClick={handlePartnerSignoff}
+                        className="px-4 py-2 bg-slate-950 text-amber-300 font-medium text-xs rounded-xs hover:bg-slate-800 transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <span>Approve & Engrave SQC-1 Audit Seal</span>
-  
+                        Approve & Apply SQC-1 Audit Seal
                       </button>
                     </>
                   ) : (
-                    <div className="w-full p-2.5 border border-emerald-300 bg-emerald-50 rounded text-emerald-900 font-mono text-[10px] space-y-1">
-                      <div className="flex items-center gap-1.5 font-bold text-emerald-800">
-                        <span>✓</span>
-                        <span>SQC-1 AUDIT TRAIL LOGGED • PARTNER SIGN-OFF COMPLETED</span>
-                      </div>
-                      <p className="text-[10px] text-emerald-700">
-                        Signed by CA Rajesh Mehta (FCA 042918) at {new Date().toLocaleTimeString()} IST. Hash: #MCA-9821-V3-AOC4-VERIFIED. Peer-review inspection audit record created.
+                    <div className="w-full p-3 border border-emerald-200 bg-emerald-50 rounded text-emerald-900 text-xs space-y-1">
+                      <p className="font-semibold text-emerald-800">
+                        SQC-1 Audit Trail Recorded: Partner Sign-off Complete
+                      </p>
+                      <p className="text-emerald-700 leading-relaxed">
+                        Approved by CA Rajesh Mehta (FCA 042918). Timestamped audit trail created for ICSI/ICAI peer review inspection.
                       </p>
                     </div>
                   )}
@@ -359,50 +367,49 @@ export function InteractiveProductCanvas({ className = '' }) {
             </div>
           )}
 
-          {/* 4. Google Drive BYOS Vault */}
+          {/* Tab 4: Google Drive Vault */}
           {activeTab === 'storage' && (
-            <div className="space-y-3">
-              <div className="border border-slate-200 bg-white rounded-md p-3.5 space-y-3 text-xs shadow-2xs">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div className="space-y-4">
+              <div className="border border-slate-200 bg-white rounded-md p-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                   <div>
-                    <h4 className="font-bold text-slate-950 text-sm">Your Firm&apos;s Private Google Drive Enclave</h4>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Strict restricted drive.file scope. Zero outside access.</p>
+                    <h3 className="text-sm font-semibold text-slate-950">Your Firm&apos;s Private Google Drive Enclave</h3>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      Restricted drive.file permission. Zero access to pre-existing files.
+                    </p>
                   </div>
-                  <span className="border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 rounded-xs">
+                  <span className="border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800 rounded-xs">
                     Private custody
                   </span>
                 </div>
 
-                <div className="p-2.5 border border-slate-200 bg-slate-50 rounded-sm font-mono text-[10px] text-slate-800 space-y-1.5">
-                  <div className="flex justify-between text-slate-500">
-                    <span>Sandboxed Google Drive Path:</span>
-                    <span className="text-emerald-700 font-bold">Encrypted & Isolated</span>
-                  </div>
-                  <p className="text-amber-800 font-bold break-all bg-white p-2 border border-slate-200 rounded">
-                    /Google Drive/Mehta & Associates/Clients/Zenith Infra/FY2025-26/ROC/
+                <div className="p-3 border border-slate-200 bg-slate-50 rounded text-xs space-y-2">
+                  <span className="text-slate-600 font-medium">Sandboxed Google Drive Path:</span>
+                  <p className="text-slate-900 bg-white p-2.5 border border-slate-200 rounded break-all">
+                    /Google Drive/Mehta_Associates/Clients/Zenith_Infra/FY2025-26/ROC/
                   </p>
                 </div>
 
-                <div className="p-2.5 border border-slate-200 bg-white rounded text-[11px] text-slate-600 space-y-2">
+                <div className="p-3 border border-slate-200 bg-white rounded text-xs text-slate-700 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900">Drive Tamper Guard:</span>
-                    <span className="font-mono text-[10px] text-emerald-700 font-semibold">Watching for Accidental Folder Moves</span>
+                    <span className="font-semibold text-slate-950">Drive Tamper Guard</span>
+                    <span className="text-emerald-700 font-medium">Folder Monitor Active</span>
                   </div>
-                  <p className="text-[11px] text-slate-600">
-                    If an associate accidentally drags or deletes a folder in Google Drive, Docketra heals the pointers automatically.
+                  <p className="text-slate-600 leading-relaxed">
+                    If an article assistant accidentally moves or renames a folder in Google Drive, Docketra heals the path automatically.
                   </p>
 
-                  <div className="pt-1 flex items-center justify-between">
+                  <div className="pt-2 flex flex-wrap items-center justify-between gap-3">
                     <button
                       type="button"
-                      onClick={runDriveRecovery}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-300 text-slate-800 font-mono text-[10px] font-bold rounded-xs hover:bg-slate-50 cursor-pointer"
+                      onClick={handleDriveRecovery}
+                      className="px-3.5 py-1.5 border border-slate-300 bg-white text-slate-800 font-medium text-xs rounded-xs hover:bg-slate-50 cursor-pointer whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <span>{driveRecoveryState === 'recovering' ? 'Scanning Drive...' : 'Simulate Accidental Move & Heal'}</span>
+                      {driveRecoveryState === 'recovering' ? 'Scanning Drive…' : 'Simulate Accidental Move & Heal'}
                     </button>
                     {driveRecoveryState === 'recovered' && (
-                      <span className="text-emerald-700 font-mono text-[10px] font-bold">
-                        ✓ Restored in 0.38s (0 Data Loss)
+                      <span className="text-emerald-700 font-medium">
+                        Restored in 0.38s with zero data loss
                       </span>
                     )}
                   </div>
@@ -411,65 +418,71 @@ export function InteractiveProductCanvas({ className = '' }) {
             </div>
           )}
 
-          {/* 5. Client Memory Vault */}
+          {/* Tab 5: Client Memory */}
           {activeTab === 'clients' && (
-            <div className="space-y-3">
-              <div className="border border-slate-200 bg-white rounded-md p-3.5 space-y-3 text-xs shadow-2xs">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div className="space-y-4">
+              <div className="border border-slate-200 bg-white rounded-md p-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                   <div>
-                    <h4 className="font-bold text-slate-950 text-sm">Zenith Infra Private Limited</h4>
-                    <p className="text-xs text-slate-500 mt-0.5">CIN: U72200MH2021PTC368942 | ROC Mumbai | Incorp: 2021</p>
+                    <h3 className="text-sm font-semibold text-slate-950">Zenith Infra Private Limited</h3>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 mt-0.5">
+                      <span className="font-mono text-[11px]">CIN: U72200MH2021PTC368942</span>
+                      <span className="text-slate-300">/</span>
+                      <span>ROC Mumbai</span>
+                      <span className="text-slate-300">/</span>
+                      <span>Incorporated 2021</span>
+                    </div>
                   </div>
-                  <span className="border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 rounded-xs">
-                    Active matter
+                  <span className="border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800 rounded-xs">
+                    Active client
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px]">
-                  <div className="p-2 border border-slate-200 bg-slate-50 rounded-sm">
-                    <span className="text-slate-500 text-xs font-medium">PAN & TAN</span>
-                    <div className="flex items-center justify-between mt-1 font-mono font-bold text-slate-900">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3 border border-slate-200 bg-slate-50 rounded">
+                    <span className="text-slate-500 font-medium">Company PAN</span>
+                    <div className="flex items-center justify-between mt-1 font-semibold text-slate-950">
                       <span>AAACZ1234F</span>
                       <button
                         type="button"
-                        onClick={() => handleCopy('AAACZ1234F')}
-                        className="text-amber-700 hover:text-amber-900 cursor-pointer"
+                        onClick={() => handleCopy('pan', 'AAACZ1234F')}
+                        className="text-amber-800 hover:text-amber-950 cursor-pointer underline focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-slate-950 active:opacity-75"
                       >
-                        [{copiedText === 'AAACZ1234F' ? 'COPIED' : 'COPY'}]
+                        {copiedKey === 'pan' ? 'Copied' : 'Copy'}
                       </button>
                     </div>
                   </div>
-                  <div className="p-2 border border-slate-200 bg-slate-50 rounded-sm">
-                    <span className="text-slate-500 text-xs font-medium">Directors (DIN)</span>
-                    <p className="font-mono text-emerald-800 font-bold mt-1">3 Active (DSC Attached)</p>
+                  <div className="p-3 border border-slate-200 bg-slate-50 rounded">
+                    <span className="text-slate-500 font-medium">Directors (DIN)</span>
+                    <p className="font-semibold text-emerald-800 mt-1">3 Active (DSC Attached)</p>
                   </div>
-                  <div className="p-2 border border-slate-200 bg-slate-50 rounded-sm">
-                    <span className="text-slate-500 text-xs font-medium">Next hearing</span>
-                    <p className="font-mono text-rose-700 font-bold mt-1">28-Sep (NCLT Bench 2)</p>
+                  <div className="p-3 border border-slate-200 bg-slate-50 rounded">
+                    <span className="text-slate-500 font-medium">Next Tribunal Hearing</span>
+                    <p className="font-semibold text-rose-700 mt-1">28-Sep (NCLT Bench 2)</p>
                   </div>
                 </div>
 
-                <div className="p-2 border border-slate-200 bg-slate-50/50 rounded flex items-center justify-between text-[11px] text-slate-700">
-                  <span>Client Upload Link (No login required for client):</span>
+                <div className="p-3 border border-slate-200 bg-slate-50/70 rounded flex flex-wrap items-center justify-between gap-2 text-xs text-slate-700">
+                  <span>Client Document Drop Link (No login required for client):</span>
                   <button
                     type="button"
-                    onClick={() => handleCopy('https://docketra.com/u/mehta-associates/zenith-upload-2026')}
-                    className="font-mono text-[10px] text-amber-700 hover:text-amber-900 font-bold cursor-pointer"
+                    onClick={() => handleCopy('drop', 'https://docketra.in/u/mehta-associates/zenith-upload-2026')}
+                    className="font-mono text-amber-800 hover:text-amber-950 font-medium cursor-pointer underline focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-slate-950 active:opacity-75"
                   >
-                    [{copiedText === 'https://docketra.com/u/mehta-associates/zenith-upload-2026' ? 'COPIED LINK' : 'COPY LINK'}]
+                    {copiedKey === 'drop' ? 'Copied link' : 'Copy upload link'}
                   </button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Bottom Status Bar */}
-          <div className="pt-2 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 text-[11px] text-slate-500">
-            <span className="text-slate-700 font-medium truncate">
+          {/* Bottom Bar: Tab explanation in simple plain English */}
+          <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-500">
+            <span className="text-slate-700 font-medium">
               {CANVAS_TABS.find((t) => t.id === activeTab)?.description}
             </span>
-            <span className="font-mono text-[10px] text-slate-400 shrink-0 font-semibold">
-              SOVEREIGN PRACTICE ENGINE • 2026
+            <span className="text-slate-400 font-medium shrink-0">
+              Verified for Indian Compliance Practices
             </span>
           </div>
         </div>

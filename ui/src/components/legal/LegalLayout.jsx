@@ -100,7 +100,7 @@ export const LegalLayout = ({
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`rounded-xs border px-3 py-2 text-center text-xs font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-900 ${
+                  className={`rounded-xs border px-3 py-2 text-center text-xs font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-900 active:bg-slate-800 ${
                     isActive
                       ? 'border-slate-900 bg-slate-900 text-white shadow-xs'
                       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
@@ -127,7 +127,7 @@ export const LegalLayout = ({
                   <li key={id}>
                     <a
                       href={`#${id}`}
-                      className={`block w-full break-words rounded-xs px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-900 ${
+                      className={`block w-full break-words rounded-xs px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-900 active:bg-slate-200 ${
                         activeId === id
                           ? 'bg-slate-900 font-semibold text-white'
                           : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'

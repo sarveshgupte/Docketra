@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Section } from '../../components/layout/Section';
 import Container from '../../components/layout/Container';
 import SeoHead from '../../components/common/SeoHead';
 import { SUPPORT_EMAIL } from '../../config/publicContact';
@@ -12,6 +11,12 @@ const REVEAL = {
   transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
   viewport: { once: true, amount: 0.08 },
 };
+
+const CheckIcon = () => (
+  <svg className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+  </svg>
+);
 
 const COMPARISON_ROWS = [
   {
@@ -34,7 +39,7 @@ const COMPARISON_ROWS = [
   },
   {
     feature: 'Client Document Intake',
-    docketra: '1-Click Drop Link + WhatsApp Forwarding (Clients stay on WhatsApp)',
+    docketra: '1-Click Drop Link & WhatsApp Forwarding',
     jamku: 'Requires Client Portal Registration',
     excel: 'Unorganized WhatsApp Threads & Email Chaos',
   },
@@ -52,7 +57,7 @@ const COMPARISON_ROWS = [
   },
   {
     feature: 'ICAI / ICSI Peer-Review Audit Trail',
-    docketra: 'Immutable, Timestamped SQC-1 Audit History',
+    docketra: 'Timestamped SQC-1 Audit History',
     jamku: 'Basic Change Log',
     excel: 'None (Fails Peer-Review Standard)',
   },
@@ -75,7 +80,7 @@ const FAQS = [
   },
   {
     question: 'Our clients refuse to open web links and only dump files in WhatsApp. How does Docketra handle this?',
-    answer: 'Clients do not need to register on any portal or click links. They can keep texting documents on WhatsApp as usual. Your team simply forwards or drops the WhatsApp file into Docketra with 1 click. Docketra saves it directly to the client’s Google Drive folder, notes the message details, and checks off the pending task.',
+    answer: 'Clients do not need to register on any portal or click links. They can keep texting documents on WhatsApp as usual. Your team simply forwards or drops the WhatsApp file into Docketra with one click. Docketra saves it directly to the client’s Google Drive folder, notes the message details, and checks off the pending task.',
   },
   {
     question: 'Our article clerks and trainees rotate every 2 to 3 years. How long does training take?',
@@ -87,19 +92,19 @@ const FAQS = [
   },
   {
     question: 'Our firm has 6 to 12 staff. Which plan is right for us, and can we add extra seats?',
-    answer: 'Our Growth Tier (₹21,990 / year flat or ₹2,499 / month) is the top choice for expanding practices with 6 to 12 team members (selected by 25% of practices in our panel). It includes 12 seats, 150 active clients, department queues (ROC, GST, Direct Tax), and Trainee Laptop Shield. Need more seats? You can add individual seats at just ₹1,200 / seat / year without an enterprise contract.',
+    answer: 'Our Growth Tier (₹21,990 / year flat or ₹2,499 / month) is the top choice for expanding practices with 6 to 12 team members. It includes 12 seats, 150 active clients, department queues (ROC, GST, Direct Tax), and Trainee Laptop Shield. Need more seats? You can add individual seats at just ₹1,200 / seat / year without an enterprise contract.',
   },
   {
     question: 'Why is Docketra priced at ₹12,990/yr when basic tools like Jamku advertise ₹6,500?',
-    answer: 'Jamku stores files on shared third-party servers with unrestricted junior downloads. Docketra keeps 100% of your client documents inside your own Google Drive, blocks junior trainees from downloading client PAN/ITR files to personal laptops, and provides SQC-1 maker-checker audit sign-offs for peer review. Protecting client confidentiality and passing peer review is worth far more than saving a few rupees on a basic task tracker.',
+    answer: 'Jamku stores files on shared third-party servers with unrestricted junior downloads. Docketra keeps 100% of your client documents inside your own Google Drive, blocks junior trainees from downloading client PAN/ITR files to personal laptops, and provides SQC-1 maker-checker audit sign-offs for peer review.',
   },
   {
     question: 'What is the Free Pilot, and how do we upgrade?',
-    answer: 'The Free Pilot is our official Proof of Sovereign Isolation sandbox for 2 seats and 5 clients (₹0 forever). You can test live filings, check that Docketra cannot read your private Drive files, and verify that trainee download blocks work. When your firm needs more seats or clients, upgrade to Pioneer 30 or Growth Tier in 1 click. All existing files stay in your Drive with zero migration.',
+    answer: 'The Free Pilot is our official Proof of Sovereign Isolation sandbox for 2 seats and 5 clients (₹0 forever). You can test live filings, check that Docketra cannot read your private Drive files, and verify that trainee download blocks work. When your firm needs more seats, upgrade to Pioneer 30 or Growth Tier in one click.',
   },
   {
     question: 'What if an assistant or clerk accidentally deletes or moves a folder inside Google Drive?',
-    answer: 'If an assistant accidentally moves or deletes a folder in Google Drive, Docketra detects it immediately, alerts the partner or admin, and restores or re-links the folder in 1 click.',
+    answer: 'If an assistant accidentally moves or deletes a folder in Google Drive, Docketra detects it immediately, alerts the partner or admin, and restores or re-links the folder in one click.',
   },
 ];
 
@@ -120,18 +125,14 @@ export const PricingPage = () => {
       />
 
       {/* Header Section */}
-      <section className="relative overflow-hidden bg-slate-50/60 pt-20 pb-12 sm:pt-24 sm:pb-16 border-b border-slate-200/80">
+      <section className="relative overflow-hidden bg-slate-50/60 pt-20 pb-16 sm:pt-24 sm:pb-20 border-b border-slate-200">
         <Container size="7xl" className="text-center">
           <motion.div {...REVEAL} className="max-w-3xl mx-auto space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-xs border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-              <span>Private Google Drive storage • Partner review on every filing</span>
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
-              Run your practice from your own Google Drive.
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl [text-wrap:balance]">
+              Transparent pricing for Indian professional practices.
             </h1>
-            <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
-              Predictable pricing for Indian CA & CS practices. Zero file leakage, 100% partner review, and zero per-user penalties for rotating trainees.
+            <p className="text-base sm:text-lg text-slate-600 max-w-xl mx-auto leading-relaxed [text-wrap:pretty]">
+              Flat-rate yearly plans with private Google Drive custody.
             </p>
 
             {/* Annual / Monthly Toggle */}
@@ -143,11 +144,12 @@ export const PricingPage = () => {
                 type="button"
                 role="switch"
                 aria-checked={isAnnual}
+                aria-label="Toggle annual billing"
                 onClick={() => setIsAnnual(!isAnnual)}
-                className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-sm border-2 border-transparent bg-slate-900 transition-colors duration-200 ease-in-out focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+                className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-sm border-2 border-transparent bg-slate-900 transition-colors duration-200 ease-in-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-xs bg-white shadow-sm ring-0 transition duration-200 ease-in-out motion-reduce:transition-none ${
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-xs bg-white shadow-xs ring-0 transition duration-200 ease-in-out motion-reduce:transition-none ${
                     isAnnual ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
@@ -156,8 +158,8 @@ export const PricingPage = () => {
                 <span className={`text-xs font-semibold ${isAnnual ? 'text-slate-950' : 'text-slate-500'}`}>
                   Annual Billing
                 </span>
-                <span className="rounded-xs bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
-                  Save ₹5,000 with annual billing
+                <span className="rounded-xs bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                  Save ₹5,000 yearly
                 </span>
               </div>
             </div>
@@ -166,7 +168,7 @@ export const PricingPage = () => {
       </section>
 
       {/* Pricing Cards Grid */}
-      <section className="py-16 bg-white border-b border-slate-200/80">
+      <section className="py-16 sm:py-24 bg-white border-b border-slate-200">
         <Container size="7xl">
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4 items-stretch">
             {/* Free Pilot */}
@@ -175,50 +177,46 @@ export const PricingPage = () => {
               className="flex flex-col rounded-sm border border-slate-200 bg-white p-6 sm:p-7 hover:border-slate-300 transition-colors shadow-xs"
             >
               <div className="border-b border-slate-100 pb-6">
-                <span className="text-xs font-semibold text-slate-600">
-                  Free evaluation • No payment needed
+                <span className="text-xs font-semibold text-slate-500 block">
+                  Free evaluation, no payment needed
                 </span>
                 <h2 className="mt-2 text-xl font-bold text-slate-950">Free Pilot</h2>
                 <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
-                  Test Google Drive safety and junior laptop download blocks on 2 seats and 5 clients. ₹0 forever. Upgrade to Pioneer or Growth in 1 click whenever you need more seats or clients.
+                  Test Google Drive safety and junior laptop download blocks on 2 seats and 5 clients. ₹0 forever. Upgrade in one click anytime.
                 </p>
                 <div className="mt-6 flex items-baseline gap-1 text-slate-950">
                   <span className="text-4xl font-extrabold tracking-tight">₹0</span>
                   <span className="text-xs font-medium text-slate-500">/ forever</span>
                 </div>
                 <div className="mt-2 text-xs text-slate-500">
-                  Up to 2 team seats / 5 clients & 15 dockets
+                  Up to 2 team seats / 5 clients &amp; 15 dockets
                 </div>
               </div>
 
               <div className="flex-1 py-6 space-y-3">
-                <span className="text-xs font-semibold text-slate-600">
+                <span className="text-xs font-semibold text-slate-700 block">
                   What is included:
                 </span>
                 <ul className="space-y-2.5 text-xs text-slate-700">
                   <li className="flex items-start gap-2.5">
-                    <span className="text-emerald-600 font-bold">✓</span>
-                    <span>Connect your own Google Drive (<code className="text-[11px]">drive.file</code> scope)</span>
+                    <CheckIcon />
+                    <span>Connect your firm Google Drive (restricted scope)</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="text-emerald-600 font-bold">✓</span>
-                    <span>In-app Google Drive safety check (0 external files accessible)</span>
+                    <CheckIcon />
+                    <span>In-app Google Drive safety check</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="text-emerald-600 font-bold">✓</span>
-                    <span>Google Drive Folder Tamper Guard & Auto-Restore</span>
+                    <CheckIcon />
+                    <span>Folder Tamper Guard &amp; Auto-Restore</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="text-emerald-600 font-bold">✓</span>
-                    <span>Trainee Laptop Shield (blocks file downloads to personal laptops)</span>
+                    <CheckIcon />
+                    <span>Trainee Laptop Shield blocks local downloads</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="text-emerald-600 font-bold">✓</span>
+                    <CheckIcon />
                     <span>Maker-Checker partner sign-offs and MCA/GST checklists</span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <span className="text-blue-600 font-bold">✓</span>
-                    <span className="font-semibold text-blue-900">1-Click Upgrade to Pioneer or Growth (Keep all your data)</span>
                   </li>
                 </ul>
               </div>
@@ -226,7 +224,7 @@ export const PricingPage = () => {
               <div className="pt-4 border-t border-slate-100">
                 <Link
                   to="/signup"
-                  className="inline-flex w-full h-10 items-center justify-center rounded-xs border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors"
+                  className="inline-flex w-full h-11 items-center justify-center rounded-xs border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-100"
                 >
                   Start Free Pilot (₹0)
                 </Link>
@@ -236,71 +234,59 @@ export const PricingPage = () => {
             {/* Starter Tier - Featured Pioneer 30 */}
             <motion.div
               {...REVEAL}
-              className="relative flex flex-col rounded-sm border-2 border-blue-600 bg-white p-6 sm:p-7 shadow-lg xl:-translate-y-2"
+              className="relative flex flex-col rounded-sm border-2 border-slate-950 bg-white p-6 sm:p-7 shadow-md"
             >
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-xs bg-blue-600 px-3 py-0.5 text-xs font-semibold text-white shadow-xs">
-                Popular for small practices
-              </div>
-
-              <div className="border-b border-slate-100 pb-6 pt-2">
-                <span className="text-xs font-semibold text-blue-700">
-                  Small firms (2 to 5 members)
+              <div className="border-b border-slate-100 pb-6 pt-1">
+                <span className="text-xs font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-xs border border-amber-200">
+                  Pioneer 30 Cohort
                 </span>
-                <h2 className="mt-2 text-xl font-bold text-slate-950">Starter Tier</h2>
+                <h2 className="mt-3 text-xl font-bold text-slate-950">Starter Tier</h2>
                 <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
-                  Complete practice OS for small firms. Replaces messy WhatsApp groups and Excel trackers.
+                  Complete practice OS for small firms (2 to 5 members). Replaces messy WhatsApp groups and Excel trackers.
                 </p>
                 <div className="mt-6 flex items-baseline gap-1 text-slate-950">
                   {isAnnual ? (
                     <>
-                      <span className="text-4xl font-extrabold tracking-tight text-blue-700 tabular-nums font-mono">₹12,990</span>
+                      <span className="text-4xl font-extrabold tracking-tight text-slate-950 tabular-nums">₹12,990</span>
                       <span className="text-xs font-medium text-slate-500">/ year</span>
-                      <span className="ml-2 text-xs line-through text-slate-400 tabular-nums font-mono">₹17,990</span>
+                      <span className="ml-2 text-xs line-through text-slate-400 tabular-nums">₹17,990</span>
                     </>
                   ) : (
                     <>
-                      <span className="text-4xl font-extrabold tracking-tight text-slate-950 tabular-nums font-mono">₹1,999</span>
+                      <span className="text-4xl font-extrabold tracking-tight text-slate-950 tabular-nums">₹1,999</span>
                       <span className="text-xs font-medium text-slate-500">/ month</span>
                     </>
                   )}
                 </div>
-                <div className="mt-2 text-xs text-blue-700 font-semibold">
+                <div className="mt-2 text-xs text-slate-700 font-semibold">
                   Up to 5 team seats / 50 active clients / Unlimited dockets
                 </div>
               </div>
 
               <div className="flex-1 py-6 space-y-3.5">
-                <span className="text-xs font-semibold text-blue-700">
+                <span className="text-xs font-semibold text-slate-700 block">
                   Included with Starter:
                 </span>
                 <ul className="space-y-2.5 text-xs text-slate-700">
                   <li className="flex items-start gap-2.5">
-                    <span className="text-blue-600 font-bold">✓</span>
-                    <span className="font-semibold text-slate-900">
-                      WhatsApp forwarding & client document link
-                    </span>
+                    <CheckIcon />
+                    <span>WhatsApp forwarding &amp; client document drop link</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="text-blue-600 font-bold">✓</span>
-                    <span className="font-semibold text-slate-900">
-                      15+ standard checklists (MCA, ROC, GST, Tax Audit)
-                    </span>
+                    <CheckIcon />
+                    <span>15+ statutory checklists (MCA, ROC, GST, Tax Audit)</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="text-blue-600 font-bold">✓</span>
-                    <span className="font-semibold text-slate-900">
-                      Free assisted client onboarding and data import
-                    </span>
+                    <CheckIcon />
+                    <span>Free assisted client onboarding and data import</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="text-blue-600 font-bold">✓</span>
-                    <span className="font-semibold text-slate-900">
-                      Google Drive security & permission setup guide
-                    </span>
+                    <CheckIcon />
+                    <span>Google Drive security &amp; permission setup guide</span>
                   </li>
                   <li className="flex items-start gap-2.5 pt-1 border-t border-slate-100">
-                    <span className="text-emerald-600 font-bold">✓</span>
-                    <span>100% Data Sovereignty (All files stay in your Drive)</span>
+                    <CheckIcon />
+                    <span className="font-semibold text-slate-950">100% Data Sovereignty in your Drive</span>
                   </li>
                 </ul>
               </div>
@@ -308,83 +294,79 @@ export const PricingPage = () => {
               <div className="pt-4 border-t border-slate-100">
                 <Link
                   to="/signup"
-                  className="inline-flex w-full h-10 items-center justify-center rounded-xs bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors"
+                  className="inline-flex w-full h-11 items-center justify-center rounded-xs bg-slate-950 px-4 text-xs font-semibold text-amber-300 shadow-sm hover:bg-slate-800 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-900"
                 >
                   Claim Pioneer Annual Pass (₹12,990/yr)
                 </Link>
                 <p className="mt-2 text-center text-xs text-slate-500">
-                  Zero setup fees • Flat rate
+                  Zero setup fees / Flat rate locked for life
                 </p>
               </div>
             </motion.div>
 
-            {/* Growth Tier - Mid-Sized Practices (6 to 12 staff) */}
+            {/* Growth Tier */}
             <motion.div
               {...REVEAL}
-              className="relative flex flex-col rounded-sm border-2 border-indigo-600 bg-white p-6 sm:p-7 shadow-lg xl:-translate-y-2"
+              className="relative flex flex-col rounded-sm border border-slate-300 bg-white p-6 sm:p-7 shadow-sm"
             >
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-xs bg-indigo-600 px-3 py-0.5 text-xs font-semibold text-white shadow-xs">
-                Recommended for growing teams
-              </div>
-
-              <div className="border-b border-slate-100 pb-6 pt-2">
-                <span className="text-xs font-semibold text-indigo-700">
-                  Mid-sized practices (6 to 12 members)
+              <div className="border-b border-slate-100 pb-6 pt-1">
+                <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-xs border border-slate-200">
+                  Growing firms (6 to 12 staff)
                 </span>
-                <h2 className="mt-2 text-xl font-bold text-slate-950">Growth Tier</h2>
+                <h2 className="mt-3 text-xl font-bold text-slate-950">Growth Tier</h2>
                 <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
-                  Flat-rate practice OS for mid-sized firms. Pre-loaded statutory blueprints, department queues, and trainee download security.
+                  Flat-rate practice OS for mid-sized practices. Department queues, Form 3CD blueprints, and Trainee Shield.
                 </p>
                 <div className="mt-6 flex items-baseline gap-1 text-slate-950">
                   {isAnnual ? (
                     <>
-                      <span className="text-4xl font-extrabold tracking-tight text-indigo-700 tabular-nums font-mono">₹21,990</span>
+                      <span className="text-4xl font-extrabold tracking-tight text-slate-950 tabular-nums">₹21,990</span>
                       <span className="text-xs font-medium text-slate-500">/ year</span>
-                      <span className="ml-2 text-xs line-through text-slate-400 tabular-nums font-mono">₹27,990</span>
+                      <span className="ml-2 text-xs line-through text-slate-400 tabular-nums">₹27,990</span>
                     </>
                   ) : (
                     <>
-                      <span className="text-4xl font-extrabold tracking-tight text-slate-950 tabular-nums font-mono">₹2,499</span>
+                      <span className="text-4xl font-extrabold tracking-tight text-slate-950 tabular-nums">₹2,499</span>
                       <span className="text-xs font-medium text-slate-500">/ month</span>
                     </>
                   )}
                 </div>
-                <div className="mt-2 text-xs text-indigo-700 font-semibold">
+                <div className="mt-2 text-xs text-slate-700 font-semibold">
                   Up to 12 team seats / 150 active clients / Unlimited dockets
                 </div>
-                <div className="mt-1 text-[10px] font-mono text-slate-400">
-                  Extra seats: +₹1,200/seat/yr (+₹149/mo)
+                <div className="mt-1 text-xs text-slate-500">
+                  Extra seats: +₹1,200/seat/year
                 </div>
               </div>
 
               <div className="flex-1 py-6 space-y-3">
-                <span className="text-xs font-semibold text-indigo-700">
+                <span className="text-xs font-semibold text-slate-700 block">
                   Everything in Starter, plus:
                 </span>
                 <ul className="space-y-2.5 text-xs text-slate-700">
                   <li className="flex items-start gap-2.5">
-                    <span className="text-emerald-600 font-bold">✓</span>
-                    <span><strong>Pre-loaded blueprints:</strong> Tax Audit Form 3CD, MCA, and GST</span>
+                    <CheckIcon />
+                    <span>Pre-loaded blueprints: Tax Audit 3CD, MCA &amp; GST</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="text-emerald-600 font-bold">✓</span>
-                    <span><strong>SQC-1 maker-checker review:</strong> Peer-review ready partner sign-offs</span>
+                    <CheckIcon />
+                    <span>SQC-1 maker-checker review with partner sign-offs</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="text-emerald-600 font-bold">✓</span>
-                    <span><strong>Trainee Laptop Shield:</strong> Junior staff cannot download raw client files</span>
+                    <CheckIcon />
+                    <span>Trainee Laptop Shield blocks file downloads</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="text-emerald-600 font-bold">✓</span>
-                    <span><strong>Drive Tamper Guard:</strong> Auto-detects moved/deleted folders with 1-click restore</span>
+                    <CheckIcon />
+                    <span>Drive Tamper Guard auto-restores moved folders</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="text-emerald-600 font-bold">✓</span>
-                    <span><strong>Department queues:</strong> ROC, Income Tax, GST, and Audit workbaskets</span>
+                    <CheckIcon />
+                    <span>Department queues: ROC, Tax, GST, and Audit</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="text-emerald-600 font-bold">✓</span>
-                    <span><strong>Priority onboarding:</strong> Assisted client migration and zero setup fee</span>
+                    <CheckIcon />
+                    <span>Priority assisted client migration and zero setup fees</span>
                   </li>
                 </ul>
               </div>
@@ -392,12 +374,12 @@ export const PricingPage = () => {
               <div className="pt-4 border-t border-slate-100">
                 <Link
                   to="/signup"
-                  className="inline-flex w-full h-10 items-center justify-center rounded-xs bg-indigo-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
+                  className="inline-flex w-full h-11 items-center justify-center rounded-xs bg-slate-950 px-4 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-900"
                 >
                   Choose Growth Tier (₹21,990/yr)
                 </Link>
                 <p className="mt-2 text-center text-xs text-slate-500">
-                  No setup fees • Free evaluation available
+                  No setup fees / Free evaluation available
                 </p>
               </div>
             </motion.div>
@@ -408,12 +390,12 @@ export const PricingPage = () => {
               className="flex flex-col rounded-sm border border-slate-200 bg-white p-6 sm:p-7 hover:border-slate-300 transition-colors shadow-xs"
             >
               <div className="border-b border-slate-100 pb-6">
-                <span className="text-xs font-semibold text-slate-600">
-                  Larger practices & multi-branch teams
+                <span className="text-xs font-semibold text-slate-500 block">
+                  Larger practices &amp; multi-branch
                 </span>
                 <h2 className="mt-2 text-xl font-bold text-slate-950">Pro Tier</h2>
                 <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
-                  For expanding compliance and audit firms requiring multi-branch controls and partner DSC workflows.
+                  For expanding compliance and audit firms requiring multi-branch controls and partner DSC sign-off workflows.
                 </p>
                 <div className="mt-6 flex items-baseline gap-1 text-slate-950">
                   {isAnnual ? (
@@ -434,28 +416,28 @@ export const PricingPage = () => {
               </div>
 
               <div className="flex-1 py-6 space-y-3">
-                <span className="text-xs font-semibold text-slate-600">
+                <span className="text-xs font-semibold text-slate-700 block">
                   Everything in Growth, plus:
                 </span>
                 <ul className="space-y-2.5 text-xs text-slate-700">
                   <li className="flex items-start gap-2.5">
-                    <span className="text-emerald-600 font-bold">✓</span>
+                    <CheckIcon />
                     <span>Multi-department queues (ROC, Direct Tax, GST, Legal)</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="text-emerald-600 font-bold">✓</span>
+                    <CheckIcon />
                     <span>Multi-partner DSC sign-off routing workflows</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="text-emerald-600 font-bold">✓</span>
-                    <span>Priority SLA & direct concierge onboarding support</span>
+                    <CheckIcon />
+                    <span>Priority SLA &amp; direct concierge onboarding</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="text-emerald-600 font-bold">✓</span>
-                    <span>Dedicated firm onboarding & data migration engineer</span>
+                    <CheckIcon />
+                    <span>Dedicated firm onboarding &amp; data migration engineer</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="text-emerald-600 font-bold">✓</span>
+                    <CheckIcon />
                     <span>Custom practice roles and granular staff permissions</span>
                   </li>
                 </ul>
@@ -464,7 +446,7 @@ export const PricingPage = () => {
               <div className="pt-4 border-t border-slate-100">
                 <Link
                   to="/signup"
-                  className="inline-flex w-full h-10 items-center justify-center rounded-xs border border-slate-950 bg-slate-950 px-4 text-xs font-semibold text-white hover:bg-slate-800 transition-colors"
+                  className="inline-flex w-full h-11 items-center justify-center rounded-xs border border-slate-950 bg-slate-950 px-4 text-xs font-semibold text-white hover:bg-slate-800 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-900"
                 >
                   Onboard Pro Practice
                 </Link>
@@ -475,26 +457,26 @@ export const PricingPage = () => {
       </section>
 
       {/* Sovereign Data Promise Banner */}
-      <section className="bg-slate-950 py-14 text-white border-b border-slate-800">
+      <section className="bg-slate-950 py-16 text-white border-b border-slate-800">
         <Container size="7xl">
           <div className="rounded-sm border border-slate-800 bg-slate-900/60 p-8 sm:p-10 flex flex-col md:flex-row items-center gap-8 justify-between">
             <div className="space-y-2 max-w-2xl">
               <h2 className="text-2xl font-bold tracking-tight text-white">
-                100% In Your Firm’s <span className="whitespace-nowrap">Google Drive</span>
+                100% In Your Firm’s Google Drive
               </h2>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Start with our Free Pilot for up to 5 clients. All your documents, working papers, and client files stay safely inside your firm’s own Google Drive with zero vendor lock-in. Your client data never leaves your hands.
+              <p className="text-sm text-slate-300 leading-relaxed">
+                Start with our Free Pilot for up to 5 clients. All your documents, working papers, and client files stay safely inside your firm’s own Google Drive with zero vendor lock-in.
               </p>
             </div>
             <div className="shrink-0 text-center">
               <Link
                 to="/signup"
-                className="inline-flex h-11 items-center justify-center rounded-xs bg-amber-500 px-6 text-xs font-bold text-slate-950 transition-colors hover:bg-amber-400 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-400"
+                className="inline-flex h-12 items-center justify-center rounded-xs bg-amber-400 px-6 text-xs font-bold text-slate-950 transition-colors hover:bg-amber-300 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-400 active:bg-amber-500"
               >
                 Start Free Pilot
               </Link>
               <div className="mt-2 text-xs text-slate-400">
-                Files stay in your firm’s Drive • Instant setup
+                Files stay in your firm’s Drive / Instant setup
               </div>
             </div>
           </div>
@@ -502,13 +484,13 @@ export const PricingPage = () => {
       </section>
 
       {/* Competitor Comparison Table */}
-      <section className="py-16 bg-slate-50/50 border-b border-slate-200/80">
+      <section className="py-16 sm:py-24 bg-slate-50/50 border-b border-slate-200">
         <Container size="7xl">
           <motion.div {...REVEAL} className="max-w-2xl mx-auto text-center space-y-2 mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
               How Docketra compares to legacy tools and Excel
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600">
+            <p className="text-sm text-slate-600">
               Why leading Indian firms are abandoning centralized servers and messy spreadsheets.
             </p>
           </motion.div>
@@ -518,7 +500,7 @@ export const PricingPage = () => {
               <thead className="bg-slate-50 text-slate-900 border-b border-slate-200 text-xs font-semibold">
                 <tr>
                   <th scope="col" className="p-4 w-1/4 font-semibold text-slate-900">Operational Capability</th>
-                  <th scope="col" className="p-4 w-1/4 bg-blue-50/60 text-blue-950 font-bold border-x border-blue-200">
+                  <th scope="col" className="p-4 w-1/4 bg-emerald-50/60 text-slate-950 font-bold border-x border-emerald-200">
                     Docketra (Sovereign OS)
                   </th>
                   <th scope="col" className="p-4 w-1/4 text-slate-700 font-medium">Jamku / Legacy</th>
@@ -527,11 +509,11 @@ export const PricingPage = () => {
               </thead>
               <tbody className="divide-y divide-slate-200/80">
                 {COMPARISON_ROWS.map((row) => (
-                  <tr key={row.feature} className="hover:bg-slate-50/50 transition-[background-color]">
+                  <tr key={row.feature} className="hover:bg-slate-50/50 transition-colors">
                     <td className="p-4 font-semibold text-slate-950 align-top">{row.feature}</td>
-                    <td className="p-4 bg-blue-50/20 text-blue-950 font-medium border-x border-blue-100 align-top">
+                    <td className="p-4 bg-emerald-50/20 text-slate-950 font-medium border-x border-emerald-100 align-top">
                       <div className="flex items-start gap-2">
-                        <span className="inline-flex items-center justify-center h-4 w-4 rounded-xs bg-emerald-100 text-emerald-800 font-bold shrink-0 mt-0.5 text-[11px] leading-none" aria-hidden="true">✓</span>
+                        <CheckIcon />
                         <span className="leading-relaxed">{row.docketra}</span>
                       </div>
                     </td>
@@ -546,7 +528,7 @@ export const PricingPage = () => {
       </section>
 
       {/* FAQ Accordion */}
-      <section className="py-16 bg-white border-b border-slate-200/80">
+      <section className="py-16 sm:py-24 bg-white border-b border-slate-200">
         <Container size="7xl">
           <div className="max-w-3xl mx-auto space-y-8">
             <div className="text-center space-y-2">
@@ -561,15 +543,15 @@ export const PricingPage = () => {
                   <button
                     type="button"
                     onClick={() => toggleFaq(idx)}
-                    className="flex w-full items-center justify-between text-left text-sm font-bold text-slate-950 hover:text-blue-600 transition-colors"
+                    className="flex w-full items-center justify-between text-left text-sm font-semibold text-slate-950 hover:text-amber-800 transition-colors cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:text-slate-900"
                   >
                     <span>{faq.question}</span>
-                    <span className="ml-4 font-mono text-base font-normal text-slate-400">
+                    <span className="ml-4 text-base font-normal text-slate-400">
                       {openFaq === idx ? '−' : '+'}
                     </span>
                   </button>
                   {openFaq === idx && (
-                    <p className="mt-2.5 text-xs text-slate-600 leading-relaxed pr-8">
+                    <p className="mt-2.5 text-xs sm:text-sm text-slate-600 leading-relaxed pr-8">
                       {faq.answer}
                     </p>
                   )}
@@ -579,7 +561,7 @@ export const PricingPage = () => {
 
             <div className="pt-4 text-center text-xs text-slate-600">
               Have a specific question about firm onboarding or custom roles? Reach our engineering team at{' '}
-              <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-blue-600 underline">
+              <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-slate-950 underline hover:text-amber-800">
                 {SUPPORT_EMAIL}
               </a>
               .
@@ -589,31 +571,31 @@ export const PricingPage = () => {
       </section>
 
       {/* Bottom CTA */}
-      <section className="bg-slate-50/60 py-16 text-center">
+      <section className="bg-slate-50/60 py-16 sm:py-24 text-center">
         <Container size="7xl">
           <motion.div {...REVEAL} className="max-w-2xl mx-auto space-y-4">
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
               Take sovereign control of your practice today.
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Join founding Indian CA & CS practices running audit-ready, zero-stress client operations.
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Join founding Indian CA &amp; CS practices running audit-ready, zero-stress client operations.
             </p>
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
                 to="/signup"
-                className="inline-flex w-full sm:w-auto h-10 items-center justify-center rounded-xs bg-slate-950 px-6 text-xs font-semibold text-amber-400 hover:bg-slate-800 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-900"
+                className="inline-flex w-full sm:w-auto h-12 items-center justify-center rounded-xs bg-slate-950 px-6 text-xs font-semibold text-amber-300 hover:bg-slate-800 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-900"
               >
                 <span>Start Free Pilot (₹0)</span>
               </Link>
               <Link
                 to="/find-workspace"
-                className="inline-flex w-full sm:w-auto h-10 items-center justify-center rounded-xs border border-slate-300 bg-white px-5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-900"
+                className="inline-flex w-full sm:w-auto h-12 items-center justify-center rounded-xs border border-slate-300 bg-white px-5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-100"
               >
                 Find existing workspace
               </Link>
             </div>
             <p className="text-xs text-slate-500 pt-1">
-              Zero setup fees / 1-click Google Drive connection / Free trial available
+              Zero setup fees / One-click Google Drive connection / Free trial available
             </p>
           </motion.div>
         </Container>

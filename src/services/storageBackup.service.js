@@ -221,6 +221,9 @@ class StorageBackupService {
       encryptedPath = `${zipPath}.enc`;
 
       const keyMaterial = process.env.BACKUP_ENCRYPTION_KEY || process.env.JWT_SECRET;
+      if (!keyMaterial) {
+        throw new Error('BACKUP_ENCRYPTION_KEY or JWT_SECRET is required for backup encryption');
+      }
       await encryptFileGcm(zipPath, encryptedPath, keyMaterial);
       const checksum = await streamSha256(encryptedPath);
       const size = (await fsp.stat(encryptedPath)).size;

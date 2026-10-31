@@ -1,0 +1,27 @@
+[
+  {
+    "shape": "Marquee Hero",
+    "theme": "coral",
+    "axes": "light/grotesk-sans/warm",
+    "hero": "Stage",
+    "nav": "floating pill",
+    "footer": "letter close",
+    "imagery": "product",
+    "photos": [],
+    "entry": "LandingPageContent.jsx",
+    "fingerprint": "coral-modern-minimal-signup-stage",
+    "sections": [
+      "Hero",
+      "Product Radar",
+      "Practice Pillars",
+      "Drive Custody",
+      "Workflow QC",
+      "Pricing",
+      "FAQ",
+      "Footer"
+    ],
+    "signature": "InteractiveProductCanvas",
+    "waived": [],
+    "prompt": "Practice management workspace for Indian chartered accountants and company secretaries"
+  }
+]

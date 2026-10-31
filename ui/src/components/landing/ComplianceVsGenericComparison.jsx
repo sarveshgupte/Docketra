@@ -20,14 +20,14 @@ const COMPARISON_ROWS = [
   {
     feature: 'SQC-1 Maker-Checker Partner Sign-off',
     category: 'Compliance',
-    docketra: 'Mandatory 4-eye partner review before portal filing. Complete immutable audit trail ready for ICAI/ICSI peer review.',
+    docketra: 'Mandatory 4-eye partner review before portal filing. Complete immutable audit trail ready for ICAI and ICSI peer review.',
     generic: 'Loose checkboxes. Anyone can mark a task complete without partner verification or audit logging.',
     spreadsheets: 'Zero sign-off trail. Impossible to verify who prepared the draft or who authorized the filing.',
   },
   {
     feature: 'Client Intake (WhatsApp & Upload Link)',
     category: 'Operations',
-    docketra: 'Direct WhatsApp bridge & zero-login upload links. Clients send bank statements without password frustration.',
+    docketra: 'Direct WhatsApp bridge and zero-login upload links. Clients send bank statements without password frustration.',
     generic: 'Forces clients onto complex third-party portals with logins they constantly forget.',
     spreadsheets: 'Messy WhatsApp chats where critical challans and bills get buried beneath everyday chatter.',
   },
@@ -41,7 +41,7 @@ const COMPARISON_ROWS = [
   {
     feature: 'Client Memory (CIN, PAN, DIN, DSC)',
     category: 'Operations',
-    docketra: '1-click copy for CIN, PAN, DIN, and authorized signatories directly into MCA V3 and Income Tax filing portals.',
+    docketra: 'One-click copy for CIN, PAN, DIN, and authorized signatories directly into MCA V3 and Income Tax filing portals.',
     generic: 'Plain text notes scattered across separate tasks; no company master structure.',
     spreadsheets: 'Staff search through old folders or ask the client for the same PAN/CIN every quarter.',
   },
@@ -49,10 +49,22 @@ const COMPARISON_ROWS = [
     feature: 'Daily Staff Worklists & Workbaskets',
     category: 'Operations',
     docketra: 'Team members see their exact prioritized daily queue. Partners monitor firm throughput without micromanaging.',
-    generic: 'Cluttered kanban boards with hundreds of loose tickets that don’t reflect statutory urgency.',
+    generic: 'Cluttered kanban boards with hundreds of loose tickets that do not reflect statutory urgency.',
     spreadsheets: 'Partners must phone or WhatsApp staff daily: "Did you file the return? What is the status?".',
   },
 ];
+
+const CheckSvg = () => (
+  <svg className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+  </svg>
+);
+
+const CrossSvg = () => (
+  <svg className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+  </svg>
+);
 
 export function ComplianceVsGenericComparison() {
   const [filterCategory, setFilterCategory] = useState('ALL');
@@ -66,17 +78,16 @@ export function ComplianceVsGenericComparison() {
       {/* Table Subheader / Filter Bar */}
       <div className="px-4 py-3 sm:px-5 sm:py-3.5 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-xs bg-amber-500 shrink-0" aria-hidden="true" />
           <span className="font-bold text-xs sm:text-sm tracking-tight text-slate-900">
             Practice Architecture Comparison
           </span>
-          <span className="text-slate-400 font-mono text-[11px] hidden md:inline">
-            | Indian Regulatory Standards
+          <span className="text-slate-400 text-xs hidden md:inline">
+            / Indian Regulatory Standards
           </span>
         </div>
 
         <div
-          className="flex items-center gap-1.5 overflow-x-auto no-scrollbar font-mono text-[10px]"
+          className="flex items-center gap-1.5 overflow-x-auto text-xs"
           role="tablist"
           aria-label="Comparison categories"
         >
@@ -89,10 +100,10 @@ export function ComplianceVsGenericComparison() {
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => setFilterCategory(cat)}
-                className={`px-2.5 py-1 rounded-xs text-xs font-medium transition-[background-color,color,border-color] cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-900 ${
+                className={`px-3 py-1 rounded-xs text-xs font-medium transition-colors cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed ${
                   isActive
                     ? 'bg-slate-950 text-white font-semibold shadow-xs'
-                    : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 hover:border-slate-300'
+                    : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300'
                 }`}
               >
                 {cat}
@@ -109,13 +120,13 @@ export function ComplianceVsGenericComparison() {
               <th scope="col" className="py-3.5 px-4 sm:px-5 w-[24%] font-bold text-xs text-slate-900 tracking-tight">
                 Practice Requirement
               </th>
-              <th scope="col" className="py-3.5 px-4 sm:px-5 w-[32%] bg-emerald-50/50 text-slate-950 border-x border-emerald-200/90 text-xs">
+              <th scope="col" className="py-3.5 px-4 sm:px-5 w-[32%] bg-emerald-50/50 text-slate-950 border-x border-emerald-200 text-xs">
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <span className="text-slate-950 font-bold tracking-tight block">Docketra Sovereign OS</span>
-                    <span className="font-mono text-[10px] text-emerald-800 font-medium block mt-0.5">Firm Google Drive Perimeter</span>
+                    <span className="text-xs text-emerald-800 font-medium block mt-0.5">Firm Google Drive Perimeter</span>
                   </div>
-                  <span className="shrink-0 border border-emerald-300 bg-emerald-100 text-emerald-800 text-xs font-semibold px-2 py-0.5 rounded-xs">
+                  <span className="shrink-0 border border-emerald-300 bg-emerald-100 text-emerald-800 text-[11px] font-semibold px-2 py-0.5 rounded-xs">
                     Purpose-built
                   </span>
                 </div>
@@ -123,62 +134,47 @@ export function ComplianceVsGenericComparison() {
               <th scope="col" className="py-3.5 px-4 sm:px-5 w-[22%] text-slate-700 text-xs font-semibold">
                 <div>
                   <span className="text-slate-900 font-semibold block">Generic Task Trackers</span>
-                  <span className="font-mono text-[10px] text-slate-500 font-normal block mt-0.5">Asana / Monday / ClickUp</span>
+                  <span className="text-xs text-slate-500 font-normal block mt-0.5">Asana / Monday / ClickUp</span>
                 </div>
               </th>
               <th scope="col" className="py-3.5 px-4 sm:px-5 w-[22%] text-slate-700 text-xs font-semibold">
                 <div>
                   <span className="text-slate-900 font-semibold block">Excel & WhatsApp</span>
-                  <span className="font-mono text-[10px] text-slate-500 font-normal block mt-0.5">Unstructured Ad-hoc</span>
+                  <span className="text-xs text-slate-500 font-normal block mt-0.5">Unstructured Ad-hoc</span>
                 </div>
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200/80 text-xs">
             {filteredRows.map((row, idx) => (
-              <tr key={idx} className="hover:bg-slate-50/60 transition-[background-color]">
-                <td className="py-3.5 px-4 sm:px-5 align-top">
-                  <span className="inline-block text-xs text-slate-600 font-medium bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-xs">
+              <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
+                <td className="py-4 px-4 sm:px-5 align-top">
+                  <span className="inline-block text-[11px] text-slate-600 font-medium bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-xs">
                     {row.category}
                   </span>
                   <div className="mt-1 font-semibold text-xs text-slate-950 leading-snug">
                     {row.feature}
                   </div>
                 </td>
-                <td className="py-3.5 px-4 sm:px-5 align-top bg-emerald-50/20 border-x border-emerald-100/80">
+                <td className="py-4 px-4 sm:px-5 align-top bg-emerald-50/20 border-x border-emerald-100">
                   <div className="flex items-start gap-2.5">
-                    <span
-                      className="inline-flex items-center justify-center h-4 w-4 rounded-xs bg-emerald-100 text-emerald-800 font-bold shrink-0 mt-0.5 text-[11px] leading-none"
-                      aria-hidden="true"
-                    >
-                      ✓
-                    </span>
+                    <CheckSvg />
                     <span className="text-xs font-medium text-slate-900 leading-relaxed">
                       {row.docketra}
                     </span>
                   </div>
                 </td>
-                <td className="py-3.5 px-4 sm:px-5 align-top text-slate-600">
+                <td className="py-4 px-4 sm:px-5 align-top text-slate-600">
                   <div className="flex items-start gap-2.5">
-                    <span
-                      className="inline-flex items-center justify-center h-4 w-4 rounded-xs bg-slate-100 text-slate-500 font-semibold shrink-0 mt-0.5 text-[10px] leading-none"
-                      aria-hidden="true"
-                    >
-                      ✕
-                    </span>
+                    <CrossSvg />
                     <span className="text-xs text-slate-600 leading-relaxed">
                       {row.generic}
                     </span>
                   </div>
                 </td>
-                <td className="py-3.5 px-4 sm:px-5 align-top text-slate-600">
+                <td className="py-4 px-4 sm:px-5 align-top text-slate-600">
                   <div className="flex items-start gap-2.5">
-                    <span
-                      className="inline-flex items-center justify-center h-4 w-4 rounded-xs bg-rose-50 text-rose-600 font-semibold shrink-0 mt-0.5 text-[10px] leading-none border border-rose-200/60"
-                      aria-hidden="true"
-                    >
-                      ✕
-                    </span>
+                    <CrossSvg />
                     <span className="text-xs text-slate-600 leading-relaxed">
                       {row.spreadsheets}
                     </span>
@@ -191,11 +187,11 @@ export function ComplianceVsGenericComparison() {
       </div>
 
       {/* Footer notice */}
-      <div className="px-4 py-3 sm:px-5 bg-slate-50/70 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between text-[11px] text-slate-600 gap-2">
+      <div className="px-4 py-3 sm:px-5 bg-slate-50/70 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs text-slate-600 gap-2">
         <span className="leading-normal">
-          Designed specifically for Chartered Accountants (CA), Company Secretaries (CS), and Indian Corporate Legal Counsels.
+          Designed specifically for Chartered Accountants (CA), Company Secretaries (CS), and Indian Corporate Legal Teams.
         </span>
-        <span className="inline-flex items-center gap-1.5 font-mono text-emerald-800 font-semibold shrink-0 text-[11px]">
+        <span className="inline-flex items-center gap-1.5 text-emerald-800 font-semibold shrink-0">
           <span className="h-1.5 w-1.5 rounded-xs bg-emerald-600 shrink-0" aria-hidden="true" />
           100% Google Drive BYOS Perimeter
         </span>

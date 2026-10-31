@@ -55,7 +55,10 @@ const parseGoogleState = (rawState) => {
     .update(encodedPayload)
     .digest('base64url');
 
-  if (providedSig !== expectedSig) {
+  const expectedBuffer = Buffer.from(expectedSig);
+  const providedBuffer = Buffer.from(providedSig);
+
+  if (expectedBuffer.length !== providedBuffer.length || !crypto.timingSafeEqual(expectedBuffer, providedBuffer)) {
     return null;
   }
 

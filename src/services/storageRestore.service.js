@@ -100,6 +100,9 @@ class StorageRestoreService {
     try {
       const provider = await StorageProviderFactory.getProvider(firmId);
       const keyMaterial = process.env.BACKUP_ENCRYPTION_KEY || process.env.JWT_SECRET;
+      if (!keyMaterial) {
+        throw new Error('BACKUP_ENCRYPTION_KEY or JWT_SECRET is required for backup decryption');
+      }
       
       tempDir = path.join(os.tmpdir(), 'docketra-restores', String(firmId), jobId);
       ensureDir(tempDir);
@@ -244,6 +247,15 @@ class StorageRestoreService {
         }
       } catch (cleanupError) {
         log.warn('[RESTORE] Temp directory cleanup failed', { cleanupError: cleanupError.message });
+      }
+
+      // Clean up uploaded archive from multer if provided
+      try {
+        if (uploadedZipPath && fs.existsSync(uploadedZipPath)) {
+          await fsp.unlink(uploadedZipPath);
+        }
+      } catch (uploadCleanupErr) {
+        log.warn('[RESTORE] Uploaded file cleanup failed', { uploadCleanupErr: uploadCleanupErr.message });
       }
     }
   }

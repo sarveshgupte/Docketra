@@ -29,6 +29,14 @@ assert.deepStrictEqual(parsed.firmName, 'Apex Law & Associates', 'Firm name must
 assert.deepStrictEqual(parsed.phone, '9876543210', 'Phone must be preserved');
 assert.deepStrictEqual(parsed.agreedToPilotTerms, true, 'Terms agreement must be preserved');
 
+// SEC-07: Verify parseGoogleState rejects forged and tampered signatures with timingSafeEqual
+const [payloadPart, sigPart] = signedState.split('.');
+const tamperedSig = sigPart.slice(0, -1) + (sigPart.slice(-1) === 'a' ? 'b' : 'a');
+assert.strictEqual(parseGoogleState(`${payloadPart}.${tamperedSig}`), null, 'Tampered signature must be rejected');
+assert.strictEqual(parseGoogleState(`${payloadPart}.${sigPart}extra`), null, 'Mismatched length signature must be rejected');
+assert.strictEqual(parseGoogleState(`${payloadPart}`), null, 'Missing signature must be rejected');
+assert.strictEqual(parseGoogleState(null), null, 'Null state must be rejected');
+
 // 2. Verify auth routes schema for GET /google/start and POST /google/complete-signup
 const startSchema = authRoutesSchema['GET /google/start'];
 assert.ok(startSchema, 'GET /google/start schema must exist');

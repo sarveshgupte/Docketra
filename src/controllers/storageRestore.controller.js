@@ -1,17 +1,30 @@
+const fsp = require('fs/promises');
 const { storageRestoreService } = require('../services/storageRestore.service');
 const { ensureStorageOtpVerification } = require('./storage.controller');
 const { requireAdmin } = require('../middleware/permission.middleware');
 const log = require('../utils/log');
 
 const initiateStorageRestore = async (req, res) => {
+  const cleanupUploadedFile = async () => {
+    if (req.file?.path) {
+      try {
+        await fsp.unlink(req.file.path);
+      } catch (_e) {}
+    }
+  };
+
   try {
     // Step-up verification
-    if (!ensureStorageOtpVerification(req, res)) return;
+    if (!ensureStorageOtpVerification(req, res)) {
+      await cleanupUploadedFile();
+      return;
+    }
 
     const exportId = req.body?.exportId;
     const file = req.file;
 
     if (!exportId && !file) {
+      await cleanupUploadedFile();
       return res.status(400).json({
         success: false,
         message: 'Either a past exportId or an uploaded backup ZIP archive is required.',
@@ -44,6 +57,7 @@ const initiateStorageRestore = async (req, res) => {
       message: 'Restore job initiated successfully. Progress is being tracked.',
     });
   } catch (error) {
+    await cleanupUploadedFile();
     log.error('STORAGE_RESTORE_INITIATION_ERROR', { firmId: req.firmId, message: error.message, stack: error.stack });
     return res.status(500).json({
       success: false,

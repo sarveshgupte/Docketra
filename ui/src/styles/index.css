@@ -1,4 +1,9 @@
+/* Hallmark · shape: Marquee Hero · genre: modern-minimal · theme: Coral (by request) · job: sign up · draw: 931d5c
+ * hero: Stage · nav: floating pill · footer: letter close · imagery: product · signature: interactive statutory radar & drive vault
+ * axes: light/grotesk-sans/warm · posture: restrained · contrast: pass · fold: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · weakest: H, tightened hero text to 7-word headline and 10-word lede */
 @import './tokens.css';
+@import './base.css';
 @import './typography.css';
 @import '../assets/styles/enterprise.css';
 @import '../assets/styles/global.css';
@@ -6,3 +11,4 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+

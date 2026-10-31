@@ -224,6 +224,40 @@ async function run() {
     assert.strictEqual(state.auditLogs[0].performedBy, 'ADMIN_USER');
     assert.strictEqual(state.auditLogs[0].metadata.restoredFileCount, 1);
 
+    // 6. Test SEC-03: uploadedZipPath cleanup in finally block
+    console.log('  Testing uploadedZipPath automatic unlinking in finally block...');
+    const tempUploadZip = path.join(testTempDir, 'temp-uploaded-archive.zip');
+    await fsp.copyFile(zipPath, tempUploadZip);
+    assert.ok(fs.existsSync(tempUploadZip), 'Temp upload zip must exist prior to restore execution');
+    
+    await storageRestoreService._executeRestoreBackground('firm-123', 'job-upload-test', {
+      exportId: null,
+      uploadedZipPath: tempUploadZip,
+      performedBy: 'ADMIN_USER',
+      performedByRole: 'Admin',
+    });
+    assert.strictEqual(fs.existsSync(tempUploadZip), false, 'Temp uploaded ZIP must be unlinked in finally block');
+
+    // 7. Test SEC-05: missing keyMaterial fails closed
+    console.log('  Testing missing keyMaterial fail-closed check...');
+    const origKey = process.env.BACKUP_ENCRYPTION_KEY;
+    const origJwt = process.env.JWT_SECRET;
+    delete process.env.BACKUP_ENCRYPTION_KEY;
+    delete process.env.JWT_SECRET;
+    await assert.rejects(
+      async () => {
+        await storageRestoreService._executeRestoreBackground('firm-123', 'job-nokey-test', {
+          exportId: 'backup-123',
+          uploadedZipPath: null,
+          performedBy: 'ADMIN_USER',
+        });
+      },
+      /BACKUP_ENCRYPTION_KEY or JWT_SECRET is required/,
+      'Must reject when keyMaterial is missing'
+    );
+    process.env.BACKUP_ENCRYPTION_KEY = origKey;
+    process.env.JWT_SECRET = origJwt;
+
     console.log('  ✓ Storage restore service fully tested & correct.');
     console.log('All tests passed successfully.');
 
