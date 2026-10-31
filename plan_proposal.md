@@ -1,18 +1,46 @@
-1. **Optimize firm client validation in `src/controllers/admin.controller.js`**
-   - In `updateUserClientAccess`, the current implementation validates that all selected `normalizedClientIds` belong to the admin's firm by querying `Client.countDocuments` and verifying the count equals `normalizedClientIds.length`.
-   - Then, just a few lines later, if `accessMode === 'SELECTED'`, it issues another database query `Client.find().select('_id').lean()` using the exact same filters to get the ObjectIds for `newClientAccess`.
-   - **Performance Win:** Combine these into a single database operation! Use `Client.find(query).select('_id clientId').lean()` to fetch the matching documents once. Then, assert that `fetchedClients.length === normalizedClientIds.length` to validate ownership, and directly map the `_id`s to populate `newClientAccess`.
-   - This eliminates one unnecessary database roundtrip (O(1) savings per request), dropping sequential query bottlenecks during user client access updates.
+1. **Fix IDOR Vulnerability in `updateCaseActivity` in `src/services/caseActivity.service.js`:**
+   - I will use `replace_with_git_merge_diff` with exact `SEARCH` and `REPLACE` blocks:
+```
+<<<<<<< SEARCH
+  const updateCaseActivity = async (req, res) => {
+    try {
+      const { caseId } = req.params;
+      const { userEmail } = req.body;
 
-2. **Add inline comments explaining the performance optimization**
-   - Add "💡 What:", "🎯 Why:", and "📊 Impact:" comments to document the removal of the redundant `countDocuments` query.
+      if (!userEmail) {
+        return res.status(400).json({
+          success: false,
+          message: 'User email is required',
+        });
+      }
+=======
+  const updateCaseActivity = async (req, res) => {
+    try {
+      const { caseId } = req.params;
+      const userEmail = req.user?.email;
 
-3. **Complete pre commit steps to ensure proper testing, verification, review, and reflection are done.**
-   - Run `pnpm lint` and `pnpm test` (or the equivalent API test runner command).
-
-4. **Document critical learning in Bolt's journal**
-   - Add a journal entry to `.jules/bolt.md` documenting the optimization pattern of merging sequential `countDocuments` validation checks and subsequent `find` retrieval queries into a single `find` operation.
-
-5. **Create a Pull Request**
-   - Title: `⚡ Bolt: [performance improvement] Eliminate redundant countDocuments query during client access validation`
-   - Description matching Bolt's format (What, Why, Impact, Measurement).
+      if (!userEmail) {
+        return res.status(400).json({
+          success: false,
+          message: 'User email is required',
+        });
+      }
+>>>>>>> REPLACE
+```
+2. **Verify changes visually:**
+   - Run `sed -n '412,430p' src/services/caseActivity.service.js`
+3. **Run Lint and Tests:**
+   - `export JWT_SECRET=dummy SUPERADMIN_PASSWORD_HASH=dummy SUPERADMIN_XID=dummy SMTP_PASS=dummy MONGO_URI=mongodb://localhost:27017/test MASTER_ENCRYPTION_KEY=dummy && pnpm lint && pnpm test`
+4. **Complete pre-commit steps:**
+   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+5. **Submit the PR:**
+   - Submit the PR with:
+      - Title: "🛡️ Sentinel: [CRITICAL] Fix IDOR in updateCaseActivity"
+      - Description:
+      ```
+      🚨 Severity: CRITICAL
+      💡 Vulnerability: IDOR in `updateCaseActivity` where `userEmail` was derived from `req.body.userEmail` allowing an attacker to bypass case lock verification by spoofing their email.
+      🎯 Impact: Attackers could manipulate case activity and bypass lock validation.
+      🔧 Fix: Update `updateCaseActivity` to derive `userEmail` from `req.user.email` to ensure identity is cryptographically tied to the authenticated user.
+      ✅ Verification: Run `pnpm test` and `pnpm lint` and inspect `src/services/caseActivity.service.js`.
+      ```
