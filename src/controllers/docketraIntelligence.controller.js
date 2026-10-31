@@ -24,9 +24,10 @@ const getWorkloadIntelligence = async (req, res) => {
     return res.json({ success: true, data });
   } catch (error) {
     const statusCode = Number(error?.statusCode || 500);
+    log.error('DOCKETRA_INTELLIGENCE_WORKLOAD_ERROR', { message: error.message, stack: error.stack });
     return res.status(statusCode).json({
       success: false,
-      message: error?.message || 'Failed to load workload intelligence',
+      message: 'Failed to load workload intelligence',
       data: {
         summary: { totalMembers: 0, available: 0, moderate: 0, busy: 0, overloaded: 0 },
         recommendations: { recommendedAssignee: null, bestAssignees: [], avoidAssigning: [] },
@@ -60,9 +61,10 @@ const getWorkbasketCapacityIntelligence = async (req, res) => {
     return res.json({ success: true, data });
   } catch (error) {
     const statusCode = Number(error?.statusCode || 500);
+    log.error('DOCKETRA_INTELLIGENCE_CAPACITY_ERROR', { message: error.message, stack: error.stack });
     return res.status(statusCode).json({
       success: false,
-      message: error?.message || 'Failed to load workbasket capacity intelligence',
+      message: 'Failed to load workbasket capacity intelligence',
       data: {
         thresholds: docketraIntelligenceService.normalizeCapacityThresholds(),
         summary: { totalWorkbaskets: 0, healthy: 0, busy: 0, overloaded: 0 },
@@ -91,9 +93,10 @@ const getDeadlineRiskIntelligence = async (req, res) => {
     return res.json({ success: true, data });
   } catch (error) {
     const statusCode = Number(error?.statusCode || 500);
+    log.error('DOCKETRA_INTELLIGENCE_DEADLINE_RISK_ERROR', { message: error.message, stack: error.stack });
     return res.status(statusCode).json({
       success: false,
-      message: error?.message || 'Failed to load deadline risk intelligence',
+      message: 'Failed to load deadline risk intelligence',
       data: {
         riskLevel: 'Low Risk',
         recommendedAction: 'No immediate action required.',
@@ -118,7 +121,8 @@ const getExecutiveBrief = async (req, res) => {
     const data = await docketraIntelligenceService.generateExecutiveAiBrief({ firmId: req.user.firmId });
     return res.json({ success: true, data });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error?.message || 'Failed to load executive brief' });
+    log.error('DOCKETRA_INTELLIGENCE_EXECUTIVE_BRIEF_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to load executive brief' });
   }
 };
 
@@ -128,7 +132,8 @@ const getClientRiskScores = async (req, res) => {
     const data = await docketraIntelligenceService.getClientComplianceRiskScores({ firmId: req.user.firmId });
     return res.json({ success: true, data });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error?.message || 'Failed to load client risk scores' });
+    log.error('DOCKETRA_INTELLIGENCE_CLIENT_RISK_SCORES_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to load client risk scores' });
   }
 };
 
@@ -142,7 +147,8 @@ const rebalanceWorkloadAction = async (req, res) => {
     const data = await docketraIntelligenceService.rebalanceWorkload({ firmId: req.user.firmId, execute });
     return res.json({ success: true, data });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error?.message || 'Failed to execute workload rebalance' });
+    log.error('DOCKETRA_INTELLIGENCE_REBALANCE_ERROR', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to execute workload rebalance' });
   }
 };
 
