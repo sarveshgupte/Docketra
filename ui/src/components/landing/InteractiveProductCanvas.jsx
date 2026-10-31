@@ -72,7 +72,7 @@ export function InteractiveProductCanvas({ className = '' }) {
   return (
     <div className={`relative ${className}`}>
       {/* Outer Shell: Precision workstation window */}
-      <div className="relative rounded-lg border border-slate-300/80 bg-white shadow-2xl overflow-hidden font-sans text-slate-900 transition-all">
+      <div className="relative rounded-lg border border-slate-300/80 bg-white shadow-2xl overflow-hidden font-sans text-slate-900 transition-colors">
         {/* Workspace Window Titlebar */}
         <div className="flex items-center justify-between border-b border-slate-200 bg-slate-900 px-3.5 py-2.5 text-xs text-white">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -95,7 +95,7 @@ export function InteractiveProductCanvas({ className = '' }) {
               FY 2025-26
             </span>
             <span className="flex items-center gap-1.5 border border-emerald-500/30 bg-emerald-950/50 px-2 py-0.5 text-emerald-400 font-semibold rounded-xs">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 motion-safe:animate-pulse shrink-0" />
               <span>Drive Perimeter Active</span>
             </span>
           </div>
@@ -138,22 +138,22 @@ export function InteractiveProductCanvas({ className = '' }) {
             <div className="space-y-2.5">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div className="border border-rose-300 bg-rose-50/60 p-2.5 rounded-md">
-                  <span className="font-mono text-[9px] font-bold text-rose-700 uppercase tracking-wider">Overdue Alert</span>
+                  <span className="text-xs font-semibold text-rose-700">Overdue alert</span>
                   <div className="font-mono text-base sm:text-lg font-bold text-slate-950 mt-0.5">3 Filings</div>
                   <span className="text-[10px] text-rose-600 font-mono">₹100/day penalty</span>
                 </div>
                 <div className="border border-amber-300 bg-amber-50/60 p-2.5 rounded-md">
-                  <span className="font-mono text-[9px] font-bold text-amber-800 uppercase tracking-wider">Next 7 Days</span>
+                  <span className="text-xs font-semibold text-amber-800">Next 7 days</span>
                   <div className="font-mono text-base sm:text-lg font-bold text-slate-950 mt-0.5">8 Filings</div>
                   <span className="text-[10px] text-amber-700 font-mono">Form 3CD + AOC-4</span>
                 </div>
                 <div className="border border-sky-300 bg-sky-50/60 p-2.5 rounded-md">
-                  <span className="font-mono text-[9px] font-bold text-sky-800 uppercase tracking-wider">Court / NCLT</span>
+                  <span className="text-xs font-semibold text-sky-800">Court / NCLT</span>
                   <div className="font-mono text-base sm:text-lg font-bold text-slate-950 mt-0.5">2 Hearings</div>
                   <span className="text-[10px] text-sky-700 font-mono">Bench 2 Mumbai</span>
                 </div>
                 <div className="border border-purple-300 bg-purple-50/60 p-2.5 rounded-md">
-                  <span className="font-mono text-[9px] font-bold text-purple-800 uppercase tracking-wider">Partner Sign</span>
+                  <span className="text-xs font-semibold text-purple-800">Partner sign</span>
                   <div className="font-mono text-base sm:text-lg font-bold text-slate-950 mt-0.5">4 In Queue</div>
                   <span className="text-[10px] text-purple-700 font-mono">SQC-1 4-Eye Review</span>
                 </div>
@@ -161,7 +161,7 @@ export function InteractiveProductCanvas({ className = '' }) {
 
               {/* Dockets Ledger Table */}
               <div className="border border-slate-200 bg-white rounded-md overflow-hidden text-xs shadow-2xs">
-                <div className="grid grid-cols-12 bg-slate-100 px-3 py-1.5 font-mono text-[10px] text-slate-700 font-bold uppercase border-b border-slate-200">
+                <div className="grid grid-cols-12 bg-slate-100 px-3 py-1.5 text-xs text-slate-700 font-semibold border-b border-slate-200">
                   <div className="col-span-5">Client & CIN</div>
                   <div className="col-span-4">Statutory Docket</div>
                   <div className="col-span-3 text-right">Cutoff / Action</div>
@@ -183,8 +183,8 @@ export function InteractiveProductCanvas({ className = '' }) {
                     </div>
                     <div className="col-span-4 text-slate-800 text-[11px] truncate">DIR-3 KYC (Director KYC)</div>
                     <div className="col-span-3 text-right">
-                      <span className="border border-rose-300 bg-rose-50 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase text-rose-800 rounded-xs">
-                        Due Today
+                      <span className="border border-rose-300 bg-rose-50 px-1.5 py-0.5 text-xs font-semibold text-rose-800 rounded-xs">
+                        Due today
                       </span>
                     </div>
                   </div>
@@ -204,8 +204,8 @@ export function InteractiveProductCanvas({ className = '' }) {
                     </div>
                     <div className="col-span-4 text-slate-800 text-[11px] truncate">AOC-4 Balance Sheet & Notes</div>
                     <div className="col-span-3 text-right">
-                      <span className="border border-amber-300 bg-amber-50 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase text-amber-800 rounded-xs">
-                        In 3 Days
+                      <span className="border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-xs font-semibold text-amber-800 rounded-xs">
+                        In 3 days
                       </span>
                     </div>
                   </div>
@@ -216,7 +216,7 @@ export function InteractiveProductCanvas({ className = '' }) {
                     </div>
                     <div className="col-span-4 text-slate-800 text-[11px] truncate">Tax Audit Form 3CD</div>
                     <div className="col-span-3 text-right">
-                      <span className="border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase text-emerald-800 rounded-xs">
+                      <span className="border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-xs font-semibold text-emerald-800 rounded-xs">
                         Ready for QC
                       </span>
                     </div>
@@ -240,8 +240,8 @@ export function InteractiveProductCanvas({ className = '' }) {
                       Articles & trainees view files inside protected web viewer. Direct downloads to personal drives or disks are blocked.
                     </p>
                   </div>
-                  <span className="border border-emerald-300 bg-emerald-50 px-2 py-0.5 font-mono text-[9px] font-bold uppercase text-emerald-800 rounded-xs self-start sm:self-auto">
-                    SHIELD ACTIVE
+                  <span className="border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 rounded-xs self-start sm:self-auto">
+                    Shield active
                   </span>
                 </div>
 
@@ -264,10 +264,10 @@ export function InteractiveProductCanvas({ className = '' }) {
                     <button
                       type="button"
                       onClick={runShieldSimulation}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-950 text-white font-mono text-[10px] font-bold uppercase tracking-wider rounded-xs hover:bg-slate-800 transition-colors cursor-pointer"
+                      className="inline-flex items-center px-3 py-1.5 bg-slate-950 text-white text-xs font-semibold rounded-xs hover:bg-slate-800 transition-colors cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-900"
                     >
                       <span>Simulate Clerk Attempting Download</span>
-                      <span>→</span>
+
                     </button>
                     <span className="text-[10px] text-slate-500 font-mono">Click to test live security policy</span>
                   </div>
@@ -282,7 +282,7 @@ export function InteractiveProductCanvas({ className = '' }) {
                   {shieldTestState === 'blocked' && (
                     <div className="p-2.5 border border-rose-300 bg-rose-50 rounded text-rose-900 font-mono text-[10px] space-y-1">
                       <div className="flex items-center gap-1.5 font-bold text-rose-800">
-                        <span className="text-rose-600">🛑</span>
+                        <span className="inline-flex items-center justify-center h-4 w-4 rounded-xs bg-rose-600 text-white font-bold text-[10px]">✕</span>
                         <span>DOWNLOAD BLOCKED: Trainee Laptop Shield Intercepted File</span>
                       </div>
                       <p className="text-[10px] text-rose-700 leading-normal">
@@ -304,12 +304,12 @@ export function InteractiveProductCanvas({ className = '' }) {
                     <h4 className="font-bold text-slate-950 text-sm">Partner Review: Form AOC-4 (Financial Statements)</h4>
                     <p className="text-[10px] text-slate-500 mt-0.5">Prepared by Associate Sneha • Ready for Partner Final Signature</p>
                   </div>
-                  <span className={`border px-2 py-0.5 font-mono text-[9px] font-bold uppercase rounded-xs ${
+                  <span className={`border px-2 py-0.5 text-xs font-semibold rounded-xs ${
                     partnerApproved
                       ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
                       : 'border-amber-300 bg-amber-50 text-amber-800'
                   }`}>
-                    {partnerApproved ? 'SEALED & FILED' : 'PENDING PARTNER SIGN'}
+                    {partnerApproved ? 'Sealed & filed' : 'Pending partner sign'}
                   </span>
                 </div>
 
@@ -340,7 +340,7 @@ export function InteractiveProductCanvas({ className = '' }) {
                         className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-950 text-amber-400 font-bold text-xs rounded-xs hover:bg-slate-800 transition-colors shadow-xs cursor-pointer"
                       >
                         <span>Approve & Engrave SQC-1 Audit Seal</span>
-                        <span>→</span>
+  
                       </button>
                     </>
                   ) : (
@@ -368,8 +368,8 @@ export function InteractiveProductCanvas({ className = '' }) {
                     <h4 className="font-bold text-slate-950 text-sm">Your Firm&apos;s Private Google Drive Enclave</h4>
                     <p className="text-[10px] text-slate-500 mt-0.5">Strict restricted drive.file scope. Zero outside access.</p>
                   </div>
-                  <span className="border border-emerald-300 bg-emerald-50 px-2 py-0.5 font-mono text-[9px] font-bold uppercase text-emerald-800 rounded-xs">
-                    BYOS SOVEREIGN
+                  <span className="border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 rounded-xs">
+                    Private custody
                   </span>
                 </div>
 
@@ -418,16 +418,16 @@ export function InteractiveProductCanvas({ className = '' }) {
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                   <div>
                     <h4 className="font-bold text-slate-950 text-sm">Zenith Infra Private Limited</h4>
-                    <p className="text-[10px] text-slate-500 font-mono mt-0.5">CIN: U72200MH2021PTC368942 • ROC Mumbai • Incorp: 2021</p>
+                    <p className="text-xs text-slate-500 mt-0.5">CIN: U72200MH2021PTC368942 | ROC Mumbai | Incorp: 2021</p>
                   </div>
-                  <span className="border border-emerald-300 bg-emerald-50 px-2 py-0.5 font-mono text-[9px] font-bold uppercase text-emerald-800 rounded-xs">
-                    ACTIVE MATTER
+                  <span className="border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 rounded-xs">
+                    Active matter
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px]">
                   <div className="p-2 border border-slate-200 bg-slate-50 rounded-sm">
-                    <span className="text-slate-500 font-mono uppercase text-[9px]">PAN & TAN</span>
+                    <span className="text-slate-500 text-xs font-medium">PAN & TAN</span>
                     <div className="flex items-center justify-between mt-1 font-mono font-bold text-slate-900">
                       <span>AAACZ1234F</span>
                       <button
@@ -440,11 +440,11 @@ export function InteractiveProductCanvas({ className = '' }) {
                     </div>
                   </div>
                   <div className="p-2 border border-slate-200 bg-slate-50 rounded-sm">
-                    <span className="text-slate-500 font-mono uppercase text-[9px]">Directors (DIN)</span>
+                    <span className="text-slate-500 text-xs font-medium">Directors (DIN)</span>
                     <p className="font-mono text-emerald-800 font-bold mt-1">3 Active (DSC Attached)</p>
                   </div>
                   <div className="p-2 border border-slate-200 bg-slate-50 rounded-sm">
-                    <span className="text-slate-500 font-mono uppercase text-[9px]">Next Hearing</span>
+                    <span className="text-slate-500 text-xs font-medium">Next hearing</span>
                     <p className="font-mono text-rose-700 font-bold mt-1">28-Sep (NCLT Bench 2)</p>
                   </div>
                 </div>

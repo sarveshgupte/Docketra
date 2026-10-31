@@ -89,7 +89,7 @@ export function ComplianceVsGenericComparison() {
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => setFilterCategory(cat)}
-                className={`px-2.5 py-1 rounded-xs font-mono font-medium transition-[background-color,color,border-color] cursor-pointer text-[10px] uppercase tracking-wider ${
+                className={`px-2.5 py-1 rounded-xs text-xs font-medium transition-[background-color,color,border-color] cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-900 ${
                   isActive
                     ? 'bg-slate-950 text-white font-semibold shadow-xs'
                     : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 hover:border-slate-300'
@@ -115,8 +115,8 @@ export function ComplianceVsGenericComparison() {
                     <span className="text-slate-950 font-bold tracking-tight block">Docketra Sovereign OS</span>
                     <span className="font-mono text-[10px] text-emerald-800 font-medium block mt-0.5">Firm Google Drive Perimeter</span>
                   </div>
-                  <span className="shrink-0 border border-emerald-300 bg-emerald-100 text-emerald-800 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider">
-                    PURPOSE-BUILT
+                  <span className="shrink-0 border border-emerald-300 bg-emerald-100 text-emerald-800 text-xs font-semibold px-2 py-0.5 rounded-xs">
+                    Purpose-built
                   </span>
                 </div>
               </th>
@@ -138,7 +138,7 @@ export function ComplianceVsGenericComparison() {
             {filteredRows.map((row, idx) => (
               <tr key={idx} className="hover:bg-slate-50/60 transition-[background-color]">
                 <td className="py-3.5 px-4 sm:px-5 align-top">
-                  <span className="inline-block font-mono text-[9px] text-slate-600 font-semibold uppercase tracking-wider bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-xs">
+                  <span className="inline-block text-xs text-slate-600 font-medium bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-xs">
                     {row.category}
                   </span>
                   <div className="mt-1 font-semibold text-xs text-slate-950 leading-snug">

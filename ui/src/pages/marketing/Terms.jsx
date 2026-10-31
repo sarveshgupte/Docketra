@@ -74,7 +74,7 @@ export const TermsPage = () => (
     <section id="liability">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">6. Limitation of Liability</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Docketra is provided on an "as available" basis. To the extent permitted by applicable
+        Docketra is provided on an “as available” basis. To the extent permitted by applicable
         law, Docketra is not liable for indirect or consequential losses resulting from use of the
         platform.
       </p>
@@ -95,7 +95,7 @@ export const TermsPage = () => (
     <section id="contact">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">8. Contact</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Questions about these Terms can be sent to <a href={`mailto:${SUPPORT_EMAIL}`} className="text-gray-700 underline hover:no-underline">{SUPPORT_EMAIL}</a>.
+        Questions about these Terms can be sent to <a href={`mailto:${SUPPORT_EMAIL}`} className="text-gray-700 underline hover:no-underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-900 rounded-xs">{SUPPORT_EMAIL}</a>.
       </p>
     </section>
   </LegalLayout>

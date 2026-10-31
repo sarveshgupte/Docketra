@@ -49,61 +49,61 @@ export const LegalLayout = ({
   }, []);
 
   return (
-    <article className="bg-[linear-gradient(135deg,#fff8eb_0%,#ffffff_42%,#e0f2fe_100%)]">
+    <article className="min-h-screen bg-slate-50/40 text-slate-900">
       <SeoHead
         canonicalPath={location.pathname}
         title={`${title} | Docketra`}
         description={description}
       />
       <PageContainer className="relative py-8 md:py-12" ref={containerRef}>
-        <header className="overflow-hidden rounded-[2rem] border border-white/80 bg-white/80 p-6 shadow-[0_30px_90px_-50px_rgba(15,23,42,0.45)] backdrop-blur md:p-8 lg:p-10">
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
+        <header className="rounded-sm border border-slate-200 bg-white p-6 sm:p-8 shadow-subtle">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
             <div>
-              <p className="text-sm font-bold text-teal-700">{kicker}</p>
-              <h1 className="mt-3 max-w-4xl text-4xl font-black leading-[0.98] tracking-normal text-slate-950 md:text-6xl">
+              <p className="text-xs font-semibold text-slate-600">{kicker}</p>
+              <h1 className="mt-2 max-w-4xl text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
                 {title}
               </h1>
               {description && (
-                <p className="mt-5 max-w-3xl text-base leading-7 text-slate-600 md:text-lg">
+                <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-600 sm:text-base">
                   {description}
                 </p>
               )}
-              <div className="mt-6 flex flex-wrap gap-2">
-                <span className="rounded-xs border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">
+              <div className="mt-5 flex flex-wrap gap-2 text-xs">
+                <span className="rounded-xs border border-slate-200 bg-slate-50 px-2.5 py-1 font-medium text-slate-700">
                   {`Version ${LEGAL_VERSION}`}
                 </span>
-                <span className="rounded-xs border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800">
+                <span className="rounded-xs border border-slate-200 bg-slate-50 px-2.5 py-1 font-medium text-slate-700">
                   {`Updated ${LAST_UPDATED}`}
                 </span>
-                <span className="rounded-xs border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
-                  Plain-English preview
+                <span className="rounded-xs border border-emerald-200 bg-emerald-50 px-2.5 py-1 font-medium text-emerald-800">
+                  Plain English summary
                 </span>
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-800 bg-slate-950 p-5 text-white shadow-md">
-              <p className="text-sm font-semibold text-sky-200">Quick orientation</p>
-              <div className="mt-4 grid gap-3">
+            <aside className="rounded-sm border border-slate-200 bg-slate-50 p-4 text-slate-800">
+              <p className="text-xs font-semibold text-slate-900">Key terms at a glance</p>
+              <div className="mt-3 grid gap-2">
                 {(highlights.length ? highlights : ['Policy scope', 'Firm-owned data', 'Support contact']).map((item) => (
-                  <div key={item} className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-semibold">
+                  <div key={item} className="rounded-xs border border-slate-200/80 bg-white px-3 py-2 text-xs font-medium text-slate-700">
                     {item}
                   </div>
                 ))}
               </div>
-            </div>
+            </aside>
           </div>
 
-          <nav aria-label="Legal pages" className="mt-8 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <nav aria-label="Legal pages" className="mt-6 border-t border-slate-100 pt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             {LEGAL_LINKS.map((item) => {
               const isActive = location.pathname === item.to;
               return (
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`rounded-2xl border px-4 py-3 text-sm font-bold transition ${
+                  className={`rounded-xs border px-3 py-2 text-center text-xs font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-900 ${
                     isActive
-                      ? 'border-slate-950 bg-slate-950 text-white shadow-lg'
-                      : 'border-white/80 bg-white/70 text-slate-700 hover:border-slate-300 hover:bg-white'
+                      ? 'border-slate-900 bg-slate-900 text-white shadow-xs'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
                   {item.label}
@@ -113,24 +113,24 @@ export const LegalLayout = ({
           </nav>
         </header>
 
-        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[260px_1fr]">
           {sections && sections.length > 0 && (
             <nav
               aria-label="Table of contents"
-              className="w-full rounded-[1.5rem] border border-white/80 bg-white/75 p-4 shadow-sm backdrop-blur lg:sticky lg:top-24 lg:self-start"
+              className="w-full rounded-sm border border-slate-200 bg-white p-4 shadow-subtle lg:sticky lg:top-24 lg:self-start"
             >
-              <p className="mb-3 text-xs font-bold text-slate-500">
-                On this page
+              <p className="mb-3 text-xs font-semibold text-slate-500">
+                Sections on this page
               </p>
               <ul className="space-y-1">
                 {sections.map(({ id, label }) => (
                   <li key={id}>
                     <a
                       href={`#${id}`}
-                      className={`block w-full break-words rounded-xl px-3 py-2 text-sm transition-colors ${
+                      className={`block w-full break-words rounded-xs px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-900 ${
                         activeId === id
-                          ? 'bg-slate-950 font-bold text-white'
-                          : 'text-slate-600 hover:bg-white hover:text-slate-950'
+                          ? 'bg-slate-900 font-semibold text-white'
+                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
                       }`}
                     >
                       {label}
@@ -141,12 +141,12 @@ export const LegalLayout = ({
             </nav>
           )}
 
-          <main className="min-w-0 w-full rounded-[1.5rem] border border-white/80 bg-white/90 p-5 text-sm leading-relaxed text-slate-700 shadow-sm md:p-8">
+          <main className="min-w-0 w-full rounded-sm border border-slate-200 bg-white p-6 sm:p-8 text-sm leading-relaxed text-slate-700 shadow-subtle">
             {children}
 
-            <footer className="mt-12 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-xs text-slate-500">
+            <footer className="mt-10 rounded-sm border border-slate-200 bg-slate-50 p-4 text-xs text-slate-500">
               <p>Operated by <strong className="text-slate-800">{COMPANY_NAME}</strong></p>
-              <p className="mt-1">{`Legal Version ${LEGAL_VERSION} \u2014 ${LAST_UPDATED}`}</p>
+              <p className="mt-1">{`Legal Version ${LEGAL_VERSION} • ${LAST_UPDATED}`}</p>
             </footer>
           </main>
         </div>
