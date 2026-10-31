@@ -11,10 +11,18 @@ const documentItemController = require('../src/controllers/documentItem.controll
 const knowledgeItemController = require('../src/controllers/knowledgeItem.controller');
 const clientPortalController = require('../src/controllers/clientPortal.controller');
 const docketEffortController = require('../src/controllers/docketEffort.controller');
+const adminController = require('../src/controllers/admin.controller');
+const caseController = require('../src/controllers/case.controller');
+const complianceTemplateController = require('../src/controllers/complianceTemplate.controller');
+const docketApprovalController = require('../src/controllers/docketApproval.controller');
+const docketraIntelligenceController = require('../src/controllers/docketraIntelligence.controller');
+const storageRestoreController = require('../src/controllers/storageRestore.controller');
+const storageController = require('../src/controllers/storage.controller');
 
 const Team = require('../src/models/Team.model');
 const Case = require('../src/models/Case.model');
 const User = require('../src/models/User.model');
+const Firm = require('../src/models/Firm.model');
 const DocumentItem = require('../src/models/DocumentItem.model');
 const KnowledgeItem = require('../src/models/KnowledgeItem.model');
 const DocketEffort = require('../src/models/DocketEffort.model');
@@ -386,7 +394,118 @@ async function runTests() {
       Case.find = origFind;
     }
 
-    console.log('All 20 information exposure vulnerability tests passed successfully!');
+    // 6. Admin Controller - getFirmPlan
+    console.log('Testing admin.controller...');
+    {
+      const origFindById = Firm.findById;
+      Firm.findById = () => { throw new Error(SECRET_SENSITIVE_ERROR); };
+      const req = { user: { firmId: testObjectId, role: 'PRIMARY_ADMIN' }, firm: { ownershipFirmId: testObjectId } };
+      const res = mockRes();
+      await adminController.getFirmPlan(req, res);
+      assert.strictEqual(res.statusCode, 500);
+      assert.strictEqual(res.body.success, false);
+      assert.strictEqual(res.body.message, 'Failed to load firm plan');
+      assert.strictEqual(res.body.error, undefined);
+      assert.ok(!JSON.stringify(res.body).includes(SECRET_SENSITIVE_ERROR));
+      const logEntry = loggedErrors.find(l => l.event === 'ADMIN_FETCH_FIRM_PLAN_ERROR');
+      assert.ok(logEntry);
+      assert.strictEqual(logEntry.meta.message, SECRET_SENSITIVE_ERROR);
+      Firm.findById = origFindById;
+    }
+
+    // 7. Case Controller - getDocketEligibleUsers & getDocketAudit
+    console.log('Testing case.controller...');
+    {
+      const origFind = User.find;
+      User.find = () => { throw new Error(SECRET_SENSITIVE_ERROR); };
+      const req = { user: { firmId: testObjectId } };
+      const res = mockRes();
+      await caseController.getDocketEligibleUsers(req, res);
+      assert.strictEqual(res.statusCode, 500);
+      assert.strictEqual(res.body.success, false);
+      assert.strictEqual(res.body.message, 'Failed to load eligible users');
+      assert.strictEqual(res.body.error, undefined);
+      assert.ok(!JSON.stringify(res.body).includes(SECRET_SENSITIVE_ERROR));
+      const logEntry = loggedErrors.find(l => l.event === 'CASE_GET_ELIGIBLE_USERS_ERROR');
+      assert.ok(logEntry);
+      assert.strictEqual(logEntry.meta.message, SECRET_SENSITIVE_ERROR);
+      User.find = origFind;
+    }
+
+    {
+      const origFindOne = Case.findOne;
+      Case.findOne = () => { throw new Error(SECRET_SENSITIVE_ERROR); };
+      const req = { params: { caseId: testObjectId }, query: {}, user: { firmId: testObjectId, role: 'ADMIN' } };
+      const res = mockRes();
+      await caseController.getDocketAudit(req, res);
+      assert.strictEqual(res.statusCode, 500);
+      assert.strictEqual(res.body.success, false);
+      assert.strictEqual(res.body.message, 'Error fetching docket audit logs');
+      assert.strictEqual(res.body.error, undefined);
+      assert.ok(!JSON.stringify(res.body).includes(SECRET_SENSITIVE_ERROR));
+      const logEntry = loggedErrors.find(l => l.event === 'CASE_GET_DOCKET_AUDIT_LOGS_ERROR');
+      assert.ok(logEntry);
+      assert.strictEqual(logEntry.meta.message, SECRET_SENSITIVE_ERROR);
+      Case.findOne = origFindOne;
+    }
+
+    // 8. Compliance Template Controller - listComplianceTemplates
+    console.log('Testing complianceTemplate.controller...');
+    {
+      const complianceService = require('../src/services/complianceTemplateGeneration.service');
+      const origLoad = complianceService.loadTemplates;
+      complianceService.loadTemplates = () => { throw new Error(SECRET_SENSITIVE_ERROR); };
+      const req = { user: { firmId: testObjectId, role: 'ADMIN' }, firmId: testObjectId, query: {} };
+      const res = mockRes();
+      await complianceTemplateController.listComplianceTemplates(req, res);
+      assert.strictEqual(res.statusCode, 500);
+      assert.strictEqual(res.body.success, false);
+      assert.strictEqual(res.body.message, 'Failed to load compliance templates');
+      assert.ok(!JSON.stringify(res.body).includes(SECRET_SENSITIVE_ERROR));
+      const logEntry = loggedErrors.find(l => l.event === 'COMPLIANCE_TEMPLATE_LIST_ERROR');
+      assert.ok(logEntry);
+      assert.strictEqual(logEntry.meta.message, SECRET_SENSITIVE_ERROR);
+      complianceService.loadTemplates = origLoad;
+    }
+
+    // 9. Docket Approval Controller - getDocketApprovalStage
+    console.log('Testing docketApproval.controller...');
+    {
+      const origFindOne = Case.findOne;
+      Case.findOne = () => { throw new Error(SECRET_SENSITIVE_ERROR); };
+      const req = { params: { caseId: 'DCK-001' }, user: { firmId: testObjectId } };
+      const res = mockRes();
+      await docketApprovalController.getDocketApprovalStage(req, res);
+      assert.strictEqual(res.statusCode, 500);
+      assert.strictEqual(res.body.success, false);
+      assert.strictEqual(res.body.message, 'Failed to load approval stage');
+      assert.ok(!JSON.stringify(res.body).includes(SECRET_SENSITIVE_ERROR));
+      const logEntry = loggedErrors.find(l => l.event === 'DOCKET_GET_APPROVAL_STAGE_ERROR');
+      assert.ok(logEntry);
+      assert.strictEqual(logEntry.meta.message, SECRET_SENSITIVE_ERROR);
+      Case.findOne = origFindOne;
+    }
+
+    // 10. Docketra Intelligence Controller - getExecutiveBrief
+    console.log('Testing docketraIntelligence.controller...');
+    {
+      const intelService = require('../src/services/docketraIntelligence.service');
+      const origBrief = intelService.generateExecutiveAiBrief;
+      intelService.generateExecutiveAiBrief = () => { throw new Error(SECRET_SENSITIVE_ERROR); };
+      const req = { user: { firmId: testObjectId }, firmId: testObjectId };
+      const res = mockRes();
+      await docketraIntelligenceController.getExecutiveBrief(req, res);
+      assert.strictEqual(res.statusCode, 500);
+      assert.strictEqual(res.body.success, false);
+      assert.strictEqual(res.body.message, 'Failed to load executive brief');
+      assert.ok(!JSON.stringify(res.body).includes(SECRET_SENSITIVE_ERROR));
+      const logEntry = loggedErrors.find(l => l.event === 'DOCKETRA_INTELLIGENCE_EXECUTIVE_BRIEF_ERROR');
+      assert.ok(logEntry);
+      assert.strictEqual(logEntry.meta.message, SECRET_SENSITIVE_ERROR);
+      intelService.generateExecutiveAiBrief = origBrief;
+    }
+
+    console.log('All information exposure vulnerability tests passed successfully!');
   } finally {
     restoreLogSpy();
   }

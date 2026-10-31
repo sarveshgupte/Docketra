@@ -1259,10 +1259,10 @@ const getDocketAudit = async (req, res) => {
       pagination: result.pagination,
     });
   } catch (error) {
+    log.error('CASE_GET_DOCKET_AUDIT_LOGS_ERROR', { message: error.message, stack: error.stack });
     return res.status(500).json({
       success: false,
       message: 'Error fetching docket audit logs',
-      error: error.message,
     });
   }
 };
