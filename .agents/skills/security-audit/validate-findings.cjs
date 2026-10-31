@@ -604,21 +604,13 @@ function loadSchema(schemaPath) {
 function readFileWithinLimit(file) {
   const noFollow = fs.constants.O_NOFOLLOW;
   const nonBlock = fs.constants.O_NONBLOCK;
-  const hasNoFollow = Number.isInteger(noFollow) && noFollow !== 0;
-  const hasNonBlock = Number.isInteger(nonBlock) && nonBlock !== 0;
-  // Windows (and some Node builds) leave O_NOFOLLOW undefined; emulate it with an
-  // lstat check so the CLI stays usable instead of failing every input.
-  if (!hasNoFollow) {
-    try {
-      if (fs.lstatSync(file).isSymbolicLink()) throw new SafeInputError("input must not be a symlink");
-    } catch (error) {
-      if (error instanceof SafeInputError) throw error;
-    }
+  if (!Number.isInteger(noFollow) || noFollow === 0 || !Number.isInteger(nonBlock) || nonBlock === 0) {
+    throw new SafeInputError("OS no-follow and nonblocking input protection is unavailable");
   }
 
   let descriptor;
   try {
-    descriptor = fs.openSync(file, fs.constants.O_RDONLY | (hasNoFollow ? noFollow : 0) | (hasNonBlock ? nonBlock : 0));
+    descriptor = fs.openSync(file, fs.constants.O_RDONLY | noFollow | nonBlock);
   } catch (error) {
     if (error && (error.code === "ELOOP" || error.code === "EMLINK")) {
       throw new SafeInputError("input must not be a symlink");
