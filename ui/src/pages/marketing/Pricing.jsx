@@ -128,7 +128,7 @@ export const PricingPage = () => {
       <section className="relative overflow-hidden bg-slate-50/60 pt-20 pb-16 sm:pt-24 sm:pb-20 border-b border-slate-200">
         <Container size="7xl" className="text-center">
           <motion.div {...REVEAL} className="max-w-3xl mx-auto space-y-4">
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl [text-wrap:balance]">
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl [text-wrap:balance] mx-auto w-full">
               Transparent pricing for Indian professional practices.
             </h1>
             <p className="text-base sm:text-lg text-slate-600 max-w-xl mx-auto leading-relaxed [text-wrap:pretty]">

@@ -42,7 +42,7 @@ export const FeaturesPage = () => (
       description="Explore Docketra features: centralized firm dashboard, granular access controls, automated audit trails, and Google Drive BYOS storage."
     />
     <div className="mx-auto w-full max-w-3xl min-w-0 text-center">
-      <h1 className="type-section text-gray-900">Platform Features</h1>
+      <h1 className="type-section text-gray-900 mx-auto w-full">Platform Features</h1>
       <p className="mt-6 type-body text-lg text-gray-600">
         Everything you need to bring operational discipline to your firm. Built for compliance, audit, and tax teams who cannot afford to miss a deadline.
       </p>

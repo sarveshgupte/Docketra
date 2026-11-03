@@ -423,6 +423,14 @@
       linear-gradient(135deg, rgba(255, 248, 235, 0.98) 0%, rgba(255, 255, 255, 0.96) 48%, rgba(224, 242, 254, 0.98) 100%);
   }
 
+  .find-workspace-page:has(.find-workspace-page__shell:only-child:has(> :only-child)),
+  .find-workspace-page--centered {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
   .find-workspace-page__shell {
     width: 100%;
     max-width: 1120px;
@@ -430,6 +438,29 @@
     display: grid;
     gap: clamp(1.25rem, 3vw, 2.5rem);
     align-items: center;
+  }
+
+  .find-workspace-page__shell:has(> :only-child),
+  .find-workspace-page__shell--single,
+  .find-workspace-page__shell--centered {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    grid-template-columns: none;
+    min-height: clamp(340px, 60vh, 560px);
+    padding-top: 0;
+    margin: 0 auto;
+  }
+
+  .find-workspace-page__shell:has(> :only-child) > *,
+  .find-workspace-page__shell--single > *,
+  .find-workspace-page__shell--centered > * {
+    width: 100%;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    justify-self: center;
   }
 
   .find-workspace-page__context {
@@ -446,18 +477,20 @@
   }
 
   .find-workspace-page__heading {
-    font-size: clamp(2rem, 4vw, 4.5rem);
+    font-size: clamp(2rem, 3.2vw, 2.75rem);
     font-weight: 800;
     line-height: 1.15;
     margin: 0;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
+    color: #0f172a;
   }
 
   .find-workspace-page__intro {
-    margin-top: 1rem;
-    color: #334155;
-    font-size: clamp(1rem, 1.3vw, 1.15rem);
-    line-height: 1.7;
+    margin-top: 0.85rem;
+    color: #475569;
+    font-size: 1rem;
+    line-height: 1.6;
+    max-width: 480px;
   }
 
   .find-workspace-page__benefits {
@@ -534,17 +567,24 @@
     background: #ffffff;
   }
 
+  .find-workspace-page__card-header {
+    text-align: left;
+    margin-bottom: 1.25rem;
+  }
+
   .find-workspace-page__card-header h2 {
-    font-size: 1.35rem;
-    font-weight: 800;
+    font-size: 1.25rem;
+    font-weight: 700;
     margin: 0;
     color: #0f172a;
+    letter-spacing: -0.01em;
   }
 
   .find-workspace-page__card-header p {
-    margin-top: 0.35rem;
-    color: #475569;
-    font-size: 0.92rem;
+    margin-top: 0.25rem;
+    color: #64748b;
+    font-size: 0.875rem;
+    line-height: 1.4;
   }
 
   .find-workspace-page__form {
@@ -645,9 +685,28 @@
 
   @media (min-width: 920px) {
     .find-workspace-page__shell {
-      grid-template-columns: minmax(0, 1fr) minmax(420px, 480px);
-      gap: 2rem;
-      min-height: calc(100vh - 128px);
+      grid-template-columns: minmax(0, 1fr) minmax(400px, 460px);
+      gap: clamp(2rem, 4vw, 4rem);
+      align-items: start;
+      padding-top: clamp(2.5rem, 7vh, 5rem);
+      padding-bottom: 2rem;
+      min-height: auto;
+    }
+
+    .find-workspace-page__shell:has(> :only-child),
+    .find-workspace-page__shell--single,
+    .find-workspace-page__shell--centered {
+      display: flex;
+      flex-direction: column;
+      grid-template-columns: none;
+      align-items: center;
+      justify-content: center;
+      padding-top: 0;
+      margin: 0 auto;
+    }
+
+    .find-workspace-page__context {
+      padding-top: 0.75rem;
     }
   }
 

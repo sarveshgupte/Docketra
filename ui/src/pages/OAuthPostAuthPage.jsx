@@ -349,9 +349,9 @@ export const OAuthPostAuthPage = () => {
 
   if (!errorCode && !error) {
     return (
-      <div className="find-workspace-page auth-public-page">
-        <div className="find-workspace-page__shell">
-          <Card className="find-workspace-page__card auth-public-page__card">
+      <div className="find-workspace-page auth-public-page find-workspace-page--centered min-h-[calc(100vh-64px)] flex items-center justify-center">
+        <div className="find-workspace-page__shell find-workspace-page__shell--centered flex justify-center items-center">
+          <Card className="find-workspace-page__card auth-public-page__card max-w-md w-full mx-auto text-center">
             <Loading message="Completing Google sign-in..." />
           </Card>
         </div>

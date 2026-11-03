@@ -169,12 +169,12 @@ export const DocketraVsExcelWhatsAppPage = () => {
               </div>
             </div>
 
-            <h1 className="text-3xl font-bold leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
+            <h1 className="text-3xl font-bold leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-5xl mx-auto max-w-3xl [text-wrap:balance]">
               The Hidden Cost of Managing Indian Compliance on <span className="text-amber-600">Excel & WhatsApp</span>
             </h1>
 
             <p className="text-sm sm:text-base font-normal leading-relaxed text-slate-600 max-w-2xl mx-auto">
-              Run your practice from your own Google Drive. Zero file leakage, 100% partner review. Why leading firms replace messy WhatsApp groups and spreadsheets with maker-checker discipline.
+              Why leading corporate secretarial and legal practices outgrow spreadsheets, and how modern firms build an institutional brain that never forgets a statutory deadline or client document.
             </p>
 
             {/* Action Buttons */}

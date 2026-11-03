@@ -58,12 +58,6 @@ const getWorkspaceStatusMessage = (status) => {
   return 'Invalid workspace URL';
 };
 
-const getFirmLoginPromises = (firmSlug, step) => [
-  `Step ${step === 'credentials' ? '1' : '2'} of 2`,
-  `Firm URL: /${firmSlug}/login`,
-  'Workspace data stays locked until sign-in',
-];
-
 export const FirmLoginPage = () => {
   const { firmSlug: rawFirmSlug } = useParams();
   const firmSlug = sanitizeFirmSlug(rawFirmSlug);
@@ -463,13 +457,21 @@ export const FirmLoginPage = () => {
     }
   };
 
-  if (firmLoading) return <div className="auth-wrapper find-workspace-page auth-public-page"><div className="find-workspace-page__shell"><Card className="auth-card find-workspace-page__card auth-public-page__card"><Loading message="Loading firm information..." /></Card></div></div>;
+  if (firmLoading) return (
+    <div className="auth-wrapper find-workspace-page auth-public-page find-workspace-page--centered min-h-[calc(100vh-64px)] flex items-center justify-center">
+      <div className="find-workspace-page__shell find-workspace-page__shell--centered flex justify-center items-center">
+        <Card className="auth-card find-workspace-page__card auth-public-page__card max-w-md w-full mx-auto text-center">
+          <Loading message="Loading firm information..." />
+        </Card>
+      </div>
+    </div>
+  );
 
   if (!firmData) {
     return (
-      <div className="auth-wrapper find-workspace-page auth-public-page">
-        <div className="find-workspace-page__shell">
-          <Card className="auth-card find-workspace-page__card auth-public-page__card">
+      <div className="auth-wrapper find-workspace-page auth-public-page find-workspace-page--centered min-h-[calc(100vh-64px)] flex items-center justify-center">
+        <div className="find-workspace-page__shell find-workspace-page__shell--centered flex justify-center items-center">
+          <Card className="auth-card find-workspace-page__card auth-public-page__card max-w-md w-full mx-auto">
             <div className="auth-header find-workspace-page__card-header">
               <p className="auth-kicker">Workspace lookup</p>
               <h2>Workspace needs a second look</h2>
@@ -492,37 +494,14 @@ export const FirmLoginPage = () => {
     <div className="auth-wrapper find-workspace-page auth-public-page">
       <div className="find-workspace-page__shell">
         <section className="find-workspace-page__context" aria-label="Firm login context">
-          <p className="find-workspace-page__eyebrow">Workspace login</p>
           <h1 className="find-workspace-page__heading">{firmData.name}</h1>
           <p className="find-workspace-page__intro">
             {step === 'credentials' ? 'Sign in to your firm workspace and get back to execution.' : 'Enter the 6-digit verification code sent to your email.'}
           </p>
-          <ul className="find-workspace-page__benefits" role="list">
-            {getFirmLoginPromises(firmSlug, step).map((promise) => (
-              <li key={promise}>
-                <svg className="find-workspace-page__benefit-check" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                </svg>
-                <span>{promise}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="find-workspace-page__trust-strip">
-            {['OTP ready', 'Google option', 'Role-safe route', 'Firm-branded'].map((label, index) => (
-              <React.Fragment key={label}>
-                {index > 0 && <span className="find-workspace-page__trust-sep" aria-hidden="true">/</span>}
-                <div className="find-workspace-page__trust-item">
-                  <span className="find-workspace-page__trust-dot" aria-hidden="true" />
-                  <span>{label}</span>
-                </div>
-              </React.Fragment>
-            ))}
-          </div>
         </section>
 
         <Card className="auth-card find-workspace-page__card auth-public-page__card">
           <div className="auth-header find-workspace-page__card-header">
-            <p className="auth-kicker">{step === 'credentials' ? 'Firm credentials' : 'Email verification'}</p>
             <h2>{step === 'credentials' ? 'Enter your credentials' : 'Verify your email OTP'}</h2>
             <p>{step === 'credentials' ? 'Use your xID and password.' : 'Use the latest code from your email.'}</p>
           </div>

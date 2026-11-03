@@ -202,12 +202,12 @@ export const CorporateLegalTeamsSolutionPage = () => {
               </div>
             </div>
 
-            <h1 className="text-3xl font-bold leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
+            <h1 className="text-3xl font-bold leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-5xl mx-auto max-w-3xl [text-wrap:balance]">
               Total Operational Clarity for <span className="text-amber-600">In-House Legal & Compliance</span>
             </h1>
 
             <p className="text-sm sm:text-base font-normal leading-relaxed text-slate-600 max-w-2xl mx-auto">
-              Run corporate legal operations from your own Google Drive. Zero file leakage, 100% partner review. Centralize internal legal intake, regulatory notices, and board governance inside a single reliable workspace.
+              Replace fragmented email threads, forgotten advisory requests, and scattered contract dockets. Centralize internal legal intake, regulatory notices, and board governance inside a single reliable workspace.
             </p>
 
             {/* CTAs */}

@@ -190,12 +190,12 @@ export const CompanySecretariesSolutionPage = () => {
               </div>
             </div>
 
-            <h1 className="text-3xl font-bold leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
+            <h1 className="text-3xl font-bold leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-5xl mx-auto max-w-3xl [text-wrap:balance]">
               The Operating System for Modern <span className="text-amber-600">Company Secretarial Practices</span>
             </h1>
 
             <p className="text-sm sm:text-base font-normal leading-relaxed text-slate-600 max-w-2xl mx-auto">
-              Run your practice from your own Google Drive. Zero file leakage, 100% partner review. Eliminate spreadsheet chaos across corporate clients and centralize MCA deadlines in one reliable workspace.
+              Eliminate spreadsheet chaos across 200+ corporate clients. Centralize MCA deadlines, board resolutions, DIN/DSC registries, and statutory registers in one bulletproof workspace.
             </p>
 
             {/* CTAs */}

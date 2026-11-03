@@ -639,18 +639,30 @@ export const LandingPageContent = () => {
     }
 
     const id = location.hash.replace('#', '');
-    const timer = window.setTimeout(() => {
+    let attempts = 0;
+    const maxAttempts = 6;
+
+    const tryScroll = () => {
       const el = document.getElementById(id);
       if (el) {
         const headerOffset = 84;
         const elementPosition = el.getBoundingClientRect().top + window.scrollY;
         window.scrollTo({ top: Math.max(elementPosition - headerOffset, 0), behavior: 'smooth' });
-        return;
+        return true;
       }
-      window.scrollTo({ top: 0, behavior: 'auto' });
+      return false;
+    };
+
+    if (tryScroll()) return;
+
+    const interval = window.setInterval(() => {
+      attempts += 1;
+      if (tryScroll() || attempts >= maxAttempts) {
+        window.clearInterval(interval);
+      }
     }, 100);
 
-    return () => window.clearTimeout(timer);
+    return () => window.clearInterval(interval);
   }, [location.hash]);
 
   const handleSectionNavigation = (sectionId) => {

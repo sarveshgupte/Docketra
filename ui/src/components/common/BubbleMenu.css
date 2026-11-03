@@ -16,7 +16,8 @@
 }
 
 .bubble-menu.fixed {
-  position: fixed;
+  position: sticky;
+  top: 0;
 }
 
 .bubble-menu.absolute {

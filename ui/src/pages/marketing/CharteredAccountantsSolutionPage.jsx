@@ -202,12 +202,12 @@ export const CharteredAccountantsSolutionPage = () => {
               </div>
             </div>
 
-            <h1 className="text-3xl font-bold leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
+            <h1 className="text-3xl font-bold leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-5xl mx-auto max-w-3xl [text-wrap:balance]">
               The Operating Engine for <span className="text-amber-600">High-Velocity CA Practices</span>
             </h1>
 
             <p className="text-sm sm:text-base font-normal leading-relaxed text-slate-600 max-w-2xl mx-auto">
-              Run your practice from your own Google Drive. Zero file leakage, 100% partner review. Stop managing audit working papers, GST reconciliations, and tax scrutiny deadlines across WhatsApp threads and fragile spreadsheets.
+              Stop managing audit working papers, GST reconciliations, and tax scrutiny deadlines across WhatsApp threads and fragile spreadsheets. Run your entire firm on a unified, sovereign compliance workspace.
             </p>
 
             {/* CTAs */}

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useId } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { gsap } from 'gsap';
 
 import './BubbleMenu.css';
@@ -7,35 +7,35 @@ import './BubbleMenu.css';
 const DEFAULT_ITEMS = [
   {
     label: 'why',
-    href: '#why',
+    href: '/#why',
     ariaLabel: 'Why',
     rotation: -2,
     hoverStyles: { bgColor: '#fdf8f2', textColor: '#b45309' }
   },
   {
     label: 'product',
-    href: '#product',
+    href: '/#product',
     ariaLabel: 'Product',
     rotation: 2,
     hoverStyles: { bgColor: '#fdf8f2', textColor: '#b45309' }
   },
   {
     label: 'workflow',
-    href: '#workflow',
+    href: '/#workflow',
     ariaLabel: 'Workflow',
     rotation: -2,
     hoverStyles: { bgColor: '#fdf8f2', textColor: '#b45309' }
   },
   {
     label: 'pilot readiness',
-    href: '#pilot-readiness',
+    href: '/#pilot-readiness',
     ariaLabel: 'Pilot Readiness',
     rotation: 2,
     hoverStyles: { bgColor: '#fdf8f2', textColor: '#b45309' }
   },
   {
     label: 'trust',
-    href: '#trust',
+    href: '/#trust',
     ariaLabel: 'Trust',
     rotation: -2,
     hoverStyles: { bgColor: '#fdf8f2', textColor: '#b45309' }
@@ -45,6 +45,7 @@ const DEFAULT_ITEMS = [
 export default function BubbleMenu({
   logo,
   onMenuClick,
+  onItemClick,
   className,
   style,
   menuAriaLabel = 'Toggle menu',
@@ -60,6 +61,8 @@ export default function BubbleMenu({
   const [showOverlay, setShowOverlay] = useState(false);
   const generatedId = useId();
   const menuId = `bubble-menu-${generatedId}`;
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const overlayRef = useRef(null);
   const bubblesRef = useRef([]);
@@ -75,6 +78,41 @@ export default function BubbleMenu({
     if (nextState) setShowOverlay(true);
     setIsMenuOpen(nextState);
     onMenuClick?.(nextState);
+  };
+
+  const handleItemClick = (e, item) => {
+    setIsMenuOpen(false);
+
+    if (onItemClick) {
+      e.preventDefault();
+      onItemClick(item);
+      return;
+    }
+
+    const href = item.href || '';
+    if (!href) return;
+
+    if (href.startsWith('#') || href.startsWith('/#')) {
+      e.preventDefault();
+      const sectionId = href.replace(/^\/?#/, '');
+      if (location.pathname === '/') {
+        const el = document.getElementById(sectionId);
+        if (el) {
+          const headerOffset = 84;
+          const elementPosition = el.getBoundingClientRect().top + window.scrollY;
+          window.scrollTo({ top: Math.max(elementPosition - headerOffset, 0), behavior: 'smooth' });
+        }
+        navigate({ pathname: '/', hash: `#${sectionId}` }, { replace: true });
+      } else {
+        navigate(`/#${sectionId}`);
+      }
+      return;
+    }
+
+    if (href.startsWith('/') && !href.startsWith('//')) {
+      e.preventDefault();
+      navigate(href);
+    }
   };
 
   useEffect(() => {
@@ -113,19 +151,24 @@ export default function BubbleMenu({
         }
       });
     } else if (showOverlay) {
-      gsap.killTweensOf([...bubbles, ...labels]);
+      gsap.killTweensOf([...bubbles, ...labels, overlay]);
       gsap.to(labels, {
         y: 12,
         autoAlpha: 0,
         duration: 0.15,
         ease: 'power3.in'
       });
+      gsap.to(overlay, {
+        autoAlpha: 0,
+        duration: 0.15,
+        ease: 'power2.in'
+      });
       gsap.to(bubbles, {
         scale: 0,
         duration: 0.15,
         ease: 'power3.in',
         onComplete: () => {
-          gsap.set(overlay, { display: 'none' });
+          gsap.set(overlay, { display: 'none', autoAlpha: 1 });
           setShowOverlay(false);
         }
       });
@@ -286,7 +329,7 @@ export default function BubbleMenu({
                     ref={el => {
                       if (el) bubblesRef.current[idx] = el;
                     }}
-                    onClick={() => setIsMenuOpen(false)}
+                    onClick={(e) => handleItemClick(e, item)}
                   >
                     <span
                       className="menu-card-label"

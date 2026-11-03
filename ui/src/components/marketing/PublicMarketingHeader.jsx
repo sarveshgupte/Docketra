@@ -18,18 +18,25 @@ export default function PublicMarketingHeader() {
   const navigate = useNavigate();
   const isFindWorkspacePage = location.pathname === '/find-workspace';
 
-  const handleSectionNavigation = (sectionId) => {
+  const handleSectionNavigation = (itemOrId) => {
+    const sectionId = typeof itemOrId === 'string'
+      ? itemOrId
+      : (itemOrId?.id || itemOrId?.href?.replace(/^\/?#/, ''));
+    if (!sectionId) return;
+
     if (location.pathname !== '/') {
       navigate(`/#${sectionId}`);
       setIsOpen(false);
       return;
     }
 
-    navigate({ pathname: '/', hash: `#${sectionId}` });
+    navigate({ pathname: '/', hash: `#${sectionId}` }, { replace: true });
 
     const el = document.getElementById(sectionId);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const headerOffset = 84;
+      const elementPosition = el.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({ top: Math.max(elementPosition - headerOffset, 0), behavior: 'smooth' });
     }
 
     setIsOpen(false);
@@ -37,8 +44,9 @@ export default function PublicMarketingHeader() {
 
   return (
     <BubbleMenu
+      onItemClick={handleSectionNavigation}
       logo={
-        <div className="flex items-center gap-2.5 text-lg font-extrabold tracking-tight text-slate-950">
+        <Link to="/" className="flex items-center gap-2.5 text-lg font-extrabold tracking-tight text-slate-950 hover:opacity-90 transition-opacity">
           {/* Geometric Concentric golden "D" logo */}
           <svg className="h-9 w-9 text-amber-600 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M25 15H50C69.33 15 85 30.67 85 50C85 69.33 69.33 85 50 85H25V15Z" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
@@ -49,7 +57,7 @@ export default function PublicMarketingHeader() {
             <span className="text-lg font-black text-slate-900 tracking-tight">Docketra</span>
             <span className="text-[8px] font-bold text-amber-700 tracking-wider uppercase mt-0.5">The Company Brain</span>
           </div>
-        </div>
+        </Link>
       }
       useFixedPosition={true}
       menuBg="#ffffff"
