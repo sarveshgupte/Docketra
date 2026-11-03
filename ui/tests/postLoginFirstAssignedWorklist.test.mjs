@@ -93,4 +93,38 @@ assert.equal(
   'user without firmSlug should not get firm worklist routing'
 );
 
+// Pending setup routing
+assert.equal(
+  getPostLoginWorkspaceDestination({
+    role: 'PRIMARY_ADMIN',
+    firmSlug,
+    firm: { isSetupComplete: false },
+  }, firmSlug),
+  `/app/firm/${firmSlug}/setup`,
+  'primary admin should route to setup when setup is pending'
+);
+
+assert.equal(
+  getPostLoginWorkspaceDestination({
+    role: 'USER',
+    firmSlug,
+    firm: { isSetupComplete: false },
+  }, firmSlug),
+  `/app/firm/${firmSlug}/setup`,
+  'non-primary admin should route to setup when setup is pending'
+);
+
+// Completed setup routing ignoring returnTo setup
+assert.equal(
+  getPostLoginWorkspaceDestination({
+    role: 'PRIMARY_ADMIN',
+    firmSlug,
+    firm: { isSetupComplete: true },
+    workbaskets: [],
+    qcWorkbaskets: [],
+  }, firmSlug, `/app/firm/${firmSlug}/setup`),
+  `/app/firm/${firmSlug}/global-worklist`,
+  'primary admin should not route back to setup when setup is complete even if returnTo is setup'
+);
+
 console.log('postLoginFirstAssignedWorklist.test.mjs passed');

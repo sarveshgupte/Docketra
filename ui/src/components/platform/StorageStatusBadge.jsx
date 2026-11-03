@@ -74,15 +74,37 @@ export default function StorageStatusBadge() {
       </button>
       {open ? (
         <div id="storage-status-popover" className="platform__storage-popover" role="dialog" aria-label="Storage status details">
-          <p className="platform__storage-helper">{summary.helperText}</p>
+          <div className="platform__storage-header">
+            <span className="platform__storage-title">Storage Status</span>
+            <span className={`platform__storage-status-badge platform__storage-status-badge--${summary.badgeTone}`}>
+              <span className="platform__storage-dot" aria-hidden="true" />
+              {summary.statusLabel || 'Active'}
+            </span>
+          </div>
+
+          <p className="platform__storage-helper">
+            {summary.isByosActive
+              ? 'Client files and statutory filings are saved directly to your firm\'s Google Drive.'
+              : summary.helperText}
+          </p>
+
           <dl className="platform__storage-meta">
-            <div><dt>Active provider</dt><dd>{summary.providerLabel}</dd></div>
-            <div><dt>Status</dt><dd>{summary.statusLabel}</dd></div>
-            {summary.connectedEmail ? <div><dt>Connected account</dt><dd>{summary.connectedEmail}</dd></div> : null}
-            <div><dt>Last checked</dt><dd>{formatDateTime(summary.lastCheckedAt)}</dd></div>
-            <div><dt>Business data location</dt><dd>{summary.businessDataLocation}</dd></div>
-            <div><dt>Control-plane metadata</dt><dd>MongoDB stores control-plane metadata.</dd></div>
+            <div>
+              <dt>Storage</dt>
+              <dd>{summary.providerLabel}</dd>
+            </div>
+            {summary.connectedEmail ? (
+              <div>
+                <dt>Account</dt>
+                <dd>{summary.connectedEmail}</dd>
+              </div>
+            ) : null}
+            <div>
+              <dt>Last verified</dt>
+              <dd>{formatDateTime(summary.lastCheckedAt)}</dd>
+            </div>
           </dl>
+
           <div className="platform__storage-links">
             <Link className="platform__storage-link platform__storage-link--primary" to={storageSettingsPath} onClick={() => setOpen(false)}>Storage Settings</Link>
             <Link className="platform__storage-link" to={dataStorageMapPath} onClick={() => setOpen(false)}>Data Storage Map</Link>

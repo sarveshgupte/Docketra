@@ -77,9 +77,20 @@ const completeFirmSetup = async (req, res) => {
       firm.setupMetadata = {};
     }
     firm.setupMetadata.completedAt = new Date();
+    if (req.user?._id) {
+      firm.setupMetadata.completedBy = req.user._id;
+    }
 
     if (req.body?.name && typeof req.body.name === 'string' && req.body.name.trim()) {
-      firm.name = req.body.name.trim();
+      const cleanName = req.body.name.trim();
+      if (!firm.settings) firm.settings = {};
+      if (!firm.settings.firm) firm.settings.firm = {};
+      firm.settings.firm.name = cleanName;
+      try {
+        firm.name = cleanName;
+      } catch (_err) {
+        // Firm name immutable in some schema contexts
+      }
     }
     if (req.body?.practiceType && typeof req.body.practiceType === 'string') {
       if (!firm.settings) firm.settings = {};

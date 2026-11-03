@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { Link, Outlet, useParams } from 'react-router-dom';
+import { Link, Navigate, Outlet, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { PageWrapper } from '../layout/PageWrapper';
 import { RouteLoadingShell } from './RouteLoadingShell';
@@ -17,6 +17,13 @@ export const FirmLayout = () => {
 
   if (loading) {
     return <RouteLoadingShell />;
+  }
+
+  const isPrimaryAdmin = user?.role === 'PRIMARY_ADMIN';
+  const isFirmSetupPending = user?.firm?.isSetupComplete === false || user?.isSetupComplete === false;
+
+  if (!isPrimaryAdmin && isFirmSetupPending && (firmSlug || user?.firmSlug)) {
+    return <Navigate to={ROUTES.SETUP(firmSlug || user?.firmSlug)} replace />;
   }
 
   if (user?.firmSlug && user.firmSlug !== firmSlug) {

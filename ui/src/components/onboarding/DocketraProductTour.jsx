@@ -1,63 +1,52 @@
 import React, { useState } from 'react';
 import {
-  Calendar,
   Layers,
   Building2,
   HardDrive,
-  CheckCircle2,
+  Compass,
   ArrowRight,
   ArrowLeft,
   X,
   Sparkles,
-  Compass,
   UserPlus,
 } from './OnboardingIcons';
 
 const TOUR_STEPS = [
   {
     step: 1,
-    title: 'Financial Year & Fast Controls',
-    category: 'Persistent Shell',
-    icon: Calendar,
-    color: 'text-amber-700',
-    description: 'Switch between financial years (25-26 / 26-27) seamlessly. Use Ctrl/⌘+K to jump anywhere in Docketra, or use the persistent "+ New" menu for instant matters and statutory dates.',
-    tip: 'Financial year context is preserved across all compliance views.',
+    title: 'My Worklist & Active Dockets',
+    category: 'Work Management',
+    icon: Layers,
+    color: 'text-indigo-600',
+    description: 'Track statutory filings, petitions, and advisory matters assigned to you. Move dockets from draft to partner review and final sign-off with a complete audit history.',
+    tip: 'Click "New docket" in the top bar anytime to register a new matter or compliance task.',
   },
   {
     step: 2,
-    title: 'PCS Daily Command Center',
-    category: 'Statutory Radar',
-    icon: Compass,
-    color: 'text-sky-700',
-    description: 'Your morning operational radar. Track Overdue MCA/GST filings, T-7 deadlines, NCLT/RD tribunal cause list listings, and pending client Director DSC signatures with zero layout shift.',
-    tip: 'Table rows are compacted to 36px with monospace CIN & DIN formatting.',
+    title: 'Corporate Client Workspace',
+    category: 'Client Records',
+    icon: Building2,
+    color: 'text-emerald-600',
+    description: 'Maintain complete client profiles with CIN, PAN, authorized capital, directors, and statutory due dates in one structured view.',
+    tip: 'Click any CIN or registration number to copy it directly to your clipboard.',
   },
   {
     step: 3,
-    title: 'Dockets & Operational Workbaskets',
-    category: 'Work Execution',
-    icon: Layers,
-    color: 'text-purple-700',
-    description: 'Work flows through Intake → Pull Queue (Workbaskets) → Execution (My Worklist) → QC Review → Completion. Nothing slips through unassigned cracks.',
-    tip: 'Dockets carry immutable audit history for every status transition.',
+    title: 'Compliance Radar & Deadlines',
+    category: 'Statutory Deadlines',
+    icon: Compass,
+    color: 'text-sky-600',
+    description: 'Stay ahead of MCA, GST, Income Tax, and tribunal cutoff dates. Track upcoming statutory deadlines and client director signatures before cutoffs.',
+    tip: 'Press Ctrl+K (or ⌘K on Mac) to search across all clients, filings, and matters instantly.',
   },
   {
     step: 4,
-    title: 'Corporate Client Workspace',
-    category: 'Entity Master',
-    icon: Building2,
-    color: 'text-emerald-700',
-    description: 'Comprehensive 3-pane client workspace. View entity master (CIN, PAN, authorized capital), key directors, active litigation timelines, and statutory due dates side-by-side.',
-    tip: 'Click any CIN or SRN to copy directly to your clipboard.',
-  },
-  {
-    step: 5,
-    title: 'Zero-Custody Document Vault (BYOS)',
-    category: 'Document Storage',
+    title: 'Firm-Owned Cloud Storage',
+    category: 'Document Security',
     icon: HardDrive,
-    color: 'text-amber-700',
-    description: 'All dockets and filings are saved directly into your firm’s cloud storage (Google Drive / S3). Docketra never takes permanent custody of confidential files.',
-    tip: 'Deterministic folder structure: Google Drive > Docketra > Firm > Cases.',
+    color: 'text-amber-600',
+    description: 'All filings, workpapers, and client documents are saved directly into your firm’s connected Google Drive. Docketra never takes custody of confidential files.',
+    tip: 'Documents are automatically organized by client name and docket matter.',
   },
 ];
 
@@ -72,9 +61,11 @@ export function DocketraProductTour({ isOpen, onClose, onCompleteTour, onAddFirs
 
   const handleNext = () => {
     if (isLastStep) {
-      if (onCompleteTour) onCompleteTour();
-      if (onAddFirstClient) onAddFirstClient();
-      if (onClose) onClose();
+      if (onAddFirstClient) {
+        onAddFirstClient(currentStepIndex);
+      } else if (onCompleteTour) {
+        onCompleteTour(currentStepIndex);
+      }
     } else {
       setCurrentStepIndex((prev) => prev + 1);
     }
@@ -85,18 +76,17 @@ export function DocketraProductTour({ isOpen, onClose, onCompleteTour, onAddFirs
   };
 
   const handleSkip = () => {
-    if (onCompleteTour) onCompleteTour();
-    if (onClose) onClose();
+    if (onClose) onClose(currentStepIndex);
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 max-w-md w-full animate-in fade-in slide-in-from-bottom-4 duration-200">
-      <div className="bg-white border border-slate-200/90 rounded-lg shadow-2xl p-5 text-slate-900 space-y-4">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-[420px] max-w-[420px] animate-in fade-in slide-in-from-bottom-4 duration-200">
+      <div className="bg-white border border-slate-200/90 rounded-lg shadow-xl p-5 text-slate-900 space-y-4">
         {/* Header Bar */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-xs bg-amber-600" />
-            <span className="text-[11px] font-mono uppercase tracking-wider text-amber-800 bg-amber-50 px-2 py-0.5 rounded-sm border border-amber-200 font-semibold">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+            <span className="text-[11px] font-mono uppercase tracking-wider text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 font-medium">
               Docketra Tour · Step {currentStep.step} of {TOUR_STEPS.length}
             </span>
           </div>
@@ -104,8 +94,8 @@ export function DocketraProductTour({ isOpen, onClose, onCompleteTour, onAddFirs
             type="button"
             onClick={handleSkip}
             className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-            title="Close Tour"
-            aria-label="Close Tour"
+            title="Skip tour"
+            aria-label="Skip tour"
           >
             <X className="h-4 w-4" />
           </button>
@@ -114,14 +104,14 @@ export function DocketraProductTour({ isOpen, onClose, onCompleteTour, onAddFirs
         {/* Card Body */}
         <div className="space-y-3">
           <div className="flex items-start gap-3">
-            <div className="h-9 w-9 rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
+            <div className="h-9 w-9 rounded-md bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0">
               <StepIcon className={`h-5 w-5 ${currentStep.color}`} />
             </div>
-            <div>
-              <span className="text-[10px] font-mono uppercase text-slate-500 block">
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 block">
                 {currentStep.category}
               </span>
-              <h3 className="text-base font-bold text-slate-950 tracking-tight">
+              <h3 className="text-sm sm:text-base font-semibold text-slate-950 tracking-tight">
                 {currentStep.title}
               </h3>
             </div>
@@ -131,22 +121,22 @@ export function DocketraProductTour({ isOpen, onClose, onCompleteTour, onAddFirs
             {currentStep.description}
           </p>
 
-          <div className="p-2.5 rounded-md bg-amber-50/70 border border-amber-200/70 text-[11px] text-amber-950 flex items-center gap-2">
-            <Sparkles className="h-3.5 w-3.5 text-amber-700 shrink-0" />
-            <span>{currentStep.tip}</span>
+          <div className="p-2.5 rounded-md bg-slate-50 border border-slate-200/80 text-[11px] text-slate-700 flex items-start gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
+            <span className="leading-snug">{currentStep.tip}</span>
           </div>
         </div>
 
         {/* Footer Navigation Controls */}
-        <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
-          {/* Progress indicators - zero pills */}
-          <div className="flex items-center gap-1.5">
+        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+          {/* Progress indicators */}
+          <div className="flex items-center gap-1.5" aria-label={`Step ${currentStep.step} of ${TOUR_STEPS.length}`}>
             {TOUR_STEPS.map((_, idx) => (
               <span
                 key={idx}
-                className={`h-1.5 rounded-xs transition-all ${
+                className={`h-1.5 rounded-full transition-all duration-200 ${
                   idx === currentStepIndex
-                    ? 'w-5 bg-slate-950'
+                    ? 'w-5 bg-slate-900'
                     : idx < currentStepIndex
                     ? 'w-2 bg-emerald-600'
                     : 'w-2 bg-slate-200'
@@ -155,12 +145,12 @@ export function DocketraProductTour({ isOpen, onClose, onCompleteTour, onAddFirs
             ))}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {currentStepIndex > 0 && (
               <button
                 type="button"
                 onClick={handlePrev}
-                className="px-2.5 py-1.5 rounded-md border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                className="px-2.5 py-1.5 rounded-md border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
               >
                 <ArrowLeft className="h-3 w-3" /> Back
               </button>
@@ -169,7 +159,7 @@ export function DocketraProductTour({ isOpen, onClose, onCompleteTour, onAddFirs
             <button
               type="button"
               onClick={handleNext}
-              className="px-3.5 py-1.5 rounded-md bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+              className="px-3.5 py-1.5 rounded-md bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer active:scale-[0.98]"
             >
               {isLastStep ? (
                 <>

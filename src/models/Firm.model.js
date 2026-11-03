@@ -487,6 +487,7 @@ const firmSchema = new mongoose.Schema({
     workbaskets: { type: Number, default: 0 },
     templateKey: { type: String, default: null, trim: true },
     completedAt: { type: Date, default: null },
+    completedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   },
   lastWeeklyAuditDigestSentAt: {
     type: Date,

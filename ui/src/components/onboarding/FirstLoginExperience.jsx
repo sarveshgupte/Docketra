@@ -47,12 +47,12 @@ export const FirstLoginExperience = () => {
     return null;
   }
 
-  const completeTutorial = async (status = 'completed') => {
+  const completeTutorial = async (status = 'completed', stepIndex = 3) => {
     const persistencePayload = resolveTutorialPersistenceIntent({
       serverShowTutorial,
       action: status,
       role: roleKey,
-      stepIndex: 4,
+      stepIndex,
     });
 
     if (isTourQuery && typeof window !== 'undefined' && window.history?.replaceState) {
@@ -110,10 +110,10 @@ export const FirstLoginExperience = () => {
       {/* Step 5: Interactive Step-by-Step Product Tour */}
       <DocketraProductTour
         isOpen={showTutorial}
-        onClose={() => completeTutorial('skipped')}
-        onCompleteTour={() => completeTutorial('completed')}
-        onAddFirstClient={() => {
-          completeTutorial('completed');
+        onClose={(idx) => completeTutorial('skipped', idx ?? 0)}
+        onCompleteTour={(idx) => completeTutorial('completed', idx ?? 3)}
+        onAddFirstClient={(idx) => {
+          completeTutorial('completed', idx ?? 3);
           setShowFirstClientModal(true);
         }}
       />

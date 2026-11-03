@@ -17,6 +17,8 @@ import {
   Lock,
   Cloud,
   RefreshCw,
+  Clock,
+  LogOut,
 } from '../../components/onboarding/OnboardingIcons';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
@@ -46,15 +48,26 @@ export function WorkspaceSetupPage() {
   const navigate = useNavigate();
   const { firmSlug: routeFirmSlug } = useParams();
   const [searchParams] = useSearchParams();
-  const { user, updateUser, fetchProfile } = useAuth();
-  const { showSuccess, showError } = useToast();
+  const { user, updateUser, fetchProfile, logout } = useAuth();
+  const { showSuccess, showError, showInfo } = useToast();
 
   const firmSlug = routeFirmSlug || user?.firmSlug || user?.firm?.firmSlug || '';
   const initialStep = Number(searchParams.get('step')) || 1;
 
+  const isPrimaryAdmin = user?.role === 'PRIMARY_ADMIN';
+  const isSetupComplete = user?.firm?.isSetupComplete === true || user?.isSetupComplete === true;
+
   const [currentStep, setCurrentStep] = useState(initialStep);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(false);
+
+  // If setup is already complete and no explicit step is requested, redirect to worklist
+  useEffect(() => {
+    if (isSetupComplete && !searchParams.get('reconfigure') && !searchParams.get('step')) {
+      navigate(ROUTES.WORKLIST(firmSlug), { replace: true });
+    }
+  }, [isSetupComplete, firmSlug, navigate, searchParams]);
 
   // Step 1 Form: Firm Identity
   const [firmName, setFirmName] = useState(user?.firm?.name || user?.firmName || '');
@@ -254,8 +267,9 @@ export function WorkspaceSetupPage() {
     setCurrentStep(4);
   };
 
-  // Exit directly to workspace (bypassing remaining steps safely)
+  // Exit directly to workspace (marking setup completed safely in database)
   const handleExitToWorkspace = async () => {
+    setLoading(true);
     try {
       if (typeof window !== 'undefined' && firmSlug) {
         window.localStorage?.setItem(`setupDismissed:${firmSlug}`, 'true');
@@ -264,7 +278,7 @@ export function WorkspaceSetupPage() {
         name: firmName.trim() || user?.firm?.name || 'Firm',
         practiceType,
       });
-      const refreshed = await fetchProfile();
+      const refreshed = await fetchProfile({ force: true });
       if (refreshed?.data) {
         updateUser({
           ...refreshed.data,
@@ -275,9 +289,11 @@ export function WorkspaceSetupPage() {
           },
         });
       }
+      showSuccess('Workspace setup completed');
     } catch (_err) {
       // Non-blocking
     } finally {
+      setLoading(false);
       navigate(ROUTES.WORKLIST(firmSlug), { replace: true });
     }
   };
@@ -293,7 +309,7 @@ export function WorkspaceSetupPage() {
         name: firmName.trim() || user?.firm?.name || 'Firm',
         practiceType,
       });
-      const refreshed = await fetchProfile();
+      const refreshed = await fetchProfile({ force: true });
       if (refreshed?.data) {
         updateUser({
           ...refreshed.data,
@@ -315,6 +331,128 @@ export function WorkspaceSetupPage() {
 
   const selectedPractice = PRACTICE_TYPES.find((p) => p.id === practiceType) || PRACTICE_TYPES[0];
 
+  // Non-Primary Admin view when firm setup is pending
+  if (!isPrimaryAdmin) {
+    if (isSetupComplete) {
+      return null; // Handled by useEffect redirect
+    }
+
+    const handleCheckStatus = async () => {
+      setCheckingStatus(true);
+      try {
+        const refreshed = await fetchProfile({ force: true });
+        const isNowComplete = Boolean(
+          refreshed?.data?.isSetupComplete || refreshed?.data?.firm?.isSetupComplete
+        );
+        if (isNowComplete) {
+          showSuccess('Workspace setup completed. Entering workspace.');
+          navigate(ROUTES.WORKLIST(firmSlug), { replace: true });
+        } else {
+          showInfo('Setup is still in progress by your primary administrator.');
+        }
+      } catch (_err) {
+        showError('Unable to check setup status right now. Please try again.');
+      } finally {
+        setCheckingStatus(false);
+      }
+    };
+
+    const handleSignOut = async () => {
+      try {
+        await logout({ preserveFirmSlug: true });
+      } finally {
+        navigate(ROUTES.FIRM_LOGIN(firmSlug), { replace: true });
+      }
+    };
+
+    return (
+      <div className="min-h-screen bg-slate-50/70 text-slate-900 flex flex-col font-sans selection:bg-amber-500/20 selection:text-amber-900">
+        <header className="h-14 border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between bg-white/95 backdrop-blur sticky top-0 z-30 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <Link to="/" className="inline-flex items-center gap-2 text-slate-950 hover:opacity-90 transition-opacity">
+              <svg className="h-6 w-6 text-amber-600 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M25 15H50C69.33 15 85 30.67 85 50C85 69.33 69.33 85 50 85H25V15Z" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M40 30H50C61.05 30 70 38.95 70 50C70 61.05 61.05 70 50 70H40V30Z" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
+              </svg>
+              <span className="font-bold tracking-tight text-slate-950 text-sm">Docketra</span>
+            </Link>
+            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-sm bg-amber-50 border border-amber-200 text-amber-800 font-semibold">
+              Setup in progress
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="inline-flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 font-medium px-2.5 py-1.5 rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Sign out
+          </button>
+        </header>
+
+        <main className="flex-1 flex items-center justify-center p-4 sm:p-6">
+          <div className="w-full max-w-lg bg-white border border-slate-200/90 rounded-xl p-6 sm:p-8 shadow-xs text-center space-y-6">
+            <div className="mx-auto h-12 w-12 rounded-full bg-amber-50 border border-amber-200/80 flex items-center justify-center text-amber-700">
+              <Clock className="h-6 w-6" />
+            </div>
+
+            <div className="space-y-2">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-950">
+                Workspace setup in progress
+              </h1>
+              <p className="text-sm text-slate-600 leading-relaxed max-w-md mx-auto">
+                Your firm&apos;s primary administrator is currently configuring this workspace. You will have full access as soon as initial setup is complete.
+              </p>
+            </div>
+
+            <div className="bg-slate-50/80 border border-slate-200 rounded-lg p-4 text-left space-y-2.5 text-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                <span className="text-slate-500 font-medium">Practice</span>
+                <span className="text-slate-900 font-semibold">{firmName || user?.firm?.name || 'Workspace'}</span>
+              </div>
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                <span className="text-slate-500 font-medium">Your account</span>
+                <span className="text-slate-900 font-medium font-mono">{user?.email || user?.xID || 'Team Member'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-medium">Configuration</span>
+                <span className="inline-flex items-center gap-1 font-mono text-[11px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                  <Clock className="h-3 w-3" /> Awaiting administrator
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-500 leading-normal">
+              Need immediate access? Please notify your firm&apos;s primary administrator.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleCheckStatus}
+                disabled={checkingStatus}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-md bg-slate-950 hover:bg-slate-800 text-white font-medium text-xs shadow-xs transition-colors cursor-pointer active:scale-[0.98] disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${checkingStatus ? 'animate-spin' : ''}`} />
+                {checkingStatus ? 'Checking status...' : 'Check status'}
+              </button>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-xs transition-colors cursor-pointer"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Sign out
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50/60 text-slate-900 flex flex-col font-sans selection:bg-amber-500/20 selection:text-amber-900">
       {/* Top Header Bar */}
@@ -335,7 +473,7 @@ export function WorkspaceSetupPage() {
 
         {/* Step Indicator & Exit */}
         <div className="flex items-center gap-2 sm:gap-4">
-          <div className="flex items-center gap-1 sm:gap-1.5" aria-label={`Setup Step ${currentStep} of 4`}>
+          <nav aria-label="Setup step navigation" className="flex items-center gap-1 sm:gap-1.5">
             {[
               { step: 1, label: 'Firm Identity' },
               { step: 2, label: 'Storage' },
@@ -345,14 +483,17 @@ export function WorkspaceSetupPage() {
               const isActive = currentStep === item.step;
               const isDone = currentStep > item.step;
               return (
-                <div
+                <button
                   key={item.step}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs transition-colors font-mono ${
+                  type="button"
+                  onClick={() => setCurrentStep(item.step)}
+                  title={`Go to Step ${item.step}: ${item.label}`}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs transition-colors font-mono cursor-pointer ${
                     isActive
                       ? 'bg-slate-950 text-white font-semibold shadow-xs'
                       : isDone
-                      ? 'bg-emerald-50 border border-emerald-200 text-emerald-800 font-medium'
-                      : 'bg-white border border-slate-200 text-slate-400'
+                      ? 'bg-emerald-50 border border-emerald-200 text-emerald-800 font-medium hover:bg-emerald-100/80'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
                   {isDone ? (
@@ -361,10 +502,10 @@ export function WorkspaceSetupPage() {
                     <span className="text-[10px] font-mono">{item.step}</span>
                   )}
                   <span className="hidden md:inline">{item.label}</span>
-                </div>
+                </button>
               );
             })}
-          </div>
+          </nav>
 
           <button
             type="button"
@@ -484,11 +625,19 @@ export function WorkspaceSetupPage() {
                 </div>
               </div>
 
-              <div className="pt-2 flex justify-end">
+              <div className="pt-3 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={handleExitToWorkspace}
+                  disabled={loading}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md border border-slate-300 hover:bg-slate-100 text-slate-700 font-medium text-xs transition-colors cursor-pointer"
+                >
+                  Skip setup &amp; open workspace
+                </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-md bg-slate-950 hover:bg-slate-800 text-white font-bold text-sm shadow-xs transition-colors cursor-pointer active:scale-[0.98] disabled:opacity-50"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-md bg-slate-950 hover:bg-slate-800 text-white font-bold text-sm shadow-xs transition-colors cursor-pointer active:scale-[0.98] disabled:opacity-50"
                 >
                   {loading ? 'Saving...' : 'Continue to Storage (BYOS)'}
                   <ArrowRight className="h-4 w-4" />
@@ -980,6 +1129,25 @@ export function WorkspaceSetupPage() {
               <p className="text-[11px] text-slate-500 font-mono">
                 Opens your statutory radar and worklist directly.
               </p>
+            </div>
+
+            <div className="pt-4 flex items-center justify-between border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setCurrentStep(3)}
+                className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors cursor-pointer py-1.5 px-3 rounded hover:bg-slate-100"
+              >
+                <ArrowLeft className="h-4 w-4" /> Back to Team
+              </button>
+
+              <button
+                type="button"
+                onClick={handleEnterWorkspace}
+                disabled={loading}
+                className="text-xs text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+              >
+                Skip tour &amp; enter
+              </button>
             </div>
           </div>
         )}

@@ -41,6 +41,12 @@ export const resolvePostAuthNavigation = ({
   return '/complete-profile';
 };
 
+const isSetupPath = (path) => {
+  if (!path) return false;
+  const clean = path.split('?')[0].replace(/\/+$/, '');
+  return clean.endsWith('/setup') || clean === '/setup';
+};
+
 const readFirstValidId = (records = []) => {
   if (!Array.isArray(records)) return '';
   for (const record of records) {
@@ -54,12 +60,6 @@ export const getPostLoginWorkspaceDestination = (user, firmSlug, intendedPath = 
   if (!user || isSuperAdmin(user)) return '';
   if (!firmSlug) return '';
   const normalizedIntendedPath = String(intendedPath || '').trim();
-  if (
-    isSafeReturnToPath(normalizedIntendedPath)
-    && isRoleCompatibleRoute(normalizedIntendedPath, { isSuperAdminUser: false, firmSlug })
-  ) {
-    return normalizedIntendedPath;
-  }
 
   const isPrimaryAdmin = user?.role === 'PRIMARY_ADMIN';
   const setupDismissedKey = firmSlug ? `setupDismissed:${firmSlug}` : '';
@@ -68,9 +68,23 @@ export const getPostLoginWorkspaceDestination = (user, firmSlug, intendedPath = 
     && typeof window !== 'undefined'
     && window.localStorage?.getItem(setupDismissedKey) === 'true'
   );
-  const isFirmSetupPending = !isSetupDismissed && (user?.firm?.isSetupComplete === false || user?.isSetupComplete === false);
-  if (isPrimaryAdmin && isFirmSetupPending) {
-    return ROUTES.SETUP(firmSlug);
+  const isFirmSetupPending = (user?.firm?.isSetupComplete === false || user?.isSetupComplete === false);
+
+  if (isFirmSetupPending) {
+    if (isPrimaryAdmin && !isSetupDismissed) {
+      return ROUTES.SETUP(firmSlug);
+    }
+    if (!isPrimaryAdmin) {
+      return ROUTES.SETUP(firmSlug);
+    }
+  }
+
+  if (
+    isSafeReturnToPath(normalizedIntendedPath)
+    && !isSetupPath(normalizedIntendedPath)
+    && isRoleCompatibleRoute(normalizedIntendedPath, { isSuperAdminUser: false, firmSlug })
+  ) {
+    return normalizedIntendedPath;
   }
 
   const assignedWorkbasketId = readFirstValidId(user?.workbaskets);
