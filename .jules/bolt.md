@@ -42,3 +42,6 @@
 ## 2024-10-27 - Optimize plan capacity threshold checks
 **Learning:** Using `User.countDocuments()` to check if user count exceeds a firm's plan capacity forces MongoDB to evaluate all matches. Since the capacity check only requires a boolean outcome, calculating the exact total is an unnecessary O(N) database operation.
 **Action:** Replace `countDocuments()` with `find().select('_id').limit(threshold + 1).lean()` and check if the returned array length exceeds the threshold. Furthermore, evaluate these counts lazily only when the corresponding limit condition is reached to avoid redundant queries.
+## 2026-11-04 - Optimize pagination safely
+**Learning:** When optimizing pagination queries, do not replace `countDocuments()` with a `limit(limit + 1)` trick if the API response requires an exact `total` count for traditional offset pagination. Fabricating the `total` introduces a critical API regression.
+**Action:** Reserve the `limit + 1` optimization for infinite scrolling or simple 'Next/Prev' interfaces where exact totals are not needed. For traditional pagination, explore other optimizations like grouping sequential independent counts concurrently with data fetches.
