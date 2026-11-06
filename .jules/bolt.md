@@ -42,3 +42,7 @@
 ## 2024-10-27 - Optimize plan capacity threshold checks
 **Learning:** Using `User.countDocuments()` to check if user count exceeds a firm's plan capacity forces MongoDB to evaluate all matches. Since the capacity check only requires a boolean outcome, calculating the exact total is an unnecessary O(N) database operation.
 **Action:** Replace `countDocuments()` with `find().select('_id').limit(threshold + 1).lean()` and check if the returned array length exceeds the threshold. Furthermore, evaluate these counts lazily only when the corresponding limit condition is reached to avoid redundant queries.
+
+## 2026-11-06 - Group independent database queries concurrently
+**Learning:** Sequential database queries (like `CaseAudit.find` and `AuthAudit.find` following concurrent `countDocuments` queries) create unnecessary network latency bottlenecks.
+**Action:** Identifying and eliminating unnecessary sequential database queries by grouping them into a single `Promise.all` array executes them concurrently, reducing overall network latency.
