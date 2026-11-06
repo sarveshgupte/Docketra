@@ -212,6 +212,7 @@ export default function BubbleMenu({
               <div className="relative group">
                 <button
                   type="button"
+                  aria-haspopup="true"
                   className="inline-flex h-9 items-center justify-center gap-1 rounded-xs border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:border-slate-300"
                 >
                   <span>Solutions</span>
