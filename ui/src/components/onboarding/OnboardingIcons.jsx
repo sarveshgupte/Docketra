@@ -206,3 +206,32 @@ export const LogOut = createIcon(
     <line x1="21" x2="9" y1="12" y2="12" />
   </>
 );
+
+export const CreditCard = createIcon(
+  <>
+    <rect width="20" height="14" x="2" y="5" rx="2" />
+    <line x1="2" x2="22" y1="10" y2="10" />
+  </>
+);
+
+export const Tag = createIcon(
+  <>
+    <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
+    <circle cx="7" cy="7" r=".5" fill="currentColor" />
+  </>
+);
+
+export const Map = createIcon(
+  <>
+    <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
+    <line x1="9" x2="9" y1="3" y2="18" />
+    <line x1="15" x2="15" y1="6" y2="21" />
+  </>
+);
+
+export const Search = createIcon(
+  <>
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" x2="16.65" y1="21" y2="16.65" />
+  </>
+);

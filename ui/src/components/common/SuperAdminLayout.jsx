@@ -78,7 +78,8 @@ export const SuperAdminLayout = ({ children }) => {
   }, [searchQuery]);
 
   // Guard: Only render children if user is loaded and is SuperAdmin
-  if (user === null || (user?.isSuperAdmin !== true && user?.role !== USER_ROLES.SUPER_ADMIN)) {
+  const isSuperAdminUser = user?.isSuperAdmin === true || ['SUPER_ADMIN', 'SUPERADMIN', 'SuperAdmin'].includes(String(user?.role || '').trim());
+  if (user === null || !isSuperAdminUser) {
     return <Loading message="Preparing platform dashboard..." />;
   }
 

@@ -589,7 +589,15 @@ export const ProtectedRoutes = () => (
         <Route
           path="admin/hierarchy"
           element={(
-            <ProtectedRoute requireAdmin>
+            <ProtectedRoute>
+              <HierarchyPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="hierarchy"
+          element={(
+            <ProtectedRoute>
               <HierarchyPage />
             </ProtectedRoute>
           )}

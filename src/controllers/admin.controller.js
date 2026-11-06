@@ -1848,6 +1848,8 @@ const toHierarchyUserNode = (user) => ({
   role: normalizeHierarchyRole(user.role),
   status: user.status || null,
   isActive: Boolean(user.isActive),
+  department: user.department || null,
+  phoneNumber: user.phoneNumber || null,
   primaryAdminId: normalizeId(user.primaryAdminId),
   adminId: normalizeId(user.adminId),
   managerId: normalizeId(user.managerId),
@@ -1855,13 +1857,11 @@ const toHierarchyUserNode = (user) => ({
 
 const getHierarchyTree = async (req, res) => {
   try {
-    assertPrimaryAdmin(req.user);
-
     const users = await User.find({
       firmId: req.user?.firmId,
       status: { $ne: 'deleted' },
     })
-      .select('_id xID name email role status isActive primaryAdminId adminId managerId')
+      .select('_id xID name email role department phoneNumber status isActive primaryAdminId adminId managerId')
       .lean();
 
     const primaryAdminDoc = users.find((user) => normalizeHierarchyRole(user.role) === 'PRIMARY_ADMIN' && String(user._id) === String(req.user?._id))
@@ -1873,6 +1873,13 @@ const getHierarchyTree = async (req, res) => {
       primaryAdmin,
       admins: [],
       unassignedUsers: [],
+      stats: {
+        totalMembers: users.length,
+        adminsCount: 0,
+        managersCount: 0,
+        usersCount: 0,
+        unassignedCount: 0,
+      },
     };
 
     if (!primaryAdmin) {
@@ -1886,6 +1893,10 @@ const getHierarchyTree = async (req, res) => {
     const admins = userNodes.filter((node) => node.role === 'ADMIN');
     const managers = userNodes.filter((node) => node.role === 'MANAGER');
     const usersOnly = userNodes.filter((node) => node.role === 'USER');
+
+    tree.stats.adminsCount = admins.length;
+    tree.stats.managersCount = managers.length;
+    tree.stats.usersCount = usersOnly.length;
 
     const adminsById = new Map(admins.map((admin) => [admin.id, { ...admin, managers: [], users: [] }]));
     const managersById = new Map(managers.map((manager) => [manager.id, { ...manager, users: [] }]));
@@ -1919,11 +1930,29 @@ const getHierarchyTree = async (req, res) => {
       tree.unassignedUsers.push(user);
     });
 
-    tree.admins = Array.from(adminsById.values()).filter((admin) => !admin.primaryAdminId || admin.primaryAdminId === primaryAdmin.id);
+    const adminsList = Array.from(adminsById.values());
+
+    adminsList.forEach((adm) => {
+      const managerUsersCount = (adm.managers || []).reduce((acc, m) => acc + (m.users?.length || 0), 0);
+      adm.directReportsCount = (adm.managers?.length || 0) + (adm.users?.length || 0);
+      adm.totalReportsCount = adm.directReportsCount + managerUsersCount;
+      (adm.managers || []).forEach((mgr) => {
+        mgr.directReportsCount = mgr.users?.length || 0;
+        mgr.totalReportsCount = mgr.directReportsCount;
+      });
+    });
+
+    if (primaryAdmin) {
+      primaryAdmin.directReportsCount = adminsList.length;
+      primaryAdmin.totalReportsCount = Math.max(0, users.length - 1);
+    }
+
+    tree.admins = adminsList;
+    tree.stats.unassignedCount = tree.unassignedUsers.length;
 
     return res.json({ success: true, data: tree });
   } catch (error) {
-    return res.status(403).json({
+    return res.status(error?.statusCode || 500).json({
       success: false,
       message: error.message || 'Failed to load hierarchy',
     });

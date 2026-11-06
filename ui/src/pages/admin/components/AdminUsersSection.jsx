@@ -21,6 +21,7 @@ export const AdminUsersSection = ({
   onResetPassword,
   actionLoadingByUser = {},
   sectionMessage,
+  onViewOrgChart,
 }) => {
   const hasUsers = users.length > 0;
 
@@ -30,6 +31,7 @@ export const AdminUsersSection = ({
         title="Team Members"
         description="Manage users, role-based access, and account safety actions."
         actions={[
+          ...(onViewOrgChart ? [{ key: 'view-org-chart', label: 'Org Structure ⑂', variant: 'outline', onClick: onViewOrgChart }] : []),
           { key: 'bulk-upload-users', label: 'Bulk Upload', onClick: onBulkUpload },
           { key: 'download-users-template', label: 'Download Template', onClick: onDownloadTemplate },
           { key: 'create-user', label: '+ Create User', variant: 'primary', onClick: onCreateUser, disabled: !canCreateUsers },

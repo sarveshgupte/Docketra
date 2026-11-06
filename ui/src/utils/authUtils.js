@@ -45,5 +45,9 @@ export const isAccessTokenOnlyUser = (user) => {
  * @param {Object} user - User object from AuthContext
  * @returns {boolean} True if user is a SuperAdmin
  */
-export const isSuperAdmin = (user) =>
-  user?.role === USER_ROLES.SUPER_ADMIN || user?.isSuperAdmin === true;
+export const isSuperAdmin = (user) => {
+  if (!user) return false;
+  if (user.isSuperAdmin === true) return true;
+  const role = String(user.role || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+  return role === 'SUPER_ADMIN' || role === 'SUPERADMIN' || user.role === USER_ROLES.SUPER_ADMIN;
+};

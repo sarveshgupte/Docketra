@@ -1692,12 +1692,21 @@ export const AdminPage = () => {
         <div className="admin__toolbar">
           <div className="admin__tabs" aria-label="Admin sections">
             {!isWorkSettingsContext && (
-              <Button
-                variant={activeTab === 'users' ? 'primary' : 'default'}
-                onClick={() => { setActiveTab('users'); setSearchParams({ tab: 'users' }); }}
-              >
-                User Management ({statsFailed ? '--' : adminStats.totalUsers})
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={activeTab === 'users' ? 'primary' : 'default'}
+                  onClick={() => { setActiveTab('users'); setSearchParams({ tab: 'users' }); }}
+                >
+                  User Management ({statsFailed ? '--' : adminStats.totalUsers})
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(ROUTES.HIERARCHY(firmSlug))}
+                  title="View interactive firm organization hierarchy"
+                >
+                  Org Structure ⑂
+                </Button>
+              </div>
             )}
             {isWorkSettingsContext && (
               <Button
@@ -1724,6 +1733,7 @@ export const AdminPage = () => {
         {activeTab === 'users' && (
           <AdminUsersSection
             users={filteredUsers}
+            onViewOrgChart={() => navigate(ROUTES.HIERARCHY(firmSlug))}
             canCreateUsers={isPrimaryAdminActor || normalizeAdminRole(loggedInUser?.role) === 'ADMIN'}
             onBulkUpload={() => handleOpenBulkUpload('team')}
             onDownloadTemplate={() => downloadBulkTemplate('team')}

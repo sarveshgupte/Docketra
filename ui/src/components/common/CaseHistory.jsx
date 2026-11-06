@@ -13,6 +13,7 @@ import { Badge } from './Badge';
 import { useAuth } from '../../hooks/useAuth';
 import { caseApi } from '../../api/case.api';
 import { formatDateTime } from '../../utils/formatters';
+import { isFirmAdminOrAbove } from '../../utils/roleHierarchy';
 
 export const CaseHistory = ({ caseId }) => {
   const { user } = useAuth();
@@ -124,7 +125,7 @@ export const CaseHistory = ({ caseId }) => {
                   )}
                   {' • '}
                   <span>{formatDateTime(entry.timestamp)}</span>
-                  {user?.role === 'Admin' && entry.ipAddress && (
+                  {(isFirmAdminOrAbove(user) || user?.role === 'Admin') && entry.ipAddress && (
                     <>
                       {' • '}
                       <span className="text-xs">IP: {entry.ipAddress}</span>

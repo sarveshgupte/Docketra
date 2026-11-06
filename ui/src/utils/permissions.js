@@ -14,7 +14,10 @@ export {
 import { canManageClientsByRoleOrPermission, isFirmAdminUser } from './firmAccess.js';
 
 export const isSuperadmin = (user) => {
-  return user?.role === USER_ROLES.SUPER_ADMIN;
+  if (!user) return false;
+  if (user.isSuperAdmin === true) return true;
+  const role = String(user.role || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+  return role === 'SUPER_ADMIN' || role === 'SUPERADMIN';
 };
 
 export const isAdmin = (user) => {
@@ -22,7 +25,9 @@ export const isAdmin = (user) => {
 };
 
 export const isEmployee = (user) => {
-  return user?.role === USER_ROLES.EMPLOYEE;
+  if (!user) return false;
+  const role = String(user.role || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+  return role === 'USER' || role === 'EMPLOYEE' || role === 'STAFF';
 };
 
 export const canEditCase = (user, caseData) => {
