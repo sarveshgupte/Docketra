@@ -406,7 +406,8 @@ module.exports = (deps) => {
         },
       });
     } catch (error) {
-      return res.status(500).json({ success: false, message: 'Failed to load comments', error: error.message });
+      log.error('CASE_COMMENTS_LOAD_FAILED', { message: error.message, stack: error.stack });
+      return res.status(500).json({ success: false, message: 'Failed to load comments' });
     }
   };
 
