@@ -219,7 +219,7 @@ export default function CorporateLegalTeamsSolutionPage() {
           </h1>
 
           <p className="mx-auto mt-6 max-w-3xl text-base sm:text-lg text-slate-300 leading-relaxed font-normal">
-            Replace fragmented email threads, forgotten advisory requests, and scattered contract dockets. Centralize internal legal intake, regulatory notices, and board governance inside a single sovereign workspace.
+            Replace fragmented email threads, forgotten advisory requests, and scattered contract dockets. Centralize internal legal intake, regulatory notices, and board governance with The Company Brain.
           </p>
 
           {/* CTAs */}

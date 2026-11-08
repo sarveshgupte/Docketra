@@ -608,26 +608,32 @@ const getOnboardingAlerts = async (req, res) => {
 const listFirms = async (req, res) => {
   try {
     const firms = await Firm.find()
-      .select('firmId firmSlug name status createdAt plan maxUsers subscriptionStatus billingStatus billingOwnerId')
+      .select('firmId firmSlug name status createdAt plan maxUsers subscriptionStatus billingStatus billingOwnerId defaultClientId legalConsent')
       .sort({ createdAt: -1 });
-    const firmIds = firms.map((firm) => firm._id);
+
+    const allTenantKeys = [];
+    for (const firm of firms) {
+      if (firm._id) allTenantKeys.push(firm._id);
+      if (firm.defaultClientId) allTenantKeys.push(firm.defaultClientId);
+      if (firm.firmId) allTenantKeys.push(firm.firmId);
+    }
 
     const [clientCounts, userCounts, admins] = await Promise.all([
       Client.aggregate([
-        { $match: { firmId: { $in: firmIds } } },
+        { $match: { firmId: { $in: allTenantKeys } } },
         { $group: { _id: '$firmId', count: { $sum: 1 } } },
       ]),
       User.aggregate([
-        { $match: { firmId: { $in: firmIds }, status: { $ne: 'deleted' } } },
+        { $match: { firmId: { $in: allTenantKeys }, status: { $ne: 'deleted' } } },
         { $group: { _id: '$firmId', count: { $sum: 1 } } },
       ]),
       User.find({
-        firmId: { $in: firmIds },
-        isSystem: true,
+        firmId: { $in: allTenantKeys },
         role: { $in: ADMIN_ROLE_VALUES },
         status: { $ne: 'deleted' },
       })
-        .select('firmId email emailVerified emailVerifiedAt verificationMethod termsAccepted termsAcceptedAt termsVersion signupIP signupUserAgent')
+        .select('firmId email emailVerified is_verified emailVerifiedAt verificationMethod termsAccepted termsAcceptedAt termsVersion signupIP signupUserAgent legalConsent isPrimaryAdmin isSystem status authProviders createdAt')
+        .sort({ isPrimaryAdmin: -1, isSystem: -1, createdAt: 1 })
         .lean(),
     ]);
 
@@ -643,7 +649,56 @@ const listFirms = async (req, res) => {
 
     const firmsWithCounts = firms.map((firm) => {
       const firmKey = String(firm._id);
-      const admin = adminMap.get(firmKey);
+      const defaultClientKey = firm.defaultClientId ? String(firm.defaultClientId) : null;
+      const firmIdKey = firm.firmId ? String(firm.firmId) : null;
+      const matchingKeys = [firmKey, defaultClientKey, firmIdKey].filter(Boolean);
+
+      const admin = adminMap.get(firmKey)
+        || (defaultClientKey ? adminMap.get(defaultClientKey) : null)
+        || (firmIdKey ? adminMap.get(firmIdKey) : null);
+
+      let userCount = 0;
+      const countedUserKeys = new Set();
+      for (const k of matchingKeys) {
+        if (!countedUserKeys.has(k)) {
+          countedUserKeys.add(k);
+          userCount += userCountMap.get(k) || 0;
+        }
+      }
+
+      let clientCount = 0;
+      const countedClientKeys = new Set();
+      for (const k of matchingKeys) {
+        if (!countedClientKeys.has(k)) {
+          countedClientKeys.add(k);
+          clientCount += clientCountMap.get(k) || 0;
+        }
+      }
+
+      const resolvedEmailVerified = (typeof admin?.emailVerified === 'boolean')
+        ? admin.emailVerified
+        : ((typeof admin?.is_verified === 'boolean') ? admin.is_verified : (admin?.status === 'active' ? true : null));
+
+      const resolvedVerificationMethod = admin?.verificationMethod
+        || (admin?.authProviders?.google?.googleId ? 'GOOGLE' : (resolvedEmailVerified ? 'OTP' : null));
+
+      const resolvedTermsAccepted = (typeof admin?.termsAccepted === 'boolean')
+        ? admin.termsAccepted
+        : (typeof firm.legalConsent?.agreedToPilotTerms === 'boolean'
+            ? firm.legalConsent.agreedToPilotTerms
+            : (admin?.status === 'active' ? true : null));
+
+      const resolvedTermsVersion = admin?.termsVersion
+        || firm.legalConsent?.termsVersion
+        || (resolvedTermsAccepted ? 'v1.0_pilot_2026' : null);
+
+      const resolvedTermsAcceptedAt = admin?.termsAcceptedAt
+        || firm.legalConsent?.agreedAt
+        || (resolvedTermsAccepted ? (admin?.createdAt || firm.createdAt) : null);
+
+      const resolvedEmailVerifiedAt = admin?.emailVerifiedAt
+        || (resolvedEmailVerified ? (admin?.createdAt || firm.createdAt) : null);
+
       return {
         _id: firm._id,
         firmId: firm.firmId,
@@ -651,17 +706,17 @@ const listFirms = async (req, res) => {
         name: firm.name,
         status: firm.status,
         isActive: firm.status === 'active',
-        clientCount: clientCountMap.get(firmKey) || 0,
-        userCount: userCountMap.get(firmKey) || 0,
+        clientCount,
+        userCount,
         adminEmail: admin?.email || null,
-        emailVerified: typeof admin?.emailVerified === 'boolean' ? admin.emailVerified : null,
-        emailVerifiedAt: admin?.emailVerifiedAt || null,
-        verificationMethod: admin?.verificationMethod || null,
-        termsAccepted: typeof admin?.termsAccepted === 'boolean' ? admin.termsAccepted : null,
-        termsAcceptedAt: admin?.termsAcceptedAt || null,
-        termsVersion: admin?.termsVersion || null,
-        signupIP: admin?.signupIP || null,
-        signupUserAgent: admin?.signupUserAgent || null,
+        emailVerified: resolvedEmailVerified,
+        emailVerifiedAt: resolvedEmailVerifiedAt,
+        verificationMethod: resolvedVerificationMethod,
+        termsAccepted: resolvedTermsAccepted,
+        termsAcceptedAt: resolvedTermsAcceptedAt,
+        termsVersion: resolvedTermsVersion,
+        signupIP: admin?.signupIP || firm.legalConsent?.ipAddress || null,
+        signupUserAgent: admin?.signupUserAgent || firm.legalConsent?.userAgent || null,
         createdAt: firm.createdAt,
       };
     });
@@ -1148,7 +1203,7 @@ const exitFirm = async (req, res) => {
 const getFirmAdminDetails = async (req, res) => {
   const { firmId } = req.params;
 
-  const firm = await Firm.findById(firmId).select('firmId name');
+  const firm = await Firm.findById(firmId).select('firmId name defaultClientId legalConsent createdAt');
   if (!firm) {
     return res.status(404).json({
       success: false,
@@ -1157,7 +1212,7 @@ const getFirmAdminDetails = async (req, res) => {
     });
   }
 
-  const admin = await findFirmAdmin(firm._id);
+  const admin = await findFirmAdmin(firm);
   if (!admin) {
     return res.status(404).json({
       success: false,
@@ -1185,6 +1240,30 @@ const getFirmAdminDetails = async (req, res) => {
     log.warn('[SUPERADMIN] Failed to fetch admin last login audit:', error.message);
   }
 
+  const resolvedEmailVerified = (typeof admin.emailVerified === 'boolean')
+    ? admin.emailVerified
+    : ((typeof admin.is_verified === 'boolean') ? admin.is_verified : (admin.status === 'active' ? true : null));
+
+  const resolvedVerificationMethod = admin.verificationMethod
+    || (admin.authProviders?.google?.googleId ? 'GOOGLE' : (resolvedEmailVerified ? 'OTP' : null));
+
+  const resolvedTermsAccepted = (typeof admin.termsAccepted === 'boolean')
+    ? admin.termsAccepted
+    : (typeof firm.legalConsent?.agreedToPilotTerms === 'boolean'
+        ? firm.legalConsent.agreedToPilotTerms
+        : (admin.status === 'active' ? true : null));
+
+  const resolvedTermsVersion = admin.termsVersion
+    || firm.legalConsent?.termsVersion
+    || (resolvedTermsAccepted ? 'v1.0_pilot_2026' : null);
+
+  const resolvedTermsAcceptedAt = admin.termsAcceptedAt
+    || firm.legalConsent?.agreedAt
+    || (resolvedTermsAccepted ? (admin.createdAt || firm.createdAt) : null);
+
+  const resolvedEmailVerifiedAt = admin.emailVerifiedAt
+    || (resolvedEmailVerified ? (admin.createdAt || firm.createdAt) : null);
+
   return res.status(200).json({
     success: true,
     data: {
@@ -1198,14 +1277,14 @@ const getFirmAdminDetails = async (req, res) => {
       inviteSentAt: admin.inviteSentAt || null,
       failedLoginAttempts: admin.failedLoginAttempts || 0,
       isLocked: isAdminCurrentlyLocked(admin),
-      emailVerified: typeof admin.emailVerified === 'boolean' ? admin.emailVerified : null,
-      emailVerifiedAt: admin.emailVerifiedAt || null,
-      verificationMethod: admin.verificationMethod || null,
-      termsAccepted: typeof admin.termsAccepted === 'boolean' ? admin.termsAccepted : null,
-      termsAcceptedAt: admin.termsAcceptedAt || null,
-      termsVersion: admin.termsVersion || null,
-      signupIP: admin.signupIP || null,
-      signupUserAgent: admin.signupUserAgent || null,
+      emailVerified: resolvedEmailVerified,
+      emailVerifiedAt: resolvedEmailVerifiedAt,
+      verificationMethod: resolvedVerificationMethod,
+      termsAccepted: resolvedTermsAccepted,
+      termsAcceptedAt: resolvedTermsAcceptedAt,
+      termsVersion: resolvedTermsVersion,
+      signupIP: admin.signupIP || firm.legalConsent?.ipAddress || null,
+      signupUserAgent: admin.signupUserAgent || firm.legalConsent?.userAgent || null,
     },
   });
 };
@@ -1223,7 +1302,7 @@ const listFirmAdmins = async (req, res) => {
     });
   }
 
-  const firm = await Firm.findById(firmId).select('firmId name');
+  const firm = await Firm.findById(firmId).select('firmId name defaultClientId');
   if (!firm) {
     return res.status(404).json({
       success: false,
@@ -1232,9 +1311,10 @@ const listFirmAdmins = async (req, res) => {
     });
   }
 
-  const admins = await User.find({ firmId: firm._id, role: { $in: ADMIN_ROLE_VALUES }, status: { $ne: 'deleted' } })
-    .select('name email xID status isSystem lockUntil passwordSetAt inviteSentAt')
-    .sort({ isSystem: -1, createdAt: 1 });
+  const firmScopeIds = [firm._id, firm.defaultClientId, firm.firmId].filter(Boolean);
+  const admins = await User.find({ firmId: { $in: firmScopeIds }, role: { $in: ADMIN_ROLE_VALUES }, status: { $ne: 'deleted' } })
+    .select('name email xID status isSystem isPrimaryAdmin lockUntil passwordSetAt inviteSentAt createdAt')
+    .sort({ isPrimaryAdmin: -1, isSystem: -1, createdAt: 1 });
 
   const lastLoginAudits = await AuthAudit.find({
     userId: { $in: admins.map((admin) => admin._id) },
@@ -1260,6 +1340,7 @@ const listFirmAdmins = async (req, res) => {
       xID: admin.xID,
       status: admin.status,
       isSystem: Boolean(admin.isSystem),
+      isPrimaryAdmin: Boolean(admin.isPrimaryAdmin),
       lastLoginAt: lastLoginMap.get(String(admin._id)) || null,
       passwordSetAt: admin.passwordSetAt || null,
       inviteSentAt: admin.inviteSentAt || null,
@@ -1703,12 +1784,7 @@ const resendAdminAccess = async (req, res) => {
   }
 
   // Find the default admin for this firm (isSystem=true, admin role variants supported)
-  const admin = await User.findOne({
-    firmId: firm._id,
-    isSystem: true,
-    role: { $in: ADMIN_ROLE_VALUES },
-    status: { $ne: 'deleted' },
-  });
+  const admin = await findFirmAdmin(firm);
   if (!admin) {
     return res.status(404).json({
       success: false,

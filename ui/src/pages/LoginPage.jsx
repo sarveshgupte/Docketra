@@ -12,6 +12,7 @@ import { validateXID, validatePassword } from '../utils/validators';
 import { useToast } from '../hooks/useToast';
 import { resolvePostAuthNavigation } from '../utils/postAuthNavigation';
 import { SESSION_KEYS, STORAGE_KEYS } from '../utils/constants';
+import SeoHead from '../components/common/SeoHead';
 
 export const LoginPage = () => {
   const [identifier, setIdentifier] = useState('');
@@ -124,6 +125,10 @@ export const LoginPage = () => {
 
   return (
     <div className="auth-wrapper find-workspace-page auth-public-page">
+      <SeoHead
+        title="Sign In • Docketra"
+        description="Secure access for platform oversight, firm setup, and operational controls."
+      />
       <div className="find-workspace-page__shell">
         <section className="find-workspace-page__context" aria-label="Superadmin login context">
           <h1 className="find-workspace-page__heading">Sign in to Docketra</h1>
@@ -169,7 +174,6 @@ export const LoginPage = () => {
             autoComplete="username"
             disabled={loading}
             autoFocus
-            helpText="Use your xID (case-insensitive, e.g., x123456 or X123456)."
           />
 
           <Input
@@ -195,12 +199,6 @@ export const LoginPage = () => {
           </Button>
 
           <div className="auth-footer-links">
-            <Link
-              to="/forgot-password"
-              className="auth-public-page__link"
-            >
-              Forgot password?
-            </Link>
             <Link to="/find-workspace" className="auth-public-page__link">
               Find a firm workspace
             </Link>

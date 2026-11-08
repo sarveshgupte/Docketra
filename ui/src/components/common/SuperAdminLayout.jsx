@@ -38,7 +38,12 @@ export const SuperAdminLayout = ({ children }) => {
     navigate('/superadmin/login', { state: { message: 'You have been signed out safely.', messageType: 'success' } });
   };
 
-  const isActive = (path) => location.pathname === path || location.pathname.startsWith(`${path}/`);
+  const isActive = (path) => {
+    if (path === '/app/superadmin') {
+      return location.pathname === '/app/superadmin' || location.pathname === '/app/superadmin/';
+    }
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+  };
   const showSuperadminNavItem = (path) => !TASK_MANAGER_MVP_ENABLED || SUPERADMIN_PILOT_SURFACE.visibleNavPaths.has(path);
   const runSearch = async (rawQuery = searchQuery) => {
     const q = String(rawQuery || '').trim();

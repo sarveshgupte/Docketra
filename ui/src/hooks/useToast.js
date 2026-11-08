@@ -3,7 +3,7 @@
  * Provides toast notification functionality
  */
 
-import { useContext } from 'react';
+import { useContext, useCallback } from 'react';
 import { ToastContext } from '../contexts/ToastContext';
 
 export const useToast = () => {
@@ -13,21 +13,23 @@ export const useToast = () => {
     throw new Error('useToast must be used within a ToastProvider');
   }
 
+  const { showError, addToast, showSuccess, showWarning, showInfo } = context;
+
   // Map showError to 'error' type (ToastContext uses 'danger')
-  const showToast = (message, type = 'info') => {
+  const showToast = useCallback((message, type = 'info') => {
     if (type === 'error') {
-      return context.showError(message);
+      return showError(message);
     }
-    return context.addToast(message, type);
-  };
+    return addToast(message, type);
+  }, [showError, addToast]);
 
   return {
     showToast,
-    showSuccess: context.showSuccess,
-    showError: context.showError,
-    showWarning: context.showWarning,
-    showInfo: context.showInfo,
-    success: context.showSuccess,
-    error: context.showError,
+    showSuccess,
+    showError,
+    showWarning,
+    showInfo,
+    success: showSuccess,
+    error: showError,
   };
 };

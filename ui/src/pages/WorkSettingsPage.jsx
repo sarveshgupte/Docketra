@@ -1,14 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PlatformShell } from '../components/platform/PlatformShell';
-import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { adminApi } from '../api/admin.api';
 import { ROUTES } from '../constants/routes';
-import { spacingClasses } from '../theme/tokens';
 import { StatusMessageStack } from './platform/PlatformShared';
 import { PageHeader } from '../components/layout/PageHeader';
+import { useToast } from '../hooks/useToast';
 
 // Custom vector SVG for Workbasket
 const WorkbasketIcon = ({ className = 'h-5 w-5' }) => (
@@ -21,6 +20,7 @@ const WorkbasketIcon = ({ className = 'h-5 w-5' }) => (
 export const WorkSettingsPage = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
+  const { showSuccess, showError } = useToast();
   const [workbaskets, setWorkbaskets] = useState([]);
   const [workbasketName, setWorkbasketName] = useState('');
   const [workbasketSaving, setWorkbasketSaving] = useState(false);
@@ -44,7 +44,7 @@ export const WorkSettingsPage = () => {
     try {
       const response = await adminApi.listWorkbaskets({ includeInactive: true });
       setWorkbaskets(response?.success ? (response.data || []) : []);
-    } catch {
+    } catch (err) {
       setWorkbaskets([]);
       setLoadError('Unable to load workbaskets. Retry to continue configuring work settings.');
     } finally {
@@ -67,28 +67,36 @@ export const WorkSettingsPage = () => {
     const nextName = String(name || '').trim();
     if (!nextName) return;
     setWorkbasketSaving(true);
-    setStatusMessage({ type: 'info', text: 'Creating workbasket…' });
+    setStatusMessage({ type: 'info', text: `Creating workbasket "${nextName}"…` });
     try {
       await adminApi.createWorkbasket(nextName);
       setWorkbasketName('');
       await loadWorkbaskets();
-      setStatusMessage({ type: 'success', text: 'Workbasket created.' });
+      setStatusMessage({ type: 'success', text: `Workbasket "${nextName}" created.` });
+      showSuccess(`Workbasket "${nextName}" created successfully.`);
     } catch (error) {
+      const serverMessage = error?.data?.message || error?.message;
+      let userMessage = 'Could not create the workbasket. Please retry.';
       if (error?.status === 409) {
-        setStatusMessage({ type: 'error', text: 'A workbasket with this name already exists for this firm.' });
+        userMessage = serverMessage || 'A workbasket with this name already exists for this firm.';
       } else if (error?.status === 400) {
-        setStatusMessage({ type: 'error', text: 'Workbasket name is required and must be valid.' });
+        userMessage = serverMessage || 'Workbasket name is required and must be valid.';
       } else if (error?.status === 403) {
-        setStatusMessage({ type: 'error', text: 'You do not have permission to manage work settings for this firm.' });
-      } else {
-        setStatusMessage({ type: 'error', text: 'Could not create the workbasket due to a server or network error. Please retry.' });
+        userMessage = serverMessage || 'You do not have permission to manage work settings for this firm.';
+      } else if (serverMessage) {
+        userMessage = serverMessage;
       }
+      setStatusMessage({ type: 'error', text: userMessage });
+      showError(userMessage);
     } finally {
       setWorkbasketSaving(false);
     }
   };
 
-  const handleCreateWorkbasket = async () => createWorkbasketByName(workbasketName);
+  const handleCreateWorkbasket = async (e) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    await createWorkbasketByName(workbasketName);
+  };
 
   const handleCreateDefaultRouting = async () => {
     setWorkbasketSaving(true);
@@ -97,12 +105,17 @@ export const WorkSettingsPage = () => {
       await adminApi.createDefaultRouting();
       await loadWorkbaskets();
       setStatusMessage({ type: 'success', text: 'Default routing configured.' });
+      showSuccess('Default routing configured.');
     } catch (error) {
+      const serverMessage = error?.data?.message || error?.message;
+      let userMessage = 'Could not configure default routing. Please retry.';
       if (error?.status === 403) {
-        setStatusMessage({ type: 'error', text: 'You do not have permission to configure default routing for this firm.' });
-      } else {
-        setStatusMessage({ type: 'error', text: 'Could not configure default routing. Please retry.' });
+        userMessage = serverMessage || 'You do not have permission to configure default routing for this firm.';
+      } else if (serverMessage) {
+        userMessage = serverMessage;
       }
+      setStatusMessage({ type: 'error', text: userMessage });
+      showError(userMessage);
     } finally {
       setWorkbasketSaving(false);
     }
@@ -116,8 +129,11 @@ export const WorkSettingsPage = () => {
       await adminApi.renameWorkbasket(workbasket._id, nextName.trim());
       await loadWorkbaskets();
       setStatusMessage({ type: 'success', text: 'Workbasket renamed.' });
-    } catch {
-      setStatusMessage({ type: 'error', text: 'Could not rename this workbasket.' });
+      showSuccess(`Workbasket renamed to "${nextName.trim()}".`);
+    } catch (error) {
+      const msg = error?.data?.message || error?.message || 'Could not rename this workbasket.';
+      setStatusMessage({ type: 'error', text: msg });
+      showError(msg);
     }
   };
 
@@ -126,9 +142,13 @@ export const WorkSettingsPage = () => {
     try {
       await adminApi.toggleWorkbasketStatus(workbasket._id, !workbasket.isActive);
       await loadWorkbaskets();
-      setStatusMessage({ type: 'success', text: 'Workbasket status updated.' });
-    } catch {
-      setStatusMessage({ type: 'error', text: 'Could not update workbasket status.' });
+      const statusLabel = !workbasket.isActive ? 'activated' : 'deactivated';
+      setStatusMessage({ type: 'success', text: `Workbasket status updated to ${statusLabel}.` });
+      showSuccess(`Workbasket "${workbasket.name}" ${statusLabel}.`);
+    } catch (error) {
+      const msg = error?.data?.message || error?.message || 'Could not update workbasket status.';
+      setStatusMessage({ type: 'error', text: msg });
+      showError(msg);
     }
   };
 
@@ -163,8 +183,19 @@ export const WorkSettingsPage = () => {
             </div>
 
             {/* Inline Add Workbasket Form */}
-            <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 space-y-4 max-w-2xl">
-              <h3 className="font-bold text-sm text-slate-700">Add Primary Workbasket</h3>
+            <form onSubmit={handleCreateWorkbasket} className="bg-slate-50 rounded-2xl p-5 border border-slate-100 space-y-4 max-w-2xl">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-sm text-slate-700">Add Primary Workbasket</h3>
+                {statusMessage.text && (
+                  <span className={`text-xs font-semibold ${
+                    statusMessage.type === 'error' ? 'text-rose-600' :
+                    statusMessage.type === 'success' ? 'text-emerald-600' :
+                    'text-indigo-600'
+                  }`}>
+                    {statusMessage.text}
+                  </span>
+                )}
+              </div>
               <div className="flex flex-col sm:flex-row gap-3 items-end">
                 <div className="flex-1 w-full">
                   <Input 
@@ -172,20 +203,20 @@ export const WorkSettingsPage = () => {
                     value={workbasketName} 
                     onChange={(event) => setWorkbasketName(event.target.value)} 
                     placeholder="e.g. Compliance WB" 
+                    disabled={workbasketSaving}
                   />
                 </div>
                 <div className="w-full sm:w-auto">
                   <Button 
-                    type="button" 
+                    type="submit" 
                     variant="primary" 
-                    onClick={handleCreateWorkbasket} 
                     disabled={workbasketSaving || !workbasketName.trim()}
                   >
-                    Add Workbasket
+                    {workbasketSaving ? 'Adding…' : 'Add Workbasket'}
                   </Button>
                 </div>
               </div>
-            </div>
+            </form>
 
             {/* Workbaskets List Area */}
             <div className="space-y-4 pt-2">
