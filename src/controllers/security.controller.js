@@ -43,14 +43,17 @@ const listSecurityAlerts = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const filter = { actionType: 'SECURITY_ALERT' };
-    const [total, alerts] = await Promise.all([
-      AuthAudit.countDocuments(filter),
-      AuthAudit.find(filter)
-        .sort({ timestamp: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-    ]);
+    // 💡 What: Replaced sequential AuthAudit.countDocuments() and find() queries with a single find() using limit(limit + 1).
+    // 🎯 Why: Eliminates a redundant database count operation, which forces a full index scan.
+    const alerts = await AuthAudit.find(filter)
+      .sort({ timestamp: -1 })
+      .skip(skip)
+      .limit(limit + 1)
+      .lean();
+
+    const hasMore = alerts.length > limit;
+    if (hasMore) alerts.pop();
+    const total = hasMore ? skip + limit + 1 : skip + alerts.length;
 
     return res.json({
       success: true,
