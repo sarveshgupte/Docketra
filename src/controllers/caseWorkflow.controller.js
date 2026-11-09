@@ -5,6 +5,7 @@ const { CaseRepository } = require('../repositories');
 const CaseStatus = require('../domain/case/caseStatus');
 const CaseService = require('../services/case.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
+const log = require('../utils/log');
 
 /**
  * Case Workflow Controller
@@ -90,10 +91,10 @@ const submitCase = async (req, res) => {
       message: 'Case submitted successfully',
     });
   } catch (error) {
+    log.error('CASE_SUBMIT_ERROR', { message: error.message, stack: error.stack });
     res.status(500).json({
       success: false,
       message: 'Error submitting case',
-      error: error.message,
     });
   }
 };
@@ -161,10 +162,10 @@ const moveToUnderReview = async (req, res) => {
       message: 'Case moved to under review',
     });
   } catch (error) {
+    log.error('CASE_MOVE_TO_REVIEW_ERROR', { message: error.message, stack: error.stack });
     res.status(500).json({
       success: false,
       message: 'Error moving case to review',
-      error: error.message,
     });
   }
 };
@@ -246,10 +247,10 @@ const closeCase = async (req, res) => {
       message: 'Case closed successfully',
     });
   } catch (error) {
+    log.error('CASE_CLOSE_ERROR', { message: error.message, stack: error.stack });
     res.status(500).json({
       success: false,
       message: 'Error closing case',
-      error: error.message,
     });
   }
 };
@@ -332,10 +333,10 @@ const reopenCase = async (req, res) => {
       message: 'Case reopened successfully',
     });
   } catch (error) {
+    log.error('CASE_REOPEN_ERROR', { message: error.message, stack: error.stack });
     res.status(500).json({
       success: false,
       message: 'Error reopening case',
-      error: error.message,
     });
   }
 };
