@@ -9,22 +9,22 @@ const ADMIN_ROLE_VALUES = ['ADMIN', 'PRIMARY_ADMIN', 'Admin', 'primary_admin', '
 const resolveFirmScopeIds = async (firmOrId) => {
   if (!firmOrId) return [];
   if (Array.isArray(firmOrId)) {
-    return firmOrId.filter(Boolean);
+    return firmOrId.filter((id) => id && mongoose.Types.ObjectId.isValid(id));
   }
   if (typeof firmOrId === 'object' && firmOrId._id) {
-    return [firmOrId._id, firmOrId.defaultClientId, firmOrId.firmId].filter(Boolean);
+    return [firmOrId._id, firmOrId.defaultClientId].filter((id) => id && mongoose.Types.ObjectId.isValid(id));
   }
   if (mongoose.Types.ObjectId.isValid(firmOrId)) {
     try {
-      const firm = await Firm.findById(firmOrId).select('_id defaultClientId firmId').lean();
+      const firm = await Firm.findById(firmOrId).select('_id defaultClientId').lean();
       if (firm) {
-        return [firm._id, firm.defaultClientId, firm.firmId].filter(Boolean);
+        return [firm._id, firm.defaultClientId].filter((id) => id && mongoose.Types.ObjectId.isValid(id));
       }
     } catch (_) {
       // Fallback to the single ID if firm lookup fails
     }
   }
-  return [firmOrId];
+  return mongoose.Types.ObjectId.isValid(firmOrId) ? [firmOrId] : [];
 };
 
 const findFirmAdmin = async (firmObjectId) => {

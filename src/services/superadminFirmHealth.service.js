@@ -40,8 +40,8 @@ const getFirmHealthSnapshot = async ({ limit = 25, status, search } = {}) => {
   const onboardingByFirm = new Map((onboarding?.firms || []).map((row) => [String(row.firmId), row]));
   const storageByFirm = new Map(storageRows.map((row) => [String(row.tenantId), row]));
 
-  // Query admins matching either firm._id (ObjectId) or firm.firmId (string)
-  const allFirmIds = firms.flatMap((f) => [f._id, String(f._id), f.firmId].filter(Boolean));
+  // Query admins matching firm._id (ObjectId) or firm.defaultClientId (ObjectId)
+  const allFirmIds = firms.flatMap((f) => [f._id, f.defaultClientId].filter((id) => id && mongoose.Types.ObjectId.isValid(id)));
   const adminUsers = await User.find({
     firmId: { $in: allFirmIds },
     role: { $in: ADMIN_ROLES },

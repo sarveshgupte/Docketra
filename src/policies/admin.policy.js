@@ -1,3 +1,5 @@
+const { isSuperAdminRole } = require('../utils/role.utils');
+
 /**
  * Admin Authorization Policies
  * 
@@ -19,7 +21,7 @@ const isAdmin = (user) => {
   if (!user) return false;
   
   // SuperAdmin cannot access firm admin operations
-  if (user.role === 'SuperAdmin' || user.role === 'SUPER_ADMIN') {
+  if (isSuperAdminRole(user.role)) {
     return false;
   }
   

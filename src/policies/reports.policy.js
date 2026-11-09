@@ -1,3 +1,5 @@
+const { isSuperAdminRole } = require('../utils/role.utils');
+
 /**
  * Reports Authorization Policies
  * 
@@ -18,7 +20,7 @@ const canGenerate = (user) => {
   if (!user) return false;
   
   // SuperAdmin cannot access firm data
-  if (user.role === 'SuperAdmin' || user.role === 'SUPER_ADMIN') {
+  if (isSuperAdminRole(user.role)) {
     return false;
   }
   
@@ -35,7 +37,7 @@ const canView = (user) => {
   if (!user) return false;
   
   // SuperAdmin cannot access firm data
-  if (user.role === 'SuperAdmin' || user.role === 'SUPER_ADMIN') {
+  if (isSuperAdminRole(user.role)) {
     return false;
   }
   

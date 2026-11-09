@@ -613,9 +613,8 @@ const listFirms = async (req, res) => {
 
     const allTenantKeys = [];
     for (const firm of firms) {
-      if (firm._id) allTenantKeys.push(firm._id);
-      if (firm.defaultClientId) allTenantKeys.push(firm.defaultClientId);
-      if (firm.firmId) allTenantKeys.push(firm.firmId);
+      if (firm._id && mongoose.Types.ObjectId.isValid(firm._id)) allTenantKeys.push(firm._id);
+      if (firm.defaultClientId && mongoose.Types.ObjectId.isValid(firm.defaultClientId)) allTenantKeys.push(firm.defaultClientId);
     }
 
     const [clientCounts, userCounts, admins] = await Promise.all([
@@ -1311,7 +1310,7 @@ const listFirmAdmins = async (req, res) => {
     });
   }
 
-  const firmScopeIds = [firm._id, firm.defaultClientId, firm.firmId].filter(Boolean);
+  const firmScopeIds = [firm._id, firm.defaultClientId].filter((id) => id && mongoose.Types.ObjectId.isValid(id));
   const admins = await User.find({ firmId: { $in: firmScopeIds }, role: { $in: ADMIN_ROLE_VALUES }, status: { $ne: 'deleted' } })
     .select('name email xID status isSystem isPrimaryAdmin lockUntil passwordSetAt inviteSentAt createdAt')
     .sort({ isPrimaryAdmin: -1, isSystem: -1, createdAt: 1 });
