@@ -26,85 +26,54 @@ const getFirmMetrics = async (req, res) => {
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
     // ⚡ Bolt: Replace multiple countDocuments with a single aggregation pipeline
-    // 💡 What: Replaced 5 concurrent Case.countDocuments() queries with a single Case.aggregate() pipeline using conditional sums.
-    // 🎯 Why: Reduces database network round-trips from 5 to 1 and evaluates all counts in a single pass over the matching documents.
-    // 📊 Impact: O(1) query time and network overhead instead of O(N) operations.
-    const [metricsResult] = await Case.aggregate([
-      { $match: { firmId: new mongoose.Types.ObjectId(firmId) } },
-      {
-        $group: {
-          _id: null,
-          overdueComplianceItems: {
-            $sum: {
-              $cond: [
-                {
-                  $and: [
-                    { $lt: ['$dueDate', now] },
-                    { $not: { $in: ['$status', TERMINAL_STATUSES] } }
-                  ]
-                },
-                1,
-                0
-              ]
-            }
-          },
-          dueInSevenDays: {
-            $sum: {
-              $cond: [
-                {
-                  $and: [
-                    { $gte: ['$dueDate', now] },
-                    { $lte: ['$dueDate', sevenDaysFromNow] },
-                    { $not: { $in: ['$status', TERMINAL_STATUSES] } }
-                  ]
-                },
-                1,
-                0
-              ]
-            }
-          },
-          awaitingPartnerReview: {
-            $sum: {
-              $cond: [
-                {
-                  $or: [
-                    { $eq: ['$approvalStatus', 'PENDING'] },
-                    { $in: ['$status', PARTNER_REVIEW_STATUSES] }
-                  ]
-                },
-                1,
-                0
-              ]
-            }
-          },
-          totalOpenCases: {
-            $sum: {
-              $cond: [
-                { $eq: ['$status', 'OPEN'] },
-                1,
-                0
-              ]
-            }
-          },
-          totalExecutedCases: {
-            $sum: {
-              $cond: [
-                { $in: ['$status', EXECUTED_STATUSES] },
-                1,
-                0
-              ]
-            }
-          }
-        }
-      }
+    // 💡 What: Replaced single Case.aggregate() pipeline using conditional sums with concurrent Case.countDocuments() queries.
+    // 🎯 Why: While $group grouping multiple metrics evaluates counts in a single pass, it is an anti-pattern because the pipeline cannot use indexes and risks hitting MongoDB's 100MB aggregation memory limit for large datasets. Individual countDocuments queries can be resolved using fast index scans.
+    // 📊 Impact: Utilizes index scans for better DB performance and memory limits on scale.
+
+    const baseQuery = { firmId: new mongoose.Types.ObjectId(firmId) };
+
+    const [
+      overdueComplianceItems,
+      dueInSevenDays,
+      awaitingPartnerReview,
+      totalOpenCases,
+      totalExecutedCases
+    ] = await Promise.all([
+      Case.countDocuments({
+        ...baseQuery,
+        dueDate: { $lt: now },
+        status: { $nin: TERMINAL_STATUSES }
+      }),
+      Case.countDocuments({
+        ...baseQuery,
+        dueDate: { $gte: now, $lte: sevenDaysFromNow },
+        status: { $nin: TERMINAL_STATUSES }
+      }),
+      Case.countDocuments({
+        ...baseQuery,
+        $or: [
+          { approvalStatus: 'PENDING' },
+          { status: { $in: PARTNER_REVIEW_STATUSES } }
+        ]
+      }),
+      Case.countDocuments({
+        ...baseQuery,
+        status: 'OPEN'
+      }),
+      Case.countDocuments({
+        ...baseQuery,
+        status: { $in: EXECUTED_STATUSES }
+      })
     ]);
 
     return res.json({
       success: true,
       data: {
-        ...EMPTY_FIRM_METRICS,
-        ...metricsResult,
-        _id: undefined,
+        overdueComplianceItems,
+        dueInSevenDays,
+        awaitingPartnerReview,
+        totalOpenCases,
+        totalExecutedCases
       },
     });
   } catch (error) {

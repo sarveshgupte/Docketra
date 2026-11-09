@@ -17,19 +17,18 @@ const createMockRes = () => ({
 });
 
 async function run() {
-  const originalAggregate = Case.aggregate;
+  const originalCountDocuments = Case.countDocuments;
   const queries = [];
 
   try {
-    Case.aggregate = async (pipeline) => {
-      queries.push(pipeline);
-      return [{
-        overdueComplianceItems: [{ count: 3 }],
-        dueInSevenDays: [{ count: 5 }],
-        awaitingPartnerReview: [{ count: 2 }],
-        totalOpenCases: [{ count: 12 }],
-        totalExecutedCases: [{ count: 9 }],
-      }];
+    Case.countDocuments = async (query) => {
+      queries.push(query);
+      if (query.dueDate && query.dueDate.$lt && !query.dueDate.$gte) return 3;
+      if (query.dueDate && query.dueDate.$gte && query.dueDate.$lte) return 5;
+      if (query.$or) return 2;
+      if (query.status === 'OPEN') return 12;
+      if (query.status && query.status.$in) return 9;
+      return 0;
     };
 
     const req = { firmId: '507f1f77bcf86cd799439011' };
@@ -47,13 +46,16 @@ async function run() {
       totalExecutedCases: 9,
     });
 
-    assert.strictEqual(queries.length, 1);
-    const pipeline = queries[0];
-    assert.strictEqual(pipeline[0].$match.firmId, req.firmId);
-    const facet = pipeline[1].$facet;
-    assert.strictEqual(facet.awaitingPartnerReview[0].$match.$or[0].approvalStatus, 'PENDING');
-    assert.strictEqual(facet.totalOpenCases[0].$match.status, 'OPEN');
-    assert.deepStrictEqual(facet.totalExecutedCases[0].$match.status.$in, ['RESOLVED', 'FILED']);
+    assert.strictEqual(queries.length, 5);
+
+    const awaitingPartnerReviewQuery = queries.find(q => q.$or);
+    assert.strictEqual(awaitingPartnerReviewQuery.$or[0].approvalStatus, 'PENDING');
+
+    const totalOpenCasesQuery = queries.find(q => q.status === 'OPEN');
+    assert.strictEqual(totalOpenCasesQuery.status, 'OPEN');
+
+    const totalExecutedCasesQuery = queries.find(q => q.status && q.status.$in);
+    assert.deepStrictEqual(totalExecutedCasesQuery.status.$in, ['RESOLVED', 'FILED']);
 
     const invalidRes = createMockRes();
     await getFirmMetrics({ firmId: 'acme-legal' }, invalidRes);
@@ -71,7 +73,7 @@ async function run() {
     console.error('Firm metrics controller test failed:', error);
     process.exit(1);
   } finally {
-    Case.aggregate = originalAggregate;
+    Case.countDocuments = originalCountDocuments;
   }
 }
 
