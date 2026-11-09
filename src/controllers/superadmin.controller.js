@@ -530,10 +530,12 @@ const getSuperadminAuditLogs = async (req, res) => {
       ];
     }
 
-    const [rows, total] = await Promise.all([
-      SuperadminAudit.find(filter).sort({ timestamp: -1 }).skip(skip).limit(limit).lean(),
-      SuperadminAudit.countDocuments(filter),
-    ]);
+    const rows = await SuperadminAudit.find(filter).sort({ timestamp: -1 }).skip(skip).limit(limit + 1).lean();
+
+    const hasMore = rows.length > limit;
+    if (hasMore) {
+      rows.pop();
+    }
 
     const data = rows.map((row) => {
       const safeMetadata = sanitizeAuditMetadata(row.metadata);
@@ -560,8 +562,7 @@ const getSuperadminAuditLogs = async (req, res) => {
       pagination: {
         page,
         limit,
-        total,
-        hasMore: page * limit < total,
+        hasMore,
       },
     });
   } catch (error) {
