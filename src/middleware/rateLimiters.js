@@ -2,7 +2,7 @@ const rateLimit = require('express-rate-limit');
 const { createHash } = require('crypto');
 const { RedisStore } = require('rate-limit-redis');
 const config = require('../config/config');
-const { getRedisClient, isRedisReady } = require('../config/redis');
+const { getRedisClient, isRedisReady, isRedisFallbackAllowed } = require('../config/redis');
 const metricsService = require('../services/metrics.service');
 const jwtService = require('../services/jwt.service');
 const { getCookieValue } = require('../utils/requestCookies');
@@ -308,9 +308,34 @@ const signupLimiter = createLimiter({
 });
 
 const authBlockEnforcer = async (req, res, next) => {
-  const redis = getRateLimitRedisClient();
-  if (!redis) {
-    if (process.env.NODE_ENV === 'production') {
+  try {
+    const redis = getRateLimitRedisClient();
+    if (!redis) {
+      if (process.env.NODE_ENV === 'production' && !isRedisFallbackAllowed()) {
+        return res.status(503).json({
+          success: false,
+          error: 'SECURITY_DEPENDENCY_UNAVAILABLE',
+          message: 'Redis is required for this security-sensitive endpoint.',
+        });
+      }
+      return next();
+    }
+    const key = `ratelimit:auth:block:${ipKeyGenerator(req)}`;
+    const ttl = await redis.ttl(key);
+    if (ttl > 0) {
+      const message = getRateLimitMessage(req, 'authBlockEnforcer');
+      res.setHeader('Retry-After', String(ttl));
+      return res.status(429).json({
+        success: false,
+        error: 'RATE_LIMIT_EXCEEDED',
+        message,
+        retryAfter: ttl,
+      });
+    }
+    return next();
+  } catch (error) {
+    log.warn('[RATE_LIMIT] authBlockEnforcer Redis check failed; bypassing block check:', error.message);
+    if (process.env.NODE_ENV === 'production' && !isRedisFallbackAllowed()) {
       return res.status(503).json({
         success: false,
         error: 'SECURITY_DEPENDENCY_UNAVAILABLE',
@@ -319,19 +344,6 @@ const authBlockEnforcer = async (req, res, next) => {
     }
     return next();
   }
-  const key = `ratelimit:auth:block:${ipKeyGenerator(req)}`;
-  const ttl = await redis.ttl(key);
-  if (ttl > 0) {
-    const message = getRateLimitMessage(req, 'authBlockEnforcer');
-    res.setHeader('Retry-After', String(ttl));
-    return res.status(429).json({
-      success: false,
-      error: 'RATE_LIMIT_EXCEEDED',
-      message,
-      retryAfter: ttl,
-    });
-  }
-  return next();
 };
 
 const sensitiveLimiter = createLimiter({

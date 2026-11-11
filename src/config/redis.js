@@ -141,4 +141,4 @@ const resetRedisClientForTests = async () => {
   }
 };
 
-module.exports = { getRedisClient, isRedisReady, isRedisUrlConfigured, isRedisUrlValid, closeRedisConnection, _resetRedisClientForTests: resetRedisClientForTests };
+module.exports = { getRedisClient, isRedisReady, isRedisUrlConfigured, isRedisUrlValid, isRedisFallbackAllowed, closeRedisConnection, _resetRedisClientForTests: resetRedisClientForTests };
