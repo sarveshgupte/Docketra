@@ -22,8 +22,7 @@ const createTeam = async (req, res) => {
     const managerId = req.body?.managerId || null;
     if (!name) return res.status(400).json({ success: false, message: 'Team name is required' });
     if (managerId && !isValidObjectId(managerId)) return res.status(400).json({ success: false, message: 'Invalid managerId' });
-    const effectiveFirmId = req.user?.firmId || req.ownershipFirmId || req.firmId || req.tenant?.id;
-    const { primary: team } = await createPrimaryWithQc({ firmId: effectiveFirmId, name, managerId });
+    const { primary: team } = await createPrimaryWithQc({ firmId: req.user.firmId, name, managerId });
     return res.status(201).json({ success: true, data: team });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message || 'Failed to create team' });

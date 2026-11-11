@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PublicMarketingHeader from '../marketing/PublicMarketingHeader';
 import LandingProductTourModal from './LandingProductTourModal';
+import InteractiveProductCanvas from './InteractiveProductCanvas';
+import ComplianceVsGenericComparison from './ComplianceVsGenericComparison';
 import Container from '../layout/Container';
 import SeoHead from '../common/SeoHead';
 
@@ -13,142 +15,99 @@ const REVEAL = {
   viewport: { once: true, amount: 0.08 },
 };
 
-/* --- Icons --- */
-const ArrowRightIcon = ({ className = 'h-4 w-4' }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M5 12h14" />
-    <path d="m12 5 7 7-7 7" />
+const PRACTICE_PILLARS = [
+  {
+    id: 'cs',
+    title: 'Company Secretaries (PCS)',
+    role: 'Corporate Governance & ROC Radar',
+    stat: 'MCA V3 Ready',
+    description: 'Track annual filings, director KYC, board resolutions, and charge registrations without spreadsheet chaos.',
+    capabilities: [
+      { form: 'AOC-4 & MGT-7', label: 'Annual filing checklists with pre-scrutiny verification' },
+      { form: 'DIR-3 KYC & DSC', label: 'Director identification and token validity tracking' },
+      { form: 'PAS-3 & CHG-1', label: 'Allotment and charge creation audit trail' },
+      { form: 'ROC Cutoff Radar', label: 'Automated warnings before compounding late fee penalties apply' },
+    ],
+    link: '/solutions/company-secretaries',
+  },
+  {
+    id: 'ca',
+    title: 'Chartered Accountants (CA)',
+    role: 'Taxation, GST & Statutory Audit',
+    stat: 'Private Drive BYOS',
+    description: 'Keep working papers, challans, and 3CD audit schedules protected inside your private Google Drive.',
+    capabilities: [
+      { form: 'Tax Audit 3CD', label: 'Clause-by-clause trainee checklists with maker-checker sign-off' },
+      { form: 'GSTR-3B & 9', label: 'Monthly reconciliation queues and challan storage' },
+      { form: 'Client Drop Link', label: 'Simple upload link so clients send bills with zero login hassle' },
+      { form: 'Trainee Shield', label: 'Article assistants cannot copy client ledgers onto personal hard drives' },
+    ],
+    link: '/solutions/chartered-accountants',
+  },
+  {
+    id: 'legal',
+    title: 'Corporate Legal Teams',
+    role: 'Litigation, Contracts & Advisory',
+    stat: 'Audit Trail Sealed',
+    description: 'Track tribunal dates, company petitions, notice replies, and client dockets in a unified sovereign vault.',
+    capabilities: [
+      { form: 'NCLT & HC Radar', label: 'Next hearing tracking with order sheet repository' },
+      { form: 'Docket Folders', label: 'Case briefs and pleadings organized automatically in Drive' },
+      { form: 'Partner Approval', label: 'Mandatory quality review on legal notices and plaints' },
+      { form: 'Client Memory', label: 'Entity master registry with director and signatory dossiers' },
+    ],
+    link: '/solutions/corporate-legal-teams',
+  },
+];
+
+const CheckIcon = () => (
+  <svg className="h-4 w-4 text-emerald-600 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
   </svg>
 );
 
-const CheckCircleIcon = ({ className = 'h-5 w-5 text-amber-400 shrink-0' }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="12" cy="12" r="10" />
-    <path d="m9 12 2 2 4-4" />
-  </svg>
-);
-
-const XCircleIcon = ({ className = 'h-5 w-5 text-rose-500 shrink-0' }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="12" cy="12" r="10" />
-    <path d="m15 9-6 6" />
-    <path d="m9 9 6 6" />
-  </svg>
-);
-
-const ClockIcon = ({ className = 'h-5 w-5' }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="12" cy="12" r="10" />
-    <polyline points="12 6 12 12 16 14" />
-  </svg>
-);
-
-const UploadIcon = ({ className = 'h-5 w-5' }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-    <polyline points="17 8 12 3 7 8" />
-    <line x1="12" y1="3" x2="12" y2="15" />
-  </svg>
-);
-
-const ListTodoIcon = ({ className = 'h-5 w-5' }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect x="3" y="5" width="6" height="6" rx="1" />
-    <path d="m3 17 2 2 4-4" />
-    <path d="M13 6h8" />
-    <path d="M13 12h8" />
-    <path d="M13 18h8" />
-  </svg>
-);
-
-const CheckCheckIcon = ({ className = 'h-5 w-5' }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M18 6 7 17l-5-5" />
-    <path d="m22 10-7.5 7.5L13 16" />
-  </svg>
-);
-
-const IdCardIcon = ({ className = 'h-5 w-5' }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect width="20" height="14" x="2" y="5" rx="2" />
-    <line x1="2" x2="22" y1="10" y2="10" />
-    <line x1="6" x2="10" y1="15" y2="15" />
-  </svg>
-);
-
-const ShieldCheckIcon = ({ className = 'h-5 w-5' }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
-    <path d="m9 12 2 2 4-4" />
-  </svg>
-);
-
-/* --- Section 1: Hero Section (Dark Ink Theme with Mehta & Associates Live Docket Widget) --- */
 const HeroSection = ({ onOpenTour }) => (
-  <section className="relative overflow-hidden bg-[#111215] text-slate-100 border-b border-slate-800">
-    {/* Subtle Background Radial Grid */}
-    <div
-      className="pointer-events-none absolute inset-0 opacity-20"
-      style={{
-        backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.2) 1px, transparent 0)',
-        backgroundSize: '24px 24px',
-        maskImage: 'radial-gradient(ellipse 70% 60% at 70% 30%, black, transparent)',
-        WebkitMaskImage: 'radial-gradient(ellipse 70% 60% at 70% 30%, black, transparent)',
-      }}
-      aria-hidden="true"
-    />
+  <section className="relative overflow-hidden bg-slate-50/60 pt-20 pb-16 sm:pt-24 sm:pb-20 lg:pt-28 lg:pb-24 border-b border-slate-200">
+    <Container size="7xl" className="relative">
+      <div className="grid items-center gap-10 lg:gap-12 lg:grid-cols-2">
+        <motion.div {...REVEAL} className="space-y-5">
+          {/* Headline - Primary H1 */}
+          <h1 className="text-3xl font-extrabold leading-[1.12] tracking-tight text-slate-950 sm:text-4xl lg:text-5xl [text-wrap:balance]">
+            The Company Brain for Indian professional firms.
+          </h1>
 
-    <Container size="7xl" className="relative pb-20 pt-16 sm:pb-24 sm:pt-20 lg:pb-28 lg:pt-24">
-      <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-14">
-        <motion.div {...REVEAL} className="space-y-6">
-          {/* Eyebrow Pill */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-900/80 px-3.5 py-1 text-[11px] font-mono tracking-widest uppercase text-slate-300">
-            <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-            <span>Built for Indian professional firms</span>
-          </div>
-
-          {/* Primary H1 + Editorial Italic Hook */}
-          <div>
-            <h1 className="text-3xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-4xl lg:text-5xl [text-wrap:balance]">
-              The Company Brain for Indian professional firms.
-            </h1>
-            <p className="mt-3 font-display italic text-3xl sm:text-4xl lg:text-[2.75rem] leading-tight text-amber-400 font-normal">
-              Every client, deadline and document — in one place.
-            </p>
-          </div>
-
-          {/* Plain English Lede */}
-          <p className="text-base sm:text-lg font-normal leading-relaxed text-slate-300 max-w-xl [text-wrap:pretty]">
-            Docketra is built for Indian professional firms: CS, CA, law, and compliance teams. It reminds you of every GST, ROC, and tax filing before it’s late, collects client documents with 1-click drop links, and enforces partner sign-off before submission.
+          {/* Lede - Simple plain English */}
+          <p className="text-base sm:text-lg font-normal leading-relaxed text-slate-600 max-w-xl [text-wrap:pretty]">
+            Built for Indian professional firms: CS, CA, law, and compliance teams.
           </p>
 
           {/* Practice Quick-Navigation Strip */}
-          <div className="pt-2">
-            <span className="text-[11px] font-semibold font-mono uppercase tracking-wider text-slate-400 block mb-2.5">
+          <div className="pt-1 pb-1">
+            <span className="text-xs font-semibold text-slate-500 block mb-2">
               Tailored For Your Practice:
             </span>
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <Link
                 to="/solutions/company-secretaries"
-                className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/90 px-3 py-1 font-medium text-slate-200 hover:border-slate-500 hover:text-white transition-colors"
+                className="inline-flex items-center border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-800 hover:border-slate-400 hover:text-slate-950 transition-colors shadow-xs rounded-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-100"
               >
                 <span>Company Secretaries (PCS)</span>
               </Link>
               <Link
                 to="/solutions/chartered-accountants"
-                className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/90 px-3 py-1 font-medium text-slate-200 hover:border-slate-500 hover:text-white transition-colors"
+                className="inline-flex items-center border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-800 hover:border-slate-400 hover:text-slate-950 transition-colors shadow-xs rounded-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-100"
               >
                 <span>Chartered Accountants (CA)</span>
               </Link>
               <Link
                 to="/solutions/corporate-legal-teams"
-                className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/90 px-3 py-1 font-medium text-slate-200 hover:border-slate-500 hover:text-white transition-colors"
+                className="inline-flex items-center border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-800 hover:border-slate-400 hover:text-slate-950 transition-colors shadow-xs rounded-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-100"
               >
                 <span>Corporate Legal Teams</span>
               </Link>
               <Link
                 to="/compare/docketra-vs-excel-whatsapp"
-                className="inline-flex items-center rounded-full border border-amber-500/40 bg-amber-950/40 px-3 py-1 font-medium text-amber-300 hover:border-amber-400 hover:text-amber-200 transition-colors"
+                className="inline-flex items-center border border-amber-200 bg-amber-50 px-3 py-1.5 font-medium text-amber-900 hover:border-amber-400 hover:text-amber-950 transition-colors rounded-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-amber-100"
               >
                 <span>vs. Excel &amp; WhatsApp</span>
               </Link>
@@ -156,18 +115,17 @@ const HeroSection = ({ onOpenTour }) => (
           </div>
 
           {/* Primary Action Row */}
-          <div className="flex flex-wrap items-center gap-3.5 pt-3">
+          <div className="flex flex-wrap items-center gap-3 pt-2">
             <Link
               to="/signup"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-amber-400 px-6 text-sm font-bold text-slate-950 transition-all hover:bg-amber-300 hover:shadow-lg hover:shadow-amber-400/20 active:scale-[0.98]"
+              className="inline-flex h-12 items-center justify-center rounded-xs bg-slate-950 px-6 text-sm font-semibold text-amber-300 transition-colors hover:bg-slate-800 shadow-sm shrink-0 whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-900"
             >
               <span>Create workspace</span>
-              <ArrowRightIcon className="h-4 w-4" />
             </Link>
 
             <Link
               to="/find-workspace"
-              className="inline-flex h-12 items-center justify-center rounded-full border border-slate-700 bg-slate-900/70 px-5 text-sm font-semibold text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+              className="inline-flex h-12 items-center justify-center rounded-xs border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-800 hover:bg-slate-50 hover:border-slate-400 transition-colors shadow-xs shrink-0 whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-100"
             >
               <span>Find workspace</span>
             </Link>
@@ -175,270 +133,281 @@ const HeroSection = ({ onOpenTour }) => (
             <button
               type="button"
               onClick={onOpenTour}
-              className="inline-flex h-12 items-center justify-center rounded-full border border-slate-800 bg-transparent px-5 text-xs font-mono text-slate-400 hover:border-slate-700 hover:text-slate-200 transition-colors cursor-pointer"
+              className="inline-flex h-12 items-center justify-center rounded-xs border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-800 hover:bg-slate-50 hover:border-slate-400 transition-colors shadow-xs shrink-0 whitespace-nowrap cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span>Product tour</span>
             </button>
           </div>
 
-          {/* Microcopy & Guarantees */}
-          <p className="text-xs font-mono text-slate-400 pt-1">
-            No credit card required • 100% Google Drive BYOS • Set up in 10 minutes
-          </p>
-        </motion.div>
-
-        {/* Right Column: Mehta & Associates Live Docket Widget */}
-        <motion.div {...REVEAL} className="relative isolate">
-          {/* Ambient Glow Accent */}
-          <div className="absolute -inset-1 -z-10 rounded-2xl bg-gradient-to-b from-amber-500/20 via-slate-800/20 to-transparent blur-xs" />
-
-          <div className="rounded-2xl border border-slate-700/80 bg-white p-6 sm:p-7 text-slate-950 shadow-2xl">
-            {/* Header */}
-            <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <p className="text-xs font-medium text-slate-500">Mehta &amp; Associates</p>
-                <p className="font-display text-2xl font-bold tracking-tight text-slate-950">This week</p>
-              </div>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200 px-3 py-1 text-xs font-bold text-rose-700">
-                <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-pulse" />
-                1 due today
-              </span>
-            </div>
-
-            {/* Live Filing Items */}
-            <ul className="divide-y divide-slate-100 text-left">
-              <li className="flex items-center justify-between py-3.5">
-                <div>
-                  <p className="text-sm font-bold text-slate-950">Zenith Logistics Pvt Ltd</p>
-                  <p className="text-xs text-slate-500">DIR-3 KYC • DIN 08924152</p>
-                </div>
-                <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                  Due today
-                </span>
-              </li>
-
-              <li className="flex items-center justify-between py-3.5">
-                <div>
-                  <p className="text-sm font-bold text-slate-950">Neo Retail Solutions</p>
-                  <p className="text-xs text-slate-500">AOC-4 filing • Annual Compliance</p>
-                </div>
-                <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                  In 3 days
-                </span>
-              </li>
-
-              <li className="flex items-center justify-between py-3.5">
-                <div>
-                  <p className="text-sm font-bold text-slate-950">Apex Bio-Tech LLP</p>
-                  <p className="text-xs text-slate-500">Tax Audit 3CD • 44 Clauses</p>
-                </div>
-                <span className="text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
-                  Partner review
-                </span>
-              </li>
-
-              <li className="flex items-center justify-between py-3.5">
-                <div>
-                  <p className="text-sm font-bold text-slate-950">Sharma Textiles</p>
-                  <p className="text-xs text-slate-500">GSTR-3B • Monthly Return</p>
-                </div>
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  Filed ✓
-                </span>
-              </li>
-            </ul>
-
-            {/* Footer Status Pill */}
-            <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-              <span className="flex items-center gap-1.5 font-medium">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Live Drive Sync Active
-              </span>
-              <span className="font-mono text-slate-400">4 of 4 dockets verified</span>
-            </div>
+          {/* Value Badges */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-600 pt-2">
+            <span className="flex items-center gap-2">
+              <CheckIcon />
+              <span>Private Google Drive storage</span>
+            </span>
+            <span className="flex items-center gap-2">
+              <CheckIcon />
+              <span>Partner review on every filing</span>
+            </span>
+            <span className="flex items-center gap-2">
+              <CheckIcon />
+              <span>Free evaluation for up to 5 clients</span>
+            </span>
           </div>
         </motion.div>
+
+        {/* Right Hero: The Interactive Workstation Signature */}
+        <motion.div
+          initial={false}
+          whileInView={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+          viewport={{ once: true }}
+          className="relative w-full max-w-full"
+        >
+          <InteractiveProductCanvas />
+        </motion.div>
       </div>
     </Container>
   </section>
 );
 
-/* --- Section 2: The Problem (Mapped to #why) --- */
-const ProblemSection = () => (
-  <section id="why" className="scroll-mt-16 bg-white py-20 sm:py-28 border-b border-slate-200">
-    <Container size="5xl">
-      <div className="mx-auto mb-14 max-w-2xl text-center">
-        <p className="mb-3 font-mono text-xs uppercase tracking-[0.25em] text-amber-600 font-bold">
-          — The problem
-        </p>
-        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-950 leading-[1.08]">
-          Running a firm on Excel and WhatsApp is risky.
-        </h2>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Without Docketra */}
-        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-8">
-          <p className="mb-6 font-mono text-xs uppercase tracking-widest text-slate-500 font-bold">
-            Without Docketra
-          </p>
-          <ul className="space-y-4">
-            <li className="flex items-start gap-3 text-sm text-slate-700 leading-relaxed">
-              <XCircleIcon />
-              <span>Deadlines tracked in Excel — and missed when staff or articles are overloaded</span>
-            </li>
-            <li className="flex items-start gap-3 text-sm text-slate-700 leading-relaxed">
-              <XCircleIcon />
-              <span>Client PAN cards, confidential returns, and bank statements lost in WhatsApp chats</span>
-            </li>
-            <li className="flex items-start gap-3 text-sm text-slate-700 leading-relaxed">
-              <XCircleIcon />
-              <span>No verifiable record or audit trail of who prepared, checked, or approved a filing</span>
-            </li>
-          </ul>
-        </div>
-
-        {/* With Docketra */}
-        <div className="rounded-2xl border border-slate-800 bg-[#111215] p-8 text-white shadow-xl">
-          <p className="mb-6 font-mono text-xs uppercase tracking-widest text-amber-400 font-bold">
-            With Docketra
-          </p>
-          <ul className="space-y-4">
-            <li className="flex items-start gap-3 text-sm text-slate-200 leading-relaxed">
-              <CheckCircleIcon />
-              <span>Automatic reminders and radar warnings before any MCA or tax late fees apply</span>
-            </li>
-            <li className="flex items-start gap-3 text-sm text-slate-200 leading-relaxed">
-              <CheckCircleIcon />
-              <span>Clients upload documents through one simple WhatsApp link with zero password hassle</span>
-            </li>
-            <li className="flex items-start gap-3 text-sm text-slate-200 leading-relaxed">
-              <CheckCircleIcon />
-              <span>Every filing checked and signed off by a partner with a permanent, peer-review audit seal</span>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </Container>
-  </section>
-);
-
-/* --- Section 3: How It Works - 4 Steps (Mapped to #workflow) --- */
-const HowItWorksSection = () => (
-  <section id="workflow" className="scroll-mt-16 bg-[#111215] py-20 sm:py-28 text-white border-b border-slate-800">
+const HighlightsStrip = () => (
+  <section className="border-b border-slate-200 bg-white py-8">
     <Container size="7xl">
-      <div className="mx-auto mb-14 max-w-2xl text-center">
-        <p className="mb-3 font-mono text-xs uppercase tracking-[0.25em] text-amber-400 font-bold">
-          — How it works
-        </p>
-        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-[1.08]">
-          Up and running in four steps.
-        </h2>
+      <div className="grid grid-cols-1 min-[440px]:grid-cols-2 md:grid-cols-4 gap-6">
+        {[
+          {
+            stat: '100% Drive BYOS',
+            label: 'Private Google Drive',
+            desc: 'Files save strictly into your own Drive. Zero third-party cloud custody.',
+          },
+          {
+            stat: 'Trainee Shield',
+            label: 'Endpoint Protection',
+            desc: 'Clerks view documents in-browser. Raw file downloads to personal laptops are blocked.',
+          },
+          {
+            stat: '100% Partner Sign-off',
+            label: 'Maker-Checker QC',
+            desc: 'Mandatory partner review before any form is submitted to government portals.',
+          },
+          {
+            stat: 'Drive Tamper Guard',
+            label: 'Automatic Recovery',
+            desc: 'Accidental folder moves or deletions in Google Drive heal automatically.',
+          },
+        ].map((item, idx) => (
+          <div key={idx} className="border-l-2 border-slate-300 pl-4 py-1 hover:border-slate-900 transition-colors">
+            <span className="text-xs font-medium text-slate-500 block">{item.label}</span>
+            <p className="text-base font-bold text-slate-950 mt-1">{item.stat}</p>
+            <p className="text-xs text-slate-600 mt-1 leading-relaxed">{item.desc}</p>
+          </div>
+        ))}
       </div>
+    </Container>
+  </section>
+);
 
-      <ol className="grid overflow-hidden rounded-2xl border border-slate-800 md:grid-cols-4 bg-slate-900/40">
+const PracticeMatrixSection = () => {
+  const [activeTab, setActiveTab] = useState('cs');
+  const currentPillar = PRACTICE_PILLARS.find((p) => p.id === activeTab) || PRACTICE_PILLARS[0];
+
+  return (
+    <section id="product" className="scroll-mt-16 bg-slate-50/50 py-16 sm:py-24 border-b border-slate-200">
+      <Container size="7xl">
+        <motion.div className="max-w-3xl" {...REVEAL}>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-950 [text-wrap:balance]">
+            Tailored Regulatory Engines for Indian Practices
+          </h2>
+          <p className="mt-3 text-sm sm:text-base text-slate-600 leading-relaxed max-w-2xl [text-wrap:pretty]">
+            Generic tools fail because they do not understand MCA V3 forms, Form 3CD clauses, GSTR-3B cutoffs, or peer review standards. Docketra organizes your work into clear Worklist queues, department Workbaskets, and QC Workbaskets.
+          </p>
+        </motion.div>
+
+        {/* Practice Selector Tabs */}
+        <div className="mt-8 flex flex-wrap gap-2 border-b border-slate-200 pb-3">
+          {PRACTICE_PILLARS.map((pillar) => (
+            <button
+              key={pillar.id}
+              type="button"
+              onClick={() => setActiveTab(pillar.id)}
+              className={`px-4 py-2.5 text-xs font-semibold rounded-sm border transition-colors cursor-pointer flex items-center gap-2 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed ${
+                activeTab === pillar.id
+                  ? 'border-slate-950 bg-slate-950 text-white shadow-xs'
+                  : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-950'
+              }`}
+            >
+              <span>{pillar.title}</span>
+              <span
+                className={`text-[11px] px-2 py-0.5 rounded-xs border ${
+                  activeTab === pillar.id
+                    ? 'border-amber-400 bg-slate-900 text-amber-300'
+                    : 'border-slate-200 bg-slate-50 text-slate-600'
+                }`}
+              >
+                {pillar.stat}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Selected Practice Display */}
+        <div className="mt-6 border border-slate-200 bg-white p-6 sm:p-8 rounded-lg shadow-xs">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+            <div>
+              <span className="text-xs font-semibold text-amber-800 bg-amber-50 px-2.5 py-1 border border-amber-200 rounded-xs">
+                {currentPillar.role}
+              </span>
+              <h3 className="text-xl sm:text-2xl font-bold text-slate-950 mt-3">
+                {currentPillar.title}
+              </h3>
+              <p className="text-sm text-slate-600 mt-1 max-w-2xl leading-relaxed">
+                {currentPillar.description}
+              </p>
+            </div>
+            <Link
+              to={currentPillar.link}
+              className="inline-flex items-center gap-1.5 px-4 py-2 border border-slate-300 bg-slate-50 text-slate-800 font-semibold text-xs rounded hover:bg-slate-100 hover:border-slate-400 transition-colors self-start lg:self-auto shrink-0 shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-200"
+            >
+              <span>Explore {currentPillar.title.split(' ')[0]} Workflows</span>
+            </Link>
+          </div>
+
+          <div className="pt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {currentPillar.capabilities.map((cap, idx) => (
+              <div key={idx} className="border border-slate-200 bg-slate-50/70 p-4 rounded-md space-y-1 hover:border-slate-300 transition-colors">
+                <span className="font-mono text-xs font-bold text-slate-950 block">
+                  {cap.form}
+                </span>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  {cap.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Operational Modules Grid */}
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            {
+              title: 'Client Memory Dossier',
+              body: 'Centralize CIN, PAN, TAN, DIN, authorized signatories, and DSC expiry in one master card with one-click portal copy.',
+              tag: '1-Click Portal Copy',
+            },
+            {
+              title: 'Zero-Login Client Upload Link',
+              body: 'Send clients a secure WhatsApp-friendly link to drop bank statements, bills, and challans without password hassle.',
+              tag: 'No Password Friction',
+            },
+            {
+              title: 'Personal Worklists & Shared Queues',
+              body: 'Staff receive prioritized daily Worklists, while practice managers route complex cases through department Workbaskets.',
+              tag: 'Clear Accountability',
+            },
+            {
+              title: 'Mandatory QC & 4-Eye Review',
+              body: 'Draft filings and working papers cannot be closed without partner verification in QC Workbaskets.',
+              tag: 'Partner Review Enforced',
+            },
+            {
+              title: 'Pre-loaded Statutory Blueprints',
+              body: 'Standardized workflows for MCA annual filings, Form 3CD clauses, GSTR reconciliations, and DIR-3 KYC.',
+              tag: 'Article Clerk Guidance',
+            },
+            {
+              title: 'Private Google Drive Storage',
+              body: 'Client documents never leave your firm’s Google Drive. Even if you cancel Docketra, 100% of your records stay in your own folders.',
+              tag: 'Permanent Custody',
+            },
+          ].map((feature) => (
+            <div
+              key={feature.title}
+              className="border border-slate-200 bg-white p-5 flex flex-col justify-between hover:border-slate-400 transition-colors rounded shadow-xs"
+            >
+              <div>
+                <h3 className="text-sm font-bold text-slate-950">{feature.title}</h3>
+                <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">{feature.body}</p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-500 font-medium">
+                <CheckIcon />
+                <span>{feature.tag}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Container>
+    </section>
+  );
+};
+
+const ProblemSection = () => (
+  <section id="why" className="scroll-mt-16 bg-white py-16 sm:py-24 border-b border-slate-200">
+    <Container size="7xl">
+      <motion.div className="max-w-3xl" {...REVEAL}>
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-950 [text-wrap:balance]">
+          Why Excel & WhatsApp Fail Busy Professional Firms
+        </h2>
+        <p className="mt-3 text-sm sm:text-base text-slate-600 leading-relaxed [text-wrap:pretty]">
+          WhatsApp mixes confidential PAN copies and financial statements with personal conversations. Excel cannot prevent trainee data leakage, track MCA late fees, or enforce partner sign-offs.
+        </p>
+      </motion.div>
+
+      <div className="mt-8">
+        <ComplianceVsGenericComparison />
+      </div>
+    </Container>
+  </section>
+);
+
+const HowItWorksSection = () => (
+  <section id="workflow" className="scroll-mt-16 bg-slate-50/50 py-16 sm:py-24 border-b border-slate-200">
+    <Container size="7xl">
+      <motion.div className="max-w-3xl" {...REVEAL}>
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-950 [text-wrap:balance]">
+          How Work Moves Through Docketra
+        </h2>
+        <p className="mt-3 text-sm sm:text-base text-slate-600 leading-relaxed [text-wrap:pretty]">
+          A clear 4-step workflow built for the maker-checker standard: staff prepares, partners review, and all files stay inside your firm’s private Google Drive.
+        </p>
+      </motion.div>
+
+      <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
             step: '01',
-            title: 'Create your workspace',
-            desc: 'Sign up and connect your firm’s private Google Drive. Takes about 10 minutes with zero IT complexity.',
+            title: 'Create the Docket',
+            desc: 'Open a client matter in seconds. A dedicated folder is created automatically in your firm’s Google Drive.',
+            detail: 'Private folder in your own Drive',
           },
           {
             step: '02',
-            title: 'Add your clients',
-            desc: 'Enter PAN, CIN or GSTIN. Docketra sets up client memory cards and statutory filing calendars automatically.',
+            title: 'Assign to Staff',
+            desc: 'Assign filing steps to associates or article clerks with pre-loaded statutory checklists and clear deadlines.',
+            detail: 'Blocks file downloads to personal laptops',
           },
           {
             step: '03',
-            title: 'Assign work to your team',
-            desc: 'Staff receive clear daily Worklists while managers route complex dockets through department Workbaskets.',
+            title: 'Collect & Prepare',
+            desc: 'Clients upload documents via secure, no-login links. All drafts and working papers save directly into your Drive.',
+            detail: 'Zero files touch external cloud servers',
           },
           {
             step: '04',
-            title: 'Review and file',
-            desc: 'A partner approves drafts in QC Workbaskets, then files to government portals. Everything is sealed in an audit trail.',
+            title: 'Partner Sign-Off',
+            desc: 'Partners verify draft challans and working papers in QC Workbaskets, sign off with one click, and submit to government portals.',
+            detail: 'Audit trail ready for ICAI & ICSI reviews',
           },
-        ].map((item, idx) => (
-          <li
-            key={item.step}
-            className={`p-8 transition-colors hover:bg-slate-800/40 ${
-              idx > 0 ? 'border-t border-slate-800 md:border-t-0 md:border-l' : ''
-            }`}
-          >
-            <span className="font-mono text-sm font-bold text-amber-400 block">
-              {item.step} /
-            </span>
-            <h3 className="mt-8 text-lg font-bold text-white">{item.title}</h3>
-            <p className="mt-3 text-sm leading-relaxed text-slate-400">{item.desc}</p>
-          </li>
-        ))}
-      </ol>
-    </Container>
-  </section>
-);
-
-/* --- Section 4: What You Get - 6 Core Capabilities (Mapped to #product) --- */
-const FeaturesSection = () => (
-  <section id="product" className="scroll-mt-16 bg-white py-20 sm:py-28 border-b border-slate-200">
-    <Container size="7xl">
-      <div className="mx-auto mb-14 max-w-2xl text-center">
-        <p className="mb-3 font-mono text-xs uppercase tracking-[0.25em] text-amber-600 font-bold">
-          — What you get
-        </p>
-        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-950 leading-[1.08]">
-          Everything your firm needs. Nothing it doesn’t.
-        </h2>
-        <p className="mt-4 text-base text-slate-600">
-          Built around how Indian CA, CS, and compliance firms actually work every single day.
-        </p>
-      </div>
-
-      <div className="grid overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 sm:grid-cols-2 lg:grid-cols-3 gap-px">
-        {[
-          {
-            icon: ClockIcon,
-            title: 'Deadline reminders',
-            desc: 'GST, ROC (MCA), income tax, and tax audit due dates tracked across all clients — with automated warnings before late fees apply.',
-          },
-          {
-            icon: UploadIcon,
-            title: 'Client upload link',
-            desc: 'Send a link on WhatsApp. Clients upload bank statements, challans, and bills directly into your Drive with zero passwords.',
-          },
-          {
-            icon: ListTodoIcon,
-            title: 'Daily team to-do lists',
-            desc: 'Every staff member knows exactly what to work on today. Managers see team execution in real-time Worklists.',
-          },
-          {
-            icon: CheckCheckIcon,
-            title: 'Partner sign-off',
-            desc: 'Work cannot be marked complete without partner sign-off in QC Workbaskets. Fully defensible for ICAI and ICSI peer review.',
-          },
-          {
-            icon: IdCardIcon,
-            title: 'Client details in one card',
-            desc: 'PAN, TAN, CIN, DIN, authorized signatories, and DSC expiry stored in one master card — copy to portals in one click.',
-          },
-          {
-            icon: ShieldCheckIcon,
-            title: 'Ready-made checklists',
-            desc: 'Turnkey statutory templates for AOC-4, MGT-7, Form 3CD clauses, GSTR, and DIR-3 KYC. Perfect for article clerks.',
-          },
-        ].map((feature) => (
-          <div
-            key={feature.title}
-            className="group bg-white p-8 transition-colors hover:bg-[#111215] hover:text-white"
-          >
-            <span className="grid h-11 w-11 place-items-center rounded-full bg-slate-100 text-slate-900 transition-colors group-hover:bg-amber-400 group-hover:text-slate-950">
-              <feature.icon className="h-5 w-5" />
-            </span>
-            <h3 className="mt-8 text-lg font-bold text-slate-950 group-hover:text-white">
-              {feature.title}
+        ].map((item) => (
+          <div key={item.step} className="border border-slate-200 bg-white p-6 hover:border-slate-400 transition-colors rounded shadow-xs">
+            <h3 className="text-sm font-bold text-slate-950">
+              <span className="text-amber-800 font-semibold mr-1.5">{item.step}.</span>
+              {item.title}
             </h3>
-            <p className="mt-2 text-sm leading-relaxed text-slate-600 group-hover:text-slate-300">
-              {feature.desc}
-            </p>
+            <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">{item.desc}</p>
+            <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 font-medium">
+              <span>{item.detail}</span>
+            </div>
           </div>
         ))}
       </div>
@@ -446,109 +415,118 @@ const FeaturesSection = () => (
   </section>
 );
 
-/* --- Section 5: Client Confidentiality & Security (Mapped to #trust) --- */
 const TrustSection = () => (
-  <section id="trust" className="scroll-mt-16 bg-[#111215] py-20 sm:py-28 text-white border-b border-slate-800">
+  <section id="trust" className="scroll-mt-16 bg-slate-950 py-16 sm:py-24 text-white border-b border-slate-800">
     <Container size="7xl">
-      <div className="grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:items-center">
-        <div>
-          <p className="mb-3 font-mono text-xs uppercase tracking-[0.25em] text-amber-400 font-bold">
-            — Your data, your control
-          </p>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-[1.08]">
-            Client confidentiality, built in.
-          </h2>
-          <p className="mt-4 text-base sm:text-lg text-slate-300 leading-relaxed">
-            Your clients trust you with sensitive financial records. Docketra is engineered with Bring-Your-Own-Storage so working papers never leave your custody.
-          </p>
-        </div>
-
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 transition-colors hover:border-slate-700">
-            <h3 className="text-lg font-bold text-white">Files stay in your Google Drive</h3>
-            <p className="mt-1.5 text-sm text-slate-300 leading-relaxed">
-              We never store your client documents on third-party servers. If you ever cancel Docketra, 100% of your folder hierarchy remains intact in your own Google Drive.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 transition-colors hover:border-slate-700">
-            <h3 className="text-lg font-bold text-white">Trainees can’t download files</h3>
-            <p className="mt-1.5 text-sm text-slate-300 leading-relaxed">
-              Article assistants view working papers securely inside the browser viewer. Local hard drive downloads are restricted to protect client ledgers.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 transition-colors hover:border-slate-700">
-            <h3 className="text-lg font-bold text-white">Accidental deletes are restored</h3>
-            <p className="mt-1.5 text-sm text-slate-300 leading-relaxed">
-              If an intern or staff member accidentally renames or deletes a folder in Google Drive, Docketra detects it immediately and restores folder links automatically.
-            </p>
-          </div>
-        </div>
-      </div>
-    </Container>
-  </section>
-);
-
-/* --- Section 6: Audience / Practice Solutions --- */
-const AudienceSection = () => (
-  <section className="bg-white py-20 sm:py-28 border-b border-slate-200">
-    <Container size="7xl">
-      <div className="mx-auto mb-14 max-w-2xl text-center">
-        <p className="mb-3 font-mono text-xs uppercase tracking-[0.25em] text-amber-600 font-bold">
-          — Who it’s for
-        </p>
-        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-950 leading-[1.08]">
-          Made for professional firms.
+      <motion.div className="max-w-3xl" {...REVEAL}>
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white [text-wrap:balance]">
+          Your Client Files Stay in Your Firm’s Own Google Drive
         </h2>
+        <p className="mt-3 text-sm sm:text-base text-slate-400 leading-relaxed [text-wrap:pretty]">
+          Docketra never stores client documents on external servers. Your files stay inside your firm’s private Google Drive, and we only manage deadlines, checklists, and approval workflows.
+        </p>
+      </motion.div>
+
+      <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="border border-slate-800 bg-slate-900/60 p-6 space-y-2 hover:border-slate-700 transition-colors rounded">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-white">Restricted Drive Scope</h3>
+            <span className="text-xs text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded-xs border border-emerald-800">Verified private</span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+            Docketra can only open the specific folders it creates for your dockets. It has zero access to your firm’s existing emails, documents, or personal Drive archives.
+          </p>
+        </div>
+        <div className="border border-slate-800 bg-slate-900/60 p-6 space-y-2 hover:border-slate-700 transition-colors rounded">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-white">Prevent Local Downloads</h3>
+            <span className="text-xs text-amber-400 bg-amber-950 px-2 py-0.5 rounded-xs border border-amber-800">Leak protection</span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+            Article clerks and junior staff view files securely in their browser. Downloading confidential PANs, tax returns, or bank statements to personal laptops is blocked.
+          </p>
+        </div>
+        <div className="border border-slate-800 bg-slate-900/60 p-6 space-y-2 hover:border-slate-700 transition-colors rounded">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-white">Automatic Folder Recovery</h3>
+            <span className="text-xs text-sky-400 bg-sky-950 px-2 py-0.5 rounded-xs border border-sky-800">Auto-recovery</span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+            If someone accidentally moves, renames, or deletes a folder in Google Drive, Docketra detects it immediately and restores the links with zero data loss.
+          </p>
+        </div>
+        <div className="border border-slate-800 bg-slate-900/60 p-6 space-y-2 hover:border-slate-700 transition-colors rounded">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-white">Peer-Review Audit Trail</h3>
+            <span className="text-xs text-purple-400 bg-purple-950 px-2 py-0.5 rounded-xs border border-purple-800">Audit ready</span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+            An uneditable audit log records every action: who prepared the filing, what changed, and when the partner signed off. Ready for ICAI and ICSI peer reviews.
+          </p>
+        </div>
       </div>
+    </Container>
+  </section>
+);
 
-      <div className="grid gap-8 md:grid-cols-3">
-        <div className="border-t-2 border-slate-900 pt-6 space-y-3">
-          <h3 className="font-display text-2xl sm:text-3xl font-bold text-slate-950">Chartered Accountants</h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            GST returns, income tax scrutiny, Tax Audit Form 3CD (44 clauses), and TDS workflows across your entire client roster.
-          </p>
-          <div className="pt-2">
+const PilotReadinessSection = () => (
+  <section id="pilot-readiness" className="scroll-mt-16 bg-white py-16 sm:py-24 border-b border-slate-200">
+    <Container size="7xl">
+      <div className="border border-slate-300 bg-slate-50/70 p-6 sm:p-10 rounded-lg shadow-xs">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-slate-200">
+          <div className="space-y-2 max-w-xl">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-950 tracking-tight [text-wrap:balance]">
+              Start Using Docketra for Your Firm in 5 Minutes
+            </h2>
+            <p className="text-sm sm:text-base text-slate-600 leading-relaxed [text-wrap:pretty]">
+              Create your firm workspace, invite your team, and manage your first 5 clients for ₹0. Upgrade to Pioneer or Growth whenever you expand.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
             <Link
-              to="/solutions/chartered-accountants"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 hover:text-amber-700 transition-colors"
+              to="/signup"
+              className="inline-flex w-full sm:w-auto h-12 items-center justify-center gap-2 bg-slate-950 px-6 text-sm font-semibold text-amber-300 transition-colors hover:bg-slate-800 shrink-0 shadow-sm whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-900"
             >
-              <span>Explore CA Solution</span>
-              <span>→</span>
+              <span>Create workspace</span>
+            </Link>
+            <Link
+              to="/pricing"
+              className="inline-flex w-full sm:w-auto h-12 items-center justify-center border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-800 hover:bg-slate-50 hover:border-slate-400 transition-colors shrink-0 shadow-xs whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-100"
+            >
+              <span>View all plans &amp; pricing</span>
             </Link>
           </div>
         </div>
 
-        <div className="border-t-2 border-slate-900 pt-6 space-y-3">
-          <h3 className="font-display text-2xl sm:text-3xl font-bold text-slate-950">Company Secretaries</h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            ROC annual filings (AOC-4/MGT-7), DIR-3 KYC, board resolutions, charge registers, and secretarial audit workflows.
-          </p>
-          <div className="pt-2">
-            <Link
-              to="/solutions/company-secretaries"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 hover:text-amber-700 transition-colors"
-            >
-              <span>Explore CS Solution</span>
-              <span>→</span>
-            </Link>
+        {/* 3 Value Pillars */}
+        <div className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div className="p-4 bg-white border border-slate-200 rounded">
+            <div className="flex items-center gap-2">
+              <CheckIcon />
+              <span className="font-bold text-slate-900 text-sm">Free Pilot (₹0 forever)</span>
+            </div>
+            <p className="text-slate-600 mt-2 leading-relaxed">
+              2 seats, 5 clients. Official sandbox for Google Drive safety &amp; junior download blocks.
+            </p>
           </div>
-        </div>
-
-        <div className="border-t-2 border-slate-900 pt-6 space-y-3">
-          <h3 className="font-display text-2xl sm:text-3xl font-bold text-slate-950">Legal &amp; compliance teams</h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            NCLT hearing radar, statutory notices, litigation order sheets, and internal corporate compliance calendars.
-          </p>
-          <div className="pt-2">
-            <Link
-              to="/solutions/corporate-legal-teams"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 hover:text-amber-700 transition-colors"
-            >
-              <span>Explore Legal Ops</span>
-              <span>→</span>
-            </Link>
+          <div className="p-4 bg-white border border-slate-200 rounded">
+            <div className="flex items-center gap-2">
+              <CheckIcon />
+              <span className="font-bold text-slate-900 text-sm">Pioneer 30 (₹12,990/year)</span>
+            </div>
+            <p className="text-slate-600 mt-2 leading-relaxed">
+              Up to 6 seats, 100 clients. Flat rate locked for life for founding practices.
+            </p>
+          </div>
+          <div className="p-4 bg-white border border-slate-200 rounded">
+            <div className="flex items-center gap-2">
+              <CheckIcon />
+              <span className="font-bold text-slate-900 text-sm">Growth Tier (₹21,990/year)</span>
+            </div>
+            <p className="text-slate-600 mt-2 leading-relaxed">
+              12 seats, 150 clients. Pre-loaded statutory blueprints and department queues.
+            </p>
           </div>
         </div>
       </div>
@@ -556,73 +534,52 @@ const AudienceSection = () => (
   </section>
 );
 
-/* --- Section 7: Final Conversion CTA (Mapped to #pilot-readiness) --- */
 const FinalCtaSection = () => (
-  <section id="pilot-readiness" className="scroll-mt-16 bg-slate-50 py-20 px-6 sm:py-24 border-b border-slate-200">
-    <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl bg-[#111215] p-10 text-center text-white sm:p-16 lg:p-20 shadow-2xl">
-      <div
-        className="pointer-events-none absolute inset-0 opacity-20"
-        style={{
-          backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.2) 1px, transparent 0)',
-          backgroundSize: '24px 24px',
-          maskImage: 'radial-gradient(ellipse 60% 80% at 50% 100%, black, transparent)',
-          WebkitMaskImage: 'radial-gradient(ellipse 60% 80% at 50% 100%, black, transparent)',
-        }}
-        aria-hidden="true"
-      />
-
-      <div className="relative mx-auto max-w-3xl space-y-5">
-        <h2 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
-          Try Docketra free with 5 clients.
+  <section className="bg-slate-50/60 py-16 sm:py-24 text-center border-b border-slate-200">
+    <Container size="7xl">
+      <motion.div className="max-w-2xl mx-auto space-y-4" {...REVEAL}>
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-950 tracking-tight [text-wrap:balance]">
+          Run your practice from your own Google Drive.
         </h2>
-        <p className="mx-auto max-w-xl text-base sm:text-lg text-slate-300 leading-relaxed">
-          See every deadline for your firm on one screen — set up in minutes with zero credit card required.
+        <p className="text-sm sm:text-base text-slate-600 max-w-lg mx-auto leading-relaxed [text-wrap:pretty]">
+          Zero file leakage to staff laptops and 100% partner review. Keep every client docket organized in one private workspace.
         </p>
 
-        <div className="pt-6 flex flex-wrap items-center justify-center gap-3.5">
+        <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
             to="/signup"
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-amber-400 px-7 text-sm font-bold text-slate-950 transition-all hover:bg-amber-300 hover:shadow-lg hover:shadow-amber-400/20 active:scale-[0.98]"
+            className="inline-flex w-full sm:w-auto h-12 items-center justify-center gap-2 bg-slate-950 px-6 text-sm font-semibold text-amber-300 transition-colors hover:bg-slate-800 shadow-sm whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-900"
           >
             <span>Create workspace</span>
-            <ArrowRightIcon className="h-4 w-4" />
           </Link>
 
           <Link
             to="/find-workspace"
-            className="inline-flex h-12 items-center justify-center rounded-full border border-slate-700 bg-slate-900/60 px-6 text-sm font-semibold text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+            className="inline-flex w-full sm:w-auto h-12 items-center justify-center gap-2 border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-800 hover:bg-slate-50 hover:border-slate-400 transition-colors shadow-xs whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-100"
           >
             <span>Find workspace</span>
           </Link>
-
-          <Link
-            to="/pricing"
-            className="inline-flex h-12 items-center justify-center rounded-full border border-transparent px-5 text-xs font-mono text-slate-400 hover:text-amber-400 transition-colors"
-          >
-            <span>View all plans &amp; pricing →</span>
-          </Link>
         </div>
 
-        <p className="pt-4 text-xs font-mono text-slate-400">
-          100% Google Drive BYOS • Zero setup fees • Cancel anytime
-        </p>
-      </div>
-    </div>
+        <div className="text-xs text-slate-500 pt-4 flex flex-wrap items-center justify-center gap-4">
+          <span>Direct Google Drive integration</span>
+          <span aria-hidden="true">/</span>
+          <span>Instant setup with no payment upfront</span>
+        </div>
+      </motion.div>
+    </Container>
   </section>
 );
 
-/* --- Footer Component --- */
 export const MarketingFooter = () => (
-  <footer className="border-t border-slate-900 bg-slate-950 text-slate-400 py-12 text-xs">
+  <footer className="bg-slate-950 py-12 text-slate-400 border-t border-slate-800 text-xs">
     <Container size="7xl">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-8 border-b border-slate-900">
-        <div className="space-y-1.5">
+      {/* Top Tier: Brand & Solutions Navigation */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-8 border-b border-slate-900">
+        <div className="space-y-1">
           <div className="flex items-center gap-2 text-white font-semibold">
-            <span className="h-2 w-2 rounded-full bg-amber-400" aria-hidden="true" />
+            <span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
             <span className="text-base font-bold tracking-tight">Docketra</span>
-            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-amber-500 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-900">
-              The Company Brain
-            </span>
           </div>
           <p className="text-slate-400 text-xs leading-relaxed max-w-sm">
             Practice management for Indian CAs, CSs, and compliance practices.
@@ -634,31 +591,32 @@ export const MarketingFooter = () => (
           <span className="text-slate-500 text-xs font-semibold shrink-0">
             Solutions:
           </span>
-          <Link to="/solutions/company-secretaries" className="hover:text-amber-400 transition-colors whitespace-nowrap">
+          <Link to="/solutions/company-secretaries" className="hover:text-amber-400 transition-colors whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-amber-400">
             Company Secretaries
           </Link>
-          <Link to="/solutions/chartered-accountants" className="hover:text-amber-400 transition-colors whitespace-nowrap">
+          <Link to="/solutions/chartered-accountants" className="hover:text-amber-400 transition-colors whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-amber-400">
             Chartered Accountants
           </Link>
-          <Link to="/solutions/corporate-legal-teams" className="hover:text-amber-400 transition-colors whitespace-nowrap">
+          <Link to="/solutions/corporate-legal-teams" className="hover:text-amber-400 transition-colors whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-amber-400">
             Corporate Legal
           </Link>
-          <Link to="/compare/docketra-vs-excel-whatsapp" className="text-amber-400 hover:text-amber-300 font-semibold transition-colors whitespace-nowrap">
+          <Link to="/compare/docketra-vs-excel-whatsapp" className="text-amber-400 hover:text-amber-300 font-semibold transition-colors whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-amber-400">
             vs. Excel &amp; WhatsApp
           </Link>
         </nav>
       </div>
 
+      {/* Bottom Tier: Copyright, Drive Promise, and Legal Links */}
       <div className="pt-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs text-slate-500">
         <p className="leading-relaxed">
-          &copy; {new Date().getFullYear()} Docketra. Made in India for professional firms. 100% Google Drive BYOS.
+          &copy; {new Date().getFullYear()} Docketra. 100% of client files stay safely inside your firm’s private Google Drive.
         </p>
 
         <nav aria-label="Footer legal navigation" className="flex flex-wrap items-center gap-x-6 gap-y-1 font-medium">
-          <Link to="/terms" className="hover:text-slate-300 transition-colors whitespace-nowrap">Terms</Link>
-          <Link to="/privacy" className="hover:text-slate-300 transition-colors whitespace-nowrap">Privacy</Link>
-          <Link to="/security" className="hover:text-slate-300 transition-colors whitespace-nowrap">Security</Link>
-          <Link to="/acceptable-use" className="hover:text-slate-300 transition-colors whitespace-nowrap">Acceptable Use</Link>
+          <Link to="/terms" className="hover:text-slate-300 transition-colors whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-slate-300">Terms</Link>
+          <Link to="/privacy" className="hover:text-slate-300 transition-colors whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-slate-300">Privacy</Link>
+          <Link to="/security" className="hover:text-slate-300 transition-colors whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-slate-300">Security</Link>
+          <Link to="/acceptable-use" className="hover:text-slate-300 transition-colors whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-slate-300">Acceptable Use</Link>
         </nav>
       </div>
     </Container>
@@ -699,13 +657,8 @@ export const LandingPageContent = () => {
 
     const interval = window.setInterval(() => {
       attempts += 1;
-      if (tryScroll()) {
+      if (tryScroll() || attempts >= maxAttempts) {
         window.clearInterval(interval);
-        return;
-      }
-      if (attempts >= maxAttempts) {
-        window.clearInterval(interval);
-        window.scrollTo({ top: 0, behavior: 'auto' });
       }
     }, 100);
 
@@ -731,16 +684,17 @@ export const LandingPageContent = () => {
     <div className="w-full bg-white text-slate-900 antialiased selection:bg-amber-500/25">
       <SeoHead
         canonicalPath="/"
-        title="Docketra — The Company Brain for Indian Professional Firms"
-        description="Streamline client dockets, MCA deadlines, and team tasks with The Company Brain. Purpose-built for Indian CS, CA, and legal firms. 100% Google Drive BYOS. Start your free pilot."
+        title="Docketra: The Sovereign Practice OS for Indian Professional Firms"
+        description="Streamline client dockets, MCA deadlines, and team tasks in one sovereign workspace. Purpose-built for Indian CS, CA, and legal firms. 100% Google Drive BYOS. Start your free pilot."
       />
       <PublicMarketingHeader />
       <HeroSection onOpenTour={() => setIsTourOpen(true)} />
+      <HighlightsStrip />
+      <PracticeMatrixSection />
       <ProblemSection />
       <HowItWorksSection />
-      <FeaturesSection />
       <TrustSection />
-      <AudienceSection />
+      <PilotReadinessSection />
       <FinalCtaSection />
       <MarketingFooter />
       <LandingProductTourModal

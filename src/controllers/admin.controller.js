@@ -123,7 +123,7 @@ const getAdminStats = async (req, res) => {
 
   try {
     assertFirmContext(req);
-    const tenantId = req.user?.firmId || req.firmId || req.tenant?.id || req.firm?.id;
+    const tenantId = req.user?.firmId;
 
     const [
       totalUsers,
@@ -1371,8 +1371,6 @@ const getFirmSettingsActivity = async (req, res) => {
     // ⚡ Bolt: Group independent queries concurrently
     // 💡 What: Merged the sequential find queries into the preceding Promise.all array containing countDocuments queries.
     // 🎯 Why: Identifying and eliminating unnecessary sequential database queries by grouping them into a single Promise.all array executes them concurrently, reducing overall network latency.
-    // ⚡ Bolt: Group independent database queries concurrently
-    // 💡 What: Replaced sequential execution of two Promise.all blocks (counts then finds) with a single concurrent Promise.all.
     const [caseAuditTotal, authAuditTotal, caseAuditRows, authAuditRows] = await Promise.all([
       CaseAudit.countDocuments({
         firmId,
@@ -1858,62 +1856,19 @@ const toHierarchyUserNode = (user) => ({
   managerId: normalizeId(user.managerId),
 });
 
-const resolveHierarchyFirmFilter = async (req) => {
-  const candidateFirmIds = [
-    req.firmId,
-    req.ownershipFirmId,
-    req.user?.firmId,
-    req.tenant?.id,
-    req.firm?.id,
-    req.firm?.ownershipFirmId,
-  ].filter(Boolean);
-
-  const primaryCandidate = candidateFirmIds[0];
-  if (primaryCandidate && mongoose.Types.ObjectId.isValid(String(primaryCandidate))) {
-    try {
-      const { resolveCanonicalTenantFromFirmId } = require('../services/tenantIdentity.service');
-      const canonicalContext = await resolveCanonicalTenantFromFirmId(primaryCandidate);
-      if (canonicalContext?.tenantId) candidateFirmIds.push(canonicalContext.tenantId);
-      if (canonicalContext?.ownershipFirmId) candidateFirmIds.push(canonicalContext.ownershipFirmId);
-      if (canonicalContext?.legacyFirmId) candidateFirmIds.push(canonicalContext.legacyFirmId);
-    } catch (err) {
-      log.warn('[ADMIN] resolveCanonicalTenantFromFirmId failed in hierarchy filter', err);
-    }
-  }
-
-  const uniqueFirmIdStrings = [...new Set(candidateFirmIds.map((id) => String(id)))];
-  const objectIds = uniqueFirmIdStrings
-    .filter((id) => mongoose.Types.ObjectId.isValid(id))
-    .map((id) => new mongoose.Types.ObjectId(id));
-
-  if (uniqueFirmIdStrings.length > 0) {
-    return { $in: [...uniqueFirmIdStrings, ...objectIds] };
-  }
-  return req.user?.firmId;
-};
-
 const getHierarchyTree = async (req, res) => {
   try {
-    const firmFilter = await resolveHierarchyFirmFilter(req);
     const users = await User.find({
-      firmId: firmFilter,
+      firmId: req.user?.firmId,
       status: { $ne: 'deleted' },
     })
-      .select('_id xID name email role department phoneNumber status isActive isPrimaryAdmin primaryAdminId adminId managerId')
+      .select('_id xID name email role department phoneNumber status isActive primaryAdminId adminId managerId')
       .lean();
 
     const primaryAdminDoc = users.find((user) => normalizeHierarchyRole(user.role) === 'PRIMARY_ADMIN' && String(user._id) === String(req.user?._id))
-      || users.find((user) => normalizeHierarchyRole(user.role) === 'PRIMARY_ADMIN')
-      || users.find((user) => Boolean(user.isPrimaryAdmin))
-      || (normalizeHierarchyRole(req.user?.role) === 'PRIMARY_ADMIN' ? users.find((u) => String(u._id) === String(req.user?._id)) : null)
-      || users.find((user) => normalizeHierarchyRole(user.role) === 'ADMIN')
-      || users[0]
-      || null;
+      || users.find((user) => normalizeHierarchyRole(user.role) === 'PRIMARY_ADMIN');
 
-    const primaryAdmin = primaryAdminDoc ? {
-      ...toHierarchyUserNode(primaryAdminDoc),
-      role: 'PRIMARY_ADMIN',
-    } : null;
+    const primaryAdmin = primaryAdminDoc ? toHierarchyUserNode(primaryAdminDoc) : null;
 
     const tree = {
       primaryAdmin,
@@ -1998,7 +1953,6 @@ const getHierarchyTree = async (req, res) => {
 
     return res.json({ success: true, data: tree });
   } catch (error) {
-    log.error('[ADMIN] Failed to get hierarchy tree', error);
     return res.status(error?.statusCode || 500).json({
       success: false,
       message: error.message || 'Failed to load hierarchy',
@@ -2017,9 +1971,8 @@ const updateUserHierarchy = async (req, res) => {
       lookup.push({ _id: req.params.id });
     }
 
-    const firmFilter = await resolveHierarchyFirmFilter(req);
     const target = await User.findOne({
-      firmId: firmFilter,
+      firmId: req.user?.firmId,
       status: { $ne: 'deleted' },
       $or: lookup,
     });
@@ -2049,7 +2002,7 @@ const updateUserHierarchy = async (req, res) => {
 
     const refIds = [requestedAdminId, requestedManagerId].filter(Boolean);
     const referenced = refIds.length
-      ? await User.find({ _id: { $in: refIds }, firmId: firmFilter, status: { $ne: 'deleted' } })
+      ? await User.find({ _id: { $in: refIds }, firmId: req.user?.firmId, status: { $ne: 'deleted' } })
         .select('_id role adminId')
         .lean()
       : [];

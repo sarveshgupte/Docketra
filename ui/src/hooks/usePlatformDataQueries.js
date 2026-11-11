@@ -67,7 +67,7 @@ export const usePlatformQcQueueQuery = () => useQuery({
 export const usePlatformReportsMetricsQuery = () => useQuery({
   queryKey: ['platform', 'reports-metrics'],
   queryFn: () => trackAsync('platform.reports.metrics', 'platform:reports:metrics', () => reportsService.getCaseMetrics()),
-  select: (res) => res?.data?.data ?? res?.data ?? res ?? {},
+  select: (res) => toArray(extractListPayload(res)),
   staleTime: 2 * 60 * 1000,
   gcTime: 20 * 60 * 1000,
   placeholderData: keepPreviousData,

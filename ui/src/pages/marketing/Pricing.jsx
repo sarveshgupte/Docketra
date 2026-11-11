@@ -501,7 +501,7 @@ export const PricingPage = () => {
                 <tr>
                   <th scope="col" className="p-4 w-1/4 font-semibold text-slate-900">Operational Capability</th>
                   <th scope="col" className="p-4 w-1/4 bg-emerald-50/60 text-slate-950 font-bold border-x border-emerald-200">
-                    Docketra (The Company Brain)
+                    Docketra (Sovereign OS)
                   </th>
                   <th scope="col" className="p-4 w-1/4 text-slate-700 font-medium">Jamku / Legacy</th>
                   <th scope="col" className="p-4 w-1/4 text-slate-700 font-medium">Excel + WhatsApp</th>
@@ -575,7 +575,7 @@ export const PricingPage = () => {
         <Container size="7xl">
           <motion.div {...REVEAL} className="max-w-2xl mx-auto space-y-4">
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
-              Take control of your practice with The Company Brain.
+              Take sovereign control of your practice today.
             </h2>
             <p className="text-sm text-slate-600 leading-relaxed">
               Join founding Indian CA &amp; CS practices running audit-ready, zero-stress client operations.

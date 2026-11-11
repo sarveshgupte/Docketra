@@ -413,13 +413,12 @@ module.exports = (deps) => {
   const updateCaseActivity = async (req, res) => {
     try {
       const { caseId } = req.params;
-      // SEC-FIX: Derive user identity securely from req.user to prevent IDOR / Mass Assignment
-      const userEmail = req.user?.email;
+      const { userEmail } = req.body;
       
       if (!userEmail) {
-        return res.status(401).json({
+        return res.status(400).json({
           success: false,
-          message: 'Authentication required - user email not found',
+          message: 'User email is required',
         });
       }
       

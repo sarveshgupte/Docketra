@@ -219,7 +219,7 @@ export default function CharteredAccountantsSolutionPage() {
           </h1>
 
           <p className="mx-auto mt-6 max-w-3xl text-base sm:text-lg text-slate-300 leading-relaxed font-normal">
-            Stop managing audit working papers, GST reconciliations, and tax scrutiny deadlines across WhatsApp threads and fragile spreadsheets. Run your entire firm on The Company Brain.
+            Stop managing audit working papers, GST reconciliations, and tax scrutiny deadlines across WhatsApp threads and fragile spreadsheets. Run your entire firm on a unified, sovereign compliance workspace.
           </p>
 
           {/* CTAs */}

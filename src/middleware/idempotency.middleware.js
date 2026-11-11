@@ -132,7 +132,6 @@ class RedisIdempotencyStore {
 const memoryStore = new MemoryIdempotencyStore();
 
 const isNonProduction = () => process.env.NODE_ENV !== 'production';
-const isRedisFallbackAllowed = () => String(process.env.ALLOW_REDIS_FALLBACK || '').trim().toLowerCase() === 'true';
 
 const getStore = () => {
   const redis = getRedisClient();
@@ -140,7 +139,7 @@ const getStore = () => {
     return { store: new RedisIdempotencyStore(redis), type: 'redis' };
   }
 
-  if (process.env.NODE_ENV === 'production' && !isRedisFallbackAllowed()) {
+  if (process.env.NODE_ENV === 'production') {
     const error = new Error('Idempotency storage is unavailable');
     error.code = 'IDEMPOTENCY_STORE_UNAVAILABLE';
     error.statusCode = 503;
@@ -149,7 +148,7 @@ const getStore = () => {
 
   if (isRedisUrlConfigured() && !idempotencyFallbackLogged) {
     idempotencyFallbackLogged = true;
-    log.warn('[IDEMPOTENCY] Redis not ready - using in-memory idempotency store');
+    log.warn('[IDEMPOTENCY] Redis not ready locally - using in-memory idempotency store');
   }
 
   return { store: memoryStore, type: 'memory' };
@@ -278,10 +277,10 @@ const idempotencyMiddleware = async (req, res, next) => {
     patchResponseCapture(req, res, distributedKey, resolved.store);
     return next();
   } catch (error) {
-    if (resolved.type === 'redis' && (isNonProduction() || isRedisFallbackAllowed())) {
+    if (resolved.type === 'redis' && isNonProduction()) {
       if (!idempotencyFallbackLogged) {
         idempotencyFallbackLogged = true;
-        log.warn('[IDEMPOTENCY] Redis operation failed - using in-memory idempotency store', {
+        log.warn('[IDEMPOTENCY] Redis operation failed locally - using in-memory idempotency store', {
           error: error.message,
         });
       }
