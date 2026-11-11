@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "docketra-prod"
-  }
+  },
+  "targets": {
+    "docketra-prod": {
+      "hosting": {
+        "live": [
+          "docketra-prod"
+        ],
+        "cug": [
+          "docketra-cug"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
