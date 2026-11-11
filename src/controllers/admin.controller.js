@@ -1365,7 +1365,12 @@ const getFirmSettingsActivity = async (req, res) => {
       'SetupLinkResent',
     ];
 
-    const [caseAuditTotal, authAuditTotal] = await Promise.all([
+    const offset = (page - 1) * limit;
+    const fetchLimit = Math.max(limit, Math.min(page * limit, 5000));
+
+    // ⚡ Bolt: Group independent database queries concurrently
+    // 💡 What: Replaced sequential execution of two Promise.all blocks (counts then finds) with a single concurrent Promise.all.
+    const [caseAuditTotal, authAuditTotal, caseAuditRows, authAuditRows] = await Promise.all([
       CaseAudit.countDocuments({
         firmId,
         actionType: { $in: caseActionTypes },
@@ -1374,13 +1379,6 @@ const getFirmSettingsActivity = async (req, res) => {
         firmId,
         actionType: { $in: authActionTypes },
       }),
-    ]);
-
-    const total = Number(caseAuditTotal || 0) + Number(authAuditTotal || 0);
-    const offset = (page - 1) * limit;
-    const fetchLimit = Math.max(limit, Math.min(page * limit, 5000));
-
-    const [caseAuditRows, authAuditRows] = await Promise.all([
       CaseAudit.find({
         firmId,
         actionType: { $in: caseActionTypes },
@@ -1396,6 +1394,8 @@ const getFirmSettingsActivity = async (req, res) => {
         .limit(fetchLimit)
         .lean(),
     ]);
+
+    const total = Number(caseAuditTotal || 0) + Number(authAuditTotal || 0);
 
     const mutationMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
     const authMapped = authAuditRows
