@@ -75,8 +75,7 @@ export const SuperadminDiagnosticsPage = () => {
                       <th className="py-2 pr-3">Firm</th>
                       <th className="py-2 pr-3">Firm status</th>
                       <th className="py-2 pr-3">Onboarding</th>
-                      <th className="py-2 pr-3">Storage</th>
-                      <th className="py-2">Next action</th>
+                      <th className="py-2">Storage</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -92,11 +91,10 @@ export const SuperadminDiagnosticsPage = () => {
                           <p>Stale: {firm.onboarding?.staleUsers || 0}</p>
                           <p className="text-xs text-gray-500">{(firm.onboarding?.blockers || []).slice(0, 2).map(pretty).join(', ') || 'No blockers'}</p>
                         </td>
-                        <td className="py-2 pr-3">
+                        <td className="py-2">
                           <p>{pretty(firm.storageMode)} · {pretty(firm.storageProvider)}</p>
                           <p className="text-xs text-gray-500">Health: {pretty(firm.storageHealthStatus)}</p>
                         </td>
-                        <td className="py-2">{firm.onboarding?.nextAction || 'Unknown'}</td>
                       </tr>
                     ))}
                   </tbody>

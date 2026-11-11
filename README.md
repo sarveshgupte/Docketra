@@ -149,11 +149,12 @@ Line:        23
 
 ## Deployment notes
 
-- Production deploy targets are documented in `docs/deployment/render-deployment.md`.
-- Build should run after deterministic dependency install (`npm run ci:install`), then execute `npm run build` (or Render build command below).
-- Ensure production secrets are set explicitly (JWT, encryption/storage, metrics token, OAuth creds).
+- Production deploy targets GCP services via GitHub Actions (`.github/workflows/deploy.yml`):
+  - **Backend API**: Google Cloud Run (`docketra-api` in `docketra-prod`) built with Google Cloud Build.
+  - **Frontend SPA**: Firebase Hosting (`docketra-prod` serving `docketra.in`).
+- Build runs after deterministic dependency install (`npm run ci:install`), then executes `npm run build`.
+- Ensure production secrets are set explicitly in Google Secret Manager and GitHub Actions secrets.
 - Run env validation and release gate checks before deployment.
-- Keep worker process enabled in production for async and queue-driven workflows.
 
 ## Security and data ownership principles
 
@@ -177,5 +178,5 @@ Line:        23
 - Local testing guide: `docs/testing/local-testing.md`
 - Pilot readiness checklist: `docs/operations/pilot-readiness-checklist.md`
 - Release updates: `docs/whats-new.md`
-- Deployment: `docs/deployment/render-deployment.md`
+- Deployment: `.github/workflows/deploy.yml` (GCP Cloud Run + Firebase Hosting)
 - Security: `docs/security/SECURITY_MODEL.md` and `docs/security/`

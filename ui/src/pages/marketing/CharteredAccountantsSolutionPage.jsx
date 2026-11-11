@@ -207,7 +207,7 @@ export const CharteredAccountantsSolutionPage = () => {
             </h1>
 
             <p className="text-sm sm:text-base font-normal leading-relaxed text-slate-600 max-w-2xl mx-auto">
-              Stop managing audit working papers, GST reconciliations, and tax scrutiny deadlines across WhatsApp threads and fragile spreadsheets. Run your entire firm on a unified, sovereign compliance workspace.
+              Stop managing audit working papers, GST reconciliations, and tax scrutiny deadlines across WhatsApp threads and fragile spreadsheets. Run your entire firm on The Company Brain.
             </p>
 
             {/* CTAs */}

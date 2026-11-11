@@ -1,3 +1,5 @@
+const { isSuperAdminRole } = require('../utils/role.utils');
+
 /**
  * Firm Authorization Policies
  * 
@@ -16,9 +18,7 @@
  */
 const canView = (user) => {
   if (!user) return false;
-  
-  // Only SuperAdmin can view firms list
-  return user.role === 'SuperAdmin' || user.role === 'SUPER_ADMIN';
+  return isSuperAdminRole(user.role);
 };
 
 /**
@@ -28,9 +28,7 @@ const canView = (user) => {
  */
 const canCreate = (user) => {
   if (!user) return false;
-  
-  // Only SuperAdmin can create firms
-  return user.role === 'SuperAdmin' || user.role === 'SUPER_ADMIN';
+  return isSuperAdminRole(user.role);
 };
 
 /**
@@ -40,9 +38,7 @@ const canCreate = (user) => {
  */
 const canUpdate = (user) => {
   if (!user) return false;
-  
-  // Only SuperAdmin can update firms
-  return user.role === 'SuperAdmin' || user.role === 'SUPER_ADMIN';
+  return isSuperAdminRole(user.role);
 };
 
 /**
@@ -52,9 +48,7 @@ const canUpdate = (user) => {
  */
 const canManageStatus = (user) => {
   if (!user) return false;
-  
-  // Only SuperAdmin can manage firm status
-  return user.role === 'SuperAdmin' || user.role === 'SUPER_ADMIN';
+  return isSuperAdminRole(user.role);
 };
 
 /**
@@ -64,9 +58,7 @@ const canManageStatus = (user) => {
  */
 const canCreateAdmin = (user) => {
   if (!user) return false;
-  
-  // Only SuperAdmin can create firm admins
-  return user.role === 'SuperAdmin' || user.role === 'SUPER_ADMIN';
+  return isSuperAdminRole(user.role);
 };
 
 /**
@@ -76,9 +68,7 @@ const canCreateAdmin = (user) => {
  */
 const canResendAdminAccess = (user) => {
   if (!user) return false;
-
-  // Only SuperAdmin can resend admin access
-  return user.role === 'SuperAdmin' || user.role === 'SUPER_ADMIN';
+  return isSuperAdminRole(user.role);
 };
 
 module.exports = {

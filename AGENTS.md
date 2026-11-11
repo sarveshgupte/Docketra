@@ -11,7 +11,7 @@ Minimal repo-specific agent notes based on committed scripts and package workflo
 - Use `npm run ci:backend:security` for the backend security gate and `npm run ci:backend:deploy-safety` for the production-shaped deploy safety wrapper.
 - Use `npm run ci:release-gate:pure` as the default merge/release blocker, and `npm run ci:release-gate:integration` when a change touches DB-dependent backend behavior.
 - Use `npm run test:secret-scanning:contract` and `npm run security:secrets` before merge when touching secret-handling or CI gate behavior.
-- Use `npm run ci:install` when you need the deterministic root + `ui/` install flow that matches CI and the current Render deployment docs.
+- Use `npm run ci:install` when you need the deterministic root + `ui/` install flow that matches CI and the Cloud Run / Firebase deployment workflow.
 
 ## Workflows
 

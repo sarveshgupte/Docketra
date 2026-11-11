@@ -154,7 +154,6 @@ export const PlatformSettingsPage = () => {
 
   return (
     <PlatformShell
-      moduleLabel="Settings"
       title="Settings"
       subtitle="Firm configuration and operational controls in one place"
     >
@@ -252,8 +251,8 @@ export const PlatformSettingsPage = () => {
 
         {/* Grouped Settings Menu */}
         <PageSection
-          title="Settings menu"
-          description="Choose the area you want to configure. The sidebar stays clean with one Settings entry, and all setting options are listed here."
+          title="Configuration areas"
+          description="Manage workspace identity, team access, statutory routing, and storage governance."
         >
           <div className="space-y-6">
             {GROUPS.map((grp) => {

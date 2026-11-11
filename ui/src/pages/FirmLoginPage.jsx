@@ -15,6 +15,7 @@ import { spacingClasses } from '../theme/tokens';
 import { resolvePostAuthNavigation } from '../utils/postAuthNavigation';
 import { sanitizeFirmSlug } from '../utils/tenantRouting';
 import { isWorkspaceActive } from '../utils/workspaceStatus';
+import SeoHead from '../components/common/SeoHead';
 
 const mapSafeLoginError = (error) => {
   const status = error?.status || error?.response?.status;
@@ -492,6 +493,10 @@ export const FirmLoginPage = () => {
 
   return (
     <div className="auth-wrapper find-workspace-page auth-public-page">
+      <SeoHead
+        title={`${firmData.name || 'Firm'} • Sign In • Docketra`}
+        description={`Secure sign-in for ${firmData.name || 'your firm'} workspace on Docketra.`}
+      />
       <div className="find-workspace-page__shell">
         <section className="find-workspace-page__context" aria-label="Firm login context">
           <h1 className="find-workspace-page__heading">{firmData.name}</h1>

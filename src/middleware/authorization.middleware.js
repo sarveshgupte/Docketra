@@ -42,17 +42,39 @@ async function requireAdmin(req, res, next) {
     }
 
     // Resolve legacy firmId mapping to look up user physical records in DB correctly
+    const candidateFirmIds = [
+      tenantId,
+      req.user?.firmId,
+      req.firmId,
+      req.ownershipFirmId,
+      req.tenant?.id,
+      req.firm?.id,
+    ].filter(Boolean).map(String);
+
     if (tenantId && mongoose.Types.ObjectId.isValid(String(tenantId))) {
-      const { resolveCanonicalTenantFromFirmId } = require('../services/tenantIdentity.service');
-      const tenantContext = await resolveCanonicalTenantFromFirmId(tenantId);
-      if (tenantContext?.ownershipFirmId) {
-        tenantId = tenantContext.ownershipFirmId;
+      try {
+        const { resolveCanonicalTenantFromFirmId } = require('../services/tenantIdentity.service');
+        const tenantContext = await resolveCanonicalTenantFromFirmId(tenantId);
+        if (tenantContext?.ownershipFirmId) candidateFirmIds.push(String(tenantContext.ownershipFirmId));
+        if (tenantContext?.legacyFirmId) candidateFirmIds.push(String(tenantContext.legacyFirmId));
+        if (tenantContext?.tenantId) candidateFirmIds.push(String(tenantContext.tenantId));
+      } catch (err) {
+        // Continue with available candidate IDs
       }
     }
 
+    const uniqueFirmIdStrings = [...new Set(candidateFirmIds.filter(Boolean))];
+    const objectIds = uniqueFirmIdStrings
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
+
+    const firmFilter = uniqueFirmIdStrings.length > 1
+      ? { $in: [...uniqueFirmIdStrings, ...objectIds] }
+      : tenantId;
+
     const userId = req.user?._id || req.user?.id || req.userId || null;
     const query = {
-      firmId: tenantId,
+      firmId: firmFilter,
       isActive: true,
     };
 

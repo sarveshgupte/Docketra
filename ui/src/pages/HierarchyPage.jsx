@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -97,6 +97,7 @@ export const HierarchyPage = () => {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const [tree, setTree] = useState(EMPTY_TREE);
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -115,9 +116,15 @@ export const HierarchyPage = () => {
     return role === 'PRIMARY_ADMIN' || Boolean(loggedInUser?.isPrimaryAdmin);
   }, [loggedInUser]);
 
+  const showToastRef = React.useRef(showToast);
+  useEffect(() => {
+    showToastRef.current = showToast;
+  }, [showToast]);
+
   const loadHierarchy = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
     else setRefreshing(true);
+    setLoadError(null);
     try {
       const response = await adminApi.getHierarchy();
       if (response?.success) {
@@ -128,12 +135,14 @@ export const HierarchyPage = () => {
       }
     } catch (error) {
       setTree(EMPTY_TREE);
-      showToast(error?.response?.data?.message || 'Failed to load organization hierarchy', 'error');
+      const errorMessage = error?.data?.message || error?.response?.data?.message || error?.message || 'Failed to load organization hierarchy';
+      setLoadError(errorMessage);
+      showToastRef.current(errorMessage, 'error');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [showToast]);
+  }, []);
 
   useEffect(() => {
     loadHierarchy();
@@ -508,11 +517,14 @@ export const HierarchyPage = () => {
             </span>
           )}
 
-          <Link to={ROUTES.ADMIN(firmSlug)}>
-            <Button variant="outline" size="sm">
-              <span className="mr-1">☵</span> Table View
-            </Button>
-          </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(ROUTES.ADMIN(firmSlug))}
+            title="Switch to Users & Team table view"
+          >
+            <span className="mr-1">☵</span> Table View
+          </Button>
 
           <Button
             variant="outline"
@@ -663,15 +675,35 @@ export const HierarchyPage = () => {
         {/* Tree Container */}
         {loading ? (
           <Loading message="Loading organization structure..." />
+        ) : loadError ? (
+          <Card>
+            <div className="py-12 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-950/50 dark:text-red-400">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <p className="mt-3 text-base font-semibold text-slate-800 dark:text-slate-200">Failed to load organization structure</p>
+              <p className="mt-1 text-sm text-slate-500 max-w-md mx-auto">{loadError}</p>
+              <div className="mt-4 flex items-center justify-center gap-3">
+                <Button onClick={() => loadHierarchy()} variant="outline">
+                  Retry
+                </Button>
+                <Button variant="primary" onClick={() => navigate(ROUTES.ADMIN(firmSlug))}>
+                  Go to Users & Team
+                </Button>
+              </div>
+            </div>
+          </Card>
         ) : !tree.primaryAdmin && !tree.admins.length && !tree.unassignedUsers.length ? (
           <Card>
             <div className="py-12 text-center">
               <p className="text-base font-semibold text-slate-800 dark:text-slate-200">No team members found</p>
               <p className="mt-1 text-sm text-slate-500">Add users in User Management to establish firm reporting lines.</p>
               <div className="mt-4">
-                <Link to={ROUTES.ADMIN(firmSlug)}>
-                  <Button variant="primary">Go to Users & Team</Button>
-                </Link>
+                <Button variant="primary" onClick={() => navigate(ROUTES.ADMIN(firmSlug))}>
+                  Go to Users & Team
+                </Button>
               </div>
             </div>
           </Card>
