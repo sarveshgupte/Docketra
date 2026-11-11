@@ -78,12 +78,11 @@ const getRedisClient = () => {
       enableOfflineQueue: false,
       lazyConnect: true,
       retryStrategy: (times) => {
-        if (isProduction()) return null;
-        if (times > 1) {
+        if (!isProduction() && times > 1) {
           logLocalFallbackOnce('[REDIS] Redis unavailable locally - using in-memory fallbacks where supported');
           return null;
         }
-        return 250;
+        return Math.min(times * 100, 2000);
       },
     });
 

@@ -54,7 +54,7 @@ export const FindWorkspacePage = () => {
 
       setError(NOT_FOUND_MESSAGE);
     } catch (lookupError) {
-      const status = lookupError?.response?.status;
+      const status = lookupError?.status ?? lookupError?.response?.status ?? lookupError?.originalError?.response?.status;
       setError(status === 404 ? NOT_FOUND_MESSAGE : LOOKUP_UNAVAILABLE_MESSAGE);
     } finally {
       setLoading(false);
