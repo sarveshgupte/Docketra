@@ -85,6 +85,11 @@
 **Vulnerability:** Information Disclosure where \`error.message\` was directly exposed to clients in 500 error responses across the DocketException API.
 **Learning:** Returning raw error messages can leak sensitive internal workings. Our custom logger (\`utils/log.js\`) expects a metadata object with \`{ message: error.message, stack: error.stack }\`.
 **Prevention:** Avoid passing raw \`error.message\` to \`res.status(500).json(...)\`. Instead, use \`log.error('EVENT_NAME', { message: error.message, stack: error.stack })\` and return a generic, safe string in the response.
+
+## 2026-11-07 - Prevent Information Disclosure via Error Messages in Case Activity
+**Vulnerability:** Information Disclosure where `error.message` was directly exposed to clients in 500 error responses in `src/services/caseActivity.service.js`.
+**Learning:** Exposing raw internal error details to the client can leak sensitive system information, configuration details, or underlying infrastructure state, which can be leveraged by attackers.
+**Prevention:** Always log the full error details server-side using the internal logger (`log.error`) and return generic, safe error messages to the client (e.g., "Failed to load comments").
 ## 2026-11-10 - Mass Assignment and IDOR Vulnerability in Case Activity
 **Vulnerability:** The application was trusting client-provided identity fields (`userEmail`) from `req.body` directly in the `caseActivity.service.js` file for updating case activity locks, which allows IDOR vulnerabilities, enabling an attacker to impersonate another user.
 **Learning:** This exposes the application to situations where attackers can manipulate case states under the guise of another user.
