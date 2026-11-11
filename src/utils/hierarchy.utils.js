@@ -1,4 +1,4 @@
-const { normalizeRole, isPrimaryAdminActor } = require('./role.utils');
+const { normalizeRole } = require('./role.utils');
 
 const INVITABLE_ROLE_MAP = {
   PRIMARY_ADMIN: ['ADMIN', 'MANAGER', 'USER'],
@@ -48,7 +48,7 @@ const getTagValidationError = ({ role, primaryAdminId, adminId, managerId }) => 
 };
 
 const assertPrimaryAdmin = (user) => {
-  if (!isPrimaryAdminActor(user) && normalizeRole(user?.role) !== 'PRIMARY_ADMIN') {
+  if (normalizeRole(user?.role) !== 'PRIMARY_ADMIN') {
     throw new Error('Only PRIMARY_ADMIN can perform this action');
   }
 };

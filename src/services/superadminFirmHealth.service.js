@@ -5,7 +5,7 @@ const onboardingAnalyticsService = require('./onboardingAnalytics.service');
 
 const MAX_LIMIT = 100;
 const MAX_SEARCH_LENGTH = 100;
-const ADMIN_ROLES = ['PRIMARY_ADMIN', 'ADMIN', 'Admin', 'primary_admin', 'admin'];
+const ADMIN_ROLES = ['PRIMARY_ADMIN', 'ADMIN'];
 
 const escapeRegex = (value) => String(value || '').trim().slice(0, MAX_SEARCH_LENGTH).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const toSafeRegex = (value) => {
@@ -32,96 +32,39 @@ const getFirmHealthSnapshot = async ({ limit = 25, status, search } = {}) => {
   }
 
   const [firms, onboarding, storageRows] = await Promise.all([
-    Firm.find(firmQuery).select('_id firmId firmSlug name status storage createdAt').sort({ createdAt: -1 }).lean(),
+    Firm.find(firmQuery).select('_id firmId firmSlug name status createdAt').sort({ createdAt: -1 }).lean(),
     onboardingAnalyticsService.getOnboardingInsightDetails({ sinceDays: 30, staleAfterDays: 7, completionState: 'all', limit: safeLimit }),
     TenantStorageHealth.find({}).select('tenantId status').lean(),
   ]);
 
   const onboardingByFirm = new Map((onboarding?.firms || []).map((row) => [String(row.firmId), row]));
   const storageByFirm = new Map(storageRows.map((row) => [String(row.tenantId), row]));
-
-  // Query admins matching firm._id (ObjectId) or firm.defaultClientId (ObjectId)
-  const allFirmIds = firms.flatMap((f) => [f._id, f.defaultClientId].filter((id) => id && mongoose.Types.ObjectId.isValid(id)));
-  const adminUsers = await User.find({
-    firmId: { $in: allFirmIds },
-    role: { $in: ADMIN_ROLES },
-    status: { $ne: 'deleted' },
-  }).select('_id firmId role emailVerified is_verified passwordSet status').lean();
-
-  const adminsByFirm = new Map();
-  for (const admin of adminUsers) {
-    const key = String(admin.firmId);
-    const existing = adminsByFirm.get(key) || { total: 0, verified: 0 };
-    existing.total += 1;
-    if (admin.emailVerified || admin.is_verified || admin.passwordSet || admin.status === 'active') {
-      existing.verified += 1;
-    }
-    adminsByFirm.set(key, existing);
-  }
+  const adminAgg = await User.aggregate([
+    { $match: { firmId: { $in: firms.map((f) => f._id) }, role: { $in: ADMIN_ROLES }, status: { $ne: 'deleted' } } },
+    { $group: { _id: '$firmId', total: { $sum: 1 }, verified: { $sum: { $cond: [{ $eq: ['$emailVerified', true] }, 1, 0] } } } },
+  ]);
+  const adminsByFirm = new Map(adminAgg.map((row) => [String(row._id), row]));
 
   const healthRows = firms.map((firm) => {
     const onboardingRow = onboardingByFirm.get(String(firm._id)) || onboardingByFirm.get(String(firm.firmId)) || {};
     const storageRow = storageByFirm.get(String(firm._id)) || storageByFirm.get(String(firm.firmId));
-    const adminRow = adminsByFirm.get(String(firm._id)) || adminsByFirm.get(String(firm.firmId)) || { total: 0, verified: 0 };
+    const adminRow = adminsByFirm.get(String(firm._id)) || { total: 0, verified: 0 };
     const reasons = [];
     let score = 100;
 
-    // 1. Firm lifecycle status check
-    if (['inactive', 'suspended', 'disabled'].includes(String(firm.status || '').toLowerCase())) {
-      score -= 30;
-      reasons.push('Firm status is inactive or suspended.');
-    }
-
-    // 2. Admin account & verification check
-    if (adminRow.total === 0) {
-      score -= 25;
-      reasons.push('No platform admin account found.');
-    } else if ((adminRow.verified || 0) === 0) {
-      score -= 10;
-      reasons.push('Admin invitation pending verification.');
-    }
-
-    // 3. Onboarding telemetry check
+    if (['inactive', 'suspended', 'disabled'].includes(String(firm.status || '').toLowerCase())) { score -= 30; reasons.push('Firm status is not active.'); }
+    if (adminRow.total === 0) { score -= 25; reasons.push('No platform admin account found.'); }
+    else if ((adminRow.verified || 0) === 0) { score -= 15; reasons.push('No verified admin access signal.'); }
     const staleUsers = Number(onboardingRow.staleUsers || 0);
     const incompleteUsers = Number(onboardingRow.incompleteUsers || 0);
-    if (staleUsers > 0) {
-      score -= Math.min(20, staleUsers * 4);
-      reasons.push(`Onboarding stale users: ${staleUsers}.`);
-    }
-    if (incompleteUsers > 0) {
-      score -= Math.min(15, incompleteUsers * 2);
-      reasons.push(`Onboarding incomplete users: ${incompleteUsers}.`);
-    }
-
-    // 4. Storage Health check (Docketra managed storage is healthy by default)
-    const storageMode = firm.storage?.mode || 'docketra_managed';
-    let storageStatus = String(storageRow?.status || '').toUpperCase();
-    if (!storageStatus) {
-      storageStatus = storageMode === 'firm_connected' ? 'UNKNOWN' : 'HEALTHY';
-    }
-
-    if (storageMode === 'firm_connected' && storageStatus !== 'HEALTHY') {
-      score -= 12;
-      reasons.push('External Google Drive storage is pending verification.');
-    }
+    if (staleUsers > 0) { score -= Math.min(20, staleUsers * 4); reasons.push(`Onboarding stale users: ${staleUsers}.`); }
+    if (incompleteUsers > 0) { score -= Math.min(15, incompleteUsers * 2); reasons.push(`Onboarding incomplete users: ${incompleteUsers}.`); }
+    const storageStatus = String(storageRow?.status || 'UNKNOWN').toUpperCase();
+    if (storageStatus !== 'HEALTHY') { score -= 12; reasons.push('Storage health is not healthy or unknown.'); }
+    if (Number(adminRow.total || 0) === 0) { score -= 8; reasons.push('Zero active usage/admin signal available.'); }
 
     score = clampScore(score);
     const riskLevel = toRiskLevel(score);
-
-    // Context-sensitive next action
-    let nextAction = 'Continue monitoring';
-    if (adminRow.total === 0) {
-      nextAction = 'Provision firm admin account';
-    } else if ((adminRow.verified || 0) === 0) {
-      nextAction = 'Resend admin setup invite';
-    } else if (storageMode === 'firm_connected' && storageStatus !== 'HEALTHY') {
-      nextAction = 'Verify Google Drive connection';
-    } else if (staleUsers > 0) {
-      nextAction = 'Follow up on stalled onboarding';
-    } else if (onboardingRow.nextAction && onboardingRow.nextAction !== 'Healthy' && onboardingRow.nextAction !== 'Unknown') {
-      nextAction = onboardingRow.nextAction;
-    }
-
     return {
       firmId: firm.firmId,
       firmObjectId: String(firm._id),
@@ -132,13 +75,13 @@ const getFirmHealthSnapshot = async ({ limit = 25, status, search } = {}) => {
       riskLevel,
       reasons: reasons.slice(0, 4),
       signals: {
-        onboarding: { staleUsers, incompleteUsers, completionState: onboardingRow.completionState || 'healthy' },
+        onboarding: { staleUsers, incompleteUsers, completionState: onboardingRow.completionState || 'unknown' },
         adminAccess: { totalAdmins: Number(adminRow.total || 0), verifiedAdmins: Number(adminRow.verified || 0) },
-        storage: { mode: storageMode, status: storageStatus },
+        storage: { status: storageStatus },
         auth: { status: 'platform_monitored' },
         usage: { hasActiveSignal: Number(adminRow.total || 0) > 0 },
       },
-      nextAction,
+      nextAction: onboardingRow.nextAction || (riskLevel === 'healthy' ? 'Continue monitoring' : 'Review firm lifecycle and admin access'),
       href: `/app/superadmin/firms/${firm._id}`,
     };
   });

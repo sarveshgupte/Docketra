@@ -4,12 +4,6 @@ const routeSchemas = require('../schemas/superadmin.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { requireSuperadmin } = require('../middleware/permission.middleware');
 const { getSuperadminAiAssistantChat } = require('../controllers/superadminAiAssistant.controller');
-const {
-  getRepoAgentStatus,
-  runRepoAgentAudit,
-  dispatchRepoAgentTask,
-  getRepoAgentPRs,
-} = require('../controllers/superadminRepoAgent.controller');
 const { authorize } = require('../middleware/authorize');
 const SuperAdminPolicy = require('../policies/superadmin.policy');
 const FirmPolicy = require('../policies/firm.policy');
@@ -112,11 +106,5 @@ router.post('/exit-firm', exitFirm);
 
 // SuperAdmin-only AI Assistant Chat
 router.post('/ai-assistant/chat', getSuperadminAiAssistantChat);
-
-// Repository AI Coding Agent & Watchdogs (Sentinel, Bolt, Palette)
-router.get('/repo-agent/status', getRepoAgentStatus);
-router.post('/repo-agent/audit', runRepoAgentAudit);
-router.post('/repo-agent/dispatch', dispatchRepoAgentTask);
-router.get('/repo-agent/prs', getRepoAgentPRs);
 
 module.exports = router;

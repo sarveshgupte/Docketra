@@ -25,7 +25,7 @@ async function ensureDefaultWorkbasketForFirm(firmId, { session } = {}) {
     {
       $setOnInsert: {
         firmId,
-        name: `${DEFAULT_PRIMARY_WORKBASKET_NAME} — QC`,
+        name: `${DEFAULT_PRIMARY_WORKBASKET_NAME} - QC`,
         isActive: true,
         type: 'QC',
         parentWorkbasketId: createdPrimary._id,

@@ -80,7 +80,6 @@ export const PublicRoutes = () => (
         <Route path="/superadmin" element={<LoginPage />} />
         <Route path="/find-workspace" element={<FindWorkspacePage />} />
         <Route path="/superadmin/login" element={<LoginPage />} />
-        <Route path="/superadmin/forgot-password" element={<Navigate to="/superadmin" replace />} />
       </Route>
     </Route>
 

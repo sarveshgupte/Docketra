@@ -4,7 +4,7 @@
  * All toasts auto-dismiss after 4 seconds by default
  */
 
-import React, { createContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { createContext, useState, useCallback, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { SESSION_KEYS } from '../utils/constants';
 
@@ -20,27 +20,14 @@ const TOAST_META = {
 
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
-  const recentToastsRef = useRef(new Map());
 
   const removeToast = useCallback((id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
   const addToast = useCallback((message, type = 'info', persistent = false) => {
-    const normalizedMessage = String(message || '').trim();
-    if (!normalizedMessage) return null;
-
-    // Deduplicate identical toasts emitted in quick succession (within 2500ms)
-    const cacheKey = `${type}:${normalizedMessage}`;
-    const now = Date.now();
-    const lastEmitted = recentToastsRef.current.get(cacheKey) || 0;
-    if (now - lastEmitted < 2500) {
-      return null;
-    }
-    recentToastsRef.current.set(cacheKey, now);
-
-    const id = `${now}-${Math.random().toString(36).slice(2, 9)}`;
-    const toast = { id, message: normalizedMessage, type };
+    const id = Date.now();
+    const toast = { id, message, type };
 
     setToasts((prev) => {
       const newToasts = [...prev, toast];

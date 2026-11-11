@@ -123,7 +123,7 @@ export function ComplianceVsGenericComparison() {
               <th scope="col" className="py-3.5 px-4 sm:px-5 w-[32%] bg-emerald-50/50 text-slate-950 border-x border-emerald-200 text-xs">
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <span className="text-slate-950 font-bold tracking-tight block">Docketra (The Company Brain)</span>
+                    <span className="text-slate-950 font-bold tracking-tight block">Docketra Sovereign OS</span>
                     <span className="text-xs text-emerald-800 font-medium block mt-0.5">Firm Google Drive Perimeter</span>
                   </div>
                   <span className="shrink-0 border border-emerald-300 bg-emerald-100 text-emerald-800 text-[11px] font-semibold px-2 py-0.5 rounded-xs">

@@ -20,7 +20,6 @@ export default {
     extend: {
       fontFamily: {
         sans: ['"DM Sans"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
-        display: ['"Instrument Serif"', 'Georgia', 'serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'SF Mono', 'Menlo', 'Consolas', 'monospace'],
       },
       spacing: {
