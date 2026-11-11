@@ -40,11 +40,11 @@ export function DocketCard({
   return (
     <button
       type="button"
-      className="docket-card"
+      className="docket-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
       style={{
         ...cardStyle,
         borderColor: focused ? '#93c5fd' : '#e5e7eb',
-        outline: focused ? '2px solid #2563eb' : 'none',
+        outline: focused ? '2px solid #2563eb' : undefined,
         outlineOffset: 2,
         boxShadow: focused ? '0 1px 6px rgba(37, 99, 235, 0.2)' : 'none',
         opacity: isOpening ? 0.85 : 1,
