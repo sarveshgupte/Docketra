@@ -3651,23 +3651,60 @@ const getAllUsers = async (req, res) => {
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
     }
-    // Get requesting admin's firmId for same-firm filtering
-    const adminFirmId = req.user?.firmId;
+    // Get requesting admin's candidate firmIds for resilient multi-tenant filtering
+    const candidateFirmIds = [
+      req.firmId,
+      req.ownershipFirmId,
+      req.user?.firmId,
+      req.tenant?.id,
+      req.firm?.id,
+      req.firm?.ownershipFirmId,
+    ].filter(Boolean);
+
+    const adminFirmId = req.user?.firmId || candidateFirmIds[0];
     if (!adminFirmId) {
       return res.status(403).json({ success: false, message: 'Firm context is required' });
     }
 
+    let tenantContext = null;
+    if (adminFirmId && mongoose.Types.ObjectId.isValid(String(adminFirmId))) {
+      try {
+        tenantContext = await resolveCanonicalTenantFromFirmId(adminFirmId);
+        if (tenantContext?.tenantId) candidateFirmIds.push(tenantContext.tenantId);
+        if (tenantContext?.ownershipFirmId) candidateFirmIds.push(tenantContext.ownershipFirmId);
+        if (tenantContext?.legacyFirmId) candidateFirmIds.push(tenantContext.legacyFirmId);
+      } catch (err) {
+        log.warn('[AUTH] resolveCanonicalTenantFromFirmId failed in getAllUsers', err);
+      }
+    }
+
+    const uniqueFirmIdStrings = [...new Set(candidateFirmIds.map(String))];
+    const objectIds = uniqueFirmIdStrings
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
+
+    const firmFilter = uniqueFirmIdStrings.length > 1
+      ? { $in: [...uniqueFirmIdStrings, ...objectIds] }
+      : adminFirmId;
+
     // Get all users in same firm, excluding password-related fields
     const users = await User.find({
-      firmId: adminFirmId,
+      firmId: firmFilter,
       status: { $ne: 'deleted' },
     })
       .select('-passwordHash -passwordHistory -passwordSetupTokenHash -passwordResetTokenHash')
       .sort({ createdAt: -1 });
-    
-    const tenantContext = await resolveCanonicalTenantFromFirmId(adminFirmId);
+
     const ownershipFirmId = tenantContext?.ownershipFirmId || tenantContext?.legacyFirmId || adminFirmId;
-    const firmDoc = await Firm.findById(ownershipFirmId).select('firmId name').lean();
+    let firmDoc = null;
+    if (ownershipFirmId && mongoose.Types.ObjectId.isValid(String(ownershipFirmId))) {
+      try {
+        firmDoc = await Firm.findById(ownershipFirmId).select('firmId name').lean();
+      } catch (firmErr) {
+        log.warn('[AUTH] Failed to fetch firmDoc in getAllUsers', firmErr);
+      }
+    }
+
     const fallbackFirm = firmDoc ? {
       _id: adminFirmId,
       firmId: firmDoc.firmId,
@@ -3702,6 +3739,7 @@ const getAllUsers = async (req, res) => {
       count: normalizedUsers.length,
     });
   } catch (error) {
+    log.error('[AUTH] Error fetching users:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching users',

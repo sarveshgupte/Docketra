@@ -210,5 +210,25 @@ export const superadminService = {
     const response = await api.post('/superadmin/ai-assistant/chat', payload);
     return response.data;
   },
+
+  getRepoAgentStatus: async () => {
+    const response = await api.get('/superadmin/repo-agent/status');
+    return response.data;
+  },
+
+  runRepoAgentAudit: async (agent = 'all') => {
+    const response = await api.post('/superadmin/repo-agent/audit', { agent });
+    return response.data;
+  },
+
+  dispatchRepoAgentTask: async (payload) => {
+    const response = await api.post('/superadmin/repo-agent/dispatch', payload);
+    return response.data;
+  },
+
+  getRepoAgentPRs: async (params = {}) => {
+    const response = await api.get('/superadmin/repo-agent/prs', { params });
+    return response.data;
+  },
 };
 

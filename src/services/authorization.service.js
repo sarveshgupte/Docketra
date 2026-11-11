@@ -73,16 +73,29 @@ const resolveFirmRole = async (userId, firmId, identity = {}) => {
   const normalizedUserId = toIdString(userId);
   const normalizedXid = typeof identity?.xID === 'string' ? identity.xID.trim() : null;
 
-  // Resolve canonical/legacy context to find the physical firmId used in the DB (only for valid ObjectIds to avoid CastError in mock tests)
-  let queryFirmId = toIdString(firmId);
-  if (mongoose.Types.ObjectId.isValid(queryFirmId)) {
-    const tenantContext = await resolveCanonicalTenantFromFirmId(firmId);
-    queryFirmId = tenantContext?.legacyFirmId || tenantContext?.tenantId || queryFirmId;
+  // Resolve canonical/legacy context to find the physical firmId used in the DB
+  const candidateFirmIds = [toIdString(firmId)];
+  if (mongoose.Types.ObjectId.isValid(toIdString(firmId))) {
+    try {
+      const tenantContext = await resolveCanonicalTenantFromFirmId(firmId);
+      if (tenantContext?.legacyFirmId) candidateFirmIds.push(toIdString(tenantContext.legacyFirmId));
+      if (tenantContext?.ownershipFirmId) candidateFirmIds.push(toIdString(tenantContext.ownershipFirmId));
+      if (tenantContext?.tenantId) candidateFirmIds.push(toIdString(tenantContext.tenantId));
+    } catch (_) {}
   }
 
-  const query = { firmId: queryFirmId, isActive: true };
+  const uniqueFirmIdStrings = [...new Set(candidateFirmIds.filter(Boolean))];
+  const objectIds = uniqueFirmIdStrings
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
 
-  if (normalizedUserId) query._id = normalizedUserId;
+  const firmFilter = uniqueFirmIdStrings.length > 1
+    ? { $in: [...uniqueFirmIdStrings, ...objectIds] }
+    : toIdString(firmId);
+
+  const query = { firmId: firmFilter, isActive: true };
+
+    if (normalizedUserId) query._id = normalizedUserId;
   else if (normalizedXid) query.xID = normalizedXid;
   else return null;
 

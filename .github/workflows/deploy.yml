@@ -41,6 +41,7 @@ jobs:
         with:
           repoToken: "${{ secrets.GITHUB_TOKEN }}"
           firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_DOCKETRA_PROD }}"
+          target: live
           channelId: live
           projectId: docketra-prod
 

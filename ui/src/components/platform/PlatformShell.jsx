@@ -480,6 +480,13 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     return isDescendant && currentNavItem.label !== title;
   }, [currentNavItem, pathname, title]);
 
+  const effectiveTitle = title || currentNavItem?.label || 'Workspace';
+  const isRedundantModuleLabel = Boolean(
+    moduleLabel &&
+    effectiveTitle &&
+    String(moduleLabel).trim().toLowerCase() === String(effectiveTitle).trim().toLowerCase()
+  );
+
   const shortcutHint = [
     'Ctrl/⌘+K open',
     '/ quick open',
@@ -589,8 +596,8 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
         <header className="platform__topbar">
           {title !== null && title !== false && title !== '' ? (
             <div className="platform__title-block">
-              {moduleLabel ? <span className="platform__module-label">{moduleLabel}</span> : null}
-              <h1>{title || currentNavItem?.label || "Workspace"}</h1>
+              {moduleLabel && !isRedundantModuleLabel ? <span className="platform__module-label">{moduleLabel}</span> : null}
+              <h1>{effectiveTitle}</h1>
               {showBreadcrumbs ? (
                 <div className="platform__breadcrumbs" aria-label="Breadcrumb">
                   <span className="platform__breadcrumb-root">{currentNavItem.label}</span>

@@ -2235,19 +2235,173 @@
 
 /* ── Docketra Intelligence ─────────────────────────────────────────────── */
 
+.intelligence-shell {
+  display: grid;
+  gap: 20px;
+}
+
+.intelligence-header-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--panel-radius, 8px);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.intelligence-brief-pill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.intelligence-brief-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.intelligence-brief-tag {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #b45309;
+}
+
+.intelligence-brief-text {
+  font-size: 12px;
+  color: var(--color-ink, #0f172a);
+  margin-top: 1px;
+  line-height: 1.4;
+}
+
+.intelligence-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.intelligence-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.intelligence-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.intelligence-action-btn--secondary {
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  color: var(--color-ink, #0f172a);
+}
+
+.intelligence-action-btn--secondary:hover:not(:disabled) {
+  background: var(--color-surface-subtle, #f8fafc);
+  border-color: var(--color-border-strong, #cbd5e1);
+}
+
+.intelligence-action-btn--primary {
+  background: var(--color-ink, #0f172a);
+  border: 1px solid var(--color-ink, #0f172a);
+  color: #ffffff;
+}
+
+.intelligence-action-btn--primary:hover:not(:disabled) {
+  background: #1e293b;
+  border-color: #1e293b;
+}
+
+.intelligence-onboarding-card {
+  padding: 16px;
+  background: var(--color-surface-subtle, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--panel-radius, 8px);
+}
+
+.intelligence-onboarding-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.intelligence-onboarding-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  color: var(--color-ink, #0f172a);
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 140ms ease;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.intelligence-onboarding-link:hover {
+  border-color: var(--color-border-strong, #cbd5e1);
+  transform: translateY(-1px);
+}
+
+.intelligence-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.intelligence-dashboard-col {
+  display: grid;
+  gap: 20px;
+}
+
 .intelligence-recommendation-card {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(160px, 220px) auto;
+  grid-template-columns: minmax(200px, 1fr) minmax(140px, 180px) auto;
   align-items: center;
   gap: 16px;
+  padding: 16px;
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--panel-radius, 8px);
 }
 
 .intelligence-recommendation-card__name {
   margin: 3px 0;
-  color: #1a1916;
-  font-size: 20px;
+  color: var(--color-ink, #0f172a);
+  font-size: 18px;
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 1.2;
 }
 
 .intelligence-score {
@@ -2257,8 +2411,8 @@
 }
 
 .intelligence-score__value {
-  color: #1a1916;
-  font-size: 14px;
+  color: var(--color-ink, #0f172a);
+  font-size: 13px;
   font-weight: 700;
   line-height: 1;
 }
@@ -2268,14 +2422,14 @@
   block-size: 6px;
   overflow: hidden;
   border-radius: 999px;
-  background: #e8e6e0;
+  background: var(--color-surface-subtle, #e2e8f0);
 }
 
 .intelligence-score__track span {
   display: block;
   block-size: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #2563eb, #16a34a);
+  background: linear-gradient(90deg, #2563eb, #10b981);
 }
 
 .intelligence-guidance-grid {
@@ -2295,46 +2449,60 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  min-block-size: 132px;
+  min-block-size: 120px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--panel-radius, 8px);
+  background: var(--color-surface, #ffffff);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
 .intelligence-workbasket-card__capacity {
-  margin: 8px 0 4px;
-  color: #1a1916;
-  font-size: 22px;
+  margin: 6px 0 2px;
+  color: var(--color-ink, #0f172a);
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: -0.02em;
 }
 
 .intelligence-deadline-card {
   display: grid;
-  grid-template-columns: minmax(180px, 0.9fr) minmax(220px, 1.1fr) minmax(180px, 0.9fr) auto;
+  grid-template-columns: minmax(160px, 1fr) minmax(200px, 1.2fr) minmax(140px, 1fr) auto;
   align-items: center;
   gap: 16px;
-  border-color: rgba(148, 163, 184, 0.28);
+  padding: 16px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--panel-radius, 8px);
+  background: var(--color-surface, #ffffff);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
 .intelligence-deadline-card--error {
-  border-color: rgba(244, 63, 94, 0.34);
-  background: linear-gradient(135deg, #fffafa, #fff7ed);
+  border-color: #fecdd3;
+  background: #fff5f5;
 }
 
 .intelligence-deadline-card--warning {
-  border-color: rgba(245, 158, 11, 0.34);
-  background: linear-gradient(135deg, #fffdf5, #fff7ed);
+  border-color: #fde68a;
+  background: #fffdf5;
 }
 
 .intelligence-deadline-card--review {
-  border-color: rgba(37, 99, 235, 0.24);
-  background: linear-gradient(135deg, #fbfdff, #eff6ff);
+  border-color: #bfdbfe;
+  background: #f8faff;
+}
+
+.intelligence-deadline-card--active {
+  border-color: var(--color-border, #e5e7eb);
+  background: var(--color-surface, #ffffff);
 }
 
 .intelligence-deadline-card__level {
-  margin: 5px 0 8px;
-  color: #1a1916;
-  font-size: 26px;
-  font-weight: 850;
-  letter-spacing: -0.03em;
+  margin: 4px 0 6px;
+  color: var(--color-ink, #0f172a);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .intelligence-deadline-card__radar {
@@ -2349,27 +2517,27 @@
   justify-content: space-between;
   gap: 8px;
   padding: 8px 10px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.74);
-  color: #3d3c38;
-  font-size: 12px;
-  font-weight: 700;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 6px;
+  background: var(--color-surface-subtle, #f8fafc);
+  color: var(--color-ink-secondary, #475569);
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .intelligence-deadline-card__radar strong {
-  color: #1a1916;
+  color: var(--color-ink, #0f172a);
 }
 
 .intelligence-deadline-card__action {
   display: grid;
-  gap: 5px;
+  gap: 4px;
 }
 
 .intelligence-deadline-card__action strong {
-  color: #1a1916;
-  font-size: 14px;
-  line-height: 1.35;
+  color: var(--color-ink, #0f172a);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .intelligence-rank-list {
@@ -4441,6 +4609,329 @@ select:focus-visible {
   border-radius: 6px;
   font-weight: 500;
   animation: slideDown 0.2s ease;
+}
+
+/* ── Reports & Practice Analytics Redesign ──────────────────────────────── */
+
+.reports-tab-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  margin-bottom: 16px;
+}
+
+.reports-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-ink-muted, #64748b);
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: -1px;
+}
+
+.reports-tab-btn:hover {
+  color: var(--color-ink, #0f172a);
+}
+
+.reports-tab-btn--active {
+  color: var(--color-accent, #4f46e5);
+  border-bottom-color: var(--color-accent, #4f46e5);
+  font-weight: 600;
+}
+
+.reports-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reports-head-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: #ffffff;
+  color: var(--color-ink, #0f172a);
+  transition: all 0.15s ease;
+}
+
+.reports-head-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.reports-head-btn--ghost {
+  cursor: pointer;
+}
+
+.reports-subtab-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.reports-subtab-btn {
+  background: #f1f5f9;
+  border: 1px solid transparent;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reports-subtab-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.reports-subtab-btn--active {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.reports-lifecycle-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 840px) {
+  .reports-lifecycle-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.reports-lifecycle-card {
+  background: #ffffff;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+
+.reports-lifecycle-card__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink, #0f172a);
+  margin: 0 0 4px 0;
+}
+
+.reports-lifecycle-card__desc {
+  font-size: 12px;
+  color: var(--color-ink-muted, #64748b);
+  margin: 0 0 14px 0;
+}
+
+.reports-bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.reports-bar-row:last-child {
+  margin-bottom: 0;
+}
+
+.reports-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.reports-bar-label {
+  color: var(--color-ink, #1e293b);
+  font-weight: 500;
+}
+
+.reports-bar-value {
+  color: var(--color-ink-muted, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+.reports-bar-track {
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.reports-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.reports-bar-fill--primary {
+  background: #4f46e5;
+}
+
+.reports-bar-fill--warning {
+  background: #f59e0b;
+}
+
+.reports-bar-fill--danger {
+  background: #ef4444;
+}
+
+.reports-bar-fill--success {
+  background: #10b981;
+}
+
+.reports-bar-fill--neutral {
+  background: #94a3b8;
+}
+
+.reports-stat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reports-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 12px;
+}
+
+.reports-stat-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.reports-stat-name {
+  color: var(--color-ink, #334155);
+}
+
+.reports-stat-metric {
+  font-weight: 600;
+  color: var(--color-ink, #0f172a);
+}
+
+.reports-stat-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.reports-stat-badge--success {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.reports-stat-badge--warning {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.reports-stat-badge--danger {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.reports-onboarding-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+}
+
+.reports-onboarding-card__icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: #e0e7ff;
+  color: #4338ca;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reports-onboarding-card__content {
+  flex: 1;
+}
+
+.reports-onboarding-card__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.reports-onboarding-card__text {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #475569;
+  margin: 0 0 12px 0;
+}
+
+.reports-onboarding-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reports-onboarding-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.reports-onboarding-btn--primary {
+  background: #4f46e5;
+  color: #ffffff !important;
+}
+
+.reports-onboarding-btn--primary:hover {
+  background: #4338ca;
+}
+
+.reports-onboarding-btn--secondary {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155 !important;
+}
+
+.reports-onboarding-btn--secondary:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
 }
 
 /* ── Cloud Isolation Certificate Print Styles ────────────────────────────── */

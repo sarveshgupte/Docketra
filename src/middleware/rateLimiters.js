@@ -46,7 +46,10 @@ const createRedisStore = () => {
   }
 
   return new RedisStore({
-    sendCommand: (...args) => {
+    sendCommand: async (...args) => {
+      if (!isRedisReady()) {
+        throw new Error('Redis is not ready');
+      }
       if (typeof redis.call === 'function') {
         return redis.call(...args);
       }
@@ -110,6 +113,7 @@ const createLimiter = ({ name, windowMs, max, keyGenerator, skip, failClosedWhen
       skip,
       handler: createRateLimitHandler(name, windowMs),
       validate: false,
+      passOnStoreError: !failClosedWhenRedisUnavailable,
     });
     return limiter;
   };

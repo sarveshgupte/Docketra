@@ -99,7 +99,7 @@ const getSupportDiagnosticsSnapshot = async ({ limit = 15 } = {}) => {
 
   const onboardingByFirm = new Map((onboardingDetails?.firms || []).map((firm) => [String(firm.firmId), firm]));
   const firmsWithOnboarding = firmRows.map((firm) => {
-    const onboarding = onboardingByFirm.get(String(firm.firmId));
+    const onboarding = onboardingByFirm.get(String(firm.firmId)) || onboardingByFirm.get(String(firm.firmCode));
     return {
       ...firm,
       onboarding: onboarding
@@ -107,13 +107,11 @@ const getSupportDiagnosticsSnapshot = async ({ limit = 15 } = {}) => {
           incompleteUsers: onboarding.incompleteUsers || 0,
           staleUsers: onboarding.staleUsers || 0,
           blockers: Array.isArray(onboarding.blockers) ? onboarding.blockers.slice(0, 4) : [],
-          nextAction: onboarding.nextAction || 'Healthy',
         }
         : {
           incompleteUsers: 0,
           staleUsers: 0,
           blockers: [],
-          nextAction: 'Unknown',
         },
     };
   });
@@ -130,7 +128,9 @@ const getSupportDiagnosticsSnapshot = async ({ limit = 15 } = {}) => {
     generatedAt: new Date().toISOString(),
     totals: {
       firmsInScope: firms.length,
-      firmsNeedingOnboardingFollowUp: firmsWithOnboarding.filter((row) => row.onboarding.nextAction !== 'Healthy').length,
+      firmsNeedingOnboardingFollowUp: firmsWithOnboarding.filter(
+        (row) => (row.onboarding.incompleteUsers > 0 || row.onboarding.staleUsers > 0 || row.onboarding.blockers.length > 0)
+      ).length,
     },
     firms: firmsWithOnboarding,
     loginAndOtpIssues: redactedFailures,

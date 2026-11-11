@@ -1,26 +1,49 @@
 const mongoose = require('mongoose');
 const User = require('../models/User.model');
+const Firm = require('../models/Firm.model');
 const SuperadminAudit = require('../models/SuperadminAudit.model');
 const log = require('../utils/log');
 
-const ADMIN_ROLE_VALUES = ['ADMIN', 'PRIMARY_ADMIN', 'Admin'];
+const ADMIN_ROLE_VALUES = ['ADMIN', 'PRIMARY_ADMIN', 'Admin', 'primary_admin', 'admin'];
+
+const resolveFirmScopeIds = async (firmOrId) => {
+  if (!firmOrId) return [];
+  if (Array.isArray(firmOrId)) {
+    return firmOrId.filter((id) => id && mongoose.Types.ObjectId.isValid(id));
+  }
+  if (typeof firmOrId === 'object' && firmOrId._id) {
+    return [firmOrId._id, firmOrId.defaultClientId].filter((id) => id && mongoose.Types.ObjectId.isValid(id));
+  }
+  if (mongoose.Types.ObjectId.isValid(firmOrId)) {
+    try {
+      const firm = await Firm.findById(firmOrId).select('_id defaultClientId').lean();
+      if (firm) {
+        return [firm._id, firm.defaultClientId].filter((id) => id && mongoose.Types.ObjectId.isValid(id));
+      }
+    } catch (_) {
+      // Fallback to the single ID if firm lookup fails
+    }
+  }
+  return mongoose.Types.ObjectId.isValid(firmOrId) ? [firmOrId] : [];
+};
 
 const findFirmAdmin = async (firmObjectId) => {
+  const ids = await resolveFirmScopeIds(firmObjectId);
   return User.findOne({
-    firmId: firmObjectId,
-    isSystem: true,
+    firmId: { $in: ids },
     role: { $in: ADMIN_ROLE_VALUES },
     status: { $ne: 'deleted' },
-  });
+  }).sort({ isPrimaryAdmin: -1, isSystem: -1, createdAt: 1 });
 };
 
 const findFirmAdminById = async (firmObjectId, adminId) => {
   if (!adminId || !mongoose.Types.ObjectId.isValid(adminId)) {
     return null;
   }
+  const ids = await resolveFirmScopeIds(firmObjectId);
   return User.findOne({
     _id: adminId,
-    firmId: firmObjectId,
+    firmId: { $in: ids },
     role: { $in: ADMIN_ROLE_VALUES },
     status: { $ne: 'deleted' },
   });

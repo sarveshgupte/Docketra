@@ -5,6 +5,7 @@ import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
 import { validateXID } from '../utils/validators';
 import { authApi } from '../api/auth.api';
+import SeoHead from '../components/common/SeoHead';
 
 const INVALID_XID_MESSAGE = 'Enter a valid xID, for example X000001.';
 const NOT_FOUND_MESSAGE = 'We could not find a workspace for that xID. Check the xID or contact your firm admin.';
@@ -53,7 +54,7 @@ export const FindWorkspacePage = () => {
 
       setError(NOT_FOUND_MESSAGE);
     } catch (lookupError) {
-      const status = lookupError?.response?.status;
+      const status = lookupError?.status ?? lookupError?.response?.status ?? lookupError?.originalError?.response?.status;
       setError(status === 404 ? NOT_FOUND_MESSAGE : LOOKUP_UNAVAILABLE_MESSAGE);
     } finally {
       setLoading(false);
@@ -62,6 +63,10 @@ export const FindWorkspacePage = () => {
 
   return (
     <div className="auth-wrapper find-workspace-page">
+      <SeoHead
+        title="Find Workspace • Docketra"
+        description="Enter your xID and route to your firm's secure workspace."
+      />
       <div className="find-workspace-page__shell">
         <section className="find-workspace-page__context" aria-label="Find workspace">
           <h1 className="find-workspace-page__heading">Find your Docketra workspace</h1>

@@ -152,5 +152,26 @@ module.exports = {
       conversationId: z.string().trim().optional(),
     }).strict(),
   },
+  'GET /repo-agent/status': {
+    query: z.object({}).strict(),
+  },
+  'POST /repo-agent/audit': {
+    body: z.object({
+      agent: z.enum(['sentinel', 'bolt', 'palette', 'all']).optional(),
+    }).strict(),
+  },
+  'POST /repo-agent/dispatch': {
+    body: z.object({
+      agent: z.enum(['sentinel', 'bolt', 'palette']),
+      prompt: z.string().trim().min(3).max(4000),
+      mode: z.enum(['preview', 'create_pr']).optional(),
+      targetFile: z.string().trim().optional(),
+    }).strict(),
+  },
+  'GET /repo-agent/prs': {
+    query: z.object({
+      state: z.enum(['open', 'closed', 'all']).optional(),
+    }).strict(),
+  },
 };
 

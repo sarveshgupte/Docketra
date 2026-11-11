@@ -120,11 +120,13 @@ const { mountTenantRoutes } = require('./routes/mountTenantRoutes');
 const { mountFallbackRoutes } = require('./routes/mountFallbackRoutes');
 const mutatingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const forceTransactionPaths = ['/google/callback', '/my-pending'];
+const nonMutatingPostPaths = new Set(['/find-workspace', '/auth/find-workspace', '/api/auth/find-workspace']);
 const writeGuardChain = (req, res, next) => {
   const shouldForceTransaction = forceTransactionPaths.some((path) => req.path && req.path.startsWith(path));
   const isEmailsInbound = req.path && (req.path === '/emails/inbound' || req.path.endsWith('/emails/inbound'));
 
-  if (!mutatingMethods.has(req.method) && !shouldForceTransaction) {
+  const isNonMutatingPost = req.path && (nonMutatingPostPaths.has(req.path) || req.path.endsWith('/find-workspace'));
+  if ((!mutatingMethods.has(req.method) || isNonMutatingPost) && !shouldForceTransaction) {
     return next();
   }
   if (shouldForceTransaction) {

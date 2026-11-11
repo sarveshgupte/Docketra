@@ -10,6 +10,7 @@ import { Card } from '../components/common/Card';
 import { authService } from '../services/authService';
 import { STRONG_PASSWORD_MESSAGE, validateEmail, validateStrongPassword, validateXID } from '../utils/validators';
 import { spacingClasses } from '../theme/tokens';
+import SeoHead from '../components/common/SeoHead';
 import './ForgotPasswordPage.css';
 
 const FALLBACK_RATE_LIMIT_MESSAGE = 'Too many password reset requests. Please wait a few minutes before trying again.';
@@ -254,7 +255,7 @@ export const ForgotPasswordPage = () => {
         if (response?.firmSlug) {
           setResolvedFirmSlug(response.firmSlug);
         }
-        const nextLoginPath = nextFirmSlug ? `/${nextFirmSlug}/login` : '/superadmin';
+        const nextLoginPath = nextFirmSlug ? `/${nextFirmSlug}/login` : '/find-workspace';
         resetRecoveryState();
         navigate(nextLoginPath, { state: { message: 'Password reset successfully. Please sign in with your new password.', messageType: 'success' } });
       }
@@ -285,6 +286,7 @@ export const ForgotPasswordPage = () => {
 
   return (
     <div className="auth-wrapper min-h-screen bg-[linear-gradient(135deg,#fff8eb_0%,#ffffff_44%,#e0f2fe_100%)] px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+      <SeoHead title="Reset Password • Docketra" description="Recover your Docketra workspace access safely." />
       <div className="grid w-full max-w-7xl items-center gap-8 lg:grid-cols-[0.9fr_1.1fr]">
         <section className="hidden lg:block" aria-label="Password recovery context">
           <Link to="/" className="inline-flex items-center gap-2 text-lg font-extrabold text-slate-950">
