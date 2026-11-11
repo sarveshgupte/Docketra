@@ -92,7 +92,7 @@ jobs:
         run: npm run ci:frontend:install
 
       - name: Install Playwright browsers
-        run: npx playwright install chromium
+        run: npm --prefix ui exec playwright install chromium
 
       - name: Frontend build gate
         run: npm run ci:frontend:build
