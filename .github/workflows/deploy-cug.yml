@@ -6,12 +6,12 @@ on:
       - cug
 
 concurrency:
-  group: cd-${{ github.workflow }}-${{ github.ref }}
+  group: cd-cug-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  deploy-cug:
-    name: Build and Deploy to GCP & Firebase (CUG)
+  deploy-frontend-cug:
+    name: Build and Deploy Frontend to Firebase (CUG)
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
@@ -28,6 +28,7 @@ jobs:
         run: |
           cd ui
           npm ci
+          npx playwright install chromium
           VITE_API_BASE_URL="https://docketra-api-cug-1078507569854.us-central1.run.app/api" \
           VITE_GOOGLE_CLIENT_ID="1078507569854-c24hg50jkar8p68ooumkdebr3qtrcoe5.apps.googleusercontent.com" \
           VITE_SUPPORT_EMAIL="sarveshgupte@gmail.com" \
@@ -44,6 +45,13 @@ jobs:
           channelId: live
           projectId: docketra-prod
 
+  deploy-backend-cug:
+    name: Build and Deploy Backend to Cloud Run (CUG)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -55,11 +63,7 @@ jobs:
       - name: Build and Deploy Backend to Cloud Run (CUG)
         run: |
           IMAGE_URI="gcr.io/docketra-prod/docketra-api-cug:${{ github.sha }}"
-          
-          # Build container using Cloud Build
           gcloud builds submit --project docketra-prod --tag "$IMAGE_URI" --suppress-logs .
-          
-          # Deploy image to Google Cloud Run (preserving env variables already configured on the service)
           gcloud run deploy docketra-api-cug \
             --project docketra-prod \
             --region us-central1 \
