@@ -11,6 +11,12 @@ Module._load = function(request, parent, isMain) {
   if (request === '../../models/StorageConfiguration.model' || request === '../models/StorageConfiguration.model') {
     return { findOne: () => ({ lean: async () => activeConfig }) };
   }
+  if (request.includes('Firm.model')) {
+    return { findById: () => ({ select: () => ({ lean: async () => null }) }), findOne: () => ({ select: () => ({ lean: async () => null }) }) };
+  }
+  if (request.includes('TenantStorageConfig.model')) {
+    return { findOne: async () => null };
+  }
   if (request === '../../storage/services/TokenEncryption.service' || request === '../storage/services/TokenEncryption.service') {
     return { decrypt: () => 'refresh' };
   }

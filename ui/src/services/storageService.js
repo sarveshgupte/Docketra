@@ -39,6 +39,11 @@ export async function getStorageRootHealth() {
   return response.data;
 }
 
+export async function recoverStorageRoot() {
+  const response = await api.post('/storage/recover-root', {});
+  return response.data;
+}
+
 export async function sendStorageChangeOtp(email) {
   // AUTH_CONTRACT_ALLOWLIST: legacy OTP endpoint retained for storage change step-up verification.
   const response = await api.post('/auth/send-otp', {

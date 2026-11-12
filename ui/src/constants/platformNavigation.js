@@ -212,7 +212,15 @@ export const getPlatformNavigation = (firmSlug, roleOrUser = 'USER', permissions
     })
     .filter(Boolean);
 
+  const canViewAllWorkbaskets = hasAtLeastRole(normalizedRole, 'MANAGER');
   const workbasketsGroupChildren = [
+    ...(canViewAllWorkbaskets || directWorkbasketItems.length === 0 ? [{
+      id: 'global-worklist',
+      label: 'Workbaskets',
+      icon: icons.work,
+      to: ROUTES.GLOBAL_WORKLIST(firmSlug),
+      activeMatch: 'exactOrDescendant',
+    }] : []),
     ...directWorkbasketItems,
   ];
   const qcGroupChildren = [

@@ -254,7 +254,12 @@ class GoogleDriveService {
     try {
       const folderRes = await drive.files.get({ fileId: rootFolderId, fields: 'id,name,trashed', supportsAllDrives: true });
       folder = folderRes.data;
-    } catch {
+    } catch (err) {
+      log.warn('[GoogleDriveService] validateRootFolder files.get failed', {
+        rootFolderId,
+        status: err?.status || err?.code,
+        message: err?.message,
+      });
       return { valid: false, code: 'STORAGE_ROOT_MISSING' };
     }
     if (folder?.trashed) return { valid: false, code: 'STORAGE_ROOT_MISSING' };
@@ -270,10 +275,155 @@ class GoogleDriveService {
     const chunks = [];
     for await (const chunk of manifestRaw.data) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     const manifest = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-    if (!manifest?.docketraStorageRoot || String(manifest?.firmId || '') !== String(firm?._id || '') || String(manifest?.rootFolderId || '') !== String(rootFolderId)) {
+    const firmIdMatches = String(manifest?.firmId || '') === String(firm?._id || '')
+      || (firm?.firmId && String(manifest?.firmId || '') === String(firm.firmId))
+      || (firm?.slug && String(manifest?.firmSlug || '') === String(firm.slug))
+      || (firm?.firmSlug && String(manifest?.firmSlug || '') === String(firm.firmSlug));
+    if (!manifest?.docketraStorageRoot || !firmIdMatches || String(manifest?.rootFolderId || '') !== String(rootFolderId)) {
       return { valid: false, code: 'STORAGE_ROOT_MISMATCH' };
     }
     return { valid: true, folderName: folder?.name || null };
+  }
+
+  async recoverRootFolder({ firmId, user = null }) {
+    const firm = await Firm.findById(firmId).select('_id slug firmSlug name storage storageConfig').lean();
+    if (!firm) {
+      throw new Error('Firm not found');
+    }
+
+    const credentials = this.decodeStorageCredentials(firm);
+    let legacyRefreshToken = null;
+    if (firm?.storage?.google?.encryptedRefreshToken) {
+      try {
+        legacyRefreshToken = decrypt(firm.storage.google.encryptedRefreshToken);
+      } catch (_err) {
+        legacyRefreshToken = null;
+      }
+    }
+
+    const refreshToken = credentials.refreshToken || credentials.googleRefreshToken || legacyRefreshToken;
+    if (!refreshToken) {
+      const error = new Error('Cloud storage must be connected to recover root folder');
+      error.code = 'STORAGE_NOT_CONNECTED';
+      error.status = 400;
+      throw error;
+    }
+
+    const oauthClient = this.getOAuthClient();
+    oauthClient.setCredentials({
+      refresh_token: refreshToken,
+      ...(credentials.accessToken ? { access_token: credentials.accessToken } : {}),
+      ...(credentials.expiryDate ? { expiry_date: credentials.expiryDate } : {}),
+    });
+
+    const drive = google.drive({ version: 'v3', auth: oauthClient });
+    const canonicalName = this.buildCanonicalRootName(firm);
+    const existingRootFolderId = credentials.rootFolderId || firm?.storage?.google?.rootFolderId || null;
+
+    let resolvedFolderId = null;
+    let resolvedFolderName = canonicalName;
+
+    // 1. Try to check/untrash existing rootFolderId if present
+    if (existingRootFolderId) {
+      try {
+        const folderRes = await drive.files.get({
+          fileId: existingRootFolderId,
+          fields: 'id,name,trashed',
+          supportsAllDrives: true,
+        });
+        if (folderRes?.data?.id) {
+          if (folderRes.data.trashed) {
+            await drive.files.update({
+              fileId: existingRootFolderId,
+              requestBody: { trashed: false },
+              supportsAllDrives: true,
+            });
+          }
+          resolvedFolderId = folderRes.data.id;
+          resolvedFolderName = folderRes.data.name || canonicalName;
+        }
+      } catch (_err) {
+        resolvedFolderId = null;
+      }
+    }
+
+    // 2. If existing folder ID was not found, search Google Drive for canonical folder name
+    if (!resolvedFolderId) {
+      try {
+        const listRes = await drive.files.list({
+          q: `mimeType = 'application/vnd.google-apps.folder' and name = '${canonicalName}' and trashed = false`,
+          supportsAllDrives: true,
+          includeItemsFromAllDrives: true,
+          fields: 'files(id,name)',
+        });
+        const match = listRes?.data?.files?.[0];
+        if (match?.id) {
+          resolvedFolderId = match.id;
+          resolvedFolderName = match.name || canonicalName;
+        }
+      } catch (_err) {
+        resolvedFolderId = null;
+      }
+    }
+
+    // 3. If still not found, create new canonical root folder in Google Drive
+    if (!resolvedFolderId) {
+      resolvedFolderId = await this.createFolder(canonicalName, null, drive);
+      resolvedFolderName = canonicalName;
+    }
+
+    // 4. Upsert/repair root manifest in resolved folder
+    const now = new Date().toISOString();
+    await this.upsertRootManifest({
+      drive,
+      rootFolderId: resolvedFolderId,
+      manifest: this.buildRootManifest({
+        firm,
+        rootFolderId: resolvedFolderId,
+        createdAt: credentials.connectedAt || now,
+      }),
+    });
+
+    // 5. Update firm document atomically with healthy active credentials
+    const updatedCredentials = {
+      ...credentials,
+      rootFolderId: resolvedFolderId,
+      rootFolderName: resolvedFolderName,
+      status: 'ACTIVE',
+      lastError: null,
+      lastVerifiedAt: now,
+      lastCheckedAt: now,
+    };
+
+    await Firm.findByIdAndUpdate(firmId, {
+      $set: {
+        storageConfig: {
+          provider: 'google_drive',
+          credentials: encrypt(JSON.stringify(updatedCredentials)),
+        },
+        'storage.mode': 'firm_connected',
+        'storage.provider': 'google_drive',
+        'storage.google.rootFolderId': resolvedFolderId,
+      },
+    });
+
+    await syncTenantStorageConfig(firmId);
+
+    log.info('[GoogleDriveService] Storage root recovered successfully', {
+      firmId,
+      rootFolderId: resolvedFolderId,
+      rootFolderName: resolvedFolderName,
+    });
+
+    return {
+      success: true,
+      recovered: true,
+      rootFolderId: resolvedFolderId,
+      rootFolderName: resolvedFolderName,
+      folderUrl: `https://drive.google.com/drive/folders/${encodeURIComponent(resolvedFolderId)}`,
+      status: 'healthy',
+      checkedAt: now,
+    };
   }
 
   async uploadFile(firmId, file) {

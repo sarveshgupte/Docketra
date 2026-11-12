@@ -688,7 +688,7 @@ const getStorageRootHealth = async (req, res) => {
   try {
     if (!ensurePrimaryAdmin(req, res)) return;
     const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res); if (!ownershipFirmId) return;
-    const firm = await Firm.findById(ownershipFirmId).select('_id name storage storageConfig settings').lean();
+    const firm = await Firm.findById(ownershipFirmId).select('_id slug firmSlug name storage storageConfig settings').lean();
     const state = resolveFirmStorageState(firm, { includeCredentials: true });
     const checkedAt = new Date().toISOString();
 
@@ -711,9 +711,24 @@ const getStorageRootHealth = async (req, res) => {
     }
 
     const oauthClient = getStorageOAuthClient();
-    oauthClient.setCredentials({ refresh_token: state.credentials?.refreshToken || state.credentials?.googleRefreshToken });
+    oauthClient.setCredentials({
+      refresh_token: state.credentials?.refreshToken || state.credentials?.googleRefreshToken,
+      ...(state.credentials?.accessToken ? { access_token: state.credentials.accessToken } : {}),
+      ...(state.credentials?.expiryDate ? { expiry_date: state.credentials.expiryDate } : {}),
+    });
     const driveClient = new GoogleDriveProvider({ oauthClient, driveId: state.credentials?.driveId || null }).getClient();
-    const rootHealth = await googleDriveService.validateRootFolder({ drive: driveClient, firm, rootFolderId: state.rootFolderId });
+    let rootHealth = await googleDriveService.validateRootFolder({ drive: driveClient, firm, rootFolderId: state.rootFolderId });
+
+    if (!rootHealth.valid && (req.query?.recover === 'true' || req.query?.autoRecover === 'true')) {
+      try {
+        const recovery = await googleDriveService.recoverRootFolder({ firmId: ownershipFirmId, user: req.user });
+        if (recovery?.success) {
+          rootHealth = { valid: true, folderName: recovery.rootFolderName };
+        }
+      } catch (_recErr) {
+        // preserve failure reporting below
+      }
+    }
 
     if (!rootHealth.valid) {
       const code = rootHealth.code || 'STORAGE_ROOT_MISSING';
@@ -750,6 +765,25 @@ const getStorageRootHealth = async (req, res) => {
     });
   } catch {
     return res.status(500).json({ error: 'storage_root_health_failed' });
+  }
+};
+
+const recoverStorageRoot = async (req, res) => {
+  try {
+    if (!ensurePrimaryAdmin(req, res)) return;
+    const ownershipFirmId = await resolveOwnershipFirmIdForWrite(req, res);
+    if (!ownershipFirmId) return;
+
+    const result = await googleDriveService.recoverRootFolder({ firmId: ownershipFirmId, user: req.user });
+    return res.json({
+      success: true,
+      message: 'Google Drive storage root successfully recovered and verified.',
+      ...result,
+    });
+  } catch (error) {
+    log.error('[STORAGE]', { event: 'storage_root_recovery_failed', firmId: req.firmId, message: error.message });
+    const statusCode = error.status || (error.code === 'STORAGE_NOT_CONNECTED' ? 400 : 500);
+    return res.status(statusCode).json({ error: 'storage_root_recovery_failed', message: error.message });
   }
 };
 
@@ -1451,6 +1485,7 @@ module.exports = {
   getStorageDataMap,
   getStorageFolderLink,
   getStorageRootHealth,
+  recoverStorageRoot,
   verifyStorageBoundary,
   ensureStorageOtpVerification,
   __private: {

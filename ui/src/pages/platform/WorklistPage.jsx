@@ -309,21 +309,19 @@ export const PlatformWorklistPage = () => {
 
   return (
     <PlatformShell
-      moduleLabel="Queues"
       title="My Worklist"
-      subtitle="Active queue."
       actions={
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => void refetch()}
             disabled={isFetching}
-            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 active:scale-[0.97] active:bg-gray-100 text-xs font-semibold text-gray-700 transition-all shadow-xs disabled:opacity-50 min-w-[96px]"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-md bg-white hover:bg-slate-50 active:bg-slate-100 text-xs font-medium text-slate-700 transition-colors shadow-xs disabled:opacity-50"
             title="Refresh worklist"
             aria-label="Refresh worklist"
           >
             <svg
-              className={`w-3.5 h-3.5 text-gray-500 transition-transform duration-500 ${isFetching ? 'animate-spin' : ''}`}
+              className={`w-3.5 h-3.5 text-slate-500 ${isFetching ? 'animate-spin' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -332,7 +330,11 @@ export const PlatformWorklistPage = () => {
             </svg>
             <span>{isFetching ? 'Refreshing…' : 'Refresh'}</span>
           </button>
-          <Link to={ROUTES.CREATE_CASE(firmSlug)} className="inline-flex items-center justify-center px-3.5 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 active:scale-[0.97] transition-all rounded-lg shadow-xs">
+          <Link
+            to={ROUTES.CREATE_CASE(firmSlug)}
+            data-primary="true"
+            className="action-primary inline-flex items-center justify-center px-3.5 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-md shadow-xs transition-colors"
+          >
             New docket
           </Link>
         </div>
@@ -348,63 +350,34 @@ export const PlatformWorklistPage = () => {
 
       <PageSection>
         <SectionToolbar>
-          <div className="w-full bg-gray-50/50 border border-gray-100/80 rounded-2xl p-4 mb-6 shadow-inner">
-            <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL' && activeOnly}>
-              <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-4 w-full">
-                <div className="relative flex-1">
-                  <div 
-                    className="absolute inset-y-0 left-0 flex items-center pointer-events-none text-gray-400"
-                    style={{ paddingLeft: '14px' }}
-                  >
-                    <svg
-                      className="w-4 h-4 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                      />
-                    </svg>
-                  </div>
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search docket number, client, assignee..."
-                    className="block w-full pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200"
-                    style={{ paddingLeft: '40px' }}
-                    aria-label="Search worklist"
-                  />
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <select
-                    value={categoryFilter}
-                    onChange={(event) => setCategoryFilter(event.target.value)}
-                    className="px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                    aria-label="Filter by category"
-                  >
-                    <option value="ALL">All Categories</option>
-                    {categories.map((category) => (
-                      <option key={category} value={category}>{category}</option>
-                    ))}
-                  </select>
-                  <label className="inline-flex items-center gap-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 shadow-sm select-none cursor-pointer hover:bg-gray-50/80 active:bg-gray-100 transition-all">
-                    <input
-                      type="checkbox"
-                      checked={activeOnly}
-                      onChange={(event) => setActiveOnly(event.target.checked)}
-                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500/20 cursor-pointer"
-                    />
-                    Show active dockets only
-                  </label>
-                </div>
-              </div>
-            </FilterBar>
-          </div>
+          <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL' && activeOnly}>
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Filter dockets…"
+              aria-label="Filter worklist"
+            />
+            <select
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value)}
+              aria-label="Filter by category"
+            >
+              <option value="ALL">All categories</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>{category}</option>
+              ))}
+            </select>
+            <label className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-md px-2.5 py-1.5 shadow-xs select-none cursor-pointer hover:bg-slate-50 transition-colors">
+              <input
+                type="checkbox"
+                checked={activeOnly}
+                onChange={(event) => setActiveOnly(event.target.checked)}
+                className="w-3.5 h-3.5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500/20 cursor-pointer"
+              />
+              Active only
+            </label>
+          </FilterBar>
         </SectionToolbar>
 
         {isSupervisor && selectedIds.length > 0 && (
@@ -448,7 +421,6 @@ export const PlatformWorklistPage = () => {
           </div>
         )}
 
-        <div className="table-wrap">
           <DataTable
             columns={isSupervisor ? [
               {
@@ -466,19 +438,19 @@ export const PlatformWorklistPage = () => {
               },
               { key: 'docketId', label: 'Docket ID', sortable: true, width: '150px' },
               { key: 'clientId', label: 'Client ID', sortable: true, width: '100px' },
-              { key: 'clientName', label: 'Client Name', sortable: true, width: '160px' },
-              { key: 'category', label: 'Category / Subcategory', sortable: true, width: '260px' },
-              { key: 'slaDue', label: 'SLA Due', sortable: true, width: '130px' },
+              { key: 'clientName', label: 'Client Name', sortable: true, width: '170px' },
+              { key: 'category', label: 'Category', sortable: true, width: '180px' },
+              { key: 'slaDue', label: 'SLA Due', sortable: true, width: '120px' },
               { key: 'slaDays', label: 'SLA Days', sortable: true, width: '110px' },
-              { key: 'updated', label: 'Updated', sortable: true, width: '120px' }
+              { key: 'updated', label: 'Updated', sortable: true, width: '110px' }
             ] : [
               { key: 'docketId', label: 'Docket ID', sortable: true, width: '150px' },
               { key: 'clientId', label: 'Client ID', sortable: true, width: '100px' },
-              { key: 'clientName', label: 'Client Name', sortable: true, width: '160px' },
-              { key: 'category', label: 'Category / Subcategory', sortable: true, width: '260px' },
-              { key: 'slaDue', label: 'SLA Due', sortable: true, width: '130px' },
+              { key: 'clientName', label: 'Client Name', sortable: true, width: '170px' },
+              { key: 'category', label: 'Category', sortable: true, width: '180px' },
+              { key: 'slaDue', label: 'SLA Due', sortable: true, width: '120px' },
               { key: 'slaDays', label: 'SLA Days', sortable: true, width: '110px' },
-              { key: 'updated', label: 'Updated', sortable: true, width: '120px' }
+              { key: 'updated', label: 'Updated', sortable: true, width: '110px' }
             ]}
             compact
             tableClassName="w-full text-left border-collapse"
@@ -487,7 +459,7 @@ export const PlatformWorklistPage = () => {
             rows={sortedRows.map((r) => {
               const rId = getDocketRouteId(r);
               return (
-                <tr key={r.caseInternalId || r._id || r.id || formatDocketLabel(r)} className="hover:bg-gray-50/70 border-b border-gray-50 last:border-b-0 transition-colors duration-150">
+                <tr key={r.caseInternalId || r._id || r.id || formatDocketLabel(r)} className="hover:bg-slate-50/80 border-b border-slate-100 last:border-b-0 transition-colors">
                   {isSupervisor && (
                     <td className="platform-table-select-col">
                       <input
@@ -498,28 +470,28 @@ export const PlatformWorklistPage = () => {
                       />
                     </td>
                   )}
-                  <td className="px-6 py-4 font-semibold text-gray-900">
+                  <td className="px-3.5 py-2.5 font-medium text-slate-900">
                     <button
-                      className="text-indigo-600 hover:text-indigo-800 hover:underline transition-colors duration-150"
+                      className="text-indigo-600 hover:text-indigo-800 hover:underline transition-colors duration-150 font-mono text-xs"
                       type="button"
                       onClick={() => openFromQueue(r)}
                     >
                       {formatDocketLabel(r)}
                     </button>
                   </td>
-                  <td className="px-6 py-4 text-gray-500 font-semibold text-sm">{r.clientId || '—'}</td>
-                  <td className="px-6 py-4 text-gray-900 font-semibold text-sm">{r.clientName || '—'}</td>
-                  <td className="px-6 py-4 text-gray-500 text-sm">
-                    <span className="text-gray-900 font-medium">{r.category || '—'}</span>
+                  <td className="px-3.5 py-2.5 text-slate-500 text-xs font-mono">{r.clientId || '—'}</td>
+                  <td className="px-3.5 py-2.5 text-slate-900 font-medium text-xs">{r.clientName || '—'}</td>
+                  <td className="px-3.5 py-2.5 text-slate-600 text-xs">
+                    <span className="text-slate-900 font-medium">{r.category || '—'}</span>
                     {r.subcategory && r.subcategory !== '-' && (
-                      <span className="text-gray-400 text-xs ml-1.5 px-1.5 py-0.5 bg-gray-100 rounded">
+                      <span className="text-slate-500 text-[11px] ml-1.5 px-1.5 py-0.5 bg-slate-100 rounded">
                         {r.subcategory}
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-gray-500 text-sm font-medium">{r.slaDueAt ? formatDateLabel(r.slaDueAt) : '—'}</td>
-                  <td className="px-6 py-4 text-sm font-medium">{formatSlaDays(r.slaDueAt)}</td>
-                  <td className="px-6 py-4 text-gray-400 text-sm tabular-nums">{formatDateLabel(r.updatedAt || r.createdAt)}</td>
+                  <td className="px-3.5 py-2.5 text-slate-500 text-xs font-medium">{r.slaDueAt ? formatDateLabel(r.slaDueAt) : '—'}</td>
+                  <td className="px-3.5 py-2.5 text-xs font-medium">{formatSlaDays(r.slaDueAt)}</td>
+                  <td className="px-3.5 py-2.5 text-slate-400 text-xs tabular-nums">{formatDateLabel(r.updatedAt || r.createdAt)}</td>
                 </tr>
               );
             })}
@@ -527,10 +499,13 @@ export const PlatformWorklistPage = () => {
             error=""
             onRetry={() => void refetch()}
             hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL' || activeOnly}
-            emptyLabel={scopedWorkbasket ? `No dockets in your ${scopedWorkbasket.name} worklist.` : 'No dockets are assigned to you yet. Pull from Workbaskets or request assignment from your manager/admin.'}
-            emptyLabelFiltered="No worklist dockets match your current search or filters."
+            emptyLabel={scopedWorkbasket ? `No dockets in your ${scopedWorkbasket.name} worklist.` : 'No dockets are assigned to you yet.'}
+            emptyBody={scopedWorkbasket ? 'New dockets routed to this workbasket will appear here.' : 'Pull dockets from Workbaskets or create a new docket.'}
+            emptyLabelFiltered="No worklist dockets match your filters."
+            emptyActionLabel={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL' || activeOnly ? 'Clear filters' : '+ New docket'}
+            onEmptyAction={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL' || activeOnly ? clearFilters : undefined}
+            emptyActionHref={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL' || activeOnly ? undefined : ROUTES.CREATE_CASE(firmSlug)}
           />
-        </div>
       </PageSection>
     </PlatformShell>
   );

@@ -34,6 +34,9 @@ module.exports = {
   'GET /root-health': {
     query: z.object({}).passthrough(),
   },
+  'POST /recover-root': {
+    body: z.object({}).passthrough(),
+  },
   'GET /verify-boundary': {
     query: z.object({}).passthrough(),
   },

@@ -137,6 +137,30 @@ async function run() {
   console.log('  ✓ folder-link endpoint returns storage_recovery_required for invalid root');
   console.log('  ✓ no response exposes refreshToken/accessToken/privateKey/clientSecret');
 
+  // root recovery service + endpoint
+  firmDoc = {
+    _id: 'firm-1',
+    slug: 'gupte-opc',
+    firmSlug: 'gupte-opc',
+    name: 'Gupte OPC',
+    storage: { google: { rootFolderId: 'stale-id' } },
+    storageConfig: { credentials: 'enc:' + JSON.stringify({ refreshToken: 'active-refresh', rootFolderId: 'stale-id' }) },
+  };
+  folderGetThrows = false; manifestMissing = false; manifestMismatch = false;
+  setupDrive();
+  const recovered = await googleDriveService.recoverRootFolder({ firmId: 'firm-1' });
+  assert.strictEqual(recovered.success, true);
+  assert.strictEqual(recovered.recovered, true);
+  assert.ok(recovered.rootFolderId);
+  console.log('  ✓ googleDriveService.recoverRootFolder recovers and returns healthy root');
+
+  const recReq = { user: { role: 'PRIMARY_ADMIN' }, firmId: 'firm-1', ownershipFirmId: 'firm-1', requestId: 'r2' };
+  const recRes = { statusCode: 200, body: null, status(c){ this.statusCode=c; return this; }, json(p){ this.body=p; return this; } };
+  await controller.recoverStorageRoot(recReq, recRes);
+  assert.strictEqual(recRes.statusCode, 200);
+  assert.strictEqual(recRes.body.success, true);
+  console.log('  ✓ controller.recoverStorageRoot handles recovery successfully');
+
   Module._load = originalLoad;
   console.log('byosRootIdentity.test.js passed');
 }

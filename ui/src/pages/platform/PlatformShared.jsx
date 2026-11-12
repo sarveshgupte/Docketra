@@ -247,6 +247,10 @@ export const DataTable = ({
   emptyLabelFiltered = 'No results match the current filters.',
   sortState,
   onSortChange,
+  emptyBody,
+  emptyActionLabel,
+  onEmptyAction,
+  emptyActionHref,
 }) => {
   const safeRows = Array.isArray(rows) ? rows : [];
   const [page, setPage] = useState(1);
@@ -284,6 +288,12 @@ export const DataTable = ({
               <th 
                 key={definition.key || definition.label} 
                 className={definition.widthClass || ''}
+                style={{
+                  ...(definition.width ? { width: definition.width } : {}),
+                  ...(definition.minWidth ? { minWidth: definition.minWidth } : {}),
+                  ...(definition.maxWidth ? { maxWidth: definition.maxWidth } : {}),
+                  ...(definition.style || {}),
+                }}
               >
                 {definition.sortable && onSortChange ? (
                   <button
@@ -338,7 +348,15 @@ export const DataTable = ({
           ) : null}
           {!loading && !error && safeRows.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="table-message" role="status" aria-live="polite"><EmptyState title={emptyMessage} /></td>
+              <td colSpan={columns.length} className="table-message" role="status" aria-live="polite">
+                <EmptyState
+                  title={emptyMessage}
+                  body={emptyBody}
+                  actionLabel={emptyActionLabel}
+                  onAction={onEmptyAction}
+                  actionHref={emptyActionHref}
+                />
+              </td>
             </tr>
           ) : null}
           {!loading && !error && safeRows.length > 0 ? visibleRows : null}

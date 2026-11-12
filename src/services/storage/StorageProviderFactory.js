@@ -49,10 +49,19 @@ async function getFirmStorageConfig(firmId) {
       const rawTenantConfig = await TenantStorageConfig.findOne({ tenantId: String(firmId), isActive: true });
       const tenantConfig = rawTenantConfig && typeof rawTenantConfig.lean === 'function' ? await rawTenantConfig.lean() : rawTenantConfig;
       if (tenantConfig) {
+        let refreshToken = tenantConfig.encryptedRefreshToken || null;
+        if (refreshToken) {
+          try {
+            const { decrypt } = require('./services/TokenEncryption.service');
+            refreshToken = decrypt(refreshToken);
+          } catch (_err) {
+            // Keep as-is if already decrypted or decryption fails
+          }
+        }
         return {
           provider: tenantConfig.provider,
           credentials: {
-            refreshToken: tenantConfig.encryptedRefreshToken,
+            refreshToken,
             driveId: tenantConfig.driveId,
             rootFolderId: tenantConfig.rootFolderId,
           },

@@ -13,6 +13,7 @@ import {
   getStorageOwnershipSummary,
   getStorageFolderLink,
   getStorageRootHealth,
+  recoverStorageRoot,
   sendStorageChangeOtp,
   testStorageConnection,
   disconnectStorage,
@@ -131,6 +132,7 @@ export function StorageSettingsPage() {
   const [folderLinkUrl, setFolderLinkUrl] = useState('');
   const [strictModeSaving, setStrictModeSaving] = useState(false);
   const [rootHealth, setRootHealth] = useState(null);
+  const [recoveringRoot, setRecoveringRoot] = useState(false);
   const [verifyingBoundary, setVerifyingBoundary] = useState(false);
   const [boundaryReport, setBoundaryReport] = useState(null);
 
@@ -155,6 +157,21 @@ export function StorageSettingsPage() {
   const [retentionDays, setRetentionDays] = useState(30);
   const [savingBackupSettings, setSavingBackupSettings] = useState(false);
   const [certificateModalOpen, setCertificateModalOpen] = useState(false);
+
+  const onRecoverRoot = async () => {
+    setRecoveringRoot(true);
+    setStatusMessage(null);
+    try {
+      await recoverStorageRoot();
+      setStatusMessage({ type: 'success', text: 'Google Drive storage root successfully recovered and verified.' });
+      await loadConfiguration();
+    } catch (error) {
+      const recovery = getRecoveryPayload(error, 'storage_settings');
+      setStatusMessage({ type: 'error', text: `${recovery.copy.message} ${recovery.copy.action}` });
+    } finally {
+      setRecoveringRoot(false);
+    }
+  };
 
   const loadStorageUsage = async () => {
     setUsageLoading(true);
@@ -692,6 +709,11 @@ export function StorageSettingsPage() {
                       {openingFolder ? 'Opening Folder…' : 'Open Storage Folder'}
                     </Button>
                   )}
+                  {normalizedProvider === 'google-drive' && rootNeedsAttention && (
+                    <Button type="button" variant="primary" onClick={onRecoverRoot} disabled={recoveringRoot}>
+                      {recoveringRoot ? 'Recovering Root…' : 'Recover Storage Root'}
+                    </Button>
+                  )}
                   <Button type="button" variant="outline" onClick={onVerifyBoundary} disabled={verifyingBoundary}>
                     {verifyingBoundary ? 'Auditing Boundary…' : 'Audit Zero-Access Boundary'}
                   </Button>
@@ -714,9 +736,14 @@ export function StorageSettingsPage() {
               <p className="text-xs text-rose-500 font-medium">Connection error: administrative folder link is temporarily unreachable.</p>
             )}
             {rootNeedsAttention && (
-              <p className="text-xs text-amber-700 font-semibold">
-                Firm storage credentials are connected, but the Google Drive root needs attention: {rootHealthMessage}
-              </p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-xl">
+                <p className="text-xs text-amber-800 font-semibold">
+                  Firm storage credentials are connected, but the Google Drive root needs attention: {rootHealthMessage}
+                </p>
+                <Button type="button" variant="primary" size="sm" onClick={onRecoverRoot} disabled={recoveringRoot} className="shrink-0">
+                  {recoveringRoot ? 'Recovering…' : 'Recover Storage Root'}
+                </Button>
+              </div>
             )}
             {summaryWarning && <p className="text-xs text-amber-600 font-medium">{summaryWarning}</p>}
           </div>
@@ -988,21 +1015,28 @@ export function StorageSettingsPage() {
 
           {/* Root Health Warnings */}
           {normalizedProvider === 'google-drive' && (
-            <div className={`p-5 rounded-2xl border flex items-start gap-3 transition-all ${
+            <div className={`p-5 rounded-2xl border flex items-start justify-between gap-4 transition-all ${
               rootHealthOk ? 'bg-emerald-50/50 border-emerald-100 text-emerald-800' : 'bg-amber-50/50 border-amber-100 text-amber-800'
             }`}>
-              <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${rootHealthOk ? 'bg-emerald-100' : 'bg-amber-100'}`}>
-                {rootHealthOk ? '✓' : '!'}
-              </span>
-              <div className="space-y-1">
-                <h4 className="font-bold text-sm">Google Drive storage root health</h4>
-                <p className="text-xs opacity-90 leading-relaxed">{rootHealthMessage}</p>
-                {strictFirmOwnedStorage && !rootHealthOk && (
-                  <p className="text-xs text-rose-700 font-semibold mt-1">
-                    CRITICAL: Strict Mode is active. Business-content writes are currently blocked until Google Drive storage is fully recovered.
-                  </p>
-                )}
+              <div className="flex items-start gap-3">
+                <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${rootHealthOk ? 'bg-emerald-100' : 'bg-amber-100'}`}>
+                  {rootHealthOk ? '✓' : '!'}
+                </span>
+                <div className="space-y-1">
+                  <h4 className="font-bold text-sm">Google Drive storage root health</h4>
+                  <p className="text-xs opacity-90 leading-relaxed">{rootHealthMessage}</p>
+                  {strictFirmOwnedStorage && !rootHealthOk && (
+                    <p className="text-xs text-rose-700 font-semibold mt-1">
+                      CRITICAL: Strict Mode is active. Business-content writes are currently blocked until Google Drive storage is fully recovered.
+                    </p>
+                  )}
+                </div>
               </div>
+              {!rootHealthOk && (
+                <Button type="button" variant="primary" size="sm" onClick={onRecoverRoot} disabled={recoveringRoot} className="shrink-0">
+                  {recoveringRoot ? 'Recovering…' : 'Recover Root Folder'}
+                </Button>
+              )}
             </div>
           )}
 

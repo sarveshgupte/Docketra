@@ -15,6 +15,8 @@ const mockTenantStorageConfig = {
 const originalLoad = Module._load;
 Module._load = function(request, parent, isMain) {
   if (request.includes('TenantStorageConfig.model')) return mockTenantStorageConfig;
+  if (request.includes('Firm.model')) return { findById: () => ({ select: () => ({ lean: async () => null }) }), findOne: () => ({ select: () => ({ lean: async () => null }) }) };
+  if (request.includes('StorageConfiguration.model')) return { findOne: async () => null };
   if (request.includes('TokenEncryption.service')) return { decrypt: () => 'refresh-token' };
   if (request === 'googleapis') {
     return {

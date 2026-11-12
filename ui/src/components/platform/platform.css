@@ -498,16 +498,24 @@
 
 .platform__action-primary button,
 .platform__action-primary a {
-  background: #4f46e5 !important;
-  color: #ffffff !important;
-  border-color: #4338ca !important;
-  font-weight: 600 !important;
-  box-shadow: 0 1px 2px rgba(79, 70, 229, 0.15) !important;
+  font-weight: 500;
 }
 
-.platform__action-primary button:hover,
-.platform__action-primary a:hover {
-  background: #4338ca !important;
+.platform__action-primary .action-primary,
+.platform__action-primary .btn-primary,
+.platform__action-primary [data-primary="true"] {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  border-color: #0f172a !important;
+  font-weight: 600 !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12) !important;
+}
+
+.platform__action-primary .action-primary:hover,
+.platform__action-primary .btn-primary:hover,
+.platform__action-primary [data-primary="true"]:hover {
+  background: #1e293b !important;
+  border-color: #1e293b !important;
 }
 
 /* ── Command trigger (Slack / Linear search omnibar) ───────────────────── */
@@ -2169,15 +2177,15 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: #fafaf8;
-  color: #b0aea8;
+  background: #f8fafc;
+  color: #475569;
   font-weight: 600;
   white-space: nowrap;
-  font-size: 10.5px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  border-bottom: 1px solid #e8e6e0;
-  padding: 8px 12px;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 9px 12px;
 }
 
 /* Table cell links and buttons — default style */
