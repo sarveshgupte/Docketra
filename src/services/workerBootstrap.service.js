@@ -25,6 +25,7 @@ const workerModules = [
   { name: 'SLA_CHECK_WORKER', path: '../workers/slaCheck.worker' },
   { name: 'REPORT_GENERATION_WORKER', path: '../workers/reportGeneration.worker' },
   { name: 'BULK_PROCESS_WORKER', path: '../workers/bulkProcess.worker' },
+  { name: 'MCA_SYNC_WORKER', path: '../workers/mcaSync.worker' },
 ];
 
 const startWorkerModule = ({ name, path }) => {
@@ -86,6 +87,13 @@ const startBackgroundSchedules = () => {
     );
   }, dueNotificationsIntervalMs);
 
+  const { runScheduledMcaSweep } = require('../workers/mcaSync.worker');
+  const mcaSweepIntervalMs = Math.max(60 * 60 * 1000, Number(process.env.MCA_SWEEP_INTERVAL_MS || 24 * 60 * 60 * 1000));
+  setInterval(() => {
+    runScheduledMcaSweep().catch((err) =>
+      log.error('[mcaScheduledSweep] failed', { message: err.message })
+    );
+  }, mcaSweepIntervalMs);
 };
 
 module.exports = {

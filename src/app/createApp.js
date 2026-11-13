@@ -110,6 +110,7 @@ const clientPortalRoutes = require('../routes/clientPortal.routes');
 const docketExceptionRoutes = require('../routes/docketException.routes');
 const docketEffortRoutes = require('../routes/docketEffort.routes');
 const subscriptionRoutes = require('../routes/subscription.routes');
+const mcaComplianceRoutes = require('../routes/mcaCompliance.routes');
 const whatsappWebhookRoutes = require('../routes/whatsappWebhook.routes');
 const tenantResolver = require('../middleware/tenantResolver');
 const { RESERVED_FIRM_SLUGS, firmSlugGuard } = require('../middleware/firmSlugGuard.middleware');
@@ -430,6 +431,7 @@ const createApp = () => {
     docketExceptionRoutes,
     docketEffortRoutes,
     subscriptionRoutes,
+    mcaComplianceRoutes,
   });
 
 

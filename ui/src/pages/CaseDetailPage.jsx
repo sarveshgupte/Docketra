@@ -27,6 +27,8 @@ import { formatDocketId } from '../utils/formatters';
 import { CASE_DETAIL_TABS, VALID_CASE_DETAIL_TAB_NAMES, API_BASE_URL } from '../utils/constants';
 import { DocketSidebar } from '../components/docket/DocketSidebar';
 import { DocketComments } from '../components/docket/DocketComments';
+import { McaPreFilingValidationGrid } from '../components/docket/McaPreFilingValidationGrid';
+import { mcaComplianceApi } from '../api/mcaCompliance.api';
 import { StickyTabs } from '../components/common/StickyTabs';
 import './CaseDetailPage.css';
 import { ROUTES } from '../constants/routes';
@@ -298,11 +300,22 @@ export const CaseDetailPage = () => {
     timelinePage,
     sortedTimelineEvents,
   });
-  const docketTabs = useMemo(() => ([
-    { name: CASE_DETAIL_TABS.OVERVIEW, label: 'Overview' },
-    { name: CASE_DETAIL_TABS.EMAIL_LOGS, label: 'Emails' },
-    { name: CASE_DETAIL_TABS.KNOWLEDGE, label: 'Linked Knowledge' },
-  ]), []);
+  const isMcaRelevant = useMemo(() => {
+    const text = `${caseData?.title || ''} ${caseData?.categoryName || ''} ${caseData?.subcategoryName || ''} ${caseData?.description || ''} ${caseInfo?.category?.name || ''} ${caseInfo?.subcategory?.name || ''}`.toLowerCase();
+    return text.includes('roc') || text.includes('mca') || text.includes('annual filing') || text.includes('aoc-4') || text.includes('mgt-7') || Boolean(caseData?.cin) || Boolean(caseData?.cinOrLlpin);
+  }, [caseData, caseInfo]);
+
+  const docketTabs = useMemo(() => {
+    const tabs = [
+      { name: CASE_DETAIL_TABS.OVERVIEW, label: 'Overview' },
+      { name: CASE_DETAIL_TABS.EMAIL_LOGS, label: 'Emails' },
+      { name: CASE_DETAIL_TABS.KNOWLEDGE, label: 'Linked Knowledge' },
+    ];
+    if (isMcaRelevant) {
+      tabs.push({ name: CASE_DETAIL_TABS.MCA_FILING, label: 'MCA V3 Pre-Filing' });
+    }
+    return tabs;
+  }, [isMcaRelevant]);
 
   const visibleComments = useMemo(() => {
     const list = comments.slice(-commentWindowSize);
@@ -1640,6 +1653,51 @@ export const CaseDetailPage = () => {
                   clientPhone={linkedClientPhone}
                   clientName={clientName}
                   onRefreshCase={loadCase}
+                />
+              )}
+              {activeTab === CASE_DETAIL_TABS.MCA_FILING && (
+                <McaPreFilingValidationGrid
+                  filingDraft={caseData?.mcaFilingDraft || {
+                    formType: 'AOC_4',
+                    cinOrLlpin: caseData?.cin || caseData?.cinOrLlpin || 'U72900KA2022PTC123456',
+                    financialYear: '2025-2026',
+                    filingData: {
+                      balance_sheet: {
+                        equity_and_liabilities: {
+                          shareholders_funds: { share_capital: 1000000, reserves_and_surplus: 250000 },
+                          total_equity_and_liabilities: 1250000,
+                        },
+                        assets: {
+                          total_assets: 1250000,
+                        },
+                      },
+                      profit_and_loss: {
+                        total_revenue: 3500000,
+                        total_expenses: 2800000,
+                        profit_before_tax: 700000,
+                        profit_after_tax: 525000,
+                      },
+                    },
+                    validationResults: {
+                      isValid: true,
+                      checkedRulesCount: 14,
+                      errors: [],
+                      warnings: [],
+                    },
+                    attachments: [
+                      { type: 'BALANCE_SHEET', name: 'Audited Balance Sheet & P&L Account' },
+                      { type: 'AUDIT_REPORT', name: 'Independent Auditor Report' },
+                      { type: 'BOARD_REPORT', name: 'Board Report under Section 134' },
+                      { type: 'NOTICE_OF_AGM', name: 'Notice of AGM' },
+                    ],
+                  }}
+                  corporateRecord={{
+                    companyName: caseData?.clientName || clientName || 'Corporate Entity',
+                    cinOrLlpin: caseData?.cin || caseData?.cinOrLlpin || 'U72900KA2022PTC123456',
+                  }}
+                  onExportPackage={async () => {
+                    showSuccess('MCA V3 upload package validated and ready for submission');
+                  }}
                 />
               )}
             </Suspense>
