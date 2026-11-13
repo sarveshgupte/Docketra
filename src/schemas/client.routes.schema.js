@@ -10,6 +10,15 @@ module.exports = {
     query: z.object({}).strict(),
     body: z.object({}).strict(),
   },
+  'POST /mca/lookup': {
+    query: z.object({}).passthrough(),
+    body: z.object({
+      cin: optionalString,
+      pan: optionalString,
+    }).refine((data) => Boolean((data.cin && data.cin.trim()) || (data.pan && data.pan.trim())), {
+      message: 'Either CIN or PAN must be provided',
+    }),
+  },
   'POST /:clientId/status/send-otp': {
     params: z.object({ clientId: clientIdString }),
     body: z.object({}).strict(),
@@ -41,6 +50,7 @@ module.exports = {
       contactPersonNumber: optionalString,
       contactPersonEmailAddress: optionalEmail,
       contactPersonPhoneNumber: optionalString,
+      mcaDossier: z.any().optional(),
     }).strict(),
   },
   'PUT /:clientId': {
@@ -65,6 +75,7 @@ module.exports = {
       contactPersonNumber: optionalString,
       contactPersonEmailAddress: optionalEmail,
       contactPersonPhoneNumber: optionalString,
+      mcaDossier: z.any().optional(),
       latitude: z.never({ invalid_type_error: 'Latitude is deprecated and cannot be modified.' }).optional(),
       longitude: z.never({ invalid_type_error: 'Longitude is deprecated and cannot be modified.' }).optional(),
     }).strict(),

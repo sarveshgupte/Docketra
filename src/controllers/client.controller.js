@@ -33,6 +33,7 @@ const { ensureTenantKey, resolveTenantKeyTenantId, resolveTenantKeyCandidates } 
 const { sendOtp: sendCentralOtp, verifyOtp: verifyCentralOtp } = require('../services/otp.service');
 const { logAuthEvent } = require('../services/audit.service');
 const { logAuditEvent } = require('../services/adminActionAudit.service');
+const mcaService = require('../services/mca.service');
 const jwt = require('jsonwebtoken');
 
 const usedClientStatusOtpJti = new Map();
@@ -546,6 +547,37 @@ const getClientById = async (req, res) => {
  * Optional fields:
  * - secondaryContactNumber, PAN, GST, TAN, CIN, latitude, longitude
  */
+/**
+ * Lookup company details directly from MCA / Regulatory gateway
+ * POST /api/clients/mca/lookup
+ */
+const lookupMcaEntity = async (req, res) => {
+  try {
+    const { cin, pan } = req.body || {};
+    const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to lookup MCA details');
+    if (!accessContext) return;
+
+    const dossier = await mcaService.lookupCompany({ cin, pan });
+
+    return res.json({
+      success: true,
+      data: dossier,
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    logClientError('MCA_LOOKUP_ERROR', req, error, {
+      cin: req.body?.cin,
+      pan: req.body?.pan,
+      code: error.code,
+    });
+    return res.status(statusCode).json({
+      success: false,
+      code: error.code || 'MCA_LOOKUP_FAILED',
+      message: error.message || 'Failed to fetch MCA details',
+    });
+  }
+};
+
 const createClient = async (req, res) => {
   try {
     const allowedFields = [
@@ -568,7 +600,8 @@ const createClient = async (req, res) => {
       'contactPersonEmailAddress',
       'contactPersonEmail',
       'contactPersonPhone',
-      'contactPersonNumber'
+      'contactPersonNumber',
+      'mcaDossier',
     ];
     
     let sanitizedBody;
@@ -677,6 +710,7 @@ const createClient = async (req, res) => {
         isActive: true,
         status: CANONICAL_CLIENT_STATUSES.ACTIVE,
         previousBusinessNames: [],
+        mcaDossier: sanitizedBody.mcaDossier || undefined,
       }, req.user?.role);
     });
 
@@ -828,6 +862,12 @@ const updateClient = async (req, res) => {
       },
     });
 
+    if (req.body.mcaDossier) {
+      await ClientRepository.updateById(accessContext.firmId, client._id, {
+        $set: { mcaDossier: req.body.mcaDossier },
+      });
+      client.mcaDossier = req.body.mcaDossier;
+    }
     const hydrated = await hydrateClientFromProfileIfAvailable(accessContext.firmId, client);
     
     await logAuditEvent({
@@ -1907,6 +1947,7 @@ const listClientDockets = async (req, res) => {
 module.exports = {
   getClients,
   getClientById,
+  lookupMcaEntity,
   createClient,
   sendClientStatusOtp: wrapWriteHandler(sendClientStatusOtp),
   verifyClientStatusOtp: wrapWriteHandler(verifyClientStatusOtp),

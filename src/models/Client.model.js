@@ -493,6 +493,39 @@ const clientSchema = new mongoose.Schema({
     trim: true,
     uppercase: true,
   },
+
+  /**
+   * MCA / Statutory Dossier
+   * Official company master details, past filings (AOC-4, MGT-7, DIR-12, etc.), and directors
+   */
+  mcaDossier: {
+    cin: { type: String, trim: true, uppercase: true },
+    pan: { type: String, trim: true, uppercase: true },
+    roc: { type: String, trim: true },
+    incorporationDate: { type: String, trim: true },
+    category: { type: String, trim: true },
+    class: { type: String, trim: true },
+    authorizedCapital: { type: Number },
+    paidUpCapital: { type: Number },
+    companyStatus: { type: String, trim: true },
+    lastFetchedAt: { type: Date, default: Date.now },
+    source: { type: String, trim: true },
+    directors: [{
+      din: { type: String, trim: true },
+      name: { type: String, trim: true },
+      designation: { type: String, trim: true },
+      appointmentDate: { type: Date },
+      isSignatory: { type: Boolean, default: false },
+    }],
+    pastFilings: [{
+      srn: { type: String, trim: true },
+      formName: { type: String, trim: true },
+      formTitle: { type: String, trim: true },
+      financialYear: { type: String, trim: true },
+      filingDate: { type: Date },
+      status: { type: String, trim: true },
+    }],
+  },
   
   /**
    * System client flag

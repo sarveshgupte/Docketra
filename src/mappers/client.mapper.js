@@ -47,6 +47,7 @@ const mapClientResponse = (client) => {
     createdBy: client.createdBy ?? null,
     previousBusinessNames: Array.isArray(client.previousBusinessNames) ? client.previousBusinessNames : [],
     clientFactSheet: client.clientFactSheet ?? null,
+    mcaDossier: client.mcaDossier ?? null,
     drive: client.drive ?? null,
     profileWarning: client.profileWarning ?? null,
   };
