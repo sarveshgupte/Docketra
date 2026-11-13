@@ -14,15 +14,53 @@ const FAQ_ITEMS = [
   },
   {
     id: 'sovereignty-dpdp',
-    question: "How does Docketra ensure data sovereignty and compliance with India's Digital Personal Data Protection (DPDP) Act?",
+    question: "How does Docketra ensure data sovereignty and compliance with India's DPDP Act?",
     answer:
-      'Docketra enforces strict domestic data residency. All customer data and documents are stored exclusively on Tier-IV data center infrastructure located physically within India (Mumbai and Hyderabad). We employ TLS 1.3 encryption in transit, AES-256 encryption at rest, and zero third-party AI model training. In-house teams can also activate Bring-Your-Own-Storage (BYOS) to vault documents directly into their own enterprise AWS S3 or Google Drive buckets.',
+      'All customer data and documents are stored exclusively on Tier-IV cloud infrastructure located physically within India (Mumbai and Hyderabad). We enforce TLS 1.3 encryption in transit, AES-256 encryption at rest, and zero third-party AI model training. In-house teams can also activate Bring-Your-Own-Storage (BYOS) to vault documents directly into their own enterprise AWS S3 or Google Drive buckets.',
   },
   {
     id: 'excel-migration',
     question: 'How straightforward is migrating ongoing litigation matters and contract repositories from Excel?',
     answer:
-      'Migration takes minutes using Docketra\'s built-in Matter & Entity Importers. You can upload existing spreadsheets containing active litigation, regulatory show-cause notices, contract registries, and subsidiary entity profiles. The system runs pre-flight dry runs, checks statutory identifiers (CIN, DIN, PAN), and auto-populates matter dockets with historical dates and responsible counsel.',
+      'Migration takes minutes using Docketra’s built-in Matter & Entity Importers. You can upload existing spreadsheets containing active litigation, regulatory show-cause notices, contract registries, and subsidiary entity profiles. The system runs pre-flight dry runs, checks statutory identifiers (CIN, DIN, PAN), and auto-populates matter dockets with historical dates and responsible counsel.',
+  },
+];
+
+const COMPARISON_ROWS = [
+  {
+    category: 'Legal Intake & Triage',
+    feature: 'Front Door & SLA Tracking',
+    oldWay: 'Drive-by Slack, WhatsApp, and email requests. Forgotten contracts, blown turnaround times, and zero paper trail.',
+    docketraWay: 'Standardized legal front door. Automated queue triage, commercial priority tagging, and live SLA countdowns.',
+    badge: 'Zero Dropped Requests',
+  },
+  {
+    category: 'High-Value Contracts',
+    feature: '4-Eye GC Approval Gates',
+    oldWay: 'Commercial contracts signed without formal legal sign-off. High liability risks and unvetted indemnity clauses.',
+    docketraWay: 'Mandatory 4-eye QC review gates for high-value contracts. Complete redline history and immutable GC sign-off.',
+    badge: '100% Risk Defensibility',
+  },
+  {
+    category: 'Regulatory Notices',
+    feature: 'Statutory Notice Dockets',
+    oldWay: 'Show-cause notices and labor summons scattered in local office folders; missed reply windows risk ex-parte orders.',
+    docketraWay: 'Centralized regulatory matter dockets with statutory countdown clocks, counsel assignment, and escalation alerts.',
+    badge: 'Zero Lapsed Deadlines',
+  },
+  {
+    category: 'Outside Counsel',
+    feature: 'Law Firm Spend & Milestones',
+    oldWay: 'Opaque monthly law firm retainers. Duplicate research, ballooning legal spend, and unpredictable bills.',
+    docketraWay: 'Milestone-driven docket tracking. Assign law firms with clear deliverable gates, hearing dates, and spend tracking.',
+    badge: 'Spend Accountability',
+  },
+  {
+    category: 'Data Sovereignty',
+    feature: 'DPDP & Domestic Storage (BYOS)',
+    oldWay: 'Confidential commercial contracts stored across personal drives and non-compliant third-party cloud tools.',
+    docketraWay: '100% Indian data residency (Mumbai/Hyderabad). Bring Your Own Storage (BYOS) into enterprise Google Drive or S3.',
+    badge: 'DPDP Act Ready',
   },
 ];
 
@@ -38,116 +76,6 @@ const FAQ_SCHEMA = {
     },
   })),
 };
-
-const REALITY_CHECK_MATRIX = [
-  {
-    title: 'Ad-Hoc Intake via Chat',
-    legacy: 'Drive-By Pings & Informal Threads',
-    legacyDetail:
-      'Business teams request contract reviews, NDA approvals, and advisory via Slack, WhatsApp, and fragmented email chains with no standardized briefing or SLA tracking.',
-    risk: 'Untracked Requests & Blown SLAs',
-    riskDetail:
-      'High-priority commercial contracts sit forgotten in inboxes. Deals stall, turnaround times become unpredictable, and counsel has zero paper trail when disputes arise.',
-    docketra: 'Structured Legal Front Door & Intake Baskets',
-    docketraDetail:
-      'A unified legal front door. Business stakeholders submit standardized intake requests with contract metadata, automated routing to specialized counsel, and live status countdowns.',
-    badge: 'Zero Dropped Requests',
-  },
-  {
-    title: 'Scattered Regulatory Notices',
-    legacy: 'Local Desktop Folders & Forwarded Mail',
-    legacyDetail:
-      'Show-cause notices, labor inspection summons, and GST/ROC letters arrive across regional plants and branch offices, saved on individual laptops or lost in forwarded emails.',
-    risk: 'Missed Court/Tribunal Filing Windows',
-    riskDetail:
-      'Statutory reply deadlines lapse without response. Ex-parte orders, contempt proceedings, and compounding penalties accumulate across decentralized subsidiaries.',
-    docketra: 'Centralized Matter Dockets with SLA Tracking',
-    docketraDetail:
-      'Unified regulatory matter docketing. Every notice is timestamped, mapped to statutory reply windows, assigned to lead litigation counsel, and tracked with automated escalation alerts.',
-    badge: '100% Notice Defensibility',
-  },
-  {
-    title: 'External Counsel Blind Spots',
-    legacy: 'Opaque Retainer Billing & Phone Check-ins',
-    legacyDetail:
-      'External law firms and designated advocates work on litigation and corporate opinions with minimal visibility between monthly billing cycles and informal phone calls.',
-    risk: 'Ballooning Legal Spend & Duplicated Effort',
-    riskDetail:
-      'Legal budgets spiral out of control. Outside counsel duplicates prior internal research, billable hours balloon without clear deliverable milestones, and budget overruns shock leadership.',
-    docketra: 'Milestone-Driven Docket Tracking',
-    docketraDetail:
-      'Assign external law firms to scoped dockets with clear deliverable milestones, hearing dates, and spend tracking. Enforce transparency before invoices are approved.',
-    badge: 'Spend Accountability',
-  },
-  {
-    title: 'Executive Reporting Headaches',
-    legacy: 'Manual Slide Decks & Weekend Spreadsheet Merges',
-    legacyDetail:
-      'Before board meetings and audit committees, the General Counsel spends 3 days frantically chasing team members to compile matter spreadsheets into executive slide presentations.',
-    risk: 'Unprepared Board Updates & Reactive Posture',
-    riskDetail:
-      'Static slides are out of date before the board meeting begins. Legal leadership remains reactive, lacking real-time metrics on legal team velocity, litigation exposure, and risk posture.',
-    docketra: 'Real-Time GC Command Dashboard',
-    docketraDetail:
-      'Instant executive telemetry on active litigation, contract turnaround times, subsidiary compliance health, and pending approvals. Export board-ready reports with one click.',
-    badge: 'Instant Board Telemetry',
-  },
-];
-
-const PILLARS = [
-  {
-    number: '01',
-    title: 'Structured Legal Intake & Triage',
-    subtitle: 'Internal Front Door & Queue Routing',
-    description:
-      'Establish a single front door for commercial contracts, corporate advisory, and statutory sign-offs. Eliminate drive-by pings and centralize work in intelligent workbaskets.',
-    features: [
-      'Standardized intake forms with contract type, commercial value, and urgency tagging',
-      'Automated triage routing to specialized counsel (Employment, IP, Commercial, Regulatory)',
-      'Real-time requester tracking portal with estimated turnaround countdowns',
-      'Configurable SLA tiers based on commercial priority and business unit',
-    ],
-  },
-  {
-    number: '02',
-    title: 'Entity & Subsidiary Governance',
-    subtitle: 'Group Corporate Records & Director Intelligence',
-    description:
-      'Manage corporate records across holding companies, operating subsidiaries, and joint ventures in India and overseas. Keep group governance perfectly synchronized.',
-    features: [
-      '21-digit CIN validation, DIN tracking, and DSC expiration registries for all directors',
-      'Centralized repository for Articles, Memorandum, shareholding charts, and board minutes',
-      'Power of Attorney (PoA) and authorized signatory registry with validity dates',
-      'Automated statutory compliance dockets for annual filings and event-driven ROC forms',
-    ],
-  },
-  {
-    number: '03',
-    title: '4-Eye QC Review Baskets',
-    subtitle: 'Risk Controls Before Dispatch',
-    description:
-      'Ensure high-stakes commercial agreements, court filings, and regulatory responses pass rigorous peer or GC review before execution or external submission.',
-    features: [
-      'Mandatory approval gates for contracts exceeding custom monetary thresholds',
-      'Complete inline redline history, revision comments, and risk commentary',
-      'Immutable digital sign-off trail with counsel timestamp and role authentication',
-      'Configurable dual-counsel review gates for litigation replies and affidavit sign-offs',
-    ],
-  },
-  {
-    number: '04',
-    title: 'Sovereign Domestic Infrastructure',
-    subtitle: 'Strict Legal Privilege & Indian Data Residency',
-    description:
-      'Engineered specifically to preserve attorney-client privilege, data residency mandates, and compliance with the Digital Personal Data Protection (DPDP) Act, 2023.',
-    features: [
-      'Hosted exclusively on Tier-IV cloud infrastructure within India (Mumbai / Hyderabad)',
-      'Zero training on third-party commercial LLMs—your enterprise legal data remains private',
-      'Optional Bring-Your-Own-Storage (BYOS) to firm AWS S3 or Google Drive accounts',
-      'Granular Role-Based Access Control (RBAC) with detailed immutable audit logging',
-    ],
-  },
-];
 
 export const CorporateLegalTeamsSolutionPage = () => {
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
@@ -167,13 +95,13 @@ export const CorporateLegalTeamsSolutionPage = () => {
       />
 
       {/* Pilot Notification Eyebrow */}
-      <div className="border-b border-amber-200/90 bg-amber-50/70 px-4 py-2 text-center text-xs">
+      <div className="border-b border-amber-200/90 bg-amber-50/80 px-4 py-2 text-center text-xs">
         <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 sm:gap-3 flex-wrap">
           <span className="inline-flex items-center gap-1.5 rounded border border-amber-300 bg-amber-100/80 px-2 py-0.5 font-bold text-amber-900 font-mono text-[11px]">
-            🚀 Docketra Enterprise Pilot Cohort
+            ⚡ Enterprise Legal Pilot
           </span>
-          <span className="text-slate-700 font-medium">
-            3 Months Unrestricted Free Access for In-House Legal Teams • Tier-IV Indian Data Residency
+          <span className="text-slate-800 font-medium">
+            3 Months Unrestricted Free Access for In-House Legal Departments • Tier-IV Indian Data Residency
           </span>
           <Link
             to="/signup"
@@ -184,121 +112,194 @@ export const CorporateLegalTeamsSolutionPage = () => {
         </div>
       </div>
 
-      {/* Shared Navigation Header */}
+      {/* Navigation Header */}
       <PublicMarketingHeader />
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-slate-50/40 pt-16 pb-12 sm:pt-20 sm:pb-16 border-b border-slate-200">
+      <section className="relative overflow-hidden bg-slate-50/50 pt-14 pb-12 sm:pt-18 sm:pb-16 border-b border-slate-200">
         <Container size="7xl">
           <div className="mx-auto max-w-4xl text-center space-y-4">
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <div className="font-mono text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
-                Built for General Counsel, Legal Ops & Corporate Secretaries
-              </div>
-              <span className="text-slate-300">•</span>
-              <div className="inline-flex items-center gap-1.5 border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-mono font-medium text-emerald-800">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-                <span>Zero File Leakage • 100% Partner Review</span>
-              </div>
+            {/* Tagline Badge */}
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-mono font-medium text-slate-700 shadow-2xs">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <span>Built for General Counsel, Legal Ops Leaders & Corporate Secretaries</span>
             </div>
 
-            <h1 className="text-3xl font-bold leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-5xl mx-auto max-w-3xl [text-wrap:balance]">
-              Total Operational Clarity for <span className="text-amber-600">In-House Legal & Compliance</span>
+            {/* Single H1 */}
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl max-w-3xl mx-auto [text-wrap:balance] leading-[1.15]">
+              Total operational clarity for <span className="text-amber-600">in-house legal & compliance</span>.
             </h1>
 
-            <p className="text-sm sm:text-base font-normal leading-relaxed text-slate-600 max-w-2xl mx-auto">
-              Replace fragmented email threads, forgotten advisory requests, and scattered contract dockets. Centralize internal legal intake, regulatory notices, and board governance inside a single reliable workspace.
+            {/* Concise Subtitle */}
+            <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
+              Replace drive-by Slack requests, unindexed contract drafts, and lost regulatory notices. Centralize internal legal intake, contract triage, outside counsel, and subsidiary governance in one reliable workspace.
             </p>
 
-            {/* CTAs */}
+            {/* Primary Action Buttons */}
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
                 to="/signup"
-                className="inline-flex w-full sm:w-auto h-10 items-center justify-center gap-2 bg-slate-950 px-5 text-xs font-semibold text-amber-400 transition-colors hover:bg-slate-800 rounded-md"
+                className="inline-flex w-full sm:w-auto h-11 items-center justify-center gap-2 rounded-md bg-slate-950 px-6 text-xs font-bold text-amber-400 transition-all hover:bg-slate-800 shadow-sm"
               >
-                <span>Start 3-Month Free Pilot</span>
+                <span>Start 3-Month Enterprise Pilot</span>
                 <span>→</span>
               </Link>
               <a
-                href="#preview"
-                className="inline-flex w-full sm:w-auto h-10 items-center justify-center gap-2 border border-slate-200 bg-white px-4 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors rounded-md"
+                href="#comparison"
+                className="inline-flex w-full sm:w-auto h-11 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
               >
-                <span>Explore Sandbox Preview</span>
+                <span>Compare vs. Spreadsheets & Slack</span>
               </a>
             </div>
 
-            {/* Risk-reversal Subtext */}
-            <div className="pt-2 flex flex-wrap items-center justify-center gap-4 text-[11px] font-mono text-slate-500">
+            {/* Quick Proof Pills */}
+            <div className="pt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-slate-600 font-medium">
               <span className="flex items-center gap-1.5">
-                <span className="text-amber-600 font-bold">✓</span>
-                <span>No credit card required</span>
+                <span className="text-emerald-600 font-bold">✓</span>
+                <span>Standardized legal front door</span>
               </span>
               <span className="text-slate-300">•</span>
               <span className="flex items-center gap-1.5">
-                <span className="text-amber-600 font-bold">✓</span>
-                <span>Full team access</span>
+                <span className="text-emerald-600 font-bold">✓</span>
+                <span>4-Eye GC approval gates</span>
               </span>
               <span className="text-slate-300">•</span>
               <span className="flex items-center gap-1.5">
-                <span className="text-amber-600 font-bold">✓</span>
-                <span>1-Click Excel matter migration</span>
+                <span className="text-emerald-600 font-bold">✓</span>
+                <span>Regulatory notice clocks</span>
+              </span>
+              <span className="text-slate-300">•</span>
+              <span className="flex items-center gap-1.5">
+                <span className="text-emerald-600 font-bold">✓</span>
+                <span>Indian cloud residency (DPDP)</span>
               </span>
             </div>
           </div>
 
-          {/* Hero Visual Mockup */}
-          <div className="mx-auto mt-12 max-w-5xl rounded-lg border border-slate-200 bg-white p-4 sm:p-6 shadow-xs">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* The Fragmented Way */}
-              <div className="rounded-md border border-rose-200 bg-rose-50/40 p-4 sm:p-5">
-                <div className="flex items-center justify-between border-b border-rose-200/60 pb-3 mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-rose-700">Spreadsheets & Slack</span>
-                  </div>
-                  <span className="text-[11px] font-medium text-slate-500">Fragmented & Untracked</span>
+          {/* Graphic: Legal Operations Cockpit */}
+          <div className="mx-auto mt-10 max-w-5xl rounded-lg border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
+            {/* Mockup Window Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
                 </div>
-                <div className="space-y-2.5 text-xs text-slate-600">
-                  <div className="rounded border border-rose-200/80 bg-white p-2.5 font-mono text-[11px]">
-                    <span className="text-rose-700 font-bold">Unindexed Channel #legal-requests:</span> "Can someone review the vendor MSA? We signed it yesterday without indemnity clause."
-                  </div>
-                  <div className="rounded border border-rose-200/80 bg-white p-2.5">
-                    <p className="text-slate-500 text-[11px] font-semibold mb-1">Litigation_Tracker_2026_Final.xlsx:</p>
-                    <p className="italic text-slate-700">"Notice from NCLT Mumbai missing from folder. Hearing scheduled for tomorrow morning."</p>
-                  </div>
-                  <div className="rounded border border-rose-200/80 bg-rose-100/60 p-2 text-rose-800 text-[11px] font-medium">
-                    Result: High-liability blind spots. Blown contractual SLAs. Ballooning outside counsel fees.
-                  </div>
+                <span className="font-mono text-xs font-semibold text-slate-700">
+                  Titan Enterprises • In-House Legal Operations Cockpit
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-800 border border-emerald-200">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  14 Group Subsidiaries Active
+                </span>
+                <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-mono font-medium text-slate-600">
+                  Domestic Cloud (Mumbai)
+                </span>
+              </div>
+            </div>
+
+            {/* Top 3 Summary Metrics */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+              <div className="rounded-md border border-slate-200 bg-slate-50/70 p-3">
+                <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
+                  <span>Internal Intake Queue</span>
+                  <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 rounded">
+                    98.4% SLA
+                  </span>
                 </div>
+                <p className="text-xl font-bold font-mono text-slate-950 mt-1 tabular-nums">18 Open Requests</p>
+                <p className="text-[11px] text-slate-600 mt-0.5">Avg turnaround: 22h • Zero unassigned</p>
               </div>
 
-              {/* The Modern Way: Docketra Legal */}
-              <div className="rounded-md border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-900">The Docketra Legal Standard</span>
-                  </div>
-                  <span className="text-[11px] font-bold text-amber-700 font-mono">Enterprise Legal Ops</span>
+              <div className="rounded-md border border-slate-200 bg-slate-50/70 p-3">
+                <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
+                  <span>4-Eye High-Value Contracts</span>
+                  <span className="text-[10px] font-mono font-bold text-amber-800 bg-amber-50 border border-amber-200 px-1 rounded">
+                    GC Review
+                  </span>
                 </div>
-                <div className="space-y-2.5 text-xs">
-                  <div className="rounded border border-slate-200 bg-white p-2.5">
-                    <div className="flex items-center justify-between text-[11px] font-bold">
-                      <span className="text-slate-900 font-mono">DOCKET-2026-LEG-088</span>
-                      <span className="rounded bg-emerald-50 text-emerald-800 px-1.5 py-0.5 border border-emerald-200 text-[10px]">GC Approved</span>
+                <p className="text-xl font-bold font-mono text-slate-950 mt-1 tabular-nums">4 Pending Sign-Off</p>
+                <p className="text-[11px] text-slate-600 mt-0.5">Threshold: &gt;₹1 Cr • Redlines verified</p>
+              </div>
+
+              <div className="rounded-md border border-slate-200 bg-slate-50/70 p-3">
+                <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
+                  <span>Litigation & Regulatory Notices</span>
+                  <span className="text-[10px] font-mono font-bold text-blue-800 bg-blue-50 border border-blue-200 px-1 rounded">
+                    Statutory Clocks
+                  </span>
+                </div>
+                <p className="text-xl font-bold font-mono text-slate-950 mt-1 tabular-nums">9 Active Matters</p>
+                <p className="text-[11px] text-slate-600 mt-0.5">0 lapsed deadlines • Outside counsel linked</p>
+              </div>
+            </div>
+
+            {/* Live Legal Pipeline Table Mockup */}
+            <div className="rounded-md border border-slate-200 overflow-hidden">
+              <div className="bg-slate-100/70 px-4 py-2 border-b border-slate-200 flex items-center justify-between text-[11px] font-mono font-bold text-slate-600">
+                <span>ACTIVE LEGAL INTAKE & REGULATORY MATTERS</span>
+                <span className="text-amber-700">ESC-ALERT: Active Statutory Reply Windows</span>
+              </div>
+              <div className="divide-y divide-slate-100 text-xs">
+                {/* Row 1 */}
+                <div className="p-3 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50/60 transition-colors">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-950">Enterprise Cloud Infrastructure Agreement</span>
+                      <span className="font-mono text-[10px] text-slate-500">DOCKET-2026-LEG-088</span>
                     </div>
-                    <p className="text-slate-800 text-[11px] mt-1 font-medium">Enterprise SaaS Agreement • ₹4.2 Cr Annual Contract</p>
-                    <p className="text-slate-500 text-[10px] mt-0.5 font-mono">Commercial Legal Basket • Turnaround: 22h • 4-Eye Gate Passed</p>
+                    <p className="text-slate-600 text-[11px]">
+                      <span className="font-semibold text-slate-800">Commercial Contract</span> • ₹4.2 Cr Annual Value • Requester: Technology &amp; Security Ops
+                    </p>
                   </div>
-                  <div className="rounded border border-slate-200 bg-white p-2.5 flex items-center justify-between">
-                    <div>
-                      <p className="text-slate-800 text-[11px] font-semibold">NCLT Show-Cause Matter Vaulted</p>
-                      <p className="text-slate-500 text-[10px]">Assigned to Senior Counsel • Reply filed 4 days ahead of window</p>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="font-mono text-[10px] text-slate-500">Turnaround: 22h</span>
+                    <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-800 border border-emerald-200">
+                      GC Approved &amp; Executed
+                    </span>
+                  </div>
+                </div>
+
+                {/* Row 2 */}
+                <div className="p-3 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50/60 transition-colors">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-950">NCLT Mumbai Bench: CP(IB) No. 412/MB/2026</span>
+                      <span className="font-mono text-[10px] text-slate-500">Corporate Insolvency Defense</span>
                     </div>
-                    <span className="text-xs font-mono text-emerald-700 font-bold">100% Compliant</span>
+                    <p className="text-slate-600 text-[11px]">
+                      <span className="font-semibold text-slate-800">Litigation Docket</span> • Designated Advocate: Senior Counsel Sh. M. Rao • Next Hearing: 14-Oct
+                    </p>
                   </div>
-                  <div className="rounded border border-emerald-200 bg-emerald-50/70 p-2 text-emerald-900 text-[11px] font-medium">
-                    Result: Zero dropped requests. Protected legal privilege. Executive audit readiness.
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="font-mono text-[10px] text-amber-700 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                      ⏳ 6 Days to Reply Window
+                    </span>
+                    <span className="rounded bg-blue-50 px-2 py-0.5 text-[10px] font-mono font-bold text-blue-800 border border-blue-200">
+                      Counter Affidavit in QC
+                    </span>
+                  </div>
+                </div>
+
+                {/* Row 3 */}
+                <div className="p-3 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50/60 transition-colors">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-950">Customer Data Processing Addendum (DPDP 2023)</span>
+                      <span className="font-mono text-[10px] text-slate-500">Privacy &amp; Regulatory</span>
+                    </div>
+                    <p className="text-slate-600 text-[11px]">
+                      <span className="font-semibold text-slate-800">Compliance Advisory</span> • Requester: Product Engineering • Data Principal Rights Clause
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="font-mono text-[10px] text-slate-600">SLA: 48h Tier</span>
+                    <span className="rounded bg-purple-50 px-2 py-0.5 text-[10px] font-mono font-bold text-purple-800 border border-purple-200">
+                      Counsel Assigned
+                    </span>
                   </div>
                 </div>
               </div>
@@ -307,150 +308,240 @@ export const CorporateLegalTeamsSolutionPage = () => {
         </Container>
       </section>
 
-      {/* The Reality Check Matrix */}
-      <section className="py-16 bg-white border-b border-slate-200">
+      {/* Comparison Table Section */}
+      <section id="comparison" className="py-16 bg-white border-b border-slate-200 scroll-mt-16">
         <Container size="7xl">
           <div className="text-center max-w-2xl mx-auto mb-10">
-            <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">Spreadsheets & Slack vs. The Enterprise Risk vs. Docketra</div>
-            <h2 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
-              The Reality Check Matrix
+            <div className="font-mono text-xs font-bold uppercase tracking-wider text-amber-600">
+              Why Spreadsheets Fail Legal Operations
+            </div>
+            <h2 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
+              Spreadsheets &amp; Slack vs. The Docketra Legal Operating System
             </h2>
             <p className="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Corporate legal teams cannot afford communication gaps or missed statutory windows. See how Docketra elevates your legal operations from reactive firefighting to strategic leadership.
+              When business demand accelerates across subsidiaries, ad-hoc legal intake breaks. Here is how Docketra shields your enterprise from blown contract SLAs and missed statutory windows.
             </p>
           </div>
 
-          <div className="space-y-4 max-w-5xl mx-auto">
-            {REALITY_CHECK_MATRIX.map((item, idx) => (
-              <div
-                key={idx}
-                className="rounded-md border border-slate-200 bg-white overflow-hidden shadow-xs hover:border-slate-300 transition-colors"
-              >
-                <div className="border-b border-slate-100 px-5 py-3 bg-slate-50/60 flex items-center justify-between flex-wrap gap-2">
-                  <h3 className="text-sm font-bold text-slate-950 flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-amber-500" />
-                    <span>{item.title}</span>
-                  </h3>
-                  <span className="rounded bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-800">
-                    {item.badge}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
-                  <div className="p-4 sm:p-5 bg-slate-50/40">
-                    <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5 font-mono">
-                      <span>1.</span>
-                      <span>Spreadsheets & Slack</span>
-                    </div>
-                    <p className="text-xs font-semibold text-slate-800 mb-1">{item.legacy}</p>
-                    <p className="text-xs text-slate-600 leading-relaxed">{item.legacyDetail}</p>
-                  </div>
-                  <div className="p-4 sm:p-5 bg-rose-50/20">
-                    <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-rose-700 mb-1.5 font-mono">
-                      <span>✕</span>
-                      <span>The Enterprise Risk</span>
-                    </div>
-                    <p className="text-xs font-semibold text-rose-900 mb-1">{item.risk}</p>
-                    <p className="text-xs text-slate-600 leading-relaxed">{item.riskDetail}</p>
-                  </div>
-                  <div className="p-4 sm:p-5 bg-emerald-50/15">
-                    <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-800 mb-1.5 font-mono">
-                      <span>✓</span>
-                      <span>The Docketra Standard</span>
-                    </div>
-                    <p className="text-xs font-semibold text-slate-950 mb-1">{item.docketra}</p>
-                    <p className="text-xs text-slate-800 leading-relaxed font-medium">{item.docketraDetail}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
+          {/* Responsive Comparison Table */}
+          <div className="max-w-5xl mx-auto overflow-hidden rounded-lg border border-slate-200 shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50/80 font-mono text-slate-700">
+                    <th scope="col" className="p-3.5 font-bold uppercase tracking-wider w-1/4">
+                      Legal Practice Area
+                    </th>
+                    <th scope="col" className="p-3.5 font-bold uppercase tracking-wider text-rose-800 bg-rose-50/40 w-3/8">
+                      Spreadsheets &amp; Slack (Old Way)
+                    </th>
+                    <th scope="col" className="p-3.5 font-bold uppercase tracking-wider text-emerald-900 bg-emerald-50/40 w-3/8">
+                      Docketra Legal Platform (Modern Way)
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {COMPARISON_ROWS.map((row, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="p-3.5 font-semibold text-slate-900 align-top">
+                        <div className="text-slate-950 font-bold">{row.feature}</div>
+                        <div className="text-[11px] font-mono text-slate-500 mt-0.5">{row.category}</div>
+                      </td>
+                      <td className="p-3.5 text-slate-600 bg-rose-50/15 align-top leading-relaxed">
+                        <div className="flex items-start gap-1.5">
+                          <span className="text-rose-600 font-bold shrink-0">✕</span>
+                          <span>{row.oldWay}</span>
+                        </div>
+                      </td>
+                      <td className="p-3.5 text-slate-900 bg-emerald-50/15 align-top font-medium leading-relaxed">
+                        <div className="flex items-start gap-1.5">
+                          <span className="text-emerald-600 font-bold shrink-0">✓</span>
+                          <span>{row.docketraWay}</span>
+                        </div>
+                        <span className="inline-block mt-1.5 rounded bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-800">
+                          {row.badge}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </Container>
       </section>
 
-      {/* Pillars Deep Dive */}
+      {/* 4 Core Capabilities Bento Grid */}
       <section className="py-16 bg-slate-50/40 border-b border-slate-200">
         <Container size="7xl">
           <div className="text-center max-w-2xl mx-auto mb-10">
-            <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">Enterprise Legal Architecture</div>
-            <h2 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
-              Pillars of the Docketra In-House Platform
+            <div className="font-mono text-xs font-bold uppercase tracking-wider text-slate-500">
+              Purpose-Built for Indian In-House Legal Departments
+            </div>
+            <h2 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
+              Everything Your Legal Team Needs in One Place
             </h2>
             <p className="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Purpose-engineered to manage legal velocity, enforce risk policies, and protect enterprise corporate governance across Indian corporate entities.
+              Engineered specifically for corporate legal intake, group subsidiary governance, high-value contract gates, and DPDP compliance.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl mx-auto">
-            {PILLARS.map((pillar, idx) => (
-              <div
-                key={idx}
-                className="rounded-md border border-slate-200 bg-white p-5 sm:p-6 flex flex-col justify-between hover:border-slate-400 transition-colors shadow-xs"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="font-mono text-xs font-bold text-amber-600 tracking-wider">
-                      {pillar.number}
-                    </span>
-                    <span className="text-[11px] font-mono font-medium text-slate-500">
-                      {pillar.subtitle}
-                    </span>
-                  </div>
-                  <h3 className="text-base font-bold text-slate-950 mb-1.5">
-                    {pillar.title}
-                  </h3>
-                  <p className="text-xs text-slate-600 leading-relaxed mb-4">
-                    {pillar.description}
-                  </p>
+            {/* Bento Card 1: Legal Intake & Triage */}
+            <div className="rounded-lg border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-mono text-xs font-bold text-amber-600">CAPABILITY 01</span>
+                  <span className="rounded bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-mono font-bold text-amber-800">
+                    Legal Front Door
+                  </span>
                 </div>
-                <div className="rounded border border-slate-100 bg-slate-50/60 p-3.5 space-y-2">
-                  <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 mb-1">
-                    Key Functionality:
-                  </div>
-                  {pillar.features.map((feat, fIdx) => (
-                    <div key={fIdx} className="flex items-start gap-2 text-xs text-slate-700">
-                      <span className="text-amber-600 font-bold shrink-0">✓</span>
-                      <span>{feat}</span>
-                    </div>
-                  ))}
+                <h3 className="text-base font-bold text-slate-950 mb-1.5">
+                  Structured Legal Intake &amp; Triage Portal
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed mb-4">
+                  Establish a single front door for commercial contracts, corporate advisory, and statutory sign-offs. Eliminate drive-by pings and centralize work in intelligent queues with automated SLA countdowns.
+                </p>
+              </div>
+              <div className="rounded border border-slate-100 bg-slate-50 p-3 space-y-1.5 font-mono text-[11px]">
+                <div className="flex items-center justify-between text-slate-800 font-semibold">
+                  <span>Intake SLA: High Priority Commercial</span>
+                  <span className="text-emerald-700">On Track</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-500 text-[10px]">
+                  <span>Turnaround Countdown:</span>
+                  <span className="font-bold text-slate-700">18 Hours Remaining</span>
+                </div>
+                <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-emerald-500 h-full w-4/5 rounded-full" />
                 </div>
               </div>
-            ))}
+            </div>
+
+            {/* Bento Card 2: 4-Eye GC Review Gates */}
+            <div className="rounded-lg border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-mono text-xs font-bold text-amber-600">CAPABILITY 02</span>
+                  <span className="rounded bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-800">
+                    Risk Safeguard
+                  </span>
+                </div>
+                <h3 className="text-base font-bold text-slate-950 mb-1.5">
+                  4-Eye GC Review Gates &amp; Redline Audit
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed mb-4">
+                  Ensure high-stakes commercial agreements, regulatory replies, and court affidavits pass rigorous dual-counsel review before execution. Complete redline history and immutable digital sign-offs.
+                </p>
+              </div>
+              <div className="rounded border border-slate-100 bg-slate-50 p-3 space-y-1.5 font-mono text-[11px]">
+                <div className="flex items-center justify-between text-slate-800 font-semibold">
+                  <span>Contract: Vendor MSA (&gt;₹1 Cr Threshold)</span>
+                  <span className="text-emerald-700 font-bold">Passed</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-500 text-[10px]">
+                  <span>Lead Counsel: Legal Manager</span>
+                  <span className="text-slate-700 font-medium">Final Sign-off: General Counsel</span>
+                </div>
+                <div className="text-[10px] text-emerald-800 font-semibold">
+                  Indemnity &amp; Limitation of Liability Verified
+                </div>
+              </div>
+            </div>
+
+            {/* Bento Card 3: Litigation & Regulatory Notices */}
+            <div className="rounded-lg border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-mono text-xs font-bold text-amber-600">CAPABILITY 03</span>
+                  <span className="rounded bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-mono font-bold text-blue-800">
+                    Court &amp; Tribunal
+                  </span>
+                </div>
+                <h3 className="text-base font-bold text-slate-950 mb-1.5">
+                  Regulatory Notice &amp; Litigation Docketing
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed mb-4">
+                  Track show-cause notices, tribunal hearings, outside counsel assignments, and statutory reply dates. Escalating reminders prevent missed court filing windows and ex-parte orders.
+                </p>
+              </div>
+              <div className="rounded border border-slate-100 bg-slate-50 p-3 space-y-1.5 font-mono text-[11px]">
+                <div className="flex items-center justify-between text-slate-800 font-semibold">
+                  <span>NCLT Mumbai: CP(IB) 412/MB/2026</span>
+                  <span className="text-blue-700 font-bold">Hearing 14-Oct</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-500 text-[10px]">
+                  <span>Designated Advocate: Senior Counsel Sh. M. Rao</span>
+                  <span className="text-emerald-700 font-bold">Affidavit Vaulted</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bento Card 4: Group Subsidiary Master & BYOS */}
+            <div className="rounded-lg border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-mono text-xs font-bold text-amber-600">CAPABILITY 04</span>
+                  <span className="rounded bg-purple-50 border border-purple-200 px-2 py-0.5 text-[10px] font-mono font-bold text-purple-800">
+                    DPDP &amp; BYOS
+                  </span>
+                </div>
+                <h3 className="text-base font-bold text-slate-950 mb-1.5">
+                  Group Subsidiary Master &amp; BYOS Storage
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed mb-4">
+                  Manage corporate records, director DIN/DSC tokens, and statutory registers across group subsidiaries. Connect your enterprise Google Drive or AWS S3 with strict Indian data residency.
+                </p>
+              </div>
+              <div className="rounded border border-slate-100 bg-slate-50 p-3 space-y-1.5 font-mono text-[11px]">
+                <div className="flex items-center justify-between text-slate-800 font-semibold">
+                  <span>Subsidiaries: 14 Entities Synchronized</span>
+                  <span className="text-emerald-700 font-bold">Compliant</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-500 text-[10px]">
+                  <span>Storage: Enterprise Google Drive (BYOS)</span>
+                  <span className="text-slate-700 font-medium">DPDP Tier-IV / Mumbai</span>
+                </div>
+              </div>
+            </div>
           </div>
         </Container>
       </section>
 
-      {/* Interactive Demo Anchor Section */}
+      {/* Interactive Command Center Preview */}
       <section id="preview" className="py-16 bg-white border-b border-slate-200 scroll-mt-16">
         <Container size="7xl">
           <div className="mx-auto max-w-5xl rounded-lg border border-slate-200 bg-white p-6 sm:p-8 shadow-xs">
             <div className="text-center max-w-2xl mx-auto mb-8">
-              <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Interactive Preview</div>
+              <div className="font-mono text-xs font-bold uppercase tracking-wider text-amber-600 mb-1">
+                Interactive Preview
+              </div>
               <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-950">
-                The General Counsel Command Center
+                Explore the General Counsel Command Center
               </h2>
-              <p className="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                Live operational telemetry: see how Docketra organizes legal intake, group subsidiary records, and litigation dockets.
+              <p className="mt-1 text-xs sm:text-sm text-slate-600">
+                Click the tabs below to preview the workflows your in-house counsel, paralegals, and business stakeholders will use daily.
               </p>
 
-              {/* Interactive Preview Tabs */}
+              {/* Tab Selector */}
               <div className="mt-5 inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-100 p-1 text-xs">
                 <button
                   type="button"
                   onClick={() => setActivePreviewTab('intake')}
                   className={`px-3 py-1.5 rounded font-medium transition-colors ${
                     activePreviewTab === 'intake'
-                      ? 'bg-slate-950 text-white font-bold'
+                      ? 'bg-slate-950 text-white font-bold shadow-xs'
                       : 'text-slate-600 hover:text-slate-950'
                   }`}
                 >
-                  Intake & Triage Front Door
+                  Intake &amp; Triage Front Door
                 </button>
                 <button
                   type="button"
                   onClick={() => setActivePreviewTab('governance')}
                   className={`px-3 py-1.5 rounded font-medium transition-colors ${
                     activePreviewTab === 'governance'
-                      ? 'bg-slate-950 text-white font-bold'
+                      ? 'bg-slate-950 text-white font-bold shadow-xs'
                       : 'text-slate-600 hover:text-slate-950'
                   }`}
                 >
@@ -461,15 +552,16 @@ export const CorporateLegalTeamsSolutionPage = () => {
                   onClick={() => setActivePreviewTab('litigation')}
                   className={`px-3 py-1.5 rounded font-medium transition-colors ${
                     activePreviewTab === 'litigation'
-                      ? 'bg-slate-950 text-white font-bold'
+                      ? 'bg-slate-950 text-white font-bold shadow-xs'
                       : 'text-slate-600 hover:text-slate-950'
                   }`}
                 >
-                  Litigation & Notice Dockets
+                  Litigation &amp; Notice Dockets
                 </button>
               </div>
             </div>
 
+            {/* Simulated Workspace View */}
             <div className="rounded-md border border-slate-200 bg-white overflow-hidden shadow-xs">
               <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2.5 bg-slate-50 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
@@ -479,11 +571,11 @@ export const CorporateLegalTeamsSolutionPage = () => {
                     <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
                   </div>
                   <span className="ml-2 font-mono text-[11px] text-slate-500 truncate">
-                    docketra.in/app/firm/titan-enterprises-legal
+                    docketra.in/app/legal/titan-enterprises
                   </span>
                 </div>
                 <span className="rounded bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200 font-mono shrink-0">
-                  Corporate Legal Workspace
+                  Corporate Legal Engine
                 </span>
               </div>
 
@@ -491,24 +583,24 @@ export const CorporateLegalTeamsSolutionPage = () => {
                 {activePreviewTab === 'intake' && (
                   <div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-                      <div className="rounded border border-slate-200 bg-slate-50/60 p-3">
+                      <div className="rounded border border-slate-200 bg-slate-50/70 p-3">
                         <p className="text-[11px] text-slate-500 font-medium">Active Requests in Queue</p>
-                        <p className="text-lg font-bold text-slate-950 mt-0.5">18 Open</p>
-                        <p className="text-[10px] text-emerald-700 mt-0.5">Avg SLA: 24h turnaround</p>
+                        <p className="text-lg font-bold font-mono text-slate-950 mt-0.5">18 Open</p>
+                        <p className="text-[10px] text-emerald-700 mt-0.5 font-medium">Avg SLA: 24h turnaround</p>
                       </div>
-                      <div className="rounded border border-slate-200 bg-slate-50/60 p-3">
+                      <div className="rounded border border-slate-200 bg-slate-50/70 p-3">
                         <p className="text-[11px] text-slate-500 font-medium">4-Eye Approvals Pending</p>
-                        <p className="text-lg font-bold text-amber-700 mt-0.5">4 Contracts</p>
-                        <p className="text-[10px] text-amber-800 mt-0.5">GC review gate active</p>
+                        <p className="text-lg font-bold font-mono text-amber-700 mt-0.5">4 Contracts</p>
+                        <p className="text-[10px] text-amber-800 mt-0.5 font-medium">GC review gate active</p>
                       </div>
-                      <div className="rounded border border-slate-200 bg-slate-50/60 p-3">
+                      <div className="rounded border border-slate-200 bg-slate-50/70 p-3">
                         <p className="text-[11px] text-slate-500 font-medium">SLA Compliance Rate</p>
-                        <p className="text-lg font-bold text-slate-950 mt-0.5">98.4%</p>
-                        <p className="text-[10px] text-emerald-700 mt-0.5">Top quartile velocity</p>
+                        <p className="text-lg font-bold font-mono text-slate-950 mt-0.5">98.4%</p>
+                        <p className="text-[10px] text-slate-600 mt-0.5 font-medium">Top quartile velocity</p>
                       </div>
                     </div>
 
-                    <div className="rounded border border-slate-200 bg-white p-4">
+                    <div className="rounded border border-slate-200 bg-white p-3 sm:p-4">
                       <div className="flex items-center justify-between text-xs font-bold text-slate-800 mb-2">
                         <span>Internal Legal Intake Queue</span>
                         <span className="text-amber-700 font-mono text-[11px]">Filter: High Priority Commercial</span>
@@ -523,7 +615,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
                             <span className="rounded bg-amber-50 text-amber-800 px-2 py-0.5 text-[10px] font-mono border border-amber-200">
                               Commercial Contract
                             </span>
-                            <span className="rounded bg-emerald-50 text-emerald-800 px-2 py-0.5 text-[10px] font-bold border border-emerald-200">
+                            <span className="rounded bg-emerald-50 text-emerald-800 px-2 py-0.5 text-[10px] font-bold border border-emerald-200 font-mono">
                               Counsel Assigned
                             </span>
                           </div>
@@ -535,7 +627,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="rounded bg-amber-50 text-amber-800 px-2 py-0.5 text-[10px] font-mono border border-amber-200">
-                              Privacy & Regulatory
+                              Privacy &amp; Regulatory
                             </span>
                             <span className="rounded bg-slate-100 text-slate-700 px-2 py-0.5 text-[10px] font-mono">
                               Under Review
@@ -551,14 +643,16 @@ export const CorporateLegalTeamsSolutionPage = () => {
                   <div className="space-y-3 text-xs">
                     <div className="rounded border border-slate-200 bg-white p-4">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-slate-950 text-sm">Group Entity & Subsidiary Roster</span>
-                        <span className="text-emerald-700 font-mono text-[11px] font-bold">14 Subsidiaries • All Compliant</span>
+                        <span className="font-bold text-slate-950 text-sm">Group Entity &amp; Subsidiary Roster</span>
+                        <span className="text-emerald-700 font-mono text-[11px] font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                          14 Subsidiaries • All Compliant
+                        </span>
                       </div>
-                      <p className="text-slate-600 text-xs leading-relaxed mb-4">
+                      <p className="text-slate-600 text-xs leading-relaxed mb-3">
                         Direct synchronization of director DINs, DSC tokens, and corporate resolutions across holding and operating entities.
                       </p>
                       <div className="space-y-2">
-                        <div className="rounded border border-slate-200 bg-slate-50/50 p-3 flex items-center justify-between">
+                        <div className="rounded border border-slate-200 bg-slate-50/70 p-3 flex items-center justify-between flex-wrap gap-2">
                           <div>
                             <p className="font-semibold text-slate-900">Titan Digital Technologies Private Limited</p>
                             <p className="text-[11px] text-slate-500 font-mono">CIN: U72900MH2021PTC368291 • 4 Directors • PoA Registry Active</p>
@@ -567,9 +661,9 @@ export const CorporateLegalTeamsSolutionPage = () => {
                             100% Up-to-Date
                           </span>
                         </div>
-                        <div className="rounded border border-slate-200 bg-slate-50/50 p-3 flex items-center justify-between">
+                        <div className="rounded border border-slate-200 bg-slate-50/70 p-3 flex items-center justify-between flex-wrap gap-2">
                           <div>
-                            <p className="font-semibold text-slate-900">Titan Logistics & Supply Chain Limited</p>
+                            <p className="font-semibold text-slate-900">Titan Logistics &amp; Supply Chain Limited</p>
                             <p className="text-[11px] text-slate-500 font-mono">CIN: L63090KA2017PLC098765 • Board Meeting Notice Dispatched</p>
                           </div>
                           <span className="rounded bg-amber-50 text-amber-800 text-[10px] font-bold px-2 py-0.5 border border-amber-200 font-mono">
@@ -585,26 +679,28 @@ export const CorporateLegalTeamsSolutionPage = () => {
                   <div className="space-y-3 text-xs">
                     <div className="rounded border border-slate-200 bg-white p-4">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-slate-950 text-sm">Regulatory Notice & Litigation Docketing</span>
-                        <span className="text-amber-800 font-mono text-[11px] font-bold">Statutory Clocks Active</span>
+                        <span className="font-bold text-slate-950 text-sm">Regulatory Notice &amp; Litigation Docketing</span>
+                        <span className="text-amber-800 font-mono text-[11px] font-bold bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                          Statutory Clocks Active
+                        </span>
                       </div>
                       <p className="text-slate-600 text-xs leading-relaxed mb-3">
                         Track show-cause notices, tribunal hearings, outside counsel assignments, and statutory reply dates.
                       </p>
                       <div className="space-y-2">
-                        <div className="p-3 rounded border border-slate-200 bg-slate-50/50 flex items-center justify-between">
+                        <div className="p-3 rounded border border-slate-200 bg-slate-50/70 flex items-center justify-between flex-wrap gap-2">
                           <div>
                             <span className="font-semibold text-slate-900">NCLT Mumbai Bench: CP(IB) No. 412/MB/2026</span>
-                            <p className="text-[11px] text-slate-500">Designated Advocate: Senior Counsel Sh. M. Rao • Next Hearing: 14 Oct</p>
+                            <p className="text-[11px] text-slate-500 font-mono">Designated Advocate: Senior Counsel Sh. M. Rao • Next Hearing: 14-Oct</p>
                           </div>
                           <span className="rounded bg-slate-100 text-slate-700 text-[10px] font-mono px-2 py-0.5">
                             Counter Affidavit Filed
                           </span>
                         </div>
-                        <div className="p-3 rounded border border-slate-200 bg-slate-50/50 flex items-center justify-between">
+                        <div className="p-3 rounded border border-slate-200 bg-slate-50/70 flex items-center justify-between flex-wrap gap-2">
                           <div>
                             <span className="font-semibold text-slate-900">Regional GST Inspection Show-Cause Notice</span>
-                            <p className="text-[11px] text-slate-500">Section 73 Notice • Reply window: 16 days remaining</p>
+                            <p className="text-[11px] text-slate-500 font-mono">Section 73 Notice • Reply window: 16 days remaining</p>
                           </div>
                           <span className="rounded bg-amber-50 text-amber-800 text-[10px] font-bold px-2 py-0.5 border border-amber-200 font-mono">
                             Reply Draft in QC
@@ -620,12 +716,14 @@ export const CorporateLegalTeamsSolutionPage = () => {
         </Container>
       </section>
 
-      {/* Why Join Pilot Program Section */}
+      {/* 3-Month Free Enterprise Pilot Cohort Box */}
       <section className="py-16 bg-slate-50/40 border-b border-slate-200">
         <Container size="7xl">
           <div className="text-center max-w-2xl mx-auto mb-10">
-            <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">Enterprise Pilot Cohort</div>
-            <h2 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
+            <div className="font-mono text-xs font-bold uppercase tracking-wider text-amber-600">
+              Limited Enterprise Cohort
+            </div>
+            <h2 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
               Why Join the In-House Legal Pilot?
             </h2>
             <p className="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
@@ -634,19 +732,19 @@ export const CorporateLegalTeamsSolutionPage = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
-            <div className="rounded-md border border-slate-200 bg-white p-5 space-y-2 hover:border-slate-400 transition-colors shadow-xs">
+            <div className="rounded-lg border border-slate-200 bg-white p-5 space-y-2 hover:border-slate-300 transition-colors shadow-xs">
               <span className="font-mono text-xs font-bold text-amber-600 tracking-wider">
-                90d
+                90 DAYS FREE
               </span>
-              <h3 className="text-sm font-bold text-slate-950">100% Free Full Enterprise Workspace</h3>
+              <h3 className="text-sm font-bold text-slate-950">Full Enterprise Workspace</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
                 90 days of unrestricted access for all in-house counsel, paralegals, and internal business requesters with unlimited matter dockets.
               </p>
             </div>
 
-            <div className="rounded-md border border-slate-200 bg-white p-5 space-y-2 hover:border-slate-400 transition-colors shadow-xs">
+            <div className="rounded-lg border border-slate-200 bg-white p-5 space-y-2 hover:border-slate-300 transition-colors shadow-xs">
               <span className="font-mono text-xs font-bold text-amber-600 tracking-wider">
-                02
+                ASSISTED SETUP
               </span>
               <h3 className="text-sm font-bold text-slate-950">White-Glove Data Migration</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
@@ -654,9 +752,9 @@ export const CorporateLegalTeamsSolutionPage = () => {
               </p>
             </div>
 
-            <div className="rounded-md border border-slate-200 bg-white p-5 space-y-2 hover:border-slate-400 transition-colors shadow-xs">
+            <div className="rounded-lg border border-slate-200 bg-white p-5 space-y-2 hover:border-slate-300 transition-colors shadow-xs">
               <span className="font-mono text-xs font-bold text-amber-600 tracking-wider">
-                03
+                DIRECT PRIORITY
               </span>
               <h3 className="text-sm font-bold text-slate-950">Dedicated Legal Ops Specialist</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
@@ -667,13 +765,15 @@ export const CorporateLegalTeamsSolutionPage = () => {
         </Container>
       </section>
 
-      {/* Interactive FAQ Accordion */}
+      {/* Frequently Asked Questions */}
       <section className="py-16 bg-white border-b border-slate-200">
         <Container size="7xl">
           <div className="text-center max-w-2xl mx-auto mb-10">
-            <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">Frequently Asked Questions</div>
-            <h2 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
-              Everything You Need to Know About the In-House Pilot
+            <div className="font-mono text-xs font-bold uppercase tracking-wider text-slate-500">
+              Clear Answers
+            </div>
+            <h2 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
+              Frequently Asked Questions
             </h2>
           </div>
 
@@ -683,7 +783,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
               return (
                 <div
                   key={item.id}
-                  className={`rounded-md border transition-colors ${
+                  className={`rounded-lg border transition-colors ${
                     isOpen ? 'border-slate-400 bg-white shadow-xs' : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >
@@ -716,35 +816,39 @@ export const CorporateLegalTeamsSolutionPage = () => {
         </Container>
       </section>
 
-      {/* Closing Conversion Banner */}
-      <section className="py-16 bg-slate-50/40 border-b border-slate-200 text-center">
+      {/* Closing Call to Action */}
+      <section className="py-16 bg-slate-50/50 border-b border-slate-200 text-center">
         <Container size="7xl">
-          <div className="border border-slate-200 bg-white p-8 sm:p-10 rounded-lg max-w-4xl mx-auto space-y-3 shadow-xs">
-            <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-              Zero Financial Commitment • Limited Enterprise Cohort
+          <div className="border border-slate-200 bg-white p-8 sm:p-10 rounded-xl max-w-3xl mx-auto space-y-4 shadow-sm">
+            <div className="font-mono text-xs font-bold uppercase tracking-wider text-amber-600">
+              Zero Financial Risk • 3-Month Enterprise Pilot
             </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
-              Bring Calm and Auditability to Your In-House Legal Ops
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight [text-wrap:balance]">
+              Bring calm and auditability to your in-house legal ops.
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
               Join legal leaders running high-velocity, risk-managed departments. Get full access for your entire legal team free for 90 days.
             </p>
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
                 to="/signup"
-                className="inline-flex w-full sm:w-auto h-10 items-center justify-center gap-2 bg-slate-950 px-6 text-xs font-bold text-amber-400 transition-colors hover:bg-slate-800 rounded-md"
+                className="inline-flex w-full sm:w-auto h-11 items-center justify-center gap-2 rounded-md bg-slate-950 px-6 text-xs font-bold text-amber-400 transition-all hover:bg-slate-800 shadow-sm"
               >
-                <span>Start Your 3-Month Free Pilot →</span>
+                <span>Claim Your Free Enterprise Seat →</span>
               </Link>
             </div>
-            <p className="text-[11px] font-mono text-slate-500 pt-2">
-              90 Days Free • Zero Financial Commitment • Indian Cloud Sovereignty • Dedicated Legal Ops Onboarding
-            </p>
+            <div className="pt-2 text-[11px] font-mono text-slate-500 flex flex-wrap items-center justify-center gap-3">
+              <span>✓ No credit card required</span>
+              <span>•</span>
+              <span>✓ Instant Excel matter import</span>
+              <span>•</span>
+              <span>✓ 100% BYOS Google Drive / S3</span>
+            </div>
           </div>
         </Container>
       </section>
 
-      {/* Shared Marketing Footer */}
+      {/* Footer */}
       <MarketingFooter />
     </div>
   );
